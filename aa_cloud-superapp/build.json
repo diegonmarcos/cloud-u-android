@@ -2639,8 +2639,14 @@
             "_doc": "The C3 pages that answer 'what is the cloud DOING'. Every one still resolves: page:c3/workflows (declarations · schedule), page:c3/gha, page:c3/dagu (native DaguFragment), page:c3/logs (per-VM), page:c3/reports. The reports tile arrived from stack_topology byte-identical — same id, same icon, same target; only its host page changed.",
             "kind": "tile_row",
             "title": "Workflows · declarations",
-            "subtitle": "GHA · Dagu · logs per VM · reports",
+            "subtitle": "Health · GHA · Dagu · logs per VM · reports",
             "tiles": [
+              {
+                "id": "c3-health",
+                "label": "C3 health",
+                "icon": "ic_p_c3_health",
+                "target": "page:c3/health"
+              },
               {
                 "id": "workflows",
                 "label": "Workflows",
@@ -2763,14 +2769,8 @@
             "_doc": "The C3 pages that answer 'what the cloud IS'. These were declared in the old Cloud ▸ C3 tiles_c3 index and never once drawn, because that page declared a stack beside them and a stack always wins. Targets unchanged. The reports tile left this row for stack_observability — reports are what the cloud PRODUCES, not part of its shape.",
             "kind": "tile_row",
             "title": "Topology · inventory",
-            "subtitle": "Health · stack · VMs · mesh",
+            "subtitle": "Stack · VMs · mesh",
             "tiles": [
-              {
-                "id": "c3-health",
-                "label": "C3 health",
-                "icon": "ic_p_c3_health",
-                "target": "page:c3/health"
-              },
               {
                 "id": "c3-stack",
                 "label": "C3 stack",
