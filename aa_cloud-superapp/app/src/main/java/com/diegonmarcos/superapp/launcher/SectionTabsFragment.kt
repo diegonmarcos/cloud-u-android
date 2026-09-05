@@ -53,6 +53,11 @@ class SectionTabsFragment : Fragment(), Collapsible {
      *  never left sitting on a tab with no pane behind it. */
     private var lastContentTab = 0
 
+    /** The group hairline, if this strip has both kinds of tab. Held so the
+     *  width arithmetic can pay for it — it sits inside the strip but is not a
+     *  tab, so its width is not the tabs' to divide. */
+    private var groupDivider: View? = null
+
     /**
      * [Collapsible] — a bottom-nav re-tap lands on this wrapper (it is the
      * visible top fragment), so forward it to the ACTIVE pane's child. Panes
@@ -96,6 +101,24 @@ class SectionTabsFragment : Fragment(), Collapsible {
             AppTabsStyle.apply(this)
             equaliseTabs(this)
         }
+
+        // The `|` the strip reads with: Observability · Topology │ Watchdog ·
+        // Morpheus. It marks a real split — the left group NAVIGATES inside the
+        // app, the right group LEAVES it — which is worth seeing at a glance
+        // rather than inferring from four undifferentiated pills.
+        //
+        // Its position is DERIVED from the same blank/non-blank `action` split
+        // this file and [LauncherNavController.isTabbed] already turn on, so it
+        // tracks the strip instead of pinning an index that would rot the
+        // moment a fifth tab appeared.
+        //
+        // And it is a plain View inserted into TabLayout's own strip, NOT a tab
+        // with a "|" label: tabCount stays 4, so nothing selectable, focusable,
+        // reachable by [startIndex], recordable by recordActiveTab, or counted
+        // towards [MAX_PANES] is brought into being by drawing it.
+        pages.indexOfFirst { it.action.isNotBlank() }
+            .takeIf { it > 0 }
+            ?.let { addGroupDivider(tabs, it) }
 
         val panes = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -165,6 +188,48 @@ class SectionTabsFragment : Fragment(), Collapsible {
         })
 
         return root
+    }
+
+    /**
+     * Insert the group hairline BETWEEN tab [position]-1 and tab [position].
+     *
+     * TabLayout lays its tabs out in one internal LinearLayout — its only
+     * child — so a rule dropped into that at the right index sits between the
+     * two groups and moves with them. Going through [TabLayout.addTab] instead
+     * would have made the divider a tab, which is precisely what it must not
+     * be. The default selection indicator is already stripped to zero height
+     * by [AppTabsStyle], so nothing is measuring against child geometry.
+     */
+    private fun addGroupDivider(tabs: TabLayout, position: Int) {
+        val strip = tabs.getChildAt(0) as? LinearLayout ?: return
+        if (position > strip.childCount) return
+        val d = tabs.resources.displayMetrics.density
+        val rule = View(tabs.context).apply {
+            setBackgroundColor(DIVIDER_COLOR)
+            isClickable = false
+            isFocusable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            layoutParams = LinearLayout.LayoutParams(
+                (DIVIDER_W_DP * d).toInt().coerceAtLeast(1),
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            ).apply {
+                val side = (DIVIDER_MARGIN_DP * d).toInt()
+                val inset = (DIVIDER_INSET_DP * d).toInt()
+                setMargins(side, inset, side, inset)
+            }
+        }
+        strip.addView(rule, position)
+        groupDivider = rule
+    }
+
+    /** What the divider costs the row: its rule plus both margins. Zero when
+     *  the strip has no divider, so undivided strips measure as they always
+     *  did. */
+    private fun dividerWidth(): Int {
+        val v = groupDivider ?: return 0
+        val lp = v.layoutParams as? ViewGroup.MarginLayoutParams ?: return v.width
+        val w = if (v.width > 0) v.width else lp.width.coerceAtLeast(0)
+        return w + lp.leftMargin + lp.rightMargin
     }
 
     /** Which tab starts selected: the page a deep link or walk stop asked
@@ -244,7 +309,12 @@ class SectionTabsFragment : Fragment(), Collapsible {
     private fun applyEqualTabs(tabs: TabLayout) {
         val n = tabs.tabCount
         if (n == 0) return
-        val avail = tabs.width - tabs.paddingStart - tabs.paddingEnd
+        // The group divider lives in the strip but is not a tab, so its width
+        // is not the tabs' to divide. Take it off the top — otherwise every
+        // pill is sized as if the row were wider than it is and the whole
+        // thing overruns by exactly the hairline plus its margins, which is
+        // the same miss as forgetting the TabView chrome below.
+        val avail = tabs.width - tabs.paddingStart - tabs.paddingEnd - dividerWidth()
         if (avail <= 0) return
 
         // The pill custom view is what the eye sees; TabLayout's own TabView is
@@ -352,6 +422,14 @@ class SectionTabsFragment : Fragment(), Collapsible {
         private const val PILL_PAD_DP = 14f
         private const val PILL_MARGIN_DP = 3f
         private const val MIN_SP = 8f
+
+        /** The group hairline: 1dp of rule, the unselected pill's own border
+         *  colour so it reads as part of the strip rather than as chrome, and
+         *  a vertical inset so it is shorter than the pills it separates. */
+        private const val DIVIDER_W_DP = 1f
+        private const val DIVIDER_MARGIN_DP = 6f
+        private const val DIVIDER_INSET_DP = 10f
+        private const val DIVIDER_COLOR = 0x33FFFFFF
 
         /** Panes we have stable host ids for — see `values/ids.xml`. */
         const val MAX_PANES = 4
