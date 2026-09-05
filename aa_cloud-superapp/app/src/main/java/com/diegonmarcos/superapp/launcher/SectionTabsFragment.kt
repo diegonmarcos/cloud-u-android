@@ -53,9 +53,9 @@ class SectionTabsFragment : Fragment(), Collapsible {
      *  never left sitting on a tab with no pane behind it. */
     private var lastContentTab = 0
 
-    /** The group hairline, if this strip has both kinds of tab. Held so the
-     *  width arithmetic can pay for it — it sits inside the strip but is not a
-     *  tab, so its width is not the tabs' to divide. */
+    /** The "|" between the tab groups, if this strip has both kinds of tab.
+     *  Held so the width arithmetic can pay for it — it sits inside the strip
+     *  but is not a tab, so its width is not the tabs' to divide. */
     private var groupDivider: View? = null
 
     /**
@@ -112,10 +112,11 @@ class SectionTabsFragment : Fragment(), Collapsible {
         // tracks the strip instead of pinning an index that would rot the
         // moment a fifth tab appeared.
         //
-        // And it is a plain View inserted into TabLayout's own strip, NOT a tab
-        // with a "|" label: tabCount stays 4, so nothing selectable, focusable,
-        // reachable by [startIndex], recordable by recordActiveTab, or counted
-        // towards [MAX_PANES] is brought into being by drawing it.
+        // And it is inserted into TabLayout's own strip rather than added as a
+        // tab whose label happens to be "|": tabCount stays 4, so nothing
+        // selectable, focusable, reachable by [startIndex], recordable by
+        // recordActiveTab, or counted towards [MAX_PANES] is brought into
+        // being by drawing it.
         pages.indexOfFirst { it.action.isNotBlank() }
             .takeIf { it > 0 }
             ?.let { addGroupDivider(tabs, it) }
@@ -191,46 +192,50 @@ class SectionTabsFragment : Fragment(), Collapsible {
     }
 
     /**
-     * Insert the group hairline BETWEEN tab [position]-1 and tab [position].
+     * Put a literal "|" BETWEEN tab [position]-1 and tab [position].
+     *
+     * It is a CHARACTER, not a rule. The first attempt drew a 1dp View at
+     * [ViewGroup.LayoutParams.MATCH_PARENT] height, and a full-height line
+     * across the strip does not read as punctuation between two words — it
+     * reads as the row having been cut in half, which is what it looked like
+     * on the device. A "|" set in the tabs' own type is the separator the ask
+     * described, and it cannot be "too big" because it is exactly as tall as
+     * the letters beside it.
      *
      * TabLayout lays its tabs out in one internal LinearLayout — its only
-     * child — so a rule dropped into that at the right index sits between the
-     * two groups and moves with them. Going through [TabLayout.addTab] instead
-     * would have made the divider a tab, which is precisely what it must not
-     * be. The default selection indicator is already stripped to zero height
-     * by [AppTabsStyle], so nothing is measuring against child geometry.
+     * child — so a view dropped into that at the right index sits between the
+     * two groups and moves with them. Going through [TabLayout.addTab] would
+     * have made it a tab, which is precisely what it must not be.
      */
     private fun addGroupDivider(tabs: TabLayout, position: Int) {
         val strip = tabs.getChildAt(0) as? LinearLayout ?: return
         if (position > strip.childCount) return
-        val d = tabs.resources.displayMetrics.density
-        val rule = View(tabs.context).apply {
-            setBackgroundColor(DIVIDER_COLOR)
+        val pad = (DIVIDER_PAD_DP * tabs.resources.displayMetrics.density).toInt()
+        val bar = android.widget.TextView(tabs.context).apply {
+            text = "|"
+            // The pills' own type and dimmed label colour (AppTabsStyle's
+            // unselected text), so it belongs to the row rather than sitting
+            // on top of it as chrome.
+            typeface = android.graphics.Typeface.create(
+                android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
+            textSize = 12f
+            setTextColor(0xAAFFFFFFL.toInt())
+            setPadding(pad, 0, pad, 0)
             isClickable = false
             isFocusable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             layoutParams = LinearLayout.LayoutParams(
-                (DIVIDER_W_DP * d).toInt().coerceAtLeast(1),
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            ).apply {
-                val side = (DIVIDER_MARGIN_DP * d).toInt()
-                val inset = (DIVIDER_INSET_DP * d).toInt()
-                setMargins(side, inset, side, inset)
-            }
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ).apply { gravity = android.view.Gravity.CENTER_VERTICAL }
         }
-        strip.addView(rule, position)
-        groupDivider = rule
+        strip.addView(bar, position)
+        groupDivider = bar
     }
 
-    /** What the divider costs the row: its rule plus both margins. Zero when
-     *  the strip has no divider, so undivided strips measure as they always
-     *  did. */
-    private fun dividerWidth(): Int {
-        val v = groupDivider ?: return 0
-        val lp = v.layoutParams as? ViewGroup.MarginLayoutParams ?: return v.width
-        val w = if (v.width > 0) v.width else lp.width.coerceAtLeast(0)
-        return w + lp.leftMargin + lp.rightMargin
-    }
+    /** What the "|" costs the row. Zero when the strip has no divider, so
+     *  undivided strips measure exactly as they always did. */
+    private fun dividerWidth(): Int = groupDivider?.width ?: 0
 
     /** Which tab starts selected: the page a deep link or walk stop asked
      *  for, else the persisted Apps/Admin mode when this section has a page
@@ -309,11 +314,12 @@ class SectionTabsFragment : Fragment(), Collapsible {
     private fun applyEqualTabs(tabs: TabLayout) {
         val n = tabs.tabCount
         if (n == 0) return
-        // The group divider lives in the strip but is not a tab, so its width
-        // is not the tabs' to divide. Take it off the top — otherwise every
-        // pill is sized as if the row were wider than it is and the whole
-        // thing overruns by exactly the hairline plus its margins, which is
-        // the same miss as forgetting the TabView chrome below.
+        // The "|" lives in the strip but is not a tab, so its width is not the
+        // tabs' to divide. One glyph is small, but it is not free: MODE_FIXED
+        // shares what is LEFT after it among the TabViews, while the pills
+        // below are sized from this figure — so skipping the subtraction sizes
+        // every pill a few px wider than the TabView holding it and the text
+        // clips. One term, same miss as forgetting the TabView chrome below.
         val avail = tabs.width - tabs.paddingStart - tabs.paddingEnd - dividerWidth()
         if (avail <= 0) return
 
@@ -423,13 +429,9 @@ class SectionTabsFragment : Fragment(), Collapsible {
         private const val PILL_MARGIN_DP = 3f
         private const val MIN_SP = 8f
 
-        /** The group hairline: 1dp of rule, the unselected pill's own border
-         *  colour so it reads as part of the strip rather than as chrome, and
-         *  a vertical inset so it is shorter than the pills it separates. */
-        private const val DIVIDER_W_DP = 1f
-        private const val DIVIDER_MARGIN_DP = 6f
-        private const val DIVIDER_INSET_DP = 10f
-        private const val DIVIDER_COLOR = 0x33FFFFFF
+        /** Breathing room either side of the "|" — typographic spacing, not
+         *  structure. Everything else about the separator is just the glyph. */
+        private const val DIVIDER_PAD_DP = 4f
 
         /** Panes we have stable host ids for — see `values/ids.xml`. */
         const val MAX_PANES = 4
