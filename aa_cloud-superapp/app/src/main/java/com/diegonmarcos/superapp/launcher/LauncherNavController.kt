@@ -166,17 +166,21 @@ class LauncherNavController(private val host: NavHost) {
      * grid of page icons. Declared per section via build.json `tabs`, so no
      * section id is named here.
      *
-     * Two guards on top of the flag. Action pages dispatch a target instead of
-     * producing a fragment, so they have nothing to put in a pane. And past
-     * [SectionTabsFragment.MAX_PANES] there are no stable pane host ids left —
-     * such a section falls through to the page grid, which on a tablet already
-     * IS page icons on the left with the one you pick rendered on the right
-     * (configs' 12 pages, mail's 9, tools' 8).
+     * One guard on top of the flag: TWO pages that can actually fill a pane.
+     * An action page dispatches a target instead of producing a fragment, so
+     * it cannot be counted towards that — but it no longer DISQUALIFIES the
+     * section either. It used to: C3's Watchdog and Morpheus launch tabs would
+     * have silently demoted the whole strip back to a page grid. The strip
+     * gives such a page a tab and no pane (see [SectionTabsFragment]), which is
+     * the behaviour that was missing, not a reason to bail out.
+     *
+     * Past [SectionTabsFragment.MAX_PANES] there are no stable pane host ids
+     * left — such a section falls through to the page grid, which on a tablet
+     * already IS page icons on the left with the one you pick rendered on the
+     * right (configs' 12 pages, mail's 9, tools' 8).
      */
     private fun isTabbed(section: Sections.Section): Boolean =
-        section.tabs &&
-            section.pages.size >= 2 &&
-            section.pages.none { it.action.isNotBlank() }
+        section.tabs && section.pages.count { it.action.isBlank() } >= 2
 
     fun openSectionPage(sectionId: String, pageId: String, args: Bundle? = null) {
         // Establish the section grid as the back-stack BASE *first*, so Back from

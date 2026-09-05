@@ -48,6 +48,11 @@ class SectionTabsFragment : Fragment(), Collapsible {
      *  to when several are on screen. */
     private var activePane = 0
 
+    /** Position of the last tab that actually HAS content. A launch tab hands
+     *  selection back to this one the moment it has fired, so the strip is
+     *  never left sitting on a tab with no pane behind it. */
+    private var lastContentTab = 0
+
     /**
      * [Collapsible] — a bottom-nav re-tap lands on this wrapper (it is the
      * visible top fragment), so forward it to the ACTIVE pane's child. Panes
@@ -64,9 +69,15 @@ class SectionTabsFragment : Fragment(), Collapsible {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
         val pages = Sections.byId(sectionId)?.pages.orEmpty()
+        // A page that declares an `action` is a LAUNCH tab, not a destination:
+        // C3's Watchdog and Morpheus fire `extapp:` and leave the app. It wears
+        // a tab so the strip reads Observability | Topology | Watchdog |
+        // Morpheus, but it has no fragment, so it never claims a pane.
+        val panePages = pages.filter { it.action.isBlank() }
         val twoPane = (activity as? ShellActivity)?.isTwoPane() == true
-        // One pane per page on a tablet; phones keep the single swapping pane.
-        val paneCount = if (twoPane) pages.size.coerceIn(1, MAX_PANES) else 1
+        // One pane per content page on a tablet; phones keep the single
+        // swapping pane.
+        val paneCount = if (twoPane) panePages.size.coerceIn(1, MAX_PANES) else 1
 
         val root = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -104,10 +115,11 @@ class SectionTabsFragment : Fragment(), Collapsible {
 
         val start = startIndex(pages)
         activePane = start
+        lastContentTab = start
         if (paneCount > 1) {
-            // Every page is on screen at once — fill each pane from its own
-            // page and leave them alone; the tabs only move [activePane].
-            pages.take(paneCount).forEachIndexed { i, p -> render(i, p.id) }
+            // Every content page is on screen at once — fill each pane from its
+            // own page and leave them alone; the tabs only move [activePane].
+            panePages.take(paneCount).forEachIndexed { i, p -> render(i, p.id) }
         } else {
             // Phone: one pane, so the selected tab is also the rendered page.
             pages.getOrNull(start)?.let { render(0, it.id) }
@@ -124,6 +136,21 @@ class SectionTabsFragment : Fragment(), Collapsible {
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
                 val page = pages.getOrNull(tab.position) ?: return
+                // Launch tab — a BUTTON wearing a tab. Dispatch its target
+                // through the same grammar a tile uses (so `extapp:` gets the
+                // existing installed→open, absent→offer-the-APK behaviour for
+                // free) and give the selection straight back to the tab the
+                // user was reading: leaving the app must not also leave the
+                // strip parked on an empty tab, which is what the user would
+                // come back to.
+                if (page.action.isNotBlank()) {
+                    (activity as? ShellActivity)?.dispatchTarget(page.action)
+                    tabs.getTabAt(lastContentTab)
+                        ?.takeIf { it != tab }
+                        ?.let { back -> tabs.post { back.select() } }
+                    return
+                }
+                lastContentTab = tab.position
                 activePane = if (paneCount > 1) tab.position.coerceAtMost(paneCount - 1) else 0
                 // An Apps/Admin tab also SETS the global mode, so the Home
                 // grid, drawer and bottom-nav icon variants follow it. Fired
@@ -142,11 +169,15 @@ class SectionTabsFragment : Fragment(), Collapsible {
 
     /** Which tab starts selected: the page a deep link or walk stop asked
      *  for, else the persisted Apps/Admin mode when this section has a page
-     *  named for it, else the first page. */
+     *  named for it, else the first page. Never a launch tab — landing on one
+     *  would fire its external app on arrival, so those are skipped here and
+     *  only reachable by an explicit tap. */
     private fun startIndex(pages: List<Sections.Page>): Int {
         val wanted = arguments?.getString(ARG_INITIAL_PAGE).orEmpty()
             .ifBlank { ModePrefs(requireContext()).mode }
-        return pages.indexOfFirst { it.id == wanted }.takeIf { it >= 0 } ?: 0
+        return pages.indexOfFirst { it.id == wanted && it.action.isBlank() }
+            .takeIf { it >= 0 }
+            ?: pages.indexOfFirst { it.action.isBlank() }.coerceAtLeast(0)
     }
 
     /** Commit page [pageId] into pane [index], reusing the nav controller's
