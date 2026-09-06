@@ -3,8 +3,7 @@
   "_schema": "mcp-servers/v1",
   "_doc": "Project-scoped MCP servers for Claude Code. In cloud, 9_others/build.sh refreshes src/apps/root/mcp.json from THIS file and deploys it to .mcp.json, so regenerating the derive is enough. In the other repos the copy under 0_apps/src/root/ is propagated by hand — nothing automates that hop, and it is how vault ended up without the cloud-infra-mcp headersHelper while cloud had it. Re-sync after changing this file.",
   "_skipped": [
-    "infra-api_cloud-superapp-mcp (stdio)",
-    "infra-api_cloud-vault-mcp (stdio)"
+    "infra-api_cloud-vault-mcp (not publicly routed)"
   ],
   "mcpServers": {
     "cloud-cgc-pub-mcp": {
@@ -34,6 +33,10 @@
     "cloud-services-mcp": {
       "type": "http",
       "url": "https://mcp.diegonmarcos.com/c3-services-mcp/mcp"
+    },
+    "cloud-superapp-mcp": {
+      "type": "http",
+      "url": "https://mcp.diegonmarcos.com/cloud-superapp-mcp/mcp"
     },
     "google-personal-mcp": {
       "type": "http",
