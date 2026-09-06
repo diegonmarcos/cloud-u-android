@@ -68,7 +68,7 @@ echo "== T3: credentials CANNOT enter the sync payload =="
 has "$SYNC" 'put("profile", enforceAllowlist(' "profile object passes the allowlist filter"
 has "$SYNC" "private val ALLOWED_PROFILE_KEYS" "an explicit allowlist exists"
 # 3b — belt and braces: the allowlist itself must not name a credential.
-for forbidden in authelia_token authelia_email bearer token private_key privkey if_privkey secret wireguard; do
+for forbidden in authelia_token authelia_email bearer token private_key privkey if_privkey secret wireguard otp 2fa mail_code; do
     if awk '/private val ALLOWED_PROFILE_KEYS/,/\)/' "$ROOT/$SYNC" | grep -qF "$forbidden"; then
         bad "ALLOWED_PROFILE_KEYS must not contain '$forbidden'"
     else
@@ -194,6 +194,79 @@ else
 fi
 hasnt_code "$SYNC" "autheliaEmail" "ProfileSync never reads the paired address"
 hasnt_code "$SYNC" "credential"    "ProfileSync never reads the credential pair"
+
+echo "== T10: the Connect | Info split, and the mailed 2FA code is never stored =="
+# The screen is two tabs now. What must survive the split is WHERE each field
+# is stored, not where it is drawn — so these assert the placement AND that
+# nothing gained a store on the way across.
+has "$FRAGMENT" 'newTab().setText("Connect")' "Connect tab exists"
+has "$FRAGMENT" 'newTab().setText("Info")'    "Info tab exists"
+# The existing pill idiom, not a second tab mechanism.
+has "$FRAGMENT" "AppTabsStyle.apply"          "reuses the launcher's pill chrome"
+# ...but NOT the child-fragment machinery behind it. SectionTabsFragment swaps
+# fragments into a fixed pool of pane host ids, and this screen rebuilds itself
+# with detach/attach after every pick, link, clear, erase and import — the
+# exact sequence that leaves such a pane blank. Both tabs are inline views.
+hasnt_code "$FRAGMENT" "childFragmentManager"      "the tabs use no child fragments"
+hasnt_code "$FRAGMENT" "SectionTabsFragment"       "no second tab mechanism"
+hasnt_code "$FRAGMENT" "R.id.section_pane"         "no pane host ids are borrowed"
+# A redraw must not throw the user back to tab 1.
+has "$FRAGMENT" "private var selectedTab"          "the selected tab survives a redraw"
+
+# Connect carries the paired credential; Mesh Data carries the tunnel key.
+has "$FRAGMENT" 'connect.addView(label(ctx, "Account email"))'          "account email is on Connect"
+has "$FRAGMENT" 'connect.addView(label(ctx, "Authelia bearer token"))'  "bearer is on Connect"
+has "$FRAGMENT" 'col.addView(label(ctx, "WireGuard private key"))'      "WG key is on Info · Mesh Data"
+has "$FRAGMENT" 'col.addView(label(ctx, "Provider"))'                   "Provider is on Info · Mesh Data"
+has "$FRAGMENT" 'sectionHeader(ctx, "Personal Data")'                   "Info has a Personal Data section"
+has "$FRAGMENT" 'sectionHeader(ctx, "Mesh Data'                         "Info has a Mesh Data section"
+has "$FRAGMENT" 'sectionHeader(ctx, "Imports")'                         "Info has an Imports section"
+# The orphan-token affordance must stay reachable after the move.
+has "$FRAGMENT" 'connect.addView(pickButton(ctx, "Link the stored token to this address")' \
+    "the orphan-token link affordance survived the split"
+
+# WHAT THE NEW FIELD IS. This fleet's Authelia enables webauthn + totp and no
+# duo_api, so there is no email second FACTOR; notifier.smtp exists only to
+# deliver the identity-validation one-time code for enrolling a factor or
+# resetting a password. The box therefore takes a TRANSIENT CODE, not a seed —
+# and a transient code that gets persisted is a stored value that expired
+# minutes ago, while a seed that gets persisted is a permanent second factor
+# sitting next to the bearer. Neither may happen.
+has "$FRAGMENT" 'label(ctx, "Mail 2FA confirmation code")' "the mail 2FA field exists"
+# No seed anywhere: the code is not a secret to keep, and nothing may start
+# keeping one.
+hasnt_code "$CONFIGS_PREFS" "totp"        "ConfigsPrefs stores no TOTP seed"
+hasnt_code "$CONFIGS_PREFS" "K_2FA"       "ConfigsPrefs has no 2FA key"
+hasnt_code "$PREFS"         "2fa"         "ProfilePrefs holds no 2FA value"
+hasnt "build.json" '"totp_secret"'        "build.json seeds no TOTP secret"
+# The field has NO save lambda and NO watcher — that is the whole mechanism by
+# which it is not persisted, so assert it directly rather than trusting prose.
+if awk '/private fun mailConfirmationField/,/^        }$/' "$ROOT/$FRAGMENT" \
+     | grep -qE 'addTextChangedListener|Prefs\('; then
+    bad "mailConfirmationField() must not save what is typed into it"
+else
+    ok "the mailed code has no watcher and no store"
+fi
+# ...and the one place it IS read must only reach the clipboard.
+if awk '/private fun confirmMailCode/,/^    }$/' "$ROOT/$FRAGMENT" | grep -qE 'ConfigsPrefs|ProfilePrefs|WireGuardPrefs'; then
+    bad "confirmMailCode() must not write the code to any store"
+else
+    ok "the mailed code reaches no preference store"
+fi
+if awk '/private fun confirmMailCode/,/^    }$/' "$ROOT/$FRAGMENT" | grep -qF 'field.setText("")'; then
+    ok "a used code is cleared from the box"
+else
+    bad "confirmMailCode() must clear the box after use"
+fi
+if awk '/fun onDestroyView/,/^    }$/' "$ROOT/$FRAGMENT" | grep -qF "mailCodeField = null"; then
+    ok "the mailed code dies with the view"
+else
+    bad "onDestroyView() must drop the mailed code"
+fi
+# And it must not have opened a new route into the payload.
+hasnt_code "$SYNC" "mailCode"     "ProfileSync never reads the mailed code"
+hasnt_code "$SYNC" "confirmation" "ProfileSync carries no confirmation field"
+hasnt_code "$IMPORT" "mail_code"  "the auto-import writes no 2FA code"
 
 echo
 echo "PASS=$PASS FAIL=$FAIL"

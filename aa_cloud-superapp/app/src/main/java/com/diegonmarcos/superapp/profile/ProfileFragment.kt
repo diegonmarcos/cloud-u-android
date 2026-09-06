@@ -15,9 +15,11 @@ import android.widget.Spinner
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.diegonmarcos.superapp.launcher.AppTabsStyle
 import com.diegonmarcos.superapp.network.WireGuardPrefs
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import com.diegonmarcos.superapp.ui.snack
+import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -53,6 +55,10 @@ class ProfileFragment : Fragment() {
      *  refresh it without rebuilding the form (which would drop focus). */
     private var statusBanner: TextView? = null
 
+    /** Which of the two tabs is showing. Held on the fragment so the many
+     *  detach/attach redraws below do not bounce the user back to Connect. */
+    private var selectedTab = 0
+
     /** Gallery picker for the profile photo (round avatar). */
     private val picturePicker =
         registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
@@ -68,14 +74,25 @@ class ProfileFragment : Fragment() {
         val ctx = inflater.context
         prefs = ProfilePrefs(ctx)
 
-        val scroll = ScrollView(ctx).apply {
-            isFillViewport = true
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
-        }
-        val col = LinearLayout(ctx).apply {
+        // TWO TABS, ONE FRAGMENT, NO CHILD FRAGMENTS.
+        //
+        // The launcher's tabbed sections ([SectionTabsFragment]) swap CHILD
+        // FRAGMENTS into a fixed pool of pane host ids. That is right for a
+        // section — it is driven by build.json::ui.sections[].pages[], and a
+        // page with a blank `action` is what [LauncherNavController.isTabbed]
+        // counts — but it is the wrong machinery here twice over: Profile is a
+        // page, not a section, so wiring it that way would mean inventing
+        // build.json pages purely to get a strip; and this screen REBUILDS
+        // ITSELF (detach/attach) after every image pick, token link, credential
+        // clear, erase and import, which is exactly the sequence that leaves a
+        // fixed-id pane blank when the re-commit lands on a host that is still
+        // occupied.
+        //
+        // So the pages are plain columns built inline and toggled by
+        // visibility — the same answer the RSS pages reached — and only the
+        // pill CHROME is shared, through [AppTabsStyle]. Nothing here touches
+        // build.json, the host-id pool, or MAX_PANES.
+        val page = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             val pad = dp(ctx, 18); setPadding(pad, pad, pad, pad)
             layoutParams = ViewGroup.LayoutParams(
@@ -83,9 +100,32 @@ class ProfileFragment : Fragment() {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             )
         }
-        scroll.addView(col)
+        val scroll = ScrollView(ctx).apply {
+            isFillViewport = true
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f,
+            )
+        }
+        scroll.addView(page)
 
-        col.addView(sectionHeader(ctx, "Profile"))
+        // `connect` is tab 1; `col` is tab 2 and keeps its name so every field
+        // that is only MOVING between tabs keeps its existing call site.
+        val connect = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        page.addView(connect)
+        page.addView(col)
+
+        val root = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
+        }
+        root.addView(tabStrip(ctx, connect, col))
+        root.addView(scroll)
+
+        col.addView(sectionHeader(ctx, "Personal Data"))
         col.addView(caption(ctx, "Edit your contact card — auto-saved on change. Your initials in the drawer are derived from your name; the rest powers the Virtual Business Card."))
 
         // Persistent completeness banner — enforcement step 2. Added first so
@@ -170,50 +210,38 @@ class ProfileFragment : Fragment() {
             bannerPicker.launch("image/*")
         })
 
-        // ── Credentials ──────────────────────────────────────────────────
-        // Deliberately BELOW the contact card and visibly separated from it:
-        // everything above this header is synced, nothing below it ever is.
-        col.addView(sectionHeader(ctx, "Credentials  (this device only)"))
-        col.addView(caption(ctx, CREDENTIALS_TEXT))
-
-        col.addView(label(ctx, "Provider"))
-        col.addView(providerSelector(ctx))
-        col.addView(caption(ctx, PROVIDER_TEXT))
-        col.addView(pickButton(ctx, "Generate this device's key pair") {
-            confirmGenerateKeyPair()
-        })
+        // ── Connect (tab 1) ──────────────────────────────────────────────
+        // Two stored fields and the code that confirms them, and nothing else.
+        // Everything on this tab is a way IN; none of it is ever synced.
+        connect.addView(sectionHeader(ctx, "Connect  (this device only)"))
+        connect.addView(caption(ctx, CONNECT_TEXT))
 
         // ONE address for this section. It is the account the bearer belongs
         // to AND the "user" the provider request asked for — those are the
         // same identity, so a second box would only invite them to disagree.
-        col.addView(label(ctx, "Account email"))
-        col.addView(autheliaEmailEditor(ctx))
+        connect.addView(label(ctx, "Account email"))
+        connect.addView(autheliaEmailEditor(ctx))
 
-        col.addView(label(ctx, "Authelia bearer token"))
-        col.addView(secretField(
+        connect.addView(label(ctx, "Authelia bearer token"))
+        connect.addView(secretField(
             ctx,
             stored = { ConfigsPrefs(ctx).autheliaToken.isNotBlank() },
             save = { saveAutheliaToken(it) },
         ))
-        col.addView(clearSecretButton(ctx, "Authelia bearer token") {
+        connect.addView(clearSecretButton(ctx, "Authelia bearer token") {
             ConfigsPrefs(ctx).clearAutheliaCredential()
         })
         if (ConfigsPrefs(ctx).hasOrphanToken()) {
-            col.addView(caption(ctx, ORPHAN_TOKEN_TEXT))
-            col.addView(pickButton(ctx, "Link the stored token to this address") {
+            connect.addView(caption(ctx, ORPHAN_TOKEN_TEXT))
+            connect.addView(pickButton(ctx, "Link the stored token to this address") {
                 linkOrphanToken()
             })
         }
 
-        col.addView(label(ctx, "WireGuard private key"))
-        col.addView(secretField(
-            ctx,
-            stored = { WireGuardPrefs(ctx).interfacePrivateKey.isNotBlank() },
-            save = { WireGuardPrefs(ctx).interfacePrivateKey = it },
-        ))
-        col.addView(clearSecretButton(ctx, "WireGuard private key") {
-            WireGuardPrefs(ctx).interfacePrivateKey = ""
-        })
+        connect.addView(label(ctx, "Mail 2FA confirmation code"))
+        connect.addView(mailConfirmationField(ctx))
+        connect.addView(caption(ctx, MAIL_2FA_TEXT))
+        connect.addView(pickButton(ctx, "Confirm in Authelia") { confirmMailCode() })
 
         // ── Privacy ──────────────────────────────────────────────────────
         // Disclosure lives on the collecting screen on purpose: "what is held
@@ -226,13 +254,37 @@ class ProfileFragment : Fragment() {
             confirmErase()
         })
 
-        // ── Config import ────────────────────────────────────────────────
+        // ── Mesh Data ────────────────────────────────────────────────────
+        // The tunnel's own configuration: the Provider preset fills the PUBLIC
+        // half, and the private key — the one field no preset may ever carry —
+        // is generated or pasted here.
+        col.addView(sectionHeader(ctx, "Mesh Data  (this device only)"))
+        col.addView(caption(ctx, MESH_TEXT))
+
+        col.addView(label(ctx, "Provider"))
+        col.addView(providerSelector(ctx))
+        col.addView(caption(ctx, PROVIDER_TEXT))
+        col.addView(pickButton(ctx, "Generate this device's key pair") {
+            confirmGenerateKeyPair()
+        })
+
+        col.addView(label(ctx, "WireGuard private key"))
+        col.addView(secretField(
+            ctx,
+            stored = { WireGuardPrefs(ctx).interfacePrivateKey.isNotBlank() },
+            save = { WireGuardPrefs(ctx).interfacePrivateKey = it },
+        ))
+        col.addView(clearSecretButton(ctx, "WireGuard private key") {
+            WireGuardPrefs(ctx).interfacePrivateKey = ""
+        })
+
+        // ── Imports ──────────────────────────────────────────────────────
         // All five entries live HERE. "Import Configs" used to be its own
         // Configs-grid tile (build.json::ui.sections[config].pages[import],
         // action:import_configs) — the tile is gone and the action route it
         // used is reused verbatim below, so the launcher shortcut and the
         // radial menu still reach the same screen.
-        col.addView(sectionHeader(ctx, "Config import"))
+        col.addView(sectionHeader(ctx, "Imports"))
         col.addView(caption(ctx, "One artifact, five ways in. The manual route is its own row; the four below differ only in how they prove who you are — Authelia by pasted token or by browser login, GitHub by login or by SSH key. All of them end in the same apply step, so whichever you use, the same sections are written."))
 
         // Row 1 — the manual route, alone and full width. It is the only entry
@@ -264,7 +316,128 @@ class ProfileFragment : Fragment() {
         })
         col.addView(authRow)
 
-        return scroll
+        return root
+    }
+
+    // ── tabs ─────────────────────────────────────────────────────────────
+
+    /**
+     * The Connect | Info strip.
+     *
+     * Two plain columns swapped by visibility — no child fragments, no pane
+     * host ids, no build.json pages (see the note in [onCreateView]). It reuses
+     * [AppTabsStyle] so the pills read exactly like the launcher's section
+     * strips, which is the whole of what that idiom is worth here.
+     *
+     * The selection is held on the FRAGMENT, not the view, because this screen
+     * redraws itself with detach/attach — which destroys the view and keeps the
+     * instance. Without that the user would be thrown back to Connect every
+     * time they picked a photo from the Info tab.
+     */
+    private fun tabStrip(
+        ctx: android.content.Context,
+        connect: View,
+        info: View,
+    ): TabLayout {
+        fun show(index: Int) {
+            connect.visibility = if (index == 0) View.VISIBLE else View.GONE
+            info.visibility = if (index == 0) View.GONE else View.VISIBLE
+        }
+        show(selectedTab)
+        return TabLayout(ctx).apply {
+            addTab(newTab().setText("Connect"))
+            addTab(newTab().setText("Info"))
+            tabMode = TabLayout.MODE_FIXED
+            tabGravity = TabLayout.GRAVITY_FILL
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            )
+            addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+                override fun onTabSelected(tab: TabLayout.Tab) {
+                    selectedTab = tab.position
+                    show(tab.position)
+                }
+                override fun onTabUnselected(tab: TabLayout.Tab) = Unit
+                override fun onTabReselected(tab: TabLayout.Tab) = Unit
+            })
+            // Styled AFTER the tabs exist — the helper builds a pill per tab.
+            AppTabsStyle.apply(this)
+            getTabAt(selectedTab)?.select()
+        }
+    }
+
+    // ── mail 2FA confirmation ────────────────────────────────────────────
+
+    /**
+     * The one-time code Authelia MAILS, and the one field on this screen that
+     * is deliberately not stored anywhere at all.
+     *
+     * WHAT THIS IS, because guessing wrong here leaks a seed. This fleet's
+     * Authelia enables exactly two second factors — `webauthn` (the default)
+     * and `totp` — and no `duo_api`. Authelia has no email second factor, so
+     * "mail 2FA" cannot be a login factor. What it does have is
+     * `notifier.smtp`, pointed at maddy on the mesh, and that transport exists
+     * for ONE purpose: the identity-validation message Authelia sends to the
+     * account address when a new TOTP or WebAuthn device is enrolled, or a
+     * password is reset. So this box takes THAT code.
+     *
+     * Consequences, both of which are the point:
+     *  • it is NOT a TOTP seed, so it must never reach [ConfigsPrefs] — a seed
+     *    saved here would be a permanent second factor sitting on the device
+     *    next to the bearer it is supposed to be independent of;
+     *  • it is a code with minutes of life and one use, so persisting it would
+     *    store something already expired. It therefore has NO TextWatcher and
+     *    no save lambda: it lives in the view, is cleared the moment it is
+     *    used, and is dropped with the view.
+     */
+    private fun mailConfirmationField(ctx: android.content.Context): EditText =
+        EditText(ctx).apply {
+            hint = "code from the Authelia email"
+            setSingleLine()
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            imeOptions = android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+            importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
+            mailCodeField = this
+        }
+
+    /** Live handle to the code box. Never read into prefs — only into the
+     *  clipboard, and only on an explicit tap. */
+    private var mailCodeField: EditText? = null
+
+    /**
+     * Hand the code to Authelia's own page, which is the only thing that can
+     * check it.
+     *
+     * The portal is mesh-only and this fleet routes no `/api/secondfactor`
+     * anywhere the app could reach, so there is nothing to POST to and no
+     * pretending otherwise: the code goes to the clipboard (flagged sensitive
+     * where the platform supports it) and the existing browser-login WebView
+     * opens on the confirmation page. The box is emptied straight away, so a
+     * used code is not left sitting on screen.
+     */
+    private fun confirmMailCode() {
+        val field = mailCodeField ?: return
+        val code = field.text?.toString()?.trim().orEmpty()
+        if (code.isEmpty()) {
+            field.error = "Paste the code Authelia emailed you."
+            return
+        }
+        val ctx = requireContext()
+        val clip = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+            as android.content.ClipboardManager
+        val item = android.content.ClipData.newPlainText("Authelia confirmation code", code)
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            item.description.extras = android.os.PersistableBundle().apply {
+                putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
+            }
+        }
+        clip.setPrimaryClip(item)
+        field.setText("")
+        field.error = null
+        showAutheliaWebAuthDialog()
+        view?.snack("Code copied — paste it into the Authelia page")
     }
 
     /** Retry a queued upload whenever this screen comes back — a plausible
@@ -290,6 +463,8 @@ class ProfileFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         statusBanner = null
+        // The mailed code is never stored; it dies with the view that held it.
+        mailCodeField = null
     }
 
     // ── mandatory-field enforcement ──────────────────────────────────────
@@ -1219,8 +1394,8 @@ class ProfileFragment : Fragment() {
          * Says where each credential actually goes, because "it is stored
          * securely" is the sentence that stops anyone checking.
          */
-        private const val CREDENTIALS_TEXT =
-            "Neither of these is part of your profile and neither is ever uploaded — " +
+        private const val CONNECT_TEXT =
+            "None of this is part of your profile and none of it is ever uploaded — " +
             "the sync document carries contact fields only.\n\n" +
             "The Authelia bearer goes into the same encrypted store the config import " +
             "writes (AES-256-GCM, key in the Android keystore), at the same " +
@@ -1232,9 +1407,31 @@ class ProfileFragment : Fragment() {
             "access it carries — which is exactly what you need to know when a " +
             "request comes back refused. A token with no address is treated as not " +
             "stored at all.\n\n" +
+            "Stored values are never displayed again. An empty box means unchanged."
+
+        /**
+         * What the third box takes, stated in full because the wrong answer is
+         * a permanently stored second factor.
+         */
+        private const val MAIL_2FA_TEXT =
+            "This is the one-time code Authelia EMAILS you — the message it sends to " +
+            "your account address when you enrol a new second factor or reset your " +
+            "password. It is NOT your authenticator's secret, and nothing on this " +
+            "screen will ever ask you for one.\n\n" +
+            "It is not saved. The code is good for a few minutes and one use, so " +
+            "storing it would only keep something already expired. It is copied to " +
+            "the clipboard, the Authelia page opens for you to paste it into, and " +
+            "the box is emptied — nothing reaches this device's storage and nothing " +
+            "reaches the sync document."
+
+        /**
+         * The tunnel half of what used to be one Credentials block.
+         */
+        private const val MESH_TEXT =
             "The WireGuard private key is written straight to the tunnel's own " +
             "settings — the very field Configs → WireGuard edits. It is not copied " +
-            "here; typing in this box changes the key the tunnel connects with.\n\n" +
+            "here; typing in this box changes the key the tunnel connects with. It " +
+            "is never uploaded, and no preset ever fills it.\n\n" +
             "Stored values are never displayed again. An empty box means unchanged."
 
         /**
