@@ -1201,7 +1201,7 @@ public class JmapSync {
                 break;
 
             EntityMessage message = (op.message == null ? null : db.message().getMessage(op.message));
-            SetBatch shape = describeBatch(op, message, mailboxToFolder);
+            SetBatch shape = describeBatch(op, message, mailboxToFolder, mailboxId);
 
             if (shape != null && batch != null && shape.key.equals(batch.key)
                     && batch.ops.size() < batch.max) {
@@ -1244,7 +1244,7 @@ public class JmapSync {
                             long target = new org.json.JSONArray(op.args).getLong(0);
                             String targetMailbox = mailboxForFolder(mailboxToFolder, target);
                             if (targetMailbox != null)
-                                jmap.moveToMailbox(ids, targetMailbox);
+                                jmap.moveToMailbox(ids, targetMailbox, mailboxId);
                         }
                         break;
                     case EntityOperation.DELETE:
@@ -1305,6 +1305,7 @@ public class JmapSync {
         boolean value;   // SEEN / FLAG / KEYWORD boolean
         String keyword;  // KEYWORD name
         String mailbox;  // MOVE target mailbox id
+        String sourceMailbox; // MOVE source mailbox id (the folder this batch is draining)
         int max = SET_BATCH_MAX;
         final List<EntityOperation> ops = new ArrayList<>();
         final List<String> ids = new ArrayList<>();
@@ -1326,7 +1327,7 @@ public class JmapSync {
     // malformed args, unresolvable move target) so the single-op path below
     // handles it exactly as before.
     private static SetBatch describeBatch(EntityOperation op, EntityMessage message,
-                                          Map<String, Long> mailboxToFolder) {
+                                          Map<String, Long> mailboxToFolder, String mailboxId) {
         if (message == null || message.uidl == null || op.name == null)
             return null;
         SetBatch b = new SetBatch();
@@ -1353,6 +1354,7 @@ public class JmapSync {
                     b.mailbox = mailboxForFolder(mailboxToFolder, target);
                     if (b.mailbox == null)
                         return null;
+                    b.sourceMailbox = mailboxId;
                     b.key = "MOVE:" + b.mailbox;
                     return b;
                 }
@@ -1396,7 +1398,7 @@ public class JmapSync {
                     jmap.setKeyword(batch.ids, batch.keyword, batch.value);
                     break;
                 case EntityOperation.MOVE:
-                    jmap.moveToMailbox(batch.ids, batch.mailbox);
+                    jmap.moveToMailbox(batch.ids, batch.mailbox, batch.sourceMailbox);
                     break;
                 case EntityOperation.DELETE:
                     jmap.deleteMessages(batch.ids);

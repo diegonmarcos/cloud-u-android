@@ -675,16 +675,23 @@ public class JmapService {
         setKeyword(emailIds, Keyword.FLAGGED, flagged);
     }
 
-    // Move emails to a single target mailbox (replaces mailboxIds wholesale).
-    void moveToMailbox(List<String> emailIds, String mailboxId) throws MessagingException {
+    // Move emails between mailboxes via JMAP patch PATHS (RFC 8620 §5.3), not a
+    // whole-property replacement. mailboxIds is the message's COMPLETE folder
+    // membership, and in our labels model every category is a mailbox — a
+    // wholesale {targetMailboxId: true} patch silently strips every other
+    // mailbox the message was in. "mailboxIds/<id>" = true|null patches exactly
+    // one membership bit and leaves the rest alone, mirroring jmap-mua's
+    // EmailService (Patches.set("mailboxIds/"+id, true)) against the same
+    // rs.ltt.jmap library we depend on.
+    void moveToMailbox(List<String> emailIds, String targetMailboxId, String sourceMailboxId) throws MessagingException {
         requireAccount();
         try {
-            Map<String, Boolean> mailboxIds = new HashMap<>();
-            mailboxIds.put(mailboxId, Boolean.TRUE);
             Map<String, Map<String, Object>> update = new HashMap<>();
             for (String id : emailIds) {
                 Map<String, Object> patch = new HashMap<>();
-                patch.put("mailboxIds", mailboxIds);
+                patch.put("mailboxIds/" + targetMailboxId, Boolean.TRUE);
+                if (sourceMailboxId != null && !sourceMailboxId.equals(targetMailboxId))
+                    patch.put("mailboxIds/" + sourceMailboxId, null);
                 update.put(id, patch);
             }
             client.call(SetEmailMethodCall.builder()
