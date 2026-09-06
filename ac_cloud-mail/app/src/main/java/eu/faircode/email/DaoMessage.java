@@ -905,6 +905,13 @@ public interface DaoMessage {
     @Query("UPDATE message SET label_ids = :label_ids WHERE id = :id AND NOT (label_ids IS :label_ids)")
     int setMessageLabelIds(long id, String label_ids);
 
+    @Query("DELETE FROM message_label WHERE message = :message")
+    void deleteMessageLabels(long message);
+
+    @Query("INSERT OR IGNORE INTO message_label (message, folder)" +
+            " SELECT :message, :folder WHERE EXISTS (SELECT 1 FROM folder WHERE id = :folder)")
+    void insertMessageLabel(long message, long folder);
+
     @Query("UPDATE message SET ui_seen = :ui_seen WHERE id = :id AND NOT (ui_seen IS :ui_seen)")
     int setMessageUiSeen(long id, boolean ui_seen);
 

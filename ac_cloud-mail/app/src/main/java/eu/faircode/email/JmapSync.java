@@ -682,6 +682,7 @@ public class JmapSync {
                     try {
                         db.beginTransaction();
                         message.id = db.message().insertMessage(message);
+                        syncMessageLabels(db, message.id, message.label_ids);
                         db.setTransactionSuccessful();
                     } finally {
                         db.endTransaction();
@@ -943,6 +944,7 @@ public class JmapSync {
                 db.beginTransaction();
                 message.notifying = EntityMessage.NOTIFYING_IGNORE;
                 message.id = db.message().insertMessage(message);
+                syncMessageLabels(db, message.id, message.label_ids);
                 db.setTransactionSuccessful();
                 EntityLog.log(context, "JMAP added " + primary.name + " id=" + message.id
                         + " uidl=" + message.uidl
@@ -1031,8 +1033,25 @@ public class JmapSync {
             db.message().setMessageLabels(message.id, DB.Converters.fromStringArray(names));
         // Backfills label_ids for rows that predate the column, and is what
         // makes a USER category mailbox list this message (DaoMessage.in_folder).
-        if (!Helper.equal(message.label_ids, ids))
+        if (!Helper.equal(message.label_ids, ids)) {
             db.message().setMessageLabelIds(message.id, DB.Converters.fromStringArray(ids));
+            syncMessageLabels(db, message.id, ids);
+        }
+    }
+
+    // Re-derive the message_label junction (the INDEXED read model DaoFolder
+    // seeks) from the label_ids just written to the message row. Must be called
+    // after the row's id is known and its label_ids persisted.
+    private static void syncMessageLabels(DB db, long message, String[] ids) {
+        db.message().deleteMessageLabels(message);
+        if (ids == null)
+            return;
+        for (String id : ids)
+            try {
+                db.message().insertMessageLabel(message, Long.parseLong(id));
+            } catch (NumberFormatException ignored) {
+                // not a folder id
+            }
     }
 
     // Build an EntityMessage from a JMAP Email header. Server-id → uidl (POP

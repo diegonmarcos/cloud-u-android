@@ -70,12 +70,13 @@ import javax.mail.internet.InternetAddress;
 // https://developer.android.com/topic/libraries/architecture/room.html
 
 @Database(
-        version = 303,
+        version = 304,
         entities = {
                 EntityIdentity.class,
                 EntityAccount.class,
                 EntityFolder.class,
                 EntityMessage.class,
+                EntityMessageLabel.class,
                 EntityAttachment.class,
                 EntityOperation.class,
                 EntityContact.class,
@@ -3148,6 +3149,26 @@ public abstract class DB extends RoomDatabase {
                         // which DaoMessage.in_folder treats exactly as before.
                         // JmapSync backfills it on the next reconcile pass.
                         db.execSQL("ALTER TABLE `message` ADD COLUMN `label_ids` TEXT");
+                    }
+                }).addMigrations(new Migration(303, 304) {
+                    @Override
+                    public void migrate(@NonNull SupportSQLiteDatabase db) {
+                        logMigration(startVersion, endVersion);
+                        // message.label_ids stays the source of truth on the row;
+                        // message_label is the INDEXED read model derived from it,
+                        // so a folder can seek its labelled messages instead of
+                        // LIKE-scanning every message row. Backfilled here so
+                        // existing rows need no resync.
+                        db.execSQL("CREATE TABLE IF NOT EXISTS `message_label` (`message` INTEGER NOT NULL, `folder` INTEGER NOT NULL, PRIMARY KEY(`message`, `folder`), FOREIGN KEY(`message`) REFERENCES `message`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`folder`) REFERENCES `folder`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )");
+                        db.execSQL("CREATE INDEX IF NOT EXISTS `index_message_label_message` ON `message_label` (`message`)");
+                        db.execSQL("CREATE INDEX IF NOT EXISTS `index_message_label_folder` ON `message_label` (`folder`)");
+                        db.execSQL("INSERT OR IGNORE INTO `message_label` (`message`, `folder`)" +
+                                " WITH split(mid, tok, rest) AS (" +
+                                "  SELECT id, '', label_ids || ' ' FROM message WHERE label_ids IS NOT NULL AND label_ids <> ''" +
+                                "  UNION ALL" +
+                                "  SELECT mid, substr(rest, 1, instr(rest, ' ') - 1), substr(rest, instr(rest, ' ') + 1) FROM split WHERE rest <> ''" +
+                                " ) SELECT mid, CAST(tok AS INTEGER) FROM split WHERE tok <> ''" +
+                                " AND CAST(tok AS INTEGER) IN (SELECT id FROM folder)");
                     }
                 }).addMigrations(new Migration(998, 999) {
                     @Override

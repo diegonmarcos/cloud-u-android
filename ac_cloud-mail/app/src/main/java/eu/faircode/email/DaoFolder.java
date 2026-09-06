@@ -30,15 +30,18 @@ import java.util.List;
 
 @Dao
 public interface DaoFolder {
-    // The counting half of DaoMessage.in_folder. cc8e9863a taught the message
-    // LIST to match a JMAP label membership as well as the home folder, but the
-    // per-folder COUNTs below still joined on the home folder alone -- so a USER
-    // category mailbox rendered its messages and a badge of 0 at the same time.
-    // Same predicate, joined on folder.id instead of a :folder parameter, so the
-    // list and the badge can never disagree again. It only ever WIDENS the old
-    // join: a row with no label_ids behaves exactly as before.
-    String message_in_folder = "(message.folder = folder.id" +
-            " OR (' ' || IFNULL(message.label_ids, '') || ' ') LIKE ('% ' || folder.id || ' %'))";
+    // The counting half of DaoMessage.in_folder: a message belongs to a folder
+    // as its home folder OR as a JMAP label, so the per-folder COUNTs below can
+    // never disagree with the message LIST again (a USER category mailbox used
+    // to render its messages and a badge of 0 at the same time).
+    // Both arms are index seeks -- message.folder and the message_label
+    // junction -- rather than an unindexable LIKE over every message row. UNION
+    // dedupes a message that is both homed and labelled in the same folder, so
+    // it contributes exactly one row per folder as it did before.
+    String message_in_folder_join =
+            " LEFT JOIN (SELECT id AS mid, folder AS fid FROM message" +
+            " UNION SELECT message AS mid, folder AS fid FROM message_label) mem ON mem.fid = folder.id" +
+            " LEFT JOIN message ON message.id = mem.mid";
 
     @Query("SELECT * FROM folder" +
             " WHERE account = :account" +
@@ -59,7 +62,7 @@ public interface DaoFolder {
             ", COUNT(DISTINCT CASE WHEN operation.state = 'executing' THEN operation.id ELSE NULL END) AS executing" +
             " FROM folder" +
             " LEFT JOIN account ON account.id = folder.account" +
-            " LEFT JOIN message ON " + message_in_folder + " AND NOT message.ui_hide" +
+            message_in_folder_join + " AND NOT message.ui_hide" +
             " LEFT JOIN rule ON rule.folder = folder.id" +
             " LEFT JOIN operation ON operation.folder = folder.id" +
             " WHERE folder.account = :account AND account.synchronize" +
@@ -100,7 +103,7 @@ public interface DaoFolder {
             ", COUNT(DISTINCT CASE WHEN operation.state = 'executing' THEN operation.id ELSE NULL END) AS executing" +
             " FROM folder" +
             " JOIN account ON account.id = folder.account" +
-            " LEFT JOIN message ON " + message_in_folder +
+            message_in_folder_join +
             " LEFT JOIN rule ON rule.folder = folder.id" +
             " LEFT JOIN operation ON operation.folder = folder.id" +
             " WHERE CASE WHEN :primary THEN account.`primary` ELSE" +
@@ -137,7 +140,7 @@ public interface DaoFolder {
             ", COUNT(DISTINCT CASE WHEN operation.state = 'executing' THEN operation.id ELSE NULL END) AS executing" +
             " FROM folder" +
             " JOIN account ON account.id = folder.account" +
-            " LEFT JOIN message ON " + message_in_folder +
+            message_in_folder_join +
             " LEFT JOIN rule ON rule.folder = folder.id" +
             " LEFT JOIN operation ON operation.folder = folder.id" +
             " WHERE CASE WHEN :primary THEN account.`primary` ELSE" +
@@ -165,7 +168,7 @@ public interface DaoFolder {
             ", COUNT(DISTINCT CASE WHEN operation.state = 'executing' THEN operation.id ELSE NULL END) AS executing" +
             " FROM folder" +
             " JOIN account ON account.id = folder.account" +
-            " LEFT JOIN message ON " + message_in_folder + " AND NOT message.ui_hide" +
+            message_in_folder_join + " AND NOT message.ui_hide" +
             " LEFT JOIN rule ON rule.folder = folder.id" +
             " LEFT JOIN operation ON operation.folder = folder.id" +
             " WHERE account.`synchronize`" +
@@ -200,7 +203,7 @@ public interface DaoFolder {
             ", COUNT(DISTINCT CASE WHEN operation.state = 'executing' THEN operation.id ELSE NULL END) AS executing" +
             " FROM folder" +
             " LEFT JOIN account ON account.id = folder.account" +
-            " LEFT JOIN message ON " + message_in_folder + " AND NOT message.ui_hide" +
+            message_in_folder_join + " AND NOT message.ui_hide" +
             " LEFT JOIN rule ON rule.folder = folder.id" +
             " LEFT JOIN operation ON operation.folder = folder.id" +
             " WHERE folder.id = :id" +
@@ -250,7 +253,7 @@ public interface DaoFolder {
             ", folder.color, COUNT (DISTINCT folder.color) AS colorCount" +
             " FROM folder" +
             " LEFT JOIN account ON account.id = folder.account" +
-            " LEFT JOIN message ON " + message_in_folder + " AND NOT message.ui_hide" +
+            message_in_folder_join + " AND NOT message.ui_hide" +
             " WHERE (account.id IS NULL OR account.synchronize)" +
             " AND ((folder.type <> '" + EntityFolder.SYSTEM + "'" +
             " AND folder.type <> '" + EntityFolder.USER + "')" +
