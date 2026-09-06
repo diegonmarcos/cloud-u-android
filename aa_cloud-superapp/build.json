@@ -5011,7 +5011,9 @@
         "vault_repo_key": "-----BEGIN OPENSSH PRIVATE KEY-----\\n…\\n-----END OPENSSH PRIVATE KEY-----"
       },
       "auth": {
-        "authelia_token": "ey…"
+        "authelia_token": "ey…",
+        "authelia_email": "me@diegonmarcos.com",
+        "_doc_authelia_pairing": "A bearer is stored ONLY as a pair. An imported blob carrying authelia_token without a valid authelia_email leaves an unidentified token that ConfigsPrefs reads as absent, and the Profile screen offers to link it — it is never adopted silently and never deleted."
       }
     },
     "_doc_data_snapshots": "C3/Health (public + private services) and C3/Mesh (wg-mesh/v1 snapshot) are NO LONGER hardcoded here — they live in aa_cloud-superapp/data/ as derived snapshots (regenerated via data/regen.sh from cloud-data's _cloud-data-consolidated.json + cloud/a_solutions/bb-net_wireguard-mesh/src/data/mesh.json). app/build.gradle reads those files at bake time and exposes them via BuildConfig.",

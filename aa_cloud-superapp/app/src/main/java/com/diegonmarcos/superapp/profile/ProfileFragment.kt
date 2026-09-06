@@ -183,15 +183,27 @@ class ProfileFragment : Fragment() {
             confirmGenerateKeyPair()
         })
 
+        // ONE address for this section. It is the account the bearer belongs
+        // to AND the "user" the provider request asked for — those are the
+        // same identity, so a second box would only invite them to disagree.
+        col.addView(label(ctx, "Account email"))
+        col.addView(autheliaEmailEditor(ctx))
+
         col.addView(label(ctx, "Authelia bearer token"))
         col.addView(secretField(
             ctx,
             stored = { ConfigsPrefs(ctx).autheliaToken.isNotBlank() },
-            save = { ConfigsPrefs(ctx).autheliaToken = it },
+            save = { saveAutheliaToken(it) },
         ))
         col.addView(clearSecretButton(ctx, "Authelia bearer token") {
-            ConfigsPrefs(ctx).autheliaToken = ""
+            ConfigsPrefs(ctx).clearAutheliaCredential()
         })
+        if (ConfigsPrefs(ctx).hasOrphanToken()) {
+            col.addView(caption(ctx, ORPHAN_TOKEN_TEXT))
+            col.addView(pickButton(ctx, "Link the stored token to this address") {
+                linkOrphanToken()
+            })
+        }
 
         col.addView(label(ctx, "WireGuard private key"))
         col.addView(secretField(
@@ -410,6 +422,69 @@ class ProfileFragment : Fragment() {
                 parentFragmentManager.beginTransaction().attach(this).commitNow()
             }
             .show()
+    }
+
+    /** Live handle to the account-email box, so the token box (which saves on
+     *  every keystroke) can pair against whatever is currently typed there. */
+    private var autheliaEmailField: EditText? = null
+
+    /**
+     * The account the bearer belongs to.
+     *
+     * Seeded from the stored credential when there is one, otherwise from the
+     * profile email already on the device — a sensible default, not a
+     * decision: it stays editable because a user may hold a token for one of
+     * the other fleet accounts rather than their own.
+     *
+     * Editing it re-pairs an existing credential so the address follows the
+     * token. A blank or malformed address does NOT rewrite storage — the last
+     * good pairing is left intact and the error is shown instead, because
+     * destroying a working credential mid-keystroke is not a correction.
+     */
+    private fun autheliaEmailEditor(ctx: android.content.Context): EditText {
+        val configs = ConfigsPrefs(ctx)
+        val initial = configs.autheliaEmail.ifBlank { prefs.email.trim() }
+        return field(ctx, initial) { typed ->
+            val address = typed.trim()
+            if (configs.autheliaToken.isBlank()) return@field   // nothing to re-pair yet
+            val error = configs.setAutheliaCredential(address, configs.autheliaToken)
+            autheliaEmailField?.error = error
+        }.apply {
+            hint = "me@diegonmarcos.com"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+            autheliaEmailField = this
+        }
+    }
+
+    /**
+     * Store the bearer WITH its address, or not at all.
+     *
+     * [ConfigsPrefs.setAutheliaCredential] is the only writer and refuses a
+     * partial write, so the refusal is reported on the field that can fix it
+     * rather than swallowed into a token that would read back as absent.
+     */
+    private fun saveAutheliaToken(token: String) {
+        val configs = ConfigsPrefs(requireContext())
+        val address = autheliaEmailField?.text?.toString()?.trim().orEmpty()
+        val error = configs.setAutheliaCredential(address, token)
+        autheliaEmailField?.error = error
+        if (error == null) view?.snack("Bearer stored for $address")
+    }
+
+    /** Attach an address to a token that predates the pairing rule. Explicit
+     *  and user-driven: the app does not get to decide whose token it is. */
+    private fun linkOrphanToken() {
+        val configs = ConfigsPrefs(requireContext())
+        val address = autheliaEmailField?.text?.toString()?.trim().orEmpty()
+        val error = configs.adoptOrphanToken(address)
+        if (error != null) {
+            autheliaEmailField?.error = error
+            return
+        }
+        view?.snack("Stored token linked to $address")
+        parentFragmentManager.beginTransaction().detach(this).commitNow()
+        parentFragmentManager.beginTransaction().attach(this).commitNow()
     }
 
     // ── provider ─────────────────────────────────────────────────────────
@@ -1151,10 +1226,31 @@ class ProfileFragment : Fragment() {
             "writes (AES-256-GCM, key in the Android keystore), at the same " +
             "auth.authelia_token path, so there is one bearer on this device rather " +
             "than two that can disagree.\n\n" +
+            "The Authelia bearer is stored WITH the account email it belongs to, " +
+            "and cannot be stored without one. Authelia issues tokens per account " +
+            "and this fleet has several, so a token on its own cannot say whose " +
+            "access it carries — which is exactly what you need to know when a " +
+            "request comes back refused. A token with no address is treated as not " +
+            "stored at all.\n\n" +
             "The WireGuard private key is written straight to the tunnel's own " +
             "settings — the very field Configs → WireGuard edits. It is not copied " +
             "here; typing in this box changes the key the tunnel connects with.\n\n" +
             "Stored values are never displayed again. An empty box means unchanged."
+
+        /**
+         * Shown only while a token is stored without a usable address —
+         * from an install that predates the pairing rule, or a config blob
+         * imported with `auth.authelia_token` and no `auth.authelia_email`.
+         *
+         * It is reported rather than repaired. Adopting the profile email
+         * automatically would invent the very fact the pairing exists to
+         * record, and deleting the token would remove the access needed to
+         * sort it out.
+         */
+        private const val ORPHAN_TOKEN_TEXT =
+            "A bearer token is stored on this device with no account email, so it " +
+            "is not being used. Check the address above is the account the token " +
+            "belongs to, then link it. Nothing was changed or deleted."
 
         /**
          * What each provider does and does not fill.

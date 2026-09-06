@@ -68,7 +68,7 @@ echo "== T3: credentials CANNOT enter the sync payload =="
 has "$SYNC" 'put("profile", enforceAllowlist(' "profile object passes the allowlist filter"
 has "$SYNC" "private val ALLOWED_PROFILE_KEYS" "an explicit allowlist exists"
 # 3b — belt and braces: the allowlist itself must not name a credential.
-for forbidden in authelia_token bearer token private_key privkey if_privkey secret wireguard; do
+for forbidden in authelia_token authelia_email bearer token private_key privkey if_privkey secret wireguard; do
     if awk '/private val ALLOWED_PROFILE_KEYS/,/\)/' "$ROOT/$SYNC" | grep -qF "$forbidden"; then
         bad "ALLOWED_PROFILE_KEYS must not contain '$forbidden'"
     else
@@ -150,6 +150,50 @@ else
     bad "build.json wireguard_default must not seed a private key"
 fi
 hasnt "app/build.gradle" "UI_WG_INTERFACE_PRIVATE_KEY" "no private key is baked into BuildConfig"
+
+echo "== T8: a bearer token cannot be stored without an email identity =="
+# Authelia issues tokens per account and the fleet has several, so a lone token
+# cannot say whose access it carries. The pairing is enforced at the STORE, not
+# in the form, so the config-import path cannot become the hole the UI closed.
+has "$CONFIGS_PREFS" "fun setAutheliaCredential" "one writer for the pair"
+has "$CONFIGS_PREFS" "fun clearAutheliaCredential" "clearing removes both halves"
+has "$CONFIGS_PREFS" "K_AUTHELIA_EMAIL = \"authelia_email\"" "the address has a declared path"
+has "$CONFIGS_PREFS" "EMAIL_PATTERN"             "the address is shape-checked, not free text"
+# The token property must be read-only: a public setter is a second writer, and
+# a second writer is how the orphan state comes back.
+has   "$CONFIGS_PREFS" "val autheliaToken"       "the token is read-only from outside"
+hasnt_code "$CONFIGS_PREFS" "var autheliaToken"  "no public token setter"
+# The reader — not the UI — is what makes an unpaired token unusable.
+if awk '/private fun credential\(\)/,/^    }/' "$ROOT/$CONFIGS_PREFS" | grep -qF "EMAIL_PATTERN"; then
+    ok "an unidentified token reads back as absent"
+else
+    bad "credential() must require a valid address before returning a token"
+fi
+# An existing token must not be silently adopted or destroyed by the new rule.
+has "$CONFIGS_PREFS" "fun hasOrphanToken"        "a pre-pairing token is detected, not deleted"
+has "$CONFIGS_PREFS" "fun adoptOrphanToken"      "linking it is explicit and user-driven"
+has "$FRAGMENT"      'label(ctx, "Account email")' "the identity is on the Profile screen"
+has "build.json"     '"authelia_email"'          "the import contract declares the pairing"
+# ONE email box for the section — a second would only invite disagreement.
+if [ "$(grep -c 'autheliaEmailEditor(ctx)' "$ROOT/$FRAGMENT")" = "1" ]; then
+    ok "exactly one account-email editor"
+else
+    bad "there must be exactly one account-email editor"
+fi
+
+echo "== T9: pairing the token to a synced field did not widen the payload =="
+# The email IS a synced profile field and the token must never be. Now that
+# they are stored together, the document must still name every key it sends.
+has "$SYNC" 'put("profile", enforceAllowlist(' "payload still passes the allowlist"
+PUTS=$(awk '/put\("profile", enforceAllowlist\(/,/\}\)\)/' "$ROOT/$SYNC" | grep -c 'put("')
+# 8 named contact fields + the put("profile", …) wrapper line itself.
+if [ "$PUTS" = "9" ]; then
+    ok "document() still enumerates exactly 8 profile fields"
+else
+    bad "document() should enumerate 8 profile fields (found $((PUTS-1)))"
+fi
+hasnt_code "$SYNC" "autheliaEmail" "ProfileSync never reads the paired address"
+hasnt_code "$SYNC" "credential"    "ProfileSync never reads the credential pair"
 
 echo
 echo "PASS=$PASS FAIL=$FAIL"
