@@ -27,11 +27,13 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * The engine implementation is registered per-app in Application.onCreate
  * (LocalTranslateEngineClient in-process ML Kit, or AidlTranslateEngineClient
- * binding the cloud-keyboard-libs companion). Lives in libs:translate, NOT in
- * libs/keyboard/src/main, so the sync-heliboard mirror never deletes it.
+ * binding the cloud-keyboard-libs companion). Lives in libs:translate; the
+ * cloud-keyboard tree (libs/keyboard) consumes it.
  */
 object Translator {
     const val AUTO = "auto"
+    /** Shown by the bar before the first keystroke too — the fix is an install, not a retry. */
+    const val NOT_CONNECTED = "Translate engine not connected — install/update the Cloud Keyboard Libs companion app"
 
     /** One translate outcome: [text] non-null = success; otherwise [error] says why (user-readable). */
     class Result(@JvmField val text: String?, @JvmField val detected: String?, @JvmField val error: String?) {
@@ -49,19 +51,24 @@ object Translator {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Result>?): Boolean = size > CACHE_SIZE
     }
 
+    /** Engine reply = {sourceTag, text[, errorMessage]}; slot 2 is the engine's own reason for a failure. */
+    private fun Array<String>.reason(): String? = getOrNull(2)?.takeIf { it.isNotEmpty() }
+
     private fun translateBlocking(client: TranslateEngineClient, text: String, from: String, to: String, hint: String?): Result {
         val key = "$from|$to|$hint|$text"
         synchronized(cache) { cache[key] }?.let { return it }
-        if (!client.isConnected()) return Result(null, null, "Translate engine not connected")
+        if (!client.isConnected()) return Result(null, null, NOT_CONNECTED)
         val r: Result = try {
             var res = if (from == AUTO) client.translate(text, to) else client.translateFrom(text, from, to)
             var detected = res.getOrNull(0) ?: "und"
-            if (detected == "und" && from == AUTO && !hint.isNullOrEmpty()) {
+            if (detected == "und" && from == AUTO && res.reason() == null && !hint.isNullOrEmpty()) {
                 res = client.translateFrom(text, hint, to)
                 detected = res.getOrNull(0) ?: "und"
             }
             val out = res.getOrNull(1).orEmpty()
+            val why = res.reason()
             when {
+                why != null -> Result(null, null, why)
                 detected == "und" && from == AUTO -> Result(null, null, "Couldn't detect the language — pick a source")
                 detected == "und" -> Result(null, null, "Engine failed — offline model still downloading?")
                 out.isEmpty() -> Result(null, detected, "No translation returned")
@@ -100,29 +107,44 @@ object Translator {
     /**
      * One-shot, in place: translate the selection (or the whole field) and
      * overwrite it. Long-press on the TRANSLATE toolbar key. Honours the
-     * default-target setting; [targetLang] (the active keyboard language) is
-     * the fallback.
+     * default-target setting; [keyboardLang] (the active keyboard language) is
+     * the fallback target AND the detection fallback source (same chain as the bar).
+     *
+     * Stale-reply guard (TextEnhancer's rule): the engine may take up to the
+     * download timeout; if the field no longer holds what was sent, the reply
+     * is dropped instead of select-all + overwrite wiping what the user typed
+     * meanwhile. A newer long-press supersedes an older one.
      */
     @JvmStatic
-    fun translate(context: Context, ic: InputConnection?, targetLang: String) {
+    fun translate(context: Context, ic: InputConnection?, keyboardLang: String) {
         if (ic == null) return
         val appCtx = context.applicationContext
         val client = TranslateEngines.client
         if (client == null) { toast(appCtx, "Translate: no engine registered"); return }
-        val target = TranslatePrefs.defaultTarget(appCtx).ifEmpty { targetLang }
+        val target = TranslatePrefs.defaultTarget(appCtx).ifEmpty { keyboardLang }
         val selected = ic.getSelectedText(0)?.toString()?.takeIf { it.isNotBlank() }
-        val text = (selected ?: ic.getExtractedText(ExtractedTextRequest(), 0)?.text?.toString())?.trim()
+        val text = (selected ?: fieldText(ic))?.trim()
         if (text.isNullOrBlank()) { toast(appCtx, "Translate: nothing to translate"); return }
         val hadSelection = selected != null
+        val hint = keyboardLang.takeIf { it.isNotEmpty() && it != target }
+        val gen = oneShot.incrementAndGet()
         toast(appCtx, "Translating → ${target.uppercase()}…")
         executor.execute {
-            val r = translateBlocking(client, text, AUTO, target, null)
+            if (gen != oneShot.get()) return@execute
+            val r = translateBlocking(client, text, AUTO, target, hint)
             main.post {
+                if (gen != oneShot.get()) return@post
                 val out = r.text
-                if (out != null) replaceInField(ic, hadSelection, out) else toast(appCtx, r.error ?: "Translate failed")
+                if (out == null) { toast(appCtx, r.error ?: "Translate failed"); return@post }
+                val now = (if (hadSelection) ic.getSelectedText(0)?.toString() else fieldText(ic))?.trim()
+                if (now != text) { toast(appCtx, "Field changed while translating — nothing replaced"); return@post }
+                replaceInField(ic, hadSelection, out)
             }
         }
     }
+
+    private val oneShot = AtomicInteger()
+    private fun fieldText(ic: InputConnection): String? = ic.getExtractedText(ExtractedTextRequest(), 0)?.text?.toString()
 
     /** Overwrite the selection, or select-all + overwrite the whole field. */
     @JvmStatic

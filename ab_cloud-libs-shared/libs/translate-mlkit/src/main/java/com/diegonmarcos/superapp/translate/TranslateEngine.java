@@ -43,7 +43,7 @@ public class TranslateEngine {
             try {
                 detected = Tasks.await(identifier.identifyLanguage(text), ID_TIMEOUT_S, TimeUnit.SECONDS);
             } catch (Throwable ex) {
-                throw asIo(ex);
+                throw asIo("Language detection", ID_TIMEOUT_S, ex);
             } finally {
                 identifier.close();
             }
@@ -51,25 +51,45 @@ public class TranslateEngine {
         String source = TranslateLanguage.fromLanguageTag(detected);
         String target = TranslateLanguage.fromLanguageTag(targetTag);
         if (target == null) throw new IOException("Unsupported target language: " + targetTag);
-        if (source == null) return new String[]{"und", ""};
+        // Explicit source the engine has no model for is an ERROR the user must see
+        // (pick another source); an undetectable auto source is the normal "und".
+        if (source == null) {
+            if (sourceTag != null && !sourceTag.isEmpty() && !"auto".equals(sourceTag))
+                throw new IOException("Unsupported source language: " + sourceTag);
+            return new String[]{"und", ""};
+        }
         if (source.equals(target)) return new String[]{detected, text};
         TranslatorOptions options = new TranslatorOptions.Builder()
                 .setSourceLanguage(source).setTargetLanguage(target).build();
         Translator translator = Translation.getClient(options);
         try {
-            Tasks.await(translator.downloadModelIfNeeded(new DownloadConditions.Builder().build()),
-                    DOWNLOAD_TIMEOUT_S, TimeUnit.SECONDS);
+            try {
+                Tasks.await(translator.downloadModelIfNeeded(new DownloadConditions.Builder().build()),
+                        DOWNLOAD_TIMEOUT_S, TimeUnit.SECONDS);
+            } catch (Throwable ex) {
+                throw asIo("Language model download (" + detected + "→" + targetTag + ", needs network once)", DOWNLOAD_TIMEOUT_S, ex);
+            }
             String result = Tasks.await(translator.translate(text), TRANSLATE_TIMEOUT_S, TimeUnit.SECONDS);
             return new String[]{detected, result};
+        } catch (IOException ex) {
+            throw ex;
         } catch (Throwable ex) {
-            throw asIo(ex);
+            throw asIo("Translation", TRANSLATE_TIMEOUT_S, ex);
         } finally {
             translator.close();
         }
     }
 
-    private static IOException asIo(Throwable ex) {
-        return ex instanceof IOException ? (IOException) ex : new IOException(ex);
+    // The message is what the keyboard shows in the bar, so it names the STAGE
+    // that failed and, for a timeout, how long we waited — "Timed out waiting
+    // for Task" (the raw TimeoutException text) told the user nothing.
+    private static IOException asIo(String stage, long timeoutS, Throwable ex) {
+        if (ex instanceof IOException) return (IOException) ex;
+        if (ex instanceof java.util.concurrent.TimeoutException)
+            return new IOException(stage + " timed out after " + timeoutS + " s", ex);
+        Throwable cause = ex instanceof java.util.concurrent.ExecutionException && ex.getCause() != null ? ex.getCause() : ex;
+        String msg = cause.getMessage();
+        return new IOException(stage + " failed: " + ((msg == null || msg.isEmpty()) ? cause.getClass().getSimpleName() : msg), ex);
     }
 
     public static List<String> supportedLanguageTags() {

@@ -39,7 +39,7 @@ import java.util.Locale
  * it breaks as soon as the host app touches its own text.
  *
  * Settings + recent pairs: [TranslatePrefs]. Engine: [Translator].
- * Lives in libs:translate so sync-heliboard's verbatim mirror never deletes it.
+ * Lives in libs:translate; the cloud-keyboard tree (libs/keyboard) hosts it in LatinIME.
  */
 class TranslateBarView(context: Context) : LinearLayout(context) {
 
@@ -153,7 +153,15 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         // Live-commit writes straight into the field — Insert/Replace would double it.
         insertBtn.visibility = if (liveCommit) View.GONE else View.VISIBLE
         replaceBtn.visibility = insertBtn.visibility
-        highlightPrimary(); renderInput(); renderChips(); showStatus("")
+        highlightPrimary(); renderInput(); renderChips()
+        // Say it on open, not after the first keystroke: with no engine every key
+        // would otherwise "Translating…" for 300 ms and then fail, one key at a time.
+        val client = TranslateEngines.client
+        showStatus(when {
+            client == null -> "No translate engine registered"
+            !client.isConnected() -> Translator.NOT_CONNECTED
+            else -> ""
+        })
     }
 
     // ── key routing entry points (called from LatinIME.onEvent) ──────────────

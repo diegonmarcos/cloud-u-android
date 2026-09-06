@@ -9,7 +9,7 @@ import android.content.SharedPreferences
  * The keys are the single source of truth for BOTH sides: the keyboard's Compose
  * settings screen (TranslationInfoScreen, inside libs:keyboard) builds its
  * preferences from these constants, and TranslateBarView / Translator read them
- * at use time. Storage is HeliBoard's own default prefs file in DEVICE-PROTECTED
+ * at use time. Storage is the keyboard's own default prefs file in DEVICE-PROTECTED
  * storage — exactly what helium314.keyboard.latin.utils.DeviceProtectedUtils
  * returns — so the settings screen and the bar always see the same file. This
  * module cannot depend on libs:keyboard (it is the other way round), hence the
