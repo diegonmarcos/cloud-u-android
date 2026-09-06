@@ -19,6 +19,9 @@
 #   T6  every CROSS-page `page:<section>/<page>#<anchor>` resolves too
 #   T7  every `page:` target anywhere in build.json resolves to a real page
 #   T8  every HIDDEN page has a referrer (a hidden page IS its referrers)
+#   T9  no (kind, title) card appears twice in the same stack — catches a
+#       copy-pasted panel (e.g. a duplicated "More" row) even though it
+#       carries no `anchor` for T2 to dedupe against
 #   W   declared-but-unreferenced ids are reported, not failed
 #
 # T8 is the one that catches the failure that prompted it. Making the C3 Index
@@ -76,9 +79,21 @@ for sec in build.get("ui", {}).get("sections", []):
             continue
         where = "%s.%s" % (sec.get("id"), key)
         declared, dupes = [], []
+        card_seen, card_dupes = [], []
         for panel in stack:
             if not isinstance(panel, dict):
                 continue
+            # T9 — a card with no `anchor` (tile_row "More", section_title
+            # headings) is invisible to the anchor-uniqueness check above, so
+            # a copy-pasted panel (the class of bug that ships a duplicated
+            # "More" row silently) needs its own identity: kind+title, the
+            # same pair a reader uses to tell two cards apart on screen.
+            # Blank titles are skipped rather than flagged — several
+            # placeholder/spacer kinds legitimately carry none.
+            title = panel.get("title", "")
+            if title:
+                sig = (panel.get("kind", ""), title)
+                (card_dupes if sig in card_seen else card_seen).append(sig)
             own = panel.get("anchor", "")
             if own:
                 (dupes if own in declared else declared).append(own)
@@ -108,6 +123,9 @@ for sec in build.get("ui", {}).get("sections", []):
                                "this panel does not render" % (where, aid, gid))
         for d in dupes:
             emit("T2", "%s: anchor id '%s' declared twice" % (where, d))
+        for k, t in card_dupes:
+            emit("T9", "%s: card '%s' (kind=%s) appears twice in this stack"
+                       % (where, t, k))
 
         targets = []
         tile_targets(stack, targets)
@@ -173,7 +191,7 @@ print("\n".join(lines))
 PY
 )" || { echo "  FAIL: checker crashed"; exit 1; }
 
-for t in T1 T2 T3 T6 T7 T8; do
+for t in T1 T2 T3 T6 T7 T8 T9; do
   hits="$(printf '%s\n' "$REPORT" | grep -c "^$t	" || true)"
   if [ "$hits" -eq 0 ]; then
     ok "$t: no violations"

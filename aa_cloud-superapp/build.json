@@ -2623,7 +2623,45 @@
         ],
         "stack_observability": [
           {
-            "_doc": "Five feed cards, one per data source, named exactly GHA / Dagu / GH Repos / Gitea Repos / NTFY per spec — replacing the old Index tile-row, the gha_runs/repos/dagu_dags kinds and the three scope-split ntfy cards (Advisories/My channels/Cloud channels). kind=feed is ONE generic card type reading `source` to pick its fetcher (github_runs | github_commits | gitea_commits | dagu_runs — AggregatorStackFragment.renderFeed), per this page's own long-standing instruction to keep card types generic rather than a bespoke render function per integration; a sixth source is a new `when` arm plus a client object, never a new panel `kind`. `limit` is a real config field now, not a number split between a Kotlin literal and a human-readable subtitle that could silently drift apart (the old 'Latest 3 runs per repo' text next to a separate hardcoded `3`). The Index is gone because every card now IS the thing it used to jump to — there is nothing left to index — but the More row below is KEPT unchanged: c3/{workflows,gha,dagu,logs,reports} are HIDDEN pages and More is their only referrer anywhere in build.json, so dropping it would silently orphan five real pages (test/test-stack-anchors-declared.sh T8 catches exactly this).",
+            "_doc": "INDEX of this page, same contract as stack_topology's: every tile is an `anchor:` id resolved by StackAnchors against the cards below, so the row is a table of contents rather than a set of deep links. One tile per feed card (GHA, Dagu, GH Repos, Gitea Repos, NTFY), in the same order the cards render below.",
+            "kind": "tile_row",
+            "title": "Index",
+            "subtitle": "Jump to a card on this page",
+            "tiles": [
+              {
+                "id": "gha",
+                "label": "GHA",
+                "icon": "ic_code",
+                "target": "anchor:gha"
+              },
+              {
+                "id": "dagu",
+                "label": "Dagu",
+                "icon": "ic_robot",
+                "target": "anchor:dagu"
+              },
+              {
+                "id": "gh-repos",
+                "label": "GH Repos",
+                "icon": "ic_p_c3_workflows",
+                "target": "anchor:gh-repos"
+              },
+              {
+                "id": "gitea-repos",
+                "label": "Gitea Repos",
+                "icon": "ic_p_c3_workflows",
+                "target": "anchor:gitea-repos"
+              },
+              {
+                "id": "ntfy",
+                "label": "NTFY",
+                "icon": "ic_rss",
+                "target": "anchor:ntfy"
+              }
+            ]
+          },
+          {
+            "_doc": "Five feed cards, one per data source, named exactly GHA / Dagu / GH Repos / Gitea Repos / NTFY per spec — replacing the old Index tile-row, the gha_runs/repos/dagu_dags kinds and the three scope-split ntfy cards (Advisories/My channels/Cloud channels). kind=feed is ONE generic card type reading `source` to pick its fetcher (github_runs | github_commits | gitea_commits | dagu_runs — AggregatorStackFragment.renderFeed), per this page's own long-standing instruction to keep card types generic rather than a bespoke render function per integration; a sixth source is a new `when` arm plus a client object, never a new panel `kind`. `limit` is a real config field now, not a number split between a Kotlin literal and a human-readable subtitle that could silently drift apart (the old 'Latest 3 runs per repo' text next to a separate hardcoded `3`). The Index tile-row is BACK (mirroring stack_topology's own Index) so the five cards are addressable from the top of the page, not just by scrolling — the More row below is KEPT unchanged: c3/{workflows,gha,dagu,logs,reports} are HIDDEN pages and More is their only referrer anywhere in build.json, so dropping it would silently orphan five real pages (test/test-stack-anchors-declared.sh T8 catches exactly this).",
             "kind": "feed",
             "source": "github_runs",
             "anchor": "gha",
