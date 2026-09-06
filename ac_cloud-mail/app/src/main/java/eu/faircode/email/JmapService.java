@@ -55,6 +55,7 @@ import rs.ltt.jmap.common.entity.Mailbox;
 import rs.ltt.jmap.common.entity.Role;
 import rs.ltt.jmap.common.entity.Upload;
 import rs.ltt.jmap.common.entity.Comparator;
+import rs.ltt.jmap.common.entity.capability.CoreCapability;
 import rs.ltt.jmap.common.entity.capability.MailAccountCapability;
 import rs.ltt.jmap.common.entity.filter.EmailFilterCondition;
 import rs.ltt.jmap.common.method.call.email.GetEmailMethodCall;
@@ -117,6 +118,12 @@ public class JmapService {
     private JmapClient client;
     private String accountId; // resolved MailAccountCapability primary account
     private String password; // comms: kept only to sign the raw Sieve HTTP calls below (no typed lib support)
+    // RFC 8620 §2 core capability -- maxObjectsInGet/maxObjectsInSet, the
+    // server's own wire-cost ceilings. Populated once per connect(); cheap to
+    // re-resolve since the client (and its session) is now cached per account
+    // (see CLIENT_CACHE), unlike the pre-cache world where every poll paid a
+    // fresh session round trip.
+    private CoreCapability coreCapability;
 
     // comms: one JmapClient per account for the SERVICE lifetime, not rebuilt
     // every poll pass. The 3-arg JmapClient ctor has no session cache, and
@@ -206,6 +213,7 @@ public class JmapService {
                 accountId = session.getPrimaryAccount(MailAccountCapability.class);
                 if (TextUtils.isEmpty(accountId))
                     throw new MessagingException("JMAP session has no mail account (urn:...:jmap:mail) for " + user);
+                coreCapability = session.getCapability(CoreCapability.class);
                 EntityLog.log(context, "JMAP connected user=" + user + " account=" + accountId +
                         " attempt=" + attempt + "/" + CONNECT_ATTEMPTS);
                 return;
@@ -348,9 +356,35 @@ public class JmapService {
 
     // ── Messages ─────────────────────────────────────────────────────────────
 
-    // JMAP page size for Email/query paging loops below. Stalwart's
-    // maxObjectsInGet is 500; 200 keeps a decent margin.
+    // JMAP page size for Email/query paging loops below -- the floor/default
+    // used whenever the session's core capability is absent or advertises
+    // nothing smaller. Stalwart's maxObjectsInGet is 500; 200 keeps a decent
+    // margin.
     private static final int JMAP_PAGE_SIZE = 200;
+
+    // Effective Email/query + Email/get page size: JMAP_PAGE_SIZE clamped
+    // down to the session's maxObjectsInGet when the server advertises one
+    // smaller (mirrors jmap-mua's QueryService, which reads the same
+    // CoreCapability field to cap its own page size).
+    private int pageSize() {
+        return clampToServer(JMAP_PAGE_SIZE, coreCapability == null ? null : coreCapability.getMaxObjectsInGet());
+    }
+
+    // Effective cap on ids folded into one coalesced Email/set (JmapSync's
+    // SetBatch), clamped down to the session's maxObjectsInSet the same way.
+    int setBatchMax(int localDefault) {
+        return clampToServer(localDefault, coreCapability == null ? null : coreCapability.getMaxObjectsInSet());
+    }
+
+    // A null or non-positive server limit means "capability absent" (session
+    // not yet resolved, or a non-conformant server) -- the local constant is
+    // then used as-is, never widened past it either: the server's number can
+    // only shrink our own already-conservative default.
+    private static int clampToServer(int localDefault, Long serverMax) {
+        if (serverMax == null || serverMax <= 0)
+            return localDefault;
+        return (int) Math.min(localDefault, serverMax);
+    }
 
     // ponytail: a fixed inter-page delay instead of a real token bucket — the
     // server edge allows 600 req/min for this vhost, so a small fixed gap
@@ -367,10 +401,11 @@ public class JmapService {
     List<Email> getFolderMessages(String mailboxId, int limit) throws MessagingException {
         requireAccount();
         List<Email> result = new ArrayList<>();
+        int pageSize = pageSize();
         try {
             long position = 0;
             while (result.size() < limit) {
-                long pageLimit = Math.min(JMAP_PAGE_SIZE, limit - result.size());
+                long pageLimit = Math.min(pageSize, limit - result.size());
                 JmapClient.MultiCall multiCall = client.newMultiCall();
                 JmapRequest.Call queryCall = multiCall.call(
                         QueryEmailMethodCall.builder()
@@ -537,9 +572,10 @@ public class JmapService {
         List<Email> result = new ArrayList<>();
         if (ids == null || ids.isEmpty())
             return result;
+        int pageSize = pageSize();
         try {
-            for (int from = 0; from < ids.size(); from += JMAP_PAGE_SIZE) {
-                List<String> page = ids.subList(from, Math.min(from + JMAP_PAGE_SIZE, ids.size()));
+            for (int from = 0; from < ids.size(); from += pageSize) {
+                List<String> page = ids.subList(from, Math.min(from + pageSize, ids.size()));
                 JmapClient.MultiCall multiCall = client.newMultiCall();
                 JmapRequest.Call getCall = multiCall.call(
                         GetEmailMethodCall.builder()
@@ -554,7 +590,7 @@ public class JmapService {
                 if (list != null)
                     for (Email e : list)
                         result.add(e);
-                if (from + JMAP_PAGE_SIZE < ids.size())
+                if (from + pageSize < ids.size())
                     sleepBetweenPages();
             }
             return result;
@@ -587,10 +623,11 @@ public class JmapService {
     List<String> getFolderUnreadIds(String mailboxId, int limit) throws MessagingException {
         requireAccount();
         List<String> result = new ArrayList<>();
+        int pageSize = pageSize();
         try {
             long position = 0;
             while (result.size() < limit) {
-                long pageLimit = Math.min(JMAP_PAGE_SIZE, limit - result.size());
+                long pageLimit = Math.min(pageSize, limit - result.size());
                 JmapClient.MultiCall multiCall = client.newMultiCall();
                 JmapRequest.Call queryCall = multiCall.call(
                         QueryEmailMethodCall.builder()

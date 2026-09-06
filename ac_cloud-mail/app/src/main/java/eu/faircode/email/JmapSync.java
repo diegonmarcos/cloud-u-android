@@ -105,9 +105,11 @@ public class JmapSync {
     // whatever does not fit is picked up by phase 2 or the next pass.
     private static final long OP_DRAIN_BUDGET_MS = 30 * 1000L;
 
-    // Max ids folded into ONE coalesced Email/set (see processOperations).
-    // Stalwart's maxObjectsInSet defaults to 500; 200 mirrors JmapService's
-    // JMAP_PAGE_SIZE and keeps a wide margin under it.
+    // Floor/default for ids folded into ONE coalesced Email/set (see
+    // processOperations) -- mirrors JmapService's JMAP_PAGE_SIZE and keeps a
+    // wide margin under Stalwart's maxObjectsInSet default of 500. describeBatch
+    // clamps this down further via JmapService.setBatchMax() whenever the
+    // connected session actually advertises a smaller maxObjectsInSet.
     private static final int SET_BATCH_MAX = 200;
 
     // Entry from ServiceSynchronize.monitorAccount's TYPE_JMAP branch. JMAP has
@@ -1217,7 +1219,7 @@ public class JmapSync {
                 break;
 
             EntityMessage message = (op.message == null ? null : db.message().getMessage(op.message));
-            SetBatch shape = describeBatch(op, message, mailboxToFolder, mailboxId);
+            SetBatch shape = describeBatch(op, message, mailboxToFolder, mailboxId, jmap);
 
             if (shape != null && batch != null && shape.key.equals(batch.key)
                     && batch.ops.size() < batch.max) {
@@ -1344,11 +1346,17 @@ public class JmapSync {
     // malformed args, unresolvable move target) so the single-op path below
     // handles it exactly as before.
     private static SetBatch describeBatch(EntityOperation op, EntityMessage message,
-                                          Map<String, Long> mailboxToFolder, String mailboxId) {
+                                          Map<String, Long> mailboxToFolder, String mailboxId,
+                                          JmapService jmap) {
         if (message == null || message.uidl == null || op.name == null)
             return null;
         SetBatch b = new SetBatch();
         b.name = op.name;
+        // Default floor SET_BATCH_MAX, clamped down to this session's
+        // maxObjectsInSet when the server advertises one smaller (see
+        // JmapService.setBatchMax). The BODY case below overrides this with
+        // its own Email/get-bound constant, untouched by this clamp.
+        b.max = jmap.setBatchMax(SET_BATCH_MAX);
         try {
             switch (op.name) {
                 case EntityOperation.SEEN:
