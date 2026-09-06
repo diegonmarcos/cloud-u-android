@@ -959,6 +959,11 @@
       }
     }
   },
+  "keyboard_upstream": {
+    "_doc": "HeliBoard commit the libs/keyboard mirror was last synced from (sync-heliboard). regen-keyboard-patch refuses to run unless the ac_keyboard-heliboard clone sits at this sha, so patches/0001 only ever encodes OUR delta, never upstream churn. Bump = checkout the new sha in the clone, sync-heliboard, reconcile, regen, update here.",
+    "repo": "https://github.com/Helium314/HeliBoard",
+    "sha": "7738e7e"
+  },
   "keyboard_brand_rename": {
     "_doc": "Brand-rebrand the vendored keyboard's USER-FACING display strings only. step_brand_rename (run at the end of sync-heliboard, also callable standalone) rewrites the `token` -> `replacement` inside ONLY the curated `string_keys` across every libs/keyboard values*/strings.xml, using awk + an idempotency guard (skips lines already carrying the replacement). Deliberately NARROW: it never touches package identifiers (helium314.keyboard.* — the manifest resolves the IME service by that namespace), nor upstream attribution/credit/license/URL text (legally the upstream's credit). english_ime_name is handled separately as an app/ resource override. Add a brand label = one entry in string_keys.",
     "token": "HeliBoard",
