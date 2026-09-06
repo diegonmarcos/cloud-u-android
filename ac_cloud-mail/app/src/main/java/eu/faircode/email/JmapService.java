@@ -92,9 +92,9 @@ public class JmapService {
     // Email/get properties fetched for the message list — headers only; the
     // body is fetched lazily per-message (getMessageBody) to keep sync cheap.
     private static final String[] EMAIL_HEADER_PROPERTIES = new String[]{
-            "id", "blobId", "threadId", "mailboxIds", "keywords",
+            "id", "threadId", "mailboxIds", "keywords",
             "from", "to", "cc", "bcc", "replyTo", "subject",
-            "receivedAt", "sentAt", "size", "preview", "hasAttachment",
+            "receivedAt", "sentAt", "size",
             "messageId", "inReplyTo", "references"
     };
 
