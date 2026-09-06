@@ -199,8 +199,7 @@ echo "== T10: the Connect | Info split, and the mailed 2FA code is never stored 
 # The screen is two tabs now. What must survive the split is WHERE each field
 # is stored, not where it is drawn — so these assert the placement AND that
 # nothing gained a store on the way across.
-has "$FRAGMENT" 'newTab().setText("Connect")' "Connect tab exists"
-has "$FRAGMENT" 'newTab().setText("Info")'    "Info tab exists"
+# Tab identity is asserted in T11, which owns the four-tab shape.
 # The existing pill idiom, not a second tab mechanism.
 has "$FRAGMENT" "AppTabsStyle.apply"          "reuses the launcher's pill chrome"
 # ...but NOT the child-fragment machinery behind it. SectionTabsFragment swaps
@@ -216,11 +215,10 @@ has "$FRAGMENT" "private var selectedTab"          "the selected tab survives a 
 # Connect carries the paired credential; Mesh Data carries the tunnel key.
 has "$FRAGMENT" 'connect.addView(label(ctx, "Account email"))'          "account email is on Connect"
 has "$FRAGMENT" 'connect.addView(label(ctx, "Authelia bearer token"))'  "bearer is on Connect"
-has "$FRAGMENT" 'col.addView(label(ctx, "WireGuard private key"))'      "WG key is on Info · Mesh Data"
-has "$FRAGMENT" 'col.addView(label(ctx, "Provider"))'                   "Provider is on Info · Mesh Data"
-has "$FRAGMENT" 'sectionHeader(ctx, "Personal Data")'                   "Info has a Personal Data section"
-has "$FRAGMENT" 'sectionHeader(ctx, "Mesh Data'                         "Info has a Mesh Data section"
-has "$FRAGMENT" 'sectionHeader(ctx, "Imports")'                         "Info has an Imports section"
+has "$FRAGMENT" 'mesh.addView(label(ctx, "WireGuard private key"))'     "WG key is on the Mesh tab"
+has "$FRAGMENT" 'mesh.addView(label(ctx, "Provider"))'                  "Provider is on the Mesh tab"
+has "$FRAGMENT" 'sectionHeader(ctx, "Personal Data")'                   "Infos has a Personal Data section"
+has "$FRAGMENT" 'sectionHeader(ctx, "Imports")'                         "Infos has an Imports section"
 # The orphan-token affordance must stay reachable after the move.
 has "$FRAGMENT" 'connect.addView(pickButton(ctx, "Link the stored token to this address")' \
     "the orphan-token link affordance survived the split"
@@ -267,6 +265,112 @@ fi
 hasnt_code "$SYNC" "mailCode"     "ProfileSync never reads the mailed code"
 hasnt_code "$SYNC" "confirmation" "ProfileSync carries no confirmation field"
 hasnt_code "$IMPORT" "mail_code"  "the auto-import writes no 2FA code"
+
+echo "== T11: four tabs; AI is a link; the export carries no private key =="
+WG_PROFILES="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardProfiles.kt"
+has "$FRAGMENT" '"Connect" to connect' "tab 1 is Connect"
+has "$FRAGMENT" '"Mesh" to mesh'       "tab 2 is Mesh"
+has "$FRAGMENT" '"AI" to null'         "tab 3 is AI, and it has no column"
+has "$FRAGMENT" '"Infos" to col'       "tab 4 is Infos"
+has "$FRAGMENT" 'sectionHeader(ctx, "Mesh Infos'  "Mesh has a Mesh Infos section"
+has "$FRAGMENT" 'sectionHeader(ctx, "Mesh Status")' "Mesh has a Mesh Status section"
+# AI must be a LINK to the page that already exists, not a second copy of it.
+has   "$FRAGMENT" 'AI_ROUTE = "page:config/ai"' "AI points at the existing page route"
+hasnt_code "$FRAGMENT" "AiFragment"             "the AI page is not re-hosted here"
+# Still no child fragments and no borrowed launcher machinery, at 4 tabs.
+hasnt_code "$FRAGMENT" "childFragmentManager"   "four tabs still use no child fragments"
+hasnt_code "$FRAGMENT" "SectionTabsFragment"    "four tabs still avoid the section mechanism"
+
+echo "-- T11a: the profile matrix is DATA in build.json, not literals in Kotlin --"
+has "$WG_PROFILES" "BuildConfig.UI_WG_PROFILES_JSON_B64" "profiles come from baked build.json data"
+has "app/build.gradle" "UI_WG_PROFILES_JSON_B64"         "the blob is baked"
+has "build.json" '"wireguard_profiles"'                  "build.json declares the matrix"
+# No fleet literal may be spelled out in the renderer — it must follow the
+# fleet the way applyCloudPreset() does, not rot when the hub moves.
+hasnt_code "$WG_PROFILES" "35.226.147.64"  "no hub endpoint literal in the renderer"
+hasnt_code "$WG_PROFILES" "129.151.228.66" "no second hub endpoint literal"
+hasnt_code "$WG_PROFILES" "10.0.0.9"       "no address literal in the renderer"
+# Render-only: it must never write the tunnel's stored settings, or it becomes
+# a second writer racing applyCloudPreset().
+hasnt_code "$WG_PROFILES" "WireGuardPrefs" "the exporter never writes tunnel prefs"
+
+echo "-- T11b: the export omits the private key --"
+hasnt_code "$WG_PROFILES" "interfacePrivateKey" "the renderer cannot read the private key"
+hasnt_code "$WG_PROFILES" "if_privkey"          "the renderer cannot reach the stored key"
+has "$WG_PROFILES" "PrivateKey = "              "an empty, named PrivateKey line is emitted"
+has "$WG_PROFILES" "NOT EXPORTED"               "the file says the key was withheld"
+if awk '/fun exportProfilesTo/,/^    }$/' "$ROOT/$FRAGMENT" | grep -qF "interfacePrivateKey"; then
+    bad "exportProfilesTo() must not touch the private key"
+else
+    ok "the export path never reads the private key"
+fi
+
+echo "-- T11c: the matrix itself (a wrong prefix here is a real outage) --"
+# One python pass: it prints the same "  PASS:/  FAIL:" lines the shell helpers
+# do, then a trailing tally the shell folds into its own counters.
+MATRIX=$(python3 - "$ROOT/build.json" <<'PY'
+import json, sys
+ui = json.load(open(sys.argv[1]))["ui"]
+blk = ui["wireguard_profiles"]
+P, F = [], []
+def chk(c, m): (P if c else F).append(m)
+
+profiles = blk["profiles"]
+chk(len(profiles) == 4, "exactly 4 profiles (one merged tunnel each, not 8)")
+chk({p["id"] for p in profiles} == {"v4-split", "v4-full", "v6-split", "v6-full"},
+    "the four ids are v{4,6}-{split,full}")
+# One shared Address line, carrying BOTH v6 identities.
+addr = blk["interface_address"]
+chk("fd0c:1d00::9/64" in addr, "Address carries the wg0 identity fd0c:1d00::9")
+chk("fd0c:1d01::9/64" in addr, "Address carries the wg-public identity fd0c:1d01::9")
+chk(blk["interface_mtu"] == "1380", "MTU is 1380, not the in-app form's 1280")
+
+for p in profiles:
+    i = p["id"]
+    peers = {q["name"]: q for q in p["peers"]}
+    chk(set(peers) == {"gcp-proxy", "oci-analytics"}, f"{i}: both meshes present as two peers")
+    g, o = peers["gcp-proxy"], peers["oci-analytics"]
+    chk(g["endpoint"].endswith(":443"), f"{i}: gcp-proxy uses udp/443, not the filtered 51820")
+    # The prefix that causes the 14-30s stall if it goes to the wrong peer.
+    chk("fd0c:1d00::/64" in g["allowed_ips"], f"{i}: fd0c:1d00::/64 routes to gcp-proxy")
+    chk("fd0c:1d00" not in o["allowed_ips"], f"{i}: fd0c:1d00 is NOT handed to oci-analytics")
+    chk("1.1.1.1" not in p["dns"] and "1.0.0.1" not in p["dns"], f"{i}: DNS is mesh-only")
+    blob = json.dumps(p)
+    chk("private_key" not in blob and "privkey" not in blob, f"{i}: carries no private key")
+
+# split vs full must actually differ, or the matrix is decoration.
+byid = {p["id"]: p for p in profiles}
+for fam in ("v4", "v6"):
+    chk("0.0.0.0/0" not in json.dumps(byid[f"{fam}-split"]), f"{fam}-split routes no default v4")
+    chk("0.0.0.0/0" in json.dumps(byid[f"{fam}-full"]), f"{fam}-full routes the default v4")
+# The separation that protects matchesCloudPreset().
+chk("fd0c" not in json.dumps(ui["wireguard_default"]),
+    "wireguard_default is untouched (still v4-only), so no install reads as drifted")
+
+for m in P: print(f"  PASS: {m}")
+for m in F: print(f"  FAIL: {m}")
+print(f"TALLY {len(P)} {len(F)}")
+PY
+)
+echo "$MATRIX" | grep -v '^TALLY '
+TALLY=$(echo "$MATRIX" | awk '/^TALLY /{print $2" "$3}')
+PASS=$((PASS + ${TALLY% *})); FAIL=$((FAIL + ${TALLY#* }))
+
+echo "-- T11d: the status readout admits what it cannot see --"
+has "$FRAGMENT" "CANNOT TELL"        "status has a third, cannot-tell state"
+has "$FRAGMENT" "isEngineInstalled"  "cannot-tell is decided by the engine being absent"
+has "$FRAGMENT" "CONNECTED"          "status can say connected"
+has "$FRAGMENT" "NOT CONNECTED"      "status can say not connected"
+# A DOWN reading with no engine is not evidence — it must not be reported as
+# "not connected", which is the lie that sends someone chasing a working mesh.
+if awk '/private fun meshStatusView/,/^    }$/' "$ROOT/$FRAGMENT" | grep -qF 'if (installed)'; then
+    ok "state is only read when the engine can actually answer"
+else
+    bad "meshStatusView() must not trust getState() without the engine"
+fi
+# No claim to see a tunnel this app does not own.
+hasnt_code "$FRAGMENT" "wg show"        "no pretence of reading the OS tunnel table"
+hasnt_code "$FRAGMENT" "latest-handshake" "no pretence of reading wg state files"
 
 echo
 echo "PASS=$PASS FAIL=$FAIL"

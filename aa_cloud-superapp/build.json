@@ -4933,6 +4933,117 @@
       ],
       "consolidated_config": "cloud/2_configs/dist/_cloud-data-consolidated.json → baked into the app as data/mesh.json (BuildConfig.MESH_JSON_B64), the full wg-mesh/v1 node + peer + transport snapshot"
     },
+    "_doc_wireguard_profiles": "The four EXPORTABLE tunnel profiles, mirrored from vault/A0_keys/providers/wireguard/termux-public/config-v{4,6}-{split,full}. SEPARATE FROM wireguard_default ON PURPOSE: wireguard_default seeds the in-app form and is what matchesCloudPreset() compares against, so folding these values into it would make every existing install read as drifted and prompt to replace a config the user may have hand-built. Nothing here is ever written to WireGuardPrefs; it is render-only, consumed by WireGuardProfiles.kt to emit wg-quick text for export. The phone is a SINGLE-TUNNEL mesh spoke (Android allows one active WG profile), so each profile is ONE merged config carrying BOTH meshes as two peers - there are 4 files, not 8. Both v6 prefixes appear on every Address line and they are NOT interchangeable: fd0c:1d00::9 is the wg0 identity and fd0c:1d01::9 is the wg-public identity. Sending fd0c:1d00:: traffic to oci-analytics is cryptokey-dropped there (its allowed source for this phone is fd0c:1d01::9), which is the 14-30s happy-eyeballs stall. MTU is 1380 and the gcp-proxy endpoint is udp/443 (redirected to 51820) because port filtering eats 51820; DNS is mesh-only. No private key is present or permitted here - the export omits it by design.",
+    "wireguard_profiles": {
+      "interface_address": "10.0.0.9/24, 10.1.0.9/24, fd0c:1d00::9/64, fd0c:1d01::9/64",
+      "interface_mtu": "1380",
+      "profiles": [
+        {
+          "id": "v4-split",
+          "label": "IPv4 · split",
+          "comment": "wg-v4-split - IPv4 wifi, SPLIT tunnel (mesh subnets only)",
+          "dns": "10.0.0.1, 10.1.0.1",
+          "peers": [
+            {
+              "name": "gcp-proxy",
+              "mesh": "wg0",
+              "comment": "gcp-proxy - wg0 hub (udp/443 REDIRECT->51820 survives port filtering)",
+              "public_key": "vV/phXUwnCjxACQ5Df11Uw47BzJaK4r85jPYMu2HmDc=",
+              "endpoint": "35.226.147.64:443",
+              "allowed_ips": "10.0.0.0/24, fd0c:1d00::/64",
+              "persistent_keepalive": "25"
+            },
+            {
+              "name": "oci-analytics",
+              "mesh": "wg-public",
+              "comment": "oci-analytics - wg-public hub (+NAT64 prefix so DNS64 answers route in-mesh)",
+              "public_key": "Bnyf83VpvGY4BjcjQEXgutNEzx9OXMltHIcKNh7cKkc=",
+              "endpoint": "129.151.228.66:51821",
+              "allowed_ips": "10.1.0.0/24, fd0c:1d01::/64, 2603:c026:c104:8f00:ff9b::/96",
+              "persistent_keepalive": "25"
+            }
+          ]
+        },
+        {
+          "id": "v4-full",
+          "label": "IPv4 · full",
+          "comment": "wg-v4-full - IPv4 wifi, FULL tunnel (v4 via gcp-proxy, v6 via oci-analytics)",
+          "dns": "10.0.0.1, 10.1.0.1",
+          "peers": [
+            {
+              "name": "gcp-proxy",
+              "mesh": "wg0",
+              "comment": "gcp-proxy - all IPv4 internet (gcp-proxy has no v6 egress) + wg0 mesh v6.\n# fd0c:1d00::/64 MUST be listed here even though v6 egress goes to\n# oci-analytics: it is more specific than the other peer's ::/0, so mesh v6\n# reaches the hub directly instead of being handed to oci-analytics (which\n# drops it - this phone's allowed source there is fd0c:1d01::9, not fd0c:1d00::9).",
+              "public_key": "vV/phXUwnCjxACQ5Df11Uw47BzJaK4r85jPYMu2HmDc=",
+              "endpoint": "35.226.147.64:443",
+              "allowed_ips": "0.0.0.0/0, fd0c:1d00::/64",
+              "persistent_keepalive": "25"
+            },
+            {
+              "name": "oci-analytics",
+              "mesh": "wg-public",
+              "comment": "oci-analytics - wg-public mesh + ALL IPv6 (it has v6 egress + NAT64)",
+              "public_key": "Bnyf83VpvGY4BjcjQEXgutNEzx9OXMltHIcKNh7cKkc=",
+              "endpoint": "129.151.228.66:51821",
+              "allowed_ips": "10.1.0.0/24, fd0c:1d01::/64, ::/0",
+              "persistent_keepalive": "25"
+            }
+          ]
+        },
+        {
+          "id": "v6-split",
+          "label": "IPv6 · split",
+          "comment": "wg-v6-split - IPv6-only wifi, SPLIT tunnel (mesh subnets only)",
+          "dns": "fd0c:1d01::1, 10.1.0.1",
+          "peers": [
+            {
+              "name": "gcp-proxy",
+              "mesh": "wg0",
+              "comment": "gcp-proxy - v4 endpoint: dead on v6-only wifi (harmless), works on dual-stack",
+              "public_key": "vV/phXUwnCjxACQ5Df11Uw47BzJaK4r85jPYMu2HmDc=",
+              "endpoint": "35.226.147.64:443",
+              "allowed_ips": "10.0.0.0/24, fd0c:1d00::/64",
+              "persistent_keepalive": "25"
+            },
+            {
+              "name": "oci-analytics",
+              "mesh": "wg-public",
+              "comment": "oci-analytics - wg-public hub (+NAT64 prefix so DNS64 answers route in-mesh)",
+              "public_key": "Bnyf83VpvGY4BjcjQEXgutNEzx9OXMltHIcKNh7cKkc=",
+              "endpoint": "[2603:c026:c104:8f00:0:c704:63b:6eee]:51821",
+              "allowed_ips": "10.1.0.0/24, fd0c:1d01::/64, 2603:c026:c104:8f00:ff9b::/96",
+              "persistent_keepalive": "25"
+            }
+          ]
+        },
+        {
+          "id": "v6-full",
+          "label": "IPv6 · full",
+          "comment": "wg-v6-full - IPv6-only wifi, FULL tunnel (everything via oci-analytics)",
+          "dns": "fd0c:1d01::1, 10.1.0.1",
+          "peers": [
+            {
+              "name": "gcp-proxy",
+              "mesh": "wg0",
+              "comment": "gcp-proxy - mesh reach when dual-stack; dead on v6-only wifi (harmless)",
+              "public_key": "vV/phXUwnCjxACQ5Df11Uw47BzJaK4r85jPYMu2HmDc=",
+              "endpoint": "35.226.147.64:443",
+              "allowed_ips": "10.0.0.0/24, fd0c:1d00::/64",
+              "persistent_keepalive": "25"
+            },
+            {
+              "name": "oci-analytics",
+              "mesh": "wg-public",
+              "comment": "oci-analytics - ALL traffic; DNS64/NAT64 reaches IPv4-only sites over v6",
+              "public_key": "Bnyf83VpvGY4BjcjQEXgutNEzx9OXMltHIcKNh7cKkc=",
+              "endpoint": "[2603:c026:c104:8f00:0:c704:63b:6eee]:51821",
+              "allowed_ips": "0.0.0.0/0, ::/0",
+              "persistent_keepalive": "25"
+            }
+          ]
+        }
+      ]
+    },
     "_doc_wireguard_default": "Seeds the Configs/WireGuard form on first run. The phone is a single-tunnel mesh spoke (Android allows one active WG profile) carrying TWO peers / two meshes — gcp-proxy wg0 (10.0.0.0/24) and oci-analytics wg-public (10.1.0.0/24), mirrored from vault/.../wireguard/termux-public/config. The network-popup Mesh section probes each peer's hub (.1 of its allowed_ips) as a separate light. peer.public_key IS seeded — WireGuard PUBLIC keys are non-secret (the hubs' public identity, already in the public cloud repo). interface_private_key + peer.preshared_key are NOT seeded (the private key is the credential — Pillar 7): generate via the in-app Generate Keypair button, or import the merged .conf / paste manually. All values are FIRST-RUN defaults, user-editable at runtime via WireGuardFragment (Add/Remove Peer; persisted in WireGuardPrefs).",
     "wireguard_default": {
       "tunnel_name": "wg-mesh",

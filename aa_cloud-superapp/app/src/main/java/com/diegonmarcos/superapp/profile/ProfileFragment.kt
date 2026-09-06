@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.diegonmarcos.superapp.launcher.AppTabsStyle
 import com.diegonmarcos.superapp.network.WireGuardPrefs
+import com.diegonmarcos.superapp.network.WireGuardProfiles
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import com.diegonmarcos.superapp.ui.snack
 import com.google.android.material.tabs.TabLayout
@@ -108,11 +109,14 @@ class ProfileFragment : Fragment() {
         }
         scroll.addView(page)
 
-        // `connect` is tab 1; `col` is tab 2 and keeps its name so every field
-        // that is only MOVING between tabs keeps its existing call site.
+        // Three content columns; `col` keeps its name so every field that is
+        // only MOVING between tabs keeps its existing call site. AI has no
+        // column at all — see [tabStrip].
         val connect = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val mesh = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         page.addView(connect)
+        page.addView(mesh)
         page.addView(col)
 
         val root = LinearLayout(ctx).apply {
@@ -122,7 +126,14 @@ class ProfileFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
         }
-        root.addView(tabStrip(ctx, connect, col))
+        // AI is paired with a null column: it is a LINK, not a page. See
+        // [tabStrip] for why it is a tab at all.
+        root.addView(tabStrip(ctx, listOf(
+            "Connect" to connect,
+            "Mesh" to mesh,
+            "AI" to null,
+            "Infos" to col,
+        )))
         root.addView(scroll)
 
         col.addView(sectionHeader(ctx, "Personal Data"))
@@ -254,29 +265,44 @@ class ProfileFragment : Fragment() {
             confirmErase()
         })
 
-        // ── Mesh Data ────────────────────────────────────────────────────
+        // ── Mesh · Infos (tab 2) ─────────────────────────────────────────
         // The tunnel's own configuration: the Provider preset fills the PUBLIC
         // half, and the private key — the one field no preset may ever carry —
         // is generated or pasted here.
-        col.addView(sectionHeader(ctx, "Mesh Data  (this device only)"))
-        col.addView(caption(ctx, MESH_TEXT))
+        mesh.addView(sectionHeader(ctx, "Mesh Infos  (this device only)"))
+        mesh.addView(caption(ctx, MESH_TEXT))
 
-        col.addView(label(ctx, "Provider"))
-        col.addView(providerSelector(ctx))
-        col.addView(caption(ctx, PROVIDER_TEXT))
-        col.addView(pickButton(ctx, "Generate this device's key pair") {
+        mesh.addView(label(ctx, "Provider"))
+        mesh.addView(providerSelector(ctx))
+        mesh.addView(caption(ctx, PROVIDER_TEXT))
+        mesh.addView(pickButton(ctx, "Generate this device's key pair") {
             confirmGenerateKeyPair()
         })
 
-        col.addView(label(ctx, "WireGuard private key"))
-        col.addView(secretField(
+        mesh.addView(label(ctx, "WireGuard private key"))
+        mesh.addView(secretField(
             ctx,
             stored = { WireGuardPrefs(ctx).interfacePrivateKey.isNotBlank() },
             save = { WireGuardPrefs(ctx).interfacePrivateKey = it },
         ))
-        col.addView(clearSecretButton(ctx, "WireGuard private key") {
+        mesh.addView(clearSecretButton(ctx, "WireGuard private key") {
             WireGuardPrefs(ctx).interfacePrivateKey = ""
         })
+
+        // ── Mesh · Export ────────────────────────────────────────────────
+        mesh.addView(label(ctx, "Export tunnel profiles"))
+        mesh.addView(caption(ctx, EXPORT_TEXT))
+        mesh.addView(caption(ctx, WireGuardProfiles.all
+            .joinToString("\n") { "• ${it.fileName} — ${it.label}" }
+            .ifBlank { "This build carries no profiles — nothing to export." }))
+        mesh.addView(pickButton(ctx, "Export the 4 profiles to a folder…") {
+            if (WireGuardProfiles.all.isEmpty()) view?.snack("No profiles in this build")
+            else profileFolderPicker.launch(null)
+        })
+
+        // ── Mesh · Status ────────────────────────────────────────────────
+        mesh.addView(sectionHeader(ctx, "Mesh Status"))
+        mesh.addView(meshStatusView(ctx))
 
         // ── Imports ──────────────────────────────────────────────────────
         // All five entries live HERE. "Import Configs" used to be its own
@@ -336,17 +362,16 @@ class ProfileFragment : Fragment() {
      */
     private fun tabStrip(
         ctx: android.content.Context,
-        connect: View,
-        info: View,
+        tabs: List<Pair<String, View?>>,
     ): TabLayout {
         fun show(index: Int) {
-            connect.visibility = if (index == 0) View.VISIBLE else View.GONE
-            info.visibility = if (index == 0) View.GONE else View.VISIBLE
+            tabs.forEachIndexed { i, (_, column) ->
+                column?.visibility = if (i == index) View.VISIBLE else View.GONE
+            }
         }
         show(selectedTab)
         return TabLayout(ctx).apply {
-            addTab(newTab().setText("Connect"))
-            addTab(newTab().setText("Info"))
+            tabs.forEach { (title, _) -> addTab(newTab().setText(title)) }
             tabMode = TabLayout.MODE_FIXED
             tabGravity = TabLayout.GRAVITY_FILL
             layoutParams = LinearLayout.LayoutParams(
@@ -355,6 +380,23 @@ class ProfileFragment : Fragment() {
             )
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab) {
+                    // A tab with NO column is a LAUNCH tab — a button wearing a
+                    // tab, the idiom [SectionTabsFragment] already uses for
+                    // C3's Watchdog and Morpheus. AI is one because the AI page
+                    // ALREADY EXISTS at page:config/ai; re-hosting it here would
+                    // be a second copy to keep in step. So the tab navigates
+                    // and hands the selection straight back — leaving for
+                    // another page must not also leave this strip parked on a
+                    // tab with nothing behind it, which is what the user would
+                    // return to.
+                    if (tabs.getOrNull(tab.position)?.second == null) {
+                        (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)
+                            ?.onTileClicked(AI_ROUTE)
+                        getTabAt(selectedTab)
+                            ?.takeIf { it != tab }
+                            ?.let { back -> post { back.select() } }
+                        return
+                    }
                     selectedTab = tab.position
                     show(tab.position)
                 }
@@ -364,6 +406,150 @@ class ProfileFragment : Fragment() {
             // Styled AFTER the tabs exist — the helper builds a pill per tab.
             AppTabsStyle.apply(this)
             getTabAt(selectedTab)?.select()
+        }
+    }
+
+    // ── mesh · export ────────────────────────────────────────────────────
+
+    /**
+     * Write the four profiles into a folder the USER picks.
+     *
+     * A folder rather than four save dialogs, and SAF rather than a path: the
+     * app writes only where it has just been handed permission, and it writes
+     * nothing at all until then. Nothing lands in Downloads unasked.
+     */
+    private val profileFolderPicker =
+        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { tree ->
+            tree ?: return@registerForActivityResult
+            exportProfilesTo(tree)
+        }
+
+    private fun exportProfilesTo(tree: android.net.Uri) {
+        val resolver = requireContext().contentResolver
+        // Platform SAF, not androidx.documentfile — that artifact is not a
+        // dependency of this module and one export is not worth adding one.
+        val dirUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(
+            tree, android.provider.DocumentsContract.getTreeDocumentId(tree))
+        val written = mutableListOf<String>()
+        val failed = mutableListOf<String>()
+        WireGuardProfiles.all.forEach { profile ->
+            val ok = runCatching {
+                deleteExisting(dirUri, profile.fileName)
+                val fileUri = android.provider.DocumentsContract.createDocument(
+                    resolver, dirUri, "text/plain", profile.fileName,
+                ) ?: error("could not create ${profile.fileName}")
+                resolver.openOutputStream(fileUri)?.use {
+                    it.write(WireGuardProfiles.render(profile).toByteArray())
+                } ?: error("could not write ${profile.fileName}")
+            }.isSuccess
+            if (ok) written += profile.fileName else failed += profile.fileName
+        }
+        // Reported per file. "Exported" over a partial write is how a missing
+        // profile gets discovered on the train instead of here.
+        view?.snack(
+            if (failed.isEmpty()) "Exported ${written.size} profiles — no private key included"
+            else "Exported ${written.size}, FAILED ${failed.size}: ${failed.joinToString()}"
+        )
+    }
+
+    /**
+     * Drop a same-named file before writing.
+     *
+     * SAF's `createDocument` RENAMES on collision rather than replacing, so a
+     * re-export after the hub moves would leave "config-v4-split (1).conf"
+     * sitting next to the stale file the user already imported — and the stale
+     * one keeps the name they would reach for. Best-effort: a folder that
+     * refuses the delete still gets the new file, just under SAF's name.
+     */
+    private fun deleteExisting(dirUri: android.net.Uri, name: String) {
+        val resolver = requireContext().contentResolver
+        runCatching {
+            val children = android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(
+                dirUri, android.provider.DocumentsContract.getDocumentId(dirUri))
+            resolver.query(
+                children,
+                arrayOf(
+                    android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                    android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                ),
+                null, null, null,
+            )?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    if (cursor.getString(1) != name) continue
+                    android.provider.DocumentsContract.deleteDocument(
+                        resolver,
+                        android.provider.DocumentsContract.buildDocumentUriUsingTree(
+                            dirUri, cursor.getString(0)),
+                    )
+                }
+            }
+        }
+    }
+
+    // ── mesh · status ────────────────────────────────────────────────────
+
+    /**
+     * What this device can honestly say about the tunnel.
+     *
+     * THREE STATES, NOT TWO. The app can read [Tunnel.State] and per-peer
+     * handshake/byte counters, but ONLY for the tunnel it owns through the
+     * engine APK — there is no netlink, no `wg show`, and no visibility into a
+     * tunnel the official WireGuard app is running. [WgState.backend] returns a
+     * working object even when the engine is absent and then reports DOWN for
+     * everything, so "DOWN" alone is not evidence of anything. When the engine
+     * is not installed this says CANNOT TELL and says why, because reporting
+     * "not connected" to someone whose mesh is plainly working is worse than
+     * admitting the blind spot.
+     *
+     * The peer rows are always CONFIGURATION — what this device would dial —
+     * and carry live counters only where the backend supplied them.
+     */
+    private fun meshStatusView(ctx: android.content.Context): TextView {
+        val prefs = WireGuardPrefs(ctx)
+        val backend = com.diegonmarcos.superapp.network.WgState.backend(ctx)
+        val installed = runCatching { backend.isEngineInstalled() }.getOrDefault(false)
+        val state = if (installed) runCatching {
+            backend.getState(com.diegonmarcos.superapp.network.WgState.tunnel)
+        }.getOrNull() else null
+        val stats = if (installed) runCatching {
+            backend.getStatistics(com.diegonmarcos.superapp.network.WgState.tunnel)
+        }.getOrNull() else null
+        val up = state == com.wireguard.android.backend.Tunnel.State.UP
+
+        val head = when {
+            !installed -> "CANNOT TELL — the WireGuard engine app is not installed on this " +
+                "device, so this app cannot read tunnel state. If your mesh is up, another " +
+                "app is running it and nothing here can see it."
+            up -> "CONNECTED — this app's tunnel \"${prefs.tunnelName}\" is up."
+            else -> "NOT CONNECTED — this app's tunnel \"${prefs.tunnelName}\" is down. A " +
+                "tunnel run by the official WireGuard app is invisible here and would also " +
+                "read as down."
+        }
+
+        val peers = prefs.peers().joinToString("\n\n") { peer ->
+            val live = runCatching {
+                stats?.peer(com.wireguard.crypto.Key.fromBase64(peer.publicKey))
+            }.getOrNull()
+            val handshake = live?.latestHandshakeEpochMillis() ?: 0L
+            buildString {
+                append("${peer.name.ifBlank { "peer" }} · ${peer.endpoint}")
+                append("\n  allowed: ${peer.allowedIps}")
+                append("\n  last handshake: ")
+                append(when {
+                    !installed -> "unknown"
+                    handshake > 0L -> "${(System.currentTimeMillis() - handshake) / 1000}s ago"
+                    up -> "never — configured but not talking"
+                    else -> "—"
+                })
+                if (live != null) {
+                    append("\n  traffic: down ${live.rxBytes()} B · up ${live.txBytes()} B")
+                }
+            }
+        }.ifBlank { "No peers configured." }
+
+        return caption(ctx, "$head\n\n$peers\n\n$STATUS_TEXT").apply {
+            alpha = 0.75f
+            setTextIsSelectable(true)
         }
     }
 
@@ -1380,6 +1566,38 @@ class ProfileFragment : Fragment() {
         private val GREEN   = 0xFF16A34A.toInt()
         private val RED     = 0xFFDC2626.toInt()
         private val NEUTRAL = 0xFF9CA3AF.toInt()
+
+        /**
+         * The AI page's existing route. It is a LINK, not a copy: `config/ai`
+         * has no `action` of its own and resolves through
+         * SectionPages → AiFragment, so this reuses the one implementation.
+         */
+        private const val AI_ROUTE = "page:config/ai"
+
+        /**
+         * Why the export omits the key, said where the export is offered.
+         */
+        private const val EXPORT_TEXT =
+            "Four ready-made tunnel profiles for the WireGuard app — the two axes that " +
+            "actually change on a phone: which address family the wifi gives you, and how " +
+            "much of your traffic goes inside the tunnel. Each file is ONE config carrying " +
+            "BOTH meshes as two peers, because Android runs one tunnel at a time.\n\n" +
+            "YOUR PRIVATE KEY IS NOT INCLUDED. The file leaves this app for a folder the " +
+            "app does not control, and a mesh private key written there undoes the reason " +
+            "it is held here and never displayed. Each file has an empty PrivateKey line " +
+            "with a note; paste your key into the WireGuard app after importing, or " +
+            "generate a pair above and register its public half on the hub."
+
+        /**
+         * The limit of what this screen can observe, stated on the screen that
+         * observes it — a status readout that will not say "I cannot tell" is
+         * a status readout that lies exactly when it matters.
+         */
+        private const val STATUS_TEXT =
+            "This reads the tunnel THIS APP owns, through the WireGuard engine app. It " +
+            "cannot see a tunnel run by the official WireGuard app, and it has no way to " +
+            "ask the operating system directly — so peer rows are what this device is " +
+            "configured to dial, and only handshake and byte counts are live."
 
         /** Advisory shape check for the birth field. Range/real-calendar
          *  validity is deliberately not checked — the field is optional and a
