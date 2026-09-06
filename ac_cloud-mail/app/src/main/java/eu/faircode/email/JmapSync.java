@@ -488,6 +488,14 @@ public class JmapSync {
         // is a cheap local COUNT; the network cost per view folder is one
         // small query (server=7), so neediest-first clears the visible symptom
         // in a single short window even when the pass never completes.
+        //
+        // Phase 1a (reconcile) and phase 1b (insert) below both read the SAME
+        // mailbox listing -- nothing between them mutates server state (no
+        // Email/set is issued until drainOperations at the very end of the
+        // pass), so 1a's result is reused verbatim by 1b instead of paging the
+        // whole mailbox again. Scoped to this single pass only: never carried
+        // into the next poll, where staleness would actually matter.
+        Map<String, List<Email>> mailboxCache = new HashMap<>();
         List<Map.Entry<Long, String>> sweepOrder = new ArrayList<>(folderToMailbox.entrySet());
         Map<Long, Integer> unseenByFolder = new HashMap<>();
         for (Map.Entry<Long, String> e : sweepOrder)
@@ -501,7 +509,7 @@ public class JmapSync {
                 continue;
             try {
                 syncMessages(context, account, folder, e.getValue(), jmap,
-                        accountHave, mailboxToFolder, folderById, false);
+                        accountHave, mailboxToFolder, folderById, false, mailboxCache);
             } catch (Throwable ex) {
                 // One folder's timeout must not abort the sweep: on a starved
                 // edge (rs.ltt.jmap's fixed ~10s call timeout, load-21 proxy)
@@ -532,7 +540,7 @@ public class JmapSync {
                 continue;
             try {
                 syncMessages(context, account, folder, e.getValue(), jmap,
-                        accountHave, mailboxToFolder, folderById, true);
+                        accountHave, mailboxToFolder, folderById, true, mailboxCache);
             } catch (Throwable ex) {
                 Log.w(folder.name + " sync", ex);
                 EntityLog.log(context, "JMAP " + folder.name + " sync skipped: "
@@ -879,7 +887,8 @@ public class JmapSync {
                                      Map<String, Long> accountHave,
                                      Map<String, Long> mailboxToFolder,
                                      Map<Long, EntityFolder> folderById,
-                                     boolean insertNew) throws Exception {
+                                     boolean insertNew,
+                                     Map<String, List<Email>> mailboxCache) throws Exception {
         DB db = DB.getInstance(context);
 
         // Rows whose HOME folder is this one -- used only by the removal pass.
@@ -888,7 +897,14 @@ public class JmapSync {
             if (u.uidl != null)
                 haveFolder.put(u.uidl, u.id);
 
-        List<Email> emails = jmap.getFolderMessages(mailboxId, SYNC_LIMIT);
+        // Phase 1a populates this per mailboxId; phase 1b hits it instead of
+        // re-paging the identical Email/query + Email/get (see mailboxCache's
+        // declaration in the caller for why that reuse is safe).
+        List<Email> emails = mailboxCache.get(mailboxId);
+        if (emails == null) {
+            emails = jmap.getFolderMessages(mailboxId, SYNC_LIMIT);
+            mailboxCache.put(mailboxId, emails);
+        }
         EntityLog.log(context, "JMAP " + folder.name + ": server=" + emails.size()
                 + " home=" + haveFolder.size() + " acct=" + accountHave.size());
 
@@ -1267,7 +1283,8 @@ public class JmapSync {
                         // does per folder. Account-wide dedup map rebuilt here
                         // (an ad-hoc SYNC is rare, off the poll's shared map).
                         syncMessages(context, account, folder, mailboxId, jmap,
-                                buildAccountHave(db, account.id), mailboxToFolder, folderById, true);
+                                buildAccountHave(db, account.id), mailboxToFolder, folderById, true,
+                                new HashMap<>());
                         break;
                     case EntityOperation.KEYWORD:
                         if (ids != null) {
