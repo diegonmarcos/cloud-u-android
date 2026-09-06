@@ -10,6 +10,7 @@ import com.diegonmarcos.superapp.launcher.Pages
 import com.diegonmarcos.superapp.launcher.TileGridFragment
 import com.diegonmarcos.superapp.launcher.CircularMenuTree
 import com.diegonmarcos.superapp.launcher.Sections
+import com.diegonmarcos.superapp.launcher.StackAnchors
 import com.diegonmarcos.superapp.launcher.SectionPages
 import com.diegonmarcos.superapp.launcher.SectionMenuFragment
 import com.diegonmarcos.superapp.launcher.SectionTabsFragment
@@ -1517,12 +1518,24 @@ open class ShellActivity : AppCompatActivity(),
                 if (id == "home") goHome() else goSection(id, Sections.byId(id)?.label ?: id)
             }
             tileId.startsWith("page:") -> {
-                val payload = tileId.removePrefix("page:")
+                // An optional `#<anchor>` fragment travels with the page, the
+                // way it does on the web: `page:c3/observability#ntfy` opens
+                // the page AND lands on the anchor that page declares. Split
+                // it off before the section/page split so a fragment can
+                // never be mistaken for part of a page id.
+                val raw = tileId.removePrefix("page:")
+                val payload = raw.substringBefore(StackAnchors.FRAGMENT)
+                val fragment = raw.substringAfter(StackAnchors.FRAGMENT, "")
                 // Two forms: "<sectionId>/<pageId>" (deep-link from Home
                 // grouped tiles) or just "<pageId>" (within current section).
                 val parts = payload.split("/", limit = 2)
-                if (parts.size == 2) openSectionPage(parts[0], parts[1], null)
-                else openSectionPage(currentSection, parts[0], null)
+                val section = if (parts.size == 2) parts[0] else currentSection
+                val page = if (parts.size == 2) parts[1] else parts[0]
+                // Requested BEFORE navigating: the destination stack consumes
+                // it as it builds, and on a tabbed section that build can
+                // happen synchronously inside openSectionPage.
+                StackAnchors.requestPending("$section/$page", fragment)
+                openSectionPage(section, page, null)
             }
             tileId.startsWith("action:") -> dispatchHomeAction(tileId.removePrefix("action:"))
             // extapp:<appId>/<forkKey> — open a companion app (Cloud-Comms),

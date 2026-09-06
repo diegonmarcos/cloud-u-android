@@ -161,6 +161,15 @@ class AggregatorStackFragment : Fragment(),
             column.addView(view)
         }
         if (filters.isNotEmpty()) applySource(ctx, filters)
+        // A cross-page `page:<section>/<page>#<anchor>` link left its fragment
+        // waiting for whichever stack answers to that page. Two posts deep:
+        // the first waits for the first layout pass (offsets are all zero
+        // before it), the second is the smooth scroll StackAnchors itself
+        // defers. Undeclared ids are inert, so a stale link does nothing
+        // rather than jumping the page somewhere arbitrary.
+        StackAnchors.consumePending("$sectionId/$mode")?.let { id ->
+            scroll.post { anchors.dispatch(StackAnchors.PREFIX + id) }
+        }
         return scroll
     }
 

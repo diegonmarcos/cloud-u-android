@@ -16,7 +16,13 @@
 #   T3  every declared {group, subgroup} binding exists in cloud_services.json
 #   T4  no anchor id is derived from a label anywhere in Kotlin
 #   T5  the panels the C3 Index leads to are still declared (no regression)
+#   T6  every CROSS-page `page:<section>/<page>#<anchor>` resolves too
 #   W   declared-but-unreferenced ids are reported, not failed
+#
+# T6 covers the second form. A link that has to travel first is an ordinary
+# `page:` target carrying a fragment — the web's own grammar — so it is checked
+# the same way a dangling `page:` target is: the page must exist, and the
+# anchor must be declared on THAT page's stack.
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0; FAIL=0
@@ -49,6 +55,13 @@ def tile_targets(node, out):
 
 lines = []
 def emit(kind, msg): lines.append("%s\t%s" % (kind, msg))
+
+# "section/page" -> ids declared on that page's stack, for the cross-page form.
+declared_by_page = {}
+# Every page id a section declares, so a `page:` half can be checked too.
+pages_by_section = {s.get("id"): {p.get("id") for p in s.get("pages", [])}
+                    for s in build.get("ui", {}).get("sections", [])}
+cross = []   # (where, target, section, page, anchor)
 
 for sec in build.get("ui", {}).get("sections", []):
     for key, stack in sec.items():
@@ -96,17 +109,46 @@ for sec in build.get("ui", {}).get("sections", []):
             if r not in declared:
                 emit("T1", "%s: tile targets 'anchor:%s', declared by no panel"
                            % (where, r))
+        declared_by_page["%s/%s" % (sec.get("id"), key[len("stack_"):])] = declared
+        for t in targets:
+            if t.startswith("page:") and "#" in t:
+                path, _, anchor = t[len("page:"):].partition("#")
+                bits = path.split("/", 1)
+                if len(bits) == 2:
+                    cross.append((where, t, bits[0], bits[1], anchor))
+                else:
+                    cross.append((where, t, sec.get("id"), bits[0], anchor))
         for d in declared:
             if d not in refs:
                 emit("W", "%s: anchor '%s' is declared but nothing points at it"
                           % (where, d))
         emit("INFO", "%s: %d declared, %d referenced" % (where, len(declared), len(refs)))
 
+# T6 — cross-page `page:<section>/<page>#<anchor>`. Both halves must resolve:
+# a dangling page is the failure that cost a dead tap, a dangling fragment is
+# a tap that arrives on the right page and then does nothing.
+for where, target, section, page, anchor in cross:
+    key = "%s/%s" % (section, page)
+    if section not in pages_by_section:
+        emit("T6", "%s: '%s' names section '%s', which does not exist"
+                   % (where, target, section))
+    elif page not in pages_by_section[section]:
+        emit("T6", "%s: '%s' names page '%s/%s', which that section does not declare"
+                   % (where, target, section, page))
+    elif key not in declared_by_page:
+        emit("T6", "%s: '%s' points at page '%s', which has no stack to anchor into"
+                   % (where, target, key))
+    elif anchor not in declared_by_page[key]:
+        emit("T6", "%s: '%s' asks for anchor '%s', not declared on '%s'"
+                   % (where, target, anchor, key))
+    else:
+        emit("INFO", "%s: cross-page '%s' resolves" % (where, target))
+
 print("\n".join(lines))
 PY
 )" || { echo "  FAIL: checker crashed"; exit 1; }
 
-for t in T1 T2 T3; do
+for t in T1 T2 T3 T6; do
   hits="$(printf '%s\n' "$REPORT" | grep -c "^$t	" || true)"
   if [ "$hits" -eq 0 ]; then
     ok "$t: no violations"
@@ -136,7 +178,9 @@ b = json.load(open(os.path.join(sys.argv[1], "build.json")))
 want = {
     "stack_topology": ["pub-urls", "pvt-urls", "containers-infra", "containers-user",
                        "stack/providers", "stack/vms", "stack/dbs", "stack/apis"],
-    "stack_observability": ["gha-runs", "repos", "dagu-workflows", "dagu-runs"],
+    # ntfy joined the Index when the notification centre moved here from
+    # Inboxes ▸ C3 Obsv; the tab that used to hold it now links in.
+    "stack_observability": ["gha-runs", "repos", "dagu-workflows", "dagu-runs", "ntfy"],
 }
 sec = next(s for s in b["ui"]["sections"] if s.get("id") == "c3")
 missing = []

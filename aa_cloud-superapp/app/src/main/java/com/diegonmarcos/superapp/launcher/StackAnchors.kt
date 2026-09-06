@@ -79,5 +79,30 @@ class StackAnchors {
 
     companion object {
         const val PREFIX = "anchor:"
+
+        /** Separator in the CROSS-page form, `page:<section>/<page>#<anchor>`.
+         *  Same-page links stay `anchor:<id>`; a link that has to travel first
+         *  is a `page:` target carrying a fragment, which is the web's own
+         *  grammar for exactly this and needs no second target verb. */
+        const val FRAGMENT = "#"
+
+        /** The anchor a pending navigation asked for, keyed "section/page".
+         *  A ONE-SHOT: the destination stack consumes it as it finishes
+         *  building, so returning to that page later does not re-scroll. */
+        private var pending: Pair<String, String>? = null
+
+        fun requestPending(pageKey: String, anchorId: String) {
+            pending = if (anchorId.isBlank()) null else pageKey to anchorId
+        }
+
+        /** The id [pageKey] was asked to land on, cleared by the read. A
+         *  request for a DIFFERENT page is left alone rather than dropped —
+         *  the destination may simply not have built yet. */
+        fun consumePending(pageKey: String): String? {
+            val (key, id) = pending ?: return null
+            if (key != pageKey) return null
+            pending = null
+            return id
+        }
     }
 }
