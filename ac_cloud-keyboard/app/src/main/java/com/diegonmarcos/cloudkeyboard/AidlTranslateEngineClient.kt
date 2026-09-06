@@ -57,6 +57,17 @@ class AidlTranslateEngineClient(private val context: Context) : TranslateEngineC
     override fun translate(text: String, targetTag: String): Array<String> =
         engine?.translate(text, targetTag) ?: arrayOf("und", "")
 
+    // A companion APK older than the translateFrom() AIDL method answers the
+    // unknown transaction with an empty reply (the generated proxy then returns
+    // null or throws) — fall back to the auto-detecting call so an out-of-step
+    // install still translates instead of dying on a binder edge case.
+    override fun translateFrom(text: String, sourceTag: String, targetTag: String): Array<String> {
+        val e = engine ?: return arrayOf("und", "")
+        return runCatching { e.translateFrom(text, sourceTag, targetTag) }.getOrNull()
+            ?: runCatching { e.translate(text, targetTag) }.getOrNull()
+            ?: arrayOf("und", "")
+    }
+
     override fun supportedLanguages(): List<String> =
         engine?.supportedLanguages() ?: emptyList()
 

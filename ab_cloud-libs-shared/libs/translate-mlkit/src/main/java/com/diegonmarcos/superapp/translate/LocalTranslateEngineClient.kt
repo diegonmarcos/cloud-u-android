@@ -16,6 +16,13 @@ class LocalTranslateEngineClient(private val context: Context) : TranslateEngine
             arrayOf("und", "")
         }
 
+    override fun translateFrom(text: String, sourceTag: String, targetTag: String): Array<String> =
+        try {
+            TranslateEngine.translateBlocking(context, text, sourceTag, targetTag)
+        } catch (_: Exception) {
+            arrayOf("und", "")
+        }
+
     override fun supportedLanguages(): List<String> =
         TranslateEngine.supportedLanguageTags()
 

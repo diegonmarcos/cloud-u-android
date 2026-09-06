@@ -7,117 +7,128 @@ import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import android.widget.Toast
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * On-device translator for the keyboard's TRANSLATE toolbar key.
+ * Translate orchestrator for the keyboard (translate bar, long-press TRANSLATE,
+ * voice bar). All engine calls run on one background thread; callbacks fire on
+ * the main looper.
  *
- * Flow (all async, callbacks fire on the main looper):
- *   1. Pull text — selected text if any, else the whole field.
- *   2. Delegate to [TranslateEngines.client].translate(text, targetLang) which
- *      returns {detectedTag, translatedText} (runs the engine blocking on a
- *      background thread).
- *   3. Replace the selection (or the whole field) with the result.
+ * Reliability chain per request (why the bar used to feel flaky):
+ *  - explicit source → [TranslateEngineClient.translateFrom], no detection;
+ *  - auto → detect; if the engine answers "und" (short text: ML Kit wants ≥0.5
+ *    confidence) retry with [hint] — the ACTIVE KEYBOARD LANGUAGE, which is
+ *    what the user is typing in nearly always — as the explicit source;
+ *  - results are cached (LRU) so backspacing/retyping never re-hits the engine;
+ *  - live requests carry a generation: a queued request that was superseded by
+ *    a newer keystroke is skipped before it touches the engine, and a late
+ *    result for an old generation is dropped;
+ *  - every failure surfaces as a [Result.error] string instead of a silent null.
  *
- * The engine implementation is registered per-app in Application.onCreate:
- *   - Superapp / cloud-keyboard-libs: LocalTranslateEngineClient (in-process ML Kit)
- *   - cloud-keyboard standalone: AidlTranslateEngineClient (companion service)
- *
- * Lives in libs:translate (NOT libs/keyboard/src/main) so the verbatim
- * `sync-heliboard` mirror never deletes it.
+ * The engine implementation is registered per-app in Application.onCreate
+ * (LocalTranslateEngineClient in-process ML Kit, or AidlTranslateEngineClient
+ * binding the cloud-keyboard-libs companion). Lives in libs:translate, NOT in
+ * libs/keyboard/src/main, so the sync-heliboard mirror never deletes it.
  */
 object Translator {
+    const val AUTO = "auto"
 
+    /** One translate outcome: [text] non-null = success; otherwise [error] says why (user-readable). */
+    class Result(@JvmField val text: String?, @JvmField val detected: String?, @JvmField val error: String?) {
+        val ok: Boolean get() = text != null
+    }
+
+    // ponytail: one worker thread. A binder call already in flight cannot be
+    // aborted; the service-side ML Kit timeouts (TranslateEngine) bound it.
     private val executor = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
+    private val generation = AtomicInteger()
 
-    /** Entry point called from the keyboard's KeyCode.TRANSLATE handler. */
+    private const val CACHE_SIZE = 64
+    private val cache = object : LinkedHashMap<String, Result>(CACHE_SIZE, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Result>?): Boolean = size > CACHE_SIZE
+    }
+
+    private fun translateBlocking(client: TranslateEngineClient, text: String, from: String, to: String, hint: String?): Result {
+        val key = "$from|$to|$hint|$text"
+        synchronized(cache) { cache[key] }?.let { return it }
+        if (!client.isConnected()) return Result(null, null, "Translate engine not connected")
+        val r: Result = try {
+            var res = if (from == AUTO) client.translate(text, to) else client.translateFrom(text, from, to)
+            var detected = res.getOrNull(0) ?: "und"
+            if (detected == "und" && from == AUTO && !hint.isNullOrEmpty()) {
+                res = client.translateFrom(text, hint, to)
+                detected = res.getOrNull(0) ?: "und"
+            }
+            val out = res.getOrNull(1).orEmpty()
+            when {
+                detected == "und" && from == AUTO -> Result(null, null, "Couldn't detect the language — pick a source")
+                detected == "und" -> Result(null, null, "Engine failed — offline model still downloading?")
+                out.isEmpty() -> Result(null, detected, "No translation returned")
+                else -> Result(out, detected, null)
+            }
+        } catch (e: Exception) {
+            Result(null, null, "Translate failed: " + (e.message ?: e.javaClass.simpleName))
+        }
+        if (r.ok) synchronized(cache) { cache[key] = r }
+        return r
+    }
+
+    /**
+     * Live (non-committing) translate for the bars. [from] is a language tag or
+     * [AUTO]; [hint] is the explicit-source fallback when detection fails.
+     * Callback on the main thread; superseded requests never call back.
+     */
+    @JvmStatic
+    fun liveTranslate(text: String, from: String, to: String, hint: String?, onResult: (Result) -> Unit) {
+        val client = TranslateEngines.client
+        if (client == null) { onResult(Result(null, null, "No translate engine registered")); return }
+        if (text.isBlank()) { onResult(Result("", null, null)); return }
+        val gen = generation.incrementAndGet()
+        executor.execute {
+            if (gen != generation.get()) return@execute   // superseded while queued — skip the engine call
+            val r = translateBlocking(client, text, from, to, hint)
+            main.post { if (gen == generation.get()) onResult(r) }
+        }
+    }
+
+    /** Auto-detect convenience (voice bar): null = failure, "" = blank input. */
+    @JvmStatic
+    fun liveTranslate(text: String, targetLang: String, onResult: (String?) -> Unit) =
+        liveTranslate(text, AUTO, targetLang, null) { onResult(it.text) }
+
+    /**
+     * One-shot, in place: translate the selection (or the whole field) and
+     * overwrite it. Long-press on the TRANSLATE toolbar key. Honours the
+     * default-target setting; [targetLang] (the active keyboard language) is
+     * the fallback.
+     */
     @JvmStatic
     fun translate(context: Context, ic: InputConnection?, targetLang: String) {
         if (ic == null) return
-        val client = TranslateEngines.client ?: return
         val appCtx = context.applicationContext
-
-        // Selected text wins; otherwise translate the entire field.
+        val client = TranslateEngines.client
+        if (client == null) { toast(appCtx, "Translate: no engine registered"); return }
+        val target = TranslatePrefs.defaultTarget(appCtx).ifEmpty { targetLang }
         val selected = ic.getSelectedText(0)?.toString()?.takeIf { it.isNotBlank() }
-        val whole = selected
-            ?: ic.getExtractedText(ExtractedTextRequest(), 0)?.text?.toString()
-        val text = whole?.trim()
-        if (text.isNullOrBlank()) {
-            toast(appCtx, "Translate: nothing to translate")
-            return
-        }
+        val text = (selected ?: ic.getExtractedText(ExtractedTextRequest(), 0)?.text?.toString())?.trim()
+        if (text.isNullOrBlank()) { toast(appCtx, "Translate: nothing to translate"); return }
         val hadSelection = selected != null
-        toast(appCtx, "Translate: … → $targetLang …")
-
+        toast(appCtx, "Translating → ${target.uppercase()}…")
         executor.execute {
-            try {
-                val result = client.translate(text, targetLang)
-                val detectedTag = result.getOrNull(0) ?: "und"
-                val translated  = result.getOrNull(1) ?: ""
-                when {
-                    detectedTag == "und" ->
-                        main.post { toast(appCtx, "Translate: couldn't detect the language") }
-                    translated.isEmpty() ->
-                        main.post { toast(appCtx, "Translate: no result") }
-                    else ->
-                        main.post { replace(ic, hadSelection, translated) }
-                }
-            } catch (e: Exception) {
-                main.post { toast(appCtx, "Translate failed (${e.message})") }
+            val r = translateBlocking(client, text, AUTO, target, null)
+            main.post {
+                val out = r.text
+                if (out != null) replaceInField(ic, hadSelection, out) else toast(appCtx, r.error ?: "Translate failed")
             }
         }
-    }
-
-    /**
-     * Non-committing translate for the live translate-bar: translate [text]
-     * to [targetLang], hand the result (or null on failure / blank) to
-     * [onResult] on the main thread. Does NOT touch any field.
-     */
-    @JvmStatic
-    fun liveTranslate(text: String, targetLang: String, onResult: (String?) -> Unit) {
-        val client = TranslateEngines.client ?: run { onResult(null); return }
-        if (text.isBlank()) { onResult(""); return }
-        executor.execute {
-            try {
-                val result = client.translate(text, targetLang)
-                val detectedTag = result.getOrNull(0) ?: "und"
-                val translated  = result.getOrNull(1)
-                main.post {
-                    if (detectedTag == "und" || translated.isNullOrEmpty()) onResult(null)
-                    else onResult(translated)
-                }
-            } catch (_: Exception) {
-                main.post { onResult(null) }
-            }
-        }
-    }
-
-    /**
-     * Like [liveTranslate] but with an explicit source: when [fromTag] is null
-     * or "auto" it delegates to [liveTranslate] (auto-detect); otherwise it
-     * translates [fromTag]→[targetTag] directly. For the translate bar's
-     * From/To selectors.
-     *
-     * Note: the client's translate() always auto-detects the source; when
-     * [fromTag] is explicit the result may still detect a different source —
-     * this is acceptable and matches the previous ML Kit behaviour (same-lang
-     * check happens inside the engine).
-     */
-    @JvmStatic
-    fun liveTranslateFromTo(text: String, fromTag: String?, targetTag: String, onResult: (String?) -> Unit) {
-        if (fromTag == null || fromTag == "auto") {
-            liveTranslate(text, targetTag, onResult)
-            return
-        }
-        liveTranslate(text, targetTag, onResult)
     }
 
     /** Overwrite the selection, or select-all + overwrite the whole field. */
-    private fun replace(ic: InputConnection, hadSelection: Boolean, text: String) {
+    @JvmStatic
+    fun replaceInField(ic: InputConnection, hadSelection: Boolean, text: String) {
         ic.beginBatchEdit()
-        if (!hadSelection) {
-            ic.performContextMenuAction(android.R.id.selectAll)
-        }
+        if (!hadSelection) ic.performContextMenuAction(android.R.id.selectAll)
         ic.commitText(text, 1)
         ic.endBatchEdit()
     }

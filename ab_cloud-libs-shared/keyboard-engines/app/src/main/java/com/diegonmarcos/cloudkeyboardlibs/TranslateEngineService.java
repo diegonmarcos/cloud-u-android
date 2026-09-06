@@ -19,6 +19,16 @@ public class TranslateEngineService extends Service {
         }
 
         @Override
+        public String[] translateFrom(String text, String sourceTag, String targetTag) {
+            try {
+                return com.diegonmarcos.superapp.translate.TranslateEngine
+                        .translateBlocking(TranslateEngineService.this, text, sourceTag, targetTag);
+            } catch (Throwable t) {
+                return new String[]{"und", ""};
+            }
+        }
+
+        @Override
         public java.util.List<String> supportedLanguages() {
             try {
                 return com.diegonmarcos.superapp.translate.TranslateEngine

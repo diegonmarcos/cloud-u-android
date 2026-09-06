@@ -11,8 +11,19 @@ package com.diegonmarcos.superapp.translate
  *    so ML Kit is not bundled there.
  */
 interface TranslateEngineClient {
-    /** Returns [detectedTag, translatedText]. */
+    /** Auto-detects the source. Returns [detectedTag, translatedText]; detectedTag "und" = detection failed. */
     fun translate(text: String, targetTag: String): Array<String>
+
+    /**
+     * Translate with an EXPLICIT source — no detection at all. Returns
+     * [sourceTag, translatedText]. Detection was the #1 reason the live bar
+     * came back empty: ML Kit's identifier wants ≥0.5 confidence, which one to
+     * three words rarely reach, so every keystroke early in a sentence produced
+     * "und". Default delegates to [translate] so an engine that predates this
+     * method keeps working; real engines override it.
+     */
+    fun translateFrom(text: String, sourceTag: String, targetTag: String): Array<String> = translate(text, targetTag)
+
     fun supportedLanguages(): List<String>
 
     /**
