@@ -35,6 +35,11 @@ hasnt_code() { codeof "$1" | grep -qF "$2" && bad "$3 ($1)" || ok "$3"; }
 PROFILE_DIR="app/src/main/java/com/diegonmarcos/superapp/profile"
 FRAGMENT="$PROFILE_DIR/ProfileFragment.kt"
 SYNC="$PROFILE_DIR/ProfileSync.kt"
+# The Mesh capabilities MOVED here rather than being deleted; the test
+# follows them, which is the only way "merged, not dropped" is provable.
+WGFRAG="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardFragment.kt"
+TABSTYLE="app/src/main/java/com/diegonmarcos/superapp/launcher/AppTabsStyle.kt"
+SECTABS="app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
 PREFS="$PROFILE_DIR/ProfilePrefs.kt"
 IMPORT="$PROFILE_DIR/ConfigAutoImport.kt"
 CONFIGS_PREFS="app/src/main/java/com/diegonmarcos/superapp/settings/ConfigsPrefs.kt"
@@ -43,7 +48,7 @@ CONTRACT="docs/profile-sync-contract.md"
 
 echo "== T1: the two credential fields exist on the Profile screen =="
 has "$FRAGMENT" 'label(ctx, "Authelia bearer token")'  "Authelia bearer token field"
-has "$FRAGMENT" 'label(ctx, "WireGuard private key")'  "WireGuard private key field"
+has "$WGFRAG" 'label(ctx, "Private key (base64, 32 bytes)")' "WireGuard private key field"
 has "$FRAGMENT" "TYPE_TEXT_VARIATION_PASSWORD"         "credential boxes are password-masked"
 has "$FRAGMENT" "IME_FLAG_NO_PERSONALIZED_LEARNING"    "kept out of the keyboard's learned words"
 has "$FRAGMENT" "IMPORTANT_FOR_AUTOFILL_NO"            "kept out of autofill"
@@ -54,7 +59,7 @@ echo "== T2: each credential reuses its EXISTING store, no parallel copy =="
 # store would mean two values that can disagree, and a private key duplicated
 # into a second place is strictly worse than one held in one place.
 has "$FRAGMENT" "ConfigsPrefs(ctx).autheliaToken"            "bearer writes ConfigsPrefs"
-has "$FRAGMENT" "WireGuardPrefs(ctx).interfacePrivateKey"    "WG key writes WireGuardPrefs"
+has "$WGFRAG" "prefs.interfacePrivateKey"    "WG key writes WireGuardPrefs"
 has "$CONFIGS_PREFS" "EncryptedSharedPreferences.create"     "ConfigsPrefs is encrypted at rest"
 has "$CONFIGS_PREFS" 'K_AUTHELIA_TOKEN = "authelia_token"'   "bearer at the existing auth.authelia_token path"
 has "$WG_PREFS" 'K_IF_PRIVKEY     = "if_privkey"'            "WG key is the tunnel's own stored field"
@@ -121,7 +126,7 @@ echo "== T7: the Cloud provider preset carries no private key =="
 # The private key is per-device by definition: two devices sharing one are a
 # single peer to the hub and knock each other off the mesh. So the preset must
 # fill everything EXCEPT that, and the seed data must not contain one either.
-has "$FRAGMENT" 'label(ctx, "Provider")'        "Provider selector exists"
+has "$WGFRAG" 'sectionHeader(ctx, "Provider")'  "Provider selector exists"
 has "$WG_PREFS" "fun applyCloudPreset"          "the preset is applied from one place"
 # The preset is derived from build.json via BuildConfig — not a literal here,
 # so it follows the fleet when the hub moves.
@@ -135,7 +140,7 @@ else
 fi
 # Switching provider must not silently eat a config the user entered.
 has "$WG_PREFS"  "fun matchesCloudPreset"  "drift from the preset is detectable"
-has "$FRAGMENT"  "confirmCloudPreset"      "Cloud asks before overwriting a custom config"
+has "$WGFRAG"  "confirmCloudPreset"      "Cloud asks before overwriting a custom config"
 # The seeded WireGuard data itself must carry no private key. Scoped to the
 # wireguard_default block: ui.import_schema.wg documents the IMPORT format and
 # legitimately names *_private_key fields, which a whole-file grep would hit.
@@ -215,8 +220,8 @@ has "$FRAGMENT" "private var selectedTab"          "the selected tab survives a 
 # Connect carries the paired credential; Mesh Data carries the tunnel key.
 has "$FRAGMENT" 'connect.addView(label(ctx, "Account email"))'          "account email is on Connect"
 has "$FRAGMENT" 'connect.addView(label(ctx, "Authelia bearer token"))'  "bearer is on Connect"
-has "$FRAGMENT" 'mesh.addView(label(ctx, "WireGuard private key"))'     "WG key is on the Mesh tab"
-has "$FRAGMENT" 'mesh.addView(label(ctx, "Provider"))'                  "Provider is on the Mesh tab"
+has "$WGFRAG" 'col.addView(sectionHeader(ctx, "Provider"))'   "Provider is on the WireGuard screen"
+hasnt_code "$FRAGMENT" "WireGuardPrefs"  "Profile no longer touches tunnel settings at all"
 has "$FRAGMENT" 'sectionHeader(ctx, "Personal Data")'                   "Infos has a Personal Data section"
 has "$FRAGMENT" 'sectionHeader(ctx, "Imports")'                         "Infos has an Imports section"
 # The orphan-token affordance must stay reachable after the move.
@@ -268,12 +273,14 @@ hasnt_code "$IMPORT" "mail_code"  "the auto-import writes no 2FA code"
 
 echo "== T11: four tabs; AI is a link; the export carries no private key =="
 WG_PROFILES="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardProfiles.kt"
-has "$FRAGMENT" '"Connect" to connect' "tab 1 is Connect"
-has "$FRAGMENT" '"Mesh" to mesh'       "tab 2 is Mesh"
-has "$FRAGMENT" '"AI" to null'         "tab 3 is AI, and it has no column"
-has "$FRAGMENT" '"Infos" to col'       "tab 4 is Infos"
-has "$FRAGMENT" 'sectionHeader(ctx, "Mesh Infos'  "Mesh has a Mesh Infos section"
-has "$FRAGMENT" 'sectionHeader(ctx, "Mesh Status")' "Mesh has a Mesh Status section"
+has "$FRAGMENT" 'Tab("Connect", connect)'          "tab 1 is Connect"
+has "$FRAGMENT" 'Tab("WireGuard", null, WG_ROUTE)' "tab 2 links to the WireGuard screen"
+has "$FRAGMENT" 'Tab("AI", null, AI_ROUTE)'        "tab 3 links to the AI page"
+has "$FRAGMENT" 'Tab("Infos", col)'                "tab 4 is Infos"
+# The route must be the one the DATA declares, not a plausible-looking string.
+has "$FRAGMENT" 'WG_ROUTE = "section:wg"'          "WireGuard tab uses the declared section target"
+hasnt_code "$FRAGMENT" "page:config/wg"            "not the page target, which only rewrites to section:wg"
+hasnt_code "$FRAGMENT" "page:wg/config"            "not the double-push target"
 # AI must be a LINK to the page that already exists, not a second copy of it.
 has   "$FRAGMENT" 'AI_ROUTE = "page:config/ai"' "AI points at the existing page route"
 hasnt_code "$FRAGMENT" "AiFragment"             "the AI page is not re-hosted here"
@@ -283,6 +290,7 @@ hasnt_code "$FRAGMENT" "SectionTabsFragment"    "four tabs still avoid the secti
 
 echo "-- T11a: the profile matrix is DATA in build.json, not literals in Kotlin --"
 has "$WG_PROFILES" "BuildConfig.UI_WG_PROFILES_JSON_B64" "profiles come from baked build.json data"
+has "$WGFRAG" "WireGuardProfiles.all"  "the WireGuard screen owns the 4-profile export"
 has "app/build.gradle" "UI_WG_PROFILES_JSON_B64"         "the blob is baked"
 has "build.json" '"wireguard_profiles"'                  "build.json declares the matrix"
 # No fleet literal may be spelled out in the renderer — it must follow the
@@ -299,7 +307,7 @@ hasnt_code "$WG_PROFILES" "interfacePrivateKey" "the renderer cannot read the pr
 hasnt_code "$WG_PROFILES" "if_privkey"          "the renderer cannot reach the stored key"
 has "$WG_PROFILES" "PrivateKey = "              "an empty, named PrivateKey line is emitted"
 has "$WG_PROFILES" "NOT EXPORTED"               "the file says the key was withheld"
-if awk '/fun exportProfilesTo/,/^    }$/' "$ROOT/$FRAGMENT" | grep -qF "interfacePrivateKey"; then
+if awk '/fun exportProfilesTo/,/^    }$/' "$ROOT/$WGFRAG" | grep -qF "interfacePrivateKey"; then
     bad "exportProfilesTo() must not touch the private key"
 else
     ok "the export path never reads the private key"
@@ -357,20 +365,65 @@ TALLY=$(echo "$MATRIX" | awk '/^TALLY /{print $2" "$3}')
 PASS=$((PASS + ${TALLY% *})); FAIL=$((FAIL + ${TALLY#* }))
 
 echo "-- T11d: the status readout admits what it cannot see --"
-has "$FRAGMENT" "CANNOT TELL"        "status has a third, cannot-tell state"
-has "$FRAGMENT" "isEngineInstalled"  "cannot-tell is decided by the engine being absent"
-has "$FRAGMENT" "CONNECTED"          "status can say connected"
-has "$FRAGMENT" "NOT CONNECTED"      "status can say not connected"
+has "$WGFRAG" "CANNOT TELL"        "status has a third, cannot-tell state"
+has "$WGFRAG" "isEngineInstalled"  "cannot-tell is decided by the engine being absent"
+has "$WGFRAG" "CONNECTED"          "status can say connected"
+has "$WGFRAG" "NOT CONNECTED"      "status can say not connected"
 # A DOWN reading with no engine is not evidence — it must not be reported as
 # "not connected", which is the lie that sends someone chasing a working mesh.
-if awk '/private fun meshStatusView/,/^    }$/' "$ROOT/$FRAGMENT" | grep -qF 'if (installed)'; then
+if awk '/private fun tunnelStatusView/,/^    }$/' "$ROOT/$WGFRAG" | grep -qF 'if (enginePresent)'; then
     ok "state is only read when the engine can actually answer"
 else
-    bad "meshStatusView() must not trust getState() without the engine"
+    bad "tunnelStatusView() must not trust getState() without the engine"
 fi
 # No claim to see a tunnel this app does not own.
-hasnt_code "$FRAGMENT" "wg show"        "no pretence of reading the OS tunnel table"
-hasnt_code "$FRAGMENT" "latest-handshake" "no pretence of reading wg state files"
+hasnt_code "$WGFRAG" "wg show"        "no pretence of reading the OS tunnel table"
+hasnt_code "$WGFRAG" "latest-handshake" "no pretence of reading wg state files"
+
+echo "== T12: the pill SIZING is shared, and nothing is duplicated =="
+# apply() paints the chrome; equalise() measures it. Profile got the first and
+# not the second, which is what "ragged pills" was — the sizing pass was a
+# private method of SectionTabsFragment, so no other strip could reach it.
+has "$TABSTYLE" "fun equalise"       "the sizing pass lives in the shared helper"
+has "$TABSTYLE" "MIN_CHARS"          "its floor moved with it"
+has "$TABSTYLE" "MODE_SCROLLABLE"    "and its honest last resort"
+has "$FRAGMENT" "AppTabsStyle.equalise" "Profile's strip is sized, not just painted"
+has "$SECTABS"  "AppTabsStyle.equalise" "the launcher's strip uses the same one"
+# ONE copy. A second would drift, and the drift would be invisible until a
+# label got long enough to clip on one strip and not the other.
+hasnt_code "$SECTABS" "private fun applyEqualTabs" "no private copy left behind"
+hasnt_code "$SECTABS" "private fun findLabel"      "nor its label walker"
+hasnt_code "$SECTABS" "PILL_PAD_DP"                "nor makePill's own numbers"
+# The divider is read lazily: addGroupDivider() runs AFTER the TabLayout is
+# built, so passing it by value would always pass null and the "|" would be
+# left at its starting size on exactly the crowded strips that have one.
+has "$SECTABS" "AppTabsStyle.equalise(this) { groupDivider }" "the divider is passed lazily"
+has "$TABSTYLE" "divider: () -> View?"                        "and the helper takes it as a lambda"
+
+echo "-- T12a: Profile no longer duplicates the WireGuard screen --"
+# The whole point of the merge: capability moved, so Profile must not still
+# carry a second, partial copy of it.
+hasnt_code "$FRAGMENT" "WireGuardProfiles" "Profile no longer exports profiles"
+hasnt_code "$FRAGMENT" "providerSelector"  "Profile no longer has a Provider dropdown"
+hasnt_code "$FRAGMENT" "meshStatusView"    "Profile no longer renders tunnel status"
+hasnt_code "$FRAGMENT" "generateInterfaceKeyPair" "Profile no longer mints tunnel keys"
+# ...and the WireGuard screen must have gained every one of them.
+has "$WGFRAG" "providerSelector"     "WireGuard gained the Provider dropdown"
+has "$WGFRAG" "profileFolderPicker"  "WireGuard gained the 4-profile export"
+has "$WGFRAG" "tunnelStatusView"     "WireGuard gained the honest status"
+has "$WGFRAG" "PROVIDER_TEXT"        "WireGuard gained the provider explainer"
+# Its own plaintext key box was the one privacy regression in the merge.
+if awk '/label\(ctx, "Private key/,/^        \}\)$/' "$ROOT/$WGFRAG" \
+     | grep -qF "TYPE_TEXT_VARIATION_PASSWORD"; then
+    ok "the WireGuard private-key box is masked"
+else
+    bad "the WireGuard private-key box must not render the key in plaintext"
+fi
+# The two exports are different features and must stay distinguishable: the
+# .conf export DOES carry the key (it moves a tunnel you own), the 4-profile
+# export never does (they are templates).
+has "$WGFRAG" "toWgQuickString"  "the single-config export still exists"
+has "$WGFRAG" "no private key included" "the profile export says it withheld the key"
 
 echo
 echo "PASS=$PASS FAIL=$FAIL"

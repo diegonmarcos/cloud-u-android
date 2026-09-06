@@ -13,16 +13,17 @@ import androidx.core.view.isVisible
  *  declares anchors gets the behaviour, and the mechanism travels with
  *  whichever module ends up owning stacks.
  *
- *  Ids are DATA, never a map in Kotlin. A panel names itself in build.json
- *  (`"anchor": "pub-urls"`) and a tile points at it (`"target":
- *  "anchor:pub-urls"`). A `cloud_dashboard` additionally registers
- *  `<panel anchor>/<group id>` and `<panel anchor>/<slugged subgroup label>`
- *  for every header it draws, so one card's sub-tables are addressable
- *  without splitting the card into four panels that the data does not have.
+ *  Ids are DATA, never a map in Kotlin and never derived from a label. A
+ *  panel names itself in build.json (`"anchor": "pub-urls"`) and a tile
+ *  points at it (`"target": "anchor:pub-urls"`). A panel that draws several
+ *  headers additionally DECLARES them — `"anchors": [{"id": "stack/vms",
+ *  "group": "providers", "subgroup": "VMs"}, …]` — so one card's sub-tables
+ *  are addressable without splitting the card into four panels the data does
+ *  not have, and so the full set of anchor targets is readable out of
+ *  build.json without running the app. See [Sections.PanelAnchor].
  *
- *  FIRST REGISTRATION WINS. The Stack card draws a group header "DBs
- *  (storage)" immediately followed by a subgroup header "DBs" — both slug to
- *  `dbs`, and the group header is the one worth landing on.
+ *  This registry stays a registry: it is handed ids and views, and has no
+ *  opinion about where either came from.
  */
 class StackAnchors {
 
@@ -37,12 +38,6 @@ class StackAnchors {
 
     fun register(id: String, view: View) {
         if (id.isNotBlank() && !targets.containsKey(id)) targets[id] = view
-    }
-
-    /** Register a header drawn INSIDE panel [panelAnchor]. No-op when the
-     *  panel declared no anchor, so a card nobody points at costs nothing. */
-    fun registerChild(panelAnchor: String, key: String, view: View) {
-        if (panelAnchor.isNotBlank()) register("$panelAnchor/${slug(key)}", view)
     }
 
     /** True when [target] was an `anchor:` link and it was handled — the
@@ -84,12 +79,5 @@ class StackAnchors {
 
     companion object {
         const val PREFIX = "anchor:"
-
-        /** Lower-case, non-alphanumerics collapsed to nothing — "MCP & API"
-         *  and "APIs" become `mcpapi` and `apis`. Used only for headers whose
-         *  label is the sole identifier the data carries (cloud_services.json
-         *  subgroups have no id of their own). */
-        fun slug(text: String): String =
-            text.lowercase().filter { it.isLetterOrDigit() }
     }
 }

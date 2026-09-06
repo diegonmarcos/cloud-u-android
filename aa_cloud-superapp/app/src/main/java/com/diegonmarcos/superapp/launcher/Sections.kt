@@ -173,6 +173,24 @@ object Sections {
          *  navigating — see [StackAnchors]. Blank means the panel is not
          *  addressable, which is the default and costs nothing. */
         val anchor: String = "",
+        /** The FURTHER anchor targets this panel provides, one per header it
+         *  draws inside itself. A section declares the pages it owns; a panel
+         *  declares the anchors it owns, and for the same reason — the set is
+         *  readable straight out of build.json, and a tile pointing at an id
+         *  nobody declares is a static error rather than a dead tap. */
+        val anchors: List<PanelAnchor> = emptyList(),
+    )
+
+    /** One declared in-panel anchor: the [id] tiles point at, plus the header
+     *  it lands on. [group] alone binds to a cloud_services.json group header;
+     *  adding [subgroup] binds to a sub-header under that group. The id is
+     *  data, never derived from a label — renaming a header cannot silently
+     *  rename an anchor, it can only break this binding, which the checker in
+     *  test/test-stack-anchors-declared.sh catches. */
+    data class PanelAnchor(
+        val id: String,
+        val group: String = "",
+        val subgroup: String = "",
     )
 
     /** One toggle in a page's `filters_<page id>` row. The filter IDS are the
@@ -664,6 +682,21 @@ object Sections {
                     }
                     // kind=rss — the ntfy scope ids this card renders; absent
                     // means all of them.
+                    // The anchors this panel declares it provides. An entry
+                    // without an id is not addressable, so it is dropped.
+                    val panelAnchors = mutableListOf<PanelAnchor>()
+                    p.optJSONArray("anchors")?.let { aa ->
+                        for (m in 0 until aa.length()) {
+                            val a = aa.optJSONObject(m) ?: continue
+                            val aid = a.optString("id", "")
+                            if (aid.isBlank()) continue
+                            panelAnchors += PanelAnchor(
+                                id       = aid,
+                                group    = a.optString("group", ""),
+                                subgroup = a.optString("subgroup", ""),
+                            )
+                        }
+                    }
                     val scopeIds = mutableListOf<String>()
                     p.optJSONArray("scopes")?.let { sa ->
                         for (m in 0 until sa.length()) sa.optString(m).takeIf { it.isNotBlank() }?.let(scopeIds::add)
@@ -687,6 +720,7 @@ object Sections {
                         origin          = p.optString("origin", ""),
                         stream          = p.optString("stream", ""),
                         anchor          = p.optString("anchor", ""),
+                        anchors         = panelAnchors,
                     ))
                 }
                 return out

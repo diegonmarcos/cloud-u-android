@@ -6,18 +6,13 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.Spinner
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.diegonmarcos.superapp.launcher.AppTabsStyle
-import com.diegonmarcos.superapp.network.WireGuardPrefs
-import com.diegonmarcos.superapp.network.WireGuardProfiles
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import com.diegonmarcos.superapp.ui.snack
 import com.google.android.material.tabs.TabLayout
@@ -109,14 +104,12 @@ class ProfileFragment : Fragment() {
         }
         scroll.addView(page)
 
-        // Three content columns; `col` keeps its name so every field that is
-        // only MOVING between tabs keeps its existing call site. AI has no
-        // column at all — see [tabStrip].
+        // TWO content columns; `col` keeps its name so every field that is only
+        // MOVING between tabs keeps its existing call site. WireGuard and AI
+        // have no column at all — see [tabStrip].
         val connect = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val mesh = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         page.addView(connect)
-        page.addView(mesh)
         page.addView(col)
 
         val root = LinearLayout(ctx).apply {
@@ -126,13 +119,14 @@ class ProfileFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
         }
-        // AI is paired with a null column: it is a LINK, not a page. See
-        // [tabStrip] for why it is a tab at all.
+        // A null column means a LINK, not a page — see [tabStrip]. WireGuard
+        // and AI both already have a screen, and re-hosting either here would
+        // be a second copy to keep in step.
         root.addView(tabStrip(ctx, listOf(
-            "Connect" to connect,
-            "Mesh" to mesh,
-            "AI" to null,
-            "Infos" to col,
+            Tab("Connect", connect),
+            Tab("WireGuard", null, WG_ROUTE),
+            Tab("AI", null, AI_ROUTE),
+            Tab("Infos", col),
         )))
         root.addView(scroll)
 
@@ -265,45 +259,6 @@ class ProfileFragment : Fragment() {
             confirmErase()
         })
 
-        // ── Mesh · Infos (tab 2) ─────────────────────────────────────────
-        // The tunnel's own configuration: the Provider preset fills the PUBLIC
-        // half, and the private key — the one field no preset may ever carry —
-        // is generated or pasted here.
-        mesh.addView(sectionHeader(ctx, "Mesh Infos  (this device only)"))
-        mesh.addView(caption(ctx, MESH_TEXT))
-
-        mesh.addView(label(ctx, "Provider"))
-        mesh.addView(providerSelector(ctx))
-        mesh.addView(caption(ctx, PROVIDER_TEXT))
-        mesh.addView(pickButton(ctx, "Generate this device's key pair") {
-            confirmGenerateKeyPair()
-        })
-
-        mesh.addView(label(ctx, "WireGuard private key"))
-        mesh.addView(secretField(
-            ctx,
-            stored = { WireGuardPrefs(ctx).interfacePrivateKey.isNotBlank() },
-            save = { WireGuardPrefs(ctx).interfacePrivateKey = it },
-        ))
-        mesh.addView(clearSecretButton(ctx, "WireGuard private key") {
-            WireGuardPrefs(ctx).interfacePrivateKey = ""
-        })
-
-        // ── Mesh · Export ────────────────────────────────────────────────
-        mesh.addView(label(ctx, "Export tunnel profiles"))
-        mesh.addView(caption(ctx, EXPORT_TEXT))
-        mesh.addView(caption(ctx, WireGuardProfiles.all
-            .joinToString("\n") { "• ${it.fileName} — ${it.label}" }
-            .ifBlank { "This build carries no profiles — nothing to export." }))
-        mesh.addView(pickButton(ctx, "Export the 4 profiles to a folder…") {
-            if (WireGuardProfiles.all.isEmpty()) view?.snack("No profiles in this build")
-            else profileFolderPicker.launch(null)
-        })
-
-        // ── Mesh · Status ────────────────────────────────────────────────
-        mesh.addView(sectionHeader(ctx, "Mesh Status"))
-        mesh.addView(meshStatusView(ctx))
-
         // ── Imports ──────────────────────────────────────────────────────
         // All five entries live HERE. "Import Configs" used to be its own
         // Configs-grid tile (build.json::ui.sections[config].pages[import],
@@ -360,18 +315,22 @@ class ProfileFragment : Fragment() {
      * instance. Without that the user would be thrown back to Connect every
      * time they picked a photo from the Info tab.
      */
+    /** One tab. A null [column] makes it a LINK: selecting it dispatches
+     *  [route] and hands the selection straight back. */
+    private data class Tab(val title: String, val column: View?, val route: String = "")
+
     private fun tabStrip(
         ctx: android.content.Context,
-        tabs: List<Pair<String, View?>>,
+        tabs: List<Tab>,
     ): TabLayout {
         fun show(index: Int) {
-            tabs.forEachIndexed { i, (_, column) ->
-                column?.visibility = if (i == index) View.VISIBLE else View.GONE
+            tabs.forEachIndexed { i, tab ->
+                tab.column?.visibility = if (i == index) View.VISIBLE else View.GONE
             }
         }
         show(selectedTab)
         return TabLayout(ctx).apply {
-            tabs.forEach { (title, _) -> addTab(newTab().setText(title)) }
+            tabs.forEach { addTab(newTab().setText(it.title)) }
             tabMode = TabLayout.MODE_FIXED
             tabGravity = TabLayout.GRAVITY_FILL
             layoutParams = LinearLayout.LayoutParams(
@@ -389,9 +348,10 @@ class ProfileFragment : Fragment() {
                     // another page must not also leave this strip parked on a
                     // tab with nothing behind it, which is what the user would
                     // return to.
-                    if (tabs.getOrNull(tab.position)?.second == null) {
+                    val picked = tabs.getOrNull(tab.position) ?: return
+                    if (picked.column == null) {
                         (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)
-                            ?.onTileClicked(AI_ROUTE)
+                            ?.onTileClicked(picked.route)
                         getTabAt(selectedTab)
                             ?.takeIf { it != tab }
                             ?.let { back -> post { back.select() } }
@@ -404,152 +364,15 @@ class ProfileFragment : Fragment() {
                 override fun onTabReselected(tab: TabLayout.Tab) = Unit
             })
             // Styled AFTER the tabs exist — the helper builds a pill per tab.
+            // BOTH halves: apply() paints the chrome, equalise() MEASURES it.
+            // Calling only the first is what left this strip ragged while the
+            // launcher's sections looked right — the sizing pass used to be a
+            // private method of SectionTabsFragment, so nothing else could
+            // reach it. It is the real work: one slot per tab, the font
+            // stepping down before any label is allowed to clip.
             AppTabsStyle.apply(this)
+            AppTabsStyle.equalise(this)
             getTabAt(selectedTab)?.select()
-        }
-    }
-
-    // ── mesh · export ────────────────────────────────────────────────────
-
-    /**
-     * Write the four profiles into a folder the USER picks.
-     *
-     * A folder rather than four save dialogs, and SAF rather than a path: the
-     * app writes only where it has just been handed permission, and it writes
-     * nothing at all until then. Nothing lands in Downloads unasked.
-     */
-    private val profileFolderPicker =
-        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { tree ->
-            tree ?: return@registerForActivityResult
-            exportProfilesTo(tree)
-        }
-
-    private fun exportProfilesTo(tree: android.net.Uri) {
-        val resolver = requireContext().contentResolver
-        // Platform SAF, not androidx.documentfile — that artifact is not a
-        // dependency of this module and one export is not worth adding one.
-        val dirUri = android.provider.DocumentsContract.buildDocumentUriUsingTree(
-            tree, android.provider.DocumentsContract.getTreeDocumentId(tree))
-        val written = mutableListOf<String>()
-        val failed = mutableListOf<String>()
-        WireGuardProfiles.all.forEach { profile ->
-            val ok = runCatching {
-                deleteExisting(dirUri, profile.fileName)
-                val fileUri = android.provider.DocumentsContract.createDocument(
-                    resolver, dirUri, "text/plain", profile.fileName,
-                ) ?: error("could not create ${profile.fileName}")
-                resolver.openOutputStream(fileUri)?.use {
-                    it.write(WireGuardProfiles.render(profile).toByteArray())
-                } ?: error("could not write ${profile.fileName}")
-            }.isSuccess
-            if (ok) written += profile.fileName else failed += profile.fileName
-        }
-        // Reported per file. "Exported" over a partial write is how a missing
-        // profile gets discovered on the train instead of here.
-        view?.snack(
-            if (failed.isEmpty()) "Exported ${written.size} profiles — no private key included"
-            else "Exported ${written.size}, FAILED ${failed.size}: ${failed.joinToString()}"
-        )
-    }
-
-    /**
-     * Drop a same-named file before writing.
-     *
-     * SAF's `createDocument` RENAMES on collision rather than replacing, so a
-     * re-export after the hub moves would leave "config-v4-split (1).conf"
-     * sitting next to the stale file the user already imported — and the stale
-     * one keeps the name they would reach for. Best-effort: a folder that
-     * refuses the delete still gets the new file, just under SAF's name.
-     */
-    private fun deleteExisting(dirUri: android.net.Uri, name: String) {
-        val resolver = requireContext().contentResolver
-        runCatching {
-            val children = android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(
-                dirUri, android.provider.DocumentsContract.getDocumentId(dirUri))
-            resolver.query(
-                children,
-                arrayOf(
-                    android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-                    android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-                ),
-                null, null, null,
-            )?.use { cursor ->
-                while (cursor.moveToNext()) {
-                    if (cursor.getString(1) != name) continue
-                    android.provider.DocumentsContract.deleteDocument(
-                        resolver,
-                        android.provider.DocumentsContract.buildDocumentUriUsingTree(
-                            dirUri, cursor.getString(0)),
-                    )
-                }
-            }
-        }
-    }
-
-    // ── mesh · status ────────────────────────────────────────────────────
-
-    /**
-     * What this device can honestly say about the tunnel.
-     *
-     * THREE STATES, NOT TWO. The app can read [Tunnel.State] and per-peer
-     * handshake/byte counters, but ONLY for the tunnel it owns through the
-     * engine APK — there is no netlink, no `wg show`, and no visibility into a
-     * tunnel the official WireGuard app is running. [WgState.backend] returns a
-     * working object even when the engine is absent and then reports DOWN for
-     * everything, so "DOWN" alone is not evidence of anything. When the engine
-     * is not installed this says CANNOT TELL and says why, because reporting
-     * "not connected" to someone whose mesh is plainly working is worse than
-     * admitting the blind spot.
-     *
-     * The peer rows are always CONFIGURATION — what this device would dial —
-     * and carry live counters only where the backend supplied them.
-     */
-    private fun meshStatusView(ctx: android.content.Context): TextView {
-        val prefs = WireGuardPrefs(ctx)
-        val backend = com.diegonmarcos.superapp.network.WgState.backend(ctx)
-        val installed = runCatching { backend.isEngineInstalled() }.getOrDefault(false)
-        val state = if (installed) runCatching {
-            backend.getState(com.diegonmarcos.superapp.network.WgState.tunnel)
-        }.getOrNull() else null
-        val stats = if (installed) runCatching {
-            backend.getStatistics(com.diegonmarcos.superapp.network.WgState.tunnel)
-        }.getOrNull() else null
-        val up = state == com.wireguard.android.backend.Tunnel.State.UP
-
-        val head = when {
-            !installed -> "CANNOT TELL — the WireGuard engine app is not installed on this " +
-                "device, so this app cannot read tunnel state. If your mesh is up, another " +
-                "app is running it and nothing here can see it."
-            up -> "CONNECTED — this app's tunnel \"${prefs.tunnelName}\" is up."
-            else -> "NOT CONNECTED — this app's tunnel \"${prefs.tunnelName}\" is down. A " +
-                "tunnel run by the official WireGuard app is invisible here and would also " +
-                "read as down."
-        }
-
-        val peers = prefs.peers().joinToString("\n\n") { peer ->
-            val live = runCatching {
-                stats?.peer(com.wireguard.crypto.Key.fromBase64(peer.publicKey))
-            }.getOrNull()
-            val handshake = live?.latestHandshakeEpochMillis() ?: 0L
-            buildString {
-                append("${peer.name.ifBlank { "peer" }} · ${peer.endpoint}")
-                append("\n  allowed: ${peer.allowedIps}")
-                append("\n  last handshake: ")
-                append(when {
-                    !installed -> "unknown"
-                    handshake > 0L -> "${(System.currentTimeMillis() - handshake) / 1000}s ago"
-                    up -> "never — configured but not talking"
-                    else -> "—"
-                })
-                if (live != null) {
-                    append("\n  traffic: down ${live.rxBytes()} B · up ${live.txBytes()} B")
-                }
-            }
-        }.ifBlank { "No peers configured." }
-
-        return caption(ctx, "$head\n\n$peers\n\n$STATUS_TEXT").apply {
-            alpha = 0.75f
-            setTextIsSelectable(true)
         }
     }
 
@@ -846,129 +669,6 @@ class ProfileFragment : Fragment() {
         view?.snack("Stored token linked to $address")
         parentFragmentManager.beginTransaction().detach(this).commitNow()
         parentFragmentManager.beginTransaction().attach(this).commitNow()
-    }
-
-    // ── provider ─────────────────────────────────────────────────────────
-
-    /**
-     * Where the tunnel's PUBLIC configuration comes from.
-     *
-     * "Cloud" writes the fleet preset — hub endpoint and public key, allowed
-     * IPs, addresses, DNS, MTU, keepalive — which
-     * [WireGuardPrefs.applyCloudPreset] reads out of BuildConfig, baked from
-     * build.json::ui.wireguard_default. There is no config literal in this
-     * file, so the preset tracks the fleet rather than rotting when the hub
-     * moves. "Custom" is the manual route, unchanged.
-     *
-     * Choosing Cloud over settings that are NOT already the preset ASKS
-     * FIRST. The values it would replace can be a hand-built tunnel the user
-     * has no copy of, and a dropdown quietly eating them is not a trade this
-     * screen gets to make. Choosing Custom never writes anything.
-     */
-    private fun providerSelector(ctx: android.content.Context): View {
-        val wg = WireGuardPrefs(ctx)
-        val spinner = Spinner(ctx)
-        spinner.adapter = ArrayAdapter(
-            ctx,
-            android.R.layout.simple_spinner_dropdown_item,
-            listOf("Cloud", "Custom"),
-        )
-        spinner.setSelection(if (wg.configProvider == WireGuardPrefs.PROVIDER_CUSTOM) 1 else 0)
-        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
-            override fun onItemSelected(parent: AdapterView<*>?, v: View?, position: Int, id: Long) {
-                val picked =
-                    if (position == 1) WireGuardPrefs.PROVIDER_CUSTOM
-                    else WireGuardPrefs.PROVIDER_CLOUD
-                // Swallows the callback Spinner fires for the setSelection above,
-                // and the one the revert fires — neither is a user choice.
-                if (picked == wg.configProvider) return
-                if (picked == WireGuardPrefs.PROVIDER_CUSTOM) {
-                    wg.configProvider = picked
-                    view?.snack("Provider: Custom — your WireGuard settings are untouched")
-                } else if (wg.matchesCloudPreset()) {
-                    wg.configProvider = picked
-                    view?.snack("Provider: Cloud")
-                } else {
-                    confirmCloudPreset(ctx, wg) { spinner.setSelection(1) }
-                }
-            }
-        }
-        return spinner
-    }
-
-    /** Ask before Cloud overwrites a config the user actually entered. */
-    private fun confirmCloudPreset(
-        ctx: android.content.Context,
-        wg: WireGuardPrefs,
-        onKeepMine: () -> Unit,
-    ) {
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
-            .setTitle("Replace your WireGuard settings?")
-            .setMessage(
-                "Cloud replaces the tunnel's addresses, DNS, MTU and entire peer " +
-                "list with the fleet preset. What is stored now differs from it, so " +
-                "those values are lost — they live in Configs → WireGuard.\n\n" +
-                "Your private key is NOT touched by either provider."
-            )
-            .setNegativeButton("Keep mine") { _, _ -> onKeepMine() }
-            .setOnCancelListener { onKeepMine() }
-            .setPositiveButton("Use Cloud") { _, _ ->
-                wg.applyCloudPreset()
-                wg.configProvider = WireGuardPrefs.PROVIDER_CLOUD
-                view?.snack("Cloud preset applied — this device still needs its own private key")
-            }
-            .show()
-    }
-
-    /**
-     * Generate the one field no preset may ever contain.
-     *
-     * Replacing an existing key is called out explicitly: the tunnel stops
-     * connecting the moment the key changes and stays down until the new
-     * public half is registered on the hub.
-     */
-    private fun confirmGenerateKeyPair() {
-        val ctx = requireContext()
-        val wg = WireGuardPrefs(ctx)
-        val replacing = wg.interfacePrivateKey.isNotBlank()
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
-            .setTitle(if (replacing) "Replace this device's key pair?" else "Generate this device's key pair?")
-            .setMessage(
-                (if (replacing)
-                    "A private key is already stored. Generating a new one REPLACES it, " +
-                    "and the tunnel will not connect again until the new public key is " +
-                    "added to the hub.\n\n"
-                else "") +
-                "The pair is created on this device. The private half is written to the " +
-                "tunnel's own settings and never leaves; the public half is what the hub " +
-                "operator needs in order to let this device in."
-            )
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Generate") { _, _ ->
-                showGeneratedPublicKey(wg.generateInterfaceKeyPair())
-            }
-            .show()
-    }
-
-    /** Show the PUBLIC half — the only half that is meant to be read out. */
-    private fun showGeneratedPublicKey(publicKey: String) {
-        val ctx = requireContext()
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
-            .setTitle("This device's public key")
-            .setMessage(
-                "$publicKey\n\nAdd this to the hub as a peer. The matching private key " +
-                "is stored on this device only — it is not displayed here, and it is not " +
-                "part of anything this app uploads."
-            )
-            .setNegativeButton("Close", null)
-            .setPositiveButton("Copy") { _, _ ->
-                val clip = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
-                    as android.content.ClipboardManager
-                clip.setPrimaryClip(android.content.ClipData.newPlainText("WireGuard public key", publicKey))
-                view?.snack("Public key copied")
-            }
-            .show()
     }
 
     // ── erasure ──────────────────────────────────────────────────────────
@@ -1575,43 +1275,19 @@ class ProfileFragment : Fragment() {
         private const val AI_ROUTE = "page:config/ai"
 
         /**
-         * Why the export omits the key, said where the export is offered.
+         * The WireGuard screen's route.
+         *
+         * `section:wg`, NOT `page:config/wg`. The Configs page `wg` declares
+         * `action: section:wg`, and LauncherNavController dispatches a page's
+         * action instead of opening it — so `page:config/wg` is silently
+         * rewritten to this anyway, and `page:wg/config` would push a SECOND
+         * copy of the fragment on top of the one the section already opened.
+         * `wg` is a single_page section, so this lands WireGuardFragment
+         * directly, and its `parent: config` makes Back return to Configs.
          */
-        private const val EXPORT_TEXT =
-            "Four ready-made tunnel profiles for the WireGuard app — the two axes that " +
-            "actually change on a phone: which address family the wifi gives you, and how " +
-            "much of your traffic goes inside the tunnel. Each file is ONE config carrying " +
-            "BOTH meshes as two peers, because Android runs one tunnel at a time.\n\n" +
-            "YOUR PRIVATE KEY IS NOT INCLUDED. The file leaves this app for a folder the " +
-            "app does not control, and a mesh private key written there undoes the reason " +
-            "it is held here and never displayed. Each file has an empty PrivateKey line " +
-            "with a note; paste your key into the WireGuard app after importing, or " +
-            "generate a pair above and register its public half on the hub."
+        private const val WG_ROUTE = "section:wg"
 
         /**
-         * The limit of what this screen can observe, stated on the screen that
-         * observes it — a status readout that will not say "I cannot tell" is
-         * a status readout that lies exactly when it matters.
-         */
-        private const val STATUS_TEXT =
-            "This reads the tunnel THIS APP owns, through the WireGuard engine app. It " +
-            "cannot see a tunnel run by the official WireGuard app, and it has no way to " +
-            "ask the operating system directly — so peer rows are what this device is " +
-            "configured to dial, and only handshake and byte counts are live."
-
-        /** Advisory shape check for the birth field. Range/real-calendar
-         *  validity is deliberately not checked — the field is optional and a
-         *  false rejection is worse than a typo here. */
-        private val DATE_PATTERN = Regex("^\\d{4}-\\d{2}-\\d{2}$")
-
-        /** DD-MM-YYYY, the shape people actually type here. Only used to
-         *  SUGGEST the ISO reordering in the field's advisory error. */
-        private val DMY_PATTERN = Regex("^(\\d{2})-(\\d{2})-(\\d{4})$")
-
-        /**
-         * Says where each credential actually goes, because "it is stored
-         * securely" is the sentence that stops anyone checking.
-         */
         private const val CONNECT_TEXT =
             "None of this is part of your profile and none of it is ever uploaded — " +
             "the sync document carries contact fields only.\n\n" +
@@ -1643,25 +1319,6 @@ class ProfileFragment : Fragment() {
             "reaches the sync document."
 
         /**
-         * The tunnel half of what used to be one Credentials block.
-         */
-        private const val MESH_TEXT =
-            "The WireGuard private key is written straight to the tunnel's own " +
-            "settings — the very field Configs → WireGuard edits. It is not copied " +
-            "here; typing in this box changes the key the tunnel connects with. It " +
-            "is never uploaded, and no preset ever fills it.\n\n" +
-            "Stored values are never displayed again. An empty box means unchanged."
-
-        /**
-         * Shown only while a token is stored without a usable address —
-         * from an install that predates the pairing rule, or a config blob
-         * imported with `auth.authelia_token` and no `auth.authelia_email`.
-         *
-         * It is reported rather than repaired. Adopting the profile email
-         * automatically would invent the very fact the pairing exists to
-         * record, and deleting the token would remove the access needed to
-         * sort it out.
-         */
         private const val ORPHAN_TOKEN_TEXT =
             "A bearer token is stored on this device with no account email, so it " +
             "is not being used. Check the address above is the account the token " +
@@ -1673,25 +1330,6 @@ class ProfileFragment : Fragment() {
          * The private-key paragraph is not boilerplate. "Cloud" reads as
          * "everything is handled", and the one field it cannot hand over is
          * the one without which nothing connects — so the limit is stated
-         * where the choice is made rather than discovered at Connect time.
-         */
-        private const val PROVIDER_TEXT =
-            "Cloud fills the PUBLIC half of the tunnel from the fleet's own " +
-            "configuration: hub endpoint and public key, allowed IPs, this device's " +
-            "addresses, DNS, MTU and keepalive. Custom leaves Configs → WireGuard " +
-            "exactly as you set it.\n\n" +
-            "Neither provider fills the private key, and no preset ever will. A " +
-            "WireGuard private key identifies ONE device — two devices sharing one " +
-            "are a single peer to the hub, and they take turns knocking each other " +
-            "off the mesh. Generate this device's own pair below, or paste a key you " +
-            "already hold. Either way the public half has to be added to the hub " +
-            "before the tunnel can hand shake."
-
-        /**
-         * In-screen disclosure. Kept specific — field names, destination and
-         * the erasure route — because a vague notice is what makes people
-         * unable to reason about their own data.
-         */
         private const val PRIVACY_TEXT =
             "Your name, email, phone, date of birth, location, company, website and " +
             "about are stored on this device and mirrored to " +

@@ -2886,6 +2886,13 @@
               "providers",
               "dbs",
               "mcpapi"
+            ],
+            "_doc_anchors": "The sub-tables this ONE card provides as anchor targets, declared the way a section declares its pages: an `id` other tiles point at with `target: \"anchor:<id>\"`, plus the header inside this card it lands on. `group` alone binds to that group's header; adding `subgroup` binds to a sub-header under it. The id is NEVER derived from a label — renaming the \"VMs\" sub-header cannot rename `stack/vms`, it only breaks the binding, and test/test-stack-anchors-declared.sh fails on a binding whose group/subgroup is not in data/cloud_services.json. It also removes the old ambiguity where group \"DBs (storage)\" and subgroup \"DBs\" both slugged to `dbs`: `stack/dbs` says group, so it lands on the group header by declaration rather than by registration order.",
+            "anchors": [
+              { "id": "stack/providers", "group": "providers" },
+              { "id": "stack/vms", "group": "providers", "subgroup": "VMs" },
+              { "id": "stack/dbs", "group": "dbs" },
+              { "id": "stack/apis", "group": "mcpapi", "subgroup": "APIs" }
             ]
           }
         ]

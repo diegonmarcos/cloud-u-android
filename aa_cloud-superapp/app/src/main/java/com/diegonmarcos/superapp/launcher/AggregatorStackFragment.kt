@@ -1659,6 +1659,15 @@ class AggregatorStackFragment : Fragment(),
      *  TCP-ping status dot per container ({name}.app — green up / red down / grey
      *  checking, meaningful only over WireGuard) and opens that .app in the in-app
      *  browser on tap. Provider groups render external consoles (no ping). */
+    /** The anchor id [panel] declared for the header identified by [groupId] +
+     *  [subLabel] (blank [subLabel] = the group header itself), or null when
+     *  the panel declared none — an undeclared header is simply not an anchor
+     *  target, which is what makes build.json the whole truth. */
+    private fun declaredAnchor(
+        panel: Sections.StackPanel, groupId: String, subLabel: String,
+    ): String? = panel.anchors
+        .firstOrNull { it.group == groupId && it.subgroup == subLabel }?.id
+
     private fun renderCloudDashboard(
         ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel,
     ) {
@@ -1677,8 +1686,9 @@ class AggregatorStackFragment : Fragment(),
                 // The card's sub-tables are anchor targets in their own right
                 // (`anchor:stack/providers`), which is what lets one card
                 // serve four index entries without being split into four
-                // panels the data does not have.
-                anchors.registerChild(panel.anchor, group.id, gh)
+                // panels the data does not have. Only ids the panel DECLARED
+                // are registered, so the set is what build.json says it is.
+                declaredAnchor(panel, group.id, "")?.let { anchors.register(it, gh) }
                 body.addView(gh)
             }
             if (group.providers.isNotEmpty()) {
@@ -1689,11 +1699,11 @@ class AggregatorStackFragment : Fragment(),
             for (sub in group.subgroups) {
                 if (sub.containers.isEmpty()) continue
                 val sh = subHeader(ctx, sub.label)
-                // Subgroups carry no id in cloud_services.json — the label is
-                // the only handle, so it is slugged. First registration wins,
-                // so "DBs (storage)" keeps `stack/dbs` over the "DBs"
-                // subheader one line below it.
-                anchors.registerChild(panel.anchor, sub.label, sh)
+                // Subgroups carry no id in cloud_services.json, so the panel's
+                // declaration names the label it binds to. The id is still the
+                // declared one: renaming the label breaks the binding loudly
+                // (the checker fails) instead of silently renaming the anchor.
+                declaredAnchor(panel, group.id, sub.label)?.let { anchors.register(it, sh) }
                 body.addView(sh)
                 addCloudGrid(ctx, body, cols, executor, sub.containers.map {
                     when {

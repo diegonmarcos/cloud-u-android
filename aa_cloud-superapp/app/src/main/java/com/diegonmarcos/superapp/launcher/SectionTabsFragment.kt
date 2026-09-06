@@ -99,7 +99,9 @@ class SectionTabsFragment : Fragment(), Collapsible {
             // Liquid-glass pill chrome — the same helper the strip used before,
             // so Suite / Infos / Labs still read as one consistent surface.
             AppTabsStyle.apply(this)
-            equaliseTabs(this)
+            // Sizing is the other half of the chrome; the divider is read
+            // lazily because addGroupDivider() runs after this block.
+            AppTabsStyle.equalise(this) { groupDivider }
         }
 
         // The `|` the strip reads with: Observability · Topology │ Watchdog ·
@@ -216,7 +218,7 @@ class SectionTabsFragment : Fragment(), Collapsible {
             // The values [AppTabsStyle.makePill] gives every tab label — that
             // is the Kotlin object in AppTabsStyle.kt, not a res/ style; there
             // is no XML for this strip. They are only the STARTING point, and
-            // deliberately so: [applyEqualTabs] re-reads the type off a real
+            // deliberately so: [AppTabsStyle.equalise] re-reads the type off a real
             // label once the row has been measured and re-applies it here, so
             // the separator follows the labels when they shrink to fit. These
             // are what it looks like for the one frame before that runs.
@@ -236,10 +238,6 @@ class SectionTabsFragment : Fragment(), Collapsible {
         strip.addView(bar, position)
         groupDivider = bar
     }
-
-    /** What the "|" costs the row. Zero when the strip has no divider, so
-     *  undivided strips measure exactly as they always did. */
-    private fun dividerWidth(): Int = groupDivider?.width ?: 0
 
     /** Which tab starts selected: the page a deep link or walk stop asked
      *  for, else the persisted Apps/Admin mode when this section has a page
@@ -264,193 +262,7 @@ class SectionTabsFragment : Fragment(), Collapsible {
             .commitAllowingStateLoss()
     }
 
-    /**
-     * One width for every tab, sized to seven characters — then shrink the text
-     * rather than the tab if that will not fit.
-     *
-     * MODE_FIXED alone was not enough. It divides the strip evenly only while
-     * the content fits; past that the tabs go back to sizing themselves, so a
-     * strip reading MSGS / MY-RSS / CLOUD-RSS came out ragged, and Cloud's nine
-     * pages made it worse. Ragged tabs also MOVE as you change section, which is
-     * the part that actually reads as broken.
-     *
-     * So the slot is measured, not negotiated. The pills are MONOSPACE, so one
-     * character width describes any string: the target is the LONGEST label
-     * actually present in the strip, and the fallback floor is [MIN_CHARS]
-     * characters. Sizing to a fixed seven was the first attempt and it was
-     * wrong — the real labels run far longer (QUANT & MARKETS is fifteen,
-     * AERO & SPACE twelve), so a seven-character slot ellipsized them, and the
-     * ellipsis ate one of the seven, leaving six readable letters.
-     *
-     * When N slots exceed the strip the FONT gives way, a step at a time down to
-     * [MIN_SP], because a smaller word is still readable while a clipped one is
-     * not. Only if even the floor overflows does the strip become scrollable —
-     * the honest last resort: nothing is hidden, it just no longer fits at once.
-     *
-     * The slot is the pill's own padding and margin PLUS the padding of the
-     * TabView that TabLayout wraps every customView in. Forgetting that last
-     * term is what let the row run past the frame and get clipped: the pill was
-     * sized to fill its share exactly, then ~24dp of invisible chrome was added
-     * around it. It is zeroed and then measured, and in MODE_FIXED the final
-     * width is clamped to the slot — only MODE_SCROLLABLE may exceed one,
-     * because there the strip scrolls instead of cutting.
-     *
-     * Runs in post(): the measurement needs the strip's real width, which
-     * TabLayout does not have until it has laid its children out.
-     */
-    private fun equaliseTabs(tabs: TabLayout) {
-        // A one-shot LAYOUT listener, not post(): post() on a not-yet-attached
-        // view runs on attach, which can still be before the first layout pass —
-        // width would be 0 and the whole thing would silently do nothing. This
-        // fires only once there is a real width to measure against.
-        tabs.addOnLayoutChangeListener(object : View.OnLayoutChangeListener {
-            override fun onLayoutChange(
-                v: View, l: Int, t: Int, r: Int, b: Int,
-                ol: Int, ot: Int, or_: Int, ob: Int,
-            ) {
-                if (v.width <= 0) return
-                v.removeOnLayoutChangeListener(this)
-                applyEqualTabs(tabs)
-            }
-        })
-    }
-
-    private fun applyEqualTabs(tabs: TabLayout) {
-        val n = tabs.tabCount
-        if (n == 0) return
-        // The "|" lives in the strip but is not a tab, so its width is not the
-        // tabs' to divide. One glyph is small, but it is not free: MODE_FIXED
-        // shares what is LEFT after it among the TabViews, while the pills
-        // below are sized from this figure — so skipping the subtraction sizes
-        // every pill a few px wider than the TabView holding it and the text
-        // clips. One term, same miss as forgetting the TabView chrome below.
-        val avail = tabs.width - tabs.paddingStart - tabs.paddingEnd - dividerWidth()
-        if (avail <= 0) return
-
-        // The pill custom view is what the eye sees; TabLayout's own TabView is
-        // invisible and MODE_FIXED already makes those equal.
-        val pills = (0 until n).mapNotNull { tabs.getTabAt(it)?.customView }
-        if (pills.size != n) return
-        val labels = pills.mapNotNull { findLabel(it) }
-        if (labels.size != n) return
-
-        val dm = tabs.resources.displayMetrics
-        val padPx = PILL_PAD_DP * dm.density * 2       // makePill's 14dp per side
-        val marginPx = PILL_MARGIN_DP * dm.density * 2 // and its 3dp per side
-        val minPx = MIN_SP * dm.scaledDensity
-        val perTab = avail.toFloat() / n               // MODE_FIXED's share
-
-        // TabLayout wraps every customView in a TabView that carries its OWN
-        // horizontal padding — Material's default tabPaddingStart/End, 12dp a
-        // side. AppTabsStyle strips the background, the indicator and the ripple
-        // but never that, and the arithmetic below never budgeted for it: each
-        // pill was sized to fill its slot exactly, then the platform added ~24dp
-        // of invisible chrome around it, so the row overran the strip and the
-        // frame clipped the boxes.
-        //
-        // The pill supplies every bit of padding the eye can see, so the chrome
-        // is pure waste — zero it. Then read back what is actually left, because
-        // a re-applied style would otherwise put us straight back into overflow
-        // without changing a line of this file.
-        val tabViews = pills.map { it.parent as? View }
-        tabViews.forEach { tv -> tv?.setPadding(0, tv.paddingTop, 0, tv.paddingBottom) }
-        val chrome = (tabViews.maxOfOrNull { (it?.paddingStart ?: 0) + (it?.paddingEnd ?: 0) } ?: 0).toFloat()
-
-        // Width left for TEXT once the pill's own padding, its margin and any
-        // surviving chrome are paid for.
-        val budget = perTab - padPx - marginPx - chrome
-        if (budget <= 0f) return
-
-        // The labels are MONOSPACE (AppTabsStyle.makePill), so one character
-        // width describes every string and the arithmetic below is exact rather
-        // than a guess about the widest glyph.
-        val paint = android.text.TextPaint().apply {
-            typeface = labels[0].typeface
-            letterSpacing = labels[0].letterSpacing
-        }
-        fun charWidth(sizePx: Float): Float {
-            paint.textSize = sizePx
-            return paint.measureText("M")
-        }
-
-        // Show the WHOLE longest label when it fits; never show fewer than
-        // MIN_CHARS. "CONFIGS" is not the ceiling — Cloud carries QUANT &
-        // MARKETS (15), AERO & SPACE (12), ENGINEERING (11) — so sizing to a
-        // fixed 7 truncated most of them, and the ellipsis then ate one more
-        // character, leaving six.
-        val longest = labels.maxOf { it.text.length }
-        var sizePx = labels[0].textSize
-        var chars = longest
-        while (true) {
-            if (chars * charWidth(sizePx) <= budget) break
-            if (sizePx > minPx) { sizePx -= dm.density; continue }   // font first
-            // At the floor: keep the box and drop characters, but never below
-            // the guarantee. +1 pays for the ellipsis so MIN_CHARS stay READABLE
-            // rather than MIN_CHARS-1 plus a dot.
-            chars = maxOf(MIN_CHARS + 1, (budget / charWidth(sizePx)).toInt())
-            break
-        }
-
-        val pillPx = chars * charWidth(sizePx) + padPx
-        val overflows = pillPx + marginPx + chrome > perTab
-        tabs.tabMode = if (overflows) TabLayout.MODE_SCROLLABLE else TabLayout.MODE_FIXED
-
-        // In FIXED mode the slot is hard: a pill wider than its share is not
-        // "slightly too big", it is the row running past the frame and getting
-        // cut. Clamp. Only the SCROLLABLE branch is allowed to exceed a slot,
-        // because there the strip scrolls instead of clipping.
-        val width = if (overflows) pillPx.toInt()
-                    else minOf(pillPx, perTab - marginPx - chrome).toInt()
-        for (i in 0 until n) {
-            labels[i].setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, sizePx)
-            labels[i].isSingleLine = true
-            labels[i].maxLines = 1
-            labels[i].ellipsize = android.text.TextUtils.TruncateAt.END
-            pills[i].layoutParams = pills[i].layoutParams.apply { this.width = width }
-            pills[i].minimumWidth = width
-        }
-
-        // Set the "|" in the type the labels ACTUALLY ended up in, not the type
-        // they started in. [AppTabsStyle.makePill] builds every label monospace
-        // bold 12sp, and the divider is built to match — but the loop above has
-        // just RESIZED them, down to MIN_SP on a crowded strip. A separator
-        // pinned to the starting size would then stand visibly taller than the
-        // words either side of it, and it is exactly the crowded strips that
-        // have a divider to draw. Colour comes from an UNSELECTED label so the
-        // "|" reads as punctuation rather than as the active tab; that dim
-        // value never changes, so reading it once here is enough.
-        (groupDivider as? android.widget.TextView)?.let { bar ->
-            val dim = (0 until n).firstOrNull { it != tabs.selectedTabPosition }
-                ?.let { labels[it] } ?: labels[0]
-            bar.typeface = dim.typeface
-            bar.letterSpacing = dim.letterSpacing
-            bar.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, sizePx)
-            bar.setTextColor(dim.currentTextColor)
-        }
-        tabs.requestLayout()
-    }
-
-    /** First TextView inside a pill. AppTabsStyle wraps the label in a
-     *  LinearLayout, but this walks rather than assuming that shape stays. */
-    private fun findLabel(v: View?): android.widget.TextView? = when (v) {
-        null -> null
-        is android.widget.TextView -> v
-        is ViewGroup -> (0 until v.childCount).firstNotNullOfOrNull { findLabel(v.getChildAt(it)) }
-        else -> null
-    }
-
     companion object {
-        /** Seven characters: LNKTREE and CONFIGS are the longest tab labels in
-         *  build.json, so this is the real ceiling rather than a guess. */
-        /** Never show fewer than this many letters of a label. The ask was
-         *  "at least 7", and the box is sized for one more so the ellipsis
-         *  does not eat the seventh. */
-        private const val MIN_CHARS = 7
-        /** makePill's horizontal padding and margin, per side. */
-        private const val PILL_PAD_DP = 14f
-        private const val PILL_MARGIN_DP = 3f
-        private const val MIN_SP = 8f
-
         /** Breathing room either side of the "|" — typographic spacing, not
          *  structure. Everything else about the separator is just the glyph. */
         private const val DIVIDER_PAD_DP = 4f
