@@ -44,6 +44,7 @@ import rs.ltt.jmap.client.JmapClient;
 import rs.ltt.jmap.client.JmapRequest;
 import rs.ltt.jmap.client.MethodResponses;
 import rs.ltt.jmap.client.blob.Uploadable;
+import rs.ltt.jmap.client.session.FileSessionCache;
 import rs.ltt.jmap.client.session.Session;
 import rs.ltt.jmap.common.entity.Email;
 import rs.ltt.jmap.common.entity.EmailImport;
@@ -117,6 +118,28 @@ public class JmapService {
     private String accountId; // resolved MailAccountCapability primary account
     private String password; // comms: kept only to sign the raw Sieve HTTP calls below (no typed lib support)
 
+    // comms: one JmapClient per account for the SERVICE lifetime, not rebuilt
+    // every poll pass. The 3-arg JmapClient ctor has no session cache, and
+    // close() used to tear the client down at the end of every pass -- so
+    // every poll (and every outgoing send, see JmapSync.onSend, which also
+    // goes through connect()/close() here) paid a full /.well-known/jmap
+    // HTTPS + TLS round trip (measured 1.8-20.4s under load) even though
+    // nothing about the account had changed. Keyed by host:port:user because
+    // accountId is only known AFTER a session resolves, so it cannot key the
+    // cache that produces it. A credential change replaces the entry -- and
+    // only then is the stale client actually closed -- see connect()/close().
+    private static final Map<String, CachedClient> CLIENT_CACHE = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static final class CachedClient {
+        final JmapClient client;
+        final String password;
+
+        CachedClient(JmapClient client, String password) {
+            this.client = client;
+            this.password = password;
+        }
+    }
+
     JmapService(Context context, EntityAccount account) {
         this(context, account.host, account.port, account.user);
     }
@@ -157,10 +180,26 @@ public class JmapService {
         HttpUrl sessionResource = HttpUrl.get(sessionResourceUrl);
         EntityLog.log(context, "JMAP connecting user=" + user + " → " + sessionResourceUrl);
 
+        String cacheKey = host + ":" + port + ":" + user;
+        synchronized (CLIENT_CACHE) {
+            CachedClient cached = CLIENT_CACHE.get(cacheKey);
+            if (cached != null && cached.password.equals(password)) {
+                client = cached.client;
+            } else {
+                if (cached != null)
+                    try {
+                        cached.client.close();
+                    } catch (Throwable ignored) {
+                    }
+                client = new JmapClient(user, password, sessionResource);
+                client.setSessionCache(new FileSessionCache(context.getCacheDir()));
+                CLIENT_CACHE.put(cacheKey, new CachedClient(client, password));
+            }
+        }
+
         Throwable last = null;
         for (int attempt = 1; attempt <= CONNECT_ATTEMPTS; attempt++) {
             try {
-                client = new JmapClient(user, password, sessionResource);
                 Session session = client.getSession().get();
                 if (session == null)
                     throw new MessagingException("JMAP session resolved null");
@@ -172,7 +211,6 @@ public class JmapService {
                 return;
             } catch (Throwable ex) {
                 last = unwrap(ex);
-                close();
                 EntityLog.log(context, "JMAP connect attempt " + attempt + "/" + CONNECT_ATTEMPTS +
                         " FAILED: " + describe(last) + " (" + sessionResourceUrl + ")");
                 Log.w("JMAP connect attempt " + attempt + " " + sessionResourceUrl, ex);
@@ -972,15 +1010,13 @@ public class JmapService {
         return new MessagingException("JMAP " + op + " failed: " + describe(cause), asException(cause));
     }
 
+    // comms: drops this instance's local references only -- the underlying
+    // JmapClient is shared via CLIENT_CACHE across poll passes and sends for
+    // this account, and is torn down only on a credential change inside
+    // connect(), not every time a per-pass JmapService instance is discarded.
     void close() {
-        try {
-            if (client != null)
-                client.close();
-        } catch (Throwable ignored) {
-        } finally {
-            client = null;
-            accountId = null;
-            password = null;
-        }
+        client = null;
+        accountId = null;
+        password = null;
     }
 }
