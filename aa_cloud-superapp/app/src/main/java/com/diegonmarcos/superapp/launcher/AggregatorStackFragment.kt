@@ -10,6 +10,8 @@ import com.diegonmarcos.superapp.cloud.CalendarMonthFragment
 import com.diegonmarcos.superapp.cloud.CalendarAgendaFragment
 import com.diegonmarcos.superapp.cloud.TasksFragment
 import com.diegonmarcos.superapp.cloud.GitHubFeed
+import com.diegonmarcos.superapp.cloud.GiteaFeed
+import com.diegonmarcos.superapp.cloud.DaguRunsFeed
 import com.diegonmarcos.superapp.cloud.DriveConnectionsFragment
 import com.diegonmarcos.superapp.cloud.C3MeshFragment
 import com.diegonmarcos.superapp.cloud.C3HealthFragment
@@ -56,7 +58,9 @@ import kotlinx.coroutines.withContext
  *   tile_row                  → inline mini-tile row (deep links into sections)
  *   mail_accounts             → per-account list with read/unread placeholders
  *   chat_matrix /chat_mattermost  → server list, tap → opens the chat section
- *   dagu_dags                 → every DAG registered on the Dagu server
+ *   feed                       → config-driven repo/run feed; `source` picks
+ *                                the fetcher (github_runs | github_commits |
+ *                                gitea_commits | dagu_runs)
  *   open_link                 → single tappable row that opens a URL
  *   placeholder               → empty hint card
  *
@@ -405,46 +409,73 @@ class AggregatorStackFragment : Fragment(),
         "chat_mattermost"    -> renderChatPlaceholder(ctx, body, "Mattermost", "page:chat/mattermost")
         "open_link"          -> renderOpenLink(ctx, body, panel)
         "notification_center" -> refreshable(body) { renderNotificationCenter(ctx, body, panel) }
-        "repos"              -> renderRepos(ctx, body, panel)
-        "gha_runs"           -> renderGhaRuns(ctx, body, panel)
-        "dagu_dags"          -> renderDaguDags(ctx, body)
+        "feed"               -> renderFeed(ctx, body, panel)
         "stats"              -> renderStats(ctx, body, panel)
         "cloud_dashboard"    -> renderCloudDashboard(ctx, body, panel)
         else                 -> renderPlaceholder(ctx, body, panel)
     }
 
-    /** Recent commits across the panel's declared repos. Fetches in
-     *  parallel from the GitHub REST API (unauthed, 60-req/h limit
-     *  shared with gha_runs; 60s cache via GitHubFeed). */
-    private fun renderRepos(ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel) {
-        if (panel.repos.isEmpty()) {
-            body.addView(android.widget.TextView(ctx).apply {
-                text = "No repos declared. Add a `repos: [{owner, repo, label}]` array to the panel."
-                setTextColor(0x99FFFFFF.toInt())
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                setPadding(0, dp(8), 0, dp(8))
-            })
-            return
+    // ── kind=feed ──────────────────────────────────────────────────────
+    //
+    // ONE config-driven kind for every repo/run integration on this page,
+    // per build.json's own instruction to keep card types generic rather
+    // than hand-roll a Kotlin `when` branch per data source. `source`
+    // picks the fetcher; `repos` (where applicable) and `limit` are the
+    // only other knobs a panel needs — adding a sixth integration is a
+    // new `when` arm here plus a client object, never a new panel `kind`.
+
+    private fun renderFeed(ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel) {
+        when (panel.source) {
+            "github_runs"    -> renderGithubRunsFeed(ctx, body, panel)
+            "github_commits" -> renderRepoCommitsFeed(ctx, body, panel, gitea = false)
+            "gitea_commits"  -> renderRepoCommitsFeed(ctx, body, panel, gitea = true)
+            "dagu_runs"      -> renderDaguRunsFeed(ctx, body, panel)
+            else -> body.addView(emptyRow(ctx,
+                "(kind=feed needs a \"source\": github_runs | github_commits | " +
+                    "gitea_commits | dagu_runs — got '${panel.source}')"))
         }
-        val loading = android.widget.TextView(ctx).apply {
-            text = "Loading commits…"
+    }
+
+    private fun loadingRow(ctx: android.content.Context, label: String): View =
+        android.widget.TextView(ctx).apply {
+            text = label
             setTextColor(0x88FFFFFF.toInt())
             setTextAppearance(android.R.style.TextAppearance_Material_Caption)
             setPadding(0, dp(8), 0, dp(8))
         }
+
+    /** Last commit per repo, one group per repo — used by both "GH Repos"
+     *  (source=github_commits) and "Gitea Repos" (source=gitea_commits).
+     *  The two only differ in which client fetches the rows; the grouping,
+     *  loading state and row rendering are identical, so this is the one
+     *  place that logic lives rather than two near-duplicate functions. */
+    private fun renderRepoCommitsFeed(
+        ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel, gitea: Boolean,
+    ) {
+        if (panel.repos.isEmpty()) {
+            body.addView(emptyRow(ctx, "No repos declared. Add a `repos: [{owner, repo, label}]` array to the panel."))
+            return
+        }
+        val perRepo = panel.limit.takeIf { it > 0 } ?: 1
+        val loading = loadingRow(ctx, "Loading commits…")
         body.addView(loading)
         viewLifecycleOwner.lifecycleScope.launch {
             val now = System.currentTimeMillis()
             val results = panel.repos.mapIndexed { i, ref ->
-                // Stagger the fan-out: the family is a dozen repos now and
-                // the anonymous GitHub quota is 60/h, so they trickle rather
-                // than arrive as one simultaneous burst.
-                async { kotlinx.coroutines.delay(i * GitHubFeed.STAGGER_MS)
-                        ref to GitHubFeed.commits(ctx, ref.owner, ref.repo, 3) }
+                // Stagger the fan-out: a dozen repos hitting either API at
+                // once beats up the anonymous GitHub quota just the same as
+                // it would beat up the Gitea container, so both sources share
+                // the same trickle.
+                async {
+                    kotlinx.coroutines.delay(i * GitHubFeed.STAGGER_MS)
+                    val feed = if (gitea) GiteaFeed.commits(ctx, ref.owner, ref.repo, perRepo)
+                               else GitHubFeed.commits(ctx, ref.owner, ref.repo, perRepo)
+                    ref to feed
+                }
             }.awaitAll()
             body.removeView(loading)
             for ((ref, feed) in results) {
-                body.addView(repoHeader(ctx, "${ref.label} (commits)", "${ref.owner}/${ref.repo}"))
+                body.addView(repoHeader(ctx, ref.label, "${ref.owner}/${ref.repo}"))
                 if (feed.items.isEmpty()) {
                     body.addView(emptyRow(ctx, feedEmptyLabel(feed.status, "commits")))
                     continue
@@ -465,58 +496,97 @@ class AggregatorStackFragment : Fragment(),
         }
     }
 
-    /** Recent workflow runs across the panel's declared repos. */
-    private fun renderGhaRuns(ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel) {
+    /** "GHA": the last [Sections.StackPanel.limit] workflow runs across
+     *  EVERY declared repo, merged into one chronological list — a feed,
+     *  not the old per-repo-grouped view. Each row is labelled with its
+     *  repo so the merge does not lose the context grouping used to give
+     *  for free. */
+    private fun renderGithubRunsFeed(ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel) {
         if (panel.repos.isEmpty()) {
-            body.addView(android.widget.TextView(ctx).apply {
-                text = "No repos declared. Add a `repos` array to the panel."
-                setTextColor(0x99FFFFFF.toInt())
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                setPadding(0, dp(8), 0, dp(8))
-            })
+            body.addView(emptyRow(ctx, "No repos declared. Add a `repos` array to the panel."))
             return
         }
-        val loading = android.widget.TextView(ctx).apply {
-            text = "Loading workflow runs…"
-            setTextColor(0x88FFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setPadding(0, dp(8), 0, dp(8))
-        }
+        val limit = panel.limit.takeIf { it > 0 } ?: 5
+        val loading = loadingRow(ctx, "Loading workflow runs…")
         body.addView(loading)
         viewLifecycleOwner.lifecycleScope.launch {
             val now = System.currentTimeMillis()
             val results = panel.repos.mapIndexed { i, ref ->
+                // Ask each repo for up to `limit` runs so the merged, sorted
+                // top-`limit` cannot be short just because one repo happened
+                // to be fetched last.
                 async { kotlinx.coroutines.delay(i * GitHubFeed.STAGGER_MS)
-                        ref to GitHubFeed.runs(ctx, ref.owner, ref.repo, 3) }
+                        ref to GitHubFeed.runs(ctx, ref.owner, ref.repo, limit) }
             }.awaitAll()
             body.removeView(loading)
-            for ((ref, feed) in results) {
-                body.addView(repoHeader(ctx, "${ref.label} (workflow runs)", "${ref.owner}/${ref.repo}"))
-                if (feed.items.isEmpty()) {
-                    body.addView(emptyRow(ctx, feedEmptyLabel(feed.status, "workflow runs")))
-                    continue
+            val flat = results
+                .flatMap { (ref, feed) -> feed.items.map { ref to it } }
+                .sortedByDescending { it.second.tsMillis }
+                .take(limit)
+            if (flat.isEmpty()) {
+                val worst = results.map { it.second.status }.firstOrNull { it != GitHubFeed.Status.OK }
+                    ?: GitHubFeed.Status.OK
+                body.addView(emptyRow(ctx, feedEmptyLabel(worst, "workflow runs")))
+                return@launch
+            }
+            for ((ref, r) in flat) {
+                val sev = when (r.conclusion) {
+                    "success" -> "info"
+                    "failure", "timed_out", "cancelled" -> "error"
+                    else      -> "warn"
                 }
-                if (feed.status != GitHubFeed.Status.OK) {
-                    body.addView(emptyRow(ctx, feedStaleLabel(feed.status)))
+                val statusLabel = if (r.conclusion.isNotBlank()) r.conclusion else r.status
+                body.addView(githubRow(
+                    ctx,
+                    title    = r.displayTitle.ifBlank { r.name },
+                    meta     = "${ref.label} · ${r.name} · $statusLabel · ${GitHubFeed.ago(now - r.tsMillis)}",
+                    url      = r.htmlUrl,
+                    severity = sev,
+                    // Only rows whose run identified its workflow file can
+                    // be re-dispatched — GitHub addresses the dispatch
+                    // endpoint by that file name.
+                    action   = r.workflowFile.takeIf { it.isNotBlank() }
+                        ?.let { ghaTriggerRow(ctx, ref, it) },
+                ))
+            }
+        }
+    }
+
+    /** "Dagu": the last [Sections.StackPanel.limit] runs across EVERY
+     *  registered DAG (not one row per DAG's latest run — see
+     *  [DaguRunsFeed] for how that differs from the native Dagu page's
+     *  own listing). Server + bearer token come from [DaguPrefs], shared
+     *  with the native page:c3/dagu list, so there is one Dagu config on
+     *  the device rather than two that can disagree. */
+    private fun renderDaguRunsFeed(ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel) {
+        val limit = panel.limit.takeIf { it > 0 } ?: 5
+        val loading = loadingRow(ctx, "Loading Dagu runs…")
+        body.addView(loading)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val prefs = com.diegonmarcos.superapp.ops.dagu.DaguPrefs(ctx)
+            val now = System.currentTimeMillis()
+            val outcome = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                runCatching { DaguRunsFeed.recentRuns(prefs.serverUrl, prefs.bearerToken, limit) }
+            }
+            body.removeView(loading)
+            outcome.onFailure { e ->
+                body.addView(emptyRow(ctx,
+                    "(Dagu unreachable — ${e.message ?: "no response"}. " +
+                        "If the token expired, sign in again on the Dagu page.)"))
+            }
+            outcome.onSuccess { runs ->
+                if (runs.isEmpty()) {
+                    body.addView(emptyRow(ctx, "(no runs recorded on ${prefs.serverUrl})"))
+                    return@onSuccess
                 }
-                for (r in feed.items) {
-                    val sev = when (r.conclusion) {
-                        "success" -> "info"
-                        "failure", "timed_out", "cancelled" -> "error"
-                        else      -> "warn"
-                    }
-                    val statusLabel = if (r.conclusion.isNotBlank()) r.conclusion else r.status
+                for (r in runs) {
+                    val ts = if (r.finishedAtMs > 0L) r.finishedAtMs else r.startedAtMs
                     body.addView(githubRow(
                         ctx,
-                        title    = r.displayTitle.ifBlank { r.name },
-                        meta     = "${r.name} · $statusLabel · ${GitHubFeed.ago(now - r.tsMillis)}",
-                        url      = r.htmlUrl,
-                        severity = sev,
-                        // Only rows whose run identified its workflow file can
-                        // be re-dispatched — GitHub addresses the dispatch
-                        // endpoint by that file name.
-                        action   = r.workflowFile.takeIf { it.isNotBlank() }
-                            ?.let { ghaTriggerRow(ctx, ref, it) },
+                        title    = r.name,
+                        meta     = "${daguStatusLabel(r.status)} · ${GitHubFeed.ago(now - ts)}",
+                        url      = "page:c3/dagu",
+                        severity = daguSeverity(r.status),
                     ))
                 }
             }
@@ -540,74 +610,6 @@ class AggregatorStackFragment : Fragment(),
     private fun feedStaleLabel(status: GitHubFeed.Status): String = when (status) {
         GitHubFeed.Status.RATE_LIMITED -> "(rate limited — showing the last cached rows)"
         else                           -> "(offline — showing the last cached rows)"
-    }
-
-    // ── kind=dagu_dags ─────────────────────────────────────────────────
-    //
-    /** Every DAG registered on the Dagu server, listed in place.
-     *
-     *  GET /api/v1/dags returns the COMPLETE set in a single response —
-     *  the deployed server reports pagination.totalPages == 1 — so there
-     *  is no page to walk, no cap applied here, and no filter: whatever
-     *  Dagu has loaded is what gets drawn, one row each.
-     *
-     *  Server + bearer token come from [DaguPrefs], the same store the
-     *  native page:c3/dagu list uses, so there is one Dagu config on the
-     *  device rather than two that can disagree.
-     *
-     *  A DAG that has never run is its OWN state: severity "idle", the
-     *  words "never run", and no timestamp. It is never green and never
-     *  blank, so "declared but never scheduled" cannot be mistaken for
-     *  "ran fine" or for a rendering gap. */
-    private fun renderDaguDags(ctx: android.content.Context, body: LinearLayout) {
-        val loading = android.widget.TextView(ctx).apply {
-            text = "Loading Dagu workflows…"
-            setTextColor(0x88FFFFFF.toInt())
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-            setPadding(0, dp(8), 0, dp(8))
-        }
-        body.addView(loading)
-        viewLifecycleOwner.lifecycleScope.launch {
-            val prefs = com.diegonmarcos.superapp.ops.dagu.DaguPrefs(ctx)
-            val outcome = withContext(kotlinx.coroutines.Dispatchers.IO) {
-                runCatching {
-                    com.diegonmarcos.superapp.ops.dagu.DaguClient(
-                        prefs.serverUrl, prefs.bearerToken).listDags()
-                }
-            }
-            body.removeView(loading)
-            outcome.onFailure { e ->
-                body.addView(emptyRow(ctx,
-                    "(Dagu unreachable — ${e.message ?: "no response"}. " +
-                        "If the token expired, sign in again on the Dagu page.)"))
-            }
-            outcome.onSuccess { resp ->
-                if (resp.dags.isEmpty()) {
-                    body.addView(emptyRow(ctx, "(no DAGs registered on ${prefs.serverUrl})"))
-                    return@onSuccess
-                }
-                val now = System.currentTimeMillis()
-                // Most recently finished first; never-run DAGs sink to the
-                // bottom, where their "never run" state reads as a group.
-                for (d in resp.dags.sortedByDescending { it.lastRun?.finishedAtMs ?: 0L }) {
-                    val code     = d.lastRun?.status ?: 0
-                    val finished = d.lastRun?.finishedAtMs ?: 0L
-                    val meta     = buildString {
-                        append(daguStatusLabel(code))
-                        if (finished > 0L) append(" · ${GitHubFeed.ago(now - finished)}")
-                        if (d.schedule.isNotBlank()) append(" · ⏰ ${d.schedule}")
-                    }
-                    body.addView(githubRow(
-                        ctx,
-                        title    = d.displayLabel,
-                        meta     = meta,
-                        url      = "page:c3/dagu",
-                        severity = daguSeverity(code),
-                    ))
-                }
-                body.addView(emptyRow(ctx, "${resp.dags.size} workflows registered"))
-            }
-        }
     }
 
     /** Dagu run-status code → words. Codes are Dagu's own: 0 not started,
@@ -1049,7 +1051,7 @@ class AggregatorStackFragment : Fragment(),
 
             val cached = ntfyCache[topic]
             if (cached != null) {
-                paintNtfyGroup(ctx, state, rowsBox, cached, topic)
+                paintNtfyGroup(ctx, state, rowsBox, cached, topic, panel.limit)
                 continue
             }
             runCatching {
@@ -1057,7 +1059,7 @@ class AggregatorStackFragment : Fragment(),
                     val result = pollTopic(topic)
                     state.post {
                         ntfyCache[topic] = result
-                        paintNtfyGroup(ctx, state, rowsBox, result, topic)
+                        paintNtfyGroup(ctx, state, rowsBox, result, topic, panel.limit)
                     }
                 }
             }.onFailure {
@@ -1072,7 +1074,7 @@ class AggregatorStackFragment : Fragment(),
 
     private fun paintNtfyGroup(
         ctx: android.content.Context, state: TextView, rowsBox: LinearLayout, result: NtfyResult,
-        topic: String = "",
+        topic: String = "", limit: Int = 0,
     ) {
         rowsBox.removeAllViews()
         if (!result.ok) {
@@ -1086,7 +1088,10 @@ class AggregatorStackFragment : Fragment(),
         // the user already swiped away.
         if (topic.isNotBlank()) StackFilters.pruneRead(
             ctx, filterPage, ntfyNs(topic), result.rows.mapTo(HashSet()) { it.id })
-        val rows = withinGroup(result.rows)
+        // `limit` caps how many of this GROUP's rows are shown (e.g. C3
+        // Observability's NTFY card wants "last 5 per channel"); 0 means
+        // every row the poll window returned, as Inboxes' full centre wants.
+        val rows = withinGroup(result.rows).let { if (limit > 0) it.take(limit) else it }
         if (rows.isEmpty()) {
             // Empty channel and hidden-by-filter are different facts, so they get
             // different words and different colours.

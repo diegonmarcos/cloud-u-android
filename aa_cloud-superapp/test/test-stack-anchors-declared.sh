@@ -196,16 +196,18 @@ else
   ok "T4: no slug()/registerChild — headers register only declared ids"
 fi
 
-echo "== C3 Index still leads somewhere =="
-python3 - "$APP" <<'PY' && ok "T5: every C3 Index anchor is declared" || bad "T5: a C3 Index anchor lost its declaration"
+echo "== C3 stack anchors are still declared =="
+python3 - "$APP" <<'PY' && ok "T5: every expected C3 anchor is declared" || bad "T5: an expected C3 anchor lost its declaration"
 import json, sys, os
 b = json.load(open(os.path.join(sys.argv[1], "build.json")))
 want = {
     "stack_topology": ["pub-urls", "pvt-urls", "containers-infra", "containers-user",
                        "stack/providers", "stack/vms", "stack/dbs", "stack/apis"],
-    # ntfy joined the Index when the notification centre moved here from
-    # Inboxes ▸ C3 Obsv; the tab that used to hold it now links in.
-    "stack_observability": ["gha-runs", "repos", "dagu-workflows", "dagu-runs", "ntfy"],
+    # The Index tile_row is gone: the page IS five feed cards now (GHA,
+    # Dagu, GH Repos, Gitea Repos, NTFY), each addressable by its own
+    # anchor with nothing left to index into it. This just checks the
+    # five anchors themselves are still declared somewhere on the stack.
+    "stack_observability": ["gha", "dagu", "gh-repos", "gitea-repos", "ntfy"],
 }
 sec = next(s for s in b["ui"]["sections"] if s.get("id") == "c3")
 missing = []

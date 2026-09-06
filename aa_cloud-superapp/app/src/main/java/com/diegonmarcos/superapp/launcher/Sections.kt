@@ -135,9 +135,11 @@ object Sections {
         /** Used by kind=link / openExternal pointers. */
         val url: String = "",
         val iconName: String = "",
-        /** Used by kind=repos / gha_runs — list of GitHub repos to
-         *  surface commits / workflow runs from. Each entry resolves to
-         *  api.github.com/repos/<owner>/<repo>/... at render time. */
+        /** Used by kind=feed (source=github_runs/github_commits/gitea_commits)
+         *  — list of repos to surface commits / workflow runs from. Each entry
+         *  resolves to api.github.com/repos/<owner>/<repo>/... (or, for
+         *  gitea_commits, the Gitea mirror at the same owner/repo path) at
+         *  render time. */
         val repos: List<RepoRef> = emptyList(),
         /** Used by kind=stats — static label/value rows. A placeholder
          *  dashboard surface: mock numbers declared in build.json today,
@@ -179,6 +181,17 @@ object Sections {
          *  readable straight out of build.json, and a tile pointing at an id
          *  nobody declares is a static error rather than a dead tap. */
         val anchors: List<PanelAnchor> = emptyList(),
+        /** Used by kind=feed — which fetcher builds this card's rows:
+         *  github_runs | github_commits | gitea_commits | dagu_runs. Blank
+         *  renders a visible "unknown source" hint rather than nothing, same
+         *  fail-visible rule as an unrecognized `kind`. */
+        val source: String = "",
+        /** Used by kind=feed (rows per repo, or total rows for a merged
+         *  source) and kind=notification_center stream=channels (messages
+         *  per channel group). 0 means "use that renderer's own default",
+         *  not "show nothing" — a panel that forgets to declare it must
+         *  still render. */
+        val limit: Int = 0,
     )
 
     /** One declared in-panel anchor: the [id] tiles point at, plus the header
@@ -721,6 +734,8 @@ object Sections {
                         stream          = p.optString("stream", ""),
                         anchor          = p.optString("anchor", ""),
                         anchors         = panelAnchors,
+                        source          = p.optString("source", ""),
+                        limit           = p.optInt("limit", 0),
                     ))
                 }
                 return out

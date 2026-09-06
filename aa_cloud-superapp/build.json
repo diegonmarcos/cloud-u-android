@@ -1226,38 +1226,14 @@
             ]
           }
         ],
-        "_doc_stack_cloud-rss": "C3 Ntfy is now a SIGNPOST, not a second notification centre. The three kind=notification_center cards that used to live here were MOVED (not copied) to c3.stack_observability, where ntfy sits beside the runs and workflows it reports on; this tab keeps its place in Inboxes and points at them. The first tile uses the cross-page anchor grammar `page:<section>/<page>#<anchor>` — the web's own page-plus-fragment form — so it navigates to Cloud ▸ C3 ▸ Observability AND scrolls it to the `ntfy` anchor declared there; ShellActivity.onTileClicked splits the fragment off and StackAnchors holds it as a one-shot the destination stack consumes once built. The other two tiles were rescued from the `tiles_cloud-rss` list this replaces: that list had been DEAD since aggregatorPage started preferring stack_<id> over tiles_<id>, which had quietly orphaned page:wg/status, page:c3/health and page:feed/all — they render again here.",
+        "_doc_stack_cloud-rss": "C3 Ntfy is now a notification centre and NOTHING else — the old signpost tile_row (a jump to Observability's ntfy anchor plus three rescued shortcuts) is gone entirely, replaced by the SAME kind=notification_center machinery the C3 Observability NTFY card and Apps RSS use: one group per ntfy channel, swipe-to-read, unread badges — all of it already built, none of it re-implemented here. No `scopes`, so every channel in ui.ntfy renders (NtfyScopes.load() + fallbackChannels(), the one registry both this page and Observability's NTFY card read from — a channel added upstream appears on both with no second list to edit) and no `limit`, so unlike Observability's 5-per-channel cap this stays the FULL browsable history, matching how Apps RSS' own Cloud-publishers card is unbounded. Losing the signpost meant `page:c3/health` and `page:wg/status` — both HIDDEN pages this tile_row was the sole referrer for — needed a new home: they moved to Observability's own `More` row below, which already exists to open full pages a card can't (test/test-stack-anchors-declared.sh T8 would fail the build otherwise, catching exactly this orphaning). `page:feed/all` was NOT hidden and had no reachability requirement, so it was simply dropped rather than relocated.",
         "stack_cloud-rss": [
           {
-            "kind": "tile_row",
+            "kind": "notification_center",
+            "stream": "channels",
             "title": "C3 Ntfy",
-            "subtitle": "The notification centre moved to C3 ▸ Observability",
-            "tiles": [
-              {
-                "id": "ntfy",
-                "label": "Ntfy channels",
-                "icon": "ic_rss",
-                "target": "page:c3/observability#ntfy"
-              },
-              {
-                "id": "rss-c3",
-                "label": "Feed",
-                "icon": "ic_rss",
-                "target": "page:feed/all"
-              },
-              {
-                "id": "c3-health",
-                "label": "C3 health",
-                "icon": "ic_p_c3_health",
-                "target": "page:c3/health"
-              },
-              {
-                "id": "wg-mesh",
-                "label": "WG mesh",
-                "icon": "ic_wg",
-                "target": "page:wg/status"
-              }
-            ]
+            "subtitle": "Every ntfy channel, one notification centre — swipe a row to mark it read.",
+            "origin": "cloud"
           }
         ]
       },
@@ -2647,49 +2623,13 @@
         ],
         "stack_observability": [
           {
-            "_doc": "INDEX of this page, same contract as stack_topology's: every tile is an `anchor:` id resolved by StackAnchors against the cards below, so the row is a table of contents rather than a set of deep links. The anchors are DERIVED FROM WHAT THIS STACK ACTUALLY RENDERS — the four panels that follow — not from the old tile list: GHA (kind=gha_runs), Repos (kind=repos), Workflows (kind=dagu_dags, the full registered-DAG inventory) and Runs (kind=open_link, the in-app deeplink to the native Dagu run list). The previous six tiles pointed at page:c3/{health,workflows,gha,dagu,logs,reports}; those pages are unchanged and still resolve, and the `More` row at the BOTTOM of this stack links them again. Anchors and pages answer different questions and the two rows now say so by position: this Index jumps to a card already on screen, More opens the full page behind it (DaguFragment's run list, the per-VM log viewer) which carries more than a card can. c3/health is reached from Inboxes ▸ Infra RSS as well.",
-            "kind": "tile_row",
-            "title": "Index",
-            "subtitle": "Jump to a table on this page",
-            "tiles": [
-              {
-                "id": "gha",
-                "label": "GHA",
-                "icon": "ic_code",
-                "target": "anchor:gha-runs"
-              },
-              {
-                "id": "repos",
-                "label": "Repos",
-                "icon": "ic_p_c3_workflows",
-                "target": "anchor:repos"
-              },
-              {
-                "id": "dagu-workflows",
-                "label": "Workflows",
-                "icon": "ic_robot",
-                "target": "anchor:dagu-workflows"
-              },
-              {
-                "id": "dagu-runs",
-                "label": "Runs",
-                "icon": "ic_robot",
-                "target": "anchor:dagu-runs"
-              },
-              {
-                "id": "ntfy",
-                "label": "Ntfy",
-                "icon": "ic_rss",
-                "target": "anchor:ntfy"
-              }
-            ]
-          },
-          {
-            "_doc": "Live GHA workflow runs across the watched repos. Fetches api.github.com/repos/{owner}/{repo}/actions/runs unauthenticated (60 req/h limit shared across panels, 60s cache). Each row's re-run button does NOT go to GitHub directly — it dispatches through c3-infra-api with the Authelia bearer, because a repo-scoped GitHub PAT inside an APK is a published PAT.",
-            "kind": "gha_runs",
-            "anchor": "gha-runs",
-            "title": "GHA · Workflow runs",
-            "subtitle": "Latest 3 runs per repo",
+            "_doc": "Five feed cards, one per data source, named exactly GHA / Dagu / GH Repos / Gitea Repos / NTFY per spec — replacing the old Index tile-row, the gha_runs/repos/dagu_dags kinds and the three scope-split ntfy cards (Advisories/My channels/Cloud channels). kind=feed is ONE generic card type reading `source` to pick its fetcher (github_runs | github_commits | gitea_commits | dagu_runs — AggregatorStackFragment.renderFeed), per this page's own long-standing instruction to keep card types generic rather than a bespoke render function per integration; a sixth source is a new `when` arm plus a client object, never a new panel `kind`. `limit` is a real config field now, not a number split between a Kotlin literal and a human-readable subtitle that could silently drift apart (the old 'Latest 3 runs per repo' text next to a separate hardcoded `3`). The Index is gone because every card now IS the thing it used to jump to — there is nothing left to index — but the More row below is KEPT unchanged: c3/{workflows,gha,dagu,logs,reports} are HIDDEN pages and More is their only referrer anywhere in build.json, so dropping it would silently orphan five real pages (test/test-stack-anchors-declared.sh T8 catches exactly this).",
+            "kind": "feed",
+            "source": "github_runs",
+            "anchor": "gha",
+            "title": "GHA",
+            "subtitle": "Last 5 GitHub Actions workflow runs · cloud + front family",
+            "limit": 5,
             "repos": [
               {
                 "owner": "diegonmarcos",
@@ -2709,11 +2649,22 @@
             ]
           },
           {
-            "_doc": "Recent commits from the whole cloud + front family — separate from GHA so workflows news and code news don't conflate. THIS ARRAY IS THE REPO SET: AggregatorStackFragment.renderRepos iterates Sections.StackPanel.repos and nothing else, so adding a repo is a data edit here, never a Kotlin edit. The list is every repo of the two families that GitHub actually answers 200 for, verified against api.github.com/repos/diegonmarcos/<name>. DELIBERATELY EXCLUDED, so nobody re-adds them: `cloud-android` and `cloud-unix` answer 301 and redirect to `cloud-u-android` and `cloud-infra-desktop` respectively — they are rename-aliases of repos already listed, and adding them would duplicate every commit; `cloud-mykonsole-dtk` answers 404, the upstream is gone and only the gitea mirror still remembers it; `front` (the ~30-project web monorepo) answers 404 too — it has no GitHub remote at all, and diegonmarcos.github.io is the published front site, which is why THAT is the front entry rather than `front`. Rate limit: this panel plus gha_runs share GitHub's 60-requests-per-hour anonymous quota, so GitHubFeed caches for 15 minutes, staggers the fan-out, and reports an exhausted quota as `rate limited` rather than as an empty repo.",
-            "kind": "repos",
-            "anchor": "repos",
-            "title": "Repos · Commits",
-            "subtitle": "Latest 3 commits per repo · cloud + front family",
+            "_doc": "Last 5 Dagu runs across EVERY registered DAG, most-recent-first — a real run HISTORY, not the old dagu_dags kind's one-row-per-DAG registry (that showed each DAG's latest run only; this can show the same DAG twice if it ran twice in the top 5). Backed by GET /api/v1/dag-runs?limit=5 (DaguRunsFeed.kt, aa_cloud-superapp-only per this task's scope — NOT a change to ab_cloud-libs-shared's DaguClient), confirmed live 2026-09-06 to already answer newest-first with `limit` honored server-side. c3-infra-api's own /workflows/dagu proxy is unrelated and unused here — this card, like the native page:c3/dagu list, talks to Dagu directly via DaguPrefs so there is one Dagu config on the device.",
+            "kind": "feed",
+            "source": "dagu_runs",
+            "anchor": "dagu",
+            "title": "Dagu",
+            "subtitle": "Last 5 Dagu workflow runs · status",
+            "limit": 5
+          },
+          {
+            "_doc": "Last COMMIT per repo (limit=1, not the old 'latest 3') from the whole cloud + front family. THIS ARRAY IS THE REPO SET: AggregatorStackFragment.renderRepoCommitsFeed iterates Sections.StackPanel.repos and nothing else, so adding a repo is a data edit here, never a Kotlin edit. The list is every repo of the two families that GitHub actually answers 200 for, verified against api.github.com/repos/diegonmarcos/<name>. DELIBERATELY EXCLUDED, so nobody re-adds them: `cloud-android` and `cloud-unix` answer 301 and redirect to `cloud-u-android` and `cloud-infra-desktop` respectively — they are rename-aliases of repos already listed, and adding them would duplicate every commit; `cloud-mykonsole-dtk` answers 404, the upstream is gone and only the gitea mirror still remembers it; `front` (the ~30-project web monorepo) answers 404 too — it has no GitHub remote at all, and diegonmarcos.github.io is the published front site, which is why THAT is the front entry rather than `front`. Rate limit: this panel plus GHA share GitHub's 60-requests-per-hour anonymous quota, so GitHubFeed caches for 15 minutes, staggers the fan-out, and reports an exhausted quota as `rate limited` rather than as an empty repo. This SAME repo list (different `owner`) is reused verbatim by the Gitea Repos card below, so the two cards are directly comparable — same repos, two mirrors.",
+            "kind": "feed",
+            "source": "github_commits",
+            "anchor": "gh-repos",
+            "title": "GH Repos",
+            "subtitle": "Last commit per repo · cloud + front family",
+            "limit": 1,
             "repos": [
               {
                 "owner": "diegonmarcos",
@@ -2758,54 +2709,68 @@
             ]
           },
           {
-            "_doc": "EVERY workflow Dagu has registered, listed in place. Before this the page carried only the deeplink below, so the answer to 'what workflows does the cloud declare' was one tap away instead of on the page — that, not a cap, is why the panel looked short. Nothing is paginated or filtered away: GET /api/v1/dags answers the complete set in one response (pagination.totalPages == 1, totalRecords == 35 as of this commit), which matches the 34 enabled .yaml in cloud-u-containers/infra-obs_dagu/src/dags plus the one under dags/gha — sync_cloud-data.yaml.disabled is disabled and correctly absent. AggregatorStackFragment.renderDaguDags drives DaguClient.listDags() against DaguPrefs.serverUrl, so it shares the server and the bearer token with the native page:c3/dagu list rather than inventing a second config. A DAG that has never run renders as its own `never run` state — Dagu status 0 — and is NEVER drawn green and never drawn blank.",
-            "kind": "dagu_dags",
-            "anchor": "dagu-workflows",
-            "title": "Dagu · Workflows",
-            "subtitle": "Every registered DAG · last run status"
+            "_doc": "Same 8 repos as GH Repos, one mirror over. `owner` is `diego` (infra-dat_gitea's org — see cloud-u-containers/infra-dat_gitea/src/build.json::gitea.org) rather than `diegonmarcos`: GiteaFeed.kt hits http://10.0.0.6:3002/api/v1/repos/diego/<repo>/commits directly (mesh-only, confirmed live and unauthenticated for these public mirrors — 10.0.0.x is already cleartext-allowed in network_security_config.xml), NOT the public git.diegonmarcos.com domain, which sits behind two-factor auth this app cannot complete. Gitea mirrors EVERY non-fork GitHub repo except cloud-vault (mirror_policy.exclude), a much longer list than these 8 — this card deliberately reuses the SAME curated family as GH Repos rather than all ~30+ mirrors, so the two cards read as 'the same repos, two remotes' instead of one card being a long unrelated scroll.",
+            "kind": "feed",
+            "source": "gitea_commits",
+            "anchor": "gitea-repos",
+            "title": "Gitea Repos",
+            "subtitle": "Last commit per repo · gitea mirror",
+            "limit": 1,
+            "repos": [
+              {
+                "owner": "diego",
+                "repo": "cloud-infra",
+                "label": "cloud-infra"
+              },
+              {
+                "owner": "diego",
+                "repo": "cloud-infra-desktop",
+                "label": "cloud-infra-desktop"
+              },
+              {
+                "owner": "diego",
+                "repo": "cloud-u-android",
+                "label": "cloud-u-android"
+              },
+              {
+                "owner": "diego",
+                "repo": "cloud-u-containers",
+                "label": "cloud-u-containers"
+              },
+              {
+                "owner": "diego",
+                "repo": "cloud-u-linux",
+                "label": "cloud-u-linux"
+              },
+              {
+                "owner": "diego",
+                "repo": "front-assets-cdn",
+                "label": "front-assets-cdn"
+              },
+              {
+                "owner": "diego",
+                "repo": "front-data",
+                "label": "front-data"
+              },
+              {
+                "owner": "diego",
+                "repo": "diegonmarcos.github.io",
+                "label": "front · site"
+              }
+            ]
           },
           {
-            "kind": "open_link",
-            "anchor": "dagu-runs",
-            "title": "Dagu · Workflow runs",
-            "url": "page:c3/dagu",
-            "icon": "ic_robot",
-            "_doc": "AggregatorStackFragment.openUrlOrTarget handles URLs AND page:* targets, so this in-app deeplink routes through onTileClicked → SectionPages → OpsPages.fragmentForDagu() and renders the native list — a bare URL would have opened the WebView at the live Dagu page and bypassed it. That fragment both lists runs and starts them (DaguClient.startDag → POST /api/v1/dags/{fileName}/start)."
-          },
-          {
-            "_doc": "THE ntfy notification centre, MOVED here verbatim from communication.stack_cloud-rss (Inboxes ▸ C3 Obsv) rather than duplicated — ntfy belongs beside the runs and workflows it reports on, and a second copy would have been a second thing to keep in sync. The three cards are the scope axis from ui.ntfy.scopes and nothing else; the channel list itself is never written here, it is resolved from the ui.ntfy catalogue through NtfyScopes, so a channel added upstream appears on the next build. Every panel is kind=notification_center, which renders as inline views only: this page deliberately declares NO embedChild-routed panel, because embedChild allocates from a fixed host-id pool and a re-rendered panel comes back silently blank. `origin` is inert here (Observability declares no Source filter) but is kept truthful for the day it does.",
+            "_doc": "Last 5 messages per channel, EVERY ntfy channel in one card — replacing the old three scope-split cards (Advisories/My channels/Cloud channels). No `scopes` declared: renderNtfyGroups already treats an empty scopes list as 'every channel', so simply not filtering is the whole change, not a new code path. `limit: 5` caps rows per channel group (paintNtfyGroup), separate from the Inboxes ▸ C3 Ntfy card below which reuses the exact same kind/stream unbounded. Channel list is resolved from ui.ntfy (this build.json's own mirror of cloud-u-containers/infra-obs_ntfy/src/build.json::topics[] — see _doc_ntfy) through NtfyScopes, so a channel added upstream appears here on the next build with no second list to edit.",
             "kind": "notification_center",
             "stream": "channels",
             "anchor": "ntfy",
-            "title": "Advisories",
-            "subtitle": "Channels that address this phone rather than the fleet.",
+            "title": "NTFY",
+            "subtitle": "Last 5 messages per channel · every channel",
             "origin": "cloud",
-            "scopes": [
-              "advisory"
-            ]
+            "limit": 5
           },
           {
-            "kind": "notification_center",
-            "stream": "channels",
-            "title": "My channels",
-            "subtitle": "Channels about this account. Empty until a `me_`-family channel exists — and the card says it is empty rather than rendering nothing.",
-            "origin": "cloud",
-            "scopes": [
-              "user"
-            ]
-          },
-          {
-            "kind": "notification_center",
-            "stream": "channels",
-            "title": "Cloud channels",
-            "subtitle": "The fleet: health, security, deploys, ops, C3. One group per channel with its own freshness verdict.",
-            "origin": "cloud",
-            "scopes": [
-              "infra"
-            ]
-          },
-          {
-            "_doc": "MORE — the full pages behind this tab's cards, restoring the five that making the Index pure anchors had left with no referrer anywhere in build.json. Ordinary `page:` targets, no anchor grammar: the Index jumps to a card that is already on screen, this opens the PAGE, which carries what a card cannot (DaguFragment lists AND starts runs, the log viewer is per-VM). Subordinate by position — it sits at the bottom, after everything the Index indexes — so the table of contents stays the first thing read. c3/dagu was the one of the five already reachable, via the Runs card's page:c3/dagu deeplink; it is listed here too so the row is the tab's whole page list rather than a list of whichever pages happened to be orphaned.",
+            "_doc": "MORE — the full pages behind this tab's cards, plus (as of the five-feed-card rework) the two pages that lost their only referrer when Inboxes ▸ C3 Ntfy stopped being a signpost: `health` and `wg-mesh` below point at page:c3/health and page:wg/status, both HIDDEN pages that tile_row used to be the sole way into. Ordinary `page:` targets, no anchor grammar: this opens the PAGE, which carries what a card cannot (DaguFragment lists AND starts runs, the log viewer is per-VM, C3 health has its own scope-filtered view). Subordinate by position — it sits at the bottom, after the five feed cards — so the cards stay the first thing read. Dropping any tile here without giving its target page another referrer fails test/test-stack-anchors-declared.sh's T8.",
             "kind": "tile_row",
             "title": "More",
             "subtitle": "Open the full page behind a card",
@@ -2839,6 +2804,18 @@
                 "label": "Reports",
                 "icon": "ic_p_c3_reports",
                 "target": "page:c3/reports"
+              },
+              {
+                "id": "health",
+                "label": "C3 health",
+                "icon": "ic_p_c3_health",
+                "target": "page:c3/health"
+              },
+              {
+                "id": "wg-mesh",
+                "label": "WG mesh",
+                "icon": "ic_wg",
+                "target": "page:wg/status"
               }
             ]
           }
@@ -7023,7 +7000,7 @@
       }
     ],
     "tile_columns": 6,
-    "_doc_ntfy": "USER vs INFRA channel split for the ntfy registry. The channels are one flat list of snake_case topics upstream, so 'my notifications' and 'the cloud's notifications' arrived indistinguishable in one alphabetical wall. Scope is decided by the topic PREFIX, declared here rather than hardcoded in the fragment (FIRE RULE #6): a new prefix is a build.json edit. Anything unmatched counts as INFRA, so a channel can never silently vanish from the list — it lands in the cloud bucket and is visible enough to classify.\n\n`channels` is the fallback registry. The live URL (cloud-data/ntfy-api/src/topics.json) moved to that repo's y_old/ and now answers 404, so the page could not list anything at all; these are the 17 topics it served, vendored so the split works offline and on a cold cache.",
+    "_doc_ntfy": "USER vs INFRA channel split for the ntfy registry. The channels are one flat list of snake_case topics upstream, so 'my notifications' and 'the cloud's notifications' arrived indistinguishable in one alphabetical wall. Scope is decided by the topic PREFIX, declared here rather than hardcoded in the fragment (FIRE RULE #6): a new prefix is a build.json edit. Anything unmatched counts as INFRA, so a channel can never silently vanish from the list — it lands in the cloud bucket and is visible enough to classify.\n\n`channels` below IS the ntfy registry's own topics[] list — the source of truth is /home/appuser/git/cloud-u-containers/infra-obs_ntfy/src/build.json::topics (this app's clone lives at cloud-u-android, a SIBLING checkout to cloud-u-containers, not a `a_solutions` submodule of it — a path this comment previously got wrong). Verified 2026-09-06: every one of that registry's 23 topic names is present below; `cloud-sa-notifications` / `fleet_advisory` / `infra_mail-health` are the only extras, and they are legitimately NOT in that registry — they are this app's own advisory-scope channels (see `advisory_topic` below), published by a different mechanism than the fleet's ntfy topic list. There is no automated sync from that JSON into this one yet (the two live in different repos and this task's scope did not include building that pipeline); a topic added to the registry needs a matching manual edit here until one exists.",
     "ntfy": {
       "scopes": [
         {
@@ -7092,7 +7069,7 @@
         "sec_connections",
         "sec_yara"
       ],
-      "_doc_labels": "Human titles, mirrored from the fleet's own registry at cloud-infra/a_solutions/infra-obs_ntfy/src/build.json::topics (the source of truth). A raw snake_case topic is an address, not a name: 'sec_yara' tells you nothing about what arrives there, and a list of twenty-six of them is an inventory nobody reads. A topic with no entry here still renders — under its raw name — because a missing label must degrade to less readable, never to invisible.",
+      "_doc_labels": "Human titles, loosely mirrored from the fleet's own registry at cloud-u-containers/infra-obs_ntfy/src/build.json::topics[].desc (the source of truth) — reworded for length rather than copied verbatim. A raw snake_case topic is an address, not a name: 'sec_yara' tells you nothing about what arrives there, and a list of twenty-six of them is an inventory nobody reads. A topic with no entry here still renders — under its raw name — because a missing label must degrade to less readable, never to invisible.",
       "labels": {
         "cloud-sa-notifications": "SuperApp advisories · direct install links",
         "fleet_advisory": "Fleet advisories · app is stuck, here is the fix",
