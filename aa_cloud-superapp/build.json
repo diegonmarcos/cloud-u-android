@@ -5103,20 +5103,20 @@
         }
       ]
     },
-    "_doc_wireguard_default": "Seeds the Configs/WireGuard form on first run. The phone is a single-tunnel mesh spoke (Android allows one active WG profile) carrying TWO peers / two meshes — gcp-proxy wg0 (10.0.0.0/24) and oci-analytics wg-public (10.1.0.0/24), mirrored from vault/.../wireguard/termux-public/config. The network-popup Mesh section probes each peer's hub (.1 of its allowed_ips) as a separate light. peer.public_key IS seeded — WireGuard PUBLIC keys are non-secret (the hubs' public identity, already in the public cloud repo). interface_private_key + peer.preshared_key are NOT seeded (the private key is the credential — Pillar 7): generate via the in-app Generate Keypair button, or import the merged .conf / paste manually. All values are FIRST-RUN defaults, user-editable at runtime via WireGuardFragment (Add/Remove Peer; persisted in WireGuardPrefs).",
+    "_doc_wireguard_default": "Seeds the Configs/WireGuard form on first run. The phone is a single-tunnel mesh spoke (Android allows one active WG profile) carrying TWO peers / two meshes — gcp-proxy wg0 (10.0.0.0/24) and oci-analytics wg-public (10.1.0.0/24), mirrored from vault/.../wireguard/termux-public/config. The network-popup Mesh section probes each peer's hub (.1 of its allowed_ips) as a separate light. peer.public_key IS seeded — WireGuard PUBLIC keys are non-secret (the hubs' public identity, already in the public cloud repo). interface_private_key + peer.preshared_key are NOT seeded (the private key is the credential — Pillar 7): generate via the in-app Generate Keypair button, or import the merged .conf / paste manually. All values are FIRST-RUN defaults, user-editable at runtime via WireGuardFragment (Add/Remove Peer; persisted in WireGuardPrefs). ALIGNED WITH THE VAULT, which is the config that demonstrably works on phones — this block had drifted into handing out three defects at once: gcp-proxy on udp/51820 (a filterable port; the hub redirects udp/443 to it precisely so the tunnel survives carrier port filtering), MTU 1280 (below the 1380 the working profiles use), and 1.1.1.1/1.0.0.1 in the resolver list (a mesh-only-DNS policy violation — a public resolver in the list means mesh names resolve off-mesh, or not at all). It now matches ui.wireguard_profiles, which was already vault-aligned; the two must not disagree, since one seeds the form and the other is what the export writes. oci-analytics stays on :51821, which is its real listen port.",
     "wireguard_default": {
       "tunnel_name": "wg-mesh",
       "interface_address": "10.0.0.9/24, 10.1.0.9/24",
-      "interface_dns": "10.0.0.1, 1.1.1.1, 1.0.0.1",
+      "interface_dns": "10.0.0.1, 10.1.0.1",
       "interface_listen_port": "",
-      "interface_mtu": "1280",
+      "interface_mtu": "1380",
       "peers": [
         {
           "name": "gcp-proxy",
           "mesh": "wg0",
           "public_key": "vV/phXUwnCjxACQ5Df11Uw47BzJaK4r85jPYMu2HmDc=",
           "preshared_key": "",
-          "endpoint": "35.226.147.64:51820",
+          "endpoint": "35.226.147.64:443",
           "allowed_ips": "10.0.0.0/24",
           "persistent_keepalive": "25"
         },

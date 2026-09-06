@@ -100,8 +100,13 @@ class WireGuardPrefs(context: Context) {
         interfaceDns        = BuildConfig.UI_WG_INTERFACE_DNS
         interfaceListenPort = BuildConfig.UI_WG_INTERFACE_LISTEN_PORT
         interfaceMtu        = BuildConfig.UI_WG_INTERFACE_MTU
-        savePeers(parsePeers(defaultPeersJson()))
+        savePeers(presetPeers())
     }
+
+    /** The peer list [applyCloudPreset] would write. Public so the confirm
+     *  dialog can NAME what it is about to change to instead of asking the
+     *  user to accept an unspecified replacement. */
+    fun presetPeers(): List<PeerData> = parsePeers(defaultPeersJson())
 
     /** True when the stored public half already equals what [applyCloudPreset]
      *  would write, so the caller can skip asking before overwriting nothing. */
@@ -111,7 +116,7 @@ class WireGuardPrefs(context: Context) {
         interfaceDns        == BuildConfig.UI_WG_INTERFACE_DNS &&
         interfaceListenPort == BuildConfig.UI_WG_INTERFACE_LISTEN_PORT &&
         interfaceMtu        == BuildConfig.UI_WG_INTERFACE_MTU &&
-        peers()             == parsePeers(defaultPeersJson())
+        peers()             == presetPeers()
 
     /**
      * Generate a Curve25519 key pair ON THIS DEVICE, store the private half as

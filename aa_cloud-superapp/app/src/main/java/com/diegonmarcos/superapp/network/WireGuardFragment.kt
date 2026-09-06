@@ -571,11 +571,36 @@ class WireGuardFragment : Fragment() {
         return spinner
     }
 
-    /** Ask before Cloud overwrites a config the user actually entered. */
+    /**
+     * Ask before Cloud overwrites a config the user actually entered.
+     *
+     * The message NAMES what the preset would change to. "Your settings differ
+     * from the preset" is true of a user who typed their own values and of a
+     * user who is simply behind a preset that moved, and those deserve
+     * opposite answers — so the dialog states the three values that matter and
+     * lets the reader tell which case they are in. The differing lines are
+     * computed, not written down twice: they are read back out of the same
+     * BuildConfig the preset is applied from.
+     */
     private fun confirmCloudPreset(ctx: android.content.Context, onKeepMine: () -> Unit) {
+        val changes = listOfNotNull(
+            prefs.presetPeers().joinToString(", ") { it.endpoint }
+                .let { "endpoint $it" }
+                .takeIf { prefs.peers() != prefs.presetPeers() },
+            "DNS ${com.diegonmarcos.superapp.BuildConfig.UI_WG_INTERFACE_DNS}"
+                .takeIf {
+                    prefs.interfaceDns != com.diegonmarcos.superapp.BuildConfig.UI_WG_INTERFACE_DNS
+                },
+            "MTU ${com.diegonmarcos.superapp.BuildConfig.UI_WG_INTERFACE_MTU}"
+                .takeIf {
+                    prefs.interfaceMtu != com.diegonmarcos.superapp.BuildConfig.UI_WG_INTERFACE_MTU
+                },
+        )
         com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
             .setTitle("Replace your WireGuard settings?")
             .setMessage(
+                (if (changes.isEmpty()) ""
+                 else "Preset: ${changes.joinToString(" · ")}.\n\n") +
                 "Cloud replaces the tunnel's addresses, DNS, MTU and entire peer " +
                 "list with the fleet preset. What is stored now differs from it, so " +
                 "those values are lost.\n\n" +
