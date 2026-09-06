@@ -15,6 +15,10 @@
 #       registration, Grammar mode "ai" in both engine and screen
 #   T6  the overlay patch carries every new mirror file (mirror rule: a file not
 #       in patches/0001 is destroyed by the next sync-heliboard)
+#   T7  pricing: every model entry is {id, open?, prompt?, completion?}; a provider
+#       with catalog_url has pricing_as_of + baked prices; and, when the catalog is
+#       reachable, every id exists there, 'open' matches hugging_face_id, and baked
+#       $/M match the live price within 1 % (a drift = bump pricing_as_of + values)
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 LIBS="$APP/../ab_cloud-libs-shared"
@@ -36,7 +40,7 @@ p = d["providers"]; s = d["styles"]
 assert d["default_provider"] in p, "default_provider not a provider"
 assert d["default_style"] in s, "default_style not a style"
 for pid, pv in p.items():
-    assert pv["default_model"] in pv["models"], f"{pid}: default_model not in models"
+    assert pv["default_model"] in [m["id"] for m in pv["models"]], f"{pid}: default_model not in models"
     assert pv["url"].startswith("http"), f"{pid}: url"
     assert isinstance(pv["needs_token"], bool), f"{pid}: needs_token"
 for sid, sv in s.items():
@@ -98,6 +102,45 @@ for f in latin/AiRouter.kt latin/TextEnhancer.kt settings/screens/AiRoutingScree
   has "$PATCH" "^diff --git a/libs/keyboard/src/main/java/helium314/keyboard/$f" "T6 patch carries $f"
 done
 has "$PATCH" '^diff --git a/libs/keyboard/src/main/res/drawable/ic_toolbar_enhance.xml' "T6 patch carries the icon"
+
+# T7 pricing: registry shape, then live catalog cross-check (skipped, not failed, when offline)
+if python3 - "$LIBS/build.json" <<'EOF'
+import json, sys
+d = json.load(open(sys.argv[1]))["keyboard_ai"]
+assert int(d["catalog_ttl_ms"]) >= 3600000, "catalog_ttl_ms: re-fetching a 700 KB catalog more than hourly is waste"
+for pid, pv in d["providers"].items():
+    for m in pv["models"]:
+        assert set(m) <= {"id", "open", "prompt", "completion"}, f"{pid}/{m.get('id')}: unknown key"
+        assert m["id"].strip(), f"{pid}: empty model id"
+        assert ("prompt" in m) == ("completion" in m), f"{pid}/{m['id']}: prompt without completion or vice versa"
+    if "catalog_url" in pv:
+        assert pv["catalog_url"].startswith("https://"), f"{pid}: catalog_url must be https"
+        assert pv.get("pricing_as_of", "").count("-") == 2, f"{pid}: pricing_as_of YYYY-MM-DD required with catalog_url"
+        assert all("prompt" in m for m in pv["models"]), f"{pid}: every catalog model needs baked prices (offline fallback)"
+        assert sum(1 for m in pv["models"] if m.get("open")) >= 5, f"{pid}: fewer than 5 open-weight models"
+EOF
+then ok "T7 model entries well-formed, catalog providers carry baked prices"; else bad "T7 pricing shape"; fi
+CATALOG=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['keyboard_ai']['providers']['openrouter']['catalog_url'])" "$LIBS/build.json")
+if curl -sS --max-time 30 -o /tmp/kb-ai-catalog.$$ "$CATALOG" 2>/dev/null; then
+  if python3 - "$LIBS/build.json" /tmp/kb-ai-catalog.$$ <<'EOF'
+import json, sys
+pv = json.load(open(sys.argv[1]))["keyboard_ai"]["providers"]["openrouter"]
+cat = {m["id"]: m for m in json.load(open(sys.argv[2]))["data"]}
+bad = []
+for m in pv["models"]:
+    c = cat.get(m["id"])
+    if not c: bad.append(f"{m['id']}: not in catalog"); continue
+    if bool(m.get("open")) != bool(c.get("hugging_face_id")): bad.append(f"{m['id']}: open={m.get('open', False)} but hugging_face_id={c.get('hugging_face_id')!r}")
+    for k in ("prompt", "completion"):
+        live = float(c["pricing"][k]) * 1e6
+        if abs(live - m[k]) > 0.01 * max(live, m[k]): bad.append(f"{m['id']}: {k} baked {m[k]} vs live {live:.4f}")
+assert not bad, "\n    ".join(bad)
+EOF
+  then ok "T7 live catalog: ids exist, open flags match, baked prices within 1 %"; else bad "T7 live catalog cross-check"; fi
+else
+  echo "  skip: T7 live catalog unreachable ($CATALOG) — offline, baked prices unverified"
+fi
+rm -f /tmp/kb-ai-catalog.$$
 
 echo "== $PASS ok, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

@@ -220,6 +220,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_AI_PROVIDER = "ai_provider";        // provider id ("cloud"|"openrouter"|…)
     public static final String PREF_AI_TOKEN_PREFIX = "ai_token_";      // + provider id → that provider's API key
     public static final String PREF_AI_MODEL_PREFIX = "ai_model_";      // + provider id → that provider's model id
+    public static final String PREF_AI_PRICING_PREFIX = "ai_pricing_";  // + provider id → cached live price catalog (JSON, AiRouter.refreshPricing)
     // Text Enhancements (SuperApp addition — TextEnhancer, ENHANCE toolbar key)
     public static final String PREF_ENHANCE_STYLE = "enhance_style";    // style id from keyboard_ai.styles
     public static final String PREF_ENHANCE_TOOLBAR_KEY = "enhance_toolbar_key"; // settings-registry key only; state lives in PREF_TOOLBAR_KEYS

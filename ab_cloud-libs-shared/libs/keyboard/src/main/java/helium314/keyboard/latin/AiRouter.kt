@@ -25,8 +25,13 @@ import java.net.URL
  * and translation once it opts in. Blocking — never call on the IME main thread.
  */
 object AiRouter {
+    /** USD per million tokens. */
+    class Pricing(val prompt: Double, val completion: Double)
+    /** [baked] = registry fallback price (null when the registry has none, e.g. the mesh bridge). */
+    class Model(val id: String, val open: Boolean, val baked: Pricing?)
     class Provider(val id: String, val label: String, val url: String, val needsToken: Boolean,
-                   val defaultModel: String, val models: List<String>)
+                   val defaultModel: String, val models: List<Model>,
+                   val catalogUrl: String?, val pricingAsOf: String?)
     class Style(val id: String, val label: String, val prompt: String)
 
     private val registry: JSONObject by lazy {
@@ -36,8 +41,12 @@ object AiRouter {
         val o = registry.getJSONObject("providers")
         o.keys().asSequence().map { id ->
             val p = o.getJSONObject(id)
+            val models = p.getJSONArray("models").let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.map { m ->
+                val pr = m.optDouble("prompt"); val co = m.optDouble("completion")
+                Model(m.getString("id"), m.optBoolean("open"), if (pr.isNaN() || co.isNaN()) null else Pricing(pr, co))
+            }
             Provider(id, p.getString("label"), p.getString("url"), p.optBoolean("needs_token", true),
-                p.getString("default_model"), p.getJSONArray("models").toStringList())
+                p.getString("default_model"), models, p.optString("catalog_url").ifEmpty { null }, p.optString("pricing_as_of").ifEmpty { null })
         }.toList()
     }
     val styles: List<Style> by lazy {
@@ -49,8 +58,54 @@ object AiRouter {
     val timeoutMs: Int get() = registry.optInt("timeout_ms", 30_000)
     /** Field-text cap sent to the model; also what the enhancer reads around the cursor. */
     val maxChars: Int get() = registry.optInt("max_chars", 4096)
+    /** How long a fetched price catalog stays fresh before the settings screen re-fetches it. */
+    val catalogTtlMs: Long get() = registry.optLong("catalog_ttl_ms", 86_400_000L)
 
-    private fun JSONArray.toStringList() = (0 until length()).map { getString(it) }
+    // ---- live pricing: provider catalog → prefs cache {"fetched": epochMs, "prices": {id: [prompt, completion]}} ----
+
+    /** Cached live prices for [p] ($/M), with the fetch time; null when never fetched. */
+    fun livePricing(context: Context, p: Provider): Pair<Long, Map<String, Pricing>>? {
+        val raw = context.prefs().getString(Settings.PREF_AI_PRICING_PREFIX + p.id, null) ?: return null
+        return runCatching {
+            val o = JSONObject(raw); val prices = o.getJSONObject("prices")
+            o.getLong("fetched") to prices.keys().asSequence().associateWith { id ->
+                val a = prices.getJSONArray(id); Pricing(a.getDouble(0), a.getDouble(1))
+            }
+        }.getOrNull()
+    }
+    fun pricingStale(context: Context, p: Provider): Boolean =
+        p.catalogUrl != null && (livePricing(context, p)?.first ?: 0L) + catalogTtlMs < System.currentTimeMillis()
+    /** Live price if fetched, else the registry's baked one, else null. */
+    fun pricing(context: Context, p: Provider, m: Model): Pricing? = livePricing(context, p)?.second?.get(m.id) ?: m.baked
+
+    /**
+     * GET the provider's public model catalog (OpenRouter shape: {"data":[{"id","pricing":{"prompt","completion"}}]},
+     * prices in $/token) and cache $/M for the registry's models only. Blocking; throws on failure — the screen
+     * keeps showing the baked table then. Never call on the main thread.
+     */
+    fun refreshPricing(context: Context, p: Provider) {
+        val url = p.catalogUrl ?: return
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            connectTimeout = 5000; readTimeout = timeoutMs; instanceFollowRedirects = false
+            setRequestProperty("Accept", "application/json")
+        }
+        val body = try {
+            if (conn.responseCode != 200) throw IllegalStateException("${p.label} catalog HTTP ${conn.responseCode}")
+            conn.inputStream.bufferedReader().use { it.readText() }
+        } finally { conn.disconnect() }
+        val wanted = p.models.map { it.id }.toSet()
+        val prices = JSONObject()
+        val data = JSONObject(body).getJSONArray("data")
+        for (i in 0 until data.length()) {
+            val m = data.getJSONObject(i)
+            if (m.getString("id") !in wanted) continue
+            val pr = m.getJSONObject("pricing")
+            prices.put(m.getString("id"), JSONArray().put(pr.getString("prompt").toDouble() * 1e6).put(pr.getString("completion").toDouble() * 1e6))
+        }
+        if (prices.length() == 0) throw IllegalStateException("${p.label} catalog has none of the registry models")
+        context.prefs().edit().putString(Settings.PREF_AI_PRICING_PREFIX + p.id,
+            JSONObject().put("fetched", System.currentTimeMillis()).put("prices", prices).toString()).apply()
+    }
 
     fun provider(context: Context): Provider {
         val id = context.prefs().getString(Settings.PREF_AI_PROVIDER, defaultProvider) ?: defaultProvider

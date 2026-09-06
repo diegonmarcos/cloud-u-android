@@ -3072,10 +3072,12 @@
     "_doc_moved": "Moved here from aa_cloud-superapp/build.json 2026-08-30. libs:firewall has TWO consumers - the superapp and lib-apks (Cloud-Lib-Firewall.apk) - so the config for its engine cannot live inside one of them. lib-apks reading the superapp's build.json would be a lib->app dependency, the exact coupling the consolidation removed. libs/firewall/build-firestack.sh reads it here."
   },
   "keyboard_ai": {
-    "_doc": "LLM routing for libs:keyboard (Settings → AI Model Routing). libs/keyboard/build.gradle bakes this whole block into BuildConfig.AI_ROUTING_B64 (rootDir build.json first, this file as fallback — same rule as voice); AiRouter.kt reads it at runtime. ONE shared config consumed by Text Enhancements (ENHANCE toolbar key), Grammar check (mode 'ai') and, when it opts in, Translation. Every provider speaks the OpenAI chat-completions shape: 'cloud' is the mesh my-ai_claude-api bridge (cloud-u-containers/user-ai_my-ai_claude-api server.mjs, POST /v1/chat/completions, no token on the WireGuard mesh — needs_token=false), 'openrouter' is openrouter.ai with a user-pasted key stored in the keyboard prefs (ai_token_<provider>). Model ids verified against https://openrouter.ai/api/v1/models on 2026-09-06. Add a provider or a model = one entry; the settings screen and the model picker are built from this list. Styles = the enhancement prompts (Text Enhancements → Style); 'grammar' is the one Grammar check's 'ai' mode uses.",
+    "_doc": "LLM routing for libs:keyboard (Settings → AI Model Routing). libs/keyboard/build.gradle bakes this whole block into BuildConfig.AI_ROUTING_B64 (rootDir build.json first, this file as fallback — same rule as voice); AiRouter.kt reads it at runtime. ONE shared config consumed by Text Enhancements (ENHANCE toolbar key), Grammar check (mode 'ai') and, when it opts in, Translation. Every provider speaks the OpenAI chat-completions shape: 'cloud' is the mesh my-ai_claude-api bridge (cloud-u-containers/user-ai_my-ai_claude-api server.mjs, POST /v1/chat/completions, no token on the WireGuard mesh — needs_token=false), 'openrouter' is openrouter.ai with a user-pasted key stored in the keyboard prefs (ai_token_<provider>). Add a provider or a model = one entry; the settings screen, the model picker and the pricing table are built from this list. Styles = the enhancement prompts (Text Enhancements → Style); 'grammar' is the one Grammar check's 'ai' mode uses.",
+    "_doc_models": "models[] = {id, open?, prompt?, completion?}. id = the EXACT provider model id (OpenRouter ids verified against GET https://openrouter.ai/api/v1/models on pricing_as_of). open = open-weight (catalog hugging_face_id non-empty) — the picker suffixes these '(open)'. prompt/completion = BAKED fallback price in USD per million tokens, shown with 'as of <pricing_as_of>' when the live catalog (catalog_url, cached in prefs ai_pricing_<provider> for catalog_ttl_ms) is unreachable. Curated for grammar + translation + text enhancement on SHORT es/en/pt/de text where latency matters: non-thinking instruct models preferred; hybrid-thinking ones (glm) are listed because they are the cheapest quality open picks — AiRouter sends no reasoning flag, so they run in their provider default mode.",
     "default_provider": "openrouter",
     "timeout_ms": 30000,
     "max_chars": 4096,
+    "catalog_ttl_ms": 86400000,
     "providers": {
       "cloud": {
         "label": "Cloud",
@@ -3083,20 +3085,27 @@
         "needs_token": false,
         "default_model": "claude-sonnet-4-6",
         "models": [
-          "claude-sonnet-4-6"
+          { "id": "claude-sonnet-4-6" }
         ]
       },
       "openrouter": {
         "label": "OpenRouter",
         "url": "https://openrouter.ai/api/v1/chat/completions",
+        "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
+        "pricing_as_of": "2026-09-06",
         "models": [
-          "google/gemini-2.5-flash",
-          "anthropic/claude-haiku-4.5",
-          "openai/gpt-4o-mini",
-          "deepseek/deepseek-chat",
-          "meta-llama/llama-3.3-70b-instruct"
+          { "id": "google/gemini-2.5-flash",                 "prompt": 0.30,  "completion": 2.50 },
+          { "id": "anthropic/claude-haiku-4.5",              "prompt": 1.00,  "completion": 5.00 },
+          { "id": "openai/gpt-4.1-mini",                     "prompt": 0.40,  "completion": 1.60 },
+          { "id": "deepseek/deepseek-v4-flash-0731",         "open": true, "prompt": 0.05,  "completion": 0.10 },
+          { "id": "meta-llama/llama-3.3-70b-instruct",       "open": true, "prompt": 0.10,  "completion": 0.32 },
+          { "id": "qwen/qwen3-235b-a22b-2507",               "open": true, "prompt": 0.09,  "completion": 0.55 },
+          { "id": "mistralai/mistral-small-3.2-24b-instruct","open": true, "prompt": 0.075, "completion": 0.20 },
+          { "id": "google/gemma-3-27b-it",                   "open": true, "prompt": 0.08,  "completion": 0.45 },
+          { "id": "z-ai/glm-5.3-flash",                      "open": true, "prompt": 0.075, "completion": 0.25 },
+          { "id": "moonshotai/kimi-k2-0905",                 "open": true, "prompt": 0.60,  "completion": 2.50 }
         ]
       }
     },

@@ -286,6 +286,14 @@
     <string name="ai_token_summary">Paste the provider\'s API key. Stored only in this keyboard\'s settings</string>
     <string name="ai_token_optional_summary">Optional — only if the bridge is reached through an authenticated gateway</string>
     <string name="ai_model_title">Model</string>
+    <string name="ai_model_open_suffix"> (open)</string>
+    <string name="ai_pricing_title">Prices</string>
+    <string name="ai_pricing_summary">USD per million tokens — prompt in / completion out. Refreshed from the provider\'s public catalog when this page opens</string>
+    <string name="ai_pricing_col_model">Model</string>
+    <string name="ai_pricing_col_in">in</string>
+    <string name="ai_pricing_col_out">out</string>
+    <string name="ai_pricing_live">Live prices from %1$s, fetched %2$s</string>
+    <string name="ai_pricing_baked">Prices as of %1$s (built in — %2$s not reached)</string>
     <string name="ai_token_cloud_title" tools:keep="@string/ai_token_cloud_title">Cloud API key</string>
     <string name="ai_model_cloud_title" tools:keep="@string/ai_model_cloud_title">Cloud model</string>
     <string name="ai_token_openrouter_title" tools:keep="@string/ai_token_openrouter_title">OpenRouter API key</string>
