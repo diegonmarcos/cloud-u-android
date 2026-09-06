@@ -13,8 +13,6 @@
 #       and the icon + per-provider title strings exist for each registry provider
 #   T5  settings surface: nav destinations, MainSettingsScreen entries, container
 #       registration, Grammar mode "ai" in both engine and screen
-#   T6  the overlay patch carries every new mirror file (mirror rule: a file not
-#       in patches/0001 is destroyed by the next sync-heliboard)
 #   T7  pricing: every model entry is {id, open?, prompt?, completion?}; a provider
 #       with catalog_url has pricing_as_of + baked prices; and, when the catalog is
 #       reachable, every id exists there, 'open' matches hugging_face_id, and baked
@@ -24,13 +22,12 @@ APP="$(cd "$(dirname "$0")/.." && pwd)"
 LIBS="$APP/../ab_cloud-libs-shared"
 K="$LIBS/libs/keyboard/src/main"
 J="$K/java/helium314/keyboard"
-PATCH="$LIBS/libs/keyboard/patches/0001-cloud-superapp-keyboard.patch"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  ok: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 has() { grep -q -- "$2" "$1" && ok "$3" || bad "$3 ($1)"; }
 
-echo "== keyboard AI routing: registry, ENHANCE key, settings, patch =="
+echo "== keyboard AI routing: registry, ENHANCE key, settings =="
 
 # T1 registry
 if python3 - "$LIBS/build.json" <<'EOF'
@@ -96,12 +93,6 @@ has "$J/settings/SettingsContainer.kt" 'createAiRoutingSettings(context)' "T5 co
 has "$J/settings/SettingsContainer.kt" 'createTextEnhanceSettings(context)' "T5 container registers enhance settings"
 has "$J/latin/GrammarChecker.kt" '"ai" -> TextEnhancer.run' "T5 Grammar mode 'ai' routes through TextEnhancer"
 has "$J/settings/screens/GrammarCheckScreen.kt" 'grammar_mode_ai) to "ai"' "T5 Grammar screen offers 'ai'"
-
-# T6 patch carries the new mirror files
-for f in latin/AiRouter.kt latin/TextEnhancer.kt settings/screens/AiRoutingScreen.kt settings/screens/TextEnhanceScreen.kt; do
-  has "$PATCH" "^diff --git a/libs/keyboard/src/main/java/helium314/keyboard/$f" "T6 patch carries $f"
-done
-has "$PATCH" '^diff --git a/libs/keyboard/src/main/res/drawable/ic_toolbar_enhance.xml' "T6 patch carries the icon"
 
 # T7 pricing: registry shape, then live catalog cross-check (skipped, not failed, when offline)
 if python3 - "$LIBS/build.json" <<'EOF'

@@ -184,7 +184,6 @@ ac_cloud-media-center/**/*.jks
 ## `ea_*-*/` blanket rule removed 2026-07-10; 93fdc30c re-added explicit ignores
 ## that were later lost. If any becomes a real app, whitelist it like ac_cloud-*.
 ac_keyboard-dicts/
-ac_keyboard-heliboard/
 ## firestack moved INTO the module that consumes it
 ## (ab_cloud-libs-shared/libs/firewall/firestack) and is committed there,
 ## so the old gitignored root clone no longer exists. What stays ignored is

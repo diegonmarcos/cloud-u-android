@@ -24,8 +24,6 @@
 # ║   gh-release  attach APK to GitHub Release (release.gh_release)   ║
 # ║   sync-qrcodes  pull qrcodes.json from front/linktree → assets/    ║
 # ║   sync-net      cherry-pick wireguard-android tunnel/ → libs/net/  ║
-# ║   sync-heliboard cherry-pick HeliBoard app/src/main → libs/keyboard/║
-# ║   regen-keyboard-patch  rewrite patches/0001 = diff(upstream, mirror)║
 # ║                                                                  ║
 # ║ NEVER bypass this script for build operations.                    ║
 # ╚══════════════════════════════════════════════════════════════════╝
@@ -950,186 +948,6 @@ step_sync_firestack() {
   log "sync-firestack: firestack source at $ref"
 }
 
-
-
-# Cherry-picks HeliBoard's app/src/main (github.com/Helium314/HeliBoard,
-# GPL-3.0 — the whole APK is already GPL-3.0) into libs/keyboard/ as the
-# self-contained keyboard provider. Upstream clone lives at
-# ${ANDROID_REPO:-$HOME/git/cloud-u-android}/ac_keyboard-heliboard/ (gitignored sibling,
-# ac_*-* workspace-clone convention).
-#
-# Copies app/src/main VERBATIM (java/kotlin + res + assets + jni + the
-# AndroidManifest.xml). The manifest is taken as-is — it is rich (own App
-# class, LatinIME IME service, spellchecker service, content providers with
-# @string authorities, boot receivers, <queries>) and changes between
-# releases, so vendoring it verbatim keeps libs:keyboard a zero-drift mirror
-# of upstream. All Cloud-SuperApp-specific reconciliation lives in the APP
-# manifest (app/src/main/AndroidManifest.xml) as explicit `tools:` overlays:
-#   • tools:replace="android:name" on <application> — the SuperApp's own App
-#     class wins the merge over helium314.keyboard.latin.App.
-#   • tools:node="remove" on the LAUNCHER intent-filter of HeliBoard's
-#     SettingsActivity + the MAIN filter of SpellCheckerSettingsActivity — so
-#     the keyboard adds NO second launcher icon (the SuperApp is the launcher).
-# The glide blob libjni_latinimegoogle.so is NEVER bundled (keeps the APK
-# FOSS); HeliBoard's built-in "Load gesture typing library" setting fetches it
-# in-app on first run.
-#
-# Idempotent — rsync --delete. Fresh upstream pull -> one
-# `./build.sh sync-heliboard` -> clear `git diff` for review.
-step_sync_heliboard() {
-  local upstream="${ANDROID_REPO:-$HOME/git/cloud-u-android}/ac_keyboard-heliboard/app/src/main"
-  local dst="$LIBS_DIR/keyboard"
-  [ -d "$upstream" ] || { errlog "sync-heliboard: upstream not found: $upstream (clone https://github.com/Helium314/HeliBoard.git to ${ANDROID_REPO:-$HOME/git/cloud-u-android}/ac_keyboard-heliboard, or set ANDROID_REPO=)"; exit 1; }
-  command -v rsync >/dev/null 2>&1 || { errlog "sync-heliboard: rsync required (in nix-shell: nix shell nixpkgs#rsync)"; exit 1; }
-
-  mkdir -p "$dst/src/main"
-
-  # Whole app/src/main, manifest included — verbatim upstream mirror.
-  rsync -a --delete "$upstream/" "$dst/src/main/"
-
-  # Re-apply SuperApp patches (the rsync --delete above clobbers any local
-  # edit to the mirror). patches/0001-cloud-superapp-keyboard.patch is the ONE
-  # consolidated overlay = diff(pristine upstream, mirror); regenerate it with
-  # `./build.sh regen-keyboard-patch` after every mirror edit (see that step).
-  #
-  # Patch paths are `libs/keyboard/...` (relative to ab_cloud-libs-shared), but
-  # `git apply` resolves paths against the REPO ROOT whenever it runs inside a
-  # repo, and silently SKIPS every hunk that lands outside its cwd. Since libs
-  # moved under ab_cloud-libs-shared/ that skip made this loop report "applied"
-  # while applying NOTHING (git apply exits 0 with 0 hunks) — every SuperApp
-  # feature would have vanished on the next sync. Hence: run at the root with
-  # --directory=<libs-shared prefix>. No --3way (it implies --index, and the
-  # freshly rsync'd worktree never matches the index).
-  if [ -d "$dst/patches" ]; then
-    local p applied=0 root prefix
-    root=$(git -C "$LIBS_DIR" rev-parse --show-toplevel)
-    prefix=$(realpath --relative-to="$root" "$LIBS_DIR/..")
-    [ "$prefix" = "." ] && prefix=""
-    for p in "$dst"/patches/*.patch; do
-      [ -f "$p" ] || continue
-      if git -C "$root" apply --directory="$prefix" "$p"; then
-        applied=$((applied+1))
-      else
-        errlog "sync-heliboard: FAILED to apply $(basename "$p") — upstream drift; reconcile by hand, then regen-keyboard-patch"; exit 1
-      fi
-    done
-    log "sync-heliboard: re-applied $applied SuperApp patch(es) after mirror"
-  fi
-
-  # Rebrand the curated user-facing display strings (HeliBoard → Cloud Keyboard
-  # (HeliBoard)). The rsync mirror above ships upstream's labels verbatim, so
-  # this re-runs every sync. Narrow + idempotent — see step_brand_rename.
-  step_brand_rename
-
-  log "sync-heliboard: libs/keyboard populated from $(realpath --relative-to="$SCRIPT_DIR" "$upstream" 2>/dev/null || echo "$upstream")"
-  log "  sources : $(find "$dst/src/main" \( -name '*.java' -o -name '*.kt' \) 2>/dev/null | wc -l) file(s)"
-  log "  jni     : $(find "$dst/src/main/jni" -type f 2>/dev/null | wc -l) file(s)"
-  log "  manifest: VERBATIM upstream (reconciled by app/ tools: overlays — see libs/keyboard/README.md)"
-  log "  review with: git -C $SCRIPT_DIR status -s -- libs/keyboard/"
-}
-
-# THE MIRROR RULE. libs/keyboard/src/main is rsync --delete'd from upstream on
-# every sync-heliboard; the ONLY thing that survives is what
-# patches/0001-cloud-superapp-keyboard.patch carries. So every mirror edit is
-# committed TWICE: the file itself (what CI builds) and this patch (what the
-# next sync re-applies). Edit mirror -> `./build.sh regen-keyboard-patch` ->
-# `git add` the mirror files -> commit both. Byte-exact + reproducible: a
-# throwaway git repo seeded with the pristine upstream app/src/main
-# (assets/dicts excluded — owned by sync-keyboard-dicts), the mirror AS STAGED
-# IN THE INDEX (HEAD + git add'ed files) copied over it, `git diff --cached`.
-# Index, not worktree, on purpose: this repo is shared by concurrent agents,
-# and a worktree diff would bake somebody else's half-written, uncommitted
-# mirror edits into the patch you are about to commit. Whatever you `git add`
-# is what the patch carries — same rule as the commit itself. The upstream
-# clone must sit at build.json::keyboard_upstream.sha (the pin the mirror was
-# last synced from) or the diff would encode upstream churn as ours.
-step_regen_keyboard_patch() {
-  local upstream="${ANDROID_REPO:-$HOME/git/cloud-u-android}/ac_keyboard-heliboard"
-  local dst="$LIBS_DIR/keyboard"
-  local out="$dst/patches/0001-cloud-superapp-keyboard.patch"
-  [ -d "$upstream/app/src/main" ] || { errlog "regen-keyboard-patch: upstream not found: $upstream (clone https://github.com/Helium314/HeliBoard.git there)"; exit 1; }
-  command -v jq >/dev/null 2>&1 || { errlog "regen-keyboard-patch: jq required"; exit 1; }
-  local pin head root prefix
-  pin=$(jq -r '.keyboard_upstream.sha // empty' "$SCRIPT_DIR/build.json")
-  head=$(git -C "$upstream" rev-parse --short=7 HEAD)
-  [ -n "$pin" ] || { errlog "regen-keyboard-patch: build.json::keyboard_upstream.sha missing"; exit 1; }
-  [ "$head" = "$(git -C "$upstream" rev-parse --short=7 "$pin")" ] \
-    || { errlog "regen-keyboard-patch: upstream clone is at $head but build.json pins $pin — git -C $upstream checkout $pin first"; exit 1; }
-  root=$(git -C "$LIBS_DIR" rev-parse --show-toplevel)
-  prefix=$(realpath --relative-to="$root" "$LIBS_DIR/..")
-  [ "$prefix" = "." ] && prefix=""
-  local mirror_rel="${prefix:+$prefix/}libs/keyboard/src/main"
-  local unstaged
-  unstaged=$(git -C "$root" status --porcelain --untracked-files=all -- "$mirror_rel" | grep -c '^\(.[MD?]\| [A-Z]\)' || true)
-  [ "$unstaged" = "0" ] || log "regen-keyboard-patch: NOTE $unstaged mirror file(s) modified/untracked but NOT staged — they are not in the patch (git add them first if they are yours)"
-
-  local tmp; tmp=$(mktemp -d)
-  mkdir -p "$tmp/libs/keyboard/src"
-  cp -a "$upstream/app/src/main" "$tmp/libs/keyboard/src/main"
-  rm -rf "$tmp/libs/keyboard/src/main/assets/dicts"
-  git -C "$tmp" init -q
-  git -C "$tmp" -c core.excludesFile=/dev/null add -A
-  git -C "$tmp" -c user.name=regen -c user.email=regen@local commit -q -m pristine
-  rm -rf "$tmp/libs/keyboard/src/main"
-  # Export the mirror from the INDEX (see above), then drop it over pristine.
-  mkdir -p "$tmp/idx"
-  git -C "$root" ls-files -z -- "$mirror_rel" | git -C "$root" checkout-index -z --stdin --prefix="$tmp/idx/"
-  mv "$tmp/idx/$mirror_rel" "$tmp/libs/keyboard/src/main"
-  rm -rf "$tmp/idx" "$tmp/libs/keyboard/src/main/assets/dicts"
-  git -C "$tmp" -c core.excludesFile=/dev/null add -A
-  {
-    printf '# Cloud-SuperApp keyboard overlay — single consolidated patch = diff(HeliBoard %s app/src/main, libs/keyboard/src/main).\n' "$head"
-    printf '# GENERATED by `./build.sh regen-keyboard-patch` (aa_cloud-superapp) — never hand-edit.\n'
-    printf '# MIRROR RULE: sync-heliboard rsync --delete'"'"'s the mirror and re-applies this file; a mirror edit\n'
-    printf '# that is not in here is destroyed on the next sync. Edit the mirror -> regen -> commit both.\n'
-    printf '# assets/dicts excluded (owned by sync-keyboard-dicts); brand-rename is idempotent over the branded\n'
-    printf '# strings carried here. git apply ignores these header lines.\n\n'
-    git -C "$tmp" diff --cached --no-renames --binary
-  } > "$out"
-  rm -rf "$tmp"
-  # Prove it: the fresh patch must reverse-apply onto the mirror as staged (--cached = index, same source as the diff).
-  git -C "$root" apply --check -R --cached --directory="$prefix" "$out" \
-    || { errlog "regen-keyboard-patch: generated patch does not reverse-apply onto the staged mirror"; exit 1; }
-  log "regen-keyboard-patch: $(grep -c '^diff --git' "$out") file(s), upstream $head → $(realpath --relative-to="$SCRIPT_DIR" "$out")"
-}
-
-# Rebrand the vendored keyboard's USER-FACING display strings only:
-# build.json::keyboard_brand_rename.token -> .replacement, inside ONLY the
-# curated .string_keys, across every libs/keyboard values*/strings.xml.
-# DATA-DRIVEN (no hardcoded key list), awk-based (FIRE rule: never sed),
-# idempotent (skips lines already carrying the replacement). Deliberately
-# NARROW — never touches package ids (helium314.*) or upstream attribution/
-# license/URL text. Invoked at the end of sync-heliboard; also standalone.
-step_brand_rename() {
-  local bj="$SCRIPT_DIR/build.json"
-  local resdir="$LIBS_DIR/keyboard/src/main/res"
-  command -v jq >/dev/null 2>&1 || { errlog "brand-rename: jq required"; exit 1; }
-  [ -d "$resdir" ] || { errlog "brand-rename: $resdir missing — run sync-heliboard first"; exit 1; }
-
-  local token rep
-  token=$(jq -r '.keyboard_brand_rename.token' "$bj")
-  rep=$(jq -r '.keyboard_brand_rename.replacement' "$bj")
-  [ -n "$token" ] && [ "$token" != "null" ] || { errlog "brand-rename: no token in build.json"; exit 1; }
-
-  local changed=0 f key
-  while IFS= read -r f; do
-    while IFS= read -r key; do
-      [ -n "$key" ] || continue
-      awk -v key="$key" -v tok="$token" -v rep="$rep" '
-        index($0, "name=\"" key "\"") > 0 && index($0, rep) == 0 && index($0, tok) > 0 {
-          line=$0; out="";
-          while ((p=index(line,tok))>0) { out=out substr(line,1,p-1) rep; line=substr(line,p+length(tok)) }
-          print out line; next
-        }
-        { print }
-      ' "$f" > "$f.brand.tmp" && mv "$f.brand.tmp" "$f"
-    done < <(jq -r '.keyboard_brand_rename.string_keys[]' "$bj")
-    grep -q "$rep" "$f" 2>/dev/null && changed=$((changed+1))
-  done < <(find "$resdir" -path '*/values*/strings.xml' 2>/dev/null)
-
-  log "brand-rename: '$token' → '$rep' applied to curated keys across $changed strings.xml file(s)"
-}
-
 # Vendor the status-bar Line 0 animated pets from KartikLabhshetwar/zoomies
 # (sprites CC BY-ND 4.0 — used UNMODIFIED + credited). DATA-DRIVEN: reads which
 # animal/variant each tool uses from build.json::status_pets.tools and copies
@@ -1174,13 +992,11 @@ step_sync_zoomies() {
   [ "$miss" -eq 0 ] || { errlog "sync-zoomies: $miss unknown animal/variant pair(s) — fix build.json::status_pets or the clone"; exit 1; }
 }
 
-# Vendor keyboard dictionaries into libs/keyboard/src/main/assets/dicts/ (HeliBoard's
-# bundled-dictionary folder). HeliBoard's mirror already ships main_<locale>.dict
-# (word suggestions); this ADDS emoji_<locale>.dict (emoji search) — and any other
-# data-driven type — so each language has full features. DATA-DRIVEN from
-# build.json::keyboard_dicts (locales[] × types[].{type,dir}). ADDITIVE (no --delete):
-# composes with the HeliBoard mirror, so run AFTER sync-heliboard (which rsync
-# --delete's the mirror and would otherwise drop these). Upstream clone:
+# Vendor keyboard dictionaries into libs/keyboard/dicts-data/. The keyboard tree
+# already ships main_<locale>.dict (word suggestions); this ADDS emoji_<locale>.dict
+# (emoji search) — and any other data-driven type — so each language has full
+# features. DATA-DRIVEN from build.json::keyboard_dicts (locales[] × types[].{type,dir}).
+# ADDITIVE (no --delete). Upstream clone:
 # ${ANDROID_REPO:-$HOME/git/cloud-u-android}/ac_keyboard-dicts (codeberg.org/Helium314/aosp-dictionaries).
 step_sync_keyboard_dicts() {
   local upstream="${ANDROID_REPO:-$HOME/git/cloud-u-android}/ac_keyboard-dicts"
@@ -1204,7 +1020,7 @@ step_sync_keyboard_dicts() {
     done
   done < <(jq -r '.keyboard_dicts.types[] | "\(.type) \(.dir)"' "$bj")
 
-  log "sync-keyboard-dicts: $n dict(s) → libs/keyboard/dicts-data/ ($miss missing). ADDITIVE — run AFTER sync-heliboard."
+  log "sync-keyboard-dicts: $n dict(s) → libs/keyboard/dicts-data/ ($miss missing). ADDITIVE."
   log "  NOTE: ab_cloud-libs-shared/keyboard-engines bundles these via assets.srcDirs; cloud-keyboard extracts from the companion at runtime."
   log "  review with: git -C $SCRIPT_DIR status -s -- libs/keyboard/dicts-data/"
   [ "$miss" -eq 0 ] || { errlog "sync-keyboard-dicts: $miss dict(s) missing — fix build.json::keyboard_dicts or update the clone"; exit 1; }
@@ -1228,12 +1044,9 @@ case "$CMD" in
   gh-release)   step_gh_release ;;
   sync-qrcodes) step_sync_qrcodes ;;
   sync-net)     step_sync_net ;;
-  sync-heliboard) step_sync_heliboard ;;
-  regen-keyboard-patch) step_regen_keyboard_patch ;;
   sync-firewall) step_sync_firewall ;;
   sync-firestack) step_sync_firestack ;;
   firestack)     step_firestack ;;
-  brand-rename) step_brand_rename ;;
   sync-zoomies) step_sync_zoomies ;;
   sync-keyboard-dicts) step_sync_keyboard_dicts ;;
   help|*)
