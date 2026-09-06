@@ -1722,11 +1722,11 @@
                 "target": "extapp:cloud-vault"
               },
               {
-                "_doc": "C3-Watchdog — the standalone fleet/host watchdog APK (ac_c3-watchdog). extapp:, not app://, so a phone without it installed gets the APK offered instead of a dead tile: launchExternalApp opens com.diegonmarcos.watchdog when present, else installs ui.external_apps[id=c3-watchdog].install_apk_url.",
-                "id": "watchdog",
-                "label": "Watchdog",
+                "_doc": "C3 — routes to the in-app topology page because there is NO standalone C3 APK yet. page:, not extapp:, deliberately: an extapp: target for an app that was never published would offer an install of a release that does not exist, which is worse than a dead tile because it fails after the user commits to it. When a C3 app ships, flip this to extapp:c3 and move the page target into that app. The C3-Watchdog APK this replaced is still reachable — it is the Watchdog tab inside Cloud/C3, which launches com.diegonmarcos.watchdog via extapp:c3-watchdog.",
+                "id": "c3",
+                "label": "C3",
                 "icon": "ic_p_watchdog",
-                "target": "extapp:c3-watchdog"
+                "target": "page:c3/topology"
               }
             ]
           },
