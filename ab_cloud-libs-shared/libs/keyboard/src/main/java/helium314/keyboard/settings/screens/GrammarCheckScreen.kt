@@ -64,6 +64,18 @@ fun createGrammarSettings(context: Context): List<Setting> = listOf(
     ) { setting ->
         TextInputPreference(setting, Defaults.PREF_GRAMMAR_REMOTE_URL)
     },
+    Setting(
+        context,
+        Settings.PREF_GRAMMAR_PT_VARIANT,
+        R.string.grammar_pt_variant_title,
+        R.string.grammar_pt_variant_summary,
+    ) { setting ->
+        val items = listOf(
+            context.getString(R.string.grammar_pt_variant_pt) to "pt-PT",
+            context.getString(R.string.grammar_pt_variant_br) to "pt-BR",
+        )
+        ListPreference(setting, items, Defaults.PREF_GRAMMAR_PT_VARIANT)
+    },
     // Placeholder for future n-gram confusion-pair API (not yet wired to anything).
     Setting(
         context,
@@ -84,6 +96,7 @@ fun GrammarCheckScreen(onClickBack: () -> Unit) {
         Settings.PREF_GRAMMAR_FIX_SENTENCE_CAPS,
         Settings.PREF_GRAMMAR_FIX_REPEATED_WORDS,
         Settings.PREF_GRAMMAR_REMOTE_URL,
+        Settings.PREF_GRAMMAR_PT_VARIANT,
         Settings.PREF_GRAMMAR_NGRAM_URL,
     )
     SearchSettingsScreen(

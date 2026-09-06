@@ -187,8 +187,12 @@ object Defaults {
     const val PREF_GRAMMAR_FIX_CAPITALIZE_I = true
     const val PREF_GRAMMAR_FIX_SENTENCE_CAPS = true
     const val PREF_GRAMMAR_FIX_REPEATED_WORDS = true
-    const val PREF_GRAMMAR_MODE = "local" // "off"|"local"|"remote"
+    // "remote" by default: "local" only ever ran the 3 built-in rules, so the
+    // LanguageTool server was never consulted unless the user found the setting.
+    // Remote falls back to the local rules on any network failure (off-mesh).
+    const val PREF_GRAMMAR_MODE = "remote" // "off"|"local"|"remote"
     const val PREF_GRAMMAR_REMOTE_URL = "https://languagetool.diegonmarcos.com/v2/check"
+    const val PREF_GRAMMAR_PT_VARIANT = "pt-PT" // LT code for a bare "pt" subtype: "pt-PT"|"pt-BR"
     const val PREF_GRAMMAR_NGRAM_URL = "" // placeholder for future n-gram API
     const val PREF_SHOW_DEBUG_SETTINGS = false
     val PREF_DEBUG_MODE = BuildConfig.DEBUG

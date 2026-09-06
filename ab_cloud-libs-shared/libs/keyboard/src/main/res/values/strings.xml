@@ -257,6 +257,10 @@
     <string name="grammar_mode_remote">Remote</string>
     <string name="grammar_remote_url_title">LanguageTool server URL</string>
     <string name="grammar_remote_url_summary">Used in Remote mode for whole-field checks</string>
+    <string name="grammar_pt_variant_title">Portuguese variant</string>
+    <string name="grammar_pt_variant_summary">Grammar rules for a Portuguese keyboard without a region (pt-PT or pt-BR layouts already carry theirs)</string>
+    <string name="grammar_pt_variant_pt">European (pt-PT)</string>
+    <string name="grammar_pt_variant_br">Brazilian (pt-BR)</string>
     <string name="grammar_ngram_url_title">Grammar n-gram API connect</string>
     <string name="grammar_ngram_url_summary">Endpoint for future n-gram confusion-pair detection (placeholder — not yet active)</string>
     <!-- Standalone Cloud Keyboard self-update entry (Configs menu) -->

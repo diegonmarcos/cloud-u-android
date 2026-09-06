@@ -4,6 +4,7 @@ package helium314.keyboard.latin
 
 import android.content.Context
 import android.text.SpannableString
+import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.SuggestionSpan
 import helium314.keyboard.latin.settings.Defaults
@@ -13,6 +14,7 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.util.Locale
 import java.util.concurrent.Executors
 
 /**
@@ -50,6 +52,29 @@ object GrammarChecker {
         }
         // Back-compat: derive from old boolean.
         return if (prefs.getBoolean(Settings.PREF_GRAMMAR_CHECK_ENABLED, Defaults.PREF_GRAMMAR_CHECK_ENABLED)) "local" else "off"
+    }
+
+    /**
+     * LanguageTool `language=` code for the ACTIVE keyboard subtype. Keyboard text is
+     * short, so server-side auto-detect ("language=auto") mis-detects; the keyboard
+     * already knows the layout language, so send it. A subtype with a region
+     * (pt_BR, en_GB, de_CH…) maps 1:1 to an LT variant; a bare language gets the
+     * variant that carries LT's spelling rules (bare "en"/"de" have no speller),
+     * and bare "pt" honours PREF_GRAMMAR_PT_VARIANT (default pt-PT).
+     */
+    private fun ltLanguage(context: Context): String {
+        val loc: Locale = runCatching { RichInputMethodManager.getInstance().currentSubtypeLocale }
+            .getOrNull() ?: return "auto"
+        val lang = loc.language.lowercase(Locale.ROOT)
+        if (lang.isEmpty()) return "auto"
+        if (loc.country.isNotEmpty()) return "$lang-${loc.country.uppercase(Locale.ROOT)}"
+        return when (lang) {
+            "pt" -> context.prefs().getString(Settings.PREF_GRAMMAR_PT_VARIANT, Defaults.PREF_GRAMMAR_PT_VARIANT)
+                ?: Defaults.PREF_GRAMMAR_PT_VARIANT
+            "en" -> "en-US"
+            "de" -> "de-DE"
+            else -> lang // es, fr, it, nl… LT accepts the bare code with its speller
+        }
     }
 
     // ── per-fix helpers ─────────────────────────────────────────────────────
@@ -105,65 +130,91 @@ object GrammarChecker {
 
     // ── remote LanguageTool call ─────────────────────────────────────────────
 
+    /** One form POST; null unless HTTP 200. Must NOT be called on the IME main thread. */
+    private fun post(urlStr: String, body: String): String? {
+        val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            // de-DE / pt-PT take 1.3–1.9 s per sentence on the mesh server (measured
+            // 2026-09-06); the old 1500 ms read timeout cut them off and fell back to
+            // the local rules silently. This is a user-triggered toolbar action on a
+            // background thread, so a longer wait is fine.
+            connectTimeout = 3000
+            readTimeout = 8000
+            doOutput = true
+            instanceFollowRedirects = false // an auth redirect is a failure, not a result
+            setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            setRequestProperty("Accept", "application/json")
+        }
+        return try {
+            conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+            if (conn.responseCode != 200) null
+            else conn.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            conn.disconnect()
+        }
+    }
+
     /**
-     * POST [text] to the LanguageTool-compatible endpoint and return the fixed text,
-     * applying all safe single-replacement matches from highest offset to lowest so
-     * earlier offsets stay valid.  Returns null on any failure (caller falls back to local).
+     * POST [text] to the LanguageTool-compatible endpoint for [language] and return the
+     * field with LanguageTool's matches applied:
+     *  - a match with exactly ONE replacement is unambiguous → applied in place;
+     *  - a match with several replacements (typical for misspellings) is NOT guessed:
+     *    the span gets a [SuggestionSpan] carrying up to 5 candidates, so the target
+     *    field underlines it and a tap opens the pick-one popup (native EditText UX).
+     * Matches are applied from highest offset to lowest so earlier offsets stay valid.
+     * Returns null on any failure (caller falls back to local).
      *
-     * "Safe" = issueType in {typographical, grammar} AND at least one replacement available.
-     * Only single replacements are applied (multi-replacement matches are skipped to avoid
-     * ambiguity).  Matches are applied in descending offset order.
+     * Every issueType is honoured. The old {typographical, grammar} allow-list dropped
+     * LanguageTool's `misspelling`, `inconsistency` and `uncategorized` matches — i.e.
+     * "ellos fue → fueron", "habe → bin", "dont → don't" — while blindly applying the
+     * FIRST of several candidates ("about they" → "about my").
      *
      * Must NOT be called on the IME main thread.
      */
-    private fun callRemote(context: Context, text: String): String? {
+    private fun callRemote(context: Context, text: String, language: String): CharSequence? {
         return try {
             val prefs = context.prefs()
             val urlStr = prefs.getString(Settings.PREF_GRAMMAR_REMOTE_URL, Defaults.PREF_GRAMMAR_REMOTE_URL)
                 ?: Defaults.PREF_GRAMMAR_REMOTE_URL
-            val body = "text=${URLEncoder.encode(text, "UTF-8")}&language=auto&level=default"
-            val url = URL(urlStr)
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                connectTimeout = 1500
-                readTimeout = 1500
-                doOutput = true
-                setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
-                setRequestProperty("Accept", "application/json")
-            }
-            conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
-            if (conn.responseCode != 200) return null
-            val responseJson = conn.inputStream.bufferedReader().use { it.readText() }
-            conn.disconnect()
+            val encoded = URLEncoder.encode(text, "UTF-8")
+            // A subtype LT does not know (e.g. es-419) answers 400 → retry with auto-detect.
+            val responseJson = post(urlStr, "text=$encoded&language=$language&level=default")
+                ?: (if (language != "auto") post(urlStr, "text=$encoded&language=auto&level=default") else null)
+                ?: return null
 
-            // Parse matches array.
-            val root = JSONObject(responseJson)
-            val matches = root.optJSONArray("matches") ?: return text
+            val matches = JSONObject(responseJson).optJSONArray("matches") ?: return text
 
-            // Collect safe single-replacement matches, sort highest offset first.
-            data class Fix(val offset: Int, val length: Int, val replacement: String)
-            val fixes = mutableListOf<Fix>()
+            data class Match(val offset: Int, val length: Int, val replacements: List<String>)
+            val found = mutableListOf<Match>()
             for (i in 0 until matches.length()) {
                 val m = matches.getJSONObject(i)
-                val issueType = m.optJSONObject("rule")?.optString("issueType") ?: continue
-                if (issueType != "typographical" && issueType != "grammar") continue
                 val reps = m.optJSONArray("replacements") ?: continue
-                if (reps.length() == 0) continue
-                val replacement = reps.getJSONObject(0).optString("value").takeIf { it.isNotEmpty() } ?: continue
+                val values = (0 until reps.length())
+                    .mapNotNull { reps.getJSONObject(it).optString("value").takeIf { v -> v.isNotEmpty() } }
+                if (values.isEmpty()) continue
                 val offset = m.optInt("offset", -1).takeIf { it >= 0 } ?: continue
                 val length = m.optInt("length", 0).takeIf { it > 0 } ?: continue
-                fixes.add(Fix(offset, length, replacement))
+                if (offset + length > text.length) continue // guard against stale offsets
+                found.add(Match(offset, length, values))
             }
 
-            // Apply highest-offset-first so earlier offsets remain valid.
-            fixes.sortByDescending { it.offset }
-            val sb = StringBuilder(text)
-            for (fix in fixes) {
-                val end = fix.offset + fix.length
-                if (end > sb.length) continue // guard against stale offsets
-                sb.replace(fix.offset, end, fix.replacement)
+            // Highest offset first: replacing later text never moves earlier offsets, and
+            // SpannableStringBuilder shifts already-set spans when earlier text changes.
+            found.sortByDescending { it.offset }
+            val sb = SpannableStringBuilder(text)
+            for (m in found) {
+                val end = m.offset + m.length
+                if (m.replacements.size == 1) {
+                    sb.replace(m.offset, end, m.replacements[0])
+                } else {
+                    sb.setSpan(
+                        SuggestionSpan(context, null, m.replacements.take(SuggestionSpan.SUGGESTIONS_MAX_SIZE).toTypedArray(),
+                            SuggestionSpan.FLAG_MISSPELLED, null),
+                        m.offset, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    )
+                }
             }
-            sb.toString()
+            sb
         } catch (_: Exception) {
             null
         }
@@ -256,12 +307,17 @@ object GrammarChecker {
         val rawAfter  = connection.getTextAfterCursor(FIELD_LIMIT, 0)?.toString() ?: ""
         val full = rawBefore + rawAfter
         if (full.isBlank()) return
+        val language = ltLanguage(context) // read on the IME thread, before hopping
 
         // Capture connection reference for the background thread callback.
         remoteExecutor.execute {
-            val fixedFull = callRemote(context, full) ?: applyLocalRules(context, full)
-            val fixedBefore = fixedFull.substring(0, rawBefore.length.coerceAtMost(fixedFull.length))
-            if (fixedBefore == rawBefore) return@execute
+            val fixedFull: CharSequence = callRemote(context, full, language) ?: applyLocalRules(context, full)
+            val cut = rawBefore.length.coerceAtMost(fixedFull.length)
+            val fixedBefore = fixedFull.subSequence(0, cut)
+            // ponytail: matches that land after the cursor are dropped (text after the
+            // cursor is left untouched); make it a full-field replace if that ever matters.
+            val hasSpans = fixedBefore is Spanned && fixedBefore.getSpans(0, cut, SuggestionSpan::class.java).isNotEmpty()
+            if (!hasSpans && fixedBefore.toString() == rawBefore) return@execute
 
             // Post the edit back; RichInputConnection methods are thread-safe (they use
             // Handler.post internally through InputConnection.sendKeyEvent routing).
