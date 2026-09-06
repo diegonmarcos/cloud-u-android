@@ -76,6 +76,11 @@ class AggregatorStackFragment : Fragment(),
     private data class PanelRefs(val body: View, val chevron: View)
     private val panelRefs = mutableListOf<PanelRefs>()
 
+    /** In-page `anchor:` links for this stack. Generic — the registry is fed
+     *  from the panels' own declarations, so no panel kind is special-cased
+     *  here and no page is either. */
+    private val anchors = StackAnchors()
+
     // ── filters_<page> toggle row state ────────────────────────────────
     //
     // Panels are built ONCE. The Source toggle hides and shows whole cards,
@@ -117,6 +122,7 @@ class AggregatorStackFragment : Fragment(),
         }
         scroll.addView(column)
         cardColumn = column
+        anchors.reset(scroll)
 
         val sec = Sections.byId(sectionId)
         if (sec == null) {
@@ -151,6 +157,7 @@ class AggregatorStackFragment : Fragment(),
             val view = if (panel.kind == "section_title") sectionTitleView(ctx, panel.title)
                        else buildPanel(ctx, inflater, panel)
             if (panel.origin.isNotBlank()) originCards += panel.origin to view
+            anchors.register(panel.anchor, view)
             column.addView(view)
         }
         if (filters.isNotEmpty()) applySource(ctx, filters)
@@ -1533,10 +1540,23 @@ class AggregatorStackFragment : Fragment(),
             layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
         }
 
+    /** Mini-tile index row. Wraps at `ui.tile_columns` — the same column
+     *  count every other grid in the app uses — because a single horizontal
+     *  row squeezes an eight-tile index down to unreadable slivers. Rows that
+     *  already fit within the column count are laid out exactly as before. */
     private fun renderTileRow(body: LinearLayout, tiles: List<Sections.AggTile>) {
         val ctx = body.context
-        val grid = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        val cols = com.diegonmarcos.superapp.BuildConfig.UI_TILE_COLUMNS.coerceAtLeast(1)
+        val rows = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        var grid = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        var inRow = 0
         for (tile in tiles) {
+            if (inRow == cols) {
+                rows.addView(grid)
+                grid = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+                inRow = 0
+            }
+            inRow++
             val t = MaterialCardView(ctx).apply {
                 radius        = dp(12).toFloat()
                 cardElevation = 0f
@@ -1566,10 +1586,23 @@ class AggregatorStackFragment : Fragment(),
             }
             inner.addView(iv); inner.addView(lbl)
             t.addView(inner)
-            t.setOnClickListener { onTileClicked(tile.target) }
+            // openUrlOrTarget, not onTileClicked directly, so `anchor:` tiles
+            // scroll this page instead of being handed to the activity's
+            // navigating dispatcher (which has no case for them).
+            t.setOnClickListener { openUrlOrTarget(tile.target) }
             grid.addView(t)
         }
-        body.addView(grid)
+        // Pad the final row so three tiles under a six-wide row stay tile
+        // sized instead of stretching to a third of the screen each.
+        if (inRow > 0) {
+            repeat(cols - inRow) {
+                grid.addView(View(ctx).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, dp(96), 1f)
+                })
+            }
+            rows.addView(grid)
+        }
+        body.addView(rows)
     }
 
     private fun renderMailAccounts(ctx: android.content.Context, body: LinearLayout) {
@@ -1682,7 +1715,15 @@ class AggregatorStackFragment : Fragment(),
         // on the card title.
         val showGroupHeader = groups.size > 1
         for (group in groups) {
-            if (showGroupHeader) body.addView(groupHeader(ctx, group.label))
+            if (showGroupHeader) {
+                val gh = groupHeader(ctx, group.label)
+                // The card's sub-tables are anchor targets in their own right
+                // (`anchor:stack/providers`), which is what lets one card
+                // serve four index entries without being split into four
+                // panels the data does not have.
+                anchors.registerChild(panel.anchor, group.id, gh)
+                body.addView(gh)
+            }
             if (group.providers.isNotEmpty()) {
                 addCloudGrid(ctx, body, cols, executor, group.providers.map {
                     CloudTile(it.label, group.icon, it.url, showLight = false, ping = null)
@@ -1690,7 +1731,13 @@ class AggregatorStackFragment : Fragment(),
             }
             for (sub in group.subgroups) {
                 if (sub.containers.isEmpty()) continue
-                body.addView(subHeader(ctx, sub.label))
+                val sh = subHeader(ctx, sub.label)
+                // Subgroups carry no id in cloud_services.json — the label is
+                // the only handle, so it is slugged. First registration wins,
+                // so "DBs (storage)" keeps `stack/dbs` over the "DBs"
+                // subheader one line below it.
+                anchors.registerChild(panel.anchor, sub.label, sh)
+                body.addView(sh)
                 addCloudGrid(ctx, body, cols, executor, sub.containers.map {
                     when {
                         // Explicit open-URL (e.g. VM dashboard) — open it verbatim
@@ -1909,6 +1956,10 @@ class AggregatorStackFragment : Fragment(),
     private fun openUrlOrTarget(target: String) {
         when {
             target.isEmpty() -> Unit
+            // `anchor:` never leaves the page — it scrolls this stack to the
+            // panel (or dashboard sub-table) that claimed the id. Checked
+            // before the URI tests because it is not a URI.
+            anchors.dispatch(target) -> Unit
             // URI-shaped targets bubble up to the activity, which owns the
             // intent:// parsing + browser_fallback_url handling — same path
             // tile clicks take, so behaviour is consistent everywhere.

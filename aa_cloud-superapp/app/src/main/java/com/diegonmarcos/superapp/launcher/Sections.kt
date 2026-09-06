@@ -168,6 +168,11 @@ object Sections {
          *  as [origin] rather than a second classifier: the card renders the
          *  stream the Source toggle would hide, so the two cannot disagree. */
         val stream: String = "",
+        /** Id this panel answers to as an in-page anchor target. A tile
+         *  declaring `target: "anchor:<this>"` scrolls here instead of
+         *  navigating — see [StackAnchors]. Blank means the panel is not
+         *  addressable, which is the default and costs nothing. */
+        val anchor: String = "",
     )
 
     /** One toggle in a page's `filters_<page id>` row. The filter IDS are the
@@ -681,6 +686,7 @@ object Sections {
                         scopes          = scopeIds,
                         origin          = p.optString("origin", ""),
                         stream          = p.optString("stream", ""),
+                        anchor          = p.optString("anchor", ""),
                     ))
                 }
                 return out
