@@ -213,9 +213,13 @@ class SectionTabsFragment : Fragment(), Collapsible {
         val pad = (DIVIDER_PAD_DP * tabs.resources.displayMetrics.density).toInt()
         val bar = android.widget.TextView(tabs.context).apply {
             text = "|"
-            // The pills' own type and dimmed label colour (AppTabsStyle's
-            // unselected text), so it belongs to the row rather than sitting
-            // on top of it as chrome.
+            // The values [AppTabsStyle.makePill] gives every tab label — that
+            // is the Kotlin object in AppTabsStyle.kt, not a res/ style; there
+            // is no XML for this strip. They are only the STARTING point, and
+            // deliberately so: [applyEqualTabs] re-reads the type off a real
+            // label once the row has been measured and re-applies it here, so
+            // the separator follows the labels when they shrink to fit. These
+            // are what it looks like for the one frame before that runs.
             typeface = android.graphics.Typeface.create(
                 android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
             textSize = 12f
@@ -404,6 +408,24 @@ class SectionTabsFragment : Fragment(), Collapsible {
             labels[i].ellipsize = android.text.TextUtils.TruncateAt.END
             pills[i].layoutParams = pills[i].layoutParams.apply { this.width = width }
             pills[i].minimumWidth = width
+        }
+
+        // Set the "|" in the type the labels ACTUALLY ended up in, not the type
+        // they started in. [AppTabsStyle.makePill] builds every label monospace
+        // bold 12sp, and the divider is built to match — but the loop above has
+        // just RESIZED them, down to MIN_SP on a crowded strip. A separator
+        // pinned to the starting size would then stand visibly taller than the
+        // words either side of it, and it is exactly the crowded strips that
+        // have a divider to draw. Colour comes from an UNSELECTED label so the
+        // "|" reads as punctuation rather than as the active tab; that dim
+        // value never changes, so reading it once here is enough.
+        (groupDivider as? android.widget.TextView)?.let { bar ->
+            val dim = (0 until n).firstOrNull { it != tabs.selectedTabPosition }
+                ?.let { labels[it] } ?: labels[0]
+            bar.typeface = dim.typeface
+            bar.letterSpacing = dim.letterSpacing
+            bar.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, sizePx)
+            bar.setTextColor(dim.currentTextColor)
         }
         tabs.requestLayout()
     }
