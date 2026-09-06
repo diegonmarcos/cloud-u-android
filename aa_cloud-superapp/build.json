@@ -3186,11 +3186,10 @@
             "icon": "ic_home"
           },
           {
-            "_doc": "Keyboard — hands off to the standalone Cloud-Keyboard app (ac_cloud-keyboard, com.diegonmarcos.cloudkeyboard). The vendored HeliBoard was extracted from the SuperApp into that standalone APK, so this entry no longer opens an in-APK SettingsActivity. target=extapp:cloud-keyboard → MainActivity.launchExternalApp opens Cloud-Keyboard's SettingsActivity if installed, else downloads + installs ui.external_apps[id=cloud-keyboard].install_apk_url. Placed before About per UI spec (it used to follow the Import entry, which moved into Configs → Profile).",
-            "id": "keyboard",
-            "label": "Keyboard",
-            "icon": "ic_keyboard",
-            "action": "extapp:cloud-keyboard"
+            "_doc": "One-Hand edge-gesture overlay (libs:launcher-onehand). OneHandFragment hosts the master toggle + the two special-permission deep-links (Draw over other apps, Accessibility). Data-driven engine config lives in build.json::onehand. Sits directly after Launcher: both are about how this launcher behaves under your thumb, so they read as a pair.",
+            "id": "onehand",
+            "label": "One-Hand",
+            "icon": "ic_onehand"
           },
           {
             "_doc": "Update ALL constellation apps (not just self). Opens the Constellation page + runs Fleet.installAll; the shared update overlay shows per-install progress with a Cancel button. MainActivity.dispatchHomeAction('update_all').",
@@ -3231,10 +3230,11 @@
             "action": "action:constellation"
           },
           {
-            "_doc": "One-Hand edge-gesture overlay (libs:launcher-onehand). OneHandFragment hosts the master toggle + the two special-permission deep-links (Draw over other apps, Accessibility). Data-driven engine config lives in build.json::onehand.",
-            "id": "onehand",
-            "label": "One-Hand",
-            "icon": "ic_onehand"
+            "_doc": "Keyboard — hands off to the standalone Cloud-Keyboard app (ac_cloud-keyboard, com.diegonmarcos.cloudkeyboard). The vendored HeliBoard was extracted from the SuperApp into that standalone APK, so this entry no longer opens an in-APK SettingsActivity. target=extapp:cloud-keyboard → MainActivity.launchExternalApp opens Cloud-Keyboard's SettingsActivity if installed, else downloads + installs ui.external_apps[id=cloud-keyboard].install_apk_url. Sits directly after Constellation: both leave this APK for another one, so the two hand-offs are next to each other.",
+            "id": "keyboard",
+            "label": "Keyboard",
+            "icon": "ic_keyboard",
+            "action": "extapp:cloud-keyboard"
           },
           {
             "id": "perms",
