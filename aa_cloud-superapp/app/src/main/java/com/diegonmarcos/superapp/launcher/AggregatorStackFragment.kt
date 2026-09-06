@@ -1540,69 +1540,26 @@ class AggregatorStackFragment : Fragment(),
             layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
         }
 
-    /** Mini-tile index row. Wraps at `ui.tile_columns` — the same column
-     *  count every other grid in the app uses — because a single horizontal
-     *  row squeezes an eight-tile index down to unreadable slivers. Rows that
-     *  already fit within the column count are laid out exactly as before. */
+    /** Mini-tile index row. The card look and the wrap-at-`ui.tile_columns`
+     *  layout both live in [IndexTiles], because Configs ▸ About draws the
+     *  same index and is not a stack — keeping the drawing here would have
+     *  meant two copies of it. */
     private fun renderTileRow(body: LinearLayout, tiles: List<Sections.AggTile>) {
         val ctx = body.context
-        val cols = com.diegonmarcos.superapp.BuildConfig.UI_TILE_COLUMNS.coerceAtLeast(1)
-        val rows = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        var grid = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        var inRow = 0
-        for (tile in tiles) {
-            if (inRow == cols) {
-                rows.addView(grid)
-                grid = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-                inRow = 0
-            }
-            inRow++
-            val t = MaterialCardView(ctx).apply {
-                radius        = dp(12).toFloat()
-                cardElevation = 0f
-                layoutParams = LinearLayout.LayoutParams(0, dp(96), 1f).apply {
-                    val m = dp(4); setMargins(m, m, m, m)
-                }
-                isClickable = true; isFocusable = true
-            }
-            val inner = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                gravity = android.view.Gravity.CENTER
-                val pad = dp(8); setPadding(pad, pad, pad, pad)
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT,
+        body.addView(IndexTiles.grid(
+            ctx,
+            com.diegonmarcos.superapp.BuildConfig.UI_TILE_COLUMNS,
+            tiles.map { tile ->
+                IndexTiles.Cell(
+                    label   = tile.label,
+                    iconRes = Sections.iconResFor(ctx, tile.iconName),
+                    // openUrlOrTarget, not onTileClicked directly, so `anchor:`
+                    // tiles scroll this page instead of being handed to the
+                    // activity's navigating dispatcher (no case for them there).
+                    onClick = { openUrlOrTarget(tile.target) },
                 )
-            }
-            val iv = ImageView(ctx).apply {
-                val resId = Sections.iconResFor(ctx, tile.iconName)
-                if (resId != 0) setImageResource(resId)
-                val sz = dp(28); layoutParams = LinearLayout.LayoutParams(sz, sz)
-            }
-            val lbl = TextView(ctx).apply {
-                text = tile.label
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                gravity = android.view.Gravity.CENTER
-            }
-            inner.addView(iv); inner.addView(lbl)
-            t.addView(inner)
-            // openUrlOrTarget, not onTileClicked directly, so `anchor:` tiles
-            // scroll this page instead of being handed to the activity's
-            // navigating dispatcher (which has no case for them).
-            t.setOnClickListener { openUrlOrTarget(tile.target) }
-            grid.addView(t)
-        }
-        // Pad the final row so three tiles under a six-wide row stay tile
-        // sized instead of stretching to a third of the screen each.
-        if (inRow > 0) {
-            repeat(cols - inRow) {
-                grid.addView(View(ctx).apply {
-                    layoutParams = LinearLayout.LayoutParams(0, dp(96), 1f)
-                })
-            }
-            rows.addView(grid)
-        }
-        body.addView(rows)
+            },
+        ))
     }
 
     private fun renderMailAccounts(ctx: android.content.Context, body: LinearLayout) {

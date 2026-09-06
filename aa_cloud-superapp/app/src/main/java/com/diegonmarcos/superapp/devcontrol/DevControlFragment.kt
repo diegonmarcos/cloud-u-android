@@ -6,6 +6,8 @@ import com.diegonmarcos.superapp.system.ScreenLocker
 import com.diegonmarcos.superapp.system.CrashLogger
 import com.diegonmarcos.superapp.system.AppProcessUptime
 import com.diegonmarcos.superapp.launcher.Sections
+import com.diegonmarcos.superapp.launcher.IndexTiles
+import com.diegonmarcos.superapp.launcher.StackAnchors
 import com.diegonmarcos.superapp.App
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.battery.SysfsProc
@@ -478,6 +480,8 @@ class DevControlFragment : Fragment() {
             ).apply { bottomMargin = dp(4) }
         }
         macroAnchors.clear()
+        macroGlyphs.clear()
+        anchors.reset(scroll)
         column.addView(indexBox)
 
         addLogcatSection(ctx, column)
@@ -1633,47 +1637,35 @@ class DevControlFragment : Fragment() {
         // groups and was reachable only by scrolling; these jump straight to a
         // group. Derived from macroAnchors, so a new macroHeader appears here
         // automatically and a removed one cannot leave a dead link behind.
+        // Heading names the section; the old "Jump to" caption is gone.
         indexBox.addView(TextView(ctx).apply {
-            text = "Jump to"
-            setTextColor(0xFF9B93AB.toInt()); textSize = 12f
-            setPadding(0, dp(4), 0, dp(6))
+            text = "Index"
+            setTextColor(0xFFE9D8FD.toInt()); textSize = 17f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setPadding(0, dp(4), 0, dp(8))
         })
-        var indexRow: LinearLayout? = null
-        macroAnchors.entries.forEachIndexed { i, (label, anchor) ->
-            if (i % 3 == 0) {
-                indexRow = LinearLayout(ctx).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    ).apply { bottomMargin = dp(6) }
-                }
-                indexBox.addView(indexRow)
-            }
-            indexRow?.addView(TextView(ctx).apply {
-                text = label
-                setTextColor(0xFFE9D8FD.toInt()); textSize = 12f
-                gravity = android.view.Gravity.CENTER
-                isClickable = true; isFocusable = true
-                setPadding(dp(6), dp(8), dp(6), dp(8))
-                background = android.graphics.drawable.GradientDrawable().apply {
-                    cornerRadius = dp(10).toFloat()
-                    setColor(0x22B794F4)
-                    setStroke(dp(1), 0x44B794F4)
-                }
-                layoutParams = LinearLayout.LayoutParams(
-                    0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-                ).apply { marginStart = dp(3); marginEnd = dp(3) }
-                // anchor.top is measured against `column`, which IS the
-                // ScrollView's only child, so it is already the scroll offset.
-                setOnClickListener { scroll.smoothScrollTo(0, (anchor.top - dp(8)).coerceAtLeast(0)) }
-            })
+        // Same card grid C3 ▸ Topology's Index draws, from the same builder —
+        // three across, because these labels are words rather than the short
+        // nouns a six-wide stack row carries.
+        indexBox.addView(IndexTiles.grid(ctx, 3, macroAnchors.map { (label, anchor) ->
+            anchors.register(label, anchor)
+            IndexTiles.Cell(
+                label   = label,
+                glyph   = macroGlyphs[label].orEmpty(),
+                onClick = { anchors.dispatch(StackAnchors.PREFIX + label) },
+            )
+        }))
+
+        // "Go Back Up to Index" closing every macro section. Inserted from the
+        // anchors themselves rather than at eight call sites, so a new
+        // macroHeader gets one for free — and in REVERSE order, because each
+        // insertion shifts the indices of everything after it.
+        anchors.register(INDEX_ANCHOR, indexBox)
+        for (header in macroAnchors.values.toList().drop(1).asReversed()) {
+            val at = column.indexOfChild(header)
+            if (at > 0) column.addView(backToIndexLink(ctx), at)
         }
-        // Pad the last row so two chips do not stretch across three slots.
-        val remainder = macroAnchors.size % 3
-        if (remainder != 0) repeat(3 - remainder) {
-            indexRow?.addView(View(ctx), LinearLayout.LayoutParams(0, 1, 1f))
-        }
+        column.addView(backToIndexLink(ctx))
 
         return scroll
     }
@@ -1902,10 +1894,44 @@ class DevControlFragment : Fragment() {
      *  two cannot disagree. */
     private val macroAnchors = LinkedHashMap<String, View>()
 
+    /** Anchor id of the index block itself — the target every "Go Back Up to
+     *  Index" link scrolls to. Not a macro label, so it cannot collide with
+     *  one. */
+    private val INDEX_ANCHOR = "__index__"
+
+    /** The upward half of the index: a long page should be navigable both
+     *  ways, so every macro section ends with the way back. */
+    private fun backToIndexLink(ctx: Context): View = TextView(ctx).apply {
+        text = "↑  Go Back Up to Index"
+        setTextColor(0xFF9B93AB.toInt()); textSize = 12f
+        gravity = android.view.Gravity.END
+        isClickable = true; isFocusable = true
+        setPadding(dp(6), dp(10), dp(6), dp(14))
+        layoutParams = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+        )
+        setOnClickListener { anchors.dispatch(StackAnchors.PREFIX + INDEX_ANCHOR) }
+    }
+
+    /** The leading glyph of each macro header, kept beside the label so the
+     *  index cards have an icon without one being invented for them —
+     *  "🔍  LOGCAT" already carries its own. */
+    private val macroGlyphs = LinkedHashMap<String, String>()
+
+    /** Scroll-to-anchor, shared with the aggregator stacks. Configs ▸ About
+     *  is NOT a stack — no build.json panels, no StackPanel — so this reuse
+     *  is the check that [StackAnchors] really is page-agnostic: the registry,
+     *  the parent-chain offset and the collapsed-ancestor handling all come
+     *  from there, and only the ids are local. */
+    private val anchors = StackAnchors()
+
     private fun macroHeader(ctx: Context, text: String) = TextView(ctx).apply {
         this.text = text
         // Label without the leading emoji + spacing: "🔍  LOGCAT" -> "LOGCAT".
-        macroAnchors[text.dropWhile { !it.isLetter() }.trim()] = this
+        val label = text.dropWhile { !it.isLetter() }.trim()
+        macroAnchors[label] = this
+        macroGlyphs[label] = text.takeWhile { !it.isLetter() }.trim()
         setTextColor(0xFFE9D8FD.toInt())
         textSize = 17f
         setTypeface(typeface, android.graphics.Typeface.BOLD)
