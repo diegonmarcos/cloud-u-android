@@ -158,6 +158,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.BACKGROUND_GATHERING -> R.drawable.ic_settings_gesture
                     ToolbarKey.TRANSLATE -> R.drawable.ic_toolbar_translate // SuperApp addition (patch 0001)
                     ToolbarKey.GRAMMAR -> R.drawable.ic_settings_correction  // SuperApp addition (patch 0002)
+                    ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance      // SuperApp addition — Text Enhancements
                 })
             }
         } }
@@ -223,6 +224,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.BACKGROUND_GATHERING -> R.drawable.ic_settings_gesture
                     ToolbarKey.TRANSLATE -> R.drawable.ic_toolbar_translate // SuperApp addition (patch 0001)
                     ToolbarKey.GRAMMAR -> R.drawable.ic_settings_correction  // SuperApp addition (patch 0002)
+                    ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance      // SuperApp addition — Text Enhancements
                 })
             }
         } }
@@ -288,6 +290,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.BACKGROUND_GATHERING -> R.drawable.ic_settings_gesture
                     ToolbarKey.TRANSLATE -> R.drawable.ic_toolbar_translate // SuperApp addition (patch 0001)
                     ToolbarKey.GRAMMAR -> R.drawable.ic_settings_correction  // SuperApp addition (patch 0002)
+                    ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance      // SuperApp addition — Text Enhancements
                 })
             }
         } }

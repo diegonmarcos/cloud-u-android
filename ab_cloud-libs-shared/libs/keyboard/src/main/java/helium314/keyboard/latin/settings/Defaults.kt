@@ -190,7 +190,7 @@ object Defaults {
     // "remote" by default: "local" only ever ran the 3 built-in rules, so the
     // LanguageTool server was never consulted unless the user found the setting.
     // Remote falls back to the local rules on any network failure (off-mesh).
-    const val PREF_GRAMMAR_MODE = "remote" // "off"|"local"|"remote"
+    const val PREF_GRAMMAR_MODE = "remote" // "off"|"local"|"remote"|"ai" ("ai" = AI Model Routing provider, grammar-only prompt)
     const val PREF_GRAMMAR_REMOTE_URL = "https://languagetool.diegonmarcos.com/v2/check"
     const val PREF_GRAMMAR_PT_VARIANT = "pt-PT" // LT code for a bare "pt" subtype: "pt-PT"|"pt-BR"
     const val PREF_GRAMMAR_NGRAM_URL = "" // placeholder for future n-gram API

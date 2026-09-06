@@ -1103,50 +1103,175 @@ index 192d92f..9d97e34 100644
 +    void onPinEmoji(Key key);
  }
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/keyboard/internal/KeyboardIconsSet.kt b/libs/keyboard/src/main/java/helium314/keyboard/keyboard/internal/KeyboardIconsSet.kt
-index fdc6510..16b1797 100644
+index fdc6510..195cf10 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/keyboard/internal/KeyboardIconsSet.kt
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/keyboard/internal/KeyboardIconsSet.kt
-@@ -156,6 +156,8 @@ class KeyboardIconsSet private constructor() {
+@@ -156,6 +156,9 @@ class KeyboardIconsSet private constructor() {
                      ToolbarKey.PAGE_END -> R.drawable.ic_page_end
                      ToolbarKey.SPLIT -> R.drawable.ic_ime_switcher
                      ToolbarKey.BACKGROUND_GATHERING -> R.drawable.ic_settings_gesture
 +                    ToolbarKey.TRANSLATE -> R.drawable.ic_toolbar_translate // SuperApp addition (patch 0001)
 +                    ToolbarKey.GRAMMAR -> R.drawable.ic_settings_correction  // SuperApp addition (patch 0002)
++                    ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance      // SuperApp addition — Text Enhancements
                  })
              }
          } }
-@@ -219,6 +221,8 @@ class KeyboardIconsSet private constructor() {
+@@ -219,6 +222,9 @@ class KeyboardIconsSet private constructor() {
                      ToolbarKey.PAGE_END -> R.drawable.ic_page_end
                      ToolbarKey.SPLIT -> R.drawable.ic_ime_switcher
                      ToolbarKey.BACKGROUND_GATHERING -> R.drawable.ic_settings_gesture
 +                    ToolbarKey.TRANSLATE -> R.drawable.ic_toolbar_translate // SuperApp addition (patch 0001)
 +                    ToolbarKey.GRAMMAR -> R.drawable.ic_settings_correction  // SuperApp addition (patch 0002)
++                    ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance      // SuperApp addition — Text Enhancements
                  })
              }
          } }
-@@ -282,6 +286,8 @@ class KeyboardIconsSet private constructor() {
+@@ -282,6 +288,9 @@ class KeyboardIconsSet private constructor() {
                      ToolbarKey.PAGE_END -> R.drawable.ic_page_end_rounded
                      ToolbarKey.SPLIT -> R.drawable.ic_ime_switcher
                      ToolbarKey.BACKGROUND_GATHERING -> R.drawable.ic_settings_gesture
 +                    ToolbarKey.TRANSLATE -> R.drawable.ic_toolbar_translate // SuperApp addition (patch 0001)
 +                    ToolbarKey.GRAMMAR -> R.drawable.ic_settings_correction  // SuperApp addition (patch 0002)
++                    ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance      // SuperApp addition — Text Enhancements
                  })
              }
          } }
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/keyboard/internal/keyboard_parser/floris/KeyCode.kt b/libs/keyboard/src/main/java/helium314/keyboard/keyboard/internal/keyboard_parser/floris/KeyCode.kt
-index 11ded67..77ca680 100644
+index 11ded67..97d6e6b 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/keyboard/internal/keyboard_parser/floris/KeyCode.kt
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/keyboard/internal/keyboard_parser/floris/KeyCode.kt
-@@ -98,6 +98,9 @@ object KeyCode {
+@@ -98,6 +98,10 @@ object KeyCode {
      const val URI_COMPONENT_TLD =           -255
  
      const val SETTINGS =                    -301
 +    const val TRANSLATE =                   -302 // SuperApp addition (patch 0001) — on-device translate toolbar key
 +    const val TRANSLATE_BAR =               -303 // SuperApp addition (patch 0001) — toggle the live translate bar (long-press)
 +    const val GRAMMAR =                     -304 // SuperApp addition (patch 0002) — on-demand whole-field grammar fix toolbar key
++    const val ENHANCE =                     -305 // SuperApp addition — Text Enhancements toolbar key (AI rewrite of selection/field)
  
      const val CURRENCY_SLOT_1 =             -801
      const val CURRENCY_SLOT_2 =             -802
+diff --git a/libs/keyboard/src/main/java/helium314/keyboard/latin/AiRouter.kt b/libs/keyboard/src/main/java/helium314/keyboard/latin/AiRouter.kt
+new file mode 100644
+index 0000000..876b20b
+--- /dev/null
++++ b/libs/keyboard/src/main/java/helium314/keyboard/latin/AiRouter.kt
+@@ -0,0 +1,115 @@
++// SPDX-License-Identifier: GPL-3.0-only
++package helium314.keyboard.latin
++
++import android.content.Context
++import android.util.Base64
++import helium314.keyboard.latin.settings.Settings
++import helium314.keyboard.latin.utils.prefs
++import org.json.JSONArray
++import org.json.JSONObject
++import java.net.HttpURLConnection
++import java.net.URL
++
++/**
++ * SuperApp addition — THE shared LLM call path behind Settings → "AI Model Routing".
++ *
++ * Registry = build.json::keyboard_ai, baked by libs/keyboard/build.gradle into
++ * BuildConfig.AI_ROUTING_B64 (providers, model lists, enhancement prompts). User
++ * choices live in the keyboard prefs: PREF_AI_PROVIDER, PREF_AI_TOKEN_PREFIX+provider,
++ * PREF_AI_MODEL_PREFIX+provider — the same SharedPreferences the LanguageTool URL and
++ * every other keyboard setting use (there is no other keyboard secret store).
++ *
++ * Every provider speaks the OpenAI chat-completions shape (the mesh bridge
++ * my-ai_claude-api mimics it, OpenRouter is it), so [complete] is one POST.
++ * Consumers: [TextEnhancer] (ENHANCE toolbar key), [GrammarChecker] mode "ai",
++ * and translation once it opts in. Blocking — never call on the IME main thread.
++ */
++object AiRouter {
++    class Provider(val id: String, val label: String, val url: String, val needsToken: Boolean,
++                   val defaultModel: String, val models: List<String>)
++    class Style(val id: String, val label: String, val prompt: String)
++
++    private val registry: JSONObject by lazy {
++        JSONObject(String(Base64.decode(BuildConfig.AI_ROUTING_B64, Base64.DEFAULT), Charsets.UTF_8))
++    }
++    val providers: List<Provider> by lazy {
++        val o = registry.getJSONObject("providers")
++        o.keys().asSequence().map { id ->
++            val p = o.getJSONObject(id)
++            Provider(id, p.getString("label"), p.getString("url"), p.optBoolean("needs_token", true),
++                p.getString("default_model"), p.getJSONArray("models").toStringList())
++        }.toList()
++    }
++    val styles: List<Style> by lazy {
++        val o = registry.getJSONObject("styles")
++        o.keys().asSequence().map { id -> val s = o.getJSONObject(id); Style(id, s.getString("label"), s.getString("prompt")) }.toList()
++    }
++    val defaultProvider: String get() = registry.getString("default_provider")
++    val defaultStyle: String get() = registry.getString("default_style")
++    val timeoutMs: Int get() = registry.optInt("timeout_ms", 30_000)
++    /** Field-text cap sent to the model; also what the enhancer reads around the cursor. */
++    val maxChars: Int get() = registry.optInt("max_chars", 4096)
++
++    private fun JSONArray.toStringList() = (0 until length()).map { getString(it) }
++
++    fun provider(context: Context): Provider {
++        val id = context.prefs().getString(Settings.PREF_AI_PROVIDER, defaultProvider) ?: defaultProvider
++        return providers.firstOrNull { it.id == id } ?: providers.first { it.id == defaultProvider }
++    }
++    fun model(context: Context, p: Provider = provider(context)): String =
++        context.prefs().getString(Settings.PREF_AI_MODEL_PREFIX + p.id, p.defaultModel)?.takeIf { it.isNotBlank() } ?: p.defaultModel
++    fun token(context: Context, p: Provider = provider(context)): String =
++        context.prefs().getString(Settings.PREF_AI_TOKEN_PREFIX + p.id, "")?.trim() ?: ""
++    fun style(context: Context): Style {
++        val id = context.prefs().getString(Settings.PREF_ENHANCE_STYLE, defaultStyle) ?: defaultStyle
++        return styles.firstOrNull { it.id == id } ?: styles.first { it.id == defaultStyle }
++    }
++    fun styleById(id: String): Style = styles.firstOrNull { it.id == id } ?: styles.first { it.id == defaultStyle }
++
++    /** Thrown when the selected provider needs a key and none is set — the settings screen is the fix. */
++    class NoTokenException(val provider: Provider) : IllegalStateException("no API key for ${provider.label}")
++
++    /**
++     * One chat completion: [system] instructions + [user] text → assistant text.
++     * Throws on any failure (no token, HTTP != 200, timeout, malformed reply); callers
++     * turn the exception into a visible message. Never call on the main thread.
++     */
++    @JvmStatic
++    fun complete(context: Context, system: String, user: String): String {
++        val p = provider(context)
++        val token = token(context, p)
++        if (p.needsToken && token.isEmpty()) throw NoTokenException(p)
++        val body = JSONObject()
++            .put("model", model(context, p))
++            .put("temperature", 0.2)
++            .put("messages", JSONArray()
++                .put(JSONObject().put("role", "system").put("content", system))
++                .put(JSONObject().put("role", "user").put("content", user)))
++            .toString()
++        val conn = (URL(p.url).openConnection() as HttpURLConnection).apply {
++            requestMethod = "POST"
++            // The mesh bridge can take long (its own limit is 180 s); the keyboard caps
++            // far lower so a stuck call never leaves the user staring at "Enhancing…".
++            connectTimeout = 5000
++            readTimeout = timeoutMs
++            doOutput = true
++            instanceFollowRedirects = false
++            setRequestProperty("Content-Type", "application/json")
++            setRequestProperty("Accept", "application/json")
++            if (token.isNotEmpty()) setRequestProperty("Authorization", "Bearer $token")
++        }
++        try {
++            conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
++            val code = conn.responseCode
++            if (code != 200) {
++                val err = runCatching { conn.errorStream?.bufferedReader()?.use { it.readText() } }.getOrNull()
++                val msg = runCatching { JSONObject(err ?: "").getJSONObject("error").getString("message") }.getOrNull()
++                throw IllegalStateException("${p.label} HTTP $code${msg?.let { ": $it" } ?: ""}")
++            }
++            val reply = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
++            return reply.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content").trim()
++        } finally {
++            conn.disconnect()
++        }
++    }
++}
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/latin/ClipboardHistoryEntry.kt b/libs/keyboard/src/main/java/helium314/keyboard/latin/ClipboardHistoryEntry.kt
 index 09c1aa4..7955068 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/latin/ClipboardHistoryEntry.kt
@@ -1346,10 +1471,10 @@ index 8910256..a9b5085 100644
          return InputTypeUtils.isPasswordInputType(inputType)
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/latin/GrammarChecker.kt b/libs/keyboard/src/main/java/helium314/keyboard/latin/GrammarChecker.kt
 new file mode 100644
-index 0000000..020a624
+index 0000000..191bced
 --- /dev/null
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/latin/GrammarChecker.kt
-@@ -0,0 +1,347 @@
+@@ -0,0 +1,350 @@
 +// SPDX-License-Identifier: GPL-3.0-only
 +
 +package helium314.keyboard.latin
@@ -1633,6 +1758,9 @@ index 0000000..020a624
 +        when (resolveMode(context)) {
 +            "off" -> return
 +            "remote" -> checkWholeFieldRemote(context, connection)
++            // "ai": the AI Model Routing provider with the grammar-only prompt — same
++            // in-place replace + revert span as Text Enhancements, no LanguageTool.
++            "ai" -> TextEnhancer.run(context, connection, AiRouter.styleById("grammar"))
 +            else -> checkWholeFieldLocal(context, connection)
 +        }
 +    }
@@ -1991,6 +2119,98 @@ index 12961a9..e9c984c 100644
          private fun makeFirstTwoSuggestionsNonEmoji(words: MutableList<SuggestedWordInfo>) {
              for (i in 0..1) {
                  if (words.size > 2 && words[i].isEmoji) {
+diff --git a/libs/keyboard/src/main/java/helium314/keyboard/latin/TextEnhancer.kt b/libs/keyboard/src/main/java/helium314/keyboard/latin/TextEnhancer.kt
+new file mode 100644
+index 0000000..379dac8
+--- /dev/null
++++ b/libs/keyboard/src/main/java/helium314/keyboard/latin/TextEnhancer.kt
+@@ -0,0 +1,86 @@
++// SPDX-License-Identifier: GPL-3.0-only
++package helium314.keyboard.latin
++
++import android.content.Context
++import android.os.Handler
++import android.os.Looper
++import android.text.SpannableString
++import android.text.Spanned
++import android.text.style.SuggestionSpan
++import android.widget.Toast
++import java.util.concurrent.Executors
++import java.util.concurrent.atomic.AtomicInteger
++
++/**
++ * SuperApp addition — "Text Enhancements": send the selection (or the whole field)
++ * through [AiRouter] with the configured style prompt and replace it with the reply.
++ * Triggered by the ENHANCE toolbar key; [GrammarChecker] mode "ai" reuses it with the
++ * "grammar" style.
++ *
++ * Interaction = GrammarChecker's family: the improved text is committed in place and
++ * carries a [SuggestionSpan] holding the ORIGINAL, so the field underlines it and a tap
++ * offers the one-tap revert. Progress/failure are Toasts (the IME has no other surface
++ * that survives the field losing focus).
++ *
++ * Cancel-on-new-input: each run takes a sequence number; a reply is dropped if a newer
++ * run started, or if the field text changed while the model was thinking.
++ */
++object TextEnhancer {
++    private val executor = Executors.newSingleThreadExecutor()
++    private val main = Handler(Looper.getMainLooper())
++    private val seq = AtomicInteger()
++
++    @JvmStatic
++    fun enhance(context: Context, connection: RichInputConnection) = run(context, connection, AiRouter.style(context))
++
++    /** Whole-field / selection enhancement with an explicit [style] (GrammarChecker passes "grammar"). */
++    @JvmStatic
++    fun run(context: Context, connection: RichInputConnection, style: AiRouter.Style) {
++        connection.finishComposingText()
++        val limit = AiRouter.maxChars
++        val selected = connection.getSelectedText(0)?.toString()?.takeIf { it.isNotBlank() }
++        val before = if (selected == null) connection.getTextBeforeCursor(limit, 0)?.toString() ?: return else ""
++        val after = if (selected == null) connection.getTextAfterCursor(limit, 0)?.toString() ?: "" else ""
++        val original = selected ?: (before + after)
++        if (original.isBlank()) return
++        val id = seq.incrementAndGet()
++        toast(context, context.getString(R.string.enhance_in_progress, AiRouter.provider(context).label))
++
++        executor.execute {
++            val improved = try {
++                AiRouter.complete(context, style.prompt, original)
++            } catch (e: AiRouter.NoTokenException) {
++                toast(context, context.getString(R.string.ai_no_token, e.provider.label)); return@execute
++            } catch (e: Exception) {
++                toast(context, context.getString(R.string.enhance_failed, e.message ?: e.javaClass.simpleName)); return@execute
++            }
++            if (id != seq.get()) return@execute // a newer run superseded this one
++            if (improved.isEmpty() || improved == original) { toast(context, context.getString(R.string.enhance_unchanged)); return@execute }
++
++            main.post {
++                if (id != seq.get()) return@post
++                // Field changed while we waited → the reply no longer matches what the user sees.
++                val stillSame = if (selected != null) connection.getSelectedText(0)?.toString() == selected
++                else connection.getTextBeforeCursor(limit, 0)?.toString() == before && (connection.getTextAfterCursor(limit, 0)?.toString() ?: "") == after
++                if (!stillSame) { toast(context, context.getString(R.string.enhance_stale)); return@post }
++
++                val replacement = SpannableString(improved).apply {
++                    // ponytail: the whole original as ONE revert candidate; the popup gets long for
++                    // long fields — split per sentence if that ever bothers anyone.
++                    setSpan(SuggestionSpan(context, null, arrayOf(original), SuggestionSpan.FLAG_EASY_CORRECT, null),
++                        0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
++                }
++                connection.beginBatchEdit()
++                if (selected == null) {
++                    val start = connection.expectedSelectionStart - before.length
++                    if (after.isNotEmpty() && start >= 0) connection.setSelection(start, start + before.length + after.length)
++                    else connection.deleteTextBeforeCursor(before.length)
++                }
++                connection.commitText(replacement, 1) // commitText replaces the selection (InputConnection contract)
++                connection.endBatchEdit()
++            }
++        }
++    }
++
++    private fun toast(context: Context, msg: String) = main.post { Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }
++}
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/latin/database/ClipboardDao.kt b/libs/keyboard/src/main/java/helium314/keyboard/latin/database/ClipboardDao.kt
 index 129e8e3..da93ba4 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/latin/database/ClipboardDao.kt
@@ -2358,7 +2578,7 @@ index 6347dfd..de815f9 100644
                                          it.getStringOrNull(3),
                                          it.getStringOrNull(4)?.split("§"),
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/latin/inputlogic/InputLogic.java b/libs/keyboard/src/main/java/helium314/keyboard/latin/inputlogic/InputLogic.java
-index bf36c20..3564c6d 100644
+index bf36c20..770e6f9 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/latin/inputlogic/InputLogic.java
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/latin/inputlogic/InputLogic.java
 @@ -33,6 +33,7 @@ import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode;
@@ -2369,7 +2589,7 @@ index bf36c20..3564c6d 100644
  import helium314.keyboard.latin.LastComposedWord;
  import helium314.keyboard.latin.LatinIME;
  import helium314.keyboard.latin.NgramContext;
-@@ -742,6 +743,28 @@ public final class InputLogic {
+@@ -742,6 +743,35 @@ public final class InputLogic {
                      sendDownUpKeyEvent(KeyEvent.KEYCODE_PASTE);
                  }
                  break;
@@ -2383,6 +2603,13 @@ index bf36c20..3564c6d 100644
 +                // fixer across text before the cursor (capitalize "i", sentence caps,
 +                // dedupe repeated words).  Respects the per-user pref toggles.
 +                helium314.keyboard.latin.GrammarChecker.checkWholeField(mLatinIME, mConnection);
++                break;
++            case KeyCode.ENHANCE:
++                // SuperApp addition: TAP → Text Enhancements. Sends the selection (or the
++                // whole field) through the AI Model Routing provider with the configured
++                // style prompt and commits the reply in place (original kept as the
++                // one-tap revert suggestion). Async; progress/failure surface as toasts.
++                helium314.keyboard.latin.TextEnhancer.enhance(mLatinIME, mConnection);
 +                break;
 +            case KeyCode.TRANSLATE_BAR: {
 +                // SuperApp addition (patch 0001): LONG-PRESS → quick in-place
@@ -2398,7 +2625,7 @@ index bf36c20..3564c6d 100644
              case KeyCode.CLIPBOARD_PASTE:
                  sendDownUpKeyEvent(KeyEvent.KEYCODE_PASTE);
                  break;
-@@ -837,8 +860,10 @@ public final class InputLogic {
+@@ -837,8 +867,10 @@ public final class InputLogic {
                  mLatinIME.onTextInput(TimestampKt.getTimestamp(mLatinIME));
                  break;
              case KeyCode.EMOJI_SEARCH:
@@ -2411,7 +2638,7 @@ index bf36c20..3564c6d 100644
                  break;
              case KeyCode.SEND_INTENT_ONE, KeyCode.SEND_INTENT_TWO, KeyCode.SEND_INTENT_THREE:
                  IntentUtils.handleSendIntentKey(mLatinIME, event.getKeyCode());
-@@ -1229,6 +1254,7 @@ public final class InputLogic {
+@@ -1229,6 +1261,7 @@ public final class InputLogic {
          }
  
          inputTransaction.requireShiftUpdate(InputTransaction.SHIFT_UPDATE_NOW);
@@ -2420,7 +2647,7 @@ index bf36c20..3564c6d 100644
  
      /**
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/latin/settings/Defaults.kt b/libs/keyboard/src/main/java/helium314/keyboard/latin/settings/Defaults.kt
-index 3892112..08a023c 100644
+index 3892112..7cb3a7e 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/latin/settings/Defaults.kt
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/latin/settings/Defaults.kt
 @@ -74,7 +74,7 @@ object Defaults {
@@ -2479,7 +2706,7 @@ index 3892112..08a023c 100644
 +    // "remote" by default: "local" only ever ran the 3 built-in rules, so the
 +    // LanguageTool server was never consulted unless the user found the setting.
 +    // Remote falls back to the local rules on any network failure (off-mesh).
-+    const val PREF_GRAMMAR_MODE = "remote" // "off"|"local"|"remote"
++    const val PREF_GRAMMAR_MODE = "remote" // "off"|"local"|"remote"|"ai" ("ai" = AI Model Routing provider, grammar-only prompt)
 +    const val PREF_GRAMMAR_REMOTE_URL = "https://languagetool.diegonmarcos.com/v2/check"
 +    const val PREF_GRAMMAR_PT_VARIANT = "pt-PT" // LT code for a bare "pt" subtype: "pt-PT"|"pt-BR"
 +    const val PREF_GRAMMAR_NGRAM_URL = "" // placeholder for future n-gram API
@@ -2487,7 +2714,7 @@ index 3892112..08a023c 100644
      val PREF_DEBUG_MODE = BuildConfig.DEBUG
      const val PREF_SHOW_SUGGESTION_INFOS = false
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/latin/settings/Settings.java b/libs/keyboard/src/main/java/helium314/keyboard/latin/settings/Settings.java
-index f7be689..12dd0ee 100644
+index f7be689..4f7cf36 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/latin/settings/Settings.java
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/latin/settings/Settings.java
 @@ -110,6 +110,9 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
@@ -2500,7 +2727,7 @@ index f7be689..12dd0ee 100644
      public static final String PREF_EMOJI_KEY_FIT = "emoji_key_fit";
      public static final String PREF_EMOJI_SKIN_TONE = "emoji_skin_tone";
      public static final String PREF_SPACE_HORIZONTAL_SWIPE = "horizontal_space_swipe";
-@@ -198,9 +201,21 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
+@@ -198,9 +201,29 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
      // Emoji
      public static final String PREF_EMOJI_MAX_SDK = "emoji_max_sdk";
      public static final String PREF_EMOJI_RECENT_KEYS = "emoji_recent_keys";
@@ -2519,10 +2746,18 @@ index f7be689..12dd0ee 100644
 +    public static final String PREF_GRAMMAR_PT_VARIANT = "grammar_pt_variant"; // "pt-PT"|"pt-BR" for a bare "pt" subtype
 +    public static final String PREF_GRAMMAR_NGRAM_URL = "grammar_ngram_url"; // placeholder for future n-gram API
 +
++    // AI Model Routing (SuperApp addition — AiRouter; registry = build.json::keyboard_ai)
++    public static final String PREF_AI_PROVIDER = "ai_provider";        // provider id ("cloud"|"openrouter"|…)
++    public static final String PREF_AI_TOKEN_PREFIX = "ai_token_";      // + provider id → that provider's API key
++    public static final String PREF_AI_MODEL_PREFIX = "ai_model_";      // + provider id → that provider's model id
++    // Text Enhancements (SuperApp addition — TextEnhancer, ENHANCE toolbar key)
++    public static final String PREF_ENHANCE_STYLE = "enhance_style";    // style id from keyboard_ai.styles
++    public static final String PREF_ENHANCE_TOOLBAR_KEY = "enhance_toolbar_key"; // settings-registry key only; state lives in PREF_TOOLBAR_KEYS
++
      public static final String PREF_VERSION_CODE = "version_code";
      public static final String PREF_LIBRARY_CHECKSUM = "lib_checksum";
      public static final String PREF_SAVE_SUBTYPE_PER_APP = "save_subtype_per_app";
-@@ -220,7 +235,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
+@@ -220,7 +243,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
      private static boolean reloadOnChanged(String key) {
          return switch (key) {
              case PREF_LAST_SHOWN_EMOJI_CATEGORY_PAGE_ID, PREF_LAST_SHOWN_EMOJI_CATEGORY_ID, PREF_EMOJI_RECENT_KEYS,
@@ -2745,19 +2980,20 @@ index 0000000..11d0b44
 +    }
 +}
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/latin/utils/ToolbarUtils.kt b/libs/keyboard/src/main/java/helium314/keyboard/latin/utils/ToolbarUtils.kt
-index c49189c..6484890 100644
+index c49189c..86d62b4 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/latin/utils/ToolbarUtils.kt
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/latin/utils/ToolbarUtils.kt
-@@ -90,6 +90,8 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
+@@ -90,6 +90,9 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
      SPLIT -> KeyCode.SPLIT_LAYOUT
      FLOATING -> KeyCode.TOGGLE_FLOATING_WINDOW
      BACKGROUND_GATHERING -> KeyCode.BACKGROUND_GATHERING
 +    TRANSLATE -> KeyCode.TRANSLATE // SuperApp addition (patch 0001)
 +    GRAMMAR -> KeyCode.GRAMMAR    // SuperApp addition (patch 0002)
++    ENHANCE -> KeyCode.ENHANCE    // SuperApp addition — Text Enhancements
  }
  
  fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getCustomToolbarLongpressCode(key) ?: when (key) {
-@@ -109,6 +111,8 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
+@@ -109,6 +112,8 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
      PAGE_UP -> KeyCode.MOVE_START_OF_PAGE
      PAGE_DOWN -> KeyCode.MOVE_END_OF_PAGE
      BACKGROUND_GATHERING -> KeyCode.BACKGROUND_GATHERING_TEMP_OFF
@@ -2766,29 +3002,32 @@ index c49189c..6484890 100644
      else -> KeyCode.UNSPECIFIED
  }
  
-@@ -116,7 +120,9 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
+@@ -116,7 +121,10 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
  enum class ToolbarKey {
      VOICE, CLIPBOARD, NUMPAD, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, FLOATING, SPLIT,
      INCOGNITO, AUTOCORRECT, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
 -    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, BACKGROUND_GATHERING
 +    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, BACKGROUND_GATHERING,
 +    TRANSLATE, // SuperApp addition (patch 0001) — on-device ML Kit translate to active subtype language
-+    GRAMMAR    // SuperApp addition (patch 0002) — on-demand whole-field grammar fix
++    GRAMMAR,   // SuperApp addition (patch 0002) — on-demand whole-field grammar fix
++    ENHANCE    // SuperApp addition — Text Enhancements: rewrite selection/field via AI Model Routing
  }
  
  enum class ToolbarMode {
-@@ -125,15 +131,25 @@ enum class ToolbarMode {
+@@ -125,15 +133,27 @@ enum class ToolbarMode {
  
  val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java)) { it.toString().lowercase(Locale.US) }
  
 +// SuperApp default toolbar order (left -> right): all-to-left (line start),
-+// word-left, undo, clipboard, translate, grammar, number keyboard, voice input,
-+// select all, redo, word-right, all-to-right (line end). FULL_LEFT/FULL_RIGHT
-+// map to MOVE_START/END_OF_LINE. SETTINGS (Config) is intentionally NOT here —
-+// it lives in the pinned/fixed list below instead.
++// word-left, undo, clipboard, translate, enhance (Text Enhancements), number
++// keyboard, voice input, select all, redo, word-right, all-to-right (line end).
++// FULL_LEFT/FULL_RIGHT map to MOVE_START/END_OF_LINE. SETTINGS (Config) is
++// intentionally NOT here — it lives in the pinned/fixed list below instead.
++// NOTE: only fresh installs get this list; upgradeToolbarPref appends a NEW key
++// as disabled for users who already customised their toolbar (upstream contract).
  val defaultToolbarPref by lazy {
 -    val default = listOf(SETTINGS, VOICE, CLIPBOARD, UNDO, REDO, SELECT_WORD, COPY, PASTE, LEFT, RIGHT)
-+    val default = listOf(FULL_LEFT, WORD_LEFT, UNDO, CLIPBOARD, TRANSLATE, NUMPAD, VOICE, SELECT_ALL, REDO, WORD_RIGHT, FULL_RIGHT)
++    val default = listOf(FULL_LEFT, WORD_LEFT, UNDO, CLIPBOARD, TRANSLATE, ENHANCE, NUMPAD, VOICE, SELECT_ALL, REDO, WORD_RIGHT, FULL_RIGHT)
      val others = entries.filterNot { it in default || it == CLOSE_HISTORY }
      default.joinToString(Separators.ENTRY) { it.name + Separators.KV + true } + Separators.ENTRY +
              others.joinToString(Separators.ENTRY) { it.name + Separators.KV + false }
@@ -2806,18 +3045,41 @@ index c49189c..6484890 100644
  }
  
  val defaultClipboardToolbarPref by lazy {
+@@ -187,6 +207,20 @@ fun addPinnedKey(prefs: SharedPreferences, key: ToolbarKey) {
+     prefs.edit { putString(Settings.PREF_PINNED_TOOLBAR_KEYS, keys.joinToString(Separators.ENTRY)) }
+ }
+ 
++/**
++ * SuperApp addition: flip one key of the (non-pinned) toolbar list without touching its
++ * order. Settings → Text Enhancements uses it for its "Show in toolbar" switch, so that
++ * switch and Settings → Toolbar edit the same pref instead of a shadow boolean.
++ */
++fun setToolbarKeyEnabled(prefs: SharedPreferences, key: ToolbarKey, enabled: Boolean) {
++    val string = prefs.getString(Settings.PREF_TOOLBAR_KEYS, defaultToolbarPref)!!
++    val keys = string.split(Separators.ENTRY).toMutableList()
++    val entry = key.name + Separators.KV + enabled
++    val i = keys.indexOfFirst { it.startsWith(key.name + Separators.KV) }
++    if (i >= 0) keys[i] = entry else keys.add(entry)
++    prefs.edit { putString(Settings.PREF_TOOLBAR_KEYS, keys.joinToString(Separators.ENTRY)) }
++}
++
+ fun removePinnedKey(prefs: SharedPreferences, key: ToolbarKey) {
+     // just set it to disabled
+     val string = prefs.getString(Settings.PREF_PINNED_TOOLBAR_KEYS, defaultPinnedToolbarPref)!!
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/settings/SettingsContainer.kt b/libs/keyboard/src/main/java/helium314/keyboard/settings/SettingsContainer.kt
-index e7c59d1..c66da69 100644
+index e7c59d1..5502254 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/settings/SettingsContainer.kt
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/settings/SettingsContainer.kt
-@@ -9,11 +9,14 @@ import helium314.keyboard.latin.utils.JniUtils
+@@ -9,11 +9,16 @@ import helium314.keyboard.latin.utils.JniUtils
  import helium314.keyboard.settings.screens.createAboutSettings
  import helium314.keyboard.settings.screens.createAdvancedSettings
  import helium314.keyboard.settings.screens.createAppearanceSettings
 +import helium314.keyboard.settings.screens.createClipboardSettings
  import helium314.keyboard.settings.screens.createCorrectionSettings
  import helium314.keyboard.settings.screens.createGestureTypingSettings
++import helium314.keyboard.settings.screens.createAiRoutingSettings
 +import helium314.keyboard.settings.screens.createGrammarSettings
++import helium314.keyboard.settings.screens.createTextEnhanceSettings
  import helium314.keyboard.settings.screens.createLayoutSettings
  import helium314.keyboard.settings.screens.createPreferencesSettings
  import helium314.keyboard.settings.screens.createToolbarSettings
@@ -2825,19 +3087,20 @@ index e7c59d1..c66da69 100644
  
  class SettingsContainer(context: Context) {
      private val list = createSettings(context)
-@@ -63,8 +66,9 @@ class Setting(
+@@ -63,8 +68,10 @@ class Setting(
  
  // intentionally not putting individual debug settings in here so user knows the context
  private fun createSettings(context: Context) = createAboutSettings(context) + createAppearanceSettings(context) +
 -        createCorrectionSettings(context) + createPreferencesSettings(context) + createToolbarSettings(context) +
 -        createLayoutSettings(context) + createAdvancedSettings(context) +
 +        createCorrectionSettings(context) + createGrammarSettings(context) + createPreferencesSettings(context) +
++        createTextEnhanceSettings(context) + createAiRoutingSettings(context) + // SuperApp addition
 +        createClipboardSettings(context) + createTranslateSettings(context) +
 +        createToolbarSettings(context) + createLayoutSettings(context) + createAdvancedSettings(context) +
          if (JniUtils.sHaveGestureLib) createGestureTypingSettings(context) else emptyList()
  
  object SettingsWithoutKey {
-@@ -76,6 +80,7 @@ object SettingsWithoutKey {
+@@ -76,6 +83,7 @@ object SettingsWithoutKey {
      const val GITHUB = "github"
      const val GITHUB_WIKI = "github_wiki"
      const val SAVE_LOG = "save_log"
@@ -2845,7 +3108,7 @@ index e7c59d1..c66da69 100644
      const val BACKUP_RESTORE = "backup_restore"
      const val DEBUG_SETTINGS = "screen_debug"
      const val LOAD_GESTURE_LIB = "load_gesture_library"
-@@ -83,4 +88,8 @@ object SettingsWithoutKey {
+@@ -83,4 +91,8 @@ object SettingsWithoutKey {
      const val BACKGROUND_IMAGE_LANDSCAPE = "background_image_landscape"
      const val CUSTOM_FONT = "custom_font"
      const val CUSTOM_EMOJI_FONT = "custom_emoji_font"
@@ -2855,14 +3118,16 @@ index e7c59d1..c66da69 100644
 +    const val CLIPBOARD_RENAME_LIST = "clipboard_rename_list"
  }
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/settings/SettingsNavHost.kt b/libs/keyboard/src/main/java/helium314/keyboard/settings/SettingsNavHost.kt
-index 425d7d3..86b59fc 100644
+index 425d7d3..c7b160b 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/settings/SettingsNavHost.kt
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/settings/SettingsNavHost.kt
-@@ -30,8 +30,13 @@ import helium314.keyboard.settings.screens.PersonalDictionaryScreen
+@@ -30,8 +30,15 @@ import helium314.keyboard.settings.screens.PersonalDictionaryScreen
  import helium314.keyboard.settings.screens.PreferencesScreen
  import helium314.keyboard.settings.screens.SecondaryLayoutScreen
  import helium314.keyboard.settings.screens.SubtypeScreen
++import helium314.keyboard.settings.screens.AiRoutingScreen
 +import helium314.keyboard.settings.screens.GrammarCheckScreen
++import helium314.keyboard.settings.screens.TextEnhanceScreen
  import helium314.keyboard.settings.screens.TextCorrectionScreen
  import helium314.keyboard.settings.screens.ToolbarScreen
 +import helium314.keyboard.settings.screens.TranslationInfoScreen
@@ -2872,7 +3137,7 @@ index 425d7d3..86b59fc 100644
  import helium314.keyboard.settings.screens.gesturedata.GestureDataScreen
  import helium314.keyboard.settings.screens.gesturedata.ReviewScreen
  import kotlinx.coroutines.CoroutineScope
-@@ -69,6 +74,11 @@ fun SettingsNavHost(
+@@ -69,6 +76,13 @@ fun SettingsNavHost(
              MainSettingsScreen(
                  onClickAbout = { navController.navigate(SettingsDestination.About) },
                  onClickTextCorrection = { navController.navigate(SettingsDestination.TextCorrection) },
@@ -2881,10 +3146,12 @@ index 425d7d3..86b59fc 100644
 +                onClickTranslation = { navController.navigate(SettingsDestination.Translation) },
 +                onClickEmoji = { navController.navigate(SettingsDestination.Emoji) },
 +                onClickVoiceTranscript = { navController.navigate(SettingsDestination.VoiceTranscript) },
++                onClickTextEnhance = { navController.navigate(SettingsDestination.TextEnhance) }, // SuperApp addition
++                onClickAiRouting = { navController.navigate(SettingsDestination.AiRouting) }, // SuperApp addition
                  onClickPreferences = { navController.navigate(SettingsDestination.Preferences) },
                  onClickToolbar = { navController.navigate(SettingsDestination.Toolbar) },
                  onClickGestureTyping = { navController.navigate(SettingsDestination.GestureTyping) },
-@@ -87,6 +97,21 @@ fun SettingsNavHost(
+@@ -87,6 +101,27 @@ fun SettingsNavHost(
          composable(SettingsDestination.TextCorrection) {
              TextCorrectionScreen(onClickBack = ::goBack)
          }
@@ -2903,10 +3170,16 @@ index 425d7d3..86b59fc 100644
 +        composable(SettingsDestination.VoiceTranscript) {
 +            VoiceTranscriptInfoScreen(onClickBack = ::goBack)
 +        }
++        composable(SettingsDestination.TextEnhance) { // SuperApp addition
++            TextEnhanceScreen(onClickBack = ::goBack)
++        }
++        composable(SettingsDestination.AiRouting) { // SuperApp addition
++            AiRoutingScreen(onClickBack = ::goBack)
++        }
          composable(SettingsDestination.Preferences) {
              PreferencesScreen(onClickBack = ::goBack)
          }
-@@ -148,6 +173,11 @@ object SettingsDestination {
+@@ -148,6 +183,13 @@ object SettingsDestination {
      const val Settings = "settings"
      const val About = "about"
      const val TextCorrection = "text_correction"
@@ -2915,6 +3188,8 @@ index 425d7d3..86b59fc 100644
 +    const val Translation = "translation_info" // SuperApp addition
 +    const val Emoji = "emoji_info" // SuperApp addition
 +    const val VoiceTranscript = "voice_transcript_info" // SuperApp addition
++    const val TextEnhance = "text_enhance" // SuperApp addition
++    const val AiRouting = "ai_routing" // SuperApp addition
      const val Preferences = "preferences"
      const val Toolbar = "toolbar"
      const val GestureTyping = "gesture_typing"
@@ -2956,6 +3231,90 @@ index 71edcba..491a23f 100644
  )
  
  @Preview
+diff --git a/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/AiRoutingScreen.kt b/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/AiRoutingScreen.kt
+new file mode 100644
+index 0000000..7f70595
+--- /dev/null
++++ b/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/AiRoutingScreen.kt
+@@ -0,0 +1,78 @@
++// SPDX-License-Identifier: GPL-3.0-only
++package helium314.keyboard.settings.screens
++
++import android.content.Context
++import androidx.compose.material3.Surface
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.collectAsState
++import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.tooling.preview.Preview
++import helium314.keyboard.latin.AiRouter
++import helium314.keyboard.latin.R
++import helium314.keyboard.latin.settings.Settings
++import helium314.keyboard.latin.utils.Log
++import helium314.keyboard.latin.utils.Theme
++import helium314.keyboard.latin.utils.getActivity
++import helium314.keyboard.latin.utils.previewDark
++import helium314.keyboard.settings.SearchSettingsScreen
++import helium314.keyboard.settings.Setting
++import helium314.keyboard.settings.SettingsActivity
++import helium314.keyboard.settings.initPreview
++import helium314.keyboard.settings.preferences.ListPreference
++import helium314.keyboard.settings.preferences.TextInputPreference
++
++// SuperApp addition — "AI Model Routing": the ONE provider/token/model choice shared by
++// Text Enhancements, Grammar check (mode "ai") and translation. Everything here is built
++// from build.json::keyboard_ai (AiRouter.providers) — add a provider = one JSON entry.
++
++/** `ai_token_<id>_title` / `ai_model_<id>_title` if the provider has its own string, else the generic one. */
++private fun Context.titleFor(prefix: String, id: String, generic: Int): Int =
++    resources.getIdentifier("$prefix${id}_title", "string", packageName).takeIf { it != 0 } ?: generic
++
++fun createAiRoutingSettings(context: Context): List<Setting> = listOf(
++    Setting(context, Settings.PREF_AI_PROVIDER, R.string.ai_provider_title, R.string.ai_provider_summary) { setting ->
++        ListPreference(setting, AiRouter.providers.map { it.label to it.id }, AiRouter.defaultProvider)
++    },
++) + AiRouter.providers.flatMap { p ->
++    listOf(
++        Setting(context, Settings.PREF_AI_TOKEN_PREFIX + p.id, context.titleFor("ai_token_", p.id, R.string.ai_token_title),
++            if (p.needsToken) R.string.ai_token_summary else R.string.ai_token_optional_summary) { setting ->
++            TextInputPreference(setting, "")
++        },
++        Setting(context, Settings.PREF_AI_MODEL_PREFIX + p.id, context.titleFor("ai_model_", p.id, R.string.ai_model_title)) { setting ->
++            ListPreference(setting, p.models.map { it to it }, p.defaultModel)
++        },
++    )
++}
++
++@Composable
++fun AiRoutingScreen(onClickBack: () -> Unit) {
++    val ctx = LocalContext.current
++    val b = (ctx.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
++    if ((b?.value ?: 0) < 0)
++        Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
++    // Only the selected provider's key + model are shown; switching provider re-composes.
++    val p = AiRouter.provider(ctx)
++    val items = listOf(
++        Settings.PREF_AI_PROVIDER,
++        Settings.PREF_AI_TOKEN_PREFIX + p.id,
++        Settings.PREF_AI_MODEL_PREFIX + p.id,
++    )
++    SearchSettingsScreen(
++        onClickBack = onClickBack,
++        title = stringResource(R.string.settings_screen_ai_routing),
++        settings = items,
++    )
++}
++
++@Preview
++@Composable
++private fun PreferencePreview() {
++    initPreview(LocalContext.current)
++    Theme(previewDark) {
++        Surface {
++            AiRoutingScreen {}
++        }
++    }
++}
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/AppearanceScreen.kt b/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/AppearanceScreen.kt
 index 1151eb4..cd97d53 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/AppearanceScreen.kt
@@ -3284,10 +3643,10 @@ index 0000000..bdc7179
 +}
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/GrammarCheckScreen.kt b/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/GrammarCheckScreen.kt
 new file mode 100644
-index 0000000..0c6ebd2
+index 0000000..b4157cf
 --- /dev/null
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/GrammarCheckScreen.kt
-@@ -0,0 +1,118 @@
+@@ -0,0 +1,119 @@
 +// SPDX-License-Identifier: GPL-3.0-only
 +package helium314.keyboard.settings.screens
 +
@@ -3322,6 +3681,7 @@ index 0000000..0c6ebd2
 +            context.getString(R.string.grammar_mode_off) to "off",
 +            context.getString(R.string.grammar_mode_local) to "local",
 +            context.getString(R.string.grammar_mode_remote) to "remote",
++            context.getString(R.string.grammar_mode_ai) to "ai", // SuperApp: AI Model Routing provider, grammar-only prompt
 +        )
 +        ListPreference(setting, items, Defaults.PREF_GRAMMAR_MODE)
 +    },
@@ -3407,7 +3767,7 @@ index 0000000..0c6ebd2
 +    }
 +}
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/MainSettingsScreen.kt b/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/MainSettingsScreen.kt
-index a2f8c7e..1592ff2 100644
+index a2f8c7e..a031fc5 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/MainSettingsScreen.kt
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/MainSettingsScreen.kt
 @@ -25,6 +25,7 @@ import helium314.keyboard.settings.SearchSettingsScreen
@@ -3418,7 +3778,7 @@ index a2f8c7e..1592ff2 100644
  import helium314.keyboard.latin.utils.previewDark
  import helium314.keyboard.settings.screens.gesturedata.END_DATE_EPOCH_MILLIS
  import helium314.keyboard.settings.screens.gesturedata.TWO_WEEKS_IN_MILLIS
-@@ -33,6 +34,11 @@ import helium314.keyboard.settings.screens.gesturedata.TWO_WEEKS_IN_MILLIS
+@@ -33,6 +34,13 @@ import helium314.keyboard.settings.screens.gesturedata.TWO_WEEKS_IN_MILLIS
  fun MainSettingsScreen(
      onClickAbout: () -> Unit,
      onClickTextCorrection: () -> Unit,
@@ -3427,10 +3787,12 @@ index a2f8c7e..1592ff2 100644
 +    onClickTranslation: () -> Unit, // SuperApp addition
 +    onClickEmoji: () -> Unit, // SuperApp addition
 +    onClickVoiceTranscript: () -> Unit, // SuperApp addition
++    onClickTextEnhance: () -> Unit, // SuperApp addition — Text Enhancements
++    onClickAiRouting: () -> Unit, // SuperApp addition — AI Model Routing
      onClickPreferences: () -> Unit,
      onClickToolbar: () -> Unit,
      onClickGestureTyping: () -> Unit,
-@@ -54,27 +60,94 @@ fun MainSettingsScreen(
+@@ -54,27 +62,109 @@ fun MainSettingsScreen(
              Column(
                  Modifier.verticalScroll(rememberScrollState()).then(Modifier.padding(innerPadding))
              ) {
@@ -3450,6 +3812,13 @@ index a2f8c7e..1592ff2 100644
 +                    onClick = onClickTranslation,
 +                    icon = R.drawable.ic_settings_about
 +                ) { NextScreenIcon() }
++                // SuperApp addition — Text Enhancements sits before Grammar check (both
++                // are "fix my text" tools; enhancement is the broader one).
++                Preference(
++                    name = stringResource(R.string.settings_screen_enhance),
++                    onClick = onClickTextEnhance,
++                    icon = R.drawable.ic_toolbar_enhance
++                ) { NextScreenIcon() }
 +                Preference(
 +                    name = stringResource(R.string.settings_screen_grammar),
 +                    onClick = onClickGrammarCheck,
@@ -3459,6 +3828,14 @@ index a2f8c7e..1592ff2 100644
 +                    name = stringResource(R.string.settings_screen_voice_transcript),
 +                    onClick = onClickVoiceTranscript,
 +                    icon = R.drawable.ic_settings_about
++                ) { NextScreenIcon() }
++                // SuperApp addition — AI Model Routing: the shared provider/key/model
++                // used by Text Enhancements, Grammar check (AI mode) and translation.
++                Preference(
++                    name = stringResource(R.string.settings_screen_ai_routing),
++                    description = stringResource(R.string.settings_screen_ai_routing_summary),
++                    onClick = onClickAiRouting,
++                    icon = R.drawable.ic_settings_advanced
 +                ) { NextScreenIcon() }
 +                // SuperApp addition — self-update entry, shown ONLY in the standalone Cloud
 +                // Keyboard app (the SuperApp updates its embedded keyboard via its own AppStore,
@@ -3530,7 +3907,7 @@ index a2f8c7e..1592ff2 100644
                  if (JniUtils.sHaveGestureLib)
                      Preference(
                          name = stringResource(R.string.settings_screen_gesture),
-@@ -93,21 +166,6 @@ fun MainSettingsScreen(
+@@ -93,21 +183,6 @@ fun MainSettingsScreen(
                      onClick = onClickTextCorrection,
                      icon = R.drawable.ic_settings_correction
                  ) { NextScreenIcon() }
@@ -3552,12 +3929,12 @@ index a2f8c7e..1592ff2 100644
                  Preference(
                      name = stringResource(R.string.settings_screen_about),
                      onClick = onClickAbout,
-@@ -124,7 +182,7 @@ private fun PreviewScreen() {
+@@ -124,7 +199,7 @@ private fun PreviewScreen() {
      initPreview(LocalContext.current)
      Theme(previewDark) {
          Surface {
 -            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
-+            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
++            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
          }
      }
  }
@@ -3643,6 +4020,91 @@ index 3a503e0..d67ac34 100644
      Setting(context, Settings.PREF_VIBRATION_DURATION_SETTINGS, R.string.prefs_keypress_vibration_duration_settings) { setting ->
          SliderPreference(
              name = setting.title,
+diff --git a/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/TextEnhanceScreen.kt b/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/TextEnhanceScreen.kt
+new file mode 100644
+index 0000000..f854d22
+--- /dev/null
++++ b/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/TextEnhanceScreen.kt
+@@ -0,0 +1,79 @@
++// SPDX-License-Identifier: GPL-3.0-only
++package helium314.keyboard.settings.screens
++
++import android.content.Context
++import androidx.compose.material3.Surface
++import androidx.compose.material3.Switch
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.collectAsState
++import androidx.compose.ui.platform.LocalContext
++import androidx.compose.ui.res.stringResource
++import androidx.compose.ui.tooling.preview.Preview
++import helium314.keyboard.latin.AiRouter
++import helium314.keyboard.latin.R
++import helium314.keyboard.latin.settings.Settings
++import helium314.keyboard.latin.utils.Log
++import helium314.keyboard.latin.utils.Theme
++import helium314.keyboard.latin.utils.ToolbarKey
++import helium314.keyboard.latin.utils.getActivity
++import helium314.keyboard.latin.utils.getEnabledToolbarKeys
++import helium314.keyboard.latin.utils.prefs
++import helium314.keyboard.latin.utils.previewDark
++import helium314.keyboard.latin.utils.setToolbarKeyEnabled
++import helium314.keyboard.settings.SearchSettingsScreen
++import helium314.keyboard.settings.Setting
++import helium314.keyboard.settings.SettingsActivity
++import helium314.keyboard.settings.initPreview
++import helium314.keyboard.settings.preferences.ListPreference
++import helium314.keyboard.settings.preferences.Preference
++
++// SuperApp addition — "Text Enhancements": style of the rewrite the ENHANCE toolbar key
++// asks the AI Model Routing provider for, and whether that key is on the toolbar.
++// Styles come from build.json::keyboard_ai.styles (AiRouter.styles).
++
++fun createTextEnhanceSettings(context: Context): List<Setting> = listOf(
++    Setting(context, Settings.PREF_ENHANCE_STYLE, R.string.enhance_style_title, R.string.enhance_style_summary) { setting ->
++        ListPreference(setting, AiRouter.styles.map { it.label to it.id }, AiRouter.defaultStyle)
++    },
++    // Not a stored pref of its own: it reads/writes the ENHANCE entry of the toolbar-keys
++    // pref, so this switch and Settings → Toolbar never disagree.
++    Setting(context, Settings.PREF_ENHANCE_TOOLBAR_KEY, R.string.enhance_toolbar_title, R.string.enhance_toolbar_summary) { setting ->
++        val ctx = LocalContext.current
++        val b = (ctx.getActivity() as? SettingsActivity)?.prefChanged?.collectAsState()
++        if ((b?.value ?: 0) < 0)
++            Log.v("irrelevant", "stupid way to trigger recomposition on preference change")
++        val prefs = ctx.prefs()
++        val enabled = ToolbarKey.ENHANCE in getEnabledToolbarKeys(prefs)
++        Preference(
++            name = setting.title,
++            description = setting.description,
++            onClick = { setToolbarKeyEnabled(prefs, ToolbarKey.ENHANCE, !enabled) },
++        ) {
++            Switch(checked = enabled, onCheckedChange = { setToolbarKeyEnabled(prefs, ToolbarKey.ENHANCE, it) })
++        }
++    },
++)
++
++@Composable
++fun TextEnhanceScreen(onClickBack: () -> Unit) {
++    val items = listOf(
++        Settings.PREF_ENHANCE_STYLE,
++        Settings.PREF_ENHANCE_TOOLBAR_KEY,
++    )
++    SearchSettingsScreen(
++        onClickBack = onClickBack,
++        title = stringResource(R.string.settings_screen_enhance),
++        settings = items,
++    )
++}
++
++@Preview
++@Composable
++private fun PreferencePreview() {
++    initPreview(LocalContext.current)
++    Theme(previewDark) {
++        Surface {
++            TextEnhanceScreen {}
++        }
++    }
++}
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/TranslationInfoScreen.kt b/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/TranslationInfoScreen.kt
 new file mode 100644
 index 0000000..a498cc0
@@ -3871,6 +4333,25 @@ index 0000000..1f94fd9
 +        }
 +    }
 +}
+diff --git a/libs/keyboard/src/main/res/drawable/ic_toolbar_enhance.xml b/libs/keyboard/src/main/res/drawable/ic_toolbar_enhance.xml
+new file mode 100644
+index 0000000..0f07ac8
+--- /dev/null
++++ b/libs/keyboard/src/main/res/drawable/ic_toolbar_enhance.xml
+@@ -0,0 +1,13 @@
++<!--
++    Material "auto_fix_high" (magic wand) icon. SuperApp addition for the ENHANCE
++    toolbar key (Text Enhancements). Apache-2.0 (Android Material icon set).
++    Runtime-tinted by KeyboardIconsSet like the other toolbar glyphs.
++-->
++<vector xmlns:android="http://schemas.android.com/apk/res/android"
++    android:height="24dp"
++    android:width="24dp"
++    android:viewportHeight="24"
++    android:viewportWidth="24" >
++    <path android:fillColor="#FFF"
++        android:pathData="M7.5,5.6L10,7 8.6,4.5 10,2 7.5,3.4 5,2l1.4,2.5L5,7zM19.5,15.4L17,14l1.4,2.5L17,19l2.5,-1.4L22,19l-1.4,-2.5L22,14zM22,2l-2.5,1.4L17,2l1.4,2.5L17,7l2.5,-1.4L22,7l-1.4,-2.5zM14.37,7.29c-0.39,-0.39 -1.02,-0.39 -1.41,0L1.29,18.96c-0.39,0.39 -0.39,1.02 0,1.41l2.34,2.34c0.39,0.39 1.02,0.39 1.41,0L16.7,11.05c0.39,-0.39 0.39,-1.02 0,-1.41l-2.33,-2.35zM13.34,12.78l-2.12,-2.12 2.44,-2.44 2.12,2.12 -2.44,2.44z"/>
++</vector>
 diff --git a/libs/keyboard/src/main/res/drawable/ic_toolbar_translate.xml b/libs/keyboard/src/main/res/drawable/ic_toolbar_translate.xml
 new file mode 100644
 index 0000000..294aa92
@@ -5353,7 +5834,7 @@ index 33ad67c..c2ee930 100644
      <integer name="config_delay_in_milliseconds_to_update_suggestions">100</integer>
  
 diff --git a/libs/keyboard/src/main/res/values/strings.xml b/libs/keyboard/src/main/res/values/strings.xml
-index 5118691..b8e11bb 100644
+index 5118691..876581d 100644
 --- a/libs/keyboard/src/main/res/values/strings.xml
 +++ b/libs/keyboard/src/main/res/values/strings.xml
 @@ -9,11 +9,11 @@
@@ -5371,7 +5852,7 @@ index 5118691..b8e11bb 100644
      <!-- Option to provide vibrate/haptic feedback on keypress -->
      <string name="vibrate_on_keypress">Vibrate on keypress</string>
      <!-- Option to provide vibrate/haptic feedback on keypress even in do not disturb mode -->
-@@ -44,6 +44,25 @@
+@@ -44,6 +44,29 @@
      <string name="settings_screen_gesture">Gesture Typing</string>
      <!-- Settings screen title for text correction options -->
      <string name="settings_screen_correction">Text correction</string>
@@ -5394,10 +5875,14 @@ index 5118691..b8e11bb 100644
 +    <string name="translate_live_commit_summary">Gboard-style: the translation is written into the app as you type, instead of previewed in the bar. Fragile in apps that edit their own text.</string>
 +    <string name="settings_screen_emoji">Emoji, GIFs &amp; Stickers</string>
 +    <string name="settings_screen_voice_transcript">Voice transcript</string>
++    <!-- SuperApp addition — Text Enhancements + AI Model Routing screens -->
++    <string name="settings_screen_enhance">Text Enhancements</string>
++    <string name="settings_screen_ai_routing">AI Model Routing</string>
++    <string name="settings_screen_ai_routing_summary">Provider, API key and model used by Text Enhancements, Grammar check (AI mode) and Translation</string>
      <!-- Settings screen title for advanced settings -->
      <string name="settings_screen_advanced">Advanced</string>
      <!-- Settings screen title for keyboard theme settings -->
-@@ -210,6 +229,55 @@
+@@ -210,6 +233,78 @@
      <string name="clipboard_history_files">Add images and other files to clipboard history</string>
      <!-- Preferences item for selecting maximum combined size of clipboard history files -->
      <string name="clipboard_history_max_file_size">Clipboard size limit</string>
@@ -5446,6 +5931,29 @@ index 5118691..b8e11bb 100644
 +    <string name="grammar_pt_variant_br">Brazilian (pt-BR)</string>
 +    <string name="grammar_ngram_url_title">Grammar n-gram API connect</string>
 +    <string name="grammar_ngram_url_summary">Endpoint for future n-gram confusion-pair detection (placeholder — not yet active)</string>
++    <string name="grammar_mode_ai">AI (Model Routing)</string>
++    <!-- SuperApp addition — AI Model Routing (AiRouter; registry = build.json::keyboard_ai) -->
++    <string name="ai_provider_title">Provider</string>
++    <string name="ai_provider_summary">Where AI requests go. Cloud = your own mesh bridge (no key on the mesh); OpenRouter = openrouter.ai with your key</string>
++    <string name="ai_token_title">API key</string>
++    <string name="ai_token_summary">Paste the provider\'s API key. Stored only in this keyboard\'s settings</string>
++    <string name="ai_token_optional_summary">Optional — only if the bridge is reached through an authenticated gateway</string>
++    <string name="ai_model_title">Model</string>
++    <string name="ai_token_cloud_title" tools:keep="@string/ai_token_cloud_title">Cloud API key</string>
++    <string name="ai_model_cloud_title" tools:keep="@string/ai_model_cloud_title">Cloud model</string>
++    <string name="ai_token_openrouter_title" tools:keep="@string/ai_token_openrouter_title">OpenRouter API key</string>
++    <string name="ai_model_openrouter_title" tools:keep="@string/ai_model_openrouter_title">OpenRouter model</string>
++    <string name="ai_no_token">No API key for %1$s — add one in Settings → AI Model Routing</string>
++    <!-- SuperApp addition — Text Enhancements (TextEnhancer; ENHANCE toolbar key) -->
++    <string name="enhance" tools:keep="@string/enhance">Text enhancement</string>
++    <string name="enhance_style_title">Enhancement style</string>
++    <string name="enhance_style_summary">What the AI is asked to do with the selected text (or the whole field)</string>
++    <string name="enhance_toolbar_title">Show in toolbar</string>
++    <string name="enhance_toolbar_summary">Magic-wand key on the toolbar: tap to enhance the selection or the whole field</string>
++    <string name="enhance_in_progress">Enhancing with %1$s…</string>
++    <string name="enhance_failed">Enhancement failed: %1$s</string>
++    <string name="enhance_unchanged">Nothing to improve</string>
++    <string name="enhance_stale">Text changed while enhancing — skipped</string>
 +    <!-- Standalone Cloud Keyboard self-update entry (Configs menu) -->
 +    <string name="keyboard_update">Update Cloud Keyboard</string>
 +    <string name="keyboard_update_summary">Download and install the latest version</string>
@@ -5453,7 +5961,7 @@ index 5118691..b8e11bb 100644
      <!-- Description, used for non-image clipboard files -->
      <string name="item_description">Description: %s</string>
      <!-- Type, used for non-image clipboard files -->
-@@ -407,6 +475,8 @@
+@@ -407,6 +502,8 @@
      <string name="prefs_font_scale">Keyboard font scale</string>
      <!-- Title of the setting for adjusting font size in emoji view -->
      <string name="prefs_emoji_font_scale">Emoji view font scale</string>
@@ -5462,7 +5970,7 @@ index 5118691..b8e11bb 100644
      <!-- Title of the setting for adjusting emoji key size to fit emoji size in emoji view -->
      <string name="prefs_emoji_key_fit">Scale emoji key size with font size</string>
      <!-- Title of the setting for setting default emoji skin tone -->
-@@ -787,6 +857,7 @@ New dictionary:
+@@ -787,6 +884,7 @@ New dictionary:
      <string name="about_wiki_link_description">The Wiki can be improved by any GitHub user!</string>
      <!-- preference title for saving the log to a file -->
      <string name="save_log">Save log</string>

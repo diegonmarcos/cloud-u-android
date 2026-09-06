@@ -216,6 +216,14 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_GRAMMAR_PT_VARIANT = "grammar_pt_variant"; // "pt-PT"|"pt-BR" for a bare "pt" subtype
     public static final String PREF_GRAMMAR_NGRAM_URL = "grammar_ngram_url"; // placeholder for future n-gram API
 
+    // AI Model Routing (SuperApp addition — AiRouter; registry = build.json::keyboard_ai)
+    public static final String PREF_AI_PROVIDER = "ai_provider";        // provider id ("cloud"|"openrouter"|…)
+    public static final String PREF_AI_TOKEN_PREFIX = "ai_token_";      // + provider id → that provider's API key
+    public static final String PREF_AI_MODEL_PREFIX = "ai_model_";      // + provider id → that provider's model id
+    // Text Enhancements (SuperApp addition — TextEnhancer, ENHANCE toolbar key)
+    public static final String PREF_ENHANCE_STYLE = "enhance_style";    // style id from keyboard_ai.styles
+    public static final String PREF_ENHANCE_TOOLBAR_KEY = "enhance_toolbar_key"; // settings-registry key only; state lives in PREF_TOOLBAR_KEYS
+
     public static final String PREF_VERSION_CODE = "version_code";
     public static final String PREF_LIBRARY_CHECKSUM = "lib_checksum";
     public static final String PREF_SAVE_SUBTYPE_PER_APP = "save_subtype_per_app";

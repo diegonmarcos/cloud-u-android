@@ -39,6 +39,8 @@ fun MainSettingsScreen(
     onClickTranslation: () -> Unit, // SuperApp addition
     onClickEmoji: () -> Unit, // SuperApp addition
     onClickVoiceTranscript: () -> Unit, // SuperApp addition
+    onClickTextEnhance: () -> Unit, // SuperApp addition — Text Enhancements
+    onClickAiRouting: () -> Unit, // SuperApp addition — AI Model Routing
     onClickPreferences: () -> Unit,
     onClickToolbar: () -> Unit,
     onClickGestureTyping: () -> Unit,
@@ -76,6 +78,13 @@ fun MainSettingsScreen(
                     onClick = onClickTranslation,
                     icon = R.drawable.ic_settings_about
                 ) { NextScreenIcon() }
+                // SuperApp addition — Text Enhancements sits before Grammar check (both
+                // are "fix my text" tools; enhancement is the broader one).
+                Preference(
+                    name = stringResource(R.string.settings_screen_enhance),
+                    onClick = onClickTextEnhance,
+                    icon = R.drawable.ic_toolbar_enhance
+                ) { NextScreenIcon() }
                 Preference(
                     name = stringResource(R.string.settings_screen_grammar),
                     onClick = onClickGrammarCheck,
@@ -85,6 +94,14 @@ fun MainSettingsScreen(
                     name = stringResource(R.string.settings_screen_voice_transcript),
                     onClick = onClickVoiceTranscript,
                     icon = R.drawable.ic_settings_about
+                ) { NextScreenIcon() }
+                // SuperApp addition — AI Model Routing: the shared provider/key/model
+                // used by Text Enhancements, Grammar check (AI mode) and translation.
+                Preference(
+                    name = stringResource(R.string.settings_screen_ai_routing),
+                    description = stringResource(R.string.settings_screen_ai_routing_summary),
+                    onClick = onClickAiRouting,
+                    icon = R.drawable.ic_settings_advanced
                 ) { NextScreenIcon() }
                 // SuperApp addition — self-update entry, shown ONLY in the standalone Cloud
                 // Keyboard app (the SuperApp updates its embedded keyboard via its own AppStore,
@@ -182,7 +199,7 @@ private fun PreviewScreen() {
     initPreview(LocalContext.current)
     Theme(previewDark) {
         Surface {
-            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
+            MainSettingsScreen({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {})
         }
     }
 }

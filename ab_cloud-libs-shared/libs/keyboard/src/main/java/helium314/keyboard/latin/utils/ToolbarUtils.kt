@@ -92,6 +92,7 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     BACKGROUND_GATHERING -> KeyCode.BACKGROUND_GATHERING
     TRANSLATE -> KeyCode.TRANSLATE // SuperApp addition (patch 0001)
     GRAMMAR -> KeyCode.GRAMMAR    // SuperApp addition (patch 0002)
+    ENHANCE -> KeyCode.ENHANCE    // SuperApp addition — Text Enhancements
 }
 
 fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getCustomToolbarLongpressCode(key) ?: when (key) {
@@ -122,7 +123,8 @@ enum class ToolbarKey {
     INCOGNITO, AUTOCORRECT, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
     PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, BACKGROUND_GATHERING,
     TRANSLATE, // SuperApp addition (patch 0001) — on-device ML Kit translate to active subtype language
-    GRAMMAR    // SuperApp addition (patch 0002) — on-demand whole-field grammar fix
+    GRAMMAR,   // SuperApp addition (patch 0002) — on-demand whole-field grammar fix
+    ENHANCE    // SuperApp addition — Text Enhancements: rewrite selection/field via AI Model Routing
 }
 
 enum class ToolbarMode {
@@ -132,12 +134,14 @@ enum class ToolbarMode {
 val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java)) { it.toString().lowercase(Locale.US) }
 
 // SuperApp default toolbar order (left -> right): all-to-left (line start),
-// word-left, undo, clipboard, translate, grammar, number keyboard, voice input,
-// select all, redo, word-right, all-to-right (line end). FULL_LEFT/FULL_RIGHT
-// map to MOVE_START/END_OF_LINE. SETTINGS (Config) is intentionally NOT here —
-// it lives in the pinned/fixed list below instead.
+// word-left, undo, clipboard, translate, enhance (Text Enhancements), number
+// keyboard, voice input, select all, redo, word-right, all-to-right (line end).
+// FULL_LEFT/FULL_RIGHT map to MOVE_START/END_OF_LINE. SETTINGS (Config) is
+// intentionally NOT here — it lives in the pinned/fixed list below instead.
+// NOTE: only fresh installs get this list; upgradeToolbarPref appends a NEW key
+// as disabled for users who already customised their toolbar (upstream contract).
 val defaultToolbarPref by lazy {
-    val default = listOf(FULL_LEFT, WORD_LEFT, UNDO, CLIPBOARD, TRANSLATE, NUMPAD, VOICE, SELECT_ALL, REDO, WORD_RIGHT, FULL_RIGHT)
+    val default = listOf(FULL_LEFT, WORD_LEFT, UNDO, CLIPBOARD, TRANSLATE, ENHANCE, NUMPAD, VOICE, SELECT_ALL, REDO, WORD_RIGHT, FULL_RIGHT)
     val others = entries.filterNot { it in default || it == CLOSE_HISTORY }
     default.joinToString(Separators.ENTRY) { it.name + Separators.KV + true } + Separators.ENTRY +
             others.joinToString(Separators.ENTRY) { it.name + Separators.KV + false }
@@ -201,6 +205,20 @@ fun addPinnedKey(prefs: SharedPreferences, key: ToolbarKey) {
     val lastEnabledIndex = keys.indexOfLast { it.endsWith("true") }
     keys.add(lastEnabledIndex + 1, key.name + Separators.KV + "true")
     prefs.edit { putString(Settings.PREF_PINNED_TOOLBAR_KEYS, keys.joinToString(Separators.ENTRY)) }
+}
+
+/**
+ * SuperApp addition: flip one key of the (non-pinned) toolbar list without touching its
+ * order. Settings → Text Enhancements uses it for its "Show in toolbar" switch, so that
+ * switch and Settings → Toolbar edit the same pref instead of a shadow boolean.
+ */
+fun setToolbarKeyEnabled(prefs: SharedPreferences, key: ToolbarKey, enabled: Boolean) {
+    val string = prefs.getString(Settings.PREF_TOOLBAR_KEYS, defaultToolbarPref)!!
+    val keys = string.split(Separators.ENTRY).toMutableList()
+    val entry = key.name + Separators.KV + enabled
+    val i = keys.indexOfFirst { it.startsWith(key.name + Separators.KV) }
+    if (i >= 0) keys[i] = entry else keys.add(entry)
+    prefs.edit { putString(Settings.PREF_TOOLBAR_KEYS, keys.joinToString(Separators.ENTRY)) }
 }
 
 fun removePinnedKey(prefs: SharedPreferences, key: ToolbarKey) {

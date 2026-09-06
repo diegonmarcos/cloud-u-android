@@ -754,6 +754,13 @@ public final class InputLogic {
                 // dedupe repeated words).  Respects the per-user pref toggles.
                 helium314.keyboard.latin.GrammarChecker.checkWholeField(mLatinIME, mConnection);
                 break;
+            case KeyCode.ENHANCE:
+                // SuperApp addition: TAP → Text Enhancements. Sends the selection (or the
+                // whole field) through the AI Model Routing provider with the configured
+                // style prompt and commits the reply in place (original kept as the
+                // one-tap revert suggestion). Async; progress/failure surface as toasts.
+                helium314.keyboard.latin.TextEnhancer.enhance(mLatinIME, mConnection);
+                break;
             case KeyCode.TRANSLATE_BAR: {
                 // SuperApp addition (patch 0001): LONG-PRESS → quick in-place
                 // translate of the selection (or whole field) into the active

@@ -281,6 +281,9 @@ object GrammarChecker {
         when (resolveMode(context)) {
             "off" -> return
             "remote" -> checkWholeFieldRemote(context, connection)
+            // "ai": the AI Model Routing provider with the grammar-only prompt — same
+            // in-place replace + revert span as Text Enhancements, no LanguageTool.
+            "ai" -> TextEnhancer.run(context, connection, AiRouter.styleById("grammar"))
             else -> checkWholeFieldLocal(context, connection)
         }
     }

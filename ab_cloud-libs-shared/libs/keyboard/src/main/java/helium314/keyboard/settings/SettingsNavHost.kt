@@ -30,7 +30,9 @@ import helium314.keyboard.settings.screens.PersonalDictionaryScreen
 import helium314.keyboard.settings.screens.PreferencesScreen
 import helium314.keyboard.settings.screens.SecondaryLayoutScreen
 import helium314.keyboard.settings.screens.SubtypeScreen
+import helium314.keyboard.settings.screens.AiRoutingScreen
 import helium314.keyboard.settings.screens.GrammarCheckScreen
+import helium314.keyboard.settings.screens.TextEnhanceScreen
 import helium314.keyboard.settings.screens.TextCorrectionScreen
 import helium314.keyboard.settings.screens.ToolbarScreen
 import helium314.keyboard.settings.screens.TranslationInfoScreen
@@ -79,6 +81,8 @@ fun SettingsNavHost(
                 onClickTranslation = { navController.navigate(SettingsDestination.Translation) },
                 onClickEmoji = { navController.navigate(SettingsDestination.Emoji) },
                 onClickVoiceTranscript = { navController.navigate(SettingsDestination.VoiceTranscript) },
+                onClickTextEnhance = { navController.navigate(SettingsDestination.TextEnhance) }, // SuperApp addition
+                onClickAiRouting = { navController.navigate(SettingsDestination.AiRouting) }, // SuperApp addition
                 onClickPreferences = { navController.navigate(SettingsDestination.Preferences) },
                 onClickToolbar = { navController.navigate(SettingsDestination.Toolbar) },
                 onClickGestureTyping = { navController.navigate(SettingsDestination.GestureTyping) },
@@ -111,6 +115,12 @@ fun SettingsNavHost(
         }
         composable(SettingsDestination.VoiceTranscript) {
             VoiceTranscriptInfoScreen(onClickBack = ::goBack)
+        }
+        composable(SettingsDestination.TextEnhance) { // SuperApp addition
+            TextEnhanceScreen(onClickBack = ::goBack)
+        }
+        composable(SettingsDestination.AiRouting) { // SuperApp addition
+            AiRoutingScreen(onClickBack = ::goBack)
         }
         composable(SettingsDestination.Preferences) {
             PreferencesScreen(onClickBack = ::goBack)
@@ -178,6 +188,8 @@ object SettingsDestination {
     const val Translation = "translation_info" // SuperApp addition
     const val Emoji = "emoji_info" // SuperApp addition
     const val VoiceTranscript = "voice_transcript_info" // SuperApp addition
+    const val TextEnhance = "text_enhance" // SuperApp addition
+    const val AiRouting = "ai_routing" // SuperApp addition
     const val Preferences = "preferences"
     const val Toolbar = "toolbar"
     const val GestureTyping = "gesture_typing"

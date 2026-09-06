@@ -63,6 +63,10 @@
     <string name="translate_live_commit_summary">Gboard-style: the translation is written into the app as you type, instead of previewed in the bar. Fragile in apps that edit their own text.</string>
     <string name="settings_screen_emoji">Emoji, GIFs &amp; Stickers</string>
     <string name="settings_screen_voice_transcript">Voice transcript</string>
+    <!-- SuperApp addition — Text Enhancements + AI Model Routing screens -->
+    <string name="settings_screen_enhance">Text Enhancements</string>
+    <string name="settings_screen_ai_routing">AI Model Routing</string>
+    <string name="settings_screen_ai_routing_summary">Provider, API key and model used by Text Enhancements, Grammar check (AI mode) and Translation</string>
     <!-- Settings screen title for advanced settings -->
     <string name="settings_screen_advanced">Advanced</string>
     <!-- Settings screen title for keyboard theme settings -->
@@ -274,6 +278,29 @@
     <string name="grammar_pt_variant_br">Brazilian (pt-BR)</string>
     <string name="grammar_ngram_url_title">Grammar n-gram API connect</string>
     <string name="grammar_ngram_url_summary">Endpoint for future n-gram confusion-pair detection (placeholder — not yet active)</string>
+    <string name="grammar_mode_ai">AI (Model Routing)</string>
+    <!-- SuperApp addition — AI Model Routing (AiRouter; registry = build.json::keyboard_ai) -->
+    <string name="ai_provider_title">Provider</string>
+    <string name="ai_provider_summary">Where AI requests go. Cloud = your own mesh bridge (no key on the mesh); OpenRouter = openrouter.ai with your key</string>
+    <string name="ai_token_title">API key</string>
+    <string name="ai_token_summary">Paste the provider\'s API key. Stored only in this keyboard\'s settings</string>
+    <string name="ai_token_optional_summary">Optional — only if the bridge is reached through an authenticated gateway</string>
+    <string name="ai_model_title">Model</string>
+    <string name="ai_token_cloud_title" tools:keep="@string/ai_token_cloud_title">Cloud API key</string>
+    <string name="ai_model_cloud_title" tools:keep="@string/ai_model_cloud_title">Cloud model</string>
+    <string name="ai_token_openrouter_title" tools:keep="@string/ai_token_openrouter_title">OpenRouter API key</string>
+    <string name="ai_model_openrouter_title" tools:keep="@string/ai_model_openrouter_title">OpenRouter model</string>
+    <string name="ai_no_token">No API key for %1$s — add one in Settings → AI Model Routing</string>
+    <!-- SuperApp addition — Text Enhancements (TextEnhancer; ENHANCE toolbar key) -->
+    <string name="enhance" tools:keep="@string/enhance">Text enhancement</string>
+    <string name="enhance_style_title">Enhancement style</string>
+    <string name="enhance_style_summary">What the AI is asked to do with the selected text (or the whole field)</string>
+    <string name="enhance_toolbar_title">Show in toolbar</string>
+    <string name="enhance_toolbar_summary">Magic-wand key on the toolbar: tap to enhance the selection or the whole field</string>
+    <string name="enhance_in_progress">Enhancing with %1$s…</string>
+    <string name="enhance_failed">Enhancement failed: %1$s</string>
+    <string name="enhance_unchanged">Nothing to improve</string>
+    <string name="enhance_stale">Text changed while enhancing — skipped</string>
     <!-- Standalone Cloud Keyboard self-update entry (Configs menu) -->
     <string name="keyboard_update">Update Cloud Keyboard</string>
     <string name="keyboard_update_summary">Download and install the latest version</string>

@@ -32,6 +32,7 @@ fun createGrammarSettings(context: Context): List<Setting> = listOf(
             context.getString(R.string.grammar_mode_off) to "off",
             context.getString(R.string.grammar_mode_local) to "local",
             context.getString(R.string.grammar_mode_remote) to "remote",
+            context.getString(R.string.grammar_mode_ai) to "ai", // SuperApp: AI Model Routing provider, grammar-only prompt
         )
         ListPreference(setting, items, Defaults.PREF_GRAMMAR_MODE)
     },
