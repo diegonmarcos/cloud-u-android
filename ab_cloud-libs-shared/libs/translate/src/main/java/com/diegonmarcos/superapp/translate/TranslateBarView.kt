@@ -47,8 +47,7 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
     fun interface IcProvider { fun get(): InputConnection? }
 
     companion object {
-        // Used only while the engine hasn't reported its language list (AIDL bind pending).
-        private val DEFAULT_LANGS = listOf("en", "pt", "es", "de")
+        private val DEFAULT_LANGS = TranslatePrefs.FALLBACK_LANGS
         private const val DEBOUNCE_MS = 300L
         private const val SLOW_MS = 8000L
         private const val AUTO = Translator.AUTO

@@ -29,6 +29,8 @@ object TranslatePrefs {
     const val DEFAULT_APPLY_MODE = APPLY_INSERT
     const val DEFAULT_LIVE_COMMIT = false
     const val MAX_RECENT = 3
+    /** Only used while the engine hasn't reported its language list (AIDL bind pending / no companion). */
+    @JvmField val FALLBACK_LANGS = listOf("en", "pt", "es", "de")
 
     @JvmStatic
     fun prefs(context: Context): SharedPreferences {
