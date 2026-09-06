@@ -1,22 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //
-// libs:keyboard — the Cloud-SuperApp's self-contained keyboard provider,
-// vendored from HeliBoard (github.com/Helium314/HeliBoard) by
-// `./build.sh sync-heliboard`. The whole src/main tree (java/kotlin + res +
-// assets + jni + AndroidManifest) is a VERBATIM upstream mirror; this
-// build.gradle is the ONLY hand-owned file in the module (same pattern as
-// libs:net's slim CMakeLists), kept across resyncs.
+// libs:keyboard — Cloud Keyboard, the owned keyboard provider (derived from
+// HeliBoard, github.com/Helium314/HeliBoard, GPL-3.0 — see README.md). The
+// whole src/main tree is ours: edit it directly, no upstream sync.
 //
-// We own this file so it must track HeliBoard's app/build.gradle.kts deps +
-// toolchain whenever sync-heliboard pulls a newer upstream. Current pin
-// mirrors HeliBoard main (see build.json::toolchain).
+// Toolchain pins: see build.json::toolchain.
 //
 // Native: ndk-build of src/main/jni/Android.mk -> libjni_latinime.so. Glide
 // typing needs Google's proprietary libjni_latinimegoogle.so, which is NEVER
-// bundled (keeps the APK FOSS) — HeliBoard's in-app "Load gesture typing
-// library" setting fetches it at runtime into app data.
+// bundled (keeps the APK FOSS) — the in-app "Load gesture typing library"
+// setting fetches it at runtime into app data.
 //
-// namespace MUST be helium314.keyboard.latin: the vendored manifest declares
+// namespace MUST be helium314.keyboard.latin: the manifest declares
 // the IME service relatively (android:name="LatinIME"), which resolves against
 // the namespace -> helium314.keyboard.latin.LatinIME (the real class path).
 
@@ -120,8 +115,7 @@ dependencies {
     // EmojiPalettesView type-tab row shows a MediaPanelView from this module.
     implementation project(':libs:media')
 
-    // ── Mirror of HeliBoard main app/build.gradle.kts dependencies. ──────
-    // Keep in sync with upstream on every `build.sh sync-heliboard` bump.
+    // ── Keyboard engine dependencies. ─────────────────────────────────────
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.5'
 
     // androidx

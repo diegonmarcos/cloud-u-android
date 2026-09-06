@@ -127,7 +127,7 @@ fun MainSettingsScreen(
                     ) { NextScreenIcon() }
                 }
 
-                // ── Everything below is upstream HeliBoard's own menu ──────────────
+                // ── Everything below is the base keyboard menu ─────────────────────
                 PreferenceCategory("Keyboard defaults")
                 Preference(
                     name = stringResource(R.string.language_and_layouts_title),

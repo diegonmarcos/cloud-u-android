@@ -1,9 +1,8 @@
-// libs:media — Sticker + GIF panel for the vendored keyboard's emoji surface.
-// Self-contained, lives OUTSIDE libs/keyboard/src/main so `build.sh
-// sync-heliboard` (rsync --delete mirror of upstream HeliBoard) never
-// clobbers it — same rule as libs:translate / libs:voice.
+// libs:media — Sticker + GIF panel for the keyboard's emoji surface.
+// Self-contained, lives OUTSIDE libs/keyboard/src/main — same layout as
+// libs:translate / libs:voice.
 //
-// libs:keyboard depends on this module; patch 0007 hosts MediaPanelView
+// libs:keyboard depends on this module; EmojiPalettesView hosts MediaPanelView
 // inside EmojiPalettesView and routes picks through the existing
 // RichInputConnection.commitContent path. GIF search is data-driven
 // (Tenor OR Giphy, chosen in build.json::keyboard_media; API keys via

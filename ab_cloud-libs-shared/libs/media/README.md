@@ -1,13 +1,12 @@
 # libs:media — Sticker + GIF panel for the keyboard emoji surface
 
-Adds a **row-1 type-tab strip (Emoji · Sticker · GIF)** above the vendored
-keyboard's existing emoji category row (row 2), and the Sticker/GIF body behind
-the new tabs. Emoji is unchanged (HeliBoard's own pager); Sticker + GIF are this
+Adds a **row-1 type-tab strip (Emoji · Sticker · GIF)** above the keyboard's
+existing emoji category row (row 2), and the Sticker/GIF body behind the new
+tabs. Emoji is unchanged (the keyboard's own pager); Sticker + GIF are this
 module.
 
 Self-contained, like `libs:translate` / `libs:voice` — it lives **outside**
-`libs/keyboard/src/main` so `build.sh sync-heliboard` (rsync `--delete` mirror of
-upstream HeliBoard) never clobbers it.
+`libs/keyboard/src/main`.
 
 ## Wiring (who calls what)
 

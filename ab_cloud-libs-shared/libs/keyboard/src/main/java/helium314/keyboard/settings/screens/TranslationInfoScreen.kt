@@ -30,7 +30,7 @@ import helium314.keyboard.settings.preferences.SwitchPreference
 
 // SuperApp addition — Translate bar settings + engine status.
 // Pref KEYS and DEFAULTS come from libs:translate's TranslatePrefs (the bar reads
-// them at use time); this screen only renders them with HeliBoard's own
+// them at use time); this screen only renders them with the keyboard's own
 // preference composables, same shape as GrammarCheckScreen / createGrammarSettings.
 // Storage is the device-protected default prefs both sides share.
 

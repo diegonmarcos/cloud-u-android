@@ -1,108 +1,76 @@
-# libs:keyboard — self-contained keyboard provider (HeliBoard, vendored)
+# libs:keyboard — Cloud Keyboard (owned keyboard provider)
 
-The Cloud-SuperApp's own keyboard. The `LatinIME` `InputMethodService` from
-[HeliBoard](https://github.com/Helium314/HeliBoard) (GPL-3.0), vendored into the
-single SuperApp APK so the app ships its own keyboard — no separate install.
+The `LatinIME` `InputMethodService` behind Cloud Keyboard. This tree is
+**owned code**: edit `src/main` directly and commit. There is no upstream
+sync, no overlay patch, no regeneration step.
 
-The SuperApp is **already a launcher** (`app` declares `category.HOME`); this
-module adds the **keyboard provider**. Both ship in one APK.
+## Heritage
+
+Cloud Keyboard is derived from [HeliBoard](https://github.com/Helium314/HeliBoard)
+(GPL-3.0, itself derived from OpenBoard / AOSP LatinIME). The GPL heritage and
+upstream attribution stay: `SPDX-License-Identifier` headers, the license link
+in the About screen, and the upstream issue/PR references in code comments are
+kept intact. Only the product name changed.
 
 ## Layout
 
-| Path | Owner | Notes |
-|------|-------|-------|
-| `build.gradle` | **us** (hand-owned) | Only hand-maintained file. Mirrors HeliBoard's `app/build.gradle.kts` deps + toolchain. Update on every upstream bump. |
-| `src/main/{java,res,assets,jni,AndroidManifest.xml}` | **upstream mirror + our overlay** | Populated by `./build.sh sync-heliboard` (rsync `--delete` of upstream, then `patches/*.patch` re-applied). Only what the patch carries survives a sync. |
-| `patches/0001-cloud-superapp-keyboard.patch` | **us (generated)** | THE overlay = `diff(pristine upstream @ build.json::keyboard_upstream.sha, src/main)`. Never hand-edit. After ANY edit under `src/main`: `git add` your mirror files, `./build.sh regen-keyboard-patch` (aa_cloud-superapp — diffs the INDEX, so other agents' unstaged edits never leak in), commit the mirror files **and** the patch together. |
+| Path | Notes |
+|------|-------|
+| `build.gradle` | Module build. Toolchain pins in `aa_cloud-superapp/build.json::toolchain`. |
+| `src/main/{java,res,assets,jni,AndroidManifest.xml}` | The keyboard. Edit directly. |
+| `dicts-data/` | Extra dictionaries vendored by `./build.sh sync-keyboard-dicts` (aa_cloud-superapp) from codeberg.org/Helium314/aosp-dictionaries. |
 
-Files that are SuperApp-only but must live inside the HeliBoard package (settings
-screens, `GrammarChecker.kt`, `EmojiSearchBarView.kt`, `TranslationInfoScreen.kt`…)
-are still mirror files — they exist only because the patch adds them. Logic that
-does not need HeliBoard's package lives in its own module instead
-(`libs/translate`, `libs/voice`, `libs/media`) and is edited normally.
-
-## Vendoring — `./build.sh sync-heliboard`
-
-```bash
-git clone https://github.com/Helium314/HeliBoard ~/git/cloud-u-android/ac_keyboard-heliboard
-cd ~/git/cloud-u-android/aa_cloud-superapp
-./build.sh sync-heliboard      # rsync mirror app/src/main → libs/keyboard/src/main
-git -C . status -s -- libs/keyboard/   # review the vendored diff, then commit
-```
-
-The sibling clone (`~/git/cloud-u-android/ac_keyboard-heliboard/`) is gitignored — the
-`ea_*-*` workspace-clone convention, same as `libs:net`'s
-`ac_net-wireguard/`. Pin a specific tag in the clone for reproducibility.
+Logic that does not need the `helium314.keyboard` package lives in its own
+module (`libs/translate`, `libs/voice`, `libs/media`).
 
 ## Manifest reconciliation (in `app/`, not here)
 
-The vendored manifest is a verbatim upstream mirror — it declares HeliBoard's
-own `<application android:name=…App>`, makes `SettingsActivity` a **LAUNCHER**
-entry and `SpellCheckerSettingsActivity` a **MAIN** entry, and registers a
-spellchecker service, two content providers, boot receivers, and `<queries>`.
+The module manifest declares its own `<application android:name=…App>`, makes
+`SettingsActivity` a **LAUNCHER** entry and `SpellCheckerSettingsActivity` a
+**MAIN** entry, and registers a spellchecker service, two content providers,
+boot receivers, and `<queries>`.
 
-All SuperApp-specific reconciliation lives in `app/src/main/AndroidManifest.xml`
-as explicit `tools:` overlays (so this module stays a pure mirror):
+Consumer-specific reconciliation lives in each app's `AndroidManifest.xml` as
+explicit `tools:` overlays:
 
-- `tools:replace="android:name"` on `<application>` → the SuperApp's `.App`
+- `tools:replace="android:name"` on `<application>` → the app's own `.App`
   wins the merge over `helium314.keyboard.latin.App`.
-- `tools:node="remove"` on the `SettingsActivity` LAUNCHER filter and the
-  `SpellCheckerSettingsActivity` MAIN filter → **no extra launcher icons**.
+- SuperApp only: `tools:node="remove"` on the `SettingsActivity` LAUNCHER
+  filter and the `SpellCheckerSettingsActivity` MAIN filter → **no extra
+  launcher icons**.
 
-### ⚠️ App-class init (verify first on the first build)
-
-Because `.App` wins the merge, **HeliBoard's `App.onCreate()` never runs**. AOSP
-`LatinIME` does most of its own setup in `onCreate`, so the IME likely works
-regardless — but if the keyboard misbehaves (no suggestions, theme/prefs not
-loading, crash on first key), port HeliBoard's `App.onCreate()` initialization
-into `app/src/main/java/com/diegonmarcos/superapp/App.kt`. This is the #1
-integration item to confirm against a real build.
+Because `.App` wins the merge, the module's `App.onCreate()` never runs; each
+consumer replicates its prefs/subtype init (see `initVendoredKeyboard` in the
+app `App.kt`).
 
 ### Provider authority collision
 
-HeliBoard's content providers use fixed `@string` authorities
-(`clipboard_provider_authority`, `gesture_data_provider_authority`). If the user
-*also* has standalone HeliBoard installed, the install fails on duplicate
-authority. Acceptable for a self-contained super-app; if it bites, override the
-authority strings via the app source set.
+The content providers use fixed `@string` authorities
+(`clipboard_provider_authority`, `gesture_data_provider_authority`). Two apps
+bundling this module with the same authorities cannot be installed side by side.
 
 ## Swipe / glide typing — FOSS base + in-app loader
 
-Glide needs Google's proprietary `libjni_latinimegoogle.so`, which is **never
-bundled** (keeps the APK FOSS). HeliBoard's built-in
-**Settings → Gesture typing → "Load gesture typing library"** is the in-app
-loader: the user fetches the blob once at runtime into app data. Without it,
-HeliBoard's open-source swipe path applies (rougher than Gboard).
+Glide needs Google's proprietary `libjni_latinimegoogle.so`, which is **never**
+bundled (keeps the APK FOSS). **Settings → Gesture typing → "Load gesture
+typing library"** is the in-app loader: the user fetches the blob once at
+runtime into app data. Without it the open-source swipe path applies.
 
 ## Native build
 
 `src/main/jni/Android.mk` → `libjni_latinime.so` via `ndk-build` (NDK 28,
-arm64-v8a). The SuperApp build already ships NDK modules (`libs:net` via CMake);
-this is the second native module. The two NDKs (26.1 for net, 28 for keyboard)
-are both provisioned in `flake.nix`.
+arm64-v8a). The two NDKs (26.1 for `libs:net`, 28 for keyboard) are both
+provisioned in `flake.nix`.
 
-## Toolchain note
+## Package namespace
 
-Vendoring HeliBoard `main` forced a repo-wide toolchain bump (recorded in
-`build.json::toolchain._doc_heliboard_bump`): nixpkgs 24.11→25.05, Kotlin
-1.9.24→2.3.20, AGP 8.7.3→8.13.2, Gradle→8.14, compileSdk 35→36, NDK +28,
-and the Kotlin-2.0 Compose-compiler plugin (`app`, `libs:wallet`, `libs:health`
-dropped `composeOptions.kotlinCompilerExtensionVersion`).
+The Java/Kotlin package stays `helium314.keyboard.*`: the manifest resolves the
+IME service, providers and the `LatinIME` class against that namespace, and
+installed users' prefs/databases (`heliboard.db`) are keyed on it. Renaming it
+is a refactor, not a rebrand.
 
-## Tests (the proof — run after `sync-heliboard`)
+## Tests
 
-1. **Build gate**
-   ```bash
-   ./build.sh build
-   unzip -l dist/*.apk | grep -E 'libjni_latinime\.so'   # native decoder present
-   unzip -l dist/*.apk | grep -vq 'libjni_latinimegoogle\.so' && echo "blob NOT bundled (FOSS) ✓"
-   ```
-2. **Single-launcher gate** — install, confirm exactly **one** launcher icon
-   (the SuperApp); HeliBoard Settings / Spell-checker do **not** appear as
-   separate icons.
-3. **Provider gate** — Settings → Languages → Keyboards lists the SuperApp
-   keyboard; enable + select it; type into the SuperApp search field.
-4. **Swipe gate** — Keyboard settings → load gesture library → swipe a word →
-   it resolves.
-5. **Regression gate** — SuperApp still launches as Home; APK size delta within
-   the Compose-inclusive estimate (~+10–15 MB over the pre-keyboard ~7.8 MB).
+Static proofs (no gradle needed) live in `aa_cloud-superapp/test/`:
+`test-keyboard-translate.sh`, `test-keyboard-ai-routing.sh`. CI builds prove
+compilation.

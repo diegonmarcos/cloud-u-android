@@ -1,6 +1,6 @@
 name: "Ship → Cloud Keyboard APK (build + push to GHCR via ORAS + attach to GH Release)"
 
-# Standalone HeliBoard IME with translate/voice/sticker panel.
+# Standalone Cloud Keyboard IME with translate/voice/sticker panel.
 # Libs shared from ab_cloud-libs-shared/libs/ via relative project references.
 #
 # Triggers:
