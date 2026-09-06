@@ -2642,7 +2642,7 @@
         ],
         "stack_observability": [
           {
-            "_doc": "INDEX of this page, same contract as stack_topology's: every tile is an `anchor:` id resolved by StackAnchors against the cards below, so the row is a table of contents rather than a set of deep links. The anchors are DERIVED FROM WHAT THIS STACK ACTUALLY RENDERS — the four panels that follow — not from the old tile list: GHA (kind=gha_runs), Repos (kind=repos), Workflows (kind=dagu_dags, the full registered-DAG inventory) and Runs (kind=open_link, the in-app deeplink to the native Dagu run list). The previous six tiles pointed at page:c3/{health,workflows,gha,dagu,logs,reports}; those pages are unchanged and still resolve, but this row no longer links them — c3/health is still reached from Inboxes ▸ Infra RSS, while c3/{workflows,gha,dagu,logs,reports} now have no tile pointing at them anywhere in build.json.",
+            "_doc": "INDEX of this page, same contract as stack_topology's: every tile is an `anchor:` id resolved by StackAnchors against the cards below, so the row is a table of contents rather than a set of deep links. The anchors are DERIVED FROM WHAT THIS STACK ACTUALLY RENDERS — the four panels that follow — not from the old tile list: GHA (kind=gha_runs), Repos (kind=repos), Workflows (kind=dagu_dags, the full registered-DAG inventory) and Runs (kind=open_link, the in-app deeplink to the native Dagu run list). The previous six tiles pointed at page:c3/{health,workflows,gha,dagu,logs,reports}; those pages are unchanged and still resolve, and the `More` row at the BOTTOM of this stack links them again. Anchors and pages answer different questions and the two rows now say so by position: this Index jumps to a card already on screen, More opens the full page behind it (DaguFragment's run list, the per-VM log viewer) which carries more than a card can. c3/health is reached from Inboxes ▸ Infra RSS as well.",
             "kind": "tile_row",
             "title": "Index",
             "subtitle": "Jump to a table on this page",
@@ -2798,6 +2798,44 @@
             "scopes": [
               "infra"
             ]
+          },
+          {
+            "_doc": "MORE — the full pages behind this tab's cards, restoring the five that making the Index pure anchors had left with no referrer anywhere in build.json. Ordinary `page:` targets, no anchor grammar: the Index jumps to a card that is already on screen, this opens the PAGE, which carries what a card cannot (DaguFragment lists AND starts runs, the log viewer is per-VM). Subordinate by position — it sits at the bottom, after everything the Index indexes — so the table of contents stays the first thing read. c3/dagu was the one of the five already reachable, via the Runs card's page:c3/dagu deeplink; it is listed here too so the row is the tab's whole page list rather than a list of whichever pages happened to be orphaned.",
+            "kind": "tile_row",
+            "title": "More",
+            "subtitle": "Open the full page behind a card",
+            "tiles": [
+              {
+                "id": "workflows",
+                "label": "Workflows",
+                "icon": "ic_p_c3_workflows",
+                "target": "page:c3/workflows"
+              },
+              {
+                "id": "gha",
+                "label": "GHA",
+                "icon": "ic_code",
+                "target": "page:c3/gha"
+              },
+              {
+                "id": "dagu",
+                "label": "Dagu",
+                "icon": "ic_robot",
+                "target": "page:c3/dagu"
+              },
+              {
+                "id": "logs",
+                "label": "Logs",
+                "icon": "ic_p_logs",
+                "target": "page:c3/logs"
+              },
+              {
+                "id": "reports",
+                "label": "Reports",
+                "icon": "ic_p_c3_reports",
+                "target": "page:c3/reports"
+              }
+            ]
           }
         ],
         "stack_topology": [
@@ -2912,6 +2950,26 @@
               { "id": "stack/vms", "group": "providers", "subgroup": "VMs" },
               { "id": "stack/dbs", "group": "dbs" },
               { "id": "stack/apis", "group": "mcpapi", "subgroup": "APIs" }
+            ]
+          },
+          {
+            "_doc": "MORE — the same contract as Observability's row: ordinary `page:` targets to the full pages, sitting below everything the Index indexes so the table of contents is still read first. These two had no referrer anywhere in build.json once the Index became pure anchors. The distinction is real and not redundancy: `anchor:stack/vms` scrolls to the VMs sub-table inside the Stack card, while `page:c3/vms` opens the VMs PAGE, which carries per-VM detail the card's icon grid does not.",
+            "kind": "tile_row",
+            "title": "More",
+            "subtitle": "Open the full page behind a card",
+            "tiles": [
+              {
+                "id": "stack",
+                "label": "Stack",
+                "icon": "ic_p_c3_stack",
+                "target": "page:c3/stack"
+              },
+              {
+                "id": "vms",
+                "label": "VMs",
+                "icon": "ic_p_c3_vms",
+                "target": "page:c3/vms"
+              }
             ]
           }
         ]

@@ -17,7 +17,14 @@
 #   T4  no anchor id is derived from a label anywhere in Kotlin
 #   T5  the panels the C3 Index leads to are still declared (no regression)
 #   T6  every CROSS-page `page:<section>/<page>#<anchor>` resolves too
+#   T7  every `page:` target anywhere in build.json resolves to a real page
+#   T8  every HIDDEN page has a referrer (a hidden page IS its referrers)
 #   W   declared-but-unreferenced ids are reported, not failed
+#
+# T8 is the one that catches the failure that prompted it. Making the C3 Index
+# pure anchors left c3/{stack,vms,workflows,gha,logs,reports} declared, routable
+# and reachable by nothing — a hidden page has no tab, so a tile pointing at it
+# is the ONLY way in, and losing that tile deletes the page without deleting it.
 #
 # T6 covers the second form. A link that has to travel first is an ordinary
 # `page:` target carrying a fragment — the web's own grammar — so it is checked
@@ -32,7 +39,7 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 echo "== stack anchors are declared in build.json =="
 
 REPORT="$(python3 - "$APP" <<'PY'
-import json, sys, os
+import json, re, sys, os
 app = sys.argv[1]
 build = json.load(open(os.path.join(app, "build.json")))
 dash  = json.load(open(os.path.join(app, "data", "cloud_services.json")))
@@ -144,11 +151,29 @@ for where, target, section, page, anchor in cross:
     else:
         emit("INFO", "%s: cross-page '%s' resolves" % (where, target))
 
+# T7/T8 — page reachability, over the WHOLE file rather than the stacks alone:
+# a tile that opens a page can live in any tile list, drawer or action row.
+raw = open(os.path.join(app, "build.json")).read()
+refs = set(re.findall(r'"page:([a-z0-9_-]+)/([a-z0-9_-]+)(?:#[a-z0-9/_-]+)?"', raw))
+for section, page in sorted(refs):
+    if section not in pages_by_section:
+        emit("T7", "page:%s/%s names a section that does not exist" % (section, page))
+    elif page not in pages_by_section[section]:
+        emit("T7", "page:%s/%s names a page that section does not declare" % (section, page))
+hidden = [(s.get("id"), p.get("id"))
+          for s in build.get("ui", {}).get("sections", [])
+          for p in s.get("pages", []) if p.get("hidden")]
+for section, page in sorted(hidden):
+    if (section, page) not in refs:
+        emit("T8", "page %s/%s is hidden and nothing points at it — it has no tab, "
+                   "so it is unreachable" % (section, page))
+emit("INFO", "%d page: targets, %d hidden pages, all reachable" % (len(refs), len(hidden)))
+
 print("\n".join(lines))
 PY
 )" || { echo "  FAIL: checker crashed"; exit 1; }
 
-for t in T1 T2 T3 T6; do
+for t in T1 T2 T3 T6 T7 T8; do
   hits="$(printf '%s\n' "$REPORT" | grep -c "^$t	" || true)"
   if [ "$hits" -eq 0 ]; then
     ok "$t: no violations"
