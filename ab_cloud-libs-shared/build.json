@@ -3070,5 +3070,50 @@
     "_doc_phase": "Phase 2 (build wiring). firestack is celzero/firestack (MPL-2.0, Go) — the gVisor-netstack + WireGuard-proxy engine behind RethinkDNS. We VENDOR + build it hermetically (user decision, matches the libs:net/libwg-go doctrine) rather than pulling the jitpack `com.github.celzero:firestack` Maven artifact. In Phase 3 the single firestack VpnService replaces BOTH FirewallVpnService (drain-engine) and GoBackend$VpnService (WireGuard); a per-connection `Bridge.Flow()` calls FirewallDecider direction-aware, and allowed flows route via the WG proxy — resolving the single-VPN-slot limit + enabling IN/OUT + the 'only under cloud VPN' condition. Nothing consumes the firestack aar yet (no consumer until Phase 3), so a plain `build.sh build`/`test` does NOT trigger the Go/gomobile build.",
     "_doc_vendored": "VENDORED IN-REPO 2026-08-30 in ONE folder beside the module that consumes it: libs/firewall/firestack holds the Go source (224 files, 2.4 MB - only what upstream tracks; upstream's bin/ is 24 MB of build output and is not tracked there either) AND receives the built firestack.aar, which is what lib-apks/settings.gradle's flatDir already points at. There is no .git inside, so the clone path is skipped - presence of go.mod marks the tree usable. To move to a newer upstream, bump ref, delete this tree and run `build.sh sync-firestack`.",
     "_doc_moved": "Moved here from aa_cloud-superapp/build.json 2026-08-30. libs:firewall has TWO consumers - the superapp and lib-apks (Cloud-Lib-Firewall.apk) - so the config for its engine cannot live inside one of them. lib-apks reading the superapp's build.json would be a lib->app dependency, the exact coupling the consolidation removed. libs/firewall/build-firestack.sh reads it here."
+  },
+  "keyboard_ai": {
+    "_doc": "LLM routing for libs:keyboard (Settings → AI Model Routing). libs/keyboard/build.gradle bakes this whole block into BuildConfig.AI_ROUTING_B64 (rootDir build.json first, this file as fallback — same rule as voice); AiRouter.kt reads it at runtime. ONE shared config consumed by Text Enhancements (ENHANCE toolbar key), Grammar check (mode 'ai') and, when it opts in, Translation. Every provider speaks the OpenAI chat-completions shape: 'cloud' is the mesh my-ai_claude-api bridge (cloud-u-containers/user-ai_my-ai_claude-api server.mjs, POST /v1/chat/completions, no token on the WireGuard mesh — needs_token=false), 'openrouter' is openrouter.ai with a user-pasted key stored in the keyboard prefs (ai_token_<provider>). Model ids verified against https://openrouter.ai/api/v1/models on 2026-09-06. Add a provider or a model = one entry; the settings screen and the model picker are built from this list. Styles = the enhancement prompts (Text Enhancements → Style); 'grammar' is the one Grammar check's 'ai' mode uses.",
+    "default_provider": "openrouter",
+    "timeout_ms": 30000,
+    "max_chars": 4096,
+    "providers": {
+      "cloud": {
+        "label": "Cloud",
+        "url": "http://10.0.0.6:3117/v1/chat/completions",
+        "needs_token": false,
+        "default_model": "claude-sonnet-4-6",
+        "models": [
+          "claude-sonnet-4-6"
+        ]
+      },
+      "openrouter": {
+        "label": "OpenRouter",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "needs_token": true,
+        "default_model": "google/gemini-2.5-flash",
+        "models": [
+          "google/gemini-2.5-flash",
+          "anthropic/claude-haiku-4.5",
+          "openai/gpt-4o-mini",
+          "deepseek/deepseek-chat",
+          "meta-llama/llama-3.3-70b-instruct"
+        ]
+      }
+    },
+    "default_style": "clarity",
+    "styles": {
+      "grammar": {
+        "label": "Fix grammar only",
+        "prompt": "Fix spelling, grammar and punctuation in the user's text. Do not change wording, tone, meaning or language. Reply with the corrected text only, no quotes, no explanations."
+      },
+      "clarity": {
+        "label": "Fix grammar and improve clarity",
+        "prompt": "Fix spelling, grammar and punctuation and make the user's text clearer and more natural. Keep the same language, meaning, tone and approximate length. Reply with the improved text only, no quotes, no explanations."
+      },
+      "polish": {
+        "label": "Polish tone and flow",
+        "prompt": "Rewrite the user's text so it reads polished and fluent: fix errors, improve flow and word choice, keep it concise. Keep the same language, meaning and intent. Reply with the rewritten text only, no quotes, no explanations."
+      }
+    }
   }
 }

@@ -41,6 +41,12 @@ plugins {
 // its own BuildConfig identified it as cloud-superapp. rootDir is the
 // CONSUMING app's build.json, which is what 'single source of truth' meant.
 def kbBuildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
+// Data-driven LLM routing registry (build.json::keyboard_ai) — providers, model
+// lists, enhancement prompts. Consuming app's build.json first, this module's
+// own repo (ab_cloud-libs-shared/build.json) as the fallback — identical rule to
+// libs/voice. Baked as base64 so quotes/newlines in prompts survive BuildConfig.
+def kbAi = kbBuildJson.keyboard_ai ?: new groovy.json.JsonSlurper().parse(file('../../build.json')).keyboard_ai
+def kbAiB64 = groovy.json.JsonOutput.toJson(kbAi).bytes.encodeBase64().toString()
 
 android {
     namespace 'helium314.keyboard.latin'
@@ -52,6 +58,8 @@ android {
         buildConfigField "int",    "VERSION_CODE",   "${kbBuildJson.android.version_code}"
         buildConfigField "String", "VERSION_NAME",   "\"${kbBuildJson.android.version_name}\""
         buildConfigField "String", "APPLICATION_ID", "\"${kbBuildJson.android.application_id}\""
+        // build.json::keyboard_ai — read by helium314.keyboard.latin.AiRouter.
+        buildConfigField "String", "AI_ROUTING_B64", "\"${kbAiB64}\""
     }
 
     buildFeatures {
