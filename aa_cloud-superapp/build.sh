@@ -25,6 +25,7 @@
 # ║   sync-qrcodes  pull qrcodes.json from front/linktree → assets/    ║
 # ║   sync-net      cherry-pick wireguard-android tunnel/ → libs/net/  ║
 # ║   sync-heliboard cherry-pick HeliBoard app/src/main → libs/keyboard/║
+# ║   regen-keyboard-patch  rewrite patches/0001 = diff(upstream, mirror)║
 # ║                                                                  ║
 # ║ NEVER bypass this script for build operations.                    ║
 # ╚══════════════════════════════════════════════════════════════════╝
@@ -987,19 +988,29 @@ step_sync_heliboard() {
   rsync -a --delete "$upstream/" "$dst/src/main/"
 
   # Re-apply SuperApp patches (the rsync --delete above clobbers any local
-  # edit to the mirror). These inject SuperApp-only features the verbatim
-  # mirror can't carry — e.g. patches/0001-translate-toolbar.patch wires the
-  # TRANSLATE toolbar key into the keyboard (calls libs:translate ML Kit).
-  # Patch paths are relative to this service dir, so apply via git -C SCRIPT_DIR.
+  # edit to the mirror). patches/0001-cloud-superapp-keyboard.patch is the ONE
+  # consolidated overlay = diff(pristine upstream, mirror); regenerate it with
+  # `./build.sh regen-keyboard-patch` after every mirror edit (see that step).
+  #
+  # Patch paths are `libs/keyboard/...` (relative to ab_cloud-libs-shared), but
+  # `git apply` resolves paths against the REPO ROOT whenever it runs inside a
+  # repo, and silently SKIPS every hunk that lands outside its cwd. Since libs
+  # moved under ab_cloud-libs-shared/ that skip made this loop report "applied"
+  # while applying NOTHING (git apply exits 0 with 0 hunks) — every SuperApp
+  # feature would have vanished on the next sync. Hence: run at the root with
+  # --directory=<libs-shared prefix>. No --3way (it implies --index, and the
+  # freshly rsync'd worktree never matches the index).
   if [ -d "$dst/patches" ]; then
-    local p applied=0
+    local p applied=0 root prefix
+    root=$(git -C "$LIBS_DIR" rev-parse --show-toplevel)
+    prefix=$(realpath --relative-to="$root" "$LIBS_DIR/..")
+    [ "$prefix" = "." ] && prefix=""
     for p in "$dst"/patches/*.patch; do
       [ -f "$p" ] || continue
-      if git -C "$SCRIPT_DIR" apply --3way "$p" 2>/dev/null \
-         || patch -p1 -d "$SCRIPT_DIR" <"$p" >/dev/null 2>&1; then
+      if git -C "$root" apply --directory="$prefix" "$p"; then
         applied=$((applied+1))
       else
-        errlog "sync-heliboard: FAILED to apply $(basename "$p") — upstream drift; reconcile by hand"; exit 1
+        errlog "sync-heliboard: FAILED to apply $(basename "$p") — upstream drift; reconcile by hand, then regen-keyboard-patch"; exit 1
       fi
     done
     log "sync-heliboard: re-applied $applied SuperApp patch(es) after mirror"
@@ -1015,6 +1026,57 @@ step_sync_heliboard() {
   log "  jni     : $(find "$dst/src/main/jni" -type f 2>/dev/null | wc -l) file(s)"
   log "  manifest: VERBATIM upstream (reconciled by app/ tools: overlays — see libs/keyboard/README.md)"
   log "  review with: git -C $SCRIPT_DIR status -s -- libs/keyboard/"
+}
+
+# THE MIRROR RULE. libs/keyboard/src/main is rsync --delete'd from upstream on
+# every sync-heliboard; the ONLY thing that survives is what
+# patches/0001-cloud-superapp-keyboard.patch carries. So every mirror edit is
+# committed TWICE: the file itself (what CI builds) and this patch (what the
+# next sync re-applies). Edit mirror -> `./build.sh regen-keyboard-patch` ->
+# commit both. Byte-exact + reproducible: a throwaway git repo seeded with the
+# pristine upstream app/src/main (assets/dicts excluded — owned by
+# sync-keyboard-dicts), the mirror copied over it, `git diff --cached`. The
+# upstream clone must sit at build.json::keyboard_upstream.sha (the pin the
+# mirror was last synced from) or the diff would encode upstream churn as ours.
+step_regen_keyboard_patch() {
+  local upstream="${ANDROID_REPO:-$HOME/git/cloud-u-android}/ac_keyboard-heliboard"
+  local dst="$LIBS_DIR/keyboard"
+  local out="$dst/patches/0001-cloud-superapp-keyboard.patch"
+  [ -d "$upstream/app/src/main" ] || { errlog "regen-keyboard-patch: upstream not found: $upstream (clone https://github.com/Helium314/HeliBoard.git there)"; exit 1; }
+  command -v jq >/dev/null 2>&1 || { errlog "regen-keyboard-patch: jq required"; exit 1; }
+  local pin head
+  pin=$(jq -r '.keyboard_upstream.sha // empty' "$SCRIPT_DIR/build.json")
+  head=$(git -C "$upstream" rev-parse --short=7 HEAD)
+  [ -n "$pin" ] || { errlog "regen-keyboard-patch: build.json::keyboard_upstream.sha missing"; exit 1; }
+  [ "$head" = "$(git -C "$upstream" rev-parse --short=7 "$pin")" ] \
+    || { errlog "regen-keyboard-patch: upstream clone is at $head but build.json pins $pin — git -C $upstream checkout $pin first"; exit 1; }
+
+  local tmp; tmp=$(mktemp -d)
+  mkdir -p "$tmp/libs/keyboard/src"
+  cp -a "$upstream/app/src/main" "$tmp/libs/keyboard/src/main"
+  rm -rf "$tmp/libs/keyboard/src/main/assets/dicts"
+  git -C "$tmp" init -q
+  git -C "$tmp" -c core.excludesFile=/dev/null add -A
+  git -C "$tmp" -c user.name=regen -c user.email=regen@local commit -q -m pristine
+  rm -rf "$tmp/libs/keyboard/src/main"
+  cp -a "$dst/src/main" "$tmp/libs/keyboard/src/main"
+  rm -rf "$tmp/libs/keyboard/src/main/assets/dicts"
+  git -C "$tmp" -c core.excludesFile=/dev/null add -A
+  {
+    printf '# Cloud-SuperApp keyboard overlay — single consolidated patch = diff(HeliBoard %s app/src/main, libs/keyboard/src/main).\n' "$head"
+    printf '# GENERATED by `./build.sh regen-keyboard-patch` (aa_cloud-superapp) — never hand-edit.\n'
+    printf '# MIRROR RULE: sync-heliboard rsync --delete'"'"'s the mirror and re-applies this file; a mirror edit\n'
+    printf '# that is not in here is destroyed on the next sync. Edit the mirror -> regen -> commit both.\n'
+    printf '# assets/dicts excluded (owned by sync-keyboard-dicts); brand-rename is idempotent over the branded\n'
+    printf '# strings carried here. git apply ignores these header lines.\n\n'
+    git -C "$tmp" diff --cached --no-renames --binary
+  } > "$out"
+  rm -rf "$tmp"
+  # Prove it: the fresh patch must apply onto pristine upstream, and reverse-apply onto the mirror.
+  git -C "$(git -C "$LIBS_DIR" rev-parse --show-toplevel)" apply --check -R \
+      --directory="$(realpath --relative-to="$(git -C "$LIBS_DIR" rev-parse --show-toplevel)" "$LIBS_DIR/..")" "$out" \
+    || { errlog "regen-keyboard-patch: generated patch does not reverse-apply onto the mirror"; exit 1; }
+  log "regen-keyboard-patch: $(grep -c '^diff --git' "$out") file(s), upstream $head → $(realpath --relative-to="$SCRIPT_DIR" "$out")"
 }
 
 # Rebrand the vendored keyboard's USER-FACING display strings only:
@@ -1153,6 +1215,7 @@ case "$CMD" in
   sync-qrcodes) step_sync_qrcodes ;;
   sync-net)     step_sync_net ;;
   sync-heliboard) step_sync_heliboard ;;
+  regen-keyboard-patch) step_regen_keyboard_patch ;;
   sync-firewall) step_sync_firewall ;;
   sync-firestack) step_sync_firestack ;;
   firestack)     step_firestack ;;
