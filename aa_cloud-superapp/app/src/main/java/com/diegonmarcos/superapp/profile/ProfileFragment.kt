@@ -6,9 +6,12 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -125,14 +128,23 @@ class ProfileFragment : Fragment() {
                 override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
                 override fun afterTextChanged(s: Editable?) {
                     val text = s?.toString().orEmpty().trim()
-                    error = if (text.isEmpty() || DATE_PATTERN.matches(text)) null
-                            else "Use YYYY-MM-DD"
+                    error = when {
+                        text.isEmpty() || DATE_PATTERN.matches(text) -> null
+                        // Name the correction instead of only the rule. The
+                        // stored value is NOT rewritten — a date silently
+                        // reordered under the user is worse than a wrong one
+                        // they can see and fix.
+                        else -> DMY_PATTERN.matchEntire(text)?.let {
+                            val (d, m, y) = it.destructured
+                            "Use YYYY-MM-DD — did you mean $y-$m-$d?"
+                        } ?: "Use YYYY-MM-DD"
+                    }
                 }
             })
         })
 
         col.addView(label(ctx, "About"))
-        col.addView(field(ctx, prefs.titles) { prefs.titles = it }.apply {
+        col.addView(field(ctx, prefs.titles) { prefs.titles = trimSeparators(it) }.apply {
             isSingleLine = false; maxLines = 4
         })
 
@@ -163,6 +175,13 @@ class ProfileFragment : Fragment() {
         // everything above this header is synced, nothing below it ever is.
         col.addView(sectionHeader(ctx, "Credentials  (this device only)"))
         col.addView(caption(ctx, CREDENTIALS_TEXT))
+
+        col.addView(label(ctx, "Provider"))
+        col.addView(providerSelector(ctx))
+        col.addView(caption(ctx, PROVIDER_TEXT))
+        col.addView(pickButton(ctx, "Generate this device's key pair") {
+            confirmGenerateKeyPair()
+        })
 
         col.addView(label(ctx, "Authelia bearer token"))
         col.addView(secretField(
@@ -389,6 +408,129 @@ class ProfileFragment : Fragment() {
                 view?.snack("$what cleared")
                 parentFragmentManager.beginTransaction().detach(this).commitNow()
                 parentFragmentManager.beginTransaction().attach(this).commitNow()
+            }
+            .show()
+    }
+
+    // ── provider ─────────────────────────────────────────────────────────
+
+    /**
+     * Where the tunnel's PUBLIC configuration comes from.
+     *
+     * "Cloud" writes the fleet preset — hub endpoint and public key, allowed
+     * IPs, addresses, DNS, MTU, keepalive — which
+     * [WireGuardPrefs.applyCloudPreset] reads out of BuildConfig, baked from
+     * build.json::ui.wireguard_default. There is no config literal in this
+     * file, so the preset tracks the fleet rather than rotting when the hub
+     * moves. "Custom" is the manual route, unchanged.
+     *
+     * Choosing Cloud over settings that are NOT already the preset ASKS
+     * FIRST. The values it would replace can be a hand-built tunnel the user
+     * has no copy of, and a dropdown quietly eating them is not a trade this
+     * screen gets to make. Choosing Custom never writes anything.
+     */
+    private fun providerSelector(ctx: android.content.Context): View {
+        val wg = WireGuardPrefs(ctx)
+        val spinner = Spinner(ctx)
+        spinner.adapter = ArrayAdapter(
+            ctx,
+            android.R.layout.simple_spinner_dropdown_item,
+            listOf("Cloud", "Custom"),
+        )
+        spinner.setSelection(if (wg.configProvider == WireGuardPrefs.PROVIDER_CUSTOM) 1 else 0)
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+            override fun onItemSelected(parent: AdapterView<*>?, v: View?, position: Int, id: Long) {
+                val picked =
+                    if (position == 1) WireGuardPrefs.PROVIDER_CUSTOM
+                    else WireGuardPrefs.PROVIDER_CLOUD
+                // Swallows the callback Spinner fires for the setSelection above,
+                // and the one the revert fires — neither is a user choice.
+                if (picked == wg.configProvider) return
+                if (picked == WireGuardPrefs.PROVIDER_CUSTOM) {
+                    wg.configProvider = picked
+                    view?.snack("Provider: Custom — your WireGuard settings are untouched")
+                } else if (wg.matchesCloudPreset()) {
+                    wg.configProvider = picked
+                    view?.snack("Provider: Cloud")
+                } else {
+                    confirmCloudPreset(ctx, wg) { spinner.setSelection(1) }
+                }
+            }
+        }
+        return spinner
+    }
+
+    /** Ask before Cloud overwrites a config the user actually entered. */
+    private fun confirmCloudPreset(
+        ctx: android.content.Context,
+        wg: WireGuardPrefs,
+        onKeepMine: () -> Unit,
+    ) {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
+            .setTitle("Replace your WireGuard settings?")
+            .setMessage(
+                "Cloud replaces the tunnel's addresses, DNS, MTU and entire peer " +
+                "list with the fleet preset. What is stored now differs from it, so " +
+                "those values are lost — they live in Configs → WireGuard.\n\n" +
+                "Your private key is NOT touched by either provider."
+            )
+            .setNegativeButton("Keep mine") { _, _ -> onKeepMine() }
+            .setOnCancelListener { onKeepMine() }
+            .setPositiveButton("Use Cloud") { _, _ ->
+                wg.applyCloudPreset()
+                wg.configProvider = WireGuardPrefs.PROVIDER_CLOUD
+                view?.snack("Cloud preset applied — this device still needs its own private key")
+            }
+            .show()
+    }
+
+    /**
+     * Generate the one field no preset may ever contain.
+     *
+     * Replacing an existing key is called out explicitly: the tunnel stops
+     * connecting the moment the key changes and stays down until the new
+     * public half is registered on the hub.
+     */
+    private fun confirmGenerateKeyPair() {
+        val ctx = requireContext()
+        val wg = WireGuardPrefs(ctx)
+        val replacing = wg.interfacePrivateKey.isNotBlank()
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
+            .setTitle(if (replacing) "Replace this device's key pair?" else "Generate this device's key pair?")
+            .setMessage(
+                (if (replacing)
+                    "A private key is already stored. Generating a new one REPLACES it, " +
+                    "and the tunnel will not connect again until the new public key is " +
+                    "added to the hub.\n\n"
+                else "") +
+                "The pair is created on this device. The private half is written to the " +
+                "tunnel's own settings and never leaves; the public half is what the hub " +
+                "operator needs in order to let this device in."
+            )
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Generate") { _, _ ->
+                showGeneratedPublicKey(wg.generateInterfaceKeyPair())
+            }
+            .show()
+    }
+
+    /** Show the PUBLIC half — the only half that is meant to be read out. */
+    private fun showGeneratedPublicKey(publicKey: String) {
+        val ctx = requireContext()
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
+            .setTitle("This device's public key")
+            .setMessage(
+                "$publicKey\n\nAdd this to the hub as a peer. The matching private key " +
+                "is stored on this device only — it is not displayed here, and it is not " +
+                "part of anything this app uploads."
+            )
+            .setNegativeButton("Close", null)
+            .setPositiveButton("Copy") { _, _ ->
+                val clip = ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                    as android.content.ClipboardManager
+                clip.setPrimaryClip(android.content.ClipData.newPlainText("WireGuard public key", publicKey))
+                view?.snack("Public key copied")
             }
             .show()
     }
@@ -967,6 +1109,18 @@ class ProfileFragment : Fragment() {
             })
         }
 
+    /**
+     * Drop a leading/trailing `|` from About.
+     *
+     * The field's old label asked for ' | ' between items, so stored values
+     * carry an opening separator that now means nothing. Only
+     * the outer ones go; separators BETWEEN items are the user's own text.
+     * This runs on save, over what the user is looking at — the box is never
+     * rewritten underneath them.
+     */
+    private fun trimSeparators(value: String): String =
+        value.trim().trim('|').trim()
+
     private fun dp(ctx: android.content.Context, v: Int): Int =
         (v * ctx.resources.displayMetrics.density).toInt()
 
@@ -981,6 +1135,10 @@ class ProfileFragment : Fragment() {
          *  validity is deliberately not checked — the field is optional and a
          *  false rejection is worse than a typo here. */
         private val DATE_PATTERN = Regex("^\\d{4}-\\d{2}-\\d{2}$")
+
+        /** DD-MM-YYYY, the shape people actually type here. Only used to
+         *  SUGGEST the ISO reordering in the field's advisory error. */
+        private val DMY_PATTERN = Regex("^(\\d{2})-(\\d{2})-(\\d{4})$")
 
         /**
          * Says where each credential actually goes, because "it is stored
@@ -997,6 +1155,26 @@ class ProfileFragment : Fragment() {
             "settings — the very field Configs → WireGuard edits. It is not copied " +
             "here; typing in this box changes the key the tunnel connects with.\n\n" +
             "Stored values are never displayed again. An empty box means unchanged."
+
+        /**
+         * What each provider does and does not fill.
+         *
+         * The private-key paragraph is not boilerplate. "Cloud" reads as
+         * "everything is handled", and the one field it cannot hand over is
+         * the one without which nothing connects — so the limit is stated
+         * where the choice is made rather than discovered at Connect time.
+         */
+        private const val PROVIDER_TEXT =
+            "Cloud fills the PUBLIC half of the tunnel from the fleet's own " +
+            "configuration: hub endpoint and public key, allowed IPs, this device's " +
+            "addresses, DNS, MTU and keepalive. Custom leaves Configs → WireGuard " +
+            "exactly as you set it.\n\n" +
+            "Neither provider fills the private key, and no preset ever will. A " +
+            "WireGuard private key identifies ONE device — two devices sharing one " +
+            "are a single peer to the hub, and they take turns knocking each other " +
+            "off the mesh. Generate this device's own pair below, or paste a key you " +
+            "already hold. Either way the public half has to be added to the hub " +
+            "before the tunnel can hand shake."
 
         /**
          * In-screen disclosure. Kept specific — field names, destination and

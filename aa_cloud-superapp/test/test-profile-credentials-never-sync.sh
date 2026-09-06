@@ -116,6 +116,41 @@ hasnt "$CONTRACT" '"social_media_links"' "contract no longer lists social_media_
 has   "$CONTRACT" "Retired fields"       "contract explains the removal"
 has   "$CONTRACT" "No credential of any kind" "contract states credentials are never sent"
 
+echo "== T7: the Cloud provider preset carries no private key =="
+# The Provider dropdown fills the tunnel's PUBLIC half from the fleet preset.
+# The private key is per-device by definition: two devices sharing one are a
+# single peer to the hub and knock each other off the mesh. So the preset must
+# fill everything EXCEPT that, and the seed data must not contain one either.
+has "$FRAGMENT" 'label(ctx, "Provider")'        "Provider selector exists"
+has "$WG_PREFS" "fun applyCloudPreset"          "the preset is applied from one place"
+# The preset is derived from build.json via BuildConfig — not a literal here,
+# so it follows the fleet when the hub moves.
+has "$WG_PREFS" "BuildConfig.UI_WG_PEERS_JSON_B64" "preset peers come from the baked build.json data"
+hasnt_code "$WG_PREFS" 'interfaceAddress    = "10.' "no hardcoded address literal in the preset"
+# applyCloudPreset() must not touch the private key.
+if awk '/fun applyCloudPreset/,/^    }/' "$ROOT/$WG_PREFS" | grep -qF "interfacePrivateKey"; then
+    bad "applyCloudPreset() must not write interfacePrivateKey"
+else
+    ok "applyCloudPreset() leaves the private key alone"
+fi
+# Switching provider must not silently eat a config the user entered.
+has "$WG_PREFS"  "fun matchesCloudPreset"  "drift from the preset is detectable"
+has "$FRAGMENT"  "confirmCloudPreset"      "Cloud asks before overwriting a custom config"
+# The seeded WireGuard data itself must carry no private key. Scoped to the
+# wireguard_default block: ui.import_schema.wg documents the IMPORT format and
+# legitimately names *_private_key fields, which a whole-file grep would hit.
+if python3 -c "
+import json,sys
+wg = json.load(open('$ROOT/build.json'))['ui'].get('wireguard_default', {})
+blob = json.dumps(wg)
+sys.exit(1 if ('private_key' in blob or 'privkey' in blob) else 0)
+" 2>/dev/null; then
+    ok "build.json wireguard_default seeds no private key"
+else
+    bad "build.json wireguard_default must not seed a private key"
+fi
+hasnt "app/build.gradle" "UI_WG_INTERFACE_PRIVATE_KEY" "no private key is baked into BuildConfig"
+
 echo
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1

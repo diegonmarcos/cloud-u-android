@@ -67,6 +67,67 @@ class WireGuardPrefs(context: Context) {
             ?: BuildConfig.UI_WG_INTERFACE_MTU
         set(value) { sp.edit().putString(K_IF_MTU, value).apply() }
 
+    /**
+     * Where the tunnel's PUBLIC half came from — [PROVIDER_CLOUD] (the fleet
+     * preset) or [PROVIDER_CUSTOM] (the user's own values). Cloud is the
+     * default because the baked first-run values ARE the preset, so a fresh
+     * install is already on it and saying otherwise would be a lie.
+     *
+     * This records a choice; it does not gate anything. Configs → WireGuard
+     * stays editable on either setting — a user who edits while on Cloud has
+     * simply drifted from the preset, which [matchesCloudPreset] detects.
+     */
+    var configProvider: String
+        get() = sp.getString(K_PROVIDER, PROVIDER_CLOUD) ?: PROVIDER_CLOUD
+        set(value) { sp.edit().putString(K_PROVIDER, value).apply() }
+
+    /**
+     * Overwrite the tunnel's PUBLIC half with the fleet preset — tunnel name,
+     * addresses, DNS, listen port, MTU and the whole peer list (hub public
+     * key, endpoint, allowed IPs, keepalive).
+     *
+     * The values come from BuildConfig.UI_WG_*, which app/build.gradle bakes
+     * from build.json::ui.wireguard_default. Nothing here is a literal, so the
+     * preset follows the fleet instead of rotting the next time the hub moves.
+     *
+     * [interfacePrivateKey] IS DELIBERATELY NOT TOUCHED, and no preset may
+     * ever carry one. A WireGuard private key names one device: two devices
+     * sharing a key are one peer to the hub, and they knock each other off it.
+     */
+    fun applyCloudPreset() {
+        tunnelName          = BuildConfig.UI_WG_TUNNEL_NAME
+        interfaceAddress    = BuildConfig.UI_WG_INTERFACE_ADDRESS
+        interfaceDns        = BuildConfig.UI_WG_INTERFACE_DNS
+        interfaceListenPort = BuildConfig.UI_WG_INTERFACE_LISTEN_PORT
+        interfaceMtu        = BuildConfig.UI_WG_INTERFACE_MTU
+        savePeers(parsePeers(defaultPeersJson()))
+    }
+
+    /** True when the stored public half already equals what [applyCloudPreset]
+     *  would write, so the caller can skip asking before overwriting nothing. */
+    fun matchesCloudPreset(): Boolean =
+        tunnelName          == BuildConfig.UI_WG_TUNNEL_NAME &&
+        interfaceAddress    == BuildConfig.UI_WG_INTERFACE_ADDRESS &&
+        interfaceDns        == BuildConfig.UI_WG_INTERFACE_DNS &&
+        interfaceListenPort == BuildConfig.UI_WG_INTERFACE_LISTEN_PORT &&
+        interfaceMtu        == BuildConfig.UI_WG_INTERFACE_MTU &&
+        peers()             == parsePeers(defaultPeersJson())
+
+    /**
+     * Generate a Curve25519 key pair ON THIS DEVICE, store the private half as
+     * the interface key and return the PUBLIC half for the user to hand to
+     * whoever administers the hub.
+     *
+     * This is the honest alternative to seeding a key: the private half is
+     * created here and never leaves, and the tunnel stays down until the
+     * returned public half is added to the hub as a peer.
+     */
+    fun generateInterfaceKeyPair(): String {
+        val pair = KeyPair()
+        interfacePrivateKey = pair.privateKey.toBase64()
+        return pair.publicKey.toBase64()
+    }
+
     /** Last user-driven Connect/Disconnect state — restored on app
      *  restart so the toggle reflects the actual tunnel state. */
     var tunnelEnabled: Boolean
@@ -223,5 +284,11 @@ class WireGuardPrefs(context: Context) {
         private const val K_IF_MTU         = "if_mtu"
         private const val K_PEERS_JSON     = "peers_json"
         private const val K_TUNNEL_ENABLED = "tunnel_enabled"
+        private const val K_PROVIDER       = "config_provider"
+
+        /** Public half comes from the fleet preset baked out of build.json. */
+        const val PROVIDER_CLOUD  = "cloud"
+        /** Public half is whatever the user set in Configs → WireGuard. */
+        const val PROVIDER_CUSTOM = "custom"
     }
 }
