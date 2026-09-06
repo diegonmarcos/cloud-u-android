@@ -166,8 +166,8 @@ class ProfileFragment : Fragment() {
             hint = "1990-04-23"
             inputType = android.text.InputType.TYPE_CLASS_DATETIME or
                 android.text.InputType.TYPE_DATETIME_VARIATION_DATE
-            // Advisory only — a wrong-looking date is flagged, never rejected,
-            // and never blocks saving. The field is optional to begin with.
+            // Advisory WHILE TYPING — a wrong-looking date is flagged, never
+            // rejected, and never blocks saving. The field is optional.
             addTextChangedListener(object : TextWatcher {
                 override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
                 override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
@@ -175,17 +175,35 @@ class ProfileFragment : Fragment() {
                     val text = s?.toString().orEmpty().trim()
                     error = when {
                         text.isEmpty() || DATE_PATTERN.matches(text) -> null
-                        // Name the correction instead of only the rule. The
-                        // stored value is NOT rewritten — a date silently
-                        // reordered under the user is worse than a wrong one
-                        // they can see and fix.
-                        else -> DMY_PATTERN.matchEntire(text)?.let {
-                            val (d, m, y) = it.destructured
-                            "Use YYYY-MM-DD — did you mean $y-$m-$d?"
-                        } ?: "Use YYYY-MM-DD"
+                        // Name the correction instead of only the rule.
+                        else -> isoFromDmy(text)?.let { "Use YYYY-MM-DD — saving as $it" }
+                            ?: DMY_PATTERN.matchEntire(text)?.let {
+                                val (d, m, y) = it.destructured
+                                "Use YYYY-MM-DD — did you mean $y-$m-$d?"
+                            } ?: "Use YYYY-MM-DD"
                     }
                 }
             })
+            // Committing happens on BLUR, which is this form's save: there is
+            // no Save button, every field persists per keystroke, and leaving
+            // the box is the moment the user is done with it. Rewriting on
+            // each keystroke would reorder a date under a finger still typing
+            // it.
+            setOnFocusChangeListener { v, hasFocus ->
+                if (hasFocus) return@setOnFocusChangeListener
+                val typed = (v as EditText).text?.toString().orEmpty().trim()
+                val iso = isoFromDmy(typed) ?: return@setOnFocusChangeListener
+                // Rewrite the BOX, not just the stored value. The old code
+                // refused to convert because "a date silently reordered under
+                // the user is worse than a wrong one they can see" — the
+                // silence was the problem, not the reordering, so the field
+                // visibly becomes what was stored and says so.
+                v.setText(iso)
+                v.setSelection(iso.length)
+                prefs.birth = iso
+                v.error = null
+                view?.snack("Date of birth saved as $iso (was $typed)")
+            }
         })
 
         col.addView(label(ctx, "About"))
@@ -1292,9 +1310,29 @@ class ProfileFragment : Fragment() {
          *  false rejection is worse than a typo here. */
         private val DATE_PATTERN = Regex("^\\d{4}-\\d{2}-\\d{2}$")
 
-        /** DD-MM-YYYY, the shape people actually type here. Only used to
-         *  SUGGEST the ISO reordering in the field's advisory error. */
+        /** DD-MM-YYYY, the shape people actually type here. */
         private val DMY_PATTERN = Regex("^(\\d{2})-(\\d{2})-(\\d{4})$")
+
+        /**
+         * The ISO date [text] unambiguously means, or null.
+         *
+         * ONLY when the first field is >12, which cannot be a month and so
+         * cannot be the American MM-DD-YYYY. `18-07-1987` is 1987-07-18 in
+         * every reading and converts; `05-07-1987` is the 5th of July or the
+         * 7th of May depending on which side of an ocean it was typed on, and
+         * no amount of confidence here would settle it — that one keeps the
+         * advisory and waits for the user to retype it.
+         *
+         * The month is still checked, because a first field >12 tells us which
+         * position is the day, not that the other one is a real month.
+         */
+        fun isoFromDmy(text: String): String? {
+            val m = DMY_PATTERN.matchEntire(text) ?: return null
+            val (d, mo, y) = m.destructured
+            if (d.toInt() !in 13..31) return null
+            if (mo.toInt() !in 1..12) return null
+            return "$y-$mo-$d"
+        }
 
         private const val CONNECT_TEXT =
             "None of this is part of your profile and none of it is ever uploaded — " +
