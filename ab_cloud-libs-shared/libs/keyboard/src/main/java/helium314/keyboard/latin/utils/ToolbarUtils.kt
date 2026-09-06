@@ -93,6 +93,7 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     TRANSLATE -> KeyCode.TRANSLATE // SuperApp addition (patch 0001)
     GRAMMAR -> KeyCode.GRAMMAR    // SuperApp addition (patch 0002)
     ENHANCE -> KeyCode.ENHANCE    // SuperApp addition — Text Enhancements
+    LANGUAGE_SWITCH -> KeyCode.LANGUAGE_SWITCH // cloud-keyboard: same code the globe key emits → InputLogic → LatinIME.switchToNextSubtype
 }
 
 fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getCustomToolbarLongpressCode(key) ?: when (key) {
@@ -114,6 +115,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
     BACKGROUND_GATHERING -> KeyCode.BACKGROUND_GATHERING_TEMP_OFF
     TRANSLATE -> KeyCode.TRANSLATE_BAR // SuperApp addition (patch 0001) — long-press opens the live translate bar
     GRAMMAR -> KeyCode.UNSPECIFIED     // SuperApp addition (patch 0002) — no long-press action defined
+    LANGUAGE_SWITCH -> KeyCode.SYSTEM_INPUT_METHOD_PICKER // cloud-keyboard: globe long-press = picker (PointerTracker → showInputPickerDialog); same dialog
     else -> KeyCode.UNSPECIFIED
 }
 
@@ -124,7 +126,8 @@ enum class ToolbarKey {
     PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, BACKGROUND_GATHERING,
     TRANSLATE, // SuperApp addition (patch 0001) — on-device ML Kit translate to active subtype language
     GRAMMAR,   // SuperApp addition (patch 0002) — on-demand whole-field grammar fix
-    ENHANCE    // SuperApp addition — Text Enhancements: rewrite selection/field via AI Model Routing
+    ENHANCE,   // SuperApp addition — Text Enhancements: rewrite selection/field via AI Model Routing
+    LANGUAGE_SWITCH // cloud-keyboard: toolbar twin of the globe key (tap = next subtype/IME per "Language switch key behavior", long-press = picker). Opt-in, not default.
 }
 
 enum class ToolbarMode {
