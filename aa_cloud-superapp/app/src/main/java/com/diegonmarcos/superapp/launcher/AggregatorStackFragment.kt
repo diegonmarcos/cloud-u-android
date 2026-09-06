@@ -97,10 +97,21 @@ class AggregatorStackFragment : Fragment(),
     private var filterPage = ""
     private var sortMode   = "time"
     private var showMode   = "all"
-    /** Start of this visit's unread window: the ts of the PREVIOUS visit.
+    /** Start of this visit's NEW window: the ts of the PREVIOUS visit.
      *  Captured before the watermark is advanced so toggling Show back and
-     *  forth within one visit keeps answering the same question. */
+     *  forth within one visit keeps answering the same question. This is what
+     *  a group's "N new" chip counts — arrival, not attention. */
     private var visitSeenAt = 0L
+    /** Ids the user has explicitly swiped read on this page. Loaded once per
+     *  build and kept in step with [StackFilters] on every swipe, so a body
+     *  rebuild (a filter tap) paints from memory rather than re-reading. */
+    private var readIds: MutableSet<String> = HashSet()
+
+    /** Read is EXPLICIT — the user swiped this row away. A row with no stable
+     *  identity has nothing to remember, so it falls back to the arrival
+     *  watermark rather than pretending to be permanently unread. */
+    private fun isUnread(r: NotifRow): Boolean =
+        if (r.id.isBlank()) r.ts > visitSeenAt else r.id !in readIds
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
@@ -143,9 +154,14 @@ class AggregatorStackFragment : Fragment(),
         // BEFORE advancing it is what makes Show=Unread mean "since you were
         // last here" rather than "since a moment ago", which would always be
         // empty.
+        // The page id is the prefs key whether or not this page draws a toggle
+        // row: C3 ▸ Observability now carries notification cards and declares
+        // no filters, and its swipes must not land in a blank-keyed bucket
+        // shared with every other stackless page.
+        filterPage = mode
+        readIds = StackFilters.readKeys(ctx, filterPage)
         val filters = Sections.stackFiltersFor(sec, mode)
         if (filters.isNotEmpty()) {
-            filterPage  = mode
             visitSeenAt = StackFilters.lastSeen(ctx, filterPage)
             StackFilters.markSeen(ctx, filterPage, System.currentTimeMillis())
             sortMode = selection(ctx, filters, "sort", sortMode)
@@ -796,6 +812,12 @@ class AggregatorStackFragment : Fragment(),
         val title: String,
         val text: String,
         val severity: String = "info",
+        /** Stable per-entry identity, NAMESPACED by stream ("phone:…",
+         *  "app:…", "ntfy:<topic>:…") so [StackFilters.pruneRead] can retire
+         *  one stream's read keys without seeing the others. Blank means this
+         *  row has no identity to remember, and it falls back to the visit
+         *  watermark for its unread verdict. */
+        val id: String = "",
     )
 
     /** A group's one-line verdict. Same four-state vocabulary the C3 Obsv page
@@ -893,9 +915,21 @@ class AggregatorStackFragment : Fragment(),
                     label         = entries.firstOrNull { it.appLabel.isNotBlank() }?.appLabel ?: key,
                     sub           = key,
                     launchPackage = entries.first().packageName,
-                    rows          = entries.map { NotifRow(it.ts, it.title.ifBlank { it.appLabel }, it.text) },
+                    // `it.key` is StatusBarNotification.key, which is what
+                    // PhoneNotificationStore dedupes on too — one stored entry
+                    // is exactly one read key. A notification updated in place
+                    // (a music progress bar) keeps its key and stays read,
+                    // matching how the shade treats a quiet update.
+                    rows          = entries.map {
+                        NotifRow(it.ts, it.title.ifBlank { it.appLabel }, it.text,
+                            id = PHONE_NS + it.key)
+                    },
                 )
             }
+        // The store IS the complete phone namespace, so this prune sees
+        // everything it is allowed to retire.
+        StackFilters.pruneRead(ctx, filterPage, PHONE_NS,
+            stored.mapTo(HashSet()) { PHONE_NS + it.key })
         if (renderGroups(ctx, body, groups) == 0) {
             body.addView(caption(ctx, filteredAwayNote(stored.size)))
         }
@@ -940,10 +974,12 @@ class AggregatorStackFragment : Fragment(),
                         NotificationStore.Sev.ERROR -> "error"
                         NotificationStore.Sev.WARN  -> "warn"
                         else                        -> "info"
-                    })
+                    }, id = APP_NS + it.id)
                 },
             )
         }
+        StackFilters.pruneRead(ctx, filterPage, APP_NS,
+            stored.mapTo(HashSet()) { APP_NS + it.id })
         if (renderGroups(ctx, body, local) == 0) {
             if (stored.isEmpty()) {
                 body.addView(stateLine(ctx, "silent · no in-app events", SIGNAL_WARN))
@@ -1013,7 +1049,7 @@ class AggregatorStackFragment : Fragment(),
 
             val cached = ntfyCache[topic]
             if (cached != null) {
-                paintNtfyGroup(ctx, state, rowsBox, cached)
+                paintNtfyGroup(ctx, state, rowsBox, cached, topic)
                 continue
             }
             runCatching {
@@ -1021,7 +1057,7 @@ class AggregatorStackFragment : Fragment(),
                     val result = pollTopic(topic)
                     state.post {
                         ntfyCache[topic] = result
-                        paintNtfyGroup(ctx, state, rowsBox, result)
+                        paintNtfyGroup(ctx, state, rowsBox, result, topic)
                     }
                 }
             }.onFailure {
@@ -1036,6 +1072,7 @@ class AggregatorStackFragment : Fragment(),
 
     private fun paintNtfyGroup(
         ctx: android.content.Context, state: TextView, rowsBox: LinearLayout, result: NtfyResult,
+        topic: String = "",
     ) {
         rowsBox.removeAllViews()
         if (!result.ok) {
@@ -1043,6 +1080,12 @@ class AggregatorStackFragment : Fragment(),
             state.setTextColor(SIGNAL_UNKNOWN)
             return
         }
+        // A SUCCESSFUL poll is the complete current window for this topic, and
+        // only then may its read keys be retired. An unavailable one returns
+        // above without pruning, so a mesh hiccup does not resurrect every row
+        // the user already swiped away.
+        if (topic.isNotBlank()) StackFilters.pruneRead(
+            ctx, filterPage, ntfyNs(topic), result.rows.mapTo(HashSet()) { it.id })
         val rows = withinGroup(result.rows)
         if (rows.isEmpty()) {
             // Empty channel and hidden-by-filter are different facts, so they get
@@ -1076,11 +1119,19 @@ class AggregatorStackFragment : Fragment(),
                 conn.inputStream.bufferedReader().forEachLine { line ->
                     if (line.isNotBlank()) runCatching {
                         val o = org.json.JSONObject(line)
-                        if (o.optString("event") == "message") rows += NotifRow(
-                            ts    = o.optLong("time", 0L) * 1000L,
-                            title = o.optString("title").ifBlank { topic },
-                            text  = o.optString("message"),
-                        )
+                        if (o.optString("event") == "message") {
+                            val ts = o.optLong("time", 0L) * 1000L
+                            rows += NotifRow(
+                                ts    = ts,
+                                title = o.optString("title").ifBlank { topic },
+                                text  = o.optString("message"),
+                                // ntfy mints a stable per-message id. Falling
+                                // back to topic+ts keeps a row swipeable on a
+                                // server old enough not to send one.
+                                id    = ntfyNs(topic) +
+                                    o.optString("id").ifBlank { ts.toString() },
+                            )
+                        }
                     }
                 }
                 NtfyResult(true, "", rows)
@@ -1115,9 +1166,13 @@ class AggregatorStackFragment : Fragment(),
             // shade is scanned for; when something in the group is newer than
             // the last visit the count of those leads instead, in the same
             // green the healthy verdicts use.
-            val unread = g.rows.count { it.ts > visitSeenAt }
+            // NEW, not unread: arrived since the previous visit. Kept on the
+            // watermark deliberately — a chip that only fell when every row
+            // was swiped would read "12 new" forever on a page you read by
+            // scrolling.
+            val fresh = g.rows.count { it.ts > visitSeenAt }
             val chip =
-                if (unread > 0) GroupState("$unread new · ${g.rows.size}", SIGNAL_OK)
+                if (fresh > 0) GroupState("$fresh new · ${g.rows.size}", SIGNAL_OK)
                 else GroupState("${g.rows.size} · ${ago(now - g.newest)}", 0x99FFFFFF.toInt())
             val block = groupBlock(ctx, g, chip)
             val rows = block.findViewWithTag<LinearLayout>(GROUP_ROWS_TAG)
@@ -1127,11 +1182,12 @@ class AggregatorStackFragment : Fragment(),
         return ordered.size
     }
 
-    /** Show=Unread inside one group: `ts > previous visit`, then newest-first.
-     *  Derived, not stored: neither store writes a read or dismissed flag, so a
-     *  filter over one would show an empty list forever. Both already carry ts. */
+    /** Show=Unread inside one group: everything not swiped away, newest-first.
+     *  Now a real stored predicate rather than a derived one — a row leaves
+     *  this list because the user said so, so the filter and the swipe cannot
+     *  disagree about what "unread" means. */
     private fun withinGroup(rows: List<NotifRow>): List<NotifRow> {
-        val shown = if (showMode == "unread") rows.filter { it.ts > visitSeenAt } else rows
+        val shown = if (showMode == "unread") rows.filter { isUnread(it) } else rows
         return shown.sortedByDescending { it.ts }
     }
 
@@ -1297,11 +1353,14 @@ class AggregatorStackFragment : Fragment(),
      * Unread is the one thing that must survive a glance, so it is said three
      * times over: the stripe lights up, the title goes bold, and the row takes
      * a faint tint. A read row says it by staying quiet.
+     *
+     * READ IS A SWIPE. Dragging the row sideways past a threshold flips it,
+     * either way, and the row slides out and comes back in wearing the other
+     * state so the gesture is visibly answered. See [attachSwipeToRead].
      */
     private fun notifRowView(
         ctx: android.content.Context, r: NotifRow, launchPackage: String,
     ): View {
-        val unread = r.ts > visitSeenAt
         val holder = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
@@ -1312,33 +1371,13 @@ class AggregatorStackFragment : Fragment(),
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, dp(7), dp(10), dp(7))
-            setBackgroundColor(when {
-                r.severity == "error" -> 0x33B91C1C
-                r.severity == "warn"  -> 0x33D97706
-                unread                -> 0x14FFFFFF
-                else                  -> 0x00000000
-            })
-            if (launchPackage.isNotBlank()) {
-                isClickable = true
-                setOnClickListener {
-                    runCatching {
-                        ctx.packageManager.getLaunchIntentForPackage(launchPackage)
-                            ?.let { ctx.startActivity(it) }
-                    }
-                }
-            }
         }
-        row.addView(View(ctx).apply {
+        val stripe = View(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
                 dp(3), LinearLayout.LayoutParams.MATCH_PARENT,
             ).apply { rightMargin = dp(9) }
-            setBackgroundColor(when {
-                r.severity == "error" -> 0xFFFF6B6B.toInt()
-                r.severity == "warn"  -> 0xFFFFB020.toInt()
-                unread                -> 0xFF7C5CFF.toInt()
-                else                  -> 0x00000000
-            })
-        })
+        }
+        row.addView(stripe)
         val col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(
@@ -1348,16 +1387,15 @@ class AggregatorStackFragment : Fragment(),
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.CENTER_VERTICAL
         }
-        line.addView(TextView(ctx).apply {
+        val title = TextView(ctx).apply {
             text = r.title
-            setTextColor(if (unread) 0xFFF2E9FF.toInt() else 0xBBE9D8FD.toInt())
             textSize = 13f
-            if (unread) typeface = Typeface.DEFAULT_BOLD
             maxLines = 1
             ellipsize = android.text.TextUtils.TruncateAt.END
             layoutParams = LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-        })
+        }
+        line.addView(title)
         line.addView(TextView(ctx).apply {
             text = ago(System.currentTimeMillis() - r.ts)
             setTextColor(0x77FFFFFF.toInt())
@@ -1365,14 +1403,14 @@ class AggregatorStackFragment : Fragment(),
             setPadding(dp(8), 0, 0, 0)
         })
         col.addView(line)
-        if (r.text.isNotBlank()) col.addView(TextView(ctx).apply {
+        val snippet = if (r.text.isBlank()) null else TextView(ctx).apply {
             text = r.text
-            setTextColor(if (unread) 0xAAE9D8FD.toInt() else 0x77E9D8FD.toInt())
             textSize = 12f
             maxLines = 2
             ellipsize = android.text.TextUtils.TruncateAt.END
             setPadding(0, dp(1), 0, 0)
-        })
+        }
+        snippet?.let { col.addView(it) }
         row.addView(col)
         holder.addView(row)
         holder.addView(View(ctx).apply {
@@ -1380,7 +1418,138 @@ class AggregatorStackFragment : Fragment(),
                 LinearLayout.LayoutParams.MATCH_PARENT, 1)
             setBackgroundColor(0x11FFFFFF)
         })
+
+        // All three unread cues in one place, so a repaint after a swipe
+        // cannot set two of them and forget the third.
+        val paint: (Boolean) -> Unit = { unread ->
+            row.setBackgroundColor(when {
+                r.severity == "error" -> 0x33B91C1C
+                r.severity == "warn"  -> 0x33D97706
+                unread                -> 0x14FFFFFF
+                else                  -> 0x00000000
+            })
+            stripe.setBackgroundColor(when {
+                r.severity == "error" -> 0xFFFF6B6B.toInt()
+                r.severity == "warn"  -> 0xFFFFB020.toInt()
+                unread                -> 0xFF7C5CFF.toInt()
+                else                  -> 0x00000000
+            })
+            title.setTextColor(if (unread) 0xFFF2E9FF.toInt() else 0xBBE9D8FD.toInt())
+            title.typeface = if (unread) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+            snippet?.setTextColor(if (unread) 0xAAE9D8FD.toInt() else 0x77E9D8FD.toInt())
+        }
+        paint(isUnread(r))
+
+        val openApp: (() -> Unit)? =
+            if (launchPackage.isBlank()) null else ({
+                runCatching {
+                    ctx.packageManager.getLaunchIntentForPackage(launchPackage)
+                        ?.let { ctx.startActivity(it) }
+                }
+                Unit
+            })
+        if (r.id.isNotBlank()) {
+            attachSwipeToRead(holder, r, paint, openApp)
+        } else if (openApp != null) {
+            // No identity to remember, so no swipe — but the tap must survive.
+            row.isClickable = true
+            row.setOnClickListener { openApp() }
+        }
         return holder
+    }
+
+    /**
+     * Swipe a row sideways — either direction — to flip its read state.
+     *
+     * Hand-rolled on a touch listener because this list is plain Views in a
+     * LinearLayout inside a ScrollView (no RecyclerView anywhere on this path,
+     * deliberately), so ItemTouchHelper does not apply and no dependency is
+     * added to get one.
+     *
+     * VERTICAL SCROLLING IS PRESERVED by claiming the gesture late. The listener
+     * takes the stream on DOWN but decides nothing; on the first movement past
+     * the touch slop it compares |dx| to |dy|, and only a clearly sideways drag
+     * calls requestDisallowInterceptTouchEvent. A vertical drag is never
+     * claimed, so the ScrollView intercepts it exactly as before and this row
+     * receives ACTION_CANCEL and settles back.
+     *
+     * The gesture is always visibly answered: the row follows the finger,
+     * leaves in the direction it was thrown, and returns from the other side
+     * already wearing the other state. A swipe that changed nothing on screen
+     * would read as a broken row.
+     */
+    private fun attachSwipeToRead(
+        holder: View, r: NotifRow, paint: (Boolean) -> Unit, onTap: (() -> Unit)?,
+    ) {
+        val ctx = holder.context
+        val slop = android.view.ViewConfiguration.get(ctx).scaledTouchSlop
+        var downX = 0f; var downY = 0f
+        var decided = false; var horizontal = false
+        // rawX/rawY, not x/y: the view is being translated under the finger,
+        // so view-local coordinates drift with the animation we are driving.
+        holder.setOnTouchListener { v, ev ->
+            when (ev.actionMasked) {
+                android.view.MotionEvent.ACTION_DOWN -> {
+                    downX = ev.rawX; downY = ev.rawY
+                    decided = false; horizontal = false
+                    true
+                }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    val dx = ev.rawX - downX
+                    val dy = ev.rawY - downY
+                    if (!decided && (kotlin.math.abs(dx) > slop || kotlin.math.abs(dy) > slop)) {
+                        decided = true
+                        horizontal = kotlin.math.abs(dx) > kotlin.math.abs(dy)
+                        if (horizontal) v.parent?.requestDisallowInterceptTouchEvent(true)
+                    }
+                    if (horizontal) {
+                        v.translationX = dx
+                        v.alpha = 1f - (kotlin.math.abs(dx) / (v.width.coerceAtLeast(1) * 2f))
+                            .coerceIn(0f, 0.55f)
+                    }
+                    true
+                }
+                android.view.MotionEvent.ACTION_UP -> {
+                    val dx = ev.rawX - downX
+                    val far = kotlin.math.abs(dx) >
+                        kotlin.math.max(dp(64).toFloat(), v.width * 0.22f)
+                    when {
+                        horizontal && far -> flipRead(v, r, paint, dx > 0)
+                        horizontal        -> settle(v)
+                        !decided          -> onTap?.invoke()
+                        else              -> settle(v)
+                    }
+                    true
+                }
+                android.view.MotionEvent.ACTION_CANCEL -> { settle(v); true }
+                else -> false
+            }
+        }
+    }
+
+    /** Slide [v] out towards [toRight], persist the flipped state, then bring
+     *  it back from the opposite edge already repainted. Under Show=Unread a
+     *  row that just became read has nowhere to return TO, so it stays gone
+     *  rather than reappearing in a list that excludes it. */
+    private fun flipRead(v: View, r: NotifRow, paint: (Boolean) -> Unit, toRight: Boolean) {
+        val makeRead = isUnread(r)
+        val out = (if (toRight) 1f else -1f) * v.width.coerceAtLeast(1)
+        v.animate().translationX(out).alpha(0f).setDuration(150).withEndAction {
+            readIds = StackFilters.markRead(v.context, filterPage, r.id, makeRead)
+            if (showMode == "unread" && makeRead) {
+                v.visibility = View.GONE
+                v.translationX = 0f
+                v.alpha = 1f
+            } else {
+                paint(!makeRead)
+                v.translationX = -out
+                v.animate().translationX(0f).alpha(1f).setDuration(170).start()
+            }
+        }.start()
+    }
+
+    private fun settle(v: View) {
+        v.animate().translationX(0f).alpha(1f).setDuration(140).start()
     }
 
     /** The divider between two halves of one stream — small, upper-case and
@@ -1967,6 +2136,18 @@ class AggregatorStackFragment : Fragment(),
          *  the collapse toggle can both find it from the block they were
          *  handed — the alternative is a field per group. */
         private const val GROUP_ROWS_TAG = "notif_group_rows"
+
+        /** Read-key namespaces. Every stored read id starts with one, so
+         *  [StackFilters.pruneRead] can retire the phone stream's keys from a
+         *  complete enumeration of the phone store without touching ntfy keys
+         *  it has no view of — see [ntfyNs] for why ntfy needs one per topic. */
+        private const val PHONE_NS = "phone:"
+        private const val APP_NS   = "app:"
+
+        /** One namespace PER TOPIC: an ntfy poll is only ever complete for the
+         *  topic it polled, so that is the largest set a successful poll is
+         *  entitled to prune. */
+        private fun ntfyNs(topic: String) = "ntfy:$topic:"
 
         fun newInstance(sectionId: String, label: String, mode: String): AggregatorStackFragment =
             AggregatorStackFragment().apply {
