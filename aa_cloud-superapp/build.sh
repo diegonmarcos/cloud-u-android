@@ -1033,23 +1033,35 @@ step_sync_heliboard() {
 # patches/0001-cloud-superapp-keyboard.patch carries. So every mirror edit is
 # committed TWICE: the file itself (what CI builds) and this patch (what the
 # next sync re-applies). Edit mirror -> `./build.sh regen-keyboard-patch` ->
-# commit both. Byte-exact + reproducible: a throwaway git repo seeded with the
-# pristine upstream app/src/main (assets/dicts excluded — owned by
-# sync-keyboard-dicts), the mirror copied over it, `git diff --cached`. The
-# upstream clone must sit at build.json::keyboard_upstream.sha (the pin the
-# mirror was last synced from) or the diff would encode upstream churn as ours.
+# `git add` the mirror files -> commit both. Byte-exact + reproducible: a
+# throwaway git repo seeded with the pristine upstream app/src/main
+# (assets/dicts excluded — owned by sync-keyboard-dicts), the mirror AS STAGED
+# IN THE INDEX (HEAD + git add'ed files) copied over it, `git diff --cached`.
+# Index, not worktree, on purpose: this repo is shared by concurrent agents,
+# and a worktree diff would bake somebody else's half-written, uncommitted
+# mirror edits into the patch you are about to commit. Whatever you `git add`
+# is what the patch carries — same rule as the commit itself. The upstream
+# clone must sit at build.json::keyboard_upstream.sha (the pin the mirror was
+# last synced from) or the diff would encode upstream churn as ours.
 step_regen_keyboard_patch() {
   local upstream="${ANDROID_REPO:-$HOME/git/cloud-u-android}/ac_keyboard-heliboard"
   local dst="$LIBS_DIR/keyboard"
   local out="$dst/patches/0001-cloud-superapp-keyboard.patch"
   [ -d "$upstream/app/src/main" ] || { errlog "regen-keyboard-patch: upstream not found: $upstream (clone https://github.com/Helium314/HeliBoard.git there)"; exit 1; }
   command -v jq >/dev/null 2>&1 || { errlog "regen-keyboard-patch: jq required"; exit 1; }
-  local pin head
+  local pin head root prefix
   pin=$(jq -r '.keyboard_upstream.sha // empty' "$SCRIPT_DIR/build.json")
   head=$(git -C "$upstream" rev-parse --short=7 HEAD)
   [ -n "$pin" ] || { errlog "regen-keyboard-patch: build.json::keyboard_upstream.sha missing"; exit 1; }
   [ "$head" = "$(git -C "$upstream" rev-parse --short=7 "$pin")" ] \
     || { errlog "regen-keyboard-patch: upstream clone is at $head but build.json pins $pin — git -C $upstream checkout $pin first"; exit 1; }
+  root=$(git -C "$LIBS_DIR" rev-parse --show-toplevel)
+  prefix=$(realpath --relative-to="$root" "$LIBS_DIR/..")
+  [ "$prefix" = "." ] && prefix=""
+  local mirror_rel="${prefix:+$prefix/}libs/keyboard/src/main"
+  local unstaged
+  unstaged=$(git -C "$root" status --porcelain --untracked-files=all -- "$mirror_rel" | grep -c '^\(.[MD?]\| [A-Z]\)' || true)
+  [ "$unstaged" = "0" ] || log "regen-keyboard-patch: NOTE $unstaged mirror file(s) modified/untracked but NOT staged — they are not in the patch (git add them first if they are yours)"
 
   local tmp; tmp=$(mktemp -d)
   mkdir -p "$tmp/libs/keyboard/src"
@@ -1059,8 +1071,11 @@ step_regen_keyboard_patch() {
   git -C "$tmp" -c core.excludesFile=/dev/null add -A
   git -C "$tmp" -c user.name=regen -c user.email=regen@local commit -q -m pristine
   rm -rf "$tmp/libs/keyboard/src/main"
-  cp -a "$dst/src/main" "$tmp/libs/keyboard/src/main"
-  rm -rf "$tmp/libs/keyboard/src/main/assets/dicts"
+  # Export the mirror from the INDEX (see above), then drop it over pristine.
+  mkdir -p "$tmp/idx"
+  git -C "$root" ls-files -z -- "$mirror_rel" | git -C "$root" checkout-index -z --stdin --prefix="$tmp/idx/"
+  mv "$tmp/idx/$mirror_rel" "$tmp/libs/keyboard/src/main"
+  rm -rf "$tmp/idx" "$tmp/libs/keyboard/src/main/assets/dicts"
   git -C "$tmp" -c core.excludesFile=/dev/null add -A
   {
     printf '# Cloud-SuperApp keyboard overlay — single consolidated patch = diff(HeliBoard %s app/src/main, libs/keyboard/src/main).\n' "$head"
@@ -1072,10 +1087,9 @@ step_regen_keyboard_patch() {
     git -C "$tmp" diff --cached --no-renames --binary
   } > "$out"
   rm -rf "$tmp"
-  # Prove it: the fresh patch must apply onto pristine upstream, and reverse-apply onto the mirror.
-  git -C "$(git -C "$LIBS_DIR" rev-parse --show-toplevel)" apply --check -R \
-      --directory="$(realpath --relative-to="$(git -C "$LIBS_DIR" rev-parse --show-toplevel)" "$LIBS_DIR/..")" "$out" \
-    || { errlog "regen-keyboard-patch: generated patch does not reverse-apply onto the mirror"; exit 1; }
+  # Prove it: the fresh patch must reverse-apply onto the mirror as staged (--cached = index, same source as the diff).
+  git -C "$root" apply --check -R --cached --directory="$prefix" "$out" \
+    || { errlog "regen-keyboard-patch: generated patch does not reverse-apply onto the staged mirror"; exit 1; }
   log "regen-keyboard-patch: $(grep -c '^diff --git' "$out") file(s), upstream $head → $(realpath --relative-to="$SCRIPT_DIR" "$out")"
 }
 

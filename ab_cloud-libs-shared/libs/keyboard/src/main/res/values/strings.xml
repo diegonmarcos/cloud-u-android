@@ -50,6 +50,17 @@
     <string name="settings_screen_clipboard">Clipboard</string>
     <!-- SuperApp addition — Translation / Emoji / Voice Transcript info screens -->
     <string name="settings_screen_translation">Translation</string>
+    <!-- SuperApp addition — Translate bar settings (keys: com.diegonmarcos.superapp.translate.TranslatePrefs) -->
+    <string name="translate_category_behavior">Translate bar</string>
+    <string name="translate_default_target_title">Default target language</string>
+    <string name="translate_default_target_active">Active keyboard language</string>
+    <string name="translate_auto_detect_title">Auto-detect source language</string>
+    <string name="translate_auto_detect_summary">Off: the source defaults to the active keyboard language. Detection falls back to it anyway when the text is too short.</string>
+    <string name="translate_apply_mode_title">Enter / primary action</string>
+    <string name="translate_apply_insert">Insert at cursor</string>
+    <string name="translate_apply_replace">Replace selection or whole field</string>
+    <string name="translate_live_commit_title">Type straight into the field</string>
+    <string name="translate_live_commit_summary">Gboard-style: the translation is written into the app as you type, instead of previewed in the bar. Fragile in apps that edit their own text.</string>
     <string name="settings_screen_emoji">Emoji, GIFs &amp; Stickers</string>
     <string name="settings_screen_voice_transcript">Voice transcript</string>
     <!-- Settings screen title for advanced settings -->

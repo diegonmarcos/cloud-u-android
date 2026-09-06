@@ -1698,7 +1698,7 @@ index 0000000..020a624
 +    }
 +}
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/latin/LatinIME.java b/libs/keyboard/src/main/java/helium314/keyboard/latin/LatinIME.java
-index 31bbb02..b1deab8 100644
+index 31bbb02..48facac 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/latin/LatinIME.java
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/latin/LatinIME.java
 @@ -79,6 +79,7 @@ import helium314.keyboard.latin.utils.JniUtils;
@@ -1742,7 +1742,7 @@ index 31bbb02..b1deab8 100644
          mClipboardHistoryManager.onDestroy();
          mDictionaryFacilitator.closeDictionaries();
          mSettings.onDestroy();
-@@ -772,6 +785,119 @@ public class LatinIME extends InputMethodService implements
+@@ -772,6 +785,122 @@ public class LatinIME extends InputMethodService implements
          }
      }
  
@@ -1762,14 +1762,17 @@ index 31bbb02..b1deab8 100644
 +        if (opening) { hideEmojiSearchBar(); hideVoiceBar(); }
 +        if (mTranslateBar == null) {
 +            mTranslateBar = new com.diegonmarcos.superapp.translate.TranslateBarView(this);
-+            final java.util.Locale loc = mRichImm.getCurrentSubtypeLocale();
-+            final String target = (loc != null && !loc.getLanguage().isEmpty()) ? loc.getLanguage() : "en";
-+            mTranslateBar.bind(this::getCurrentInputConnection, target, this::hideTranslateBar);
 +            frame.addView(mTranslateBar, 0);
 +        }
 +        if (mTranslateBar.getVisibility() == View.VISIBLE) {
 +            hideTranslateBar();
 +        } else {
++            // Re-bind on EVERY open: the active subtype language is the bar's
++            // detection fallback + default target, and the user may have switched
++            // language since the bar was first created.
++            final java.util.Locale loc = mRichImm.getCurrentSubtypeLocale();
++            final String kbLang = (loc != null && !loc.getLanguage().isEmpty()) ? loc.getLanguage() : "en";
++            mTranslateBar.bind(this::getCurrentInputConnection, kbLang, this::hideTranslateBar);
 +            mTranslateBar.setVisibility(View.VISIBLE);
 +            mTranslateBar.onShown();
 +        }
@@ -1862,7 +1865,7 @@ index 31bbb02..b1deab8 100644
      @Override
      public void setCandidatesView(final View view) {
          // To ensure that CandidatesView will never be set.
-@@ -790,11 +916,14 @@ public class LatinIME extends InputMethodService implements
+@@ -790,11 +919,14 @@ public class LatinIME extends InputMethodService implements
  
      @Override
      public void onFinishInputView(final boolean finishingInput) {
@@ -1877,7 +1880,7 @@ index 31bbb02..b1deab8 100644
      }
  
      @Override
-@@ -1202,6 +1331,23 @@ public class LatinIME extends InputMethodService implements
+@@ -1202,6 +1334,23 @@ public class LatinIME extends InputMethodService implements
          if (Settings.getValues().mIsFloatingKeyboard)
              visibleTopY = getResources().getDisplayMetrics().heightPixels;
  
@@ -1901,7 +1904,7 @@ index 31bbb02..b1deab8 100644
          if (hasSuggestionStripView()) {
              mSuggestionStripView.setMoreSuggestionsHeight(visibleTopY);
          }
-@@ -1410,8 +1556,27 @@ public class LatinIME extends InputMethodService implements
+@@ -1410,8 +1559,27 @@ public class LatinIME extends InputMethodService implements
      // This method is public for testability of LatinIME, but also in the future it should
      // completely replace #onCodeInput.
      public void onEvent(@NonNull final Event event) {
@@ -2804,10 +2807,10 @@ index c49189c..6484890 100644
  
  val defaultClipboardToolbarPref by lazy {
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/settings/SettingsContainer.kt b/libs/keyboard/src/main/java/helium314/keyboard/settings/SettingsContainer.kt
-index e7c59d1..3706b81 100644
+index e7c59d1..c66da69 100644
 --- a/libs/keyboard/src/main/java/helium314/keyboard/settings/SettingsContainer.kt
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/settings/SettingsContainer.kt
-@@ -9,8 +9,10 @@ import helium314.keyboard.latin.utils.JniUtils
+@@ -9,11 +9,14 @@ import helium314.keyboard.latin.utils.JniUtils
  import helium314.keyboard.settings.screens.createAboutSettings
  import helium314.keyboard.settings.screens.createAdvancedSettings
  import helium314.keyboard.settings.screens.createAppearanceSettings
@@ -2818,19 +2821,23 @@ index e7c59d1..3706b81 100644
  import helium314.keyboard.settings.screens.createLayoutSettings
  import helium314.keyboard.settings.screens.createPreferencesSettings
  import helium314.keyboard.settings.screens.createToolbarSettings
-@@ -63,8 +65,9 @@ class Setting(
++import helium314.keyboard.settings.screens.createTranslateSettings
+ 
+ class SettingsContainer(context: Context) {
+     private val list = createSettings(context)
+@@ -63,8 +66,9 @@ class Setting(
  
  // intentionally not putting individual debug settings in here so user knows the context
  private fun createSettings(context: Context) = createAboutSettings(context) + createAppearanceSettings(context) +
 -        createCorrectionSettings(context) + createPreferencesSettings(context) + createToolbarSettings(context) +
 -        createLayoutSettings(context) + createAdvancedSettings(context) +
 +        createCorrectionSettings(context) + createGrammarSettings(context) + createPreferencesSettings(context) +
-+        createClipboardSettings(context) +
++        createClipboardSettings(context) + createTranslateSettings(context) +
 +        createToolbarSettings(context) + createLayoutSettings(context) + createAdvancedSettings(context) +
          if (JniUtils.sHaveGestureLib) createGestureTypingSettings(context) else emptyList()
  
  object SettingsWithoutKey {
-@@ -76,6 +79,7 @@ object SettingsWithoutKey {
+@@ -76,6 +80,7 @@ object SettingsWithoutKey {
      const val GITHUB = "github"
      const val GITHUB_WIKI = "github_wiki"
      const val SAVE_LOG = "save_log"
@@ -2838,7 +2845,7 @@ index e7c59d1..3706b81 100644
      const val BACKUP_RESTORE = "backup_restore"
      const val DEBUG_SETTINGS = "screen_debug"
      const val LOAD_GESTURE_LIB = "load_gesture_library"
-@@ -83,4 +87,8 @@ object SettingsWithoutKey {
+@@ -83,4 +88,8 @@ object SettingsWithoutKey {
      const val BACKGROUND_IMAGE_LANDSCAPE = "background_image_landscape"
      const val CUSTOM_FONT = "custom_font"
      const val CUSTOM_EMOJI_FONT = "custom_emoji_font"
@@ -3638,15 +3645,18 @@ index 3a503e0..d67ac34 100644
              name = setting.title,
 diff --git a/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/TranslationInfoScreen.kt b/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/TranslationInfoScreen.kt
 new file mode 100644
-index 0000000..24df865
+index 0000000..a498cc0
 --- /dev/null
 +++ b/libs/keyboard/src/main/java/helium314/keyboard/settings/screens/TranslationInfoScreen.kt
-@@ -0,0 +1,87 @@
+@@ -0,0 +1,132 @@
 +// SPDX-License-Identifier: GPL-3.0-only
 +package helium314.keyboard.settings.screens
 +
++import android.content.Context
 +import androidx.compose.foundation.layout.Column
 +import androidx.compose.foundation.layout.padding
++import androidx.compose.foundation.rememberScrollState
++import androidx.compose.foundation.verticalScroll
 +import androidx.compose.material3.MaterialTheme
 +import androidx.compose.material3.Surface
 +import androidx.compose.material3.Text
@@ -3657,64 +3667,106 @@ index 0000000..24df865
 +import androidx.compose.ui.tooling.preview.Preview
 +import androidx.compose.ui.unit.dp
 +import com.diegonmarcos.superapp.translate.TranslateEngines
++import com.diegonmarcos.superapp.translate.TranslatePrefs
 +import helium314.keyboard.latin.R
 +import helium314.keyboard.latin.utils.Theme
 +import helium314.keyboard.latin.utils.previewDark
 +import helium314.keyboard.settings.SearchSettingsScreen
++import helium314.keyboard.settings.Setting
++import helium314.keyboard.settings.SettingsActivity
 +import helium314.keyboard.settings.initPreview
++import helium314.keyboard.settings.preferences.ListPreference
 +import helium314.keyboard.settings.preferences.PreferenceCategory
++import helium314.keyboard.settings.preferences.SwitchPreference
 +
-+// SuperApp addition — informational screen for the Translate bar feature.
-+// No functional toggles exist yet (translate is always available from the
-+// toolbar), so this just surfaces the current engine status and language
-+// coverage instead of pretending to configure prefs that don't exist.
++// SuperApp addition — Translate bar settings + engine status.
++// Pref KEYS and DEFAULTS come from libs:translate's TranslatePrefs (the bar reads
++// them at use time); this screen only renders them with HeliBoard's own
++// preference composables, same shape as GrammarCheckScreen / createGrammarSettings.
++// Storage is the device-protected default prefs both sides share.
++
++private fun langName(code: String) = "${java.util.Locale(code).displayLanguage} ($code)"
++
++fun createTranslateSettings(context: Context): List<Setting> = listOf(
++    Setting(context, TranslatePrefs.KEY_DEFAULT_TARGET, R.string.translate_default_target_title) { setting ->
++        val langs = TranslateEngines.client?.supportedLanguages().orEmpty()
++            .ifEmpty { TranslatePrefs.FALLBACK_LANGS }
++            .sortedBy { java.util.Locale(it).displayLanguage }
++        val items = listOf(context.getString(R.string.translate_default_target_active) to TranslatePrefs.DEFAULT_TARGET) +
++            langs.map { langName(it) to it }
++        ListPreference(setting, items, TranslatePrefs.DEFAULT_TARGET)
++    },
++    Setting(context, TranslatePrefs.KEY_AUTO_DETECT, R.string.translate_auto_detect_title, R.string.translate_auto_detect_summary) {
++        SwitchPreference(it, TranslatePrefs.DEFAULT_AUTO_DETECT)
++    },
++    Setting(context, TranslatePrefs.KEY_APPLY_MODE, R.string.translate_apply_mode_title) { setting ->
++        val items = listOf(
++            context.getString(R.string.translate_apply_insert) to TranslatePrefs.APPLY_INSERT,
++            context.getString(R.string.translate_apply_replace) to TranslatePrefs.APPLY_REPLACE,
++        )
++        ListPreference(setting, items, TranslatePrefs.DEFAULT_APPLY_MODE)
++    },
++    Setting(context, TranslatePrefs.KEY_LIVE_COMMIT, R.string.translate_live_commit_title, R.string.translate_live_commit_summary) {
++        SwitchPreference(it, TranslatePrefs.DEFAULT_LIVE_COMMIT)
++    },
++)
++
 +@Composable
 +fun TranslationInfoScreen(onClickBack: () -> Unit) {
++    val keys = listOf(
++        TranslatePrefs.KEY_DEFAULT_TARGET,
++        TranslatePrefs.KEY_AUTO_DETECT,
++        TranslatePrefs.KEY_APPLY_MODE,
++        TranslatePrefs.KEY_LIVE_COMMIT,
++    )
 +    SearchSettingsScreen(
 +        onClickBack = onClickBack,
 +        title = stringResource(R.string.settings_screen_translation),
-+        settings = emptyList(),
++        settings = keys,
 +    ) {
-+        val client = TranslateEngines.client
-+        val liveLangs = client?.supportedLanguages().orEmpty()
-+        val defaultLangs = listOf("en", "pt", "es", "de")
-+        val installedLangs = liveLangs.ifEmpty { defaultLangs }
-+        Column(Modifier.padding(16.dp)) {
-+            Text(
-+                "Tap the translate icon on the keyboard toolbar to open a translate bar above " +
-+                    "the keys. Pick a source (or Auto-detect) and target language from the two " +
-+                    "chips at the top. What you type is translated live and the translation " +
-+                    "(not your original text) is committed to the app.",
-+                style = MaterialTheme.typography.bodyMedium
-+            )
++        // Custom content (it replaces the default list) so the engine status can
++        // sit under the preferences — the prefs themselves still come from the
++        // container, so they stay searchable from the settings search box.
++        Column(Modifier.verticalScroll(rememberScrollState())) {
++            PreferenceCategory(stringResource(R.string.translate_category_behavior))
++            keys.forEach { SettingsActivity.settingsContainer[it]?.Preference() }
++
++            val client = TranslateEngines.client
++            val liveLangs = client?.supportedLanguages().orEmpty()
 +            PreferenceCategory("Engine")
-+            Text(
-+                "Type: ${client?.javaClass?.simpleName ?: "none registered"}",
-+                style = MaterialTheme.typography.bodyMedium
-+            )
-+            // client != null only means the client OBJECT exists — for the AIDL
-+            // client that's true even when the underlying bind to the companion
-+            // service failed or is still pending. isConnected() reflects the
-+            // actual bind state, so this line can be trusted.
-+            Text(
-+                when {
-+                    client == null -> "Not connected — no engine registered."
-+                    client.isConnected() -> "Connected — translation is functional."
-+                    else -> "NOT connected — client exists but the underlying service " +
-+                        "isn't bound. On the standalone Cloud Keyboard app this means the " +
-+                        "cloud-keyboard-libs companion app is either not installed, or its " +
-+                        "service failed to bind (see logcat tag AidlTranslateEngine). " +
-+                        "Translation will silently do nothing until this is connected."
-+                },
-+                style = MaterialTheme.typography.bodyMedium
-+            )
-+            PreferenceCategory("Installed / default languages")
-+            Text(
-+                installedLangs.joinToString(", ") { code ->
-+                    java.util.Locale(code).displayLanguage + " ($code)"
-+                } + if (liveLangs.isEmpty()) " — defaults, engine not reporting yet" else " — from engine",
-+                style = MaterialTheme.typography.bodyMedium
-+            )
++            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
++                Text(
++                    "Tap the translate icon on the toolbar: type in the bar, see the live " +
++                        "translation underneath, then Insert / Replace / Copy (Enter runs the " +
++                        "primary action). Long-press the icon to translate the selection or the " +
++                        "whole field in place.",
++                    style = MaterialTheme.typography.bodyMedium
++                )
++                Text(
++                    "Type: ${client?.javaClass?.simpleName ?: "none registered"}",
++                    style = MaterialTheme.typography.bodyMedium
++                )
++                // client != null only means the client OBJECT exists — for the AIDL
++                // client that's true even when the underlying bind to the companion
++                // service failed or is still pending. isConnected() is the real state.
++                Text(
++                    when {
++                        client == null -> "Not connected — no engine registered."
++                        client.isConnected() -> "Connected — translation is functional."
++                        else -> "NOT connected — client exists but the underlying service " +
++                            "isn't bound. On the standalone Cloud Keyboard app this means the " +
++                            "cloud-keyboard-libs companion app is either not installed, or its " +
++                            "service failed to bind (see logcat tag AidlTranslateEngine). " +
++                            "The bar reports this as a status line instead of translating."
++                    },
++                    style = MaterialTheme.typography.bodyMedium
++                )
++                Text(
++                    "Languages: " + liveLangs.ifEmpty { TranslatePrefs.FALLBACK_LANGS }.joinToString(", ") { langName(it) } +
++                        if (liveLangs.isEmpty()) " — defaults, engine not reporting yet" else " — from engine",
++                    style = MaterialTheme.typography.bodyMedium
++                )
++            }
 +        }
 +    }
 +}
@@ -5301,7 +5353,7 @@ index 33ad67c..c2ee930 100644
      <integer name="config_delay_in_milliseconds_to_update_suggestions">100</integer>
  
 diff --git a/libs/keyboard/src/main/res/values/strings.xml b/libs/keyboard/src/main/res/values/strings.xml
-index 5118691..6fe0e93 100644
+index 5118691..b8e11bb 100644
 --- a/libs/keyboard/src/main/res/values/strings.xml
 +++ b/libs/keyboard/src/main/res/values/strings.xml
 @@ -9,11 +9,11 @@
@@ -5319,7 +5371,7 @@ index 5118691..6fe0e93 100644
      <!-- Option to provide vibrate/haptic feedback on keypress -->
      <string name="vibrate_on_keypress">Vibrate on keypress</string>
      <!-- Option to provide vibrate/haptic feedback on keypress even in do not disturb mode -->
-@@ -44,6 +44,14 @@
+@@ -44,6 +44,25 @@
      <string name="settings_screen_gesture">Gesture Typing</string>
      <!-- Settings screen title for text correction options -->
      <string name="settings_screen_correction">Text correction</string>
@@ -5329,12 +5381,23 @@ index 5118691..6fe0e93 100644
 +    <string name="settings_screen_clipboard">Clipboard</string>
 +    <!-- SuperApp addition — Translation / Emoji / Voice Transcript info screens -->
 +    <string name="settings_screen_translation">Translation</string>
++    <!-- SuperApp addition — Translate bar settings (keys: com.diegonmarcos.superapp.translate.TranslatePrefs) -->
++    <string name="translate_category_behavior">Translate bar</string>
++    <string name="translate_default_target_title">Default target language</string>
++    <string name="translate_default_target_active">Active keyboard language</string>
++    <string name="translate_auto_detect_title">Auto-detect source language</string>
++    <string name="translate_auto_detect_summary">Off: the source defaults to the active keyboard language. Detection falls back to it anyway when the text is too short.</string>
++    <string name="translate_apply_mode_title">Enter / primary action</string>
++    <string name="translate_apply_insert">Insert at cursor</string>
++    <string name="translate_apply_replace">Replace selection or whole field</string>
++    <string name="translate_live_commit_title">Type straight into the field</string>
++    <string name="translate_live_commit_summary">Gboard-style: the translation is written into the app as you type, instead of previewed in the bar. Fragile in apps that edit their own text.</string>
 +    <string name="settings_screen_emoji">Emoji, GIFs &amp; Stickers</string>
 +    <string name="settings_screen_voice_transcript">Voice transcript</string>
      <!-- Settings screen title for advanced settings -->
      <string name="settings_screen_advanced">Advanced</string>
      <!-- Settings screen title for keyboard theme settings -->
-@@ -210,6 +218,55 @@
+@@ -210,6 +229,55 @@
      <string name="clipboard_history_files">Add images and other files to clipboard history</string>
      <!-- Preferences item for selecting maximum combined size of clipboard history files -->
      <string name="clipboard_history_max_file_size">Clipboard size limit</string>
@@ -5390,7 +5453,7 @@ index 5118691..6fe0e93 100644
      <!-- Description, used for non-image clipboard files -->
      <string name="item_description">Description: %s</string>
      <!-- Type, used for non-image clipboard files -->
-@@ -407,6 +464,8 @@
+@@ -407,6 +475,8 @@
      <string name="prefs_font_scale">Keyboard font scale</string>
      <!-- Title of the setting for adjusting font size in emoji view -->
      <string name="prefs_emoji_font_scale">Emoji view font scale</string>
@@ -5399,7 +5462,7 @@ index 5118691..6fe0e93 100644
      <!-- Title of the setting for adjusting emoji key size to fit emoji size in emoji view -->
      <string name="prefs_emoji_key_fit">Scale emoji key size with font size</string>
      <!-- Title of the setting for setting default emoji skin tone -->
-@@ -787,6 +846,7 @@ New dictionary:
+@@ -787,6 +857,7 @@ New dictionary:
      <string name="about_wiki_link_description">The Wiki can be improved by any GitHub user!</string>
      <!-- preference title for saving the log to a file -->
      <string name="save_log">Save log</string>

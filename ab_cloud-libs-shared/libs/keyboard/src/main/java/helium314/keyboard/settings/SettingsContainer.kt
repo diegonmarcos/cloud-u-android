@@ -16,6 +16,7 @@ import helium314.keyboard.settings.screens.createGrammarSettings
 import helium314.keyboard.settings.screens.createLayoutSettings
 import helium314.keyboard.settings.screens.createPreferencesSettings
 import helium314.keyboard.settings.screens.createToolbarSettings
+import helium314.keyboard.settings.screens.createTranslateSettings
 
 class SettingsContainer(context: Context) {
     private val list = createSettings(context)
@@ -66,7 +67,7 @@ class Setting(
 // intentionally not putting individual debug settings in here so user knows the context
 private fun createSettings(context: Context) = createAboutSettings(context) + createAppearanceSettings(context) +
         createCorrectionSettings(context) + createGrammarSettings(context) + createPreferencesSettings(context) +
-        createClipboardSettings(context) +
+        createClipboardSettings(context) + createTranslateSettings(context) +
         createToolbarSettings(context) + createLayoutSettings(context) + createAdvancedSettings(context) +
         if (JniUtils.sHaveGestureLib) createGestureTypingSettings(context) else emptyList()
 

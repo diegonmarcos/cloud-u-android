@@ -801,14 +801,17 @@ public class LatinIME extends InputMethodService implements
         if (opening) { hideEmojiSearchBar(); hideVoiceBar(); }
         if (mTranslateBar == null) {
             mTranslateBar = new com.diegonmarcos.superapp.translate.TranslateBarView(this);
-            final java.util.Locale loc = mRichImm.getCurrentSubtypeLocale();
-            final String target = (loc != null && !loc.getLanguage().isEmpty()) ? loc.getLanguage() : "en";
-            mTranslateBar.bind(this::getCurrentInputConnection, target, this::hideTranslateBar);
             frame.addView(mTranslateBar, 0);
         }
         if (mTranslateBar.getVisibility() == View.VISIBLE) {
             hideTranslateBar();
         } else {
+            // Re-bind on EVERY open: the active subtype language is the bar's
+            // detection fallback + default target, and the user may have switched
+            // language since the bar was first created.
+            final java.util.Locale loc = mRichImm.getCurrentSubtypeLocale();
+            final String kbLang = (loc != null && !loc.getLanguage().isEmpty()) ? loc.getLanguage() : "en";
+            mTranslateBar.bind(this::getCurrentInputConnection, kbLang, this::hideTranslateBar);
             mTranslateBar.setVisibility(View.VISIBLE);
             mTranslateBar.onShown();
         }

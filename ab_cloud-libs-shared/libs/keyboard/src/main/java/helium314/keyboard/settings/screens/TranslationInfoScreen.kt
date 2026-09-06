@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-only
 package helium314.keyboard.settings.screens
 
+import android.content.Context
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -13,64 +16,106 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.diegonmarcos.superapp.translate.TranslateEngines
+import com.diegonmarcos.superapp.translate.TranslatePrefs
 import helium314.keyboard.latin.R
 import helium314.keyboard.latin.utils.Theme
 import helium314.keyboard.latin.utils.previewDark
 import helium314.keyboard.settings.SearchSettingsScreen
+import helium314.keyboard.settings.Setting
+import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.initPreview
+import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.PreferenceCategory
+import helium314.keyboard.settings.preferences.SwitchPreference
 
-// SuperApp addition — informational screen for the Translate bar feature.
-// No functional toggles exist yet (translate is always available from the
-// toolbar), so this just surfaces the current engine status and language
-// coverage instead of pretending to configure prefs that don't exist.
+// SuperApp addition — Translate bar settings + engine status.
+// Pref KEYS and DEFAULTS come from libs:translate's TranslatePrefs (the bar reads
+// them at use time); this screen only renders them with HeliBoard's own
+// preference composables, same shape as GrammarCheckScreen / createGrammarSettings.
+// Storage is the device-protected default prefs both sides share.
+
+private fun langName(code: String) = "${java.util.Locale(code).displayLanguage} ($code)"
+
+fun createTranslateSettings(context: Context): List<Setting> = listOf(
+    Setting(context, TranslatePrefs.KEY_DEFAULT_TARGET, R.string.translate_default_target_title) { setting ->
+        val langs = TranslateEngines.client?.supportedLanguages().orEmpty()
+            .ifEmpty { TranslatePrefs.FALLBACK_LANGS }
+            .sortedBy { java.util.Locale(it).displayLanguage }
+        val items = listOf(context.getString(R.string.translate_default_target_active) to TranslatePrefs.DEFAULT_TARGET) +
+            langs.map { langName(it) to it }
+        ListPreference(setting, items, TranslatePrefs.DEFAULT_TARGET)
+    },
+    Setting(context, TranslatePrefs.KEY_AUTO_DETECT, R.string.translate_auto_detect_title, R.string.translate_auto_detect_summary) {
+        SwitchPreference(it, TranslatePrefs.DEFAULT_AUTO_DETECT)
+    },
+    Setting(context, TranslatePrefs.KEY_APPLY_MODE, R.string.translate_apply_mode_title) { setting ->
+        val items = listOf(
+            context.getString(R.string.translate_apply_insert) to TranslatePrefs.APPLY_INSERT,
+            context.getString(R.string.translate_apply_replace) to TranslatePrefs.APPLY_REPLACE,
+        )
+        ListPreference(setting, items, TranslatePrefs.DEFAULT_APPLY_MODE)
+    },
+    Setting(context, TranslatePrefs.KEY_LIVE_COMMIT, R.string.translate_live_commit_title, R.string.translate_live_commit_summary) {
+        SwitchPreference(it, TranslatePrefs.DEFAULT_LIVE_COMMIT)
+    },
+)
+
 @Composable
 fun TranslationInfoScreen(onClickBack: () -> Unit) {
+    val keys = listOf(
+        TranslatePrefs.KEY_DEFAULT_TARGET,
+        TranslatePrefs.KEY_AUTO_DETECT,
+        TranslatePrefs.KEY_APPLY_MODE,
+        TranslatePrefs.KEY_LIVE_COMMIT,
+    )
     SearchSettingsScreen(
         onClickBack = onClickBack,
         title = stringResource(R.string.settings_screen_translation),
-        settings = emptyList(),
+        settings = keys,
     ) {
-        val client = TranslateEngines.client
-        val liveLangs = client?.supportedLanguages().orEmpty()
-        val defaultLangs = listOf("en", "pt", "es", "de")
-        val installedLangs = liveLangs.ifEmpty { defaultLangs }
-        Column(Modifier.padding(16.dp)) {
-            Text(
-                "Tap the translate icon on the keyboard toolbar to open a translate bar above " +
-                    "the keys. Pick a source (or Auto-detect) and target language from the two " +
-                    "chips at the top. What you type is translated live and the translation " +
-                    "(not your original text) is committed to the app.",
-                style = MaterialTheme.typography.bodyMedium
-            )
+        // Custom content (it replaces the default list) so the engine status can
+        // sit under the preferences — the prefs themselves still come from the
+        // container, so they stay searchable from the settings search box.
+        Column(Modifier.verticalScroll(rememberScrollState())) {
+            PreferenceCategory(stringResource(R.string.translate_category_behavior))
+            keys.forEach { SettingsActivity.settingsContainer[it]?.Preference() }
+
+            val client = TranslateEngines.client
+            val liveLangs = client?.supportedLanguages().orEmpty()
             PreferenceCategory("Engine")
-            Text(
-                "Type: ${client?.javaClass?.simpleName ?: "none registered"}",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            // client != null only means the client OBJECT exists — for the AIDL
-            // client that's true even when the underlying bind to the companion
-            // service failed or is still pending. isConnected() reflects the
-            // actual bind state, so this line can be trusted.
-            Text(
-                when {
-                    client == null -> "Not connected — no engine registered."
-                    client.isConnected() -> "Connected — translation is functional."
-                    else -> "NOT connected — client exists but the underlying service " +
-                        "isn't bound. On the standalone Cloud Keyboard app this means the " +
-                        "cloud-keyboard-libs companion app is either not installed, or its " +
-                        "service failed to bind (see logcat tag AidlTranslateEngine). " +
-                        "Translation will silently do nothing until this is connected."
-                },
-                style = MaterialTheme.typography.bodyMedium
-            )
-            PreferenceCategory("Installed / default languages")
-            Text(
-                installedLangs.joinToString(", ") { code ->
-                    java.util.Locale(code).displayLanguage + " ($code)"
-                } + if (liveLangs.isEmpty()) " — defaults, engine not reporting yet" else " — from engine",
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(
+                    "Tap the translate icon on the toolbar: type in the bar, see the live " +
+                        "translation underneath, then Insert / Replace / Copy (Enter runs the " +
+                        "primary action). Long-press the icon to translate the selection or the " +
+                        "whole field in place.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "Type: ${client?.javaClass?.simpleName ?: "none registered"}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                // client != null only means the client OBJECT exists — for the AIDL
+                // client that's true even when the underlying bind to the companion
+                // service failed or is still pending. isConnected() is the real state.
+                Text(
+                    when {
+                        client == null -> "Not connected — no engine registered."
+                        client.isConnected() -> "Connected — translation is functional."
+                        else -> "NOT connected — client exists but the underlying service " +
+                            "isn't bound. On the standalone Cloud Keyboard app this means the " +
+                            "cloud-keyboard-libs companion app is either not installed, or its " +
+                            "service failed to bind (see logcat tag AidlTranslateEngine). " +
+                            "The bar reports this as a status line instead of translating."
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    "Languages: " + liveLangs.ifEmpty { TranslatePrefs.FALLBACK_LANGS }.joinToString(", ") { langName(it) } +
+                        if (liveLangs.isEmpty()) " — defaults, engine not reporting yet" else " — from engine",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
     }
 }

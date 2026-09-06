@@ -13,7 +13,7 @@ module adds the **keyboard provider**. Both ship in one APK.
 |------|-------|-------|
 | `build.gradle` | **us** (hand-owned) | Only hand-maintained file. Mirrors HeliBoard's `app/build.gradle.kts` deps + toolchain. Update on every upstream bump. |
 | `src/main/{java,res,assets,jni,AndroidManifest.xml}` | **upstream mirror + our overlay** | Populated by `./build.sh sync-heliboard` (rsync `--delete` of upstream, then `patches/*.patch` re-applied). Only what the patch carries survives a sync. |
-| `patches/0001-cloud-superapp-keyboard.patch` | **us (generated)** | THE overlay = `diff(pristine upstream @ build.json::keyboard_upstream.sha, src/main)`. Never hand-edit. After ANY edit under `src/main`: `./build.sh regen-keyboard-patch` (aa_cloud-superapp) and commit the mirror file **and** the patch together. |
+| `patches/0001-cloud-superapp-keyboard.patch` | **us (generated)** | THE overlay = `diff(pristine upstream @ build.json::keyboard_upstream.sha, src/main)`. Never hand-edit. After ANY edit under `src/main`: `git add` your mirror files, `./build.sh regen-keyboard-patch` (aa_cloud-superapp — diffs the INDEX, so other agents' unstaged edits never leak in), commit the mirror files **and** the patch together. |
 
 Files that are SuperApp-only but must live inside the HeliBoard package (settings
 screens, `GrammarChecker.kt`, `EmojiSearchBarView.kt`, `TranslationInfoScreen.kt`…)
