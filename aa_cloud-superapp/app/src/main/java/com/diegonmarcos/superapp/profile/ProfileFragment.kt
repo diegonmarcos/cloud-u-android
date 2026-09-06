@@ -1287,7 +1287,15 @@ class ProfileFragment : Fragment() {
          */
         private const val WG_ROUTE = "section:wg"
 
-        /**
+        /** Advisory shape check for the birth field. Range/real-calendar
+         *  validity is deliberately not checked — the field is optional and a
+         *  false rejection is worse than a typo here. */
+        private val DATE_PATTERN = Regex("^\\d{4}-\\d{2}-\\d{2}$")
+
+        /** DD-MM-YYYY, the shape people actually type here. Only used to
+         *  SUGGEST the ISO reordering in the field's advisory error. */
+        private val DMY_PATTERN = Regex("^(\\d{2})-(\\d{2})-(\\d{4})$")
+
         private const val CONNECT_TEXT =
             "None of this is part of your profile and none of it is ever uploaded — " +
             "the sync document carries contact fields only.\n\n" +
@@ -1318,18 +1326,11 @@ class ProfileFragment : Fragment() {
             "the box is emptied — nothing reaches this device's storage and nothing " +
             "reaches the sync document."
 
-        /**
         private const val ORPHAN_TOKEN_TEXT =
             "A bearer token is stored on this device with no account email, so it " +
             "is not being used. Check the address above is the account the token " +
             "belongs to, then link it. Nothing was changed or deleted."
 
-        /**
-         * What each provider does and does not fill.
-         *
-         * The private-key paragraph is not boilerplate. "Cloud" reads as
-         * "everything is handled", and the one field it cannot hand over is
-         * the one without which nothing connects — so the limit is stated
         private const val PRIVACY_TEXT =
             "Your name, email, phone, date of birth, location, company, website and " +
             "about are stored on this device and mirrored to " +
