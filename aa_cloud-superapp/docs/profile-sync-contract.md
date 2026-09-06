@@ -81,17 +81,40 @@ last-write-wins is correct and no merge logic is needed.
     "email": "ada@example.com",          // required, must contain @ and a dot
     "phone": "+49 30 123456",            // optional
     "birth": "1815-12-10",               // optional, ISO YYYY-MM-DD
-    "city_from": "London",               // optional, city of origin
     "location": "Berlin/DE",             // optional, where they are now
     "company": "LEAFY",                  // optional
     "website": "example.com",            // optional
-    "titles": "Engineer | Analyst",      // optional, ' | '-separated
-    "social_media_links": [              // optional, may be empty
-      { "platform": "GitHub", "url": "https://github.com/ada" }
-    ]
+    "titles": "Engineer | Analyst"       // optional, ' | '-separated
+                                         // (labelled "About" in the app)
   }
 }
 ```
+
+`profile` carries **exactly** these eight keys and no others. The client builds
+the object by naming each one and then filters it against
+`ProfileSync.ALLOWED_PROFILE_KEYS` before the POST, so a server that receives an
+unlisted key is talking to something that is not this client.
+
+### Retired fields
+
+`city_from` and `social_media_links` were removed from the app (form, local
+store and document) — the form no longer collects them, so continuing to upload
+whatever an old install had on disk would have been personal data the user could
+neither see nor edit. Servers should accept and ignore them on records written
+by older clients; the current client ignores them on restore rather than writing
+them back.
+
+### What is never in this document
+
+No credential of any kind. Specifically **not** the Authelia bearer token and
+**not** the WireGuard interface private key, both of which the app now offers a
+field for under Configs → Profile → Credentials. Those live only on the device
+(`ConfigsPrefs`, EncryptedSharedPreferences; and `WireGuardPrefs`, the tunnel's
+own settings) and no code path copies them into this payload. Records here are
+stored as plain files on the host, so a mesh private key or a live session
+bearer placed in one would be at rest on a server and on the wire to get there —
+which is exactly what holding them on-device avoids. If a future version of this
+contract appears to add such a field, it is wrong.
 
 Responses: `200 {"ok":true}` · `400` malformed or missing name/email ·
 `403` wrong secret · `413` body over 64 KB · `429` rate limited.

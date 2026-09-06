@@ -32,9 +32,39 @@ class ConfigsPrefs(context: Context) {
         get() = prefs.getString(K_JSON, "") ?: ""
         set(v) { prefs.edit().putString(K_JSON, v).apply() }
 
+    /**
+     * The Authelia bearer, read from / written into the SAME blob at the SAME
+     * path the importers already use (`auth.authelia_token` — see
+     * build.json::ui.import_schema and ProfileFragment.extractToken).
+     *
+     * A read-modify-write of the one blob rather than a second preference key,
+     * so there is exactly one place a bearer can live on this device and
+     * [clear] still erases it. It is a credential: never logged, never put in
+     * the profile sync document (ProfileSync.ALLOWED_PROFILE_KEYS enforces
+     * that), never shown back in the UI once stored.
+     */
+    var autheliaToken: String
+        get() = runCatching {
+            org.json.JSONObject(json.ifBlank { "{}" })
+                .optJSONObject(SECTION_AUTH)?.optString(K_AUTHELIA_TOKEN).orEmpty()
+        }.getOrDefault("")
+        set(v) {
+            // A malformed existing blob must not make the token unstorable, so
+            // an unparseable blob is replaced by a fresh object rather than
+            // throwing out of a setter the UI calls on every keystroke.
+            val root = runCatching { org.json.JSONObject(json.ifBlank { "{}" }) }
+                .getOrDefault(org.json.JSONObject())
+            val auth = root.optJSONObject(SECTION_AUTH) ?: org.json.JSONObject()
+            if (v.isBlank()) auth.remove(K_AUTHELIA_TOKEN) else auth.put(K_AUTHELIA_TOKEN, v)
+            if (auth.length() == 0) root.remove(SECTION_AUTH) else root.put(SECTION_AUTH, auth)
+            json = root.toString()
+        }
+
     fun clear() { prefs.edit().clear().apply() }
 
     companion object {
         private const val K_JSON = "configs_json"
+        private const val SECTION_AUTH = "auth"
+        private const val K_AUTHELIA_TOKEN = "authelia_token"
     }
 }

@@ -340,7 +340,6 @@ def profileName      = (profileDefault.name     ?: '').toString()
 def profileEmail     = (profileDefault.email    ?: '').toString()
 def profilePhone     = (profileDefault.phone     ?: '').toString()
 def profileBirth     = (profileDefault.birth     ?: '').toString()
-def profileCityFrom  = (profileDefault.city_from ?: '').toString()
 // Where the profile is mirrored so the fleet operator can reach users
 // out-of-band. Blank disables sync entirely (ProfileSync no-ops).
 def profileSyncUrl   = (buildJson.ui.profile_sync?.url ?: '').toString()
@@ -694,7 +693,6 @@ android {
         buildConfigField "String", "UI_PROFILE_EMAIL",      "\"${profileEmail}\""
         buildConfigField "String", "UI_PROFILE_PHONE",      "\"${profilePhone}\""
         buildConfigField "String", "UI_PROFILE_BIRTH",      "\"${profileBirth}\""
-        buildConfigField "String", "UI_PROFILE_CITY_FROM",  "\"${profileCityFrom}\""
         buildConfigField "String", "UI_PROFILE_SYNC_URL",   "\"${profileSyncUrl}\""
         buildConfigField "String", "UI_PROFILE_COMPANY",    "\"${profileCompany}\""
         buildConfigField "String", "UI_PROFILE_LOCATION",   "\"${profileLocation}\""

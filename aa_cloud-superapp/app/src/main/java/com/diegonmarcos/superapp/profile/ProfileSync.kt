@@ -4,7 +4,6 @@ import android.content.Context
 import android.util.Log
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.core.ProfileSyncClient
-import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -97,21 +96,14 @@ object ProfileSync {
         fill("email", prefs.email) { prefs.email = it }
         fill("phone", prefs.phone) { prefs.phone = it }
         fill("birth", prefs.birth) { prefs.birth = it }
-        fill("city_from", prefs.cityFrom) { prefs.cityFrom = it }
         fill("location", prefs.location) { prefs.location = it }
         fill("company", prefs.company) { prefs.company = it }
         fill("website", prefs.website) { prefs.website = it }
         fill("titles", prefs.titles) { prefs.titles = it }
-        if (prefs.socialLinks.isEmpty()) {
-            val array = profile.optJSONArray("social_media_links")
-            if (array != null && array.length() > 0) {
-                prefs.socialLinks = (0 until array.length()).mapNotNull { i ->
-                    val o = array.optJSONObject(i) ?: return@mapNotNull null
-                    ProfilePrefs.SocialLink(o.optString("platform").trim(), o.optString("url").trim())
-                }.filterNot { it.platform.isBlank() && it.url.isBlank() }
-                applied = true
-            }
-        }
+        // `city_from` / `social_media_links` may still arrive from a server
+        // record written by an older client. They no longer exist on this
+        // device, so they are ignored rather than resurrected into a store the
+        // user has no way to view or clear.
         Log.i(TAG, "restore applied=$applied")
         return applied
     }
@@ -167,6 +159,17 @@ object ProfileSync {
      * mean nothing off-device), no device fingerprint, no location fix, no
      * account tokens. The document is a contact card, and keeping it to that
      * is what makes "what do you store about me" answerable in one screen.
+     *
+     * CREDENTIALS CAN NEVER GET IN, and that holds by construction twice over.
+     * First, the `profile` object is built by NAMING each key — there is no
+     * sweep of [ProfilePrefs] or of the SharedPreferences map, so adding a
+     * field to any store does not add it here. Second, [enforceAllowlist]
+     * re-checks the finished object against [ALLOWED_PROFILE_KEYS] and drops
+     * anything else, so if a later refactor DOES replace the enumeration with
+     * a sweep, the sweep's extra keys are removed instead of uploaded. The
+     * Authelia bearer (settings.ConfigsPrefs) and the WireGuard private key
+     * (network.WireGuardPrefs) live in other stores this file never reads, and
+     * their key names are not in the allowlist.
      */
     private fun document(prefs: ProfilePrefs): JSONObject = JSONObject().apply {
         put("schema", SCHEMA)
@@ -176,21 +179,52 @@ object ProfileSync {
         put("updated_at", java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US)
             .apply { timeZone = java.util.TimeZone.getTimeZone("UTC") }
             .format(java.util.Date()))
-        put("profile", JSONObject().apply {
+        put("profile", enforceAllowlist(JSONObject().apply {
             put("name", prefs.name.trim())
             put("email", prefs.email.trim())
             put("phone", prefs.phone.trim())
             put("birth", prefs.birth.trim())
-            put("city_from", prefs.cityFrom.trim())
             put("location", prefs.location.trim())
             put("company", prefs.company.trim())
             put("website", prefs.website.trim())
             put("titles", prefs.titles.trim())
-            put("social_media_links", JSONArray().apply {
-                prefs.socialLinks.forEach {
-                    put(JSONObject().put("platform", it.platform.trim()).put("url", it.url.trim()))
-                }
-            })
-        })
+        }))
     }
+
+    /**
+     * Strip anything not in [ALLOWED_PROFILE_KEYS] from the outgoing `profile`
+     * object.
+     *
+     * A no-op today — the builder above already emits exactly this set. It is
+     * here for the edit that has not happened yet: the day someone "simplifies"
+     * [document] into a loop over the preference map, this is what stops a
+     * bearer token or a private key riding along. It drops rather than throws,
+     * because refusing to sync a contact card is not a proportionate response
+     * to an unexpected key, and it logs the key NAME only, never the value.
+     */
+    private fun enforceAllowlist(profile: JSONObject): JSONObject {
+        val extra = profile.keys().asSequence().filterNot { it in ALLOWED_PROFILE_KEYS }.toList()
+        if (extra.isNotEmpty()) {
+            Log.e(TAG, "dropping non-allowlisted profile keys before upload: ${extra.joinToString(", ")}")
+            extra.forEach { profile.remove(it) }
+        }
+        return profile
+    }
+
+    /**
+     * Every key the profile document may carry. Adding one here is a
+     * deliberate act with a matching change to
+     * `docs/profile-sync-contract.md`; anything absent is dropped by
+     * [enforceAllowlist] before the POST.
+     *
+     * NEVER add `authelia_token`, `bearer`, `private_key`, `if_privkey`, or any
+     * other credential name to this set. This document is stored server-side as
+     * a plain JSON file; a mesh private key or a live session bearer placed in
+     * it is on the wire and at rest on a host, which is the precise thing
+     * holding those credentials on-device exists to avoid.
+     */
+    private val ALLOWED_PROFILE_KEYS = setOf(
+        "name", "email", "phone", "birth",
+        "location", "company", "website", "titles",
+    )
 }

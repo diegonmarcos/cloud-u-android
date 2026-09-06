@@ -16,7 +16,14 @@ import android.content.SharedPreferences
  *    operator has an out-of-band way to reach people when the update chain
  *    breaks and the app can no longer fix itself.
  *
- * PERSONAL DATA. [name], [email], [phone], [birth], [location] and [cityFrom]
+ * NO CREDENTIALS LIVE HERE. This class is mirrored to the server wholesale by
+ * [ProfileSync], so a bearer token or a WireGuard private key added to it
+ * would be uploaded. The Authelia bearer lives in
+ * `settings.ConfigsPrefs.autheliaToken` (EncryptedSharedPreferences) and the
+ * WireGuard private key in `network.WireGuardPrefs.interfacePrivateKey`; the
+ * profile screen edits those stores directly and never copies them here.
+ *
+ * PERSONAL DATA. [name], [email], [phone], [birth] and [location]
  * are personal data under GDPR. Two engineering consequences are load-bearing
  * and must survive future edits:
  *  • [clearPersonalData] exists so an erasure request is one call locally and
@@ -44,14 +51,22 @@ class ProfilePrefs(context: Context) {
      * is a no-op once [K_SCHEMA] reaches [SCHEMA_VERSION].
      *
      * v0 → v1: delete the orphaned `initials` key. Deliberately additive
-     * otherwise — the new fields (phone, birth, city_from, social links) need
-     * no migration because an absent key already reads as its default, which
-     * is exactly the "not filled in yet" state the form shows.
+     * otherwise — the fields added then (phone, birth) need no migration
+     * because an absent key already reads as its default, which is exactly the
+     * "not filled in yet" state the form shows.
+     *
+     * v1 → v2: delete `city_from` and `social_links`. Both fields were removed
+     * from the form, and personal data that can no longer be viewed or edited
+     * but is still on disk (and still uploaded) is the worst of both — so the
+     * stored values go with the UI rather than lingering as an undisclosable
+     * residue.
      */
     private fun migrate() {
         if (sp.getInt(K_SCHEMA, 0) >= SCHEMA_VERSION) return
         sp.edit()
             .remove("initials")
+            .remove("city_from")
+            .remove("social_links")
             .putInt(K_SCHEMA, SCHEMA_VERSION)
             .apply()
     }
@@ -74,12 +89,6 @@ class ProfilePrefs(context: Context) {
     var birth: String
         get() = sp.getString(K_BIRTH, BuildConfig.UI_PROFILE_BIRTH) ?: BuildConfig.UI_PROFILE_BIRTH
         set(value) { sp.edit().putString(K_BIRTH, value).apply() }
-
-    /** City of origin — distinct from [location], which is where the user is
-     *  now. Both are kept; they answer different questions. */
-    var cityFrom: String
-        get() = sp.getString(K_CITY_FROM, BuildConfig.UI_PROFILE_CITY_FROM) ?: BuildConfig.UI_PROFILE_CITY_FROM
-        set(value) { sp.edit().putString(K_CITY_FROM, value).apply() }
 
     var company: String
         get() = sp.getString(K_COMPANY, BuildConfig.UI_PROFILE_COMPANY) ?: BuildConfig.UI_PROFILE_COMPANY
@@ -108,35 +117,6 @@ class ProfilePrefs(context: Context) {
     var bannerUri: String
         get() = sp.getString(K_BANNER, "") ?: ""
         set(value) { sp.edit().putString(K_BANNER, value).apply() }
-
-    /**
-     * Social profiles, as an ordered list of {platform, url}.
-     *
-     * A list rather than N fixed columns (twitter_url, github_url, …) because
-     * the set of platforms people use is not knowable at build time, and every
-     * fixed column is a schema migration plus a server change the day someone
-     * joins a new network. Persisted as a JSON array in ONE key so adding a
-     * platform costs nothing.
-     *
-     * Malformed stored JSON degrades to an empty list rather than throwing —
-     * a corrupt preference must not make the profile screen uninflatable.
-     */
-    var socialLinks: List<SocialLink>
-        get() = runCatching {
-            val array = org.json.JSONArray(sp.getString(K_SOCIAL, "[]") ?: "[]")
-            (0 until array.length()).mapNotNull { i ->
-                val o = array.optJSONObject(i) ?: return@mapNotNull null
-                val platform = o.optString("platform").trim()
-                val url = o.optString("url").trim()
-                if (platform.isEmpty() && url.isEmpty()) null else SocialLink(platform, url)
-            }
-        }.getOrDefault(emptyList())
-        set(value) {
-            val array = org.json.JSONArray()
-            value.filterNot { it.platform.isBlank() && it.url.isBlank() }
-                .forEach { array.put(org.json.JSONObject().put("platform", it.platform).put("url", it.url)) }
-            sp.edit().putString(K_SOCIAL, array.toString()).apply()
-        }
 
     /**
      * Stable per-install identifier, generated on first read and kept until
@@ -214,28 +194,22 @@ class ProfilePrefs(context: Context) {
     fun clearPersonalData() {
         sp.edit()
             .remove(K_NAME).remove(K_EMAIL).remove(K_PHONE).remove(K_BIRTH)
-            .remove(K_CITY_FROM).remove(K_COMPANY).remove(K_LOCATION)
-            .remove(K_WEBSITE).remove(K_TITLES).remove(K_SOCIAL)
+            .remove(K_COMPANY).remove(K_LOCATION)
+            .remove(K_WEBSITE).remove(K_TITLES)
             .remove(K_PICTURE).remove(K_BANNER)
             .remove(K_INSTALL_ID).remove(K_INSTALL_SECRET)
             .apply()
     }
 
-    /** One social profile. [platform] is free text ("GitHub", "Mastodon") so
-     *  the app never has to ship an enum of every network that exists. */
-    data class SocialLink(val platform: String, val url: String)
-
     companion object {
         /** Bumped when a stored key is removed or its meaning changes. */
-        private const val SCHEMA_VERSION = 1
+        private const val SCHEMA_VERSION = 2
 
         private const val K_SCHEMA   = "schema_version"
         private const val K_NAME     = "name"
         private const val K_EMAIL    = "email"
         private const val K_PHONE    = "phone"
         private const val K_BIRTH    = "birth"
-        private const val K_CITY_FROM = "city_from"
-        private const val K_SOCIAL   = "social_links"
         private const val K_INSTALL_ID = "install_id"
         private const val K_INSTALL_SECRET = "install_secret"
         private const val K_COMPANY  = "company"

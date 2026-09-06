@@ -12,6 +12,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.diegonmarcos.superapp.network.WireGuardPrefs
+import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import com.diegonmarcos.superapp.ui.snack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -129,12 +131,7 @@ class ProfileFragment : Fragment() {
             })
         })
 
-        col.addView(label(ctx, "City of origin"))
-        col.addView(field(ctx, prefs.cityFrom) { prefs.cityFrom = it }.apply {
-            hint = "Where you are from"
-        })
-
-        col.addView(label(ctx, "Titles  (use ' | ' to separate)"))
+        col.addView(label(ctx, "About"))
         col.addView(field(ctx, prefs.titles) { prefs.titles = it }.apply {
             isSingleLine = false; maxLines = 4
         })
@@ -161,10 +158,31 @@ class ProfileFragment : Fragment() {
             bannerPicker.launch("image/*")
         })
 
-        // ── Social profiles ──────────────────────────────────────────────
-        col.addView(sectionHeader(ctx, "Social profiles"))
-        col.addView(caption(ctx, "Any number of {platform, link} pairs — GitHub, Mastodon, LinkedIn, whatever you use. Clearing both boxes of a row removes it."))
-        col.addView(socialEditor(ctx))
+        // ── Credentials ──────────────────────────────────────────────────
+        // Deliberately BELOW the contact card and visibly separated from it:
+        // everything above this header is synced, nothing below it ever is.
+        col.addView(sectionHeader(ctx, "Credentials  (this device only)"))
+        col.addView(caption(ctx, CREDENTIALS_TEXT))
+
+        col.addView(label(ctx, "Authelia bearer token"))
+        col.addView(secretField(
+            ctx,
+            stored = { ConfigsPrefs(ctx).autheliaToken.isNotBlank() },
+            save = { ConfigsPrefs(ctx).autheliaToken = it },
+        ))
+        col.addView(clearSecretButton(ctx, "Authelia bearer token") {
+            ConfigsPrefs(ctx).autheliaToken = ""
+        })
+
+        col.addView(label(ctx, "WireGuard private key"))
+        col.addView(secretField(
+            ctx,
+            stored = { WireGuardPrefs(ctx).interfacePrivateKey.isNotBlank() },
+            save = { WireGuardPrefs(ctx).interfacePrivateKey = it },
+        ))
+        col.addView(clearSecretButton(ctx, "WireGuard private key") {
+            WireGuardPrefs(ctx).interfacePrivateKey = ""
+        })
 
         // ── Privacy ──────────────────────────────────────────────────────
         // Disclosure lives on the collecting screen on purpose: "what is held
@@ -308,70 +326,71 @@ class ProfileFragment : Fragment() {
         else
             "Sync status: nothing queued.")
 
-    // ── social profiles ──────────────────────────────────────────────────
+    // ── credentials ──────────────────────────────────────────────────────
 
     /**
-     * Rows of {platform, url}, plus one always-blank row to type into.
+     * A write-mostly box for one credential.
      *
-     * The whole editor re-reads and re-writes the entire list on every
-     * keystroke. That is O(rows) per character and completely fine at the
-     * handful of rows a person actually has — and it means there is exactly
-     * one representation of the list (the prefs) rather than a view-model that
-     * can drift from it.
+     * WRITE-MOSTLY, not read-write, and that is the whole design. The stored
+     * value is NEVER put back into the view — the box starts empty and its
+     * hint says only whether something is on file. A masked EditText still
+     * holds the plaintext in the view hierarchy (recents screenshots,
+     * accessibility tree, a "show password" toggle), so the way to keep a
+     * bearer or a private key out of the UI is to not load it into the UI.
+     *
+     * Consequences that are intentional:
+     *  • blank does NOT clear — leaving the box untouched must not wipe a key
+     *    the user cannot see to retype. Clearing is the explicit button below.
+     *  • the value is saved on change, matching the rest of this auto-saving
+     *    screen, so there is no unsaved-state trap.
+     *  • nothing here is logged. The credential never becomes a string this
+     *    class hands to Log, and it is not in the profile sync document —
+     *    [ProfileSync] enumerates its keys and re-filters them through an
+     *    allowlist that contains neither of these.
      */
-    private fun socialEditor(ctx: android.content.Context): LinearLayout {
-        val container = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-
-        fun rebuild() {
-            container.removeAllViews()
-            // A trailing blank row is what makes "add another" work without an
-            // Add button: fill it in and the next rebuild grows a fresh one.
-            val rows = prefs.socialLinks + ProfilePrefs.SocialLink("", "")
-            rows.forEachIndexed { index, link ->
-                val row = LinearLayout(ctx).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    ).apply { topMargin = dp(ctx, 4) }
-                }
-                fun update(platform: String, url: String) {
-                    val next = rows.toMutableList()
-                    next[index] = ProfilePrefs.SocialLink(platform, url)
-                    prefs.socialLinks = next.filterNot { it.platform.isBlank() && it.url.isBlank() }
-                }
-                val platformBox = EditText(ctx).apply {
-                    setText(link.platform); hint = "Platform"; setSingleLine()
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                }
-                val urlBox = EditText(ctx).apply {
-                    setText(link.url); hint = "https://…"; setSingleLine()
-                    inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                        android.text.InputType.TYPE_TEXT_VARIATION_URI
-                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f)
-                }
-                // Watchers are attached AFTER both boxes exist so each one can
-                // read the other's current text instead of a stale capture.
-                platformBox.addTextChangedListener(afterText {
-                    update(it, urlBox.text.toString())
-                })
-                urlBox.addTextChangedListener(afterText {
-                    update(platformBox.text.toString(), it)
-                })
-                row.addView(platformBox)
-                row.addView(urlBox)
-                container.addView(row)
+    private fun secretField(
+        ctx: android.content.Context,
+        stored: () -> Boolean,
+        save: (String) -> Unit,
+    ): EditText = EditText(ctx).apply {
+        hint = if (stored()) "•••••••• stored — type to replace" else "Paste to store on this device"
+        setSingleLine(false)
+        maxLines = 4
+        inputType = android.text.InputType.TYPE_CLASS_TEXT or
+            android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
+        // Keep it out of the keyboard's learned-words store, and out of
+        // autofill's — both persist what is typed well beyond this screen.
+        imeOptions = android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
+        importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
+        addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
+            override fun afterTextChanged(s: Editable?) {
+                val typed = s?.toString()?.trim().orEmpty()
+                if (typed.isNotEmpty()) save(typed)
             }
-        }
-        rebuild()
-        return container
+        })
     }
 
-    /** TextWatcher that only cares about the final text. */
-    private fun afterText(onChange: (String) -> Unit) = object : TextWatcher {
-        override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-        override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-        override fun afterTextChanged(s: Editable?) { onChange(s?.toString().orEmpty()) }
+    /** The only way to remove a stored credential, since a blank box means
+     *  "unchanged". Confirmed, because losing the WireGuard private key means
+     *  the tunnel cannot be brought up again without re-importing it. */
+    private fun clearSecretButton(
+        ctx: android.content.Context,
+        what: String,
+        clear: () -> Unit,
+    ): View = pickButton(ctx, "Clear stored $what") {
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
+            .setTitle("Clear $what?")
+            .setMessage("It is removed from this device. It is not stored anywhere else, so you will have to paste or re-import it.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Clear") { _, _ ->
+                clear()
+                view?.snack("$what cleared")
+                parentFragmentManager.beginTransaction().detach(this).commitNow()
+                parentFragmentManager.beginTransaction().attach(this).commitNow()
+            }
+            .show()
     }
 
     // ── erasure ──────────────────────────────────────────────────────────
@@ -389,9 +408,12 @@ class ProfileFragment : Fragment() {
         com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
             .setTitle("Erase your profile?")
             .setMessage(
-                "This deletes your name, email, phone, date of birth, city of origin, " +
-                "location, company, website, titles, social links and photos from this " +
-                "device, and asks the server to delete its copy.\n\n" +
+                "This deletes your name, email, phone, date of birth, location, " +
+                "company, website, about and photos from this device, and asks the " +
+                "server to delete its copy.\n\n" +
+                "Your stored credentials are NOT touched — they were never sent to the " +
+                "server, so erasing the server copy has nothing to do with them. Clear " +
+                "them with their own buttons above.\n\n" +
                 "Your device also gets a new random sync id, so the old server-side " +
                 "record can no longer be linked to this install.\n\nThis cannot be undone."
             )
@@ -961,16 +983,35 @@ class ProfileFragment : Fragment() {
         private val DATE_PATTERN = Regex("^\\d{4}-\\d{2}-\\d{2}$")
 
         /**
+         * Says where each credential actually goes, because "it is stored
+         * securely" is the sentence that stops anyone checking.
+         */
+        private const val CREDENTIALS_TEXT =
+            "Neither of these is part of your profile and neither is ever uploaded — " +
+            "the sync document carries contact fields only.\n\n" +
+            "The Authelia bearer goes into the same encrypted store the config import " +
+            "writes (AES-256-GCM, key in the Android keystore), at the same " +
+            "auth.authelia_token path, so there is one bearer on this device rather " +
+            "than two that can disagree.\n\n" +
+            "The WireGuard private key is written straight to the tunnel's own " +
+            "settings — the very field Configs → WireGuard edits. It is not copied " +
+            "here; typing in this box changes the key the tunnel connects with.\n\n" +
+            "Stored values are never displayed again. An empty box means unchanged."
+
+        /**
          * In-screen disclosure. Kept specific — field names, destination and
          * the erasure route — because a vague notice is what makes people
          * unable to reason about their own data.
          */
         private const val PRIVACY_TEXT =
-            "Your name, email, phone, date of birth, city of origin, location, company, " +
-            "website, titles and social links are stored on this device and mirrored to " +
+            "Your name, email, phone, date of birth, location, company, website and " +
+            "about are stored on this device and mirrored to " +
             "the constellation server over HTTPS, so the fleet operator can contact you " +
             "out-of-band when an update breaks the app and it can no longer fix itself. " +
             "That is the only reason this is collected.\n\n" +
+            "Your credentials are NOT in that list and never leave this device — the " +
+            "sync document is built from a fixed list of contact fields and filtered " +
+            "against it again before sending.\n\n" +
             "Your photos stay on this device and are never uploaded. Your profile is " +
             "identified by a random id generated on this install — not by any device, " +
             "SIM or advertising identifier. It is not synced until name and email are " +

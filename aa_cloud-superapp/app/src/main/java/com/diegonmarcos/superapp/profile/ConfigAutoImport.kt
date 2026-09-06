@@ -109,7 +109,7 @@ object ConfigAutoImport {
         // "initials" is deliberately absent — it is derived from the name at
         // render time now, so an artifact carrying one has nothing to write to.
         for (key in listOf(
-            "name", "email", "phone", "birth", "city_from",
+            "name", "email", "phone", "birth",
             "titles", "company", "location", "website",
         )) {
             if (!o.has(key)) continue
@@ -126,30 +126,23 @@ object ConfigAutoImport {
                 "email"     -> prefs.email = value
                 "phone"     -> prefs.phone = value
                 "birth"     -> prefs.birth = value
-                "city_from" -> prefs.cityFrom = value
                 "titles"    -> prefs.titles = value
                 "company"   -> prefs.company = value
                 "location"  -> prefs.location = value
                 "website"   -> prefs.website = value
-            }
-            // social_media_links is a list of objects, not a flattenable
-            // scalar, so it is handled separately from the string fields.
-            o.optJSONArray("social_media_links")?.let { array ->
-                val links = (0 until array.length()).mapNotNull { i ->
-                    val entry = array.optJSONObject(i) ?: return@mapNotNull null
-                    ProfilePrefs.SocialLink(
-                        entry.optString("platform").trim(),
-                        entry.optString("url").trim(),
-                    )
-                }.filterNot { it.platform.isBlank() && it.url.isBlank() }
-                if (links.isNotEmpty()) prefs.socialLinks = links
             }
         }
         // picture/banner are LOCAL file paths written by the gallery picker;
         // a server-side value would point at a path that does not exist here.
         val images = listOf("picture_uri", "banner_uri").filter { o.has(it) }
         val tail = if (images.isEmpty()) "" else " ($SKIP ${images.joinToString(", ")}: local file paths, pick those on-device)"
-        return "$OK profile — ${fields.size} fields: ${fields.keys.joinToString(", ")}$tail"
+        // Retired fields are REPORTED, not dropped in silence — an artifact
+        // still carrying them is a stale generator, and the operator only finds
+        // that out if the import says so.
+        val retired = listOf("city_from", "social_media_links").filter { o.has(it) }
+        val retiredTail = if (retired.isEmpty()) "" else
+            " ($SKIP ${retired.joinToString(", ")}: removed from this app, nothing to write)"
+        return "$OK profile — ${fields.size} fields: ${fields.keys.joinToString(", ")}$tail$retiredTail"
     }
 
     // ── wireguard ────────────────────────────────────────────────────────
