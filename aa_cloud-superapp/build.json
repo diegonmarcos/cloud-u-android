@@ -3800,7 +3800,8 @@
         "order": "17",
         "label": "-Health",
         "match_keywords": [
-          "pkg:com.medantapatient.app"
+          "pkg:com.medantapatient.app",
+          "pkg:com.urbansportsclub"
         ]
       },
       {
