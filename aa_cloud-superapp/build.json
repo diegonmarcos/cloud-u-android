@@ -477,13 +477,15 @@
         "id": "left",
         "edge": "left",
         "position_pct": 50,
+        "_doc_down_outer": "down_outer is AI Claude — the same Telegram-bot target the Cloud > Apps tile uses (@Cloud_agent_claude_bot). GestureAction.parse only understands app:/action:/bare-OneHandAction, so the intent:// URL has to travel as an action: payload: parse strips the action: prefix, openInHost forwards the rest verbatim in the shortcut_action extra, and ShellActivity's tile grammar recognises the intent: prefix and hands it to Intent.parseUri. Keep the two targets identical — if the bot handle changes, change it here as well.",
         "gestures": {
           "top_outer": "action:open_search",
           "top": "app:com.x8bit.bitwarden",
           "top_middle": "app:com.brave.browser",
           "center": "back",
           "down_middle": "app:com.google.android.apps.bard",
-          "down": "app:com.google.android.apps.maps"
+          "down": "app:com.google.android.apps.maps",
+          "down_outer": "action:intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end"
         }
       }
     ],
