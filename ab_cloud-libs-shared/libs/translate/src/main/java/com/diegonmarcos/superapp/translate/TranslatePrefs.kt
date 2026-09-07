@@ -27,7 +27,12 @@ object TranslatePrefs {
     const val APPLY_INSERT = "insert"
     const val APPLY_REPLACE = "replace"
     const val DEFAULT_APPLY_MODE = APPLY_INSERT
-    const val DEFAULT_LIVE_COMMIT = false
+    /**
+     * On by default: the translation lands in the field as you type, which is what
+     * the bar is for. Turning it off leaves the Insert/Replace buttons as the only
+     * way to get the text out, which reads as the bar not working.
+     */
+    const val DEFAULT_LIVE_COMMIT = true
     const val MAX_RECENT = 3
     /** Only used while the engine hasn't reported its language list (AIDL bind pending / no companion). */
     @JvmField val FALLBACK_LANGS = listOf("en", "pt", "es", "de")

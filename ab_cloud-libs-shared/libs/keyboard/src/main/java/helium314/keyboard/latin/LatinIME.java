@@ -1567,6 +1567,13 @@ public class LatinIME extends InputMethodService implements
             if (KeyCode.DELETE == event.getKeyCode()) { mTranslateBar.backspace(); return; }
             final int cp = event.getCodePoint();
             if (cp > 0) { mTranslateBar.appendCodePoint(cp); return; }
+            // The bar owns its own buffer, so the toolbar's navigation and clipboard
+            // keys have to act on that buffer instead of the app's field — otherwise
+            // they silently edit the text behind the bar while the user is looking at
+            // the bar. Unmapped codes fall through to the normal handling below.
+            final com.diegonmarcos.superapp.translate.TranslateEdit edit =
+                    translateEditFor(event.getKeyCode());
+            if (edit != null && mTranslateBar.onEdit(edit)) return;
         }
         // SuperApp (patch 0011): same manual key-routing as the translate bar.
         if (isEmojiSearchBarActive()) {
@@ -1587,6 +1594,30 @@ public class LatinIME extends InputMethodService implements
                         mKeyboardSwitcher.getCurrentKeyboardScript(), mHandler);
         updateStateAfterInputTransaction(completeInputTransaction);
         mKeyboardSwitcher.onEvent(event, getCurrentAutoCapsState(), getCurrentRecapitalizeState());
+    }
+
+    /**
+     * Toolbar keys the translate bar handles against its own buffer while it is open.
+     * The mapping lives here, not in libs:translate, so that module keeps no
+     * dependency on the keyboard. Null = not ours, handle it normally.
+     */
+    private static com.diegonmarcos.superapp.translate.TranslateEdit translateEditFor(
+            final int keyCode) {
+        switch (keyCode) {
+            case KeyCode.ARROW_LEFT: return com.diegonmarcos.superapp.translate.TranslateEdit.LEFT;
+            case KeyCode.ARROW_RIGHT: return com.diegonmarcos.superapp.translate.TranslateEdit.RIGHT;
+            case KeyCode.WORD_LEFT: return com.diegonmarcos.superapp.translate.TranslateEdit.WORD_LEFT;
+            case KeyCode.WORD_RIGHT: return com.diegonmarcos.superapp.translate.TranslateEdit.WORD_RIGHT;
+            // The bar is a short single-field buffer, so up/down are its ends.
+            case KeyCode.ARROW_UP: case KeyCode.MOVE_START_OF_LINE: return com.diegonmarcos.superapp.translate.TranslateEdit.LINE_START;
+            case KeyCode.ARROW_DOWN: case KeyCode.MOVE_END_OF_LINE: return com.diegonmarcos.superapp.translate.TranslateEdit.LINE_END;
+            case KeyCode.CLIPBOARD_SELECT_ALL: return com.diegonmarcos.superapp.translate.TranslateEdit.SELECT_ALL;
+            case KeyCode.CLIPBOARD_SELECT_WORD: return com.diegonmarcos.superapp.translate.TranslateEdit.SELECT_WORD;
+            case KeyCode.CLIPBOARD_COPY: return com.diegonmarcos.superapp.translate.TranslateEdit.COPY;
+            case KeyCode.CLIPBOARD_CUT: return com.diegonmarcos.superapp.translate.TranslateEdit.CUT;
+            case KeyCode.CLIPBOARD_PASTE: return com.diegonmarcos.superapp.translate.TranslateEdit.PASTE;
+            default: return null;
+        }
     }
 
     public void onTextInput(final String rawText) {
