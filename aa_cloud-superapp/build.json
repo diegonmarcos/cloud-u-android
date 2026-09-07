@@ -4108,26 +4108,6 @@
         ]
       },
       {
-        "id": "prod_learning",
-        "order": "58",
-        "label": ".Learning",
-        "match_keywords": [
-          "pkg:air.nn.mobile.app.main",
-          "pkg:com.duocards.app",
-          "pkg:com.fluentflix.fluentu",
-          "pkg:com.flutterflow.kards",
-          "pkg:com.hueber.huebermedia",
-          "pkg:com.lubosmikusiak.articuli.derdiedas",
-          "pkg:com.memrise.android.memrisecompanion",
-          "pkg:com.rype.go",
-          "pkg:com.simonandschuster.pimsleur.unified.android",
-          "pkg:com.softissimo.reverso.context",
-          "pkg:com.ted.android",
-          "pkg:de.digionline.webweavera2",
-          "pkg:mobi.eup.easygerman"
-        ]
-      },
-      {
         "id": "prod_files",
         "order": "59",
         "label": ".Files",
@@ -4234,9 +4214,9 @@
         ]
       },
       {
-        "id": "fun_read",
-        "order": "74",
-        "label": ">News & Reading",
+        "id": "hlth_news",
+        "order": "80",
+        "label": "*News & Reading",
         "match_keywords": [
           "pkg:com.checkitt",
           "pkg:com.diegonmarcos.cloudnews",
@@ -4248,9 +4228,29 @@
         ]
       },
       {
-        "id": "fun_outdoor",
-        "order": "75",
-        "label": ">Outdoor & Sport",
+        "id": "hlth_learning",
+        "order": "81",
+        "label": "*Learning",
+        "match_keywords": [
+          "pkg:air.nn.mobile.app.main",
+          "pkg:com.duocards.app",
+          "pkg:com.fluentflix.fluentu",
+          "pkg:com.flutterflow.kards",
+          "pkg:com.hueber.huebermedia",
+          "pkg:com.lubosmikusiak.articuli.derdiedas",
+          "pkg:com.memrise.android.memrisecompanion",
+          "pkg:com.rype.go",
+          "pkg:com.simonandschuster.pimsleur.unified.android",
+          "pkg:com.softissimo.reverso.context",
+          "pkg:com.ted.android",
+          "pkg:de.digionline.webweavera2",
+          "pkg:mobi.eup.easygerman"
+        ]
+      },
+      {
+        "id": "hlth_outdoor",
+        "order": "82",
+        "label": "*Outdoor & Sport",
         "match_keywords": [
           "pkg:com.alltrails.alltrails",
           "pkg:com.downdogapp",
@@ -4281,7 +4281,7 @@
         "match_keywords": []
       }
     ],
-    "_doc_phone_sections": "Top-level section headers in the Home Apps/Phone tab. Folders are bucketed under a section by their label's first character: Services · Buro (-), Services · Others (+), Tools · System (_), Tools · Productivity (.), Tools · Fun (>). A folder whose label starts with none of those prefixes belongs to no section and renders last (that is where the New Apps and Misc sinks live). The split is Service vs Tool: a SERVICE is a client for one external provider you hold an account, contract or booking with, and is worthless without that provider (Santander, Ryanair, Uber, Airalo, ImmoScout24, Gov.br); a TOOL is software that operates on your own data or device and works with any provider or none (maps, file managers, notes, keyboards, browsers, media players). Entertainment clients are tools, not services: you reach for Netflix the way you reach for a media player. Services then split again by why you open them: BURO is the paperwork of being alive, the accounts you must keep in order (money, government and identity, telecom, housing, health, getting to work); OTHERS is discretionary, the services you open because you chose to (travel, shopping, events, jobs). Order = render order. Empty sections (every folder empty) are silently skipped. Phone tab renders one subhead per non-empty section + the folder grid below.",
+    "_doc_phone_sections": "Top-level section headers in the Home Apps/Phone tab. Folders are bucketed under a section by their label's first character: Services · Buro (-), Services · Others (+), Tools · System (_), Tools · Productivity (.), Tools · Fun (>), Tools · Health (*). A folder whose label starts with none of those prefixes belongs to no section and renders last (that is where the New Apps and Misc sinks live). The split is Service vs Tool: a SERVICE is a client for one external provider you hold an account, contract or booking with, and is worthless without that provider (Santander, Ryanair, Uber, Airalo, ImmoScout24, Gov.br); a TOOL is software that operates on your own data or device and works with any provider or none (maps, file managers, notes, keyboards, browsers, media players). Entertainment clients are tools, not services: you reach for Netflix the way you reach for a media player. Tools · Fun is what you consume for pleasure; Tools · Health is what you open to look after yourself — moving your body, learning something, staying informed. Services then split again by why you open them: BURO is the paperwork of being alive, the accounts you must keep in order (money, government and identity, telecom, housing, health, getting to work); OTHERS is discretionary, the services you open because you chose to (travel, shopping, events, jobs). Order = render order. Empty sections (every folder empty) are silently skipped. Phone tab renders one subhead per non-empty section + the folder grid below.",
     "phone_sections": [
       {
         "title": "Services · Buro",
@@ -4302,6 +4302,10 @@
       {
         "title": "Tools · Fun",
         "prefix": ">"
+      },
+      {
+        "title": "Tools · Health",
+        "prefix": "*"
       }
     ],
     "_doc_phone_smart_folders": "Smart Folders rendered at the BOTTOM of the Home Apps/Phone tab — dynamic filters over the same LauncherApps.getActivityList enumeration the page uses. Apps still belong to their topical folder above; Smart Folders are an orthogonal cross-cut view by manufacturer / install-source. Rule types: pkg_prefix (any pkg starts-with one of values); pkg_eq (any pkg equals one of values); install_source_in (the app's install-source-of-record — installingPackageName OR initiatingPackageName from PackageManager.getInstallSourceInfo — IS one of values; use this to bucket apps by the store/installer that owns their updates); install_source_not (install source NOT in values — legacy catch-all for 'anything outside the official stores'); recently_installed (ranking rule: newest firstInstallTime first, capped at `limit`); recent_used (ranking: most-recently-used first via UsageStatsManager.lastTimeUsed, capped at `limit`); active_since (ranking: apps used within the last `window_h` hours, most-recent first, optional `limit`); most_opened (ranking: launch count via MOVE_TO_FOREGROUND events over 7d, capped at `limit`); top_network (ranking: total bytes rx+tx via NetworkStatsManager over 7d, capped at `limit`); top_battery (ranking: estimated mAh via libs:battery EnergyWatchdog.perAppEstimate, capped at `limit`). The five usage/network/battery ranking rules read through libs:datamanager (usage+network) / libs:battery (energy) and ALL need the PACKAGE_USAGE_STATS usage-access grant — without it each degrades to an empty (hidden) folder. The install-source values are real installer package names — verified on-device via /api/phone/classify (which dumps installing/initiating/system per app): com.android.vending=Google Play, com.sec.android.app.samsungapps=Galaxy Store, com.uptodown=Uptodown, org.fdroid.fdroid=F-Droid, com.google.android.packageinstaller=manual sideload (raw APK, no store), com.epicgames.portal=Epic, com.facebook.system=Meta's own installer.",
