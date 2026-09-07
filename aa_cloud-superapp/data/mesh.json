@@ -130,7 +130,7 @@
       "alias": "gcp-gpu-embed",
       "public_ip": "34.66.107.117",
       "wg_ip": "",
-      "region": "us-central1-a",
+      "region": "?",
       "provider": "gcloud",
       "os": "NixOS",
       "ports_public": [],
