@@ -92,7 +92,9 @@ object UpdateProgress {
      */
     fun restore() {
         minimized = false
-        if (!quiet) listener?.invoke(state)
+        if (quiet) return
+        listener?.invoke(state)
+        observers.toList().forEach { it(state) }
     }
 
     /**
@@ -148,6 +150,24 @@ object UpdateProgress {
 
     private var listener: ((State) -> Unit)? = null
 
+    /**
+     * Extra observers, on top of the shell's single [listener] slot.
+     *
+     * A screen that wants to show progress inline — the Constellation page's row
+     * under its buttons — cannot use [setListener]: that slot belongs to the
+     * Activity's overlay, and taking it would silently switch the overlay off for
+     * as long as the screen is open. These stack instead, so nothing displaces
+     * anything. Same [quiet] and [suppressed] rules apply; the caller decides.
+     */
+    private val observers = mutableListOf<(State) -> Unit>()
+
+    fun addObserver(observer: (State) -> Unit) {
+        observers.add(observer)
+        if (!quiet) observer(state)   // replay, exactly as setListener does
+    }
+
+    fun removeObserver(observer: (State) -> Unit) { observers.remove(observer) }
+
     fun setListener(l: ((State) -> Unit)?) {
         listener = l
         // Replay current state so a late subscriber catches up — but honour
@@ -166,7 +186,9 @@ object UpdateProgress {
 
     fun update(next: State) {
         state = next
-        if (!quiet) listener?.invoke(next)
+        if (quiet) return
+        listener?.invoke(next)
+        observers.toList().forEach { it(next) }
     }
 
     fun reset() { batchLabel = null; minimized = false; update(State.Idle) }

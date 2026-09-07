@@ -13,6 +13,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -24,6 +25,7 @@ import com.diegonmarcos.superapp.updater.Advisory
 import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
 import com.diegonmarcos.superapp.updater.BootstrapInstall
 import com.diegonmarcos.superapp.updater.Fleet
+import com.diegonmarcos.superapp.updater.UpdateProgress
 import kotlin.concurrent.thread
 
 /**
@@ -62,6 +64,26 @@ class ConstellationFragment : Fragment() {
     private var filter = 0
     private lateinit var summaryView: TextView
     private lateinit var listHost: LinearLayout
+
+    // ── live download / install progress ─────────────────────────────────────
+    // Sits under the buttons that start the work and above the summary line that
+    // describes the result: what the fleet is doing RIGHT NOW. Before this, the
+    // page went quiet the moment you pressed Check all / Update all, and the only
+    // place with an answer was the shell's overlay — which is not this screen, and
+    // is not there at all when a satellite app hosts the page.
+    private var progressRow: LinearLayout? = null
+    private var progressLabel: TextView? = null
+    private var progressBar: ProgressBar? = null
+
+    /**
+     * Attached with [UpdateProgress.addObserver], never setListener: that slot is
+     * the shell overlay's, and taking it would turn the overlay off for as long as
+     * this page is open. The pipeline posts from its worker thread, so hop to the
+     * view's looper before touching anything.
+     */
+    private val progressObserver: (UpdateProgress.State) -> Unit = { state ->
+        progressRow?.post { renderProgress(state) }
+    }
     private val filterChips = ArrayList<TextView>()
     private val actionRows = HashMap<String, LinearLayout>()
     private val installBtns = HashMap<String, TextView>()
@@ -94,6 +116,13 @@ class ConstellationFragment : Fragment() {
         col.addView(body)
         renderTab(ctx)
         return scroll
+    }
+
+    /** The observer holds a view; leaving it attached would outlive the view tree. */
+    override fun onDestroyView() {
+        UpdateProgress.removeObserver(progressObserver)
+        progressRow = null; progressLabel = null; progressBar = null
+        super.onDestroyView()
     }
 
     // ── tabs: Apps | Libs | Perms ────────────────────────────────────────────
@@ -151,6 +180,7 @@ class ConstellationFragment : Fragment() {
         headerControls = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         body.addView(headerControls)
         renderHeader(ctx)
+        body.addView(progressPanel(ctx))
         if (list.isEmpty()) { body.addView(caption(ctx, "Nothing here yet.")); return }
         summaryView = TextView(ctx).apply {
             textSize = 12f; setTextColor(cDim); setPadding(0, dp(ctx, 2), 0, dp(ctx, 6))
@@ -228,6 +258,83 @@ class ConstellationFragment : Fragment() {
             if (miss > 0) append("  ·  $miss missing")
             if (bytes > 0) append("  ·  ${human(bytes)}")
         }
+    }
+
+    // ── live progress, under the buttons ─────────────────────────────────────
+
+    /** The row itself. Built once per render pass and hidden until there is work. */
+    private fun progressPanel(ctx: Context): LinearLayout {
+        val row = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(ctx, 6), 0, dp(ctx, 4))
+            visibility = View.GONE
+        }
+        val label = TextView(ctx).apply { textSize = 12f; setTextColor(cUpd) }
+        // Horizontal style = a real determinate bar; the default is the spinner,
+        // which cannot show a percentage.
+        val bar = ProgressBar(ctx, null, android.R.attr.progressBarStyleHorizontal).apply {
+            max = 100
+            isIndeterminate = true
+        }
+        row.addView(label)
+        row.addView(bar, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 6)).apply {
+            topMargin = dp(ctx, 4)
+        })
+        progressRow = row; progressLabel = label; progressBar = bar
+        // Re-attaching on every render would stack observers, so drop the old one
+        // first — the field is the same lambda instance for the fragment's life.
+        UpdateProgress.removeObserver(progressObserver)
+        UpdateProgress.addObserver(progressObserver)
+        renderProgress(UpdateProgress.state)
+        return row
+    }
+
+    private fun renderProgress(state: UpdateProgress.State) {
+        val row = progressRow ?: return
+        val label = progressLabel ?: return
+        val bar = progressBar ?: return
+        // "Chat · 2/5" during an Update all, so a bar that restarts per app reads as
+        // progress through a batch rather than as a bar that keeps resetting.
+        val batch = UpdateProgress.batchLabel
+        val prefix = if (batch == null) "" else "$batch  ·  "
+        when (state) {
+            is UpdateProgress.State.Downloading -> {
+                bar.isIndeterminate = false
+                bar.progress = state.percent
+                label.text = prefix + "Downloading  ${state.percent}%  ·  " +
+                    "${human(state.bytes)} / ${human(state.total)}"
+            }
+            is UpdateProgress.State.CheckingManifest -> {
+                bar.isIndeterminate = true
+                label.text = prefix + "Checking manifest…"
+            }
+            is UpdateProgress.State.UpdateAvailable -> {
+                bar.isIndeterminate = true
+                label.text = prefix + "Update available  ·  ${human(state.totalBytes)}"
+            }
+            is UpdateProgress.State.Installing -> {
+                bar.isIndeterminate = true
+                label.text = prefix + "Installing…"
+            }
+            // Never hidden: silence about work that did not happen is hiding, not
+            // quietness — the same rule UpdateProgress.suppressed states.
+            is UpdateProgress.State.Failed -> {
+                bar.isIndeterminate = false
+                bar.progress = 0
+                label.setTextColor(cBlk)
+                label.text = prefix + "Failed — " + state.message
+            }
+            // Between apps of a batch the state dips through Done; hiding there
+            // would flicker the row out and back for every app in the pass.
+            else -> {
+                if (batch == null) { row.visibility = View.GONE; return }
+                bar.isIndeterminate = true
+                label.text = batch
+            }
+        }
+        if (state !is UpdateProgress.State.Failed) label.setTextColor(cUpd)
+        row.visibility = View.VISIBLE
     }
 
     // ── header: Update-all / Check-all + auto-update toggle + grant ──────────
