@@ -4063,7 +4063,7 @@
       {
         "id": "prod_storage",
         "order": "55",
-        "label": ".Storage & Photos",
+        "label": ".Storage",
         "match_keywords": [
           "pkg:cld.camera",
           "pkg:com.google.android.apps.docs",
@@ -4073,7 +4073,20 @@
           "pkg:com.musicvideo.photoeditor.squarefit",
           "pkg:com.sec.android.app.camera",
           "pkg:com.sec.android.gallery3d",
-          "pkg:pl.mobimax.cameraopus"
+          "pkg:pl.mobimax.cameraopus",
+          "pkg:com.alphainventor.filemanager",
+          "pkg:com.amaze.filemanager",
+          "pkg:com.app.applistbackup",
+          "pkg:com.ghisler.android.TotalCommander",
+          "pkg:com.ghostsq.commander",
+          "pkg:com.lonelycatgames.Xplore",
+          "pkg:com.mobisystems.fileman",
+          "pkg:com.rarlab.rar",
+          "pkg:com.sec.android.app.myfiles",
+          "pkg:com.smlnskgmail.jaman.hashchecker",
+          "pkg:dk.tacit.android.foldersync.lite",
+          "pkg:me.zhanghai.android.files",
+          "pkg:pl.solidexplorer2"
         ]
       },
       {
@@ -4105,26 +4118,6 @@
           "pkg:com.duckduckgo.mobile.android",
           "pkg:com.google.android.googlequicksearchbox",
           "pkg:io.raindrop.raindropio"
-        ]
-      },
-      {
-        "id": "prod_files",
-        "order": "59",
-        "label": ".Files",
-        "match_keywords": [
-          "pkg:com.alphainventor.filemanager",
-          "pkg:com.amaze.filemanager",
-          "pkg:com.app.applistbackup",
-          "pkg:com.ghisler.android.TotalCommander",
-          "pkg:com.ghostsq.commander",
-          "pkg:com.lonelycatgames.Xplore",
-          "pkg:com.mobisystems.fileman",
-          "pkg:com.rarlab.rar",
-          "pkg:com.sec.android.app.myfiles",
-          "pkg:com.smlnskgmail.jaman.hashchecker",
-          "pkg:dk.tacit.android.foldersync.lite",
-          "pkg:me.zhanghai.android.files",
-          "pkg:pl.solidexplorer2"
         ]
       },
       {
