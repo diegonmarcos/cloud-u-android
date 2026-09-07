@@ -1543,6 +1543,12 @@
                 "label": "AI Goose",
                 "icon": "ic_ai_chat",
                 "target": "intent://resolve?domain=Cloud_agent_goose_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_goose_bot;end"
+              },
+              {
+                "id": "ai-tlg-claude",
+                "label": "AI Claude",
+                "icon": "ic_ai_chat",
+                "target": "intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end"
               }
             ]
           },
