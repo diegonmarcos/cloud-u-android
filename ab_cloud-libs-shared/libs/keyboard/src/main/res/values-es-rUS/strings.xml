@@ -310,7 +310,7 @@
     <string name="layout_functional_keys" tools:keep="@string/layout_functional_keys">Teclas funcionales</string>
     <string name="layout_functional_keys_symbols_shifted" tools:keep="@string/layout_functional_keys_symbols_shifted">Teclas funcionales (Más símbolos)</string>
     <string name="layout_functional_keys_symbols" tools:keep="@string/layout_functional_keys_symbols">Teclas funcionales (Símbolos)</string>
-    <string name="pinned_toolbar_keys">Seleccionar teclas ancladas en la barra de herramientas</string>
+    <string name="second_row_toolbar_keys">Seleccionar teclas ancladas en la barra de herramientas</string>
     <string name="quick_pin_toolbar_keys">Fijar la tecla en la barra de herramientas con una pulsación larga</string>
     <string name="quick_pin_toolbar_keys_summary">Esto desactivará otras acciones de pulsación larga para las teclas de la barra de herramientas que no estén ancladas</string>
     <string name="toast_msg_clipboard_copy">Contenido copiado</string>

@@ -341,7 +341,7 @@
     <string name="auto_correct_shortcuts">Pintasan koreksi otomatis</string>
     <string name="auto_correct_shortcuts_summary">Saat diaktifkan, pintasan mungkin diperluas dengan koreksi otomatis</string>
     <string name="page_down" tools:keep="@string/page_down">Halaman bawah</string>
-    <string name="pinned_toolbar_keys">Pilih tombol bilah alat yang disematkan</string>
+    <string name="second_row_toolbar_keys">Pilih tombol bilah alat yang disematkan</string>
     <string name="page_up" tools:keep="@string/page_up">Halaman atas</string>
     <string name="word_right" tools:keep="@string/word_right">Kata yang tepat</string>
     <string name="custom_font">Atur font khusus dari file</string>

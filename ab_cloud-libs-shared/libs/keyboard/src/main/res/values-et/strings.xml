@@ -222,7 +222,7 @@
     <string name="file_read_error">Faili lugemine ei õnnestu</string>
     <string name="delete_layout">Kas sa kindlasti soovid kustutada sinu tehtud klahvistiku paigutuse „%s“?</string>
     <string name="layout_error">Klahvistiku paigutuse viga: %s</string>
-    <string name="pinned_toolbar_keys">Vali esiletõstetud tööriistariba nupud</string>
+    <string name="second_row_toolbar_keys">Vali esiletõstetud tööriistariba nupud</string>
     <string name="quick_pin_toolbar_keys_summary">Selle valiku kasutamisega blokeerid muud pikast vajutusest avanevad tegevused, välja arvatud need mille oled esile tõstnud</string>
     <string name="prefs_narrow_key_gaps">Kitsaste klahvide vahed</string>
     <string name="prefs_bottom_padding_scale">Alumiste veeriste mõõtkava</string>

@@ -259,7 +259,7 @@
     <string name="layout_functional_keys_symbols_shifted" tools:keep="@string/layout_functional_keys_symbols_shifted">Функционални клавиши (Още символи)</string>
     <string name="remove_redundant_popups_summary">Потискане на изскачащи клавиши, които вече присъстват в основното оформление</string>
     <string name="no_dictionary_message">"Без речник ще получавате само предложения за текст, който сте въвели преди.&lt;br&gt;\n        Можете да изтеглите речници %1$s, или да проверите дали речник за \"%2$s\" може да бъде изтеглен директно %3$s."</string>
-    <string name="pinned_toolbar_keys">Избиране на прикрепени клавиши от лентата с инструменти</string>
+    <string name="second_row_toolbar_keys">Избиране на прикрепени клавиши от лентата с инструменти</string>
     <string name="quick_pin_toolbar_keys_summary">Това ще деактивира други действия с дълго натискане за клавишите от лентата с инструменти, които не са закачени</string>
     <string name="internal_dictionary_summary">Вътрешен основен речник</string>
     <string name="space_swipe_toggle_numpad_entry">Превключване на цифровата клавиатура</string>

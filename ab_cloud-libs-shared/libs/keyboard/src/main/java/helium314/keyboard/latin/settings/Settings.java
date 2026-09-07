@@ -180,7 +180,11 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_URL_DETECTION = "url_detection";
     public static final String PREF_DONT_SHOW_MISSING_DICTIONARY_DIALOG = "dont_show_missing_dict_dialog";
     public static final String PREF_QUICK_PIN_TOOLBAR_KEYS = "quick_pin_toolbar_keys";
-    public static final String PREF_PINNED_TOOLBAR_KEYS = "pinned_toolbar_keys";
+    // The fixed row next to the suggestions (upstream called it "pinned keys"). The STORED key
+    // keeps the old name on purpose — renaming it would silently reset everyone's second row.
+    public static final String PREF_SECOND_ROW_TOOLBAR_KEYS = "pinned_toolbar_keys";
+    // Which shipped toolbar arrangement the stored rows are at; see TOOLBAR_LAYOUT_REVISION.
+    public static final String PREF_TOOLBAR_LAYOUT_REVISION = "toolbar_layout_revision";
     public static final String PREF_TOOLBAR_KEYS = "toolbar_keys";
     public static final String PREF_AUTO_SHOW_TOOLBAR = "auto_show_toolbar";
     public static final String PREF_AUTO_HIDE_TOOLBAR = "auto_hide_toolbar";

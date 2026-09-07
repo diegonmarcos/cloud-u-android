@@ -312,7 +312,7 @@
     <string name="layout_functional_keys_symbols" tools:keep="@string/layout_functional_keys_symbols">المفاتيح الوظيفية (الرموز)</string>
     <string name="quick_pin_toolbar_keys">تثبيت مفتاح شريط الأدوات عند الضغط لفترة طويلة</string>
     <string name="quick_pin_toolbar_keys_summary">سيؤدي هذا إلى تعطيل إجراءات الضغط لفترة طويلة الأخرى لمفاتيح شريط الأدوات غير المثبتة</string>
-    <string name="pinned_toolbar_keys">حدد مفاتيح شريط الأدوات المثبتة</string>
+    <string name="second_row_toolbar_keys">حدد مفاتيح شريط الأدوات المثبتة</string>
     <string name="toast_msg_clipboard_copy">نُسخ المحتوى</string>
     <string name="language_switch_key_behavior">سلوك مفتاح تبديل اللغة</string>
     <string name="auto_show_toolbar">أظهِر شريط الأدوات تلقائيًا</string>

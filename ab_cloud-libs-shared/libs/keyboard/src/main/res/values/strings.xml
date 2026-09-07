@@ -493,7 +493,7 @@
     <!-- Title of the setting to set clipboard toolbar keys -->
     <string name="clipboard_toolbar_keys">Select clipboard toolbar keys</string>
     <!-- Title of the setting to set pinned toolbar keys -->
-    <string name="pinned_toolbar_keys">Select pinned toolbar keys</string>
+    <string name="second_row_toolbar_keys">Select second row keys</string>
     <!-- Title of the setting to quick-pin toolbar keys -->
     <string name="quick_pin_toolbar_keys">Pin toolbar key on long press</string>
     <!-- Description of the setting to quick-pin toolbar keys -->

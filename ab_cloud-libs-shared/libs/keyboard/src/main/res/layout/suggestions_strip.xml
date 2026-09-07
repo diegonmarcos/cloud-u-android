@@ -58,7 +58,7 @@
                 </LinearLayout>
             </HorizontalScrollView>
         </LinearLayout>
-        <!-- Row 2: TEXT RECOMMENDATION (word suggestions + pinned keys) -->
+        <!-- Row 2: TEXT RECOMMENDATION (word suggestions + second row keys) -->
         <LinearLayout
             android:id="@+id/suggestions_row"
             android:orientation="horizontal"
@@ -79,7 +79,7 @@
                 android:hapticFeedbackEnabled="false"
                 android:soundEffectsEnabled="false" />
             <LinearLayout
-                android:id="@+id/pinned_keys"
+                android:id="@+id/second_row_keys"
                 android:orientation="horizontal"
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"

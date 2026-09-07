@@ -308,7 +308,7 @@
     <string name="close_history" tools:keep="@string/close_history">Закрыць буфер абмену</string>
     <string name="subtype_generic_extended">%s (Пашыраная)</string>
     <string name="emoji" tools:keep="@string/emoji">Эмодзі</string>
-    <string name="pinned_toolbar_keys">Выбраць замацаваныя клавішы панэлі інструментаў</string>
+    <string name="second_row_toolbar_keys">Выбраць замацаваныя клавішы панэлі інструментаў</string>
     <string name="settings_screen_toolbar">Панэль інструментаў</string>
     <string name="subtype_mns">Мансійская</string>
     <string name="more_colors">Паказаць больш колераў</string>

@@ -253,7 +253,7 @@
     <string name="emoji" tools:keep="@string/emoji">ایموجی</string>
     <string name="floating" tools:keep="@string/floating">صفحه‌کلید شناور</string>
     <string name="clipboard_toolbar_keys">انتخاب کلیدهای نوار ابزار کلیپ‌بورد</string>
-    <string name="pinned_toolbar_keys">انتخاب کلیدهای سنجاق‌شده نوار ابزار</string>
+    <string name="second_row_toolbar_keys">انتخاب کلیدهای سنجاق‌شده نوار ابزار</string>
     <string name="quick_pin_toolbar_keys">سنجاق کردن کلید نوار ابزار با لمس طولانی</string>
     <string name="quick_pin_toolbar_keys_summary">این کار سایر عملکردهای لمس طولانی را برای کلیدهای سنجاق‌نشده نوار ابزار غیرفعال می‌کند</string>
     <string name="show_popup_hints">نمایش راهنمای عملکردها</string>

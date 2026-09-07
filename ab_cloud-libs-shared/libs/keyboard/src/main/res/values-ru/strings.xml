@@ -294,7 +294,7 @@
     <string name="subtype_generic_student">%s (Студенческая)</string>
     <string name="language_switch_key_behavior">Действие клавиши смены языка</string>
     <string name="emoji" tools:keep="@string/emoji">Эмодзи</string>
-    <string name="pinned_toolbar_keys">Выбрать закреплённые клавиши панели инструментов</string>
+    <string name="second_row_toolbar_keys">Выбрать закреплённые клавиши панели инструментов</string>
     <string name="quick_pin_toolbar_keys_summary">При этом отключатся остальные функции долгого нажатия для незакреплённых клавиш панели</string>
     <string name="quick_pin_toolbar_keys">Закреплять клавиши панели инструментов при долгом нажатии</string>
     <string name="toast_msg_clipboard_copy">Контент скопирован</string>

@@ -311,7 +311,7 @@
     <string name="layout_functional_keys_symbols_shifted" tools:keep="@string/layout_functional_keys_symbols_shifted">Teclas función (Máis símbolos)</string>
     <string name="layout_functional_keys_symbols" tools:keep="@string/layout_functional_keys_symbols">Teclas función (Símbolos)</string>
     <string name="quick_pin_toolbar_keys">Fixa unha tecla na barra mantendo premida</string>
-    <string name="pinned_toolbar_keys">Escolle as teclas da barra fixada</string>
+    <string name="second_row_toolbar_keys">Escolle as teclas da barra fixada</string>
     <string name="quick_pin_toolbar_keys_summary">Esto desactivará outras accións de pulsación longa para teclas da barra que non están fixadas</string>
     <string name="settings_screen_toolbar">Barra de ferramentas</string>
     <string name="toast_msg_clipboard_copy">Copiouse o contido</string>

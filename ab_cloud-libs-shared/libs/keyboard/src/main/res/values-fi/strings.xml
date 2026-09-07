@@ -240,7 +240,7 @@
     <string name="ime_settings">Cloud Keyboard-asetukset</string>
     <string name="theme_name_dynamic" tools:keep="@string/theme_name_dynamic">Dynaamiset värit</string>
     <string name="settings_no_limit">Ei rajoitusta</string>
-    <string name="pinned_toolbar_keys">Valitse kiinnitetyt työkalupalkin näppäimet</string>
+    <string name="second_row_toolbar_keys">Valitse kiinnitetyt työkalupalkin näppäimet</string>
     <string name="theme_name_brown" tools:keep="@string/theme_name_brown">Ruskea</string>
     <string name="switch_language">Vaihda kieltä</string>
     <string name="prefs_force_incognito_mode_summary">Poista käytöstä sanojen oppiminen</string>

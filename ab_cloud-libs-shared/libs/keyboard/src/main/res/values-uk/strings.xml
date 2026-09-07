@@ -292,7 +292,7 @@
     <string name="main_colors">Показувати лише основні кольори</string>
     <string name="replace_dictionary_message">Замінити словник користувача «%1$s»?\n\nПоточний словник:\n%2$s\n\nНовий словник:\n%3$s</string>
     <string name="no_dictionary_message">"Без словника ви отримуватимете пропозиції лише для попередньо введеного тексту.&lt;br&gt;\n        Ви можете завантажити словники %1$s або перевірити, чи може словник для «%2$s» завантажити безпосередньо %3$s."</string>
-    <string name="pinned_toolbar_keys">Вибрати закріплені клавіші панелі інструментів</string>
+    <string name="second_row_toolbar_keys">Вибрати закріплені клавіші панелі інструментів</string>
     <string name="gesture_fast_typing_cooldown">Час відновлення швидкого друку</string>
     <string name="gesture_fast_typing_cooldown_instant">Завжди починати негайно</string>
     <string name="auto_show_toolbar">Показувати панель інструментів автоматично</string>

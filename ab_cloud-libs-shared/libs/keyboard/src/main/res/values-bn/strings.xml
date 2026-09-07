@@ -294,7 +294,7 @@
     <string name="prefs_language_swipe_distance">ভাষা পরিবর্তন অভিস্পর্শের দূরত্ব</string>
     <string name="subtype_generic_student">%s (শিক্ষার্থী)</string>
     <string name="language_switch_key_behavior">ভাষা পরিবর্তন বোতামের আচরণ</string>
-    <string name="pinned_toolbar_keys">পিন করে রাখা টুলবার বোতাম নির্বাচন</string>
+    <string name="second_row_toolbar_keys">পিন করে রাখা টুলবার বোতাম নির্বাচন</string>
     <string name="quick_pin_toolbar_keys">টুলবার বোতামে দীর্ঘ চাপ পিন করবে</string>
     <string name="toast_msg_clipboard_copy">আধেয় অনুলিপি করা হয়েছে</string>
     <string name="auto_show_toolbar_summary">ইনপুট শুরু হলে বা লেখা সিলেক্ট করা হলে টুলবার প্রদর্শিত হবে</string>

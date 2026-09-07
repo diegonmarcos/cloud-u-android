@@ -345,7 +345,7 @@
     <string name="layout_functional_keys" tools:keep="@string/layout_functional_keys">Functietoetsen</string>
     <string name="layout_functional_keys_symbols" tools:keep="@string/layout_functional_keys_symbols">Functietoetsen (symbolen)</string>
     <string name="layout_functional_keys_symbols_shifted" tools:keep="@string/layout_functional_keys_symbols_shifted">Functietoetsen (meer symbolen)</string>
-    <string name="pinned_toolbar_keys">Vastgezette werkbalktoetsen selecteren</string>
+    <string name="second_row_toolbar_keys">Vastgezette werkbalktoetsen selecteren</string>
     <string name="quick_pin_toolbar_keys">Werkbalktoets vastzetten bij lang indrukken</string>
     <string name="quick_pin_toolbar_keys_summary">Hiermee worden andere lang indrukkenacties uitgeschakeld voor werkbalktoetsen die niet zijn vastgezet</string>
     <string name="settings_screen_toolbar">Werkbalk</string>

@@ -359,7 +359,7 @@
     <string name="close_history" tools:keep="@string/close_history">Lukk utklippstavlehistorikk</string>
     <string name="emoji" tools:keep="@string/emoji">Emoji</string>
     <string name="clipboard_toolbar_keys">Velg verktøylinjetaster for utklippstavle</string>
-    <string name="pinned_toolbar_keys">Velg festede verktøylinjetaster</string>
+    <string name="second_row_toolbar_keys">Velg festede verktøylinjetaster</string>
     <string name="quick_pin_toolbar_keys">Fest verktøylinjetast ved langt trykk</string>
     <string name="quick_pin_toolbar_keys_summary">Dette deaktiverer andre handlinger med langt trykk for verktøylinjetaster som ikke er festet</string>
     <string name="remove_redundant_popups">Fjern overflødige popup-vinduer</string>

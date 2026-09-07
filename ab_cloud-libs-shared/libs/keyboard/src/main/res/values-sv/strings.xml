@@ -250,7 +250,7 @@
     <string name="word_left" tools:keep="@string/word_left">Ord vänster</string>
     <string name="auto_hide_toolbar">Dölj verktygsfält automatiskt</string>
     <string name="quick_pin_toolbar_keys_summary">Detta kommer att inaktivera andra långtryckningsåtgärder för verktygsfältstangenter som inte är fästa</string>
-    <string name="pinned_toolbar_keys">Välj fästa verktygsfältstangenter</string>
+    <string name="second_row_toolbar_keys">Välj fästa verktygsfältstangenter</string>
     <string name="quick_pin_toolbar_keys">Fäst verktygsfältstangent genom långtryckning</string>
     <string name="setup_step3_action">Konfigurera tangentbordet</string>
     <string name="page_down" tools:keep="@string/page_down">Sida ner</string>

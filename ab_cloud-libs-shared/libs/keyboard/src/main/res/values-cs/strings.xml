@@ -401,7 +401,7 @@
     <string name="label_delete_key" tools:keep="@string/label_delete_key">Delete</string>
     <string name="label_shift_key" tools:keep="@string/label_shift_key">Shift</string>
     <string name="prefs_language_swipe_distance">Přepnout vzdálenost přejetí jazyka</string>
-    <string name="pinned_toolbar_keys">Vyberte připnuté klávesy v panelu nástrojů</string>
+    <string name="second_row_toolbar_keys">Vyberte připnuté klávesy v panelu nástrojů</string>
     <string name="quick_pin_toolbar_keys_summary">Toto zakáže další akce dlouhého stisknutí pro klávesy panelu nástrojů, které nejsou připnuty</string>
     <string name="remove_redundant_popups_summary">Zakázat vyskakovací klávesy, které se již nacházejí v základním rozložení klávesnice</string>
     <string name="get_colors_message">Barvy můžete najít a sdílet v %s.</string>

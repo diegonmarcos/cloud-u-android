@@ -31,7 +31,7 @@ import helium314.keyboard.latin.utils.ScriptUtils.script
 import helium314.keyboard.latin.utils.SubtypeSettings
 import helium314.keyboard.latin.utils.SubtypeUtilsAdditional
 import helium314.keyboard.latin.utils.ToolbarKey
-import helium314.keyboard.latin.utils.defaultPinnedToolbarPref
+import helium314.keyboard.latin.utils.defaultSecondRowToolbarPref
 import helium314.keyboard.latin.utils.getResourceSubtypes
 import helium314.keyboard.latin.utils.locale
 import helium314.keyboard.latin.utils.mainLayoutNameOrQwerty
@@ -109,19 +109,19 @@ private object AppUpgrade {
             }
         }
         if (oldVersion <= 2000) {
-            // upgrade pinned toolbar keys pref
-            val oldPinnedKeysPref = prefs.getString(Settings.PREF_PINNED_TOOLBAR_KEYS, "")!!
-            val pinnedKeys = oldPinnedKeysPref.split(";").mapNotNull {
+            // upgrade second row toolbar keys pref
+            val oldSecondRowKeysPref = prefs.getString(Settings.PREF_SECOND_ROW_TOOLBAR_KEYS, "")!!
+            val secondRowKeys = oldSecondRowKeysPref.split(";").mapNotNull {
                 try {
                     ToolbarKey.valueOf(it)
                 } catch (_: IllegalArgumentException) {
                     null
                 }
             }
-            val newPinnedKeysPref = (pinnedKeys.map { "${it.name},true" } + defaultPinnedToolbarPref.split(";"))
+            val newSecondRowKeysPref = (secondRowKeys.map { "${it.name},true" } + defaultSecondRowToolbarPref.split(";"))
                 .distinctBy { it.split(",").first() }
                 .joinToString(";")
-            prefs.edit { putString(Settings.PREF_PINNED_TOOLBAR_KEYS, newPinnedKeysPref) }
+            prefs.edit { putString(Settings.PREF_SECOND_ROW_TOOLBAR_KEYS, newSecondRowKeysPref) }
 
             // enable language switch key if it was enabled previously
             if (prefs.contains(Settings.PREF_LANGUAGE_SWITCH_KEY) && prefs.getString(Settings.PREF_LANGUAGE_SWITCH_KEY, "") != "off")
@@ -403,7 +403,7 @@ private object AppUpgrade {
         }
         if (oldVersion <= 2305) {
             (prefs.all.keys.filter { it.startsWith(Settings.PREF_POPUP_KEYS_ORDER) || it.startsWith(Settings.PREF_POPUP_KEYS_HINT_ORDER) } +
-                listOf(Settings.PREF_TOOLBAR_KEYS, Settings.PREF_PINNED_TOOLBAR_KEYS, Settings.PREF_CLIPBOARD_TOOLBAR_KEYS)).forEach {
+                listOf(Settings.PREF_TOOLBAR_KEYS, Settings.PREF_SECOND_ROW_TOOLBAR_KEYS, Settings.PREF_CLIPBOARD_TOOLBAR_KEYS)).forEach {
                 if (!prefs.contains(it)) return@forEach
                 val newValue = prefs.getString(it, "")!!.replace(",", Separators.KV).replace(";", Separators.ENTRY)
                 prefs.edit { putString(it, newValue) }

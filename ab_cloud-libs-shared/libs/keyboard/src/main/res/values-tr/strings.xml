@@ -313,7 +313,7 @@
     <string name="page_down" tools:keep="@string/page_down">Sayfa aşağı</string>
     <string name="quick_pin_toolbar_keys_summary">Bu, sabitlenmemiş araç çubuğu tuşları için diğer uzun basma işlemlerini devre dışı bırakacaktır</string>
     <string name="show_popup_hints">İşlevsel ipuçlarını göster</string>
-    <string name="pinned_toolbar_keys">Sabitlenmiş araç çubuğu tuşlarını seç</string>
+    <string name="second_row_toolbar_keys">Sabitlenmiş araç çubuğu tuşlarını seç</string>
     <string name="quick_pin_toolbar_keys">Uzun basıldığında araç çubuğu tuşunu sabitle</string>
     <string name="subtype_generic_sebeolsik_390">%s (Sebeolsik 390)</string>
     <string name="subtype_generic_sebeolsik_final">%s (Sebeolsik Final)</string>

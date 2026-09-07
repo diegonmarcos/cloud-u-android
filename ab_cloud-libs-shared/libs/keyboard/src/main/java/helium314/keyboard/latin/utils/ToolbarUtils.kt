@@ -127,7 +127,7 @@ enum class ToolbarKey {
     TRANSLATE, // SuperApp addition (patch 0001) — on-device ML Kit translate to active subtype language
     GRAMMAR,   // SuperApp addition (patch 0002) — on-demand whole-field grammar fix
     ENHANCE,   // SuperApp addition — Text Enhancements: rewrite selection/field via AI Model Routing
-    LANGUAGE_SWITCH // cloud-keyboard: toolbar twin of the globe key (tap = next subtype/IME per "Language switch key behavior", long-press = picker). Opt-in, not default.
+    LANGUAGE_SWITCH // cloud-keyboard: toolbar twin of the globe key (tap = next subtype/IME per "Language switch key behavior", long-press = picker). In the default first row.
 }
 
 enum class ToolbarMode {
@@ -136,26 +136,31 @@ enum class ToolbarMode {
 
 val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java)) { it.toString().lowercase(Locale.US) }
 
-// SuperApp default toolbar order (left -> right): all-to-left (line start),
-// word-left, undo, clipboard, translate, enhance (Text Enhancements), number
-// keyboard, voice input, select all, redo, word-right, all-to-right (line end).
-// FULL_LEFT/FULL_RIGHT map to MOVE_START/END_OF_LINE. SETTINGS (Config) is
-// intentionally NOT here — it lives in the pinned/fixed list below instead.
+// SuperApp default FIRST ROW (the scrolling toolbar), left -> right. Writing tools
+// come first because they are what the toolbar is for; the caret and clipboard keys
+// trail behind and are reached by scrolling. FULL_LEFT/FULL_RIGHT map to
+// MOVE_START/END_OF_LINE. SETTINGS (Config) is intentionally NOT here — it is the
+// whole of the SECOND ROW below, so it never scrolls out of reach.
 // NOTE: only fresh installs get this list; upgradeToolbarPref appends a NEW key
 // as disabled for users who already customised their toolbar (upstream contract).
+// A change of THIS order reaches existing phones only via TOOLBAR_LAYOUT_REVISION.
 val defaultToolbarPref by lazy {
-    val default = listOf(FULL_LEFT, WORD_LEFT, UNDO, CLIPBOARD, TRANSLATE, ENHANCE, NUMPAD, VOICE, SELECT_ALL, REDO, WORD_RIGHT, FULL_RIGHT)
+    val default = listOf(
+        FULL_LEFT, GRAMMAR, AUTOCORRECT, ENHANCE, TRANSLATE, NUMPAD, CLIPBOARD, EMOJI, VOICE, LANGUAGE_SWITCH,
+        FULL_RIGHT, SELECT_ALL, WORD_RIGHT, WORD_LEFT, REDO, UNDO, SELECT_WORD, COPY, PASTE, CUT, PAGE_START,
+    )
     val others = entries.filterNot { it in default || it == CLOSE_HISTORY }
     default.joinToString(Separators.ENTRY) { it.name + Separators.KV + true } + Separators.ENTRY +
             others.joinToString(Separators.ENTRY) { it.name + Separators.KV + false }
 }
 
-// SuperApp default: pin Config (SETTINGS) to the fixed toolbar list so it stays
-// next to the suggestions; everything else unpinned.
-val defaultPinnedToolbarPref by lazy {
-    val pinned = listOf(SETTINGS)
-    val others = entries.filterNot { it in pinned || it == CLOSE_HISTORY }
-    pinned.joinToString(Separators.ENTRY) { it.name + Separators.KV + true } + Separators.ENTRY +
+// SuperApp default SECOND ROW: the fixed row that sits next to the suggestions and
+// never scrolls. Config (SETTINGS) alone, so it is always one tap away whatever the
+// first row is scrolled to. (Upstream calls this row "pinned keys".)
+val defaultSecondRowToolbarPref by lazy {
+    val secondRow = listOf(SETTINGS)
+    val others = entries.filterNot { it in secondRow || it == CLOSE_HISTORY }
+    secondRow.joinToString(Separators.ENTRY) { it.name + Separators.KV + true } + Separators.ENTRY +
             others.joinToString(Separators.ENTRY) { it.name + Separators.KV + false }
 }
 
@@ -166,10 +171,33 @@ val defaultClipboardToolbarPref by lazy {
             others.joinToString(Separators.ENTRY) { it.name + Separators.KV + false }
 }
 
+/**
+ * Bump this when the default rows above are reorganised and the new arrangement should reach
+ * phones that already have the old one stored. [upgradeToolbarPref] only ever APPENDS keys that
+ * the stored value does not know yet, so without this a reordered default would be visible to
+ * fresh installs only — the exact trap that made earlier default changes look like no-ops.
+ */
+const val TOOLBAR_LAYOUT_REVISION = 1
+
+/**
+ * Adopt the current default first and second rows, once per [TOOLBAR_LAYOUT_REVISION]. This
+ * DISCARDS a hand-made arrangement, which is the point: the revision only moves when the shipped
+ * layout is meant to win.
+ */
+private fun adoptToolbarLayoutRevision(prefs: SharedPreferences) {
+    if (prefs.getInt(Settings.PREF_TOOLBAR_LAYOUT_REVISION, 0) >= TOOLBAR_LAYOUT_REVISION) return
+    prefs.edit {
+        putString(Settings.PREF_TOOLBAR_KEYS, defaultToolbarPref)
+        putString(Settings.PREF_SECOND_ROW_TOOLBAR_KEYS, defaultSecondRowToolbarPref)
+        putInt(Settings.PREF_TOOLBAR_LAYOUT_REVISION, TOOLBAR_LAYOUT_REVISION)
+    }
+}
+
 /** add missing keys, typically because a new key has been added */
 fun upgradeToolbarPrefs(prefs: SharedPreferences) {
+    adoptToolbarLayoutRevision(prefs)
     upgradeToolbarPref(prefs, Settings.PREF_TOOLBAR_KEYS, defaultToolbarPref)
-    upgradeToolbarPref(prefs, Settings.PREF_PINNED_TOOLBAR_KEYS, defaultPinnedToolbarPref)
+    upgradeToolbarPref(prefs, Settings.PREF_SECOND_ROW_TOOLBAR_KEYS, defaultSecondRowToolbarPref)
     upgradeToolbarPref(prefs, Settings.PREF_CLIPBOARD_TOOLBAR_KEYS, defaultClipboardToolbarPref)
 }
 
@@ -196,18 +224,18 @@ private fun upgradeToolbarPref(prefs: SharedPreferences, pref: String, default: 
 
 fun getEnabledToolbarKeys(prefs: SharedPreferences) = getEnabledToolbarKeys(prefs, Settings.PREF_TOOLBAR_KEYS, defaultToolbarPref)
 
-fun getPinnedToolbarKeys(prefs: SharedPreferences) = getEnabledToolbarKeys(prefs, Settings.PREF_PINNED_TOOLBAR_KEYS, defaultPinnedToolbarPref)
+fun getSecondRowToolbarKeys(prefs: SharedPreferences) = getEnabledToolbarKeys(prefs, Settings.PREF_SECOND_ROW_TOOLBAR_KEYS, defaultSecondRowToolbarPref)
 
 fun getEnabledClipboardToolbarKeys(prefs: SharedPreferences) = getEnabledToolbarKeys(prefs, Settings.PREF_CLIPBOARD_TOOLBAR_KEYS, defaultClipboardToolbarPref)
 
-fun addPinnedKey(prefs: SharedPreferences, key: ToolbarKey) {
+fun addSecondRowKey(prefs: SharedPreferences, key: ToolbarKey) {
     // remove the existing version of this key and add the enabled one after the last currently enabled key
-    val string = prefs.getString(Settings.PREF_PINNED_TOOLBAR_KEYS, defaultPinnedToolbarPref)!!
+    val string = prefs.getString(Settings.PREF_SECOND_ROW_TOOLBAR_KEYS, defaultSecondRowToolbarPref)!!
     val keys = string.split(Separators.ENTRY).toMutableList()
     keys.removeAll { it.startsWith(key.name + Separators.KV) }
     val lastEnabledIndex = keys.indexOfLast { it.endsWith("true") }
     keys.add(lastEnabledIndex + 1, key.name + Separators.KV + "true")
-    prefs.edit { putString(Settings.PREF_PINNED_TOOLBAR_KEYS, keys.joinToString(Separators.ENTRY)) }
+    prefs.edit { putString(Settings.PREF_SECOND_ROW_TOOLBAR_KEYS, keys.joinToString(Separators.ENTRY)) }
 }
 
 /**
@@ -224,15 +252,15 @@ fun setToolbarKeyEnabled(prefs: SharedPreferences, key: ToolbarKey, enabled: Boo
     prefs.edit { putString(Settings.PREF_TOOLBAR_KEYS, keys.joinToString(Separators.ENTRY)) }
 }
 
-fun removePinnedKey(prefs: SharedPreferences, key: ToolbarKey) {
+fun removeSecondRowKey(prefs: SharedPreferences, key: ToolbarKey) {
     // just set it to disabled
-    val string = prefs.getString(Settings.PREF_PINNED_TOOLBAR_KEYS, defaultPinnedToolbarPref)!!
+    val string = prefs.getString(Settings.PREF_SECOND_ROW_TOOLBAR_KEYS, defaultSecondRowToolbarPref)!!
     val result = string.split(Separators.ENTRY).joinToString(Separators.ENTRY) {
         if (it.startsWith(key.name + Separators.KV))
             key.name + Separators.KV + "false"
         else it
     }
-    prefs.edit { putString(Settings.PREF_PINNED_TOOLBAR_KEYS, result) }
+    prefs.edit { putString(Settings.PREF_SECOND_ROW_TOOLBAR_KEYS, result) }
 }
 
 private fun getEnabledToolbarKeys(prefs: SharedPreferences, pref: String, default: String): List<ToolbarKey> {

@@ -257,7 +257,7 @@
     <string name="show_popup_keys_all">添加所有可用变体</string>
     <string name="voice" tools:keep="@string/voice">语音输入</string>
     <string name="left" tools:keep="@string/left">左</string>
-    <string name="pinned_toolbar_keys">选择固定工具栏键</string>
+    <string name="second_row_toolbar_keys">选择固定工具栏键</string>
     <string name="quick_pin_toolbar_keys">长按固定工具栏键</string>
     <string name="popup_order">选择弹出键顺序</string>
     <string name="popup_keys_layout" tools:keep="@string/popup_keys_layout">布局</string>

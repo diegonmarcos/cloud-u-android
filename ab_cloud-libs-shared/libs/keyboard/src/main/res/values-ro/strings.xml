@@ -316,7 +316,7 @@
     <string name="gesture_floating_preview_static_summary">Afișează cuvântul sugerat când utilizezi gesturi</string>
     <string name="gesture_floating_preview_dynamic_summary">Mută previzualizarea în timpul unui gest</string>
     <string name="gesture_trail_fadeout_duration">Durata de viață a traseului gesturilor</string>
-    <string name="pinned_toolbar_keys">Selectează tastele fixate din bara de instrumente</string>
+    <string name="second_row_toolbar_keys">Selectează tastele fixate din bara de instrumente</string>
     <string name="layout_number_row" tools:keep="@string/layout_number_row">Rând de numere</string>
     <string name="subtype_generic_phonetic">%s (Fonetic)</string>
     <string name="subtype_dru">Dargwa (Urakhi)</string>

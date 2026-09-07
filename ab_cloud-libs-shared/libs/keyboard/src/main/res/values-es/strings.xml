@@ -235,7 +235,7 @@
     <string name="layout_symbols_shifted" tools:keep="@string/layout_symbols_shifted">Más símbolos</string>
     <string name="layout_number" tools:keep="@string/layout_number">Números</string>
     <string name="quick_pin_toolbar_keys_summary">Esto deshabilita otras acciones de pulsación prolongada para teclas de la barra de herramientas que no están fijadas</string>
-    <string name="pinned_toolbar_keys">Seleccionar teclas fijas de la barra de herramientas</string>
+    <string name="second_row_toolbar_keys">Seleccionar teclas fijas de la barra de herramientas</string>
     <string name="quick_pin_toolbar_keys">Fijar tecla de la barra de herramientas con pulsación prolongada</string>
     <string name="layout_functional_keys" tools:keep="@string/layout_functional_keys">Teclas funcionales</string>
     <string name="settings_screen_appearance">Apariencia</string>

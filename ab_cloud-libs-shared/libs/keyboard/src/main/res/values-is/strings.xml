@@ -368,7 +368,7 @@
     <string name="auto_show_toolbar_summary">Birta verkfærastikuna ef innsláttur byrjar eða texti er valinn</string>
     <string name="number_row_hints">Birta ábendingar á talnaröð</string>
     <string name="popup_order">Veldu röðun sprettlykla</string>
-    <string name="pinned_toolbar_keys">Veldu fasta lykla á verkfærastiku</string>
+    <string name="second_row_toolbar_keys">Veldu fasta lykla á verkfærastiku</string>
     <string name="show_popup_hints">Birta ábendingar á aðgerðalyklum</string>
     <string name="load_gesture_library_message">Þú munt þurfa aðgerðasafnið fyrir \'%s\'. Ósamhæfð aðgerðasöfn gætu hrunið þegar notaður er innsláttur með bendingum. \n\nAðvörun: Öryggisáhætta getur fylgt því að hlaða inn utanaðkomandi kóða. Notaðu einungis aðgerðasöfn frá aðilum sem þú treystir.</string>
     <string name="var_toolbar_direction_summary">Öfug stefna þegar hægri-til-vinstri undirgerð lyklaborðs er valin</string>

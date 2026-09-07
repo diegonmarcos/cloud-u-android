@@ -348,7 +348,7 @@
     <string name="quick_pin_toolbar_keys">Przypnij klawisz paska narzędzi po długim naciśnięciu</string>
     <string name="settings_screen_toolbar">Pasek narzędzi</string>
     <string name="quick_pin_toolbar_keys_summary">Spowoduje to wyłączenie funkcji związanych z długim naciśnięciem klawiszy, które nie zostały przypięte</string>
-    <string name="pinned_toolbar_keys">Wybierz przypięte klawisze paska narzędzi</string>
+    <string name="second_row_toolbar_keys">Wybierz przypięte klawisze paska narzędzi</string>
     <string name="toast_msg_clipboard_copy">Skopiowano</string>
     <string name="auto_hide_toolbar_summary">Ukryj pasek narzędzi, jeśli są dostępne sugestie</string>
     <string name="auto_show_toolbar_summary">Pokaż pasek narzędzi, jeśli rozpocznie się wprowadzanie lub tekst zostanie zaznaczony</string>

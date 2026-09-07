@@ -203,7 +203,7 @@
     <string name="locales_with_dict">Idiomas com dicionários</string>
     <string name="clipboard" tools:keep="@string/clipboard">Área de transferência</string>
     <string name="quick_pin_toolbar_keys">Fixar tecla da barra de ferramentas em toque longo</string>
-    <string name="pinned_toolbar_keys">Selecionar teclas fixadas da barra de ferramentas</string>
+    <string name="second_row_toolbar_keys">Selecionar teclas fixadas da barra de ferramentas</string>
     <string name="toast_msg_clipboard_copy">Conteúdo copiado</string>
     <string name="label_switch_onehanded_key" tools:keep="@string/label_switch_onehanded_key">Mudar o lado do modo de uma mão</string>
     <string name="file_read_error">Não foi possível ler o ficheiro</string>

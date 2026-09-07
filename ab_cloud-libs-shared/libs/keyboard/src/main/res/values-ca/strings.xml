@@ -167,7 +167,7 @@
     <string name="one_handed" tools:keep="@string/one_handed">Mode d\'una sola mà</string>
     <string name="full_left" tools:keep="@string/full_left">Tot a l\'esquerra</string>
     <string name="full_right" tools:keep="@string/full_right">Tot a la dreta</string>
-    <string name="pinned_toolbar_keys">Seleccioneu les tecles de la barra d\'eines fixades</string>
+    <string name="second_row_toolbar_keys">Seleccioneu les tecles de la barra d\'eines fixades</string>
     <string name="emoji" tools:keep="@string/emoji">Emojis</string>
     <string name="prefs_space_bar_text">Text personalitzat a la barra espaiadora</string>
     <string name="customize_currencies">Personalitza divises</string>

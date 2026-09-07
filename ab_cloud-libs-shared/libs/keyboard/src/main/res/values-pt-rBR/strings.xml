@@ -304,7 +304,7 @@
     <string name="clipboard_toolbar_keys">Selecionar teclas da barra de ferramentas de área de transferência</string>
     <string name="subtype_generic_extended">%s (Extendido)</string>
     <string name="all_colors_warning">Essa configuração expõe todas as cores que são usadas internamente. A lista de cores pode mudar a qualquer momento. A cor padrão é derivada das cores normais, e os nomes não são traduzidos.</string>
-    <string name="pinned_toolbar_keys">Selecionar teclas fixadas da barra de ferramentas</string>
+    <string name="second_row_toolbar_keys">Selecionar teclas fixadas da barra de ferramentas</string>
     <string name="gesture_fast_typing_cooldown_instant">Começar instantaneamente sempre</string>
     <string name="gesture_fast_typing_cooldown">Tempo de espera para digitação rápida</string>
     <string name="quick_pin_toolbar_keys">Fixar tecla da barra de ferramentas em toque longo</string>

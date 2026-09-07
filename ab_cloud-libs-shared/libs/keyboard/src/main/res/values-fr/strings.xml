@@ -308,7 +308,7 @@ Nouveau dictionnaire:
     <string name="layout_functional_keys_symbols" tools:keep="@string/layout_functional_keys_symbols">Touches fonctionnelles (Symboles)</string>
     <string name="quick_pin_toolbar_keys">Épingler les touches de la barre d\'outils lors d\'un appui-long</string>
     <string name="settings_screen_toolbar">Barre d\'outils</string>
-    <string name="pinned_toolbar_keys">Sélectionner les touches épinglées de la barre d\'outils</string>
+    <string name="second_row_toolbar_keys">Sélectionner les touches épinglées de la barre d\'outils</string>
     <string name="quick_pin_toolbar_keys_summary">Cela désactivera les autres actions lors d\'un appui-long sur les touches de la barre d\'outils qui ne sont pas épinglées</string>
     <string name="toast_msg_clipboard_copy">Contenu copié</string>
     <string name="auto_hide_toolbar">Masquer automatiquement la barre d\'outils</string>

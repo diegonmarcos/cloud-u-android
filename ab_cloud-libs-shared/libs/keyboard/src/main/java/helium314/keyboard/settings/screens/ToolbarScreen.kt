@@ -54,7 +54,7 @@ fun ToolbarScreen(
              else -> null
         },
         when (toolbarMode) {
-            ToolbarMode.EXPANDABLE, ToolbarMode.SUGGESTION_STRIP -> Settings.PREF_PINNED_TOOLBAR_KEYS
+            ToolbarMode.EXPANDABLE, ToolbarMode.SUGGESTION_STRIP -> Settings.PREF_SECOND_ROW_TOOLBAR_KEYS
             else -> null
         },
         if (clipboardToolbarVisible) Settings.PREF_CLIPBOARD_TOOLBAR_KEYS else null,
@@ -97,8 +97,8 @@ fun createToolbarSettings(context: Context) = listOf(
         val keys = Defaults.PREF_TOOLBAR_KEYS.filterBackgroundGatheringToolbarKeys(LocalContext.current.prefs())
         ReorderSwitchPreference(it, keys)
     },
-    Setting(context, Settings.PREF_PINNED_TOOLBAR_KEYS, R.string.pinned_toolbar_keys) {
-        val keys = Defaults.PREF_PINNED_TOOLBAR_KEYS.filterBackgroundGatheringToolbarKeys(LocalContext.current.prefs())
+    Setting(context, Settings.PREF_SECOND_ROW_TOOLBAR_KEYS, R.string.second_row_toolbar_keys) {
+        val keys = Defaults.PREF_SECOND_ROW_TOOLBAR_KEYS.filterBackgroundGatheringToolbarKeys(LocalContext.current.prefs())
         ReorderSwitchPreference(it, keys)
     },
     Setting(context, Settings.PREF_CLIPBOARD_TOOLBAR_KEYS, R.string.clipboard_toolbar_keys) {
