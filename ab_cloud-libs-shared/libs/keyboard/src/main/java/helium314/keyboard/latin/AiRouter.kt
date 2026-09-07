@@ -74,6 +74,13 @@ object AiRouter {
     val timeoutMs: Int get() = registry.optInt("timeout_ms", 30_000)
     /** Field-text cap sent to the model; also what the enhancer reads around the cursor. */
     val maxChars: Int get() = registry.optInt("max_chars", 4096)
+    /**
+     * Completion cap sent with every request. Must be set: some OpenRouter upstream providers
+     * read a missing max_tokens as "reserve the whole context window for the completion", then
+     * refuse the call because window + input overflows the window — an HTTP 400 that lands on
+     * whichever request happened to be routed to that provider.
+     */
+    val maxTokens: Int get() = registry.optInt("max_tokens", 2048)
     /** How long a fetched price catalog stays fresh before the settings screen re-fetches it. */
     val catalogTtlMs: Long get() = registry.optLong("catalog_ttl_ms", 86_400_000L)
 
@@ -186,6 +193,7 @@ object AiRouter {
         val body = JSONObject()
             .put("model", model(context, p))
             .put("temperature", 0.2)
+            .put("max_tokens", maxTokens)
             .put("messages", JSONArray()
                 .put(JSONObject().put("role", "system").put("content", system))
                 .put(JSONObject().put("role", "user").put("content", user)))

@@ -3077,6 +3077,8 @@
     "default_provider": "openrouter",
     "timeout_ms": 30000,
     "max_chars": 4096,
+    "_doc_max_tokens": "Completion cap sent on every request. Never omit it: some OpenRouter upstream providers treat a missing max_tokens as a request to reserve the entire context window for the completion, then reject the call because window + input overflows the window. That 400 lands on whichever request happens to be routed to such a provider, so it looks intermittent and looks like a difference between callers.",
+    "max_tokens": 2048,
     "catalog_ttl_ms": 86400000,
     "providers": {
       "cloud": {
