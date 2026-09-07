@@ -3907,26 +3907,6 @@
         ]
       },
       {
-        "id": "sys_files",
-        "order": "34",
-        "label": "_Files",
-        "match_keywords": [
-          "pkg:com.alphainventor.filemanager",
-          "pkg:com.amaze.filemanager",
-          "pkg:com.app.applistbackup",
-          "pkg:com.ghisler.android.TotalCommander",
-          "pkg:com.ghostsq.commander",
-          "pkg:com.lonelycatgames.Xplore",
-          "pkg:com.mobisystems.fileman",
-          "pkg:com.rarlab.rar",
-          "pkg:com.sec.android.app.myfiles",
-          "pkg:com.smlnskgmail.jaman.hashchecker",
-          "pkg:dk.tacit.android.foldersync.lite",
-          "pkg:me.zhanghai.android.files",
-          "pkg:pl.solidexplorer2"
-        ]
-      },
-      {
         "id": "sys_dev",
         "order": "35",
         "label": "_Dev & Terminal",
@@ -3976,23 +3956,6 @@
         ]
       },
       {
-        "id": "sys_utils",
-        "order": "37",
-        "label": "_Utilities",
-        "match_keywords": [
-          "pkg:com.adobe.reader",
-          "pkg:com.diotek.sec.lookup.dictionary",
-          "pkg:com.google.android.apps.translate",
-          "pkg:com.google.android.calculator",
-          "pkg:com.google.audio.hearing.visualization.accessibility.scribe",
-          "pkg:com.persapps.multitimer",
-          "pkg:com.samsung.android.ardrawing",
-          "pkg:com.sec.android.app.clockpackage",
-          "pkg:com.sec.android.app.popupcalculator",
-          "pkg:com.sec.android.app.voicenote"
-        ]
-      },
-      {
         "id": "sys_keyboards",
         "order": "38",
         "label": "_Keyboards",
@@ -4002,19 +3965,6 @@
           "pkg:com.gingersoftware.android.keyboard",
           "pkg:com.google.android.inputmethod.latin",
           "pkg:com.grammarly.android.keyboard"
-        ]
-      },
-      {
-        "id": "sys_maps",
-        "order": "39",
-        "label": "_Maps & Weather",
-        "match_keywords": [
-          "pkg:aplicacion.tiempo",
-          "pkg:com.diegonmarcos.cloudnav",
-          "pkg:com.google.android.apps.maps",
-          "pkg:com.google.earth",
-          "pkg:com.mapswithme.maps.pro",
-          "pkg:cz.ackee.ventusky"
         ]
       },
       {
@@ -4175,6 +4125,56 @@
           "pkg:com.ted.android",
           "pkg:de.digionline.webweavera2",
           "pkg:mobi.eup.easygerman"
+        ]
+      },
+      {
+        "id": "prod_files",
+        "order": "59",
+        "label": ".Files",
+        "match_keywords": [
+          "pkg:com.alphainventor.filemanager",
+          "pkg:com.amaze.filemanager",
+          "pkg:com.app.applistbackup",
+          "pkg:com.ghisler.android.TotalCommander",
+          "pkg:com.ghostsq.commander",
+          "pkg:com.lonelycatgames.Xplore",
+          "pkg:com.mobisystems.fileman",
+          "pkg:com.rarlab.rar",
+          "pkg:com.sec.android.app.myfiles",
+          "pkg:com.smlnskgmail.jaman.hashchecker",
+          "pkg:dk.tacit.android.foldersync.lite",
+          "pkg:me.zhanghai.android.files",
+          "pkg:pl.solidexplorer2"
+        ]
+      },
+      {
+        "id": "prod_utils",
+        "order": "60",
+        "label": ".Utilities",
+        "match_keywords": [
+          "pkg:com.adobe.reader",
+          "pkg:com.diotek.sec.lookup.dictionary",
+          "pkg:com.google.android.apps.translate",
+          "pkg:com.google.android.calculator",
+          "pkg:com.google.audio.hearing.visualization.accessibility.scribe",
+          "pkg:com.persapps.multitimer",
+          "pkg:com.samsung.android.ardrawing",
+          "pkg:com.sec.android.app.clockpackage",
+          "pkg:com.sec.android.app.popupcalculator",
+          "pkg:com.sec.android.app.voicenote"
+        ]
+      },
+      {
+        "id": "prod_maps",
+        "order": "61",
+        "label": ".Maps & Weather",
+        "match_keywords": [
+          "pkg:aplicacion.tiempo",
+          "pkg:com.diegonmarcos.cloudnav",
+          "pkg:com.google.android.apps.maps",
+          "pkg:com.google.earth",
+          "pkg:com.mapswithme.maps.pro",
+          "pkg:cz.ackee.ventusky"
         ]
       },
       {
