@@ -62,7 +62,10 @@ class ClipboardDao private constructor(private val db: Database) {
 
     fun addClip(timestamp: Long, pinned: Boolean, text: String) = synchronized(this) {
         clearOldClips()
-        val existingIndex = cache.indexOfFirst { it.text == text }
+        // Dedupe against the HISTORY only. A pinned clip is a copy that lives in its list
+        // for good, so copying that text again is a new event for the history — matching a
+        // pinned row here only bumped that row's timestamp and the copy showed up nowhere.
+        val existingIndex = cache.indexOfFirst { it.text == text && !it.isPinned }
         if (existingIndex >= 0 && cache[existingIndex].timeStamp == timestamp)
             return@synchronized // nothing to do
         if (existingIndex >= 0) {
@@ -84,7 +87,8 @@ class ClipboardDao private constructor(private val db: Database) {
         val sha256 = ChecksumCalculator.checksum(tempFile)
         val file = File(clipFilesDir, sha256 + extension)
 
-        val existingIndex = cache.indexOfFirst { it.filename == file.name }
+        // same as addClip: a pinned copy must not swallow the history event
+        val existingIndex = cache.indexOfFirst { it.filename == file.name && !it.isPinned }
         if (existingIndex >= 0) {
             if (cache[existingIndex].timeStamp != timestamp)
                 updateTimestampAt(existingIndex, timestamp)
@@ -169,22 +173,24 @@ class ClipboardDao private constructor(private val db: Database) {
 
     fun sort() = cache.sort()
 
+    /**
+     * Pinning COPIES the clip into [listName]: the history row stays where it is, because the
+     * default page is the full record of everything that was copied and a pin list is a
+     * durable copy of some of it. Pinning used to move the row, so pinning made the clip
+     * vanish from the history it belongs to. Copying the same clip into a list twice is a
+     * no-op.
+     */
     fun pinToList(id: Long, listName: String) = synchronized(this) {
         val entry = cache.first { it.id == id }
-        entry.listName = listName
-        val cv = ContentValues(2)
-        cv.put(COLUMN_PINNED, true)
-        cv.put(COLUMN_LIST_NAME, listName)
-        db.writableDatabase.update(TABLE, cv, "$COLUMN_ID = ${entry.id}", null)
+        if (entry.listName == listName) return@synchronized
+        if (cache.any { it.listName == listName && it.text == entry.text && it.filename == entry.filename })
+            return@synchronized
+        insertNewEntry(entry.timeStamp, listName, entry.text, entry.filename, entry.mimeTypes, null)
     }
 
+    /** Drops the pinned copy. The history keeps its own row, subject to the retention time. */
     fun unpin(id: Long) = synchronized(this) {
-        val entry = cache.first { it.id == id }
-        entry.listName = null
-        val cv = ContentValues(2)
-        cv.put(COLUMN_PINNED, false)
-        cv.putNull(COLUMN_LIST_NAME)
-        db.writableDatabase.update(TABLE, cv, "$COLUMN_ID = ${entry.id}", null)
+        delete(listOf(cache.first { it.id == id }))
     }
 
     /**
@@ -210,7 +216,12 @@ class ClipboardDao private constructor(private val db: Database) {
         if (entries.isEmpty()) return@synchronized
         cache.removeAll(entries)
         db.writableDatabase.delete(TABLE, "$COLUMN_ID IN (${entries.joinToString(",") { it.id.toString() }})", null)
-        entries.forEach { if (it.filename != null) File(clipFilesDir, it.filename).delete() }
+        // The file is named after its content hash, so a pinned copy and the history row it
+        // was copied from share one file: only the last row referencing it may delete it.
+        entries.forEach { entry ->
+            val filename = entry.filename ?: return@forEach
+            if (cache.none { it.filename == filename }) File(clipFilesDir, filename).delete()
+        }
     }
 
     fun clearOldClips(now: Boolean = false) {

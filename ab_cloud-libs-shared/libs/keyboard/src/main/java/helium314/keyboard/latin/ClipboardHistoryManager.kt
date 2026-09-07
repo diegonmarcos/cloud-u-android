@@ -158,7 +158,11 @@ class ClipboardHistoryManager(
 
     fun getListNames(): List<String> = clipboardDao?.getListNames() ?: emptyList()
 
-    /** Long-press on an unpinned clip: ask which list to pin it into (existing, or a freshly-numbered new one). */
+    /**
+     * Long-press on an unpinned clip: ask which list to copy it into (existing, or a
+     * freshly-numbered new one). The clip stays in the history — the default page is the
+     * full record of what was copied, a pin list is a durable copy of part of it.
+     */
     fun showPinListPicker(id: Long, windowToken: IBinder) {
         val existingLists = getListNames()
         val items = (existingLists + latinIME.getString(R.string.clipboard_pin_new_list)).toTypedArray()
@@ -185,7 +189,11 @@ class ClipboardHistoryManager(
         historyChangeListener?.onHistoryChanged()
     }
 
-    /** Long-press on an already-pinned clip (only reachable from within its own pin list tab): unpin directly. */
+    /**
+     * Long-press on an already-pinned clip (only reachable from within its own pin list tab):
+     * drop the copy this list holds. The history page is unaffected — pinning copied the clip
+     * into the list, it never moved it out of the history.
+     */
     fun unpin(id: Long) {
         clipboardDao?.unpin(id)
         historyChangeListener?.onHistoryChanged()
