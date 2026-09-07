@@ -3706,9 +3706,64 @@
         ]
       },
       {
-        "id": "svc_travel",
+        "id": "svc_telecom",
         "order": "12",
-        "label": "-Travel",
+        "label": "-Telecom",
+        "match_keywords": [
+          "pkg:com.affinityclick.alosim",
+          "pkg:com.esim.numero",
+          "pkg:com.mobillium.airalo",
+          "pkg:com.saily.android",
+          "pkg:com.spanishcoders.pepephone",
+          "pkg:de.congstar.meincongstar",
+          "pkg:net.esim.twa"
+        ]
+      },
+      {
+        "id": "svc_home",
+        "order": "13",
+        "label": "-Home & Housing",
+        "match_keywords": [
+          "pkg:com.sensorberg.oneaccess",
+          "pkg:com.wggesucht.android",
+          "pkg:de.is24.android",
+          "pkg:de.nebenan.app"
+        ]
+      },
+      {
+        "id": "svc_health",
+        "order": "14",
+        "label": "-Health",
+        "match_keywords": [
+          "pkg:com.medantapatient.app",
+          "pkg:com.urbansportsclub"
+        ]
+      },
+      {
+        "id": "svc_mobility",
+        "order": "15",
+        "label": "-Mobility",
+        "match_keywords": [
+          "pkg:cat.atm.tmobilitat",
+          "pkg:com.comuto",
+          "pkg:com.donkeyrepublic.bike.android",
+          "pkg:com.geomobile.tmbmobile",
+          "pkg:com.ridedott.rider",
+          "pkg:com.trafi.android.tr",
+          "pkg:com.trafi.whitelabel.bvg",
+          "pkg:com.ubercab",
+          "pkg:de.eos.uptrade.android.fahrinfo.berlin",
+          "pkg:de.hafas.android.db",
+          "pkg:ee.mtakso.client",
+          "pkg:no.ruter.reise",
+          "pkg:ride.app",
+          "pkg:taxi.android.client"
+        ]
+      },
+      {
+        "id": "svc_travel",
+        "order": "20",
+        "label": "+Travel",
         "match_keywords": [
           "pkg:app.campy",
           "pkg:be.greifmatthias.wakaship",
@@ -3737,44 +3792,9 @@
         ]
       },
       {
-        "id": "svc_mobility",
-        "order": "13",
-        "label": "-Mobility",
-        "match_keywords": [
-          "pkg:cat.atm.tmobilitat",
-          "pkg:com.comuto",
-          "pkg:com.donkeyrepublic.bike.android",
-          "pkg:com.geomobile.tmbmobile",
-          "pkg:com.ridedott.rider",
-          "pkg:com.trafi.android.tr",
-          "pkg:com.trafi.whitelabel.bvg",
-          "pkg:com.ubercab",
-          "pkg:de.eos.uptrade.android.fahrinfo.berlin",
-          "pkg:de.hafas.android.db",
-          "pkg:ee.mtakso.client",
-          "pkg:no.ruter.reise",
-          "pkg:ride.app",
-          "pkg:taxi.android.client"
-        ]
-      },
-      {
-        "id": "svc_telecom",
-        "order": "14",
-        "label": "-Telecom",
-        "match_keywords": [
-          "pkg:com.affinityclick.alosim",
-          "pkg:com.esim.numero",
-          "pkg:com.mobillium.airalo",
-          "pkg:com.saily.android",
-          "pkg:com.spanishcoders.pepephone",
-          "pkg:de.congstar.meincongstar",
-          "pkg:net.esim.twa"
-        ]
-      },
-      {
         "id": "svc_shopping",
-        "order": "15",
-        "label": "-Shopping",
+        "order": "21",
+        "label": "+Shopping",
         "match_keywords": [
           "pkg:com.amazon.mShop.android.shopping",
           "pkg:com.app.tgtg",
@@ -3785,43 +3805,23 @@
         ]
       },
       {
-        "id": "svc_home",
-        "order": "16",
-        "label": "-Home & Housing",
-        "match_keywords": [
-          "pkg:com.sensorberg.oneaccess",
-          "pkg:com.wggesucht.android",
-          "pkg:de.is24.android",
-          "pkg:de.nebenan.app"
-        ]
-      },
-      {
-        "id": "svc_health",
-        "order": "17",
-        "label": "-Health",
-        "match_keywords": [
-          "pkg:com.medantapatient.app",
-          "pkg:com.urbansportsclub"
-        ]
-      },
-      {
-        "id": "svc_jobs",
-        "order": "18",
-        "label": "-Jobs",
-        "match_keywords": [
-          "pkg:com.linkedin.android",
-          "pkg:com.otta.otta"
-        ]
-      },
-      {
         "id": "svc_events",
-        "order": "19",
-        "label": "-Events",
+        "order": "22",
+        "label": "+Events",
         "match_keywords": [
           "pkg:com.codekarussell.rausgegangen",
           "pkg:com.linearshift.broadcastoslo",
           "pkg:fm.dice",
           "pkg:net.residentadvisor.raguide"
+        ]
+      },
+      {
+        "id": "svc_jobs",
+        "order": "23",
+        "label": "+Jobs",
+        "match_keywords": [
+          "pkg:com.linkedin.android",
+          "pkg:com.otta.otta"
         ]
       },
       {
@@ -4281,11 +4281,15 @@
         "match_keywords": []
       }
     ],
-    "_doc_phone_sections": "Top-level section headers in the Home Apps/Phone tab. Folders are bucketed under a section by their label's first character: Services (-), Tools · System (_), Tools · Productivity (.), Tools · Fun (>). A folder whose label starts with none of those prefixes belongs to no section and renders last (that is where the New Apps and Misc sinks live). The split is Service vs Tool: a SERVICE is a client for one external provider you hold an account, contract or booking with, and is worthless without that provider (Santander, Ryanair, Uber, Airalo, ImmoScout24, Gov.br); a TOOL is software that operates on your own data or device and works with any provider or none (maps, file managers, notes, keyboards, browsers, media players). Entertainment clients are tools, not services: you reach for Netflix the way you reach for a media player. Order = render order. Empty sections (every folder empty) are silently skipped. Phone tab renders one subhead per non-empty section + the folder grid below.",
+    "_doc_phone_sections": "Top-level section headers in the Home Apps/Phone tab. Folders are bucketed under a section by their label's first character: Services · Buro (-), Services · Others (+), Tools · System (_), Tools · Productivity (.), Tools · Fun (>). A folder whose label starts with none of those prefixes belongs to no section and renders last (that is where the New Apps and Misc sinks live). The split is Service vs Tool: a SERVICE is a client for one external provider you hold an account, contract or booking with, and is worthless without that provider (Santander, Ryanair, Uber, Airalo, ImmoScout24, Gov.br); a TOOL is software that operates on your own data or device and works with any provider or none (maps, file managers, notes, keyboards, browsers, media players). Entertainment clients are tools, not services: you reach for Netflix the way you reach for a media player. Services then split again by why you open them: BURO is the paperwork of being alive, the accounts you must keep in order (money, government and identity, telecom, housing, health, getting to work); OTHERS is discretionary, the services you open because you chose to (travel, shopping, events, jobs). Order = render order. Empty sections (every folder empty) are silently skipped. Phone tab renders one subhead per non-empty section + the folder grid below.",
     "phone_sections": [
       {
-        "title": "Services",
+        "title": "Services · Buro",
         "prefix": "-"
+      },
+      {
+        "title": "Services · Others",
+        "prefix": "+"
       },
       {
         "title": "Tools · System",
