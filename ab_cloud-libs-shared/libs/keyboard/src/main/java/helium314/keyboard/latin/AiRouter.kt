@@ -207,8 +207,22 @@ object AiRouter {
             val code = conn.responseCode
             if (code != 200) {
                 val err = runCatching { conn.errorStream?.bufferedReader()?.use { it.readText() } }.getOrNull()
-                val msg = runCatching { JSONObject(err ?: "").getJSONObject("error").getString("message") }.getOrNull()
-                throw IllegalStateException("${p.label} HTTP $code${msg?.let { ": $it" } ?: ""}")
+                val error = runCatching { JSONObject(err ?: "").getJSONObject("error") }.getOrNull()
+                val msg = error?.optString("message")?.ifBlank { null }
+                // "Provider returned error" is OpenRouter saying the upstream model refused —
+                // useless on its own, and it was all the user ever saw. The why lives in
+                // error.metadata (provider_name + raw). Name the model too: the same failure
+                // reads completely differently depending on which one was routed to.
+                val detail = error?.optJSONObject("metadata")?.let { meta ->
+                    listOfNotNull(
+                        meta.optString("provider_name").ifBlank { null },
+                        meta.opt("raw")?.toString()?.take(300)?.ifBlank { null },
+                    ).joinToString(" — ").ifBlank { null }
+                }
+                throw IllegalStateException(
+                    "${p.label} HTTP $code${msg?.let { ": $it" } ?: ""}" +
+                        "${detail?.let { " ($it)" } ?: ""} [model ${model(context, p)}]"
+                )
             }
             val reply = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
             return reply.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content").trim()
