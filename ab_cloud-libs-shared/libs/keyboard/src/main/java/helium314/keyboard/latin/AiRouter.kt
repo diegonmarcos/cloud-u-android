@@ -49,12 +49,21 @@ object AiRouter {
                 p.getString("default_model"), models, p.optString("catalog_url").ifEmpty { null }, p.optString("pricing_as_of").ifEmpty { null })
         }.toList()
     }
-    val styles: List<Style> by lazy {
-        val o = registry.getJSONObject("styles")
-        o.keys().asSequence().map { id -> val s = o.getJSONObject(id); Style(id, s.getString("label"), s.getString("prompt")) }.toList()
+    val styles: List<Style> by lazy { promptSet("styles") }
+    /** Tone and length are two more system-prompt lines the ENHANCE key appends after the style. */
+    val tones: List<Style> by lazy { promptSet("tones") }
+    val lengths: List<Style> by lazy { promptSet("lengths") }
+
+    /** A registry object of id → {label, prompt}. Android's JSONObject keeps insertion order, so this is the menu order too. */
+    private fun promptSet(key: String): List<Style> {
+        val o = registry.optJSONObject(key) ?: return emptyList()
+        return o.keys().asSequence().map { id -> val s = o.getJSONObject(id); Style(id, s.getString("label"), s.optString("prompt")) }.toList()
     }
+
     val defaultProvider: String get() = registry.getString("default_provider")
     val defaultStyle: String get() = registry.getString("default_style")
+    val defaultTone: String get() = registry.optString("default_tone", "keep")
+    val defaultLength: String get() = registry.optString("default_length", "keep")
     val timeoutMs: Int get() = registry.optInt("timeout_ms", 30_000)
     /** Field-text cap sent to the model; also what the enhancer reads around the cursor. */
     val maxChars: Int get() = registry.optInt("max_chars", 4096)
@@ -120,6 +129,29 @@ object AiRouter {
         return styles.firstOrNull { it.id == id } ?: styles.first { it.id == defaultStyle }
     }
     fun styleById(id: String): Style = styles.firstOrNull { it.id == id } ?: styles.first { it.id == defaultStyle }
+
+    /**
+     * What the ENHANCE toolbar key actually sends: the chosen [style] prompt, then the tone and
+     * the length the user pinned in Settings → Text Enhancements. The "keep" entries carry an
+     * empty prompt, so leaving both alone reproduces the plain style prompt exactly.
+     *
+     * Returned as a [Style] so callers keep the id and label for logging. GrammarChecker
+     * deliberately does NOT go through here: fixing grammar must not restyle or resize the text.
+     */
+    fun enhanceStyle(context: Context): Style {
+        val style = style(context)
+        val extra = listOfNotNull(
+            pick(context, tones, Settings.PREF_ENHANCE_TONE, defaultTone),
+            pick(context, lengths, Settings.PREF_ENHANCE_LENGTH, defaultLength),
+        )
+        return if (extra.isEmpty()) style else Style(style.id, style.label, (listOf(style.prompt) + extra).joinToString(" "))
+    }
+
+    /** The prompt line the user pinned under [key], or null when it is "keep" or no longer in the registry. */
+    private fun pick(context: Context, set: List<Style>, key: String, fallback: String): String? {
+        val id = context.prefs().getString(key, fallback) ?: fallback
+        return set.firstOrNull { it.id == id }?.prompt?.takeIf { it.isNotBlank() }
+    }
 
     /** Thrown when the selected provider needs a key and none is set — the settings screen is the fix. */
     class NoTokenException(val provider: Provider) : IllegalStateException("no API key for ${provider.label}")

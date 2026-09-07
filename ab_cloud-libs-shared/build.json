@@ -3123,6 +3123,57 @@
         "label": "Polish tone and flow",
         "prompt": "Rewrite the user's text so it reads polished and fluent: fix errors, improve flow and word choice, keep it concise. Keep the same language, meaning and intent. Reply with the rewritten text only, no quotes, no explanations."
       }
+    },
+    "_doc_tones_lengths": "Two extra system-prompt lines the ENHANCE key appends after the style prompt, chosen in Settings > Text Enhancements. Same shape as styles; an empty prompt means 'append nothing', which is what the default 'keep' entries are for. They apply to the toolbar key only — GrammarChecker mode 'ai' calls the grammar style directly and must not be told to change tone or length. Picking a tone or length together with the 'grammar' style does contradict that style's 'do not change wording or tone'; the tone line comes last, so it wins.",
+    "default_tone": "keep",
+    "tones": {
+      "keep": {
+        "label": "Keep my tone",
+        "prompt": ""
+      },
+      "formal": {
+        "label": "Formal",
+        "prompt": "Use a formal, professional tone."
+      },
+      "informal": {
+        "label": "Informal",
+        "prompt": "Use an informal, casual, conversational tone."
+      },
+      "fun": {
+        "label": "Fun",
+        "prompt": "Use a fun, playful, upbeat tone."
+      },
+      "fun_emoji": {
+        "label": "Fun, with emojis",
+        "prompt": "Use a fun, playful, upbeat tone and sprinkle in fitting emojis."
+      }
+    },
+    "default_length": "keep",
+    "lengths": {
+      "keep": {
+        "label": "Keep my length",
+        "prompt": ""
+      },
+      "sentence": {
+        "label": "One sentence",
+        "prompt": "Deliver the result as a single sentence."
+      },
+      "paragraph_1": {
+        "label": "One paragraph",
+        "prompt": "Deliver the result as exactly one paragraph."
+      },
+      "paragraph_2": {
+        "label": "Two paragraphs",
+        "prompt": "Deliver the result as exactly two paragraphs, separated by a blank line."
+      },
+      "paragraph_3": {
+        "label": "Three paragraphs",
+        "prompt": "Deliver the result as exactly three paragraphs, separated by blank lines."
+      },
+      "paragraph_4": {
+        "label": "Four paragraphs",
+        "prompt": "Deliver the result as exactly four paragraphs, separated by blank lines."
+      }
     }
   }
 }

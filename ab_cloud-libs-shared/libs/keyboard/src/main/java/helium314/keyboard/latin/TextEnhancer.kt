@@ -81,7 +81,7 @@ object TextEnhancer {
     }
 
     @JvmStatic
-    fun enhance(context: Context, connection: RichInputConnection) = run(context, connection, AiRouter.style(context))
+    fun enhance(context: Context, connection: RichInputConnection) = run(context, connection, AiRouter.enhanceStyle(context))
 
     /** Whole-field / selection enhancement with an explicit [style] (GrammarChecker passes "grammar"). */
     @JvmStatic
