@@ -224,6 +224,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     // Text Enhancements (SuperApp addition — TextEnhancer, ENHANCE toolbar key)
     public static final String PREF_ENHANCE_STYLE = "enhance_style";    // style id from keyboard_ai.styles
     public static final String PREF_ENHANCE_TOOLBAR_KEY = "enhance_toolbar_key"; // settings-registry key only; state lives in PREF_TOOLBAR_KEYS
+    public static final String PREF_ENHANCE_SCOPE = "enhance_scope";    // what the ENHANCE key rewrites: "auto"|"selection"|"field"
 
     public static final String PREF_VERSION_CODE = "version_code";
     public static final String PREF_LIBRARY_CHECKSUM = "lib_checksum";

@@ -311,6 +311,13 @@
     <string name="enhance_failed">Enhancement failed: %1$s</string>
     <string name="enhance_unchanged">Nothing to improve</string>
     <string name="enhance_stale">Text changed while enhancing — skipped</string>
+    <string name="enhance_scope_title">What to enhance</string>
+    <string name="enhance_scope_summary">Whether the magic wand rewrites the text you selected or everything in the box</string>
+    <string name="enhance_scope_auto">Selection, or the whole box when nothing is selected</string>
+    <string name="enhance_scope_selection">Only the selected text</string>
+    <string name="enhance_scope_field">Always the whole box</string>
+    <string name="enhance_no_selection">Select some text first</string>
+    <string name="enhance_no_cursor">This app does not say where the cursor is — select the text and try again</string>
     <!-- Standalone Cloud Keyboard self-update entry (Configs menu) -->
     <string name="keyboard_update">Update Cloud Keyboard</string>
     <string name="keyboard_update_summary">Download and install the latest version</string>

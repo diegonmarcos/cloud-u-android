@@ -11,6 +11,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import helium314.keyboard.latin.AiRouter
 import helium314.keyboard.latin.R
+import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.Theme
@@ -27,11 +28,19 @@ import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.Preference
 
-// SuperApp addition — "Text Enhancements": style of the rewrite the ENHANCE toolbar key
-// asks the AI Model Routing provider for, and whether that key is on the toolbar.
-// Styles come from build.json::keyboard_ai.styles (AiRouter.styles).
+// SuperApp addition — "Text Enhancements": what the ENHANCE toolbar key rewrites, the style
+// of the rewrite it asks the AI Model Routing provider for, and whether that key is on the
+// toolbar. Styles come from build.json::keyboard_ai.styles (AiRouter.styles).
 
 fun createTextEnhanceSettings(context: Context): List<Setting> = listOf(
+    Setting(context, Settings.PREF_ENHANCE_SCOPE, R.string.enhance_scope_title, R.string.enhance_scope_summary) { setting ->
+        val items = listOf(
+            context.getString(R.string.enhance_scope_auto) to "auto",
+            context.getString(R.string.enhance_scope_selection) to "selection",
+            context.getString(R.string.enhance_scope_field) to "field",
+        )
+        ListPreference(setting, items, Defaults.PREF_ENHANCE_SCOPE)
+    },
     Setting(context, Settings.PREF_ENHANCE_STYLE, R.string.enhance_style_title, R.string.enhance_style_summary) { setting ->
         ListPreference(setting, AiRouter.styles.map { it.label to it.id }, AiRouter.defaultStyle)
     },
@@ -57,6 +66,7 @@ fun createTextEnhanceSettings(context: Context): List<Setting> = listOf(
 @Composable
 fun TextEnhanceScreen(onClickBack: () -> Unit) {
     val items = listOf(
+        Settings.PREF_ENHANCE_SCOPE,
         Settings.PREF_ENHANCE_STYLE,
         Settings.PREF_ENHANCE_TOOLBAR_KEY,
     )

@@ -194,6 +194,9 @@ object Defaults {
     const val PREF_GRAMMAR_REMOTE_URL = "https://languagetool.diegonmarcos.com/v2/check"
     const val PREF_GRAMMAR_PT_VARIANT = "pt-PT" // LT code for a bare "pt" subtype: "pt-PT"|"pt-BR"
     const val PREF_GRAMMAR_NGRAM_URL = "" // placeholder for future n-gram API
+    // "auto" = rewrite the selection when there is one, the whole field otherwise. The other
+    // two values force one of the halves, for people who never want to be guessed at.
+    const val PREF_ENHANCE_SCOPE = "auto" // "auto"|"selection"|"field"
     const val PREF_SHOW_DEBUG_SETTINGS = false
     val PREF_DEBUG_MODE = BuildConfig.DEBUG
     const val PREF_SHOW_SUGGESTION_INFOS = false
