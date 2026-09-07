@@ -3663,31 +3663,11 @@
     ],
     "_doc_phone_grid_columns": "Column count for the Phone tab's folder grid. Mirrors tile_columns (6) so the two tabs share the same density rhythm.",
     "phone_grid_columns": 6,
-    "_doc_phone_folders": "Every launchable app is routed to exactly one folder by PhoneAppClassifier: folders are walked in `order`, and the first keyword that matches wins, so a lower order beats a higher one. Keyword forms: (1) `pkg:com.foo.bar` exact packageName; (2) `pkg^com.foo.` packageName.startsWith; (3) `lbl:name` exact case-insensitive label; (4) `lbl~frag` label contains (min 3 chars); (5) a bare string matches anywhere in \"packageName label\" (min 4 chars) — sweeping and collision-prone, so it is used sparingly. Every app installed at the 2026-09-07 rebuild is pinned with an exact `pkg:` rule, which is why the folder lists read as inventories; `pkg^` rules only cover families that will keep growing (our own com.diegonmarcos.cloudlib.*, com.termux.*, VPN vendors). Two sinks, neither with keywords: `new_apps` (order 98, sink=true) catches everything unmatched and is the triage queue — an app landing there means it needs a rule; `misc` (order 99) is the manual exile, give it explicit keywords to push something there on purpose. Manufacturer (Google / Samsung / non-Play-Store) is metadata for Smart Folders (see phone_smart_folders below) — NOT a primary grouping criterion.",
+    "_doc_phone_folders": "Every launchable app is routed to exactly one folder by PhoneAppClassifier: folders are walked in `order`, and the first keyword that matches wins, so a lower order beats a higher one. Keyword forms: (1) `pkg:com.foo.bar` exact packageName; (2) `pkg^com.foo.` packageName.startsWith; (3) `lbl:name` exact case-insensitive label; (4) `lbl~frag` label contains (min 3 chars); (5) a bare string matches anywhere in \"packageName label\" (min 4 chars) — sweeping and collision-prone, so it is used sparingly. Every app installed at the 2026-09-07 rebuild is pinned with an exact `pkg:` rule, which is why the folder lists read as inventories; `pkg^` rules only cover families that will keep growing (our own com.diegonmarcos.cloudlib.*, com.termux.*, VPN vendors). Two sinks, neither with keywords: `new_apps` (order 98, sink=true) catches everything unmatched and is the triage queue — an app landing there means it needs a rule; `misc` (order 99) is the manual exile, give it explicit keywords to push something there on purpose. Manufacturer (Google / Samsung / non-Play-Store) is metadata for Smart Folders (see phone_smart_folders below) — NOT a primary grouping criterion. Order is a three-digit string, one hundred-block per section in phone_sections order, folders alphabetical by label inside the block (110, 120, ...); it drives both render order and match precedence, so a new folder takes the next free number in its block.",
     "phone_folders": [
       {
-        "id": "svc_money",
-        "order": "10",
-        "label": "-Money",
-        "match_keywords": [
-          "pkg:com.binance.dev",
-          "pkg:com.bitpanda.bitpanda",
-          "pkg:com.btg.pactual.banking",
-          "pkg:com.btg.pactual.digital.mobile",
-          "pkg:com.btg.pactual.homebroker.mobile",
-          "pkg:com.fusionmedia.investing",
-          "pkg:com.google.android.apps.walletnfcrel",
-          "pkg:com.paypal.android.p2pmobile",
-          "pkg:com.revolut.revolut",
-          "pkg:com.transferwise.android",
-          "pkg:com.xe.currency",
-          "pkg:es.bancosantander.apps",
-          "pkg^com.btg.pactual."
-        ]
-      },
-      {
         "id": "svc_gov",
-        "order": "11",
+        "order": "110",
         "label": "-Gov & ID",
         "match_keywords": [
           "pkg:br.com.vidaas.sp",
@@ -3706,22 +3686,17 @@
         ]
       },
       {
-        "id": "svc_telecom",
-        "order": "12",
-        "label": "-Telecom",
+        "id": "svc_health",
+        "order": "120",
+        "label": "-Health",
         "match_keywords": [
-          "pkg:com.affinityclick.alosim",
-          "pkg:com.esim.numero",
-          "pkg:com.mobillium.airalo",
-          "pkg:com.saily.android",
-          "pkg:com.spanishcoders.pepephone",
-          "pkg:de.congstar.meincongstar",
-          "pkg:net.esim.twa"
+          "pkg:com.medantapatient.app",
+          "pkg:com.urbansportsclub"
         ]
       },
       {
         "id": "svc_home",
-        "order": "13",
+        "order": "130",
         "label": "-Home & Housing",
         "match_keywords": [
           "pkg:com.sensorberg.oneaccess",
@@ -3731,17 +3706,8 @@
         ]
       },
       {
-        "id": "svc_health",
-        "order": "14",
-        "label": "-Health",
-        "match_keywords": [
-          "pkg:com.medantapatient.app",
-          "pkg:com.urbansportsclub"
-        ]
-      },
-      {
         "id": "svc_mobility",
-        "order": "15",
+        "order": "140",
         "label": "-Mobility",
         "match_keywords": [
           "pkg:cat.atm.tmobilitat",
@@ -3761,8 +3727,75 @@
         ]
       },
       {
+        "id": "svc_money",
+        "order": "150",
+        "label": "-Money",
+        "match_keywords": [
+          "pkg:com.binance.dev",
+          "pkg:com.bitpanda.bitpanda",
+          "pkg:com.btg.pactual.banking",
+          "pkg:com.btg.pactual.digital.mobile",
+          "pkg:com.btg.pactual.homebroker.mobile",
+          "pkg:com.fusionmedia.investing",
+          "pkg:com.google.android.apps.walletnfcrel",
+          "pkg:com.paypal.android.p2pmobile",
+          "pkg:com.revolut.revolut",
+          "pkg:com.transferwise.android",
+          "pkg:com.xe.currency",
+          "pkg:es.bancosantander.apps",
+          "pkg^com.btg.pactual."
+        ]
+      },
+      {
+        "id": "svc_telecom",
+        "order": "160",
+        "label": "-Telecom",
+        "match_keywords": [
+          "pkg:com.affinityclick.alosim",
+          "pkg:com.esim.numero",
+          "pkg:com.mobillium.airalo",
+          "pkg:com.saily.android",
+          "pkg:com.spanishcoders.pepephone",
+          "pkg:de.congstar.meincongstar",
+          "pkg:net.esim.twa"
+        ]
+      },
+      {
+        "id": "svc_events",
+        "order": "210",
+        "label": "+Events",
+        "match_keywords": [
+          "pkg:com.codekarussell.rausgegangen",
+          "pkg:com.linearshift.broadcastoslo",
+          "pkg:fm.dice",
+          "pkg:net.residentadvisor.raguide"
+        ]
+      },
+      {
+        "id": "svc_jobs",
+        "order": "220",
+        "label": "+Jobs",
+        "match_keywords": [
+          "pkg:com.linkedin.android",
+          "pkg:com.otta.otta"
+        ]
+      },
+      {
+        "id": "svc_shopping",
+        "order": "230",
+        "label": "+Shopping",
+        "match_keywords": [
+          "pkg:com.amazon.mShop.android.shopping",
+          "pkg:com.app.tgtg",
+          "pkg:com.backmarket",
+          "pkg:com.ebay.kleinanzeigen",
+          "pkg:com.wallapop",
+          "pkg:vivino.web.app"
+        ]
+      },
+      {
         "id": "svc_travel",
-        "order": "20",
+        "order": "240",
         "label": "+Travel",
         "match_keywords": [
           "pkg:app.campy",
@@ -3792,123 +3825,8 @@
         ]
       },
       {
-        "id": "svc_shopping",
-        "order": "21",
-        "label": "+Shopping",
-        "match_keywords": [
-          "pkg:com.amazon.mShop.android.shopping",
-          "pkg:com.app.tgtg",
-          "pkg:com.backmarket",
-          "pkg:com.ebay.kleinanzeigen",
-          "pkg:com.wallapop",
-          "pkg:vivino.web.app"
-        ]
-      },
-      {
-        "id": "svc_events",
-        "order": "22",
-        "label": "+Events",
-        "match_keywords": [
-          "pkg:com.codekarussell.rausgegangen",
-          "pkg:com.linearshift.broadcastoslo",
-          "pkg:fm.dice",
-          "pkg:net.residentadvisor.raguide"
-        ]
-      },
-      {
-        "id": "svc_jobs",
-        "order": "23",
-        "label": "+Jobs",
-        "match_keywords": [
-          "pkg:com.linkedin.android",
-          "pkg:com.otta.otta"
-        ]
-      },
-      {
-        "id": "sys_settings",
-        "order": "30",
-        "label": "_Settings",
-        "match_keywords": [
-          "pkg:com.android.settings",
-          "pkg:com.binarysmith.webclipwidget.ad",
-          "pkg:com.diegonmarcos.cloudme",
-          "pkg:com.diegonmarcos.superapp",
-          "pkg:com.mi.earphone",
-          "pkg:com.rsupport.rs.activity.rsupport.aas2",
-          "pkg:com.samsung.android.app.routines",
-          "pkg:com.samsung.android.app.watchmanager",
-          "pkg:com.samsung.android.lool",
-          "pkg:com.samsung.android.mdx",
-          "pkg:com.samsung.android.oneconnect",
-          "pkg:com.sec.android.easyMover",
-          "pkg:com.teslacoilsw.launcher",
-          "pkg:pub.hanks.appfolderwidget",
-          "pkg^com.samsung.android.app.aodservice",
-          "pkg^com.samsung.android.sidegesturepad",
-          "pkg^com.samsung.android.themecenter",
-          "pkg^com.samsung.android.themestore"
-        ]
-      },
-      {
-        "id": "sys_security",
-        "order": "31",
-        "label": "_Security",
-        "match_keywords": [
-          "pkg:ch.protonvpn.android",
-          "pkg:com.azure.authenticator",
-          "pkg:com.beemdevelopment.aegis",
-          "pkg:com.diegonmarcos.cloudvault",
-          "pkg:com.diegonmarcos.cloudwallet",
-          "pkg:com.google.android.apps.authenticator2",
-          "pkg:com.google.android.apps.credentialmanager",
-          "pkg:com.opera.max.global",
-          "pkg:com.samsung.knox.securefolder",
-          "pkg:com.wireguard.android",
-          "pkg:com.x8bit.bitwarden",
-          "pkg:eu.faircode.netguard",
-          "pkg^com.bitwarden.",
-          "pkg^com.expressvpn.",
-          "pkg^com.kunzisoft.keepass",
-          "pkg^com.nordvpn.",
-          "pkg^com.protonvpn.",
-          "pkg^io.tailscale.",
-          "pkg^me.proton.",
-          "pkg^net.mullvad.",
-          "pkg^net.openvpn.",
-          "pkg^org.torproject."
-        ]
-      },
-      {
-        "id": "sys_network",
-        "order": "32",
-        "label": "_Network",
-        "match_keywords": [
-          "pkg:com.devolutions.remotedesktopmanager",
-          "pkg:com.ghisler.tcplugins.SFTP",
-          "pkg:com.mobidia.android.mdm",
-          "pkg:com.phlox.simpleserver",
-          "pkg:com.ubnt.usurvey",
-          "pkg:net.techet.netanalyzerlite.an",
-          "pkg:org.kde.kdeconnect_tp"
-        ]
-      },
-      {
-        "id": "sys_stores",
-        "order": "33",
-        "label": "_Stores",
-        "match_keywords": [
-          "pkg:com.android.vending",
-          "pkg:com.sec.android.app.samsungapps",
-          "pkg:com.uptodown",
-          "pkg:org.fdroid.fdroid",
-          "pkg^com.aurora.adroid",
-          "pkg^com.aurora.store",
-          "pkg^org.fdroid."
-        ]
-      },
-      {
         "id": "sys_dev",
-        "order": "35",
+        "order": "310",
         "label": "_Dev & Terminal",
         "match_keywords": [
           "pkg:cld.termux",
@@ -3940,7 +3858,7 @@
       },
       {
         "id": "sys_diag",
-        "order": "36",
+        "order": "320",
         "label": "_Diagnostics",
         "match_keywords": [
           "pkg:com.digibites.accubattery",
@@ -3957,7 +3875,7 @@
       },
       {
         "id": "sys_keyboards",
-        "order": "38",
+        "order": "330",
         "label": "_Keyboards",
         "match_keywords": [
           "pkg:ch.icoaching.typewise",
@@ -3968,24 +3886,129 @@
         ]
       },
       {
-        "id": "prod_mail",
-        "order": "50",
-        "label": ".Mail",
+        "id": "sys_network",
+        "order": "340",
+        "label": "_Network",
         "match_keywords": [
-          "pkg:com.diegonmarcos.comms.mail",
-          "pkg:com.fsck.k9",
-          "pkg:com.google.android.gm",
-          "pkg:com.mailtemi.email",
-          "pkg:com.microsoft.office.outlook",
-          "pkg:com.samsung.android.email.provider",
-          "pkg:email.clean.android",
-          "pkg:eu.faircode.email",
-          "pkg:rs.ltt.android"
+          "pkg:com.devolutions.remotedesktopmanager",
+          "pkg:com.ghisler.tcplugins.SFTP",
+          "pkg:com.mobidia.android.mdm",
+          "pkg:com.phlox.simpleserver",
+          "pkg:com.ubnt.usurvey",
+          "pkg:net.techet.netanalyzerlite.an",
+          "pkg:org.kde.kdeconnect_tp"
+        ]
+      },
+      {
+        "id": "sys_security",
+        "order": "350",
+        "label": "_Security",
+        "match_keywords": [
+          "pkg:ch.protonvpn.android",
+          "pkg:com.azure.authenticator",
+          "pkg:com.beemdevelopment.aegis",
+          "pkg:com.diegonmarcos.cloudvault",
+          "pkg:com.diegonmarcos.cloudwallet",
+          "pkg:com.google.android.apps.authenticator2",
+          "pkg:com.google.android.apps.credentialmanager",
+          "pkg:com.opera.max.global",
+          "pkg:com.samsung.knox.securefolder",
+          "pkg:com.wireguard.android",
+          "pkg:com.x8bit.bitwarden",
+          "pkg:eu.faircode.netguard",
+          "pkg^com.bitwarden.",
+          "pkg^com.expressvpn.",
+          "pkg^com.kunzisoft.keepass",
+          "pkg^com.nordvpn.",
+          "pkg^com.protonvpn.",
+          "pkg^io.tailscale.",
+          "pkg^me.proton.",
+          "pkg^net.mullvad.",
+          "pkg^net.openvpn.",
+          "pkg^org.torproject."
+        ]
+      },
+      {
+        "id": "sys_settings",
+        "order": "360",
+        "label": "_Settings",
+        "match_keywords": [
+          "pkg:com.android.settings",
+          "pkg:com.binarysmith.webclipwidget.ad",
+          "pkg:com.diegonmarcos.cloudme",
+          "pkg:com.diegonmarcos.superapp",
+          "pkg:com.mi.earphone",
+          "pkg:com.rsupport.rs.activity.rsupport.aas2",
+          "pkg:com.samsung.android.app.routines",
+          "pkg:com.samsung.android.app.watchmanager",
+          "pkg:com.samsung.android.lool",
+          "pkg:com.samsung.android.mdx",
+          "pkg:com.samsung.android.oneconnect",
+          "pkg:com.sec.android.easyMover",
+          "pkg:com.teslacoilsw.launcher",
+          "pkg:pub.hanks.appfolderwidget",
+          "pkg^com.samsung.android.app.aodservice",
+          "pkg^com.samsung.android.sidegesturepad",
+          "pkg^com.samsung.android.themecenter",
+          "pkg^com.samsung.android.themestore"
+        ]
+      },
+      {
+        "id": "sys_stores",
+        "order": "370",
+        "label": "_Stores",
+        "match_keywords": [
+          "pkg:com.android.vending",
+          "pkg:com.sec.android.app.samsungapps",
+          "pkg:com.uptodown",
+          "pkg:org.fdroid.fdroid",
+          "pkg^com.aurora.adroid",
+          "pkg^com.aurora.store",
+          "pkg^org.fdroid."
+        ]
+      },
+      {
+        "id": "prod_ai",
+        "order": "410",
+        "label": ".AI",
+        "match_keywords": [
+          "pkg:ai.perplexity.app.android",
+          "pkg:ai.perplexity.comet",
+          "pkg:ai.x.grok",
+          "pkg:com.anthropic.claude",
+          "pkg:com.deepseek.chat",
+          "pkg:com.facebook.stella",
+          "pkg:com.google.android.apps.bard",
+          "pkg:com.google.android.apps.googleassistant",
+          "pkg:com.google.android.apps.labs.language.tailwind",
+          "pkg:com.microsoft.copilot",
+          "pkg:com.samsung.android.bixby.agent",
+          "pkg:com.synthesia.synthesia",
+          "pkg:org.chromium.webapk.afdfe84a0acbbed2f_v2",
+          "pkg:xyz.chatboxapp.chatbox"
+        ]
+      },
+      {
+        "id": "prod_plan",
+        "order": "420",
+        "label": ".Calendar & Tasks",
+        "match_keywords": [
+          "pkg:com.diegonmarcos.cloudcalendar",
+          "pkg:com.gianlu.timeless",
+          "pkg:com.google.android.apps.tasks",
+          "pkg:com.google.android.calendar",
+          "pkg:com.microsoft.todos",
+          "pkg:com.samsung.android.app.reminder",
+          "pkg:com.samsung.android.calendar",
+          "pkg:com.toggl.giskard",
+          "pkg:com.trello",
+          "pkg:me.clockify.android",
+          "pkg:todolist.scheduleplanner.dailyplanner.todo.reminders"
         ]
       },
       {
         "id": "prod_chat",
-        "order": "51",
+        "order": "430",
         "label": ".Chat",
         "match_keywords": [
           "pkg:chat.rocket.android",
@@ -4008,43 +4031,8 @@
         ]
       },
       {
-        "id": "prod_phone",
-        "order": "52",
-        "label": ".Phone & Contacts",
-        "match_keywords": [
-          "pkg:com.diegonmarcos.cloudcontacts",
-          "pkg:com.diegonmarcos.comms.contacts",
-          "pkg:com.diegonmarcos.comms.dialer",
-          "pkg:com.google.android.apps.messaging",
-          "pkg:com.samsung.android.app.contacts",
-          "pkg:com.samsung.android.dialer",
-          "pkg:com.samsung.android.messaging"
-        ]
-      },
-      {
-        "id": "prod_ai",
-        "order": "53",
-        "label": ".AI",
-        "match_keywords": [
-          "pkg:ai.perplexity.app.android",
-          "pkg:ai.perplexity.comet",
-          "pkg:ai.x.grok",
-          "pkg:com.anthropic.claude",
-          "pkg:com.deepseek.chat",
-          "pkg:com.facebook.stella",
-          "pkg:com.google.android.apps.bard",
-          "pkg:com.google.android.apps.googleassistant",
-          "pkg:com.google.android.apps.labs.language.tailwind",
-          "pkg:com.microsoft.copilot",
-          "pkg:com.samsung.android.bixby.agent",
-          "pkg:com.synthesia.synthesia",
-          "pkg:org.chromium.webapk.afdfe84a0acbbed2f_v2",
-          "pkg:xyz.chatboxapp.chatbox"
-        ]
-      },
-      {
         "id": "prod_docs",
-        "order": "54",
+        "order": "440",
         "label": ".Docs & Notes",
         "match_keywords": [
           "pkg:com.adeeteya.markdown_editor",
@@ -4061,8 +4049,51 @@
         ]
       },
       {
+        "id": "prod_mail",
+        "order": "450",
+        "label": ".Mail",
+        "match_keywords": [
+          "pkg:com.diegonmarcos.comms.mail",
+          "pkg:com.fsck.k9",
+          "pkg:com.google.android.gm",
+          "pkg:com.mailtemi.email",
+          "pkg:com.microsoft.office.outlook",
+          "pkg:com.samsung.android.email.provider",
+          "pkg:email.clean.android",
+          "pkg:eu.faircode.email",
+          "pkg:rs.ltt.android"
+        ]
+      },
+      {
+        "id": "prod_maps",
+        "order": "460",
+        "label": ".Maps & Weather",
+        "match_keywords": [
+          "pkg:aplicacion.tiempo",
+          "pkg:com.diegonmarcos.cloudnav",
+          "pkg:com.google.android.apps.maps",
+          "pkg:com.google.earth",
+          "pkg:com.mapswithme.maps.pro",
+          "pkg:cz.ackee.ventusky"
+        ]
+      },
+      {
+        "id": "prod_phone",
+        "order": "470",
+        "label": ".Phone & Contacts",
+        "match_keywords": [
+          "pkg:com.diegonmarcos.cloudcontacts",
+          "pkg:com.diegonmarcos.comms.contacts",
+          "pkg:com.diegonmarcos.comms.dialer",
+          "pkg:com.google.android.apps.messaging",
+          "pkg:com.samsung.android.app.contacts",
+          "pkg:com.samsung.android.dialer",
+          "pkg:com.samsung.android.messaging"
+        ]
+      },
+      {
         "id": "prod_storage",
-        "order": "55",
+        "order": "480",
         "label": ".Storage",
         "match_keywords": [
           "pkg:cld.camera",
@@ -4090,39 +4121,8 @@
         ]
       },
       {
-        "id": "prod_plan",
-        "order": "56",
-        "label": ".Calendar & Tasks",
-        "match_keywords": [
-          "pkg:com.diegonmarcos.cloudcalendar",
-          "pkg:com.gianlu.timeless",
-          "pkg:com.google.android.apps.tasks",
-          "pkg:com.google.android.calendar",
-          "pkg:com.microsoft.todos",
-          "pkg:com.samsung.android.app.reminder",
-          "pkg:com.samsung.android.calendar",
-          "pkg:com.toggl.giskard",
-          "pkg:com.trello",
-          "pkg:me.clockify.android",
-          "pkg:todolist.scheduleplanner.dailyplanner.todo.reminders"
-        ]
-      },
-      {
-        "id": "prod_web",
-        "order": "57",
-        "label": ".Web",
-        "match_keywords": [
-          "pkg:com.android.chrome",
-          "pkg:com.brave.browser",
-          "pkg:com.diegonmarcos.cloudbrowser",
-          "pkg:com.duckduckgo.mobile.android",
-          "pkg:com.google.android.googlequicksearchbox",
-          "pkg:io.raindrop.raindropio"
-        ]
-      },
-      {
         "id": "prod_utils",
-        "order": "60",
+        "order": "490",
         "label": ".Utilities",
         "match_keywords": [
           "pkg:com.adobe.reader",
@@ -4138,35 +4138,33 @@
         ]
       },
       {
-        "id": "prod_maps",
-        "order": "61",
-        "label": ".Maps & Weather",
+        "id": "prod_web",
+        "order": "500",
+        "label": ".Web",
         "match_keywords": [
-          "pkg:aplicacion.tiempo",
-          "pkg:com.diegonmarcos.cloudnav",
-          "pkg:com.google.android.apps.maps",
-          "pkg:com.google.earth",
-          "pkg:com.mapswithme.maps.pro",
-          "pkg:cz.ackee.ventusky"
+          "pkg:com.android.chrome",
+          "pkg:com.brave.browser",
+          "pkg:com.diegonmarcos.cloudbrowser",
+          "pkg:com.duckduckgo.mobile.android",
+          "pkg:com.google.android.googlequicksearchbox",
+          "pkg:io.raindrop.raindropio"
         ]
       },
       {
-        "id": "fun_video",
-        "order": "70",
-        "label": ">Video",
+        "id": "media_games",
+        "order": "510",
+        "label": ">Games",
         "match_keywords": [
-          "pkg:com.amazon.avod.thirdpartyclient",
-          "pkg:com.diegonmarcos.mediacenter",
-          "pkg:com.google.android.videos",
-          "pkg:com.google.android.youtube",
-          "pkg:com.netflix.mediaclient",
-          "pkg:com.wbd.stream",
-          "pkg:tv.arte.plus7"
+          "pkg:com.epicgames.portal",
+          "pkg:com.playdead.limbo.egs.full",
+          "pkg:com.samsung.android.game.gamehome",
+          "pkg:com.werewolfapps.online",
+          "pkg:org.faudroids.werewolf"
         ]
       },
       {
-        "id": "fun_audio",
-        "order": "71",
+        "id": "media_audio",
+        "order": "520",
         "label": ">Music & Audio",
         "match_keywords": [
           "pkg:at.zuggabecka.radiofm4",
@@ -4181,20 +4179,8 @@
         ]
       },
       {
-        "id": "fun_games",
-        "order": "72",
-        "label": ">Games",
-        "match_keywords": [
-          "pkg:com.epicgames.portal",
-          "pkg:com.playdead.limbo.egs.full",
-          "pkg:com.samsung.android.game.gamehome",
-          "pkg:com.werewolfapps.online",
-          "pkg:org.faudroids.werewolf"
-        ]
-      },
-      {
-        "id": "fun_social",
-        "order": "73",
+        "id": "media_social",
+        "order": "530",
         "label": ">Social",
         "match_keywords": [
           "pkg:com.badoo.mobile",
@@ -4207,22 +4193,22 @@
         ]
       },
       {
-        "id": "hlth_news",
-        "order": "80",
-        "label": "*News & Reading",
+        "id": "media_video",
+        "order": "540",
+        "label": ">Video",
         "match_keywords": [
-          "pkg:com.checkitt",
-          "pkg:com.diegonmarcos.cloudnews",
-          "pkg:com.flyersoft.moonreader",
-          "pkg:com.google.android.apps.magazines",
-          "pkg:com.rama.mako",
-          "pkg:com.samsung.android.app.spage",
-          "pkg:com.substack.app"
+          "pkg:com.amazon.avod.thirdpartyclient",
+          "pkg:com.diegonmarcos.mediacenter",
+          "pkg:com.google.android.videos",
+          "pkg:com.google.android.youtube",
+          "pkg:com.netflix.mediaclient",
+          "pkg:com.wbd.stream",
+          "pkg:tv.arte.plus7"
         ]
       },
       {
         "id": "hlth_learning",
-        "order": "81",
+        "order": "610",
         "label": "*Learning",
         "match_keywords": [
           "pkg:air.nn.mobile.app.main",
@@ -4241,8 +4227,22 @@
         ]
       },
       {
+        "id": "hlth_news",
+        "order": "620",
+        "label": "*News & Reading",
+        "match_keywords": [
+          "pkg:com.checkitt",
+          "pkg:com.diegonmarcos.cloudnews",
+          "pkg:com.flyersoft.moonreader",
+          "pkg:com.google.android.apps.magazines",
+          "pkg:com.rama.mako",
+          "pkg:com.samsung.android.app.spage",
+          "pkg:com.substack.app"
+        ]
+      },
+      {
         "id": "hlth_outdoor",
-        "order": "82",
+        "order": "630",
         "label": "*Outdoor & Sport",
         "match_keywords": [
           "pkg:com.alltrails.alltrails",
@@ -4261,20 +4261,20 @@
         ]
       },
       {
+        "id": "misc",
+        "order": "710",
+        "label": "Misc",
+        "match_keywords": []
+      },
+      {
         "id": "new_apps",
-        "order": "98",
+        "order": "720",
         "label": "New Apps",
         "match_keywords": [],
         "sink": true
-      },
-      {
-        "id": "misc",
-        "order": "99",
-        "label": "Misc",
-        "match_keywords": []
       }
     ],
-    "_doc_phone_sections": "Top-level section headers in the Home Apps/Phone tab. Folders are bucketed under a section by their label's first character: Services · Buro (-), Services · Others (+), Tools · System (_), Tools · Productivity (.), Tools · Fun (>), Tools · Health (*). A folder whose label starts with none of those prefixes belongs to no section and renders last (that is where the New Apps and Misc sinks live). The split is Service vs Tool: a SERVICE is a client for one external provider you hold an account, contract or booking with, and is worthless without that provider (Santander, Ryanair, Uber, Airalo, ImmoScout24, Gov.br); a TOOL is software that operates on your own data or device and works with any provider or none (maps, file managers, notes, keyboards, browsers, media players). Entertainment clients are tools, not services: you reach for Netflix the way you reach for a media player. Tools · Fun is what you consume for pleasure; Tools · Health is what you open to look after yourself — moving your body, learning something, staying informed. Services then split again by why you open them: BURO is the paperwork of being alive, the accounts you must keep in order (money, government and identity, telecom, housing, health, getting to work); OTHERS is discretionary, the services you open because you chose to (travel, shopping, events, jobs). Order = render order. Empty sections (every folder empty) are silently skipped. Phone tab renders one subhead per non-empty section + the folder grid below.",
+    "_doc_phone_sections": "Top-level section headers in the Home Apps/Phone tab. Folders are bucketed under a section by their label's first character: Services · Buro (-), Services · Others (+), Tools · System (_), Tools · Productivity (.), Tools · Media (>), Tools · Health (*). A folder whose label starts with none of those prefixes belongs to no section and renders last (that is where the New Apps and Misc sinks live). The split is Service vs Tool: a SERVICE is a client for one external provider you hold an account, contract or booking with, and is worthless without that provider (Santander, Ryanair, Uber, Airalo, ImmoScout24, Gov.br); a TOOL is software that operates on your own data or device and works with any provider or none (maps, file managers, notes, keyboards, browsers, media players). Entertainment clients are tools, not services: you reach for Netflix the way you reach for a media player. Tools · Media is what you watch, listen to and play; Tools · Health is what you open to look after yourself — moving your body, learning something, staying informed. Services then split again by why you open them: BURO is the paperwork of being alive, the accounts you must keep in order (money, government and identity, telecom, housing, health, getting to work); OTHERS is discretionary, the services you open because you chose to (travel, shopping, events, jobs). Order = render order. Empty sections (every folder empty) are silently skipped. Phone tab renders one subhead per non-empty section + the folder grid below.",
     "phone_sections": [
       {
         "title": "Services · Buro",
@@ -4293,7 +4293,7 @@
         "prefix": "."
       },
       {
-        "title": "Tools · Fun",
+        "title": "Tools · Media",
         "prefix": ">"
       },
       {
