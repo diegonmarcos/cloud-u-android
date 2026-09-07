@@ -332,6 +332,22 @@
     <string name="enhance_test_output">Result — edit it here</string>
     <string name="enhance_test_copy">Copy</string>
     <string name="enhance_test_copied">Copied</string>
+    <!-- SuperApp: the Text Enhancements bar (tap on the toolbar key) -->
+    <string name="enhance_bar_generate">Generate</string>
+    <string name="enhance_bar_copy">Copy</string>
+    <string name="enhance_bar_paste">Paste</string>
+    <string name="enhance_bar_replace">Replace</string>
+    <string name="enhance_bar_clear">Clear</string>
+    <string name="enhance_bar_output_hint">The rewrite lands here, editable…</string>
+    <string name="enhance_bar_no_source">Nothing to rewrite — type or select some text</string>
+    <string name="enhance_bar_generate_first">Nothing to paste — generate or type a rewrite first</string>
+    <string name="enhance_bar_replaced">Replaced</string>
+    <string name="enhance_bar_copied">Copied</string>
+    <string name="enhance_bar_clipboard_empty">Clipboard is empty</string>
+    <string name="enhance_bar_menu_paste">Paste</string>
+    <string name="enhance_bar_menu_cut">Cut</string>
+    <string name="enhance_bar_menu_copy">Copy</string>
+    <string name="enhance_bar_menu_select_all">Select all</string>
     <!-- Standalone Cloud Keyboard self-update entry (Configs menu) -->
     <string name="keyboard_update">Update Cloud Keyboard</string>
     <string name="keyboard_update_summary">Download and install the latest version</string>

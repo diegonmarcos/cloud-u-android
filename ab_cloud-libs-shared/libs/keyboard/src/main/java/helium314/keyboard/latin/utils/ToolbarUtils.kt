@@ -92,7 +92,7 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     BACKGROUND_GATHERING -> KeyCode.BACKGROUND_GATHERING
     TRANSLATE -> KeyCode.TRANSLATE // SuperApp addition (patch 0001)
     GRAMMAR -> KeyCode.GRAMMAR    // SuperApp addition (patch 0002)
-    ENHANCE -> KeyCode.ENHANCE    // SuperApp addition — Text Enhancements
+    ENHANCE -> KeyCode.ENHANCE_BAR // SuperApp addition — Text Enhancements: tap opens the bar
     LANGUAGE_SWITCH -> KeyCode.LANGUAGE_SWITCH // cloud-keyboard: same code the globe key emits → InputLogic → LatinIME.switchToNextSubtype
 }
 
@@ -115,6 +115,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
     BACKGROUND_GATHERING -> KeyCode.BACKGROUND_GATHERING_TEMP_OFF
     TRANSLATE -> KeyCode.TRANSLATE_BAR // SuperApp addition (patch 0001) — long-press opens the live translate bar
     GRAMMAR -> KeyCode.UNSPECIFIED     // SuperApp addition (patch 0002) — no long-press action defined
+    ENHANCE -> KeyCode.ENHANCE         // SuperApp addition — long-press rewrites in place, no bar
     LANGUAGE_SWITCH -> KeyCode.SYSTEM_INPUT_METHOD_PICKER // cloud-keyboard: globe long-press = picker (PointerTracker → showInputPickerDialog); same dialog
     else -> KeyCode.UNSPECIFIED
 }

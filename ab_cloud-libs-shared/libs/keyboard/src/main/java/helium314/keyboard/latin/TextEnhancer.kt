@@ -59,8 +59,16 @@ object TextEnhancer {
      * [fromSelection] target can still be applied then, because commitText replaces a
      * selection without needing coordinates.
      */
-    private class Target(val text: String, val start: Int, val end: Int, val fromSelection: Boolean) {
+    class Target(val text: String, val start: Int, val end: Int, val fromSelection: Boolean) {
         fun sameAs(other: Target?) = other != null && other.text == text && other.start == start && other.end == end
+    }
+
+    /** What the ENHANCE key would rewrite right now — [EnhanceBarView] shows and applies this. */
+    @JvmStatic
+    fun target(context: Context, connection: RichInputConnection): Target? {
+        connection.finishComposingText()
+        connection.tryFixIncorrectCursorPosition()
+        return target(connection, scope(context), AiRouter.maxChars)
     }
 
     private fun target(connection: RichInputConnection, scope: Scope, limit: Int): Target? {
@@ -127,26 +135,36 @@ object TextEnhancer {
                     toast(context, context.getString(R.string.enhance_stale)); return@post
                 }
 
-                val replacement = SpannableString(improved).apply {
-                    // ponytail: the whole original as ONE revert candidate; the popup gets long for
-                    // long fields — split per sentence if that ever bothers anyone.
-                    setSpan(SuggestionSpan(context, null, arrayOf(target.text), SuggestionSpan.FLAG_EASY_CORRECT, null),
-                        0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
-                connection.beginBatchEdit()
-                // Select the range, then commit: commitText replaces the selection (InputConnection
-                // contract), so one call covers both halves of the field.
-                val selectable = target.start >= 0 && target.end >= target.start
-                val ready = if (selectable) connection.setSelection(target.start, target.end) else target.fromSelection
-                if (ready) connection.commitText(replacement, 1)
-                connection.endBatchEdit()
-                if (ready) Log.i(TAG, "run $id: applied ${improved.length} chars")
+                if (apply(context, connection, target, improved)) Log.i(TAG, "run $id: applied ${improved.length} chars")
                 else {
                     Log.w(TAG, "run $id: cannot address ${target.start}..${target.end}, not applied")
                     toast(context, context.getString(R.string.enhance_no_cursor))
                 }
             }
         }
+    }
+
+    /**
+     * Write [replacement] over [target]'s range, keeping the original as a one-tap revert.
+     * Returns false when the range cannot be addressed, so callers can say so rather than
+     * silently dropping the rewrite. Main thread only.
+     */
+    @JvmStatic
+    fun apply(context: Context, connection: RichInputConnection, target: Target, replacement: String): Boolean {
+        val spanned = SpannableString(replacement).apply {
+            // ponytail: the whole original as ONE revert candidate; the popup gets long for
+            // long fields — split per sentence if that ever bothers anyone.
+            setSpan(SuggestionSpan(context, null, arrayOf(target.text), SuggestionSpan.FLAG_EASY_CORRECT, null),
+                0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        connection.beginBatchEdit()
+        // Select the range, then commit: commitText replaces the selection (InputConnection
+        // contract), so one call covers both halves of the field.
+        val selectable = target.start >= 0 && target.end >= target.start
+        val ready = if (selectable) connection.setSelection(target.start, target.end) else target.fromSelection
+        if (ready) connection.commitText(spanned, 1)
+        connection.endBatchEdit()
+        return ready
     }
 
     private fun toast(context: Context, msg: String) = main.post { Toast.makeText(context, msg, Toast.LENGTH_SHORT).show() }

@@ -151,6 +151,9 @@ public class LatinIME extends InputMethodService implements
     // in-panel emoji-only search field.
     private helium314.keyboard.keyboard.emoji.EmojiSearchBarView mEmojiSearchBar;
 
+    // SuperApp: the Text Enhancements bar (ENHANCE toolbar key, short tap).
+    private EnhanceBarView mEnhanceBar;
+
     private RichInputMethodManager mRichImm;
     final KeyboardSwitcher mKeyboardSwitcher;
     private final SubtypeState mSubtypeState = new SubtypeState((InputMethodSubtype subtype) -> { switchToSubtype(subtype); return Unit.INSTANCE; });
@@ -798,7 +801,7 @@ public class LatinIME extends InputMethodService implements
         if (strip == null || !(strip.getParent() instanceof android.widget.LinearLayout)) return;
         final android.widget.LinearLayout frame = (android.widget.LinearLayout) strip.getParent();
         final boolean opening = mTranslateBar == null || mTranslateBar.getVisibility() != View.VISIBLE;
-        if (opening) { hideEmojiSearchBar(); hideVoiceBar(); }
+        if (opening) { hideEmojiSearchBar(); hideVoiceBar(); hideEnhanceBar(); }
         if (mTranslateBar == null) {
             mTranslateBar = new com.diegonmarcos.superapp.translate.TranslateBarView(this);
             frame.addView(mTranslateBar, 0);
@@ -832,7 +835,7 @@ public class LatinIME extends InputMethodService implements
         if (strip == null || !(strip.getParent() instanceof android.widget.LinearLayout)) return;
         final android.widget.LinearLayout frame = (android.widget.LinearLayout) strip.getParent();
         final boolean opening = mEmojiSearchBar == null || mEmojiSearchBar.getVisibility() != View.VISIBLE;
-        if (opening) { hideTranslateBar(); hideVoiceBar(); }
+        if (opening) { hideTranslateBar(); hideVoiceBar(); hideEnhanceBar(); }
         if (mEmojiSearchBar == null) {
             mEmojiSearchBar = new helium314.keyboard.keyboard.emoji.EmojiSearchBarView(this);
             final java.util.Locale loc = mRichImm.getCurrentSubtypeLocale();
@@ -867,6 +870,53 @@ public class LatinIME extends InputMethodService implements
     }
 
     /**
+     * SuperApp: toggle the Text Enhancements bar, hosted exactly like the translate
+     * bar (first child of the keyboard frame, above the suggestion strip). A short
+     * tap on the ENHANCE toolbar key opens it — the options, the rewrite and the
+     * Generate/Copy/Paste/Replace buttons all live in the bar, so nothing reaches
+     * the app's field until the user asks for it. Long-pressing that key keeps the
+     * old one-shot "rewrite in place" behaviour.
+     */
+    public void toggleEnhanceBar() {
+        if (mInputView == null) return;
+        final View strip = mInputView.findViewById(R.id.strip_container);
+        if (strip == null || !(strip.getParent() instanceof android.widget.LinearLayout)) return;
+        final android.widget.LinearLayout frame = (android.widget.LinearLayout) strip.getParent();
+        final boolean opening = mEnhanceBar == null || mEnhanceBar.getVisibility() != View.VISIBLE;
+        if (opening) { hideTranslateBar(); hideVoiceBar(); hideEmojiSearchBar(); }
+        if (mEnhanceBar == null) {
+            mEnhanceBar = new EnhanceBarView(this);
+            mEnhanceBar.bind(this::getRichInputConnection, this::hideEnhanceBar);
+            frame.addView(mEnhanceBar, 0);
+        }
+        if (mEnhanceBar.getVisibility() == View.VISIBLE) {
+            hideEnhanceBar();
+        } else {
+            mEnhanceBar.setVisibility(View.VISIBLE);
+            mEnhanceBar.onShown();
+        }
+    }
+
+    public void hideEnhanceBar() {
+        if (mEnhanceBar != null) mEnhanceBar.setVisibility(View.GONE);
+    }
+
+    /** SuperApp: true while the Text Enhancements bar is shown — LatinIME routes key
+     *  presses into its output box instead of the app field. */
+    public boolean isEnhanceBarActive() {
+        return mEnhanceBar != null && mEnhanceBar.getVisibility() == View.VISIBLE;
+    }
+
+    /**
+     * The IME's connection as the enhancer sees the field: RichInputConnection is what
+     * knows the expected cursor position, and the whole scope/range logic in
+     * TextEnhancer is written against it — same object the ENHANCE key already uses.
+     */
+    private RichInputConnection getRichInputConnection() {
+        return mInputLogic.mConnection;
+    }
+
+    /**
      * SuperApp (patch 0005): toggle the offline voice dictation bar. Hosted as the
      * first child of the keyboard frame (above strip_container), so it sits right
      * above the keys and the keyboard stays usable below. Tap the mic key once to
@@ -878,7 +928,7 @@ public class LatinIME extends InputMethodService implements
         if (strip == null || !(strip.getParent() instanceof android.widget.LinearLayout)) return;
         final android.widget.LinearLayout frame = (android.widget.LinearLayout) strip.getParent();
         final boolean opening = mVoiceBar == null || mVoiceBar.getVisibility() != View.VISIBLE;
-        if (opening) { hideTranslateBar(); hideEmojiSearchBar(); }
+        if (opening) { hideTranslateBar(); hideEmojiSearchBar(); hideEnhanceBar(); }
         if (mVoiceBar == null) {
             mVoiceBar = new com.diegonmarcos.superapp.voice.VoiceBarView(this);
             final java.util.Locale loc = mRichImm.getCurrentSubtypeLocale();
@@ -927,6 +977,7 @@ public class LatinIME extends InputMethodService implements
         BackgroundGatheringCache.saveOrClear(this);
         hideTranslateBar(); // SuperApp addition (patch 0001)
         hideVoiceBar(); // SuperApp (patch 0005) — stop + release mic when input ends
+        hideEnhanceBar(); // SuperApp — its target range belongs to the field we are leaving
     }
 
     @Override
@@ -1350,6 +1401,10 @@ public class LatinIME extends InputMethodService implements
         else if (mEmojiSearchBar != null && mEmojiSearchBar.getVisibility() == View.VISIBLE) {
             visibleTopY -= mEmojiSearchBar.getHeight();
         }
+        // SuperApp: and for the Text Enhancements bar.
+        else if (mEnhanceBar != null && mEnhanceBar.getVisibility() == View.VISIBLE) {
+            visibleTopY -= mEnhanceBar.getHeight();
+        }
 
         if (hasSuggestionStripView()) {
             mSuggestionStripView.setMoreSuggestionsHeight(visibleTopY);
@@ -1580,6 +1635,15 @@ public class LatinIME extends InputMethodService implements
             if (KeyCode.DELETE == event.getKeyCode()) { mEmojiSearchBar.backspace(); return; }
             final int cp = event.getCodePoint();
             if (cp > 0) { mEmojiSearchBar.appendCodePoint(cp); return; }
+        }
+        // SuperApp: same manual key-routing again — while the Text Enhancements bar is
+        // open the keys edit the rewrite in its output box, not the app's field. The
+        // ENHANCE_BAR key itself must fall through, or the bar could never be closed.
+        if (isEnhanceBarActive() && KeyCode.ENHANCE_BAR != event.getKeyCode()) {
+            if (KeyCode.DELETE == event.getKeyCode()) { mEnhanceBar.backspace(); return; }
+            final int cp = event.getCodePoint();
+            if (cp > 0) { mEnhanceBar.appendCodePoint(cp); return; }
+            if (mEnhanceBar.onEdit(event.getKeyCode())) return;
         }
         if (KeyCode.VOICE_INPUT == event.getKeyCode()) {
             // SuperApp (patch 0005): toggle the bundled OFFLINE Vosk dictation bar

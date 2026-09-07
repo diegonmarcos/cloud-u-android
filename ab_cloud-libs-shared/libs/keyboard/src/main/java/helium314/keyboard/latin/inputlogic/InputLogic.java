@@ -755,11 +755,17 @@ public final class InputLogic {
                 helium314.keyboard.latin.GrammarChecker.checkWholeField(mLatinIME, mConnection);
                 break;
             case KeyCode.ENHANCE:
-                // SuperApp addition: TAP → Text Enhancements. Sends the selection (or the
-                // whole field) through the AI Model Routing provider with the configured
-                // style prompt and commits the reply in place (original kept as the
-                // one-tap revert suggestion). Async; progress/failure surface as toasts.
+                // SuperApp addition: LONG-PRESS → Text Enhancements without the bar. Sends
+                // the selection (or the whole field) through the AI Model Routing provider
+                // with the configured style prompt and commits the reply in place (original
+                // kept as the one-tap revert suggestion). Async; progress/failure as toasts.
                 helium314.keyboard.latin.TextEnhancer.enhance(mLatinIME, mConnection);
+                break;
+            case KeyCode.ENHANCE_BAR:
+                // SuperApp addition: TAP → the Text Enhancements bar, where the style/tone/
+                // length/language options are picked, the rewrite is shown editable, and
+                // nothing touches the field until Paste or Replace.
+                mLatinIME.toggleEnhanceBar();
                 break;
             case KeyCode.TRANSLATE_BAR: {
                 // SuperApp addition (patch 0001): LONG-PRESS → quick in-place
