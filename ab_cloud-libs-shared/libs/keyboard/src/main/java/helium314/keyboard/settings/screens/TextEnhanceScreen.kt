@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -23,8 +22,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import helium314.keyboard.latin.AiRouter
@@ -50,9 +51,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 // SuperApp addition — "Text Enhancements": what the ENHANCE toolbar key rewrites, the style,
-// tone and length of the rewrite it asks the AI Model Routing provider for, whether that key is
-// on the toolbar, and a box to try the whole lot on your own text. Styles, tones and lengths all
-// come from build.json::keyboard_ai (AiRouter.styles/tones/lengths).
+// tone, length and output language of the rewrite it asks the AI Model Routing provider for,
+// whether that key is on the toolbar, and a box to try the whole lot on your own text. Every
+// menu here comes from build.json::keyboard_ai (AiRouter.styles/tones/lengths/languages).
 
 fun createTextEnhanceSettings(context: Context): List<Setting> = listOf(
     Setting(context, Settings.PREF_ENHANCE_SCOPE, R.string.enhance_scope_title, R.string.enhance_scope_summary) { setting ->
@@ -73,6 +74,11 @@ fun createTextEnhanceSettings(context: Context): List<Setting> = listOf(
     },
     Setting(context, Settings.PREF_ENHANCE_LENGTH, R.string.enhance_length_title, R.string.enhance_length_summary) { setting ->
         ListPreference(setting, AiRouter.lengths.map { it.label to it.id }, AiRouter.defaultLength)
+    },
+    // Picking anything but "keep" turns the enhancement into a translation as well; the registry
+    // lists the five starred languages first, then the rest alphabetically, and that IS the order.
+    Setting(context, Settings.PREF_ENHANCE_LANGUAGE, R.string.enhance_language_title, R.string.enhance_language_summary) { setting ->
+        ListPreference(setting, AiRouter.languages.map { it.label to it.id }, AiRouter.defaultLanguage)
     },
     // Not a stored pref of its own: it reads/writes the ENHANCE entry of the toolbar-keys
     // pref, so this switch and Settings → Toolbar never disagree.
@@ -109,6 +115,8 @@ private fun EnhanceTestBox(setting: Setting) {
     var input by rememberSaveable { mutableStateOf("") }
     var output by rememberSaveable { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    var copied by remember { mutableStateOf(false) }
+    val clipboard = LocalClipboardManager.current
     val dim = MaterialTheme.colorScheme.onSurfaceVariant
     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 12.dp)) {
         Text(setting.title, style = MaterialTheme.typography.bodyLarge)
@@ -127,6 +135,7 @@ private fun EnhanceTestBox(setting: Setting) {
                 enabled = !busy && input.isNotBlank(),
                 onClick = {
                     busy = true
+                    copied = false
                     output = ""
                     scope.launch {
                         val style = AiRouter.enhanceStyle(ctx)
@@ -145,8 +154,26 @@ private fun EnhanceTestBox(setting: Setting) {
         if (busy)
             Text(stringResource(R.string.enhance_test_running, AiRouter.provider(ctx).label),
                 Modifier.padding(top = 8.dp), color = dim, style = MaterialTheme.typography.bodyMedium)
-        else if (output.isNotEmpty())
-            SelectionContainer { Text(output, Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodyMedium) }
+        else if (output.isNotEmpty()) {
+            // Second box: the result lands here editable, so a near-miss can be fixed by hand and
+            // taken away with Copy instead of being re-run until the model gets it right.
+            OutlinedTextField(
+                value = output,
+                onValueChange = { output = it; copied = false },
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                minLines = 3,
+                label = { Text(stringResource(R.string.enhance_test_output)) },
+            )
+            Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = {
+                    clipboard.setText(AnnotatedString(output))
+                    copied = true
+                }) { Text(stringResource(R.string.enhance_test_copy)) }
+                if (copied)
+                    Text(stringResource(R.string.enhance_test_copied), Modifier.padding(start = 12.dp),
+                        color = dim, style = MaterialTheme.typography.bodySmall)
+            }
+        }
     }
 }
 
@@ -157,6 +184,7 @@ fun TextEnhanceScreen(onClickBack: () -> Unit) {
         Settings.PREF_ENHANCE_STYLE,
         Settings.PREF_ENHANCE_TONE,
         Settings.PREF_ENHANCE_LENGTH,
+        Settings.PREF_ENHANCE_LANGUAGE,
         Settings.PREF_ENHANCE_TOOLBAR_KEY,
         Settings.PREF_ENHANCE_TEST,
     )

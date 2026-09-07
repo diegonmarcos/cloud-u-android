@@ -231,6 +231,7 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_ENHANCE_SCOPE = "enhance_scope";    // what the ENHANCE key rewrites: "auto"|"selection"|"field"
     public static final String PREF_ENHANCE_TONE = "enhance_tone";      // tone id from keyboard_ai.tones
     public static final String PREF_ENHANCE_LENGTH = "enhance_length";  // length id from keyboard_ai.lengths
+    public static final String PREF_ENHANCE_LANGUAGE = "enhance_language"; // language id from keyboard_ai.languages
     public static final String PREF_ENHANCE_TEST = "enhance_test";      // settings-registry key only; the try-it box stores nothing
 
     public static final String PREF_VERSION_CODE = "version_code";

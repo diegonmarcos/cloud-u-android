@@ -50,9 +50,10 @@ object AiRouter {
         }.toList()
     }
     val styles: List<Style> by lazy { promptSet("styles") }
-    /** Tone and length are two more system-prompt lines the ENHANCE key appends after the style. */
+    /** Tone, length and output language are three more system-prompt lines appended after the style. */
     val tones: List<Style> by lazy { promptSet("tones") }
     val lengths: List<Style> by lazy { promptSet("lengths") }
+    val languages: List<Style> by lazy { promptSet("languages") }
 
     /** A registry object of id → {label, prompt}. Android's JSONObject keeps insertion order, so this is the menu order too. */
     private fun promptSet(key: String): List<Style> {
@@ -64,6 +65,12 @@ object AiRouter {
     val defaultStyle: String get() = registry.getString("default_style")
     val defaultTone: String get() = registry.optString("default_tone", "keep")
     val defaultLength: String get() = registry.optString("default_length", "keep")
+    val defaultLanguage: String get() = registry.optString("default_language", "keep")
+    /**
+     * Prepended to every rewrite prompt. Without it the model reads the field text as a message
+     * addressed to it and answers it conversationally instead of rewriting it.
+     */
+    val rewritePreamble: String get() = registry.optString("rewrite_preamble")
     val timeoutMs: Int get() = registry.optInt("timeout_ms", 30_000)
     /** Field-text cap sent to the model; also what the enhancer reads around the cursor. */
     val maxChars: Int get() = registry.optInt("max_chars", 4096)
@@ -128,23 +135,33 @@ object AiRouter {
         val id = context.prefs().getString(Settings.PREF_ENHANCE_STYLE, defaultStyle) ?: defaultStyle
         return styles.firstOrNull { it.id == id } ?: styles.first { it.id == defaultStyle }
     }
-    fun styleById(id: String): Style = styles.firstOrNull { it.id == id } ?: styles.first { it.id == defaultStyle }
+    fun styleById(id: String): Style =
+        compose(styles.firstOrNull { it.id == id } ?: styles.first { it.id == defaultStyle }, emptyList())
+
+    /** One system prompt out of the shared preamble, the style, and whatever [extra] lines were pinned. */
+    private fun compose(style: Style, extra: List<String>): Style {
+        val lines = (listOf(rewritePreamble, style.prompt) + extra).filter { it.isNotBlank() }
+        return Style(style.id, style.label, lines.joinToString(" "))
+    }
 
     /**
-     * What the ENHANCE toolbar key actually sends: the chosen [style] prompt, then the tone and
-     * the length the user pinned in Settings → Text Enhancements. The "keep" entries carry an
-     * empty prompt, so leaving both alone reproduces the plain style prompt exactly.
+     * What the ENHANCE toolbar key actually sends: the chosen [style] prompt, then the tone, the
+     * length and the output language the user pinned in Settings → Text Enhancements. The "keep"
+     * entries carry an empty prompt, so leaving all three alone reproduces the plain style prompt.
      *
      * Returned as a [Style] so callers keep the id and label for logging. GrammarChecker
-     * deliberately does NOT go through here: fixing grammar must not restyle or resize the text.
+     * deliberately does NOT go through here (fixing grammar must not restyle, resize or translate
+     * the text) — it goes through [styleById], which shares only the preamble.
      */
     fun enhanceStyle(context: Context): Style {
-        val style = style(context)
-        val extra = listOfNotNull(
-            pick(context, tones, Settings.PREF_ENHANCE_TONE, defaultTone),
-            pick(context, lengths, Settings.PREF_ENHANCE_LENGTH, defaultLength),
+        return compose(
+            style(context),
+            listOfNotNull(
+                pick(context, tones, Settings.PREF_ENHANCE_TONE, defaultTone),
+                pick(context, lengths, Settings.PREF_ENHANCE_LENGTH, defaultLength),
+                pick(context, languages, Settings.PREF_ENHANCE_LANGUAGE, defaultLanguage),
+            ),
         )
-        return if (extra.isEmpty()) style else Style(style.id, style.label, (listOf(style.prompt) + extra).joinToString(" "))
     }
 
     /** The prompt line the user pinned under [key], or null when it is "keep" or no longer in the registry. */

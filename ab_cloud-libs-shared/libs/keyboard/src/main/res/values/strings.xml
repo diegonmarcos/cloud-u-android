@@ -322,11 +322,16 @@
     <string name="enhance_tone_summary">How the rewritten text should sound</string>
     <string name="enhance_length_title">Length</string>
     <string name="enhance_length_summary">How long the rewritten text should be</string>
+    <string name="enhance_language_title">Output language</string>
+    <string name="enhance_language_summary">Language the result is written in; the text is translated when it differs</string>
     <string name="enhance_test_title">Try it</string>
     <string name="enhance_test_summary">Run the settings above on your own text, without leaving this screen</string>
     <string name="enhance_test_hint">Type something to enhance…</string>
     <string name="enhance_test_run">Enhance</string>
     <string name="enhance_test_running">Waiting for %1$s…</string>
+    <string name="enhance_test_output">Result — edit it here</string>
+    <string name="enhance_test_copy">Copy</string>
+    <string name="enhance_test_copied">Copied</string>
     <!-- Standalone Cloud Keyboard self-update entry (Configs menu) -->
     <string name="keyboard_update">Update Cloud Keyboard</string>
     <string name="keyboard_update_summary">Download and install the latest version</string>
