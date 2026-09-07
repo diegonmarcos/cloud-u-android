@@ -91,6 +91,15 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
     private var busy = false
     private var applyWhenReady = false
 
+    /**
+     * Where the keys go. False — the default, and the state the bar opens in — means
+     * the keyboard still types into the app's own field, which is the whole point:
+     * you write and edit there, the bar only reads from it. True means the user
+     * tapped the output box to touch up a rewrite, so the keys are routed here until
+     * they tap the source line (or Generate) to hand them back.
+     */
+    private var editingOutput = false
+
     private val sourceView: TextView
     private val outputView: TranslateInputView
     private val statusView: TextView
@@ -145,8 +154,12 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         addView(optionRow, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
 
         // ── Row 2: what will be rewritten ────────────────────────────────────
+        // Tapping it is also how the keys go back to the app's field after a
+        // detour into the output box — "type over there" is what the row means.
         sourceView = TextView(context).apply {
             textSize = 14f; setTextColor(muted); maxLines = 2; setPadding(0, dp(6), 0, 0)
+            isClickable = true
+            setOnClickListener { focusField() }
         }
         addView(sourceView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
 
@@ -189,11 +202,33 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
     fun onShown() {
         seq.incrementAndGet()
         busy = false; applyWhenReady = false
+        editingOutput = false
         buffer.setLength(0); setCaret(0)
         options.forEach { it.render() }
         reloadTarget()
         renderOutput()
         showStatus("")
+    }
+
+    /** The source line is what the app's field holds; re-read it after the user types. */
+    fun onFieldChanged() {
+        if (visibility != VISIBLE || busy) return
+        reloadTarget()
+    }
+
+    /**
+     * True while the output box owns the keys. LatinIME asks before routing anything
+     * here, so with the box unfocused every key lands in the app's field as usual.
+     */
+    fun consumesKeys() = visibility == VISIBLE && editingOutput
+
+    /** Hand the keys back to the app's field and re-read what it now holds. */
+    private fun focusField() {
+        if (!editingOutput) return
+        editingOutput = false
+        select(selLo(), selLo())
+        reloadTarget()
+        renderOutput()
     }
 
     // ── key routing entry points (called from LatinIME.onEvent) ──────────────
@@ -248,6 +283,11 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
 
     /** Ask the model for a rewrite of the source; [thenApply] = the Replace button. */
     private fun generate(thenApply: Boolean) {
+        // Read the field NOW. The snapshot taken when the bar opened is stale by
+        // definition — the user types after opening it, which is the normal way to
+        // use this, and enhancing what the field held before that is never right.
+        editingOutput = false
+        reloadTarget()
         val t = target
         if (t == null || t.text.isBlank()) { showStatus(str(R.string.enhance_bar_no_source)); return }
         if (busy) return
@@ -290,7 +330,9 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         }
         if (TextEnhancer.apply(context, connection, t, text)) {
             showStatus(str(R.string.enhance_bar_replaced))
+            editingOutput = false   // the text lives in the field now — type there
             reloadTarget()   // the field is now the rewrite: enhancing again starts from it
+            renderOutput()
         } else {
             showStatus(str(R.string.enhance_no_cursor))
         }
@@ -427,6 +469,9 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
                 if (buffer.isEmpty()) return false
                 when (e.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
+                        // Touching the box is what claims the keys; until then they
+                        // belong to the app's field.
+                        editingOutput = true
                         anchor = outputView.offsetAt(e.x, e.y); downX = e.x; downY = e.y; dragging = false
                         setCaret(anchor); renderOutput()
                         ui.postDelayed(longPress, ViewConfiguration.getLongPressTimeout().toLong())
@@ -500,7 +545,9 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
             outputView.caret = -1
         } else {
             outputView.text = buffer.toString()
-            outputView.caret = selStart
+            // The caret is the only thing that says where the keys are going, so it
+            // is drawn only while the box actually has them.
+            outputView.caret = if (editingOutput) selStart else -1
         }
     }
 

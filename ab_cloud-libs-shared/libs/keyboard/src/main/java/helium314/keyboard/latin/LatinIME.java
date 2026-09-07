@@ -1244,6 +1244,15 @@ public class LatinIME extends InputMethodService implements
                     + ", nss=" + newSelStart + ", nse=" + newSelEnd
                     + ", cs=" + composingSpanStart + ", ce=" + composingSpanEnd);
         }
+        // SuperApp: the Text Enhancements bar shows what the field holds, so it has to
+        // follow the field. Two guards: only once the word being typed is committed (no
+        // composing span), because reading mid-compose would finish the composition and
+        // kill suggestions; and posted rather than called, so the read happens after
+        // mInputLogic below has reconciled the connection with this new selection.
+        if (isEnhanceBarActive() && composingSpanEnd < 0) {
+            final EnhanceBarView bar = mEnhanceBar;
+            bar.post(bar::onFieldChanged);
+        }
 
         // This call happens whether our view is displayed or not, but if it's not then we should
         // not attempt recorrection. This is true even with a hardware keyboard connected: if the
@@ -1636,10 +1645,12 @@ public class LatinIME extends InputMethodService implements
             final int cp = event.getCodePoint();
             if (cp > 0) { mEmojiSearchBar.appendCodePoint(cp); return; }
         }
-        // SuperApp: same manual key-routing again — while the Text Enhancements bar is
-        // open the keys edit the rewrite in its output box, not the app's field. The
-        // ENHANCE_BAR key itself must fall through, or the bar could never be closed.
-        if (isEnhanceBarActive() && KeyCode.ENHANCE_BAR != event.getKeyCode()) {
+        // SuperApp: same manual key-routing again, but the Text Enhancements bar asks
+        // for the keys only while its output box was tapped. Unfocused — which is how
+        // it opens — typing goes to the app's own field, because that is the text the
+        // bar reads and rewrites. The ENHANCE_BAR key itself must always fall through,
+        // or the bar could never be closed.
+        if (isEnhanceBarActive() && mEnhanceBar.consumesKeys() && KeyCode.ENHANCE_BAR != event.getKeyCode()) {
             if (KeyCode.DELETE == event.getKeyCode()) { mEnhanceBar.backspace(); return; }
             final int cp = event.getCodePoint();
             if (cp > 0) { mEnhanceBar.appendCodePoint(cp); return; }

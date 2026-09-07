@@ -338,8 +338,8 @@
     <string name="enhance_bar_paste">Paste</string>
     <string name="enhance_bar_replace">Replace</string>
     <string name="enhance_bar_clear">Clear</string>
-    <string name="enhance_bar_output_hint">The rewrite lands here, editable…</string>
-    <string name="enhance_bar_no_source">Nothing to rewrite — type or select some text</string>
+    <string name="enhance_bar_output_hint">The rewrite lands here — tap it to edit…</string>
+    <string name="enhance_bar_no_source">Nothing to rewrite — type in the field, then Generate</string>
     <string name="enhance_bar_generate_first">Nothing to paste — generate or type a rewrite first</string>
     <string name="enhance_bar_replaced">Replaced</string>
     <string name="enhance_bar_copied">Copied</string>
