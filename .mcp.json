@@ -10,6 +10,10 @@
       "type": "http",
       "url": "https://mcp.diegonmarcos.com/cloud-cgc-pub-mcp/mcp"
     },
+    "cloud-cgc-pvt-mcp": {
+      "type": "http",
+      "url": "http://10.0.0.6:3107/mcp"
+    },
     "cloud-drive-mcp": {
       "type": "http",
       "url": "https://mcp.diegonmarcos.com/cloud-drive-mcp/mcp"
@@ -37,6 +41,10 @@
     "cloud-superapp-mcp": {
       "type": "http",
       "url": "https://mcp.diegonmarcos.com/cloud-superapp-mcp/mcp"
+    },
+    "cloud-vault-mcp": {
+      "type": "http",
+      "url": "http://10.0.0.6:3111/mcp"
     },
     "google-personal-mcp": {
       "type": "http",
