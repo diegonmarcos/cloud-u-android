@@ -1848,6 +1848,12 @@
           "title": "Active Apps",
           "limit": 12
         },
+        "_doc_last_apps": "Phone-only 'Last Apps' section rendered directly BELOW Active Apps, still inside the Quickmarks block at the top of SuitePhoneAppsFragment. Lists the `limit` apps you most recently OPENED, most recent first (libs:datamanager AppUsageProvider.lastOpened → UsageStatsManager MOVE_TO_FOREGROUND events over 7 days). Different data from Active Apps: that one ranks by `lastTimeUsed`, which the system also bumps for background work, so a sync adapter can outrank an app you actually launched; this one only counts an app being brought to the front. Empty (section hidden) when usage-access is not granted. Baked to scalar BuildConfig fields UI_SUITE_LAST_APPS_{ENABLED,TITLE,LIMIT}.",
+        "last_apps": {
+          "enabled": true,
+          "title": "Last Apps",
+          "limit": 12
+        },
         "pages": [
           {
             "id": "apps",

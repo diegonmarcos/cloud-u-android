@@ -217,6 +217,13 @@ def suiteActiveApps    = buildJson.ui.sections.find { it.id == "phone" }?.active
 def activeAppsEnabled  = (suiteActiveApps.enabled != false)
 def activeAppsTitle    = (suiteActiveApps.title ?: 'Active Apps').toString()
 def activeAppsLimit    = ((suiteActiveApps.limit ?: 8) as Number).intValue()
+// Suite/Phone "Last Apps" section — the apps most recently OPENED, rendered
+// directly under Active Apps. Scalar knobs from
+// build.json::sections[id=phone].last_apps.
+def suiteLastApps    = buildJson.ui.sections.find { it.id == "phone" }?.last_apps ?: [:]
+def lastAppsEnabled  = (suiteLastApps.enabled != false)
+def lastAppsTitle    = (suiteLastApps.title ?: 'Last Apps').toString()
+def lastAppsLimit    = ((suiteLastApps.limit ?: 12) as Number).intValue()
 // Dynamic-island tap target. Format: "app:<pkg>" | "notifications" |
 // "shortcut:<id>". Parsed at runtime by MainActivity. Default lives in
 // build.json::ui.dynamic_island_action.
@@ -659,6 +666,9 @@ android {
         buildConfigField "boolean","UI_SUITE_ACTIVE_APPS_ENABLED", "${activeAppsEnabled}"
         buildConfigField "String", "UI_SUITE_ACTIVE_APPS_TITLE",   "\"${activeAppsTitle}\""
         buildConfigField "int",    "UI_SUITE_ACTIVE_APPS_LIMIT",   "${activeAppsLimit}"
+        buildConfigField "boolean","UI_SUITE_LAST_APPS_ENABLED",   "${lastAppsEnabled}"
+        buildConfigField "String", "UI_SUITE_LAST_APPS_TITLE",     "\"${lastAppsTitle}\""
+        buildConfigField "int",    "UI_SUITE_LAST_APPS_LIMIT",     "${lastAppsLimit}"
         buildConfigField "int",    "UI_PHONE_GRID_COLUMNS",   "${phoneGridColumns}"
         buildConfigField "String", "UI_DYNAMIC_ISLAND_ACTION","\"${dynamicIslandAction}\""
         buildConfigField "String", "MESH_JSON_B64",         "\"${meshB64}\""

@@ -194,31 +194,36 @@ class SuitePhoneAppsFragment : Fragment() {
         //    launchable matches. Constellation packages filtered out — the
         //    superapp is always hot, and the rest belong to Cloud ▸ Apps.
         if (BuildConfig.UI_SUITE_ACTIVE_APPS_ENABLED) {
-            val recent = AppUsageProvider.recentUsed(ctx)
-                .asSequence()
-                .filter { it !in ourApps }
-                .mapNotNull { resolve(it) }
-                .take(BuildConfig.UI_SUITE_ACTIVE_APPS_LIMIT.coerceAtLeast(1))
-                .toList()
-            if (recent.isNotEmpty()) {
-                root.addView(subhead(ctx, BuildConfig.UI_SUITE_ACTIVE_APPS_TITLE))
-                for (rowChunk in recent.chunked(columns)) {
-                    val row = LinearLayout(ctx).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        layoutParams = LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.MATCH_PARENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                        )
-                    }
-                    for (a in rowChunk) row.addView(makeAppTile(ctx, a.pkg, a.label, a.icon))
-                    repeat(columns - rowChunk.size) {
-                        row.addView(View(ctx).apply {
-                            layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
-                        })
-                    }
-                    root.addView(row)
-                }
-            }
+            usageSection(
+                ctx, root, columns,
+                title = BuildConfig.UI_SUITE_ACTIVE_APPS_TITLE,
+                apps = AppUsageProvider.recentUsed(ctx)
+                    .asSequence()
+                    .filter { it !in ourApps }
+                    .mapNotNull { resolve(it) }
+                    .take(BuildConfig.UI_SUITE_ACTIVE_APPS_LIMIT.coerceAtLeast(1))
+                    .toList(),
+            )
+        }
+
+        // ── Last Apps — the apps most recently OPENED, most recent first.
+        //    Sits directly under Active Apps and looks identical, but the
+        //    ranking differs on purpose: Active Apps reads lastTimeUsed,
+        //    which the system also bumps for background work, so an app that
+        //    merely synced can outrank one you actually launched. This list
+        //    counts MOVE_TO_FOREGROUND events only — apps you brought to the
+        //    front. Same knobs, same hidden-when-empty behaviour.
+        if (BuildConfig.UI_SUITE_LAST_APPS_ENABLED) {
+            usageSection(
+                ctx, root, columns,
+                title = BuildConfig.UI_SUITE_LAST_APPS_TITLE,
+                apps = AppUsageProvider.lastOpened(ctx)
+                    .asSequence()
+                    .filter { it !in ourApps }
+                    .mapNotNull { resolve(it) }
+                    .take(BuildConfig.UI_SUITE_LAST_APPS_LIMIT.coerceAtLeast(1))
+                    .toList(),
+            )
         }
 
         // ── All Apps — every installed app grouped by purpose. Same
@@ -319,6 +324,39 @@ class SuitePhoneAppsFragment : Fragment() {
         layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 1),
         ).apply { topMargin = dp(ctx, 16); bottomMargin = dp(ctx, 4) }
+    }
+
+    /** A subheading plus a grid of app tiles — the shape both Quickmarks
+     *  usage sections (Active Apps, Last Apps) render. Draws nothing at all
+     *  when [apps] is empty, so a missing usage-access grant leaves no
+     *  orphan heading behind. */
+    private fun usageSection(
+        ctx: Context,
+        root: LinearLayout,
+        columns: Int,
+        title: String,
+        apps: List<AppInfo>,
+    ) {
+        if (apps.isEmpty()) return
+        root.addView(subhead(ctx, title))
+        for (rowChunk in apps.chunked(columns)) {
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                )
+            }
+            for (a in rowChunk) row.addView(makeAppTile(ctx, a.pkg, a.label, a.icon))
+            // Pad a short last row so its tiles keep column alignment
+            // instead of stretching across the full width.
+            repeat(columns - rowChunk.size) {
+                row.addView(View(ctx).apply {
+                    layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
+                })
+            }
+            root.addView(row)
+        }
     }
 
     private fun subhead(ctx: Context, t: String) = TextView(ctx).apply {
