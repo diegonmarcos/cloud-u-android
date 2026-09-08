@@ -1555,7 +1555,7 @@
             ]
           },
           {
-            "title": "Communications",
+            "title": "Inboxes",
             "tiles": [
               {
                 "id": "mail",
@@ -1588,6 +1588,12 @@
                 "label": "C3-Bot",
                 "icon": "ic_ai_chat",
                 "target": "intent://resolve?domain=Cloud_bot_C3_Infra_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_bot_C3_Infra_bot;end"
+              },
+              {
+                "id": "news",
+                "label": "News",
+                "icon": "ic_rss",
+                "target": "extapp:cloud-news"
               }
             ]
           },
@@ -1599,12 +1605,6 @@
                 "label": "Calendar",
                 "icon": "ic_calendar",
                 "target": "extapp:cloud-calendar"
-              },
-              {
-                "id": "news",
-                "label": "News",
-                "icon": "ic_rss",
-                "target": "extapp:cloud-news"
               },
               {
                 "_doc": "Opens the standalone Cloud-Contacts app (ac_cloud-contacts, com.diegonmarcos.cloudcontacts, native multi-channel people hub) via extapp:cloud-contacts — installed → launches; absent → install via Configs ▸ Constellation. Replaces the old Google Contacts launcher.",
@@ -1644,6 +1644,13 @@
                 "label": "Drive",
                 "icon": "ic_p_sol_cloud",
                 "target": "page:drive/connections"
+              },
+              {
+                "_doc": "Cloud-Vault — the dedicated Vaultwarden client app (ac_cloud-vault). libs:vault (KeePassDX stub) was replaced by Cloud-Vault, a standalone constellation APK hosting vault.diegonmarcos.com (self-hosted Vaultwarden). target=extapp:cloud-vault → MainActivity.launchExternalApp opens com.diegonmarcos.cloudvault if installed, else downloads + installs ui.external_apps[id=cloud-vault].install_apk_url. Lives in Data Apps rather than Tools Primary: the vault is one of the data stores, alongside Drive and Sheets.",
+                "id": "vault",
+                "label": "Vault",
+                "icon": "ic_vault",
+                "target": "extapp:cloud-vault"
               }
             ]
           },
@@ -1677,13 +1684,6 @@
                 "target": "extapp:cloud-nav"
               },
               {
-                "_doc": "Cloud-Vault — the dedicated Vaultwarden client app (ac_cloud-vault). libs:vault (KeePassDX stub) was replaced by Cloud-Vault, a standalone constellation APK hosting vault.diegonmarcos.com (self-hosted Vaultwarden). target=extapp:cloud-vault → MainActivity.launchExternalApp opens com.diegonmarcos.cloudvault if installed, else downloads + installs ui.external_apps[id=cloud-vault].install_apk_url.",
-                "id": "vault",
-                "label": "Vault",
-                "icon": "ic_vault",
-                "target": "extapp:cloud-vault"
-              },
-              {
                 "_doc": "Keyboard — hands off to the standalone Cloud-Keyboard app (ac_cloud-keyboard, com.diegonmarcos.cloudkeyboard). Same target as the Configs ▸ Keyboard entry: extapp:cloud-keyboard → MainActivity.launchExternalApp opens Cloud-Keyboard's SettingsActivity if installed, else downloads + installs ui.external_apps[id=cloud-keyboard].install_apk_url. The keyboard is a first-class Cloud app like Browser/Wallet/Vault, so it belongs in Tools Primary and not only behind Configs.",
                 "id": "keyboard",
                 "label": "Keyboard",
@@ -1700,7 +1700,7 @@
             ]
           },
           {
-            "title": "Tools Dashboards",
+            "title": "Dashboard",
             "tiles": [
               {
                 "_doc": "PM Boards — the aa-sui_paca project-management tool (Kanban boards). Opens the cloud service over the browser/WebView. Leftmost tile of Tools Dashboards. NOTE: paca is not deployed yet (blocked on the WG mesh) — the route 404s until aa-sui_paca ships.",
@@ -1773,7 +1773,7 @@
         "active_apps": {
           "enabled": true,
           "title": "Active Apps",
-          "limit": 8
+          "limit": 12
         },
         "pages": [
           {
@@ -1802,29 +1802,17 @@
               "cld.termux.nix",
               "cld.termux"
             ],
-            "_doc_folders": "Nested folders inside a phone_app_group — render as One-UI-style folder tiles in the same grid as plain packages (2×2 mini-icon preview, tap → modal dialog with the contents at 5 cols). Empty folders silently skipped. SuitePhoneAppsFragment is the renderer.",
-            "folders": [
-              {
-                "label": "Files Editor (IDE)",
-                "packages": [
-                  "com.lonelycatgames.Xplore",
-                  "com.sec.android.app.myfiles",
-                  "com.google.android.apps.docs",
-                  "com.viscouspot.gitsync",
-                  "com.foxdebug.acode",
-                  "com.rhmsoft.edit"
-                ]
-              }
-            ]
+            "_doc_folders": "Nested folders inside a phone_app_group — render as One-UI-style folder tiles in the same grid as plain packages (2×2 mini-icon preview, tap → modal dialog with the contents at 5 cols). Empty folders silently skipped. SuitePhoneAppsFragment is the renderer."
           },
           {
-            "title": "Communications",
+            "title": "Inboxes",
+            "_doc_mail_client": "app.sterna is Sterna Mail (codeberg.org/emon/sterna-mail), the UPSTREAM build — deliberately the upstream and not our cloud-mail rebrand, so this row shows the vanilla client alongside the third-party inboxes. It replaced eu.faircode.email (FairMail) and rs.ltt.android (ltt.rs), both dropped 2026-09-09.",
             "packages": [
-              "eu.faircode.email",
-              "rs.ltt.android",
+              "app.sterna",
               "com.mattermost.rn",
               "com.beeper.android",
-              "org.fossify.phone"
+              "org.fossify.phone",
+              "com.google.android.apps.magazines"
             ],
             "folders": [
               {
@@ -1848,6 +1836,19 @@
               "com.samsung.android.app.contacts",
               "com.aspiro.tidal",
               "com.x8bit.bitwarden"
+            ],
+            "folders": [
+              {
+                "label": "Files Editor (IDE)",
+                "packages": [
+                  "com.lonelycatgames.Xplore",
+                  "com.sec.android.app.myfiles",
+                  "com.google.android.apps.docs",
+                  "com.viscouspot.gitsync",
+                  "com.foxdebug.acode",
+                  "com.rhmsoft.edit"
+                ]
+              }
             ]
           },
           {
