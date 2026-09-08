@@ -430,11 +430,13 @@ class PhoneAppsFragment : Fragment() {
             apps: List<PhoneApp>,
         ) {
             val launcherApps = ctx.getSystemService(Context.LAUNCHER_APPS_SERVICE) as LauncherApps
-            val dialog = Dialog(ctx, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+            val dialog = launcherFolderDialog(ctx)
             dialog.window?.requestFeature(Window.FEATURE_NO_TITLE)
             val sheet = LinearLayout(ctx).apply {
                 orientation = LinearLayout.VERTICAL
-                setBackgroundColor(0xEE0A0A14.toInt())  // near-black, near-opaque
+                // Background is applied by setFolderContent — the card corners
+                // have to be part of the same drawable, so setting a flat
+                // colour here would just paint square edges over them.
                 val pad = dp(ctx, 16); setPadding(pad, pad, pad, pad)
             }
             sheet.addView(TextView(ctx).apply {
@@ -473,9 +475,10 @@ class PhoneAppsFragment : Fragment() {
                 grid.addView(row)
             }
             sheet.addView(scroll)
-            // Tap outside (the column background) → dismiss.
-            sheet.setOnClickListener { dialog.dismiss() }
-            dialog.setContentView(sheet)
+            // Dismissing on a tap anywhere in the sheet was a workaround for the
+            // sheet being the whole screen. setFolderContent gives the folder a
+            // real outside, so the card must now swallow its own taps instead.
+            dialog.setFolderContent(ctx, sheet)
             dialog.show()
         }
 

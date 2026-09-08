@@ -440,14 +440,18 @@ class SuitePhoneAppsFragment : Fragment() {
         label: String,
         contents: List<AppInfo>,
     ) {
-        val dialog = Dialog(ctx, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        val dialog = launcherFolderDialog(ctx)
         dialog.window?.requestFeature(Window.FEATURE_NO_TITLE)
         val sheet = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(0xEE0A0A14.toInt())
+            // Background is applied by setFolderContent — the card corners have
+            // to be part of the same drawable, so setting a flat colour here
+            // would just paint square edges over them.
             val pad = dp(ctx, 16); setPadding(pad, pad, pad, pad)
+            // Dismissing on a tap anywhere in the sheet was a workaround for the
+            // sheet being the whole screen. The folder now has a real outside,
+            // so the card swallows its own taps instead.
             isClickable = true
-            setOnClickListener { dialog.dismiss() }
         }
         sheet.addView(TextView(ctx).apply {
             text = label
@@ -483,7 +487,7 @@ class SuitePhoneAppsFragment : Fragment() {
             grid.addView(row)
         }
         sheet.addView(scroll)
-        dialog.setContentView(sheet)
+        dialog.setFolderContent(ctx, sheet)
         dialog.show()
     }
 

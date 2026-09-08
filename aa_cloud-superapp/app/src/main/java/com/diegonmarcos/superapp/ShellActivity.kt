@@ -1876,10 +1876,16 @@ open class ShellActivity : AppCompatActivity(),
         super.onNewIntent(intent)
         // Pressing the system HOME button while we're the default launcher
         // re-delivers our launcher intent here (ACTION_MAIN + CATEGORY_HOME, no
-        // shortcut_action). Other apps get sent to us; inside us it must reset to
-        // the home page too — otherwise HOME is a no-op on non-home pages.
-        if (intent.hasCategory(android.content.Intent.CATEGORY_HOME)) resetToHome()
-        else handleShortcutIntent(intent)
+        // shortcut_action). This used to call resetToHome(), so coming back from
+        // another app always dumped you on the home page and threw away wherever
+        // you actually were. HOME now resumes the last page instead: keep the
+        // section and the back stack, and only close the drawer, which is a
+        // transient overlay rather than a place you were.
+        if (intent.hasCategory(android.content.Intent.CATEGORY_HOME)) {
+            if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                drawerLayout.closeDrawer(GravityCompat.START)
+            }
+        } else handleShortcutIntent(intent)
     }
 
     /** Return to a clean Home root: close the drawer, drop any pushed pages and

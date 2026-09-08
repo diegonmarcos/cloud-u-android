@@ -1020,13 +1020,23 @@
       ],
       "_doc_roles": "Single-holder RoleManager roles surfaced as Special-access rows on Configs/About → Permissions. These are NOT held by the SuperApp (it's a launcher with no dialer / call-screening service) — the holder is the Cloud-Comms phone fork (or Fossify Phone in the interim). The SuperApp cannot grant another app a role programmatically (createRequestRoleIntent only ever targets the calling app), so each row (a) reads the LIVE holder via RoleManager.getRoleHolders / TelecomManager.getDefaultDialerPackage and shows ✓ when the holder is one of `expected_holders`, and (b) the 'Set Default Apps' button deep-links to Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS so the user picks Cloud-Comms there. `role` is the literal android.app.role.* constant passed straight to RoleManager. When our own fork ships, add its package to the relevant expected_holders[] — zero code change.",
       "_doc_privileged": "Signature/privileged perms Android will NEVER show a runtime dialog for. They are grantable only by the shell user (uid 2000) via `pm grant <pkg> <perm>` over the privileged plane (embedded adb / Shizuku / cloud-superapp-mcp superapp_grant). A `pm grant` persists across reboots AND across in-place updates of the same package (silent installs are updates, not reinstalls), so one grant is for all time until an uninstall. READ_LOGS is what lets an app read the FULL system logcat into its own log view instead of only its own uid — the Registros/Logs screen needs it to be useful. `apps` is an OPTIONAL override: when present it is the exact list granted (used to NARROW a grant, e.g. WRITE_SECURE_SETTINGS goes to superapp only). When absent, PrivilegedPlaneWorker resolves targets dynamically as fleet ∩ installed packages whose own manifest declares that permission — `pm grant` is a silent no-op for a package that never declared the perm. READ_LOGS is narrowed back to the superapp DELIBERATELY, and the earlier note here claiming the dynamic list rescued nix-on-droid and termux from 'the logcat dialog forever' had the causality backwards: holding READ_LOGS is what SENDS an app to that dialog. It maps the process into the `log` supplementary gid (frameworks/base data/etc/platform.xml), and that gid is precisely the test logd applies in clientHasLogCredentials() — a client without it is served its own uid's lines immediately and silently (system/logging/logd/LogReader.cpp:260), while a client WITH it is routed to LogcatManagerService's SystemUI consent dialog. That consent cannot be persisted by any means: it lives in an in-memory map cleared 60s after each approval, there is no app-op behind it, and the dialog has no 'remember' control. So granting it fleet-wide to stop the prompts made every app prompt instead. Only the superapp's cross-app log viewer genuinely needs it; every other fleet reader is written for own-uid output already.",
-    "privileged": [
-      {"label": "Read system logs (full logcat)", "perm": "android.permission.READ_LOGS",
-       "apps": ["com.diegonmarcos.superapp"]},
-      {"label": "Write secure settings (re-enable Wireless Debugging on boot)", "perm": "android.permission.WRITE_SECURE_SETTINGS",
-       "apps": ["com.diegonmarcos.superapp"]}
-    ],
-    "roles": [
+      "privileged": [
+        {
+          "label": "Read system logs (full logcat)",
+          "perm": "android.permission.READ_LOGS",
+          "apps": [
+            "com.diegonmarcos.superapp"
+          ]
+        },
+        {
+          "label": "Write secure settings (re-enable Wireless Debugging on boot)",
+          "perm": "android.permission.WRITE_SECURE_SETTINGS",
+          "apps": [
+            "com.diegonmarcos.superapp"
+          ]
+        }
+      ],
+      "roles": [
         {
           "label": "Default phone app",
           "role": "android.app.role.DIALER",
@@ -1168,8 +1178,14 @@
             "label": "By",
             "default": "time",
             "options": [
-              { "id": "time", "label": "Time" },
-              { "id": "app",  "label": "App" }
+              {
+                "id": "time",
+                "label": "Time"
+              },
+              {
+                "id": "app",
+                "label": "App"
+              }
             ]
           },
           {
@@ -1177,9 +1193,18 @@
             "label": "Source",
             "default": "both",
             "options": [
-              { "id": "both",  "label": "Both" },
-              { "id": "cloud", "label": "Cloud" },
-              { "id": "phone", "label": "Phone" }
+              {
+                "id": "both",
+                "label": "Both"
+              },
+              {
+                "id": "cloud",
+                "label": "Cloud"
+              },
+              {
+                "id": "phone",
+                "label": "Phone"
+              }
             ]
           },
           {
@@ -1187,8 +1212,14 @@
             "label": "Show",
             "default": "all",
             "options": [
-              { "id": "all",    "label": "All" },
-              { "id": "unread", "label": "Unread" }
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "unread",
+                "label": "Unread"
+              }
             ]
           }
         ],
@@ -2967,10 +2998,24 @@
             ],
             "_doc_anchors": "The sub-tables this ONE card provides as anchor targets, declared the way a section declares its pages: an `id` other tiles point at with `target: \"anchor:<id>\"`, plus the header inside this card it lands on. `group` alone binds to that group's header; adding `subgroup` binds to a sub-header under it. The id is NEVER derived from a label — renaming the \"VMs\" sub-header cannot rename `stack/vms`, it only breaks the binding, and test/test-stack-anchors-declared.sh fails on a binding whose group/subgroup is not in data/cloud_services.json. It also removes the old ambiguity where group \"DBs (storage)\" and subgroup \"DBs\" both slugged to `dbs`: `stack/dbs` says group, so it lands on the group header by declaration rather than by registration order.",
             "anchors": [
-              { "id": "stack/providers", "group": "providers" },
-              { "id": "stack/vms", "group": "providers", "subgroup": "VMs" },
-              { "id": "stack/dbs", "group": "dbs" },
-              { "id": "stack/apis", "group": "mcpapi", "subgroup": "APIs" }
+              {
+                "id": "stack/providers",
+                "group": "providers"
+              },
+              {
+                "id": "stack/vms",
+                "group": "providers",
+                "subgroup": "VMs"
+              },
+              {
+                "id": "stack/dbs",
+                "group": "dbs"
+              },
+              {
+                "id": "stack/apis",
+                "group": "mcpapi",
+                "subgroup": "APIs"
+              }
             ]
           },
           {
@@ -3980,7 +4025,7 @@
       {
         "id": "prod_ai",
         "order": "410",
-        "label": ".AI",
+        "label": "@AI",
         "match_keywords": [
           "pkg:ai.perplexity.app.android",
           "pkg:ai.perplexity.comet",
@@ -3999,27 +4044,9 @@
         ]
       },
       {
-        "id": "prod_plan",
-        "order": "420",
-        "label": ".Calendar & Tasks",
-        "match_keywords": [
-          "pkg:com.diegonmarcos.cloudcalendar",
-          "pkg:com.gianlu.timeless",
-          "pkg:com.google.android.apps.tasks",
-          "pkg:com.google.android.calendar",
-          "pkg:com.microsoft.todos",
-          "pkg:com.samsung.android.app.reminder",
-          "pkg:com.samsung.android.calendar",
-          "pkg:com.toggl.giskard",
-          "pkg:com.trello",
-          "pkg:me.clockify.android",
-          "pkg:todolist.scheduleplanner.dailyplanner.todo.reminders"
-        ]
-      },
-      {
         "id": "prod_chat",
-        "order": "430",
-        "label": ".Chat",
+        "order": "420",
+        "label": "@Chat",
         "match_keywords": [
           "pkg:chat.rocket.android",
           "pkg:com.beeper.android",
@@ -4041,8 +4068,70 @@
         ]
       },
       {
-        "id": "prod_docs",
+        "id": "prod_mail",
+        "order": "430",
+        "label": "@Mail",
+        "match_keywords": [
+          "pkg:com.diegonmarcos.comms.mail",
+          "pkg:com.fsck.k9",
+          "pkg:com.google.android.gm",
+          "pkg:com.mailtemi.email",
+          "pkg:com.microsoft.office.outlook",
+          "pkg:com.samsung.android.email.provider",
+          "pkg:email.clean.android",
+          "pkg:eu.faircode.email",
+          "pkg:rs.ltt.android"
+        ]
+      },
+      {
+        "id": "hlth_news",
         "order": "440",
+        "label": "@News & Reading",
+        "match_keywords": [
+          "pkg:com.checkitt",
+          "pkg:com.diegonmarcos.cloudnews",
+          "pkg:com.flyersoft.moonreader",
+          "pkg:com.google.android.apps.magazines",
+          "pkg:com.rama.mako",
+          "pkg:com.samsung.android.app.spage",
+          "pkg:com.substack.app"
+        ]
+      },
+      {
+        "id": "prod_phone",
+        "order": "450",
+        "label": "@Phone & Contacts",
+        "match_keywords": [
+          "pkg:com.diegonmarcos.cloudcontacts",
+          "pkg:com.diegonmarcos.comms.contacts",
+          "pkg:com.diegonmarcos.comms.dialer",
+          "pkg:com.google.android.apps.messaging",
+          "pkg:com.samsung.android.app.contacts",
+          "pkg:com.samsung.android.dialer",
+          "pkg:com.samsung.android.messaging"
+        ]
+      },
+      {
+        "id": "prod_plan",
+        "order": "510",
+        "label": ".Calendar & Tasks",
+        "match_keywords": [
+          "pkg:com.diegonmarcos.cloudcalendar",
+          "pkg:com.gianlu.timeless",
+          "pkg:com.google.android.apps.tasks",
+          "pkg:com.google.android.calendar",
+          "pkg:com.microsoft.todos",
+          "pkg:com.samsung.android.app.reminder",
+          "pkg:com.samsung.android.calendar",
+          "pkg:com.toggl.giskard",
+          "pkg:com.trello",
+          "pkg:me.clockify.android",
+          "pkg:todolist.scheduleplanner.dailyplanner.todo.reminders"
+        ]
+      },
+      {
+        "id": "prod_docs",
+        "order": "520",
         "label": ".Docs & Notes",
         "match_keywords": [
           "pkg:com.adeeteya.markdown_editor",
@@ -4059,51 +4148,8 @@
         ]
       },
       {
-        "id": "prod_mail",
-        "order": "450",
-        "label": ".Mail",
-        "match_keywords": [
-          "pkg:com.diegonmarcos.comms.mail",
-          "pkg:com.fsck.k9",
-          "pkg:com.google.android.gm",
-          "pkg:com.mailtemi.email",
-          "pkg:com.microsoft.office.outlook",
-          "pkg:com.samsung.android.email.provider",
-          "pkg:email.clean.android",
-          "pkg:eu.faircode.email",
-          "pkg:rs.ltt.android"
-        ]
-      },
-      {
-        "id": "prod_maps",
-        "order": "460",
-        "label": ".Maps & Weather",
-        "match_keywords": [
-          "pkg:aplicacion.tiempo",
-          "pkg:com.diegonmarcos.cloudnav",
-          "pkg:com.google.android.apps.maps",
-          "pkg:com.google.earth",
-          "pkg:com.mapswithme.maps.pro",
-          "pkg:cz.ackee.ventusky"
-        ]
-      },
-      {
-        "id": "prod_phone",
-        "order": "470",
-        "label": ".Phone & Contacts",
-        "match_keywords": [
-          "pkg:com.diegonmarcos.cloudcontacts",
-          "pkg:com.diegonmarcos.comms.contacts",
-          "pkg:com.diegonmarcos.comms.dialer",
-          "pkg:com.google.android.apps.messaging",
-          "pkg:com.samsung.android.app.contacts",
-          "pkg:com.samsung.android.dialer",
-          "pkg:com.samsung.android.messaging"
-        ]
-      },
-      {
         "id": "prod_storage",
-        "order": "480",
+        "order": "530",
         "label": ".Storage",
         "match_keywords": [
           "pkg:cld.camera",
@@ -4131,9 +4177,22 @@
         ]
       },
       {
+        "id": "prod_maps",
+        "order": "610",
+        "label": "=Maps & Weather",
+        "match_keywords": [
+          "pkg:aplicacion.tiempo",
+          "pkg:com.diegonmarcos.cloudnav",
+          "pkg:com.google.android.apps.maps",
+          "pkg:com.google.earth",
+          "pkg:com.mapswithme.maps.pro",
+          "pkg:cz.ackee.ventusky"
+        ]
+      },
+      {
         "id": "prod_utils",
-        "order": "490",
-        "label": ".Utilities",
+        "order": "620",
+        "label": "=Utilities",
         "match_keywords": [
           "pkg:com.adobe.reader",
           "pkg:com.diotek.sec.lookup.dictionary",
@@ -4149,8 +4208,8 @@
       },
       {
         "id": "prod_web",
-        "order": "500",
-        "label": ".Web",
+        "order": "630",
+        "label": "=Web",
         "match_keywords": [
           "pkg:com.android.chrome",
           "pkg:com.brave.browser",
@@ -4162,7 +4221,7 @@
       },
       {
         "id": "media_games",
-        "order": "510",
+        "order": "710",
         "label": ">Games",
         "match_keywords": [
           "pkg:com.epicgames.portal",
@@ -4174,7 +4233,7 @@
       },
       {
         "id": "media_audio",
-        "order": "520",
+        "order": "720",
         "label": ">Music & Audio",
         "match_keywords": [
           "pkg:at.zuggabecka.radiofm4",
@@ -4190,7 +4249,7 @@
       },
       {
         "id": "media_social",
-        "order": "530",
+        "order": "730",
         "label": ">Social",
         "match_keywords": [
           "pkg:com.badoo.mobile",
@@ -4204,7 +4263,7 @@
       },
       {
         "id": "media_video",
-        "order": "540",
+        "order": "740",
         "label": ">Video",
         "match_keywords": [
           "pkg:com.amazon.avod.thirdpartyclient",
@@ -4218,7 +4277,7 @@
       },
       {
         "id": "hlth_learning",
-        "order": "610",
+        "order": "810",
         "label": "*Learning",
         "match_keywords": [
           "pkg:air.nn.mobile.app.main",
@@ -4237,22 +4296,8 @@
         ]
       },
       {
-        "id": "hlth_news",
-        "order": "620",
-        "label": "*News & Reading",
-        "match_keywords": [
-          "pkg:com.checkitt",
-          "pkg:com.diegonmarcos.cloudnews",
-          "pkg:com.flyersoft.moonreader",
-          "pkg:com.google.android.apps.magazines",
-          "pkg:com.rama.mako",
-          "pkg:com.samsung.android.app.spage",
-          "pkg:com.substack.app"
-        ]
-      },
-      {
         "id": "hlth_outdoor",
-        "order": "630",
+        "order": "820",
         "label": "*Outdoor & Sport",
         "match_keywords": [
           "pkg:com.alltrails.alltrails",
@@ -4272,19 +4317,19 @@
       },
       {
         "id": "misc",
-        "order": "710",
+        "order": "910",
         "label": "Misc",
         "match_keywords": []
       },
       {
         "id": "new_apps",
-        "order": "720",
+        "order": "920",
         "label": "New Apps",
         "match_keywords": [],
         "sink": true
       }
     ],
-    "_doc_phone_sections": "Top-level section headers in the Home Apps/Phone tab. Folders are bucketed under a section by their label's first character: Services · Buro (-), Services · Others (+), Tools · System (_), Tools · Productivity (.), Tools · Media (>), Tools · Health (*). A folder whose label starts with none of those prefixes belongs to no section and renders last (that is where the New Apps and Misc sinks live). The split is Service vs Tool: a SERVICE is a client for one external provider you hold an account, contract or booking with, and is worthless without that provider (Santander, Ryanair, Uber, Airalo, ImmoScout24, Gov.br); a TOOL is software that operates on your own data or device and works with any provider or none (maps, file managers, notes, keyboards, browsers, media players). Entertainment clients are tools, not services: you reach for Netflix the way you reach for a media player. Tools · Media is what you watch, listen to and play; Tools · Health is what you open to look after yourself — moving your body, learning something, staying informed. Services then split again by why you open them: BURO is the paperwork of being alive, the accounts you must keep in order (money, government and identity, telecom, housing, health, getting to work); OTHERS is discretionary, the services you open because you chose to (travel, shopping, events, jobs). Order = render order. Empty sections (every folder empty) are silently skipped. Phone tab renders one subhead per non-empty section + the folder grid below.",
+    "_doc_phone_sections": "Top-level section headers in the Home Apps/Phone tab. Folders are bucketed under a section by their label's first character: Services · Buro (-), Services · Others (+), Tools · System (_), Tools · Inboxes & AI (@), Tools · Data Apps (.), Tools · Primary (=), Tools · Media (>), Tools · Health (*). A folder whose label starts with none of those prefixes belongs to no section and renders last (that is where the New Apps and Misc sinks live). The split is Service vs Tool: a SERVICE is a client for one external provider you hold an account, contract or booking with, and is worthless without that provider (Santander, Ryanair, Uber, Airalo, ImmoScout24, Gov.br); a TOOL is software that operates on your own data or device and works with any provider or none (maps, file managers, notes, keyboards, browsers, media players). Entertainment clients are tools, not services: you reach for Netflix the way you reach for a media player. Tools · Inboxes & AI is everything that carries messages in and the assistants you talk to: AI, Chat, Mail, Phone & Contacts, News & Reading — it sits ahead of the other tool sections because it is what you open first and most. Tools · Data Apps holds the tools that own a body of your data (Calendar & Tasks, Docs & Notes, Storage); Tools · Primary holds the general-purpose ones that operate on whatever you point them at (Maps & Weather, Utilities, Web). Tools · Media is what you watch, listen to and play; Tools · Health is what you open to look after yourself — moving your body, learning something, staying informed. Services then split again by why you open them: BURO is the paperwork of being alive, the accounts you must keep in order (money, government and identity, telecom, housing, health, getting to work); OTHERS is discretionary, the services you open because you chose to (travel, shopping, events, jobs). Order = render order. Empty sections (every folder empty) are silently skipped. Phone tab renders one subhead per non-empty section + the folder grid below.",
     "phone_sections": [
       {
         "title": "Services · Buro",
@@ -4299,8 +4344,16 @@
         "prefix": "_"
       },
       {
-        "title": "Tools · Productivity",
+        "title": "Tools · Inboxes & AI",
+        "prefix": "@"
+      },
+      {
+        "title": "Tools · Data Apps",
         "prefix": "."
+      },
+      {
+        "title": "Tools · Primary",
+        "prefix": "="
       },
       {
         "title": "Tools · Media",
