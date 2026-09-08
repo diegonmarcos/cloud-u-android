@@ -38,6 +38,34 @@ object AppUsageProvider {
         return rankByLastUse(ctx, start, now, floor = start)
     }
 
+    /**
+     * Packages ranked by the LAST TIME THEY WERE OPENED — most recent first,
+     * 7-day window.
+     *
+     * Deliberately not [recentUsed]: that reads `lastTimeUsed`, which the
+     * system also bumps for work an app does without the user ever choosing
+     * it, so a sync adapter or a widget refresh outranks an app you actually
+     * launched. This counts MOVE_TO_FOREGROUND events only — an app appears
+     * here because it was brought to the front, which is what "last opened"
+     * means to a person reading the list.
+     */
+    fun lastOpened(ctx: Context, now: Long = System.currentTimeMillis()): List<String> {
+        val u = usm(ctx) ?: return emptyList()
+        val start = now - 7 * DAY_MS
+        val last = HashMap<String, Long>()
+        runCatching {
+            val ev = u.queryEvents(start, now)
+            val e = UsageEvents.Event()
+            while (ev.hasNextEvent()) {
+                ev.getNextEvent(e)
+                if (e.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) {
+                    last[e.packageName] = maxOf(last[e.packageName] ?: 0L, e.timeStamp)
+                }
+            }
+        }
+        return last.entries.sortedByDescending { it.value }.map { it.key }
+    }
+
     /** Packages ranked by launch count — MOVE_TO_FOREGROUND events over 7 days. */
     fun mostOpened(ctx: Context, now: Long = System.currentTimeMillis()): List<String> {
         val u = usm(ctx) ?: return emptyList()
