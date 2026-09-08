@@ -70,7 +70,15 @@ class SuitePhoneAppsFragment : Fragment() {
             val pad = dp(ctx, 8); setPadding(pad, pad, pad, dp(ctx, 96))
         }
         scroll.addView(root)
+        buildPage(ctx, root)
+        return scroll
+    }
 
+    /** The whole page, so the bottom refresh button can clear [root] and call
+     *  this again — the same clear-and-rebuild shape PhoneAppsFragment uses.
+     *  Everything below used to sit inline in onCreateView, which is why this
+     *  page had no way to rebuild itself and therefore no refresh button. */
+    private fun buildPage(ctx: Context, root: LinearLayout) {
         // ── Quickmarks — the curated groups/folders/active-apps content
         //    that used to be this fragment's entire page. Now the first
         //    of three stacked sections on one scrollable page.
@@ -248,10 +256,17 @@ class SuitePhoneAppsFragment : Fragment() {
                 if (!isAdded) return@post
                 root.addView(sectionDivider(ctx))
                 PhoneAppsFragment.renderSmartFolders(ctx, root, ourApps)
+
+                // Refresh belongs at the VERY BOTTOM, so it has to be added
+                // from inside the last deferred section — added in buildPage's
+                // own frame it would land above the two posted sections.
+                root.addView(PhoneAppsFragment.refreshBar(ctx) {
+                    PhoneAppsFragment.invalidateCache()
+                    root.removeAllViews()
+                    buildPage(ctx, root)
+                })
             }
         }
-
-        return scroll
     }
 
     private fun parseGroups(): List<Group> = runCatching {

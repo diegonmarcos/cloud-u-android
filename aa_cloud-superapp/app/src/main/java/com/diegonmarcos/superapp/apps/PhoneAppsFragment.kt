@@ -80,32 +80,6 @@ class PhoneAppsFragment : Fragment() {
         return scroll
     }
 
-    /** Centered "refresh app list" icon. */
-    private fun refreshBar(ctx: Context, onRefresh: () -> Unit): View {
-        val bar = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-            ).apply { topMargin = dp(ctx, 8) }
-        }
-        bar.addView(android.widget.ImageView(ctx).apply {
-            setImageResource(R.drawable.ic_refresh)
-            imageTintList = android.content.res.ColorStateList.valueOf(0xCCFFFFFF.toInt())
-            val sz = dp(ctx, 22); val p = dp(ctx, 8)
-            layoutParams = LinearLayout.LayoutParams(sz + 2 * p, sz + 2 * p)
-            setPadding(p, p, p, p)
-            isClickable = true; isFocusable = true
-            contentDescription = "Refresh app list"
-            val outVal = android.util.TypedValue()
-            ctx.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outVal, true)
-            if (outVal.resourceId != 0) setBackgroundResource(outVal.resourceId)
-            setOnClickListener { Haptics.tap(it); onRefresh() }
-        })
-        return bar
-    }
-
     /** true = A–Z folders (alphabetic), false = category + smart folders.
      *  In-memory only — resets to Categories each time the sheet opens. */
     private var alphaMode = false
@@ -199,6 +173,36 @@ class PhoneAppsFragment : Fragment() {
 
     companion object {
         fun newInstance() = PhoneAppsFragment()
+
+        /** Centered "refresh app list" icon, pinned at the very bottom of a
+         *  page. Lives in the companion because BOTH app surfaces need it:
+         *  this fragment's Phone tab and SuitePhoneAppsFragment's merged
+         *  Suite→Phone page, which only ever embedded the grid renderers and
+         *  so silently lost the refresh affordance. */
+        fun refreshBar(ctx: Context, onRefresh: () -> Unit): View {
+            val bar = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ).apply { topMargin = dp(ctx, 8) }
+            }
+            bar.addView(android.widget.ImageView(ctx).apply {
+                setImageResource(R.drawable.ic_refresh)
+                imageTintList = android.content.res.ColorStateList.valueOf(0xCCFFFFFF.toInt())
+                val sz = dp(ctx, 22); val p = dp(ctx, 8)
+                layoutParams = LinearLayout.LayoutParams(sz + 2 * p, sz + 2 * p)
+                setPadding(p, p, p, p)
+                isClickable = true; isFocusable = true
+                contentDescription = "Refresh app list"
+                val outVal = android.util.TypedValue()
+                ctx.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outVal, true)
+                if (outVal.resourceId != 0) setBackgroundResource(outVal.resourceId)
+                setOnClickListener { Haptics.tap(it); onRefresh() }
+            })
+            return bar
+        }
 
         /** "All Apps by purpose" — category folder grid, bucketed by
          *  label prefix (System _, Services -, Tools A ., Tools B >),
