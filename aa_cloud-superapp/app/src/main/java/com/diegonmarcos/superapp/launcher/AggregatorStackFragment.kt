@@ -35,6 +35,7 @@ import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.diegonmarcos.superapp.apps.PhoneTaxonomy
 import com.diegonmarcos.superapp.core.NotificationStore
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.async
@@ -101,6 +102,12 @@ class AggregatorStackFragment : Fragment(),
     private var filterPage = ""
     private var sortMode   = "time"
     private var showMode   = "all"
+    /** The two phone-taxonomy rows. Their values are the SECTION PREFIX
+     *  characters declared in ui.phone_sections ("@", ".", "=", "-", "+"), or
+     *  "all". Keeping the prefix itself as the option id is what lets a section
+     *  added to build.json become filterable with no Kotlin-side list. */
+    private var toolsMode    = "all"
+    private var servicesMode = "all"
     /** Start of this visit's NEW window: the ts of the PREVIOUS visit.
      *  Captured before the watermark is advanced so toggling Show back and
      *  forth within one visit keeps answering the same question. This is what
@@ -168,8 +175,10 @@ class AggregatorStackFragment : Fragment(),
         if (filters.isNotEmpty()) {
             visitSeenAt = StackFilters.lastSeen(ctx, filterPage)
             StackFilters.markSeen(ctx, filterPage, System.currentTimeMillis())
-            sortMode = selection(ctx, filters, "sort", sortMode)
-            showMode = selection(ctx, filters, "show", showMode)
+            sortMode     = selection(ctx, filters, "sort", sortMode)
+            showMode     = selection(ctx, filters, "show", showMode)
+            toolsMode    = selection(ctx, filters, FILTER_TOOLS, "all")
+            servicesMode = selection(ctx, filters, FILTER_SERVICES, "all")
             column.addView(filterRow(ctx, filters))
         }
 
@@ -203,9 +212,14 @@ class AggregatorStackFragment : Fragment(),
     ): String = filters.firstOrNull { it.id == id }
         ?.let { StackFilters.selected(ctx, filterPage, it) } ?: fallback
 
-    /** The declared toggles, one horizontal button row each. Same idiom as
-     *  the other button rows in the app (plain Buttons, weight 1f, in a
-     *  horizontal LinearLayout); the current option is the opaque one. */
+    /** The declared toggles, one segmented control each.
+     *
+     *  These used to be plain framework Buttons at 0.45 alpha when inactive —
+     *  five of those stacked read as a wall of grey slabs, and dimming is a
+     *  weak "not selected" signal next to a raised button's own shadow. Now
+     *  each row is a single rounded track holding equal-weight segments, with
+     *  exactly one filled pill: the selected value is the only thing on the
+     *  row with a background, which is what makes it legible at a glance. */
     private fun filterRow(
         ctx: android.content.Context,
         filters: List<Sections.StackFilter>,
@@ -214,33 +228,90 @@ class AggregatorStackFragment : Fragment(),
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, dp(6))
         }
+        // Every row's repainter, so one row can redraw another: picking a
+        // taxonomy value resets its sibling row (see resetTaxonomySibling),
+        // and that reset has to be visible, not just stored.
+        val repainters = mutableListOf<() -> Unit>()
         for (filter in filters) {
             host.addView(caption(ctx, filter.label))
-            val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-            val buttons = mutableMapOf<String, android.widget.Button>()
+            val track = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    cornerRadius = dp(22).toFloat()
+                    setColor(FILTER_TRACK)
+                }
+                val p = dp(3)
+                setPadding(p, p, p, p)
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ).apply { bottomMargin = dp(6) }
+            }
+            val segments = mutableMapOf<String, android.widget.TextView>()
             fun paint() {
                 val active = StackFilters.selected(ctx, filterPage, filter)
-                for ((id, b) in buttons) b.alpha = if (id == active) 1f else 0.45f
+                for ((id, segment) in segments) {
+                    val on = id == active
+                    segment.background = if (!on) null else
+                        android.graphics.drawable.GradientDrawable().apply {
+                            cornerRadius = dp(19).toFloat()
+                            setColor(FILTER_ACTIVE)
+                        }
+                    segment.setTextColor(if (on) FILTER_ACTIVE_TEXT else FILTER_IDLE_TEXT)
+                    segment.typeface =
+                        if (on) android.graphics.Typeface.DEFAULT_BOLD
+                        else android.graphics.Typeface.DEFAULT
+                }
             }
+            repainters += { paint() }
             for (option in filter.options) {
-                val b = android.widget.Button(ctx).apply {
+                val segment = android.widget.TextView(ctx).apply {
                     text = option.label
+                    textSize = 12f
+                    gravity = android.view.Gravity.CENTER
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    val ph = dp(8); val pv = dp(7)
+                    setPadding(ph, pv, ph, pv)
+                    isClickable = true
+                    isFocusable = true
                     layoutParams = LinearLayout.LayoutParams(
                         0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f,
                     )
                     setOnClickListener {
                         StackFilters.select(ctx, filterPage, filter.id, option.id)
-                        paint()
+                        resetTaxonomySibling(ctx, filters, filter.id, option.id)
+                        for (repaint in repainters) repaint()
                         onFilterChanged(ctx, filters)
                     }
                 }
-                buttons[option.id] = b
-                row.addView(b)
+                segments[option.id] = segment
+                track.addView(segment)
             }
             paint()
-            host.addView(row)
+            host.addView(track)
         }
         return host
+    }
+
+    /** The two taxonomy rows are ONE choice spread over two rows: an app is a
+     *  Tool or a Service, never both, so a value left set in each would AND to
+     *  a permanently empty page and read as a broken filter. Narrowing one row
+     *  therefore returns the other to All. */
+    private fun resetTaxonomySibling(
+        ctx: android.content.Context,
+        filters: List<Sections.StackFilter>,
+        changed: String,
+        picked: String,
+    ) {
+        if (picked == "all") return
+        val siblingId = when (changed) {
+            FILTER_TOOLS    -> FILTER_SERVICES
+            FILTER_SERVICES -> FILTER_TOOLS
+            else            -> return
+        }
+        val sibling = filters.firstOrNull { it.id == siblingId } ?: return
+        StackFilters.select(ctx, filterPage, sibling.id, "all")
     }
 
     /** Re-apply every toggle after one of them changed. */
@@ -248,10 +319,24 @@ class AggregatorStackFragment : Fragment(),
         ctx: android.content.Context,
         filters: List<Sections.StackFilter>,
     ) {
-        sortMode = selection(ctx, filters, "sort", sortMode)
-        showMode = selection(ctx, filters, "show", showMode)
+        sortMode     = selection(ctx, filters, "sort", sortMode)
+        showMode     = selection(ctx, filters, "show", showMode)
+        toolsMode    = selection(ctx, filters, FILTER_TOOLS, "all")
+        servicesMode = selection(ctx, filters, FILTER_SERVICES, "all")
         for (refresh in bodyRefreshers) refresh()
         applySource(ctx, filters)
+    }
+
+    /** Keep a phone-stream app under the two taxonomy rows. Both default to
+     *  "all" and only one can be narrowed at a time, so this is a single
+     *  prefix comparison in practice. */
+    private fun taxonomyKeeps(packageName: String, label: String): Boolean {
+        val want = when {
+            toolsMode    != "all" -> toolsMode
+            servicesMode != "all" -> servicesMode
+            else                  -> return true
+        }
+        return PhoneTaxonomy.sectionPrefixOf(packageName, label) == want
     }
 
     /**
@@ -928,6 +1013,10 @@ class AggregatorStackFragment : Fragment(),
                     },
                 )
             }
+            // Phone-taxonomy rows. Filtering here rather than hiding rendered
+            // views keeps renderGroups' own count honest, so an empty result
+            // still lands on filteredAwayNote instead of a bare page.
+            .filter { taxonomyKeeps(it.launchPackage, it.label) }
         // The store IS the complete phone namespace, so this prune sees
         // everything it is allowed to retire.
         StackFilters.pruneRead(ctx, filterPage, PHONE_NS,
@@ -2134,6 +2223,17 @@ class AggregatorStackFragment : Fragment(),
         /** Marks the "Source hid everything" note so it is reused, not
          *  appended once per toggle tap. */
         private const val SOURCE_EMPTY_TAG = "stack_source_empty"
+
+        /** The two phone-taxonomy filter ids. Named because three call sites
+         *  read them and the sibling-reset rule pairs them explicitly. */
+        private const val FILTER_TOOLS    = "tools"
+        private const val FILTER_SERVICES = "services"
+
+        /** Segmented-control palette: one filled pill on a faint track. */
+        private const val FILTER_TRACK       = 0x14FFFFFF
+        private val FILTER_ACTIVE            = 0xFFE9D8FD.toInt()
+        private val FILTER_ACTIVE_TEXT       = 0xFF1A1A24.toInt()
+        private val FILTER_IDLE_TEXT         = 0x99FFFFFF.toInt()
         /** Marks a notification group's verdict chip so an async ntfy poll can
          *  find it again without a field per group. */
         private const val GROUP_STATE_TAG = "notif_group_state"
