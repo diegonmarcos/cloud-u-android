@@ -396,17 +396,12 @@
         {
           "label": "Inboxes Msgs",
           "icon": "ic_chat",
-          "target": "page:communication/msgs"
+          "target": "page:infos/msgs"
         },
         {
           "label": "Inboxes Apps RSS",
           "icon": "ic_p_sol_personal",
           "target": "page:communication/my-rss"
-        },
-        {
-          "label": "Inboxes Infra RSS",
-          "icon": "ic_p_sol_cloud",
-          "target": "page:communication/cloud-rss"
         },
         {
           "label": "Projects My-PM",
@@ -1062,116 +1057,53 @@
     "sections": [
       {
         "id": "communication",
-        "label": "Inboxes",
+        "label": "Notify",
         "icon": "ic_p_inbox",
         "module": null,
         "bottom_nav": true,
         "is_aggregator": true,
         "pages": [
           {
-            "id": "msgs",
-            "label": "Msgs",
-            "icon": "ic_chat",
-            "facet": true
-          },
-          {
             "id": "my-rss",
-            "_doc_label": "Renamed My-RSS → Apps RSS (and Cloud-RSS → Infra RSS) on request. ONLY the label moved: the id `my-rss` is the data key for stack_my-rss / filters_my-rss and the target of `page:communication/my-rss`, so renaming it would silently break the navigation and back-stack lookups that resolve those targets.",
-            "label": "Apps RSS",
+            "label": "All",
             "icon": "ic_p_sol_personal",
             "facet": true
           },
           {
-            "id": "cloud-rss",
-            "label": "C3 Ntfy",
-            "icon": "ic_rss",
+            "id": "rss-inboxes",
+            "label": "Inboxes",
+            "icon": "ic_p_inbox",
+            "facet": true
+          },
+          {
+            "id": "rss-data",
+            "label": "Data Apps",
+            "icon": "ic_p_sol_cloud",
+            "facet": true
+          },
+          {
+            "id": "rss-tools",
+            "label": "Tools",
+            "icon": "ic_p_sol_tools",
+            "facet": true
+          },
+          {
+            "id": "rss-services",
+            "label": "Services",
+            "icon": "ic_p_folder",
+            "facet": true
+          },
+          {
+            "id": "rss-sys",
+            "label": "Sys",
+            "icon": "ic_settings",
             "facet": true
           }
         ],
         "tabs": true,
-        "_doc_pages": "Inboxes = what ARRIVES. Msgs is conversation, Apps RSS is this phone's own notifications, Infra RSS is the infrastructure's. Each page owns a stack_<page id> list below — the page id IS the data key, so the three tabs are three independent pages rather than one list shown three times.",
-        "stack_msgs": [
-          {
-            "kind": "mail_accounts",
-            "title": "Mail · accounts"
-          },
-          {
-            "kind": "chat_matrix",
-            "title": "Chat · Matrix"
-          },
-          {
-            "kind": "chat_mattermost",
-            "title": "Chat · Mattermost"
-          },
-          {
-            "kind": "stats",
-            "title": "Messenger (Element)",
-            "subtitle": "Matrix · Element",
-            "rows": [
-              {
-                "label": "Rooms",
-                "value": "14"
-              },
-              {
-                "label": "Unread",
-                "value": "6"
-              },
-              {
-                "label": "Mentions",
-                "value": "2"
-              },
-              {
-                "label": "Last sync",
-                "value": "2 min ago"
-              }
-            ]
-          },
-          {
-            "kind": "stats",
-            "title": "Dialer (Fossy)",
-            "subtitle": "Fossify Phone",
-            "rows": [
-              {
-                "label": "Missed calls",
-                "value": "2"
-              },
-              {
-                "label": "Recent",
-                "value": "8"
-              },
-              {
-                "label": "Contacts",
-                "value": "341"
-              },
-              {
-                "label": "Voicemail",
-                "value": "1"
-              }
-            ]
-          }
-        ],
-        "tiles_msgs": [
-          {
-            "id": "mail",
-            "label": "Mail",
-            "icon": "ic_mail",
-            "target": "extapp:cloud-mail"
-          },
-          {
-            "id": "chat-matrix",
-            "label": "Chat-Matrix",
-            "icon": "ic_p_chat_matrix",
-            "target": "extapp:cloud-matrix"
-          },
-          {
-            "id": "chat-mm",
-            "label": "Chat-Mattermost",
-            "icon": "ic_p_chat_mattermost",
-            "target": "extapp:cloud-chat"
-          }
-        ],
+        "_doc_pages": "Notify — one Apps RSS stack, six PRESETS of it. Every tab renders the SAME three panels (Cloud publishers, Phone apps, C3 Ntfy) and differs only in the `default` of its taxonomy rows, so a preset is data, not a second implementation: All shows everything, and the other five open pre-narrowed to one phone-taxonomy section. C3 Ntfy stopped being its own tab and became the third panel plus a Source option, because it was never a different KIND of page — only a different origin, which Source already models. Filter choices are remembered per PAGE ID, so narrowing one preset never disturbs another. Msgs moved out to Projects (page id kept, relabelled Inboxes): it is a mail/chat console, not a notification stack, and it never belonged on a page whose every sibling reads a notification store.",
         "_doc_stack_my-rss": "Apps RSS is a NOTIFICATION CENTRE divided per app, not a stack of feeds. It declares one card per STREAM and each card renders one group per PUBLISHER. Phone stream: the group key is the notification's own `packageName`, labelled with its `appLabel` — carried by the notification itself, so an app installed tomorrow groups correctly with no edit here and no package list to rot. Cloud stream: the group key is the ntfy TOPIC (and the `source` field for the in-app feed), because a cloud message has no package and the address it was published to is the closest thing it carries to one — a topic has exactly one publisher the way a package has exactly one app. Grouping by SCOPE was the alternative and is wrong: advisory/user/cloud is a routing category shared by many publishers, so it would collapse every unrelated channel into one bucket, which is the undivided list this page replaced. Scope still selects WHICH topics the cloud card carries, via `scopes` below, over the same ui.ntfy catalog Infra RSS browses — there is still no second topic list anywhere. The old rss / notifications / phone_notifications / news_feeds panels are gone: three of the four were child fragments embedded through the fixed host-id pool, which is exactly what cannot survive a card that re-renders on every toggle tap.",
-        "_doc_filters_my-rss": "The five toggles above the Apps RSS stack. Declared here, not in Kotlin: the OPTION SET and the LABELS are data, only the five filter IDS (sort|source|tools|services|show) are a contract the fragment implements. `default` is what a phone shows before the user has ever touched the row; the choice is then remembered per page in SharedPreferences (committed, not applied — this app is the launcher and Android restarts it many times an hour, so a queued write is a setting that silently reverts), and a stored id this file no longer declares falls back to the default rather than stranding the row on an invisible choice. SORT now chooses the ORDER OF THE APP GROUPS — App = alphabetical, Time = most recently active app first — never whether grouping happens, because the division per app IS this page; inside a group the order is always newest-first, so flipping Sort can never bury something fresh. SOURCE works off each panel's `origin` below rather than any package list: a stream is Phone or Cloud by WHERE IT COMES FROM, which cannot go stale. SHOW is All vs Unread and NOT All vs Dismissed: neither NotificationStore nor PhoneNotificationStore records a dismissed flag — PhoneNotificationStore deliberately keeps entries the system already dismissed, and opening the cloud card calls cancelAll(), which destroys dismissal state rather than recording it, so a Dismissed filter would read a field nothing writes and render an eternally empty list. Unread needs no new field at all: it is `ts > last visit`, read before the watermark is advanced so toggling within one visit keeps answering the same question, and both stores already carry ts. TOOLS and SERVICES filter by the PHONE-APPS TAXONOMY: each option id IS the section prefix character declared in ui.phone_sections, so a section added there becomes filterable with no Kotlin change, and PhoneTaxonomy resolves a package to its prefix through the same PhoneAppClassifier + phone_folders the launcher uses. They are ONE choice spread over two rows — an app is a Tool or a Service, never both, so narrowing one row returns the other to All rather than AND-ing to a permanently empty page. They prune the phone groups before rendering, not after, so an empty result still lands on the filtered-away note.",
+        "_doc_filters_my-rss": "The five toggles above the Apps RSS stack. Declared here, not in Kotlin: the OPTION SET and the LABELS are data, only the five filter IDS (sort|source|tools|services|show) are a contract the fragment implements. `default` is what a phone shows before the user has ever touched the row; the choice is then remembered per page in SharedPreferences (committed, not applied — this app is the launcher and Android restarts it many times an hour, so a queued write is a setting that silently reverts), and a stored id this file no longer declares falls back to the default rather than stranding the row on an invisible choice. SORT now chooses the ORDER OF THE APP GROUPS — App = alphabetical, Time = most recently active app first — never whether grouping happens, because the division per app IS this page; inside a group the order is always newest-first, so flipping Sort can never bury something fresh. SOURCE works off each panel's `origin` below rather than any package list: a stream is Phone or Cloud by WHERE IT COMES FROM, which cannot go stale. SHOW is All vs Unread and NOT All vs Dismissed: neither NotificationStore nor PhoneNotificationStore records a dismissed flag — PhoneNotificationStore deliberately keeps entries the system already dismissed, and opening the cloud card calls cancelAll(), which destroys dismissal state rather than recording it, so a Dismissed filter would read a field nothing writes and render an eternally empty list. Unread needs no new field at all: it is `ts > last visit`, read before the watermark is advanced so toggling within one visit keeps answering the same question, and both stores already carry ts. TOOLS and SERVICES filter by the PHONE-APPS TAXONOMY: each option id IS the section prefix character declared in ui.phone_sections, so a section added there becomes filterable with no Kotlin change, and PhoneTaxonomy resolves a package to its prefix through the same PhoneAppClassifier + phone_folders the launcher uses. They are ONE choice spread over two rows — an app is a Tool or a Service, never both, so narrowing one row returns the other to All rather than AND-ing to a permanently empty page. They prune the phone groups before rendering, not after, so an empty result still lands on the filtered-away note. AN OPTION ID IS A SET OF PREFIXES, not one prefix: \"-+\" (Services) matches both Services · Buro (-) and Services · Others (+), and \"=>*\" (Tools) matches Primary (=), Media (>) and Health (*). AggregatorStackFragment.taxonomyKeeps tests membership, so single-character ids keep working unchanged and every phone_sections prefix stays reachable from some tab. THE SIX NOTIFY TABS are one page cloned six times: they all share stack_* (cloud + phone + C3-ntfy) and differ only in their filters_<pageid> defaults — my-rss all/all, rss-inboxes @, rss-data ., rss-tools =>*, rss-services -+, rss-sys _. Selections persist per PAGE ID, so a tab the user retunes keeps its own bucket and the others stay on their preset.",
         "filters_my-rss": [
           {
             "id": "sort",
@@ -1195,7 +1127,7 @@
             "options": [
               {
                 "id": "both",
-                "label": "Both"
+                "label": "All"
               },
               {
                 "id": "cloud",
@@ -1204,6 +1136,10 @@
               {
                 "id": "phone",
                 "label": "Phone"
+              },
+              {
+                "id": "c3ntfy",
+                "label": "C3 Ntfy"
               }
             ]
           },
@@ -1217,16 +1153,20 @@
                 "label": "All"
               },
               {
+                "id": "_",
+                "label": "Sys"
+              },
+              {
                 "id": "@",
-                "label": "AGI & Inboxes"
+                "label": "Inboxes"
               },
               {
                 "id": ".",
                 "label": "Data Apps"
               },
               {
-                "id": "=",
-                "label": "Primary"
+                "id": "=>*",
+                "label": "Tools"
               }
             ]
           },
@@ -1238,6 +1178,10 @@
               {
                 "id": "all",
                 "label": "All"
+              },
+              {
+                "id": "-+",
+                "label": "Services"
               },
               {
                 "id": "-",
@@ -1269,11 +1213,31 @@
         "stack_my-rss": [
           {
             "kind": "notification_center",
+            "stream": "cloud",
+            "title": "Cloud publishers",
+            "subtitle": "The SuperApp's own feed, then one group per ntfy channel with a live freshness verdict.",
+            "origin": "cloud",
+            "scopes": [
+              "advisory",
+              "user"
+            ]
+          },
+          {
+            "kind": "notification_center",
             "stream": "phone",
             "title": "Phone apps",
             "subtitle": "Every app that has posted to this phone's shade, one group per app, newest first inside each.",
             "origin": "phone"
           },
+          {
+            "kind": "notification_center",
+            "stream": "channels",
+            "title": "C3 Ntfy",
+            "subtitle": "Every ntfy channel, one notification centre — swipe a row to mark it read.",
+            "origin": "c3ntfy"
+          }
+        ],
+        "stack_rss-inboxes": [
           {
             "kind": "notification_center",
             "stream": "cloud",
@@ -1284,16 +1248,653 @@
               "advisory",
               "user"
             ]
-          }
-        ],
-        "_doc_stack_cloud-rss": "C3 Ntfy is now a notification centre and NOTHING else — the old signpost tile_row (a jump to Observability's ntfy anchor plus three rescued shortcuts) is gone entirely, replaced by the SAME kind=notification_center machinery the C3 Observability NTFY card and Apps RSS use: one group per ntfy channel, swipe-to-read, unread badges — all of it already built, none of it re-implemented here. No `scopes`, so every channel in ui.ntfy renders (NtfyScopes.load() + fallbackChannels(), the one registry both this page and Observability's NTFY card read from — a channel added upstream appears on both with no second list to edit) and no `limit`, so unlike Observability's 5-per-channel cap this stays the FULL browsable history, matching how Apps RSS' own Cloud-publishers card is unbounded. Losing the signpost meant `page:c3/health` and `page:wg/status` — both HIDDEN pages this tile_row was the sole referrer for — needed a new home: they moved to Observability's own `More` row below, which already exists to open full pages a card can't (test/test-stack-anchors-declared.sh T8 would fail the build otherwise, catching exactly this orphaning). `page:feed/all` was NOT hidden and had no reachability requirement, so it was simply dropped rather than relocated.",
-        "stack_cloud-rss": [
+          },
+          {
+            "kind": "notification_center",
+            "stream": "phone",
+            "title": "Phone apps",
+            "subtitle": "Every app that has posted to this phone's shade, one group per app, newest first inside each.",
+            "origin": "phone"
+          },
           {
             "kind": "notification_center",
             "stream": "channels",
             "title": "C3 Ntfy",
             "subtitle": "Every ntfy channel, one notification centre — swipe a row to mark it read.",
-            "origin": "cloud"
+            "origin": "c3ntfy"
+          }
+        ],
+        "stack_rss-data": [
+          {
+            "kind": "notification_center",
+            "stream": "cloud",
+            "title": "Cloud publishers",
+            "subtitle": "The SuperApp's own feed, then one group per ntfy channel with a live freshness verdict.",
+            "origin": "cloud",
+            "scopes": [
+              "advisory",
+              "user"
+            ]
+          },
+          {
+            "kind": "notification_center",
+            "stream": "phone",
+            "title": "Phone apps",
+            "subtitle": "Every app that has posted to this phone's shade, one group per app, newest first inside each.",
+            "origin": "phone"
+          },
+          {
+            "kind": "notification_center",
+            "stream": "channels",
+            "title": "C3 Ntfy",
+            "subtitle": "Every ntfy channel, one notification centre — swipe a row to mark it read.",
+            "origin": "c3ntfy"
+          }
+        ],
+        "stack_rss-tools": [
+          {
+            "kind": "notification_center",
+            "stream": "cloud",
+            "title": "Cloud publishers",
+            "subtitle": "The SuperApp's own feed, then one group per ntfy channel with a live freshness verdict.",
+            "origin": "cloud",
+            "scopes": [
+              "advisory",
+              "user"
+            ]
+          },
+          {
+            "kind": "notification_center",
+            "stream": "phone",
+            "title": "Phone apps",
+            "subtitle": "Every app that has posted to this phone's shade, one group per app, newest first inside each.",
+            "origin": "phone"
+          },
+          {
+            "kind": "notification_center",
+            "stream": "channels",
+            "title": "C3 Ntfy",
+            "subtitle": "Every ntfy channel, one notification centre — swipe a row to mark it read.",
+            "origin": "c3ntfy"
+          }
+        ],
+        "stack_rss-services": [
+          {
+            "kind": "notification_center",
+            "stream": "cloud",
+            "title": "Cloud publishers",
+            "subtitle": "The SuperApp's own feed, then one group per ntfy channel with a live freshness verdict.",
+            "origin": "cloud",
+            "scopes": [
+              "advisory",
+              "user"
+            ]
+          },
+          {
+            "kind": "notification_center",
+            "stream": "phone",
+            "title": "Phone apps",
+            "subtitle": "Every app that has posted to this phone's shade, one group per app, newest first inside each.",
+            "origin": "phone"
+          },
+          {
+            "kind": "notification_center",
+            "stream": "channels",
+            "title": "C3 Ntfy",
+            "subtitle": "Every ntfy channel, one notification centre — swipe a row to mark it read.",
+            "origin": "c3ntfy"
+          }
+        ],
+        "stack_rss-sys": [
+          {
+            "kind": "notification_center",
+            "stream": "cloud",
+            "title": "Cloud publishers",
+            "subtitle": "The SuperApp's own feed, then one group per ntfy channel with a live freshness verdict.",
+            "origin": "cloud",
+            "scopes": [
+              "advisory",
+              "user"
+            ]
+          },
+          {
+            "kind": "notification_center",
+            "stream": "phone",
+            "title": "Phone apps",
+            "subtitle": "Every app that has posted to this phone's shade, one group per app, newest first inside each.",
+            "origin": "phone"
+          },
+          {
+            "kind": "notification_center",
+            "stream": "channels",
+            "title": "C3 Ntfy",
+            "subtitle": "Every ntfy channel, one notification centre — swipe a row to mark it read.",
+            "origin": "c3ntfy"
+          }
+        ],
+        "filters_rss-inboxes": [
+          {
+            "id": "sort",
+            "label": "By",
+            "default": "time",
+            "options": [
+              {
+                "id": "time",
+                "label": "Time"
+              },
+              {
+                "id": "app",
+                "label": "App"
+              }
+            ]
+          },
+          {
+            "id": "source",
+            "label": "Source",
+            "default": "both",
+            "options": [
+              {
+                "id": "both",
+                "label": "All"
+              },
+              {
+                "id": "cloud",
+                "label": "Cloud"
+              },
+              {
+                "id": "phone",
+                "label": "Phone"
+              },
+              {
+                "id": "c3ntfy",
+                "label": "C3 Ntfy"
+              }
+            ]
+          },
+          {
+            "id": "tools",
+            "label": "Source · Tools",
+            "default": "@",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "_",
+                "label": "Sys"
+              },
+              {
+                "id": "@",
+                "label": "Inboxes"
+              },
+              {
+                "id": ".",
+                "label": "Data Apps"
+              },
+              {
+                "id": "=>*",
+                "label": "Tools"
+              }
+            ]
+          },
+          {
+            "id": "services",
+            "label": "Source · Services",
+            "default": "all",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "-+",
+                "label": "Services"
+              },
+              {
+                "id": "-",
+                "label": "Buro"
+              },
+              {
+                "id": "+",
+                "label": "Others"
+              }
+            ]
+          },
+          {
+            "id": "show",
+            "label": "Show",
+            "default": "all",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "unread",
+                "label": "Unread"
+              }
+            ]
+          }
+        ],
+        "filters_rss-data": [
+          {
+            "id": "sort",
+            "label": "By",
+            "default": "time",
+            "options": [
+              {
+                "id": "time",
+                "label": "Time"
+              },
+              {
+                "id": "app",
+                "label": "App"
+              }
+            ]
+          },
+          {
+            "id": "source",
+            "label": "Source",
+            "default": "both",
+            "options": [
+              {
+                "id": "both",
+                "label": "All"
+              },
+              {
+                "id": "cloud",
+                "label": "Cloud"
+              },
+              {
+                "id": "phone",
+                "label": "Phone"
+              },
+              {
+                "id": "c3ntfy",
+                "label": "C3 Ntfy"
+              }
+            ]
+          },
+          {
+            "id": "tools",
+            "label": "Source · Tools",
+            "default": ".",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "_",
+                "label": "Sys"
+              },
+              {
+                "id": "@",
+                "label": "Inboxes"
+              },
+              {
+                "id": ".",
+                "label": "Data Apps"
+              },
+              {
+                "id": "=>*",
+                "label": "Tools"
+              }
+            ]
+          },
+          {
+            "id": "services",
+            "label": "Source · Services",
+            "default": "all",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "-+",
+                "label": "Services"
+              },
+              {
+                "id": "-",
+                "label": "Buro"
+              },
+              {
+                "id": "+",
+                "label": "Others"
+              }
+            ]
+          },
+          {
+            "id": "show",
+            "label": "Show",
+            "default": "all",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "unread",
+                "label": "Unread"
+              }
+            ]
+          }
+        ],
+        "filters_rss-tools": [
+          {
+            "id": "sort",
+            "label": "By",
+            "default": "time",
+            "options": [
+              {
+                "id": "time",
+                "label": "Time"
+              },
+              {
+                "id": "app",
+                "label": "App"
+              }
+            ]
+          },
+          {
+            "id": "source",
+            "label": "Source",
+            "default": "both",
+            "options": [
+              {
+                "id": "both",
+                "label": "All"
+              },
+              {
+                "id": "cloud",
+                "label": "Cloud"
+              },
+              {
+                "id": "phone",
+                "label": "Phone"
+              },
+              {
+                "id": "c3ntfy",
+                "label": "C3 Ntfy"
+              }
+            ]
+          },
+          {
+            "id": "tools",
+            "label": "Source · Tools",
+            "default": "=>*",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "_",
+                "label": "Sys"
+              },
+              {
+                "id": "@",
+                "label": "Inboxes"
+              },
+              {
+                "id": ".",
+                "label": "Data Apps"
+              },
+              {
+                "id": "=>*",
+                "label": "Tools"
+              }
+            ]
+          },
+          {
+            "id": "services",
+            "label": "Source · Services",
+            "default": "all",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "-+",
+                "label": "Services"
+              },
+              {
+                "id": "-",
+                "label": "Buro"
+              },
+              {
+                "id": "+",
+                "label": "Others"
+              }
+            ]
+          },
+          {
+            "id": "show",
+            "label": "Show",
+            "default": "all",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "unread",
+                "label": "Unread"
+              }
+            ]
+          }
+        ],
+        "filters_rss-services": [
+          {
+            "id": "sort",
+            "label": "By",
+            "default": "time",
+            "options": [
+              {
+                "id": "time",
+                "label": "Time"
+              },
+              {
+                "id": "app",
+                "label": "App"
+              }
+            ]
+          },
+          {
+            "id": "source",
+            "label": "Source",
+            "default": "both",
+            "options": [
+              {
+                "id": "both",
+                "label": "All"
+              },
+              {
+                "id": "cloud",
+                "label": "Cloud"
+              },
+              {
+                "id": "phone",
+                "label": "Phone"
+              },
+              {
+                "id": "c3ntfy",
+                "label": "C3 Ntfy"
+              }
+            ]
+          },
+          {
+            "id": "tools",
+            "label": "Source · Tools",
+            "default": "all",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "_",
+                "label": "Sys"
+              },
+              {
+                "id": "@",
+                "label": "Inboxes"
+              },
+              {
+                "id": ".",
+                "label": "Data Apps"
+              },
+              {
+                "id": "=>*",
+                "label": "Tools"
+              }
+            ]
+          },
+          {
+            "id": "services",
+            "label": "Source · Services",
+            "default": "-+",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "-+",
+                "label": "Services"
+              },
+              {
+                "id": "-",
+                "label": "Buro"
+              },
+              {
+                "id": "+",
+                "label": "Others"
+              }
+            ]
+          },
+          {
+            "id": "show",
+            "label": "Show",
+            "default": "all",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "unread",
+                "label": "Unread"
+              }
+            ]
+          }
+        ],
+        "filters_rss-sys": [
+          {
+            "id": "sort",
+            "label": "By",
+            "default": "time",
+            "options": [
+              {
+                "id": "time",
+                "label": "Time"
+              },
+              {
+                "id": "app",
+                "label": "App"
+              }
+            ]
+          },
+          {
+            "id": "source",
+            "label": "Source",
+            "default": "both",
+            "options": [
+              {
+                "id": "both",
+                "label": "All"
+              },
+              {
+                "id": "cloud",
+                "label": "Cloud"
+              },
+              {
+                "id": "phone",
+                "label": "Phone"
+              },
+              {
+                "id": "c3ntfy",
+                "label": "C3 Ntfy"
+              }
+            ]
+          },
+          {
+            "id": "tools",
+            "label": "Source · Tools",
+            "default": "_",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "_",
+                "label": "Sys"
+              },
+              {
+                "id": "@",
+                "label": "Inboxes"
+              },
+              {
+                "id": ".",
+                "label": "Data Apps"
+              },
+              {
+                "id": "=>*",
+                "label": "Tools"
+              }
+            ]
+          },
+          {
+            "id": "services",
+            "label": "Source · Services",
+            "default": "all",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "-+",
+                "label": "Services"
+              },
+              {
+                "id": "-",
+                "label": "Buro"
+              },
+              {
+                "id": "+",
+                "label": "Others"
+              }
+            ]
+          },
+          {
+            "id": "show",
+            "label": "Show",
+            "default": "all",
+            "options": [
+              {
+                "id": "all",
+                "label": "All"
+              },
+              {
+                "id": "unread",
+                "label": "Unread"
+              }
+            ]
           }
         ]
       },
@@ -1306,6 +1907,12 @@
         "bottom_nav": true,
         "is_aggregator": true,
         "pages": [
+          {
+            "id": "msgs",
+            "label": "Inboxes",
+            "icon": "ic_chat",
+            "facet": true
+          },
           {
             "id": "my-pm",
             "label": "My-PM",
@@ -1433,7 +2040,87 @@
             "subtitle": "paca.diegonmarcos.com"
           }
         ],
-        "_doc_moved_cloud": "stack_cloud / tiles_cloud USED to hang here — GHA runs, repo commits and the Dagu deeplink. They are now sections[c3].stack_observability, under Cloud ▸ C3 ▸ Observability — which IS the c3 section's own Observability tab, not a copy of it beside the pages it points at. Nothing else keyed off them: `page:infos/cloud` addresses the PAGE, not these lists."
+        "_doc_moved_cloud": "stack_cloud / tiles_cloud USED to hang here — GHA runs, repo commits and the Dagu deeplink. They are now sections[c3].stack_observability, under Cloud ▸ C3 ▸ Observability — which IS the c3 section's own Observability tab, not a copy of it beside the pages it points at. Nothing else keyed off them: `page:infos/cloud` addresses the PAGE, not these lists.",
+        "stack_msgs": [
+          {
+            "kind": "mail_accounts",
+            "title": "Mail · accounts"
+          },
+          {
+            "kind": "chat_matrix",
+            "title": "Chat · Matrix"
+          },
+          {
+            "kind": "chat_mattermost",
+            "title": "Chat · Mattermost"
+          },
+          {
+            "kind": "stats",
+            "title": "Messenger (Element)",
+            "subtitle": "Matrix · Element",
+            "rows": [
+              {
+                "label": "Rooms",
+                "value": "14"
+              },
+              {
+                "label": "Unread",
+                "value": "6"
+              },
+              {
+                "label": "Mentions",
+                "value": "2"
+              },
+              {
+                "label": "Last sync",
+                "value": "2 min ago"
+              }
+            ]
+          },
+          {
+            "kind": "stats",
+            "title": "Dialer (Fossy)",
+            "subtitle": "Fossify Phone",
+            "rows": [
+              {
+                "label": "Missed calls",
+                "value": "2"
+              },
+              {
+                "label": "Recent",
+                "value": "8"
+              },
+              {
+                "label": "Contacts",
+                "value": "341"
+              },
+              {
+                "label": "Voicemail",
+                "value": "1"
+              }
+            ]
+          }
+        ],
+        "tiles_msgs": [
+          {
+            "id": "mail",
+            "label": "Mail",
+            "icon": "ic_mail",
+            "target": "extapp:cloud-mail"
+          },
+          {
+            "id": "chat-matrix",
+            "label": "Chat-Matrix",
+            "icon": "ic_p_chat_matrix",
+            "target": "extapp:cloud-matrix"
+          },
+          {
+            "id": "chat-mm",
+            "label": "Chat-Mattermost",
+            "icon": "ic_p_chat_mattermost",
+            "target": "extapp:cloud-chat"
+          }
+        ]
       },
       {
         "_doc_icons": "Per-mode icons: Apps mode = multi-tools glyph (mymovies / mymusic / etc.); Admin mode = C3-stack glyph (infra dashboard read). Both the bottom-nav item AND the home_groups tile resolve via Section.iconForMode(mode).",

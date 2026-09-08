@@ -336,7 +336,14 @@ class AggregatorStackFragment : Fragment(),
             servicesMode != "all" -> servicesMode
             else                  -> return true
         }
-        return PhoneTaxonomy.sectionPrefixOf(packageName, label) == want
+        // An option id is a SET of section prefixes, not one prefix: the
+        // Services option is "-+" because Services Buro ("-") and Services
+        // Others ("+") are two build.json sections but one idea to the
+        // person reading the filter. Membership also keeps single-character
+        // ids working unchanged, so adding a section stays a build.json-only
+        // change.
+        val prefix = PhoneTaxonomy.sectionPrefixOf(packageName, label)
+        return prefix.isNotEmpty() && want.contains(prefix)
     }
 
     /**
