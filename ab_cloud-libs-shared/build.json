@@ -3073,7 +3073,8 @@
   },
   "keyboard_ai": {
     "_doc": "LLM routing for libs:keyboard (Settings → AI Model Routing). libs/keyboard/build.gradle bakes this whole block into BuildConfig.AI_ROUTING_B64 (rootDir build.json first, this file as fallback — same rule as voice); AiRouter.kt reads it at runtime. ONE shared config consumed by Text Enhancements (ENHANCE toolbar key), Grammar check (mode 'ai') and, when it opts in, Translation. Every provider speaks the OpenAI chat-completions shape: 'cloud' is the mesh my-ai_claude-api bridge (cloud-u-containers/user-ai_my-ai_claude-api server.mjs, POST /v1/chat/completions, no token on the WireGuard mesh — needs_token=false), 'openrouter' is openrouter.ai with a user-pasted key stored in the keyboard prefs (ai_token_<provider>). Add a provider or a model = one entry; the settings screen, the model picker and the pricing table are built from this list. Styles = the enhancement prompts (Text Enhancements → Style); 'grammar' is the one Grammar check's 'ai' mode uses.",
-    "_doc_models": "models[] = {id, open?, prompt?, completion?}. id = the EXACT provider model id (OpenRouter ids verified against GET https://openrouter.ai/api/v1/models on pricing_as_of). open = open-weight (catalog hugging_face_id non-empty) — the picker suffixes these '(open)'. prompt/completion = BAKED fallback price in USD per million tokens, shown with 'as of <pricing_as_of>' when the live catalog (catalog_url, cached in prefs ai_pricing_<provider> for catalog_ttl_ms) is unreachable. Curated for grammar + translation + text enhancement on SHORT es/en/pt/de text where latency matters: non-thinking instruct models preferred; hybrid-thinking ones (glm) are listed because they are the cheapest quality open picks — AiRouter sends no reasoning flag, so they run in their provider default mode.",
+    "_doc_models": "models[] = {id, name, open?, params_b?, quant?, trained_for?, note?, prompt?, completion?}. id = the EXACT provider model id and the LAST column of the routing table — the string you copy when something needs the literal identifier, so it is never shortened. name = the short readable label the Name column shows instead of the id. open = open-weight (catalog hugging_face_id non-empty). params_b = total parameter count in billions, taken ONLY from the number the id itself publishes; OpenRouter exposes no parameter field, so a model whose id carries no size has no params_b and the table prints the unknown marker rather than a guess. quant = the quantisations OpenRouter actually serves the model at (GET /api/v1/models/<id>/endpoints -> endpoints[].quantization, with 'unknown' dropped); it is a LIST because one model is served at several precisions at once, and closed models publish none. trained_for = OpenRouter's own category ranking, the twelve values GET /api/v1/models?category=<c> accepts (an invalid one 400s with the full list); never a taxonomy of our own. note = one short editorial line on what the model is good for. prompt/completion = BAKED fallback price in USD per million tokens; the table renders them in US CENTS per million so that no real price collapses to 0.00 at two decimals. Curated for grammar + translation + text enhancement on SHORT es/en/pt/de text where latency matters: non-thinking instruct models preferred; hybrid-thinking ones (glm) are listed because they are the cheapest quality open picks — AiRouter sends no reasoning flag, so they run in their provider default mode.",
+    "_doc_refresh": "STATIC DATA — it goes stale silently. Only prompt/completion have a runtime refresh (AiRouter.refreshPricing re-reads catalog_url when the ai_pricing_<provider> cache is older than catalog_ttl_ms); name, params_b, quant, trained_for and note are baked at build time and NOTHING updates them on a phone. Refresh procedure: run aa_cloud-superapp/test/test-keyboard-ai-routing.sh with network up — its T7 and T8 live blocks re-read OpenRouter and print every field that has drifted; apply what they print, then bump pricing_as_of. note is editorial and no test can check it, so re-read it whenever the rest of a row changes.",
     "default_provider": "openrouter",
     "timeout_ms": 30000,
     "max_chars": 4096,
@@ -3087,7 +3088,11 @@
         "needs_token": false,
         "default_model": "claude-sonnet-4-6",
         "models": [
-          { "id": "claude-sonnet-4-6" }
+          {
+            "id": "claude-sonnet-4-6",
+            "name": "Claude Sonnet 4.6",
+            "note": "The mesh bridge model. No key and no per-token price on the WireGuard mesh."
+          }
         ]
       },
       "openrouter": {
@@ -3096,18 +3101,140 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-09-06",
+        "pricing_as_of": "2026-09-09",
         "models": [
-          { "id": "google/gemini-2.5-flash",                 "prompt": 0.30,  "completion": 2.50 },
-          { "id": "anthropic/claude-haiku-4.5",              "prompt": 1.00,  "completion": 5.00 },
-          { "id": "openai/gpt-4.1-mini",                     "prompt": 0.40,  "completion": 1.60 },
-          { "id": "deepseek/deepseek-v4-flash-0731",         "open": true, "prompt": 0.05,  "completion": 0.10 },
-          { "id": "meta-llama/llama-3.3-70b-instruct",       "open": true, "prompt": 0.10,  "completion": 0.32 },
-          { "id": "qwen/qwen3-235b-a22b-2507",               "open": true, "prompt": 0.09,  "completion": 0.55 },
-          { "id": "mistralai/mistral-small-3.2-24b-instruct","open": true, "prompt": 0.075, "completion": 0.20 },
-          { "id": "google/gemma-3-27b-it",                   "open": true, "prompt": 0.08,  "completion": 0.45 },
-          { "id": "z-ai/glm-5.3-flash",                      "open": true, "prompt": 0.075, "completion": 0.25 },
-          { "id": "moonshotai/kimi-k2-0905",                 "open": true, "prompt": 0.60,  "completion": 2.50 }
+          {
+            "id": "meta-llama/llama-3.1-8b-instruct",
+            "name": "Llama 3.1 8B",
+            "open": true,
+            "params_b": 8,
+            "quant": ["fp8", "bf16"],
+            "trained_for": ["translation"],
+            "prompt": 0.05, "completion": 0.08,
+            "note": "Cheapest and smallest row; translation-ranked, best for short fixes."
+          },
+          {
+            "id": "mistralai/mistral-small-3.2-24b-instruct",
+            "name": "Mistral Small 3.2",
+            "open": true,
+            "params_b": 24,
+            "quant": ["fp8", "bf16"],
+            "prompt": 0.075, "completion": 0.2,
+            "note": "24B open weights, no category ranking; cheap European-language rewriting."
+          },
+          {
+            "id": "google/gemma-4-26b-a4b-it",
+            "name": "Gemma 4 26B A4B",
+            "open": true,
+            "params_b": 26,
+            "quant": ["fp8", "bf16"],
+            "trained_for": ["academia", "legal", "roleplay", "translation", "trivia"],
+            "prompt": 0.07, "completion": 0.34,
+            "note": "Sparse 26B (4B active): translation, academia and legal at a small-model price."
+          },
+          {
+            "id": "google/gemma-3-27b-it",
+            "name": "Gemma 3 27B",
+            "open": true,
+            "params_b": 27,
+            "quant": ["fp8", "bf16"],
+            "trained_for": ["marketing/seo"],
+            "prompt": 0.08, "completion": 0.45,
+            "note": "Ranked for marketing/SEO only; light and predictable on short rewrites."
+          },
+          {
+            "id": "google/gemma-4-31b-it",
+            "name": "Gemma 4 31B",
+            "open": true,
+            "params_b": 31,
+            "quant": ["fp4", "fp8", "bf16", "fp16"],
+            "trained_for": ["health", "roleplay", "translation", "trivia"],
+            "prompt": 0.09, "completion": 0.34,
+            "note": "Translation-ranked, served at four precisions; more headroom than the 26B."
+          },
+          {
+            "id": "meta-llama/llama-3.3-70b-instruct",
+            "name": "Llama 3.3 70B",
+            "open": true,
+            "params_b": 70,
+            "quant": ["fp8", "bf16", "fp16"],
+            "prompt": 0.1, "completion": 0.32,
+            "note": "70B open weights, no category ranking — a general fallback, not a specialist."
+          },
+          {
+            "id": "qwen/qwen3-235b-a22b-2507",
+            "name": "Qwen3 235B A22B",
+            "open": true,
+            "params_b": 235,
+            "quant": ["fp8"],
+            "prompt": 0.22, "completion": 0.88,
+            "note": "Largest parameter count here; served only at fp8."
+          },
+          {
+            "id": "deepseek/deepseek-v3.2",
+            "name": "DeepSeek V3.2",
+            "open": true,
+            "quant": ["fp4", "fp8"],
+            "trained_for": ["marketing/seo", "roleplay", "translation"],
+            "prompt": 0.269, "completion": 0.4,
+            "note": "Translation and marketing/SEO ranked; mid-price open weights."
+          },
+          {
+            "id": "deepseek/deepseek-v4-flash-0731",
+            "name": "DeepSeek V4 Flash 0731",
+            "open": true,
+            "quant": ["fp4", "fp8", "bf16"],
+            "trained_for": ["academia", "finance", "health", "legal", "marketing", "marketing/seo", "programming", "roleplay", "science", "technology", "translation", "trivia"],
+            "prompt": 0.065, "completion": 0.18,
+            "note": "Ranked in all twelve categories at the second-lowest price here."
+          },
+          {
+            "id": "z-ai/glm-5.2",
+            "name": "GLM 5.2",
+            "open": true,
+            "quant": ["fp4", "fp8"],
+            "trained_for": ["academia", "finance", "health", "legal", "marketing", "programming", "roleplay", "science", "technology", "translation", "trivia"],
+            "prompt": 0.966, "completion": 3.036,
+            "note": "Ranked in eleven categories including translation; the formal-register GLM."
+          },
+          {
+            "id": "z-ai/glm-5.3-flash",
+            "name": "GLM 5.3 Flash",
+            "open": true,
+            "quant": ["fp4", "fp8"],
+            "trained_for": ["academia", "finance", "health", "legal", "marketing", "marketing/seo", "programming", "roleplay", "science", "technology", "translation", "trivia"],
+            "prompt": 0.075, "completion": 0.25,
+            "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
+          },
+          {
+            "id": "moonshotai/kimi-k2-0905",
+            "name": "Kimi K2 0905",
+            "open": true,
+            "quant": ["fp8"],
+            "prompt": 0.6, "completion": 2.5,
+            "note": "Priciest open row; a single fp8 endpoint, aimed at long-context rewriting."
+          },
+          {
+            "id": "anthropic/claude-haiku-4.5",
+            "name": "Claude Haiku 4.5",
+            "trained_for": ["health"],
+            "prompt": 1.0, "completion": 5.0,
+            "note": "Dearest row. Pick it when following a fussy instruction matters more than price."
+          },
+          {
+            "id": "openai/gpt-4.1-mini",
+            "name": "GPT-4.1 mini",
+            "trained_for": ["translation"],
+            "prompt": 0.4, "completion": 1.6,
+            "note": "Translation-ranked and closed-weight; steady, conservative English grammar fixes."
+          },
+          {
+            "id": "google/gemini-2.5-flash",
+            "name": "Gemini 2.5 Flash",
+            "trained_for": ["academia", "finance", "health", "legal", "marketing", "marketing/seo", "roleplay", "translation", "trivia"],
+            "prompt": 0.3, "completion": 2.5,
+            "note": "The default: translation-ranked plus eight more categories, and still cheap."
+          }
         ]
       }
     },

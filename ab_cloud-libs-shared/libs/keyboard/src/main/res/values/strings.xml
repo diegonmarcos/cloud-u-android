@@ -288,10 +288,16 @@
     <string name="ai_model_title">Model</string>
     <string name="ai_model_open_suffix"> (open)</string>
     <string name="ai_pricing_title">Prices</string>
-    <string name="ai_pricing_summary">USD per million tokens — prompt in / completion out. Refreshed from the provider\'s public catalog when this page opens</string>
+    <string name="ai_pricing_summary">US cents per million tokens — prompt in / completion out. Prices refresh from the provider\'s public catalog when this page opens; size, quantisation and category are built in. Swipe the lower line of a row sideways for the rest of the columns</string>
     <string name="ai_pricing_col_model">Model</string>
-    <string name="ai_pricing_col_in">in</string>
-    <string name="ai_pricing_col_out">out</string>
+    <string name="ai_pricing_col_in">in ¢/M</string>
+    <string name="ai_pricing_col_out">out ¢/M</string>
+    <string name="ai_pricing_col_size">size</string>
+    <string name="ai_pricing_col_quant">quant</string>
+    <string name="ai_pricing_col_trained">trained for</string>
+    <string name="ai_pricing_col_note">observations</string>
+    <string name="ai_pricing_col_slug">model code</string>
+    <string name="ai_table_unknown">—</string>
     <string name="ai_pricing_live">Live prices from %1$s, fetched %2$s</string>
     <string name="ai_pricing_baked">Prices as of %1$s (built in — %2$s not reached)</string>
     <string name="ai_token_cloud_title" tools:keep="@string/ai_token_cloud_title">Cloud API key</string>

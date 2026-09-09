@@ -27,8 +27,26 @@ import java.net.URL
 object AiRouter {
     /** USD per million tokens. */
     class Pricing(val prompt: Double, val completion: Double)
-    /** [baked] = registry fallback price (null when the registry has none, e.g. the mesh bridge). */
-    class Model(val id: String, val open: Boolean, val baked: Pricing?)
+    /**
+     * One row of the routing table. [id] is the provider's exact model id — the string a request
+     * is sent with and the one the prefs store, so it is the only field routing ever resolves by.
+     *
+     * [paramsB], [quant] and [trainedFor] are null/empty whenever the registry has nothing to say:
+     * OpenRouter publishes no parameter count at all (size is only ever read off the id), serves
+     * closed models without declaring a quantisation, and ranks only some models by category. The
+     * table prints an explicit unknown marker for those rather than inventing a value.
+     * [baked] = registry fallback price (null when the registry has none, e.g. the mesh bridge).
+     */
+    class Model(
+        val id: String,
+        val name: String,
+        val open: Boolean,
+        val paramsB: Int?,
+        val quant: List<String>,
+        val trainedFor: List<String>,
+        val note: String?,
+        val baked: Pricing?,
+    )
     class Provider(val id: String, val label: String, val url: String, val needsToken: Boolean,
                    val defaultModel: String, val models: List<Model>,
                    val catalogUrl: String?, val pricingAsOf: String?)
@@ -43,7 +61,19 @@ object AiRouter {
             val p = o.getJSONObject(id)
             val models = p.getJSONArray("models").let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.map { m ->
                 val pr = m.optDouble("prompt"); val co = m.optDouble("completion")
-                Model(m.getString("id"), m.optBoolean("open"), if (pr.isNaN() || co.isNaN()) null else Pricing(pr, co))
+                val id = m.getString("id")
+                Model(
+                    id,
+                    // A registry row with no short name would render an empty Name column, which
+                    // reads as a broken row rather than as a missing field; the id always works.
+                    m.optString("name").ifEmpty { id },
+                    m.optBoolean("open"),
+                    m.optInt("params_b", 0).takeIf { it > 0 },
+                    m.stringList("quant"),
+                    m.stringList("trained_for"),
+                    m.optString("note").ifEmpty { null },
+                    if (pr.isNaN() || co.isNaN()) null else Pricing(pr, co),
+                )
             }
             Provider(id, p.getString("label"), p.getString("url"), p.optBoolean("needs_token", true),
                 p.getString("default_model"), models, p.optString("catalog_url").ifEmpty { null }, p.optString("pricing_as_of").ifEmpty { null })
@@ -54,6 +84,9 @@ object AiRouter {
     val tones: List<Style> by lazy { promptSet("tones") }
     val lengths: List<Style> by lazy { promptSet("lengths") }
     val languages: List<Style> by lazy { promptSet("languages") }
+
+    private fun JSONObject.stringList(key: String): List<String> =
+        optJSONArray(key)?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList()
 
     /** A registry object of id → {label, prompt}. Android's JSONObject keeps insertion order, so this is the menu order too. */
     private fun promptSet(key: String): List<Style> {
