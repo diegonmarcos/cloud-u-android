@@ -3,6 +3,7 @@ package app.sterna.core.data.mail
 import app.sterna.core.data.account.AccountCredentials
 import app.sterna.core.data.account.ConnectionSecurity
 import app.sterna.core.data.account.MailEndpoint
+import app.sterna.core.data.db.EmailAttachments
 import app.sterna.core.data.db.EmailEntity
 import app.sterna.core.data.db.EmailRecipients
 import app.sterna.core.data.db.MailboxEntity
@@ -22,6 +23,7 @@ import app.sterna.core.imap.ImapTextPart
 import app.sterna.core.imap.ImapUidValidityChanged
 import app.sterna.core.imap.MailSecurity
 import app.sterna.core.imap.MailServerConfig
+import app.sterna.core.imap.MimeAttachment
 import app.sterna.core.imap.MimeParser
 import app.sterna.core.imap.OutgoingMessage
 import app.sterna.core.imap.OutgoingMime
@@ -31,6 +33,7 @@ import app.sterna.core.imap.searchFolders
 import app.sterna.core.data.settings.NotificationContent
 import app.sterna.core.data.settings.PreviewLines
 import app.sterna.core.jmap.model.EmailAddress
+import app.sterna.core.jmap.model.EmailBodyPart
 import app.sterna.core.jmap.model.SearchQuery
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -917,8 +920,29 @@ internal fun ImapMessage.toEntity(
         // The numbering this message was enumerated under (schema v25, #99), normalised here and
         // never at the six call sites: a stated 0 becomes null, which destroys nothing.
         uidValidity = UidValidity.stated(uidValidity),
+        // Column v28, and the reason this mapper's header says it must agree with [EmailMapper]
+        // column by column: leave it out here and every IMAP sync pass would erase the chips a JMAP
+        // path stored -- on a unified inbox holding both, on the same screen.
+        attachmentsJson = EmailAttachments.encode(attachments.map { it.toBodyPart() }),
     )
 }
+
+    /** An IMAP file part as the shared [EmailBodyPart] the rest of the app speaks. [partId] is the
+     *  BODY section a fetch addresses (IMAP has no blob ids), which is exactly what
+     *  [MailRepository.downloadAttachment] branches on to decide which protocol to ask.
+     *
+     *  An EMPTY name means the sender declared none -- [attachmentParts] does not invent one -- so it
+     *  becomes null here and the UI shows its own placeholder. "" would be a filename, and it would
+     *  reach the disk as one. */
+private fun MimeAttachment.toBodyPart(): EmailBodyPart = EmailBodyPart(
+    partId = section,
+    size = size.toLong(),
+    type = type.ifBlank { null },
+    name = name.ifBlank { null },
+    disposition = "attachment",
+    cid = cid,
+    encoding = encoding.ifBlank { null },
+)
 
 /** What an IMAP search found; [complete] is false when a folder's local attachment filter hit its scan cap. */
 data class ImapSearchHits(val messages: List<EmailEntity>, val complete: Boolean)

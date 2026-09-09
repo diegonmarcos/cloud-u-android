@@ -1,6 +1,7 @@
 package app.sterna.core.data.mail
 
 import app.sterna.core.data.db.ConversationRow
+import app.sterna.core.data.db.EmailAttachments
 import app.sterna.core.data.db.EmailEntity
 import app.sterna.core.data.db.EmailFtsEntity
 import app.sterna.core.data.db.EmailRecipients
@@ -74,6 +75,10 @@ internal fun Email.toEntity(accountId: String, mailboxId: String): EmailEntity {
         // loses. Two separate columns: a blind copy is blind, and is never folded into the Cc.
         ccJson = EmailRecipients.encode(cc),
         bccJson = EmailRecipients.encode(bcc),
+        // Persisted since v28: which files this message carries, so the LIST can name them. Metadata
+        // only -- no bytes. Like the three fields above it, every caching path must supply it or the
+        // `@Upsert` erases it; that is why the JMAP fetches share one property list.
+        attachmentsJson = EmailAttachments.encode(attachments),
     )
 }
 
@@ -100,6 +105,11 @@ internal fun EmailEntity.toEmail(): Email = Email(
     cc = EmailRecipients.decode(ccJson),
     bcc = EmailRecipients.decode(bccJson),
     hasAttachment = hasAttachment,
+    // Persisted since v28. A row cached before the column existed decodes to an empty list, so the
+    // row draws no chips rather than a wrong number of them -- and `fileAttachmentParts()` is then
+    // the SAME classifier the reader uses, applied to the same parts, so a message cannot show two
+    // chips in the list and three rows when opened.
+    attachments = EmailAttachments.decode(attachmentsJson),
     keywords = buildMap {
         if (seen) put("\$seen", true)
         if (flagged) put("\$flagged", true)

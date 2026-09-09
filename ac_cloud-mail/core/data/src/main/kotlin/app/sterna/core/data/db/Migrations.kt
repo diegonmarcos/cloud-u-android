@@ -344,3 +344,20 @@ val MIGRATION_26_27 = object : Migration(26, 27) {
         )
     }
 }
+
+/**
+ * Additive 27->28: `emails` gains `attachmentsJson`, the message's file parts as the server described
+ * them -- name, MIME type, size and the blob/section id a download addresses. Metadata only: no bytes
+ * of any attachment are in this database, and none ever will be.
+ *
+ * ADDITIVE AND NULLABLE, with no backfill, because there is nothing to backfill FROM. The column
+ * holds what a fetch was told, and rows cached before this version were fetched without asking. They
+ * read back as null -> no chips, and gain their chips the next time sync touches them, which is the
+ * same way `replyTo`, `cc` and `bcc` each arrived. Rewriting the table to invent a value would mean
+ * inventing one.
+ */
+val MIGRATION_27_28 = object : Migration(27, 28) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `emails` ADD COLUMN `attachmentsJson` TEXT")
+    }
+}

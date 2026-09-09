@@ -39,4 +39,11 @@ data class EmailEntity(
     /** IMAP UIDVALIDITY [id]'s UID was read under (v25, #99); decoupled from
      *  `mailbox_uidvalidity` so a renumbered folder can't make a purge hit different, live mail. */
     val uidValidity: Long? = null,
+        /** The message's file parts, JSON-encoded (v28) -- metadata only, never bytes. What lets the
+         *  LIST draw a chip per file, and lets a tap on one resolve to a download without opening the
+         *  message first. Null decodes to [], which is what a row cached before this column existed
+         *  reads back as: no chips, the honest answer for a row nothing has said anything about yet.
+         *  Every fetch path that caches a row must fill it ([EMAIL_LIST_PROPERTIES]) -- the `@Upsert`
+         *  replaces the row whole, so one path omitting it erases what the others stored. */
+    val attachmentsJson: String? = null,
 )
