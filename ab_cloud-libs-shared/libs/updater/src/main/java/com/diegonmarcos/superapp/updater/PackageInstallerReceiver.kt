@@ -21,6 +21,15 @@ import com.diegonmarcos.superapp.core.NotificationStore
  * FAILURE_* outcomes as a Toast + persistent notification so silent
  * rejects (e.g. signature mismatch after a keystore bump) stop being
  * invisible.
+ *
+ * THE INVARIANT: NO STATUS LEAVES THIS RECEIVER WITHOUT SAYING SOMETHING.
+ *
+ * Every branch of the `when` below either shows the user a message or puts a
+ * tappable notification in front of them, and the `else` names every status
+ * Android defines rather than printing its number. The owner cannot read
+ * logcat for another app on this phone, so a log line is not a report; an
+ * install that fails without telling anyone costs a repeat of the download,
+ * and for Cloud Office that download is 267 MB of mobile data.
  */
 class PackageInstallerReceiver : BroadcastReceiver() {
     private val TAG = "Updater/Receiver"
@@ -49,7 +58,7 @@ class PackageInstallerReceiver : BroadcastReceiver() {
     }
 
     override fun onReceive(context: Context, intent: Intent) {
-        val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, -999)
+        val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, NO_STATUS)
         val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: ""
         // EXTRA_STATUS is a coarse bucket — STATUS_FAILURE tells you nothing
         // about WHY. The legacy code underneath it is the exact reason
@@ -78,6 +87,15 @@ class PackageInstallerReceiver : BroadcastReceiver() {
         // Prefer the package we armed the gate with; EXTRA_PACKAGE_NAME is a
         // fallback for sessions started outside a batch.
         val gateKey = intent.getStringExtra(EXTRA_TARGET_PKG).orEmpty().ifEmpty { pkg }
+        // Which app anything the USER reads is about. [appName] above reads
+        // EXTRA_PACKAGE_NAME, which the platform leaves empty on
+        // STATUS_PENDING_USER_ACTION — so every confirmation prompt for a
+        // companion app announced itself as "Cloud SuperApp". gateKey is the
+        // package we armed the session with, and it is always present.
+        val subject = when {
+            gateKey.isBlank() || gateKey == context.packageName -> "Cloud SuperApp"
+            else -> gateKey
+        }
         // NOTE: the gate is NOT opened here. Releasing on every status - which
         // this used to do - released it on STATUS_PENDING_USER_ACTION too, so
         // the next install committed while the current one's dialog was still
@@ -100,19 +118,56 @@ class PackageInstallerReceiver : BroadcastReceiver() {
         when (status) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
                 @Suppress("DEPRECATION")
-                // No confirm Intent means this session cannot proceed at all;
-                // releasing first is what stops it stranding the queue behind a
-                // dialog that will never appear.
                 val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
-                    ?: run { releaseGate(); return }
+                if (confirm == null) {
+                    // PENDING_USER_ACTION carrying no Intent means the system
+                    // wants a confirmation it has given us no way to ask for,
+                    // so this session can never proceed. This used to be
+                    // `releaseGate(); return` — no toast, no notification, no
+                    // state change — which left the progress row reading
+                    // "Installing…" forever for an install that was already
+                    // over. That is precisely the shape of "it downloads the
+                    // whole 267 MB and then nothing happens and nothing says
+                    // why": not a failure that was reported badly, a failure
+                    // that was never reported at all.
+                    releaseGate()
+                    Log.w(TAG, "PENDING_USER_ACTION with no EXTRA_INTENT for $gateKey")
+                    if (!isUninstall && !unattended) UpdateProgress.update(
+                        UpdateProgress.State.Failed(
+                            "Android asked for your confirmation and supplied no screen to " +
+                            "ask it on — nothing was installed",
+                            appId = gateKey,
+                            pkg = gateKey,
+                            apkPath = intent.getStringExtra(EXTRA_APK_PATH).orEmpty(),
+                        ))
+                    surface(context, "$verb needs confirmation, but none was offered",
+                        "$subject could not be ${verb.lowercase()}ed: the system asked for " +
+                        "your confirmation and then supplied no screen to ask it on. Nothing " +
+                        "was installed. The downloaded file is kept — try the row's Direct " +
+                        "button, which uses the ordinary system installer.",
+                        severity = NotificationStore.Sev.ERROR)
+                    return
+                }
                 confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                // The 6h auto-update runs in WorkManager. Android 10+ BLOCKS
-                // background activity starts but does NOT throw — startActivity
-                // silently no-ops, so a try/catch fallback never fires and the
-                // update dies invisibly. Decide by real process importance:
-                // foreground → launch the system confirm dialog directly;
-                // background → a tap-to-install notification (the only
-                // background-safe launch path).
+                // POST THE NOTIFICATION FIRST, ALWAYS. THEN TRY THE DIALOG.
+                //
+                // Android 10+ BLOCKS a background activity start and does NOT
+                // throw: startActivity silently no-ops. [isForeground] used to
+                // be the entire defence against that, and it is a SAMPLE taken
+                // when the broadcast lands, not a guarantee held across the
+                // call — so the probe could answer "foreground", the process
+                // could be backgrounded a moment later, the dialog could never
+                // appear, and there was nothing behind it. Staging a 267 MB
+                // APK takes long enough that the user has usually left the
+                // screen by the time this status arrives, which is why the
+                // biggest app in the fleet lost this race the most reliably.
+                //
+                // So the notification is the GUARANTEE and the dialog is the
+                // optimisation. A confirmation that turns out to be redundant
+                // costs one stale notification, and the terminal status below
+                // clears it; a confirmation that is merely hoped for costs the
+                // entire download.
+                notifyConfirm(context, confirm, subject)
                 if (isForeground(context)) {
                     // The dialog is going up NOW and this install has not
                     // finished. Keep the gate SHUT: the next commit must wait
@@ -120,20 +175,32 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                     // this one and Play Protect's scan prompt lands between
                     // them. The gate's timeout is the backstop if the user
                     // simply walks away.
-                    context.startActivity(confirm)
+                    runCatching { context.startActivity(confirm) }.onFailure {
+                        Log.w(TAG, "confirm dialog refused to start for $gateKey", it)
+                    }
                 } else {
                     // Background: we cannot show a dialog, so this session now
-                    // waits on a notification the user may never tap. Release -
+                    // waits on the notification posted above. Release -
                     // otherwise one unanswered notification wedges every later
                     // install until the timeout. What bounds these is the
                     // per-pass cap, not the gate.
                     Log.w(TAG, "confirm launch deferred to notification (app backgrounded)")
-                    notifyConfirm(context, confirm)
                     releaseGate()
                 }
+                // The row says "Installing…" and would keep saying it for as
+                // long as the user takes to answer — indistinguishable from a
+                // stuck install. Name what is actually being waited on, so the
+                // confirmation is still findable from the screen the user is
+                // already looking at after the notification has been swiped
+                // away. Waiting is deliberately not a full-screen overlay.
+                if (!isUninstall && !unattended) UpdateProgress.update(
+                    UpdateProgress.State.Waiting(
+                        "$subject needs your confirmation — tap the \"tap to finish " +
+                        "installing\" notification"))
             }
             PackageInstaller.STATUS_SUCCESS -> {
                 releaseGate()   // terminal: the next install may start
+                clearConfirmNotification(context)
                 // Drop the cached APK now that it is genuinely installed. This
                 // is the ONLY point where success is known: commit() only means
                 // the session was handed over, and a user who declines the
@@ -149,6 +216,10 @@ class PackageInstallerReceiver : BroadcastReceiver() {
             }
             else -> {
                 releaseGate()   // terminal (failure/abort): unblock the queue
+                clearConfirmNotification(context)
+                // EVERY status Android defines gets a sentence. The two added
+                // here were reaching the user as the bare text "status=7" and
+                // "status=-999", which names nothing and points nowhere.
                 val label = when (status) {
                     PackageInstaller.STATUS_FAILURE             -> "FAILURE"
                     PackageInstaller.STATUS_FAILURE_ABORTED     -> "ABORTED"
@@ -156,8 +227,14 @@ class PackageInstallerReceiver : BroadcastReceiver() {
                     PackageInstaller.STATUS_FAILURE_CONFLICT    -> "CONFLICT (signature/applicationId mismatch — uninstall previous install once)"
                     PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> "INCOMPATIBLE"
                     PackageInstaller.STATUS_FAILURE_INVALID     -> "INVALID"
-                    PackageInstaller.STATUS_FAILURE_STORAGE     -> "STORAGE"
-                    else -> "status=$status"
+                    PackageInstaller.STATUS_FAILURE_STORAGE     -> "STORAGE (not enough free space to stage and install this APK)"
+                    // API 34. The one a 267 MB APK can actually reach: the
+                    // system bounds how long it will hold a session waiting,
+                    // and a quarter-gigabyte stage is the only thing in this
+                    // fleet slow enough to test that bound.
+                    PackageInstaller.STATUS_FAILURE_TIMEOUT     -> "TIMEOUT (the system stopped waiting on this session before it finished)"
+                    NO_STATUS -> "no status at all — the installer answered without saying what happened"
+                    else -> "unrecognised installer status $status"
                 }
                 // Resolve the overlay to a visible failure instead of leaving it
                 // stuck on "Installing…" for a companion install (installs only).
@@ -236,10 +313,23 @@ class PackageInstallerReceiver : BroadcastReceiver() {
         } ?: false
     }
 
-    /** Background-safe fallback for STATUS_PENDING_USER_ACTION: a tap-to-install
-     *  notification wrapping the system confirm Intent (notifications can launch
-     *  activities from the background, unlike startActivity). */
-    private fun notifyConfirm(context: Context, confirm: Intent) {
+    /** Drop the "tap to finish installing" notification once the session has
+     *  reached a terminal state. It is an instruction to act on a session that
+     *  no longer exists, and a stale one looks exactly like a live one — which
+     *  would turn the guarantee added above into a new way to mislead. */
+    private fun clearConfirmNotification(context: Context) {
+        runCatching {
+            (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                .cancel(NOTIF_ID + 1)
+        }
+    }
+
+    /** The durable surface for STATUS_PENDING_USER_ACTION: a tap-to-install
+     *  notification wrapping the system confirm Intent. Posted on EVERY
+     *  pending-user-action, foreground or not — notifications can launch
+     *  activities from the background, which startActivity cannot, and unlike
+     *  startActivity a notification that was posted is observably there. */
+    private fun notifyConfirm(context: Context, confirm: Intent, subject: String) {
         runCatching {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -249,8 +339,8 @@ class PackageInstallerReceiver : BroadcastReceiver() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) flags = flags or PendingIntent.FLAG_IMMUTABLE
             val pi = PendingIntent.getActivity(context, NOTIF_ID + 1, confirm, flags)
             val notif = Notification.Builder(context, NOTIF_CHANNEL)
-                .setContentTitle("Update ready — tap to install")
-                .setContentText("Tap to finish installing the update.")
+                .setContentTitle("$subject — tap to finish installing")
+                .setContentText("Android needs one tap from you to confirm this install.")
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
                 .setContentIntent(pi)
                 .setAutoCancel(true)
@@ -318,5 +408,10 @@ class PackageInstallerReceiver : BroadcastReceiver() {
 
         /** Package this session installs, used as the InstallGate key. */
         const val EXTRA_TARGET_PKG = "target_pkg"
+
+        /** EXTRA_STATUS absent. Not a value Android defines — ours, so that
+         *  "the installer answered without a status" stays distinguishable
+         *  from the statuses it does define instead of being read as one. */
+        private const val NO_STATUS = -999
     }
 }

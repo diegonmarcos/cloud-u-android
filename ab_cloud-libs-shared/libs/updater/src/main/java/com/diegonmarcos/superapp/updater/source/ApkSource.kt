@@ -99,12 +99,33 @@ internal object ReleaseSource : ApkSource {
             // here falls through to GHCR, which does carry a digest — an
             // unverifiable download must never be RETURNED, because the caller
             // cannot tell the difference once it is just a File.
-            VerifiedApk.bySize(target, declared) ?: run {
+            // VERIFY THE BYTES, NOT MERELY HOW MANY OF THEM ARRIVED.
+            //
+            // The ship engine publishes a "<asset>.sha256" sidecar beside every
+            // release asset, and CI now hard-verifies the published pin against
+            // it — so the exact bytes that were meant to ship ARE knowable from
+            // the phone. This path checked only the LENGTH, which cannot tell a
+            // 267 MB APK from a DIFFERENT 267 MB APK. That is not hypothetical
+            // here: on 2026-08-30 several distinct builds all landed on exactly
+            // 32,012,393 bytes and the store was wrong about every one of them.
+            // A length check spends a whole install attempt — and, when the
+            // installer's answer goes unread, spends it silently — to discover
+            // what the digest answers before the attempt is made.
+            //
+            // Size remains the fallback for apps not yet re-shipped with a
+            // sidecar. "No digest published" must degrade to the older, weaker
+            // check; it must never degrade to no check.
+            val sha = Fleet.releaseSha256(app)
+            val verified = if (sha != null) VerifiedApk.byDigest(target, sha)
+                           else VerifiedApk.bySize(target, declared)
+            verified ?: run {
                 // Known-bad bytes: drop the partial too, or every later attempt
                 // resumes on top of them forever.
                 Download.discard(target)
-                error("release asset failed verification " +
-                      "(${target.length()} B against a declared $declared) — deferring to GHCR")
+                error("release asset failed verification (${target.length()} B against a " +
+                      "declared $declared" +
+                      (if (sha != null) ", sha256 $sha" else ", no sha256 sidecar published") +
+                      ") — deferring to GHCR")
             }
         } catch (c: java.util.concurrent.CancellationException) {
             // A cancel is the user's decision, not a reason to go and try the

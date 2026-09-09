@@ -48,8 +48,44 @@ internal class UpdateInstaller(private val context: Context) {
 
     private fun installLocked(apk: File, targetPackage: String) {
         UpdateProgress.update(UpdateProgress.State.Installing)
+        // ASK ABOUT SPACE BEFORE SPENDING AN INSTALL ATTEMPT ON IT.
+        //
+        // The bytes are already on disk once — the download lands in cacheDir —
+        // and committing stages a SECOND copy under /data before the system
+        // builds a third to install from. Both live on the same volume, so at
+        // the moment of commit a 267 MB Collabora Office wants roughly 267 MB
+        // of free space just to stage, and about 534 MB to see the install
+        // through, on a phone that has only just spent 267 MB of mobile data
+        // getting here. Short of that, openWrite dies on ENOSPC or the system
+        // answers STATUS_FAILURE_STORAGE — neither of which names either
+        // number, and the second only arrives asynchronously. Ask now, and say
+        // both numbers, while there is still something useful to say.
+        //
+        // Only the STAGING shortfall is fatal enough to refuse on: below it the
+        // install provably cannot start. An unreadable free-space figure (-1)
+        // must never block an install that might have worked.
+        val expected = apk.length()
+        val free = freeStagingBytes()
+        if (free in 0 until expected) {
+            error("not enough free space to install $targetPackage: the APK is " +
+                "${expected / 1_000_000} MB and the install session has to stage a second " +
+                "copy of it, but only ${free / 1_000_000} MB is free. Free about " +
+                "${(2 * expected) / 1_000_000} MB and try again — the download is already on " +
+                "disk, so retrying will not fetch it a second time")
+        }
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
+            // TELL THE SYSTEM HOW BIG THIS IS, BEFORE IT OPENS THE SESSION.
+            //
+            // Left unset, sizeBytes stays -1 and the platform reserves nothing
+            // and evicts nothing: it uses this figure to free cache space
+            // ahead of the staging write. At the 6-33 MB the rest of the fleet
+            // ships at there is always enough slack that its absence never
+            // showed. A 267 MB APK is the one that needs the eviction to
+            // actually happen. openWrite's own length argument sizes the FILE
+            // inside the session, which is a different question and cannot
+            // stand in for this one.
+            setSize(expected)
             // NO setAppPackageName: it's only a hint, and forcing our fork id on
             // a resigned STOCK upstream APK (chat=com.mattermost.rnbeta,
             // matrix=io.element.android.x) makes PackageInstaller reject it with
@@ -104,7 +140,9 @@ internal class UpdateInstaller(private val context: Context) {
                 // system parser reports INSTALL_PARSE_FAILED_NOT_APK / "failed to
                 // load asset path". That reads like a corrupt build and sends you
                 // to the artifact, which is where an hour goes.
-                val expected = apk.length()
+                // `expected` is the length read ONCE above, the same figure the
+                // session was sized with — re-reading it here would let the
+                // session's declared size and the write's disagree.
                 var written = 0L
                 apk.inputStream().use { input ->
                     session.openWrite("base.apk", 0, expected).use { output ->
@@ -154,6 +192,22 @@ internal class UpdateInstaller(private val context: Context) {
         }
         Log.i(tag, "PackageInstaller session $sessionId committed for ${apk.name}")
     }
+
+    /**
+     * Free bytes on the volume an install session stages into.
+     *
+     * cacheDir and the session's staging area are both on /data, which is
+     * exactly why the downloaded APK and its staged copy compete for the same
+     * space instead of the download being free once it has landed.
+     *
+     * -1 when it cannot be read: an unknown figure must never be treated as a
+     * shortage, because refusing an install over a number we failed to obtain
+     * is its own kind of unexplained failure.
+     */
+    private fun freeStagingBytes(): Long = runCatching {
+        val stat = android.os.StatFs(context.cacheDir.absolutePath)
+        stat.availableBlocksLong * stat.blockSizeLong
+    }.getOrDefault(-1L)
 
     /**
      * How many new install sessions it is safe to open right now.

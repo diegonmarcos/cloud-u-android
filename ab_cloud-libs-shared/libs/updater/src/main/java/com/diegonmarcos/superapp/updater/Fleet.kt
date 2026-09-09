@@ -286,7 +286,7 @@ object Fleet {
      * case the caller falls back to the size compare). Never throws: a missing
      * or malformed sidecar must degrade to the old behaviour, not to an error.
      */
-    private fun releaseSha256(app: App): String? = runCatching {
+    internal fun releaseSha256(app: App): String? = runCatching {
         val c = (java.net.URL(app.abiReleaseUrl + ".sha256").openConnection()
                 as java.net.HttpURLConnection)
         c.instanceFollowRedirects = true
@@ -317,9 +317,9 @@ object Fleet {
      *
      * A terminal outcome is part of running the pass, so it belongs to the pass.
      */
-    fun install(ctx: Context, app: App) {
+    fun install(ctx: Context, app: App): Boolean {
         try {
-            commit(ctx, app, download(ctx, app))
+            return observesOutcome(commit(ctx, app, download(ctx, app)))
         } catch (c: java.util.concurrent.CancellationException) {
             UpdateProgress.update(UpdateProgress.State.Cancelled)
             throw c
@@ -355,6 +355,21 @@ object Fleet {
      * interleaving made every tap wait on the next app's network fetch.
      */
     private val sources: List<ApkSource> = listOf(ReleaseSource, GhcrSource)
+
+    /**
+     * Does a clean return from [channelName] mean INSTALLED, or only HANDED OVER?
+     *
+     * [ShellInstall] runs `pm install` and reads its answer, so when it says
+     * nothing went wrong it has actually watched the install finish. A
+     * PackageInstaller commit has not: it hands a session to the system and
+     * returns, and the real outcome arrives later at [PackageInstallerReceiver].
+     *
+     * The distinction has to be visible to callers because treating a commit as
+     * a result is how "installed successfully" gets recorded for an install
+     * that went on to fail. [install] returns this rather than Unit so a caller
+     * cannot silently assume the stronger of the two.
+     */
+    fun observesOutcome(channelName: String): Boolean = channelName == ShellInstall.name
 
     fun download(ctx: Context, app: App): VerifiedApk {
         UpdateProgress.update(UpdateProgress.State.CheckingManifest)

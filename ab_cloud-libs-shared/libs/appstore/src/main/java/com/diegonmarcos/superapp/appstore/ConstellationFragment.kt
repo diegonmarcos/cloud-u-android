@@ -727,11 +727,21 @@ class ConstellationFragment : Fragment() {
         thread(name = "fleet-install-${app.id}") {
             com.diegonmarcos.superapp.updater.UpdateProgress.beginDownload()
             try {
-                Fleet.install(ctx, app)
+                // ONLY AN OBSERVED INSTALL CLEARS THE ADVISORY.
+                //
                 // Success CLEARS the advisory: a warning that outlives the
                 // problem is noise, and noise is how the next real one is
-                // ignored.
-                Advisory.recordSuccess(ctx, app.id)
+                // ignored. But [Fleet.install] returns as soon as a channel
+                // ACCEPTED the APK, and for the PackageInstaller channel
+                // "accepted" only means a session was handed to the system —
+                // the actual outcome lands minutes later at
+                // PackageInstallerReceiver. Clearing here regardless meant a
+                // commit that went on to fail wiped the very record that was
+                // meant to survive it, so three consecutive failures could
+                // never accumulate into the "use Direct" banner they exist to
+                // raise. Now it returns whether the channel WATCHED the install
+                // finish, and only that clears anything.
+                if (Fleet.install(ctx, app)) Advisory.recordSuccess(ctx, app.id)
             } catch (t: Throwable) {
                 // The Toast used to be the ONLY record of this, and it said
                 // "no install channel accepted <pkg>" — a permanent dead end
