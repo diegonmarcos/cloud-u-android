@@ -88,6 +88,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import app.sterna.core.jmap.model.EmailBodyPart
 import app.sterna.ui.message.snoozePresets
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -263,6 +264,10 @@ fun InboxScreen(
     val ui by viewModel.state.collectAsStateWithLifecycle()
     val listRows = viewModel.pagedListRows.collectAsLazyPagingItems()
     val swipe by viewModel.swipeConfig.collectAsStateWithLifecycle()
+    // Which attachment is downloading, and the question asked before a large one is fetched over a
+    // metered network. Collected once here rather than per row: one download runs at a time.
+    val openingAttachmentKey by viewModel.openingAttachment.collectAsStateWithLifecycle()
+    val meteredAttachment by viewModel.meteredAttachment.collectAsStateWithLifecycle()
     val selectionActive by viewModel.selectionActive.collectAsStateWithLifecycle()
     val selectedKeys by viewModel.selectedKeys.collectAsStateWithLifecycle()
     val selectionAllRead by viewModel.selectionAllRead.collectAsStateWithLifecycle()
@@ -563,6 +568,41 @@ fun InboxScreen(
                 ) { Text(stringResource(R.string.inbox_create)) }
             },
             dismissButton = { TextButton(onClick = { folderToAddChild = null }) { Text(stringResource(R.string.inbox_cancel)) } },
+        )
+    }
+
+    // The one question a chip tap ever asks. Nothing is REFUSED here -- the tap was consent -- but a
+    // chip lives in a scrolling list, where a brushed finger is a real way to arrive, and this is
+    // where the fleet's "never spend the owner's mobile data unasked" rule lands for a file the user
+    // did choose. Small files and unmetered networks never see it: [DownloadLimits.needsMeteredConfirmation].
+    meteredAttachment?.let { pending ->
+        AlertDialog(
+            // Dismissing by tapping outside is the same answer as Cancel, and it downloads nothing.
+            onDismissRequest = { viewModel.dismissMeteredAttachment() },
+            title = { Text(stringResource(R.string.attachment_metered_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.attachment_metered_body,
+                        pending.name,
+                        // The size is SAID, not implied by a warning. The chip itself shows only the
+                        // name -- width on a phone is spent on the one thing that identifies the file
+                        // -- so this sentence is the first and only place the cost is stated, which
+                        // is exactly where a decision about cost needs it.
+                        formatAttachmentSize(pending.bytes),
+                    ),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.confirmMeteredAttachment() }) {
+                    Text(stringResource(R.string.attachment_metered_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissMeteredAttachment() }) {
+                    Text(stringResource(R.string.inbox_cancel))
+                }
+            },
         )
     }
 
@@ -1257,6 +1297,11 @@ fun InboxScreen(
                     // search branch keeps the keyword alone — `false` there would REMOVE a chip. The
                     // second chip says the draft has not reached the server yet (#95).
                     showNotUploadedBadge = isLocalDraftRow(email.id),
+                    // The chips, and the tap that downloads one. Search results reach this list too
+                    // and their rows carry no parts (the FTS table has no attachment column), so
+                    // they simply draw none -- the chip cannot appear without something to open.
+                    onOpenAttachment = { part -> viewModel.openAttachment(email, part) },
+                    openingAttachmentKey = openingAttachmentKey,
                     showDraftBadge = if (fromSearch) email.isDraft else showsDraftBadge(
                         isDraft = email.isDraft,
                         accountId = email.accountId,
@@ -1334,6 +1379,8 @@ fun InboxScreen(
                     // drew the newcomer twice and dropped the message it displaced.
                     val members = ConversationExpansion.membersBelow(threadMembers[threadKey].orEmpty(), email.id)
                     ThreadChildren(
+                        onOpenAttachment = { child, part -> viewModel.openAttachment(child, part) },
+                        openingAttachmentKey = openingAttachmentKey,
                         visible = isExpanded,
                         members = members,
                         unified = ui.unified,
@@ -2170,6 +2217,13 @@ private fun SwipeableEmailRow(
     /** Whether the row is a draft this phone holds and the server has not got (#95). Defaults to
      *  false, like [EmailListItem]'s own parameter: no other list has such rows in it. */
     showNotUploadedBadge: Boolean = false,
+    /** Tapping one of the row's attachment chips. Threaded rather than read from a CompositionLocal
+     *  because it is an ACTION, not a presentation preference: a list that cannot download one must
+     *  be able to say so by passing null, and the row then draws no chip to tap. */
+    onOpenAttachment: ((EmailBodyPart) -> Unit)? = null,
+    /** The attachment being downloaded right now, whichever row it belongs to, as [attachmentKey]
+     *  spells it. Only the chip whose key matches spins. */
+    openingAttachmentKey: String? = null,
     onSwipe: (SwipeAction) -> Unit,
     onClick: () -> Unit,
     // Nullable so inline conversation children can omit long-press selection and the star.
@@ -2489,6 +2543,8 @@ private fun SwipeableEmailRow(
                 showRecipients = showRecipients,
                 showDraftBadge = showDraftBadge,
                 showNotUploadedBadge = showNotUploadedBadge,
+                onOpenAttachment = onOpenAttachment,
+                openingAttachmentKey = openingAttachmentKey,
             )
         }
     }
@@ -2722,6 +2778,11 @@ private fun ThreadChildren(
     /** Same shape again, for the origin chip: an unfolded child IS a row, and in the unread view it
      *  is filed in a folder of its own. Null (the common case) draws no chip ([unreadRowFolder]). */
     folderFor: (Email) -> Mailbox?,
+    /** An unfolded child IS a row, so it offers its own attachments. Passed down rather than left
+     *  off: a file reachable from the collapsed conversation and unreachable once it is expanded
+     *  would be the affordance disappearing exactly when the user went looking for it. */
+    onOpenAttachment: (Email, EmailBodyPart) -> Unit,
+    openingAttachmentKey: String?,
     highlightId: String?,
     /** The reading pane's anchor: the child it names is painted current (#103). */
     paneAnchor: MessageAnchor?,
@@ -2767,6 +2828,8 @@ private fun ThreadChildren(
                             trashContext = trashContextFor(child),
                             showRecipients = showRecipientsFor(child),
                             showDraftBadge = showDraftBadgeFor(child),
+                            onOpenAttachment = { part -> onOpenAttachment(child, part) },
+                            openingAttachmentKey = openingAttachmentKey,
                             onSwipe = { action -> onSwipeChild(action, child) },
                             // Children join multi-select like top-level rows.
                             onClick = { if (selectionActive) onToggleSelectChild(child) else onOpenChild(child) },
@@ -2944,4 +3007,15 @@ private fun OutboxFailureBanner(onClick: () -> Unit) {
             )
         }
     }
+}
+
+    /** An announced attachment size, for the metered question. Its own copy rather than a shared one
+     *  with the reader's [app.sterna.ui.message.formatSize]: that one returns "" for an unknown size,
+     *  which is right in a list of files and wrong in a sentence asking permission to spend data. A
+     *  size of 0 never reaches here -- [DownloadLimits.needsMeteredConfirmation] does not ask about a
+     *  message that announced nothing. */
+internal fun formatAttachmentSize(bytes: Long): String = when {
+    bytes < 1024 -> "$bytes B"
+    bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+    else -> "%.1f MB".format(bytes / 1024.0 / 1024.0)
 }

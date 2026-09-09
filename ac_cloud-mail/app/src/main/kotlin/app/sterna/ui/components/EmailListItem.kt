@@ -4,7 +4,10 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import app.sterna.core.jmap.model.EmailBodyPart
 import app.sterna.ui.rememberMotionEnabled
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -162,6 +167,16 @@ fun EmailListItem(
     showDraftBadge: Boolean = email.isDraft,
     // Whether to mark the row as a draft this phone is still holding for the server (#95).
     showNotUploadedBadge: Boolean = false,
+    // Tapping an attachment chip. NULL means draw no chips at all -- which is what every list that
+    // cannot download (search results, whose rows come from the FTS table and carry no parts) passes,
+    // rather than drawing chips that would do nothing when touched.
+    onOpenAttachment: ((EmailBodyPart) -> Unit)? = null,
+    // The attachment currently downloading anywhere in the list, as [attachmentKey] spells it. Only
+    // the chip whose key matches shows the spinner: the thing the user touched is the thing that has
+    // to answer. A KEY and not the part itself, because the part is re-decoded from the cache on
+    // every paging refresh -- an identity comparison would stop matching mid-download, and equality
+    // would spin the same-numbered part on a neighbouring row.
+    openingAttachmentKey: String? = null,
 ) {
     val senderName = email.from.firstOrNull()?.display() ?: stringResource(R.string.message_unknown_sender)
     val recipient = if (showRecipients) email.to.firstOrNull() else null
@@ -213,6 +228,13 @@ fun EmailListItem(
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             enter()
         }
+    }
+    // The row's file parts, computed ONCE: both the chips and the paperclip below turn on it, and a
+    // row that answered "do I have files?" twice could answer differently and draw both.
+    // `fileAttachmentParts()` is the SAME classifier the reader uses on the same parts, so a message
+    // cannot show two chips here and three rows when opened.
+    val attachmentParts = remember(email.id, email.attachments) {
+        if (onOpenAttachment == null) emptyList() else email.fileAttachmentParts()
     }
     val chipBackground = chipFill(
         scheme = MaterialTheme.colorScheme,
@@ -313,6 +335,21 @@ fun EmailListItem(
                     )
                 }
             }
+            // The attachment chips, LAST inside the weighted column and emitted only when there is
+            // something to draw. That placement is the whole answer to "how does row height vary":
+            // this Row has no fixed or minimum height anywhere, so its height is its content, and a
+            // message with no attachments emits NOTHING here and is exactly as tall as it was. A list
+            // where every row grew because some rows have chips would show the reader fewer messages
+            // per screen and buy them nothing.
+            if (onOpenAttachment != null && attachmentParts.isNotEmpty()) {
+                AttachmentChips(
+                    email = email,
+                    parts = attachmentParts,
+                    fill = chipBackground,
+                    openingKey = openingAttachmentKey,
+                    onOpen = onOpenAttachment,
+                )
+            }
             originLabel?.takeIf { it.isNotBlank() }?.let { label ->
                 Spacer(Modifier.size(4.dp))
                 // Tint the chip with the account's accent when there is one; a folder has none.
@@ -333,8 +370,11 @@ fun EmailListItem(
                 )
             }
         }
-        // A small paperclip flags rows carrying an attachment, left of the favourite star.
-        if (email.hasAttachment) {
+        // A small paperclip flags rows carrying an attachment, left of the favourite star. Where the
+        // chips are drawn it is redundant -- the files are named right there -- so it is not also
+        // shown. It still appears for a row that has the flag but no parts: a message cached before
+        // schema v28, or a search hit, where "there is something in here" is all that is known.
+        if (email.hasAttachment && attachmentParts.isEmpty()) {
             Spacer(Modifier.width(4.dp))
             Icon(
                 Icons.Filled.AttachFile,
@@ -479,3 +519,144 @@ private fun DraftLabel(fill: Color) {
             .padding(horizontal = 6.dp, vertical = 1.dp),
     )
 }
+
+    /** How many chips a row draws before it stops and says how many are left. Four files is already
+     *  an unusual message; twenty is a row six lines tall in a list meant to be scanned. */
+private const val MAX_ATTACHMENT_CHIPS = 3
+
+    /** Longest filename a chip spells out before [attachmentChipLabel] shortens it. */
+private const val MAX_CHIP_NAME = 22
+
+/**
+ * The attachment chips of one row: one per file, tappable, wrapping rather than truncating.
+ *
+ * WRAPPED, NOT SCROLLED, NOT CUT. A FlowRow is the same answer this app already gave for the
+ * settings confirm slot -- "wrapped where the labels don't fit, never truncated". A horizontal
+ * scroller inside a vertically scrolling list is the alternative and it is worse: the row would eat
+ * drags meant for the list. Past [MAX_ATTACHMENT_CHIPS] the row stops and says "+N", which opens the
+ * message, where all of them are listed with their sizes.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AttachmentChips(
+    email: Email,
+    parts: List<EmailBodyPart>,
+    fill: Color,
+    openingKey: String?,
+    onOpen: (EmailBodyPart) -> Unit,
+) {
+    Spacer(Modifier.size(4.dp))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        parts.take(MAX_ATTACHMENT_CHIPS).forEach { part ->
+            AttachmentChip(
+                part = part,
+                fill = fill,
+                busy = openingKey != null && openingKey == attachmentKey(email, part),
+                onOpen = { onOpen(part) },
+            )
+        }
+        val hidden = parts.size - MAX_ATTACHMENT_CHIPS
+        if (hidden > 0) {
+            Text(
+                text = stringResource(R.string.list_more_attachments, hidden),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .background(fill)
+                    .padding(horizontal = 6.dp, vertical = 3.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun AttachmentChip(
+    part: EmailBodyPart,
+    fill: Color,
+    busy: Boolean,
+    onOpen: () -> Unit,
+) {
+    val fallback = stringResource(R.string.message_attachment_fallback)
+    val name = part.name?.takeIf { it.isNotBlank() } ?: fallback
+    // The screen reader is given the WHOLE name, never the shortened one: shortening is a fix for a
+    // narrow screen, and a screen reader does not have one.
+    val spoken = stringResource(R.string.a11y_open_attachment, name)
+    Row(
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.small)
+            .background(fill)
+            .clickable(enabled = !busy, onClick = onOpen)
+            .padding(horizontal = 6.dp, vertical = 3.dp)
+            .clearAndSetSemantics {
+                contentDescription = spoken
+                role = Role.Button
+            },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // The paperclip becomes the progress ring in place, so the chip that was touched is the
+        // chip that answers, and the row does not reflow while it downloads.
+        if (busy) {
+            CircularProgressIndicator(
+                strokeWidth = 1.5.dp,
+                modifier = Modifier.size(12.dp),
+                color = MaterialTheme.colorScheme.primary,
+            )
+        } else {
+            Icon(
+                Icons.Filled.AttachFile,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(12.dp),
+            )
+        }
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = attachmentChipLabel(name),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * A filename shortened to fit a chip on a narrow phone -- from the MIDDLE, keeping both ends.
+ *
+ * The folder sidebar settled this argument for this module already (b5e47807e): when 28 names would
+ * not fit, the answer was explicitly NOT to truncate them into unreadability -- the sheet was
+ * widened and the label shrunk so the names stayed whole, and the rows that still wrapped were left
+ * wrapping. A chip cannot be widened, so the same judgement has to be spent differently: keep what
+ * carries the meaning and cut what does not.
+ *
+ * For a filename that is the two ENDS. "Quarterly_Financial_Report_Final_v3_SIGNED.pdf" tail-cut to
+ * "Quarterly_Financial_Repo…" has lost the version, the status AND the fact that it is a PDF -- and
+ * the extension is exactly what tells the reader what will open. Cut the middle and
+ * "Quarterly_Fin…_SIGNED.pdf" still answers both questions a glance is asking.
+ *
+ * No maxLines ellipsis does this, which is why the label is shortened as a STRING before Compose
+ * sees it. [maxLines] is still 1 on the Text as a backstop for a font scale this cannot predict.
+ */
+internal fun attachmentChipLabel(name: String, max: Int = MAX_CHIP_NAME): String {
+    if (name.length <= max) return name
+    // One character for the ellipsis, and the rest split with the TAIL favoured -- the extension and
+    // whatever qualifier sits before it are the informative end.
+    val tail = ((max - 1) * 2) / 3
+    val head = max - 1 - tail
+    return name.take(head) + "…" + name.takeLast(tail)
+}
+
+    /**
+     * Names one attachment of one message, uniquely across the whole list.
+     *
+     * The message id is in the key because neither half of the part is enough on its own: a JMAP
+     * blob id is unique only within its account (the same reason the `emails` table is keyed on
+     * `(accountId, id)`), and an IMAP part id is a section NUMBER -- "2" on one message and "2" on
+     * the next are different files with the same name for it. Keyed on the part alone, tapping a
+     * file on one row would spin a chip on another.
+     *
+     * Shared by the row and by the view model that reports which download is running, so the two
+     * cannot spell it differently -- which would show a spinner nowhere at all.
+     */
+internal fun attachmentKey(email: Email, part: EmailBodyPart): String =
+    "${email.accountId}\u0000${email.id}\u0000${part.blobId ?: part.partId}"

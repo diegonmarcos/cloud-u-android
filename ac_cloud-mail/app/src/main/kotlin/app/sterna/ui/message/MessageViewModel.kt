@@ -6,10 +6,10 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
-import androidx.core.content.FileProvider
 import app.sterna.core.data.mail.MessageCrypto
 import app.sterna.core.data.mail.MessageUnavailableException
 import app.sterna.core.data.mail.requireAttachmentBytes
+import app.sterna.ui.attachment.AttachmentOpen
 import app.sterna.core.data.pgp.PgpResult
 import app.sterna.core.imap.CryptoKind
 import androidx.lifecycle.AndroidViewModel
@@ -1458,17 +1458,13 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             try {
                 val credentials = credentials() ?: error(getApplication<Application>().getString(R.string.status_no_saved_account))
-                val bytes = repo.downloadAttachment(credentials, part, emailId)
-                val file = storage.cacheAttachment(part.name, bytes)
-                val uri = FileProvider.getUriForFile(app, "${app.packageName}.fileprovider", file)
-                val view = Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(uri, part.type ?: "*/*")
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                // unguarded: not a tap. The tap was handled above, where [openingAttachment] holds
-                // the second one back; there is no composition here to hang the leave guard on.
-                app.startActivity(
-                    Intent.createChooser(view, app.getString(R.string.status_open_attachment)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-                )
+                // The download, the safe name, the FileProvider grant and the MIME decision are all
+                // [AttachmentOpen]'s, shared with the message LIST, which now offers the same files a
+                // screen earlier. Two copies of this would be two chances to stop granting read
+                // permission, or for one of them to keep trusting the sender's Content-Type.
+                // Unguarded startActivity is inside it: the tap was handled above, where
+                // [openingAttachment] holds the second one back.
+                AttachmentOpen.openExternally(app, repo, storage, credentials, part, emailId)
                 _attachmentStatus.value = null
             } catch (t: ContentTooLargeException) {
                 // Our own refusal, not a failure: say it plainly instead of showing byte counts.

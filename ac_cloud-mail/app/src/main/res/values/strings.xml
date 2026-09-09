@@ -273,6 +273,14 @@
     <string name="a11y_favourite">Add star</string>
     <string name="a11y_unfavourite">Remove star</string>
     <string name="a11y_has_attachment">Has attachment</string>
+    <string name="a11y_open_attachment">Open attachment %1$s</string>
+    <!-- Shown on a message row when more files are attached than the row draws chips for. -->
+    <string name="list_more_attachments">+%1$d</string>
+    <!-- Asked before a large attachment is fetched over a metered network. %1$s is the filename,
+         %2$s the size. Nothing is refused: the tap was consent, this is only about the cost. -->
+    <string name="attachment_metered_title">Download over mobile data?</string>
+    <string name="attachment_metered_body">%1$s is %2$s. Your connection is metered.</string>
+    <string name="attachment_metered_confirm">Download</string>
     <string name="draft_label">Draft</string>
     <string name="local_draft_not_uploaded">Not uploaded</string>
     <string name="a11y_conversation_pill">Conversation, %1$d messages</string>

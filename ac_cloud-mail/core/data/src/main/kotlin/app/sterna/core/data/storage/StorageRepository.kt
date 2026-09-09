@@ -135,11 +135,28 @@ class StorageRepository(
             orphans
         }
 
-    /** Write a downloaded attachment to the cache, then enforce the size/age cap. */
+        /**
+         * Write a downloaded attachment to the cache under a name derived from [name], then enforce
+         * the size/age cap.
+         *
+         * [name] is a string a STRANGER chose, so it goes through [SafeFileName] rather than through
+         * a character replacement written inline here -- pure, in one place, and executable by a test.
+         * The canonical-path check below is not redundant with it: it is the invariant that must hold
+         * WHATEVER [SafeFileName] does, including after someone edits it. A write that would land
+         * outside this directory throws instead of happening.
+         */
     suspend fun cacheAttachment(name: String?, bytes: ByteArray): File = withContext(Dispatchers.IO) {
         val dir = attachmentsDir.apply { mkdirs() }
-        val safeName = (name ?: "attachment").replace(Regex("[^A-Za-z0-9._-]"), "_")
-        val file = File(dir, safeName).apply { writeBytes(bytes) }
+        val file = File(dir, SafeFileName.of(name))
+        val root = dir.canonicalPath
+        val target = file.canonicalFile
+        // `canonicalPath` resolves `..` and any symlink, so this compares where the write would
+        // ACTUALLY land, not where the string suggests it would. The separator guards against
+        // `…/attachments-elsewhere` passing a bare prefix test.
+        require(target.parentFile?.canonicalPath == root) {
+            "Refusing to write an attachment outside the cache directory."
+        }
+        file.writeBytes(bytes)
         enforceAttachmentCap()
         file
     }

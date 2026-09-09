@@ -23,6 +23,11 @@ import app.sterna.push.Notifications
 import app.sterna.push.PushController
 import app.sterna.snooze.Snoozes
 import app.sterna.core.data.account.AccountCredentials
+import app.sterna.core.jmap.ContentTooLargeException
+import app.sterna.core.jmap.DownloadLimits
+import app.sterna.core.jmap.model.EmailBodyPart
+import app.sterna.ui.attachment.AttachmentOpen
+import app.sterna.ui.components.attachmentKey
 import app.sterna.core.data.account.StoredAccount
 import app.sterna.core.data.db.OutboxLogic
 import app.sterna.core.data.getOrElseUnlessCancelled
@@ -214,6 +219,7 @@ class InboxViewModel(
 ) : AndroidViewModel(application) {
     private val store = application.container.accountStore
     private val repo = application.container.mailRepository
+    private val storage = application.container.storageRepository
     private val settings = application.container.settingsRepository
     private val outbox = application.container.sendOutbox
 
@@ -303,6 +309,93 @@ class InboxViewModel(
 
     fun clearMessage() {
         _message.value = null
+    }
+
+    // ---- Attachment chips: opening a file from the LIST, without opening the message ----
+
+        /** Which attachment a tap is currently downloading, as [attachmentKey] spells it. ONE chip
+         *  shows the progress, not every chip on the row and not a bar at the top of the screen: the
+         *  thing the user touched is the thing that has to answer. Null when nothing is downloading. */
+    private val _openingAttachment = MutableStateFlow<String?>(null)
+    val openingAttachment: StateFlow<String?> = _openingAttachment.asStateFlow()
+
+        /** A tapped attachment held back for an answer because it is large and this network charges
+         *  for what it carries. Held with its resolved credentials so confirming cannot re-resolve
+         *  them against an account list that changed while the dialog was up. */
+    data class MeteredAttachment(
+        val credentials: AccountCredentials,
+        val email: Email,
+        val part: EmailBodyPart,
+        val name: String,
+        val bytes: Long,
+    )
+
+    private val _meteredAttachment = MutableStateFlow<MeteredAttachment?>(null)
+    val meteredAttachment: StateFlow<MeteredAttachment?> = _meteredAttachment.asStateFlow()
+
+        /**
+         * Open [part] of [email] in another application, WITHOUT opening the message.
+         *
+         * A chip lives in a scrolling list, so this begins by deciding whether to ask. The rule is
+         * [DownloadLimits.needsMeteredConfirmation] and it is stated there: the tap itself is explicit
+         * consent, so nothing is refused for being on mobile data -- but a LARGE file gets a question
+         * first, because a brushed finger is a real way to arrive at a chip and the owner's data
+         * allowance is a real cost. Under the threshold, or on an unmetered network, it just opens.
+         */
+    fun openAttachment(email: Email, part: EmailBodyPart) {
+        if (_openingAttachment.value != null) return
+        val credentials = credentialsFor(email) ?: return
+        val app = getApplication<Application>()
+        val name = part.name?.takeIf { it.isNotBlank() }
+            ?: app.getString(R.string.message_attachment_fallback)
+        if (DownloadLimits.needsMeteredConfirmation(part.size, AttachmentOpen.isMetered(app))) {
+            _meteredAttachment.value = MeteredAttachment(credentials, email, part, name, part.size)
+            return
+        }
+        download(credentials, email, part, name)
+    }
+
+    /** The answer to the metered question was yes. */
+    fun confirmMeteredAttachment() {
+        val pending = _meteredAttachment.value ?: return
+        _meteredAttachment.value = null
+        download(pending.credentials, pending.email, pending.part, pending.name)
+    }
+
+    /** The answer was no. Nothing is fetched and nothing is said -- the user just declined. */
+    fun dismissMeteredAttachment() {
+        _meteredAttachment.value = null
+    }
+
+    private fun download(
+        credentials: AccountCredentials,
+        email: Email,
+        part: EmailBodyPart,
+        name: String,
+    ) {
+        val app = getApplication<Application>()
+        val key = attachmentKey(email, part)
+        _openingAttachment.value = key
+        viewModelScope.launch {
+            try {
+                AttachmentOpen.openExternally(app, repo, storage, credentials, part, email.id)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (t: ContentTooLargeException) {
+                // Our own ceiling, not a failure of theirs: say it plainly, without byte counts.
+                _message.value = app.getString(R.string.status_attachment_too_large)
+            } catch (t: Throwable) {
+                // A tap that does nothing at all is the worst outcome here -- the user cannot tell a
+                // dead chip from a slow one. The exception text is raw and English-only, so it goes
+                // to logcat and the snackbar gets the named file.
+                android.util.Log.w("SternaInbox", "opening attachment failed", t)
+                _message.value = app.getString(R.string.status_open_attachment_failed, name)
+            } finally {
+                // Released when the chooser is up, not when the user comes back: the file is theirs
+                // to open again as often as they like.
+                _openingAttachment.value = null
+            }
+        }
     }
 
     /** A read/flag server write failed after the list showed the change optimistically. The

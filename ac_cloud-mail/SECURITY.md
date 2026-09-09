@@ -419,6 +419,43 @@ ignore. The real host is read from after the last `@`, so
   account that asked for a relay address has a transport that can be moved this way; a JMAP
   account does not, nor does an IMAP account without one.
 
+## Opening an attachment
+
+An attachment is content from a stranger, and BOTH of the things that decide what happens to it —
+its declared filename and its declared MIME type — are chosen by the sender. Since the message list
+can now open one directly from a chip, a tap can reach this path without the message ever having
+been read.
+
+**The filename never reaches the disk as given.** `SafeFileName.of()` takes the last path segment on
+both separators, reduces everything outside `[A-Za-z0-9._-]` to `_`, refuses a name that is nothing
+but dots (`.` and `..` are directories), strips leading dots, and shortens a long name from the
+MIDDLE so the extension survives — a length cap that could silently remove an extension would be a
+security decision made by a cosmetic rule. `StorageRepository.cacheAttachment` then compares the
+canonical parent of the target against the canonical cache directory and throws if they differ.
+That check is not redundant with the rule above it: it is the invariant that must hold whatever the
+rule does, including after someone edits the rule. Both are pinned by executed tests that resolve
+every hostile case against a real directory path rather than comparing it to an expected string.
+
+**The declared type does not choose the handler.** The MIME type is what Android matches an intent
+filter against, so trusting the sender's `Content-Type` would let a stranger pick which application
+opens their own file. `AttachmentMime.of()` asks the FILE first — the platform's extension map, on
+the name this app itself wrote — and falls back to the claim only when the file says nothing, and
+only if the claim is a well-formed media type. Anything else becomes `*/*`, which asserts nothing
+and leaves the choice to the user in the chooser. `application/vnd.android.package-archive` is
+never handed over, from either source: summoning the package installer from a tap on a chip in a
+scrolling list is not something a mail application should offer.
+
+**The file leaves as a grant, not as a path.** One function, `AttachmentOpen.openExternally`, is the
+only place in the app that hands a file to another application, and both the reader and the message
+list call it. It is a `content://` URI from this app's own FileProvider (`cache-path` scoped to
+`attachments/`), `FLAG_GRANT_READ_URI_PERMISSION`, and a chooser. No filesystem path is exposed and
+no application is selected on the sender's behalf.
+
+**What is stored, and what is not.** The list holds attachment METADATA only — name, type, size and
+the blob or section id a download addresses. No attachment bytes are in the database. Content is
+fetched only when the user taps, is written to the cache under the existing size and age caps, and
+is swept by the same "clear cache" paths as everything else in that directory.
+
 ## Coordinated disclosure
 
 I prefer coordinated disclosure: give me a reasonable window to ship a fix before any
