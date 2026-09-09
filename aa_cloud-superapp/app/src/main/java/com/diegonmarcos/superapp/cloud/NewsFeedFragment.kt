@@ -24,13 +24,13 @@ import java.util.concurrent.Executors
 /**
  * News & RSS — each channel is a collapsable card. Header tap toggles
  * the body; on first expand the feed XML is fetched in the background,
- * parsed, and rendered as a tappable item list. Each item tap pushes
- * the URL into the internal browser (Tabs section) via
- * MainActivity.onTileClicked.
+ * parsed, and rendered as a tappable item list. Each item tap hands the
+ * URL to [ShellActivity.onTileClicked].
  *
- * Tap targets follow the same target-grammar the rest of the app uses,
- * so http(s) URLs automatically route through launchUri → BrowserTabPrefs →
- * BrowserHostFragment.
+ * Tap targets follow the same target-grammar the rest of the app uses, so
+ * http(s) URLs automatically route through ShellActivity.launchUri, which
+ * renders them in the app's embedded browser ([WebPageFragment], pushed onto
+ * the content back stack). Nothing here reaches an external browser.
  */
 class NewsFeedFragment : Fragment() {
 
@@ -196,8 +196,8 @@ class NewsFeedFragment : Fragment() {
             })
         }
         row.setOnClickListener {
-            // http(s) routes through MainActivity.launchUri →
-            // BrowserTabPrefs.add → BrowserHostFragment (internal browser).
+            // http(s) routes through ShellActivity.launchUri →
+            // openEmbeddedBrowser → WebPageFragment (the app's own browser).
             (activity as? TileGridFragment.TileClickListener)?.onTileClicked(item.link)
         }
         return row

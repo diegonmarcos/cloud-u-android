@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.rss
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.cloud.CloudData
+import com.diegonmarcos.superapp.launcher.TileGridFragment
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -170,12 +171,12 @@ class RssFeedFragment : Fragment(R.layout.fragment_rss_feed) {
                 val url = "https://rss.diegonmarcos.com/$topic"
                 row.findViewById<TextView>(R.id.r_url).text  = "$topic · rss.diegonmarcos.com/$topic"
                 row.setOnClickListener {
-                    runCatching {
-                        startActivity(android.content.Intent(
-                            android.content.Intent.ACTION_VIEW,
-                            android.net.Uri.parse(url),
-                        ))
-                    }
+                    // The topic page is ordinary web content on our own host,
+                    // so it belongs in the app's browser. Handing it to
+                    // ACTION_VIEW left superapp on every topic tap and lost the
+                    // way back to this registry.
+                    (activity as? TileGridFragment.TileClickListener)
+                        ?.onTileClicked(url)
                 }
                 container.addView(row)
             }
@@ -228,21 +229,26 @@ class RssFeedFragment : Fragment(R.layout.fragment_rss_feed) {
                         row.findViewById<TextView>(R.id.r_url).text =
                             if (hasLink) getString(R.string.rss_advisory_install) else m.body.take(160)
                         row.setOnClickListener {
-                            runCatching {
+                            if (hasLink) {
                                 // Straight to the bootstrap installer, which
                                 // downloads, verifies the sha256 sidecar and
                                 // hands the system installer bytes it can
                                 // vouch for. Handing the raw URL to a browser
-                                // would skip every one of those steps.
-                                startActivity(
-                                    if (hasLink)
+                                // would skip every one of those steps. This is
+                                // an Activity of this app, not a browser hop,
+                                // so it stays a direct startActivity.
+                                runCatching {
+                                    startActivity(
                                         com.diegonmarcos.superapp.recovery.RecoveryActivity
                                             .intent(ctx, m.appId)
-                                    else android.content.Intent(
-                                        android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse("https://rss.diegonmarcos.com/$topic"),
                                     )
-                                )
+                                }
+                            } else {
+                                // No install link: the row just shows the
+                                // channel, which is a plain web page and so
+                                // renders in the app's own browser.
+                                (activity as? TileGridFragment.TileClickListener)
+                                    ?.onTileClicked("https://rss.diegonmarcos.com/$topic")
                             }
                         }
                         slot.addView(row)

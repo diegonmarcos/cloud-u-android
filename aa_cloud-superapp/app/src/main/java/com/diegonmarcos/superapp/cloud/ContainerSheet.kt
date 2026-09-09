@@ -1,10 +1,8 @@
 package com.diegonmarcos.superapp.cloud
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.net.Uri
 import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
@@ -12,6 +10,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
 import com.diegonmarcos.superapp.launcher.Sections
+import com.diegonmarcos.superapp.launcher.TileGridFragment
 import com.diegonmarcos.superapp.ops.dagu.DaguPrefs
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.tabs.TabLayout
@@ -179,7 +178,11 @@ object ContainerSheet {
         } ?: openUrl
         if (url.isNotBlank()) {
             card2.addView(action(ctx, "Open", url.removePrefix("https://")) {
-                runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+                // Same target the C3 tile itself dispatches when the sheet is
+                // bypassed, so it must open the same way: through the activity,
+                // in the app's browser. Two paths to one service URL that
+                // disagreed about where it opens is the bug this removes.
+                (ctx as? TileGridFragment.TileClickListener)?.onTileClicked(url)
                 dialog.dismiss()
             })
         }

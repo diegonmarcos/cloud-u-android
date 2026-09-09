@@ -1,11 +1,10 @@
 package com.diegonmarcos.superapp.cloud
 import com.diegonmarcos.superapp.launcher.Sections
+import com.diegonmarcos.superapp.launcher.TileGridFragment
 import com.diegonmarcos.superapp.launcher.AggregatorStackFragment
 import com.diegonmarcos.superapp.R
 
-import android.content.Intent
 import android.graphics.drawable.GradientDrawable
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -74,9 +73,12 @@ class C3HealthFragment : Fragment(R.layout.fragment_c3_health) {
                     if (svc.privateDns.isNotBlank()) "🔒 ${svc.privateDns}" else "—"
                 row.findViewById<TextView>(R.id.h_vm).text      = svc.vm
                 row.setOnClickListener {
-                    runCatching {
-                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://${svc.publicUrl}")))
-                    }
+                    // A public service's own web UI is exactly the content this
+                    // app can render, and the estate dashboard is a place you
+                    // tap through repeatedly — bouncing to an external browser
+                    // per row meant a task switch and no way back to the list.
+                    (activity as? TileGridFragment.TileClickListener)
+                        ?.onTileClicked("https://${svc.publicUrl}")
                 }
                 root.addView(row)
             }

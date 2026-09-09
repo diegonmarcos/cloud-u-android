@@ -20,9 +20,7 @@ import com.diegonmarcos.superapp.cloud.C3HealthFragment
 import com.diegonmarcos.superapp.core.Collapsible
 import com.diegonmarcos.superapp.notificationcenter.PhoneNotificationStore
 
-import android.content.Intent
 import android.graphics.Typeface
-import android.net.Uri
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -881,11 +879,12 @@ class AggregatorStackFragment : Fragment(),
             isClickable = true
             isFocusable = true
             setOnClickListener {
-                if (url.isNotBlank()) {
-                    runCatching {
-                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                    }
-                }
+                // A workflow-run link is a plain web page, so it goes to the
+                // activity dispatcher rather than straight out to ACTION_VIEW.
+                // Firing the intent here handed the user to whatever external
+                // browser the system picked, which ends the superapp task: the
+                // Back gesture returns to the launcher, not to this run list.
+                if (url.isNotBlank()) onTileClicked(url)
             }
         }
         row.addView(android.widget.TextView(ctx).apply {
@@ -1709,11 +1708,19 @@ class AggregatorStackFragment : Fragment(),
         if (g.launchPackage.isNotBlank() || g.url.isNotBlank()) {
             view.isClickable = true
             view.setOnClickListener {
-                runCatching {
-                    if (g.launchPackage.isNotBlank())
+                // A group that names a package IS that app, so launching it is
+                // the whole point and stays a direct intent. A group that only
+                // carries a URL is a published ntfy channel — plain web content
+                // this app renders itself, so it goes through the dispatcher and
+                // keeps the user (and the Back gesture) inside the notification
+                // stack they tapped from.
+                if (g.launchPackage.isNotBlank()) {
+                    runCatching {
                         ctx.packageManager.getLaunchIntentForPackage(g.launchPackage)
                             ?.let { ctx.startActivity(it) }
-                    else startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(g.url)))
+                    }
+                } else {
+                    onTileClicked(g.url)
                 }
             }
         }
