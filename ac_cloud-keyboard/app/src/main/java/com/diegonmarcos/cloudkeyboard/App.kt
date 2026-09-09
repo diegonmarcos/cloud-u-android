@@ -59,8 +59,8 @@ class App : Application(), WorkManagerConfiguration.Provider {
         // a fresh install (no subtype yet + never seeded), so it never fights a
         // user who later curates their own languages. Uses the exact API the
         // Settings → Languages screen uses (getResourceSubtypesForLocale +
-        // addEnabledSubtype), with createDefaultSubtype as fallback for locales
-        // without an exact resource subtype.
+        // addEnabledSubtype), resolving each configured tag to the closest
+        // DECLARED subtype so a seeded language always survives the next launch.
         runCatching { seedDefaultLocales() }
     }
 
@@ -74,11 +74,25 @@ class App : Application(), WorkManagerConfiguration.Provider {
         BuildConfig.DEFAULT_LOCALES.split(',').map { it.trim() }.filter { it.isNotEmpty() }.forEach { tag ->
             runCatching {
                 val locale = helium314.keyboard.latin.common.LocaleUtils.run { tag.constructLocale() }
+                // Seed only locales the keyboard actually DECLARES a subtype for. Creating one
+                // on the fly instead (the previous behaviour) enabled a subtype that no later
+                // launch could resolve: addEnabledSubtype writes it to PREF_ENABLED_SUBTYPES,
+                // but it was never registered in PREF_ADDITIONAL_SUBTYPES, so the next start's
+                // loadResourceSubtypes/loadEnabledSubtypes pass found neither a resource nor an
+                // additional subtype for it and deleted it again. The language vanished without
+                // any error and the system-locale default silently took its place.
+                // getBestMatch returns the exact locale when one is declared and otherwise the
+                // closest declared relative, which is also the locale whose main dictionary
+                // getBestMatch will find — so a phone reporting Mexico or Argentina lands on the
+                // Spanish subtype that has a dictionary rather than on nothing at all.
+                val declaredLocale = helium314.keyboard.latin.common.LocaleUtils.getBestMatch(
+                    locale,
+                    helium314.keyboard.latin.utils.SubtypeSettings.getAvailableSubtypeLocales()
+                ) { it } ?: return@runCatching
                 val subtype = helium314.keyboard.latin.utils.SubtypeSettings
-                    .getResourceSubtypesForLocale(locale).firstOrNull()
-                    ?: helium314.keyboard.latin.utils.SubtypeUtilsAdditional.createDefaultSubtype(locale)
+                    .getResourceSubtypesForLocale(declaredLocale).firstOrNull() ?: return@runCatching
                 helium314.keyboard.latin.utils.SubtypeSettings.addEnabledSubtype(prefs, subtype)
-                prewarmEmojiDict(locale)
+                prewarmEmojiDict(declaredLocale)
             }
         }
         prefs.edit().putBoolean(PREF_DEFAULT_LOCALES_SEEDED, true).apply()
