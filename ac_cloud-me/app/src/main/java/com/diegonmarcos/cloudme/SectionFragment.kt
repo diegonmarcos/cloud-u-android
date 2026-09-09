@@ -17,10 +17,13 @@ import org.json.JSONObject
 /**
  * One section: its tab strip and whichever page is showing.
  *
- * A tab that declares `pages` of its own is a container — it draws a second,
- * quieter strip underneath and shows one of its children. Buro > Fin is the
- * only one today: Acct, Budget and Portfolio are three views of one question,
- * and three top-level tabs would have said they were three questions.
+ * A tab that declares `pages` of its own is a container — it draws another,
+ * quieter strip underneath and shows one of its children, and a child may be
+ * a container in turn. Buro > Fin was the first: Acct, Budget and Portfolio
+ * are three views of one question, and three top-level tabs would have said
+ * they were three questions. Projects > Health > Workout > Gym is the deepest,
+ * at three strips. The strips are built from the page chain rather than from
+ * two named fields, so the depth build.json may declare is not capped here.
  *
  * A page's content is decided by its `stack_<id>` list. When that list is a
  * single `fragment` block the library fragment is hosted directly — Health,
@@ -35,8 +38,10 @@ class SectionFragment : Fragment() {
     /** The LEAF page on screen — a sub-page id when the tab is a container. */
     private var pageId: String? = null
 
-    private var tabs: TabLayout? = null
-    private var subTabs: TabLayout? = null
+    /** One TabLayout per level of the chain to [pageId], outermost first.
+     *  Held as a column rather than as named fields so that adding a level in
+     *  build.json needs no field here. */
+    private var strips: LinearLayout? = null
 
     /** TabLayout fires onTabSelected for programmatic selection and for the
      *  first tab added, so every sync below would bounce straight back into
@@ -55,23 +60,12 @@ class SectionFragment : Fragment() {
         pageId = (s?.getString(STATE_PAGE) ?: arguments?.getString(ARG_PAGE))
             .let { section?.page(it)?.leaf()?.id }
 
-        // One page needs no tab strip — a single-tab strip reads as a broken
-        // control rather than a navigation aid. Configs is shaped that way on
-        // purpose: a settings screen is a list you scroll.
-        if (section != null && section.pages.size > 1) {
-            val top = buildStrip(ctx, section.pages, primary = true) { id ->
-                // A container tab has no content of its own; opening it opens
-                // the child you were last on, or its first.
-                val target = section.page(id) ?: return@buildStrip
-                showPage(if (target.pages.any { it.id == pageId }) pageId else target.leaf().id)
-            }
-            tabs = top
-            root.addView(top, LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-        val sub = TabLayout(ctx).apply { visibility = View.GONE }
-        subTabs = sub
-        root.addView(sub, LinearLayout.LayoutParams(
+        // The strips themselves are filled by showPage, which is the only
+        // place that knows which page — and therefore how many levels — is on
+        // screen. Empty here means a section reached before its first page.
+        val column = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        strips = column
+        root.addView(column, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
 
         root.addView(FrameLayout(ctx).apply { id = HOST_ID }, LinearLayout.LayoutParams(
@@ -90,31 +84,46 @@ class SectionFragment : Fragment() {
         outState.putString(STATE_PAGE, pageId)
     }
 
-    /** A tab strip over [pages]. `primary` is the section's own strip; the
-     *  secondary one is smaller and unindicated, so the two never read as
-     *  competing rows of the same control. */
-    private fun buildStrip(
-        ctx: android.content.Context,
-        pages: List<Page>,
-        primary: Boolean,
-        onSelect: (String) -> Unit,
-    ): TabLayout = TabLayout(ctx).apply {
-        tabMode = if (pages.size > 4) TabLayout.MODE_SCROLLABLE else TabLayout.MODE_FIXED
-        setBackgroundColor(ContextCompat.getColor(ctx, R.color.me_bg))
-        setSelectedTabIndicatorColor(ContextCompat.getColor(
-            ctx, if (primary) R.color.me_primary else R.color.me_surface))
-        setTabTextColors(
-            ContextCompat.getColor(ctx, R.color.me_text_dim),
-            ContextCompat.getColor(ctx, R.color.me_primary),
-        )
-        pages.forEach { p -> addTab(newTab().apply { text = p.label; tag = p.id }) }
-        addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+    /** An empty strip. `primary` is the section's own; every strip below it
+     *  is unindicated, so the rows never read as competing copies of the same
+     *  control. */
+    private fun newStrip(ctx: android.content.Context, primary: Boolean): TabLayout =
+        TabLayout(ctx).apply {
+            setBackgroundColor(ContextCompat.getColor(ctx, R.color.me_bg))
+            setSelectedTabIndicatorColor(ContextCompat.getColor(
+                ctx, if (primary) R.color.me_primary else R.color.me_surface))
+            setTabTextColors(
+                ContextCompat.getColor(ctx, R.color.me_text_dim),
+                ContextCompat.getColor(ctx, R.color.me_primary),
+            )
+        }
+
+    /** Puts [pages] into [strip], leaving it alone when it already holds
+     *  them. Rebuilt rather than patched when they differ: a second container
+     *  tab would otherwise inherit the previous one's children for one frame. */
+    private fun fillStrip(strip: TabLayout, pages: List<Page>) {
+        val shown = (0 until strip.tabCount).map { strip.getTabAt(it)?.tag as? String }
+        if (pages.map { it.id } == shown) return
+        strip.clearOnTabSelectedListeners()
+        strip.removeAllTabs()
+        strip.tabMode = if (pages.size > 4) TabLayout.MODE_SCROLLABLE else TabLayout.MODE_FIXED
+        pages.forEach { p -> strip.addTab(strip.newTab().apply { text = p.label; tag = p.id }) }
+        strip.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
-                if (!syncing) (tab.tag as? String)?.let(onSelect)
+                if (!syncing) (tab.tag as? String)?.let(::openTab)
             }
             override fun onTabUnselected(tab: TabLayout.Tab) = Unit
             override fun onTabReselected(tab: TabLayout.Tab) = Unit
         })
+    }
+
+    /** A container tab has no content of its own; tapping one opens the child
+     *  you were last on — which is what staying on the chain means — or its
+     *  first child. Tapping a leaf opens the leaf. */
+    private fun openTab(id: String) {
+        val section = Sections.byId(sectionId) ?: return
+        val stillBelow = section.path(pageId).any { it.id == id }
+        showPage(if (stillBelow) pageId else section.page(id)?.leaf()?.id)
     }
 
     /** Shows [id] and brings both strips in line with it. [replaceContent] is
@@ -126,11 +135,9 @@ class SectionFragment : Fragment() {
         val changed = pageId != page.id
         pageId = page.id
 
-        val parent = section.parentOf(page.id)
         val wasSyncing = syncing
         syncing = true
-        tabs?.let { syncStrip(it, section.pages.indexOfFirst { p -> p.id == parent?.id }) }
-        syncSubStrip(parent)
+        syncStrips(section, section.path(page.id))
         syncing = wasSyncing
 
         if (replaceContent || changed) {
@@ -144,32 +151,27 @@ class SectionFragment : Fragment() {
         strip.getTabAt(index)?.let { strip.selectTab(it, true) }
     }
 
-    private fun syncSubStrip(parent: Page?) {
-        val holder = subTabs ?: return
-        val children = parent?.pages.orEmpty()
-        if (children.isEmpty()) {
-            holder.visibility = View.GONE
-            holder.removeAllTabs()
-            return
-        }
-        holder.visibility = View.VISIBLE
-        // Rebuilt rather than reused: a second container tab would otherwise
-        // inherit the previous one's children for one frame.
-        val shown = (0 until holder.tabCount).map { holder.getTabAt(it)?.tag as? String }
-        if (children.map { it.id } != shown) {
-            holder.clearOnTabSelectedListeners()
-            holder.removeAllTabs()
-            holder.tabMode = if (children.size > 4) TabLayout.MODE_SCROLLABLE else TabLayout.MODE_FIXED
-            children.forEach { p -> holder.addTab(holder.newTab().apply { text = p.label; tag = p.id }) }
-            holder.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-                override fun onTabSelected(tab: TabLayout.Tab) {
-                    if (!syncing) (tab.tag as? String)?.let { showPage(it) }
+    /** Draws the strips [chain] implies: level 0 offers the section's own
+     *  tabs, level n the children of the tab chosen at level n-1, and the
+     *  chain says which tab is selected at each. Strips past the chain are
+     *  removed, so stepping out of a container takes its strip with it. */
+    private fun syncStrips(section: Section, chain: List<Page>) {
+        val host = strips ?: return
+        val levels = listOf(section.pages) + chain.dropLast(1).map { it.pages }
+        while (host.childCount > levels.size) host.removeViewAt(host.childCount - 1)
+        levels.forEachIndexed { level, siblings ->
+            val strip = host.getChildAt(level) as? TabLayout
+                ?: newStrip(host.context, primary = level == 0).also {
+                    host.addView(it, LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
                 }
-                override fun onTabUnselected(tab: TabLayout.Tab) = Unit
-                override fun onTabReselected(tab: TabLayout.Tab) = Unit
-            })
+            // One tab is not a choice — a single-tab strip reads as a broken
+            // control rather than as a navigation aid. Configs is shaped that
+            // way on purpose: a settings screen is a list you scroll.
+            strip.visibility = if (siblings.size > 1) View.VISIBLE else View.GONE
+            fillStrip(strip, siblings)
+            syncStrip(strip, siblings.indexOfFirst { it.id == chain.getOrNull(level)?.id })
         }
-        syncStrip(holder, children.indexOfFirst { it.id == pageId })
     }
 
     private fun contentFor(section: Section, page: Page): Fragment {
@@ -186,7 +188,18 @@ class SectionFragment : Fragment() {
      *  block's title rather than a blank screen, so a typo in JSON is
      *  visible on the phone instead of silent. */
     private fun libraryFragment(o: JSONObject): Fragment? = when (o.optString("id")) {
-        "health" -> HealthFragment.newInstance(o.optString("page", HealthFragment.PAGE_SUMMARY))
+        // `metric` and `records` are only read by the metric page, which is
+        // one metric of the taxonomy on a page of its own — Workout > Steps
+        // is the Activity metric narrowed to steps, distance and calories.
+        // Both are declared here rather than in Kotlin so that narrowing a
+        // page, or adding another one, stays a JSON edit.
+        "health" -> HealthFragment.newInstance(
+            o.optString("page", HealthFragment.PAGE_SUMMARY),
+            o.optString("metric"),
+            (o.optJSONArray("records") ?: org.json.JSONArray()).let { arr ->
+                (0 until arr.length()).map { arr.optString(it) }
+            },
+        )
         "fin"    -> MyFinDashboardFragment()
         "agenda" -> AgendaFragment.newInstance(AgendaFragment.MODE_EVENTS)
         "todo"   -> AgendaFragment.newInstance(AgendaFragment.MODE_TODOS)

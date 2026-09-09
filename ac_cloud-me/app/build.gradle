@@ -65,18 +65,22 @@ def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toStr
 // A declared page with no file is still a build failure rather than a blank
 // tab on the phone — the check moves here, the loader does not become
 // fail-soft.
+//
+// A container tab holds no content of its own, and its children sit one folder
+// deeper — at whatever depth build.json declares, since Projects > Health >
+// Workout > Gym is three deep and nothing in the shell caps that any more.
 def uiPagesDir = file('../data/ui')
-(buildJson.ui.sections ?: []).each { s ->
-    def check = { p, dir ->
-        if (!new File(uiPagesDir, "${dir}/${p.id}.json").exists()) {
-            throw new GradleException("ui.sections[${s.id}] page '${p.id}' has no data/ui/${dir}/${p.id}.json")
+def checkPages
+checkPages = { sectionId, pages, dir ->
+    pages.each { p ->
+        if (p.pages) {
+            checkPages(sectionId, p.pages, "${dir}/${p.id}")
+        } else if (!new File(uiPagesDir, "${dir}/${p.id}.json").exists()) {
+            throw new GradleException("ui.sections[${sectionId}] page '${p.id}' has no data/ui/${dir}/${p.id}.json")
         }
     }
-    (s.pages ?: []).each { p ->
-        if (p.pages) p.pages.each { sub -> check(sub, "${s.id}/${p.id}") }
-        else check(p, s.id)
-    }
 }
+(buildJson.ui.sections ?: []).each { s -> checkPages(s.id, s.pages ?: [], s.id) }
 def uiSectionsB64     = b64(buildJson.ui.sections ?: [])
 def uiExternalAppsB64 = b64(buildJson.ui.external_apps ?: [])
 def uiPermsRuntimeB64 = b64(buildJson.ui.permissions?.runtime ?: [])

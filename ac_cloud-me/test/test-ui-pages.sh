@@ -15,23 +15,34 @@ secs = ui["sections"]
 apps = {a["id"] for a in ui.get("external_apps", [])}
 bad  = []
 
-# section id → every navigable page id (tabs and sub-tabs alike)
+# section id → every navigable page id (tabs and sub-tabs, at any depth)
+def declared(pages, folder):
+    """(page id, content file or None) for every page below `pages`.
+
+    A container tab holds no content of its own and its children live one
+    folder deeper, so the folder path IS the tab path — and it recurses,
+    because Projects > Health > Workout > Gym is three deep. It is still a
+    valid target id, which is why the container yields None rather than
+    nothing at all."""
+    for p in pages:
+        subs = p.get("pages", [])
+        if subs:
+            yield p["id"], None
+            yield from declared(subs, f"{folder}/{p['id']}")
+        else:
+            yield p["id"], f"{folder}/{p['id']}.json"
+
 pages, files = {}, {}
 for s in secs:
     ids = []
-    for p in s.get("pages", []):
-        subs = p.get("pages", [])
-        # A container tab holds no content of its own; its children live one
-        # folder deeper and are the ids a target can name.
-        for q in (subs or [p]):
-            ids.append(q["id"])
-            f = f"data/ui/{s['id']}/{p['id']}/{q['id']}.json" if subs else f"data/ui/{s['id']}/{q['id']}.json"
-            if not os.path.exists(f):
-                bad.append(f"missing page file {f}")
-            else:
-                files[f] = json.load(open(f))
-        if subs:
-            ids.append(p["id"])   # the container is still a valid target
+    for pid, f in declared(s.get("pages", []), f"data/ui/{s['id']}"):
+        ids.append(pid)
+        if f is None:
+            continue
+        if not os.path.exists(f):
+            bad.append(f"missing page file {f}")
+        else:
+            files[f] = json.load(open(f))
     # Sections.kt::Section.page() resolves an id against the tab strip AND
     # every sub-strip in ONE flat list, so two pages in a section sharing an
     # id are not two destinations — the second is unreachable and the first
@@ -83,6 +94,23 @@ for icon in sorted({o["icon"] for o in list(walk(secs)) + blocks
                     if isinstance(o.get("icon"), str) and o["icon"]}):
     if icon not in drawables:
         bad.append(f"icon '{icon}' — no app/src/main/res/drawable/{icon}.xml")
+
+# A `metric` page is ONE entry of the health taxonomy drawn on a page of its
+# own, optionally narrowed to some of that metric's record types. Both names
+# are matched at RUNTIME against a list baked from build.json — a typo in
+# either resolves to nothing and the page draws its "no such metric" state,
+# which is honest but is not what anyone meant to ship.
+health_metrics = {m["id"]: m for s in secs if s["id"] == "health" for m in s.get("metrics", [])}
+for o in blocks:
+    if o.get("kind") != "fragment" or o.get("id") != "health" or o.get("page") != "metric":
+        continue
+    m = health_metrics.get(o.get("metric"))
+    if m is None:
+        bad.append(f"metric page names '{o.get('metric')}' — no such ui.sections[health].metrics id")
+        continue
+    for r in o.get("records", []):
+        if r not in m["records"]:
+            bad.append(f"metric page '{o['metric']}' narrows to '{r}', which that metric does not declare")
 
 # A `files` block browses a real asset tree; an empty root is a blank screen.
 roots = [o["root"] for o in blocks if o.get("kind") == "fragment" and o.get("id") == "files"]
@@ -166,8 +194,11 @@ def resolve(target):
     section = secs.get(section_id)
     if section is None:
         return None, f"target {target} — no section '{section_id}'"
-    flat = [q for p in section.get("pages", []) for q in [p] + p.get("pages", [])]
-    hit = next((p for p in flat if p["id"] == page_id), None)
+    def flatten(pages):
+        for p in pages:
+            yield p
+            yield from flatten(p.get("pages", []))
+    hit = next((p for p in flatten(section.get("pages", [])) if p["id"] == page_id), None)
     if hit is None:
         return None, f"target {target} — section '{section_id}' declares no page '{page_id}'"
     # leaf(): a container tab shows its first child, never itself.

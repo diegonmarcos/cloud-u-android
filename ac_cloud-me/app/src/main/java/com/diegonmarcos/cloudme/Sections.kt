@@ -21,17 +21,35 @@ import org.json.JSONObject
  * an app that opens on a blank page, never one that crashes on launch.
  */
 /** A tab. [pages] is non-empty only for a container tab — one that holds a
- *  second strip instead of content of its own, which is what Buro > Fin is:
- *  Acct, Budget and Portfolio are three views of one question and do not each
- *  deserve a top-level tab. */
+ *  strip of its own instead of content, which is what Buro > Fin is: Acct,
+ *  Budget and Portfolio are three views of one question and do not each
+ *  deserve a top-level tab.
+ *
+ *  A container may hold containers. Projects > Health > Workout > Gym is
+ *  three strips deep, because the plan belongs under the training it plans
+ *  and the training belongs under the body it trains. Depth is a decision
+ *  taken in build.json; nothing here or in the shell caps it. */
 data class Page(
     val id: String,
     val label: String,
     val icon: String,
     val pages: List<Page> = emptyList(),
 ) {
-    /** The tab that actually renders when this one is selected. */
+    /** The tab that actually renders when this one is selected — walked all
+     *  the way down, since the first child may itself be a container. */
     fun leaf(): Page = pages.firstOrNull()?.leaf() ?: this
+}
+
+/** The chain of tabs from [pages] down to [id], or empty when no branch
+ *  carries it. Depth-first: ids are unique per section (test-ui-pages.sh
+ *  fails when they are not), so the first hit is the only hit. */
+private fun pathTo(pages: List<Page>, id: String?): List<Page> {
+    for (p in pages) {
+        if (p.id == id) return listOf(p)
+        val below = pathTo(p.pages, id)
+        if (below.isNotEmpty()) return listOf(p) + below
+    }
+    return emptyList()
 }
 
 data class Section(
@@ -52,14 +70,17 @@ data class Section(
     val target: String,
     val pages: List<Page>,
 ) {
-    /** Resolves a page id against the tab strip AND every sub-strip, so a
-     *  `page:buro/acct` target lands on a sub-page as readily as on a tab. */
-    fun page(id: String?): Page? =
-        pages.flatMap { listOf(it) + it.pages }.firstOrNull { it.id == id } ?: pages.firstOrNull()
+    /** The tabs leading to [id], outermost first — Health, Workout, Gym for
+     *  `page:projects/gym`. Empty when this section declares no such id.
+     *
+     *  It is the ONE resolution the shell needs at any depth: the last entry
+     *  is the page, the entries before it are the strips drawn above it, and
+     *  their ids are the folders the page's content file lives under. */
+    fun path(id: String?): List<Page> = pathTo(pages, id)
 
-    /** The top-level tab holding [id] — itself, when [id] is already a tab. */
-    fun parentOf(id: String?): Page? =
-        pages.firstOrNull { it.id == id || it.pages.any { sub -> sub.id == id } }
+    /** Resolves a page id against the tab strip AND every strip below it, so
+     *  a `page:buro/acct` target lands on a sub-page as readily as on a tab. */
+    fun page(id: String?): Page? = path(id).lastOrNull() ?: pages.firstOrNull()
 }
 
 object Sections {
@@ -101,19 +122,17 @@ object Sections {
      * constant at 64KB. The navigation shape is bounded and stays in
      * BuildConfig; the content is a file, read once per page open.
      *
-     * A sub-page lives one folder deeper, under its container tab. Missing or
-     * malformed yields an empty list and a page that says so, never a crash —
-     * the build already refuses a page with no file, so reaching the fallback
-     * means the asset was lost after the build, not that JSON went untested.
+     * A page lives one folder deeper per container tab above it, so the file
+     * path IS the tab path: projects/health/workout/gym.json is Projects >
+     * Health > Workout > Gym. Missing or malformed yields an empty list and a
+     * page that says so, never a crash — the build already refuses a page
+     * with no file, so reaching the fallback means the asset was lost after
+     * the build, not that JSON went untested.
      */
     fun stack(ctx: Context, sectionId: String, pageId: String): JSONArray {
         val section = byId(sectionId) ?: return JSONArray()
-        val parent = section.parentOf(pageId)
-        val path = if (parent != null && parent.id != pageId) {
-            "$sectionId/${parent.id}/$pageId.json"
-        } else {
-            "$sectionId/$pageId.json"
-        }
+        val chain = section.path(pageId).map { it.id }.ifEmpty { listOf(pageId) }
+        val path = (listOf(sectionId) + chain).joinToString("/") + ".json"
         return runCatching {
             JSONArray(ctx.assets.open(path).bufferedReader().use { it.readText() })
         }.getOrElse {
@@ -125,9 +144,11 @@ object Sections {
         }
     }
 
-    /** One level of `pages`, plus whatever `pages` each of those declares.
-     *  Two levels is all the shell draws, so it is all this reads. */
-    private fun parsePages(arr: JSONArray?, nested: Boolean = false): List<Page> {
+    /** `pages` all the way down. The shell draws one strip per level it is
+     *  handed, so a depth limit here would be a cap on what build.json is
+     *  allowed to express — and the last one silently dropped the third
+     *  level rather than refusing it. */
+    private fun parsePages(arr: JSONArray?): List<Page> {
         val out = mutableListOf<Page>()
         for (j in 0 until (arr?.length() ?: 0)) {
             val p = arr!!.optJSONObject(j) ?: continue
@@ -137,7 +158,7 @@ object Sections {
                 id = pid,
                 label = p.optString("label", pid),
                 icon = p.optString("icon"),
-                pages = if (nested) emptyList() else parsePages(p.optJSONArray("pages"), true),
+                pages = parsePages(p.optJSONArray("pages")),
             ))
         }
         return out

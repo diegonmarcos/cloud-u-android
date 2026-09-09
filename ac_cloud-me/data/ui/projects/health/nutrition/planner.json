@@ -1,0 +1,12 @@
+[
+  {
+    "kind": "note",
+    "title": "No plan yet",
+    "body": "The planner is what is MEANT to be eaten, against what Meals records was eaten. It has no data source either, and for the same reason it shows nothing rather than a template: a seven-day plan nobody wrote is a suggestion wearing the app's authority."
+  },
+  {
+    "kind": "note",
+    "title": "What would fill it",
+    "body": "A plan is dated, and the constellation already keeps dated things in CalDAV — Agenda and Todo are both views of it. A meal plan is most cheaply a category on those same entries rather than a fourth store, which would also put it in the week view the owner already reads every morning."
+  }
+]

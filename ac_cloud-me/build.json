@@ -392,6 +392,29 @@
                 "icon": "ic_p_health_activity"
               },
               {
+                "_doc": "Nutrition — what goes in, as three different kinds of thing, which is why it is a tree and not a tab. Meals and Planner are RECORDS the owner writes: what was eaten, and what is meant to be eaten. Neither has a store yet — no CalDAV category, no NocoDB table, no file under data/files — so both pages say exactly that instead of drawing a plausible week. Tracking is the opposite: it is the Nutrition metric of the Health Connect taxonomy (NutritionRecord + HydrationRecord) on a page of its own, so its numbers are measured by whatever producer syncs them and none of them are typed here. When Meals gains a store it becomes a `cards` stack the way Workout > Gym is; until then an empty state that names the missing source is the honest page.",
+                "id": "nutrition",
+                "label": "Nutrition",
+                "icon": "ic_p_health_nutrition",
+                "pages": [
+                  {
+                    "id": "meals",
+                    "label": "Meals",
+                    "icon": "ic_p_health_nutrition"
+                  },
+                  {
+                    "id": "planner",
+                    "label": "Planner",
+                    "icon": "ic_p_cal_day"
+                  },
+                  {
+                    "id": "tracking",
+                    "label": "Tracking",
+                    "icon": "ic_p_c3_reports"
+                  }
+                ]
+              },
+              {
                 "id": "timeline",
                 "label": "Timeline",
                 "icon": "ic_p_cal_day"

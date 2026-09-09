@@ -40,18 +40,32 @@ class HealthFragment : Fragment() {
     private val pageId: String
         get() = arguments?.getString(ARG_PAGE) ?: PAGE_SUMMARY
 
+    /** Only [PAGE_METRIC] reads these: which metric the page is, and which of
+     *  its record types to keep. Empty means the whole metric. */
+    private val metricId: String
+        get() = arguments?.getString(ARG_METRIC).orEmpty()
+
+    private val recordNames: List<String>
+        get() = arguments?.getStringArrayList(ARG_RECORDS).orEmpty()
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View =
         ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0B0414))) {
-                    HealthScreen(pageId = pageId)
+                    HealthScreen(
+                        pageId      = pageId,
+                        metricId    = metricId,
+                        recordNames = recordNames,
+                    )
                 }
             }
         }
 
     companion object {
-        private const val ARG_PAGE = "pageId"
+        private const val ARG_PAGE    = "pageId"
+        private const val ARG_METRIC  = "metricId"
+        private const val ARG_RECORDS = "recordNames"
 
         /** Page id constants — the three pages this module draws, and the
          *  ids the host's `page` field is matched against. The host's
@@ -65,9 +79,24 @@ class HealthFragment : Fragment() {
         const val PAGE_TIMELINE = "timeline"
         const val PAGE_CONFIGS  = "configs"
 
-        fun newInstance(pageId: String = PAGE_SUMMARY): HealthFragment =
+        /** ONE metric on a page of its own, named by the host. The other
+         *  three pages each draw the whole taxonomy; this one exists because
+         *  a host tab can be about a single thing — Workout > Steps is daily
+         *  walking, which is the Activity metric with everything but steps,
+         *  distance and calories left out. */
+        const val PAGE_METRIC   = "metric"
+
+        fun newInstance(
+            pageId: String = PAGE_SUMMARY,
+            metricId: String = "",
+            recordNames: List<String> = emptyList(),
+        ): HealthFragment =
             HealthFragment().apply {
-                arguments = Bundle().apply { putString(ARG_PAGE, pageId) }
+                arguments = Bundle().apply {
+                    putString(ARG_PAGE, pageId)
+                    putString(ARG_METRIC, metricId)
+                    putStringArrayList(ARG_RECORDS, ArrayList(recordNames))
+                }
             }
     }
 }

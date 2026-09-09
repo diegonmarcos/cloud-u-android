@@ -1,0 +1,12 @@
+[
+  {
+    "kind": "note",
+    "title": "No meal record yet",
+    "body": "This page has no data source. Nothing here is measured, nothing is estimated, and there is deliberately no example week: a meal list that was invented by the app would be indistinguishable from one the owner wrote, and the first thing anyone would do with it is trust it."
+  },
+  {
+    "kind": "note",
+    "title": "What would fill it",
+    "body": "A meal is a record the owner writes, so it needs somewhere to be written. Health Connect is not that place — it stores nutrition totals a producer measured, not the dish they came from, which is what Tracking already reads. The candidates the constellation already runs are a NocoDB table reached through the cloud-services MCP server, or a folder of JSON records under data/files/ browsed the way Buro > Wallet browses the wallet. Whichever lands, this page becomes a `cards` stack over it and stops being a note."
+  }
+]

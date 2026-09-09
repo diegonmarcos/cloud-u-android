@@ -35,6 +35,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -73,10 +74,15 @@ import kotlin.reflect.KClass
  *   └──────────────────────────────────────────┘
  */
 @Composable
-fun HealthScreen(pageId: String) {
+fun HealthScreen(
+    pageId: String,
+    metricId: String = "",
+    recordNames: List<String> = emptyList(),
+) {
     when (pageId) {
         HealthFragment.PAGE_TIMELINE -> TimelineBody()
         HealthFragment.PAGE_CONFIGS  -> ConfigsBody()
+        HealthFragment.PAGE_METRIC   -> MetricBody(metricId, recordNames)
         // An unknown id is the host's page-to-body mapping drifting, not a
         // reason to draw nothing: Summary is the page every entry point
         // means when it does not say otherwise.
@@ -135,6 +141,119 @@ private fun SummaryBody() {
             } else {
                 items(merged, key = { "r-${m.id}-${it.first}" }) { (lbl, v7, v30) ->
                     DualValueRow(label = lbl, value7d = v7, value30d = v30)
+                }
+            }
+        }
+    }
+}
+
+// ── One metric, on a page of its own ────────────────────────────────
+// The same 7d/30d rows the Summary draws, narrowed to ONE metric and, when
+// the host page says so, to a subset of its record types. That is what makes
+// Workout > Steps a page about walking without a second taxonomy standing
+// beside the first one.
+//
+// It will not print a number it cannot source. "Health Connect is absent" and
+// "you did not grant this" are two different facts, and neither of them is
+// "no data" — a page that answered all three with the same empty list would
+// be inviting its reader to conclude they had not walked. Record types whose
+// read permission was refused are dropped BEFORE the query rather than
+// summed to zero afterwards, because a confident 0 km is a lie and a named
+// gap is not.
+@Composable
+private fun MetricBody(metricId: String, recordNames: List<String>) {
+    val ctx = LocalContext.current
+    val metric = remember(metricId, recordNames) {
+        HealthMetrics.byId(metricId)?.let { m ->
+            if (recordNames.isEmpty()) m
+            else m.copy(records = m.records.filter { it.simpleName in recordNames })
+        }
+    }
+    var availability by remember { mutableStateOf<HealthConnectGateway.Availability?>(null) }
+    var refused by remember { mutableStateOf<List<String>>(emptyList()) }
+    var rows7d  by remember { mutableStateOf<List<HealthConnectGateway.WindowRow>>(emptyList()) }
+    var rows30d by remember { mutableStateOf<List<HealthConnectGateway.WindowRow>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    // Bumped by the permission launcher to re-run the read. The launcher's own
+    // result set is not trusted for that: the user may grant some of what was
+    // asked and deny the rest, and the page has to redraw around what it
+    // actually got rather than around what it requested.
+    var grantRound by remember { mutableStateOf(0) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = PermissionController.createRequestPermissionResultContract(),
+    ) {
+        HealthStore.recordPermissionGrant(ctx)
+        grantRound++
+    }
+
+    LaunchedEffect(metric, grantRound) {
+        loading = true
+        availability = HealthConnectGateway.availability(ctx)
+        val granted = HealthConnectGateway.grantedPermissions(ctx)
+        val wanted  = metric?.records.orEmpty()
+        val allowed = wanted.filter { HealthPermission.getReadPermission(it) in granted }
+        refused = wanted.filterNot { it in allowed }.mapNotNull { it.simpleName?.removeSuffix("Record") }
+        if (metric != null && allowed.isNotEmpty()) {
+            val readable = metric.copy(records = allowed)
+            rows7d  = HealthConnectGateway.readMetricWindow(ctx, readable, 7)
+            rows30d = HealthConnectGateway.readMetricWindow(ctx, readable, 30)
+        } else {
+            rows7d  = emptyList()
+            rows30d = emptyList()
+        }
+        loading = false
+    }
+
+    PageScroll {
+        SectionHeader(metric?.let { "${it.label} · daily average" } ?: "Unknown metric")
+        when {
+            metric == null -> InfoCard(
+                "No such metric",
+                "This page asked for '$metricId', which the metric taxonomy in build.json does not declare. Nothing was read and nothing is shown.",
+            )
+            loading -> InfoCard("Loading…", "Reading the last 30 days from Health Connect…")
+            availability == HealthConnectGateway.Availability.NotInstalled -> InfoCard(
+                "Health Connect is not installed",
+                "Every value on this page is a local query against the Health Connect store. Without the provider there is no source, and this page will not invent one.",
+            )
+            availability == HealthConnectGateway.Availability.UpdateRequired -> InfoCard(
+                "Health Connect needs updating",
+                "The installed provider is older than this app can read. Nothing was read.",
+            )
+            availability != HealthConnectGateway.Availability.Installed -> InfoCard(
+                "Health Connect is not supported on this device",
+                "There is no provider to read, so this page has no data source at all.",
+            )
+            else -> {
+                if (refused.isNotEmpty()) {
+                    InfoCard(
+                        "Not allowed to read ${refused.joinToString(", ")}",
+                        "Health Connect has not granted this app those record types. They are missing from the rows below rather than shown as zero — nothing here is estimated.",
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            launcher.launch(
+                                metric.records.map { HealthPermission.getReadPermission(it) }.toSet()
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    ) { Text("Grant the missing read permissions") }
+                }
+                val merged = (0 until maxOf(rows7d.size, rows30d.size)).map { i ->
+                    val seven  = rows7d.getOrNull(i)
+                    val thirty = rows30d.getOrNull(i)
+                    Triple(seven?.label ?: thirty?.label ?: "—", seven?.value ?: "—", thirty?.value ?: "—")
+                }
+                if (merged.isEmpty()) {
+                    InfoCard(
+                        "Nothing to show",
+                        "No record type on this page is both granted and populated. A producer — Garmin Connect, Google Fit, Samsung Health — has to be syncing into Health Connect for a number to exist.",
+                    )
+                } else {
+                    merged.forEach { (label, value7d, value30d) ->
+                        DualValueRow(label = label, value7d = value7d, value30d = value30d)
+                    }
                 }
             }
         }
