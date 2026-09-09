@@ -288,6 +288,12 @@
         "order": 1,
         "pages": [
           {
+            "_doc": "Summary — Buro's index, and FIRST because 'what does life-admin look like right now' is the question this section answers; Wallet, Docs, Fin and Vault are each one part of that answer. Same shape as Projects ▸ Summary (`pm`): a note plus one card per sibling TAB, every card carrying a `page:buro/<id>` target so it opens the tab that owns the records instead of restating them. Deliberately carries NO figures. Two of these tabs have nothing to count — Docs stores no documents and Vault is forbidden to read any — and a card showing `0` for either would report a measurement that was never taken; a card that says what its tab can answer stays true whether or not a source ever arrives. Fin does have figures, but they are ui.myfin_mock rather than a live feed, so its card says that instead of quoting them. The id is `summary`, which is free HERE: Section.page() resolves ids across the tab strip AND every sub-strip of ONE section in a flat list, and Buro's other ids are wallet/docs/fin/acct/budget/portfolio/vault — Health's own `summary` sub-page lives in the `projects` section and cannot collide. test-ui-pages.sh fails if that ever stops holding.",
+            "id": "summary",
+            "label": "Summary",
+            "icon": "ic_p_c3_reports"
+          },
+          {
             "id": "wallet",
             "label": "Wallet",
             "icon": "ic_wallet"
@@ -387,9 +393,22 @@
             "icon": "ic_nav_health",
             "pages": [
               {
+                "_doc": "Summary — the index of the two trees beside it, one card per page, each card saying what that page is and where its numbers come from. It carries no measurements of its own on purpose: a card cannot read Health Connect, so a Steps card showing a step count would be showing a number typed into JSON months ago, and it would be indistinguishable from the real one two taps away. Metrics is the page Summary used to BE — the whole taxonomy, every record, 7-day beside 30-day — and it is unchanged and still first-class, one tap rather than zero. Overview leads because the question this tab answers is 'what is on this screen', and the 34-row metric dump was never an answer to it.",
                 "id": "summary",
                 "label": "Summary",
-                "icon": "ic_p_health_activity"
+                "icon": "ic_p_health_activity",
+                "pages": [
+                  {
+                    "id": "overview",
+                    "label": "Overview",
+                    "icon": "ic_p_c3_reports"
+                  },
+                  {
+                    "id": "metrics",
+                    "label": "Metrics",
+                    "icon": "ic_p_health_activity"
+                  }
+                ]
               },
               {
                 "_doc": "Nutrition — what goes in, as three different kinds of thing, which is why it is a tree and not a tab. Meals and Planner are RECORDS the owner writes: what was eaten, and what is meant to be eaten. Neither has a store yet — no CalDAV category, no NocoDB table, no file under data/files — so both pages say exactly that instead of drawing a plausible week. Tracking is the opposite: it is the Nutrition metric of the Health Connect taxonomy (NutritionRecord + HydrationRecord) on a page of its own, so its numbers are measured by whatever producer syncs them and none of them are typed here. When Meals gains a store it becomes a `cards` stack the way Workout > Gym is; until then an empty state that names the missing source is the honest page.",

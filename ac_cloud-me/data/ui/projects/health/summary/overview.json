@@ -1,0 +1,93 @@
+[
+  {
+    "kind": "note",
+    "title": "One card per page",
+    "body": "Each card says what its page holds and where that comes from — measured by a device, written by hand, or not yet sourced at all. No card carries a number: a card is JSON baked at build time and could only ever show a value that was true when it was typed, which is exactly the kind of confident stale figure the page it summarises would contradict. Tap a card to read the real thing."
+  },
+  {
+    "kind": "section_title",
+    "title": "Nutrition"
+  },
+  {
+    "kind": "cards",
+    "items": [
+      {
+        "title": "Meals",
+        "subtitle": "What was eaten",
+        "icon": "ic_p_health_nutrition",
+        "accent": "#26A69A",
+        "body": "Empty. There is no store behind this page yet — no table, no file tree, no calendar category — so it records nothing and shows nothing rather than an example week.",
+        "meta": [
+          { "label": "Source", "value": "none yet" }
+        ],
+        "target": "page:projects/meals"
+      },
+      {
+        "title": "Planner",
+        "subtitle": "What is meant to be eaten",
+        "icon": "ic_p_cal_day",
+        "accent": "#26A69A",
+        "body": "Empty, for the same reason as Meals. A plan is dated, so the cheapest home for it is a category on the CalDAV entries Agenda and Todo already read.",
+        "meta": [
+          { "label": "Source", "value": "none yet" }
+        ],
+        "target": "page:projects/planner"
+      },
+      {
+        "title": "Tracking",
+        "subtitle": "What a device measured",
+        "icon": "ic_p_c3_reports",
+        "accent": "#26A69A",
+        "body": "Real. The Nutrition metric of the Health Connect taxonomy — energy from NutritionRecord, volume from HydrationRecord — averaged per day over the last 7 and 30 days. Empty on this phone until a producer syncs those records in, and the page says which permission is missing when one is.",
+        "meta": [
+          { "label": "Source", "value": "Health Connect" }
+        ],
+        "target": "page:projects/tracking"
+      }
+    ]
+  },
+  {
+    "kind": "section_title",
+    "title": "Workout"
+  },
+  {
+    "kind": "cards",
+    "items": [
+      {
+        "title": "Gym",
+        "subtitle": "The plan",
+        "icon": "ic_gym",
+        "accent": "#7E57C2",
+        "body": "Written by hand, and the only page here that is a decision rather than a measurement. An ABC split on free weights — push, pull, legs — with every movement named in English and Portuguese, its working sets, its rest, a form note and its own drawing.",
+        "meta": [
+          { "label": "Source", "value": "the owner" },
+          { "label": "Sessions", "value": "3 · A, B, C" },
+          { "label": "Movements", "value": "24" }
+        ],
+        "target": "page:projects/gym"
+      },
+      {
+        "title": "Timeline",
+        "subtitle": "One day, every metric",
+        "icon": "ic_p_cal_day",
+        "accent": "#7E57C2",
+        "body": "Real. Pick a date and read what Health Connect holds for it across the whole taxonomy. It moved here from the Health level so that a day of training reads next to the plan it was training for.",
+        "meta": [
+          { "label": "Source", "value": "Health Connect" }
+        ],
+        "target": "page:projects/timeline"
+      },
+      {
+        "title": "Steps",
+        "subtitle": "Daily walking",
+        "icon": "ic_p_health_activity",
+        "accent": "#7E57C2",
+        "body": "Real. Steps, kilometres and active calories, averaged per day over the last 7 and 30 days, from whatever syncs into Health Connect. Not the phone's own step counter — that would be a second source disagreeing with this one on the same screen.",
+        "meta": [
+          { "label": "Source", "value": "Health Connect" }
+        ],
+        "target": "page:projects/steps"
+      }
+    ]
+  }
+]
