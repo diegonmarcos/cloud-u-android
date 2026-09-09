@@ -1,6 +1,6 @@
 {
   "name": "cloud-me",
-  "description": "Diego's Cloud Me \u2014 the personal-administration half of the constellation. Where Cloud SuperApp is the launcher for everything the cloud runs, Cloud Me is the launcher for everything the PERSON runs: paperwork and money (Buro), what is due (Agenda), the public profile (Me), travel (Projects) and study (Studying), with Health in the drawer. It stores almost nothing of its own \u2014 cards live in Cloud Wallet, passwords in Cloud Vault, files in Cloud IDE, health records in Health Connect \u2014 and is the one screen that indexes all of them.",
+  "description": "Diego's Cloud Me \u2014 the personal-administration half of the constellation. Where Cloud SuperApp is the launcher for everything the cloud runs, Cloud Me is the launcher for everything the PERSON runs: paperwork and money (Buro), what is due (Agenda), the public profile (Me), travel and health (Projects) and study (Studying). It stores almost nothing of its own \u2014 cards live in Cloud Wallet, passwords in Cloud Vault, files in Cloud IDE, health records in Health Connect \u2014 and is the one screen that indexes all of them.",
   "category": "android",
   "build": {
     "type": "gradle",
@@ -77,7 +77,7 @@
     }
   },
   "ui": {
-    "_doc": "Cloud Me's whole navigation is this block: five bottom-nav sections in `order`, everything else reached from the hamburger drawer (bottom_nav:false) or the toolbar gear (toolbar:true). A section's `pages` are its tab strip, and a page may declare `pages` of its own \u2014 a second strip below the first, which is what Buro > Fin is. Page CONTENT is not here: each page is a file at data/ui/<section>/<page>.json (a sub-page at .../<page>/<sub>.json), loaded by app/build.gradle into `stack_<page id>` at build time. A section with a `target` and no `pages` (Wallet) launches another app instead of showing one. Moving Health into the bottom bar is one boolean here.",
+    "_doc": "Cloud Me's whole navigation is this block: five bottom-nav sections in `order`, everything else reached from the hamburger drawer (bottom_nav:false) or the toolbar gear (toolbar:true). A section's `pages` are its tab strip, and a page may declare `pages` of its own \u2014 a second strip below the first, which is what Buro > Fin is. Page CONTENT is not here: each page is a file at data/ui/<section>/<page>.json (a sub-page at .../<page>/<sub>.json), loaded by app/build.gradle into `stack_<page id>` at build time. A section with a `target` and no `pages` (Wallet, Health) hands that target to MainActivity.onTarget instead of showing a page of its own — Wallet launches another app, Health jumps to Projects > Health. The same `page:<section>/<page>` grammar arrives from OUTSIDE the app too: the SuperApp's Dashboard icons launch Cloud Me with a `shortcut_action` extra carrying one of these strings.",
     "permissions": {
       "runtime": [
         {
@@ -368,13 +368,35 @@
         "default": true
       },
       {
-        "_doc": "Projects \u2014 what is being worked on, travelled to, or studied. Studying leads because it is the standing project; Trips is the one with a date, and History is its record. Studying was a bottom-nav section of its own until it became a tab here \u2014 study management is a project, and the freed bar slot went to Wallet, which is a different app entirely.",
+        "_doc": "Projects \u2014 what is being worked on, travelled to, or studied. Health leads because it is the project that outlives all the others, and because this is now the ONLY MyHealth surface in the constellation: the SuperApp page was deleted and its dashboard icon deep-links here instead. Health is a container tab like Buro > Fin \u2014 Summary, Timeline and Configs are three views of one body, not three separate projects. Studying follows as the standing project; Trips is the one with a date, and History is its record. Studying was a bottom-nav section of its own until it became a tab here \u2014 study management is a project, and the freed bar slot went to Wallet, which is a different app entirely.",
         "id": "projects",
         "label": "Projects",
         "icon": "ic_nav_trips",
         "bottom_nav": true,
         "order": 4,
         "pages": [
+          {
+            "id": "health",
+            "label": "Health",
+            "icon": "ic_nav_health",
+            "pages": [
+              {
+                "id": "summary",
+                "label": "Summary",
+                "icon": "ic_p_health_activity"
+              },
+              {
+                "id": "timeline",
+                "label": "Timeline",
+                "icon": "ic_p_cal_day"
+              },
+              {
+                "id": "configs",
+                "label": "Configs",
+                "icon": "ic_nav_configs"
+              }
+            ]
+          },
           {
             "id": "studying",
             "label": "Studying",
@@ -402,29 +424,13 @@
         "target": "extapp:cloud-wallet"
       },
       {
-        "_doc": "Health \u2014 the full MyHealth surface from libs:health, the same three pages the SuperApp shows, reading Health Connect locally with no network call. It sits in the hamburger drawer because the bottom bar was spoken for; `bottom_nav: true` and an `order` are the only edits needed to promote it.",
+        "_doc": "Health \u2014 no longer a section with pages of its own. The MyHealth surface moved to Projects > Health, so the constellation has exactly ONE Health screen: the SuperApp's copy is gone and its dashboard icon deep-links into that page. What is left here is the Wallet idiom \u2014 a `target` and no `pages`, so the drawer entry is a shortcut to the page rather than a second copy of it \u2014 plus the metric taxonomy below, which libs:health's build.gradle looks up by SECTION ID (`ui.sections[id=health].metrics`) and which therefore cannot move with the pages.",
         "_doc_metrics": "Data-driven metric taxonomy \u2014 read by SummaryPage / TimelinePage / ConfigsPage to render the per-metric tiles + drill-downs. Each metric maps to one-or-more Health Connect record types via `records` (matched at runtime by class simple-name) + the perm subset via `perm_keys`. Add a metric = one entry here + tile icon. Removing a metric here removes it from all 3 top-level pages.",
         "id": "health",
         "label": "Health",
         "icon": "ic_nav_health",
         "bottom_nav": false,
-        "pages": [
-          {
-            "id": "summary",
-            "label": "Summary",
-            "icon": "ic_p_health_activity"
-          },
-          {
-            "id": "timeline",
-            "label": "Timeline",
-            "icon": "ic_p_cal_day"
-          },
-          {
-            "id": "configs",
-            "label": "Configs",
-            "icon": "ic_nav_configs"
-          }
-        ],
+        "target": "page:projects/health",
         "metrics": [
           {
             "id": "activity",

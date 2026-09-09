@@ -56,7 +56,7 @@
         "title": "Health",
         "subtitle": "Insurance · prescriptions · pharmacy",
         "accent": "#EC407A",
-        "target": "page:health/summary"
+        "target": "page:projects/health"
       }
     ]
   }

@@ -53,6 +53,9 @@ class MainActivity : AppCompatActivity() {
 
         if (savedInstanceState == null) {
             Sections.default()?.let { open(it.id) }
+            // A caller that knows where it wants to land overrides that. Both
+            // commits land in the same frame, so the default is never drawn.
+            handleShortcutIntent(intent)
         } else {
             currentSection = savedInstanceState.getString(STATE_SECTION)
             supportActionBar?.title = Sections.byId(currentSection)?.label ?: getString(R.string.app_name)
@@ -63,6 +66,31 @@ class MainActivity : AppCompatActivity() {
         // interval on a fresh install.
         Updater.start(this)
         UpdateProgress.setListener { state -> runOnUiThread { handleUpdateState(state) } }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleShortcutIntent(intent)
+    }
+
+    /**
+     * The one way INTO a specific page from outside the app.
+     *
+     * The SuperApp's Dashboard icons for Fin and Health are `extapp:cloud-me`
+     * tiles that no longer have a page of their own to open, so they launch us
+     * with the destination attached. The extra is `shortcut_action` carrying a
+     * target string — the SAME name and the SAME grammar the SuperApp already
+     * accepts on its own launcher intent (ShellActivity.handleShortcutIntent),
+     * because a second convention for "open at this page" would be one more
+     * thing for the two apps to disagree about.
+     *
+     * Consumed once: the extra is removed so a later resume of the same task
+     * does not re-navigate away from wherever the user has since gone.
+     */
+    private fun handleShortcutIntent(intent: Intent?) {
+        val target = intent?.getStringExtra(EXTRA_SHORTCUT_ACTION)?.takeIf { it.isNotBlank() }
+        intent?.removeExtra(EXTRA_SHORTCUT_ACTION)
+        target?.let { onTarget(it) }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -236,5 +264,10 @@ class MainActivity : AppCompatActivity() {
     private companion object {
         const val MENU_CONFIGS = 9001
         const val STATE_SECTION = "section"
+
+        /** Cross-app "open at this target" extra. The name is the SuperApp's —
+         *  it is the sending side and already reads this exact extra on its own
+         *  launcher intent, so the constellation has one convention, not two. */
+        const val EXTRA_SHORTCUT_ACTION = "shortcut_action"
     }
 }
