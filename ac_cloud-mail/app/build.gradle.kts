@@ -2,6 +2,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -51,7 +52,13 @@ val mailAiRouting: Map<String, Any> = ((groovy.json.JsonSlurper()
     )
 val mailAiRoutingB64: String = groovy.json.JsonOutput.toJson(mailAiRouting)
     .toByteArray(Charsets.UTF_8)
-    .let { java.util.Base64.getEncoder().encodeToString(it) }
+    // Base64, NOT java.util.Base64 — imported above and referred to by its simple
+    // name, exactly like Properties and the java.time trio. The comment under
+    // commsVersionCode already spells out why, and this line is what it was
+    // warning about: inside a Kotlin DSL build script the leftmost `java` resolves
+    // to the Android plugin's generated `val Project.java: JavaPluginExtension`
+    // accessor, not to the package, so the qualified form cannot compile.
+    .let { Base64.getEncoder().encodeToString(it) }
 
 // Minutes since 2026-01-01 plus a 3,000,000 base, from the stamp CI already bakes
 // into the release tag. Monotonic, independent of how the tree was assembled, and
