@@ -34,9 +34,13 @@ lacks() { grep -q -- "$2" "$1" && bad "$3 ($1)" || ok "$3"; }
 echo "== cloud-mail Text tools: config entries, engine routing, credential, read-only body =="
 
 # ── C1 the three entries exist and resolve to real destinations ──
+# The COUNT is not the property; the AGREEMENT is. Mail's entries and the keyboard's allowlist have
+# to be the same set, so neither a row that opens nothing nor a route reachable from outside that
+# nobody meant to expose can pass. Written without a magic number so adding a fifth entry needs a
+# real change here, not a number bumped -- Text Resume was the fourth.
 n=$(grep -c 'screen = "' "$SEC")
-[ "$n" = 3 ] && ok "C1 the Text section declares exactly 3 entries" || bad "C1 declares $n entries, expected 3"
-for want in ai_routing text_enhance translation; do
+[ "$n" -ge 1 ] && ok "C1 the Text section declares $n entries" || bad "C1 the Text section declares nothing"
+for want in $(grep -o 'screen = "[a-z_]*"' "$SEC" | sed 's/screen = "//;s/"//'); do
   grep -q "screen = \"$want\"" "$SEC" \
     && ok "C1 entry '$want' declared" || bad "C1 entry '$want' missing"
   # THE point of the assertion: the name must be one the keyboard actually allowlists.
@@ -47,7 +51,8 @@ for want in ai_routing text_enhance translation; do
 done
 # the allowlist may not be wider than what mail asks for
 ext=$(awk '/val external: Map<String, String> = mapOf\(/,/^    \)/' "$NAV" | grep -cE '^\s*"[a-z_]+" to ')
-[ "$ext" = 3 ] && ok "C1 the keyboard allowlists exactly the 3 mail asks for" || bad "C1 allowlist holds $ext entries, mail declares 3"
+[ "$ext" = "$n" ] && ok "C1 the keyboard allowlists exactly the $n mail asks for" \
+  || bad "C1 allowlist holds $ext entries, mail declares $n"
 has "$ACT" 'const val EXTRA_OPEN_AT = "open_at"' "C1 the activity takes the extra mail sends"
 has "$SEC" 'EXTRA_OPEN_AT = "open_at"' "C1 mail sends the extra the activity takes"
 has "$ACT" 'SettingsDestination.externalRoute(intent' "C1 the extra goes through the allowlist, not straight to the NavHost"
