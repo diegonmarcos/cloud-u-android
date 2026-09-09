@@ -45,13 +45,21 @@ import kotlin.math.abs
  *   │ what will be rewritten (dim)   312 words · ~420 tokens│  source — read-only, sized
  *   │ the rewrite, editable, scrolls                        │  output — keys are routed here
  *   │ status                                                │
- *   │ [Generate] [Copy] [Paste] [Replace] [Undo] [Clear]    │
+ *   │ [Generate] [Resume] [Copy] [Paste] [Replace] [Undo]…  │
  *   └──────────────────────────────────────────────────────┘
  *
  * Tapping the ENHANCE toolbar key opens this; long-pressing it keeps the old
  * one-shot behaviour (rewrite in place, no bar). Nothing here touches the app's
  * field until Paste or Replace: Generate only fills the output box, so a rewrite
  * can be read and corrected before it lands.
+ *
+ * TWO QUESTIONS OVER ONE BAR. Generate asks for a rewrite of the source; Resume
+ * ("Text Resume" — the owner's name for SUMMARISE) asks for a summary of it.
+ * They share this bar because a Resume needs exactly what this bar already does:
+ * resolve the same source the ENHANCE key would take, then show an answer the
+ * user can read, edit and Copy before anything is applied. They differ in one
+ * thing that matters, and [Held] is where that difference is enforced — a
+ * rewrite may be written back over the source, a summary may never be.
  *
  * The option chips write the very same preferences as Settings → Text
  * Enhancements, so the bar and that screen can never disagree, and the prompt is
@@ -103,6 +111,19 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
     private var selEnd = 0
     private var busy = false
     private var applyWhenReady = false
+
+    /**
+     * WHAT THE OUTPUT BOX HOLDS, AND THEREFORE WHETHER IT MAY BE WRITTEN BACK.
+     *
+     * A [REWRITE] is a better version of the source, so replacing the source with it is the whole
+     * point of Enhance. A [SUMMARY] is a different, SHORTER text ABOUT the source: pasting it over
+     * the paragraph it describes deletes that paragraph and leaves a précis where the writing was,
+     * and no Undo the user did not think to press gets it back. So Resume never applies, and it is
+     * this field the apply path asks — one branch that cannot be forgotten, rather than a rule
+     * about which buttons to be careful with.
+     */
+    private enum class Held { REWRITE, SUMMARY }
+    private var held = Held.REWRITE
 
     /**
      * Where the keys go. False — the default, and the state the bar opens in — means
@@ -214,6 +235,13 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         // ── Row 5: actions ───────────────────────────────────────────────────
         val actions = LinearLayout(context).apply { orientation = HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         actions.addView(chip(str(R.string.enhance_bar_generate), chipPrimary) { generate(false) }); actions.gap()
+        // "Text Resume" — the owner's name for SUMMARISE, not a curriculum vitae and not resuming
+        // anything paused. It sits here rather than on a toolbar key of its own because this bar
+        // already is the surface a Resume needs: it reads the same source the ENHANCE key would,
+        // and it shows a result the user can read, edit and Copy before anything is applied. A
+        // second toolbar entry would have bought nothing and spent it in the one row of this
+        // keyboard that has gone blank, scrolled wrong and crashed in three separate defects.
+        actions.addView(chip(str(R.string.resume_bar_resume)) { resume() }); actions.gap()
         actions.addView(chip(str(R.string.enhance_bar_copy)) { copyOutput() }); actions.gap()
         actions.addView(chip(str(R.string.enhance_bar_paste)) { applyOutput() }); actions.gap()
         actions.addView(chip(str(R.string.enhance_bar_replace)) { generate(true) }); actions.gap()
@@ -240,6 +268,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         ui.removeCallbacks(reload)
         busy = false; applyWhenReady = false
         editingOutput = false
+        held = Held.REWRITE   // a fresh session holds nothing, and nothing is not a summary
         buffer.setLength(0); setCaret(0)
         options.forEach { it.render() }
         reloadTarget()
@@ -355,6 +384,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
                 if (id != seq.get()) return@post   // a newer run, or the bar was reopened
                 busy = false
                 result.onSuccess { out ->
+                    held = Held.REWRITE   // a rewrite may be written back; see [Held]
                     buffer.setLength(0); buffer.append(out); setCaret(buffer.length)
                     renderOutput(); showStatus("")
                     if (applyWhenReady) applyOutput()
@@ -370,8 +400,65 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         }
     }
 
+    /**
+     * "Text Resume" — SUMMARISE what the ENHANCE key would have rewritten. The owner's product
+     * name, kept exactly as they spell it: it means condense this text, not a curriculum vitae and
+     * not resuming a paused operation.
+     *
+     * SAME INPUT AS ENHANCE, DELIBERATELY. [reloadTarget] resolves the source through
+     * [TextEnhancer.target], which reads Settings → Text Enhancements → "What gets enhanced"
+     * (auto / selection / whole field). "Summarise the selection, or the field when nothing is
+     * selected" is the same question Enhance already answered, the source line above already shows
+     * that answer, and a second scope preference that disagreed with the one on screen would be a
+     * setting whose only purpose was to surprise people.
+     *
+     * DIFFERENT OUTPUT, AND THAT IS THE POINT. The summary lands in the output box — readable,
+     * editable, Copy-able — and stops there. It is never written into the field: see [Held].
+     *
+     * Shares Enhance's engine, key, model, timeout, sequence number and error wording; what differs
+     * is the prompt set, and AiRouter.summarise is the one place either application composes it.
+     */
+    private fun resume() {
+        editingOutput = false
+        ui.removeCallbacks(reload)
+        reloadTarget()
+        val t = target
+        if (t == null || t.text.isBlank()) { showStatus(str(R.string.resume_bar_no_source)); return }
+        busy = true
+        // A Resume in flight must not leave a Replace armed behind it: the two chips share the
+        // sequence number, and a summary arriving into an armed apply is the exact overwrite
+        // this feature is not allowed to perform.
+        applyWhenReady = false
+        val id = seq.incrementAndGet()
+        val style = AiRouter.summaryStyle(context)
+        val providerLabel = AiRouter.provider(context).label
+        showStatus(context.getString(R.string.resume_in_progress, providerLabel))
+        io.execute {
+            val result = runCatching { AiRouter.summarise(context, style, t.text) }
+            ui.post {
+                if (id != seq.get()) return@post   // a newer run, or the bar was reopened
+                busy = false
+                result.onSuccess { out ->
+                    held = Held.SUMMARY
+                    buffer.setLength(0); buffer.append(out); setCaret(buffer.length)
+                    renderOutput(); showStatus(str(R.string.resume_bar_done))
+                }.onFailure { e ->
+                    Log.e(TAG, "resume failed", e)
+                    showStatus(when (e) {
+                        is AiRouter.NoTokenException -> context.getString(R.string.ai_no_token, e.provider.label)
+                        else -> context.getString(R.string.enhance_failed, e.message ?: e.javaClass.simpleName)
+                    })
+                }
+            }
+        }
+    }
+
     /** Write the box into the field over the text it was made from. */
     private fun applyOutput() {
+        // A SUMMARY IS NOT A REWRITE AND NEVER REPLACES ITS SOURCE. Refused here rather than by
+        // hiding the chip, so the bar can say why instead of appearing broken — and so the rule
+        // holds for every route into this method, including a Replace armed before a Resume.
+        if (held == Held.SUMMARY) { showStatus(str(R.string.resume_bar_no_replace)); return }
         val text = buffer.toString()
         if (text.isBlank()) { showStatus(str(R.string.enhance_bar_generate_first)); return }
         val t = target ?: return
@@ -422,6 +509,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
     }
 
     private fun clear() {
+        held = Held.REWRITE   // an empty box is not a summary; Paste must not stay refused
         buffer.setLength(0); setCaret(0); renderOutput(); showStatus("")
     }
 

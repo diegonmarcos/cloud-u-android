@@ -371,6 +371,12 @@
     <string name="enhance_bar_menu_cut">Cut</string>
     <string name="enhance_bar_menu_copy">Copy</string>
     <string name="enhance_bar_menu_select_all">Select all</string>
+    <!-- Text Resume in the Enhance bar. "Resume" means SUMMARISE — see settings_screen_resume. -->
+    <string name="resume_bar_resume">Resume</string>
+    <string name="resume_in_progress">Summarising with %s…</string>
+    <string name="resume_bar_no_source">Nothing to summarise — type in the field, then Resume</string>
+    <string name="resume_bar_done">Summary ready — Copy takes it; it will not replace your text</string>
+    <string name="resume_bar_no_replace">A summary does not replace your text — use Copy</string>
     <string name="enhance_bar_undo">Undo</string>
     <string name="enhance_bar_undone">Original restored</string>
     <!-- Size of what Generate will send. Tokens are an estimate (no tokenizer on the phone), hence the tilde. -->
