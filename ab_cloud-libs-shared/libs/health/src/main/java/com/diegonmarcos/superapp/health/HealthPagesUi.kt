@@ -48,17 +48,21 @@ import kotlin.reflect.KClass
 /**
  * MyHealth — Compose surface.
  *
- * Single Compose entry [HealthScreen]: renders a STICKY top tab strip
- * (Summary | Timeline | Configs) that's visible at all times, plus a
- * body that swaps based on the selected tab. The `initialPageId` arg
- * sets the initial tab — Suite tile lands on Summary, drawer menu
- * lands on whichever page-id was tapped — but once the user is inside
- * MyHealth the strip lets them flip between the three.
+ * Single Compose entry [HealthScreen]: ONE page's body, chosen by the
+ * page id the host hands in. It draws NO tab strip of its own.
+ *
+ * It used to. This module was written when MyHealth was a standalone
+ * SuperApp section that owned its whole screen, so it carried a sticky
+ * Summary | Timeline | Configs strip and treated the incoming page id as
+ * a mere starting tab. Its only host today is Cloud-Me, where Health is
+ * a container tab whose children ARE those three pages and whose strip
+ * the shell already draws from build.json — so the surface came up with
+ * two stacked tab rows navigating the same three destinations, one of
+ * which the shell could not keep in sync. The host owns navigation; this
+ * module owns a body. That is also what lets the shell add a fourth
+ * child (Projects > Health > Gym) that this module knows nothing about.
  *
  *   ┌──────────────────────────────────────────┐
- *   │  Summary  │  Timeline  │  Configs        │   ← sticky tab strip
- *   ├──────────────────────────────────────────┤
- *   │                                          │
  *   │  Activity (10)                           │
  *   │    Steps        ·  7d 8420  · 30d 7890   │
  *   │    Distance     ·  7d 6.4km · 30d 5.9km  │
@@ -66,60 +70,17 @@ import kotlin.reflect.KClass
  *   │  Vitals (9)                              │
  *   │    HR avg       ·  7d 72bpm · 30d 71bpm  │
  *   │    …                                     │
- *   │                                          │
  *   └──────────────────────────────────────────┘
  */
 @Composable
-fun HealthScreen(initialPageId: String) {
-    var tab by remember { mutableStateOf(tabFromPageId(initialPageId)) }
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0B0414))) {
-        TopTabStrip(selected = tab, onSelect = { tab = it })
-        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-            when (tab) {
-                TopTab.Summary  -> SummaryBody()
-                TopTab.Timeline -> TimelineBody()
-                TopTab.Configs  -> ConfigsBody()
-            }
-        }
-    }
-}
-
-private enum class TopTab(val label: String) {
-    Summary("Summary"), Timeline("Timeline"), Configs("Configs"),
-}
-
-private fun tabFromPageId(pageId: String): TopTab = when (pageId) {
-    HealthFragment.PAGE_TIMELINE -> TopTab.Timeline
-    HealthFragment.PAGE_CONFIGS  -> TopTab.Configs
-    else                         -> TopTab.Summary
-}
-
-@Composable
-private fun TopTabStrip(selected: TopTab, onSelect: (TopTab) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        TopTab.values().forEach { t ->
-            val isSel = t == selected
-            Card(
-                modifier = Modifier.weight(1f).height(38.dp),
-                shape    = RoundedCornerShape(12.dp),
-                colors   = CardDefaults.cardColors(
-                    containerColor = if (isSel) Color(0xFF6E2BD9) else Color(0xFF1A0F2A),
-                ),
-                onClick = { onSelect(t) },
-            ) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = t.label,
-                        color = Color.White,
-                        fontWeight = if (isSel) FontWeight.SemiBold else FontWeight.Normal,
-                        fontSize = 13.sp,
-                    )
-                }
-            }
-        }
+fun HealthScreen(pageId: String) {
+    when (pageId) {
+        HealthFragment.PAGE_TIMELINE -> TimelineBody()
+        HealthFragment.PAGE_CONFIGS  -> ConfigsBody()
+        // An unknown id is the host's page-to-body mapping drifting, not a
+        // reason to draw nothing: Summary is the page every entry point
+        // means when it does not say otherwise.
+        else                         -> SummaryBody()
     }
 }
 

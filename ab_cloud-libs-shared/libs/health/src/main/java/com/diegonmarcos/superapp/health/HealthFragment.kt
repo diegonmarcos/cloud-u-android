@@ -24,11 +24,12 @@ import androidx.fragment.app.Fragment
  * via the SectionPages dispatcher, and the [HealthScreen] composable
  * picks which top-level page to render based on that id.
  *
- * Three top-level pages — Summary / Timeline / Configs — mirror
- * build.json::ui.sections[id=health].pages[]. Per-metric drill-down
- * (Activity, Heart, Sleep, Body, Vitals, Nutrition, Workouts, Cycle)
- * is INTERNAL Compose state inside each page, driven by the
- * `metrics` list in the same section.
+ * Three pages — Summary / Timeline / Configs — one fragment instance
+ * each, and the tab strip that moves between them belongs to the HOST,
+ * not to this module: Cloud-Me draws it from build.json and hands the
+ * chosen page id down here. Per-metric drill-down (Activity, Heart,
+ * Sleep, Body, Vitals, Nutrition, Workouts, Cycle) is INTERNAL Compose
+ * state inside each page, driven by the `metrics` list.
  *
  * Adding/removing a metric: edit `metrics` in build.json — no Kotlin
  * change needed (the list is baked into BuildConfig.UI_HEALTH_METRICS_B64
@@ -44,7 +45,7 @@ class HealthFragment : Fragment() {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0B0414))) {
-                    HealthScreen(initialPageId = pageId)
+                    HealthScreen(pageId = pageId)
                 }
             }
         }
@@ -52,8 +53,10 @@ class HealthFragment : Fragment() {
     companion object {
         private const val ARG_PAGE = "pageId"
 
-        /** Page id constants — three top-level pages, mirrored from
-         *  build.json::ui.sections[id=health].pages[]. Per-metric
+        /** Page id constants — the three pages this module draws, and the
+         *  ids the host's `page` field is matched against. The host's
+         *  Health tab may hold pages this module knows nothing about
+         *  (Cloud-Me's Gym is one); those never reach here. Per-metric
          *  drill-down (Activity / Heart / Sleep / Body / Vitals /
          *  Nutrition / Workouts / Cycle) is internal Compose state
          *  inside each page, driven by the metrics list baked into
