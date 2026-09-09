@@ -1564,6 +1564,30 @@ open class ShellActivity : AppCompatActivity(),
         if (tileId.startsWith("action:")) {
             runCatching { Pages.byTarget(tileId)?.let { recordTarget(tileId, it.label, it.icon) } }
         }
+        routeTarget(tileId)
+    }
+
+    /**
+     * THE ROUTER, WITHOUT THE CLICK — everything above this point in
+     * [onTileClicked] is what a TAP means (it was felt, it was logged, it
+     * closed the drawer, it counts as an open), and everything below is what a
+     * TARGET means. They are separated because one tap can legitimately re-enter
+     * the router, and re-entering through [onTileClicked] made it a second tap.
+     *
+     * `action:constellation` is that case. Its declaring page
+     * (build.json::sections[config].pages[constellation]) opens a SCREEN, so
+     * [dispatchHomeAction] first sends it to [LauncherNavController.openSectionPage]
+     * to establish Configs as the back-stack base; that function then dispatches
+     * the page's own declared action — the same `action:constellation` — back
+     * here to finish the job. Going back in via [onTileClicked] logged a second
+     * `onTileClicked`, fired a second [Haptics.tap], and recorded a second open
+     * into both the Recently-Used folder and the App-Tabs shelf, 7–49ms after
+     * the first, for one tap. Coming back in HERE, the tap is counted once and
+     * the navigation still completes.
+     *
+     * Grammar: section:X | page:X/Y[#anchor] | action:X | extapp:X | URI | stub:X
+     */
+    override fun routeTarget(tileId: String) {
         when {
             tileId.startsWith("section:") -> {
                 val id = tileId.removePrefix("section:")

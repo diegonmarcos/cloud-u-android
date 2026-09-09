@@ -44,18 +44,21 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
 echo "== Drive ▸ Connections: Apps row is derived, and every icon can fire =="
 
-# The verbs onTileClicked actually branches on, read off the `when` itself.
+# The verbs the router actually branches on, read off the `when` itself.
+# It lives in routeTarget, which is onTileClicked minus the click bookkeeping
+# — the split exists so the shell can re-enter the router mid-tap without
+# the re-entry counting as a second tap.
 # Retyping them here is how T4 would go on passing against a dispatcher that
 # had since dropped a branch — the row would still "match" a prefix this file
 # remembers and the shell no longer honours. One list, and it lives in the
 # Kotlin.
 DISPATCH_PREFIXES="$(
-  awk '/^    override fun onTileClicked\(tileId: String\) \{/{f=1} f{print} f&&/^    \}$/{exit}' \
+  awk '/^    override fun routeTarget\(tileId: String\) \{/{f=1} f{print} f&&/^    \}$/{exit}' \
       "$SHELL_KT" |
   grep -o 'tileId\.startsWith("[^"]*")' | sed 's/.*("//;s/")//' | sort -u
 )"
 if [ -z "$DISPATCH_PREFIXES" ]; then
-  bad "T8: read no startsWith verbs out of ShellActivity.onTileClicked — the
+  bad "T8: read no startsWith verbs out of ShellActivity.routeTarget — the
        function was renamed or restructured, and T4 below is asserting against
        nothing"
 else

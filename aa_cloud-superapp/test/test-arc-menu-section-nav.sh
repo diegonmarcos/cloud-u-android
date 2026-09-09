@@ -35,18 +35,21 @@ grep -qF 'page:$section/${it.id}' "$CAN" 2>/dev/null \
 echo "== T2: openSectionPage establishes the section base BEFORE the action dispatch =="
 # Line of the base-establishment (goSection) vs the action early-return.
 base_ln=$(grep -n 'goSection(sectionId, Sections.byId(sectionId)' "$NAV" | head -1 | cut -d: -f1)
-act_ln=$(grep -n 'host.dispatchTarget(pageAction)' "$NAV" | head -1 | cut -d: -f1)
+act_ln=$(grep -n 'host.routeTarget(pageAction)' "$NAV" | head -1 | cut -d: -f1)
 if [ -n "$base_ln" ] && [ -n "$act_ln" ]; then
   [ "$base_ln" -lt "$act_ln" ] \
     && ok "goSection (line $base_ln) precedes action dispatch (line $act_ln)" \
     || bad "action dispatch (line $act_ln) still runs BEFORE goSection (line $base_ln) — regression"
 else
-  bad "could not locate goSection / dispatchTarget markers in openSectionPage"
+  bad "could not locate goSection / routeTarget markers in openSectionPage"
 fi
 
 echo "== T3: the action dispatch + base guard both still exist (no accidental removal) =="
-grep -qF 'if (pageAction.isNotBlank()) { host.dispatchTarget(pageAction); return }' "$NAV" 2>/dev/null \
-  && ok "action-page dispatch preserved" || bad "action-page dispatch missing"
+# routeTarget, not dispatchTarget: this hop COMPLETES a tap, it does not
+# start one. Through the click entry point it billed one tap as two.
+grep -qF 'if (pageAction.isNotBlank()) { host.routeTarget(pageAction); return }' "$NAV" 2>/dev/null \
+  && ok "action-page dispatch preserved, and routes without re-counting a click" \
+  || bad "action-page dispatch missing, or back on the click entry point"
 grep -qF 'if (host.currentSection != sectionId) {' "$NAV" 2>/dev/null \
   && ok "section-base guard preserved" || bad "section-base guard missing"
 

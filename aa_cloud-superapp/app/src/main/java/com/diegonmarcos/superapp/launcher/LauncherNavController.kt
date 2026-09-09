@@ -246,9 +246,20 @@ class LauncherNavController(private val host: NavHost) {
                 if (tabbedOwner != null) pageId else activeTabFor(sectionId))
         }
         // Pages that declare an `action` dispatch it instead of opening a fragment.
+        //
+        // [NavHost.routeTarget], not [NavHost.dispatchTarget]: this is the shell
+        // FINISHING a navigation the user already clicked once, not a new click.
+        // A screen-opening action page is reached by arriving here FROM its own
+        // target — `action:constellation` routes to dispatchHomeAction, which
+        // sends it here to establish the section base, and the line below sends
+        // that same target back to complete it. Through dispatchTarget (which is
+        // the tile-click entry point) the round trip billed one tap as two:
+        // two `onTileClicked` log lines 7–49ms apart, two haptic pulses, and two
+        // Recently-Used and App-Tabs recordings. routeTarget performs the target
+        // without re-counting the tap.
         val pageAction = Sections.byId(sectionId)?.pages
             ?.firstOrNull { it.id == pageId }?.action.orEmpty()
-        if (pageAction.isNotBlank()) { host.dispatchTarget(pageAction); return }
+        if (pageAction.isNotBlank()) { host.routeTarget(pageAction); return }
         if (sectionId != "apptabs") runCatching {
             val pageEntry = Sections.byId(sectionId)?.pages?.firstOrNull { it.id == pageId }
             host.recordPage(sectionId, pageId, pageEntry?.label ?: pageId, pageEntry?.iconName ?: "")
@@ -516,7 +527,14 @@ class LauncherNavController(private val host: NavHost) {
         fun openAppDrawerSheet(initialTab: String = "")
         fun closeAppDrawerSheetIfOpen()
         fun closeDrawerIfOpen()
+        /** A USER CLICKED this target: felt, logged and counted as an open,
+         *  then routed. For a target the shell is dispatching to itself, use
+         *  [routeTarget] — see [openSectionPage]'s page-action hop. */
         fun dispatchTarget(target: String)
+        /** Perform [target] under the tile grammar WITHOUT counting a click.
+         *  The shell re-enters its own router while completing one tap, and
+         *  every such re-entry through [dispatchTarget] was a second tap. */
+        fun routeTarget(target: String)
         fun applyMode(mode: String)
         fun tabHaptic()
         fun recordSection(id: String, label: String, icon: String)
