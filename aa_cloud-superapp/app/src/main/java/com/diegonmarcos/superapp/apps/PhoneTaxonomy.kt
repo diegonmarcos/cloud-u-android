@@ -1,5 +1,7 @@
 package com.diegonmarcos.superapp.apps
 
+import android.content.Context
+
 /**
  * packageName → phone-taxonomy SECTION.
  *
@@ -21,18 +23,29 @@ object PhoneTaxonomy {
 
     /** Memoised per package — a notification stream re-renders on every filter
      *  tap and every arriving notification, and classify() walks every folder's
-     *  keyword list, which is pure waste to repeat for a package we just saw. */
+     *  keyword list, which is pure waste to repeat for a package we just saw.
+     *  The memo is what keeps the metadata path affordable too: the
+     *  PackageManager reads below happen at most once per package. */
     private val cache = HashMap<String, String>()
 
     /**
      * Section prefix character of the folder [packageName] classifies into, or
-     * "" for an app landing in a prefix-less folder (Misc, New) — those belong
-     * to no section and so are only ever shown by an "All" choice.
+     * "" for an app landing in a prefix-less folder (Misc, Others) — those
+     * belong to no section and so are only ever shown by an "All" choice.
+     *
+     * Pass [ctx] to let an app the keyword rules do not know reach its folder
+     * through what Android declares about it — the same metadata pass the
+     * launcher grid uses. Without it the answer is keyword-only, so a freshly
+     * installed app filters as sectionless until somebody edits build.json:
+     * the notification stream and the grid would disagree about the same app.
      */
-    fun sectionPrefixOf(packageName: String, label: String): String {
+    fun sectionPrefixOf(packageName: String, label: String, ctx: Context? = null): String {
         if (packageName.isBlank() || folders.isEmpty()) return ""
         cache[packageName]?.let { return it }
-        val folderLabel = labelById[PhoneAppClassifier.classify(packageName, label, folders)]
+        val metadata = if (ctx == null) AppMetadata.NONE else
+            PhoneAppClassifier.metadataFor(ctx, folders, listOf(packageName))[packageName]
+                ?: AppMetadata.NONE
+        val folderLabel = labelById[PhoneAppClassifier.classify(packageName, label, folders, metadata)]
         val first = folderLabel?.firstOrNull()
         val prefix = if (first == null || first.isLetterOrDigit()) "" else first.toString()
         cache[packageName] = prefix

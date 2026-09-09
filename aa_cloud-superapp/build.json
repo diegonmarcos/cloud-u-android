@@ -4543,7 +4543,7 @@
     ],
     "_doc_phone_grid_columns": "Column count for the Phone tab's folder grid. Mirrors tile_columns (6) so the two tabs share the same density rhythm.",
     "phone_grid_columns": 6,
-    "_doc_phone_folders": "Every launchable app is routed to exactly one folder by PhoneAppClassifier: folders are walked in `order`, and the first keyword that matches wins, so a lower order beats a higher one. Keyword forms: (1) `pkg:com.foo.bar` exact packageName; (2) `pkg^com.foo.` packageName.startsWith; (3) `lbl:name` exact case-insensitive label; (4) `lbl~frag` label contains (min 3 chars); (5) a bare string matches anywhere in \"packageName label\" (min 4 chars) — sweeping and collision-prone, so it is used sparingly. Every app installed at the 2026-09-07 rebuild is pinned with an exact `pkg:` rule, which is why the folder lists read as inventories; `pkg^` rules only cover families that will keep growing (our own com.diegonmarcos.cloudlib.*, com.termux.*, VPN vendors). Two sinks, neither with keywords: `new_apps` (order 98, sink=true) catches everything unmatched and is the triage queue — an app landing there means it needs a rule; `misc` (order 99) is the manual exile, give it explicit keywords to push something there on purpose. Manufacturer (Google / Samsung / non-Play-Store) is metadata for Smart Folders (see phone_smart_folders below) — NOT a primary grouping criterion. Order is a three-digit string, one hundred-block per section in phone_sections order, folders alphabetical by label inside the block (110, 120, ...); it drives both render order and match precedence, so a new folder takes the next free number in its block.",
+    "_doc_phone_folders": "Every launchable app is routed to exactly one folder by PhoneAppClassifier: folders are walked in `order`, and the first keyword that matches wins, so a lower order beats a higher one. Keyword forms: (1) `pkg:com.foo.bar` exact packageName; (2) `pkg^com.foo.` packageName.startsWith; (3) `lbl:name` exact case-insensitive label; (4) `lbl~frag` label contains (min 3 chars); (5) a bare string matches anywhere in \"packageName label\" (min 4 chars) — sweeping and collision-prone, so it is used sparingly. Every app installed at the 2026-09-07 rebuild is pinned with an exact `pkg:` rule, which is why the folder lists read as inventories; `pkg^` rules only cover families that will keep growing (our own com.diegonmarcos.cloudlib.*, com.termux.*, VPN vendors). An app no keyword claimed then goes through the METADATA pass before any sink: `match_metadata`, declared beside `match_keywords`, routes on what Android itself publishes about the package, so a newly installed app is placed without a keyword edit. Three rule forms: `cat:game` matches ApplicationInfo.category by the platform constant name lowercased (game, audio, video, image, social, news, maps, productivity, accessibility); `intent:android.intent.category.APP_EMAIL` matches a launcher intent category the package resolves for, i.e. a role the platform grants it; `perm:android.permission.BODY_SENSORS` matches a permission declared in its manifest. Precedence inside the pass is by SIGNAL STRENGTH, not by `order` — category (the app states its own genre) beats intent (the platform grants it a role) beats permission (we infer from what it asks for), and `order` only breaks ties within one signal; otherwise a storage permission on a game would beat cat:game purely because Storage sorts earlier. Keywords always win over metadata: the keyword lists are curated and correct, metadata only keeps an un-curated app off the sink pile. Two sinks, neither with any rules: `others` (order 930, sink=true) catches everything both passes missed and is the triage queue — an app landing there means it needs a rule; `misc` (order 910) is the manual exile, give it explicit keywords to push something there on purpose. Neither carries a section prefix, so both render last under the Other subhead. Manufacturer (Google / Samsung / non-Play-Store) is metadata for Smart Folders (see phone_smart_folders below) — NOT a primary grouping criterion. Order is a three-digit string, one hundred-block per section in phone_sections order, folders alphabetical by label inside the block (110, 120, ...); it drives both render order and match precedence, so a new folder takes the next free number in its block.",
     "phone_folders": [
       {
         "id": "svc_gov",
@@ -4845,6 +4845,10 @@
           "pkg^com.aurora.adroid",
           "pkg^com.aurora.store",
           "pkg^org.fdroid."
+        ],
+        "match_metadata": [
+          "intent:android.intent.category.APP_MARKET",
+          "perm:android.permission.REQUEST_INSTALL_PACKAGES"
         ]
       },
       {
@@ -4890,6 +4894,9 @@
           "pkg:io.element.android.x",
           "pkg:io.heckel.ntfy",
           "pkg:org.telegram.messenger"
+        ],
+        "match_metadata": [
+          "intent:android.intent.category.APP_MESSAGING"
         ]
       },
       {
@@ -4906,6 +4913,9 @@
           "pkg:email.clean.android",
           "pkg:eu.faircode.email",
           "pkg:rs.ltt.android"
+        ],
+        "match_metadata": [
+          "intent:android.intent.category.APP_EMAIL"
         ]
       },
       {
@@ -4920,6 +4930,9 @@
           "pkg:com.rama.mako",
           "pkg:com.samsung.android.app.spage",
           "pkg:com.substack.app"
+        ],
+        "match_metadata": [
+          "cat:news"
         ]
       },
       {
@@ -4934,6 +4947,9 @@
           "pkg:com.samsung.android.app.contacts",
           "pkg:com.samsung.android.dialer",
           "pkg:com.samsung.android.messaging"
+        ],
+        "match_metadata": [
+          "intent:android.intent.category.APP_CONTACTS"
         ]
       },
       {
@@ -4952,6 +4968,9 @@
           "pkg:com.trello",
           "pkg:me.clockify.android",
           "pkg:todolist.scheduleplanner.dailyplanner.todo.reminders"
+        ],
+        "match_metadata": [
+          "intent:android.intent.category.APP_CALENDAR"
         ]
       },
       {
@@ -4970,6 +4989,9 @@
           "pkg:com.samsung.android.app.notes",
           "pkg:md.obsidian",
           "pkg:org.chromium.webapk.a64d263d6f7d935c4_v2"
+        ],
+        "match_metadata": [
+          "cat:productivity"
         ]
       },
       {
@@ -4999,6 +5021,12 @@
           "pkg:dk.tacit.android.foldersync.lite",
           "pkg:me.zhanghai.android.files",
           "pkg:pl.solidexplorer2"
+        ],
+        "match_metadata": [
+          "cat:image",
+          "intent:android.intent.category.APP_GALLERY",
+          "intent:android.intent.category.APP_FILES",
+          "perm:android.permission.MANAGE_EXTERNAL_STORAGE"
         ]
       },
       {
@@ -5012,6 +5040,11 @@
           "pkg:com.google.earth",
           "pkg:com.mapswithme.maps.pro",
           "pkg:cz.ackee.ventusky"
+        ],
+        "match_metadata": [
+          "cat:maps",
+          "intent:android.intent.category.APP_MAPS",
+          "intent:android.intent.category.APP_WEATHER"
         ]
       },
       {
@@ -5029,6 +5062,9 @@
           "pkg:com.sec.android.app.clockpackage",
           "pkg:com.sec.android.app.popupcalculator",
           "pkg:com.sec.android.app.voicenote"
+        ],
+        "match_metadata": [
+          "intent:android.intent.category.APP_CALCULATOR"
         ]
       },
       {
@@ -5042,6 +5078,9 @@
           "pkg:com.duckduckgo.mobile.android",
           "pkg:com.google.android.googlequicksearchbox",
           "pkg:io.raindrop.raindropio"
+        ],
+        "match_metadata": [
+          "intent:android.intent.category.APP_BROWSER"
         ]
       },
       {
@@ -5054,6 +5093,9 @@
           "pkg:com.samsung.android.game.gamehome",
           "pkg:com.werewolfapps.online",
           "pkg:org.faudroids.werewolf"
+        ],
+        "match_metadata": [
+          "cat:game"
         ]
       },
       {
@@ -5070,6 +5112,10 @@
           "pkg:com.ultimateguitar.tabs",
           "pkg:de.deutschlandfunk.dlfaudiothek",
           "pkg:ott.alanwatts"
+        ],
+        "match_metadata": [
+          "cat:audio",
+          "intent:android.intent.category.APP_MUSIC"
         ]
       },
       {
@@ -5084,6 +5130,9 @@
           "pkg:com.instagram.barcelona",
           "pkg:com.pinterest",
           "pkg:com.tinder"
+        ],
+        "match_metadata": [
+          "cat:social"
         ]
       },
       {
@@ -5098,6 +5147,9 @@
           "pkg:com.netflix.mediaclient",
           "pkg:com.wbd.stream",
           "pkg:tv.arte.plus7"
+        ],
+        "match_metadata": [
+          "cat:video"
         ]
       },
       {
@@ -5138,6 +5190,10 @@
           "pkg:com.urbandroid.sleep",
           "pkg:com.wikiloc.wikilocandroid",
           "pkg:de.komoot.android"
+        ],
+        "match_metadata": [
+          "perm:android.permission.ACTIVITY_RECOGNITION",
+          "perm:android.permission.BODY_SENSORS"
         ]
       },
       {
@@ -5147,14 +5203,14 @@
         "match_keywords": []
       },
       {
-        "id": "new_apps",
-        "order": "920",
-        "label": "New Apps",
+        "id": "others",
+        "order": "930",
+        "label": "Others",
         "match_keywords": [],
         "sink": true
       }
     ],
-    "_doc_phone_sections": "Top-level section headers in the Home Apps/Phone tab. Folders are bucketed under a section by their label's first character: Services · Buro (-), Services · Others (+), Tools · System (_), Tools · Inboxes & AI (@), Tools · Data Apps (.), Tools · Primary (=), Tools · Media (>), Tools · Health (*). A folder whose label starts with none of those prefixes belongs to no section and renders last (that is where the New Apps and Misc sinks live). The split is Service vs Tool: a SERVICE is a client for one external provider you hold an account, contract or booking with, and is worthless without that provider (Santander, Ryanair, Uber, Airalo, ImmoScout24, Gov.br); a TOOL is software that operates on your own data or device and works with any provider or none (maps, file managers, notes, keyboards, browsers, media players). Entertainment clients are tools, not services: you reach for Netflix the way you reach for a media player. Tools · Inboxes & AI is everything that carries messages in and the assistants you talk to: AI, Chat, Mail, Phone & Contacts, News & Reading — it sits ahead of the other tool sections because it is what you open first and most. Tools · Data Apps holds the tools that own a body of your data (Calendar & Tasks, Docs & Notes, Storage); Tools · Primary holds the general-purpose ones that operate on whatever you point them at (Maps & Weather, Utilities, Web). Tools · Media is what you watch, listen to and play; Tools · Health is what you open to look after yourself — moving your body, learning something, staying informed. Services then split again by why you open them: BURO is the paperwork of being alive, the accounts you must keep in order (money, government and identity, telecom, housing, health, getting to work); OTHERS is discretionary, the services you open because you chose to (travel, shopping, events, jobs). Order = render order. Empty sections (every folder empty) are silently skipped. Phone tab renders one subhead per non-empty section + the folder grid below.",
+    "_doc_phone_sections": "Top-level section headers in the Home Apps/Phone tab. Folders are bucketed under a section by their label's first character: Services · Buro (-), Services · Others (+), Tools · System (_), Tools · Inboxes & AI (@), Tools · Data Apps (.), Tools · Primary (=), Tools · Media (>), Tools · Health (*). A folder whose label starts with none of those prefixes belongs to no section and renders last (that is where the Others and Misc sinks live). The split is Service vs Tool: a SERVICE is a client for one external provider you hold an account, contract or booking with, and is worthless without that provider (Santander, Ryanair, Uber, Airalo, ImmoScout24, Gov.br); a TOOL is software that operates on your own data or device and works with any provider or none (maps, file managers, notes, keyboards, browsers, media players). Entertainment clients are tools, not services: you reach for Netflix the way you reach for a media player. Tools · Inboxes & AI is everything that carries messages in and the assistants you talk to: AI, Chat, Mail, Phone & Contacts, News & Reading — it sits ahead of the other tool sections because it is what you open first and most. Tools · Data Apps holds the tools that own a body of your data (Calendar & Tasks, Docs & Notes, Storage); Tools · Primary holds the general-purpose ones that operate on whatever you point them at (Maps & Weather, Utilities, Web). Tools · Media is what you watch, listen to and play; Tools · Health is what you open to look after yourself — moving your body, learning something, staying informed. Services then split again by why you open them: BURO is the paperwork of being alive, the accounts you must keep in order (money, government and identity, telecom, housing, health, getting to work); OTHERS is discretionary, the services you open because you chose to (travel, shopping, events, jobs). Order = render order. Empty sections (every folder empty) are silently skipped. Phone tab renders one subhead per non-empty section + the folder grid below.",
     "phone_sections": [
       {
         "title": "Services · Buro",
