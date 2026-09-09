@@ -14,8 +14,12 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.content.pm.LauncherApps
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
@@ -104,15 +108,25 @@ class LauncherConfigFragment : Fragment() {
         // Theme tiles — data-driven from BuildConfig.
         val themes = LauncherThemes.loadFromBuildConfig()
         val current = themePrefs.theme
+        // "· modified" on the selected tile when the device no longer matches
+        // what the theme declares — see LauncherThemes.isModified for why the
+        // honest label beats the flattering one.
+        val modified = LauncherThemes.isModified(ctx, current)
         for (themeRow in themes) {
+            val isCurrent = themeRow.id == current.id
             root.addView(genericTile(
                 ctx,
-                label    = themeRow.label,
-                subtitle = themeRow.subtitle,
-                isSelected = themeRow.id == current.id,
+                label    = themeRow.label + if (isCurrent && modified) "  ·  modified" else "",
+                subtitle = if (isCurrent && modified)
+                    "You changed a switch by hand, so this is no longer exactly " +
+                        "${themeRow.label}. Tap to re-apply it."
+                else themeRow.subtitle,
+                isSelected = isCurrent,
             ) {
-                themePrefs.theme = LauncherTheme.fromId(themeRow.id)
+                // ONE action, both effects: chrome + every toggle the theme declares.
+                LauncherThemes.apply(ctx, LauncherTheme.fromId(themeRow.id))
                 (activity as? ShellActivity)?.notifyLauncherThemeChanged()
+                com.diegonmarcos.superapp.appstore.ConstellationWorker.start(requireContext())
                 rerender()
             })
             root.addView(spacer(ctx, dp(ctx, 8)))
@@ -136,57 +150,49 @@ class LauncherConfigFragment : Fragment() {
         root.addView(sliderRow(ctx, st.label, st.subtitle, st.min, st.max,
             settingsPrefs.screensaverTimeout) { v -> settingsPrefs.screensaverTimeout = v })
 
-        // Split the toggles data-drivenly: the ones flagged battery:true in
-        // build.json are the actual power drains (continuous animations + the
-        // 10s live-stats poll) → grouped under "Battery Hunger Ones" with a
-        // master switch; the rest stay under "Others". Add a dragger = one
-        // `"battery": true` in build.json, no code change.
+        // ── Toggles ────────────────────────────────────────────────
+        // One box per build.json::ui.launcher_settings.toggle_groups entry, in
+        // declared order, holding the toggles that name it. This replaced a
+        // `filter { it.battery }` / `filter { !it.battery }` split, which could
+        // express exactly two boxes and no more — the four the owner asked for
+        // were a Kotlin change under that shape and are a data change under this
+        // one. A group with no toggles draws nothing rather than an empty header.
         val allToggles = LauncherSettingsPrefs.Config.toggles
-        val batteryOnes = allToggles.filter { it.battery }
-        val otherOnes   = allToggles.filter { !it.battery }
+        for (group in LauncherSettingsPrefs.Config.groups) {
+            val rows = allToggles.filter { it.group == group.id }
+            if (rows.isEmpty()) continue
 
-        // ── Battery Hunger Ones ────────────────────────────────────
-        if (batteryOnes.isNotEmpty()) {
             root.addView(spacer(ctx, dp(ctx, 24)))
-            root.addView(sectionHeader(ctx, "Battery Hunger Ones",
-                "Continuous animations + live system stats — the effects that cost battery. Off = leaner."))
-            val allOn = batteryOnes.all { settingsPrefs.toggle(it.id) }
-            root.addView(toggleRow(ctx, "All battery-hungry effects",
-                "One switch to flip every effect below on or off.", allOn) { on ->
-                batteryOnes.forEach { settingsPrefs.setToggle(it.id, on) }
-                (activity as? ShellActivity)?.notifyLauncherThemeChanged()
-                com.diegonmarcos.superapp.appstore.ConstellationWorker.start(requireContext()) // re-apply fleet_check
-                rerender() // reflect the child switches
-            })
-            root.addView(spacer(ctx, dp(ctx, 8)))
-            for (t in batteryOnes) {
-                root.addView(toggleRow(ctx, t.label, t.subtitle, settingsPrefs.toggle(t.id)) { on ->
-                    settingsPrefs.setToggle(t.id, on)
-                    (activity as? ShellActivity)?.notifyLauncherThemeChanged()
-                    com.diegonmarcos.superapp.appstore.ConstellationWorker.start(requireContext()) // re-apply fleet_check
-                    rerender() // keep the master switch in sync
+            root.addView(sectionHeader(ctx, group.label, group.subtitle))
+
+            if (group.master) {
+                val allOn = rows.all { settingsPrefs.toggle(it) }
+                root.addView(toggleRow(ctx, group.masterLabel, group.masterSubtitle, allOn) { on ->
+                    // A master must not stomp a user-owned switch either: the
+                    // edge menus are not the master's to turn off.
+                    rows.filterNot { it.userOwned }.forEach { settingsPrefs.setToggle(it, on) }
+                    onToggleChanged()
+                    rerender() // reflect the child switches
                 })
                 root.addView(spacer(ctx, dp(ctx, 8)))
             }
-        }
 
-        // ── Others section ─────────────────────────────────────────
-        root.addView(spacer(ctx, dp(ctx, 24)))
-        root.addView(sectionHeader(ctx, "Others",
-            "Haptics, brightness and eye protection."))
-        for (t in otherOnes) {
-            root.addView(toggleRow(ctx, t.label, t.subtitle, settingsPrefs.toggle(t.id)) { on ->
-                settingsPrefs.setToggle(t.id, on)
-                // Eye protection = the ANDROID SYSTEM night-light (blue-light
-                // filter), NOT a custom overlay — open its settings to enable.
-                if (t.id == "eye_protection" && on) {
-                    runCatching { startActivity(Intent("android.settings.NIGHT_DISPLAY_SETTINGS")) }
-                        .onFailure { runCatching { startActivity(Intent(Settings.ACTION_DISPLAY_SETTINGS)) } }
-                }
-                // Re-apply launcher chrome so stars/cube/pets pick up the change.
-                (activity as? ShellActivity)?.notifyLauncherThemeChanged()
-            })
-            root.addView(spacer(ctx, dp(ctx, 8)))
+            for (t in rows) {
+                root.addView(toggleRow(ctx, t.label, t.subtitle, settingsPrefs.toggle(t)) { on ->
+                    settingsPrefs.setToggle(t, on)
+                    // Eye protection = the ANDROID SYSTEM night-light (blue-light
+                    // filter), NOT a custom overlay — open its settings to enable.
+                    if (t.id == "eye_protection" && on) {
+                        runCatching { startActivity(Intent("android.settings.NIGHT_DISPLAY_SETTINGS")) }
+                            .onFailure { runCatching { startActivity(Intent(Settings.ACTION_DISPLAY_SETTINGS)) } }
+                    }
+                    onToggleChanged()
+                    // Re-render because a hand-flip can move the theme tile into
+                    // its "modified" state, and that label is derived, not stored.
+                    rerender()
+                })
+                root.addView(spacer(ctx, dp(ctx, 8)))
+            }
         }
         // Screen brightness (device-wide → needs WRITE_SETTINGS)
         val b = LauncherSettingsPrefs.Config.brightness
@@ -226,8 +232,85 @@ class LauncherConfigFragment : Fragment() {
             }
         })
 
+        // ── Power Saving home apps — the very bottom of the page ────────────
+        addPowerSavingAppsEditor(root, ctx)
+
         return scroll
     }
+
+    /**
+     * The twelve Cloud Power Saving slots, two rows of six, each a spinner over
+     * the launchable apps on this device.
+     *
+     * Writes back to [PowerSavingAppsPrefs], which is the same store the home
+     * pane reads — the defaults it falls back to are the ones declared in
+     * build.json, so this editor overrides data rather than replacing it, and a
+     * slot the user never touches keeps tracking whatever default we ship next.
+     */
+    private fun addPowerSavingAppsEditor(root: LinearLayout, ctx: android.content.Context) {
+        val slots = LauncherThemes.homeAppsFor(LauncherTheme.CloudPowerSaving.id)
+        if (slots.isEmpty()) return
+
+        root.addView(spacer(ctx, dp(ctx, 32)))
+        root.addView(sectionHeader(ctx, "Power Saving home apps",
+            "The twelve apps on the Cloud Power Saving home screen — two rows of six, " +
+                "in this order. 'Default' keeps the app shipped in build.json."))
+
+        val prefs = PowerSavingAppsPrefs(ctx)
+        val installed = installedApps(ctx)
+
+        slots.forEachIndexed { index, slot ->
+            // Options are rebuilt per slot so entry 0 can name THIS slot's own
+            // default — "Default (Mail)" is readable, a bare "Default" is not.
+            val options = listOf(Option("Default (${slot.label})", null)) +
+                installed.map { Option(it.label, "app:${it.pkg}") }
+            val current = prefs.target(slot.id)
+            val selected = options.indexOfFirst { it.target == current }.coerceAtLeast(0)
+
+            root.addView(TextView(ctx).apply {
+                text = "Row ${index / 6 + 1} · slot ${index % 6 + 1} — ${slot.label}"
+                setTextColor(0xAAFFFFFFL.toInt())
+                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+                setPadding(0, dp(ctx, 8), 0, dp(ctx, 2))
+            })
+            root.addView(Spinner(ctx).apply {
+                adapter = ArrayAdapter(
+                    ctx, android.R.layout.simple_spinner_dropdown_item, options.map { it.label },
+                )
+                setSelection(selected)
+                // Spinner.setSelection POSTS its callback, so a listener attached
+                // here would also receive the PROGRAMMATIC selection and persist
+                // it — merely opening this screen would write an override for all
+                // twelve slots and freeze them against every future default. The
+                // One-Hand editor shipped exactly that bug; this post() is queued
+                // after the one setSelection made, so only real choices are written.
+                var suppress = true
+                post { suppress = false }
+                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+                    override fun onNothingSelected(p: AdapterView<*>?) {}
+                    override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                        if (suppress) return
+                        prefs.setTarget(slot.id, options[pos].target)
+                    }
+                }
+            })
+        }
+    }
+
+    private data class Option(val label: String, val target: String?)
+    private data class InstalledApp(val label: String, val pkg: String)
+
+    /** Launchable apps on this device, by label. The editor offers real
+     *  packages only — a slot cannot be pointed at something that is not there. */
+    private fun installedApps(ctx: android.content.Context): List<InstalledApp> = runCatching {
+        val la = ctx.getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
+            ?: return emptyList()
+        la.getActivityList(null, android.os.Process.myUserHandle())
+            .map { InstalledApp(it.label?.toString().orEmpty().ifBlank { it.componentName.packageName },
+                                it.componentName.packageName) }
+            .distinctBy { it.pkg }
+            .sortedBy { it.label.lowercase() }
+    }.getOrDefault(emptyList())
 
     /** Shared "selectable card" row used by both the Profiles and the
      *  Themes pickers — label up top, optional subtitle beneath,
@@ -389,6 +472,18 @@ class LauncherConfigFragment : Fragment() {
         }
     }
 
+    /** What every switch has to do after it is written, whichever group it is
+     *  in: re-apply the launcher chrome so stars / cube / pets pick the change
+     *  up, and re-arm the constellation worker so `fleet_check` takes effect
+     *  now rather than at the next cold start. One place, so a new group cannot
+     *  be added without it. */
+    private fun onToggleChanged() {
+        (activity as? ShellActivity)?.notifyLauncherThemeChanged()
+        runCatching {
+            com.diegonmarcos.superapp.appstore.ConstellationWorker.start(requireContext())
+        }
+    }
+
     /** True when the SuperApp's MainActivity is currently the resolved
      *  default Home Screen handler. The picker uses this to surface a
      *  live "active / not active" hint above the CTA. */
@@ -464,6 +559,118 @@ object LauncherThemes {
 
     fun featuresFor(themeId: String): Features = featuresById[themeId] ?: Features.SAFE_DEFAULT
     fun featuresFor(theme: LauncherTheme): Features = featuresFor(theme.id)
+
+    // ── Theme → toggle mapping ──────────────────────────────────────────────
+    /**
+     * The device state each theme sets, read from
+     * build.json::ui.launcher_themes[*].toggles. Picking a theme applies the
+     * chrome ([Features]) and this map in ONE action, which is what makes the
+     * switches on the Theme tab agree with what the theme actually did.
+     *
+     * The mapping is DATA. A new theme is a new entry in that array — there is
+     * deliberately no `when (theme)` here to add an arm to, because the previous
+     * shape of this code had exactly that and it is why the toggles and the
+     * theme could disagree: two places to edit, one of them easy to forget.
+     *
+     * A toggle the theme does not name keeps whatever the user had.
+     */
+    private val togglesById: Map<String, Map<String, Boolean>> by lazy { parseToggles() }
+
+    fun togglesFor(themeId: String): Map<String, Boolean> = togglesById[themeId] ?: emptyMap()
+    fun togglesFor(theme: LauncherTheme): Map<String, Boolean> = togglesFor(theme.id)
+
+    private fun parseToggles(): Map<String, Map<String, Boolean>> = runCatching {
+        val arr = JSONArray(String(Base64.decode(BuildConfig.UI_LAUNCHER_THEMES_B64, Base64.NO_WRAP)))
+        // Read ONCE, here, and drop the ids no theme may write. Filtering at the
+        // source means no caller can forget to: an `edge_menus` key mistakenly
+        // added to a theme record simply does not survive parsing. Doing it at
+        // the call sites instead would be one `if` per site and one forgotten
+        // site away from a theme silently switching the user's edge menus off.
+        val userOwned = LauncherSettingsPrefs.Config.userOwnedIds
+        val out = mutableMapOf<String, Map<String, Boolean>>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val id = o.optString("id")
+            if (id.isBlank()) continue
+            val t = o.optJSONObject("toggles") ?: continue
+            val map = mutableMapOf<String, Boolean>()
+            for (key in t.keys()) {
+                if (key in userOwned) continue
+                map[key] = t.optBoolean(key)
+            }
+            out[id] = map
+        }
+        out
+    }.getOrDefault(emptyMap())
+
+    /**
+     * CHOOSING A THEME SETS THE TOGGLES AND APPLIES THE UI TOGETHER — one call,
+     * both effects. Every surface that changes the theme goes through here, so
+     * there is no path that applies the chrome without the device state.
+     */
+    fun apply(ctx: android.content.Context, theme: LauncherTheme) {
+        LauncherThemePrefs(ctx).theme = theme
+        val settings = LauncherSettingsPrefs(ctx)
+        val byId = LauncherSettingsPrefs.Config.toggles.associateBy { it.id }
+        for ((id, want) in togglesFor(theme)) {
+            // Route through the Item so a switch backed by another subsystem's
+            // store is written where that subsystem reads it. An unknown id is
+            // skipped rather than written blind: it would create a preference
+            // key no switch displays, which is the invisible state this whole
+            // change exists to remove.
+            val item = byId[id] ?: continue
+            settings.setToggle(item, want)
+        }
+    }
+
+    /**
+     * Does the device still match what [theme] declares?
+     *
+     * DERIVED, never stored. The alternative — a "modified" flag written when a
+     * switch is flipped — is a second copy of the truth that goes stale the
+     * moment anything else writes a toggle. Comparing against the mapping cannot
+     * be wrong, because the mapping is what "being on this theme" MEANS.
+     *
+     * The picker shows "· modified" when this is true rather than silently
+     * claiming a theme the phone no longer matches. A label that lies is worse
+     * than no label: the user came to this screen precisely to find out what is
+     * on, and the honest answer is "Power Saving, except you changed something".
+     */
+    fun isModified(ctx: android.content.Context, theme: LauncherTheme): Boolean {
+        val settings = LauncherSettingsPrefs(ctx)
+        val byId = LauncherSettingsPrefs.Config.toggles.associateBy { it.id }
+        return togglesFor(theme).any { (id, want) ->
+            val item = byId[id] ?: return@any false
+            settings.toggle(item) != want
+        }
+    }
+
+    // ── Power Saving's twelve home slots ────────────────────────────────────
+    /** One launch target on the Power Saving home pane. [target] is the ordinary
+     *  tile grammar, so it goes through the same dispatcher every other tile
+     *  uses and `extapp:` keeps its install-if-missing fallback. */
+    data class HomeApp(val id: String, val label: String, val target: String)
+
+    private val homeAppsById: Map<String, List<HomeApp>> by lazy { parseHomeApps() }
+
+    /** The theme's DEFAULT slots. The user's edits live in PowerSavingAppsPrefs,
+     *  which falls back to this list per slot. */
+    fun homeAppsFor(themeId: String): List<HomeApp> = homeAppsById[themeId] ?: emptyList()
+
+    private fun parseHomeApps(): Map<String, List<HomeApp>> = runCatching {
+        val arr = JSONArray(String(Base64.decode(BuildConfig.UI_LAUNCHER_THEMES_B64, Base64.NO_WRAP)))
+        val out = mutableMapOf<String, List<HomeApp>>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val id = o.optString("id")
+            val slots = o.optJSONArray("home_apps") ?: continue
+            out[id] = (0 until slots.length()).mapNotNull { idx ->
+                val s = slots.optJSONObject(idx) ?: return@mapNotNull null
+                HomeApp(s.optString("id"), s.optString("label"), s.optString("target"))
+            }
+        }
+        out
+    }.getOrDefault(emptyMap())
 
     private fun parseFeatures(): Map<String, Features> = runCatching {
         val json = String(Base64.decode(BuildConfig.UI_LAUNCHER_THEMES_B64, Base64.NO_WRAP))

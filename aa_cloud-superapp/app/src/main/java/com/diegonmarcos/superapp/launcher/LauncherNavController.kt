@@ -61,13 +61,18 @@ class LauncherNavController(private val host: NavHost) {
         host.currentSection = "home"
         host.currentLabel = ctx.getString(R.string.section_home)
         host.setSectionTitle(host.currentLabel)
-        // Cloud-Minimalist-Black launcher → terminal app list; else the 3D cube.
+        // Each theme that declares a home pane of its own gets it; everything
+        // else gets the 3D cube. Power Saving used to fall through to the cube,
+        // which is why the mode meant to look like an ordinary phone rendered in
+        // the full colourful design.
         val themePrefs = LauncherThemePrefs(ctx)
         val homePane: Fragment =
-            if (host.isDefaultLauncher() && themePrefs.theme == LauncherTheme.CloudMinimalistBlack)
-                MinimalistBlackFragment.newInstance()
-            else
-                Home3DFragment.newInstance()
+            if (!host.isDefaultLauncher()) Home3DFragment.newInstance()
+            else when (themePrefs.theme) {
+                LauncherTheme.CloudMinimalistBlack -> MinimalistBlackFragment.newInstance()
+                LauncherTheme.CloudPowerSaving     -> PowerSavingFragment.newInstance()
+                else                               -> Home3DFragment.newInstance()
+            }
         host.swapContent(homePane, clearBackStack = true)
         host.syncBottomNav("home")
         host.syncDrawerTab(0)

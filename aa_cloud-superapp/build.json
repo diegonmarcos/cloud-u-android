@@ -4254,7 +4254,7 @@
         ]
       }
     ],
-    "_doc_launcher_themes": "Themes the user can pick in Configs → Launcher. The chosen theme drives MainActivity's home-pane chrome ONLY when the SuperApp is set as the Android Home / Launcher replacement. id maps to LauncherTheme enum; `default: true` marks the first-run choice. The `features` map on each theme is the DECLARATIVE contract Kotlin (Push B) will read to enable/disable chrome elements + background services. Adding a feature toggle = adding a key here; nothing in code needs to know the toggle name ahead of time. Cloud Theme = existing UI (Home3D + bottom nav + dynamic island). Cloud Minimalist Black = terminal aesthetic. Cloud Power Saving = battery-first; mirrors Samsung / Apple / Pixel power-save behaviour (no chrome, no animations, background paused) but keeps WireGuard tunnel ON so network connectivity stays alive — the SuperApp can't fall back to a stock Samsung power-saving picker because Samsung's classifier filters out home-launchers entirely (verified: even Samsung's app-search excludes us). Owning the mode is the only path.",
+    "_doc_launcher_themes": "Launcher themes. `features` is the CHROME the theme draws; `toggles` is the DEVICE STATE it sets. Picking a theme applies both in one action, which is what the owner asked for: one tap, both effects. The mapping lives here and not in a Kotlin `when`, so a new theme is a new entry in this array and nothing else — no enum arm, no branch. Any toggle a theme does not name keeps its current value; a toggle marked `user_owned` in ui.launcher_settings.toggles is dropped from every mapping at parse time and can only ever be set by the user.",
     "launcher_themes": [
       {
         "id": "cloud",
@@ -4271,6 +4271,27 @@
           "grid": "default",
           "background_pause": false,
           "wireguard_required": false
+        },
+        "toggles": {
+          "all_anim": true,
+          "pets_anim": true,
+          "cube_anim": true,
+          "island_anim": true,
+          "stars_anim": true,
+          "star_twinkle": true,
+          "status_live": true,
+          "home_3d": true,
+          "dynamic_island": true,
+          "oled_black": false,
+          "background_pause": false,
+          "apps_warmup": true,
+          "maps_tracker": true,
+          "wireguard_pinned": false,
+          "fleet_check": true,
+          "ntfy_poll": true,
+          "analytics_batch": true,
+          "bottom_nav": true,
+          "drawer": true
         }
       },
       {
@@ -4287,12 +4308,33 @@
           "grid": "monospace_list",
           "background_pause": false,
           "wireguard_required": false
+        },
+        "toggles": {
+          "all_anim": false,
+          "pets_anim": false,
+          "cube_anim": false,
+          "island_anim": false,
+          "stars_anim": false,
+          "star_twinkle": false,
+          "status_live": false,
+          "home_3d": false,
+          "dynamic_island": false,
+          "oled_black": true,
+          "background_pause": false,
+          "apps_warmup": true,
+          "maps_tracker": true,
+          "wireguard_pinned": false,
+          "fleet_check": true,
+          "ntfy_poll": true,
+          "analytics_batch": true,
+          "bottom_nav": false,
+          "drawer": false
         }
       },
       {
         "id": "cloud_power_saving",
         "label": "Cloud Power Saving",
-        "subtitle": "Battery-first launcher — dim OLED-black UI, no animations, no dynamic island, no 3D home. Background services paused EXCEPT WireGuard (network connectivity stays on). Mirrors Samsung / Apple / Pixel power-saving behaviour.",
+        "subtitle": "Looks like an ordinary phone — black, no accent, no chrome. Time top-left, settings top-right, twelve apps on the bottom two rows. Background work paused EXCEPT WireGuard (connectivity stays on).",
         "features": {
           "home_3d": false,
           "bottom_nav": false,
@@ -4300,10 +4342,106 @@
           "animations": false,
           "drawer": true,
           "oled_black": true,
-          "grid": "4x2",
+          "grid": "6x2",
           "background_pause": true,
           "wireguard_required": true
-        }
+        },
+        "toggles": {
+          "all_anim": false,
+          "pets_anim": false,
+          "cube_anim": false,
+          "island_anim": false,
+          "stars_anim": false,
+          "star_twinkle": false,
+          "status_live": false,
+          "home_3d": false,
+          "dynamic_island": false,
+          "oled_black": true,
+          "background_pause": true,
+          "apps_warmup": false,
+          "maps_tracker": false,
+          "wireguard_pinned": true,
+          "fleet_check": false,
+          "ntfy_poll": false,
+          "analytics_batch": false,
+          "bottom_nav": false,
+          "drawer": true
+        },
+        "_doc_home_apps": "The twelve launch targets of the Power Saving home pane, in reading order: slots 0-5 are the top row, 6-11 the bottom row. DEFAULTS, not constants — PowerSavingAppsPrefs stores the user's edits from the editor at the bottom of the Theme tab and falls back to this list per slot. Every target is written in the ordinary tile grammar and dispatched through the same onTileClicked path every other tile uses, so `extapp:` keeps its install-if-missing fallback. Each target resolves through the CENTRAL identity records — `extapp:<id>` into ui.external_apps, `app:<package>` into a ui.phone_folders keyword — and the tester fails the build if one does not, because a tile that resolves to nothing is invisible until someone taps it.",
+        "home_apps": [
+          {
+            "_doc": "Our own mail app (Cloud Mail / Sterna). extapp: rather than app:app.sterna so a phone that does not have it yet gets the install path instead of a dead tile.",
+            "id": "ps_mail",
+            "label": "Mail",
+            "target": "extapp:cloud-mail"
+          },
+          {
+            "_doc": "Declared in ui.phone_folders @Chat. The w4b (Business) build is declared there too; this row is the consumer one.",
+            "id": "ps_whatsapp",
+            "label": "WhatsApp",
+            "target": "app:com.whatsapp"
+          },
+          {
+            "_doc": "ui.phone_folders @Chat.",
+            "id": "ps_telegram",
+            "label": "Telegram",
+            "target": "app:org.telegram.messenger"
+          },
+          {
+            "_doc": "Our own calendar app. Same install-path reasoning as Mail.",
+            "id": "ps_calendar",
+            "label": "Calendar",
+            "target": "extapp:cloud-calendar"
+          },
+          {
+            "_doc": "'Traductor' is the translator. Google Translate, declared in ui.phone_folders =Utilities and already the target of the right-edge top_middle one-hand gesture, so this is the package the owner already reaches for.",
+            "id": "ps_traductor",
+            "label": "Traductor",
+            "target": "app:com.google.android.apps.translate"
+          },
+          {
+            "_doc": "Samsung's stock clock, declared in ui.phone_folders =Utilities. The stock one on purpose: the theme's whole point is to look like an ordinary Samsung phone.",
+            "id": "ps_clock",
+            "label": "Clock",
+            "target": "app:com.sec.android.app.clockpackage"
+          },
+          {
+            "_doc": "ui.phone_folders =Web.",
+            "id": "ps_brave",
+            "label": "Brave",
+            "target": "app:com.brave.browser"
+          },
+          {
+            "_doc": "Google Maps, declared in ui.phone_folders =Maps & Weather. Our own Cloud-Nav exists and is NOT used here for the same reason as the clock — this screen is meant to read as a stock phone.",
+            "id": "ps_maps",
+            "label": "Maps",
+            "target": "app:com.google.android.apps.maps"
+          },
+          {
+            "_doc": "Samsung's stock calculator, declared in ui.phone_folders =Utilities.",
+            "id": "ps_calculator",
+            "label": "Calculator",
+            "target": "app:com.sec.android.app.popupcalculator"
+          },
+          {
+            "_doc": "Google Drive, declared in ui.phone_folders .Storage.",
+            "id": "ps_drive",
+            "label": "Drive",
+            "target": "app:com.google.android.apps.docs"
+          },
+          {
+            "_doc": "Samsung's stock gallery, declared in ui.phone_folders .Storage.",
+            "id": "ps_gallery",
+            "label": "Gallery",
+            "target": "app:com.sec.android.gallery3d"
+          },
+          {
+            "_doc": "The camera build already declared in ui.phone_folders .Storage and already the target of the right-edge top_outer one-hand gesture.",
+            "id": "ps_camera",
+            "label": "Camera",
+            "target": "app:cld.camera"
+          }
+        ]
       }
     ],
     "_doc_launcher_profiles": "Profiles the user can pick in Configs → Launcher → Profiles. The chosen profile is persisted via LauncherProfilePrefs. Unlike themes (which control UI/chrome/features), profiles control APP ISOLATION + DATA SAFETY — which apps the user can reach and which subsystems get neutered (e.g. Guest disables WireGuard so the guest can't see private infra). The `behavior` map is the declarative contract Push C reads. Personal = full access (passthrough). Work = same as Personal for now; tag-based filtering wires in once apps carry app_tags. Guest = hands-off lockdown.",
@@ -6695,75 +6833,176 @@
           "label": "All animations",
           "subtitle": "Master switch - off stops every animation.",
           "default": true,
-          "battery": true
+          "group": "battery"
         },
         {
           "id": "pets_anim",
           "label": "Animal animations",
           "subtitle": "Animate the status-bar pets.",
           "default": true,
-          "battery": true
+          "group": "battery"
         },
         {
           "id": "cube_anim",
           "label": "Cube animation",
           "subtitle": "3D home cube motion.",
           "default": true,
-          "battery": true
+          "group": "battery"
         },
         {
           "id": "cube_interactive",
           "label": "Cube drag-to-spin",
           "subtitle": "Touch and drag the home cube to spin it across its 3D faces.",
           "default": false,
-          "battery": false
+          "group": "others"
         },
         {
           "id": "island_anim",
           "label": "Island animation",
           "subtitle": "Home-screen island wave motion.",
           "default": true,
-          "battery": true
+          "group": "battery"
         },
         {
           "id": "stars_anim",
           "label": "Stars animation",
           "subtitle": "Galaxy backdrop stars + comets.",
           "default": true,
-          "battery": true
+          "group": "battery"
         },
         {
           "id": "status_live",
           "label": "Live system stats",
           "subtitle": "Refresh RAM/CPU/storage every 10s (off = frozen numbers, leaner).",
           "default": true,
-          "battery": true
+          "group": "battery"
         },
         {
           "id": "star_twinkle",
           "label": "Star twinkle",
           "subtitle": "Pulse the home Sirius star (off = static).",
           "default": true,
-          "battery": true
+          "group": "battery"
         },
         {
           "id": "fleet_check",
           "label": "Constellation update check",
           "subtitle": "Periodic GHCR check for sibling-app updates (off = manual only, saves network).",
           "default": true,
-          "battery": true
+          "group": "connectivity",
+          "_doc": "WorkManager tag superapp-updater-check. This toggle already existed and already LIED: background_pause cancelled the job while the switch still read ON. Moving it into Connectivity and mapping it from the theme is what makes the switch agree with the device."
         },
         {
           "id": "haptics",
           "label": "Vibration on tap",
           "subtitle": "Haptic feedback on every tap.",
-          "default": true
+          "default": true,
+          "group": "others"
         },
         {
           "id": "eye_protection",
           "label": "Eye protection",
           "subtitle": "Warm amber overlay to cut blue light.",
-          "default": false
+          "default": false,
+          "group": "others"
+        },
+        {
+          "_doc": "features.home_3d. The theme has always flipped this and there was no switch for it, so a user in Power Saving could not get the cube back without abandoning the whole theme.",
+          "id": "home_3d",
+          "label": "3D home pane",
+          "subtitle": "The rotating cube home screen (off = the flat app grid).",
+          "default": true,
+          "group": "battery"
+        },
+        {
+          "_doc": "features.dynamic_island. Same defect as home_3d: theme-flipped, never exposed.",
+          "id": "dynamic_island",
+          "label": "Dynamic island",
+          "subtitle": "The floating pill above the toolbar.",
+          "default": true,
+          "group": "battery"
+        },
+        {
+          "_doc": "features.oled_black. ShellActivity paints the decor view black for this; the user had no way to keep the black background while leaving the theme.",
+          "id": "oled_black",
+          "label": "OLED black background",
+          "subtitle": "Pure black window background — an OLED panel spends no power on black pixels.",
+          "default": false,
+          "group": "battery"
+        },
+        {
+          "_doc": "features.background_pause — the single most invisible thing a theme did. BackgroundOrchestrator.applyForTheme cancels the WorkManager tags and stops the Maps tracker, and NOTHING on screen said so. The three jobs it cancels each have their own switch below, so this is the master and they are the detail.",
+          "id": "background_pause",
+          "label": "Pause background work",
+          "subtitle": "Tear down the location tracker, the update poll and the message poll.",
+          "default": false,
+          "group": "battery"
+        },
+        {
+          "_doc": "PhoneAppsFragment.warmUp is skipped under background_pause. The cost of it being off is a slow Phone tab, which reads as a bug rather than a setting.",
+          "id": "apps_warmup",
+          "label": "Warm up the app list",
+          "subtitle": "Pre-index installed apps at launch so the Phone tab opens instantly.",
+          "default": true,
+          "group": "battery"
+        },
+        {
+          "_doc": "BackgroundOrchestrator.stopMapsTracker. A location service the user cannot see stopping is the one they most need told about.",
+          "id": "maps_tracker",
+          "label": "Location tracking",
+          "subtitle": "Keep the Maps location service running in the background.",
+          "default": true,
+          "group": "connectivity"
+        },
+        {
+          "_doc": "features.wireguard_required. This is the one thing Power Saving turns ON rather than off, and it deserves a switch precisely because it is surprising: a power-saving mode that keeps a VPN up is a deliberate choice, not a leak.",
+          "id": "wireguard_pinned",
+          "label": "Keep WireGuard up",
+          "subtitle": "Pin the tunnel ON — connectivity survives power saving.",
+          "default": false,
+          "group": "connectivity"
+        },
+        {
+          "_doc": "WorkManager tag superapp-ntfy-poll. Cancelled by background_pause, which means Power Saving silently stopped delivering notifications. This is the toggle the Notifications group exists for.",
+          "id": "ntfy_poll",
+          "label": "Message polling",
+          "subtitle": "Poll the ntfy server for new messages and notifications.",
+          "default": true,
+          "group": "notifications"
+        },
+        {
+          "_doc": "WorkManager tag superapp-analytics-batch, the third job background_pause cancels.",
+          "id": "analytics_batch",
+          "label": "Usage batch upload",
+          "subtitle": "Send batched usage events when the network is idle.",
+          "default": true,
+          "group": "connectivity"
+        },
+        {
+          "_doc": "features.bottom_nav. Chrome rather than battery, but still theme-flipped with no switch.",
+          "id": "bottom_nav",
+          "label": "Bottom navigation bar",
+          "subtitle": "The section bar along the bottom of the screen.",
+          "default": true,
+          "group": "others"
+        },
+        {
+          "_doc": "features.drawer.",
+          "id": "drawer",
+          "label": "Side drawer",
+          "subtitle": "The slide-in section drawer.",
+          "default": true,
+          "group": "others"
+        },
+        {
+          "_doc": "PART FOUR, and the one toggle a THEME MAY NOT TOUCH. `user_owned: true` is not documentation — LauncherThemes.parseToggles DROPS this id out of every theme's mapping at parse time, so a theme cannot force edge menus off even if someone adds `\"edge_menus\": false` to its record by mistake. The owner asked to keep edge menus while in power saving; a theme that could stomp it would take the feature away exactly when one-handed use matters most. Backed by OneHandPrefs (store `onehand_prefs`), NOT by launcher_settings — the One-Hand tab writes the same key, so the two surfaces agree.",
+          "id": "edge_menus",
+          "label": "Edge menus",
+          "subtitle": "One-Hand edge gesture pads on the screen borders.",
+          "default": false,
+          "group": "others",
+          "user_owned": true,
+          "store": "onehand"
         }
       ],
       "brightness": {
@@ -6779,6 +7018,54 @@
         "min": 0,
         "max": 120,
         "default": 10
+      },
+      "_doc_toggle_groups": "The four boxes Configs > Launcher > Theme draws its switches into, in this order. A toggle names its group by id; the fragment renders one box per entry here and drops an empty one. This REPLACED a hardcoded Kotlin split (`toggles.filter { it.battery }` vs `!it.battery`) that could only ever express two groups, so a third box was a code change. Adding a fifth box is now one entry here plus a `group` on the toggles that belong in it.",
+      "toggle_groups": [
+        {
+          "id": "battery",
+          "label": "Battery Hungers",
+          "subtitle": "Continuous motion, the 3D home pane, live stats and background work — the effects that actually drain the cell. Off = leaner.",
+          "master": true,
+          "master_label": "All battery-hungry effects",
+          "master_subtitle": "One switch to flip every effect below on or off."
+        },
+        {
+          "id": "connectivity",
+          "label": "Connectivity",
+          "subtitle": "What the launcher keeps talking to the network about. Power Saving cuts compute but PINS the tunnel up, mirroring Samsung / Apple / Pixel power-save."
+        },
+        {
+          "id": "notifications",
+          "label": "Notifications",
+          "subtitle": "Delivery of messages the launcher pushes at you. Pausing background work silently stops these, which is why the switch has to be visible."
+        },
+        {
+          "id": "others",
+          "label": "Others",
+          "subtitle": "Chrome, haptics, eye protection and the edge menus — preferences that cost no battery worth naming."
+        }
+      ],
+      "_doc_feature_exposure": "THE ANTI-INVISIBILITY CONTRACT. Every key in a theme's `features` block is a device state the theme changes behind the user's back, so every key must be accounted for here: either it maps to the id of the toggle that exposes it, or it is listed in `feature_not_toggleable` with the reason it is not a switch. The tester walks ui.launcher_themes and fails on any feature key that appears in neither, which is what stops the next feature flag from shipping with no way for the user to see or undo it — the defect this whole change exists to fix.",
+      "feature_exposure": {
+        "home_3d": "home_3d",
+        "bottom_nav": "bottom_nav",
+        "dynamic_island": "dynamic_island",
+        "animations": "all_anim",
+        "drawer": "drawer",
+        "oled_black": "oled_black",
+        "background_pause": "background_pause",
+        "wireguard_required": "wireguard_pinned"
+      },
+      "feature_not_toggleable": {
+        "grid": "A LAYOUT choice, not a device state. It names the shape of the home pane ('6x2' = two rows of six) and the user changes it by editing those twelve slots in the Power Saving home apps editor at the bottom of this tab, not by flipping a switch. A boolean could not express it and a switch labelled 'grid' would explain nothing."
+      },
+      "_doc_background_jobs": "The background work `background_pause` tears down, and the toggle that shows each piece of it. BackgroundOrchestrator cancels these WorkManager tags and stops the Maps tracker; before this list existed the user got no signal that notifications had stopped arriving. Keep in sync with BackgroundOrchestrator.TAGGED_JOBS — the tester asserts every entry here names a toggle that exists.",
+      "background_jobs": {
+        "superapp-updater-check": "fleet_check",
+        "superapp-ntfy-poll": "ntfy_poll",
+        "superapp-analytics-batch": "analytics_batch",
+        "maps-location-tracker": "maps_tracker",
+        "phone-apps-warmup": "apps_warmup"
       }
     },
     "_doc_control_panel": "Configs ▸ Panel ▸ Control — the switch board, DECLARED here and implemented in configs/DeviceControls.kt. This file owns PRESENTATION ONLY: which controls appear, in which of the three groups, in what order, under what wording. It owns nothing about what a control can do.\n\nTHE THREE GROUPS ARE A QUESTION ABOUT BLAST RADIUS, not about which subsystem the code lives in. Phone = this handset's radios and hardware. Cloud = the fleet — flipping one of these changes what other machines can reach or what this app does to other APKs. System = this app's own behaviour plus the Android settings it is permitted to write. A control belongs to the group naming WHAT IT CHANGES, which is what the owner is actually deciding between when reaching for one.\n\nNEVER RENDER A SWITCH THAT LIES. Adding an id here does NOT create a switch: DeviceControls decides, per control, which of three things it is — (1) really toggleable in-process, so a switch whose state is re-read from the system after every write; (2) toggleable only through a special permission this app holds, so a switch that is DISABLED with the missing permission named on it; (3) not toggleable at all, so NOT a switch but a row that opens the exact Settings panel for it and shows the live state read-only. An id declared here with no capability behind it is dropped rather than drawn, because a control that does nothing is the same lie as a switch that does nothing.",
