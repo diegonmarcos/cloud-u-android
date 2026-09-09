@@ -112,11 +112,16 @@ class ControlFragment : Fragment() {
     private fun addRow(parent: LinearLayout, ctx: Context, decl: DeviceControls.Row) {
         val control = DeviceControls.byId[decl.id] ?: return   // dropped, never drawn
 
-        val text = LinearLayout(ctx).apply {
+        // NOT named `text`. A local called `text` outranks the implicit
+        // receiver inside every nested `TextView(ctx).apply { }` in this
+        // function, so each `text = ...` in those blocks binds to the local
+        // LinearLayout instead of TextView.setText — four assignments that
+        // read as setting a caption but mean reassigning this column.
+        val labelColumn = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        text.addView(TextView(ctx).apply {
+        labelColumn.addView(TextView(ctx).apply {
             text = decl.label
             textSize = 15f
             setTextColor(COLOR_LABEL)
@@ -126,14 +131,14 @@ class ControlFragment : Fragment() {
             textSize = 11f
             setTextColor(COLOR_NOTE)
         }
-        text.addView(note)
+        labelColumn.addView(note)
 
         val line = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             val v = dp(6)
             setPadding(0, v, 0, v)
-            addView(text)
+            addView(labelColumn)
         }
 
         if (control.set != null) {
