@@ -4,6 +4,17 @@ build/
 **/build/
 .kotlin/
 
+# Ship output. cloud-mail-engine.sh writes the signed release APK to
+# ac_cloud-mail/dist/cloud-comms-mail.apk (build-fork), and ship.yaml uploads and
+# publishes from exactly that path. dist/ sits at the app root, outside every
+# build/ rule above, and unlike ac_cloud-vault/ac_cloud-nav/ac_cloud-media-center
+# this app was never given the repo root's per-app `dist/` line — so a `git add`
+# from this directory would stage a ~30-80 MB APK. GitHub rejects any single file
+# over 100 MB outright, and a committed APK is a build artifact the GHCR image and
+# the rolling `latest` release already version. Nothing here is source.
+dist/
+*.apk
+
 # Local config / secrets — never commit these.
 # keystore.properties is WRITTEN BY THE ENGINE at ship time (cloud-mail-engine.sh,
 # signing='keystore_properties') from the one constellation key resolved out of
