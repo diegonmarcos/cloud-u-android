@@ -69,6 +69,17 @@ import kotlinx.coroutines.withContext
  *
  * All panels default to **expanded** (matches user spec "all uncolapsed
  * one after the other"). Tap the header chevron to collapse/expand.
+ *
+ * An INBOX card (mail_accounts, chat_*, and a stats card that names an app)
+ * keeps its summary counts and draws that app's own notification boxes
+ * underneath them: the counts say how much is in there, the boxes say what
+ * arrived, and the two questions are asked in the same place.
+ *
+ * Every app/publisher box inside a card carries two group-level controls. The
+ * double tick marks that box's notifications read; ARCHIVE moves the box
+ * itself out of its card into the page's collapsed Archive section at the
+ * bottom. Both are per-page state in [StackFilters], so both survive the
+ * process death this launcher sees many times an hour.
  */
 class AggregatorStackFragment : Fragment(),
     TileGridFragment.TileClickListener,
@@ -101,6 +112,19 @@ class AggregatorStackFragment : Fragment(),
     /** The vertical column holding the cards — where the "everything is
      *  filtered out" note is appended. */
     private var cardColumn: LinearLayout? = null
+    /** The page-level Archive: ONE collapsed section at the bottom holding
+     *  every app box the user archived, whichever card it was filed from.
+     *  Page-level rather than per-card because the archive answers "what did I
+     *  put away", a question about the page — a fold-away row per card would
+     *  hide the answer in the same cards the user archived to get away from.
+     *
+     *  Built before the cards so a card can hand its archived boxes straight
+     *  over as it renders, and added to the column after them so it still
+     *  draws last. */
+    private var archiveBox:    LinearLayout? = null
+    private var archiveWrap:   LinearLayout? = null
+    private var archiveHeader: TextView?     = null
+    private var archiveOpen = false
     private var filterPage = ""
     private var sortMode   = "time"
     private var showMode   = "all"
@@ -146,6 +170,10 @@ class AggregatorStackFragment : Fragment(),
         }
         scroll.addView(column)
         cardColumn = column
+        // Dropped before anything can return early: these name views from the
+        // PREVIOUS onCreateView, and a stale reference would have an archive
+        // click filing a box into a destroyed container.
+        archiveBox = null; archiveWrap = null; archiveHeader = null
         anchors.reset(scroll)
 
         val sec = Sections.byId(sectionId)
@@ -173,10 +201,16 @@ class AggregatorStackFragment : Fragment(),
         // shared with every other stackless page.
         filterPage = mode
         readIds = StackFilters.readKeys(ctx, filterPage)
+        // The watermark moves on EVERY visit, for the same reason readIds is
+        // loaded on every visit: a page can carry notification boxes without
+        // declaring a toggle row. Inboxes and C3 Observability are both that
+        // page, and while this sat inside the branch below their watermark
+        // stayed 0 forever — so every box on them reported its whole history
+        // as "N new" on every single visit, which is the chip saying nothing.
+        visitSeenAt = StackFilters.lastSeen(ctx, filterPage)
+        StackFilters.markSeen(ctx, filterPage, System.currentTimeMillis())
         val filters = Sections.stackFiltersFor(sec, mode)
         if (filters.isNotEmpty()) {
-            visitSeenAt = StackFilters.lastSeen(ctx, filterPage)
-            StackFilters.markSeen(ctx, filterPage, System.currentTimeMillis())
             sortMode     = selection(ctx, filters, "sort", sortMode)
             showMode     = selection(ctx, filters, "show", showMode)
             toolsMode    = selection(ctx, filters, FILTER_TOOLS, "all")
@@ -184,6 +218,9 @@ class AggregatorStackFragment : Fragment(),
             column.addView(filterRow(ctx, filters))
         }
 
+        // Before the cards: a card files its archived boxes into this while it
+        // builds. Added to the column after them, so it still renders last.
+        val archive = buildArchiveSection(ctx)
         for (panel in panels) {
             val view = if (panel.kind == "section_title") sectionTitleView(ctx, panel.title)
                        else buildPanel(ctx, inflater, panel)
@@ -191,6 +228,8 @@ class AggregatorStackFragment : Fragment(),
             anchors.register(panel.anchor, view)
             column.addView(view)
         }
+        column.addView(archive)
+        syncArchiveHeader()
         if (filters.isNotEmpty()) applySource(ctx, filters)
         // A cross-page `page:<section>/<page>#<anchor>` link left its fragment
         // waiting for whichever stack answers to that page. Two posts deep:
@@ -357,7 +396,12 @@ class AggregatorStackFragment : Fragment(),
         showMode     = selection(ctx, filters, "show", showMode)
         toolsMode    = selection(ctx, filters, FILTER_TOOLS, "all")
         servicesMode = selection(ctx, filters, FILTER_SERVICES, "all")
+        // Each card is about to rebuild its bodies and re-file its own archived
+        // boxes. Emptying the Archive first is what stops it growing a second
+        // copy of every box per toggle tap.
+        archiveBox?.removeAllViews()
         for (refresh in bodyRefreshers) refresh()
+        syncArchiveHeader()
         applySource(ctx, filters)
     }
 
@@ -545,13 +589,24 @@ class AggregatorStackFragment : Fragment(),
         "linktree_slide"     -> renderLinktreeSlide(ctx, body, panel.slideId)
         "link_grid"          -> renderLinkGrid(ctx, body, panel.columns, panel.links)
         "tile_row"           -> renderTileRow(body, panel.tiles)
-        "mail_accounts"      -> renderMailAccounts(ctx, body)
-        "chat_matrix"        -> renderChatPlaceholder(ctx, body, "Matrix", "page:chat/matrix")
-        "chat_mattermost"    -> renderChatPlaceholder(ctx, body, "Mattermost", "page:chat/mattermost")
+        // The inbox kinds: summary first, then what actually arrived. Wrapped
+        // in [refreshable] like the notification centre is, because the boxes
+        // underneath answer to the same Sort/Show toggles on a page that
+        // declares them. Safe to re-run — every view below is a plain View,
+        // nothing here goes through [embedChild].
+        "mail_accounts"      -> refreshable(body) {
+            renderMailAccounts(ctx, body); renderInboxNotifications(ctx, body, panel) }
+        "chat_matrix"        -> refreshable(body) {
+            renderChatPlaceholder(ctx, body, "Matrix", "page:chat/matrix")
+            renderInboxNotifications(ctx, body, panel) }
+        "chat_mattermost"    -> refreshable(body) {
+            renderChatPlaceholder(ctx, body, "Mattermost", "page:chat/mattermost")
+            renderInboxNotifications(ctx, body, panel) }
         "open_link"          -> renderOpenLink(ctx, body, panel)
         "notification_center" -> refreshable(body) { renderNotificationCenter(ctx, body, panel) }
         "feed"               -> renderFeed(ctx, body, panel)
-        "stats"              -> renderStats(ctx, body, panel)
+        "stats"              -> refreshable(body) {
+            renderStats(ctx, body, panel); renderInboxNotifications(ctx, body, panel) }
         "cloud_dashboard"    -> renderCloudDashboard(ctx, body, panel)
         else                 -> renderPlaceholder(ctx, body, panel)
     }
@@ -1191,10 +1246,10 @@ class AggregatorStackFragment : Fragment(),
             )
             // "checking…", never OK: an unpolled channel must not spend even its
             // first frame looking healthy.
-            val block   = groupBlock(ctx, group, GroupState("checking…", SIGNAL_UNKNOWN))
+            val block   = groupBlock(ctx, group, GroupState("checking…", SIGNAL_UNKNOWN), body)
             val state   = block.findViewWithTag<TextView>(GROUP_STATE_TAG) ?: continue
             val rowsBox = block.findViewWithTag<LinearLayout>(GROUP_ROWS_TAG) ?: continue
-            body.addView(block)
+            placeGroup(ctx, block, topic, body)
 
             val cached = ntfyCache[topic]
             if (cached != null) {
@@ -1326,11 +1381,15 @@ class AggregatorStackFragment : Fragment(),
             val chip =
                 if (fresh > 0) GroupState("$fresh new · ${g.rows.size}", SIGNAL_OK)
                 else GroupState("${g.rows.size} · ${ago(now - g.newest)}", 0x99FFFFFF.toInt())
-            val block = groupBlock(ctx, g, chip)
+            val block = groupBlock(ctx, g, chip, body)
             val rows = block.findViewWithTag<LinearLayout>(GROUP_ROWS_TAG)
             for (r in g.rows) rows?.addView(notifRowView(ctx, r, g.launchPackage))
-            body.addView(block)
+            placeGroup(ctx, block, g.key, body)
         }
+        // Counted as rendered even when every box went to the Archive: the user
+        // filed them there on purpose and the Archive line at the bottom of the
+        // page says how many, so filteredAwayNote would be a wrong explanation
+        // for the gap it left behind.
         return ordered.size
     }
 
@@ -1360,6 +1419,7 @@ class AggregatorStackFragment : Fragment(),
      */
     private fun groupBlock(
         ctx: android.content.Context, g: NotifGroup, state: GroupState,
+        homeBody: LinearLayout,
     ): LinearLayout {
         val block = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -1453,6 +1513,11 @@ class AggregatorStackFragment : Fragment(),
                 }
             }
         })
+        // Archive — the tick's twin, one level up. The tick is about the
+        // NOTIFICATIONS ("I have read these"); this is about the APP ("stop
+        // putting this box in front of me"), so it touches no read state and
+        // the box leaves whole, to the page's Archive section.
+        header.addView(archivePill(ctx, g.key, block, homeBody))
         val chevron = ImageView(ctx).apply {
             setImageResource(R.drawable.ic_chevron_right)
             alpha = 0.5f
@@ -1470,6 +1535,148 @@ class AggregatorStackFragment : Fragment(),
         block.addView(header)
         block.addView(rows)
         return block
+    }
+
+    // ── archived app boxes ─────────────────────────────────────────────
+    //
+    // Archived state is a StackFilters SELECTION under this page id: the same
+    // prefs file, the same "<page>/<id>" key shape and the same commit()
+    // discipline every other choice on the page already gets. Not a second
+    // store — one that would have to learn, the hard way, the same lesson
+    // about apply() losing a choice to process death.
+    //
+    // The id carries the `__` page-setting prefix [filterRow] already skips
+    // drawing a control for, exactly like [FILTER_COLLAPSED]. Unlike that one
+    // it is NOT declared in build.json and cannot be: there is one key per app
+    // box, and which apps exist is discovered at runtime from what posted. So
+    // the yes/no option set is supplied here rather than read off a
+    // declaration; everything about how it is stored is unchanged.
+
+    private fun yesNo(id: String) = Sections.StackFilter(
+        id      = id,
+        label   = "",
+        default = "no",
+        options = listOf(Sections.FilterOption("yes", "yes"), Sections.FilterOption("no", "no")),
+    )
+
+    private fun isArchived(ctx: android.content.Context, key: String): Boolean =
+        StackFilters.selected(ctx, filterPage, yesNo(ARCHIVED_PREFIX + key)) == "yes"
+
+    private fun setArchived(ctx: android.content.Context, key: String, archived: Boolean) {
+        StackFilters.select(ctx, filterPage, ARCHIVED_PREFIX + key, if (archived) "yes" else "no")
+    }
+
+    /**
+     * The Archive control on an app box's header.
+     *
+     * A WORD, not a glyph. "File this away" has no icon in this app's set, and
+     * a borrowed folder would be one more symbol to learn sitting right next to
+     * a tick that already means something else. It says what it does, and says
+     * "Restore" once the box is in the Archive.
+     *
+     * It MOVES THE BOX, immediately. Writing the preference alone would leave
+     * the box exactly where it was until the next visit, which reads as a dead
+     * button — the same failure an in-memory dismissal gave the home banner.
+     */
+    private fun archivePill(
+        ctx: android.content.Context, key: String, block: View, homeBody: LinearLayout,
+    ): View = TextView(ctx).apply {
+        textSize = 10f
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(0xCCFFFFFF.toInt())
+        setPadding(dp(7), dp(3), dp(7), dp(3))
+        background = android.graphics.drawable.GradientDrawable().apply {
+            cornerRadius = dp(9).toFloat()
+            setColor(0x22FFFFFF)
+        }
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+        ).apply { leftMargin = dp(8) }
+        isClickable = true
+        isFocusable = true
+        val paint: (Boolean) -> Unit = { archived ->
+            text = if (archived) ARCHIVE_RESTORE_LABEL else ARCHIVE_LABEL
+            contentDescription =
+                if (archived) "Restore this app out of the Archive"
+                else "Archive this app"
+        }
+        paint(isArchived(ctx, key))
+        setOnClickListener {
+            Haptics.tap(it)
+            val archived = !isArchived(ctx, key)
+            setArchived(ctx, key, archived)
+            paint(archived)
+            // Falls back to the card it came from rather than to nothing: a box
+            // removed from one parent and added to none is a box the user just
+            // deleted by accident.
+            val target = (if (archived) archiveBox else homeBody) ?: homeBody
+            (block.parent as? ViewGroup)?.removeView(block)
+            // A restored box lands at the END of its card rather than back in
+            // its sorted slot: the order is re-derived on the next visit, and a
+            // box that visibly comes back beats one that needs the page
+            // reopened before it reappears.
+            target.addView(block)
+            syncArchiveHeader()
+        }
+    }
+
+    /** File a freshly built app box where the user left it: its own card, or
+     *  the page's Archive. */
+    private fun placeGroup(
+        ctx: android.content.Context, block: View, key: String, homeBody: LinearLayout,
+    ) {
+        val archive = archiveBox
+        if (archive != null && isArchived(ctx, key)) {
+            archive.addView(block)
+            syncArchiveHeader()
+        } else homeBody.addView(block)
+    }
+
+    /** The page's Archive section: one collapsed line over the boxes the user
+     *  filed away, remembered per page like every other choice on it.
+     *
+     *  Hidden entirely while it holds nothing. A permanent "Archive 0" line on
+     *  a page nobody has ever archived from is chrome, and a control that opens
+     *  an empty list teaches the user to stop reading that part of the page. */
+    private fun buildArchiveSection(ctx: android.content.Context): View {
+        val wrap = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(6), 0, dp(6))
+            isVisible = false
+        }
+        val box = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        archiveOpen = StackFilters.selected(ctx, filterPage, yesNo(FILTER_ARCHIVE_OPEN)) == "yes"
+        box.isVisible = archiveOpen
+        val header = caption(ctx, "").apply {
+            setPadding(dp(2), dp(4), dp(2), dp(6))
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                Haptics.tap(it)
+                archiveOpen = !archiveOpen
+                StackFilters.select(
+                    ctx, filterPage, FILTER_ARCHIVE_OPEN, if (archiveOpen) "yes" else "no")
+                box.isVisible = archiveOpen
+                syncArchiveHeader()
+            }
+        }
+        archiveBox    = box
+        archiveWrap   = wrap
+        archiveHeader = header
+        syncArchiveHeader()
+        wrap.addView(header)
+        wrap.addView(box)
+        return wrap
+    }
+
+    /** Keep the Archive line honest about what is behind it — the count, the
+     *  open marker, and whether the section is worth drawing at all. Called
+     *  from every path that can change the count, including a late ntfy poll. */
+    private fun syncArchiveHeader() {
+        val box = archiveBox ?: return
+        archiveWrap?.isVisible = box.childCount > 0
+        archiveHeader?.text =
+            "Archive  ${if (archiveOpen) "▾" else "▸"}  ${box.childCount}"
     }
 
     /**
@@ -2007,6 +2214,108 @@ class AggregatorStackFragment : Fragment(),
         body.addView(caption(ctx, "Mock data — live fetch pending"))
     }
 
+    // ── Inbox cards: the summary, then what actually arrived ───────────
+    //
+    // An Inboxes card carries that inbox's counts. Counts answer "how much is
+    // in there"; they do not answer "what arrived", which is the question that
+    // makes someone open the app. Both belong in the one box, so the card keeps
+    // its stats and grows the posting app's own notification boxes underneath
+    // them — the same boxes, with the same read swipe, tick and Archive, as the
+    // Notify page draws.
+    //
+    // WHICH app a card is about is DATA. There is deliberately no kind→package
+    // table in this file: a package list in Kotlin starts rotting the day it is
+    // written, which is the same reason [renderPhoneCenter] groups on the key
+    // the notification itself carries rather than on a roster of apps.
+
+    /** The `ui.external_apps` entry this card is an inbox for, or null when the
+     *  panel names none.
+     *
+     *  Both routes are EXACT — an `extapp:<id>` target the panel declares, or a
+     *  title/subtitle identical to that app's declared label. Nothing fuzzy: a
+     *  near-match would quietly file one app's notifications under another
+     *  app's box, and a notification shown against the wrong app is worse than
+     *  one not shown at all. */
+    private fun inboxApp(panel: Sections.StackPanel): Sections.ExternalApp? {
+        val extappId = (listOf(panel.url) + panel.links.map { it.url })
+            .firstOrNull { it.startsWith(EXTAPP_PREFIX) }
+            ?.removePrefix(EXTAPP_PREFIX)?.substringBefore('/')
+            .orEmpty()
+        if (extappId.isNotBlank()) return Sections.externalApp(extappId)
+        val named = listOf(panel.title, panel.subtitle).map { it.trim() }.filter { it.isNotEmpty() }
+        return Sections.externalApps().firstOrNull { app ->
+            app.label.isNotBlank() && named.any { it.equals(app.label.trim(), ignoreCase = true) }
+        }
+    }
+
+    /** Every package that IS this app on a device: the hub id, the resigned
+     *  stock alt, the install target and each fork. A notification can arrive
+     *  under any of them — which one depends on how this phone got the app, and
+     *  that is precisely what [Sections.ExternalApp.altPackage] exists for. */
+    private fun inboxPackages(app: Sections.ExternalApp): Set<String> =
+        (listOf(app.hubPackage, app.altPackage, app.installPackage) + app.forks.values)
+            .filterNot { it.isBlank() }.toSet()
+
+    private fun renderInboxNotifications(
+        ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel,
+    ) {
+        val app = inboxApp(panel)
+        if (app == null) {
+            // A mail or chat card IS an inbox by construction, so one that names
+            // no app is a gap in the declaration — it says so, and names the
+            // fix. A `stats` card is a generic dashboard surface other pages
+            // reuse (Projects ▸ PM boards), so one that names no app simply
+            // stays the dashboard it already was.
+            if (panel.kind in INBOX_KINDS) body.addView(caption(ctx,
+                "No app declared for this inbox, so its notifications cannot be shown here. " +
+                "Declare one in build.json: \"url\": \"extapp:<id>\" on the panel, or title " +
+                "the panel exactly as that app is labelled in ui.external_apps."))
+            return
+        }
+        body.addView(shadeLabel(ctx, "NOTIFICATIONS"))
+        if (!isNotificationAccessGranted(ctx)) {
+            // Drawing an empty list here would be a failure reporting success —
+            // the same distinction [renderPhoneCenter] makes for a whole page.
+            body.addView(stateLine(ctx, "unavailable · permission not granted", SIGNAL_UNKNOWN))
+            body.addView(caption(ctx, "Notification Access is off, so nothing this app posts is " +
+                "captured at all. This is empty because we cannot read it, not because the " +
+                "inbox is quiet."))
+            return
+        }
+        val packages = inboxPackages(app)
+        val stored = PhoneNotificationStore.all(ctx).filter { it.packageName in packages }
+        if (stored.isEmpty()) {
+            // Granted and empty is a real, different state: amber, and it names
+            // the app so it cannot be read as a dead card.
+            body.addView(stateLine(ctx, "silent · nothing captured from ${app.label}", SIGNAL_WARN))
+            return
+        }
+        // Grouped by package, not folded into one box: a hub and its forks are
+        // separate apps on the device, each with its own icon, count chip and
+        // Archive control.
+        //
+        // No pruneRead here, on purpose. This is ONE app's slice of the phone
+        // namespace, and [StackFilters.pruneRead] against a partial view is
+        // exactly what makes read rows silently reappear. The complete
+        // enumeration belongs to the Notify page's phone card, which has it.
+        val groups = stored.groupBy { it.packageName }.map { (pkg, entries) ->
+            NotifGroup(
+                key           = pkg,
+                label         = entries.firstOrNull { it.appLabel.isNotBlank() }?.appLabel ?: app.label,
+                sub           = pkg,
+                launchPackage = pkg,
+                // PHONE_NS, the same namespace [renderPhoneCenter] writes: a row
+                // read here is read there too, because it is the same
+                // notification and not a copy of one.
+                rows          = entries.map {
+                    NotifRow(it.ts, it.title.ifBlank { it.appLabel }, it.text,
+                        id = PHONE_NS + it.key)
+                },
+            )
+        }
+        renderGroups(ctx, body, groups)
+    }
+
     /** Grey = we do not know. Deliberately NOT red: red is a claim about the
      *  fleet, and a failed fetch is a claim about this phone's network. */
     private val SIGNAL_UNKNOWN = 0xFF9E9E9E.toInt()
@@ -2341,6 +2650,24 @@ class AggregatorStackFragment : Fragment(),
          *  it has no view of — see [ntfyNs] for why ntfy needs one per topic. */
         private const val PHONE_NS = "phone:"
         private const val APP_NS   = "app:"
+
+        /** Archived-box keys, and the Archive section's own open/closed flag.
+         *  Both `__`-prefixed page settings, stored by [StackFilters] under the
+         *  page id beside the page's visible selections. */
+        private const val ARCHIVED_PREFIX     = "__archived/"
+        private const val FILTER_ARCHIVE_OPEN = "__archive_open"
+        private const val ARCHIVE_LABEL         = "Archive"
+        private const val ARCHIVE_RESTORE_LABEL = "Restore"
+
+        /** `extapp:<id>` — the declared handle for a companion app, resolved
+         *  through `ui.external_apps`. An id, never a package name. */
+        private const val EXTAPP_PREFIX = "extapp:"
+
+        /** The kinds that exist ONLY as inbox cards, and therefore say so when
+         *  they name no app. `stats` is deliberately absent: it is a generic
+         *  dashboard card other pages reuse, and a note there would be noise on
+         *  every page that is not Inboxes. */
+        private val INBOX_KINDS = setOf("mail_accounts", "chat_matrix", "chat_mattermost")
 
         /** One namespace PER TOPIC: an ntfy poll is only ever complete for the
          *  topic it polled, so that is the largest set a successful poll is
