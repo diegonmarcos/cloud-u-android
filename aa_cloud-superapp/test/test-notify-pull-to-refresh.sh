@@ -20,7 +20,9 @@
 #   T3  it wraps the ScrollView, holds exactly one child, and is what the
 #       fragment returns from every exit in onCreateView
 #   T4  the spinner is cleared on success, on empty AND on failure
-#   T5  a watchdog exists, because View.post drops runnables on a detached view
+#   T5  a watchdog exists, and is scoped to the view — View.post does NOT
+#       drop runnables on a view that was attached when it was posted, which
+#       is how this page crashed repainting through a detached fragment
 #   T6  the gesture is disarmed on a page with nothing to re-query
 #   T7  a refresh really re-queries: channels go back to the network instead of
 #       being repainted out of the cache
@@ -103,16 +105,36 @@ f=$(grep -c 'finishRefresh(timedOut = ' "$CODE")
 [ "$f" -eq 3 ] \
   && ok "T4: completion is reached from all 3 ends (sync, poll settled, watchdog)" \
   || bad "T4: $f calls to finishRefresh — expected 3"
-# The failure path specifically: a poll that could not even be scheduled must
-# settle, or the counter never reaches zero.
-if awk '/}.onFailure \{/,/^        }$/' "$CODE" | grep -q 'ntfyPollSettled()'; then
-  ok "T4: the poll FAILURE path settles too, not just the success path"
+# The failure path specifically. There is no longer a could-not-schedule branch
+# to check — the executor that could reject a submission is gone — so the claim
+# is the stronger one it was standing in for: pollTopics answers for EVERY
+# requested topic on every path including total transport failure, so the settle
+# after the paint loop is reached whatever came back.
+if awk '/private fun pollTopics/,/^    }$/' "$CODE" | grep -q 'catch (_: Throwable)'; then
+  ok "T4: a poll that fails outright still returns a verdict per topic"
 else
-  bad "T4: a failed poll never settles — the spinner would run forever"
+  bad "T4: pollTopics can now escape without answering — the counter would stick"
 fi
-has "$AGG" 'host.postDelayed({' \
-  && ok "T5: a watchdog backstops the case where a callback never runs at all" \
-  || bad "T5: no watchdog — a detached view drops View.post and hangs the spinner"
+if awk '/viewLifecycleOwner.lifecycleScope.launch \{/,/^        }$/' "$CODE" \
+     | grep -q 'if (counted) ntfyPollSettled()'; then
+  ok "T4: the poll settles on the one path every outcome reaches"
+else
+  bad "T4: the poll no longer settles — the spinner would run forever"
+fi
+# T5 USED TO ASSERT `host.postDelayed`, on the belief that View.post drops its
+# runnable on a detached view. It does not, and that belief is what crashed the
+# app: a view that was ATTACHED when post() was called has already handed the
+# runnable to the main-thread Handler, which runs it after the fragment is gone.
+# The watchdog now waits on the view's own scope, so it is cancelled with the
+# view instead of firing finishRefresh (→ stateLine → dp) into a dead Context.
+if awk '/private fun startRefresh/,/^    }$/' "$CODE" | grep -q 'postDelayed'; then
+  bad "T5: the watchdog is back on postDelayed — it outlives the view it repaints"
+elif awk '/private fun startRefresh/,/^    }$/' "$CODE" \
+       | grep -q 'viewLifecycleOwner.lifecycleScope.launch'; then
+  ok "T5: a watchdog backstops a callback that never runs, and dies with the view"
+else
+  bad "T5: no watchdog — a poll that never settles hangs the spinner forever"
+fi
 
 echo "== the gesture does not pretend =="
 has "$AGG" 'host.isEnabled = bodyRefreshers.isNotEmpty()' \

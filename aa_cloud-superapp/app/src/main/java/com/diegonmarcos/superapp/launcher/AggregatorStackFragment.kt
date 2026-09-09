@@ -122,9 +122,9 @@ class AggregatorStackFragment : Fragment(),
     // already treats a control that misreports state as a defect.
     private var refreshHost: SwipeRefreshLayout? = null
     /** Outstanding channel polls for the refresh in flight. The spinner stops
-     *  when this reaches zero — or when the watchdog fires, because
-     *  `View.post` silently drops its runnable on a detached view and a
-     *  decrement that never happens is a spinner that never stops. */
+     *  when this reaches zero — or when the watchdog fires, because a poll
+     *  that answers nothing at all still has to end somewhere and a decrement
+     *  that never happens is a spinner that never stops. */
     private var refreshPending = 0
     /** Every notification id DRAWN on this page since the last render. The
      *  refresh diffs it against [refreshBefore] so the outcome line can say
@@ -1416,35 +1416,43 @@ class AggregatorStackFragment : Fragment(),
         // line and hands back HTTP 429 for a scattered handful of channels.
         // Grey cards that move around between visits are the hardest kind of
         // broken to report, and one request cannot produce them.
-        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
         // Whether THIS card's poll is one the spinner is waiting on, decided
-        // now and carried into the callbacks: by the time they run the refresh
-        // may already be over, and a card drawn by an ordinary render must not
-        // decrement a counter it never incremented.
+        // now and carried into the continuation: by the time it resumes the
+        // refresh may already be over, and a card drawn by an ordinary render
+        // must not decrement a counter it never incremented.
         val counted = refreshHost?.isRefreshing == true
         if (counted) refreshPending++
-        runCatching {
-            executor.execute {
-                val byTopic = pollTopics(slots.keys.toList())
-                body.post {
-                    for ((topic, slot) in slots) {
-                        val result = byTopic.getValue(topic)
-                        ntfyCache[topic] = result
-                        paintNtfyGroup(ctx, slot.first, slot.second, result, topic, panel.limit)
-                    }
-                    if (counted) ntfyPollSettled()
-                }
+        // THE PAINT BELONGS TO THIS VIEW, SO IT IS SCOPED TO THIS VIEW.
+        //
+        // This was an unscoped executor whose result hopped back to the main
+        // thread with `body.post`, written on the belief that a detached view
+        // drops its runnable. IT DOES NOT. A view that was ATTACHED when post()
+        // was called has already handed the runnable to the ViewRootImpl's
+        // main-thread Handler, and that Handler runs it whatever has become of
+        // the fragment in the meantime. So leaving this page with a poll in
+        // flight repainted through a fragment that no longer had a Context, and
+        // the crash landed on the first `dp()` the paint reached — a Samsung
+        // SM-G996B on Android 15 threw exactly that, from notifRowView.
+        //
+        // A guard at the paint would only have converted the crash into a
+        // half-drawn card. The scope is the fix: viewLifecycleOwner's scope is
+        // cancelled in onDestroyView, so the continuation cannot run at all
+        // once the views it paints are gone, and the poll itself is cancelled
+        // with it instead of finishing into nothing.
+        viewLifecycleOwner.lifecycleScope.launch {
+            val byTopic = withContext(kotlinx.coroutines.Dispatchers.IO) {
+                pollTopics(slots.keys.toList())
             }
-        }.onFailure {
+            // [pollTopics] answers for every requested topic on every path,
+            // including total transport failure, so there is no separate
+            // could-not-poll branch to leave a card reading "checking…".
+            for ((topic, slot) in slots) {
+                val result = byTopic.getValue(topic)
+                ntfyCache[topic] = result
+                paintNtfyGroup(ctx, slot.first, slot.second, result, topic, panel.limit)
+            }
             if (counted) ntfyPollSettled()
-            // Could not even schedule the poll — say so rather than leaving
-            // the rows reading "checking…" forever, which looks like progress.
-            for ((_, slot) in slots) {
-                slot.first.text = "unavailable · not polled"
-                slot.first.setTextColor(SIGNAL_UNKNOWN)
-            }
         }
-        executor.shutdown()
     }
 
     private fun paintNtfyGroup(
@@ -3003,17 +3011,21 @@ class AggregatorStackFragment : Fragment(),
         ntfyForceRepoll = true
         rebuildBodies()
         ntfyForceRepoll = false
-        // WATCHDOG. Every scheduled poll decrements the counter on both its
-        // success and its failure path, but `View.post` silently drops its
-        // runnable on a detached view, and a decrement that never happens is a
-        // spinner that never stops — which reads as a hang and is the one
-        // failure this gesture would be judged by.
-        host.postDelayed({
+        // WATCHDOG. A poll that never settles is a spinner that never stops,
+        // which reads as a hang and is the one failure this gesture would be
+        // judged by. It waits on the SAME scope the polls do, for the reason
+        // that scope exists: this was `host.postDelayed`, which keeps its
+        // runnable alive across the fragment's teardown and would then fire
+        // [finishRefresh] — whose "Refreshed …" line is built with [stateLine],
+        // and so reaches `dp()` and a Context that is gone. Cancelled with the
+        // view, it can only fire while there is still a spinner to stop.
+        viewLifecycleOwner.lifecycleScope.launch {
+            kotlinx.coroutines.delay(REFRESH_TIMEOUT_MS)
             if (host.isRefreshing) {
                 refreshPending = 0
                 finishRefresh(timedOut = true)
             }
-        }, REFRESH_TIMEOUT_MS)
+        }
         // The stores are read synchronously, so a page with no channel poll out
         // is already done and must not sit spinning until the watchdog.
         if (refreshPending == 0) finishRefresh(timedOut = false)
