@@ -441,6 +441,19 @@
     <string name="settings_text_missing_title">Cloud Keyboard not installed</string>
     <string name="settings_text_missing_body">These settings live in the Cloud Keyboard app, which also holds the API key the Text tools use. Install it and this opens its page.</string>
 
+    <!-- The two Text tools on a message. Two entries, two engines: Enhance goes through the
+         OpenRouter model chosen in AI Routing, Translate through the translation library. -->
+    <string name="text_tool_enhance">Text Enhance</string>
+    <string name="text_tool_translate">Translate</string>
+    <string name="text_tool_running">Working…</string>
+    <!-- Names the provider, as the keyboard's Enhance bar does: a slow call then reads as a
+         slow provider rather than as a stuck app. %1$s is the provider, e.g. "OpenRouter". -->
+    <string name="text_tool_running_with">Working with %1$s…</string>
+    <string name="text_tool_copy">Copy</string>
+    <string name="text_tool_apply">Apply</string>
+    <string name="text_tool_close">Close</string>
+    <string name="text_tool_stale">The draft changed while this was running — nothing was replaced</string>
+
     <string name="settings_group_current_account">This account · %1$s</string>
     <string name="settings_group_current_account_generic">This account</string>
     <string name="settings_back">Back</string>

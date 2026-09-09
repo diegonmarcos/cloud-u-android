@@ -89,6 +89,14 @@ import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.MoreVert
+import app.sterna.ui.text.rememberTextToolRunner
+import app.sterna.ui.text.TextToolScope
+import app.sterna.ui.text.TextToolPanel
+import app.sterna.ui.text.TextTool
+import app.sterna.core.data.text.htmlToText
+import app.sterna.ui.compose.bodySource
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Print
@@ -830,6 +838,20 @@ private fun MessageActions(
         // A cancelled picker (null) does nothing — no toast.
         if (uri != null) viewModel.exportSource(uri, exportName, exportFor)
     }
+    // Text tools on a RECEIVED message. onApply is null and stays null: this body is a record
+    // of what somebody sent, so the result is shown to read or copy and the stored message is
+    // never written to. See TextToolScope.
+    val textTools = rememberTextToolRunner()
+    val textToolScope = rememberCoroutineScope()
+    TextToolPanel(textTools, onApply = null)
+    // Flattened HERE, where the reader's own HTML-vs-text notion already lives, and only ever
+    // to be SENT: the message keeps its markup, and nothing flattened is ever written back.
+    // The quoted thread is cut — a translation of the whole history is not what was asked for,
+    // and it is what the user pays for by the token.
+    fun textToolSource(): String {
+        val (raw, isHtml) = bodySource(loaded.email)
+        return TextToolScope.receivedScope(if (isHtml) htmlToText(raw) else raw)
+    }
     IconButton(onClick = { menuOpen = true }) {
         Icon(
             Icons.Filled.MoreVert,
@@ -880,6 +902,25 @@ private fun MessageActions(
                 text = { Text(stringResource(R.string.message_forward_attachment)) },
                 leadingIcon = { Icon(Icons.Filled.AttachFile, contentDescription = null) },
                 onClick = { menuOpen = false; onReply("forwardAttachment", replyTargetId, accountId) },
+            )
+            // The two Text tools. Two entries, two ENGINES, and they are not interchangeable:
+            // Enhance goes to the OpenRouter model chosen in AI Routing, Translate goes to the
+            // translation library. The pairing is made once, in TextToolRunner.run.
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.text_tool_enhance)) },
+                leadingIcon = { Icon(Icons.Filled.AutoFixHigh, contentDescription = null) },
+                onClick = {
+                    menuOpen = false
+                    textTools.run(textToolScope, TextTool.ENHANCE, textToolSource())
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.text_tool_translate)) },
+                leadingIcon = { Icon(Icons.Filled.Translate, contentDescription = null) },
+                onClick = {
+                    menuOpen = false
+                    textTools.run(textToolScope, TextTool.TRANSLATE, textToolSource())
+                },
             )
             // Reading mode (#149). The label says what the tap DOES, so it follows the mode actually
             // RENDERED — which is why the entry reads "Show HTML" on a message the setting opened as

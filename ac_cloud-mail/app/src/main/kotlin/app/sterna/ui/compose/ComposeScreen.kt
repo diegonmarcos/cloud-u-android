@@ -63,6 +63,13 @@ import androidx.compose.material.icons.filled.FormatStrikethrough
 import androidx.compose.material.icons.filled.FormatUnderlined
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
+import app.sterna.ui.text.rememberTextToolRunner
+import app.sterna.ui.text.TextToolScope
+import app.sterna.ui.text.TextToolPanel
+import app.sterna.ui.text.TextTool
+import app.sterna.core.data.text.Span
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BasicAlertDialog
@@ -497,6 +504,42 @@ fun ComposeScreen(
     var initialRequestReceipt by rememberSaveable { mutableStateOf(false) }
     // The body and its styling as one value: derived on every recomposition, never stored twice.
     val rich = RichBody(body.text, ranges, blocks, links)
+
+    // Text tools on a DRAFT. Unlike the reader's, this one applies: the body is the user's own
+    // and the result belongs back in the field.
+    val textTools = rememberTextToolRunner()
+    val textToolScope = rememberCoroutineScope()
+    // WHAT was sent and from WHERE, captured at the tap. The engines are network calls and the
+    // user keeps typing while one is in flight; applying a reply against a range that has since
+    // moved would overwrite whatever drifted into it. Same stale guard the keyboard's Enhance
+    // makes, for the same reason.
+    var textToolTarget by remember { mutableStateOf<Pair<Span, String>?>(null) }
+    fun runTextTool(tool: TextTool) {
+        val span = TextToolScope.draftScope(body.text, Span.between(body.selection.start, body.selection.end))
+        val sent = body.text.substring(span.start, span.end)
+        textToolTarget = span to sent
+        textTools.run(textToolScope, tool, sent)
+    }
+    TextToolPanel(textTools) { result ->
+        val target = textToolTarget
+        val stillThere = target != null &&
+            target.first.end <= body.text.length &&
+            body.text.substring(target.first.start, target.first.end) == target.second
+        if (!stillThere) {
+            Toast.makeText(context, context.getString(R.string.text_tool_stale), Toast.LENGTH_SHORT).show()
+        } else {
+            // splice, not a whole-body assignment: the inline styling, lists and links live
+            // BESIDE this text as offsets into it, and replacing a stretch without moving them
+            // leaves every style after the edit pointing at the wrong words.
+            val out = TextToolScope.splice(RichBody(body.text, ranges, blocks, links), target!!.first, result)
+            val caret = (target.first.start + result.length).coerceIn(0, out.text.length)
+            body = TextFieldValue(out.text, TextRange(caret))
+            ranges = out.ranges
+            blocks = out.blocks
+            links = out.links
+        }
+        textToolTarget = null
+    }
 
     // Which compose this is, for the signature rules: a forward carries its original at send time, so
     // its body holds no quote, while both a reply and a forward obey the two settings.
@@ -1188,6 +1231,21 @@ fun ComposeScreen(
                                 text = { Text(stringResource(R.string.compose_request_receipt)) },
                                 trailingIcon = { Checkbox(checked = requestReceipt, onCheckedChange = null) },
                                 onClick = { moreMenu = false; requestReceipt = !requestReceipt },
+                            )
+                            // Two entries, two ENGINES: Enhance is the OpenRouter model chosen in
+                            // AI Routing, Translate is the translation library. The pairing is made
+                            // once, in TextToolRunner.run, so there is one line to get wrong.
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.text_tool_enhance)) },
+                                leadingIcon = { Icon(Icons.Filled.AutoFixHigh, contentDescription = null) },
+                                onClick = { moreMenu = false; runTextTool(TextTool.ENHANCE) },
+                                enabled = !sending,
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.text_tool_translate)) },
+                                leadingIcon = { Icon(Icons.Filled.Translate, contentDescription = null) },
+                                onClick = { moreMenu = false; runTextTool(TextTool.TRANSLATE) },
+                                enabled = !sending,
                             )
                         }
                         // The presets, anchored to this same Box as the overflow: the two menus are
