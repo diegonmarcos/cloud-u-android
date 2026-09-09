@@ -1,0 +1,298 @@
+[
+  {
+    "kind": "note",
+    "title": "ABC split · free weights on the bench",
+    "body": "Three sessions — A push, B pull, C legs — rotated A / B / C with a rest day wherever the week allows one, never two of the same day back to back. Barbell and dumbbell work with a flat, incline and decline bench at the centre of it; the machines are not part of the plan. Every movement carries its English and Portuguese names because the rack it is performed at is in Berlin and the training partner who calls it out is Brazilian. Sets, repetitions and rest are the working sets — warm-up sets are not counted. Progress by adding weight when the top of the repetition range is reached on every set with the form note still true."
+  },
+  {
+    "kind": "section_title",
+    "title": "A · Chest, shoulders, triceps — Peito, ombros e tríceps"
+  },
+  {
+    "kind": "cards",
+    "items": [
+      {
+        "title": "Barbell flat bench press",
+        "subtitle": "Supino reto com barra",
+        "icon": "ic_gym_bench_press_flat",
+        "accent": "#7E57C2",
+        "meta": [
+          { "label": "Sets × reps", "value": "4 × 6–8" },
+          { "label": "Rest", "value": "2–3 min" }
+        ],
+        "body": "Shoulder blades pinned back and down and feet planted before the bar moves. The bar touches the lower chest, not the throat, and the elbows stay around 45° from the torso — flared straight out is the usual way to hurt a shoulder here."
+      },
+      {
+        "title": "Incline dumbbell press",
+        "subtitle": "Supino inclinado com halteres",
+        "icon": "ic_gym_bench_press_incline",
+        "accent": "#7E57C2",
+        "meta": [
+          { "label": "Sets × reps", "value": "4 × 8–10" },
+          { "label": "Rest", "value": "2 min" }
+        ],
+        "body": "Bench at 30°, not 45°. Steeper than that and the front deltoid takes the set — it becomes a shoulder press wearing a chest exercise's name, which is the single most common mistake on this one."
+      },
+      {
+        "title": "Decline barbell bench press",
+        "subtitle": "Supino declinado com barra",
+        "icon": "ic_gym_bench_press_decline",
+        "accent": "#7E57C2",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 8–10" },
+          { "label": "Rest", "value": "2 min" }
+        ],
+        "body": "Have the bar handed off — reaching back for it while inverted is where decline sets go wrong. The stroke is shorter than the flat press, so the weight is not the achievement it looks like."
+      },
+      {
+        "title": "Dumbbell fly",
+        "subtitle": "Crucifixo reto com halteres",
+        "icon": "ic_gym_dumbbell_fly",
+        "accent": "#7E57C2",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 10–12" },
+          { "label": "Rest", "value": "90 s" }
+        ],
+        "body": "The elbow angle is fixed and slightly bent for the whole repetition. Opening and closing it turns the fly into a clumsy press. Stop when the hands are level with the torso; deeper buys nothing and costs the shoulder capsule."
+      },
+      {
+        "title": "Seated dumbbell shoulder press",
+        "subtitle": "Desenvolvimento sentado com halteres",
+        "icon": "ic_gym_shoulder_press_seated",
+        "accent": "#7E57C2",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 8–10" },
+          { "label": "Rest", "value": "2 min" }
+        ],
+        "body": "Ribs down and the lower back against the pad. Leaning back to move more weight quietly converts this into the incline press already done two exercises ago."
+      },
+      {
+        "title": "Dumbbell lateral raise",
+        "subtitle": "Elevação lateral com halteres",
+        "icon": "ic_gym_lateral_raise",
+        "accent": "#7E57C2",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 12–15" },
+          { "label": "Rest", "value": "60 s" }
+        ],
+        "body": "Lead with the elbow and stop at shoulder height. No dip-and-heave from the hips: this is the movement most often turned into a whole-body swing, and light weight done still beats heavy weight thrown."
+      },
+      {
+        "title": "Lying triceps extension",
+        "subtitle": "Tríceps testa",
+        "icon": "ic_gym_skull_crusher",
+        "accent": "#7E57C2",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 10–12" },
+          { "label": "Rest", "value": "90 s" }
+        ],
+        "body": "Upper arms stay vertical and still — only the forearms travel. Letting the elbows drift back toward the head turns it into a pullover-press hybrid that trains neither."
+      },
+      {
+        "title": "Close-grip bench press",
+        "subtitle": "Supino fechado",
+        "icon": "ic_gym_close_grip_bench",
+        "accent": "#7E57C2",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 8–10" },
+          { "label": "Rest", "value": "2 min" }
+        ],
+        "body": "Hands about shoulder-width, elbows tucked to the ribs. A grip narrower than that does nothing extra for the triceps and puts the whole load through the wrists."
+      }
+    ]
+  },
+  {
+    "kind": "section_title",
+    "title": "B · Back, biceps — Costas e bíceps"
+  },
+  {
+    "kind": "cards",
+    "items": [
+      {
+        "title": "Bent-over barbell row",
+        "subtitle": "Remada curvada com barra",
+        "icon": "ic_gym_bent_over_row",
+        "accent": "#42A5F5",
+        "meta": [
+          { "label": "Sets × reps", "value": "4 × 6–8" },
+          { "label": "Rest", "value": "2–3 min" }
+        ],
+        "body": "Torso around 45°, back flat and braced, bar to the navel. When the chest starts rising to meet the bar the set is finished — that rep is a shrug with extra steps, and it is where backs get hurt."
+      },
+      {
+        "title": "One-arm dumbbell row",
+        "subtitle": "Remada unilateral com halter (serrote)",
+        "icon": "ic_gym_one_arm_row",
+        "accent": "#42A5F5",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 8–10 per side" },
+          { "label": "Rest", "value": "90 s" }
+        ],
+        "body": "Hips square to the bench. Twisting the torso up with the arm is how an extra ten kilos appears without any extra work being done."
+      },
+      {
+        "title": "Chest-supported incline dumbbell row",
+        "subtitle": "Remada com apoio no banco inclinado",
+        "icon": "ic_gym_chest_supported_row",
+        "accent": "#42A5F5",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 10–12" },
+          { "label": "Rest", "value": "90 s" }
+        ],
+        "body": "The chest does not leave the pad. That support is the entire reason this exercise is in the plan — rocking off it gives back the honesty the bent-over row cannot enforce."
+      },
+      {
+        "title": "Barbell shrug",
+        "subtitle": "Encolhimento de ombros com barra",
+        "icon": "ic_gym_shrug",
+        "accent": "#42A5F5",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 12–15" },
+          { "label": "Rest", "value": "60 s" }
+        ],
+        "body": "Straight up and straight down, with a pause at the top. Rolling the shoulders adds no range the trapezius can use and grinds the joint."
+      },
+      {
+        "title": "Dumbbell pullover",
+        "subtitle": "Pullover com halter",
+        "icon": "ic_gym_pullover",
+        "accent": "#42A5F5",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 10–12" },
+          { "label": "Rest", "value": "90 s" }
+        ],
+        "body": "Ribs down and hips low. Go back only as far as the shoulders allow with the lower back still flat; arching to gain range moves the stretch from the lats to the spine."
+      },
+      {
+        "title": "Barbell curl",
+        "subtitle": "Rosca direta com barra",
+        "icon": "ic_gym_barbell_curl",
+        "accent": "#42A5F5",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 8–10" },
+          { "label": "Rest", "value": "90 s" }
+        ],
+        "body": "Elbows against the ribs and the hips still. If the bar needs a swing to start, the weight is answering the question instead of the biceps."
+      },
+      {
+        "title": "Incline dumbbell curl",
+        "subtitle": "Rosca inclinada com halteres",
+        "icon": "ic_gym_incline_curl",
+        "accent": "#42A5F5",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 10–12" },
+          { "label": "Rest", "value": "90 s" }
+        ],
+        "body": "Let the arms hang fully behind the torso between reps. Cutting that stretch short is easy and removes the only reason to do this instead of a standing curl."
+      },
+      {
+        "title": "Hammer curl",
+        "subtitle": "Rosca martelo",
+        "icon": "ic_gym_hammer_curl",
+        "accent": "#42A5F5",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 10–12" },
+          { "label": "Rest", "value": "60 s" }
+        ],
+        "body": "Neutral grip from bottom to top. Rotating the palms up near the finish makes it an ordinary curl and skips the brachialis the exercise is for."
+      }
+    ]
+  },
+  {
+    "kind": "section_title",
+    "title": "C · Legs, posterior chain, trunk — Pernas, posterior e core"
+  },
+  {
+    "kind": "cards",
+    "items": [
+      {
+        "title": "Barbell back squat",
+        "subtitle": "Agachamento livre com barra",
+        "icon": "ic_gym_back_squat",
+        "accent": "#66BB6A",
+        "meta": [
+          { "label": "Sets × reps", "value": "4 × 6–8" },
+          { "label": "Rest", "value": "3 min" }
+        ],
+        "body": "Knees track over the toes and the hips and chest rise together. A rise that starts with the hips leaves the bar behind and turns the squat into a good morning with the spine taking the load."
+      },
+      {
+        "title": "Romanian deadlift",
+        "subtitle": "Levantamento terra romeno (stiff)",
+        "icon": "ic_gym_romanian_deadlift",
+        "accent": "#66BB6A",
+        "meta": [
+          { "label": "Sets × reps", "value": "4 × 8–10" },
+          { "label": "Rest", "value": "2–3 min" }
+        ],
+        "body": "Push the hips back rather than bending down, keep the bar grazing the legs, and stop where the hamstrings run out — not at the floor. Chasing the floor is what rounds the lower back on this one."
+      },
+      {
+        "title": "Bulgarian split squat",
+        "subtitle": "Agachamento búlgaro",
+        "icon": "ic_gym_bulgarian_split_squat",
+        "accent": "#66BB6A",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 10–12 per side" },
+          { "label": "Rest", "value": "90 s" }
+        ],
+        "body": "Rear foot on the bench, front foot far enough forward that the front shin stays close to vertical at the bottom. Standing too close puts the whole set into the knee."
+      },
+      {
+        "title": "Barbell hip thrust",
+        "subtitle": "Elevação pélvica com barra",
+        "icon": "ic_gym_hip_thrust",
+        "accent": "#66BB6A",
+        "meta": [
+          { "label": "Sets × reps", "value": "4 × 10–12" },
+          { "label": "Rest", "value": "2 min" }
+        ],
+        "body": "Shoulder blades on the bench, chin tucked, ribs down. Finish the movement with the hips and stop at a flat body line — arching past it is the lower back finishing what the glutes did not."
+      },
+      {
+        "title": "Dumbbell walking lunge",
+        "subtitle": "Afundo caminhando com halteres",
+        "icon": "ic_gym_walking_lunge",
+        "accent": "#66BB6A",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 10–12 per side" },
+          { "label": "Rest", "value": "90 s" }
+        ],
+        "body": "Step long and drop the rear knee straight down. A short step drives the front knee past the toes and takes the work off the leg it was meant for."
+      },
+      {
+        "title": "Standing dumbbell calf raise",
+        "subtitle": "Elevação de panturrilha em pé com halteres",
+        "icon": "ic_gym_calf_raise",
+        "accent": "#66BB6A",
+        "meta": [
+          { "label": "Sets × reps", "value": "4 × 12–15" },
+          { "label": "Rest", "value": "60 s" }
+        ],
+        "body": "Forefoot on a step, full stretch at the bottom, a held pause at the top. Bouncing through both ends is the usual way to make this exercise do nothing at all."
+      },
+      {
+        "title": "Dumbbell step-up",
+        "subtitle": "Subida no banco com halteres",
+        "icon": "ic_gym_step_up",
+        "accent": "#66BB6A",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 10–12 per side" },
+          { "label": "Rest", "value": "90 s" }
+        ],
+        "body": "Whole foot on the bench and drive through the heel. Pushing off the floor with the trailing leg is a hop, and it is why step-ups feel easy when they should not."
+      },
+      {
+        "title": "Decline weighted crunch",
+        "subtitle": "Abdominal declinado com anilha",
+        "icon": "ic_gym_decline_crunch",
+        "accent": "#66BB6A",
+        "meta": [
+          { "label": "Sets × reps", "value": "3 × 12–15" },
+          { "label": "Rest", "value": "60 s" }
+        ],
+        "body": "Curl the spine one vertebra at a time; the lower back leaves the bench last and only just. Hinging at the hips instead makes it a sit-up, which trains the hip flexors and leaves the back sore."
+      }
+    ]
+  }
+]

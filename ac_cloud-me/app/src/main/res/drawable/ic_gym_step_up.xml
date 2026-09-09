@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dumbbell step-up / subida no banco — whole foot on the bench, driving through the heel. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:tint="?attr/colorOnSurface">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M13,14 H21.5 M15,14 V21 M20.5,14 V21 M7,6 V12 M7,12 L11,13 M11,13 L14,14 M7,12 L6,16.6 M6,16.6 V20 M4.2,20 H7.8 M4.4,10 V13.2 M9.6,10 V13.2"/>
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M5.6,4.4 A1.4,1.4 0 1,0 8.4,4.4 A1.4,1.4 0 1,0 5.6,4.4 Z"/>
+</vector>

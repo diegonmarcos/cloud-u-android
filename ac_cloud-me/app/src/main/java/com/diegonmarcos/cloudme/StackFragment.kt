@@ -28,7 +28,9 @@ import org.json.JSONObject
  *   section_title  a heading between blocks
  *   note           a paragraph — used for honest empty states
  *   stats          label/value rows in a card
- *   cards          a card per item, with optional body, meta rows, progress
+ *   cards          a card per item, with optional icon, body, meta rows,
+ *                  progress — the shape Projects > Health > Gym renders a
+ *                  whole training programme with, one item per movement
  *   link_grid      a four-column icon grid of navigation targets
  *   image_grid     a three-column photo grid, loaded from URLs
  *   about          version, commit, build time and the update control
@@ -117,10 +119,25 @@ class StackFragment : Fragment() {
         val accent = parseColor(o.optString("accent"), ContextCompat.getColor(ctx, R.color.me_primary))
 
         val header = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        header.addView(View(ctx).apply {
-            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(accent) }
-            layoutParams = LinearLayout.LayoutParams(dp(ctx, 10), dp(ctx, 10)).apply { rightMargin = dp(ctx, 10) }
-        })
+        // A card that declares an `icon` shows the drawing instead of the
+        // accent dot: the dot is a colour code for a card whose subject cannot
+        // be pictured, and where the subject CAN be — a gym movement — the
+        // picture is the thing the eye reads first and the dot is noise beside
+        // it. The accent still tints the figure, so the colour coding survives.
+        val icon = iconRes(ctx, o.optString("icon"))
+        if (icon != null) {
+            header.addView(ImageView(ctx).apply {
+                setImageResource(icon)
+                imageTintList = android.content.res.ColorStateList.valueOf(accent)
+                layoutParams = LinearLayout.LayoutParams(dp(ctx, 40), dp(ctx, 40))
+                    .apply { rightMargin = dp(ctx, 12) }
+            })
+        } else {
+            header.addView(View(ctx).apply {
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(accent) }
+                layoutParams = LinearLayout.LayoutParams(dp(ctx, 10), dp(ctx, 10)).apply { rightMargin = dp(ctx, 10) }
+            })
+        }
         header.addView(cardTitle(ctx, o.optString("title")))
         card.addView(header)
 

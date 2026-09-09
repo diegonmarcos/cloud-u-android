@@ -397,6 +397,12 @@
                 "icon": "ic_p_cal_day"
               },
               {
+                "_doc": "Gym — the training programme, and the one page under Health that is NOT a libs:health surface: Summary, Timeline and Configs read Health Connect, while the plan is a decision rather than a measurement and has no record type. It is an ordinary `cards` stack at data/ui/projects/health/gym.json — one item per movement, both names, sets, repetitions, rest, a form note and its own drawable — so editing the programme is editing that list and never Kotlin. It sits here rather than beside it because a workout plan without the body's numbers next to it is a note, not a project.",
+                "id": "gym",
+                "label": "Gym",
+                "icon": "ic_gym"
+              },
+              {
                 "id": "configs",
                 "label": "Configs",
                 "icon": "ic_nav_configs"

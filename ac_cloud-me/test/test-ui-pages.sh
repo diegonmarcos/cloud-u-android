@@ -73,6 +73,17 @@ for t in {o["target"] for o in list(walk(secs)) + blocks
     elif not t.startswith("http"):
         bad.append(f"target {t} — unknown grammar")
 
+# Icons are looked up by NAME at runtime (getIdentifier), so a misspelt or
+# deleted drawable is not a build error and not a crash — iconRes() answers null
+# and the tile, tab or card simply renders without its picture. Projects >
+# Health > Gym makes that unacceptable: there, the drawing of the movement IS
+# the content, and a silently missing one is an exercise shipped blank.
+drawables = {n[:-4] for n in os.listdir("app/src/main/res/drawable") if n.endswith(".xml")}
+for icon in sorted({o["icon"] for o in list(walk(secs)) + blocks
+                    if isinstance(o.get("icon"), str) and o["icon"]}):
+    if icon not in drawables:
+        bad.append(f"icon '{icon}' — no app/src/main/res/drawable/{icon}.xml")
+
 # A `files` block browses a real asset tree; an empty root is a blank screen.
 roots = [o["root"] for o in blocks if o.get("kind") == "fragment" and o.get("id") == "files"]
 for r in roots:

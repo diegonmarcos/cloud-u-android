@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lying triceps extension / triceps testa — upper arms vertical, only the forearms move. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24"
+    android:tint="?attr/colorOnSurface">
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="1.3"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M3,17 H16 M5,17 V21 M14,17 V21 M6,15.6 H12.5 M11,15.4 V10.5 M11,10.5 L13.4,12.4 M12,12.6 H16 M13,11.3 V13.9 M15.2,11.3 V13.9"/>
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M13.0,15.6 A1.4,1.4 0 1,0 15.8,15.6 A1.4,1.4 0 1,0 13.0,15.6 Z"/>
+</vector>
