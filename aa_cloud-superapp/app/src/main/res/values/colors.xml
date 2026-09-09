@@ -66,4 +66,31 @@
     <color name="drawer_banner_text">#FFE9D8FD</color>    <!-- same lavender used on island accents -->
     <color name="drawer_avatar">#FF7C3AED</color>         <!-- vibrant violet — matches fan-menu highlight -->
     <color name="drawer_separator">#55B794F4</color>      <!-- faint violet hairline -->
+
+    <!-- ── Status light (Configs ▸ Panel ▸ Control, Permissions, Profile) ──
+         The app's ONE definition of healthy / failed / cannot-say. They are
+         resources and not Kotlin constants so a theme can override them: this
+         app paints its pages over a black→deep-purple gradient by default and
+         over PURE BLACK under the two oled_black launcher themes, and a status
+         light is the last thing on screen that may become hard to read.
+
+         Chosen against BOTH of those surfaces, not against white. The values
+         these replaced (#16A34A / #DC2626 / #6B7280) were picked for a light
+         background and measured 4.35:1 and 2.95:1 for the red on black and on
+         the purple band — below the 4.5:1 AA floor for the 12sp text they are
+         drawn as. test-configs-panel-control.sh recomputes every ratio rather
+         than trusting this comment. -->
+    <color name="status_light_on">#FF3DDC84</color>       <!-- 11.77:1 black, 7.99:1 purple -->
+    <color name="status_light_off">#FFF87171</color>      <!--  7.59:1 black, 5.16:1 purple -->
+    <color name="status_light_unknown">#FFB0B8C4</color>  <!-- 10.50:1 black, 7.13:1 purple -->
+
+    <!-- ── Configs ▸ Panel ▸ Control chrome ─────────────────────────────
+         The row label, its note, the group heading and the sentence naming a
+         missing grant. Here rather than as Kotlin constants for the same
+         reason as the lights above: a colour compiled into the fragment
+         cannot follow a theme. -->
+    <color name="control_label">#FFFFFFFF</color>
+    <color name="control_note">#AAFFFFFF</color>
+    <color name="control_section">#FF8BE9A0</color>
+    <color name="control_blocked">#FFFFB199</color>
 </resources>

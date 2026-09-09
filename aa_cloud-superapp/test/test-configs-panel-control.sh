@@ -35,6 +35,10 @@ TABS="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragm
 CONTROLS="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/DeviceControls.kt"
 FRAGMENT="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/ControlFragment.kt"
 STATUS="$APP/app/src/main/java/com/diegonmarcos/superapp/ui/StatusLight.kt"
+COLORS="$APP/app/src/main/res/values/colors.xml"
+STRINGS="$APP/app/src/main/res/values/strings.xml"
+THEME_BG="$APP/app/src/main/res/drawable/bg_gradient_black_purple.xml"
+LIBS="$(cd "$APP/../ab_cloud-libs-shared" && pwd)"
 
 echo "== T1: Configs ▸ Panel is a visible page declaring its two tabs in order =="
 check "$(python3 - "$BJ" <<'PY'
@@ -317,30 +321,57 @@ print('; '.join(problems) or 'OK')
 PY
 )" "every control: an icon that resolves to a real drawable, and a read to light it"
 
-echo "== T14: NO light colour is hardcoded - every one comes from StatusLight =="
-# A hex green written at the row is a colour chosen at BUILD time. It survives
-# the state source being removed, which is exactly how a light stops meaning
-# anything while still looking right.
+echo "== T14: NO light colour is a literal - every one is a themeable resource =="
+# Two different defects, and the second is the one that ships looking fine.
+#   1. A hex written at the row is a colour chosen at BUILD time. It survives
+#      the state source being removed, which is exactly how a light stops
+#      meaning anything while still looking right.
+#   2. A hex written ANYWHERE, including in StatusLight, cannot follow a theme.
+#      This app draws over a black->purple gradient by default and over pure
+#      black under the two oled_black launcher themes; a status light is the
+#      last thing on screen allowed to become unreadable, so its colours live
+#      in colors.xml where a theme can override them.
 light_fail=""
-grep -qE '0x[fF][fF](16A34A|DC2626|6B7280)' "$FRAGMENT" \
-  && light_fail="$light_fail fragment-hardcodes-a-light-colour"
+grep -qE '0x[fF][fF][0-9A-Fa-f]{6}' "$FRAGMENT" \
+  && light_fail="$light_fail fragment-hardcodes-a-colour"
+grep -qE '0x[fF][fF][0-9A-Fa-f]{6}' "$STATUS" \
+  && light_fail="$light_fail StatusLight-hardcodes-a-colour"
 grep -q 'StatusLight.colour(' "$FRAGMENT" || light_fail="$light_fail fragment-does-not-use-the-token"
 # setTextColor on the light must take StatusLight's answer and nothing else.
 grep -qE 'light\.setTextColor\(StatusLight\.colour\(' "$FRAGMENT" \
   || light_fail="$light_fail light-painted-from-something-else"
-# ONE definition of healthy / failed / cannot-say in the whole app. Scoped to
-# constants NAMED as a status colour on purpose: the same hex used as a plain
-# palette colour elsewhere (CalendarAgendaPopup's green play glyph) is not a
-# second status light and banning it would make this assertion a lie about
-# what it protects. A second `GREEN =` IS the defect - that is a page about to
-# drift into its own idea of what healthy looks like.
-dupes="$(grep -rnE '(GREEN|RED|GREY|GRAY|OK|FAIL|HEALTHY|STATUS)[A-Z_]*  *= *0x[fF][fF](16A34A|DC2626|6B7280)' \
-         --include=*.kt "$APP/app/src/main/java" 2>/dev/null | grep -v 'StatusLight.kt' || true)"
-[ -z "$dupes" ] || light_fail="$light_fail status-colour-redefined-in:$(echo "$dupes" | cut -d: -f1 | xargs -n1 basename | tr '\n' ',')"
-grep -q '0xFF16A34A' "$STATUS" || light_fail="$light_fail StatusLight-is-not-the-definer"
+# StatusLight must resolve through resources, and those resources must exist.
+grep -q 'ContextCompat.getColor' "$STATUS" || light_fail="$light_fail StatusLight-does-not-resolve-a-resource"
+for c in status_light_on status_light_off status_light_unknown; do
+  grep -q "R.color.$c" "$STATUS"          || light_fail="$light_fail StatusLight-misses:$c"
+  grep -q "name=\"$c\"" "$COLORS"        || light_fail="$light_fail colors.xml-misses:$c"
+done
+# ONE definition of healthy / failed / cannot-say. A SECOND copy of one of
+# these exact values in Kotlin is a page about to drift into its own idea of
+# what healthy looks like, and it would not follow the theme either.
+# The values are read out of colors.xml rather than written here, so this
+# assertion cannot go stale against the palette it is protecting. Scoped to
+# THESE values on purpose: another page's own unrelated green is not a second
+# status light, and banning it would make this a lie about what it protects.
+dupes="$(python3 - "$COLORS" "$APP/app/src/main/java" <<'PYX'
+import os, re, sys
+xml = open(sys.argv[1]).read()
+hexes = [re.search(r'name="status_light_%s">#(\w{8})<' % k, xml).group(1).lower()
+         for k in ('on', 'off', 'unknown')]
+hits = []
+for root, _, files in os.walk(sys.argv[2]):
+    for f in files:
+        if not f.endswith('.kt') or f == 'StatusLight.kt': continue
+        body = open(os.path.join(root, f), encoding='utf-8').read().lower()
+        for h in hexes:
+            if '0x' + h in body: hits.append('%s:%s' % (f, h))
+print(','.join(hits))
+PYX
+)"
+[ -z "$dupes" ] || light_fail="$light_fail status-colour-copied-into:$dupes"
 [ -z "$light_fail" ] \
-  && ok "every light colour resolves from StatusLight, which is its only definition" \
-  || bad "a light colour is hardcoded or duplicated:$light_fail"
+  && ok "every light colour resolves from StatusLight, which resolves from colors.xml" \
+  || bad "a light colour is a literal, duplicated, or missing:$light_fail"
 
 echo "== T15: a state source that will not answer renders UNKNOWN, never green =="
 # The third state. Red and green are two; the check that has not run, threw,
@@ -351,15 +382,15 @@ unknown_fail=""
 python3 - "$STATUS" <<'PY' || unknown_fail="$unknown_fail null-is-not-unknown"
 import re, sys
 s = open(sys.argv[1]).read()
-m = re.search(r'fun of\(reading: Boolean\?\).*?\n    \}', s, re.S)
+m = re.search(r'fun of\(reading: Boolean\?, observed: Boolean.*?\n        \}', s, re.S)
 sys.exit(0 if m and re.search(r'null\s*->\s*State\.UNKNOWN', m.group(0)) else 1)
 PY
 # ...and UNKNOWN must not be painted with the ON colour.
 python3 - "$STATUS" <<'PY' || unknown_fail="$unknown_fail unknown-is-green"
 import re, sys
 s = open(sys.argv[1]).read()
-m = re.search(r'fun colour\(state: State\).*?\n    \}', s, re.S)
-sys.exit(0 if m and re.search(r'State\.UNKNOWN\s*->\s*GREY', m.group(0)) else 1)
+m = re.search(r'fun colourRes\(state: State\).*?\n    \}', s, re.S)
+sys.exit(0 if m and re.search(r'State\.UNKNOWN\s*->\s*R\.color\.status_light_unknown', m.group(0)) else 1)
 PY
 # A read that throws must become null, not a default.
 grep -q 'runCatching { row.control.read(ctx) }.getOrNull()' "$FRAGMENT" \
@@ -370,7 +401,7 @@ grep -q 'SystemClock.elapsedRealtime() - row.readAt <= STALE_MS' "$FRAGMENT" \
   || unknown_fail="$unknown_fail stale-reading-still-shown"
 # The light is painted from reading(), which is the function that ages out -
 # painting from row.reading directly would skip the staleness rule entirely.
-grep -q 'StatusLight.of(reading(row))' "$FRAGMENT" \
+grep -q 'StatusLight.of(reading(row), row.control.observed)' "$FRAGMENT" \
   || unknown_fail="$unknown_fail light-bypasses-the-stale-check"
 # Nothing may coerce a null reading into a boolean on the way to a light.
 grep -qE 'reading\(row\)\s*(\?:|== true)' "$FRAGMENT" \
@@ -415,6 +446,210 @@ done
 [ -z "$life_fail" ] \
   && ok "one ticker, started on resume, cancelled on pause, ageing slower than it polls" \
   || bad "the panel polls when nobody is looking, or blinks when they are:$life_fail"
+
+echo "== T17: every control ANSWERS whether its read observes anything =="
+# The light's second input. A control added without deciding this would be lit
+# from whatever its read happens to return - including a preference, which is
+# the SETTING again and never the state. There is deliberately no default in
+# the Kotlin, so this check is about the ones that go missing anyway: a new
+# entry copied from an old one, a merge that drops a line, a default put back.
+check "$(python3 - "$BJ" "$CONTROLS" <<'PYX'
+import json, re, sys
+cp = json.load(open(sys.argv[1]))['ui']['control_panel']
+declared = [c['id'] for g in cp['groups'] for c in g['controls']]
+src = open(sys.argv[2]).read()
+blocks, ids = {}, [(m.start(), m.group(1)) for m in
+                   re.finditer(r'"([a-z_]+)" to (?:Control\(|launcherToggle\()', src)]
+for i, (pos, cid) in enumerate(ids):
+    blocks[cid] = src[pos:(ids[i + 1][0] if i + 1 < len(ids) else len(src))]
+# The two launcher toggles are built by one factory, so their flag is declared
+# there; resolve to it rather than demanding a copy at each row.
+m = re.search(r'private fun launcherToggle\(.*?\n    \)', src, re.S)
+factory = m.group(0) if m else ''
+problems = []
+for cid in declared:
+    b = blocks.get(cid, '')
+    if 'launcherToggle(' in b and 'read =' not in b:
+        b = factory
+    if not re.search(r'observed = (true|false)', b):
+        problems.append('%s: does not declare observed' % cid)
+if 'observed = ' not in factory:
+    problems.append('launcherToggle: the factory declares no observed')
+if re.search(r'val observed: Boolean\s*=', src):
+    problems.append('Control.observed has a default - a new control could stay silent')
+print('; '.join(problems) or 'OK')
+PYX
+)" "every declared control says whether its read observes the device or a preference"
+
+echo "== T18: THE LIGHT IS THE STATE, NOT THE SETTING =="
+# The one assertion this feature exists for, and the one a future refactor
+# would break in silence. Both halves run against the SHIPPED mapping, parsed
+# out of StatusLight.kt and executed - not a copy of it restated here, which
+# would pass forever while the app did something else.
+#
+#   A. THE CASE. The preference says on and the device says off: an accept loop
+#      that died, a tunnel the engine dropped. The panel must go RED. It does
+#      only while `read` asks the mechanism instead of the store `set` writes,
+#      so every observing control is checked for exactly that.
+#   B. THE OTHER CASE. The preference says on and NOTHING can be observed.
+#      Green there would be the switch position recoloured, which is the whole
+#      failure being designed against.
+check "$(python3 - "$STATUS" "$CONTROLS" "$FRAGMENT" "$LIBS" <<'PYX'
+import re, sys
+st = open(sys.argv[1]).read()
+
+# ── the shipped decision, executed ───────────────────────────────────────
+of = re.search(r'fun of\(reading: Boolean\?, observed: Boolean.*?\n        \}', st, re.S)
+if not of:
+    print('StatusLight.of no longer has the shape this asserts about'); sys.exit()
+guard = re.search(r'if \(!observed\) State\.(\w+)', of.group(0))
+arms = dict(re.findall(r'(true|false|null) -> State\.(\w+)', of.group(0)))
+colour = dict(re.findall(r'State\.(\w+) -> R\.color\.(\w+)', st))
+glyph = dict(re.findall(r'State\.(\w+) -> "([^"]+)"', st))
+if not guard:
+    print('of() no longer refuses to answer for a read that observed nothing'); sys.exit()
+
+def state(reading, observed):
+    if not observed:
+        return guard.group(1)
+    return arms[{True: 'true', False: 'false', None: 'null'}[reading]]
+
+problems = []
+# A. preference on, device off  =>  red
+if state(False, True) != 'OFF':
+    problems.append('an observed false reads %s, not OFF' % state(False, True))
+elif colour.get('OFF') == colour.get('ON') or 'off' not in (colour.get('OFF') or ''):
+    problems.append('OFF is not painted the failed colour (%s)' % colour.get('OFF'))
+# B. preference on, nothing observable  =>  not green
+if state(True, False) == 'ON':
+    problems.append('an unobservable "on" is drawn ON - the switch recoloured')
+if colour.get(state(True, False)) == colour.get('ON'):
+    problems.append('%s wears the ON colour' % state(True, False))
+# Shape carries the state too, or the light is one hue away from useless.
+if glyph.get('ON') == glyph.get('OFF'):
+    problems.append('ON and OFF share a glyph - colour is the only channel')
+
+# ── and the panel must ask for it that way ───────────────────────────────
+if 'StatusLight.of(reading(row), row.control.observed)' not in open(sys.argv[3]).read():
+    problems.append('the fragment does not light its rows from (reading, observed)')
+
+# ── no observing read may consult the store its own write touches ────────
+src = open(sys.argv[2]).read()
+# The map closes on a 4-space `)`; entries close on an 8-space one. Without
+# this bound the last control absorbs every helper below it and is accused of
+# reading stores it never touches.
+start = src.index('val byId: Map<String, Control> = mapOf(')
+close = re.search(r'\n    \)\n', src[start:])
+catalog = src[start:start + close.start()] if close else src[start:]
+blocks, ids = {}, [(m.start(), m.group(1)) for m in
+                   re.finditer(r'"([a-z_]+)" to (?:Control\(|launcherToggle\()', catalog)]
+for i, (pos, cid) in enumerate(ids):
+    blocks[cid] = catalog[pos:(ids[i + 1][0] if i + 1 < len(ids) else len(catalog))]
+worked = []
+for cid, b in sorted(blocks.items()):
+    obs = re.search(r'observed = (true|false)', b)
+    if not obs or obs.group(1) != 'true':
+        continue
+    m = re.search(r'read = (.*?)\n            (?:set|blocked|open) =', b, re.S)
+    read = m.group(1) if m else b
+    in_read = set(re.findall(r'\b(\w+Prefs)\b', read))
+    in_write = set(re.findall(r'\b(\w+Prefs)\b', b)) - in_read
+    if in_read:
+        problems.append('%s: claims to observe but its read asks %s'
+                        % (cid, ', '.join(sorted(in_read))))
+    elif in_write:
+        worked.append('%s set writes %s, read does not' % (cid, '+'.join(sorted(in_write))))
+
+# The firewall is the sharpest case and it is one hop away, so follow the hop:
+# FirewallController.isEnabled delegating to a preference store means the row
+# CANNOT be observed, whatever its flag says.
+import os
+target = None
+for root, _, files in os.walk(sys.argv[4]):
+    if 'FirewallController.kt' in files:
+        target = os.path.join(root, 'FirewallController.kt'); break
+if target:
+    hop = re.search(r'fun isEnabled\(ctx: Context\): Boolean = (\w+)', open(target).read())
+    if hop and hop.group(1).endswith('Prefs') \
+       and 'observed = false' not in blocks.get('firewall', ''):
+        problems.append('firewall reads %s - a store - but claims to observe'
+                        % hop.group(1))
+if worked:
+    sys.stderr.write('    evidence: ' + '; '.join(worked) + '\n')
+print('; '.join(problems) or 'OK')
+PYX
+)" "preference on + device off => red; preference on + nothing observable => never green"
+
+echo "== T19: the lights stay READABLE on the themes this app actually ships =="
+# A green picked against white is a green nobody can find on the Samsung-black
+# power-saving theme, and a status light that cannot be seen is worse than
+# none: its absence reads as nothing being wrong. The surfaces come from the
+# app's own window background, so a theme that darkens or lightens the page
+# re-runs this arithmetic instead of invalidating it.
+check "$(python3 - "$COLORS" "$THEME_BG" <<'PYX'
+import re, sys
+lights = dict(re.findall(r'name="(status_light_\w+)">#\w\w(\w{6})<', open(sys.argv[1]).read()))
+# Every colour the window background paints, plus pure black: the two
+# oled_black launcher themes drop the gradient entirely.
+surfaces = set(re.findall(r'Color="#\w\w(\w{6})"', open(sys.argv[2]).read())) | {'000000'}
+
+def lin(c):
+    c /= 255.0
+    return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+def lum(h):
+    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+def ratio(a, b):
+    la, lb = lum(a), lum(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+problems, worst = [], []
+if len(lights) != 3:
+    problems.append('expected three status colours, found %d' % len(lights))
+for name, hexv in sorted(lights.items()):
+    low, on = min((ratio(hexv, s), s) for s in surfaces)
+    worst.append('%s %.2f:1 on #%s' % (name.replace('status_light_', ''), low, on))
+    if low < 4.5:
+        problems.append('%s is %.2f:1 on #%s - below the 4.5:1 AA floor for the '
+                        '12sp text it is drawn as' % (name, low, on))
+sys.stderr.write('    worst case: ' + '; '.join(worst) + '\n')
+print('; '.join(problems) or 'OK')
+PYX
+)" "every status colour clears WCAG AA against pure black and against the gradient"
+
+echo "== T20: the light is readable WITHOUT colour, and translatable =="
+# Red and green are the pair colour-blind users most often cannot separate,
+# and neither colour reaches a screen reader at all. And the owner reads this
+# app in Spanish: a state word compiled into Kotlin can never be translated,
+# which on THIS page means the one screen that says whether the fleet is
+# working is the one screen stuck in English.
+a11y_fail=""
+python3 - "$STATUS" <<'PYX' || a11y_fail="$a11y_fail states-share-a-glyph"
+import re, sys
+g = dict(re.findall(r'State\.(\w+) -> "([^"]+)"', open(sys.argv[1]).read()))
+sys.exit(0 if g.get('ON') and g.get('OFF') and g['ON'] != g['OFF'] else 1)
+PYX
+grep -q 'row.light.contentDescription = StatusLight.description(' "$FRAGMENT" \
+  || a11y_fail="$a11y_fail light-has-no-content-description"
+grep -qE 'State\.(ON|OFF|UNKNOWN|UNVERIFIABLE) -> "(On|Off|Unknown|Not verifiable)"' "$STATUS" \
+  && a11y_fail="$a11y_fail state-word-hardcoded-in-kotlin"
+grep -q 'getString(R.string.control_title)' "$FRAGMENT"   || a11y_fail="$a11y_fail title-not-a-resource"
+grep -q 'getString(R.string.control_caption' "$FRAGMENT"  || a11y_fail="$a11y_fail caption-not-a-resource"
+grep -q 'getString(R.string.control_write_refused' "$FRAGMENT" \
+  || a11y_fail="$a11y_fail snackbar-not-a-resource"
+# EVERY locale carries them, not only the default: the day a values-es lands,
+# a state word missing from it must fail HERE rather than ship as one English
+# word in the middle of a Spanish sentence.
+for f in "$APP"/app/src/main/res/values*/strings.xml; do
+  [ -e "$f" ] || continue
+  for k in status_light_on status_light_off status_light_unknown status_light_unverifiable \
+           status_light_description control_title control_caption control_write_refused; do
+    grep -q "name=\"$k\"" "$f" || a11y_fail="$a11y_fail $(basename "$(dirname "$f")")-misses:$k"
+  done
+done
+[ -z "$a11y_fail" ] \
+  && ok "differing glyphs, a spoken description, and every word in the string table" \
+  || bad "the light is colour-only or English-only:$a11y_fail"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

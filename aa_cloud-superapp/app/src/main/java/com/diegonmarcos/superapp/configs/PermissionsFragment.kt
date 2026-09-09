@@ -543,7 +543,7 @@ class PermissionsFragment : Fragment() {
             // were the literals StatusLight was built from; pointing at it
             // instead is what stops this page and Configs ▸ Panel ▸ Control
             // drifting into two greens that mean the same thing.
-            setTextColor(com.diegonmarcos.superapp.ui.StatusLight.colour(
+            setTextColor(com.diegonmarcos.superapp.ui.StatusLight.colour(ctx,
                 com.diegonmarcos.superapp.ui.StatusLight.of(granted)))
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })

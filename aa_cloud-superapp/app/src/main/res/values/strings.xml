@@ -164,4 +164,36 @@
     <!-- Notification group header: the double-tick button that marks every
          notification from that one app as read. -->
     <string name="notif_mark_group_read">Mark all read</string>
+
+    <!-- ── Configs ▸ Panel ▸ Control ────────────────────────────────────
+         The status light on every row, and the page chrome around it. All of
+         it is here rather than in ControlFragment.kt because the owner reads
+         this app in Spanish: a sentence compiled into Kotlin cannot be
+         translated, and this page is the one that says whether the phone and
+         the fleet are working. NOTE for whoever adds the first translated
+         locale: this app has no values-<lang> at all yet, so these need a
+         values-es alongside the other 123 strings, not on their own. -->
+    <string name="status_light_on">On</string>
+    <string name="status_light_off">Off</string>
+    <!-- Nobody has an answer YET: not read, still reading, the call threw,
+         the platform declined, or the last answer has aged out. -->
+    <string name="status_light_unknown">Unknown</string>
+    <!-- Nobody can EVER have an answer from here: the only thing readable is
+         a preference this app stored, which is what was asked for and not
+         what is true. Never shortened to "Unknown" — the owner can wait out
+         an unknown, and waiting out this one would never end. -->
+    <string name="status_light_unverifiable">Not verifiable</string>
+    <!-- Spoken by a screen reader for one row's light: row name, then state.
+         %1$s = the control's label, %2$s = one of the four words above. -->
+    <string name="status_light_description">%1$s: %2$s</string>
+
+    <string name="control_title">Control</string>
+    <!-- %1$s..%4$s are the four light readings (glyph + word) and %5$d is the
+         refresh interval in seconds, so this paragraph cannot describe a
+         light the page does not draw. -->
+    <string name="control_caption">The things flipped often enough to deserve one screen, grouped by WHAT THEY CHANGE: the handset, the fleet, or this app.\n\nOnly what can really move is a switch. A row ending in › instead opens the system screen that owns it — Android does not let an app flip those, and a switch that pretended otherwise would leave the device exactly as it was. A greyed switch says which grant it is waiting for; tap the row to go give it.\n\nThe light is what the DEVICE answered just now, never what the switch is set to: %1$s, %2$s, or %3$s when it would not say or has not been asked yet. %4$s marks the rows where nothing but this app\'s own stored preference can be read — that preference is what was asked for, so those rows never claim to be working. Lights refresh every %5$d seconds while this page is open and stop entirely when it is not, so they go unknown before they go stale.</string>
+    <string name="control_none_declared">No controls are declared — build.json::ui.control_panel is empty or did not reach this build.</string>
+    <!-- A write the device refused. %1$s = the control's label, %2$s = what
+         the re-read reported. -->
+    <string name="control_write_refused">%1$s: didn\'t change — %2$s</string>
 </resources>

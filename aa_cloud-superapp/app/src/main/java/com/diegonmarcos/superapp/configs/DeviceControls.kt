@@ -88,6 +88,16 @@ object DeviceControls {
      *
      * @param read live state from the system; null when the platform will not
      *   say. NEVER a remembered boolean.
+     * @param observed whether [read] LOOKS AT THE THING, or only at a
+     *   preference this app wrote down about it. There is no default: every
+     *   control has to answer it, because a control added without answering it
+     *   would default to claiming more than it knows, and the whole point of
+     *   the light is that it claims nothing it cannot support. False does NOT
+     *   mean the switch is broken — the preference is still what the switch is
+     *   for, and flipping it still works. It means the row cannot be lit green
+     *   or red, because the mechanism the preference is supposed to drive
+     *   might have died without the preference hearing about it. See
+     *   [ControlFragment], which draws those rows "? Not verifiable".
      * @param set null ⇒ category 3, this is not a switch and [open] is the
      *   only thing the row can do.
      * @param blocked "" ⇒ the switch is usable; anything else is the reason it
@@ -98,6 +108,7 @@ object DeviceControls {
      */
     data class Control(
         val read: (Context) -> Boolean?,
+        val observed: Boolean,
         val set: ((Context, Boolean) -> Verdict)? = null,
         val blocked: (Context) -> String = { "" },
         val open: ((Context) -> Unit)? = null,
@@ -117,6 +128,8 @@ object DeviceControls {
         // the platform reports the flash unit's state back through
         // TorchCallback — see [Torch], which is the only writer of that state.
         "torch" to Control(
+            // The camera service's own TorchCallback, not our last write.
+            observed = true,
             read = { ctx -> Torch.state(ctx) },
             set = { ctx, on ->
                 val flash = Torch.flashCameraId(ctx)
@@ -135,6 +148,8 @@ object DeviceControls {
         // NONE, matching the DND toggle FloatingNavService already ships — two
         // switches for one thing must not mean two different things.
         "dnd" to Control(
+            // NotificationManager's current interruption filter.
+            observed = true,
             read = { ctx ->
                 notifications(ctx)?.currentInterruptionFilter
                     ?.let { it != NotificationManager.INTERRUPTION_FILTER_ALL }
@@ -163,6 +178,8 @@ object DeviceControls {
         // the capability is proven in this APK. Note the inversion: the switch
         // says LOCKED, the setting says auto-rotate.
         "rotation_lock" to Control(
+            // The Settings key the window manager itself obeys.
+            observed = true,
             read = { ctx -> systemInt(ctx, Settings.System.ACCELEROMETER_ROTATION)?.let { it == 0 } },
             set = { ctx, on ->
                 runCatching {
@@ -188,6 +205,8 @@ object DeviceControls {
         // only when BOTH rungs are gone, which is exactly when it could not
         // land the write.
         "wireless_debugging" to Control(
+            // Settings.Global.adb_wifi_enabled — the daemon's own flag.
+            observed = true,
             read = { ctx -> WirelessDebugging.isOn(ctx) },
             set = { ctx, on ->
                 val r = WirelessDebugging.set(ctx, on)
@@ -207,6 +226,8 @@ object DeviceControls {
         // sanctioned replacement: the system's own Wi-Fi sheet over our page.
         // READING is unprivileged, so the row still shows the truth.
         "wifi" to Control(
+            // WifiManager.isWifiEnabled.
+            observed = true,
             read = { ctx -> wifi(ctx)?.isWifiEnabled },
             open = { ctx ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) open(ctx, Settings.Panel.ACTION_WIFI)
@@ -220,6 +241,8 @@ object DeviceControls {
         // either. The internet panel is the whole switch board for data,
         // Wi-Fi and airplane in one sheet.
         "mobile_data" to Control(
+            // TelephonyManager, falling back to the system's own key.
+            observed = true,
             read = { ctx -> mobileDataEnabled(ctx) },
             open = { ctx ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
@@ -233,6 +256,8 @@ object DeviceControls {
         // on. Reading isEnabled is fine (BLUETOOTH_CONNECT, which this app
         // declares), so state stays honest while the flip goes to Settings.
         "bluetooth" to Control(
+            // BluetoothAdapter.isEnabled.
+            observed = true,
             read = { ctx ->
                 runCatching {
                     (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)
@@ -252,6 +277,8 @@ object DeviceControls {
         // a lie with a receipt. Read-only state plus the real settings screen
         // is the honest version.
         "airplane_mode" to Control(
+            // Settings.Global.airplane_mode_on.
+            observed = true,
             read = { ctx -> globalInt(ctx, Settings.Global.AIRPLANE_MODE_ON)?.let { it == 1 } },
             open = { ctx -> open(ctx, Settings.ACTION_AIRPLANE_MODE_SETTINGS) },
         ),
@@ -263,6 +290,8 @@ object DeviceControls {
         // preference: the pref is what we WANT, the loop is what IS, and the
         // whole point of this row is being told when they disagree.
         "app_api" to Control(
+            // The accept loop's own flag, which is why this row is honest.
+            observed = true,
             read = { DevControlServer.isRunning() },
             set = { ctx, on ->
                 val app = ctx.applicationContext
@@ -280,6 +309,8 @@ object DeviceControls {
         // and the one-time VPN consent granted through it. Both are reported
         // by name rather than left to fail as a silent no-op.
         "mesh" to Control(
+            // The WireGuard backend's tunnel state, asked live.
+            observed = true,
             read = { ctx ->
                 runCatching { WgState.backend(ctx).getState(WgState.tunnel) == Tunnel.State.UP }
                     .getOrNull()
@@ -311,9 +342,19 @@ object DeviceControls {
         // CATEGORY 2. FirewallController.start/stop drive a VpnService this
         // APK owns, so the flip is real; Android's one-time VPN consent is the
         // gate, and VpnService.prepare returning non-null IS the missing
-        // consent. isEnabled is the desired-state store the controller itself
-        // reconciles against, which makes it this control's system of record.
+        // consent. isEnabled is the desired-state store the controller
+        // reconciles against — which is enough to drive the SWITCH, and not
+        // enough to drive the light. See `observed` below.
         "firewall" to Control(
+            // NOT OBSERVED. FirewallController.isEnabled is
+            // FirewallPrefs.isEnabled — the DESIRED state, which that file
+            // documents as "kept separate from whether the VpnService is
+            // actually established right now". Nothing here can see the
+            // service, so a firewall the system killed reads exactly like a
+            // firewall that is running. That is the false green this page
+            // exists to refuse, so this row shows Not verifiable until
+            // something can report the tunnel itself.
+            observed = false,
             read = { ctx -> FirewallController.isEnabled(ctx) },
             set = { ctx, on ->
                 if (on) FirewallController.start(ctx) else FirewallController.stop(ctx)
@@ -328,11 +369,16 @@ object DeviceControls {
             open = { ctx -> open(ctx, Settings.ACTION_VPN_SETTINGS) },
         ),
 
-        // CATEGORY 1. An app-owned preference, and here the store IS the
-        // system of record: the periodic workers read this exact key at
-        // runtime to decide whether to run, so reading it back is reading the
-        // thing that decides, not a UI shadow of it.
+        // CATEGORY 1. An app-owned preference. The periodic workers read this
+        // exact key at runtime to decide whether to run, so writing it really
+        // does stop auto-updating — the switch is honest. Whether those workers
+        // are still scheduled is a different fact, and one nothing here reads.
         "auto_update" to Control(
+            // NOT OBSERVED. The store is what the periodic workers consult
+            // WHEN THEY RUN; whether WorkManager still has them scheduled is
+            // a different fact and this cannot see it. Enabled and never
+            // running again are indistinguishable from here.
+            observed = false,
             read = { ctx -> AutoUpdatePrefs.enabled(ctx) },
             set = { ctx, on ->
                 AutoUpdatePrefs.setEnabled(ctx, on)
@@ -348,6 +394,8 @@ object DeviceControls {
         // flag rather than the preference, for the same reason app_api reads
         // its accept loop: the overlay can be killed out from under the pref.
         "floating_nav" to Control(
+            // The service's own isRunning, set in onCreate/onDestroy.
+            observed = true,
             read = { FloatingNavService.isRunning },
             set = { ctx, on ->
                 FloatingNavPrefs.setEnabled(ctx, on)
@@ -374,8 +422,13 @@ object DeviceControls {
         // CATEGORY 1. Apps/Admin is this app's own global view mode. Written
         // through the activity when there is one, so the Home grid, drawer and
         // bottom-nav icons follow immediately; the store is written either way
-        // so the flip survives without an activity to tell.
+        // so the flip survives without an activity to tell. What nothing
+        // reports back is whether those surfaces actually repainted.
         "admin_mode" to Control(
+            // NOT OBSERVED. ModePrefs is a stored preference; nothing reports
+            // back that the Home grid, drawer and bottom nav actually
+            // repainted into that mode.
+            observed = false,
             read = { ctx -> ModePrefs(ctx).mode == "admin" },
             set = { ctx, on ->
                 val want = if (on) "admin" else "apps"
@@ -391,8 +444,8 @@ object DeviceControls {
 
         // CATEGORY 1 ×2. Every animated surface in this app asks
         // LauncherSettingsPrefs.anim() before drawing, and Haptics gates on
-        // "haptics" — so these two stores are what the behaviour reads, not a
-        // mirror of it.
+        // "haptics", so writing these stores really does change behaviour.
+        // Nothing reports back that it did; see launcherToggle.
         "all_anim" to launcherToggle("all_anim"),
         "haptics" to launcherToggle("haptics"),
 
@@ -401,6 +454,8 @@ object DeviceControls {
         // MANUAL when its brightness slider moves, so this row is also how the
         // owner hands adaptive brightness back.
         "auto_brightness" to Control(
+            // Settings.System.screen_brightness_mode.
+            observed = true,
             read = { ctx ->
                 systemInt(ctx, Settings.System.SCREEN_BRIGHTNESS_MODE)
                     ?.let { it == Settings.System.SCREEN_BRIGHTNESS_MODE_AUTOMATIC }
@@ -430,6 +485,12 @@ object DeviceControls {
     /** One of the launcher_settings toggles, by its declared id. */
     private fun launcherToggle(id: String) = Control(
         read = { ctx -> LauncherSettingsPrefs(ctx).toggle(id) },
+        // NOT OBSERVED. The store is the only readable thing: every animated
+        // surface asks LauncherSettingsPrefs before drawing and Haptics gates
+        // on it, but neither reports back, so this cannot tell a toggle that
+        // is being honoured from one every caller has quietly stopped asking
+        // about. Same store, same preference, one flag.
+        observed = false,
         set = { ctx, on ->
             val prefs = LauncherSettingsPrefs(ctx)
             prefs.setToggle(id, on)

@@ -15,7 +15,9 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.ui.StatusLight
 import com.diegonmarcos.superapp.ui.snack
@@ -49,6 +51,20 @@ import java.util.concurrent.Executors
  * — the platform will not say, the call threw, the flash unit is held by
  * another app — is drawn UNKNOWN, never green and never red.
  *
+ * THE LIGHT IS NOT THE SWITCH. The switch shows the SETTING, which is what
+ * was asked for; the light shows the STATE, which is what is true. They agree
+ * most of the time and the whole page exists for the times they do not — a
+ * mesh tunnel the engine dropped, an accept loop that died, an overlay the
+ * system killed. A light that were merely the switch position recoloured
+ * would be green in exactly the situation it is here to catch.
+ *
+ * AND WHERE THERE IS NO STATE TO SHOW, IT SAYS SO. Some rows have nothing
+ * readable but a preference this app stored — see
+ * [DeviceControls.Control.observed] for which, and why each one. A preference
+ * is the setting again, so lighting it green would be the switch recoloured
+ * after all. Those rows draw "? Not verifiable" permanently, which is the
+ * honest answer and the one the owner can act on: it says go and look.
+ *
  * STALE IS UNKNOWN. A reading is kept for [STALE_MS] and then stops counting
  * as an answer. This is what makes the light honest across the gap where
  * nothing is polling: the page stops reading the moment it is not visible
@@ -81,6 +97,9 @@ class ControlFragment : Fragment() {
     /** Everything a rendered row needs to refresh itself in place. */
     private class Bound(
         val id: String,
+        /** The declared label, repeated into the light's contentDescription:
+         *  a light announced on its own is a bare "On" belonging to nothing. */
+        val label: String,
         val control: DeviceControls.Control,
         val switch: Switch?,
         val light: TextView,
@@ -119,22 +138,16 @@ class ControlFragment : Fragment() {
             setPadding(pad, pad, pad, pad)
         }
 
-        root.addView(title(ctx, "Control"))
-        root.addView(caption(ctx,
-            "The things flipped often enough to deserve one screen, grouped by " +
-            "WHAT THEY CHANGE: the handset, the fleet, or this app.\n\n" +
-            "Only what can really move is a switch. A row ending in › instead " +
-            "opens the system screen that owns it — Android does not let an app " +
-            "flip those, and a switch that pretended otherwise would leave the " +
-            "device exactly as it was. A greyed switch says which grant it is " +
-            "waiting for; tap the row to go give it.\n\n" +
-            "The light on each row is what the device answered just now — " +
-            "${StatusLight.text(StatusLight.State.ON)}, " +
-            "${StatusLight.text(StatusLight.State.OFF)}, or " +
-            "${StatusLight.text(StatusLight.State.UNKNOWN)} when it would not " +
-            "say or has not been asked yet. Lights refresh every " +
-            "${REFRESH_MS / 1000} seconds while this page is open and stop " +
-            "entirely when it is not, so they go Unknown before they go stale."))
+        root.addView(title(ctx, getString(R.string.control_title)))
+        // The paragraph is a resource, but the four words it quotes are asked
+        // of StatusLight at render time — so a page that stopped drawing one
+        // of them could not go on describing it.
+        root.addView(caption(ctx, getString(R.string.control_caption,
+            StatusLight.text(ctx, StatusLight.State.ON),
+            StatusLight.text(ctx, StatusLight.State.OFF),
+            StatusLight.text(ctx, StatusLight.State.UNKNOWN),
+            StatusLight.text(ctx, StatusLight.State.UNVERIFIABLE),
+            REFRESH_MS / 1000)))
 
         rows.clear()
         for (group in DeviceControls.groups) {
@@ -143,9 +156,7 @@ class ControlFragment : Fragment() {
         }
         // A build whose declaration failed to parse must say so rather than
         // render an empty page that reads as "nothing is controllable here".
-        if (rows.isEmpty()) root.addView(caption(ctx,
-            "No controls are declared — build.json::ui.control_panel is empty or " +
-            "did not reach this build."))
+        if (rows.isEmpty()) root.addView(caption(ctx, getString(R.string.control_none_declared)))
 
         return ScrollView(ctx).apply { addView(root) }
     }
@@ -184,7 +195,11 @@ class ControlFragment : Fragment() {
         // read as one set here.
         val icon = ImageView(ctx).apply {
             setImageResource(Sections.iconResFor(ctx, decl.icon))
-            imageTintList = android.content.res.ColorStateList.valueOf(COLOR_LABEL)
+            imageTintList = android.content.res.ColorStateList.valueOf(labelColour(ctx))
+            // Decorative: the row's own label already says what this controls,
+            // and a screen reader announcing the drawable name after it is
+            // noise between the label and the state the owner came for.
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).apply {
                 rightMargin = dp(12)
             }
@@ -202,12 +217,12 @@ class ControlFragment : Fragment() {
         labelColumn.addView(TextView(ctx).apply {
             text = decl.label
             textSize = 15f
-            setTextColor(COLOR_LABEL)
+            setTextColor(labelColour(ctx))
         })
         val note = TextView(ctx).apply {
             text = decl.subtitle
             textSize = 11f
-            setTextColor(COLOR_NOTE)
+            setTextColor(noteColour(ctx))
         }
         labelColumn.addView(note)
 
@@ -239,7 +254,7 @@ class ControlFragment : Fragment() {
             // the switch itself stays disabled so the tap cannot look like a
             // flip that worked.
             control.open?.let { open -> line.setOnClickListener { open(requireContext()) } }
-            rows += Bound(decl.id, control, sw, light, note, listener)
+            rows += Bound(decl.id, decl.label, control, sw, light, note, listener)
         } else {
             // NOT a switch: the state is read-only and the row is a door. The
             // light IS the state readout here — there is no second column
@@ -248,10 +263,10 @@ class ControlFragment : Fragment() {
             line.addView(TextView(ctx).apply {
                 text = "›"
                 textSize = 18f
-                setTextColor(COLOR_NOTE)
+                setTextColor(noteColour(ctx))
             })
             control.open?.let { open -> line.setOnClickListener { open(requireContext()) } }
-            rows += Bound(decl.id, control, null, light, note, null)
+            rows += Bound(decl.id, decl.label, control, null, light, note, null)
         }
 
         paintLight(rows.last())
@@ -305,10 +320,22 @@ class ControlFragment : Fragment() {
         if (row.readAt != 0L && SystemClock.elapsedRealtime() - row.readAt <= STALE_MS) row.reading
         else null
 
+    /**
+     * The row's light, and the only place one is decided.
+     *
+     * TWO inputs, both from the same [DeviceControls.Control]: the reading,
+     * aged out by [reading], and whether that reading was a look at the thing
+     * or at a preference. Nothing else reaches here — not the switch, not the
+     * last write, not what the user asked for. The contentDescription is the
+     * same fact in words, because colour and glyph are both invisible to a
+     * screen reader.
+     */
     private fun paintLight(row: Bound) {
-        val state = StatusLight.of(reading(row))
-        row.light.text = StatusLight.text(state)
-        row.light.setTextColor(StatusLight.colour(state))
+        val ctx = row.light.context
+        val state = StatusLight.of(reading(row), row.control.observed)
+        row.light.text = StatusLight.text(ctx, state)
+        row.light.setTextColor(StatusLight.colour(ctx, state))
+        row.light.contentDescription = StatusLight.description(ctx, row.label, state)
     }
 
     /** Draw one row's truth. [blocked] non-blank ⇒ the switch is disabled and
@@ -324,9 +351,9 @@ class ControlFragment : Fragment() {
         paintLight(row)
         if (blocked.isNotEmpty()) {
             row.note.text = blocked
-            row.note.setTextColor(COLOR_BLOCKED)
+            row.note.setTextColor(ContextCompat.getColor(row.note.context, R.color.control_blocked))
         } else {
-            row.note.setTextColor(COLOR_NOTE)
+            row.note.setTextColor(noteColour(row.note.context))
         }
     }
 
@@ -357,7 +384,7 @@ class ControlFragment : Fragment() {
                 if (!isAdded || activity.isFinishing) return@post
                 rows.firstOrNull { it.id == decl.id }?.let { landed(it, state, blocked) }
                 if (!verdict.ok) {
-                    view?.snack("${decl.label}: didn't change — ${verdict.detail}",
+                    view?.snack(getString(R.string.control_write_refused, decl.label, verdict.detail),
                         com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
                 }
             }
@@ -369,14 +396,14 @@ class ControlFragment : Fragment() {
     private fun title(ctx: Context, s: String) = TextView(ctx).apply {
         text = s
         textSize = 22f
-        setTextColor(COLOR_LABEL)
+        setTextColor(labelColour(ctx))
         setPadding(0, 0, 0, dp(4))
     }
 
     private fun caption(ctx: Context, s: String) = TextView(ctx).apply {
         text = s
         textSize = 12f
-        setTextColor(COLOR_NOTE)
+        setTextColor(noteColour(ctx))
         setPadding(0, 0, 0, dp(8))
     }
 
@@ -386,22 +413,26 @@ class ControlFragment : Fragment() {
         addView(TextView(ctx).apply {
             text = label.uppercase()
             textSize = 12f
-            setTextColor(COLOR_SECTION)
+            setTextColor(ContextCompat.getColor(ctx, R.color.control_section))
         })
         if (subtitle.isNotBlank()) addView(TextView(ctx).apply {
             text = subtitle
             textSize = 11f
-            setTextColor(COLOR_NOTE)
+            setTextColor(noteColour(ctx))
         })
     }
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
+    // Every colour on this page is a resource, never a literal here. This app
+    // paints over a black→purple gradient by default and over pure black under
+    // the two oled_black launcher themes; a colour compiled into this file
+    // cannot follow either of them, and the one surface that must never become
+    // hard to read is the one saying whether things work.
+    private fun labelColour(ctx: Context): Int = ContextCompat.getColor(ctx, R.color.control_label)
+    private fun noteColour(ctx: Context): Int = ContextCompat.getColor(ctx, R.color.control_note)
+
     companion object {
-        private const val COLOR_LABEL = 0xFFFFFFFF.toInt()
-        private const val COLOR_NOTE = 0xAAFFFFFF.toInt()
-        private const val COLOR_SECTION = 0xFF8BE9A0.toInt()
-        private const val COLOR_BLOCKED = 0xFFFFB199.toInt()
 
         /** Poll cadence WHILE VISIBLE — the launcher status strip's, so the
          *  two live surfaces in this app do not tick at two different rates. */

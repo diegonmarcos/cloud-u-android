@@ -1278,16 +1278,27 @@ class ProfileFragment : Fragment() {
     private fun dp(ctx: android.content.Context, v: Int): Int =
         (v * ctx.resources.displayMetrics.density).toInt()
 
+    /** Import-status colours. GREEN is the "authenticated + applied" state the
+     *  auto-import is required to show explicitly.
+     *
+     *  Taken from [com.diegonmarcos.superapp.ui.StatusLight] rather than
+     *  restated: this page and Configs ▸ Panel ▸ Control both tell the owner
+     *  whether something worked, and two literals for that are two things that
+     *  can be edited apart into two different greens meaning one thing.
+     *
+     *  Resolved per instance, not in the companion, because the values are
+     *  colour RESOURCES now — a theme is allowed to change what healthy looks
+     *  like, and a constant folded in at compile time could not follow it. */
+    private val GREEN: Int by lazy {
+        com.diegonmarcos.superapp.ui.StatusLight.colour(
+            requireContext(), com.diegonmarcos.superapp.ui.StatusLight.State.ON)
+    }
+    private val RED: Int by lazy {
+        com.diegonmarcos.superapp.ui.StatusLight.colour(
+            requireContext(), com.diegonmarcos.superapp.ui.StatusLight.State.OFF)
+    }
+
     companion object {
-        /** Import-status colours. GREEN is the "authenticated + applied"
-         *  state the auto-import is required to show explicitly.
-         *
-         *  Taken from [StatusLight] rather than restated: this page and
-         *  Configs ▸ Panel ▸ Control both tell the owner whether something
-         *  worked, and two literals for that are two things that can be
-         *  edited apart into two different greens meaning one thing. */
-        private val GREEN   = com.diegonmarcos.superapp.ui.StatusLight.GREEN
-        private val RED     = com.diegonmarcos.superapp.ui.StatusLight.RED
         private val NEUTRAL = 0xFF9CA3AF.toInt()
 
         /**
