@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Drive · Connections — declarative listing rendered by
-     DriveConnectionsFragment from build.json::ui.drive_connections. -->
+<!-- Drive · Connections — TWO sections, in this order:
+       Apps    — the app row DriveConnectionsFragment fills from
+                 build.json::ui.sections[drive].pages[connections]
+                 .apps_from_tile_group + .apps_extra_tile_ids.
+       Configs — the storage-backend listing, rendered from
+                 build.json::ui.drive_connections. This is everything the
+                 page showed before the Apps section landed above it; it
+                 was relocated under a heading, not rewritten. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -19,6 +25,32 @@
             android:textColor="?attr/colorOnSurface"
             android:textAppearance="?attr/textAppearanceHeadlineSmall"
             android:text="@string/drive_connections_title" />
+
+        <TextView
+            android:id="@+id/drive_apps_header"
+            style="@style/DriveSectionHeader"
+            android:text="@string/drive_section_apps" />
+
+        <!-- Horizontal, like every other tile row in the app: the row must
+             never wrap into a second line that pushes Configs off screen. -->
+        <HorizontalScrollView
+            android:id="@+id/drive_apps_scroll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none"
+            android:overScrollMode="never">
+
+            <LinearLayout
+                android:id="@+id/drive_apps_row"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal" />
+        </HorizontalScrollView>
+
+        <TextView
+            android:id="@+id/drive_configs_header"
+            style="@style/DriveSectionHeader"
+            android:text="@string/drive_section_configs" />
 
         <TextView
             android:id="@+id/drive_status"

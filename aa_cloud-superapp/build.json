@@ -2432,6 +2432,13 @@
             "title": "Data Apps",
             "tiles": [
               {
+                "_doc": "Drive ▸ Connections, relocated here from the C3 Topology index when that row became a pure in-page anchor list. The target is the SAME string the C3 tile carried — page:drive/connections, which SectionPages.factoryFor routes to DriveConnectionsFragment — and this is now its only referrer in build.json, so the page keeps exactly one entry point rather than losing it. Tile id stays `drive-conn`, not `drive`: Cloud ▸ Apps already has a `drive` tile (MyIDE files) in another group.",
+                "id": "drive-conn",
+                "label": "Drive",
+                "icon": "ic_p_sol_cloud",
+                "target": "page:drive/connections"
+              },
+              {
                 "id": "calendar",
                 "label": "Calendar",
                 "icon": "ic_calendar",
@@ -2468,13 +2475,6 @@
                 "label": "Music",
                 "icon": "ic_music",
                 "target": "app://com.aspiro.tidal?fallback=https%3A%2F%2Ftidal.com"
-              },
-              {
-                "_doc": "Drive ▸ Connections, relocated here from the C3 Topology index when that row became a pure in-page anchor list. The target is the SAME string the C3 tile carried — page:drive/connections, which SectionPages.factoryFor routes to DriveConnectionsFragment — and this is now its only referrer in build.json, so the page keeps exactly one entry point rather than losing it. Tile id stays `drive-conn`, not `drive`: Cloud ▸ Apps already has a `drive` tile (MyIDE files) in another group.",
-                "id": "drive-conn",
-                "label": "Drive",
-                "icon": "ic_p_sol_cloud",
-                "target": "page:drive/connections"
               },
               {
                 "_doc": "Cloud-Vault — the dedicated Vaultwarden client app (ac_cloud-vault). libs:vault (KeePassDX stub) was replaced by Cloud-Vault, a standalone constellation APK hosting vault.diegonmarcos.com (self-hosted Vaultwarden). target=extapp:cloud-vault → MainActivity.launchExternalApp opens com.diegonmarcos.cloudvault if installed, else downloads + installs ui.external_apps[id=cloud-vault].install_apk_url. Lives in Data Apps rather than Tools Primary: the vault is one of the data stores, alongside Drive and Sheets.",
@@ -3130,6 +3130,11 @@
             "upstream": "photoprism"
           },
           {
+            "_doc_apps": "The Apps section this page opens with. DERIVED, never retyped: `apps_from_tile_group` names the ONE canonical list — Cloud ▸ Apps ▸ Data Apps, the same tile_groups entry the launcher row renders — so adding an app to that row adds it here, and the two can never drift into disagreeing about what a Data App is. `apps_extra_tile_ids` picks up the strays that belong on this page but live in another group (PM Boards is in Tools Dashboards), addressed as `<sectionId>/<tileId>` so the reference says where to look. Both resolve to the tiles' own targets, so every icon dispatches through the same grammar the launcher uses and inherits its not-installed handling — see Sections.appTilesFor.",
+            "apps_from_tile_group": "cloud/Data Apps",
+            "apps_extra_tile_ids": [
+              "cloud/pmboards"
+            ],
             "id": "connections",
             "label": "Connections",
             "icon": "ic_p_sol_cloud",
@@ -7401,6 +7406,12 @@
     "tile_columns": 6,
     "_doc_ntfy": "USER vs INFRA channel split for the ntfy registry. The channels are one flat list of snake_case topics upstream, so 'my notifications' and 'the cloud's notifications' arrived indistinguishable in one alphabetical wall. Scope is decided by the topic PREFIX, declared here rather than hardcoded in the fragment (FIRE RULE #6): a new prefix is a build.json edit. Anything unmatched counts as INFRA, so a channel can never silently vanish from the list — it lands in the cloud bucket and is visible enough to classify.\n\n`channels` below IS the ntfy registry's own topics[] list — the source of truth is /home/appuser/git/cloud-u-containers/infra-obs_ntfy/src/build.json::topics (this app's clone lives at cloud-u-android, a SIBLING checkout to cloud-u-containers, not a `a_solutions` submodule of it — a path this comment previously got wrong). Verified 2026-09-06: every one of that registry's 23 topic names is present below; `cloud-sa-notifications` / `fleet_advisory` / `infra_mail-health` are the only extras, and they are legitimately NOT in that registry — they are this app's own advisory-scope channels (see `advisory_topic` below), published by a different mechanism than the fleet's ntfy topic list. There is no automated sync from that JSON into this one yet (the two live in different repos and this task's scope did not include building that pipeline); a topic added to the registry needs a matching manual edit here until one exists.",
     "ntfy": {
+      "_doc_base_url": "Origin for PROGRAMMATIC reads (the JSON poll API). This is ntfy itself on the WireGuard mesh. It is NOT rss.diegonmarcos.com: that hostname is the same container behind Caddy, whose only anonymous prefix is /feed* (infra-sec_caddy/src/caddyfile.nix::mkNtfyBlock, feed_auth=\"none\"), and /feed* is served by the rss-gateway sidecar which publishes profiles.json, channels.json and <profile>.atom / c/<topic>.atom — it has no /<topic>/json route at all. Every other path on that host falls through to `handle { forward_auth authelia }` and answers 302 to the SSO portal, which is the 401 the Notify cards rendered. Measured anonymously from a mesh peer on 2026-09-09: /feed/channels.json 200, /feed/<topic>/json 404, /<topic>/json 302 -> auth.diegonmarcos.com, http://10.0.0.6:8090/<topic>/json 200 for all 26 channels below.",
+      "base_url": "http://10.0.0.6:8090",
+      "_doc_web_base_url": "Origin for HUMAN links — the topic page a card opens in the in-app browser. The public hostname on purpose: a WebView carries the Authelia session cookie and satisfies the gate, which is the tier that exists for people.",
+      "web_base_url": "https://rss.diegonmarcos.com",
+      "_doc_poll_window": "`since` for the channel cards, in a unit ntfy parses — s/m/h, a Unix timestamp, a message id or `all`. NEVER `d`: since=7d answers HTTP 400 {\"code\":40008}. Kept at a day rather than a week because health_resources alone replays 851 KB / 2101 messages over 24h and 3.6 MB over 168h, and a shade only ever shows the newest handful.",
+      "poll_window": "24h",
       "scopes": [
         {
           "id": "advisory",

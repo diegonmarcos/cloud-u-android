@@ -75,4 +75,17 @@
         <item name="lineHeight">14sp</item>
         <item name="android:textColor">#FFE9D8FD</item>
     </style>
+
+    <!-- Heading over one section of a page that has several (Drive's Apps
+         and Configs). Matches the group headers GroupedTilesFragment draws
+         in code so a section heading reads the same wherever it appears. -->
+    <style name="DriveSectionHeader" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">12dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:textColor">#FFE9D8FD</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAppearance">?attr/textAppearanceTitleSmall</item>
+    </style>
 </resources>

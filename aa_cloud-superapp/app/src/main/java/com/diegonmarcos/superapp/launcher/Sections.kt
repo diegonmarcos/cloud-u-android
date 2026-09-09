@@ -369,6 +369,19 @@ object Sections {
          *  the Pages/Actions split in the Configs grid and the ArcMenu's
          *  outer/inner arcs. */
         val isAction: Boolean = false,
+
+        /** `<sectionId>/<tile group title>` whose tiles this page opens with,
+         *  as an app row. A REFERENCE to the canonical list, never a copy:
+         *  Drive ▸ Connections names Cloud ▸ Apps ▸ Data Apps, so the row the
+         *  launcher draws and the row this page draws cannot drift apart, and
+         *  adding an app to that group adds it to both. Blank ⇒ no app row. */
+        val appsFromTileGroup: String = "",
+
+        /** Extra tiles for that app row, each `<sectionId>/<tileId>`, for the
+         *  ones that belong on the page but live in another group — PM Boards
+         *  sits in Tools Dashboards, not Data Apps. Addressed by id so the
+         *  reference survives the group being retitled or reordered. */
+        val appsExtraTileIds: List<String> = emptyList(),
     )
 
     /** App-level action tile shown in the Home master TileGrid below the
@@ -592,6 +605,10 @@ object Sections {
                             (0 until ta.length()).map { ta.getString(it) }
                         }.orEmpty(),
                         isAction = po.optBoolean("is_action", false),
+                        appsFromTileGroup = po.optString("apps_from_tile_group", ""),
+                        appsExtraTileIds = po.optJSONArray("apps_extra_tile_ids")?.let { ea ->
+                            (0 until ea.length()).map { ea.getString(it) }
+                        }.orEmpty(),
                     ))
                 }
             }
@@ -901,6 +918,44 @@ object Sections {
      */
     fun tabOwnerOf(sectionId: String, pageId: String): Page? =
         byId(sectionId)?.allPages?.firstOrNull { it.id != pageId && pageId in it.tabs }
+
+    /**
+     * The app row [page] declares — [Page.appsFromTileGroup]'s whole group in
+     * its declared order, then [Page.appsExtraTileIds] appended in theirs.
+     *
+     * RESOLVED, not stored. The tiles come back as the very [AggTile]s the
+     * launcher renders, so the icons, the labels and above all the TARGETS are
+     * whatever `tile_groups` says today — a page listing apps cannot go stale
+     * against the group it names, and it cannot invent an app that group does
+     * not have.
+     *
+     * A reference that resolves to nothing is DROPPED rather than drawn: an
+     * icon with no target is the failure this page is supposed to avoid, so a
+     * typo'd group or tile id shows up as a missing icon here and as a failed
+     * assertion in test/test-drive-page-sections.sh, not as a dead tap.
+     * Duplicates are collapsed by target, so naming a tile that the group
+     * already carries adds nothing rather than a second copy of it.
+     */
+    fun appTilesFor(page: Page): List<AggTile> {
+        fun tilesOf(sectionId: String): List<AggTile> =
+            byId(sectionId)?.tileGroups?.flatMap { it.tiles }.orEmpty()
+
+        val group = page.appsFromTileGroup
+            .split('/', limit = 2)
+            .takeIf { it.size == 2 && it.none(String::isBlank) }
+            ?.let { (sectionId, title) ->
+                byId(sectionId)?.tileGroups?.firstOrNull { it.title == title }?.tiles
+            }
+            .orEmpty()
+
+        val extras = page.appsExtraTileIds.mapNotNull { ref ->
+            ref.split('/', limit = 2)
+                .takeIf { it.size == 2 && it.none(String::isBlank) }
+                ?.let { (sectionId, tileId) -> tilesOf(sectionId).firstOrNull { it.id == tileId } }
+        }
+
+        return (group + extras).distinctBy { it.target }
+    }
 
     /** [owner]'s tabs as declared pages of [sectionId], in strip order. A tab
      *  id with no page behind it is dropped rather than drawn as an empty
