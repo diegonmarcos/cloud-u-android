@@ -3,6 +3,7 @@ package app.sterna.ui.message
 import app.sterna.core.data.settings.PLAIN_TEXT_DEFAULT
 import app.sterna.core.data.text.htmlEscape
 import app.sterna.core.data.text.htmlToText
+import app.sterna.core.data.text.sanitiseReceivedHtml
 import app.sterna.core.jmap.model.Email
 import app.sterna.ui.compose.bodySource
 
@@ -28,8 +29,13 @@ internal fun readerBody(
     noContent: String,
 ): ReaderBody {
     if (!plainText) {
+        // The ONE place a received message's own markup becomes a fragment a renderer will be given,
+        // so the ONE place it is reduced to the policy in [sanitiseReceivedHtml]. Both the reader and
+        // the print document reach a body through here, which is why the sanitiser is not at either
+        // of those call sites: a third renderer added later inherits the policy instead of forgetting
+        // it.
         email.htmlContent()?.takeIf { it.isNotBlank() }
-            ?.let { return ReaderBody(it, richHtml = true, derived = false) }
+            ?.let { return ReaderBody(sanitiseReceivedHtml(it), richHtml = true, derived = false) }
         email.textContent()?.takeIf { it.isNotBlank() }
             ?.let { return ReaderBody(plainFragment(it, null), false, false) }
         val fallback = email.preview?.takeIf { it.isNotBlank() } ?: noContent

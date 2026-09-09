@@ -146,6 +146,68 @@ Out of scope:
 
 ### Message rendering (WebView)
 
+Everything below the sanitisation policy is *containment* — it stops hostile markup from
+doing anything. The sanitiser is the layer that stops the markup from *arriving*, and it
+exists because every containment measure here is a setting or a callback in another file:
+one `javaScriptEnabled = true`, one renderer that forgets to install the blocking client,
+and inline handlers still sitting in the DOM are live again.
+
+#### Sanitisation policy for received markup
+
+Applied in `sanitiseReceivedHtml` (`core/data/.../text/ReceivedHtml.kt`) at the single point
+where a message's own markup becomes a fragment a renderer is given (`readerBody`) — so the
+reader and the print document inherit it, and so will the next renderer. The tables in that
+file are the policy; nothing else in it decides anything they do not say.
+
+**Allowed** — element tags survive:
+paragraph and structure (`p div span br hr center blockquote pre h1`–`h6`), inline
+formatting including the legacy spellings mail still uses (`b strong i em u s strike del ins
+sub sup small big code tt kbd samp var font mark abbr cite q wbr`), lists (`ul ol li dl dt
+dd`), tables (`table thead tbody tfoot tr td th caption colgroup col`), `a`, `img`,
+`details`/`summary`, and `style` — whose content is copied as CSS, never walked as markup.
+
+**Allowed attributes** are default-deny: a global set (`style class id title dir lang align
+valign`) plus a per-element set (`a`: `href name`; `img`: `src alt width height border hspace
+vspace`; `font`: `color face size`; the table family's sizing and span attributes;
+`blockquote`: `cite type`). Everything else is dropped. Every `on*` handler is refused by a
+*rule* rather than a list, so it cannot be outgrown by a new platform attribute.
+
+**Dropped with their entire content** — the element and its text both go, because the text is
+not prose: `script noscript`, `iframe frame frameset noframes object embed applet param`,
+`form input button select option optgroup textarea label fieldset legend output datalist
+keygen`, `svg math`, `link meta base title template portal`, `audio video source track
+canvas`, `marquee blink plaintext xmp listing`. Comments, CDATA sections, doctypes and
+processing instructions are dropped too — a conditional comment is how markup is smuggled
+past a scanner that reads the whole construct as text.
+
+**Unwrapped** — tags removed, words kept — is the default for anything unrecognised,
+including `html`/`head`/`body` (which cannot legally appear inside a fragment) and word
+processor namespaces like `<o:p>`. Content loss is the failure this pass must not have, so
+every ambiguity resolves toward keeping the sender's words.
+
+**URL-valued attributes** keep their value only for an allowed scheme: `href` for `http https
+mailto tel sms geo cid`, `src` for `http https cid data`, `cite` for `http https`. The value
+is entity-decoded and stripped of control characters *before* the scheme is read, so
+`java&#115;cript:` and `java<TAB>script:` are both refused. A `data:` URL is allowed only
+when it decodes to an image. `@import` is stripped from stylesheets, since it fetches a
+remote sheet and no user affordance would ever want it.
+
+**Deliberately NOT dropped**: a remote `<img src="https://…">`. Stripping it would leave the
+"show images" affordance with nothing to load. Whether the fetch happens is the load-time
+gate's decision below — sanitisation decides what may be *asked for*. Conversely `srcset`,
+`background` and `poster` ARE dropped, because the affordance detects remote references by
+reading `src`: a picture arriving past it would be blocked with no way for the user to ask
+for it.
+
+**Deferred behind a user action**: remote content (below), opening a link (a real gesture,
+plus an optional confirmation dialog), and — for a link whose visible text names one host
+while its `href` goes to another — a marker naming the real target, since both halves are
+legal markup and it is their *disagreement* that is the attack. Only a link whose whole
+visible text reads as a bare host or URL is marked; "click here" over a redirector made no
+claim to contradict, and a marker on every tracked newsletter link is one the user learns to
+ignore. The real host is read from after the last `@`, so
+`https://www.bank.example@evil.example/` is named as `evil.example`.
+
 - **JavaScript is disabled** in the message WebView, there is **no `JavascriptInterface`
   bridge**, and content is loaded with a **null base URL** (opaque origin). File and
   content access are disabled, as are DOM storage, geolocation, and file-URL access.

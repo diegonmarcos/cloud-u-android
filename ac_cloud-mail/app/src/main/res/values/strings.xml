@@ -371,6 +371,9 @@
     <string name="message_no_subject">(no subject)</string>
     <string name="message_no_content">(no content)</string>
     <string name="message_quoted_text">Quoted text</string>
+    <!-- Beside a link whose visible text names one site and whose target is another: the
+         phishing shape. %1$s is the host the link actually opens. -->
+    <string name="message_link_goes_to">[goes to %1$s]</string>
     <!-- Sent/Drafts list rows: who the mail went to (%1$s = recipient names) -->
     <string name="list_to_recipients">To: %1$s</string>
     <string name="message_attachments">Attachments (%1$d)</string>

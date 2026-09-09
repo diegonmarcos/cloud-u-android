@@ -99,7 +99,9 @@ import app.sterna.ui.text.LocalTextToolRunner
 import app.sterna.ui.text.TextTool
 import app.sterna.ui.text.TextToolScope
 import app.sterna.ui.text.TextToolPanel
+import app.sterna.core.data.text.htmlEscape
 import app.sterna.core.data.text.htmlToText
+import app.sterna.core.data.text.markDeceptiveLinks
 import app.sterna.ui.compose.bodySource
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.AutoFixHigh
@@ -2042,6 +2044,7 @@ private fun ConversationBody(
                 // The quote-fold button's label, resolved here for the same reason as the two
                 // above. A locale change recreates the activity, so it is safe in the key below.
                 val quoteLabel = stringResource(R.string.message_quoted_text)
+                val deceptiveLinkLabel = stringResource(R.string.message_link_goes_to)
                 // plainText is part of the key, or the toggle would change the mode and re-render the
                 // SAME document.
                 // The two spacers enter the key as the LENGTHS themselves, which depend on two
@@ -2050,11 +2053,11 @@ private fun ConversationBody(
                 // flash white, send her back to the top and reset the zoom, in a loop.
                 val html = remember(
                     full, msg.inlineImages, emailTheme, topSpacerCss, bottomSpacerCss,
-                    plainText, derivedNotice, noContent, quoteLabel,
+                    plainText, derivedNotice, noContent, quoteLabel, deceptiveLinkLabel,
                 ) {
                     buildHtmlDocument(
                         full, msg.inlineImages, emailTheme, topSpacerCss, bottomSpacerCss,
-                        plainText, derivedNotice, noContent, quoteLabel,
+                        plainText, derivedNotice, noContent, quoteLabel, deceptiveLinkLabel,
                     )
                 }
                 EmailWebView(
@@ -4715,6 +4718,11 @@ internal fun buildHtmlDocument(
     // THIS one HAS a default, for the opposite reason: a caller who forgets it gets a document with
     // no quote fold, which is the page as it has always been — never an empty one.
     quoteLabel: String = "",
+    // The wording of the marker put beside a link whose text names one host and whose target is
+    // another. Defaults to off for [quoteLabel]'s reason — a caller who forgets it gets the page as it
+    // has always been. Empty means the pass does not run at all, so the print document (whose links
+    // cannot be tapped) simply omits it.
+    deceptiveLinkLabel: String = "",
 ): String {
     // Which part of the message the document carries, and what that implies for the page, is
     // decided in ONE place a test can run — see [readerBody].
@@ -4734,6 +4742,15 @@ internal fun buildHtmlDocument(
         // invert then turns light (the "white band in dark theme" bug). A declared color-scheme is
         // ignored by Android WebView, so the media queries are defanged directly.
         inner = neutraliseDarkModeStyles(inner)
+        // Name the real target of a link that claims a different one (#193). BEFORE the quote fold,
+        // so a deceptive link inside quoted history is marked too — a phishing mail that forges a
+        // thread is exactly where one hides. The marker is a <span>, so folding still only has
+        // blockquotes to find.
+        if (deceptiveLinkLabel.isNotBlank()) {
+            inner = markDeceptiveLinks(inner) { host ->
+                "<span class=\"s-deceptive\">${htmlEscape(deceptiveLinkLabel.format(host))}</span>"
+            }
+        }
         // Fold the TRAILING quoted block behind a native <details> (no script, so the CSP is
         // untouched). INSIDE the richHtml guard, after the two rewrites: it wraps the message's OWN
         // blockquotes. NOT shared with [buildPrintDocument] — paper does not unfold.
@@ -4795,6 +4812,11 @@ internal fun buildHtmlDocument(
                  Counter-inverting it would paint dark-on-dark. */
               details.s-quote { margin: 12px 0; }
               details.s-quote > summary { cursor: pointer; padding: 4px 0; font-size: 0.9em; opacity: 0.8; }
+              /* The real target of a link that named a different one ([markDeceptiveLinks]). Text of
+                 ours, so — like the quote summary above — it inverts WITH the page and is NOT
+                 counter-inverted. Not a colour warning: a red that survives invert+hue-rotate is not
+                 worth guessing at, and the words are the warning. */
+              .s-deceptive { margin-left: 0.4em; font-size: 0.85em; opacity: 0.85; white-space: nowrap; }
             </style></head><body>${wrapEmoji(inner)}</body></html>
         """.trimIndent()
     }
@@ -4830,6 +4852,9 @@ internal fun buildHtmlDocument(
              default disclosure triangle. */
           details.s-quote { margin: 12px 0; }
           details.s-quote > summary { cursor: pointer; padding: 4px 0; font-size: 0.9em; opacity: 0.8; }
+          /* See the inverted template: both carry this rule, because they share no CSS and a marker
+             styled in only one of them is invisible in the other theme. */
+          .s-deceptive { margin-left: 0.4em; font-size: 0.85em; opacity: 0.85; white-space: nowrap; }
         </style></head><body>$inner</body></html>
     """.trimIndent()
 }
