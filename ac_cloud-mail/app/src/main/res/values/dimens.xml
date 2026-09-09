@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        The corner of a widget's cell. This is the pre-Android-12 value: a fixed 16dp, matching what
+        the launcher of that era rounds a cell to. From API 31 the twin in res/values-v31 hands the
+        job over to the system radius instead — see drawable/widget_unread_background.xml.
+    -->
+    <dimen name="widget_corner_radius">16dp</dimen>
+
+    <!--
+        The side of a row's monogram badge on the home screen. The app's own list draws 40 dp; a
+        home-screen cell is a THUMBNAIL and not a screen — three or four rows share the height of
+        one launcher cell, and a 40 dp disc would be taller than the two lines of text beside it.
+
+        24 dp is the LOW END of a 24–28 dp bracket, and which of the two it settles on is a bench
+        call: it is legibility of a single letter at arm's length against how much width the badge
+        takes from the sender's name on a narrow cell, and neither can be read off a source file.
+    -->
+    <dimen name="widget_recent_monogram">24dp</dimen>
+</resources>

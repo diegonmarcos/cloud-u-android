@@ -1,13 +1,15 @@
 pluginManagement {
     repositories {
-        google()
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
         mavenCentral()
         gradlePluginPortal()
     }
-}
-
-plugins {
-    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 
 dependencyResolutionManagement {
@@ -15,30 +17,24 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url = "https://jitpack.io" }
     }
 }
 
-rootProject.name = "email"
+rootProject.name = "cloud-mail"
 
 // Data-driven from build.json::modules (FIRE RULE #6: never hardcode lists).
-// The include list used to live here as literals, so the module graph existed
-// in two places and neither knew about the other — which is exactly how
-// :libs:analytics came to be compiled by a build that never declared it.
+// Upstream keeps the include list as literals here; we cannot, because the same
+// graph also drives the ship workflow's path triggers and the publish gate's
+// source hash (cloud-android-ship-repo-workflow-engine.sh reads build.json::
+// modules). A literal list here would be a second copy of the graph that
+// neither of those two can see, and a module added to only one of them either
+// fails to build or ships without ever triggering a build.
 def buildJson = new groovy.json.JsonSlurper().parse(file('build.json'))
-buildJson.modules.each { name, _spec ->
+buildJson.modules.each { name, spec ->
     if (name.startsWith('_')) return  // skip _doc keys
     include ":${name}"
-    // Map gradle path :libs:foo -> libs/foo/  (vs. :app -> app/), unless the
-    // module declares a `dir` in build.json. `dir` is how a module is SHARED by
-    // reference instead of copy-pasted: it lives once in ab_cloud-libs-shared/
-    // libs/ and every app points at that one directory, so a fix lands in all
-    // of them at build time and copies cannot drift.
-    def path = _spec?.dir ?: name.replace(':', '/')
-    project(":${name}").projectDir = file(path)
+    // Gradle path :core:jmap -> core/jmap, unless the module declares an
+    // explicit `dir` (how a module is shared BY REFERENCE from one canonical
+    // directory instead of copy-pasted per app).
+    project(":${name}").projectDir = file(spec?.dir ?: name.replace(':', '/'))
 }
-
-// ':libs:analytics' implicitly declares a ':libs' container whose default
-// projectDir is <root>/libs. This app has none, and Gradle 9 fails on a project
-// directory that does not exist. Must come AFTER the loop that creates it.
-project(':libs').projectDir = file('../ab_cloud-libs-shared/libs')

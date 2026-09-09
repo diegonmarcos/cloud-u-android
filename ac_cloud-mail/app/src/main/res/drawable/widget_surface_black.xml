@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The cell's surface when the reader has the OLED setting on: true black, which is what
+    pulledToBlack() puts on `surface` and therefore what the app's own pages are wearing. A cell
+    left on the Pelagic navy beside a black app is the whole point of the setting missed.
+
+    Dark theme only — applyPureBlack ignores the setting in light, and so does widgetPalette.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/widget_corner_radius" />
+    <solid android:color="#000000" />
+</shape>

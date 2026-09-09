@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Manifest of the TEST APP ONLY. Registered on the debug/release source sets inside the
+    `-PtestApp` gate of app/build.gradle.kts and nowhere else: without that property this file is
+    part of no variant, so the production merged manifest gains no component and F-Droid's rebuild
+    stays byte-identical. Never move its registration out of that gate.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!--
+            Bench provisioning entry point, driven over adb (see BenchProvisionReceiver's header
+            for the spec-file format and the exact command).
+
+            ⛔ EXPORTED AND UNPROTECTED, ON PURPOSE AND WITH NO EXCUSE: a non-exported receiver
+            refuses an explicit broadcast from the shell uid, which is the only way this is called,
+            and no permission guards it. Any app installed alongside can therefore drive it. What
+            makes that acceptable is not a guard but the packaging: the class exists only in
+            `app.sterna.test`, built behind -PtestApp, never shipped to a user.
+
+            No intent-filter, deliberately: an implicit broadcast can never reach it, the driver
+            must name the component.
+        -->
+        <receiver
+            android:name="app.sterna.bench.BenchProvisionReceiver"
+            android:enabled="true"
+            android:exported="true" />
+    </application>
+</manifest>

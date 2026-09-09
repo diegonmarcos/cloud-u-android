@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ONE line of the enlarged counter: an account's name, and that account's own unread figure.
+    Added at draw time with RemoteViews.addView, into @id/widget_unread_accounts.
+
+    ⛔ NO android:text here either, for the same reason as the container: this layout is nobody's
+    initialLayout, so anything written in it would be drawn by the launcher before
+    UnreadWidgetContent.byAccount had decided whether an account may be named at all.
+
+    ⚠ THE WEIGHT IS ON THE NAME ALONE, and that is the whole layout. On a 360dp screen the cell is
+    narrow enough that a translated label already overflows (see @layout/widget_unread), and an
+    account name can be a full mail address. With the weight here the NAME ellipsises and the digits
+    stay at the end of the line; put a weight on the figure too, or none at all, and the number —
+    the only thing this widget exists to show — is what gets cut off.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+
+    <TextView
+        android:id="@+id/widget_unread_account_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/widget_row_primary"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/widget_unread_account_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:maxLines="1"
+        android:textColor="@color/widget_unread_count"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+</LinearLayout>

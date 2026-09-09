@@ -1,60 +1,67 @@
 {
   "vendored_engine": "cloud-mail-engine.sh",
   "_doc_vendored_engine": "CI does NOT run the engine source in 1_cicd/src/scripts — it runs the VENDORED COPY at ./build.sh, from this directory. This key DECLARES that copy relationship so the workflow generator can enforce byte-identity (cloud-android-ship-repo-workflow-engine.sh, step 'verify engine ↔ vendored build.sh parity') and go red on drift. Editing the engine alone used to change nothing at ship time, silently — which is how the ABI gate and the GHCR auto-delete gate came to exist only in the file nobody executes. Re-sync with: cp 1_cicd/src/scripts/<engine> ./build.sh",
+  "upstream": {
+    "_doc": "Provenance of the vendored tree. This is a CLONE, not a fork: the app source under app/, core/ and libs/ is upstream's, edited only where the constellation forces it (package id, versionCode, launcher icon, product name). Recording repo+commit is what makes 'is this file ours or theirs?' answerable a year from now, and what makes a re-clone against a newer upstream a diff instead of an archaeology project.",
+    "repo": "https://codeberg.org/emon/sterna-mail",
+    "commit": "6941b3ae50ef37aa58ef81ff2a23344c2b6a1e41",
+    "version": "1.5.4",
+    "vendored_on": "2026-09-09",
+    "excluded": [
+      ".forgejo/",
+      "ci/",
+      "site/",
+      "fastlane/",
+      "docs/logo.png",
+      "docs/screenshots/"
+    ],
+    "_doc_excluded": "Upstream's own release plumbing, not app source: their Forgejo CI and self-hosted runner compose (we ship through cloud-mail-engine.sh), their marketing brochure, and the F-Droid listing copy — which names their product and their store entry, neither of which we publish to."
+  },
   "modules": {
-    "_doc": "The gradle module graph, as data. settings.gradle loops over this instead of carrying a hardcoded include list, so the graph lives in exactly one place (FIRE RULE #6). `dir` shares a module BY REFERENCE from the one canonical directory: libs:analytics lives in ab_cloud-libs-shared/libs/ with every other shared module, never as a per-app copy. colorpicker and openpgp-api are vendored FairEmail subprojects that belong to this app alone, so they resolve at the default path.",
+    "_doc": "The gradle module graph, as data. settings.gradle loops over this instead of carrying a hardcoded include list, so the graph lives in exactly one place (FIRE RULE #6) — and the same list drives the ship workflow's path triggers and the publish gate's source hash. Upstream's own settings.gradle.kts holds these five as literals; that copy is deliberately not carried over. All five resolve at their default path (:core:jmap -> core/jmap); no module is shared by reference from ab_cloud-libs-shared any more, see the analytics block below.",
     "app": {},
-    "colorpicker": {
+    "core:jmap": {
       "type": "library",
-      "comment": "Vendored FairEmail subproject (upstream com.rarepebble:colorpicker). App-local: nothing else in the constellation consumes it."
+      "comment": "Upstream JMAP client. The protocol this app is built around — the IMAP module is the compatibility path, not the primary one."
     },
-    "openpgp-api": {
+    "core:imap": {
       "type": "library",
-      "comment": "Vendored FairEmail subproject (OpenKeychain OpenPGP API). App-local, same reason as colorpicker."
+      "comment": "Upstream IMAP/SMTP client, for accounts with no JMAP endpoint."
     },
-    "libs:analytics": {
+    "core:data": {
       "type": "library",
-      "dir": "../ab_cloud-libs-shared/libs/analytics",
-      "comment": "Shared BY REFERENCE - one copy for the whole constellation, no per-app drift."
+      "comment": "Upstream Room database + repositories, shared by :app and both protocol modules."
     },
-    "libs:core": {
+    "libs:openpgp-api": {
       "type": "library",
-      "dir": "../ab_cloud-libs-shared/libs/core",
-      "comment": "Shared BY REFERENCE, same as libs:analytics. Brings in the constellation-wide Telemetry default (see libs/core/README.md) plus DataBackendService. `api project(':libs:devtools')` in its own build.gradle, so libs:devtools must ALSO be included below."
-    },
-    "libs:devtools": {
-      "type": "library",
-      "dir": "../ab_cloud-libs-shared/libs/devtools",
-      "comment": "Transitive dependency of libs:core (see above) — not consumed directly by this app, but Gradle needs it declared in the module graph to resolve libs:core's `api` dependency."
+      "comment": "OpenKeychain OpenPGP API, vendored by upstream under libs/. App-local: nothing else in the constellation consumes it."
     }
   },
   "forks": {
     "mail": {
       "app_id": "com.diegonmarcos.comms.mail",
-      "label": "Cloud Mail (Fairmail)",
+      "_doc_app_id": "SINGLE SOURCE OF TRUTH for the package id. app/build.gradle.kts reads this key at configure time rather than repeating the string, and the engine's identity-assert step compares the built APK against it. Kept identical to what the FairEmail-derived app shipped so the replacement installs as an update rather than as a second Cloud Mail.",
+      "label": "Cloud Mail",
       "image": "cloud-comms-mail",
       "tracker_dir": "ac_cloud-mail",
-      "tracker_dir_note": "THIS IS OUR CODE. The gradle project is ac_cloud-mail/ itself (app/, build.gradle, settings.gradle at its root), same shape as aa_cloud-superapp. No upstream clone, no pinned tag, no patch series -- edit the source in place on main. upstream_repo/pinned_tag were removed 2026-08-27; materialize-fork no longer clones anything, it just verifies the tree is there. GPL provenance (FairEmail by M66B, GPL-3.0) lives in README.md, ATTRIBUTION.md, LICENSE and the per-file headers, which is where a licence obligation belongs -- not in a build input.",
+      "tracker_dir_note": "THIS IS OUR TREE. The gradle project is ac_cloud-mail/ itself (app/, core/, libs/, build.gradle, settings.gradle at its root). materialize-fork clones nothing, it just verifies the tree is there. GPL provenance (Sterna Mail, GPL-3.0) lives in LICENSE, README.md and the upstream block above, which is where a licence obligation belongs — not in a build input.",
       "license": "GPL-3.0",
-      "primary_lang": "Java",
+      "primary_lang": "Kotlin",
       "runtime": "native",
       "priority": 1,
       "blocked_on": null,
       "build": {
-        "_doc": "How build-fork builds this fork: gradle task run via the fork's OWN wrapper (FairEmail pins Gradle 9.4.1 / AGP 9.2.1 — never our devShell gradle), glob of the output APK, and signing='keystore_properties' meaning the engine writes keystore.properties at the fork root from the comms keystore (FairEmail's signingConfigs.release reads it natively — zero signing patch).",
-        "gradle_task": "assembleGithubRelease",
-        "apk_glob": "app/build/outputs/apk/github/release/*.apk",
+        "_doc": "How build-fork builds this app: gradle task run via the tree's OWN wrapper (upstream pins Gradle 8.13 / AGP 8.9.1 — never our devShell gradle), glob of the output APK, and signing='keystore_properties' meaning the engine writes keystore.properties at the app root. Upstream's signingConfigs already reads exactly that file with exactly those four keys (storeFile/storePassword/keyAlias/keyPassword), so there is no signing patch at all. No product flavours here, unlike the FairEmail tree this replaced — hence assembleRelease, not assembleGithubRelease.",
+        "gradle_task": "assembleRelease",
+        "apk_glob": "app/build/outputs/apk/release/*.apk",
         "signing": "keystore_properties",
         "gradle_props": {
-          "COMMS_GH_OWNER": "diegonmarcos",
-          "COMMS_GH_REPO": "cloud-u-android",
-          "COMMS_RELEASE_ASSET_NAME": "cloud-comms-mail.apk",
           "COMMS_BUILD_TIMESTAMP": "$ENV:COMMS_BUILD_TIMESTAMP",
-          "_COMMS_RSS_BASE_doc": "SUPER RSS READER default feed root (wg0-only rss-gateway, feed_auth=none). Baked into BuildConfig.COMMS_RSS_BASE; WorkerFeedSync auto-provisions the channel tree from <base>/channels.json on first run — no manual Cloud Feeds dialog needed.",
-          "COMMS_RSS_BASE": "https://rss.diegonmarcos.com/feed"
-        }
+          "_COMMS_BUILD_TIMESTAMP_doc": "Read by app/build.gradle.kts::commsVersionCode. Upstream's versionCode is a small hand-bumped integer (174); the app this replaces shipped ~3.35M, so upstream's number would be a downgrade on every install in the field and Android would refuse it silently. This stamp is the monotonic clock that produced those 3.35M-scale codes, so the sequence simply continues."
+        },
+        "_doc_dropped_gradle_props": "COMMS_GH_OWNER / COMMS_GH_REPO / COMMS_RELEASE_ASSET_NAME fed CommsUpdateWorker, and COMMS_RSS_BASE fed WorkerFeedSync — both were FairEmail-fork Java that does not exist in this codebase. Passing -P properties nothing reads is how a build grows configuration that looks live and is not."
       },
-      "comment": "FairEmail. Reuses the EXISTING ac_mail-fairmail tracker clone already used by aa_cloud-superapp's cherry-pick — materialize-fork checks out the pin, never trusts the tracker HEAD. Server: Maddy + Stalwart on oci-mail (imap./smtps. via SNI on :443, jmap.). Do this fork first: pure Java, no RN/Rust, mail server is live."
+      "comment": "Clone of Sterna Mail (JMAP-first, Kotlin/Compose). Server: Maddy + Stalwart on oci-mail (imap./smtps. via SNI on :443, jmap.) — the JMAP endpoint this client prefers is already the one we run."
     }
   },
   "signing": {
@@ -78,8 +85,8 @@
     }
   },
   "analytics": {
-    "_doc": "Consumed by :libs:analytics, which reads THIS file (rootDir) at build time and bakes the values into BuildConfig. This app is AGP 9, which supplies Kotlin itself; the module detects that and skips its own Kotlin apply.",
-    "enabled": true,
+    "_doc": "DISABLED, and the endpoints kept on purpose. :libs:analytics is a Java/AGP-9 module that was compiled into the FairEmail tree and read these values from this file at build time; the clone is Kotlin/Compose on AGP 8.9 and does not include it, so nothing consumes them today. The site_id below is a registered Umami site that cannot be re-derived from anything in this repo — deleting the block would lose it, and re-registering would orphan the existing history. Whoever wires a Compose-side telemetry hook reads these two endpoints and flips enabled.",
+    "enabled": false,
     "app": "ac_cloud-mail",
     "umami": {
       "endpoint": "https://analytics.diegonmarcos.com/umami",

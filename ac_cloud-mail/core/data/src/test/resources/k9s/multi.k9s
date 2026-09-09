@@ -1,0 +1,75 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<k9settings version="110" format="1">
+  <global>
+    <value key="theme">follow_system</value>
+  </global>
+  <accounts>
+    <account uuid="00000000-0000-0000-0000-000000000030">
+      <name>Good One</name>
+      <incoming-server type="IMAP">
+        <host>imap.one.example.com</host>
+        <port>993</port>
+        <connection-security>SSL_TLS_REQUIRED</connection-security>
+        <authentication-type>PLAIN</authentication-type>
+        <username>one@example.com</username>
+      </incoming-server>
+      <outgoing-server type="SMTP">
+        <host>smtp.one.example.com</host>
+        <port>587</port>
+        <connection-security>STARTTLS_REQUIRED</connection-security>
+        <authentication-type>PLAIN</authentication-type>
+        <username>one@example.com</username>
+      </outgoing-server>
+      <identities>
+        <identity>
+          <name>One</name>
+          <email>one@example.com</email>
+        </identity>
+      </identities>
+    </account>
+    <account uuid="00000000-0000-0000-0000-000000000031">
+      <name>Legacy POP</name>
+      <incoming-server type="POP3">
+        <host>pop.two.example.com</host>
+        <port>995</port>
+        <connection-security>SSL_TLS_REQUIRED</connection-security>
+        <authentication-type>PLAIN</authentication-type>
+        <username>two@example.com</username>
+      </incoming-server>
+    </account>
+    <account uuid="00000000-0000-0000-0000-000000000032">
+      <name>Two Identities</name>
+      <incoming-server type="IMAP">
+        <host>imap.three.example.com</host>
+        <port>993</port>
+        <connection-security>SSL_TLS_REQUIRED</connection-security>
+        <authentication-type>XOAUTH2</authentication-type>
+        <username>three@example.com</username>
+      </incoming-server>
+      <outgoing-server type="SMTP">
+        <host>smtp.three.example.com</host>
+        <port>587</port>
+        <connection-security>STARTTLS_REQUIRED</connection-security>
+        <authentication-type>XOAUTH2</authentication-type>
+        <username>three@example.com</username>
+      </outgoing-server>
+      <identities>
+        <identity>
+          <name>Three Work</name>
+          <email>three.work@example.com</email>
+          <settings>
+            <value key="signatureUse">true</value>
+            <value key="signature">Work sig</value>
+          </settings>
+        </identity>
+        <identity>
+          <name>Three Personal</name>
+          <email>three.personal@example.com</email>
+          <settings>
+            <value key="signatureUse">false</value>
+          </settings>
+        </identity>
+      </identities>
+    </account>
+  </accounts>
+</k9settings>

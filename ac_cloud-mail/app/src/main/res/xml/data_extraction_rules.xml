@@ -1,18 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Backup / device-transfer rules (Android 12+). Backups are disabled via
+  android:allowBackup="false"; these exclusions are a defensive backstop covering both
+  cloud-backup and device-to-device transfer so that account credentials, the Room cache
+  (cached mail), and the settings DataStore never leave the device. See PRIVACY.md.
+-->
 <data-extraction-rules>
-    <!-- https://developer.android.com/about/versions/12/behavior-changes-12#backup-restore -->
     <cloud-backup>
-        <exclude domain="file" />
-        <exclude domain="database" />
-        <exclude domain="sharedpref" />
-        <exclude domain="external" />
-        <exclude domain="root" />
+        <exclude domain="sharedpref" path="sterna_account.xml" />
+        <exclude domain="database" path="sterna.db" />
+        <exclude domain="database" path="sterna.db-wal" />
+        <exclude domain="database" path="sterna.db-shm" />
+        <exclude domain="file" path="datastore/" />
     </cloud-backup>
     <device-transfer>
-        <exclude domain="file" />
-        <exclude domain="database" />
-        <exclude domain="sharedpref" />
-        <exclude domain="external" />
-        <exclude domain="root" />
+        <exclude domain="sharedpref" path="sterna_account.xml" />
+        <exclude domain="database" path="sterna.db" />
+        <exclude domain="database" path="sterna.db-wal" />
+        <exclude domain="database" path="sterna.db-shm" />
+        <exclude domain="file" path="datastore/" />
     </device-transfer>
 </data-extraction-rules>

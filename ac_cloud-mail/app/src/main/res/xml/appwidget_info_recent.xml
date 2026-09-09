@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ⛔ updatePeriodMillis="0" — the latest-messages widget polls NOTHING, and never may. Any other
+    value asks the system to wake this app on a timer (30 minutes at the very least, whether or not
+    a message moved) to redraw a list that has not changed. It is redrawn when the system asks: when
+    a cell is placed, after a reboot and after an app update.
+
+    android:description and android:previewLayout are API 31+, so they live in res/xml-v31 rather
+    than under a tools:targetApi here. Below API 31 the picker falls back to the app's icon and
+    shows no description: less pretty, and nothing else.
+
+    The list itself comes from a RemoteViewsService (RecentMailWidgetService), which is what listing
+    anything costs at minSdk 26 — RemoteViews.RemoteCollectionItems is API 31+. That service is
+    guarded by android:permission="android.permission.BIND_REMOTEVIEWS" in the manifest.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:initialLayout="@layout/widget_recent"
+    android:minHeight="110dp"
+    android:minWidth="180dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

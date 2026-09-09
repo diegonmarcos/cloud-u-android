@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The unread counter's home-screen layout, and the repository's first layout file of any kind:
+    everything else is Compose. A widget cannot be Compose (RemoteViews inflates in the launcher's
+    process, not ours), and RemoteViews accepts only a fixed list of views — LinearLayout,
+    RelativeLayout, FrameLayout, GridLayout, TextView, ImageView, Button, ProgressBar, ViewFlipper.
+    ⛔ No ConstraintLayout, no custom view, no Compose here, ever: any of them throws at inflation
+    time inside the launcher, and the cell shows "Problem loading widget".
+
+    The number stays on one line at any width (a four-digit total is ~70dp at this size, inside the
+    narrowest 2x1 cell), and the label below it may take two lines before it ellipsises — a
+    translated "All inboxes  (12)" is longer than the English one on a 360dp screen.
+
+    ⭐ BOTH TextViews CARRY TEXT, and it is not decoration. This is the file the system inflates as
+    `initialLayout`, i.e. what the cell shows between being dropped on the home screen and the
+    provider's first draw coming back — and on a cold start that draw opens Room and may take
+    seconds, or time out at 5 s and never arrive. With no android:text at all, the very first thing
+    the user saw of this widget was an EMPTY rectangle: no figure, no label, nothing to say the app
+    was even waking up. "A cell that keeps its old number is honest" was the argument for drawing
+    nothing on failure, and it holds — but at the first placement there IS no old number.
+
+    ⛔ Not a zero. "0" is a number, and a number here says "no unread mail", which the app does not
+    know yet and which is wrong for most people. The figure is a horizontal ellipsis: it is not a
+    count, nobody can misread it as one, and it says the same thing in every language. The label is
+    @string/app_name — already translated in the nine languages, so nothing is added to carry, and
+    it answers the only question a blank cell leaves: which app is this.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_unread_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_unread_background"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/widget_unread_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="…"
+        android:textColor="@color/widget_unread_count"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_unread_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:gravity="center_horizontal"
+        android:maxLines="2"
+        android:text="@string/app_name"
+        android:textColor="@color/widget_unread_label"
+        android:textSize="12sp" />
+</LinearLayout>

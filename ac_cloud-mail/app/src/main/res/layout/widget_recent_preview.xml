@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What the system's widget PICKER shows for the latest-messages widget (Android 12+, the
+    previewLayout of res/xml-v31).
+
+    ⛔ NOT the runtime layout. The provider does not run for a preview and the row factory is never
+    bound, so pointing the picker at @layout/widget_recent would advertise this widget as an empty
+    rectangle with the app's name in the middle of it — in the one place the widget has to say what
+    it is before anyone places it.
+
+    ⛔ NOT drawn on a home screen, ever: the names and times below are an illustration.
+
+    WHAT IS WRITTEN HERE, and why so little. Three senders and three clock times, and no subjects.
+    Given names are the same word in every language and a 24-hour time is digits; an example subject
+    would be an English sentence shown to eight readers out of nine, and a string for it would be a
+    tenth translation carried for a picture (the counter's preview refused the same thing for its
+    "12"). What the picture has to say is "this widget is a list of who wrote and when", and names
+    and times say it.
+
+    ⭐ EACH ROW OPENS ON THE SAME HEAD COLUMN AS A SERVED ONE: a badge, then the 8 dp account dot.
+    Both ImageViews are carried always by the real row, VISIBLE or INVISIBLE and never GONE
+    (widget_recent_row.xml), so every real line starts at the same x. Without the column here the
+    picture shows senders flush against the left edge, a layout no row has.
+
+    ⭐ AND THE TWO ARE SHOWN DIFFERENTLY, deliberately. The DOT stays invisible: it qualifies a
+    function that only exists from two accounts up AND with a colour actually chosen, and this
+    picture is looked at by someone who may hold one account — a coloured dot would promise a
+    telling-apart of mailboxes they will never see. The BADGE is shown: every unlocked row wears
+    one, whatever the number of accounts and whatever is configured, so drawing it promises nothing
+    that is not true. ⛔ It carries no letter: a preview is a static resource, the factory never
+    runs for it, and an initial here would name a correspondent who does not exist.
+
+    ⭐ THE FIRST ROW IS BOLD, AND THE OTHER TWO ARE NOT: one unread message and two read ones, which
+    is how a served row marks the difference (a StyleSpan set in RecentMailWidgetService.weighted;
+    the row layout has no unread dot and neither has this). Written by hand here because this file
+    is a hand-made copy of the row that nothing at runtime ever draws — so it goes on advertising
+    whatever it was last given, and three plain rows would advertise a list where nothing is ever
+    unread.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_unread_background"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
+
+        <ImageView
+            android:layout_width="@dimen/widget_recent_monogram"
+            android:layout_height="@dimen/widget_recent_monogram"
+            android:layout_marginEnd="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/widget_recent_monogram_badge" />
+
+        <ImageView
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginEnd="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/widget_recent_account_dot"
+            android:visibility="invisible" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Marie Dupont"
+            android:textColor="@color/widget_row_primary"
+            android:textStyle="bold"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:text="09:12"
+            android:textColor="@color/widget_unread_label"
+            android:textStyle="bold"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
+
+        <ImageView
+            android:layout_width="@dimen/widget_recent_monogram"
+            android:layout_height="@dimen/widget_recent_monogram"
+            android:layout_marginEnd="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/widget_recent_monogram_badge" />
+
+        <ImageView
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginEnd="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/widget_recent_account_dot"
+            android:visibility="invisible" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Tomasz Nowak"
+            android:textColor="@color/widget_row_primary"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:text="08:41"
+            android:textColor="@color/widget_unread_label"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingTop="6dp"
+        android:paddingBottom="6dp">
+
+        <ImageView
+            android:layout_width="@dimen/widget_recent_monogram"
+            android:layout_height="@dimen/widget_recent_monogram"
+            android:layout_marginEnd="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/widget_recent_monogram_badge" />
+
+        <ImageView
+            android:layout_width="8dp"
+            android:layout_height="8dp"
+            android:layout_marginEnd="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/widget_recent_account_dot"
+            android:visibility="invisible" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Ada Lindqvist"
+            android:textColor="@color/widget_row_primary"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:maxLines="1"
+            android:text="07:58"
+            android:textColor="@color/widget_unread_label"
+            android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The unread counter, ENLARGED: one line per account instead of one figure for all of them.
+
+    Which layout a cell gets is not decided here and is not decided by us: UnreadWidgetDraw hands
+    the launcher a RemoteViews(Map<SizeF, RemoteViews>) holding this one and @layout/widget_unread,
+    and the LAUNCHER picks by the size the user dragged the cell to. ⛔ Not OPTION_APPWIDGET_MIN_* —
+    those four numbers do not bound one size, they describe two orientations (MIN_WIDTH is the
+    portrait width, MAX_WIDTH the landscape one), so a single threshold read from them is wrong in
+    one of the two orientations by construction. That constructor is API 31+; below it the cell
+    keeps @layout/widget_unread whatever its size, which is what it did before this file existed.
+
+    ⛔ NO android:text ANYWHERE, and that is the opposite of the rule at the top of
+    @layout/widget_unread. That file is the initialLayout — the system inflates it the moment a cell
+    is dropped, before any draw comes back, so it must say something. This one is never anybody's
+    initialLayout: it is only ever handed over already filled in, and a literal left here would be a
+    line the launcher draws before UnreadWidgetContent.byAccount has decided that ventilating is
+    allowed at all — a name, or a figure, for an account the app lock says must not be named.
+
+    ⛔ THE ROOT CARRIES @+id/widget_unread_root because that is where the tap is attached, exactly
+    as in @layout/widget_unread: given to a child, only that child would open the app and the rest
+    of the cell would swallow the touch. Rows are NOT clickable — the whole cell is one target.
+
+    Same closed list of views as everywhere else in RemoteViews: LinearLayout, TextView. ⛔ No
+    ConstraintLayout, or the cell shows "Problem loading widget" in the launcher's process.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_unread_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_unread_background"
+    android:gravity="center_vertical"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:id="@+id/widget_unread_accounts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+</LinearLayout>

@@ -1,0 +1,50 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<k9settings version="110" format="1">
+  <global>
+    <value key="animations">true</value>
+    <value key="theme">follow_system</value>
+    <value key="messageListDateTimeFormat">Contextual</value>
+  </global>
+  <accounts>
+    <account uuid="00000000-0000-0000-0000-000000000001">
+      <name>demo@example.com</name>
+      <incoming-server type="IMAP">
+        <host>outlook.office365.com</host>
+        <port>993</port>
+        <connection-security>SSL_TLS_REQUIRED</connection-security>
+        <authentication-type>XOAUTH2</authentication-type>
+        <username>demo@example.com</username>
+        <extra>
+          <value key="autoDetectNamespace">true</value>
+          <value key="pathPrefix" />
+        </extra>
+      </incoming-server>
+      <outgoing-server type="SMTP">
+        <host>smtp.office365.com</host>
+        <port>587</port>
+        <connection-security>STARTTLS_REQUIRED</connection-security>
+        <authentication-type>XOAUTH2</authentication-type>
+        <username>demo@example.com</username>
+      </outgoing-server>
+      <settings>
+        <value key="automaticCheckIntervalMinutes">60</value>
+        <value key="messageFormat">HTML</value>
+      </settings>
+      <identities>
+        <identity>
+          <name>Demo User</name>
+          <email>demo@example.com</email>
+          <description>Première identité</description>
+          <settings>
+            <value key="signatureUse">false</value>
+          </settings>
+        </identity>
+      </identities>
+      <folders>
+        <folder name="INBOX">
+          <value key="integrate">true</value>
+        </folder>
+      </folders>
+    </account>
+  </accounts>
+</k9settings>

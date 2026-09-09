@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<k9settings version="110" format="1">
+  <accounts>
+    <account uuid="00000000-0000-0000-0000-000000000040">
+      <name>Healthy</name>
+      <incoming-server type="IMAP">
+        <host>imap.healthy.example.com</host>
+        <port>993</port>
+        <connection-security>SSL_TLS_REQUIRED</connection-security>
+        <authentication-type>PLAIN</authentication-type>
+        <username>healthy@example.com</username>
+      </incoming-server>
+      <outgoing-server type="SMTP">
+        <host>smtp.healthy.example.com</host>
+        <port>587</port>
+        <connection-security>STARTTLS_REQUIRED</connection-security>
+        <authentication-type>PLAIN</authentication-type>
+        <username>healthy@example.com</username>
+      </outgoing-server>
+      <identities>
+        <identity>
+          <name>Healthy</name>
+          <email>healthy@example.com</email>
+        </identity>
+      </identities>
+    </account>
+    <account uuid="00000000-0000-0000-0000-000000000041">
+      <name>Broken</name>
+      <incoming-server type="IMAP">
+        <port>993</port>
+        <connection-security>SSL_TLS_REQUIRED</connection-security>
+        <authentication-type>PLAIN</authentication-type>
+        <username>broken@example.com</username>
+      </incoming-server>
+      <identities>
+        <identity>
+          <name>Broken</name>
+          <email>broken@example.com</email>
+        </identity>
+      </identities>
+    </account>
+  </accounts>
+</k9settings>

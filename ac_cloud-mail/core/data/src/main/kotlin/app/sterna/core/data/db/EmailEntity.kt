@@ -1,0 +1,42 @@
+package app.sterna.core.data.db
+
+import androidx.room.Entity
+import androidx.room.Index
+
+/** Cached email for a mailbox list view. Composite `(accountId, id)` key: a JMAP id is unique
+ *  only within its account; two accounts of one login (#31) can share an [id]. Index column
+ *  order matters — it serves scope/sort/join queries in one (#121). */
+@Entity(
+    tableName = "emails",
+    primaryKeys = ["accountId", "id"],
+    indices = [Index("mailboxId"), Index(value = ["accountId", "mailboxId", "sortKey"])],
+)
+data class EmailEntity(
+    val id: String,
+    val accountId: String,
+    val mailboxId: String,
+    val threadId: String?,
+    val subject: String?,
+    val preview: String?,
+    val receivedAt: String?,
+    val fromName: String?,
+    val fromEmail: String?,
+    val seen: Boolean,
+    val flagged: Boolean,
+    val hasAttachment: Boolean,
+    /** Epoch millis derived from receivedAt, for ordering. */
+    val sortKey: Long,
+    /** `To:` recipients, JSON-encoded (v17); shown instead of sender in Sent/Drafts (#59). Null
+     *  decodes to []. */
+    val recipientsJson: String? = null,
+    /** `Reply-To:` addresses, JSON-encoded (v20); null decodes to [] ("answer the sender"). */
+    val replyToJson: String? = null,
+    /** `Cc:` recipients, JSON-encoded (v21); rebuilds a reopened draft's Cc and "reply all". */
+    val ccJson: String? = null,
+    /** `Bcc:` recipients, JSON-encoded (v21). Kept separate from [ccJson] — a blind copy
+     *  must not show to others. */
+    val bccJson: String? = null,
+    /** IMAP UIDVALIDITY [id]'s UID was read under (v25, #99); decoupled from
+     *  `mailbox_uidvalidity` so a renumbered folder can't make a purge hit different, live mail. */
+    val uidValidity: Long? = null,
+)

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The account mark of a widget row. Same shape and same 8dp as the unread dot next door, and a
+    shape rather than a vector for the same reason: it is one flat colour.
+
+    ⚠ THE COLOUR HERE IS A BASE, NOT THE ANSWER. Each row is retinted at runtime by
+    RecentMailWidgetService (setInt(…, "setColorFilter", …)) with the colour the reader chose for
+    that account, and a filter needs something opaque under it — so @color/widget_unread_count, the
+    same day/night colour the rest of the two widgets draw with, is what shows if a row is ever
+    served without one. A transparent base would filter to nothing at all.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/widget_unread_count" />
+</shape>

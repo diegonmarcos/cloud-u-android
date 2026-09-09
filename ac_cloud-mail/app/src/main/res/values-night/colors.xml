@@ -1,0 +1,21 @@
+<resources>
+    <!-- Pre-Compose window background, matching the Pelagic (dark) surface. -->
+    <color name="sterna_window_background">#0E1A1F</color>
+    <!-- Dark splash (Codeberg #9): same deep navy-teal as the window background, so the
+         cold start stays dark end-to-end on a dark-themed device. -->
+    <color name="sterna_splash_background">#0E1A1F</color>
+    <!-- The tern flips to the Pelagic primary (soft teal) to stay visible on the dark field. -->
+    <color name="sterna_splash_tern">#6FB1AB</color>
+    <!-- The widget in the system's dark mode: the Pelagic surface, with the soft teal on it.
+         ⛔ This is no longer what darkens a drawn cell — the app paints that in Kotlin from its own
+         theme. What is left here is the initialLayout and the two picker previews, which nobody
+         paints and which have nothing but the system's mode to go on. See values/colors.xml. -->
+    <color name="widget_unread_background">#0E1A1F</color>
+    <color name="widget_unread_count">#6FB1AB</color>
+    <!-- Two roles, not one. widget_unread_count is the ACCENT (Material `primary`): the big
+         unread figure and the unread dot of a row. widget_row_primary is a row's primary TEXT
+         (Material `onSurface`), like the sender line the app's own list draws. ⛔ Do not merge
+         them back: one resource for both painted every row name teal. -->
+    <color name="widget_row_primary">#DEE3E7</color>
+    <color name="widget_unread_label">#BCC6CE</color>
+</resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 12+ variant of res/xml/appwidget_info_unread.xml: same declaration plus the two
+    attributes the platform only understands from API 31 — the picker's description and a preview.
+    Everything else must stay identical to the base file, updatePeriodMillis="0" first of all (the
+    widget polls nothing; see the base file).
+
+    ⛔ previewLayout is NOT @layout/widget_unread. That is the runtime layout, and the text it
+    carries is a PLACEHOLDER: a horizontal ellipsis and the app's name, there to fill the seconds
+    between a cell being dropped and the provider's first draw coming back. The provider does not
+    run for a preview, so the picker would advertise this widget as "… Sterna" — which says nothing
+    about what it counts. @layout/widget_unread_preview is the same layout with an example figure
+    and the translated label in it.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_unread_description"
+    android:initialLayout="@layout/widget_unread"
+    android:minHeight="40dp"
+    android:minWidth="110dp"
+    android:previewLayout="@layout/widget_unread_preview"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

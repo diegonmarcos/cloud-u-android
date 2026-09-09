@@ -1,5 +1,27 @@
-# Vendored FairEmail source (see ac_cloud-mail/README.md). Committed as
-# plain files — these local build/IDE artifacts must never be re-added.
-build/
+# Gradle
 .gradle/
+build/
+**/build/
+.kotlin/
+
+# Local config / secrets — never commit these.
+# keystore.properties is WRITTEN BY THE ENGINE at ship time (cloud-mail-engine.sh,
+# signing='keystore_properties') from the one constellation key resolved out of
+# sops. It is a build artifact that happens to live at the app root, so it has to
+# be ignored here as well as by the repo root's *.jks / *.keystore rules.
+local.properties
+secrets.properties
+keystore.properties
+
+# Android Studio / IntelliJ
 .idea/
+*.iml
+captures/
+.cxx/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

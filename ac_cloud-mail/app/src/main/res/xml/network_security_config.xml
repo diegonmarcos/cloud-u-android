@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<network-security-config xmlns:tools="http://schemas.android.com/tools"
-    tools:ignore="InsecureBaseConfiguration,AcceptsUserCertificates">
-    <!-- https://developer.android.com/training/articles/security-config -->
-    <base-config cleartextTrafficPermitted="true">
+<!--
+  Trust anchors (#93). Since Android 7 the default configuration trusts only the system
+  CA store, so a CA the user installed themselves (Settings > Security > Encryption &
+  credentials > Install a certificate > CA certificate) is ignored and a self-hosted
+  server with a private CA cannot be reached at all. Adding the user store lets that
+  work while the chain and the hostname are still verified by the platform: there is no
+  "trust this certificate anyway" prompt anywhere in Sterna. See SECURITY.md.
+
+  Deliberately no cleartextTrafficPermitted attribute: the default under targetSdk 36 is
+  already false, which is exactly the behaviour this file inherits.
+-->
+<network-security-config>
+    <base-config>
         <trust-anchors>
             <certificates src="system" />
             <certificates src="user" />
         </trust-anchors>
-        <certificateTransparency enabled="false" />
     </base-config>
 </network-security-config>

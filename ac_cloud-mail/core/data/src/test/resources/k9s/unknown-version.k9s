@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<k9settings version="999" format="9">
+  <accounts>
+    <account uuid="00000000-0000-0000-0000-000000000050">
+      <name>Future Format</name>
+      <incoming-server type="IMAP">
+        <host>imap.future.example.com</host>
+        <port>993</port>
+        <connection-security>SSL_TLS_REQUIRED</connection-security>
+        <authentication-type>PLAIN</authentication-type>
+        <username>future@example.com</username>
+      </incoming-server>
+      <outgoing-server type="SMTP">
+        <host>smtp.future.example.com</host>
+        <port>587</port>
+        <connection-security>STARTTLS_REQUIRED</connection-security>
+        <authentication-type>PLAIN</authentication-type>
+        <username>future@example.com</username>
+      </outgoing-server>
+      <identities>
+        <identity>
+          <name>Future</name>
+          <email>future@example.com</email>
+        </identity>
+      </identities>
+    </account>
+  </accounts>
+</k9settings>

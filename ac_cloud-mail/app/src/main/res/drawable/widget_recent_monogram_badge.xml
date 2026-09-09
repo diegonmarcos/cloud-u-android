@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The monogram badge AS THE WIDGET PICKER SEES IT, and only there.
+
+    ⚠ A PREVIEW IS A STATIC RESOURCE. Nothing runs for it: no provider, no row factory, no read —
+    so it cannot carry the real badge, which is a Bitmap drawn at runtime from the palette in force
+    (WidgetMonogram). Hence a flat disc and NO LETTER: an initial here would be an invented
+    correspondent, and the picture's job is to show the row's geometry, not to name anybody.
+
+    The colour is @color/widget_unread_count for the same reason the account dot next door uses it:
+    it is the accent, the one flat colour the two widgets already draw with, and this is a shape
+    rather than a vector because it is one flat fill.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/widget_unread_count" />
+</shape>

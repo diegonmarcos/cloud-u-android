@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<k9settings version="110" format="1">
+  <accounts>
+    <!-- An older K-9 export: OPTIONAL security (not one of the two REQUIRED literals we map)
+         plus the matching cleartext ports. Must NOT come out configured in the clear. -->
+    <account uuid="00000000-0000-0000-0000-000000000040">
+      <name>Optional Security</name>
+      <incoming-server type="IMAP">
+        <host>imap.example.com</host>
+        <port>143</port>
+        <connection-security>SSL_TLS_OPTIONAL</connection-security>
+        <authentication-type>PLAIN</authentication-type>
+        <username>optional@example.com</username>
+      </incoming-server>
+      <outgoing-server type="SMTP">
+        <host>smtp.example.com</host>
+        <port>25</port>
+        <connection-security>STARTTLS_OPTIONAL</connection-security>
+        <authentication-type>PLAIN</authentication-type>
+        <username>optional@example.com</username>
+      </outgoing-server>
+    </account>
+    <!-- No <connection-security> at all (truncated / older format). -->
+    <account uuid="00000000-0000-0000-0000-000000000041">
+      <name>No Security Element</name>
+      <incoming-server type="IMAP">
+        <host>imap.example.org</host>
+        <port>143</port>
+        <authentication-type>PLAIN</authentication-type>
+        <username>missing@example.org</username>
+      </incoming-server>
+      <outgoing-server type="SMTP">
+        <host>smtp.example.org</host>
+        <port>587</port>
+        <authentication-type>PLAIN</authentication-type>
+        <username>missing@example.org</username>
+      </outgoing-server>
+    </account>
+  </accounts>
+</k9settings>

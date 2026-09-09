@@ -1,0 +1,10 @@
+<resources>
+    <!-- Android 12+ system splash: the tern flaps once over a light-grey field, then
+         the window hands off to the app. Uses the platform attributes directly (no
+         androidx.core:core-splashscreen needed). -->
+    <style name="Theme.Sterna.Splash" parent="Theme.Sterna">
+        <item name="android:windowSplashScreenBackground">@color/sterna_splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_tern_anim</item>
+        <item name="android:windowSplashScreenAnimationDuration">600</item>
+    </style>
+</resources>

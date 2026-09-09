@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What the system's widget PICKER shows (Android 12+, res/xml-v31's previewLayout). A copy of
+    widget_unread.xml carrying an example COUNT and the label the widget usually wears. That is the
+    only difference between the two files, and it is the right one: the runtime layout shows a
+    horizontal ellipsis and the app's name, because until the provider's first draw the app knows
+    neither the number nor which of the two labels applies, and must not pretend to. A picker entry
+    reading "… / Sterna Mail" says nothing about what this widget is for, in the one place the
+    widget has to sell itself before anyone places it.
+
+    ⛔ Not drawn on the home screen, ever. The production layout is widget_unread.xml, and the
+    number written HERE is an illustration that must never appear there: on a real cell it would sit
+    as a plausible, wrong count for as long as the first draw takes, and forever if it never lands.
+
+    The label is @string/inbox_all_inboxes — the widget's own two-account label, already translated
+    in the nine languages, so the preview speaks the reader's language too. The figure is a literal:
+    it is a digit, it would be the same word in every language, and a string for it would be a tenth
+    translation to carry for a picture.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_unread_background"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/widget_unread_count"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="12"
+        android:textColor="@color/widget_unread_count"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_unread_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:gravity="center_horizontal"
+        android:maxLines="2"
+        android:text="@string/inbox_all_inboxes"
+        android:textColor="@color/widget_unread_label"
+        android:textSize="12sp" />
+</LinearLayout>

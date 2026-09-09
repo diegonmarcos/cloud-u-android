@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Android 12+ lets the launcher decide how round a widget's cell is, and gives every widget on
+        the home screen the same corner. Sterna's cell takes that radius rather than a figure of its
+        own, so it sits among its neighbours instead of beside them. Below API 31 the value in
+        res/values applies, and stays 16dp.
+    -->
+    <dimen name="widget_corner_radius">@android:dimen/system_app_widget_background_radius</dimen>
+</resources>

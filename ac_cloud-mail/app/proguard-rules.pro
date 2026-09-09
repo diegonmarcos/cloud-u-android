@@ -1,184 +1,98 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Add project-specific ProGuard rules here.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# --- kotlinx.serialization ---------------------------------------------------
+# The serialization artifacts ship consumer rules, but the JMAP protocol leans
+# heavily on @Serializable models (core:jmap) where a stripped/renamed generated
+# serializer surfaces only at runtime as a sync failure. Keep them explicitly as
+# belt-and-suspenders (the official kotlinx.serialization R8 rules).
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.**
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
--keepattributes SourceFile,LineNumberTable,Signature,InnerClasses,EnclosingMethod
+# Keep the generated serializers and the companions that expose serializer().
+-if @kotlinx.serialization.Serializable class **
+-keepclassmembers class <1> {
+    static <1>$Companion Companion;
+}
+-if @kotlinx.serialization.Serializable class ** {
+    static **$* *;
+}
+-keepclassmembers class <2>$<3> {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-if @kotlinx.serialization.Serializable class **
+-keepclassmembers class <1> {
+    *** Companion;
+}
+-keepclasseswithmembers class ** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+# Sterna's own @Serializable models (JMAP wire types, settings) — keep wholesale
+# so no protocol field is ever dropped by shrinking.
+-keep,includedescriptorclasses class app.sterna.**$$serializer { *; }
+-keepclassmembers class app.sterna.** {
+    *** Companion;
+    kotlinx.serialization.KSerializer serializer(...);
+}
 
-# If you after the line number information, uncomment this to
-# hide the original source file name.
--renamesourcefileattribute SourceFile
+# --- logging ------------------------------------------------------------------
+# Drop debug/verbose logging from release builds, and ONLY those. Log.i/w/e stay:
+# reporters send logcats, and on hardware I do not own that is the only diagnostic
+# there is (a crash was fixed from a reporter's log, and another case still rides on
+# one). The real risk was never the existence of the log, it was the content
+# interpolated into it, which is handled at the source instead. If a debug line ever
+# carries something needed for diagnosis, promote it to Log.i rather than widen this.
+-assumenosideeffects class android.util.Log {
+    public static int d(...);
+    public static int v(...);
+}
 
-#App
--keep class eu.faircode.email.** {*;}
--keepnames class eu.faircode.email.** {*;}
+# The OpenPGP provider (OpenKeychain) sends its result Parcelables across the binder under
+# their original class names, and unmarshalling looks them up BY NAME in our classloader —
+# so the vendored openpgp-api classes must keep their names verbatim. Without this, every
+# minified release crashed with BadParcelableException/ClassNotFoundException
+# (OpenPgpSignatureResult) the moment a signed or encrypted mail was verified (Codeberg #14).
+-keep class org.openintents.openpgp.** { *; }
 
-#AndroidX
--keep class androidx.appcompat.widget.** {*;}
--keep class androidx.appcompat.app.AppCompatViewInflater {<init>(...);}
-#android.os.BadParcelableException: Parcelable protocol requires a Parcelable.Creator object called CREATOR on class androidx...
--keepclassmembers class * implements android.os.Parcelable {static ** CREATOR;}
-#ROOM inline compilation
--keep class androidx.work.impl.** {*;}
-#Stack traces, InvalidationTracker reflection
--keepnames class androidx.** {*;}
+# The avatar composables render nothing in a minified build while debug is fine: R8's optimizer
+# inlines these small, non-inline @Composable functions into their callers (the mapping keeps
+# only Monogram's synthetic lambda, the function itself is gone), which drops the restartable
+# group they need to emit — so neither the contact photo nor the monogram slot draws in the
+# recipient-suggestion menu, the message list or the reader. Keeping them whole stops the inline
+# and restores the avatar. Same failure family as #14: an optimization that is correct for
+# ordinary code but wrong for a compiler-managed calling convention.
+-keep class app.sterna.ui.components.MonogramKt { *; }
+-keep class app.sterna.ui.components.ContactAvatarKt { *; }
 
--dontnote androidx.**
--dontnote android.support.**
--dontnote kotlin.**
--dontwarn com.google.errorprone.annotations.Immutable
+# Same family, and pre-emptive this time (#120). IncognitoKeyboard is a small, non-inline
+# @Composable whose whole body is "provide an interceptor, call content()" — exactly the shape R8
+# inlined above. What it installs is the request that asks the keyboard not to learn from a message
+# being written, and unlike a missing avatar its loss is INVISIBLE: the composer looks and behaves
+# the same, only the privacy request is gone, and only in a minified build. Keeping the file's
+# class costs a few bytes and removes the one failure nobody would notice.
+-keep class app.sterna.ui.compose.IncognitoKeyboardKt { *; }
+# And the anonymous classes of that file, which is where the behaviour actually lives: the
+# interceptor and the request it wraps around the field's own compile to
+# IncognitoKeyboardKt$INCOGNITO_INTERCEPTOR$1 and a nested $1 of it. The rule above keeps the
+# facade and would have left those two to be merged, renamed or inlined on their own.
+-keep class app.sterna.ui.compose.IncognitoKeyboardKt$** { *; }
 
-#IAB
--keep class com.android.billingclient.** {*;}
--keepnames class com.android.billingclient.** {*;}
--keep class com.android.vending.billing.** {*;}
--keepnames class com.android.vending.billing.** {*;}
+# Same family again, pre-emptive (#63). LoadingRing is a small, non-inline @Composable whose body
+# is "read a setting, call one of two indicators" — the exact shape R8 inlined above, and it is now
+# the ONLY centred loading indicator on fifteen screens. Inlined away, a minified build would show
+# an empty screen wherever it used to say "loading".
+-keep class app.sterna.ui.components.LoadingRingKt { *; }
+# And its anonymous classes, same reason as IncognitoKeyboard above: the resting branch is a Box
+# whose content lambda and `progress = { rest }` compile to LoadingRingKt$LoadingRing$… — that
+# lambda IS the ring. The facade rule would leave them to be merged, renamed or inlined on their
+# own, and a minified build would then paint an empty screen on all fifteen loading states.
+-keep class app.sterna.ui.components.LoadingRingKt$** { *; }
 
--dontnote com.android.billingclient.**
-
-#JavaMail
--keep class javax.** {*;}
--keep class com.sun.** {*;}
--keep class myjava.** {*;}
--keep class org.apache.harmony.** {*;}
--keep class mailcap.** {*;}
--keep class mimetypes.** {*;}
--keepnames class com.sun.mail.** {*;}
-
--dontwarn java.awt.**
--dontwarn javax.activation.**
--dontwarn javax.security.**
-
-#jsoup
--keeppackagenames org.jsoup.nodes
--keepnames class org.jsoup.** {*;}
-
-#CSS Parser
--keepnames class com.steadystate.css.** {*;}
--keepnames class org.w3c.css.** {*;}
--keepnames class org.w3c.dom.** {*;}
-
-#CSS Parser / biweekly
--dontwarn org.w3c.dom.**
-
-#JCharset
--keep class net.freeutils.charset.** {*;}
-
-#dnsjava
--keep class org.xbill.DNS.** {*;}
--keepnames class org.xbill.DNS.** {*;}
-
--dontwarn sun.net.spi.nameservice.**
-
-#OpenPGP
--keep class org.openintents.openpgp.** {*;}
--keepnames class org.openintents.openpgp.** {*;}
-
-#biweekly
--keepnames class biweekly.** {*;}
--dontwarn biweekly.io.json.**
--dontwarn com.fasterxml.jackson.**
-
-#MSAL
--keep class com.microsoft.aad.adal.** {*;}
--keep class com.microsoft.identity.common.** {*;}
--dontwarn com.nimbusds.jose.**
--dontwarn org.bouncycastle.pkix.jcajce.**
--keepclassmembers enum * {*;} #GSON
-
-#Bouncy castle
--keep class org.bouncycastle.** {*;}
--keepnames class org.bouncycastle.* {*;}
--dontwarn org.bouncycastle.cert.dane.**
--dontwarn org.bouncycastle.jce.provider.**
--dontwarn org.bouncycastle.x509.util.**
-
-#AppAuth
--keep class net.openid.appauth.** {*;}
--keepnames class net.openid.appauth.* {*;}
-
-#Notes
--dontnote com.google.android.material.**
--dontnote com.sun.mail.**
--dontnote javax.activation.**
--dontnote org.xbill.DNS.**
--dontnote me.leolin.shortcutbadger.**
--dontnote com.github.chrisbanes.photoview.**
--dontnote com.bugsnag.android.**
--dontnote biweekly.io.**
-
-#SASL
--keep class com.sun.mail.imap.protocol.IMAPSaslAuthenticator {*;}
--keep class com.sun.mail.smtp.SMTPSaslAuthenticator {*;}
-
-#Color picker
--keepnames class com.flask.colorpicker.** {*;}
-
-#overscroll-decor
--keepnames class me.everything.android.ui.overscroll.** {*;}
-
-#Markwon
--keep class io.noties.markwon.** {*;}
--keep class org.commonmark.** {*;}
--keepnames class io.noties.markwon.** {*;}
--keepnames class org.commonmark.** {*;}
--dontwarn org.commonmark.ext.gfm.strikethrough.Strikethrough
-
-#Amazon IAP
--dontwarn com.amazon.**
--keep class com.amazon.** {*;}
--keepattributes *Annotation*
-
-#Misc
--dontwarn org.slf4j.impl.StaticLoggerBinder
--dontwarn edu.umd.cs.findbugs.annotations.SuppressFBWarnings
-
-#Apache Commons Compress
--keep class org.apache.commons.compress.archivers.zip.** {*;}
--keep class org.apache.commons.compress.compressors.gzip.** {*;}
-
-#ShortcutBadger
--keep class me.leolin.shortcutbadger.** {*;}
--keepnames class me.leolin.shortcutbadger.** {*;}
-
-#https://tinylog.org/v2/configuration/#proguard
--keepnames interface org.tinylog.**
--keepnames class * implements org.tinylog.**
--keepclassmembers class * implements org.tinylog.** { <init>(...); }
-
--dontwarn dalvik.system.VMStack
--dontwarn java.lang.**
--dontwarn javax.naming.**
--dontwarn sun.reflect.Reflection
-
-#EvalEx
--dontwarn lombok.Generated
--keep class com.ezylang.evalex.** {*;}
-
-# comms: rs.ltt.jmap (JMAP client) — Lombok-annotated, Gson-serialized entities.
-# R8 fails on the compile-only lombok.NonNull reference and would strip/rename
-# the reflected entity fields, breaking JMAP JSON. Silence lombok + keep the
-# library's model classes/members intact.
--dontwarn lombok.**
--keep class rs.ltt.jmap.** { *; }
--keepclassmembers class rs.ltt.jmap.** { *; }
-# Gson 2.10+ throws RuntimeException("Missing type parameter") when R8 strips
-# generic signatures from TypeToken anonymous subclasses. -keepattributes Signature
-# (added globally above) preserves them; these rules prevent TypeToken itself from
-# being shrunk away.
--keep class com.google.gson.reflect.TypeToken { *; }
--keep class * extends com.google.gson.reflect.TypeToken { *; }
-# joda-time (pulled transitively by the JMAP deps) references joda-convert's
-# compile-only @FromString/@ToString annotations — not present at runtime.
--dontwarn org.joda.convert.**
+# Same family, pre-emptive (#103). ReadingPane holds two small, non-inline @Composable functions:
+# the row that puts the list beside the reading pane, and the pane's own "select a message" line.
+# Inlined away, a wide window would show the list alone — or a blank right half — in release only.
+-keep class app.sterna.ui.inbox.ReadingPaneKt { *; }
+# And its anonymous classes, same reason as LoadingRing above: the row's content lambdas — the
+# `{ list() }` and `{ detail() }` handed to each Box — compile to ReadingPaneKt$ListDetailPanes$…,
+# outside the facade the rule above keeps; merged or inlined on their own, a wide window would
+# paint one of the two halves empty in a minified build.
+-keep class app.sterna.ui.inbox.ReadingPaneKt$** { *; }

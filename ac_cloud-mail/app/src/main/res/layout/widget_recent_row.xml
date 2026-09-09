@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ONE row of the latest-messages widget, served by RecentMailWidgetService.
+
+    Every text here is set at runtime and NONE is set in this file: what a row may say is
+    RecentMailWidgetContent's decision, taken from the notification-content setting and the app
+    lock, and a literal left in this layout would be a line the launcher draws before that rule ever
+    runs. ⛔ Nothing here reads a database column either — the factory hands over strings that are
+    already decided.
+
+    ⛔ THE ROOT CARRIES AN ID because that is what a tap is attached to (setOnClickFillInIntent in
+    RecentMailWidgetService): given to a child instead, only that child would open the message and
+    the rest of the row would swallow the touch.
+
+    Same closed list of views as the cell itself: LinearLayout, TextView, ImageView.
+
+    ⛔ READ AND UNREAD ARE TOLD APART BY WEIGHT, AND BY NOTHING ELSE — there is no unread dot on
+    this row, and re-adding one would say the same thing twice. The message list inside the app
+    settled that long ago (EmailListItem: "Unread is shown by weight (bold) rather than a status
+    dot"), and a home-screen cell that marks unread differently from the list it opens is the app
+    contradicting itself on the one piece of state a row carries. The weight is set at runtime, as
+    a StyleSpan inside the text (RecentMailWidgetService.weighted): RemoteViews has no way to set a
+    typeface on a TextView.
+
+    TWO IMAGEVIEWS HOLD THE COLUMN, and both are VISIBLE or INVISIBLE, never GONE. The badge comes
+    first, the account dot second. The list interleaves several accounts by date, so rows that wear
+    no dot (one account only, or an account left on the picker's "auto" position) sit beside rows
+    that do; and rows carry no badge at all under the app lock or at the NONE position of the
+    notification-content setting. A GONE view in either place would shift that row's sender left
+    against its neighbours, for no reason the reader can see.
+
+    ⛔ NEITHER IS NAMED OUT LOUD: importantForAccessibility="no" and no contentDescription on both.
+    Reading the account's name is the naming the app lock exists to prevent, and speaking the
+    initial is the same leak one letter at a time — on a locked screen the badge is not drawn, and
+    a talkback string would have said aloud what the pixels deliberately do not.
+
+    ⛔ NO android:src ON THE BADGE. It is a Bitmap posted at runtime (RecentMailWidgetService →
+    WidgetMonogram), painted in the tones read beside the rows; a compile-time drawable here would
+    be a colour this layout chose, on rows the palette has not answered for yet.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_recent_row_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+
+    <ImageView
+        android:id="@+id/widget_recent_row_monogram"
+        android:layout_width="@dimen/widget_recent_monogram"
+        android:layout_height="@dimen/widget_recent_monogram"
+        android:layout_marginEnd="8dp"
+        android:importantForAccessibility="no" />
+
+    <ImageView
+        android:id="@+id/widget_recent_row_account"
+        android:layout_width="8dp"
+        android:layout_height="8dp"
+        android:layout_marginEnd="8dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/widget_recent_account_dot" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/widget_recent_row_primary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/widget_row_primary"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/widget_recent_row_secondary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/widget_unread_label"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/widget_recent_row_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:maxLines="1"
+        android:textColor="@color/widget_unread_label"
+        android:textSize="12sp" />
+</LinearLayout>

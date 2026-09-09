@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    ⛔ updatePeriodMillis="0" — the widget polls NOTHING, and never may. Any other value asks the
+    system to wake this app on a timer (30 minutes at the very least, whether or not a single
+    message moved) to redraw a number that has not changed. The widget is redrawn when the system
+    asks: when it is placed, after a reboot and after an app update — and, since UnreadWidgetPush
+    was wired into SternaApplication, whenever the count itself moves. That collector is the reason
+    this attribute stays 0 rather than the reason it might one day change: it pushes on a number
+    that actually moved, which a timer cannot do.
+
+    resizeMode lets the cell be dragged to any size, and that is not decorative either: past a size
+    it draws a line per account instead of one figure, and the LAUNCHER picks between the two from
+    the RemoteViews size map UnreadWidgetDraw hands it. Nothing here declares that threshold, and
+    nothing reads OPTION_APPWIDGET_MIN_*/MAX_* to find it — those four numbers describe two
+    orientations rather than one size. Android 12 and up only; below it the cell keeps
+    @layout/widget_unread at every size.
+
+    android:description and android:previewLayout are API 31+, so they live in res/xml-v31 rather
+    than under a tools:targetApi here. Below API 31 the picker falls back to the app's icon and
+    shows no description: less pretty, and nothing else.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:initialLayout="@layout/widget_unread"
+    android:minHeight="40dp"
+    android:minWidth="110dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

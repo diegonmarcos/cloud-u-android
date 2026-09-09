@@ -1,10 +1,17 @@
+// Top-level build file. Plugins are declared here (apply false) and applied per-module.
+//
+// Groovy, not the .kts upstream ships, and the module scripts under app/ and
+// core/ are still .kts. Two reasons, both structural rather than taste:
+// the ship engine identifies a buildable app by `build.gradle` + `app/` at the
+// app root (cloud-mail-engine.sh, step materialize-fork), and settings.gradle
+// has to read build.json with groovy.json.JsonSlurper to keep the module graph
+// in one place. A root written in Kotlin would satisfy neither.
 plugins {
-    // https://developer.android.com/studio/releases/gradle-plugin
-    id 'com.android.application' version '9.2.1' apply false
-    // https://plugins.gradle.org/plugin/de.undercouch.download
-    id 'de.undercouch.download' version '5.7.0' apply false
-}
-
-tasks.register('clean', Delete) {
-    delete rootProject.getLayout().getBuildDirectory()
+    alias libs.plugins.android.application apply false
+    alias libs.plugins.android.library apply false
+    alias libs.plugins.kotlin.android apply false
+    alias libs.plugins.kotlin.jvm apply false
+    alias libs.plugins.kotlin.serialization apply false
+    alias libs.plugins.compose.compiler apply false
+    alias libs.plugins.ksp apply false
 }

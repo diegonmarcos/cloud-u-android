@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The latest-messages widget at RUNTIME, and its initialLayout.
+
+    ⛔ RemoteViews accepts a closed list of views — LinearLayout, RelativeLayout, FrameLayout,
+    GridLayout, TextView, ImageView, Button, ProgressBar, ViewFlipper, ListView, StackView,
+    AdapterViewFlipper, GridView. No ConstraintLayout, no Compose, no custom view: any of them
+    throws at inflation time inside the LAUNCHER's process and the cell reads "Problem loading
+    widget".
+
+    The ListView is filled by RecentMailWidgetService through setRemoteAdapter — the only way to
+    list anything below API 31, where RemoteViews.RemoteCollectionItems does not exist yet.
+
+    ⭐ THE NOTICE CARRIES TEXT, and it is not decoration. This file is what the system inflates the
+    instant a cell is dropped on the home screen, before any read has answered — and that read may
+    take seconds on a cold start, or time out and never arrive, since nothing is drawn on failure.
+    Textless, the user's first sight of this widget is an empty rectangle.
+
+    ⛔ And that text says NOTHING about mail. @string/app_name names the app and stops there. "No
+    messages" here would be a claim about someone's inbox made before the app has read a single
+    row — wrong for nearly everyone, and wrong in the one state (an account whose inbox is not
+    known yet: restored backup, offline) where it is furthest from true. Which line replaces it
+    once a read HAS answered is RecentMailWidgetContent.notice's decision, not this file's.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_recent_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_unread_background"
+    android:padding="8dp">
+
+    <ListView
+        android:id="@+id/widget_recent_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:divider="@null"
+        android:dividerHeight="0dp" />
+
+    <TextView
+        android:id="@+id/widget_recent_notice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:maxLines="3"
+        android:text="@string/app_name"
+        android:textColor="@color/widget_unread_label"
+        android:textSize="14sp" />
+</FrameLayout>

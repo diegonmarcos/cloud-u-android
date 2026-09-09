@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 12+ variant of res/xml/appwidget_info_recent.xml: same declaration plus the two
+    attributes the platform only understands from API 31 — the picker's description and a preview.
+    Everything else must stay identical to the base file, updatePeriodMillis="0" first of all (the
+    widget polls nothing; see the base file).
+
+    ⛔ previewLayout is NOT @layout/widget_recent. That is the runtime layout: its list is filled by
+    a service the system never binds for a preview, so the picker would show an empty rectangle with
+    the app's name in it. @layout/widget_recent_preview is a picture of the same cell with example
+    rows in it.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_latest_description"
+    android:initialLayout="@layout/widget_recent"
+    android:minHeight="110dp"
+    android:minWidth="180dp"
+    android:previewLayout="@layout/widget_recent_preview"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

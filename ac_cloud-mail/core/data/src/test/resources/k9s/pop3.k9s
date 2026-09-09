@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
+<k9settings version="110" format="1">
+  <accounts>
+    <account uuid="00000000-0000-0000-0000-000000000020">
+      <name>Old POP account</name>
+      <incoming-server type="POP3">
+        <host>pop.example.com</host>
+        <port>995</port>
+        <connection-security>SSL_TLS_REQUIRED</connection-security>
+        <authentication-type>PLAIN</authentication-type>
+        <username>old@example.com</username>
+      </incoming-server>
+      <outgoing-server type="SMTP">
+        <host>smtp.example.com</host>
+        <port>587</port>
+        <connection-security>STARTTLS_REQUIRED</connection-security>
+        <authentication-type>PLAIN</authentication-type>
+        <username>old@example.com</username>
+      </outgoing-server>
+      <identities>
+        <identity>
+          <name>Old</name>
+          <email>old@example.com</email>
+        </identity>
+      </identities>
+    </account>
+  </accounts>
+</k9settings>

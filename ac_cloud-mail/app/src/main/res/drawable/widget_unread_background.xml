@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The widget's own surface, shared by both widgets and by both of their picker previews.
+
+    The corner comes from @dimen/widget_corner_radius, not from a figure written here, because the
+    radius the launcher gives every widget — @android:dimen/system_app_widget_background_radius —
+    only exists from API 31. Reading it directly would have needed a second copy of this drawable
+    under drawable-v31, i.e. two files to keep in step for one shape; a values file is not a copy of
+    anything. Below API 31 the dimen resolves to 16dp, as it always did.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/widget_corner_radius" />
+    <solid android:color="@color/widget_unread_background" />
+</shape>

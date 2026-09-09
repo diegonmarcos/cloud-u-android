@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The cell's surface when the APP is in its light theme — one of three, chosen in Kotlin by
+    WidgetThemeReader and set with setInt(…, "setBackgroundResource", …).
+
+    ⛔ The colour is a literal on purpose, and it is NOT free: it is ArcticColorScheme.surface from
+    ui/theme/Color.kt, and WidgetSurfaceDrawableTest asks the scheme itself for the value rather
+    than trusting the figure below. Re-tune the palette there and this file has to follow, loudly.
+
+    ⛔ Three files rather than one under drawable-night: -night answers the SYSTEM, which is exactly
+    the defect (#117) — a system in dark plus an app forced to light left the cell dark.
+
+    The corner comes from @dimen/widget_corner_radius and never from a length written here, for the
+    reason spelled out in widget_unread_background.xml: that dimen is what carries the API-31 split.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/widget_corner_radius" />
+    <solid android:color="#F7F8FA" />
+</shape>

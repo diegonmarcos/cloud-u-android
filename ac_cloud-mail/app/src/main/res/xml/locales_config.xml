@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Languages Sterna ships translations for. Surfaced in the system per-app
+     language picker (Settings → Apps → Sterna → Language) and read by AppCompat. -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="en" />
+    <locale android:name="fr" />
+    <locale android:name="es" />
+    <locale android:name="de" />
+    <locale android:name="it" />
+    <locale android:name="pt" />
+    <locale android:name="nl" />
+    <locale android:name="ru" />
+    <locale android:name="pl" />
+</locale-config>

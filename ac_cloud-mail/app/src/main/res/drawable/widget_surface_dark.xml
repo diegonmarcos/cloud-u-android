@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The cell's surface when the APP is in its dark theme. PelagicColorScheme.surface, pinned against
+    the scheme object by WidgetSurfaceDrawableTest — see widget_surface_light.xml for the whole
+    rule and for why there are three files instead of a drawable-night pair.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="@dimen/widget_corner_radius" />
+    <solid android:color="#0E1A1F" />
+</shape>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash tern silhouette (colour follows day/night via @color), split into a static body + two wing
+     groups so the wings can flap. Scaled down so it sits within the splash safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.72"
+        android:scaleY="0.72">
+        <!-- Body, neck and forked tail (static). -->
+        <path
+            android:fillColor="@color/sterna_splash_tern"
+            android:pathData="M49,58 L50,73 L54,63 L58,73 L59,58 L54,49 Z" />
+        <!-- Left wing — pivots at the shoulder. -->
+        <group
+            android:name="leftWing"
+            android:pivotX="51"
+            android:pivotY="54">
+            <path
+                android:fillColor="@color/sterna_splash_tern"
+                android:pathData="M54,49 C42,45 32,43 20,54 C32,52 43,54 50,57 Z" />
+        </group>
+        <!-- Right wing — pivots at the shoulder. -->
+        <group
+            android:name="rightWing"
+            android:pivotX="57"
+            android:pivotY="54">
+            <path
+                android:fillColor="@color/sterna_splash_tern"
+                android:pathData="M54,49 C66,45 76,43 88,54 C76,52 65,54 58,57 Z" />
+        </group>
+    </group>
+</vector>

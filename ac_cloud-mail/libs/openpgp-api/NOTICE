@@ -1,0 +1,17 @@
+openpgp-api — client library for the OpenPGP provider API (OpenKeychain).
+
+Vendored from the Thunderbird for Android repository:
+  https://github.com/thunderbird/thunderbird-android
+  path:   plugins/openpgp-api-lib/openpgp-api
+  commit: c2859b12f967e782ab71ea2820ecf0a88e053176 (2026-06-09)
+
+Original project: https://github.com/open-keychain/openpgp-api
+Copyright the OpenKeychain / openpgp-api authors.
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Local modifications for Sterna Mail:
+  - Replaced the Thunderbird logging shim (net.thunderbird.core.logging.legacy.Log)
+    with android.util.Log in OpenPgpApi.java and ParcelFileDescriptorUtil.java.
+  - Dropped UI/lifecycle helpers not used by Sterna: OpenPgpApiManager.java,
+    OpenPgpKeyPreference.java, OpenPgpIntentStarter.kt, the res/ tree, and the
+    unused IOpenPgpService.aidl (v1 interface; Sterna binds IOpenPgpService2).
