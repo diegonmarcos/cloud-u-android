@@ -27,6 +27,8 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.TextView
+import androidx.core.content.edit
+import androidx.core.view.children
 import androidx.core.view.doOnNextLayout
 import androidx.core.view.isVisible
 import helium314.keyboard.event.HapticEvent
@@ -50,6 +52,7 @@ import helium314.keyboard.latin.utils.ToolbarKey
 import helium314.keyboard.latin.utils.ToolbarMode
 import helium314.keyboard.latin.utils.addSecondRowKey
 import helium314.keyboard.latin.utils.createToolbarKey
+import helium314.keyboard.latin.utils.defaultToolbarPref
 import helium314.keyboard.latin.utils.dpToPx
 import helium314.keyboard.latin.utils.getCodeForToolbarKey
 import helium314.keyboard.latin.utils.getCodeForToolbarKeyLongClick
@@ -167,15 +170,17 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // the whole row — taking Translate and Enhance with it, which is why
         // those bars looked broken when in fact they were never reachable.
         if (mToolbarMode != ToolbarMode.HIDDEN) {
-            for (key in getEnabledToolbarKeys(context.prefs())) {
-                try {
-                    val button = createToolbarKey(context, key)
-                    button.layoutParams = toolbarKeyLayoutParams
-                    setupKey(button, colors)
-                    toolbar.addView(button)
-                } catch (t: Throwable) {
-                    Log.e("SuggestionStripView", "failed building toolbar key $key", t)
-                }
+            buildRow(toolbar, getEnabledToolbarKeys(context.prefs()), colors)
+            if (toolbar.childCount == 0) {
+                // A toolbar the user did not hide that builds nothing is a stored layout
+                // that cannot be shown (every key disabled, unknown, or unbuildable). The
+                // strip is rebuilt from that same stored layout on every restart, so left
+                // alone it stays broken forever — nothing else ever rewrites the layout
+                // pref except a TOOLBAR_LAYOUT_REVISION bump. Restoring the shipped row
+                // here, and storing it, makes it a one-time event.
+                Log.w(TAG, "toolbar built 0 keys from the stored layout, restoring the default row")
+                context.prefs().edit { putString(Settings.PREF_TOOLBAR_KEYS, defaultToolbarPref) }
+                buildRow(toolbar, getEnabledToolbarKeys(context.prefs()), colors)
             }
         }
         // No mSuggestionStripHiddenPerUserSettings check. That flag means "the
@@ -183,24 +188,12 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         // (SettingsValues.java) — so in exactly the mode that shows the
         // toolbar, this loop was skipped and the second row stayed empty.
         // SETTINGS is its only member, which is why the Config icon went
-        // missing with nothing else obviously wrong.
+        // missing with nothing else obviously wrong. An EMPTY second row is
+        // not healed: unpinning every key is a choice the long-press offers.
         if (!isGone) {
-            for (secondRowKey in getSecondRowToolbarKeys(context.prefs())) {
-                // Guarded like the first row above: one key that fails to
-                // build used to abort the rest of init(), so a single bad
-                // entry took out the whole strip instead of itself.
-                try {
-                    val button = createToolbarKey(context, secondRowKey)
-                    button.layoutParams = toolbarKeyLayoutParams
-                    setupKey(button, colors)
-                    secondRowKeys.addView(button)
-                    val secondRowKeyInToolbar = toolbar.findViewWithTag<View>(secondRowKey)
-                    if (secondRowKeyInToolbar != null && Settings.getValues().mQuickPinToolbarKeys)
-                        secondRowKeyInToolbar.background = enabledToolKeyBackground
-                } catch (t: Throwable) {
-                    Log.e("SuggestionStripView", "failed building second-row key $secondRowKey", t)
-                }
-            }
+            buildRow(secondRowKeys, getSecondRowToolbarKeys(context.prefs()), colors)
+            if (Settings.getValues().mQuickPinToolbarKeys)
+                secondRowKeys.children.forEach { toolbar.findViewWithTag<View>(it.tag)?.background = enabledToolKeyBackground }
         }
 
         // SuperApp two-row strip: the toolbar now occupies its own dedicated row
@@ -587,6 +580,27 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         copy.isActivated = original.isActivated
         setupKey(copy, Settings.getValues().mColors)
         secondRowKeys.addView(copy)
+    }
+
+    /**
+     * Builds [keys] into [row] one at a time, so a key that cannot be built is the only thing
+     * lost — the try/catch is what keeps one bad entry from aborting init() and with it the
+     * whole strip. A key without an icon is treated as unbuildable on purpose: ImageButton
+     * takes a null drawable without complaint, and the result is a blank square that still
+     * fires on tap — worse than an absent key, and invisible to any try/catch.
+     */
+    private fun buildRow(row: ViewGroup, keys: List<ToolbarKey>, colors: Colors) {
+        for (key in keys) {
+            try {
+                val button = createToolbarKey(context, key)
+                if (button.drawable == null) throw IllegalStateException("the icon set has no icon named ${key.name}")
+                button.layoutParams = toolbarKeyLayoutParams
+                setupKey(button, colors)
+                row.addView(button)
+            } catch (t: Throwable) {
+                Log.e(TAG, "toolbar key $key dropped, it cannot be built", t)
+            }
+        }
     }
 
     private fun setupKey(view: ImageButton, colors: Colors) {
