@@ -2123,20 +2123,25 @@
           }
         ],
         "_doc_moved_cloud": "stack_cloud / tiles_cloud USED to hang here — GHA runs, repo commits and the Dagu deeplink. They are now sections[c3].stack_observability, under Cloud ▸ C3 ▸ Observability — which IS the c3 section's own Observability tab, not a copy of it beside the pages it points at. Nothing else keyed off them: `page:infos/cloud` addresses the PAGE, not these lists.",
+        "_doc_stack_msgs": "Projects ▸ Inboxes. Every card here draws the posting app's own notification boxes under its counts, and WHICH app that is comes from the `url` this panel declares: \"extapp:<id>\", an id from ui.external_apps. That declaration is the ONLY route — a panel that omits it renders its counts and nothing else, silently, because a missing declaration is a gap for whoever edits this file and not something the person holding the phone can act on (AggregatorStackFragment.inboxApp logs it to logcat instead). The card title used to double as a second, implicit route; it was removed because it bound notifications to a human-readable string, so relabelling a card silently moved or dropped its boxes.",
         "stack_msgs": [
           {
             "kind": "mail_accounts",
-            "title": "Mail · accounts"
+            "title": "Mail · accounts",
+            "url": "extapp:cloud-mail"
           },
           {
             "kind": "chat_matrix",
-            "title": "Chat · Matrix"
+            "title": "Chat · Matrix",
+            "url": "extapp:cloud-matrix"
           },
           {
             "kind": "chat_mattermost",
-            "title": "Chat · Mattermost"
+            "title": "Chat · Mattermost",
+            "url": "extapp:cloud-chat"
           },
           {
+            "_doc": "Deliberately declares NO `extapp:` url, unlike its siblings. This is a summary of the very app the `chat_matrix` card above already draws the notification boxes for, and declaring cloud-matrix here too would print the same Element notifications twice on one page. It stays what it is: counts.",
             "kind": "stats",
             "title": "Messenger (Element)",
             "subtitle": "Matrix · Element",
@@ -2163,6 +2168,7 @@
             "kind": "stats",
             "title": "Dialer (Fossy)",
             "subtitle": "Fossify Phone",
+            "url": "extapp:cloud-dialer",
             "rows": [
               {
                 "label": "Missed calls",

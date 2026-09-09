@@ -25,6 +25,9 @@
 #   T8  which app an inbox is about is DATA, never a package literal in Kotlin
 #   T9  the partial per-app view still prunes no read keys
 #   T10 the "N new" watermark advances on a page that declares no filter row
+#   T11 every inbox panel in build.json DECLARES that app — the feature shipped
+#       inert because the resolver was right and nothing was declared for it
+#   T12 an inbox that declares no app is quiet on the phone and loud in logcat
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0; FAIL=0
@@ -121,12 +124,17 @@ for k in mail_accounts chat_matrix chat_mattermost; do
 done
 
 echo "== the inbox→app binding is data =="
-has "$AGG" 'Sections.externalApp(extappId)' \
+has "$AGG" '?.let { Sections.externalApp(it) }' \
   && ok "T8: an extapp:<id> target resolves through ui.external_apps" \
   || bad "T8: the extapp route is gone"
-has "$AGG" 'Sections.externalApps().firstOrNull' \
-  && ok "T8: the label route reads the same declared catalog" \
-  || bad "T8: the label route no longer reads ui.external_apps"
+# The label route is GONE and must stay gone: it bound a card's notifications
+# to a human-readable title, so relabelling a card silently moved or dropped
+# its boxes, and two cards naming one app both claimed it.
+if grep -q 'Sections.externalApps()' "$CODE"; then
+  bad "T8: a title/label matching route is back — relabelling a card would move its boxes"
+else
+  ok "T8: extapp:<id> is the only route — no title matching"
+fi
 # No package literal anywhere in the code: a roster of app ids in Kotlin starts
 # rotting the day it is written. Fully-qualified Kotlin references are not
 # string literals, so only literals are inspected.
@@ -141,6 +149,51 @@ print("  ok: T8: no package literal in the fragment" if not bad
 sys.exit(1 if bad else 0)
 PY
 [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
+
+echo "== the declaration the resolver needs actually exists =="
+# T11 is the assertion that was missing when this feature shipped inert: the
+# resolver was correct and NO panel declared anything for it to resolve, so
+# every inbox card fell through. Code-shape tests could not see that; only
+# reading the data can.
+python3 - "$APP/build.json" <<'PY2'
+import io, json, sys
+b = json.load(io.open(sys.argv[1], encoding="utf-8"))
+ids = {a["id"] for a in b["ui"]["external_apps"]}
+KINDS = {"mail_accounts", "chat_matrix", "chat_mattermost"}
+bad = []
+seen = 0
+for sec in b["ui"]["sections"]:
+    for key, val in sec.items():
+        if not (key.startswith("stack_") and isinstance(val, list)):
+            continue
+        for panel in val:
+            if panel.get("kind") not in KINDS:
+                continue
+            seen += 1
+            url = panel.get("url", "")
+            if not url.startswith("extapp:"):
+                bad.append("%s/%s declares no extapp: url" % (key, panel.get("title")))
+            elif url[len("extapp:"):].split("/")[0] not in ids:
+                bad.append("%s/%s points at unknown app %r" % (key, panel.get("title"), url))
+if seen == 0:
+    bad.append("no inbox-kind panel found at all — the page moved and this test went blind")
+print("  ok: T11: all %d inbox panels resolve to a declared app" % seen if not bad
+      else "  FAIL: T11: " + "; ".join(bad))
+sys.exit(1 if bad else 0)
+PY2
+[ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
+
+echo "== the unresolved case is quiet for the user =="
+# T12: an undeclared inbox is a gap only whoever edits build.json can close, so
+# it must not be spelled out on the phone. The branch renders nothing and logs.
+if awk '/val app = inboxApp\(panel\)/,/^        }$/' "$CODE" | grep -q 'body.addView'; then
+  bad "T12: the unresolved branch draws into the card again — build.json prose on the phone"
+else
+  ok "T12: the unresolved branch draws nothing"
+fi
+has "$AGG" 'if (panel.kind in INBOX_KINDS) android.util.Log.w(TAG,' \
+  && ok "T12: the gap is reported to logcat, where whoever can fix it looks" \
+  || bad "T12: nothing reports the gap at all — it would be invisible to everyone"
 
 echo "== read keys and the watermark =="
 p=$(grep -cF 'StackFilters.pruneRead(' "$CODE")

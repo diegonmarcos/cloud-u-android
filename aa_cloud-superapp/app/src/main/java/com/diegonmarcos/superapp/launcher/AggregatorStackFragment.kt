@@ -2236,24 +2236,23 @@ class AggregatorStackFragment : Fragment(),
     // the notification itself carries rather than on a roster of apps.
 
     /** The `ui.external_apps` entry this card is an inbox for, or null when the
-     *  panel names none.
+     *  panel declares none.
      *
-     *  Both routes are EXACT — an `extapp:<id>` target the panel declares, or a
-     *  title/subtitle identical to that app's declared label. Nothing fuzzy: a
-     *  near-match would quietly file one app's notifications under another
-     *  app's box, and a notification shown against the wrong app is worse than
-     *  one not shown at all. */
-    private fun inboxApp(panel: Sections.StackPanel): Sections.ExternalApp? {
-        val extappId = (listOf(panel.url) + panel.links.map { it.url })
+     *  ONE route, and it is exact: the `extapp:<id>` target the panel declares.
+     *  A second route used to match the panel title against an app's declared
+     *  label, and it is gone. It bound a card's notifications to a
+     *  human-readable string, so relabelling a card silently moved or dropped
+     *  its boxes; and because the label is not unique to one card, the Inboxes
+     *  page had both a `chat_matrix` card and an Element summary card claiming
+     *  the same app, which drew the same notifications twice. Nothing fuzzy
+     *  either: a near-match would quietly file one app's notifications under
+     *  another app's box, and a notification shown against the wrong app is
+     *  worse than one not shown at all. */
+    private fun inboxApp(panel: Sections.StackPanel): Sections.ExternalApp? =
+        (listOf(panel.url) + panel.links.map { it.url })
             .firstOrNull { it.startsWith(EXTAPP_PREFIX) }
             ?.removePrefix(EXTAPP_PREFIX)?.substringBefore('/')
-            .orEmpty()
-        if (extappId.isNotBlank()) return Sections.externalApp(extappId)
-        val named = listOf(panel.title, panel.subtitle).map { it.trim() }.filter { it.isNotEmpty() }
-        return Sections.externalApps().firstOrNull { app ->
-            app.label.isNotBlank() && named.any { it.equals(app.label.trim(), ignoreCase = true) }
-        }
-    }
+            ?.let { Sections.externalApp(it) }
 
     /** Every package that IS this app on a device: the hub id, the resigned
      *  stock alt, the install target and each fork. A notification can arrive
@@ -2268,15 +2267,23 @@ class AggregatorStackFragment : Fragment(),
     ) {
         val app = inboxApp(panel)
         if (app == null) {
-            // A mail or chat card IS an inbox by construction, so one that names
-            // no app is a gap in the declaration — it says so, and names the
-            // fix. A `stats` card is a generic dashboard surface other pages
-            // reuse (Projects ▸ PM boards), so one that names no app simply
-            // stays the dashboard it already was.
-            if (panel.kind in INBOX_KINDS) body.addView(caption(ctx,
-                "No app declared for this inbox, so its notifications cannot be shown here. " +
-                "Declare one in build.json: \"url\": \"extapp:<id>\" on the panel, or title " +
-                "the panel exactly as that app is labelled in ui.external_apps."))
+            // Nothing is drawn, on purpose. A card whose inbox declares no app
+            // is a gap in build.json, and the person holding the phone cannot
+            // close it — the declaration grammar printed under every card put a
+            // paragraph of instructions where a count belongs, addressed to a
+            // reader who was not there. The explanation now goes where the
+            // reader who CAN act on it looks: logcat, at the moment the gap
+            // bites and naming the panel that has it, plus the contract written
+            // out beside the panels themselves (build.json _doc_stack_msgs).
+            //
+            // Only the inbox kinds are logged. A mail or chat card IS an inbox
+            // by construction, so a missing declaration there is a bug; a
+            // `stats` card is a generic dashboard surface other pages reuse
+            // (Projects ▸ PM boards), and one that names no app is not a gap at
+            // all — it simply stays the dashboard it already was.
+            if (panel.kind in INBOX_KINDS) android.util.Log.w(TAG,
+                "inbox panel '${panel.title}' (kind=${panel.kind}) declares no extapp: " +
+                "target, so no notifications can be shown under it")
             return
         }
         body.addView(shadeLabel(ctx, "NOTIFICATIONS"))
@@ -2666,14 +2673,17 @@ class AggregatorStackFragment : Fragment(),
         private const val ARCHIVE_LABEL         = "Archive"
         private const val ARCHIVE_RESTORE_LABEL = "Restore"
 
+        private const val TAG = "AggregatorStack"
+
         /** `extapp:<id>` — the declared handle for a companion app, resolved
          *  through `ui.external_apps`. An id, never a package name. */
         private const val EXTAPP_PREFIX = "extapp:"
 
-        /** The kinds that exist ONLY as inbox cards, and therefore say so when
-         *  they name no app. `stats` is deliberately absent: it is a generic
-         *  dashboard card other pages reuse, and a note there would be noise on
-         *  every page that is not Inboxes. */
+        /** The kinds that exist ONLY as inbox cards, and whose missing app
+         *  declaration is therefore worth a log line. `stats` is deliberately
+         *  absent: it is a generic dashboard card other pages reuse, and
+         *  logging one that names no app would warn about every card on every
+         *  page that is not Inboxes. */
         private val INBOX_KINDS = setOf("mail_accounts", "chat_matrix", "chat_mattermost")
 
         /** One namespace PER TOPIC: an ntfy poll is only ever complete for the
