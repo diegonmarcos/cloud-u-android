@@ -4584,6 +4584,7 @@
           "pkg:com.arlosoft.macrodroid",
           "pkg:com.diegonmarcos.cloudkeyboardlibs",
           "pkg:com.diegonmarcos.ide",
+          "pkg^com.diegonmarcos.ide.",
           "pkg:com.diegonmarcos.morpheus",
           "pkg:com.diegonmarcos.watchdog",
           "pkg:com.foxdebug.acode",
@@ -4772,7 +4773,9 @@
         "id": "prod_mail",
         "order": "430",
         "label": "@Mail",
+        "_doc_match_keywords": "This list is the CENTRAL classification: it is what puts a mail app in the \"@\" section, and therefore what makes its notifications survive the Notify ▸ Inboxes filter (PhoneTaxonomy.sectionPrefixOf → the first character of this folder's label). Any package named as a mail client anywhere else in this file has to appear HERE too, or that other list is describing an app the taxonomy has never heard of: app.sterna was added to sections[phone].phone_app_groups[Inboxes] on 2026-09-09 and not here, so upstream Sterna Mail fell to the `others` sink, came back prefix-less, and was pruned from every Notify tab except All. Keyed on package, never on label — the 2026-09-09 mail rename changed the product name and left every package id alone, which is exactly why this key survived it.",
         "match_keywords": [
+          "pkg:app.sterna",
           "pkg:com.diegonmarcos.comms.mail",
           "pkg:com.fsck.k9",
           "pkg:com.google.android.gm",
@@ -4815,7 +4818,8 @@
           "pkg:com.google.android.apps.messaging",
           "pkg:com.samsung.android.app.contacts",
           "pkg:com.samsung.android.dialer",
-          "pkg:com.samsung.android.messaging"
+          "pkg:com.samsung.android.messaging",
+          "pkg:org.fossify.phone"
         ],
         "match_metadata": [
           "intent:android.intent.category.APP_CONTACTS"
@@ -6452,8 +6456,9 @@
         "forks": {}
       },
       {
+        "_doc": "Cloud Mail — since 2026-09-09 a CLONE of Sterna Mail (ac_cloud-mail, commits 8b7ca107d/e7274372f), no longer the FairEmail fork the label used to name. The package ids below did NOT move: applicationId stays com.diegonmarcos.comms.mail so the replacement installs over what is in the field, and app.sterna is only the clone's R/BuildConfig namespace, never a package on any device. That is the whole reason every lookup in this file keys on package and not on this label.",
         "id": "cloud-mail",
-        "label": "Cloud Mail (Fairmail)",
+        "label": "Cloud Mail (Sterna)",
         "hub_package": "com.diegonmarcos.comms.mail",
         "install_package": "com.diegonmarcos.comms.mail",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/cloud-comms-mail.apk",
