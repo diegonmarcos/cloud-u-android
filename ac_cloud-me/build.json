@@ -415,15 +415,27 @@
                 ]
               },
               {
-                "id": "timeline",
-                "label": "Timeline",
-                "icon": "ic_p_cal_day"
-              },
-              {
-                "_doc": "Gym — the training programme, and the one page under Health that is NOT a libs:health surface: Summary, Timeline and Configs read Health Connect, while the plan is a decision rather than a measurement and has no record type. It is an ordinary `cards` stack at data/ui/projects/health/gym.json — one item per movement, both names, sets, repetitions, rest, a form note and its own drawable — so editing the programme is editing that list and never Kotlin. It sits here rather than beside it because a workout plan without the body's numbers next to it is a note, not a project.",
-                "id": "gym",
-                "label": "Gym",
-                "icon": "ic_gym"
+                "_doc": "Workout — everything the body is asked to do, which is three different things and so is a tree. Gym is the PLAN: a decision, not a measurement, with no Health Connect record type behind it, an ordinary `cards` stack at data/ui/projects/health/workout/gym.json — one item per movement, both names, sets, repetitions, rest, a form note and its own drawable — so editing the programme is editing that list and never Kotlin. Timeline is the RECORD, moved down from the Health level: it reads one day of every Health Connect metric, and a day of training reads next to the plan it was training for rather than three tabs away from it. Steps is the WALK, and it is the Activity metric narrowed to steps, distance and active calories, because daily walking is not a workout session and reading it beside VO2 max and power buried it. Gym keeps its own page rather than becoming a `cards` block inside Workout: the strip is the navigation, and a plan that long wants the whole screen.",
+                "id": "workout",
+                "label": "Workout",
+                "icon": "ic_gym",
+                "pages": [
+                  {
+                    "id": "gym",
+                    "label": "Gym",
+                    "icon": "ic_gym"
+                  },
+                  {
+                    "id": "timeline",
+                    "label": "Timeline",
+                    "icon": "ic_p_cal_day"
+                  },
+                  {
+                    "id": "steps",
+                    "label": "Steps",
+                    "icon": "ic_p_health_activity"
+                  }
+                ]
               },
               {
                 "id": "configs",

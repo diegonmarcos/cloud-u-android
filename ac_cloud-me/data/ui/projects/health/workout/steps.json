@@ -1,0 +1,13 @@
+[
+  {
+    "kind": "fragment",
+    "id": "health",
+    "page": "metric",
+    "metric": "activity",
+    "records": [
+      "StepsRecord",
+      "DistanceRecord",
+      "ActiveCaloriesBurnedRecord"
+    ]
+  }
+]
