@@ -101,12 +101,16 @@ class TextToolsService : Service() {
          *  - the prompt comes from keyboard_ai.summaries via AiRouter.summaryStyle, not from the
          *    Enhance styles. Mixing the two menus would offer "improve this" to a feature that
          *    promises "shorten this".
-         *  - ONE request, never TextEnhancer.rewrite. rewrite() splits input past the provider's
-         *    budget and rejoins the answers, which for a rewrite is right and for a summary is
-         *    exactly wrong: it produces a summary PER PIECE, concatenated, and a "summary" longer
-         *    than the mail it was made from. Input past the budget is cut, and the cut is STATED
-         *    in the reply — a summary of the first half of an email, handed over as a summary of
-         *    the email, is worse than no summary.
+         *  - it goes through AiRouter.summarise rather than TextEnhancer.rewrite. rewrite() splits
+         *    input past the provider's budget and rejoins the answers, which for a rewrite is right
+         *    and for a summary is exactly wrong: it produces a summary PER PIECE, concatenated, and
+         *    a "summary" longer than the mail it was made from.
+         *
+         * NOTHING OF THE SUMMARY IS DECIDED HERE. The budget, the truncation note and the check
+         * that a reply asked for bullets came back as bullets all live in AiRouter.summarise, which
+         * the keyboard's own Text Resume bar also calls directly. That is what makes cloud-mail's
+         * AI Resume and the keyboard's Text Resume the same feature rather than two features that
+         * agree today: this method contributes the binder, and not one rule about summarising.
          */
         override fun summarise(text: String?, summaryId: String?): Array<String> {
             val body = text.orEmpty()
@@ -116,14 +120,8 @@ class TextToolsService : Service() {
             } else {
                 AiRouter.summaryById(summaryId)
             }
-            val sent = body.take(AiRouter.maxChars)
             return try {
-                val summary = AiRouter.complete(this@TextToolsService, style.prompt, sent)
-                if (sent.length < body.length) {
-                    ok(summary + "\n\n" + String.format(AiRouter.summaryTruncatedNote, sent.length, body.length))
-                } else {
-                    ok(summary)
-                }
+                ok(AiRouter.summarise(this@TextToolsService, style, body))
             } catch (e: AiRouter.NoTokenException) {
                 failed("No API key for ${e.provider.label} — set one in AI Routing")
             } catch (e: Exception) {

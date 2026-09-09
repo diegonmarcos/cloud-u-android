@@ -50,7 +50,13 @@ object AiRouter {
     class Provider(val id: String, val label: String, val url: String, val needsToken: Boolean,
                    val defaultModel: String, val models: List<Model>,
                    val catalogUrl: String?, val pricingAsOf: String?)
-    class Style(val id: String, val label: String, val prompt: String)
+    /**
+     * One named prompt out of the registry. [bullets] marks a prompt that asked the model for a
+     * list, and it is the flag [enforceBullets] keys off; it is registry data rather than something
+     * guessed from the prompt wording, because whether a prompt wants bullets is a fact its author
+     * knows and a regex over English only estimates.
+     */
+    class Style(val id: String, val label: String, val prompt: String, val bullets: Boolean = false)
 
     private val registry: JSONObject by lazy {
         JSONObject(String(Base64.decode(BuildConfig.AI_ROUTING_B64, Base64.DEFAULT), Charsets.UTF_8))
@@ -104,7 +110,10 @@ object AiRouter {
     /** A registry object of id → {label, prompt}. Android's JSONObject keeps insertion order, so this is the menu order too. */
     private fun promptSet(key: String): List<Style> {
         val o = registry.optJSONObject(key) ?: return emptyList()
-        return o.keys().asSequence().map { id -> val s = o.getJSONObject(id); Style(id, s.getString("label"), s.optString("prompt")) }.toList()
+        return o.keys().asSequence().map { id ->
+            val s = o.getJSONObject(id)
+            Style(id, s.getString("label"), s.optString("prompt"), s.optBoolean("bullets"))
+        }.toList()
     }
 
     val defaultProvider: String get() = registry.getString("default_provider")
@@ -229,7 +238,84 @@ object AiRouter {
     fun summaryById(id: String): Style {
         val chosen = summaries.firstOrNull { it.id == id } ?: summaries.first { it.id == defaultSummary }
         val lines = listOf(summaryPreamble, chosen.prompt).filter { it.isNotBlank() }
-        return Style(chosen.id, chosen.label, lines.joinToString(" "))
+        return Style(chosen.id, chosen.label, lines.joinToString(" "), chosen.bullets)
+    }
+
+    /**
+     * THE summariser. Both Text Resume in the keyboard and AI Resume in cloud-mail end up here —
+     * the keyboard's bar calls it directly, cloud-mail calls it across the binder through
+     * TextToolsService.summarise — so the two applications cannot summarise differently.
+     *
+     * ONE request, never [TextEnhancer.rewrite]. rewrite() splits input past the provider's budget
+     * and rejoins the answers, which is right for a rewrite and exactly wrong here: it yields a
+     * summary PER PIECE, concatenated, i.e. something longer than the text it came from. Input past
+     * [maxChars] is cut instead, and the cut is STATED in the reply — a summary of the first half of
+     * a message, handed over as a summary of the message, is worse than no summary.
+     *
+     * Blocking; throws whatever [complete] throws. Never call on the main thread.
+     */
+    fun summarise(context: Context, style: Style, text: String): String {
+        val sent = text.take(maxChars)
+        val reply = complete(context, style.prompt, sent)
+        val shaped = if (style.bullets) enforceBullets(reply) else reply
+        if (sent.length == text.length) return shaped
+        return shaped + "\n\n" + String.format(summaryTruncatedNote, sent.length, text.length)
+    }
+
+    /** Canonical bullet opener; the bullet prompts name this exact string, so the two must agree. */
+    val summaryBulletMarker: String get() = registry.optString("summary_bullet_marker", "- ")
+
+    /** The other openers models reach for. A line starting with one of these IS a bullet. */
+    val summaryBulletAliases: List<String> by lazy { registry.stringList("summary_bullet_aliases") }
+
+    /** Appended when a reply that was asked for bullets contains no list at all. */
+    val summaryNotBulletsNote: String get() = registry.optString("summary_not_bullets_note")
+
+    /**
+     * Numbered openers, matched rather than listed: there are a hundred of them and a model
+     * generates them, so no registry list would ever be complete.
+     */
+    private val numberedBullet = Regex("""^\d{1,2}[.)]\s+""")
+
+    /**
+     * Hold the model to the shape the prompt asked for, because asking is not the same as getting.
+     *
+     * A line opening with any known bullet marker is rewritten to the canonical one: that changes
+     * punctuation, not content, and it is what makes "•" and "1." and "-" one shape to whatever
+     * reads the summary next.
+     *
+     * When NOTHING in the reply is a list the model wrote prose, and the reply is returned exactly
+     * as it wrote it with [summaryNotBulletsNote] appended. Splitting that paragraph into bullets
+     * here would invent a division of the facts that no model proposed and no reader could check —
+     * and a summariser that silently hands back a paragraph it was told not to write is the failure
+     * this function exists to make visible.
+     *
+     * ponytail: a stray heading above real bullets is left where the model put it. It is the
+     * model's own words and dropping lines is a bigger risk than an untidy first line; strip it if
+     * anyone ever minds.
+     */
+    fun enforceBullets(reply: String): String {
+        val marker = summaryBulletMarker
+        if (marker.isEmpty()) return reply
+        val aliases = summaryBulletAliases
+        val lines = reply.lines().map { line ->
+            val body = line.trimStart()
+            when {
+                body.isEmpty() -> line
+                body.startsWith(marker) -> body
+                else -> {
+                    val alias = aliases.firstOrNull { body.startsWith(it) }
+                    val numbered = if (alias == null) numberedBullet.find(body) else null
+                    when {
+                        alias != null -> marker + body.removePrefix(alias).trimStart()
+                        numbered != null -> marker + body.removeRange(numbered.range).trimStart()
+                        else -> line
+                    }
+                }
+            }
+        }
+        if (lines.none { it.startsWith(marker) }) return reply.trimEnd() + "\n\n" + summaryNotBulletsNote
+        return lines.joinToString("\n").trim()
     }
 
     /** One system prompt out of the shared preamble, the style, and whatever [extra] lines were pinned. */
