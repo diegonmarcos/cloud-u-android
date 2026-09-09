@@ -1,0 +1,76 @@
+[
+  {
+    "kind": "note",
+    "title": "Summary",
+    "body": "Everything being run, in one screen: what is scheduled, what is owed, what it costs, what the body is doing and where the year has been. Each panel below opens the surface that owns the numbers rather than restating them — this page is the index of the projects, not a second store of them."
+  },
+  {
+    "kind": "link_grid",
+    "title": "Calendar",
+    "subtitle": "Month view · CalDAV",
+    "links": [
+      {
+        "label": "Month",
+        "icon": "ic_p_cal_day",
+        "target": "extapp:cloud-calendar"
+      },
+      {
+        "label": "Agenda",
+        "icon": "ic_nav_agenda",
+        "target": "page:agenda/agenda"
+      },
+      {
+        "label": "ToDo",
+        "icon": "ic_p_more",
+        "target": "page:agenda/todo"
+      },
+      {
+        "label": "Boards",
+        "icon": "ic_p_c3_reports",
+        "target": "https://paca.diegonmarcos.com"
+      }
+    ]
+  },
+  {
+    "kind": "cards",
+    "title": "Panels",
+    "subtitle": "Each opens the app or page that holds the real figures",
+    "items": [
+      {
+        "title": "Tasks",
+        "subtitle": "Agenda · Day · ToDo",
+        "accent": "#42A5F5",
+        "body": "The next thirty days of events and every open VTODO, both from the same CalDAV account Agenda reads.",
+        "target": "page:agenda/todo"
+      },
+      {
+        "title": "Myfin",
+        "subtitle": "Personal finance",
+        "accent": "#66BB6A",
+        "body": "Net worth, the month's income and spending, accounts, categories and recent transactions — the accounting dashboard under Buro.",
+        "target": "page:buro/fin"
+      },
+      {
+        "title": "Myhealth",
+        "subtitle": "Health & fitness",
+        "accent": "#EC407A",
+        "body": "Steps, sleep, resting heart rate and workouts, read locally from Health Connect. The only MyHealth surface in the constellation.",
+        "target": "page:projects/health"
+      },
+      {
+        "title": "Nav Maps Tracker",
+        "subtitle": "Cloud-Nav location tracker",
+        "accent": "#7E57C2",
+        "body": "Trips, distance and places logged. The track itself lives in Cloud Nav; this is the way into it.",
+        "target": "extapp:cloud-nav"
+      },
+      {
+        "title": "Studying",
+        "subtitle": "Courses and hours",
+        "accent": "#FFA726",
+        "body": "The standing project — its own tab in this section.",
+        "target": "page:projects/studying"
+      }
+    ]
+  }
+]

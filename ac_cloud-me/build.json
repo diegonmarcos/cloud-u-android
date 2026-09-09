@@ -376,6 +376,12 @@
         "order": 4,
         "pages": [
           {
+            "_doc": "Summary — the project-management overview, first because it is the answer to 'what is going on' and every other tab here is one project inside that answer. It is the page the SuperApp used to draw as Projects ▸ My-PM: the same five panels (Calendar, Tasks, Myfin, Myhealth, Nav tracker), except that in the SuperApp four of the five were hardcoded mock numbers with no source, while every one of them is a LIVE surface of THIS app — Agenda reads CalDAV, Buro ▸ Fin draws the accounting dashboard, Projects ▸ Health reads Health Connect. So the panels open the real thing instead of restating a frozen copy of it, and My-PM in the SuperApp becomes a deep link here (extapp:cloud-me#page:projects/pm) exactly as its MyFin and MyHealth dashboard tiles already do. The id is `pm`, not `summary`: Section.page() in Sections.kt resolves a page id across the tab strip AND every sub-strip in one flat list, so a second `summary` in this section would shadow Health's own Summary sub-page and break that tab. Page ids are unique per section, and test-ui-pages.sh now fails when they are not.",
+            "id": "pm",
+            "label": "Summary",
+            "icon": "ic_p_c3_reports"
+          },
+          {
             "id": "health",
             "label": "Health",
             "icon": "ic_nav_health",

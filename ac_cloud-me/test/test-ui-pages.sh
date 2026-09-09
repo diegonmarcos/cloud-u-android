@@ -32,6 +32,15 @@ for s in secs:
                 files[f] = json.load(open(f))
         if subs:
             ids.append(p["id"])   # the container is still a valid target
+    # Sections.kt::Section.page() resolves an id against the tab strip AND
+    # every sub-strip in ONE flat list, so two pages in a section sharing an
+    # id are not two destinations — the second is unreachable and the first
+    # answers for both, which silently breaks the shadowed tab rather than
+    # failing anywhere. Projects came within one id of this: the new Summary
+    # tab would have shadowed Health's Summary sub-page had it been called
+    # `summary` instead of `pm`.
+    for dupe in sorted({i for i in ids if ids.count(i) > 1}):
+        bad.append(f"section {s['id']} declares page id '{dupe}' twice — the second is unreachable")
     pages[s["id"]] = ids
     if not ids and not s.get("target"):
         bad.append(f"section {s['id']} has neither pages nor a target")
@@ -112,6 +121,70 @@ for b in bad:
     print("FAIL:", b)
 sys.exit(1 if bad else 0)
 PYWEB
+
+# Every `extapp:cloud-me#<target>` in the SuperApp must land on a page that
+# exists HERE. Those strings are the only way into a specific Cloud Me page
+# from outside the app, they live in another app's build.json, and nothing on
+# either side notices when a page they name is renamed or removed — the
+# SuperApp cannot see this file and the tile stays silent, opening Cloud Me at
+# its front door as if the deep link had never been written.
+#
+# The resolution below mirrors the runtime exactly, so this passes only for the
+# reasons the phone would: ShellActivity.launchExternalApp splits the payload at
+# '#' (StackAnchors.FRAGMENT) and forwards the half after it as the
+# `shortcut_action` extra; MainActivity.handleShortcutIntent reads that extra
+# and hands it to onTarget, which splits `page:<section>/<page>` at the first
+# '/'; Sections.kt::Section.page() then looks the page id up across the tab
+# strip and every sub-strip, and leaf() walks a container tab down to its first
+# child.
+python3 - <<'PYLINK'
+import json, os, sys
+
+SUPERAPP = "../aa_cloud-superapp/build.json"
+if not os.path.exists(SUPERAPP):
+    print("aa_cloud-superapp not checked out — deep-link routes skipped")
+    sys.exit(0)
+
+secs = {s["id"]: s for s in json.load(open("build.json"))["ui"]["sections"]}
+
+def resolve(target):
+    """The page id Cloud Me would actually show, or a reason it would not."""
+    if not target.startswith("page:"):
+        return None, f"target {target} — not a page: route"
+    section_id, _, page_id = target[len("page:"):].partition("/")
+    section = secs.get(section_id)
+    if section is None:
+        return None, f"target {target} — no section '{section_id}'"
+    flat = [q for p in section.get("pages", []) for q in [p] + p.get("pages", [])]
+    hit = next((p for p in flat if p["id"] == page_id), None)
+    if hit is None:
+        return None, f"target {target} — section '{section_id}' declares no page '{page_id}'"
+    # leaf(): a container tab shows its first child, never itself.
+    while hit.get("pages"):
+        hit = hit["pages"][0]
+    return hit["id"], None
+
+def strings(o):
+    if isinstance(o, str):   yield o
+    elif isinstance(o, dict):
+        for v in o.values(): yield from strings(v)
+    elif isinstance(o, list):
+        for v in o:          yield from strings(v)
+
+# Every route the SuperApp actually ships, plus the one Projects > Summary was
+# built to answer. The literal is here on purpose: it is the contract this app
+# publishes, and it has to hold on the day the SuperApp side is written as much
+# as on the day after.
+routes = {s.split("#", 1)[1] for s in strings(json.load(open(SUPERAPP)))
+          if s.startswith("extapp:cloud-me#") and "#" in s}
+routes.add("page:projects/pm")
+
+bad = [why for _, why in map(resolve, sorted(routes)) if why]
+for b in bad:
+    print("FAIL:", b)
+print(f"checked {len(routes)} cloud-me deep-link routes")
+sys.exit(1 if bad else 0)
+PYLINK
 
 # A literal-dollar escape in Kotlin is almost always a generated-code accident:
 # "${'$'}x" is the string $x, not the value of x. One of those turned every
