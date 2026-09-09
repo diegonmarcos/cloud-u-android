@@ -1,3 +1,7 @@
+import java.time.Duration
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Properties
 
 plugins {
@@ -32,20 +36,26 @@ val commsApplicationId: String = (groovy.json.JsonSlurper()
 // well inside the 2^31 ceiling for centuries. Falls back to upstream's own number
 // when the stamp is absent or unparseable (a local build, where CI substitutes the
 // literal "dev"), so `./gradlew assembleRelease` still works off a bare checkout.
+//
+// Everything below refers to LocalDateTime/Duration/DateTimeFormatter by their imported
+// simple names, never as java.time.X. Inside a Kotlin DSL build script the identifier
+// `java` is already taken: the Android plugin applies java-base, so the generated
+// accessor `val Project.java: JavaPluginExtension` is in scope and wins the leftmost
+// segment of an expression. `java.time.Duration` then parses as "read property `time`
+// off the JavaPluginExtension" and cannot resolve. The imports here are a type-only
+// context where no accessor competes, so they bind to the real package. Do not
+// re-qualify these — it puts run 34325048405 back.
 fun commsVersionCode(upstreamVersionCode: Int): Int {
     val stamp = providers.gradleProperty("COMMS_BUILD_TIMESTAMP").orNull
         ?: System.getenv("COMMS_BUILD_TIMESTAMP")
         ?: return upstreamVersionCode
     val built = try {
-        java.time.LocalDateTime.parse(
-            stamp,
-            java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss"),
-        )
-    } catch (parseFailed: java.time.format.DateTimeParseException) {
+        LocalDateTime.parse(stamp, DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss"))
+    } catch (parseFailed: DateTimeParseException) {
         return upstreamVersionCode
     }
-    val epoch = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
-    val minutes = java.time.Duration.between(epoch, built).toMinutes()
+    val epoch = LocalDateTime.of(2026, 1, 1, 0, 0)
+    val minutes = Duration.between(epoch, built).toMinutes()
     return if (minutes > 0) (3_000_000L + minutes).toInt() else upstreamVersionCode
 }
 
