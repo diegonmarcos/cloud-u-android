@@ -99,13 +99,12 @@ import app.sterna.ui.text.LocalTextToolRunner
 import app.sterna.ui.text.TextTool
 import app.sterna.ui.text.TextToolScope
 import app.sterna.ui.text.TextToolPanel
+import app.sterna.ui.text.TextToolMenuItems
+import app.sterna.ui.text.TextToolSurface
 import app.sterna.core.data.text.htmlEscape
 import app.sterna.core.data.text.htmlToText
 import app.sterna.core.data.text.markDeceptiveLinks
 import app.sterna.ui.compose.bodySource
-import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material.icons.filled.AutoFixHigh
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Print
@@ -447,7 +446,7 @@ private fun MessagePager(
     // level (#62) — and shown in a box under the sender, which is inside the swiped page. Provided
     // rather than threaded so four signatures, two of them pinned line for line by tests, do not
     // each gain a parameter they never look at. See LocalTextToolRunner.
-    val textTools = rememberTextToolRunner()
+    val textTools = rememberTextToolRunner(TextToolSurface.READ)
     // Swiping to another message drops the previous one's summary and any error with it. A box
     // headed by this sender holding a summary of the last one is the worst of the two failures
     // available here: it looks right.
@@ -833,16 +832,20 @@ private fun MessageActions(
 
     // AI Resume — BEFORE the star, as asked. Summarises this message into the box under the sender.
     // Absent while there is no body to summarise: an AI icon on a header-only row would spend a
-    // network call to summarise nothing.
-    val resumable = messages.firstOrNull()?.body != null
+    // network call to summarise nothing. Absent, too, unless this surface offers Resume at all —
+    // the icon asks the same list the overflow and the runner ask, so a tool taken off
+    // TextToolSurface.READ loses its button here in the same edit, rather than leaving a live
+    // control standing behind a rule that no longer holds.
+    val resumable = messages.firstOrNull()?.body != null &&
+        TextTool.RESUME in textTools.surface.tools
     if (resumable) {
         IconButton(
             enabled = textTools.busy == null,
             onClick = { textTools.run(textToolScope, TextTool.RESUME, textToolSource()) },
         ) {
             Icon(
-                Icons.Filled.AutoAwesome,
-                contentDescription = stringResource(R.string.text_tool_resume),
+                TextTool.RESUME.icon,
+                contentDescription = stringResource(TextTool.RESUME.label),
             )
         }
     }
@@ -975,25 +978,17 @@ private fun MessageActions(
                 leadingIcon = { Icon(Icons.Filled.AttachFile, contentDescription = null) },
                 onClick = { menuOpen = false; onReply("forwardAttachment", replyTargetId, accountId) },
             )
-            // The two Text tools. Two entries, two ENGINES, and they are not interchangeable:
-            // Enhance goes to the OpenRouter model chosen in AI Routing, Translate goes to the
-            // translation library. The pairing is made once, in TextToolRunner.run.
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.text_tool_enhance)) },
-                leadingIcon = { Icon(Icons.Filled.AutoFixHigh, contentDescription = null) },
-                onClick = {
-                    menuOpen = false
-                    textTools.run(textToolScope, TextTool.ENHANCE, textToolSource())
-                },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.text_tool_translate)) },
-                leadingIcon = { Icon(Icons.Filled.Translate, contentDescription = null) },
-                onClick = {
-                    menuOpen = false
-                    textTools.run(textToolScope, TextTool.TRANSLATE, textToolSource())
-                },
-            )
+            // The Text tools this surface offers, drawn from TextToolSurface.READ rather than
+            // listed here. On a RECEIVED message that is Translate alone: Enhance REWRITES a text
+            // into a better version of itself, and this text is a record of what somebody else
+            // sent — there is nothing to improve and nowhere to save an improvement to. The
+            // read-side counterpart is AI Resume, on the toolbar above, which makes a separate
+            // shorter text ABOUT the message instead of touching it. Translate stays because it
+            // is meaningful in both directions.
+            TextToolMenuItems(textTools.surface) { tool ->
+                menuOpen = false
+                textTools.run(textToolScope, tool, textToolSource())
+            }
             // Reading mode (#149). The label says what the tap DOES, so it follows the mode actually
             // RENDERED — which is why the entry reads "Show HTML" on a message the setting opened as
             // text. Transitory: the deviation is forgotten when the message is left.

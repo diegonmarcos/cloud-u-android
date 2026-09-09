@@ -66,10 +66,10 @@ import androidx.compose.material.icons.filled.MoreVert
 import app.sterna.ui.text.rememberTextToolRunner
 import app.sterna.ui.text.TextToolScope
 import app.sterna.ui.text.TextToolPanel
+import app.sterna.ui.text.TextToolMenuItems
+import app.sterna.ui.text.TextToolSurface
 import app.sterna.ui.text.TextTool
 import app.sterna.core.data.text.Span
-import androidx.compose.material.icons.filled.Translate
-import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BasicAlertDialog
@@ -512,7 +512,7 @@ fun ComposeScreen(
 
     // Text tools on a DRAFT. Unlike the reader's, this one applies: the body is the user's own
     // and the result belongs back in the field.
-    val textTools = rememberTextToolRunner()
+    val textTools = rememberTextToolRunner(TextToolSurface.COMPOSE)
     val textToolScope = rememberCoroutineScope()
     // WHAT was sent and from WHERE, captured at the tap. The engines are network calls and the
     // user keeps typing while one is in flight; applying a reply against a range that has since
@@ -1275,21 +1275,17 @@ fun ComposeScreen(
                                 trailingIcon = { Checkbox(checked = requestReceipt, onCheckedChange = null) },
                                 onClick = { moreMenu = false; requestReceipt = !requestReceipt },
                             )
-                            // Two entries, two ENGINES: Enhance is the OpenRouter model chosen in
-                            // AI Routing, Translate is the translation library. The pairing is made
-                            // once, in TextToolRunner.run, so there is one line to get wrong.
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.text_tool_enhance)) },
-                                leadingIcon = { Icon(Icons.Filled.AutoFixHigh, contentDescription = null) },
-                                onClick = { moreMenu = false; runTextTool(TextTool.ENHANCE) },
-                                enabled = !sending,
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.text_tool_translate)) },
-                                leadingIcon = { Icon(Icons.Filled.Translate, contentDescription = null) },
-                                onClick = { moreMenu = false; runTextTool(TextTool.TRANSLATE) },
-                                enabled = !sending,
-                            )
+                            // The Text tools this surface offers, drawn from TextToolSurface.COMPOSE
+                            // rather than listed here. Enhance belongs on THIS side and only this
+                            // side: the text is the user's own, they can still change it, and the
+                            // rewrite has somewhere to land. AI Resume is not here for the mirror
+                            // reason — summarising a draft you are still writing answers a question
+                            // nobody asked. Closed while a send is in flight, which is a separate
+                            // question from membership: see TextToolMenuItems.
+                            TextToolMenuItems(textTools.surface, enabled = !sending) { tool ->
+                                moreMenu = false
+                                runTextTool(tool)
+                            }
                         }
                         // The presets, anchored to this same Box as the overflow: the two menus are
                         // siblings, never one inside the other.

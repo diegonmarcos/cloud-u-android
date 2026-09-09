@@ -1,12 +1,19 @@
 package app.sterna.ui.text
 
+import androidx.annotation.StringRes
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import app.sterna.R
 import com.diegonmarcos.superapp.texttools.TextToolsClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,8 +30,53 @@ import kotlinx.coroutines.withContext
  * curriculum vitae, and not resuming anything that was paused. It shares ENHANCE's provider, key,
  * model and error wording on purpose (one binder method, `summarise`, over the same engine); what
  * it does NOT share is the prompt, which comes from the keyboard's summary registry.
+ *
+ * [label] and [icon] live here rather than at each call site because a tool that reads "Translate"
+ * on one screen and shows a different glyph on another is two tools as far as the user is
+ * concerned. [inOverflow] says whether the tool is DRAWN as an entry in a screen's overflow menu;
+ * [RESUME] is not, because it is started from its own toolbar icon and reports into the box under
+ * the sender rather than into [TextToolPanel]'s dialog. That placement difference was already
+ * expressed as an early return inside the panel — it is stated here instead, once.
  */
-enum class TextTool { ENHANCE, TRANSLATE, RESUME }
+enum class TextTool(
+    @StringRes val label: Int,
+    val icon: ImageVector,
+    val inOverflow: Boolean,
+) {
+    ENHANCE(R.string.text_tool_enhance, Icons.Filled.AutoFixHigh, inOverflow = true),
+    TRANSLATE(R.string.text_tool_translate, Icons.Filled.Translate, inOverflow = true),
+    RESUME(R.string.text_tool_resume, Icons.Filled.AutoAwesome, inOverflow = false),
+}
+
+/**
+ * WHICH TOOLS A SURFACE OFFERS. This is the whole rule, and it is stated exactly once.
+ *
+ * It used to be nowhere: the reader hand-built its menu and the composer hand-built its own, so
+ * "does this screen have Enhance" was answered in two places that had no way to disagree loudly.
+ * That is how an action ends up rendered on a screen whose handler was removed, or removed from a
+ * screen whose handler still answers.
+ *
+ * The split is not cosmetic, and it is the reason this type exists rather than a boolean:
+ *
+ *   [READ]     a RECEIVED message. Enhance REWRITES a text into a better version of itself, and a
+ *              received message is a record of what somebody else sent — there is nothing to
+ *              improve and nowhere to save an improvement to. [TextTool.RESUME] is the read-side
+ *              counterpart: it produces a separate, shorter text ABOUT the message, which is a
+ *              thing you can honestly do to somebody else's words.
+ *   [COMPOSE]  a DRAFT. The text is the user's own and they can still change it, so a rewrite has
+ *              both a point and somewhere to land. Summarising your own unsent draft does not.
+ *
+ * [TextTool.TRANSLATE] is on both because it is meaningful in both directions: understanding a
+ * message you received and writing one somebody else can read are the same need pointed two ways.
+ *
+ * Every renderer asks this list what to draw, and [TextToolRunner.run] REFUSES anything not on it,
+ * so a menu entry and its handler cannot drift apart — removing a tool here removes the button and
+ * closes the path behind it in the same edit.
+ */
+enum class TextToolSurface(val tools: List<TextTool>) {
+    READ(listOf(TextTool.RESUME, TextTool.TRANSLATE)),
+    COMPOSE(listOf(TextTool.ENHANCE, TextTool.TRANSLATE)),
+}
 
 /** How a finished run ended. Exactly one of [text] and [error] is set. */
 class TextToolOutcome(val tool: TextTool, val text: String?, val error: String?)
@@ -37,8 +89,14 @@ class TextToolOutcome(val tool: TextTool, val text: String?, val error: String?)
  * is visible and NAMES THE PROVIDER (so a slow call reads as a slow provider rather than a
  * stuck app), and a failure surfaces the engine's own reason verbatim instead of a generic
  * apology. There is no silent path out of [run]: every branch ends in an outcome.
+ *
+ * A runner belongs to ONE [surface], and that is what makes [TextToolSurface] a guard rather than
+ * a suggestion — see [run].
  */
-class TextToolRunner internal constructor(private val client: TextToolsClient) {
+class TextToolRunner internal constructor(
+    private val client: TextToolsClient,
+    val surface: TextToolSurface,
+) {
 
     /** Non-null while a call is in flight; the screen shows progress for exactly this tool. */
     var busy by mutableStateOf<TextTool?>(null)
@@ -63,6 +121,16 @@ class TextToolRunner internal constructor(private val client: TextToolsClient) {
      * to write the same field is the bug, not a feature.
      */
     fun run(scope: CoroutineScope, tool: TextTool, text: String) {
+        // THE guard, and the reason it lives in front of the engines rather than in front of a
+        // menu. Hiding a button only stops the taps you thought of; every other route in — a
+        // stale composable, a shortcut, a caller written next year — arrives HERE. Refusing at
+        // this line is what makes "Enhance is not on the read surface" true of the app rather
+        // than true of one screen's overflow menu. It reports rather than throws: an unreachable
+        // branch that crashes the app in a user's hand is a worse trade than one that says why.
+        if (tool !in surface.tools) {
+            outcome = TextToolOutcome(tool, null, "$tool is not offered on the ${surface.name.lowercase()} surface")
+            return
+        }
         if (busy != null) return
         if (text.isBlank()) {
             outcome = TextToolOutcome(tool, null, "Nothing to send — the message has no text outside its quoted history")
@@ -92,11 +160,14 @@ class TextToolRunner internal constructor(private val client: TextToolsClient) {
  * The client binds on construction and rebinds on use, so it is deliberately kept on the
  * APPLICATION context and not rebuilt per composition — a fresh bind for every recomposition
  * would spend the whole rate limit reconnecting.
+ *
+ * [surface] is required, not defaulted: a screen that does not say which set of tools it offers
+ * has not decided, and defaulting would decide for it silently.
  */
 @Composable
-fun rememberTextToolRunner(): TextToolRunner {
+fun rememberTextToolRunner(surface: TextToolSurface): TextToolRunner {
     val app = LocalContext.current.applicationContext
-    return remember(app) { TextToolRunner(sharedClient(app)) }
+    return remember(app, surface) { TextToolRunner(sharedClient(app), surface) }
 }
 
 private var shared: TextToolsClient? = null

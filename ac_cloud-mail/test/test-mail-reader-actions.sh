@@ -271,15 +271,20 @@ src = open(sys.argv[1], encoding='utf-8').read()
 start = src.index("val resumable = messages.firstOrNull()?.body != null")
 end = src.index("var menuOpen by remember", start)
 row = src[start:end]
-icons = re.findall(r'Icons\.(?:AutoMirrored\.)?Filled\.(\w+)', row)
+# Two spellings, because the row draws from two places now. A Text tool takes its glyph from the
+# TextTool enum, which is where "which surface offers this" is also declared -- so the row names
+# the ACTION (Resume) and the enum owns the glyph, instead of this test pinning a second copy of a
+# choice it does not make. Everything else is still a literal Icons.Filled.X.
+icons = re.findall(r'Icons\.(?:AutoMirrored\.)?Filled\.(\w+)|TextTool\.(\w+)\.icon', row)
 # star/unstar is one action drawn two ways; likewise delete-forever, which is no longer on the row.
 seen, order = set(), []
-for i in icons:
+for literal, tool in icons:
+    i = literal or tool.capitalize()
     key = {"StarBorder": "Star"}.get(i, i)
     if key not in seen:
         seen.add(key)
         order.append(key)
-want = ["AutoAwesome", "Star", "Label", "Unsubscribe", "ReplyAll"]
+want = ["Resume", "Star", "Label", "Unsubscribe", "ReplyAll"]
 if order != want:
     print(f"  FAIL: A1 the action row is {order}, expected {want}")
     sys.exit(1)

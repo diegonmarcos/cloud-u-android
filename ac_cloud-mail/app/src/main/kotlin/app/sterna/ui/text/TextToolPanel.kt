@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,23 +42,17 @@ fun TextToolPanel(runner: TextToolRunner, onApply: ((String) -> Unit)?) {
     val busy = runner.busy
     val outcome = runner.outcome
     if (busy == null && outcome == null) return
+    val tool = busy ?: outcome!!.tool
     // AI Resume reports somewhere else: the owner asked for its summary in a box UNDER THE SENDER,
     // not in a modal over the message. Same runner, same progress and the same verbatim error — see
     // ResumeBox — so this is a routing decision about where one outcome is drawn, not a second copy
     // of the machinery. Returning early here is what keeps a dialog from opening over that box.
-    if ((busy ?: outcome?.tool) == TextTool.RESUME) return
+    // The tools this dialog answers for are exactly the ones drawn in an overflow menu, so it asks
+    // TextTool rather than naming RESUME: a fourth tool that draws itself is handled already.
+    if (!tool.inOverflow) return
 
     val clipboard = LocalClipboardManager.current
-    val toolName = stringResource(
-        when (busy ?: outcome!!.tool) {
-            TextTool.ENHANCE -> R.string.text_tool_enhance
-            TextTool.TRANSLATE -> R.string.text_tool_translate
-            // Unreachable — the early return above sends RESUME to its own box — but a `when` over
-            // an enum has to be exhaustive, and a branch is cheaper than an else that would swallow
-            // a fourth tool added later.
-            TextTool.RESUME -> R.string.text_tool_resume
-        },
-    )
+    val toolName = stringResource(tool.label)
 
     AlertDialog(
         // While a call is in flight there is nothing to dismiss TO: the reply would arrive
@@ -117,4 +113,37 @@ fun TextToolPanel(runner: TextToolRunner, onApply: ((String) -> Unit)?) {
             }
         },
     )
+}
+
+/**
+ * The overflow entries for [surface], drawn FROM the surface's own declaration.
+ *
+ * Both screens call this instead of hand-writing a DropdownMenuItem per tool. That is the point:
+ * the reader used to list Enhance and Translate itself and the composer listed its own pair, so
+ * the two could disagree about which tools exist — and did, which is the bug this replaces. Now
+ * "which entries does this menu hold" and "which tools will the runner accept" are the same list
+ * read twice, and neither can be edited without the other following.
+ *
+ * [TextTool.RESUME] never appears here even on [TextToolSurface.READ]: it is started from its own
+ * toolbar icon and reports into the box under the sender. See [TextTool.inOverflow].
+ *
+ * [enabled] is the caller's own gate — the composer closes its tools while a send is in flight —
+ * and is deliberately separate from membership. Whether an action EXISTS on a surface and whether
+ * it can be tapped right now are different questions, and answering them with one flag is how an
+ * action ends up permanently greyed out instead of honestly absent.
+ */
+@Composable
+fun TextToolMenuItems(
+    surface: TextToolSurface,
+    enabled: Boolean = true,
+    onPick: (TextTool) -> Unit,
+) {
+    surface.tools.filter { it.inOverflow }.forEach { tool ->
+        DropdownMenuItem(
+            text = { Text(stringResource(tool.label)) },
+            leadingIcon = { Icon(tool.icon, contentDescription = null) },
+            onClick = { onPick(tool) },
+            enabled = enabled,
+        )
+    }
 }
