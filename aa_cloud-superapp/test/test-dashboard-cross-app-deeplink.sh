@@ -79,13 +79,17 @@ me = json.load(open(sys.argv[2]))
 
 # Every navigable id Cloud-Me's MainActivity.open can resolve: a section, a tab,
 # a sub-tab, and a container tab (which opens its first child).
-pages = {}
-for s in me["ui"]["sections"]:
-    ids = []
-    for p in s.get("pages", []):
-        ids.append(p["id"])
-        ids += [q["id"] for q in p.get("pages", [])]
-    pages[s["id"]] = ids
+#
+# RECURSIVE, because Cloud-Me's strips are no longer two deep — Projects >
+# Health > Workout > Gym is three, and Section.page() still resolves the whole
+# chain into one flat list per section. A fixed two-level walk would report a
+# page that exists as missing, which fails this test for a tile that works.
+def ids_of(pages_json):
+    for p in pages_json:
+        yield p["id"]
+        yield from ids_of(p.get("pages", []))
+
+pages = {s["id"]: list(ids_of(s.get("pages", []))) for s in me["ui"]["sections"]}
 
 def walk(o):
     if isinstance(o, dict):
@@ -121,6 +125,56 @@ assert "libs:health" in mods, "libs:health dropped but Configs ▸ Permissions s
 assert "libs:fin" not in mods, "libs:fin still in the module graph after MyFin left"
 assert "libs:fin" not in mods["app"]["depends_on"], "app still depends on libs:fin"
 assert "myfin_mock" not in d["ui"], "ui.myfin_mock outlived the MyFin page"
+PY
+
+echo "== T5: the Dashboard row reads left-to-right as declared, and every tile in it goes somewhere =="
+python3 - "$BJ" <<'PY' && ok "MyBuro · MyProjects · MyFin · MyHealth · MySocials · | · PM Boards, separator inert" || bad "the Dashboard row is out of order, or carries a tile that leads nowhere"
+import json, sys
+d = json.load(open(sys.argv[1]))
+cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
+group = next(g for g in cloud["tile_groups"] if g["title"] == "Dashboard")
+tiles = group["tiles"]
+
+# Order is the product decision this row exists to express: the four Cloud-Me
+# deep links first, then MySocials, then a rule, then PM Boards last because it
+# is a web service and — see its own _doc — a route that 404s until paca ships.
+# Nothing about a JSON array's order fails on its own when someone appends to
+# it, which is exactly why it is asserted here.
+order = [t.get("id") for t in tiles]
+assert order == ["myburo", "myprojects", "myfin", "myhealth",
+                 "mysocials", "dashboard-sep", "pmboards"], order
+
+# The separator is a glyph, not a control. A cell with no target that is still
+# clickable is the dead-tap defect; declaring it keeps GroupedTilesFragment and
+# Sections.TileGroup.destinations able to tell decoration from a destination.
+sep = tiles[order.index("dashboard-sep")]
+assert sep.get("separator") is True, sep
+assert not sep.get("target"), f"a separator must not carry a target: {sep}"
+assert sep.get("label"), "parseTilesInline reads label with getString — it must exist"
+
+# A tile that is NOT a separator must go somewhere, in a grammar the launcher
+# actually dispatches. This is the check that would have caught a tile pointing
+# at a page nobody declares — T3 above then proves the cloud-me ones resolve.
+apps = {a["id"] for a in d["ui"].get("external_apps", [])}
+for t in tiles:
+    if t.get("separator"):
+        continue
+    target = t.get("target", "")
+    assert target, f"tile {t.get('id')} has no target — it would be a dead tap"
+    assert not t.get("separator"), t
+    if target.startswith("extapp:"):
+        app = target.removeprefix("extapp:").split("#", 1)[0]
+        assert app in apps, f"tile {t['id']} → no such ui.external_apps id '{app}'"
+    else:
+        assert target.startswith(("page:", "section:", "action:", "http")), \
+            f"tile {t['id']} target '{target}' — unknown grammar"
+
+want = {"myburo": "extapp:cloud-me#page:buro/summary",
+        "myprojects": "extapp:cloud-me#page:projects/pm"}
+for tid, target in want.items():
+    got = next(t for t in tiles if t.get("id") == tid)
+    assert got["target"] == target, (tid, got["target"], "!=", target)
+    assert got.get("icon"), f"{tid} tile has no icon"
 PY
 
 echo

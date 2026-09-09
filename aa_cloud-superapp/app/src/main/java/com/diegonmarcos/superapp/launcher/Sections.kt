@@ -275,10 +275,26 @@ object Sections {
         val label: String,
         val iconName: String,
         val target: String,
+        /** A rule drawn BETWEEN two tiles, not a tile. It carries a label and
+         *  nothing else — no icon, no target — and every surface that treats
+         *  tiles as destinations drops it, so it exists only where tiles are
+         *  laid out in a row. Declared as `"separator": true` in build.json.
+         *
+         *  It has to be its own flag rather than "a tile with a blank target":
+         *  target already defaults to blank, so that reading would silently
+         *  reclassify any tile whose target was lost in an edit as decoration
+         *  instead of failing. */
+        val separator: Boolean = false,
     )
 
     /** A themed sub-group of an aggregator section's tile list. */
-    data class TileGroup(val title: String, val tiles: List<AggTile>)
+    data class TileGroup(val title: String, val tiles: List<AggTile>) {
+        /** [tiles] minus the separators — the ones that actually go somewhere.
+         *  Only a renderer laying this group out as a ROW wants [tiles]; every
+         *  other reader is asking "what can be opened from here", and a rule
+         *  drawn between two icons is not an answer to that. */
+        val destinations: List<AggTile> get() = tiles.filterNot { it.separator }
+    }
 
     data class Page(
         val id: String,
@@ -630,10 +646,11 @@ object Sections {
                     val t = ta.getJSONObject(j)
                     out.add(
                         AggTile(
-                            id       = t.optString("id", t.optString("label", "")),
-                            label    = t.getString("label"),
-                            iconName = t.optString("icon", "ic_settings"),
-                            target   = t.optString("target", ""),
+                            id        = t.optString("id", t.optString("label", "")),
+                            label     = t.getString("label"),
+                            iconName  = t.optString("icon", "ic_settings"),
+                            target    = t.optString("target", ""),
+                            separator = t.optBoolean("separator", false),
                         )
                     )
                 }
@@ -938,13 +955,13 @@ object Sections {
      */
     fun appTilesFor(page: Page): List<AggTile> {
         fun tilesOf(sectionId: String): List<AggTile> =
-            byId(sectionId)?.tileGroups?.flatMap { it.tiles }.orEmpty()
+            byId(sectionId)?.tileGroups?.flatMap { it.destinations }.orEmpty()
 
         val group = page.appsFromTileGroup
             .split('/', limit = 2)
             .takeIf { it.size == 2 && it.none(String::isBlank) }
             ?.let { (sectionId, title) ->
-                byId(sectionId)?.tileGroups?.firstOrNull { it.title == title }?.tiles
+                byId(sectionId)?.tileGroups?.firstOrNull { it.title == title }?.destinations
             }
             .orEmpty()
 
@@ -995,7 +1012,7 @@ object Sections {
      *  apps whatever it declared. A page that names its own list means it. */
     fun aggregatorTilesFor(sec: Section, page: String): List<AggTile> = when {
         sec.tilesByPage[page]?.isNotEmpty() == true -> sec.tilesByPage.getValue(page)
-        sec.tileGroups.isNotEmpty()  -> sec.tileGroups.flatMap { it.tiles }
+        sec.tileGroups.isNotEmpty()  -> sec.tileGroups.flatMap { it.destinations }
         sec.tilesShared.isNotEmpty() -> sec.tilesShared
         else -> emptyList()
     }

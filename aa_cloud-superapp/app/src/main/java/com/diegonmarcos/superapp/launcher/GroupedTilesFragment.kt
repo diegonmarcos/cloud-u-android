@@ -108,7 +108,7 @@ class GroupedTilesFragment : Fragment() {
                 //    empty-state line) so the section doesn't disappear
                 //    entirely before the user has opened any Cloud tiles.
                 col.addView(sectionDivider(ctx))
-                val allTiles = Sections.all().flatMap { it.tileGroups }.flatMap { it.tiles }
+                val allTiles = Sections.all().flatMap { it.tileGroups }.flatMap { it.destinations }
                     .associateBy { it.target }
                 val recent = RecentCloudTiles.recent(ctx).mapNotNull { allTiles[it] }
                 col.addView(groupHeader(ctx, "Smart Folders"))
@@ -168,7 +168,37 @@ class GroupedTilesFragment : Fragment() {
         return scroll
     }
 
+    /**
+     * The "|" between two runs of tiles in one group. A glyph, not a control:
+     * a cell that looks like the tiles around it but does nothing when pressed
+     * is the defect this app already fixed once in the tab strips, so this one
+     * is explicitly not clickable, not focusable, and hidden from
+     * accessibility — TalkBack should walk from the tile before it to the tile
+     * after it and never stop on a vertical bar.
+     *
+     * Set in the tiles' own caption type at the icon's height so it reads as
+     * punctuation between the rows rather than as a piece of chrome sitting on
+     * top of them, and it stays aligned when the labels wrap to two lines.
+     */
+    private fun separatorCell(ctx: android.content.Context, tile: Sections.AggTile): View =
+        TextView(ctx).apply {
+            text = tile.label
+            setTextColor(0x66FFFFFF)
+            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+            gravity = android.view.Gravity.CENTER
+            isClickable = false
+            isFocusable = false
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            val pad = dp(6)
+            setPadding(pad, pad, pad, pad)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.MATCH_PARENT,
+            )
+        }
+
     private fun tileCell(ctx: android.content.Context, tile: Sections.AggTile): View {
+        if (tile.separator) return separatorCell(ctx, tile)
         // Fixed-width cells so the horizontal scroll row shows ~6
         // tiles at a time on a typical phone width (matches Home Apps'
         // tile_columns = 6) and the rest stay reachable by swiping.

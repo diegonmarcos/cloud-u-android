@@ -2534,11 +2534,18 @@
             "title": "Dashboard",
             "tiles": [
               {
-                "_doc": "PM Boards — the aa-sui_paca project-management tool (Kanban boards). Opens the cloud service over the browser/WebView. Leftmost tile of Tools Dashboards. NOTE: paca is not deployed yet (blocked on the WG mesh) — the route 404s until aa-sui_paca ships.",
-                "id": "pmboards",
-                "label": "PM Boards",
-                "icon": "ic_pm_boards",
-                "target": "https://paca.diegonmarcos.com"
+                "_doc": "MyBuro — Cloud-Me's Buro section, entered at its Summary tab (ac_cloud-me/build.json::ui.sections[buro].pages[0]), which is the index of Wallet, Docs, Fin and Vault rather than any one of them. Same `extapp:<appId>#<target>` hand-off as MyFin and MyHealth beside it: launchExternalApp opens Cloud-Me and passes everything after the '#' as the `shortcut_action` extra, which Cloud-Me's MainActivity resolves through the `page:<section>/<page>` grammar. The fragment names `buro/summary` and not `buro`, because a bare section target lands on whatever page happens to be first and would silently follow a reorder there. Not installed → the same download-and-install path every other extapp tile uses.",
+                "id": "myburo",
+                "label": "MyBuro",
+                "icon": "ic_p_folder",
+                "target": "extapp:cloud-me#page:buro/summary"
+              },
+              {
+                "_doc": "MyProjects — Cloud-Me's Projects section, entered at its Summary tab. The target is `page:projects/pm`, NOT `page:projects/summary`: that page is labelled Summary but its id is `pm` on purpose, because Cloud-Me's Section.page() resolves an id across a section's tab strip AND every sub-strip in one flat list, and Projects already contains Health's own `summary` sub-page — a second `summary` there would shadow it. Spelling this tile the way it reads on screen instead of the way the router resolves it is exactly how a tile starts opening the app at its front door and looking like it half-worked; test-dashboard-cross-app-deeplink.sh T3 fails if it ever does.",
+                "id": "myprojects",
+                "label": "MyProjects",
+                "icon": "ic_p_c3_reports",
+                "target": "extapp:cloud-me#page:projects/pm"
               },
               {
                 "_doc": "MyFin — MIGRATED to Cloud-Me (Buro > Fin), which renders the same libs:fin dashboard from its own build.json::ui.myfin_mock. The SuperApp's `myfin` section, its libs:fin dependency and its copy of the mock are all gone; the icon stays and hands the destination to the app that now owns the screen. Grammar: `extapp:<appId>#<target>` — launchExternalApp launches Cloud-Me and passes everything after the `#` as the `shortcut_action` extra, which Cloud-Me's MainActivity routes through the same `page:` grammar this tile used to use in-process. Not installed → the same download-and-install path every other extapp tile uses.",
@@ -2559,6 +2566,19 @@
                 "label": "MySocials",
                 "icon": "ic_database",
                 "target": "https://diegonmarcos.github.io/mySocials/"
+              },
+              {
+                "_doc": "A rule between the four Cloud-Me deep links and PM Boards, which is a web service and the odd one out. NOT a tile: it declares no target and GroupedTilesFragment draws it as a bare '|' that is not clickable, not focusable and hidden from accessibility, because a cell that looks tappable and does nothing is a defect this app already fixed once in the tab strips. Sections.TileGroup.destinations drops it, so every surface that reads tiles as places to go — the derived Apps page, the flat aggregator fallback, Recently Used — never sees it.",
+                "id": "dashboard-sep",
+                "label": "|",
+                "separator": true
+              },
+              {
+                "_doc": "PM Boards — the aa-sui_paca project-management tool (Kanban boards). Opens the cloud service over the browser/WebView. Leftmost tile of Tools Dashboards. NOTE: paca is not deployed yet (blocked on the WG mesh) — the route 404s until aa-sui_paca ships.",
+                "id": "pmboards",
+                "label": "PM Boards",
+                "icon": "ic_pm_boards",
+                "target": "https://paca.diegonmarcos.com"
               }
             ]
           }
