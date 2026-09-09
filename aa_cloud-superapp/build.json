@@ -7071,41 +7071,49 @@
           "controls": [
             {
               "id": "torch",
+              "icon": "ic_nav_torch",
               "label": "Torch",
               "subtitle": "The flash unit, straight through CameraManager — no permission needed."
             },
             {
               "id": "dnd",
+              "icon": "ic_nav_dnd",
               "label": "Do Not Disturb",
               "subtitle": "Silences everything but priority senders."
             },
             {
               "id": "rotation_lock",
+              "icon": "ic_nav_lock",
               "label": "Rotation lock",
               "subtitle": "Freezes the screen in its current orientation."
             },
             {
               "id": "wireless_debugging",
+              "icon": "ic_terminal",
               "label": "Wireless debugging",
               "subtitle": "The adbd this app's own privileged plane talks to. Turning it off ends silent installs and self-grants until it is back on."
             },
             {
               "id": "wifi",
+              "icon": "ic_ctl_wifi",
               "label": "Wi-Fi",
               "subtitle": "Android forbids an app to flip the Wi-Fi radio."
             },
             {
               "id": "mobile_data",
+              "icon": "ic_ctl_mobile_data",
               "label": "Mobile data",
               "subtitle": "Carrier data is a system-only switch."
             },
             {
               "id": "bluetooth",
+              "icon": "ic_route_bluetooth",
               "label": "Bluetooth",
               "subtitle": "The adapter's own enable/disable is a no-op for a normal app."
             },
             {
               "id": "airplane_mode",
+              "icon": "ic_ctl_airplane",
               "label": "Airplane mode",
               "subtitle": "Writable as a setting, but the broadcast that moves the radios is not ours to send — writing it alone changes the icon and nothing else."
             }
@@ -7118,21 +7126,25 @@
           "controls": [
             {
               "id": "app_api",
+              "icon": "ic_code",
               "label": "App API",
               "subtitle": "DevControlServer — the loopback HTTP surface the MCP and every script drive this app through."
             },
             {
               "id": "mesh",
+              "icon": "ic_wg",
               "label": "WireGuard mesh",
               "subtitle": "The 10.0.0.x tunnel. Needs the engine APK and VPN consent."
             },
             {
               "id": "firewall",
+              "icon": "ic_ctl_firewall",
               "label": "Per-app firewall",
               "subtitle": "The local no-root VpnService that blocks per-app egress."
             },
             {
               "id": "auto_update",
+              "icon": "ic_refresh",
               "label": "Fleet auto-update",
               "subtitle": "Periodic GHCR check and silent install for every constellation app."
             }
@@ -7145,26 +7157,31 @@
           "controls": [
             {
               "id": "floating_nav",
+              "icon": "ic_nav",
               "label": "Floating menu",
               "subtitle": "The draggable overlay button, on top of any app."
             },
             {
               "id": "admin_mode",
+              "icon": "ic_p_c3_stack",
               "label": "Admin mode",
               "subtitle": "Swaps the Home grid, drawer and bottom-nav to their Admin variants."
             },
             {
               "id": "all_anim",
+              "icon": "ic_sparkles",
               "label": "All animations",
               "subtitle": "Master motion gate — off stops every animated surface at once."
             },
             {
               "id": "haptics",
+              "icon": "ic_ctl_vibration",
               "label": "Vibration on tap",
               "subtitle": "Haptic feedback on every tap."
             },
             {
               "id": "auto_brightness",
+              "icon": "ic_ctl_brightness",
               "label": "Auto brightness",
               "subtitle": "Android's adaptive-brightness mode."
             }

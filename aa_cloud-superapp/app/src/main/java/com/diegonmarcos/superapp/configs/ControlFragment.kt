@@ -4,16 +4,20 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.CompoundButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.launcher.Sections
+import com.diegonmarcos.superapp.ui.StatusLight
 import com.diegonmarcos.superapp.ui.snack
 import java.util.concurrent.Executors
 
@@ -37,6 +41,33 @@ import java.util.concurrent.Executors
  * as the switch coming back — with the reason in a snackbar — rather than as
  * a control that looks set and is not.
  *
+ * ── The lights ────────────────────────────────────────────────────────────
+ * Every row carries a [StatusLight]. It is painted from ONE source and only
+ * that source: the [DeviceControls.Control.read] for that row, which is the
+ * same live read the switch is drawn from. There is no second state path, no
+ * cached colour, no per-row special case. A row whose read declines to answer
+ * — the platform will not say, the call threw, the flash unit is held by
+ * another app — is drawn UNKNOWN, never green and never red.
+ *
+ * STALE IS UNKNOWN. A reading is kept for [STALE_MS] and then stops counting
+ * as an answer. This is what makes the light honest across the gap where
+ * nothing is polling: the page stops reading the moment it is not visible
+ * (see below), so by the time the owner comes back every reading has aged out
+ * and the lights say Unknown until fresh reads land — usually within the same
+ * frame or two. A green dot recalling an hour-old truth is the same lie as a
+ * green dot that was never driven by anything.
+ *
+ * The switch POSITION deliberately does not age out. Snapping a switch off
+ * because a read grew old would look like the device turning off; the switch
+ * keeps the last real reading and the light carries the honesty about how old
+ * that reading is.
+ *
+ * ── Battery ───────────────────────────────────────────────────────────────
+ * This is a phone. The ticker runs on [onResume] and is cancelled on
+ * [onPause], so a page nobody is looking at costs nothing: no wakeups, no
+ * binder calls into the WireGuard engine, no shell channel probes. Same
+ * shape, and the same [REFRESH_MS] cadence, as the launcher status strip.
+ *
  * ── Threading ─────────────────────────────────────────────────────────────
  * Reads and writes both block: shell channels, binder calls into the
  * WireGuard engine, a torch callback's first delivery. All of it runs on one
@@ -52,14 +83,33 @@ class ControlFragment : Fragment() {
         val id: String,
         val control: DeviceControls.Control,
         val switch: Switch?,
-        val state: TextView?,
+        val light: TextView,
         val note: TextView,
         val listener: CompoundButton.OnCheckedChangeListener?,
-    )
+    ) {
+        /** The last reading the device gave, and WHEN — both written only by
+         *  a read that landed. [readAt] 0 means this row has never been read,
+         *  which is an unknown like any other. */
+        var reading: Boolean? = null
+        var readAt: Long = 0L
+    }
 
     private val rows = mutableListOf<Bound>()
     private val io = Executors.newSingleThreadExecutor { r -> Thread(r, "control-panel") }
     private val main = Handler(Looper.getMainLooper())
+
+    /**
+     * Age the lights, then read the device again — in that order, so a read
+     * that hangs or never comes back shows as Unknown rather than as the
+     * previous answer held indefinitely.
+     */
+    private val ticker = object : Runnable {
+        override fun run() {
+            for (row in rows) paintLight(row)
+            refresh()
+            main.postDelayed(this, REFRESH_MS)
+        }
+    }
 
     override fun onCreateView(inf: LayoutInflater, c: ViewGroup?, s: Bundle?): View {
         val ctx = requireContext()
@@ -77,7 +127,14 @@ class ControlFragment : Fragment() {
             "opens the system screen that owns it — Android does not let an app " +
             "flip those, and a switch that pretended otherwise would leave the " +
             "device exactly as it was. A greyed switch says which grant it is " +
-            "waiting for; tap the row to go give it."))
+            "waiting for; tap the row to go give it.\n\n" +
+            "The light on each row is what the device answered just now — " +
+            "${StatusLight.text(StatusLight.State.ON)}, " +
+            "${StatusLight.text(StatusLight.State.OFF)}, or " +
+            "${StatusLight.text(StatusLight.State.UNKNOWN)} when it would not " +
+            "say or has not been asked yet. Lights refresh every " +
+            "${REFRESH_MS / 1000} seconds while this page is open and stop " +
+            "entirely when it is not, so they go Unknown before they go stale."))
 
         rows.clear()
         for (group in DeviceControls.groups) {
@@ -98,12 +155,21 @@ class ControlFragment : Fragment() {
         // Every one of these can be changed from outside this page — the
         // notification shade, a Settings screen we just sent the user to, the
         // fleet's own workers. Coming back is exactly when the displayed state
-        // is most likely to be stale.
-        refresh()
+        // is most likely to be stale, so the ticker runs immediately rather
+        // than after its first interval.
+        main.post(ticker)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        // Nothing is looking at these lights, so nothing polls for them. This
+        // is the whole battery story of the page.
+        main.removeCallbacks(ticker)
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        main.removeCallbacks(ticker)
         io.shutdownNow()
     }
 
@@ -111,6 +177,18 @@ class ControlFragment : Fragment() {
 
     private fun addRow(parent: LinearLayout, ctx: Context, decl: DeviceControls.Row) {
         val control = DeviceControls.byId[decl.id] ?: return   // dropped, never drawn
+
+        // The declared icon, resolved through the same name→drawable lookup
+        // every other declared surface in this app uses. Tinted to the row's
+        // own label colour so seventeen drawables authored at different times
+        // read as one set here.
+        val icon = ImageView(ctx).apply {
+            setImageResource(Sections.iconResFor(ctx, decl.icon))
+            imageTintList = android.content.res.ColorStateList.valueOf(COLOR_LABEL)
+            layoutParams = LinearLayout.LayoutParams(dp(20), dp(20)).apply {
+                rightMargin = dp(12)
+            }
+        }
 
         // NOT named `text`. A local called `text` outranks the implicit
         // receiver inside every nested `TextView(ctx).apply { }` in this
@@ -133,12 +211,21 @@ class ControlFragment : Fragment() {
         }
         labelColumn.addView(note)
 
+        // One indicator per row, whatever kind of row it is. Starts Unknown
+        // because at this instant it IS: nothing has been read yet.
+        val light = TextView(ctx).apply {
+            textSize = 12f
+            setPadding(0, 0, dp(8), 0)
+        }
+
         val line = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             val v = dp(6)
             setPadding(0, v, 0, v)
+            addView(icon)
             addView(labelColumn)
+            addView(light)
         }
 
         if (control.set != null) {
@@ -152,25 +239,22 @@ class ControlFragment : Fragment() {
             // the switch itself stays disabled so the tap cannot look like a
             // flip that worked.
             control.open?.let { open -> line.setOnClickListener { open(requireContext()) } }
-            rows += Bound(decl.id, control, sw, null, note, listener)
+            rows += Bound(decl.id, control, sw, light, note, listener)
         } else {
-            // NOT a switch: the state is read-only and the row is a door.
-            val state = TextView(ctx).apply {
-                text = "…"
-                textSize = 13f
-                setTextColor(COLOR_NOTE)
-                setPadding(0, 0, dp(8), 0)
-            }
-            line.addView(state)
+            // NOT a switch: the state is read-only and the row is a door. The
+            // light IS the state readout here — there is no second column
+            // saying On/Off beside it, because two renderings of one fact are
+            // two things that can disagree.
             line.addView(TextView(ctx).apply {
                 text = "›"
                 textSize = 18f
                 setTextColor(COLOR_NOTE)
             })
             control.open?.let { open -> line.setOnClickListener { open(requireContext()) } }
-            rows += Bound(decl.id, control, null, state, note, null)
+            rows += Bound(decl.id, control, null, light, note, null)
         }
 
+        paintLight(rows.last())
         parent.addView(line)
     }
 
@@ -196,9 +280,35 @@ class ControlFragment : Fragment() {
             val blocked = runCatching { row.control.blocked(ctx) }.getOrDefault("")
             main.post {
                 if (!isAdded || activity.isFinishing) return@post
-                draw(row, state, blocked)
+                landed(row, state, blocked)
             }
         }
+    }
+
+    /** A read came back. This is the ONLY writer of a row's reading, which is
+     *  the only thing a light is ever painted from. */
+    private fun landed(row: Bound, state: Boolean?, blocked: String) {
+        row.reading = state
+        row.readAt = SystemClock.elapsedRealtime()
+        draw(row, state, blocked)
+    }
+
+    /**
+     * The row's reading, or null once it has aged out.
+     *
+     * A reading older than [STALE_MS] is not an answer any more, and a row
+     * that has never been read (readAt 0) never had one. Both are the same
+     * fact to the owner — nobody currently knows — so both are null, which
+     * [StatusLight] draws as Unknown rather than picking a colour.
+     */
+    private fun reading(row: Bound): Boolean? =
+        if (row.readAt != 0L && SystemClock.elapsedRealtime() - row.readAt <= STALE_MS) row.reading
+        else null
+
+    private fun paintLight(row: Bound) {
+        val state = StatusLight.of(reading(row))
+        row.light.text = StatusLight.text(state)
+        row.light.setTextColor(StatusLight.colour(state))
     }
 
     /** Draw one row's truth. [blocked] non-blank ⇒ the switch is disabled and
@@ -211,11 +321,7 @@ class ControlFragment : Fragment() {
             sw.isEnabled = blocked.isEmpty()
             sw.setOnCheckedChangeListener(row.listener)
         }
-        row.state?.text = when (state) {
-            true -> "On"
-            false -> "Off"
-            null -> "—"
-        }
+        paintLight(row)
         if (blocked.isNotEmpty()) {
             row.note.text = blocked
             row.note.setTextColor(COLOR_BLOCKED)
@@ -249,7 +355,7 @@ class ControlFragment : Fragment() {
             val blocked = runCatching { control.blocked(ctx) }.getOrDefault("")
             main.post {
                 if (!isAdded || activity.isFinishing) return@post
-                rows.firstOrNull { it.id == decl.id }?.let { draw(it, state, blocked) }
+                rows.firstOrNull { it.id == decl.id }?.let { landed(it, state, blocked) }
                 if (!verdict.ok) {
                     view?.snack("${decl.label}: didn't change — ${verdict.detail}",
                         com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
@@ -296,6 +402,15 @@ class ControlFragment : Fragment() {
         private const val COLOR_NOTE = 0xAAFFFFFF.toInt()
         private const val COLOR_SECTION = 0xFF8BE9A0.toInt()
         private const val COLOR_BLOCKED = 0xFFFFB199.toInt()
+
+        /** Poll cadence WHILE VISIBLE — the launcher status strip's, so the
+         *  two live surfaces in this app do not tick at two different rates. */
+        private const val REFRESH_MS = 10_000L
+
+        /** How long a reading counts as an answer. Two missed ticks plus
+         *  slack: long enough that an ordinary slow read does not blink the
+         *  light, short enough that nothing on screen is ever a minute old. */
+        private const val STALE_MS = 25_000L
 
         fun newInstance(): ControlFragment = ControlFragment()
     }

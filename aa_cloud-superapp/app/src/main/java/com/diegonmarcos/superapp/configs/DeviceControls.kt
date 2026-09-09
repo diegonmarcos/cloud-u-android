@@ -67,10 +67,10 @@ import org.json.JSONObject
  * was already right.
  *
  * ── Where the data is, where the capability is ────────────────────────────
- * build.json owns PRESENTATION — which controls exist, their group, order and
- * wording. This file owns CAPABILITY. The split is deliberate and is not the
- * usual data/code line: a command and the read-back that verifies it are ONE
- * fact, and putting the command in JSON while its verification stayed in
+ * build.json owns PRESENTATION — which controls exist, their group, order,
+ * wording and icon. This file owns CAPABILITY. The split is deliberate and is
+ * not the usual data/code line: a command and the read-back that verifies it
+ * are ONE fact, and putting the command in JSON while its verification stayed in
  * Kotlin is how the two would drift into a switch that reports success from a
  * command that stopped working three Android versions ago.
  *
@@ -566,7 +566,15 @@ object DeviceControls {
 
     // ── The declaration this file implements ─────────────────────────────
 
-    data class Row(val id: String, val label: String, val subtitle: String)
+    /**
+     * @param icon a drawable name, resolved by [Sections.iconResFor] at render
+     *   time. Presentation, so it lives in build.json with the label — but it
+     *   is NOT optional there: that resolver falls back to a generic tile for
+     *   a name it cannot find, so an undeclared or misspelled icon would ship
+     *   as a row that looks deliberate and means nothing. The repo tester is
+     *   what refuses it; see test-configs-panel-control.sh.
+     */
+    data class Row(val id: String, val label: String, val subtitle: String, val icon: String)
     data class Group(val id: String, val label: String, val subtitle: String, val rows: List<Row>)
 
     /**
@@ -589,7 +597,8 @@ object DeviceControls {
                 val o = ca!!.getJSONObject(j)
                 val id = o.optString("id")
                 if (id !in byId) null
-                else Row(id, o.optString("label", id), o.optString("subtitle", ""))
+                else Row(id, o.optString("label", id), o.optString("subtitle", ""),
+                    o.optString("icon", ""))
             }
             if (rows.isEmpty()) null
             else Group(g.optString("id"), g.optString("label", g.optString("id")),

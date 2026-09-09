@@ -34,6 +34,7 @@ NAV="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherNavContro
 TABS="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
 CONTROLS="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/DeviceControls.kt"
 FRAGMENT="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/ControlFragment.kt"
+STATUS="$APP/app/src/main/java/com/diegonmarcos/superapp/ui/StatusLight.kt"
 
 echo "== T1: Configs ▸ Panel is a visible page declaring its two tabs in order =="
 check "$(python3 - "$BJ" <<'PY'
@@ -273,6 +274,147 @@ grep -q 'private val activeTabBySection = mutableMapOf<String, String>()' "$NAV"
 [ -z "$land_fail" ] \
   && ok "first declared tab is the landing tab; last-viewed tab is remembered per process only" \
   || bad "the declared tab order does not decide what opens:$land_fail"
+
+echo "== T13: every DECLARED control carries an icon that RESOLVES, and a state source =="
+# Two ways a row ships blank, neither of which the compiler or the JSON parser
+# will mention:
+#   - no `icon` at all, or one naming a drawable that does not exist. Sections
+#     .iconResFor falls back to the generic ic_link_tile for any name it cannot
+#     resolve, so a typo becomes a row that looks deliberate and means nothing.
+#   - no `read`, which is the ONLY thing a light is painted from. A row without
+#     one could not have a light that was driven by anything.
+# Adding a control without either has to fail HERE, because nothing downstream
+# fails at all.
+check "$(python3 - "$BJ" "$CONTROLS" "$APP/app/src/main/res/drawable" <<'PY'
+import json, os, re, sys
+cp = json.load(open(sys.argv[1]))['ui']['control_panel']
+src = open(sys.argv[2]).read()
+drawables = sys.argv[3]
+
+# One block per control id, so `read` is attributed to the right entry.
+blocks, ids = {}, [(m.start(), m.group(1)) for m in
+                   re.finditer(r'"([a-z_]+)" to (?:Control\(|launcherToggle\()', src)]
+for i, (pos, cid) in enumerate(ids):
+    blocks[cid] = src[pos:(ids[i + 1][0] if i + 1 < len(ids) else len(src))]
+
+problems = []
+for g in cp['groups']:
+    for c in g['controls']:
+        cid = c['id']
+        icon = c.get('icon', '')
+        if not icon:
+            problems.append('%s: no icon declared' % cid)
+        elif not any(os.path.exists(os.path.join(drawables, icon + ext))
+                     for ext in ('.xml', '.png', '.webp')):
+            problems.append('%s: icon %r is not a drawable - it would render '
+                            'as the ic_link_tile fallback' % (cid, icon))
+        b = blocks.get(cid)
+        if b is None:
+            problems.append('%s: no capability, so no state source' % cid)
+        elif 'read =' not in b and 'launcherToggle' not in b:
+            problems.append('%s: no read - its light could not be driven' % cid)
+print('; '.join(problems) or 'OK')
+PY
+)" "every control: an icon that resolves to a real drawable, and a read to light it"
+
+echo "== T14: NO light colour is hardcoded - every one comes from StatusLight =="
+# A hex green written at the row is a colour chosen at BUILD time. It survives
+# the state source being removed, which is exactly how a light stops meaning
+# anything while still looking right.
+light_fail=""
+grep -qE '0x[fF][fF](16A34A|DC2626|6B7280)' "$FRAGMENT" \
+  && light_fail="$light_fail fragment-hardcodes-a-light-colour"
+grep -q 'StatusLight.colour(' "$FRAGMENT" || light_fail="$light_fail fragment-does-not-use-the-token"
+# setTextColor on the light must take StatusLight's answer and nothing else.
+grep -qE 'light\.setTextColor\(StatusLight\.colour\(' "$FRAGMENT" \
+  || light_fail="$light_fail light-painted-from-something-else"
+# ONE definition of healthy / failed / cannot-say in the whole app. Scoped to
+# constants NAMED as a status colour on purpose: the same hex used as a plain
+# palette colour elsewhere (CalendarAgendaPopup's green play glyph) is not a
+# second status light and banning it would make this assertion a lie about
+# what it protects. A second `GREEN =` IS the defect - that is a page about to
+# drift into its own idea of what healthy looks like.
+dupes="$(grep -rnE '(GREEN|RED|GREY|GRAY|OK|FAIL|HEALTHY|STATUS)[A-Z_]*  *= *0x[fF][fF](16A34A|DC2626|6B7280)' \
+         --include=*.kt "$APP/app/src/main/java" 2>/dev/null | grep -v 'StatusLight.kt' || true)"
+[ -z "$dupes" ] || light_fail="$light_fail status-colour-redefined-in:$(echo "$dupes" | cut -d: -f1 | xargs -n1 basename | tr '\n' ',')"
+grep -q '0xFF16A34A' "$STATUS" || light_fail="$light_fail StatusLight-is-not-the-definer"
+[ -z "$light_fail" ] \
+  && ok "every light colour resolves from StatusLight, which is its only definition" \
+  || bad "a light colour is hardcoded or duplicated:$light_fail"
+
+echo "== T15: a state source that will not answer renders UNKNOWN, never green =="
+# The third state. Red and green are two; the check that has not run, threw,
+# timed out or aged out is the third, and drawing it as either of the other two
+# is a false statement the owner cannot see is false.
+unknown_fail=""
+# null MUST map to UNKNOWN in the one place that decides.
+python3 - "$STATUS" <<'PY' || unknown_fail="$unknown_fail null-is-not-unknown"
+import re, sys
+s = open(sys.argv[1]).read()
+m = re.search(r'fun of\(reading: Boolean\?\).*?\n    \}', s, re.S)
+sys.exit(0 if m and re.search(r'null\s*->\s*State\.UNKNOWN', m.group(0)) else 1)
+PY
+# ...and UNKNOWN must not be painted with the ON colour.
+python3 - "$STATUS" <<'PY' || unknown_fail="$unknown_fail unknown-is-green"
+import re, sys
+s = open(sys.argv[1]).read()
+m = re.search(r'fun colour\(state: State\).*?\n    \}', s, re.S)
+sys.exit(0 if m and re.search(r'State\.UNKNOWN\s*->\s*GREY', m.group(0)) else 1)
+PY
+# A read that throws must become null, not a default.
+grep -q 'runCatching { row.control.read(ctx) }.getOrNull()' "$FRAGMENT" \
+  || unknown_fail="$unknown_fail throwing-read-not-nulled"
+# A row never read, or read too long ago, has no answer to show.
+grep -q 'if (row.readAt != 0L' "$FRAGMENT" || unknown_fail="$unknown_fail never-read-not-unknown"
+grep -q 'SystemClock.elapsedRealtime() - row.readAt <= STALE_MS' "$FRAGMENT" \
+  || unknown_fail="$unknown_fail stale-reading-still-shown"
+# The light is painted from reading(), which is the function that ages out -
+# painting from row.reading directly would skip the staleness rule entirely.
+grep -q 'StatusLight.of(reading(row))' "$FRAGMENT" \
+  || unknown_fail="$unknown_fail light-bypasses-the-stale-check"
+# Nothing may coerce a null reading into a boolean on the way to a light.
+grep -qE 'reading\(row\)\s*(\?:|== true)' "$FRAGMENT" \
+  && unknown_fail="$unknown_fail null-coerced-before-the-light"
+[ -z "$unknown_fail" ] \
+  && ok "unread, throwing and aged-out readings all render Unknown, not a colour" \
+  || bad "the third state is drawn as one of the other two:$unknown_fail"
+
+echo "== T16: the lights poll only while the page is VISIBLE, and age out slower than they poll =="
+# This is a phone. A control panel that keeps binding the WireGuard engine and
+# probing shell channels while the owner is in another app is a battery cost
+# with no reader.
+life_fail=""
+grep -q 'main.post(ticker)' "$FRAGMENT"            || life_fail="$life_fail no-start-on-resume"
+grep -q 'main.removeCallbacks(ticker)' "$FRAGMENT" || life_fail="$life_fail never-stopped"
+grep -q 'override fun onPause()' "$FRAGMENT"       || life_fail="$life_fail no-onPause"
+# The stop must be in onPause, not only in onDestroy - a fragment that is merely
+# covered still runs its handler.
+python3 - "$FRAGMENT" <<'PY' || life_fail="$life_fail stop-not-in-onPause"
+import re, sys
+s = open(sys.argv[1]).read()
+m = re.search(r'override fun onPause\(\).*?\n    \}', s, re.S)
+sys.exit(0 if m and 'removeCallbacks(ticker)' in m.group(0) else 1)
+PY
+grep -q 'main.postDelayed(this, REFRESH_MS)' "$FRAGMENT" || life_fail="$life_fail ticker-does-not-repeat"
+# A reading must outlive the interval that refreshes it, or every row blinks to
+# Unknown between ticks and the light becomes noise the owner learns to ignore.
+python3 - "$FRAGMENT" <<'PY' || life_fail="$life_fail stale-window-shorter-than-poll"
+import re, sys
+s = open(sys.argv[1]).read()
+def const(n):
+    m = re.search(r'%s = ([0-9_]+)L' % n, s)
+    return int(m.group(1).replace('_', '')) if m else None
+r, st = const('REFRESH_MS'), const('STALE_MS')
+sys.exit(0 if r and st and st > r else 1)
+PY
+# ONE state path. A second poller alongside the existing read is how two
+# surfaces start disagreeing about the same device.
+for banned in 'java.util.Timer' 'ScheduledExecutorService' 'lifecycleScope.launch'; do
+  grep -q "$banned" "$FRAGMENT" && life_fail="$life_fail second-poller:$banned"
+done
+[ -z "$life_fail" ] \
+  && ok "one ticker, started on resume, cancelled on pause, ageing slower than it polls" \
+  || bad "the panel polls when nobody is looking, or blinks when they are:$life_fail"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

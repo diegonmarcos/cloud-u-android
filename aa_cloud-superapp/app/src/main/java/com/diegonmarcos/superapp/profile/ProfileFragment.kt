@@ -1280,9 +1280,14 @@ class ProfileFragment : Fragment() {
 
     companion object {
         /** Import-status colours. GREEN is the "authenticated + applied"
-         *  state the auto-import is required to show explicitly. */
-        private val GREEN   = 0xFF16A34A.toInt()
-        private val RED     = 0xFFDC2626.toInt()
+         *  state the auto-import is required to show explicitly.
+         *
+         *  Taken from [StatusLight] rather than restated: this page and
+         *  Configs ▸ Panel ▸ Control both tell the owner whether something
+         *  worked, and two literals for that are two things that can be
+         *  edited apart into two different greens meaning one thing. */
+        private val GREEN   = com.diegonmarcos.superapp.ui.StatusLight.GREEN
+        private val RED     = com.diegonmarcos.superapp.ui.StatusLight.RED
         private val NEUTRAL = 0xFF9CA3AF.toInt()
 
         /**

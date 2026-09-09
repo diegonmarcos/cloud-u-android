@@ -539,7 +539,12 @@ class PermissionsFragment : Fragment() {
         r.addView(TextView(ctx).apply {
             text = icon + label + (if (state.isNotBlank()) "  ·  $state" else "")
             textSize = 11.5f
-            setTextColor(if (granted == true) 0xFF16A34A.toInt() else if (granted == false) 0xFFDC2626.toInt() else 0xFF6B7280.toInt())
+            // The app's one definition of healthy / failed / cannot-say. These
+            // were the literals StatusLight was built from; pointing at it
+            // instead is what stops this page and Configs ▸ Panel ▸ Control
+            // drifting into two greens that mean the same thing.
+            setTextColor(com.diegonmarcos.superapp.ui.StatusLight.colour(
+                com.diegonmarcos.superapp.ui.StatusLight.of(granted)))
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
         r.addView(permButton(ctx, btn, granted, onClick).apply {
