@@ -30,8 +30,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|end"
-            android:layout_marginEnd="@dimen/bigger_margin"
-            android:layout_marginBottom="@dimen/activity_margin"
+            android:layout_marginEnd="@dimen/activity_margin"
+            android:layout_marginBottom="@dimen/bigger_margin"
             android:contentDescription="@string/dialpad"
             android:elevation="@dimen/medium_margin"
             android:padding="@dimen/activity_margin"
@@ -42,13 +42,20 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:rippleColor="@color/pressed_item_foreground" />
 
+        <!--
+            Four tabs share the width evenly. The 150dp minimum this carried
+            before was written for three tabs and, at four, asks for 600dp of
+            strip on a phone that has 400 — which turns the bottom bar into a
+            scrolling strip whose last tab is off screen.
+        -->
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/main_tabs_holder"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:layout_constraintBottom_toBottomOf="parent"
+            app:tabGravity="fill"
             app:tabIndicator="@null"
-            app:tabMinWidth="150dp"
+            app:tabMode="fixed"
             app:tabRippleColor="@null" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>

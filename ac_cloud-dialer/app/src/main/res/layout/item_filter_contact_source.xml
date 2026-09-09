@@ -4,6 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?attr/selectableItemBackground"
+    android:minHeight="@dimen/minimum_touch_target"
     android:paddingStart="@dimen/normal_margin"
     android:paddingTop="@dimen/small_margin"
     android:paddingEnd="@dimen/normal_margin"

@@ -4,13 +4,18 @@
     android:id="@+id/item_screened_holder"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/selectableItemBackground"
+    android:layout_marginStart="@dimen/card_margin_horizontal"
+    android:layout_marginTop="@dimen/card_margin_vertical"
+    android:layout_marginEnd="@dimen/card_margin_horizontal"
+    android:layout_marginBottom="@dimen/card_margin_vertical"
+    android:background="@drawable/item_recents_card_ripple_background"
     android:clickable="true"
     android:focusable="true"
+    android:minHeight="@dimen/list_row_minimum_height"
     android:paddingStart="@dimen/normal_margin"
-    android:paddingTop="@dimen/medium_margin"
+    android:paddingTop="@dimen/normal_margin"
     android:paddingEnd="@dimen/normal_margin"
-    android:paddingBottom="@dimen/medium_margin">
+    android:paddingBottom="@dimen/normal_margin">
 
     <org.fossify.commons.views.MyTextView
         android:id="@+id/item_screened_number"

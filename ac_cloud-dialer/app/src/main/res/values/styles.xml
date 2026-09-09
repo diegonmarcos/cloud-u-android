@@ -44,13 +44,20 @@
         <item name="android:layout_marginTop">@dimen/normal_margin</item>
     </style>
 
-    <style name="HomeCardTitle">
+    <!-- Cloud Dialer interface refresh: one voice for every heading that divides
+         a list or a card into sections — the recents date separators and the Home
+         cards' titles were two different sizes and two different weights, which is
+         most of why the app read as assembled rather than designed. -->
+    <style name="SectionHeader">
         <item name="android:layout_width">wrap_content</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:textSize">@dimen/text_title_small</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:textAllCaps">true</item>
         <item name="android:alpha">0.7</item>
+    </style>
+
+    <style name="HomeCardTitle" parent="SectionHeader">
+        <item name="android:textAllCaps">true</item>
     </style>
 
     <style name="HomeStatValue">

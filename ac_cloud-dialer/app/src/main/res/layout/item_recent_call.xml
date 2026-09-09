@@ -12,8 +12,9 @@
     android:layout_marginEnd="@dimen/card_margin_horizontal"
     android:layout_marginTop="@dimen/card_margin_vertical"
     android:layout_marginBottom="@dimen/card_margin_vertical"
-    android:paddingTop="@dimen/medium_margin"
-    android:paddingBottom="@dimen/medium_margin">
+    android:minHeight="@dimen/list_row_minimum_height"
+    android:paddingTop="@dimen/normal_margin"
+    android:paddingBottom="@dimen/normal_margin">
 
     <ImageView
         android:id="@+id/item_recents_image"

@@ -30,6 +30,8 @@
             android:layout_centerHorizontal="true"
             android:background="@drawable/ripple_all_corners"
             android:gravity="center"
+            android:minWidth="@dimen/minimum_touch_target"
+            android:minHeight="@dimen/minimum_touch_target"
             android:padding="@dimen/activity_margin"
             android:text="@string/create_new_contact"
             android:textSize="@dimen/bigger_text_size"

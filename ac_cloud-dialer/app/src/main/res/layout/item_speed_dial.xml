@@ -8,6 +8,7 @@
     android:ellipsize="end"
     android:foreground="@drawable/selector"
     android:lines="1"
+    android:minHeight="@dimen/minimum_touch_target"
     android:maxLines="1"
     android:padding="@dimen/activity_margin"
     android:singleLine="true"

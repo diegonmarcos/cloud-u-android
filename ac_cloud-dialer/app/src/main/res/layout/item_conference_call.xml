@@ -36,8 +36,8 @@
 
     <ImageButton
         android:id="@+id/item_conference_call_end"
-        android:layout_width="@dimen/normal_icon_size"
-        android:layout_height="@dimen/normal_icon_size"
+        android:layout_width="@dimen/minimum_touch_target"
+        android:layout_height="@dimen/minimum_touch_target"
         android:layout_margin="@dimen/medium_margin"
         android:background="?actionBarItemBackground"
         android:contentDescription="@string/end_call"
@@ -48,8 +48,8 @@
 
     <ImageButton
         android:id="@+id/item_conference_call_split"
-        android:layout_width="@dimen/normal_icon_size"
-        android:layout_height="@dimen/normal_icon_size"
+        android:layout_width="@dimen/minimum_touch_target"
+        android:layout_height="@dimen/minimum_touch_target"
         android:layout_margin="@dimen/medium_margin"
         android:background="?actionBarItemBackground"
         android:contentDescription="@string/call_split"
