@@ -115,6 +115,14 @@ class UpdateConfigFragment : Fragment() {
         // updater never had them, so this when had no branch for either.
         is UpdateProgress.State.UpdateAvailable   -> "Update ready — held back on a metered network"
         is UpdateProgress.State.Cancelled        -> "Cancelled"
+        // A pass held by a policy constraint, not by a network that is failing.
+        // The reason is the whole point of the state — collapsing it into a
+        // bare "Waiting" would put this line back where it was before the
+        // state existed, where a deliberate deferral and a dead download read
+        // identically. No `else` here on purpose: this when staying exhaustive
+        // is what turned the next new state into a compile error instead of a
+        // status line that silently says nothing.
+        is UpdateProgress.State.Waiting          -> "Waiting — ${state.reason}"
     }
 
     private fun openUnknownSourcesSettings() {
