@@ -51,6 +51,13 @@ data class LocalDraftPrefill(
     val bodyLinks: List<Link> = emptyList(),
     /** Reveal the Cc/Bcc row, so a draft that carried them does not hide them on reopen. */
     val expand: Boolean,
+    /**
+     * Show every recipient chip rather than the "two and +N" summary — the same SAFETY property a
+     * reply-all sets, for the same reason. A draft addressed to several people, reopened and sent,
+     * can reach all of them from behind a "+6" that nobody read. The row does not store the flag, so
+     * it is derived from what the row DOES hold: more than one address means show them all.
+     */
+    val showAllRecipients: Boolean,
     val fromEmail: String?,
     val inReplyTo: List<String>,
     val references: List<String>,
@@ -68,13 +75,14 @@ data class LocalDraftPrefill(
  * first (#131); `requestReceipt` is not projected (stated debt D1).
  */
 fun localDraftPrefill(row: LocalDraftEntity): LocalDraftPrefill {
+    val to = localDraftAddresses(row.toAddresses)
     val cc = localDraftAddresses(row.cc)
     val bcc = localDraftAddresses(row.bcc)
     // Both halves out of one answer, or two disagreeing columns open spans over the wrong letters.
     val rich: RichBody = richBodyFrom(row.htmlBody) { row.textBody }
     return LocalDraftPrefill(
         editingDraftId = row.id,
-        to = localDraftAddresses(row.toAddresses).joinToString(", "),
+        to = to.joinToString(", "),
         cc = cc.joinToString(", "),
         bcc = bcc.joinToString(", "),
         subject = row.subject,
@@ -83,6 +91,7 @@ fun localDraftPrefill(row: LocalDraftEntity): LocalDraftPrefill {
         bodyBlocks = rich.blocks,
         bodyLinks = rich.links,
         expand = cc.isNotEmpty() || bcc.isNotEmpty(),
+        showAllRecipients = to.size + cc.size + bcc.size > 1,
         fromEmail = row.fromEmail,
         inReplyTo = localDraftMessageIds(row.inReplyTo),
         references = localDraftMessageIds(row.references),

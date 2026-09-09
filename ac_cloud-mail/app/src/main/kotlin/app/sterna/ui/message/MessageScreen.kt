@@ -1204,6 +1204,13 @@ private fun MessageActions(
     // mailboxes name the ids and supply what "add" can offer, which is every mailbox the message is
     // not already in.
     if (labelSheet) {
+        // `mailboxDisplayName` is @Composable — it resolves a standard folder's name from
+        // resources — but every consumer below needs a PLAIN `(Mailbox) -> String`: `messageTags` is
+        // a pure function that SORTS by the resolved label, and on the header's path it runs inside a
+        // `remember`, which is not a composable context at all. So the names are resolved HERE, where
+        // resources are reachable, and what goes down is a lookup. A mailbox with no entry falls back
+        // to its own name rather than to a blank chip.
+        val folderNames = accountFolders.associate { it.id to mailboxDisplayName(it.role, it.name) }
         val tags = messageTags(
             mailboxIds = messageMailboxIds,
             mailboxes = accountFolders,
@@ -1212,12 +1219,12 @@ private fun MessageActions(
             // where a message's membership is EDITED, and hiding the folder it was opened from
             // would hide the one row a user came here to remove.
             currentMailboxId = null,
-            nameOf = { mailboxDisplayName(it.role, it.name) },
+            nameOf = { folderNames[it.id] ?: it.name },
         )
         LabelSheet(
             tags = tags,
             addableMailboxes = accountFolders.filter { it.id !in messageMailboxIds },
-            nameOf = { mailboxDisplayName(it.role, it.name) },
+            nameOf = { folderNames[it.id] ?: it.name },
             onAddMailbox = { id -> labelSheet = false; viewModel.addMailbox(id) },
             onRemoveMailbox = { id -> labelSheet = false; viewModel.removeMailbox(id) },
             onRemoveKeyword = { name -> labelSheet = false; viewModel.setUserKeyword(name, false) },
@@ -1746,13 +1753,16 @@ private fun MessageContent(
     // was OPENED from is left out: repeating it to a reader standing in it is noise, while every
     // other mailbox is the news the row exists to carry.
     val tagEmail = (state as? MessageState.Loaded)?.email
-    val tags = remember(messageMailboxIds, accountMailboxes, tagEmail, currentMailboxId) {
+    // See the label sheet: the same resolution, for the same reason, and here the `remember` below is
+    // the proof it cannot be done inside — a `remember` block is not a composable context.
+    val mailboxNames = accountMailboxes.associate { it.id to mailboxDisplayName(it.role, it.name) }
+    val tags = remember(messageMailboxIds, accountMailboxes, tagEmail, currentMailboxId, mailboxNames) {
         messageTags(
             mailboxIds = messageMailboxIds,
             mailboxes = accountMailboxes,
             keywords = tagEmail?.keywords.orEmpty(),
             currentMailboxId = currentMailboxId,
-            nameOf = { mailboxDisplayName(it.role, it.name) },
+            nameOf = { mailboxNames[it.id] ?: it.name },
         )
     }
     // The sender panel's routing/identity rows. Decided here, and only from what the message

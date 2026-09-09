@@ -17,6 +17,8 @@
 #   H8  an old plain-text draft still opens
 #   H9  the AI tools still resolve to their own engines and still refuse to rewrite markup
 #  H10  the executed unit tests exist and are named
+#  H11  the two compile breaks this task INHERITED stay fixed -- mail CI was red for the two
+#       commits before this one, and neither cause was HTML
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 UI="$APP/app/src/main/kotlin/app/sterna/ui"
@@ -30,6 +32,8 @@ DRAFT="$DATA/text/DraftRichBody.kt"
 SCOPE="$UI/text/TextToolScope.kt"
 JMAP="$APP/core/jmap/src/main/kotlin/app/sterna/core/jmap/JmapClient.kt"
 SANITEST="$APP/core/data/src/test/kotlin/app/sterna/core/data/text/ReceivedHtmlTest.kt"
+DRAFT_REOPEN="$DATA/mail/LocalDraftReopen.kt"
+REOPEN_TEST="$APP/core/data/src/test/kotlin/app/sterna/core/data/mail/LocalDraftReopenTest.kt"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  ok: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
@@ -200,6 +204,29 @@ for t in aScriptElementAndItsCodeBothGo \
          aLinkThatClaimsNothingOrClaimsTrulyIsLeftAlone; do
   has "$SANITEST" "fun $t(" "H10 executed: $t"
 done
+
+# ── H11 the inherited compile breaks ──
+# Mail CI failed on the two commits before this one, for two reasons that had nothing to do with
+# HTML. Both are shape errors a grep can hold, and both are the kind that come back.
+#
+# (a) `mailboxDisplayName` is @Composable. Both consumers want a plain `(Mailbox) -> String`, and on
+#     the header's path the call sits inside a `remember` -- not a composable context at any point.
+#     Passing it directly is "@Composable invocations can only happen from the context of a
+#     @Composable function", three times.
+hasnt "$SCREEN" 'nameOf = { mailboxDisplayName(' \
+  "H11 no @Composable name resolver is passed where a plain lookup is required"
+n=$(grep -c 'associate { it.id to mailboxDisplayName(it.role, it.name) }' "$SCREEN")
+[ "$n" -eq 2 ] && ok "H11 both scopes resolve the names where resources ARE reachable ($n)" \
+  || bad "H11 $n of the 2 scopes resolve mailbox names for a plain lookup"
+# (b) DraftFields.showAllRecipients was read off a projection that did not carry it. It is a SAFETY
+#     property (every address on screen before a word is typed), so the projection derives it from
+#     the addresses the row holds rather than defaulting it away.
+has "$DRAFT_REOPEN" 'val showAllRecipients: Boolean,' \
+  "H11 the local-draft projection carries showAllRecipients"
+has "$DRAFT_REOPEN" 'showAllRecipients = to.size + cc.size + bcc.size > 1,' \
+  "H11 …derived from the row's own addresses, not defaulted to false"
+has "$REOPEN_TEST" 'a reopened draft with more than one recipient shows every recipient chip' \
+  "H11 executed: the derivation is run, not just wired"
 
 echo
 echo "== $PASS passed, $FAIL failed =="
