@@ -201,6 +201,13 @@ class LauncherNavController(private val host: NavHost) {
             openSectionPage(sectionId, owner.id, args)
             return
         }
+        // Does this open name one of a TABBED section's own tabs? Asked HERE,
+        // before the base is established, because the answer decides which tab
+        // the base should land on. It used to be asked further down, after the
+        // base had already been built on a different tab — see [tabbedOwner]'s
+        // second use for what that cost.
+        val tabbedOwner = Sections.byId(sectionId)
+            ?.takeIf { sec -> isTabbed(sec) && sec.pages.any { it.id == pageId } }
         // Establish the section grid as the back-stack BASE *first*, so Back from
         // this child returns to its parent section (e.g. Configs), not wherever it
         // was launched from (Home, the Home-Apps sheet, the Canopus arc menu).
@@ -210,13 +217,28 @@ class LauncherNavController(private val host: NavHost) {
         // skipped the base, leaving currentSection="home" so Back went Home and
         // the page never landed in its own section. No-op when already in the
         // section — preserves any existing in-section back stack.
+        //
+        // Whether it ran is remembered, because the tabbed branch further down
+        // has to know: a base that ran has already put the strip on the right
+        // tab, and rebuilding it would be the second of the two builds this
+        // function used to pay for.
+        var baseWasEstablished = false
         if (host.currentSection != sectionId) {
+            baseWasEstablished = true
             // Land the base on the tab the section was left on. Without this the
             // rebuilt strip falls to [SectionTabsFragment.startIndex]'s default —
             // tab 0 — so Back out of a page opened from tab N returned to tab 0,
             // not to the tab the page was opened from.
+            //
+            // …unless THIS open names a tab, in which case land on that one and
+            // be done. Both used to run on a first open of a tab from outside
+            // its section: the base built the whole strip on the remembered tab
+            // and the branch below immediately tore it down and built it again
+            // on the requested one, so one tap paid for two full section builds
+            // and showed the wrong tab in between. Arriving on the right tab is
+            // the same end state for half the work.
             goSection(sectionId, Sections.byId(sectionId)?.label ?: sectionId,
-                activeTabFor(sectionId))
+                if (tabbedOwner != null) pageId else activeTabFor(sectionId))
         }
         // Pages that declare an `action` dispatch it instead of opening a fragment.
         val pageAction = Sections.byId(sectionId)?.pages
@@ -237,12 +259,12 @@ class LauncherNavController(private val host: NavHost) {
         // FIRST page. That is what "page:c3/health opens Observability" and
         // "the C3 tiles do not open" were: not a routing failure, a tab
         // selection that quietly succeeded on the wrong page.
-        Sections.byId(sectionId)?.let { sec ->
-            if (isTabbed(sec) && sec.pages.any { it.id == pageId }) {
-                goSection(sectionId, sec.label, pageId)
-                host.closeDrawerIfOpen()
-                return
-            }
+        if (tabbedOwner != null) {
+            // Only an open from INSIDE the section still has to move the strip:
+            // when the base above ran, it already built it on this very tab.
+            if (!baseWasEstablished) goSection(sectionId, tabbedOwner.label, pageId)
+            host.closeDrawerIfOpen()
+            return
         }
         syncModeForPage(pageId)
         val frag = pageFragment(sectionId, pageId, args)

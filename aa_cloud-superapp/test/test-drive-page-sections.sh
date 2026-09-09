@@ -23,15 +23,46 @@
 #   T6  the Configs half is intact — the page still renders every declared
 #       drive_connections backend, i.e. it was relocated, not rewritten
 #   T7  the layout puts Apps before Configs
+#   T8  the verb list T4 checks against is READ OUT OF the dispatcher, not
+#       retyped here — a `when` that grows or loses a branch moves the
+#       assertion with it instead of leaving T4 green against a shell that no
+#       longer agrees with it
+#   T9  a tap that reaches launchUri cannot throw out of the click handler.
+#       Notes targets `obsidian://open`, which Intent.parseUri turns into a
+#       plain ACTION_VIEW, and startActivity on that raises
+#       ActivityNotFoundException on any phone without Obsidian installed. An
+#       uncaught throw there is a crash on a tap — strictly worse than the icon
+#       doing nothing — so every parse and every launch in that function has to
+#       sit inside a runCatching, and the function has to end by SAYING the tap
+#       failed rather than returning silently.
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
+SHELL_KT="$APP/app/src/main/java/com/diegonmarcos/superapp/ShellActivity.kt"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  ok: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
 echo "== Drive ▸ Connections: Apps row is derived, and every icon can fire =="
 
-REPORT="$(python3 - "$APP" <<'PY'
+# The verbs onTileClicked actually branches on, read off the `when` itself.
+# Retyping them here is how T4 would go on passing against a dispatcher that
+# had since dropped a branch — the row would still "match" a prefix this file
+# remembers and the shell no longer honours. One list, and it lives in the
+# Kotlin.
+DISPATCH_PREFIXES="$(
+  awk '/^    override fun onTileClicked\(tileId: String\) \{/{f=1} f{print} f&&/^    \}$/{exit}' \
+      "$SHELL_KT" |
+  grep -o 'tileId\.startsWith("[^"]*")' | sed 's/.*("//;s/")//' | sort -u
+)"
+if [ -z "$DISPATCH_PREFIXES" ]; then
+  bad "T8: read no startsWith verbs out of ShellActivity.onTileClicked — the
+       function was renamed or restructured, and T4 below is asserting against
+       nothing"
+else
+  ok "T8: T4 checks against the dispatcher's own verbs: $(printf '%s' "$DISPATCH_PREFIXES" | tr '\n' ' ')"
+fi
+
+REPORT="$(python3 - "$APP" $DISPATCH_PREFIXES <<'PY'
 import json, os, sys
 
 app = sys.argv[1]
@@ -117,9 +148,10 @@ else:
                    "Tools Dashboards and must be referenced, not duplicated")
 
 # ── T4 — every target in the row is a verb onTileClicked has a branch for ────
-# Mirrors the `when` in ShellActivity.onTileClicked. A target matching none of
-# these renders an icon that does nothing at all when tapped.
-PREFIXES = ("section:", "page:", "action:", "extapp:", "http://", "https://", "intent:", "stub:")
+# The `when` in ShellActivity.onTileClicked, handed in by the caller which read
+# it out of the Kotlin. A target matching none of these renders an icon that
+# does nothing at all when tapped.
+PREFIXES = tuple(sys.argv[2:])
 for t in row:
     tgt = t.get("target", "")
     if not tgt:
@@ -169,6 +201,62 @@ if [ -n "$A" ] && [ -n "$C" ] && [ -n "$R" ] && [ "$A" -lt "$C" ] && [ "$C" -lt 
   ok "T7: Apps header, then Configs header, then the backend list"
 else
   bad "T7: layout order is Apps($A) Configs($C) list($R) — expected ascending"
+fi
+
+echo "== a tap that leaves the app grammar cannot crash it =="
+# Notes is `obsidian://open`. Intent.parseUri turns a non-`intent:` URI into a
+# plain ACTION_VIEW, and startActivity on that throws ActivityNotFoundException
+# on every phone that does not have Obsidian. The same is true of the app://
+# branch's store fallback and of any intent:// whose browser_fallback_url has
+# no handler either. Guarding them is not optional: an uncaught throw on the
+# click handler kills the launcher, which is a worse answer than the icon
+# doing nothing.
+T9="$(python3 - "$SHELL_KT" <<'PY'
+import re, sys
+
+src = open(sys.argv[1]).read().splitlines()
+try:
+    start = next(i for i, l in enumerate(src)
+                 if l.startswith("    private fun launchUri(uri: String) {"))
+except StopIteration:
+    print("launchUri is gone or was renamed — this whole check is asserting nothing")
+    raise SystemExit
+
+end = next(i for i in range(start + 1, len(src)) if src[i] == "    }")
+body = src[start:end + 1]
+
+bad = []
+# Brace-depth of the innermost open runCatching, or None when outside one.
+guard = None
+depth = 0
+for line in body:
+    for tok in re.findall(r'runCatching|startActivity\(|Intent\.parseUri\(|[{}]', line):
+        if tok == "runCatching":
+            if guard is None:
+                guard = depth
+        elif tok == "{":
+            depth += 1
+        elif tok == "}":
+            depth -= 1
+            if guard is not None and depth <= guard:
+                guard = None
+        elif guard is None:
+            bad.append(tok.rstrip("("))
+
+for name in dict.fromkeys(bad):
+    print("%s is called outside any runCatching — a target with no installed "
+          "handler throws straight out of the tap" % name)
+
+if not any("snack(" in l for l in body[-6:]):
+    print("launchUri no longer ends by saying the tap failed — a target that "
+          "nothing handles would go silently dead")
+PY
+)" || { echo "  FAIL: launchUri checker crashed"; exit 1; }
+if [ -z "$T9" ]; then
+  ok "T9: every parse and launch in launchUri is caught, and a dead target says so"
+else
+  printf '%s\n' "$T9" | sed 's/^/    /'
+  bad "T9: launchUri can throw out of a tap"
 fi
 
 echo
