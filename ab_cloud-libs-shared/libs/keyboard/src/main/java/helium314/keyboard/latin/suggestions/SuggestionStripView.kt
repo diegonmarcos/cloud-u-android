@@ -157,7 +157,16 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         }
 
         // toolbar keys setup
-        if (mToolbarMode == ToolbarMode.TOOLBAR_KEYS || mToolbarMode == ToolbarMode.EXPANDABLE) {
+        //
+        // Every mode but HIDDEN, because the two-row redesign changed what a
+        // ToolbarMode means. Upstream's modes chose WHICH SINGLE ROW won, so
+        // gating the toolbar on TOOLBAR_KEYS/EXPANDABLE was right there. Here
+        // the toolbar has its own permanent row beside the suggestions (see
+        // the note below), and under SUGGESTION_STRIP that gate built zero
+        // keys, so `toolbarRow.isVisible = toolbar.childCount > 0` collapsed
+        // the whole row — taking Translate and Enhance with it, which is why
+        // those bars looked broken when in fact they were never reachable.
+        if (mToolbarMode != ToolbarMode.HIDDEN) {
             for (key in getEnabledToolbarKeys(context.prefs())) {
                 try {
                     val button = createToolbarKey(context, key)
@@ -169,15 +178,28 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
                 }
             }
         }
-        if (!isGone && !Settings.getValues().mSuggestionStripHiddenPerUserSettings) {
+        // No mSuggestionStripHiddenPerUserSettings check. That flag means "the
+        // SUGGESTIONS row is hidden" and is set for TOOLBAR_KEYS mode
+        // (SettingsValues.java) — so in exactly the mode that shows the
+        // toolbar, this loop was skipped and the second row stayed empty.
+        // SETTINGS is its only member, which is why the Config icon went
+        // missing with nothing else obviously wrong.
+        if (!isGone) {
             for (secondRowKey in getSecondRowToolbarKeys(context.prefs())) {
-                val button = createToolbarKey(context, secondRowKey)
-                button.layoutParams = toolbarKeyLayoutParams
-                setupKey(button, colors)
-                secondRowKeys.addView(button)
-                val secondRowKeyInToolbar = toolbar.findViewWithTag<View>(secondRowKey)
-                if (secondRowKeyInToolbar != null && Settings.getValues().mQuickPinToolbarKeys)
-                    secondRowKeyInToolbar.background = enabledToolKeyBackground
+                // Guarded like the first row above: one key that fails to
+                // build used to abort the rest of init(), so a single bad
+                // entry took out the whole strip instead of itself.
+                try {
+                    val button = createToolbarKey(context, secondRowKey)
+                    button.layoutParams = toolbarKeyLayoutParams
+                    setupKey(button, colors)
+                    secondRowKeys.addView(button)
+                    val secondRowKeyInToolbar = toolbar.findViewWithTag<View>(secondRowKey)
+                    if (secondRowKeyInToolbar != null && Settings.getValues().mQuickPinToolbarKeys)
+                        secondRowKeyInToolbar.background = enabledToolKeyBackground
+                } catch (t: Throwable) {
+                    Log.e("SuggestionStripView", "failed building second-row key $secondRowKey", t)
+                }
             }
         }
 
