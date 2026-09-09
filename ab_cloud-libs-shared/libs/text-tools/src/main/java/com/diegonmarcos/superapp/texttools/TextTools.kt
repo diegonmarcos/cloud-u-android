@@ -46,6 +46,12 @@ object TextTools {
     /** The empty target-tag argument to `translate`: use the configured default target. */
     const val TARGET_CONFIGURED = ""
 
+    /**
+     * The empty [summaryId] argument to `summarise`: use the summary shape the user pinned in
+     * Text Resume. ("Resume" is the owner's name for SUMMARISE — see [ITextTools.summarise].)
+     */
+    const val SUMMARY_CONFIGURED = ""
+
     /** One call's outcome. [text] non-null = it worked; otherwise [error] says why, always readable. */
     class Result(val text: String?, val error: String?) {
         val ok: Boolean get() = text != null

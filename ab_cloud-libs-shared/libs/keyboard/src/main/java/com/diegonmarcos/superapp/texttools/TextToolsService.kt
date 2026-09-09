@@ -27,9 +27,13 @@ import helium314.keyboard.latin.utils.Log
  *
  * ROUTING, AND IT MUST NOT BE CROSSED:
  *   [enhance]   -> AiRouter / TextEnhancer  — the OpenRouter-shape provider.
+ *   [summarise] -> AiRouter                 — the SAME provider, a different prompt set.
  *   [translate] -> Translator / TranslateEngines — the translation library.
- * Neither method may reach the other's engine. They cost different money, they answer
- * differently, and a caller cannot tell from a reply which one produced it.
+ * The LLM pair and the translator may never reach each other's engine. They cost different money,
+ * they answer differently, and a caller cannot tell from a reply which one produced it.
+ * [enhance] and [summarise] deliberately DO share an engine: they are one feature's plumbing asked
+ * two questions, and a second copy of the routing and credential path for the second question is
+ * the duplication this whole module exists to prevent.
  *
  * Access is decided entirely by the manifest: the service is exported under
  * [TextTools.PERMISSION], declared `signature`, so the platform turns away any caller
@@ -83,6 +87,49 @@ class TextToolsService : Service() {
             // Translator already turns every failure into a readable reason rather than a
             // null; pass that through instead of inventing a second wording for it.
             return result.text?.let { ok(it) } ?: failed(result.error ?: "Translate failed")
+        }
+
+        /**
+         * "AI Resume" / "Text Resume" — SUMMARISE this message. The owner's product name, kept
+         * exactly; it is not a curriculum vitae and it does not resume anything.
+         *
+         * THE SAME ENGINE AS [enhance], ON PURPOSE. Same provider, same key, same model, same
+         * timeout, same error wording — the routing, credential and progress machinery is not
+         * copied for a third feature, it is called with a different prompt set. Only two things
+         * differ, and both are deliberate:
+         *
+         *  - the prompt comes from keyboard_ai.summaries via AiRouter.summaryStyle, not from the
+         *    Enhance styles. Mixing the two menus would offer "improve this" to a feature that
+         *    promises "shorten this".
+         *  - ONE request, never TextEnhancer.rewrite. rewrite() splits input past the provider's
+         *    budget and rejoins the answers, which for a rewrite is right and for a summary is
+         *    exactly wrong: it produces a summary PER PIECE, concatenated, and a "summary" longer
+         *    than the mail it was made from. Input past the budget is cut, and the cut is STATED
+         *    in the reply — a summary of the first half of an email, handed over as a summary of
+         *    the email, is worse than no summary.
+         */
+        override fun summarise(text: String?, summaryId: String?): Array<String> {
+            val body = text.orEmpty()
+            if (body.isBlank()) return failed("Nothing to summarise")
+            val style = if (summaryId.isNullOrEmpty()) {
+                AiRouter.summaryStyle(this@TextToolsService)
+            } else {
+                AiRouter.summaryById(summaryId)
+            }
+            val sent = body.take(AiRouter.maxChars)
+            return try {
+                val summary = AiRouter.complete(this@TextToolsService, style.prompt, sent)
+                if (sent.length < body.length) {
+                    ok(summary + "\n\n" + String.format(AiRouter.summaryTruncatedNote, sent.length, body.length))
+                } else {
+                    ok(summary)
+                }
+            } catch (e: AiRouter.NoTokenException) {
+                failed("No API key for ${e.provider.label} — set one in AI Routing")
+            } catch (e: Exception) {
+                Log.w(TAG, "summarise failed", e)
+                failed(e.message ?: e.javaClass.simpleName)
+            }
         }
 
         override fun enhanceProviderLabel(): String =

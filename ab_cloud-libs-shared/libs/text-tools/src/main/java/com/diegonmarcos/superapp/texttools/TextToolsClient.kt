@@ -107,6 +107,14 @@ class TextToolsClient(context: Context) {
     fun translate(text: String, targetTag: String = TextTools.TARGET_CONFIGURED): TextTools.Result =
         call("translate") { it.translate(text, targetTag) }
 
+    /**
+     * Summarise [text] through the same AI Model Routing provider [enhance] uses — "AI Resume" /
+     * "Text Resume", the owner's name for condensing a message, never a CV. [summaryId] defaults
+     * to the shape pinned in Text Resume settings.
+     */
+    fun summarise(text: String, summaryId: String = TextTools.SUMMARY_CONFIGURED): TextTools.Result =
+        call("summarise") { it.summarise(text, summaryId) }
+
     /** What to name the provider in progress and error text; null when nothing is bound. */
     fun enhanceProviderLabel(): String? =
         boundOrRebind()?.let { runCatching { it.enhanceProviderLabel() }.getOrNull() }

@@ -85,6 +85,19 @@ object AiRouter {
     val lengths: List<Style> by lazy { promptSet("lengths") }
     val languages: List<Style> by lazy { promptSet("languages") }
 
+    /**
+     * "AI Resume" / "Text Resume" — SUMMARISE. The owner's product name for condensing a text to
+     * its essentials, kept exactly as they spell it. It does NOT mean a curriculum vitae, and it
+     * does not mean resuming something that was paused; anyone reading this file later should take
+     * the word as a synonym for "summary" and nothing else.
+     *
+     * Its OWN prompt set rather than three more entries in [styles], because the two are different
+     * jobs and the menus must not mix: an Enhance style listed among summaries would silently make
+     * "improve this" an option for a feature that promises "shorten this", and a summary prompt in
+     * the Enhance list would let the ENHANCE key replace a user's paragraph with a précis of it.
+     */
+    val summaries: List<Style> by lazy { promptSet("summaries") }
+
     private fun JSONObject.stringList(key: String): List<String> =
         optJSONArray(key)?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList()
 
@@ -104,6 +117,20 @@ object AiRouter {
      * addressed to it and answers it conversationally instead of rewriting it.
      */
     val rewritePreamble: String get() = registry.optString("rewrite_preamble")
+    val defaultSummary: String get() = registry.getString("default_summary")
+
+    /**
+     * Prepended to every summary prompt, and deliberately not [rewritePreamble]. That one says the
+     * input is a field being typed in and asks for a rewrite of about the same length; this one
+     * says the input is a whole received email and asks for something shorter, and it refuses
+     * instructions found inside that email. A summariser that follows the mail it is summarising
+     * is a prompt-injection hole with a friendly name.
+     */
+    val summaryPreamble: String get() = registry.optString("summary_preamble")
+
+    /** Appended to a summary whose source did not fit [maxChars]; two arguments, sent then total. */
+    val summaryTruncatedNote: String get() = registry.optString("summary_truncated_note")
+
     val timeoutMs: Int get() = registry.optInt("timeout_ms", 30_000)
     /** Input budget of ONE request; longer text is cut into pieces of this size by [TextEnhancer.rewrite]. */
     val maxChars: Int get() = registry.optInt("max_chars", 4096)
@@ -185,6 +212,25 @@ object AiRouter {
     }
     fun styleById(id: String): Style =
         compose(styles.firstOrNull { it.id == id } ?: styles.first { it.id == defaultStyle }, emptyList())
+
+    /**
+     * The summary prompt the user pinned in Text Resume, composed with [summaryPreamble].
+     *
+     * No tone, no length, no output language: those three exist to shape a REWRITE of the user's
+     * own words, and applied to a summary they fight the summary prompt's own length instruction.
+     * The output language is decided by the summary preamble instead — follow the email's.
+     */
+    fun summaryStyle(context: Context): Style {
+        val id = context.prefs().getString(Settings.PREF_SUMMARY_STYLE, defaultSummary) ?: defaultSummary
+        return summaryById(id)
+    }
+
+    /** One named summary prompt, composed with [summaryPreamble]; falls back to [defaultSummary]. */
+    fun summaryById(id: String): Style {
+        val chosen = summaries.firstOrNull { it.id == id } ?: summaries.first { it.id == defaultSummary }
+        val lines = listOf(summaryPreamble, chosen.prompt).filter { it.isNotBlank() }
+        return Style(chosen.id, chosen.label, lines.joinToString(" "))
+    }
 
     /** One system prompt out of the shared preamble, the style, and whatever [extra] lines were pinned. */
     private fun compose(style: Style, extra: List<String>): Style {

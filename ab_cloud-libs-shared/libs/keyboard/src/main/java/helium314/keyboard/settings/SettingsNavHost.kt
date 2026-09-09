@@ -33,6 +33,7 @@ import helium314.keyboard.settings.screens.SubtypeScreen
 import helium314.keyboard.settings.screens.AiRoutingScreen
 import helium314.keyboard.settings.screens.GrammarCheckScreen
 import helium314.keyboard.settings.screens.TextEnhanceScreen
+import helium314.keyboard.settings.screens.TextResumeScreen
 import helium314.keyboard.settings.screens.TextCorrectionScreen
 import helium314.keyboard.settings.screens.ToolbarScreen
 import helium314.keyboard.settings.screens.TranslationInfoScreen
@@ -122,6 +123,9 @@ fun SettingsNavHost(
         composable(SettingsDestination.AiRouting) { // SuperApp addition
             AiRoutingScreen(onClickBack = ::goBack)
         }
+        composable(SettingsDestination.TextResume) { // SuperApp addition
+            TextResumeScreen(onClickBack = ::goBack)
+        }
         composable(SettingsDestination.Preferences) {
             PreferencesScreen(onClickBack = ::goBack)
         }
@@ -189,6 +193,8 @@ object SettingsDestination {
     const val Emoji = "emoji_info" // SuperApp addition
     const val VoiceTranscript = "voice_transcript_info" // SuperApp addition
     const val TextEnhance = "text_enhance" // SuperApp addition
+    // "Resume" is the owner's name for SUMMARISE, not a CV and not resuming anything.
+    const val TextResume = "text_resume" // SuperApp addition
     const val AiRouting = "ai_routing" // SuperApp addition
     const val Preferences = "preferences"
     const val Toolbar = "toolbar"
@@ -216,7 +222,7 @@ object SettingsDestination {
      * allowlist rather than a blocklist: a route added later is unreachable from outside
      * until somebody puts it here on purpose, which is the safe direction for a default.
      *
-     * These three are the Text tools' settings. cloud-mail's Configs list them under
+     * These four are the Text tools' settings. cloud-mail's Configs list them under
      * "Text" and opens THESE pages rather than rebuilding them, so there is one copy of
      * each page on the device and one store behind it — the settings a user changes from
      * mail are the keyboard's own, because they are literally the keyboard's screens.
@@ -227,6 +233,7 @@ object SettingsDestination {
     val external: Map<String, String> = mapOf(
         "ai_routing" to AiRouting,
         "text_enhance" to TextEnhance,
+        "text_resume" to TextResume,
         "translation" to Translation,
     )
 

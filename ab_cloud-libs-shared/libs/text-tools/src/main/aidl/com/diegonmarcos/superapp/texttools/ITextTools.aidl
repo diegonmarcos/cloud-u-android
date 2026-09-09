@@ -45,4 +45,22 @@ interface ITextTools {
 
     /** BCP-47 tags translate() can target right now; empty when no engine is bound. */
     List<String> translateLanguages();
+
+    /**
+     * Summarise [text] through the same AI Model Routing provider enhance() uses.
+     * summaryId "" = the summary shape the user pinned in Text Resume; any other id = that one.
+     *
+     * "RESUME" IS THE OWNER'S NAME FOR THIS AND IT MEANS SUMMARISE. Not a curriculum vitae, and
+     * not resuming a paused operation. The method is spelled summarise() so the wire cannot be
+     * misread even though the menus say Resume.
+     *
+     * A THIRD METHOD, NOT A THIRD ENGINE. It shares enhance()'s provider, key, model, timeout and
+     * error wording; what differs is the prompt set it draws from (keyboard_ai.summaries) and that
+     * it sends ONE request rather than splitting long input, because a summary of each piece
+     * stitched together is longer than the piece it came from, not shorter.
+     *
+     * APPENDED, at the end, per the method-order rule above: inserting it anywhere else renumbers
+     * every method below and an older installed keyboard would answer the wrong call.
+     */
+    String[] summarise(in String text, in String summaryId);
 }

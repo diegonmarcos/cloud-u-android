@@ -65,6 +65,9 @@
     <string name="settings_screen_voice_transcript">Voice transcript</string>
     <!-- SuperApp addition — Text Enhancements + AI Model Routing screens -->
     <string name="settings_screen_enhance">Text Enhancements</string>
+    <!-- "Resume" is the owner's product name for SUMMARISE. Not a curriculum vitae, and not
+         resuming a paused operation. Translators: render it as "summarise"/"summary". -->
+    <string name="settings_screen_resume">Text Resume</string>
     <string name="settings_screen_ai_routing">AI Model Routing</string>
     <string name="settings_screen_ai_routing_summary">Provider, API key and model used by Text Enhancements, Grammar check (AI mode) and Translation</string>
     <!-- Settings screen title for advanced settings -->
@@ -330,6 +333,20 @@
     <string name="enhance_length_summary">How long the rewritten text should be</string>
     <string name="enhance_language_title">Output language</string>
     <string name="enhance_language_summary">Language the result is written in; the text is translated when it differs</string>
+    <string name="enhance_prompt_title">The prompt this sends</string>
+    <string name="enhance_prompt_summary">Exactly what the settings above tell the model to do. Read-only.</string>
+    <!-- Text Resume: summarising. See the note on settings_screen_resume. -->
+    <string name="summary_style_title">Summary shape</string>
+    <string name="summary_style_summary">How a summarised message comes back</string>
+    <string name="summary_prompt_title">The prompt this sends</string>
+    <string name="summary_prompt_summary">Exactly what the setting above tells the model to do. Read-only.</string>
+    <string name="summary_test_title">Try it</string>
+    <string name="summary_test_summary">Summarise a piece of text with the setting above</string>
+    <string name="summary_test_hint">Paste some text to summarise…</string>
+    <string name="ai_preamble_title">Shared instructions</string>
+    <string name="ai_preamble_summary">Prepended to every prompt routed through this provider. Read-only.</string>
+    <string name="ai_preamble_rewrite">When rewriting (Text Enhancements):</string>
+    <string name="ai_preamble_summary_label">When summarising (Text Resume):</string>
     <string name="enhance_test_title">Try it</string>
     <string name="enhance_test_summary">Run the settings above on your own text, without leaving this screen</string>
     <string name="enhance_test_hint">Type something to enhance…</string>

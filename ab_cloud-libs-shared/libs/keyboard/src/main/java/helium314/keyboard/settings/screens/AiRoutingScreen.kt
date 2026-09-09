@@ -70,6 +70,16 @@ fun createAiRoutingSettings(context: Context): List<Setting> = listOf(
     Setting(context, Settings.PREF_AI_PROVIDER, R.string.ai_provider_title, R.string.ai_provider_summary) { setting ->
         ListPreference(setting, AiRouter.providers.map { it.label to it.id }, AiRouter.defaultProvider)
     },
+    // The two preambles every feature routed through here prepends, shown on the page that owns the
+    // routing. Stores nothing. Text Enhancement and Text Resume each show their OWN composed prompt;
+    // this row is the part they have in common and neither of them chose.
+    Setting(context, Settings.PREF_AI_PREAMBLE, R.string.ai_preamble_title, R.string.ai_preamble_summary) { setting ->
+        PromptPreview(
+            setting,
+            context.getString(R.string.ai_preamble_rewrite) + "\n\n" + AiRouter.rewritePreamble +
+                "\n\n" + context.getString(R.string.ai_preamble_summary_label) + "\n\n" + AiRouter.summaryPreamble,
+        )
+    },
 ) + AiRouter.providers.flatMap { p ->
     listOf(
         Setting(context, Settings.PREF_AI_TOKEN_PREFIX + p.id, context.titleFor("ai_token_", p.id, R.string.ai_token_title),
@@ -208,6 +218,7 @@ fun AiRoutingScreen(onClickBack: () -> Unit) {
     val p = AiRouter.provider(ctx)
     val items = listOf(
         Settings.PREF_AI_PROVIDER,
+        Settings.PREF_AI_PREAMBLE,
         Settings.PREF_AI_TOKEN_PREFIX + p.id,
         Settings.PREF_AI_MODEL_PREFIX + p.id,
     ) + if (p.hasPricing()) listOf(Settings.PREF_AI_PRICING_PREFIX + p.id) else emptyList()

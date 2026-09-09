@@ -97,6 +97,12 @@ fun createTextEnhanceSettings(context: Context): List<Setting> = listOf(
             Switch(checked = enabled, onCheckedChange = { setToolbarKeyEnabled(prefs, ToolbarKey.ENHANCE, it) })
         }
     },
+    // Stores nothing: it SHOWS what the five menus above actually send. Built by the very function
+    // the ENHANCE key calls, so the screen cannot drift from the request — and possible at all only
+    // because these prompts are registry data rather than literals inside the code that sends them.
+    Setting(context, Settings.PREF_ENHANCE_PROMPT, R.string.enhance_prompt_title, R.string.enhance_prompt_summary) { setting ->
+        PromptPreview(setting, AiRouter.enhanceStyle(LocalContext.current).prompt)
+    },
     // Stores nothing — the key only exists so the row can live in the settings registry.
     Setting(context, Settings.PREF_ENHANCE_TEST, R.string.enhance_test_title, R.string.enhance_test_summary) { setting ->
         EnhanceTestBox(setting)
@@ -186,6 +192,7 @@ fun TextEnhanceScreen(onClickBack: () -> Unit) {
         Settings.PREF_ENHANCE_LENGTH,
         Settings.PREF_ENHANCE_LANGUAGE,
         Settings.PREF_ENHANCE_TOOLBAR_KEY,
+        Settings.PREF_ENHANCE_PROMPT,
         Settings.PREF_ENHANCE_TEST,
     )
     SearchSettingsScreen(

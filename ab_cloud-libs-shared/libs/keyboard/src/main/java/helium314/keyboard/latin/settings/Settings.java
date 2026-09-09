@@ -233,6 +233,12 @@ public final class Settings implements SharedPreferences.OnSharedPreferenceChang
     public static final String PREF_ENHANCE_LENGTH = "enhance_length";  // length id from keyboard_ai.lengths
     public static final String PREF_ENHANCE_LANGUAGE = "enhance_language"; // language id from keyboard_ai.languages
     public static final String PREF_ENHANCE_TEST = "enhance_test";      // settings-registry key only; the try-it box stores nothing
+    // "Text Resume" = SUMMARISE (the owner's product name), not a CV and not resuming anything.
+    public static final String PREF_SUMMARY_STYLE = "summary_style";    // summary id from keyboard_ai.summaries
+    public static final String PREF_SUMMARY_PROMPT = "summary_prompt";  // settings-registry key only; shows the composed prompt, stores nothing
+    public static final String PREF_SUMMARY_TEST = "summary_test";      // settings-registry key only; the try-it box stores nothing
+    public static final String PREF_ENHANCE_PROMPT = "enhance_prompt";  // settings-registry key only; shows the composed prompt, stores nothing
+    public static final String PREF_AI_PREAMBLE = "ai_preamble";        // settings-registry key only; shows the shared preambles, stores nothing
 
     public static final String PREF_VERSION_CODE = "version_code";
     public static final String PREF_LIBRARY_CHECKSUM = "lib_checksum";
