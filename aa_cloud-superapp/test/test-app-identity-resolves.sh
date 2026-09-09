@@ -244,6 +244,30 @@ done < <(jq -r "$CLASSIFY"'
   | group_by(.) | map(select(length > 1)) | .[]
   | [ .[0], (. | length) ] | @tsv' "$BJ")
 
+echo "== T7: the BY KIND summary derives its kinds, and never prints an unasked zero =="
+# The box between each summary and its list segments notifications by kind. Two
+# properties are worth pinning, because losing either quietly turns the box into
+# the thing it was added to prevent.
+#
+#   T7a  The kinds come from ui.phone_folders through PhoneTaxonomy — not from a
+#        list of kind names in Kotlin. A fourth parallel taxonomy is exactly the
+#        defect the rest of this file exists to catch.
+#   T7b  A kind that was never queried says so. The count is reachable ONLY
+#        under the "notification access granted" branch; drop that guard and
+#        every kind reports a confident 0 that the owner cannot tell apart from
+#        a real empty inbox.
+grep -q 'PhoneTaxonomy.folders.map { it.id }' "$FRAG" \
+  && ok "BY KIND enumerates ui.phone_folders through PhoneTaxonomy, not a Kotlin list" \
+  || bad "BY KIND no longer derives its kinds from PhoneTaxonomy.folders — check for a second kind list"
+
+grep -q 'if (granted) (counted\[id\] ?: 0).toString() else NO_SOURCE' "$FRAG" \
+  && ok "BY KIND prints a count only when the listener was queried, '$(grep -o 'private val NO_SOURCE = "[^"]*"' "$FRAG" | sed 's/.*"\(.*\)"/\1/')' otherwise" \
+  || bad "BY KIND can print a number for a kind it never queried — a zero indistinguishable from a real empty inbox"
+
+grep -q 'NO_SOURCE · classification unavailable' "$FRAG" \
+  && ok "BY KIND reports an unloaded ui.phone_folders as no source rather than as no kinds" \
+  || bad "BY KIND treats a missing central classification as an empty one"
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

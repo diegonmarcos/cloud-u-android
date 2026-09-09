@@ -2424,9 +2424,102 @@ class AggregatorStackFragment : Fragment(),
     private fun kindLabel(folderId: String): String =
         PhoneTaxonomy.folderLabelOf(folderId).dropWhile { !it.isLetterOrDigit() }
 
+    // ── Summary by KIND ────────────────────────────────────────────────
+    //
+    // Between a card's summary and its list: how the notifications on this page
+    // divide by kind. The kinds are the CENTRAL classification's own folders —
+    // ui.phone_folders, the list Notify filters by and the list every card here
+    // derives its own membership from. There is deliberately no fourth taxonomy
+    // behind this box: a kind it could show that no other surface knows about
+    // would be the same defect this page was just fixed for.
+    //
+    // THE RULE THIS BOX IS BUILT AROUND. A count of zero and a question nobody
+    // asked are different facts and have to look different. A confident "0"
+    // beside a kind that was never queried is indistinguishable from a quiet
+    // inbox, and the owner would have no way to tell which one they are looking
+    // at — the same reason a control that misreports its state is treated as a
+    // defect here. So a kind with no source says "no source", never "0".
+
+    /** The value a kind shows when nothing has been asked on its behalf. */
+    private val NO_SOURCE = "no source"
+
+    private fun renderKindSummary(ctx: android.content.Context, body: LinearLayout) {
+        body.addView(shadeLabel(ctx, "BY KIND"))
+        if (PhoneTaxonomy.folders.isEmpty()) {
+            // The classification itself did not arrive — build.json's
+            // phone_folders never reached BuildConfig. Every count below would
+            // be a number about a list we do not have.
+            body.addView(stateLine(ctx, "$NO_SOURCE · classification unavailable", SIGNAL_UNKNOWN))
+            body.addView(caption(ctx, "ui.phone_folders did not reach this build, so there are " +
+                "no kinds to divide the feed into. Nothing here is empty; it is unasked."))
+            return
+        }
+        val granted = isNotificationAccessGranted(ctx)
+        val feed = if (granted) PhoneNotificationStore.all(ctx) else emptyList()
+        if (granted) PhoneTaxonomy.prime(ctx, feed.associate { it.packageName to it.appLabel })
+        val counted = feed
+            .groupingBy { PhoneTaxonomy.folderIdOf(it.packageName, it.appLabel, ctx) }
+            .eachCount()
+        // The kinds this page is ABOUT stay listed even at zero: a card that
+        // promises mail and has none has to say "0", or the reader cannot tell
+        // the promise was kept. Every other kind is listed only when the feed
+        // actually carries it — "whatever kinds exist in the data", rather than
+        // all thirty-four folders of a launcher grid.
+        val declared = pagePanels
+            .mapNotNull { p -> inboxApp(p)?.let { folderOfApp(ctx, it) } }
+            .filter { it.isNotEmpty() }
+        val ids = PhoneTaxonomy.folders.map { it.id }
+            .filter { isSectionFolder(it) && (counted[it] != null || it in declared) }
+        for (id in ids) {
+            body.addView(kindRow(ctx, kindLabel(id),
+                if (granted) (counted[id] ?: 0).toString() else NO_SOURCE, granted))
+        }
+        // Notifications the classification could not place. Not a kind and not
+        // a zero — it is the size of the gap in ui.phone_folders, which is the
+        // very thing that made a whole category invisible, so it is reported
+        // rather than folded into the counts above.
+        val unplaced = counted.filterKeys { it.isNotEmpty() && !isSectionFolder(it) }.values.sum()
+        if (unplaced > 0) body.addView(kindRow(ctx, "Unclassified", unplaced.toString(), true))
+        if (!granted) {
+            body.addView(caption(ctx, "Notification Access is off, so no kind above has been " +
+                "queried. Those are not zeroes — grant access and they become counts."))
+        } else if (ids.isEmpty() && unplaced == 0) {
+            body.addView(stateLine(ctx, "silent · the phone feed is empty", SIGNAL_WARN))
+        }
+        body.addView(caption(ctx, "Counted from the phone notification listener. The cloud " +
+            "stream is not counted here and cannot be: ui.ntfy.taxon classifies a publisher by " +
+            "SECTION prefix, never by folder, so a cloud message has no kind to be counted " +
+            "under. Notify ▸ Inboxes is where that stream is shown."))
+    }
+
+    /** One kind and its number. [sourced] false greys the value, because the
+     *  text in it is a statement about the source and not a measurement. */
+    private fun kindRow(
+        ctx: android.content.Context, label: String, value: String, sourced: Boolean,
+    ): View = LinearLayout(ctx).apply {
+        orientation = LinearLayout.HORIZONTAL
+        val p = dp(4); setPadding(0, p, 0, p)
+        addView(TextView(ctx).apply {
+            text = label
+            setTextColor(0x99FFFFFF.toInt())
+            textSize = 13f
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        addView(TextView(ctx).apply {
+            text = value
+            setTextColor(if (sourced) 0xFFFFFFFF.toInt() else SIGNAL_UNKNOWN)
+            textSize = 13f
+            typeface = if (sourced) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
+        })
+    }
+
     private fun renderInboxNotifications(
         ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel,
     ) {
+        // Between the summary above and the list below, on every card — the
+        // page's own division of what arrived, so a card that lists none of a
+        // kind still shows where that kind went.
+        renderKindSummary(ctx, body)
         val app = inboxApp(panel)
         if (app == null) {
             // Nothing is drawn, on purpose. A card whose inbox declares no app
