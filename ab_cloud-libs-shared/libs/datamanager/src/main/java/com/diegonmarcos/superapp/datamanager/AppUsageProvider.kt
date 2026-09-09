@@ -39,6 +39,56 @@ object AppUsageProvider {
     }
 
     /**
+     * Packages that are STILL ALIVE right now — running a foreground
+     * service, or sitting in the foreground — most recently active first.
+     *
+     * This is what "active" means to a person holding the phone: an app
+     * doing something while they are somewhere else, not merely an app they
+     * happened to open lately. Ranking by recency, as [recentUsed] does,
+     * cannot express that — it returns the same head of the list as
+     * [lastOpened] and the two sections render as twins.
+     *
+     * Android hands a non-system app no process list, but it does report
+     * FOREGROUND_SERVICE_START / FOREGROUND_SERVICE_STOP and
+     * ACTIVITY_RESUMED / ACTIVITY_STOPPED, and a START with no matching
+     * STOP is precisely a service that is still running. An app that was
+     * opened and then left behind — no service, no visible activity —
+     * is deliberately absent here; that one belongs to [lastOpened].
+     *
+     * The two event families are replayed in one pass and each package
+     * keeps whichever is still open, so an app that is BOTH in the
+     * foreground and running a service appears once.
+     */
+    fun activeNow(ctx: Context, now: Long = System.currentTimeMillis()): List<String> {
+        val u = usm(ctx) ?: return emptyList()
+        // 7 days, not 24 hours: a media player or a VPN can hold a
+        // foreground service open far longer than a day, and its START
+        // event would fall outside a shorter window — the service would
+        // then look stopped purely because we stopped looking.
+        val start = now - 7 * DAY_MS
+        val alive = HashMap<String, Long>()
+        runCatching {
+            val ev = u.queryEvents(start, now)
+            val e = UsageEvents.Event()
+            while (ev.hasNextEvent()) {
+                ev.getNextEvent(e)
+                when (e.eventType) {
+                    // ACTIVITY_RESUMED is the same constant as the older
+                    // MOVE_TO_FOREGROUND, so one branch covers both names.
+                    UsageEvents.Event.FOREGROUND_SERVICE_START,
+                    UsageEvents.Event.ACTIVITY_RESUMED ->
+                        alive[e.packageName] = e.timeStamp
+                    UsageEvents.Event.FOREGROUND_SERVICE_STOP,
+                    UsageEvents.Event.ACTIVITY_STOPPED ->
+                        alive.remove(e.packageName)
+                    else -> Unit
+                }
+            }
+        }
+        return alive.entries.sortedByDescending { it.value }.map { it.key }
+    }
+
+    /**
      * Packages ranked by the LAST TIME THEY WERE OPENED — most recent first,
      * 7-day window.
      *
