@@ -139,9 +139,14 @@ groups = {g["title"]: g for g in cloud["tile_groups"]}
 # why it is written out here. Projects Me is the personal half, Projects W the
 # work half; the split is what tells the next editor which row a new tile joins.
 ROWS = {
-    "Projects Me": ["mysocials", "pmboards",
+    "Projects Me": ["mysocials",
                     "projects-me-sep-1", "myburo", "myfin",
                     "projects-me-sep-2", "myhealth", "mystudy", "mytrips"],
+    # One tile, no rule. The owner asked for "PM Boards | PM C3 PM X"; paca has
+    # zero projects, so there is no board for PM C3 or PM X to address and a
+    # rule with nothing after it would divide nothing. Both are an open question
+    # for the owner — see the row's own _doc in build.json.
+    "Projects W":  ["pmboards"],
 }
 
 # Every target, spelled the way the ROUTER resolves it and not the way the tile

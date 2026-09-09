@@ -2543,13 +2543,6 @@
                 "target": "https://diegonmarcos.github.io/mySocials/"
               },
               {
-                "_doc": "PM Boards — the aa-sui_paca project-management tool (Kanban boards). Sits beside MySocials for now because both are web destinations and the rule behind them may not be crossed by a browser link; it moves to its own 'Projects W' row in the very next commit, which is where a work board belongs. Paca IS deployed and healthy as of 2026-09-09 (gateway 10.0.0.6:8095 answers 200, /api/healthz returns {\"status\":\"ok\"}), so the older note here claiming a 404 was stale — the route works, it is the projects inside it that do not exist yet.",
-                "id": "pmboards",
-                "label": "PM Boards",
-                "icon": "ic_pm_boards",
-                "target": "https://paca.diegonmarcos.com"
-              },
-              {
                 "_doc": "First rule — divides the web destinations from the Cloud-Me deep links. NOT a tile: it declares no target and GroupedTilesFragment draws it as a bare '|' that is not clickable, not focusable and hidden from accessibility, because a cell that looks tappable and does nothing is a defect this app already fixed once in the tab strips. Sections.TileGroup.destinations drops it, so every surface that reads tiles as places to go — the derived Apps page, the flat aggregator fallback, Recently Used — never sees it.",
                 "id": "projects-me-sep-1",
                 "label": "|",
@@ -2595,6 +2588,19 @@
                 "label": "MyTrips",
                 "icon": "ic_map_pin",
                 "target": "extapp:cloud-me#page:projects/trips"
+              }
+            ]
+          },
+          {
+            "_doc": "Projects W — the work half of the two project rows, opposite Projects Me. It holds exactly ONE tile today. The owner asked for 'PM Boards | PM C3 PM X' and gave two names with no targets; PM Boards is a paca Kanban board, so the reading is that PM C3 and PM X are two more boards in the same system. Paca DOES address a board by id — its web router declares /projects/$projectId, and projects.id is a uuid (gen_random_uuid()) — and paca is deployed and healthy on the mesh as of 2026-09-09. But the projects table is EMPTY: zero rows, so no board named C3 and no board named X exists to link to. Shipping the two tiles would mean inventing uuids that resolve to nothing, and this row would go from carrying one documented exception to being a row nobody trusts, which is how a dashboard stops being used. They are an open question for the owner, not a guess. There is also NO separator: the rule was to divide PM Boards from those two tiles, and a rule with nothing on one side of it divides nothing — T5 fails a row that ends on one.",
+            "title": "Projects W",
+            "tiles": [
+              {
+                "_doc": "PM Boards — the aa-sui_paca project-management tool (Kanban boards), moved here out of Projects Me because a work board is not one of the owner's personal projects. Opens the cloud service in the in-app browser. The older note here said paca was not deployed and the route 404s; that is no longer true — the gateway on 10.0.0.6:8095 answers 200 and /api/healthz returns {\"status\":\"ok\"}. What is empty is the content: paca has zero projects, so this tile reaches a real, reachable, signed-in-empty board list rather than an error page.",
+                "id": "pmboards",
+                "label": "PM Boards",
+                "icon": "ic_pm_boards",
+                "target": "https://paca.diegonmarcos.com"
               }
             ]
           }
@@ -3166,7 +3172,7 @@
             "upstream": "photoprism"
           },
           {
-            "_doc_apps": "The Apps section this page opens with. DERIVED, never retyped: `apps_from_tile_group` names the ONE canonical list — Cloud ▸ Apps ▸ Data Apps, the same tile_groups entry the launcher row renders — so adding an app to that row adds it here, and the two can never drift into disagreeing about what a Data App is. `apps_extra_tile_ids` picks up the strays that belong on this page but live in another group (PM Boards is in Tools Dashboards), addressed as `<sectionId>/<tileId>` so the reference says where to look. Both resolve to the tiles' own targets, so every icon dispatches through the same grammar the launcher uses and inherits its not-installed handling — see Sections.appTilesFor.",
+            "_doc_apps": "The Apps section this page opens with. DERIVED, never retyped: `apps_from_tile_group` names the ONE canonical list — Cloud ▸ Apps ▸ Data Apps, the same tile_groups entry the launcher row renders — so adding an app to that row adds it here, and the two can never drift into disagreeing about what a Data App is. `apps_extra_tile_ids` picks up the strays that belong on this page but live in another group (PM Boards is in Projects W), addressed as `<sectionId>/<tileId>` so the reference says where to look. Both resolve to the tiles' own targets, so every icon dispatches through the same grammar the launcher uses and inherits its not-installed handling — see Sections.appTilesFor.",
             "apps_from_tile_group": "cloud/Data Apps",
             "apps_extra_tile_ids": [
               "cloud/pmboards"
