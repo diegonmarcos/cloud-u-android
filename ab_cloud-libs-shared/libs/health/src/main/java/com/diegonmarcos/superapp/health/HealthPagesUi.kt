@@ -166,7 +166,10 @@ private fun MetricBody(metricId: String, recordNames: List<String>) {
     val metric = remember(metricId, recordNames) {
         HealthMetrics.byId(metricId)?.let { m ->
             if (recordNames.isEmpty()) m
-            else m.copy(records = m.records.filter { it.simpleName in recordNames })
+            // orEmpty() because KClass.simpleName is nullable and a List<String>
+            // will not be asked whether it contains a String? — a local class has no
+            // simple name, and no page narrows to one.
+            else m.copy(records = m.records.filter { it.simpleName.orEmpty() in recordNames })
         }
     }
     var availability by remember { mutableStateOf<HealthConnectGateway.Availability?>(null) }
