@@ -48,6 +48,9 @@ TARGET="$(cfgv '.firestack.build.make_target')"
 AARBUILT="$(cfgv '.firestack.build.aar_built')"
 API="$(cfgv '.firestack.build.android_api')"
 TAGS="$(cfgv '.firestack.build.gomobile_tags')"
+# go-patch-overlay is a build tool, not a module dependency, so go.mod cannot
+# pin it. Empty is tolerated: the Makefile carries the same default.
+GPOV="$(cfgv '.firestack.build.go_patch_overlay_version')"
 VARIANT="${SUPERAPP_VARIANT:-}"
 GT="$(jq -r --arg v "$VARIANT" \
       '.firestack.build.gomobile_targets[$v] // .firestack.build.gomobile_targets[""] // empty' "$CFG")"
@@ -67,7 +70,12 @@ esac
 CACHE="${FIRESTACK_CACHE:-$SHARED_ROOT/.cache}"
 GODIR="$CACHE/golang"
 export GOPATH="$CACHE/gopath" GOBIN="$CACHE/gopath/bin" GOTOOLCHAIN=local
-mkdir -p "$GODIR" "$GOPATH"
+# GOMODCACHE is named explicitly rather than left to default under GOPATH so CI
+# can persist exactly this one directory across runs. gomobile also passes
+# GOMODCACHE down to the `go` commands it spawns, so the cache seeded below is
+# the same one the bind reads.
+export GOMODCACHE="$CACHE/gomodcache"
+mkdir -p "$GODIR" "$GOPATH" "$GOMODCACHE"
 
 TARBALL="go${GOVER}.linux-amd64.tar.gz"
 if [ ! -x "$GODIR/go/bin/go" ]; then
@@ -84,11 +92,45 @@ NDK="$(ls -d "$ANDROID_HOME"/ndk/* 2>/dev/null | sort -V | tail -1)"
 [ -n "$NDK" ] || { errlog "firestack: no NDK under $ANDROID_HOME/ndk"; exit 1; }
 export ANDROID_NDK_HOME="$NDK" ANDROID_NDK_ROOT="$NDK"
 
+# SEED, then BUILD OFFLINE. These two steps are the whole reason this build is
+# reproducible, and they must stay in this order.
+#
+# Dependency resolution happens HERE, once, and only against the committed
+# go.mod/go.sum: `go mod download` verifies every module against the checksums
+# in go.sum and refuses anything that does not match. Nothing is resolved
+# afterwards. The build itself then runs with GOPROXY=off, so it can only use
+# what these pins delivered — a dependency the pins do not cover fails loudly
+# with "module lookup disabled by GOPROXY=off" instead of being silently
+# fetched from the network mid-build.
+#
+# Why this matters: `gomobile bind` shells out to `go mod tidy` in a throwaway
+# module it synthesises per ABI (x/mobile cmd/gomobile/bind_androidapp.go, the
+# goModTidyAt call after writeGoMod). That temp module has no go.sum, so tidy
+# re-derives the ENTIRE dependency graph on every build. Three APK publishes
+# were lost in one day to sum.golang.org returning a stream error partway
+# through that, each time on a different module. Seeding first is what stops
+# the aar depending on a third-party service being healthy.
+# NOT `go mod download all`: the `all` pattern walks the test dependencies of
+# dependencies, and to record them it WRITES new hashes into go.sum — a build
+# step quietly editing the pins it is supposed to be constrained by, which is
+# the same class of bug as the tidy. Bare `go mod download` covers what this
+# module builds, verifies it against the committed go.sum, and leaves both files
+# byte-identical.
+log "firestack: seeding module cache from committed pins (go.mod/go.sum)"
+( cd "$SRC" && go mod download ) || {
+  errlog "firestack: seeding failed — the committed go.mod/go.sum do not cover this build."
+  errlog "firestack: fix the pins in a commit; do NOT relax verification to get past this."
+  exit 1
+}
+
 log "firestack: building netstack aar — $(go version); ndk=$(basename "$NDK"); abi=$GT (slow)"
 make -C "$SRC" clean || true
 # Override firestack's Makefile ANDROID23 so gomobile builds ONE ABI, not all
 # four: the default is ~4x the time and blows the CI job limit.
-make -C "$SRC" "$TARGET" ANDROID23="-androidapi $API -target=$GT -tags=$TAGS -work"
+# GOPROXY=off: the build resolves nothing. See the seed step above.
+GOPROXY=off make -C "$SRC" "$TARGET" \
+  ANDROID23="-androidapi $API -target=$GT -tags=$TAGS -work" \
+  ${GPOV:+GOPATCHOVERLAY_VERSION="$GPOV"}
 cp "$SRC/$AARBUILT" "$AAR"
 
 # Smoke-test: a truncated or empty aar resolves in gradle and fails at dex time,

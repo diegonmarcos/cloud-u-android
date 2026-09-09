@@ -91,13 +91,27 @@ $(WINDOWS_BUILDDIR)/tun2socks.exe: $(XGO)
 $(BUILDDIR)/apple/Tun2socks.xcframework: $(GOMOBILE)
 	export MACOSX_DEPLOYMENT_TARGET=10.14; $(GOMOBILE) $(GOBIND) -iosversion=9.0 -target=ios,iossimulator,macos -o $@ -ldflags '-s -w' -bundleid org.outline.tun2socks $(IMPORT_PATH)/outline/apple $(IMPORT_PATH)/outline/shadowsocks
 
-go.mod: tools/tools.go
-	go mod tidy
-	touch go.mod
+# go.mod and go.sum are COMMITTED pins, not build output. There used to be a
+# `go.mod: tools/tools.go` rule here that ran `go mod tidy`, so a checkout whose
+# mtimes happened to land the wrong way round would re-resolve the whole
+# dependency set mid-build against the module proxy and sum.golang.org. That
+# makes the APK depend on a third-party service being healthy and lets two
+# builds of the same commit resolve differently. Anything that needs to change
+# a pin does it in a commit, not in a build.
 
+# go-patch-overlay is a build tool that is NOT a module dependency, so it cannot
+# be pinned by go.mod. Its version is passed in by build-firestack.sh from
+# build.json::firestack.build.go_patch_overlay_version; the default here only
+# keeps upstream's standalone `make` usable. `@latest` would re-resolve on every
+# build, which is the same defect as the tidy above.
+GOPATCHOVERLAY_VERSION ?= v0.0.0-20250623154806-ec286d1fd9dc
+
+# No @version: inside this module `go install` uses the version go.mod already
+# pins (golang.org/x/mobile), so the tool that builds the aar is the one the
+# repository declares. `@latest` fetched a different gomobile every day.
 $(GOMOBILE): go.mod
-	env GOBIN=$(GOBIN) go install golang.org/x/mobile/cmd/gomobile@latest
-	env GOBIN=$(GOBIN) go install github.com/felixge/go-patch-overlay@latest
+	env GOBIN=$(GOBIN) go install golang.org/x/mobile/cmd/gomobile
+	env GOBIN=$(GOBIN) go install github.com/felixge/go-patch-overlay@$(GOPATCHOVERLAY_VERSION)
 	env PATH=$(GOBIN):$(PATH) $(GOMOBILE) init
 
 $(XGO): go.mod

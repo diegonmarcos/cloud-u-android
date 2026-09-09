@@ -176,6 +176,25 @@ jobs:
           # Compose-compiler plugin). Mirrors HeliBoard main's wrapper.
           gradle-version: "8.14"
 
+      # ── firestack Go module cache ───────────────────────────────────────
+      # MITIGATION, not the fix. The fix is in build-firestack.sh: the build
+      # seeds from the committed go.mod/go.sum and then runs with GOPROXY=off,
+      # so it resolves nothing. What this cache buys is the one hole that fix
+      # cannot close: `gomobile bind` shells out to `go mod tidy` in a throwaway
+      # module that has no go.sum, so tidy re-verifies the whole graph against
+      # sum.golang.org — 257 tile fetches on a cold runner, any one of which can
+      # return a stream error and cost the publish. Those tiles live in
+      # GOMODCACHE, so once this cache is warm the tidy needs no network at all.
+      # A cold cache still reaches out; only persisting it removes the lottery.
+      # Keyed on go.sum: a pin change correctly invalidates it.
+      - name: Cache firestack Go modules + checksum-db tiles
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ab_cloud-libs-shared/.cache/gomodcache
+          key: firestack-gomodcache-${{ runner.os }}-${{ hashFiles('ab_cloud-libs-shared/libs/firewall/firestack/go.sum') }}
+          restore-keys: firestack-gomodcache-${{ runner.os }}-
+
       # ── ONE shared Cloud-constellation signing key (vault) ──────────────
       # ALL constellation apps (Cloud-Comms hub+forks, Cloud-Nav, Cloud-IDE,
       # Cloud-SuperApp) sign with the SAME key so cross-app signature-IPC + the

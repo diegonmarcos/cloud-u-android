@@ -3061,6 +3061,8 @@
       "_doc_abi": "gomobile bind defaults to ALL android ABIs (arm,arm64,x86,x86_64) — ~4× build time, blows the 30-min CI job. build.sh restricts it to the ONE ABI the SUPERAPP_VARIANT ships by overriding firestack's Makefile ANDROID23 var with a single -target. These flags MIRROR firestack Makefile's ANDROID23 (`-androidapi 23 -target=android -tags='android' -work`) minus the ABI; keep in sync on firestack bumps.",
       "android_api": "23",
       "gomobile_tags": "android",
+      "go_patch_overlay_version": "v0.0.0-20250623154806-ec286d1fd9dc",
+      "_doc_pins": "REPRODUCIBILITY CONTRACT. go.mod/go.sum in libs/firewall/firestack are committed pins and the build resolves NOTHING: build-firestack.sh seeds the module cache with `go mod download all` (checksum-verified against the committed go.sum) and then runs the gomobile bind with GOPROXY=off, so a dependency the pins do not cover fails loudly instead of being fetched mid-build. The Makefile no longer carries a `go mod tidy` rule and no longer installs gomobile at @latest — gomobile comes from the version go.mod already pins. go_patch_overlay_version lives here because go-patch-overlay is a build tool rather than a module dependency, so go.mod cannot pin it and @latest re-resolved it on every build. Guarded by libs/firewall/build-firestack.test.sh.",
       "gomobile_targets": {
         "": "android/arm64",
         "arm64": "android/arm64",
