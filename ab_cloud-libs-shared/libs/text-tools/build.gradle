@@ -1,0 +1,41 @@
+// libs:text-tools — the boundary the Text tools (Enhance, Translate) are reached
+// across, and NOTHING else.
+//
+// The two engines themselves live where they already lived: AiRouter + TextEnhancer
+// in libs:keyboard (they need its BuildConfig.AI_ROUTING_B64 registry and its prefs),
+// Translator + TranslateEngines in libs:translate. This module holds only the AIDL
+// contract between them and a consuming app, plus the client that binds it.
+//
+// Why a boundary and not a shared engine module: libs:keyboard is an IME with an
+// ndk-build native decoder, viewBinding and a Compose settings tree. An app that
+// wants to rewrite a paragraph cannot take that as a dependency. Reaching the
+// engine over a binder gives every consumer the SAME engine, the SAME settings and
+// the SAME credential — the keyboard's — without linking any of it.
+//
+// Deliberately dependency-free beyond core-ktx: every constellation app links this,
+// so anything added here is added to all of them.
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.texttools'
+    compileSdk 36
+    defaultConfig {
+        minSdk 26
+    }
+    buildFeatures {
+        aidl true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+}

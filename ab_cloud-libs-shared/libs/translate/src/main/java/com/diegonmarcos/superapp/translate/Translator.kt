@@ -82,6 +82,31 @@ object Translator {
     }
 
     /**
+     * Translate [text] and hand back the result — no field, no callback, no thread of
+     * its own. BLOCKS the calling thread; never call it on a main looper.
+     *
+     * Every other entry point here is tied to a keyboard surface: [liveTranslate] posts
+     * to the main thread for a bar to draw, and [translate] writes straight back into an
+     * InputConnection. A caller that is not a keyboard has neither — an app translating an
+     * email it RECEIVED has no editable field at all, and a reply written into one would
+     * be a bug rather than a feature. This is the same [translateBlocking] chain those two
+     * already use (explicit source, or detect with [hint] as the fallback, LRU cached, the
+     * engine's own reason on failure), with the surface left to the caller.
+     *
+     * [to] empty = the target pinned in Translation settings, falling back to [hint].
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun translateNow(context: Context, text: String, to: String = "", hint: String? = null): Result {
+        val client = TranslateEngines.client ?: return Result(null, null, "No translate engine registered")
+        if (text.isBlank()) return Result("", null, null)
+        val target = to.ifEmpty { TranslatePrefs.defaultTarget(context.applicationContext) }
+            .ifEmpty { hint.orEmpty() }
+        if (target.isEmpty()) return Result(null, null, "No target language set — pick one in Translation settings")
+        return translateBlocking(client, text, AUTO, target, hint?.takeIf { it != target })
+    }
+
+    /**
      * Live (non-committing) translate for the bars. [from] is a language tag or
      * [AUTO]; [hint] is the explicit-source fallback when detection fails.
      * Callback on the main thread; superseded requests never call back.

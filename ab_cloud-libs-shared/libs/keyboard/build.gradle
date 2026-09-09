@@ -103,6 +103,12 @@ dependencies {
     // SuperApp addition (NOT upstream): on-device translator behind the
     // TRANSLATE toolbar key. Injected by patches/0001-translate-toolbar.patch;
     // the KeyCode.TRANSLATE handler in InputLogic calls into this module.
+    // The binder a sibling app reaches the Text tools across (Enhance, Translate).
+    // The engines stay here; only text crosses. Deliberately NOT api: nothing this
+    // module exposes takes a text-tools type, and a consumer that wants the client
+    // depends on :libs:text-tools directly rather than on the keyboard.
+    implementation project(':libs:text-tools')
+
     implementation project(':libs:translate')
 
     // SuperApp addition (NOT upstream): offline Vosk voice-input behind the

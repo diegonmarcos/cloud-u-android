@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Merged into every app that links libs:text-tools.
+
+  CONSTELLATION_DATA is the constellation's existing signature permission - the one
+  libs:core declares and libs:devtools, libs:feed, libs:net-wg and the AIDL engines
+  already guard themselves with. It is reused rather than reinvented: an app either
+  belongs to the constellation or it does not, and a second permission would only add
+  a way for the two answers to disagree.
+
+  Both tags are needed and neither is redundant: <permission> DEFINES it,
+  <uses-permission> REQUESTS it. The keyboard SERVES ITextTools so it must define the
+  permission its service is guarded by; mail CALLS it so it must request it. Declaring
+  both here means neither app needs manifest work of its own, and a consumer that does
+  not depend on libs:core (cloud-keyboard does not) still gets the definition.
+
+  Duplicate identical <permission> declarations across apps are accepted by the
+  platform when the apps share a signing key, which the whole constellation does.
+
+  <queries> is the Android 11+ package-visibility grant. Without it bindService to the
+  keyboard silently fails with "service not found" even though the service is exported
+  and the permission is held - the caller cannot SEE the package to resolve it.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <permission
+        android:name="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"
+        android:label="Cloud constellation data"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA" />
+
+    <queries>
+        <intent>
+            <action android:name="com.diegonmarcos.superapp.texttools.ITextTools" />
+        </intent>
+    </queries>
+
+</manifest>

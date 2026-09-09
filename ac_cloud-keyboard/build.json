@@ -42,6 +42,12 @@
     "_doc": "Keyboard libs are shared from ../aa_cloud-superapp/libs/ via relative project references in settings.gradle.",
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
+    },
+    "libs:text-tools": {
+      "type": "library",
+      "_doc_dir": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/ - settings.gradle points projectDir here instead of at a local copy.",
+      "_doc": "The ITextTools binder. This APK SERVES it: libs:keyboard holds AiRouter (Enhance) and reaches libs:translate (Translate), so it is the only app that can answer, and the only one that ever sees the provider key. cloud-mail declares the same module to CALL it.",
+      "dir": "../ab_cloud-libs-shared/libs/text-tools"
     }
   },
   "keyboard_media": {

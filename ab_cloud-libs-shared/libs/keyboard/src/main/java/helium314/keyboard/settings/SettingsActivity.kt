@@ -87,6 +87,16 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
 
         val spellchecker = intent?.getBooleanExtra("spellchecker", false) ?: false
 
+        // SuperApp addition: open straight at one screen, for a sibling app that lists
+        // these settings in ITS menu but must not own a second copy of the page. The name
+        // is resolved through SettingsDestination.external, an allowlist — this activity is
+        // exported, so the extra is attacker-controlled input and an arbitrary route string
+        // is not something to hand to a NavHost.
+        //
+        // null when the extra is absent or not allowlisted, which is the normal launcher
+        // case and leaves the start destination exactly as it was.
+        val openAt = SettingsDestination.externalRoute(intent?.getStringExtra(EXTRA_OPEN_AT))
+
         val cv = ComposeView(context = this)
         setContentView(cv)
         cv.setContent {
@@ -116,7 +126,7 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
                             }
                         }
                     else {
-                        SettingsNavHost(onClickBack = { this.finish() })
+                        SettingsNavHost(onClickBack = { this.finish() }, startDestination = openAt)
                         if (showWelcomeWizard) {
                             WelcomeWizard(close = { showWelcomeWizard = false }, finish = this::finish)
                         } else if (crashReports.isNotEmpty()) {
@@ -226,6 +236,12 @@ open class SettingsActivity : ComponentActivity(), SharedPreferences.OnSharedPre
     }
 
     companion object {
+        /**
+         * Intent extra naming the screen to open at; the value is a key of
+         * [SettingsDestination.external], NOT a route. Anything else is ignored.
+         */
+        const val EXTRA_OPEN_AT = "open_at"
+
         // public write so compose previews can show the screens
         // having it in a companion object is not ideal as it will stay in memory even after settings are closed
         // but it's small enough to not care

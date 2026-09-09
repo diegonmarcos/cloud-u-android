@@ -50,6 +50,23 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
                     android:resource="@xml/spellchecker" />
         </service>
 
+        <!-- SuperApp addition: the Text tools (Enhance, Translate) served to sibling
+             apps. This app is the one that holds the AI Model Routing settings and the
+             provider key, so it is the one that makes the calls - a caller hands over
+             text and gets text back, and the credential never leaves this process.
+
+             Guarded by CONSTELLATION_DATA, declared signature by :libs:text-tools, so
+             the platform refuses any caller not signed with the Cloud key. That IS the
+             access check; there is deliberately none in code. -->
+        <service android:name="com.diegonmarcos.superapp.texttools.TextToolsService"
+                android:permission="com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"
+                android:directBootAware="true"
+                android:exported="true">
+            <intent-filter>
+                <action android:name="com.diegonmarcos.superapp.texttools.ITextTools" />
+            </intent-filter>
+        </service>
+
         <!-- Activities -->
         <activity android:name="helium314.keyboard.settings.SettingsActivity"
                 android:theme="@style/platformActivityTheme"

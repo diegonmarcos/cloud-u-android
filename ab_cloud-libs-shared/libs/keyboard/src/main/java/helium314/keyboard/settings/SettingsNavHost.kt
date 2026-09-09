@@ -208,6 +208,32 @@ object SettingsDestination {
     const val Dictionaries = "dictionaries"
     val navTarget = MutableStateFlow(Settings)
 
+    /**
+     * The screens another app may open this one AT, by name, and the ONLY ones.
+     *
+     * SettingsActivity is exported (it is the keyboard's launcher icon), so the screen
+     * name arrives from outside and cannot be trusted to be one of the routes above. An
+     * allowlist rather than a blocklist: a route added later is unreachable from outside
+     * until somebody puts it here on purpose, which is the safe direction for a default.
+     *
+     * These three are the Text tools' settings. cloud-mail's Configs list them under
+     * "Text" and opens THESE pages rather than rebuilding them, so there is one copy of
+     * each page on the device and one store behind it — the settings a user changes from
+     * mail are the keyboard's own, because they are literally the keyboard's screens.
+     *
+     * Keyed by name so the caller does not have to know the route string: a route is an
+     * internal detail and renaming one must not break another app's intent.
+     */
+    val external: Map<String, String> = mapOf(
+        "ai_routing" to AiRouting,
+        "text_enhance" to TextEnhance,
+        "translation" to Translation,
+    )
+
+    /** The route [name] asks for, or null when it is not one another app may reach. */
+    fun externalRoute(name: String?): String? = name?.let { external[it] }
+
+
     private val navScope = CoroutineScope(Dispatchers.Default)
     fun navigateTo(target: String) {
         if (navTarget.value == target) {
