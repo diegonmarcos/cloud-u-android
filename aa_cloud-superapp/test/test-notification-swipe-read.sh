@@ -21,6 +21,8 @@
 #   T7  prefs are committed, and the page key is set even without a filter row
 #   T8  still zero RecyclerView / ItemTouchHelper / child fragments on this path
 #   T9  the gesture is visibly answered and reversible
+#   T10 the page does not narrate itself — no section subtitle describing what
+#       a section is, no empty state written as a paragraph
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0; FAIL=0
@@ -132,6 +134,69 @@ has "$AGG" 'paint(!makeRead)' \
 grep -q 'v.animate().translationX(out).alpha(0f)' "$AGG" \
   && ok "T9: the row visibly leaves in the direction it was thrown" \
   || bad "T9: the commit animation is gone"
+
+echo "== the page does not narrate itself =="
+# A notification page STATES; it does not explain itself. The section subtitles
+# that described what each section is are gone, and the empty states that were
+# written as paragraphs are short neutral labels now. The half of that prose a
+# DEVELOPER needs — why an ntfy card matched no channel — was relocated, not
+# destroyed: logcat at the moment it bites, plus a _doc key beside the panels in
+# build.json. This is what fails when a sentence creeps back onto the card.
+while IFS="	" read -r kind msg; do
+  [ "$kind" = "OK" ] && ok "$msg" || bad "$msg"
+done < <(python3 - "$CODE" "$APP/build.json" <<'PY'
+import io, json, re, sys
+
+code  = io.open(sys.argv[1], encoding="utf-8").read()
+build = json.load(io.open(sys.argv[2], encoding="utf-8"))
+out   = []
+
+# Everything the notification-centre path puts on screen, including the strings
+# written as several concatenated literals across lines — that spelling is how
+# a paragraph gets past a one-line grep.
+region = code[code.index("private fun renderNotificationCenter"):
+              code.index("private fun renderGroups")]
+LIT  = r'"(?:[^"\\]|\\.)*"'
+CALL = re.compile(r"\b(?:caption|emptyHint|stateLine)\(ctx,\s*(" + LIT +
+                  r"(?:\s*\+\s*" + LIT + r")*)")
+prose = []
+for m in CALL.finditer(region):
+    text = "".join(re.findall(LIT, m.group(1))).replace('"', "")
+    if len(text) > 48 or ". " in text:
+        prose.append(text)
+if prose:
+    for t in prose:
+        out.append(("BAD", "T10: a sentence is back on the card: " + t[:70]))
+else:
+    out.append(("OK", "T10: every state on this path is a short label, not a sentence"))
+
+notify = next(s for s in build["ui"]["sections"] if s["id"] == "communication")
+subs = [p["subtitle"] for k, v in notify.items() if k.startswith("stack_")
+        for p in v if p.get("subtitle")]
+out.append(("OK", "T10: no Notify panel declares a describe-the-section subtitle")
+           if not subs else
+           ("BAD", "T10: %d panel subtitle(s) came back, e.g. %s" % (len(subs), subs[0][:60])))
+
+out.append(("OK", "T10: the scopes explanation survives in build.json::_doc_scopes_my-rss")
+           if "_doc_scopes_my-rss" in notify else
+           ("BAD", "T10: the scopes explanation was destroyed rather than relocated"))
+out.append(("OK", "T10: an out-of-scope ntfy card reports itself to logcat")
+           if "matched no channel" in region else
+           ("BAD", "T10: nothing tells a developer why an ntfy card came up empty"))
+out.append(("OK", "T10: a panel with no stream reports itself to logcat")
+           if "declares no " in region else
+           ("BAD", "T10: a stream-less panel is silent in the log as well as on screen"))
+
+# Counts are DATA and stay. The label lost its paragraph, not its total.
+note = re.search(r"fun filteredAwayNote\(total: Int\): String =\s*(" + LIT + r")", code)
+out.append(("OK", "T10: the filtered-away label still carries its count")
+           if note and "$total" in note.group(1) and len(note.group(1)) < 40 else
+           ("BAD", "T10: filteredAwayNote lost its count or grew back into a sentence"))
+
+for kind, msg in out:
+    sys.stdout.write(kind + "\t" + msg + "\n")
+PY
+)
 
 echo
 echo "PASS=$PASS FAIL=$FAIL"

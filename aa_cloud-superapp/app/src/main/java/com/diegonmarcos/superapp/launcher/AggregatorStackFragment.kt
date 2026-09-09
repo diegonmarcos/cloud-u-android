@@ -1055,11 +1055,15 @@ class AggregatorStackFragment : Fragment(),
         // be drawn three times here — once per scope card — and would clear the
         // framework badge as a side effect of merely opening this page.
         "channels" -> renderNtfyGroups(ctx, body, panel)
-        // A card that declares no stream cannot guess one. Saying so beats an
-        // empty list, which the user would read as "you have no notifications".
+        // A card that declares no stream cannot guess one, and it must not look
+        // like "you have no notifications" — so the card keeps a short state
+        // line and nothing more. The build.json grammar that would fix it is
+        // addressed to whoever edits the file, not to the person holding the
+        // phone, so it goes to logcat and to build.json::_doc_stack_my-rss.
         else -> Unit.also {
-            body.addView(emptyHint(ctx, "This card declares no `stream`. " +
-                "Add \"stream\": \"phone\", \"cloud\" or \"channels\" to the panel in build.json."))
+            android.util.Log.w(TAG, "notification panel '${panel.title}' declares no " +
+                "`stream`: add \"stream\": \"phone\", \"cloud\" or \"channels\" in build.json")
+            body.addView(stateLine(ctx, "no stream declared", SIGNAL_UNKNOWN))
         }
     }
 
@@ -1080,9 +1084,6 @@ class AggregatorStackFragment : Fragment(),
             // — grey, with the way to fix it attached. Rendering an empty list
             // in this state would be a failure reporting success.
             body.addView(stateLine(ctx, "unavailable · permission not granted", SIGNAL_UNKNOWN))
-            body.addView(caption(ctx,
-                "Notification Access is off, so this phone's notifications are not being captured at all. " +
-                "This list is empty because we cannot read them — not because none arrived."))
             body.addView(android.widget.Button(ctx).apply {
                 text = "Grant Notification Access"
                 setOnClickListener {
@@ -1097,11 +1098,9 @@ class AggregatorStackFragment : Fragment(),
         }
         val stored = PhoneNotificationStore.all(ctx)
         if (stored.isEmpty()) {
-            // Granted and empty is a REAL state and a different one: amber, and
-            // it names the listener so it cannot be mistaken for a dead page.
-            body.addView(stateLine(ctx, "silent · listener granted, nothing captured", SIGNAL_WARN))
-            body.addView(caption(ctx,
-                "Apps appear here as they post. Nothing has arrived since the store was last cleared."))
+            // Granted and empty is a REAL state and a different one: amber, so
+            // it cannot be mistaken for the grey unavailable case above.
+            body.addView(stateLine(ctx, "silent · nothing captured", SIGNAL_WARN))
             return
         }
         val groups = stored
@@ -1185,9 +1184,12 @@ class AggregatorStackFragment : Fragment(),
             stored.mapTo(HashSet()) { APP_NS + it.id })
         if (renderGroups(ctx, body, local) == 0) {
             if (stored.isEmpty()) {
+                // The producers that write to NotificationStore are Updater (a
+                // version bump on launch) and Crash (an uncaught exception).
+                // That list used to be printed under the card; it is a fact
+                // about this codebase, so it belongs in this comment and not on
+                // the phone, where it answered a question nobody asked.
                 body.addView(stateLine(ctx, "silent · no in-app events", SIGNAL_WARN))
-                body.addView(caption(ctx, "Producers wired: Updater (version bump on launch), " +
-                    "Crash (uncaught exceptions)."))
             } else {
                 body.addView(caption(ctx, filteredAwayNote(stored.size)))
             }
@@ -1228,10 +1230,15 @@ class AggregatorStackFragment : Fragment(),
         }).filter { cloudTaxonomyKeeps(it) }
         if (topics.isEmpty()) {
             // Nothing is being polled, which is not the same as everything being
-            // quiet. Name the reason and the scopes that produced it.
-            body.addView(stateLine(ctx, "unavailable · no channels match", SIGNAL_UNKNOWN))
-            body.addView(caption(ctx, "No channel in build.json::ui.ntfy falls in this card's scopes (" +
-                panel.scopes.joinToString(", ").ifBlank { "all" } + "). Nothing is being polled."))
+            // quiet — so the card still says something rather than going blank.
+            // WHY it is empty is a scopes-vs-ui.ntfy question only whoever edits
+            // build.json can answer, so it goes to logcat with the offending
+            // panel and its scopes, and is written out beside the panels in
+            // build.json::_doc_scopes_my-rss.
+            android.util.Log.w(TAG, "ntfy panel '${panel.title}' matched no channel: no " +
+                "build.json::ui.ntfy topic falls in scopes (" +
+                panel.scopes.joinToString(", ").ifBlank { "all" } + ")")
+            body.addView(stateLine(ctx, "no channels in scope", SIGNAL_UNKNOWN))
             return
         }
         val executor = java.util.concurrent.Executors.newFixedThreadPool(4)
@@ -2573,12 +2580,10 @@ class AggregatorStackFragment : Fragment(),
         render()
     }
 
-    /** Why a non-empty store still rendered nothing. Only Show=Unread can do
-     *  this — sorting never removes a row — so the message can name the cause
-     *  instead of shrugging. */
-    private fun filteredAwayNote(total: Int): String =
-        "Nothing new since your last visit. All $total entries are older, " +
-        "and Show is set to Unread — switch it to All to see them."
+    /** A non-empty store that rendered nothing. Only Show=Unread can do this —
+     *  sorting never removes a row — so the label needs no explanation, only
+     *  the count it is hiding, which is the one thing here that is data. */
+    private fun filteredAwayNote(total: Int): String = "Nothing new · $total older"
 
     private fun caption(ctx: android.content.Context, text: String): TextView =
         TextView(ctx).apply {
