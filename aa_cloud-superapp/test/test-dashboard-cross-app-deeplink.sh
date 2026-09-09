@@ -53,7 +53,7 @@ python3 - "$BJ" <<'PY' && ok "MyFin + MyHealth tiles → extapp:cloud-me#page:..
 import json, sys
 d = json.load(open(sys.argv[1]))
 cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
-group = next(g for g in cloud["tile_groups"] if g["title"] == "Dashboard")
+group = next(g for g in cloud["tile_groups"] if g["title"] == "Projects Me")
 tiles = {t.get("id"): t for t in group["tiles"]}
 want = {"myfin": "extapp:cloud-me#page:buro/fin",
         "myhealth": "extapp:cloud-me#page:projects/health"}
@@ -127,65 +127,115 @@ assert "libs:fin" not in mods["app"]["depends_on"], "app still depends on libs:f
 assert "myfin_mock" not in d["ui"], "ui.myfin_mock outlived the MyFin page"
 PY
 
-echo "== T5: the Dashboard row reads left-to-right as declared, and every tile in it goes somewhere =="
-python3 - "$BJ" <<'PY' && ok "MyBuro · MyProjects · MyFin · MyHealth · | · MySocials · PM Boards, separator inert" || bad "the Dashboard row is out of order, or carries a tile that leads nowhere"
+echo "== T5: the project rows read left-to-right as declared, and every tile in them goes somewhere =="
+python3 - "$BJ" <<'PY' && ok "every project row in declared order, every run one kind, separators inert" || bad "a project row is out of order, mixes kinds inside one run, or carries a tile that leads nowhere"
 import json, sys
 d = json.load(open(sys.argv[1]))
 cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
-group = next(g for g in cloud["tile_groups"] if g["title"] == "Dashboard")
-tiles = group["tiles"]
+groups = {g["title"]: g for g in cloud["tile_groups"]}
 
-# Order is the product decision this row exists to express: the four Cloud-Me
-# deep links first, then a rule, then the two web destinations, with PM Boards
-# last because — see its own _doc — its route 404s until paca ships. What the
-# rule divides is "opens another app on this phone" from "opens a web page", so
-# MySocials belongs on the far side of it with PM Boards and not among the deep
-# links. Nothing about a JSON array's order fails on its own when someone
-# appends to it, which is exactly why it is asserted here.
-order = [t.get("id") for t in tiles]
-assert order == ["myburo", "myprojects", "myfin", "myhealth",
-                 "dashboard-sep", "mysocials", "pmboards"], order
+# The product decision each row exists to express, pinned. Nothing about a JSON
+# array's order fails on its own when someone appends to it, which is exactly
+# why it is written out here. Projects Me is the personal half, Projects W the
+# work half; the split is what tells the next editor which row a new tile joins.
+ROWS = {
+    "Projects Me": ["mysocials", "pmboards",
+                    "projects-me-sep-1", "myburo", "myfin",
+                    "projects-me-sep-2", "myhealth", "mystudy", "mytrips"],
+}
 
-# The rule earns its place only if it actually separates the two kinds. If a
-# later edit drops a browser link above it or a deep link below it, the glyph
-# starts dividing nothing and its own _doc becomes false.
-cut = order.index("dashboard-sep")
-for t in tiles[:cut]:
-    assert t["target"].startswith("extapp:"), f"{t['id']} is above the rule but is not a deep link"
-for t in tiles[cut + 1:]:
-    assert t["target"].startswith("http"), f"{t['id']} is below the rule but is not a web link"
+# Every target, spelled the way the ROUTER resolves it and not the way the tile
+# reads on screen. MyStudy and MyTrips are the reason this table exists: their
+# pages are `studying` and `trips` in ac_cloud-me, and T3 above is what proves
+# those ids resolve against Cloud-Me's flattened page tree rather than against
+# a filename that happens to look similar.
+TARGETS = {
+    "mysocials": "https://diegonmarcos.github.io/mySocials/",
+    "pmboards":  "https://paca.diegonmarcos.com",
+    "myburo":    "extapp:cloud-me#page:buro/summary",
+    "myfin":     "extapp:cloud-me#page:buro/fin",
+    "myhealth":  "extapp:cloud-me#page:projects/health",
+    "mystudy":   "extapp:cloud-me#page:projects/studying",
+    "mytrips":   "extapp:cloud-me#page:projects/trips",
+}
 
-# The separator is a glyph, not a control. A cell with no target that is still
-# clickable is the dead-tap defect; declaring it keeps GroupedTilesFragment and
-# Sections.TileGroup.destinations able to tell decoration from a destination.
-sep = tiles[order.index("dashboard-sep")]
-assert sep.get("separator") is True, sep
-assert not sep.get("target"), f"a separator must not carry a target: {sep}"
-assert sep.get("label"), "parseTilesInline reads label with getString — it must exist"
-
-# A tile that is NOT a separator must go somewhere, in a grammar the launcher
-# actually dispatches. This is the check that would have caught a tile pointing
-# at a page nobody declares — T3 above then proves the cloud-me ones resolve.
-apps = {a["id"] for a in d["ui"].get("external_apps", [])}
-for t in tiles:
-    if t.get("separator"):
-        continue
-    target = t.get("target", "")
-    assert target, f"tile {t.get('id')} has no target — it would be a dead tap"
-    assert not t.get("separator"), t
+def kind(tile):
+    """What TAPPING this tile does — the only distinction the rules mark.
+    An `extapp:` tile launches another app on this phone, or offers to install
+    it; an http tile opens a web page. Mixing the two inside one run is what
+    makes a row unreadable, because two neighbouring icons then behave nothing
+    alike."""
+    target = tile["target"]
     if target.startswith("extapp:"):
-        app = target.removeprefix("extapp:").split("#", 1)[0]
-        assert app in apps, f"tile {t['id']} → no such ui.external_apps id '{app}'"
-    else:
-        assert target.startswith(("page:", "section:", "action:", "http")), \
-            f"tile {t['id']} target '{target}' — unknown grammar"
+        return "another app on this phone"
+    if target.startswith(("http://", "https://")):
+        return "a web page"
+    return "a screen in this app"
 
-want = {"myburo": "extapp:cloud-me#page:buro/summary",
-        "myprojects": "extapp:cloud-me#page:projects/pm"}
-for tid, target in want.items():
-    got = next(t for t in tiles if t.get("id") == tid)
-    assert got["target"] == target, (tid, got["target"], "!=", target)
-    assert got.get("icon"), f"{tid} tile has no icon"
+apps = {a["id"] for a in d["ui"].get("external_apps", [])}
+
+for title, want_order in ROWS.items():
+    assert title in groups, f"tile_groups has no row titled '{title}'"
+    tiles = groups[title]["tiles"]
+    assert [t.get("id") for t in tiles] == want_order, (title, [t.get("id") for t in tiles])
+
+    # A rule is a glyph, not a control. A cell with no target that is still
+    # clickable is the dead-tap defect; declaring it keeps GroupedTilesFragment
+    # and Sections.TileGroup.destinations able to tell decoration from a
+    # destination.
+    for sep in (t for t in tiles if t.get("separator")):
+        assert sep.get("separator") is True, sep
+        assert not sep.get("target"), f"{title}: a separator must not carry a target: {sep}"
+        assert sep.get("label"), "parseTilesInline reads label with getString — it must exist"
+
+    # Split the row on its rules. A rule at either edge, or two in a row,
+    # divides nothing and is pure decoration the reader has to explain away.
+    runs, current = [], []
+    for t in tiles:
+        if t.get("separator"):
+            assert current, f"{title}: a separator with nothing before it divides nothing"
+            runs.append(current); current = []
+        else:
+            current.append(t)
+    assert current, f"{title}: the row ends on a separator, which divides nothing"
+    runs.append(current)
+
+    # THE rule the separators actually keep: each run is of ONE kind. Note this
+    # is deliberately weaker than "consecutive runs differ" — Projects Me's
+    # second rule divides Buro pages from Projects pages and BOTH are deep
+    # links, so the stronger assertion would be false, and a tester that
+    # asserts something false is deleted the first time it is inconvenient.
+    for run in runs:
+        kinds = {kind(t) for t in run}
+        assert len(kinds) == 1, (
+            f"{title}: one run mixes {sorted(kinds)} — a browser link and a "
+            f"cross-app deep link on the same side of a rule: "
+            f"{[t.get('id') for t in run]}")
+
+    # A tile that is NOT a separator must go somewhere, in a grammar the
+    # launcher actually dispatches. This is the check that would have caught a
+    # tile pointing at a page nobody declares — T3 above then proves the
+    # cloud-me ones resolve.
+    for t in tiles:
+        if t.get("separator"):
+            continue
+        tid, target = t.get("id"), t.get("target", "")
+        assert target, f"{title}: tile {tid} has no target — it would be a dead tap"
+        assert t.get("icon"), f"{title}: tile {tid} has no icon"
+        assert tid in TARGETS, f"{title}: tile {tid} is not in the pinned target table"
+        assert target == TARGETS[tid], (tid, target, "!=", TARGETS[tid])
+        if target.startswith("extapp:"):
+            app = target.removeprefix("extapp:").split("#", 1)[0]
+            assert app in apps, f"{title}: tile {tid} → no such ui.external_apps id '{app}'"
+        else:
+            assert target.startswith(("page:", "section:", "action:", "http")), \
+                f"{title}: tile {tid} target '{target}' — unknown grammar"
+
+# MyProjects was REMOVED from the row by the owner. Asserting its absence keeps
+# a well-meant restore from quietly reappearing beside MyBuro, where it used to
+# sit — the Projects Summary page it opened is still reachable from Cloud-Me.
+placed = {t.get("id") for g in ROWS for t in groups[g]["tiles"]}
+assert "myprojects" not in placed, "myprojects is back in a project row — the owner removed it"
 PY
 
 echo
