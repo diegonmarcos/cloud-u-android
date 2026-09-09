@@ -142,11 +142,10 @@ ROWS = {
     "Projects Me": ["mysocials",
                     "projects-me-sep-1", "myburo", "myfin",
                     "projects-me-sep-2", "myhealth", "mystudy", "mytrips"],
-    # One tile, no rule. The owner asked for "PM Boards | PM C3 PM X"; paca has
-    # zero projects, so there is no board for PM C3 or PM X to address and a
-    # rule with nothing after it would divide nothing. Both are an open question
-    # for the owner — see the row's own _doc in build.json.
-    "Projects W":  ["pmboards"],
+    # "PM Boards | PM C3 PM X", as the owner asked. The rule divides the board
+    # LIST from the two named boards; all three are http tiles, so it marks a
+    # difference in destination rather than in what tapping does.
+    "Projects W":  ["pmboards", "projects-w-sep-1", "pmc3", "pmx"],
 }
 
 # Every target, spelled the way the ROUTER resolves it and not the way the tile
@@ -157,6 +156,12 @@ ROWS = {
 TARGETS = {
     "mysocials": "https://diegonmarcos.github.io/mySocials/",
     "pmboards":  "https://paca.diegonmarcos.com",
+    # Board uuids, baked in at build time because paca's projects table has no
+    # slug column and its router only declares /projects/$projectId — there is
+    # no name-based route to prefer. Recreating the paca database reissues both
+    # ids and silently breaks these two tiles; see their _doc in build.json.
+    "pmc3":      "https://paca.diegonmarcos.com/projects/91d8fa68-ce83-463d-af00-af632cf26ab7",
+    "pmx":       "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d",
     "myburo":    "extapp:cloud-me#page:buro/summary",
     "myfin":     "extapp:cloud-me#page:buro/fin",
     "myhealth":  "extapp:cloud-me#page:projects/health",
