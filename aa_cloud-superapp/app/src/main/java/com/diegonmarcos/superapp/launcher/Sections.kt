@@ -325,6 +325,19 @@ object Sections {
          *  Configs is the case. */
         val mirrorSection: String = "",
 
+        /** `<section>/<page>` — this facet IS that ONE page, rendered by that
+         *  page's own fragment. The page-level twin of [mirrorSection], and it
+         *  exists for the same reason: a tab that IS the other surface cannot
+         *  drift from it, a second copy of it always does.
+         *
+         *  Configs ▸ Panel ▸ Notify is the case. [mirrorSection] could not
+         *  serve it — Notify is a six-page section, so mirroring the SECTION
+         *  puts its own tab strip inside ours, and the ask was for the one
+         *  ntfy page. Mirroring the PAGE hands back exactly the fragment
+         *  `page:communication/my-rss` opens, cards and filter row and all,
+         *  with stack_my-rss still declared by the section that owns it. */
+        val mirrorPage: String = "",
+
         /** When set, this facet appends THAT section's Actions (its
          *  `is_action` pages plus its star extras) under an Actions heading,
          *  below its own tiles. Phone ▸ Configs is the case: Android's
@@ -572,6 +585,7 @@ object Sections {
                         mode     = po.optString("mode", ""),
                         url      = po.optString("url", ""),
                         mirrorSection = po.optString("mirror_section", ""),
+                        mirrorPage = po.optString("mirror_page", ""),
                         actionsFromSection = po.optString("actions_from_section", ""),
                         hidden   = po.optBoolean("hidden", false),
                         tabs     = po.optJSONArray("tabs")?.let { ta ->

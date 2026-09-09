@@ -181,11 +181,25 @@ for section, page in sorted(refs):
 hidden = [(s.get("id"), p.get("id"))
           for s in build.get("ui", {}).get("sections", [])
           for p in s.get("pages", []) if p.get("hidden")]
+# A TAB is the second way in, and it arrived after this check was written.
+# "A hidden page has no tab" was true until pages could declare `tabs`
+# (Configs ▸ Launcher, then ▸ Panel): a page named in another page's tab strip
+# is hidden from the grid precisely BECAUSE the strip is how it is reached, so
+# demanding a `page:` tile for it fails the pages that are working as designed
+# — which is what it was doing for config/theme and config/onehand. Owning
+# tabs counts as pointing at them.
+tabbed = {(s.get("id"), tab)
+          for s in build.get("ui", {}).get("sections", [])
+          for p in s.get("pages", [])
+          for tab in (p.get("tabs") or [])}
+reachable = refs | tabbed
 for section, page in sorted(hidden):
-    if (section, page) not in refs:
-        emit("T8", "page %s/%s is hidden and nothing points at it — it has no tab, "
-                   "so it is unreachable" % (section, page))
-emit("INFO", "%d page: targets, %d hidden pages, all reachable" % (len(refs), len(hidden)))
+    if (section, page) not in reachable:
+        emit("T8", "page %s/%s is hidden and nothing points at it — no tile "
+                   "targets it and no page lists it as a tab, so it is "
+                   "unreachable" % (section, page))
+emit("INFO", "%d page: targets, %d tab references, %d hidden pages, all reachable"
+             % (len(refs), len(tabbed), len(hidden)))
 
 print("\n".join(lines))
 PY

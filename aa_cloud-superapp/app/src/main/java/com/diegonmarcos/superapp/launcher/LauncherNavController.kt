@@ -368,7 +368,21 @@ class LauncherNavController(private val host: NavHost) {
         val title = "${section.label} · ${page.label}"
         val ownTiles = section.tilesByPage[page.id].orEmpty()
         val mirrored = page.mirrorSection.takeIf { it.isNotBlank() }?.let { Sections.byId(it) }
+        // `mirror_page` — this facet IS that ONE page of another section.
+        // Configs ▸ Panel ▸ Notify is the case: the tab renders THE ntfy page,
+        // by asking for the very fragment `page:communication/my-rss` opens,
+        // so there is no second copy of that screen to drift from it.
+        //
+        // Self-reference is dropped rather than followed: a page mirroring
+        // itself would re-enter this function forever, and a tab that renders
+        // nothing is a visibly empty pane the owner can report — a stack
+        // overflow on arrival is not.
+        val mirroredPage = page.mirrorPage
+            .split('/', limit = 2)
+            .takeIf { it.size == 2 && it.none(String::isBlank) }
+            ?.let { (sec, pid) -> (sec to pid).takeIf { sec != section.id || pid != page.id } }
         return when {
+            mirroredPage != null -> pageFragment(mirroredPage.first, mirroredPage.second)
             // `mirror_section` — this facet IS that section. Cloud ▸ Configs
             // shows THE Configs page, Actions and all, instead of a second
             // copy of the same page list drifting beside it.

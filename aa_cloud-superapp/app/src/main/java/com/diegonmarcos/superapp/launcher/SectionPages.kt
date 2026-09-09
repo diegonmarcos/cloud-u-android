@@ -93,6 +93,11 @@ object SectionPages {
         sectionId == "wg"     && pageId == "config"         -> WireGuardFragment.newInstance()
         sectionId == "config" && pageId == "onehand" ->
             com.diegonmarcos.superapp.configs.OneHandFragment.newInstance()
+        // Panel's Control tab. Its sibling tab `notify` is NOT here: it is a
+        // facet declaring `mirror_page`, so it is answered before this map is
+        // ever consulted — see LauncherNavController.pageFragment.
+        sectionId == "config" && pageId == "control" ->
+            com.diegonmarcos.superapp.configs.ControlFragment.newInstance()
         sectionId == "config" && pageId == "perms" ->
             com.diegonmarcos.superapp.configs.PermissionsFragment.newInstance()
         sectionId == "config" && (pageId == "about" || pageId == "dev") ->
