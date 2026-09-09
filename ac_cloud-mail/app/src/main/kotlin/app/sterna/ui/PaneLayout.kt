@@ -1,5 +1,10 @@
 package app.sterna.ui
 
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import kotlin.math.max
+
 /**
  * How many panes the inbox host shows, decided on the window WIDTH alone — never on the
  */
@@ -54,6 +59,50 @@ const val DRAWER_FOLDER_ROW_CHROME_DP = 184
 /** How much width a folder LABEL actually gets at [DRAWER_SHEET_WIDTH_DP]. */
 fun folderLabelBudgetDp(drawerWidthDp: Int = DRAWER_SHEET_WIDTH_DP): Int =
     drawerWidthDp - DRAWER_FOLDER_ROW_CHROME_DP
+
+/**
+ * What Material 3 makes a `NavigationDrawerItem` cost in height if nothing caps it:
+ * `NavigationDrawerTokens.ActiveIndicatorHeight`, applied as `heightIn(min = …)`.
+ *
+ * Recorded here because it is the number this app is deliberately spending less than, and a rule
+ * that says "denser than Material" needs Material's figure to compare against.
+ */
+const val MATERIAL_DRAWER_ROW_HEIGHT_DP = 56
+
+/**
+ * The smallest a control carrying a tap target may be drawn: Material's own
+ * `minimumInteractiveComponentSize`, which every `IconButton` reserves.
+ *
+ * The floor under [DRAWER_ROW_HEIGHT_DP] and not a style choice — the folder-options `IconButton`
+ * measures itself at this height and ignores the constraints handed to it, so a shorter row does
+ * not shrink the button, it draws it outside the row.
+ */
+const val MIN_TOUCH_TARGET_DP = 48
+
+/**
+ * How tall one drawer row is allowed to be, at `fontScale 1`.
+ *
+ * 48 and not Material's [MATERIAL_DRAWER_ROW_HEIGHT_DP], because at 56 a row holds one 20dp line
+ * box of label and 36dp of nothing — and the sidebar draws 28 folders, so that "nothing" is the
+ * difference between reading the folder list and scrolling for it. The gap was always there;
+ * what made it show was folder labels ceasing to wrap onto the second line that used to fill it.
+ *
+ * It cannot go below [MIN_TOUCH_TARGET_DP]: the folder-options button owns that height whatever
+ * the row says. And it does not need to go above, because a label that still wraps draws two
+ * label-large line boxes — 40dp — which 48 holds without clipping, so the wrapping that was
+ * deliberately kept readable stays readable.
+ */
+const val DRAWER_ROW_HEIGHT_DP = 48
+
+/**
+ * The row height at THIS font scale — the cap actually handed to a drawer row.
+ *
+ * Capping is what beats Material's `heightIn(min = 56.dp)` at all: that modifier enforces the
+ * constraints coming in, so only a maximum can bring a row under the token. A maximum fixed in dp
+ * would then CLIP a user who has scaled their text up, which the token's minimum never did — so
+ * the cap grows with the text, exactly as [app.sterna.ui.compose.minimumSuggestionRow] does.
+ */
+fun drawerRowHeight(density: Density): Dp = DRAWER_ROW_HEIGHT_DP.dp * max(1f, density.fontScale)
 
 /** Below this the list truncates sender and time on every row. */
 const val LIST_PANE_MIN_WIDTH_DP = 280

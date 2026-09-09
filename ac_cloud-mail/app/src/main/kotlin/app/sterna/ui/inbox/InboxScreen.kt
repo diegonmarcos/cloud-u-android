@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -201,6 +202,7 @@ import app.sterna.ui.messageFolderRole
 import app.sterna.ui.rememberMotionEnabled
 import app.sterna.ui.showsDraftBadge
 import app.sterna.ui.DRAWER_SHEET_WIDTH_DP
+import app.sterna.ui.drawerRowHeight
 import app.sterna.ui.FOLDER_LABEL_TEXT_SIZE_SP
 import app.sterna.ui.PaneLayout
 import app.sterna.ui.PaneSplit
@@ -1770,6 +1772,14 @@ private fun DrawerContent(
 ) {
               // Scroll the whole drawer so long folder lists (and Settings below them) stay reachable (#7).
               Column(Modifier.verticalScroll(rememberScrollState())) {
+                // ONE modifier for every row in this drawer, deliberately shared rather than
+                // repeated: the selected row is drawn as a filled pill, and a pill that is a
+                // different height from the rows around it reads as a rendering fault. Sharing the
+                // value is what makes "all the rows agree" true by construction instead of by
+                // five call sites happening to match.
+                val drawerRowModifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .heightIn(max = drawerRowHeight(LocalDensity.current))
                 val currentAccount = accounts.firstOrNull { it.id == currentAccountId }
                 val currentLabel = currentAccount?.label()
                     ?: ui.accountName.ifBlank { stringResource(R.string.inbox_app_name) }
@@ -1858,6 +1868,22 @@ private fun DrawerContent(
                             )
                         }
                     }
+                    // The same settings the row at the very bottom of this drawer opens — the SAME
+                    // onOpenSettings, so there is one destination and not two that have to be kept
+                    // agreeing. It is repeated up here because reaching it otherwise means
+                    // scrolling past 28 folders, which is the whole complaint. Last in the row, so
+                    // it sits outside the account chevron rather than displacing it.
+                    IconButton(
+                        onClick = {
+                            onOpenSettings()
+                            scope.launch { drawerState.close() }
+                        },
+                    ) {
+                        Icon(
+                            Icons.Filled.Settings,
+                            contentDescription = stringResource(R.string.inbox_settings),
+                        )
+                    }
                 }
                 if (accountsExpanded) {
                     otherAccounts.forEach { account ->
@@ -1907,7 +1933,7 @@ private fun DrawerContent(
                             viewModel.selectUnified()
                             scope.launch { drawerState.close() }
                         },
-                        modifier = Modifier.padding(horizontal = 12.dp),
+                        modifier = drawerRowModifier,
                     )
                 }
                 // Outside the guard above, deliberately: this is one account's unread mail across
@@ -1925,7 +1951,7 @@ private fun DrawerContent(
                         viewModel.selectUnread()
                         scope.launch { drawerState.close() }
                     },
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = drawerRowModifier,
                 )
                 // The one place the registry AND the default become "what is folded"; see
                 // [collapsedFolderIds]. The list it resolves against is the one drawn just below.
@@ -2007,7 +2033,7 @@ private fun DrawerContent(
                             viewModel.select(mailbox)
                             scope.launch { drawerState.close() }
                         },
-                        modifier = Modifier.padding(horizontal = 12.dp),
+                        modifier = drawerRowModifier,
                     )
                 }
                 NavigationDrawerItem(
@@ -2015,7 +2041,7 @@ private fun DrawerContent(
                     label = { DrawerLabel(stringResource(R.string.inbox_new_folder)) },
                     selected = false,
                     onClick = onCreateFolder,
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = drawerRowModifier,
                 )
                 HorizontalDivider()
                 NavigationDrawerItem(
@@ -2026,7 +2052,7 @@ private fun DrawerContent(
                         onOpenSettings()
                         scope.launch { drawerState.close() }
                     },
-                    modifier = Modifier.padding(horizontal = 12.dp),
+                    modifier = drawerRowModifier,
                 )
               }
 }

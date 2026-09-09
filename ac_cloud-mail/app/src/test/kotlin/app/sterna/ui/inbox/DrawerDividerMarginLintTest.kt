@@ -32,15 +32,48 @@ class DrawerDividerMarginLintTest {
     fun `the entries under the divider did not take the margin instead`() {
         val found = ENTRY_SELECTORS.map { it to modifierArguments(entryCalling(it)) }
         assertEquals(
-            "The two drawer entries that can sit right under the divider must keep their modifier " +
-                "exactly as it was — the horizontal inset, nothing else. Padding the item instead " +
-                "of the divider either misses the single-account layout entirely ('Unread' is the " +
+            "The two drawer entries that can sit right under the divider must take the drawer's " +
+                "SHARED row modifier and nothing else of their own. Padding the item instead of " +
+                "the divider either misses the single-account layout entirely ('Unread' is the " +
                 "row against the line there) or pushes the selected pill out of line with the " +
                 "folder rows below it. Compared as whole arguments; an empty list means the " +
                 "modifier was dropped. Modifier arguments found were:" +
                 "\n${found.joinToString("\n")}",
             ENTRY_SELECTORS.map { it to listOf(EXPECTED_ENTRY_MODIFIER) },
             found,
+        )
+    }
+
+    /**
+     * What the rule above USED to say on its own, back when the expected modifier was spelled out
+     * at each row: "the horizontal inset, nothing else". Two rows agreeing with a literal only
+     * implied that the other three agreed too — now the agreement is the thing asserted.
+     */
+    @Test
+    fun `every drawer row takes the one shared modifier, and it pays no vertical air`() {
+        val rows = allDrawerRowModifiers()
+        check(rows.size >= MINIMUM_DRAWER_ROWS) {
+            "InboxScreen.kt is expected to draw at least $MINIMUM_DRAWER_ROWS NavigationDrawerItem " +
+                "rows in the sidebar. Found ${rows.size}, so this rule is guarding almost nothing."
+        }
+        assertEquals(
+            "EVERY row in the drawer must take the same modifier value. The selected row is drawn " +
+                "as a filled pill, and a pill a different height from its neighbours reads as a " +
+                "rendering fault — sharing one value is what makes the rows agree by construction " +
+                "instead of by five call sites happening to match. Modifiers found were:" +
+                "\n${rows.joinToString("\n")}",
+            List(rows.size) { listOf(EXPECTED_ENTRY_MODIFIER) },
+            rows,
+        )
+        val declaration = sharedRowModifierDeclaration()
+        assertEquals(
+            "The shared row modifier must inset the rows horizontally and take NO vertical " +
+                "padding. Vertical air here is the margin that belongs to the divider above " +
+                "(issue #179), and it is also how the sidebar silently gets sparse again — the " +
+                "28-folder list has already lost its density once. The declaration found was:" +
+                "\n$declaration",
+            emptyList<String>(),
+            VERTICAL_PADDING_ARGUMENTS.filter { declaration.contains(it) },
         )
     }
 
@@ -92,6 +125,26 @@ class DrawerDividerMarginLintTest {
                 "have to be told apart here?"
         }
         return entries.single()
+    }
+
+    /** The `modifier = …` arguments of every `NavigationDrawerItem(…)` in the file, in source order. */
+    private fun allDrawerRowModifiers(): List<List<String>> {
+        val text = codeText(INBOX_SCREEN)
+        return Regex("""\bNavigationDrawerItem\s*\(""").findAll(text)
+            .map { modifierArguments(callAt(text, it.range.first)) }
+            .toList()
+    }
+
+    /** The `val drawerRowModifier = …` declaration the rows share, whole. */
+    private fun sharedRowModifierDeclaration(): String {
+        val text = codeText(INBOX_SCREEN)
+        val found = Regex("""val $SHARED_ROW_MODIFIER = Modifier [^;]*?\)\)""").find(text)
+        checkNotNull(found) {
+            "InboxScreen.kt is expected to declare `val $SHARED_ROW_MODIFIER = Modifier…` once, in " +
+                "DrawerContent — the single place the sidebar's row inset and height are set. It " +
+                "is not there, so this rule is guarding nothing until it is repaired."
+        }
+        return found.value.trim()
     }
 
     /** The `modifier = …` arguments of the call [text], whole, in source order. */
@@ -211,9 +264,28 @@ class DrawerDividerMarginLintTest {
         /** The two rows that can sit right under it, by the view each one selects. */
         private val ENTRY_SELECTORS = listOf("selectUnified", "selectUnread")
 
-        /** Their modifier, unchanged: the horizontal inset, and no vertical air of their own. */
-        private const val EXPECTED_ENTRY_MODIFIER =
-            "modifier = Modifier.padding(horizontal = 12.dp)"
+        /** The name of the one modifier every row in the drawer takes. */
+        private const val SHARED_ROW_MODIFIER = "drawerRowModifier"
+
+        /**
+         * Their modifier: the shared value, and no vertical air of their own.
+         *
+         * This was spelled out as the literal `Modifier.padding(horizontal = 12.dp)` until the
+         * sidebar needed a row-height cap. That value was not wrong, but pinning it at the CALL
+         * SITE was too narrow a rule: it forbade every modifier change, including the uniform one
+         * that gives all five rows the same height, and it only ever covered two of the five rows.
+         * The rule it was standing in for — no row takes vertical air of its own, and all rows
+         * agree so the selected pill stays in line — is now asserted directly, over every row and
+         * over the shared declaration itself.
+         */
+        private const val EXPECTED_ENTRY_MODIFIER = "modifier = $SHARED_ROW_MODIFIER"
+
+        /** At least this many rows: two views, the folders, "new folder" and "settings". */
+        private const val MINIMUM_DRAWER_ROWS = 5
+
+        /** Every way of writing vertical padding that the shared modifier must not carry. */
+        private val VERTICAL_PADDING_ARGUMENTS =
+            listOf("vertical =", "top =", "bottom =", "all =")
 
         private const val INBOX_SCREEN_PATH =
             "app/src/main/kotlin/app/sterna/ui/inbox/InboxScreen.kt"
