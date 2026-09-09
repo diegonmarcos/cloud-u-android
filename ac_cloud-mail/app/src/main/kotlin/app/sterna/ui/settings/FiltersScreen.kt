@@ -3,6 +3,7 @@ package app.sterna.ui.settings
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -38,11 +39,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sterna.R
 import app.sterna.core.data.filter.FilterRule
+import app.sterna.core.data.filter.ForeignScript
 import app.sterna.core.data.filter.ForeignScriptNotice
 import app.sterna.core.data.filter.RuleField
 import app.sterna.core.data.filter.RuleMatch
@@ -69,6 +72,9 @@ fun FiltersScreen(
     // still leave once the write lands, the button must still stay.
     var confirmOverwrite by remember { mutableStateOf(false) }
     var overwriteThenLeave by remember { mutableStateOf(false) }
+    // The takeover confirmation, and the same passenger: which gesture is waiting behind it.
+    var confirmTakeover by remember { mutableStateOf(false) }
+    var takeoverThenLeave by remember { mutableStateOf(false) }
 
     val editIndex = editing
     if (editIndex != null && editIndex < state.rules.size) {
@@ -94,8 +100,9 @@ fun FiltersScreen(
     // button. Hung on the button alone it is walked around by the back gesture, which reaches the
     // same write through the exit dialog below. Which asked travels in `thenLeave`.
     fun requestSave(thenLeave: Boolean) {
-        when (filtersSaveStep(scriptUnreadable = state.scriptUnreadable)) {
+        when (filtersSaveStep(scriptUnreadable = state.scriptUnreadable, foreignActive = state.foreignActive)) {
             FiltersSaveStep.CONFIRM_OVERWRITE -> { overwriteThenLeave = thenLeave; confirmOverwrite = true }
+            FiltersSaveStep.CONFIRM_TAKEOVER -> { takeoverThenLeave = thenLeave; confirmTakeover = true }
             FiltersSaveStep.WRITE -> { leaveAfterSave = thenLeave; viewModel.save() }
         }
     }
@@ -133,6 +140,31 @@ fun FiltersScreen(
             },
             dismissButton = {
                 TextButton(onClick = { confirmOverwrite = false }) { Text(stringResource(R.string.settings_cancel)) }
+            },
+        )
+    }
+
+    if (confirmTakeover) {
+        // Same shape as the overwrite dialog, different loss: that one replaces content, this one
+        // STOPS a script that is filtering mail right now. The script is named in every sentence,
+        // because "another script" is what the owner already read as a routine notice (#209).
+        val foreignName = state.foreignScript?.name.orEmpty()
+        AlertDialog(
+            onDismissRequest = { confirmTakeover = false },
+            title = { Text(stringResource(R.string.settings_filters_takeover_title, foreignName)) },
+            text = {
+                Text(
+                    stringResource(R.string.settings_filters_takeover_body, foreignName),
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmTakeover = false; leaveAfterSave = takeoverThenLeave; viewModel.save() }) {
+                    Text(stringResource(R.string.settings_filters_takeover_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmTakeover = false }) { Text(stringResource(R.string.settings_cancel)) }
             },
         )
     }
@@ -178,6 +210,47 @@ private fun BoxScope.FiltersNote(text: String, onRetry: (() -> Unit)? = null) {
     }
 }
 
+/**
+ * The active script this app did not write, shown as text because it cannot be shown as rules.
+ * Read-only on purpose: an editor here would be a Sieve editor, and a parser that filled the rule
+ * list from it would drop every construct the rule model has no field for.
+ */
+@Composable
+private fun ForeignScriptBody(foreign: ForeignScript) {
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            stringResource(R.string.settings_filters_foreign_body_title, foreign.name),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (foreign.body == null) {
+            // The list named it and the blob would not come down. Saying so is the whole point:
+            // silence here is indistinguishable from an empty script, and an empty script is the
+            // one case where a save costs nothing.
+            Text(
+                stringResource(R.string.settings_filters_foreign_body_unavailable, foreign.name),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        } else {
+            // Monospace and horizontally scrollable: Sieve is indented code, and re-wrapping it
+            // silently changes what the owner is being asked to judge.
+            Text(
+                foreign.body,
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                softWrap = false,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .padding(top = 4.dp)
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+            )
+        }
+    }
+}
+
 @Composable
 private fun FiltersList(
     state: FiltersUiState,
@@ -215,18 +288,24 @@ private fun FiltersList(
             vacationScriptActive = state.vacationScriptActive,
         )?.let { notice ->
             Text(
-                stringResource(
-                    when (notice) {
-                        ForeignScriptNotice.UNREADABLE_SCRIPT -> R.string.settings_filters_unreadable
-                        ForeignScriptNotice.STOPS_AUTO_REPLY -> R.string.settings_filters_stops_auto_reply
-                        ForeignScriptNotice.ANOTHER_SCRIPT -> R.string.settings_filters_foreign_warning
-                    },
-                ),
+                when (notice) {
+                    ForeignScriptNotice.UNREADABLE_SCRIPT -> stringResource(R.string.settings_filters_unreadable)
+                    ForeignScriptNotice.STOPS_AUTO_REPLY -> stringResource(R.string.settings_filters_stops_auto_reply)
+                    // Named, not "another": the unnamed sentence read as routine, and the owner
+                    // could not tell which of their scripts a save was about to switch off (#209).
+                    ForeignScriptNotice.ANOTHER_SCRIPT ->
+                        stringResource(R.string.settings_filters_foreign_warning, state.foreignScript?.name.orEmpty())
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
             )
         }
+        // The script itself, verbatim. This app models a SUBSET of Sieve, so it cannot turn a
+        // script it did not write into rules without dropping whatever it failed to understand —
+        // the same data loss as before, arriving quietly. Showing the text unparsed states both
+        // facts honestly: none of this is represented as rules, and none of it was invented.
+        state.foreignScript?.let { foreign -> ForeignScriptBody(foreign) }
         when {
             state.rules.isNotEmpty() -> {
                 state.rules.forEachIndexed { index, rule ->
@@ -239,9 +318,15 @@ private fun FiltersList(
                 }
                 HorizontalDivider()
             }
-            // An empty list is not always "no rules": over an unreadable script the line above
-            // already says a save would replace unread content, which "No rules yet" contradicts.
-            showsNoRulesNote(ruleCount = state.rules.size, scriptUnreadable = state.scriptUnreadable) ->
+            // An empty list is not always "no rules". Over an unreadable script, and over a
+            // foreign one quoted just above, the line already there says what the emptiness
+            // means — and "No rules yet. Add one…" contradicts it while inviting the save that
+            // makes it true (#209).
+            showsNoRulesNote(
+                ruleCount = state.rules.size,
+                scriptUnreadable = state.scriptUnreadable,
+                foreignActive = state.foreignActive,
+            ) ->
                 Text(
                     stringResource(R.string.settings_filters_empty),
                     style = MaterialTheme.typography.bodyMedium,

@@ -418,7 +418,12 @@
     <string name="settings_filters_add">Regel toevoegen</string>
     <string name="settings_filters_saved">Filters opgeslagen</string>
     <string name="settings_filters_untitled">Naamloze regel</string>
-    <string name="settings_filters_foreign_warning">Er is al een ander filterscript actief op de server; door op te slaan wordt dat van Cloud Mail het actieve script.</string>
+    <string name="settings_filters_foreign_warning">“%1$s” filtert je post op dit moment. Cloud Mail heeft dit script niet geschreven en kan het niet als regels tonen; de tekst staat hieronder precies zoals de server hem bewaart.</string>
+    <string name="settings_filters_foreign_body_title">%1$s (alleen-lezen)</string>
+    <string name="settings_filters_foreign_body_unavailable">Cloud Mail kon de tekst van “%1$s” niet downloaden. Opslaan zou een script stoppen waarvan hier niemand de inhoud heeft gezien.</string>
+    <string name="settings_filters_takeover_title">“%1$s” stoppen?</string>
+    <string name="settings_filters_takeover_body">“%1$s” is het script dat dit account op dit moment filtert, en Cloud Mail kan niet als regels uitdrukken wat het doet. Opslaan maakt de regels op dit scherm het actieve script en stopt “%1$s”, dus vanaf dan wordt je post alleen gefilterd door wat je hier ziet. “%1$s” wordt niet verwijderd: het blijft onder zijn naam op de server staan, en een client die Sieve rechtstreeks bewerkt kan het weer activeren.</string>
+    <string name="settings_filters_takeover_confirm">Stoppen en opslaan</string>
     <string name="settings_filters_not_running">Je filterregels worden op dit moment niet toegepast.</string>
     <string name="settings_filters_stops_auto_reply">Je automatische antwoord loopt op de server. Als je deze filters opslaat, stopt het.</string>
     <string name="settings_filters_unreadable">Cloud Mail kan het filterscript van dit account niet lezen; door op te slaan wordt het vervangen.</string>

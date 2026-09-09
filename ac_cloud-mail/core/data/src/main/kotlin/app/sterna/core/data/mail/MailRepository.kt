@@ -24,6 +24,7 @@ import app.sterna.core.data.account.resolveExistingLogin
 import app.sterna.core.data.account.resolveExistingLoginAmong
 import app.sterna.core.data.filter.FilterRule
 import app.sterna.core.data.filter.FilterScriptStatus
+import app.sterna.core.data.filter.ForeignScript
 import app.sterna.core.data.filter.SieveCodec
 import app.sterna.core.data.filter.VACATION_SCRIPT_NAME
 import app.sterna.core.data.filter.enabledRuleCount
@@ -107,6 +108,7 @@ import app.sterna.core.jmap.model.JmapSession
 import app.sterna.core.jmap.model.PushSubscription
 import app.sterna.core.jmap.model.Quota
 import app.sterna.core.jmap.model.SearchQuery
+import app.sterna.core.jmap.model.SieveScript
 import app.sterna.core.jmap.model.SubmissionEnvelope
 import app.sterna.core.jmap.model.VacationResponse
 import kotlinx.coroutines.CancellationException
@@ -827,6 +829,11 @@ sealed interface FilterRulesState {
         /** The second of those two causes, kept apart so a screen can NAME it. It cannot be
          *  recovered from the script list, which carries names and flags, never content. */
         val scriptUnreadable: Boolean = false,
+        /** The FIRST of those two causes, with the script's own text: what the account is being
+         *  filtered by right now, and what Save would switch off. Null when nothing foreign is
+         *  active. [rules] is what this app can model; this is everything it cannot — the two are
+         *  separate fields so a save can carry the first and never silently drop the second. */
+        val foreignScript: ForeignScript? = null,
     ) : FilterRulesState
 }
 
@@ -5490,16 +5497,24 @@ class MailRepository(
             return FilterRulesState.Unsupported
         }
         val scripts = client.getSieveScripts(ctx.session, ctx.accountId, ctx.auth)
+        suspend fun bodyOf(script: SieveScript): String = client.downloadBlob(
+            ctx.session, ctx.accountId, script.blobId, "application/sieve", "${script.name}.siv", ctx.auth,
+        ).toString(Charsets.UTF_8)
+
         val managed = scripts.firstOrNull { it.name == SieveCodec.SCRIPT_NAME }
-        val script = managed?.let {
-            client.downloadBlob(
-                ctx.session, ctx.accountId, it.blobId, "application/sieve", "sterna.siv", ctx.auth,
-            ).toString(Charsets.UTF_8)
+        val script = managed?.let { bodyOf(it) }
+        // The active script that is not ours is DOWNLOADED, not merely counted (#209). Its blobId
+        // was already in hand and went unused, so the screen could say "another script is active"
+        // and "no rules yet" in the same breath, over an account whose mail was being filtered.
+        val foreign = scripts.firstOrNull { it.isActive && it.name != SieveCodec.SCRIPT_NAME }?.let { other ->
+            ForeignScript(
+                name = other.name,
+                // A body we could not fetch stays null rather than "": an unknown script must not
+                // read as an empty one, which is the single case where replacing it is free.
+                body = runCatching { bodyOf(other) }.getOrElseUnlessCancelled { null },
+            )
         }
-        return loadedFilterRules(
-            sternaScript = script,
-            otherActiveScript = scripts.any { it.isActive && it.name != SieveCodec.SCRIPT_NAME },
-        )
+        return loadedFilterRules(sternaScript = script, foreignScript = foreign)
     }
 
     /**

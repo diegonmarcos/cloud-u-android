@@ -103,10 +103,20 @@ fun foreignScriptNotice(
 }
 
 /**
- * Whether the filters screen prints "No rules yet…". When the script could not be parsed the rule
+ * Whether the filters screen prints "No rules yet. Add one…". An empty rule list has three causes
+ * and only ONE of them is that sentence:
+ *
+ *  - nothing is filtering this account — the sentence is true, and the invitation is right;
+ *  - this app's own script exists and could not be parsed ([scriptUnreadable]);
+ *  - another script is filtering the account right now ([foreignActive]) and this app cannot
+ *    express it as rules.
+ *
+ * The last one is #209. Zero rules HERE was printed as zero rules ON THE SERVER, next to a line
+ * saying another script was active — the app told the owner their working filters did not exist,
+ * and invited them to start from nothing.
  */
-fun showsNoRulesNote(ruleCount: Int, scriptUnreadable: Boolean): Boolean =
-    ruleCount == 0 && !scriptUnreadable
+fun showsNoRulesNote(ruleCount: Int, scriptUnreadable: Boolean, foreignActive: Boolean): Boolean =
+    ruleCount == 0 && !scriptUnreadable && !foreignActive
 
 /** Which sentence the RESPONDER screen puts at its head, or null for none. */
 enum class VacationFilterLine {

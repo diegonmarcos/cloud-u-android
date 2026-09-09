@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.sterna.container
 import app.sterna.core.data.filter.FilterRule
+import app.sterna.core.data.filter.ForeignScript
 import app.sterna.core.data.mail.FilterRulesState
 import app.sterna.ui.inbox.mailboxFilePath
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,10 @@ data class FiltersUiState(
     /** This account's `sterna` script exists and could not be parsed, so Save would replace content
      *  nobody read. Carried separately from [foreignActive], which the rules read folds it into. */
     val scriptUnreadable: Boolean = false,
+    /** The active script this app did not write, WITH its text — what the account is being filtered
+     *  by right now. Held beside [rules] rather than merged into it: [rules] is what this app can
+     *  model and push, this is what it cannot, and a save must never quietly carry the second. */
+    val foreignScript: ForeignScript? = null,
     val accountLabel: String = "",
     val rules: List<FilterRule> = emptyList(),
     /** Folder paths offered in the "move to folder" picker, and stored as the rule's target.
@@ -100,6 +105,7 @@ class FiltersViewModel(application: Application) : AndroidViewModel(application)
                             status = repo.loadFilterScriptStatus(credentials),
                             foreignFromRulesRead = result.foreignActiveScript,
                             unreadableFromRulesRead = result.scriptUnreadable,
+                            foreignScriptFromRulesRead = result.foreignScript,
                         )
                     }
                 }

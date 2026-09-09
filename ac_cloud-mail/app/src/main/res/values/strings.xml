@@ -661,7 +661,12 @@
     <string name="settings_filters_add">Add rule</string>
     <string name="settings_filters_saved">Filters saved</string>
     <string name="settings_filters_untitled">Untitled rule</string>
-    <string name="settings_filters_foreign_warning">Another filter script is active on the server; saving will make Cloud Mail\'s the active one.</string>
+    <string name="settings_filters_foreign_warning">“%1$s” is filtering your mail right now. Cloud Mail did not write this script and cannot show it as rules, so its text is below exactly as the server holds it.</string>
+    <string name="settings_filters_foreign_body_title">%1$s (read-only)</string>
+    <string name="settings_filters_foreign_body_unavailable">Cloud Mail could not download the text of “%1$s”. Saving would stop a script whose contents nobody here has seen.</string>
+    <string name="settings_filters_takeover_title">Stop “%1$s”?</string>
+    <string name="settings_filters_takeover_body">“%1$s” is the script filtering this account right now, and Cloud Mail cannot express what it does as rules. Saving makes the rules on this screen the active script and stops “%1$s”, so from then on your mail is filtered by what you see here and nothing else. “%1$s” is not deleted: it stays on the server under its name, and a client that edits Sieve directly can make it active again.</string>
+    <string name="settings_filters_takeover_confirm">Stop it and save</string>
     <string name="settings_filters_not_running">Your filter rules are not being applied at the moment.</string>
     <string name="settings_filters_stops_auto_reply">Your auto-reply is running on the server. Saving these filters will stop it.</string>
     <string name="settings_filters_unreadable">Cloud Mail cannot read this account\'s filter script; saving will replace it.</string>

@@ -1,6 +1,7 @@
 package app.sterna.ui.settings
 
 import app.sterna.core.data.filter.FilterScriptStatus
+import app.sterna.core.data.filter.ForeignScript
 import app.sterna.core.data.filter.refreshedFilterWarning
 import app.sterna.core.data.filter.rulesAreNotRunning
 
@@ -12,6 +13,7 @@ internal fun filtersStateWithStatus(
     status: FilterScriptStatus?,
     foreignFromRulesRead: Boolean = false,
     unreadableFromRulesRead: Boolean = false,
+    foreignScriptFromRulesRead: ForeignScript? = null,
 ): FiltersUiState {
     val next = if (status == null) {
         state
@@ -32,5 +34,14 @@ internal fun filtersStateWithStatus(
     return next.copy(
         foreignActive = next.foreignActive || foreignFromRulesRead,
         scriptUnreadable = next.scriptUnreadable || unreadableFromRulesRead,
+        // The script's text outlives the read that produced it, EXCEPT when a status read that
+        // succeeded says nothing foreign is active any more — which is exactly the post-save
+        // refresh, where ours has just become the active script. Keeping the old body past that
+        // would leave the screen warning about a script it no longer switches off.
+        foreignScript = when {
+            foreignScriptFromRulesRead != null -> foreignScriptFromRulesRead
+            status != null && !status.foreignActive -> null
+            else -> state.foreignScript
+        },
     )
 }

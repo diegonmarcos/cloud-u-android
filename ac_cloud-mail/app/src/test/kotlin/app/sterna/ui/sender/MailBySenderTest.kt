@@ -540,7 +540,8 @@ class MailBySenderTest {
         val strings = englishStrings()
         assertEquals(
             "the by-sender screen's footnote is shown for FOREIGN_SCRIPT, which is " +
-                "otherActiveScript || unreadable — a third-party script, our own unreadable one, " +
+                "(foreignScript != null) || unreadable — a third-party script, our own " +
+                "unreadable one, " +
                 "or her own vacation script. It keeps its pointer to Settings → Filters, where " +
                 "the state is actually read and repaired, and claims nothing about a cause",
             "Sterna Mail isn't managing this account's filter script at the moment, so no filter " +

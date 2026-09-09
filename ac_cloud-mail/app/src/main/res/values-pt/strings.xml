@@ -418,7 +418,12 @@
     <string name="settings_filters_add">Adicionar regra</string>
     <string name="settings_filters_saved">Filtros guardados</string>
     <string name="settings_filters_untitled">Regra sem título</string>
-    <string name="settings_filters_foreign_warning">Outro script de filtro está ativo no servidor; ao guardar, o do Cloud Mail passará a ser o ativo.</string>
+    <string name="settings_filters_foreign_warning">«%1$s» está a filtrar o seu correio neste momento. O Cloud Mail não escreveu este script e não o consegue mostrar como regras, por isso o texto dele aparece abaixo tal como o servidor o guarda.</string>
+    <string name="settings_filters_foreign_body_title">%1$s (só leitura)</string>
+    <string name="settings_filters_foreign_body_unavailable">O Cloud Mail não conseguiu transferir o texto de «%1$s». Ao guardar, pararia um script cujo conteúdo ninguém aqui viu.</string>
+    <string name="settings_filters_takeover_title">Parar «%1$s»?</string>
+    <string name="settings_filters_takeover_body">«%1$s» é o script que filtra esta conta neste momento, e o Cloud Mail não consegue exprimir em regras o que ele faz. Ao guardar, as regras deste ecrã passam a ser o script ativo e «%1$s» deixa de correr, pelo que a partir daí o seu correio é filtrado apenas pelo que vê aqui. «%1$s» não é apagado: fica no servidor com o seu nome, e um cliente que edite Sieve diretamente pode voltar a ativá-lo.</string>
+    <string name="settings_filters_takeover_confirm">Parar e guardar</string>
     <string name="settings_filters_not_running">As suas regras de filtro não estão a ser aplicadas neste momento.</string>
     <string name="settings_filters_stops_auto_reply">A sua resposta automática está ativa no servidor. Ao guardar estes filtros, será interrompida.</string>
     <string name="settings_filters_unreadable">O Cloud Mail não consegue ler o script de filtro desta conta; ao guardar, será substituído.</string>

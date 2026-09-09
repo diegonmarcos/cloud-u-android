@@ -418,7 +418,12 @@
     <string name="settings_filters_add">Dodaj regułę</string>
     <string name="settings_filters_saved">Filtry zapisane</string>
     <string name="settings_filters_untitled">Reguła bez nazwy</string>
-    <string name="settings_filters_foreign_warning">Na serwerze jest aktywny inny skrypt filtrujący; zapisanie sprawi, że aktywny stanie się skrypt Cloud Mail.</string>
+    <string name="settings_filters_foreign_warning">„%1$s” filtruje teraz Twoją pocztę. Cloud Mail nie napisał tego skryptu i nie potrafi przedstawić go jako reguł, więc poniżej znajduje się jego tekst dokładnie taki, jaki przechowuje serwer.</string>
+    <string name="settings_filters_foreign_body_title">%1$s (tylko do odczytu)</string>
+    <string name="settings_filters_foreign_body_unavailable">Cloud Mail nie mógł pobrać tekstu skryptu „%1$s”. Zapisanie zatrzymałoby skrypt, którego zawartości nikt tutaj nie widział.</string>
+    <string name="settings_filters_takeover_title">Zatrzymać „%1$s”?</string>
+    <string name="settings_filters_takeover_body">„%1$s” to skrypt, który w tej chwili filtruje to konto, a Cloud Mail nie potrafi wyrazić jego działania w postaci reguł. Zapisanie sprawi, że aktywnym skryptem staną się reguły z tego ekranu, a „%1$s” przestanie działać — od tej pory Twoja poczta będzie filtrowana wyłącznie tym, co tu widzisz. „%1$s” nie zostaje usunięty: pozostaje na serwerze pod swoją nazwą, a klient edytujący Sieve bezpośrednio może go ponownie aktywować.</string>
+    <string name="settings_filters_takeover_confirm">Zatrzymaj i zapisz</string>
     <string name="settings_filters_not_running">Twoje reguły filtrowania nie są obecnie stosowane.</string>
     <string name="settings_filters_stops_auto_reply">Twoja automatyczna odpowiedź działa na serwerze. Zapisanie tych filtrów ją wyłączy.</string>
     <string name="settings_filters_unreadable">Cloud Mail nie potrafi odczytać skryptu filtrującego tego konta; zapisanie go zastąpi.</string>

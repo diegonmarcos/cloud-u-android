@@ -1,6 +1,8 @@
 package app.sterna.ui.settings
 
 import app.sterna.core.data.filter.FilterScriptStatus
+import app.sterna.core.data.filter.ForeignScript
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -194,5 +196,66 @@ class FiltersStatusUpdateTest {
                 "nobody has managed to read, on the strength of a failure",
             next.scriptUnreadable,
         )
+    }
+
+    // ---- the foreign script's TEXT, which the flag beside it cannot carry (#209) ----------------
+
+    private val roundcube = ForeignScript("roundcube", "require [\"fileinto\"];\nif true { keep; }")
+
+    /**
+     * **THE FIX, FOLDED.** The rules read downloaded the script that is filtering the account;
+     * the status read that follows knows only names and flags. If the fold kept the boolean and
+     * dropped the body, the repository would fetch the script and the screen would still have
+     * nothing but "another script is active" to draw — #209 with a wasted round-trip added.
+     */
+    @Test
+    fun `the script the rules read downloaded survives the status read`() {
+        val next = filtersStateWithStatus(
+            state = FiltersUiState(loading = false),
+            status = FilterScriptStatus(foreignActive = true),
+            foreignFromRulesRead = true,
+            foreignScriptFromRulesRead = roundcube,
+        )
+        assertEquals("the body is what the screen shows instead of \"no rules yet\"", roundcube, next.foreignScript)
+        assertTrue(next.foreignActive)
+    }
+
+    /** A status read that failed must not throw the text away — same rule as the three flags. */
+    @Test
+    fun `a read that failed keeps the script already on screen`() {
+        val showing = FiltersUiState(loading = false, foreignActive = true, foreignScript = roundcube)
+        assertEquals(
+            "null is \"I could not look\": blanking the body here empties the one part of this " +
+                "screen that is not a claim but a quotation",
+            showing,
+            filtersStateWithStatus(state = showing, status = null),
+        )
+    }
+
+    /**
+     * The other half, and the reason this is a `when` and not an `?:`. After a successful save
+     * ours IS the active script, so the status read says foreignActive = false. Holding the old
+     * body past that leaves the screen quoting a script it no longer switches off, above a button
+     * that would now ask a question with no subject.
+     */
+    @Test
+    fun `a successful read that finds nothing foreign retires the script it was showing`() {
+        val next = filtersStateWithStatus(
+            state = FiltersUiState(loading = false, foreignActive = true, foreignScript = roundcube),
+            status = FilterScriptStatus(scriptExists = true, scriptActive = true, foreignActive = false),
+        )
+        assertNull("the takeover succeeded: there is no foreign script left to quote", next.foreignScript)
+        assertFalse(next.foreignActive)
+    }
+
+    /** …but a read that still finds one foreign keeps the text, so the warning keeps its subject. */
+    @Test
+    fun `a read that still finds a foreign script keeps the text`() {
+        val next = filtersStateWithStatus(
+            state = FiltersUiState(loading = false, foreignActive = true, foreignScript = roundcube),
+            status = FilterScriptStatus(foreignActive = true),
+        )
+        assertEquals(roundcube, next.foreignScript)
+        assertTrue(next.foreignActive)
     }
 }

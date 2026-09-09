@@ -418,7 +418,12 @@
     <string name="settings_filters_add">Regel hinzufügen</string>
     <string name="settings_filters_saved">Filter gespeichert</string>
     <string name="settings_filters_untitled">Unbenannte Regel</string>
-    <string name="settings_filters_foreign_warning">Auf dem Server ist ein anderes Filterskript aktiv; beim Speichern wird das von Cloud Mail aktiviert.</string>
+    <string name="settings_filters_foreign_warning">„%1$s“ filtert Ihre Mail gerade. Cloud Mail hat dieses Skript nicht geschrieben und kann es nicht als Regeln darstellen; sein Text steht unten genau so, wie der Server ihn hält.</string>
+    <string name="settings_filters_foreign_body_title">%1$s (schreibgeschützt)</string>
+    <string name="settings_filters_foreign_body_unavailable">Cloud Mail konnte den Text von „%1$s“ nicht herunterladen. Speichern würde ein Skript stoppen, dessen Inhalt hier niemand gesehen hat.</string>
+    <string name="settings_filters_takeover_title">„%1$s“ stoppen?</string>
+    <string name="settings_filters_takeover_body">„%1$s“ ist das Skript, das dieses Konto gerade filtert, und Cloud Mail kann nicht als Regeln ausdrücken, was es tut. Beim Speichern werden die Regeln auf diesem Bildschirm zum aktiven Skript und „%1$s“ hört auf zu laufen; von da an filtert nur noch, was Sie hier sehen. „%1$s“ wird nicht gelöscht: Es bleibt unter seinem Namen auf dem Server, und ein Client, der Sieve direkt bearbeitet, kann es wieder aktivieren.</string>
+    <string name="settings_filters_takeover_confirm">Stoppen und speichern</string>
     <string name="settings_filters_not_running">Die Filterregeln werden derzeit nicht angewendet.</string>
     <string name="settings_filters_stops_auto_reply">Auf dem Server läuft deine automatische Antwort. Beim Speichern dieser Filter wird sie beendet.</string>
     <string name="settings_filters_unreadable">Cloud Mail kann das Filterskript dieses Kontos nicht lesen; beim Speichern wird es ersetzt.</string>

@@ -418,7 +418,12 @@
     <string name="settings_filters_add">Добавить правило</string>
     <string name="settings_filters_saved">Фильтры сохранены</string>
     <string name="settings_filters_untitled">Безымянное правило</string>
-    <string name="settings_filters_foreign_warning">На сервере активен другой скрипт фильтрации; при сохранении активным станет скрипт Cloud Mail.</string>
+    <string name="settings_filters_foreign_warning">«%1$s» сейчас фильтрует вашу почту. Cloud Mail не создавал этот скрипт и не может показать его в виде правил, поэтому ниже приведён его текст в том виде, в каком его хранит сервер.</string>
+    <string name="settings_filters_foreign_body_title">%1$s (только чтение)</string>
+    <string name="settings_filters_foreign_body_unavailable">Cloud Mail не смог загрузить текст «%1$s». Сохранение остановит скрипт, содержимое которого здесь никто не видел.</string>
+    <string name="settings_filters_takeover_title">Остановить «%1$s»?</string>
+    <string name="settings_filters_takeover_body">«%1$s» — это скрипт, который сейчас фильтрует эту учётную запись, и Cloud Mail не может выразить его работу в виде правил. При сохранении активным скриптом станут правила с этого экрана, а «%1$s» перестанет работать: с этого момента почту фильтрует только то, что вы видите здесь. «%1$s» не удаляется — он остаётся на сервере под своим именем, и клиент, который правит Sieve напрямую, может снова сделать его активным.</string>
+    <string name="settings_filters_takeover_confirm">Остановить и сохранить</string>
     <string name="settings_filters_not_running">Ваши правила фильтрации сейчас не применяются.</string>
     <string name="settings_filters_stops_auto_reply">На сервере работает ваш автоответ. Сохранение этих фильтров остановит его.</string>
     <string name="settings_filters_unreadable">Cloud Mail не может прочитать скрипт фильтрации этой учётной записи; при сохранении он будет заменён.</string>

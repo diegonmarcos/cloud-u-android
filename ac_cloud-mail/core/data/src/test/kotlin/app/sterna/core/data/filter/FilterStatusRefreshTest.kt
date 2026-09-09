@@ -351,7 +351,7 @@ class FilterStatusRefreshTest {
         assertFalse(
             "the warning above already said what the empty list means; repeating it as \"no rules " +
                 "yet\" contradicts it, and invites the very save that replaces the script",
-            showsNoRulesNote(ruleCount = 0, scriptUnreadable = true),
+            showsNoRulesNote(ruleCount = 0, scriptUnreadable = true, foreignActive = false),
         )
     }
 
@@ -361,7 +361,7 @@ class FilterStatusRefreshTest {
         assertTrue(
             "a readable account with nothing in it is the case the sentence was written for — " +
                 "silencing it leaves a screen with a lone Add button and no explanation",
-            showsNoRulesNote(ruleCount = 0, scriptUnreadable = false),
+            showsNoRulesNote(ruleCount = 0, scriptUnreadable = false, foreignActive = false),
         )
     }
 
@@ -370,9 +370,50 @@ class FilterStatusRefreshTest {
         for (unreadable in listOf(true, false)) {
             assertFalse(
                 "rules are listed: the sentence is about their absence. unreadable=$unreadable",
-                showsNoRulesNote(ruleCount = 1, scriptUnreadable = unreadable),
+                showsNoRulesNote(ruleCount = 1, scriptUnreadable = unreadable, foreignActive = false),
             )
         }
+    }
+
+    /**
+     * **#209, AS THE OWNER SAW IT.** The account is filtered by a script this app did not write.
+     * The read found it, so `foreignActive` is true and the red line above says so — and the rule
+     * list is empty, because none of that script is expressible as [FilterRule]s. Zero rules HERE
+     * was printed as zero rules ON THE SERVER: "No rules yet. Add one to filter incoming mail on
+     * the server." directly under "another filter script is active". The owner was told their
+     * working filters did not exist, and invited to build the script that would replace them.
+     */
+    @Test
+    fun `a foreign active script does not also claim there are no rules`() {
+        assertFalse(
+            "the line above says another script is filtering this account; \"No rules yet\" under " +
+                "it contradicts it, and the invitation to add one is the invitation to stop it",
+            showsNoRulesNote(ruleCount = 0, scriptUnreadable = false, foreignActive = true),
+        )
+    }
+
+    /** Both causes at once — neither cancels the other, and the sentence stays away. */
+    @Test
+    fun `neither cause of an unexplained empty list brings the sentence back`() {
+        for (unreadable in listOf(true, false)) {
+            for (foreign in listOf(true, false)) {
+                assertEquals(
+                    "the sentence belongs to exactly one empty list: the one with nothing behind " +
+                        "it (unreadable=$unreadable, foreign=$foreign)",
+                    !unreadable && !foreign,
+                    showsNoRulesNote(ruleCount = 0, scriptUnreadable = unreadable, foreignActive = foreign),
+                )
+            }
+        }
+    }
+
+    /** The witness that keeps the fix from being "never say it": rules listed, nothing claimed. */
+    @Test
+    fun `a foreign script says nothing about a list that is not empty`() {
+        assertFalse(
+            "the sentence is about an ABSENCE of rules; with one on screen it is false either way",
+            showsNoRulesNote(ruleCount = 1, scriptUnreadable = false, foreignActive = true),
+        )
     }
 
     // ---- the read itself, out of the shipped source: a LAST RESORT, not the proof ----

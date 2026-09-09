@@ -96,10 +96,14 @@ class FilterWarningWiringTest {
         // is on the button only": the exit dialog's Save writes the same script, is reached by the
         val lines = text(FILTERS_SCREEN).lines().map { it.trim() }
         assertEquals(
-            "FiltersScreen must consult filtersSaveStep(scriptUnreadable = state.scriptUnreadable) " +
-                "exactly once, on the screen's own flag: a literal there makes the whole gate " +
-                "decorative, and a second call site is a second policy",
-            listOf("when (filtersSaveStep(scriptUnreadable = state.scriptUnreadable)) {"),
+            "FiltersScreen must consult filtersSaveStep(...) exactly once, on BOTH of the " +
+                "screen's own flags: a literal there makes the whole gate decorative, a second " +
+                "call site is a second policy, and dropping foreignActive is #209 itself — the " +
+                "save that stopped a working script with no question asked",
+            listOf(
+                "when (filtersSaveStep(scriptUnreadable = state.scriptUnreadable, " +
+                    "foreignActive = state.foreignActive)) {",
+            ),
             lines.filter { it.contains("filtersSaveStep(") },
         )
         assertEquals(
@@ -119,12 +123,13 @@ class FilterWarningWiringTest {
             lines.contains("onClick = onSave,"),
         )
         assertEquals(
-            "the ONLY two places FiltersScreen may start a write: the WRITE branch of the " +
-                "decision, and the overwrite confirmation's own button. Anything else in this " +
-                "list is a third door, which is exactly how this one was found open",
+            "the ONLY three places FiltersScreen may start a write: the WRITE branch of the " +
+                "decision, and the two confirmations' own buttons. Anything else in this list is " +
+                "a fourth door, which is exactly how the first one was found open",
             listOf(
                 "FiltersSaveStep.WRITE -> { leaveAfterSave = thenLeave; viewModel.save() }",
                 "TextButton(onClick = { confirmOverwrite = false; leaveAfterSave = overwriteThenLeave; viewModel.save() }) {",
+                "TextButton(onClick = { confirmTakeover = false; leaveAfterSave = takeoverThenLeave; viewModel.save() }) {",
             ),
             lines.filter { Regex("viewModel(::save\\b|\\.save\\(\\))").containsMatchIn(it) },
         )
@@ -198,16 +203,22 @@ class FilterWarningWiringTest {
         // the CONDITION, whole: written back as `state.rules.isEmpty()` the screen says "No rules
         // yet. Add one…" straight under "Sterna Mail cannot read this account's filter script;
         // saving will replace it", and every executed test stays green.
-        val condition = text(FILTERS_SCREEN).lines().map { it.trim() }
-            .filter { it.startsWith("showsNoRulesNote(") }
+        val lines = text(FILTERS_SCREEN).lines().map { it.trim() }
+        val start = lines.indexOfFirst { it.startsWith("showsNoRulesNote(") }
+        assertTrue("FiltersScreen must call showsNoRulesNote at all", start >= 0)
+        val condition = lines.subList(start, minOf(start + 5, lines.size))
         assertEquals(
-            "FiltersScreen must gate R.string.settings_filters_empty on exactly " +
-                "'showsNoRulesNote(ruleCount = state.rules.size, scriptUnreadable = " +
-                "state.scriptUnreadable) ->' — the count it is showing and the flag the warning " +
-                "above is chosen from. `scriptUnreadable = false` there is the contradiction " +
-                "written back with nothing to catch it",
+            "FiltersScreen must gate R.string.settings_filters_empty on all THREE inputs: the " +
+                "count it is showing, and both flags the warning above is chosen from. A literal " +
+                "`false` for either is the contradiction written back with nothing to catch it — " +
+                "and `foreignActive` missing altogether is #209, where 'No rules yet. Add one…' " +
+                "was printed under a line saying another script was filtering the account",
             listOf(
-                "showsNoRulesNote(ruleCount = state.rules.size, scriptUnreadable = state.scriptUnreadable) ->",
+                "showsNoRulesNote(",
+                "ruleCount = state.rules.size,",
+                "scriptUnreadable = state.scriptUnreadable,",
+                "foreignActive = state.foreignActive,",
+                ") ->",
             ),
             condition,
         )
@@ -252,6 +263,13 @@ class FilterWarningWiringTest {
                 "result.foreignActiveScript`): the script list cannot see a `sterna` script we " +
                 "failed to parse, so passing false there loses the refusal that protects it",
             Regex("foreignFromRulesRead = result\\.foreignActiveScript").containsMatchIn(source),
+        )
+        assertTrue(
+            "the load must also carry the foreign script's CONTENT (`foreignScriptFromRulesRead " +
+                "= result.foreignScript`). Dropped here, the repository downloads the script and " +
+                "the screen still has only a boolean to draw — which is #209 with the fetch added " +
+                "and nothing else changed",
+            Regex("foreignScriptFromRulesRead = result\\.foreignScript").containsMatchIn(source),
         )
         // WHOLE LINE, not `containsMatchIn`. Measured: `result.scriptUnreadable && false` LENGTHENS
         // the line, so a containment check still matched it and the whole suite stayed green — with

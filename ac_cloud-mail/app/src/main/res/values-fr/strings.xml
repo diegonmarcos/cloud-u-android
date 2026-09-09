@@ -418,7 +418,12 @@
     <string name="settings_filters_add">Ajouter une règle</string>
     <string name="settings_filters_saved">Filtres enregistrés</string>
     <string name="settings_filters_untitled">Règle sans titre</string>
-    <string name="settings_filters_foreign_warning">Un autre script de filtrage est actif sur le serveur ; l\'enregistrement activera celui de Cloud Mail.</string>
+    <string name="settings_filters_foreign_warning">« %1$s » filtre votre courrier en ce moment. Cloud Mail n\'a pas écrit ce script et ne peut pas le présenter sous forme de règles ; son texte figure ci-dessous tel que le serveur le conserve.</string>
+    <string name="settings_filters_foreign_body_title">%1$s (lecture seule)</string>
+    <string name="settings_filters_foreign_body_unavailable">Cloud Mail n\'a pas pu télécharger le texte de « %1$s ». Enregistrer arrêterait un script dont personne ici n\'a vu le contenu.</string>
+    <string name="settings_filters_takeover_title">Arrêter « %1$s » ?</string>
+    <string name="settings_filters_takeover_body">« %1$s » est le script qui filtre ce compte en ce moment, et Cloud Mail ne peut pas exprimer ce qu\'il fait sous forme de règles. Enregistrer fait des règles de cet écran le script actif et arrête « %1$s » : à partir de là, votre courrier n\'est filtré que par ce que vous voyez ici. « %1$s » n\'est pas supprimé : il reste sur le serveur sous son nom, et un client qui modifie Sieve directement peut le réactiver.</string>
+    <string name="settings_filters_takeover_confirm">L\'arrêter et enregistrer</string>
     <string name="settings_filters_not_running">Vos règles de filtrage ne s\'appliquent pas en ce moment.</string>
     <string name="settings_filters_stops_auto_reply">Votre réponse automatique est active sur le serveur. Enregistrer ces filtres l\'arrêtera.</string>
     <string name="settings_filters_unreadable">Cloud Mail ne sait pas lire le script de filtrage de ce compte ; l\'enregistrement le remplacera.</string>
