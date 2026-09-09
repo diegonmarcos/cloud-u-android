@@ -18,13 +18,16 @@
 #                       Every `extapp:<id>` target in the file must resolve here
 #                       (T1). AggregatorStackFragment.inboxApp has exactly this
 #                       one route, so an unresolved id is a card with no
-#                       notifications and no error.
+#                       notifications and no error. Each entry also names the
+#                       `folder` it classifies into, and PhoneFolders derives
+#                       the `pkg:` keyword from it — so identity and taxonomy
+#                       are ONE record for our own apps and cannot drift (T8).
 #
-#   ui.phone_folders    classification of ANY installed package, keyed by
-#                       package (`pkg:` exact / `pkg^` prefix). A package that
-#                       matches no folder lands in the sink, and a sink folder
-#                       carries no section prefix, which is the same thing as
-#                       invisible on every filtered surface (T2/T3/T4).
+#   ui.phone_folders    classification of ANY installed THIRD-PARTY package,
+#                       keyed by package (`pkg:` exact / `pkg^` prefix). A
+#                       package that matches no folder lands in the sink, and a
+#                       sink folder carries no section prefix, which is the same
+#                       thing as invisible on every filtered surface (T2/T3/T4).
 #
 # Both are keyed on things a rename does not move — a slug id and a package name
 # — which is exactly why the mail rename broke a MEMBERSHIP (a package missing
@@ -47,9 +50,25 @@ command -v jq >/dev/null 2>&1 || { echo "ERROR: jq required" >&2; exit 2; }
 # is a LOWER bound on what the device would match, and a package this says is
 # classified really is.
 CLASSIFY='
+# The folder list the app actually classifies with: ui.phone_folders, plus the
+# `pkg:` keyword every ui.external_apps entry contributes to the folder it
+# names. PhoneFolders.loadFromBuildConfig does exactly this at load time, and a
+# checker that read only the declared half would report our own apps as
+# sectionless — the very failure it exists to catch, inverted.
+def folders_merged:
+  . as $root
+  | [ $root.ui.phone_folders[]
+      | . as $folder
+      | .match_keywords = ( (.match_keywords // [])
+          + [ $root.ui.external_apps[]
+              | select(.folder == $folder.id)
+              | ( .hub_package, .alt_package, .install_package,
+                  ((.forks // {}) | to_entries[] | .value) )
+              | select(. != null and . != "")
+              | "pkg:" + . ] ) ];
 def fold($pkg):
   ($pkg | ascii_downcase) as $p
-  | ( [ .ui.phone_folders[] | select((.match_keywords // []) | length > 0) ]
+  | ( [ folders_merged[] | select((.match_keywords // []) | length > 0) ]
       | sort_by(.order) ) as $folders
   | ( first( $folders[]
       | select( any( .match_keywords[];
@@ -89,7 +108,7 @@ UNRESOLVED="$(jq -r '
 echo "== T2: every ui.external_apps package classifies into a SECTION =="
 while IFS=$'\t' read -r id field pkg prefix; do
   [ -n "$prefix" ] && ok "$id.$field $pkg → section '$prefix'" \
-                   || bad "$id.$field $pkg classifies to no section (add pkg:$pkg to ui.phone_folders)"
+                   || bad "$id.$field $pkg classifies to no section (set ui.external_apps[$id].folder — never add a pkg: keyword, see T8b)"
 done < <(jq -r "$CLASSIFY"'
   . as $root
   | .ui.external_apps[]
@@ -103,19 +122,26 @@ done < <(jq -r "$CLASSIFY"'
   | .value as $pkg
   | [ $id, .key, $pkg, ($root | sect($pkg)) ] | @tsv' "$BJ")
 
-echo "== T3: every phone_app_groups package classifies into a SECTION =="
+echo "== T3: every curated package list classifies into a SECTION =="
 # The Phone ▸ Apps Quickmarks rows. These are third-party packages the owner
 # curated by hand, and they are the list that drifted: an entry here that the
 # taxonomy cannot place renders as a tile but never as a notification.
-while IFS=$'\t' read -r group pkg prefix; do
-  [ -n "$prefix" ] && ok "$group / $pkg → section '$prefix'" \
-                   || bad "$group / $pkg classifies to no section (add pkg:$pkg to ui.phone_folders)"
+#
+# Discovered BY SHAPE — every `packages` array anywhere in the document, named
+# by its json path — not by walking to sections[phone].phone_app_groups. A
+# curated list is curated somewhere, and the next surface to grow one will not
+# announce itself to this file; the whole point of the check is to see a list
+# the author of the check never heard of.
+while IFS=$'\t' read -r where pkg prefix; do
+  [ -n "$prefix" ] && ok "$where / $pkg → section '$prefix'" \
+                   || bad "$where / $pkg classifies to no section (add pkg:$pkg to ui.phone_folders)"
 done < <(jq -r "$CLASSIFY"'
   . as $root
-  | ( .ui.sections[] | select(.id == "phone") | .phone_app_groups[] )
-  | .title as $g
-  | ( (.packages // [])[], ((.folders // [])[] | (.packages // [])[]) ) as $pkg
-  | [ $g, $pkg, ($root | sect($pkg)) ] | @tsv' "$BJ")
+  | paths(type == "array") as $path
+  | select(($path | last) == "packages")
+  | ($path | map(tostring) | join(".")) as $where
+  | (getpath($path))[] | select(type == "string") | . as $pkg
+  | [ $where, $pkg, ($root | sect($pkg)) ] | @tsv' "$BJ")
 
 echo "== T4: every app:<package> target classifies into a SECTION =="
 while IFS=$'\t' read -r pkg prefix; do
@@ -146,8 +172,8 @@ TAXO="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/PhoneTaxonomy.kt"
 while IFS=$'\t' read -r fid label rules; do
   [ "$rules" -gt 0 ] && ok "folder $fid ('$label') declares $rules match rule(s)" \
                      || bad "folder $fid ('$label') sits in a section but declares no match_keywords and no match_metadata, so nothing can ever reach it"
-done < <(jq -r '
-  .ui.phone_folders[]
+done < <(jq -r "$CLASSIFY"'
+  folders_merged[]
   | select((.label[0:1] | test("^[A-Za-z0-9]$")) | not)
   | [ .id, .label, (((.match_keywords // []) | length) + ((.match_metadata // []) | length)) ]
   | @tsv' "$BJ")
@@ -224,7 +250,8 @@ done < <(jq -r "$CLASSIFY"'
   # `.` is a closure evaluated where it is USED, so a bare fid(.) would be read
   # off $root — the same trap documented in T2. Bind the package first.
   | ( [ $pkgs[] | . as $pk | ($root | fid($pk)) ] | unique ) as $kinds
-  | [ $title, $id, ($kinds | join(",")), ($kinds | length) ] | @tsv' "$BJ")
+  | [ $title, $id, (($kinds | join(",")) | if . == "" then "<sink>" else . end),
+      ($kinds | length) ] | @tsv' "$BJ")
 
 while IFS=$'\t' read -r kind cards; do
   ok "kind '$kind' is claimed by $cards cards, so none of them expands to it (no double-draw)"
@@ -267,6 +294,74 @@ grep -q 'if (granted) (counted\[id\] ?: 0).toString() else NO_SOURCE' "$FRAG" \
 grep -q 'NO_SOURCE · classification unavailable' "$FRAG" \
   && ok "BY KIND reports an unloaded ui.phone_folders as no source rather than as no kinds" \
   || bad "BY KIND treats a missing central classification as an empty one"
+
+echo "== T8: the two identity structures cannot disagree, because there is only one copy =="
+# THE ASSERTION THIS FILE IS FOR. Every check above answers "does this app
+# resolve?"; these three answer "can the answer ever be written down twice?",
+# which is the question the Sterna report actually asked. An app used to be
+# declared in ui.external_apps (identity) AND again in ui.phone_folders (a
+# `pkg:` keyword that classified it), with nothing tying the copies together —
+# so editing one and forgetting the other produced an app that was installable
+# and sectionless at the same time, and nothing anywhere complained. The entry
+# now names its folder and the keyword is derived from it, so the copy is gone;
+# T8b is what keeps it gone.
+
+# T8a — the reference has to resolve. An entry with no `folder`, or one naming
+# a folder that no longer exists, classifies through nothing and lands in the
+# sink: installable, sectionless, invisible on every filtered surface.
+while IFS=$'\t' read -r id folder known; do
+  [ "$known" = "true" ] && ok "external app '$id' classifies into ui.phone_folders '$folder'" \
+                        || bad "external app '$id' declares folder '$folder', which no ui.phone_folders entry defines — it will fall to the sink and show on no filtered surface"
+done < <(jq -r '
+  [ .ui.phone_folders[].id ] as $ids
+  | .ui.external_apps[]
+  # Bind before the pipe: inside index() the input is $ids, so a bare .folder
+  # would be read off the array — the closure trap documented in T2.
+  | .id as $id | (.folder // "") as $folder
+  # A placeholder, not "": `read` with IFS=tab collapses consecutive tabs, so
+  # an empty column would shift `known` into $folder and the message would
+  # report the wrong thing in the one case it is written for.
+  | [ $id, (if $folder == "" then "<none>" else $folder end),
+      (($ids | index($folder)) != null) ] | @tsv' "$BJ")
+
+# T8b — and no second copy may come back. A `pkg:` keyword for a package
+# ui.external_apps already owns is that copy, and a copy is free to name a
+# different folder than the entry does, which is a disagreement no surface can
+# report. Third-party packages are unaffected: they have no identity entry.
+while IFS=$'\t' read -r folder pkg owner; do
+  bad "ui.phone_folders '$folder' restates pkg:$pkg, which ui.external_apps '$owner' already owns — delete the keyword, the entry's \`folder\` is what classifies it"
+done < <(jq -r '
+  [ .ui.external_apps[] | . as $a
+    | ( .hub_package, .alt_package, .install_package, ((.forks // {}) | to_entries[] | .value) )
+    | select(. != null and . != "") | { pkg: (. | ascii_downcase), owner: $a.id } ] as $owned
+  | .ui.phone_folders[] | . as $folder
+  | (.match_keywords // [])[] | ascii_downcase | select(startswith("pkg:")) | .[4:] as $pkg
+  | $owned[] | select(.pkg == $pkg)
+  | [ $folder.id, $pkg, .owner ] | @tsv' "$BJ")
+DUPES="$(jq -r '
+  [ .ui.external_apps[]
+    | ( .hub_package, .alt_package, .install_package, ((.forks // {}) | to_entries[] | .value) )
+    | select(. != null and . != "") | ascii_downcase ] as $owned
+  | [ .ui.phone_folders[] | (.match_keywords // [])[] | ascii_downcase
+      | select(startswith("pkg:")) | .[4:] | select(. as $p | $owned | index($p)) ] | length' "$BJ")"
+[ "$DUPES" = "0" ] && ok "no ui.phone_folders keyword restates a package ui.external_apps owns ($(jq -r '[.ui.external_apps[] | (.hub_package, .alt_package, .install_package, ((.forks // {}) | to_entries[] | .value)) | select(. != null and . != "")] | length' "$BJ") packages, one copy each)"
+
+# T8c — the derivation has to LAND. A folder earlier in `order` can claim one
+# of our packages with a broader rule, and then the `folder` an entry declares
+# is simply not where the app ends up; the card would derive a kind the grid
+# disagrees with. Cheap to check, impossible to see by reading.
+while IFS=$'\t' read -r id declared actual pkg; do
+  [ "$declared" = "$actual" ] && ok "external app '$id' package $pkg lands in its declared folder '$declared'" \
+                              || bad "external app '$id' declares folder '$declared' but $pkg classifies into '${actual:-<sink>}' — an earlier folder claims it first"
+done < <(jq -r "$CLASSIFY"'
+  . as $root
+  | .ui.external_apps[] | . as $app
+  | select((.folder // "") != "")
+  # hub_package and install_package are the same string on every entry today;
+  # uniquing keeps that from printing each app twice.
+  | ( [ .hub_package, .alt_package, .install_package, ((.forks // {}) | to_entries[] | .value) ]
+      | map(select(. != null and . != "")) | unique )[] | . as $pkg
+  | [ $app.id, $app.folder, ($root | fid($pkg)), $pkg ] | @tsv' "$BJ")
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
