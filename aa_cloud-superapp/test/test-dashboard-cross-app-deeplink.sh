@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Tester: Cloud ▸ Dashboard's MyFin and MyHealth icons are cross-app deep links
-# into Cloud-Me, and nothing of the two deleted SuperApp pages is left behind.
+# Tester: Cloud ▸ Projects Me's MyHealth icon is a cross-app deep link into
+# Cloud-Me, and nothing of the two deleted SuperApp pages is left behind.
 #
 # MyFin and MyHealth were SuperApp pages (sections `myfin` and `health`). Both
-# surfaces now live in Cloud-Me — Buro ▸ Fin and Projects ▸ Health — and the two
-# icons stayed put, retargeted to `extapp:cloud-me#<target>`: launchExternalApp
+# surfaces now live in Cloud-Me — Buro ▸ Fin and Projects ▸ Health. MyHealth's
+# icon stayed put, retargeted to `extapp:cloud-me#<target>`; MyFin's icon was
+# dropped from the row by the owner, so Buro ▸ Fin is reached from inside
+# Cloud-Me and nothing here links to it. launchExternalApp
 # launches Cloud-Me and hands everything after the `#` to it as the
 # `shortcut_action` extra, which Cloud-Me's MainActivity.onTarget resolves with
 # the same `page:<section>/<page>` grammar.
@@ -48,19 +50,22 @@ dead = [o["target"] for o in walk(d["ui"])
 assert not dead, f"targets still point at the deleted pages: {dead}"
 PY
 
-echo "== T2: both icons survive as extapp deep links with an install path =="
-python3 - "$BJ" <<'PY' && ok "MyFin + MyHealth tiles → extapp:cloud-me#page:..., cloud-me installable" || bad "a dashboard icon is missing, mistargeted, or has no install path"
+echo "== T2: the surviving migrated icon is an extapp deep link with an install path =="
+python3 - "$BJ" <<'PY' && ok "MyHealth tile → extapp:cloud-me#page:..., MyFin gone, cloud-me installable" || bad "a project-row icon is missing, mistargeted, or has no install path"
 import json, sys
 d = json.load(open(sys.argv[1]))
 cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
 group = next(g for g in cloud["tile_groups"] if g["title"] == "Projects Me")
 tiles = {t.get("id"): t for t in group["tiles"]}
-want = {"myfin": "extapp:cloud-me#page:buro/fin",
-        "myhealth": "extapp:cloud-me#page:projects/health"}
+want = {"myhealth": "extapp:cloud-me#page:projects/health"}
 for tid, target in want.items():
-    assert tid in tiles, f"Dashboard tile {tid} is gone — the icon must remain"
+    assert tid in tiles, f"Projects Me tile {tid} is gone — the icon must remain"
     assert tiles[tid]["target"] == target, (tid, tiles[tid]["target"], "!=", target)
     assert tiles[tid].get("icon"), f"{tid} tile has no icon"
+# MyFin was DROPPED by the owner. Asserting its absence here, not just leaving it
+# out of the table above, is what stops a well-meant restore from putting it back
+# beside MyBuro: Buro ▸ Fin is still reachable from inside Cloud-Me.
+assert "myfin" not in tiles, "the MyFin tile is back — the owner dropped it"
 # A missing target app must not be a dead icon: launchExternalApp falls back to
 # downloading install_apk_url for install_package.
 me = next(e for e in d["ui"]["external_apps"] if e.get("id") == "cloud-me")
@@ -140,7 +145,7 @@ groups = {g["title"]: g for g in cloud["tile_groups"]}
 # work half; the split is what tells the next editor which row a new tile joins.
 ROWS = {
     "Projects Me": ["mysocials",
-                    "projects-me-sep-1", "myburo", "myfin",
+                    "projects-me-sep-1", "myburo",
                     "projects-me-sep-2", "myhealth", "mystudy", "mytrips"],
     # "PM Boards | PM C3 PM X", as the owner asked. The rule divides the board
     # LIST from the two named boards; all three are http tiles, so it marks a
@@ -163,7 +168,6 @@ TARGETS = {
     "pmc3":      "https://paca.diegonmarcos.com/projects/91d8fa68-ce83-463d-af00-af632cf26ab7",
     "pmx":       "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d",
     "myburo":    "extapp:cloud-me#page:buro/summary",
-    "myfin":     "extapp:cloud-me#page:buro/fin",
     "myhealth":  "extapp:cloud-me#page:projects/health",
     "mystudy":   "extapp:cloud-me#page:projects/studying",
     "mytrips":   "extapp:cloud-me#page:projects/trips",
@@ -245,7 +249,8 @@ for title, want_order in ROWS.items():
 # a well-meant restore from quietly reappearing beside MyBuro, where it used to
 # sit — the Projects Summary page it opened is still reachable from Cloud-Me.
 placed = {t.get("id") for g in ROWS for t in groups[g]["tiles"]}
-assert "myprojects" not in placed, "myprojects is back in a project row — the owner removed it"
+for gone in ("myprojects", "myfin"):
+    assert gone not in placed, f"{gone} is back in a project row — the owner removed it"
 PY
 
 echo

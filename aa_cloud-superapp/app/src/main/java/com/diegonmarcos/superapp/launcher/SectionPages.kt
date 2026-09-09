@@ -82,7 +82,9 @@ object SectionPages {
         sectionId == "config" && pageId == "constellation"  -> com.diegonmarcos.superapp.appstore.ConstellationFragment()
         sectionId == "config" && pageId == "wg"             -> WireGuardFragment.newInstance()
         // "myfin" section is GONE — the dashboard moved to Cloud-Me (Buro > Fin)
-        // and libs:fin left with it; tile target extapp:cloud-me#page:buro/fin.
+        // and libs:fin left with it. The tile that deep-linked to it is gone too
+        // (the owner dropped Projects Me ▸ MyFin), so nothing here targets
+        // Buro > Fin; it is reached from inside Cloud-Me.
         sectionId == "cal"     && pageId == "month"         -> CalendarMonthFragment.newInstance()
         sectionId == "cal"     && pageId == "agenda"        -> CalendarAgendaFragment.newInstance()
         // "wallet" section is dead — tile target extapp:cloud-wallet bypasses openSectionPage.

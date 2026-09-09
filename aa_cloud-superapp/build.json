@@ -271,7 +271,7 @@
       "comment": "MyHealth — native Android Health Connect dashboard. Reads aggregated records (Steps, Distance, Floors, Elevation, HR, RHR, HRV, VO2max, BP, BloodGlucose, SpO2, Temperature, RespiratoryRate, Sleep+stages, Exercise, Weight/BodyFat/Lean/Bone/Water, Hydration, Nutrition, Cycle) via androidx.health.connect:connect-client. All of Garmin Connect / Google Fit / Samsung Health / Fitbit / Oura sync INTO Health Connect on-device — single SDK gets the union. LOCAL-ONLY: persists rollups + caches into HealthStore (libs:core, SharedPreferences). Zero network. No OAuth, no webhooks, no cloud ingester. The Compose PAGES moved to ac_cloud-me (Projects > Health) and the SuperApp no longer routes to any of them; the module stays because Configs > Permissions uses HealthMetrics + HealthConnectGateway to count and request the Health Connect grants. Taxonomy still read from build.json::ui.sections[id=health].metrics."
     },
     "_libs_browser_tombstone": "libs:browser MOVED to ac_cloud-browser (constellation APK). Removed from app.depends_on and from this module list 2026-07. The Tools tile target is now extapp:cloud-browser. launchUri http/https now sends ACTION_VIEW to com.diegonmarcos.cloudbrowser instead of instantiating BrowserHostFragment.",
-    "_libs_fin_tombstone": "libs:fin MOVED to ac_cloud-me (Buro > Fin). Removed from app.depends_on and from this module list, along with ui.myfin_mock — MyFinDashboardFragment had exactly one referrer here (SectionPages' `myfin` dispatch) and that section is gone. The Cloud > Dashboard tile target is now extapp:cloud-me#page:buro/fin. settings.gradle derives the gradle module graph from this map, so dropping the entry is what actually removes :libs:fin from the build.",
+    "_libs_fin_tombstone": "libs:fin MOVED to ac_cloud-me (Buro > Fin). Removed from app.depends_on and from this module list, along with ui.myfin_mock — MyFinDashboardFragment had exactly one referrer here (SectionPages' `myfin` dispatch) and that section is gone. The Cloud tile that deep-linked to it (Projects Me ▸ MyFin, extapp:cloud-me#page:buro/fin) has since been dropped by the owner as well, so nothing in this app targets Buro > Fin any more — it is reached from inside Cloud-Me. settings.gradle derives the gradle module graph from this map, so dropping the entry is what actually removes :libs:fin from the build.",
     "libs:launcher-apptabs": {
       "dir": "../ab_cloud-libs-shared/libs/launcher-apptabs",
       "type": "library",
@@ -2532,7 +2532,7 @@
             ]
           },
           {
-            "_doc": "Projects Me — the personal half of the two project rows (Projects W is the work half). Renamed from 'Dashboard', which described the widget rather than what the row is FOR: every tile here is one of the owner's own long-running projects, and the name is what tells the next person whether a new tile belongs in this row or the other one. Two rules divide it into three runs: the web destination, the administration pages, and the life projects. A run never mixes a web link with a cross-app deep link, because those two behave differently on tap — one opens a browser, the other launches or offers to install another app — and a row that interleaves them cannot be read at a glance.",
+            "_doc": "Projects Me — the personal half of the two project rows (Projects W is the work half). Renamed from 'Dashboard', which described the widget rather than what the row is FOR: every tile here is one of the owner's own long-running projects, and the name is what tells the next person whether a new tile belongs in this row or the other one. Two rules divide it into three runs: the web destination, the administration page, and the life projects. The middle run holds only MyBuro since the owner dropped MyFin; a run of one is still a run, and the rule around it still marks where administration stops and the life projects start. A run never mixes a web link with a cross-app deep link, because those two behave differently on tap — one opens a browser, the other launches or offers to install another app — and a row that interleaves them cannot be read at a glance.",
             "title": "Projects Me",
             "tiles": [
               {
@@ -2556,14 +2556,7 @@
                 "target": "extapp:cloud-me#page:buro/summary"
               },
               {
-                "_doc": "MyFin — Cloud-Me's Buro > Fin page, kept beside MyBuro because both open the same Buro section and belong in one run. AWAITING AN OWNER DECISION: the reorder that produced this row named MySocials, MyBuro, MyHealth, MyStudy and MyTrips and did not name MyFin, but the same instruction removed MyProjects by name and said nothing about removing this one, so the omission reads as an oversight rather than a deletion. Dropping a tile nobody asked to drop is the expensive mistake here — the screen it reaches is the only Fin dashboard left in the constellation since libs:fin moved to Cloud-Me — so it stays until the owner says otherwise.",
-                "id": "myfin",
-                "label": "MyFin",
-                "icon": "ic_fin",
-                "target": "extapp:cloud-me#page:buro/fin"
-              },
-              {
-                "_doc": "Second rule — divides Cloud-Me's Buro pages from its Projects pages. Both runs around it are cross-app deep links, so unlike the first rule it does not separate two kinds of tap; it separates administration from the life projects, which is the owner's own grouping. That is why the tester asserts each run is internally of ONE kind rather than asserting that consecutive runs differ: the weaker rule is the one that is actually true here, and a tester that asserts something false gets deleted the first time it is inconvenient.",
+                "_doc": "Second rule — divides Cloud-Me's Buro entry point from its Projects pages. Both runs around it are cross-app deep links, so unlike the first rule it does not separate two kinds of tap; it separates administration from the life projects, which is the owner's own grouping. That is why the tester asserts each run is internally of ONE kind rather than asserting that consecutive runs differ: the weaker rule is the one that is actually true here, and a tester that asserts something false gets deleted the first time it is inconvenient.",
                 "id": "projects-me-sep-2",
                 "label": "|",
                 "separator": true
@@ -6728,7 +6721,7 @@
         "forks": {}
       },
       {
-        "_doc": "Cloud-Me — the personal-administration app (ac_cloud-me): Buro / Agenda / Profile / Projects / Wallet, with Fin under Buro and Health under Projects. It owns what MyFin and MyHealth used to be here, which is why three tiles point at it: Tools 'Me' opens it plain, and the two Dashboard tiles carry a destination (extapp:cloud-me#page:buro/fin, extapp:cloud-me#page:projects/health). Like cloud-wallet it is a standalone constellation APK with no forks, so extapp:cloud-me resolves straight to hub_package; the Cloud tile opens it when installed and otherwise downloads install_apk_url. install_apk_url mirrors ac_cloud-me/build.json::release.gh_release (asset Cloud-Me.apk, published by ship-cloud-me.yml). Shares the constellation signing key.",
+        "_doc": "Cloud-Me — the personal-administration app (ac_cloud-me): Buro / Agenda / Profile / Projects / Wallet, with Fin under Buro and Health under Projects. It owns what MyFin and MyHealth used to be here, which is why several tiles point at it: Tools 'Me' opens it plain, and every Projects Me tile carries a destination (page:buro/summary, page:projects/health, page:projects/studying, page:projects/trips). page:buro/fin is no longer among them — the owner dropped the MyFin tile, and Buro > Fin is now reached from inside Cloud-Me. Like cloud-wallet it is a standalone constellation APK with no forks, so extapp:cloud-me resolves straight to hub_package; the Cloud tile opens it when installed and otherwise downloads install_apk_url. install_apk_url mirrors ac_cloud-me/build.json::release.gh_release (asset Cloud-Me.apk, published by ship-cloud-me.yml). Shares the constellation signing key.",
         "id": "cloud-me",
         "label": "Cloud-Me",
         "folder": "sys_settings",
