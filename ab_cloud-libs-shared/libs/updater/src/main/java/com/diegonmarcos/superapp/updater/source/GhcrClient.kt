@@ -68,14 +68,16 @@ internal class GhcrClient(
         }
     }
 
-    /** Streams the blob into [target]. Caller verifies sha256 against [digest].
-     *  [onProgress] is called periodically with (bytesRead, totalBytes);
-     *  totalBytes may be -1 if the server didn't send Content-Length.
-     *  [shouldCancel] is polled every 64KiB chunk so a WorkManager cancel
-     *  (Cancel button) actually aborts the blocking read loop — throwing
-     *  CancellationException. A wedged socket still bounds at readTimeout. */
+    /** Streams the blob into [target] via [Download], which owns resume,
+     *  the stall watchdog and progress. Caller verifies sha256 against
+     *  [digest]. [expectedBytes] is the manifest layer size — [Download] needs
+     *  it to tell a resumable prefix from a leftover of another build.
+     *  [onProgress] reports bytes actually written and the total, -1 when the
+     *  registry declined to declare one. [shouldCancel] is polled every chunk
+     *  so a Cancel actually aborts the blocking read loop. */
     fun blob(
         digest: String, token: String, target: File,
+        expectedBytes: Long = -1L,
         shouldCancel: () -> Boolean = { false },
         onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)? = null,
     ) {
@@ -85,53 +87,24 @@ internal class GhcrClient(
         // pure waste, and worse, the old code opened `target` for writing
         // FIRST, so a failed or cancelled retry truncated the good copy it was
         // about to replace. That is why a failed install "lost" the download.
-        if (target.isFile && runCatching { "sha256:" + ApkIntegrity.sha256(target) == digest }.getOrDefault(false)) {
+        // Length first: hashing is a full read of the file, which for a 265 MB
+        // artifact is seconds of CPU on a phone, and a length mismatch already
+        // proves these are not the bytes. Only pay for the digest when the
+        // cheap test cannot rule it out.
+        val lengthCouldMatch = expectedBytes <= 0 || target.length() == expectedBytes
+        if (target.isFile && lengthCouldMatch &&
+            runCatching { "sha256:" + ApkIntegrity.sha256(target) == digest }.getOrDefault(false)) {
             onProgress?.invoke(target.length(), target.length())
             return
         }
-        val url = URL("https://$registry/v2/$repo/blobs/$digest")
-        val headers = mapOf("Authorization" to "Bearer $token")
-        val conn = openConn(url, headers)
-        if (conn.responseCode !in 200..299) {
-            val msg = conn.errorStream?.bufferedReader()?.readText()
-            throw java.io.IOException("HTTP ${conn.responseCode} for $url: $msg")
-        }
-        val total = conn.contentLengthLong
-        // Download to a sibling and rename on success, so `target` is either
-        // absent or complete-and-verified - never a half-written APK that the
-        // cache check above would then have to distrust.
-        val part = File(target.parentFile, target.name + ".part")
-        try {
-        conn.inputStream.use { input ->
-            part.outputStream().use { output ->
-                val buf = ByteArray(64 * 1024)
-                var read: Int
-                var soFar = 0L
-                var lastTick = 0L
-                while (true) {
-                    if (shouldCancel()) throw java.util.concurrent.CancellationException("download cancelled")
-                    read = input.read(buf)
-                    if (read < 0) break
-                    output.write(buf, 0, read)
-                    soFar += read
-                    // Throttle callbacks — at most one per 80ms.
-                    val now = System.currentTimeMillis()
-                    if (now - lastTick >= 80) {
-                        onProgress?.invoke(soFar, total)
-                        lastTick = now
-                    }
-                }
-                onProgress?.invoke(soFar, total)
-            }
-        }
-        if (!part.renameTo(target)) {
-            // Rename can only fail across filesystems; both live in cacheDir,
-            // but copy rather than fail the whole update if it ever does.
-            part.copyTo(target, overwrite = true)
-        }
-        } finally {
-            part.delete()
-        }
+        Download.toFile(
+            url = "https://$registry/v2/$repo/blobs/$digest",
+            target = target,
+            headers = mapOf("Authorization" to "Bearer $token"),
+            expectedBytes = expectedBytes,
+            shouldCancel = shouldCancel,
+            onProgress = onProgress,
+        )
     }
 
     /** Drop older cache entries for the same app - [prefix] is per-app and the
@@ -142,16 +115,6 @@ internal class GhcrClient(
         keep.parentFile?.listFiles { f: File -> f.name.startsWith(prefix) && f != keep }
             ?.forEach { it.delete() }
     }
-
-
-    private fun openConn(url: URL, headers: Map<String, String>): HttpURLConnection =
-        (url.openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            headers.forEach { (k, v) -> setRequestProperty(k, v) }
-            connectTimeout = 15_000
-            readTimeout = 60_000
-            instanceFollowRedirects = true
-        }
 
     private fun openGet(url: URL, headers: Map<String, String>) =
         (url.openConnection() as HttpURLConnection).apply {

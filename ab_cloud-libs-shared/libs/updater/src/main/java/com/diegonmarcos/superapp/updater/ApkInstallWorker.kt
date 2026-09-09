@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.updater
 
 import com.diegonmarcos.superapp.updater.apk.VerifiedApk
 import com.diegonmarcos.superapp.updater.install.UpdateInstaller
+import com.diegonmarcos.superapp.updater.source.Download
 import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
@@ -9,9 +10,6 @@ import androidx.work.WorkerParameters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 
 /**
  * WorkManager job: download a plain-HTTPS APK (a direct asset URL — e.g. a
@@ -41,9 +39,17 @@ class ApkInstallWorker(
         }
         try {
             val apk = File(applicationContext.cacheDir, "companion-$pkg.apk")
-            UpdateProgress.update(UpdateProgress.State.Downloading(0, 0, 0))
+            UpdateProgress.update(UpdateProgress.State.Downloading(0, 0, -1))
             var declared = 0L
-            download(url, apk) { bytes, total ->
+            // The private copy of this loop is gone. It was the only one of the
+            // three that chased redirects by hand and the only one that could
+            // not resume; [Download] now does both for every caller, so a
+            // companion APK survives the same interruptions a fleet APK does.
+            Download.toFile(
+                url = url,
+                target = apk,
+                shouldCancel = { isStopped },
+            ) { bytes, total ->
                 if (total > declared) declared = total
                 val pct = if (total > 0) ((bytes * 100) / total).toInt().coerceIn(0, 100) else 0
                 UpdateProgress.update(UpdateProgress.State.Downloading(pct, bytes, total))
@@ -79,62 +85,8 @@ class ApkInstallWorker(
         }
     }
 
-    /**
-     * Stream [url] to [target], manually following redirects. GitHub release
-     * links 302 to objects.githubusercontent.com (and may cross protocol), so
-     * we disable instanceFollowRedirects and chase Location ourselves to stay
-     * correct across hosts. Progress callbacks are throttled to ~12/s.
-     */
-    private fun download(url: String, target: File, onProgress: (Long, Long) -> Unit) {
-        var current = url
-        var hops = 0
-        while (true) {
-            val conn = (URL(current).openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 15_000
-                readTimeout = 60_000
-                instanceFollowRedirects = false
-                setRequestProperty("Accept", "application/octet-stream")
-            }
-            val code = conn.responseCode
-            if (code in 300..399) {
-                val loc = conn.getHeaderField("Location")
-                    ?: throw IOException("HTTP $code with no Location for $current")
-                conn.disconnect()
-                if (++hops > MAX_REDIRECTS) throw IOException("too many redirects for $url")
-                current = loc
-                continue
-            }
-            if (code !in 200..299) {
-                val msg = conn.errorStream?.bufferedReader()?.readText()
-                throw IOException("HTTP $code for $current: $msg")
-            }
-            val total = conn.contentLengthLong
-            conn.inputStream.use { input ->
-                target.outputStream().use { output ->
-                    val buf = ByteArray(64 * 1024)
-                    var soFar = 0L
-                    var lastTick = 0L
-                    while (true) {
-                        // Cancel button → WorkManager cancels this worker → isStopped.
-                        if (isStopped) throw java.util.concurrent.CancellationException("install cancelled")
-                        val read = input.read(buf)
-                        if (read < 0) break
-                        output.write(buf, 0, read)
-                        soFar += read
-                        val now = System.currentTimeMillis()
-                        if (now - lastTick >= 80) { onProgress(soFar, total); lastTick = now }
-                    }
-                    onProgress(soFar, total)
-                }
-            }
-            return
-        }
-    }
-
     companion object {
         private const val TAG = "Updater/ApkInstall"
-        private const val MAX_REDIRECTS = 5
         const val KEY_URL = "url"
         const val KEY_PKG = "pkg"
         const val KEY_LABEL = "label"

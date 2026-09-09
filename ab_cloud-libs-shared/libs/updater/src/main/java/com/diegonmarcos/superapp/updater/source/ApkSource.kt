@@ -23,11 +23,20 @@ internal interface ApkSource {
     val name: String
 
     /**
-     * Fetch [app]'s APK, verified, or null when this source cannot serve it.
+     * Fetch [app]'s APK, verified.
      *
-     * Null means "try the next source", NOT "this failed" — a release URL that
-     * 404s is a reason to fall through to GHCR, not a reason to fail an
-     * install the other channel could still complete.
+     * Returns null when this source DOES NOT APPLY to this app at all — no
+     * release URL configured, say. Throws, with a message naming what went
+     * wrong, when it applies and fails.
+     *
+     * Either way [Fleet.download] moves on to the next source: a release URL
+     * that 404s is a reason to fall through to GHCR, not a reason to fail an
+     * install the other channel could still complete. The distinction is not
+     * about control flow, it is about EVIDENCE. Returning null for a failure
+     * threw the reason away, and the pipeline's final message could then only
+     * report that everything had failed for no stated reason — which is how a
+     * transfer that stalled at 182 MB of 265 MB was reported to the user as
+     * nothing at all.
      */
     fun fetch(ctx: Context, app: Fleet.App): VerifiedApk?
 }
@@ -52,32 +61,27 @@ internal object ReleaseSource : ApkSource {
 
     override fun fetch(ctx: Context, app: Fleet.App): VerifiedApk? {
         if (app.releaseUrl.isBlank()) return null
-        return runCatching {
-            val target = File(ctx.cacheDir, "fleet-${app.id}-release.apk")
-            // abiReleaseUrl, not releaseUrl: the release asset name is per-ABI
-            // (see Fleet.App.assets), and this source is tried FIRST, so a flat
-            // arm64 name here is what put an arm64 APK on an x86_64 device.
-            val conn = (java.net.URL(app.abiReleaseUrl).openConnection() as java.net.HttpURLConnection)
-            conn.instanceFollowRedirects = true
-            conn.connectTimeout = 15_000
-            conn.readTimeout = 60_000
-            if (conn.responseCode !in 200..299) error("HTTP ${conn.responseCode}")
-            val total = conn.contentLengthLong
-            UpdateProgress.update(UpdateProgress.State.Downloading(0, 0L, total))
-            var seen = 0L
-            conn.inputStream.use { input ->
-                target.outputStream().use { out ->
-                    val buf = ByteArray(64 * 1024)
-                    while (true) {
-                        if (UpdateProgress.cancelRequested) error("cancelled")
-                        val n = input.read(buf)
-                        if (n <= 0) break
-                        out.write(buf, 0, n)
-                        seen += n
-                        val pct = if (total > 0) ((seen * 100) / total).toInt().coerceIn(0, 100) else 0
-                        UpdateProgress.update(UpdateProgress.State.Downloading(pct, seen, total))
-                    }
-                }
+        // abiReleaseUrl, not releaseUrl: the release asset name is per-ABI
+        // (see Fleet.App.assets), and this source is tried FIRST, so a flat
+        // arm64 name here is what put an arm64 APK on an x86_64 device.
+        val url = app.abiReleaseUrl
+        val target = File(ctx.cacheDir, "fleet-${app.id}-release.apk")
+        // The declared size, so Download can tell a resumable prefix of THIS
+        // artifact from a leftover part of a previous release under the same
+        // per-app filename, and so progress has a denominator from the first
+        // byte instead of after the first response.
+        val declared = Fleet.releaseSize(app)
+        return try {
+            UpdateProgress.update(UpdateProgress.State.Downloading(0, 0L, declared))
+            Download.toFile(
+                url = url,
+                target = target,
+                expectedBytes = declared,
+                shouldCancel = { UpdateProgress.cancelRequested },
+            ) { written, total ->
+                val t = if (total > 0) total else declared
+                val pct = if (t > 0) ((written * 100) / t).toInt().coerceIn(0, 100) else 0
+                UpdateProgress.update(UpdateProgress.State.Downloading(pct, written, t))
             }
             // A truncated download is the failure this catches: an APK that is
             // short is not an APK, and the installer's error for one is far
@@ -90,19 +94,47 @@ internal object ReleaseSource : ApkSource {
             // fleet-mail-release.apk — 1.3% of a 29 MB APK — reached
             // PackageInstaller and came back
             // "INSTALL_PARSE_FAILED_NOT_APK: Failed to load asset path".
-            // Unlike the GHCR path there is no digest here to catch it after
-            // the fact, so an unverifiable download must never be RETURNED;
-            // returning null falls through to GHCR, which does carry one.
             // One construction, three guarantees: a declared length must
-            // exist, must match, and the bytes must actually be a zip. Returning
-            // null here falls through to GHCR, which carries a digest — an
+            // exist, must match, and the bytes must actually be a zip. Failing
+            // here falls through to GHCR, which does carry a digest — an
             // unverifiable download must never be RETURNED, because the caller
             // cannot tell the difference once it is just a File.
-            VerifiedApk.bySize(target, total) ?: run {
-                target.delete()
-                error("release asset for ${app.id} failed verification — deferring to GHCR")
+            VerifiedApk.bySize(target, declared) ?: run {
+                // Known-bad bytes: drop the partial too, or every later attempt
+                // resumes on top of them forever.
+                Download.discard(target)
+                error("release asset failed verification " +
+                      "(${target.length()} B against a declared $declared) — deferring to GHCR")
             }
-        }.getOrNull()
+        } catch (c: java.util.concurrent.CancellationException) {
+            // A cancel is the user's decision, not a reason to go and try the
+            // other source with the same 265 MB.
+            throw c
+        } catch (t: Throwable) {
+            // THIS CATCH USED TO BE `runCatching { ... }.getOrNull()`.
+            //
+            // That swallowed every Throwable — socket timeout, connection
+            // reset, OutOfMemoryError, the explicit verification error — with
+            // no log line and, far worse, no UpdateProgress transition. The
+            // last state the user could see stayed `Downloading(43%)` while
+            // control quietly fell through to GHCR, which republished
+            // `Downloading(0, …)` and began the same 265 MB again from byte
+            // zero. A progress bar that resets and a progress bar that is
+            // frozen are the same picture to someone watching: "it sticks on
+            // downloading and never progresses".
+            //
+            // At 25 MB this path essentially never ran, because the transfer
+            // finished inside one TCP session. Nothing about it was safe; it
+            // was untested.
+            //
+            // Falling through to GHCR is still right — GHCR carries a digest
+            // and may well succeed where the release CDN did not — but it must
+            // be a decision that leaves evidence, and the partial file stays on
+            // disk so a retry resumes rather than restarts.
+            val kept = File(target.parentFile, target.name + ".part").length()
+            throw java.io.IOException(
+                "${t.message ?: t.javaClass.simpleName} (kept $kept B on disk for resume)", t)
+        }
     }
 }
 
@@ -123,16 +155,22 @@ internal object GhcrSource : ApkSource {
         UpdateProgress.update(UpdateProgress.State.Downloading(0, 0L, layer.size))
         // Raw fleet threads aren't WorkManager — the Cancel button reaches them
         // only through UpdateProgress.cancelRequested.
-        client.blob(layer.digest, token, target, { UpdateProgress.cancelRequested }) { bytes, total ->
+        client.blob(layer.digest, token, target, layer.size, { UpdateProgress.cancelRequested }) { bytes, total ->
             val t = if (total > 0) total else layer.size
             val pct = if (t > 0) ((bytes * 100) / t).toInt().coerceIn(0, 100) else 0
             UpdateProgress.update(UpdateProgress.State.Downloading(pct, bytes, t))
         }
         val verified = VerifiedApk.byDigest(target, layer.digest)
         if (verified == null) {
-            target.delete()
-            UpdateProgress.update(UpdateProgress.State.Failed("digest mismatch for ${app.label}"))
-            return null
+            // Both the file AND the partial: bytes that failed a digest are
+            // known-bad, and a resume on top of them can only ever fail again.
+            Download.discard(target)
+            // Throw rather than publish Failed and return null. Fleet.download
+            // owns the terminal state now, and it needs this reason to put in
+            // it; publishing here as well raced its own caller and reported a
+            // digest mismatch as the outcome of a pass that had another source
+            // still to try.
+            error("digest mismatch against ${layer.digest}")
         }
         // Keep the verified APK, drop this app's superseded ones. Keeping it
         // means a retry after a failed install reuses the download instead of

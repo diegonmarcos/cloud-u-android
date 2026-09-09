@@ -22,8 +22,30 @@ object UpdateProgress {
          *  held back. The overlay prompts the user (Update now / Later) — tapping
          *  Update now calls Updater.downloadNow to fetch over data with consent. */
         data class UpdateAvailable(val totalBytes: Long) : State()
-        /** Streaming the APK blob — [percent] is 0..100. */
+        /**
+         * Streaming the APK blob.
+         *
+         * [bytes] is what has actually been WRITTEN TO DISK, so it survives a
+         * resume: a transfer that restarts at 180 MB reports 180 MB, not 0.
+         * [total] is -1 (or 0) when the server declined to declare a length —
+         * renderers MUST show that as "size unknown" on an indeterminate bar
+         * and never as a percentage, because a hard 0% is indistinguishable
+         * from stuck and that is precisely the confusion this state caused.
+         * [percent] is 0..100, and meaningless whenever [total] is not > 0.
+         */
         data class Downloading(val percent: Int, val bytes: Long, val total: Long) : State()
+        /**
+         * There is work to do and a CONSTRAINT is holding it, not a network
+         * that is failing.
+         *
+         * Task #46 requires that an automatic pass never download over mobile
+         * data. Honouring that used to be a log line and an early return, so a
+         * pass parked on "waiting for Wi-Fi" was observationally identical to a
+         * download that had silently died — same absence of progress, same
+         * absence of an error. A withheld download is a state, and the user is
+         * entitled to see which one they are in.
+         */
+        data class Waiting(val reason: String) : State()
         /** APK is on disk; PackageInstaller session in progress. */
         object Installing : State()
         /** Install handed off — system dialog is up OR install completed. */
@@ -115,9 +137,22 @@ object UpdateProgress {
      * never errors — silence about work that did not happen is hiding, not
      * quietness. [NotificationStore] push stays unconditional either way.
      */
-    fun suppressed(ctx: Context, state: State): Boolean =
-        state !is State.Failed &&
-            (minimized || AutoUpdatePrefs.unattendedPass(ctx))
+    fun suppressed(ctx: Context, state: State): Boolean = when (state) {
+        // Suppress progress, never errors.
+        is State.Failed -> false
+        // A deferral is page-level information, never a full-screen
+        // interruption: nothing is running, nothing is wrong, and the only
+        // useful response is one the user takes when they next go looking. The
+        // Constellation page's inline row shows it; the overlay must not.
+        //
+        // Suppressed UNCONDITIONALLY rather than via unattendedPass, because a
+        // worker publishes this BEFORE it raises the unattended flag — the flag
+        // is set inside the pass it decided not to run. Reading it here would
+        // have every deferred wake-up throw an overlay over whatever the user
+        // was doing, which is the exact failure the flag exists to prevent.
+        is State.Waiting -> true
+        else -> minimized || AutoUpdatePrefs.unattendedPass(ctx)
+    }
 
     /**
      * During a multi-app "Update all", names the current app + position
@@ -163,7 +198,10 @@ object UpdateProgress {
 
     fun addObserver(observer: (State) -> Unit) {
         observers.add(observer)
-        if (!quiet) observer(state)   // replay, exactly as setListener does
+        // Replay unconditionally, for the same reason update() drives observers
+        // during a quiet pass: a page opened WHILE a background pass is running
+        // must show where that pass is, not a blank row.
+        observer(state)
     }
 
     fun removeObserver(observer: (State) -> Unit) { observers.remove(observer) }
@@ -184,10 +222,22 @@ object UpdateProgress {
         if (l != null && !quiet) l(state)
     }
 
+    /**
+     * QUIET SILENCES THE OVERLAY, NOT THE PAGE.
+     *
+     * [quiet] means an unattended pass is running and must not throw a
+     * full-screen overlay over whatever the user is doing — that is the
+     * [listener] slot, and it stays undriven, exactly as the doc above has
+     * always claimed. It was ALSO skipping [observers], which is a different
+     * thing entirely: an observer is an inline row on a screen the user
+     * deliberately opened to watch this. Suppressing that meant the
+     * Constellation page showed nothing at all while a background pass
+     * downloaded 265 MB, or while one sat parked on [State.Waiting] — the
+     * "nothing is happening" reading of work that was, in fact, happening.
+     */
     fun update(next: State) {
         state = next
-        if (quiet) return
-        listener?.invoke(next)
+        if (!quiet) listener?.invoke(next)
         observers.toList().forEach { it(next) }
     }
 

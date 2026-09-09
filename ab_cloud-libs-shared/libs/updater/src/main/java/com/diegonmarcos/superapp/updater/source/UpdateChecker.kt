@@ -80,14 +80,17 @@ internal class UpdateChecker(private val context: Context) {
         try {
             val target = File(context.cacheDir, "update-${a.remoteDigest.substringAfter(':').take(12)}.apk")
             UpdateProgress.update(UpdateProgress.State.Downloading(0, 0, a.remoteSize))
-            client.blob(a.remoteDigest, a.token, target, shouldCancel) { bytes, total ->
+            client.blob(a.remoteDigest, a.token, target, a.remoteSize, shouldCancel) { bytes, total ->
                 val totalKnown = if (total > 0) total else a.remoteSize
                 val pct = if (totalKnown > 0) ((bytes * 100) / totalKnown).toInt().coerceIn(0, 100) else 0
                 UpdateProgress.update(UpdateProgress.State.Downloading(pct, bytes, totalKnown))
             }
             val verified = VerifiedApk.byDigest(target, a.remoteDigest)
             if (verified == null) {
-                target.delete()
+                // The partial goes too. Bytes that failed a digest are
+                // known-bad, and leaving the .part would have every later
+                // attempt resume on top of them and fail the same way forever.
+                Download.discard(target)
                 UpdateProgress.update(UpdateProgress.State.Failed(
                     "digest mismatch against ${a.remoteDigest}"))
                 error("downloaded digest != manifest ${a.remoteDigest}")

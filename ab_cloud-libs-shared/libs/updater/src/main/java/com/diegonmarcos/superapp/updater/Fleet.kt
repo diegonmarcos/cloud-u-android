@@ -220,6 +220,30 @@ object Fleet {
     }
 
     /**
+     * Byte size of [app]'s release asset for THIS device's ABI, or -1 when the
+     * asset is absent, unreachable, or served without a Content-Length.
+     *
+     * Extracted because it has two callers with the same question and they must
+     * not answer it differently: [releaseStatus] uses it to decide whether an
+     * update exists, and ReleaseSource needs it as the download's expected
+     * length — both the denominator for progress and the signal that lets
+     * Download tell a resumable prefix of this artifact from a leftover of a
+     * previous one. A second HEAD probe written slightly differently is how the
+     * store came to report a size the downloader disagreed with.
+     */
+    internal fun releaseSize(app: App): Long = runCatching {
+        val c = (java.net.URL(app.abiReleaseUrl).openConnection() as java.net.HttpURLConnection)
+        c.requestMethod = "HEAD"
+        c.instanceFollowRedirects = true
+        c.connectTimeout = 10_000
+        c.readTimeout = 10_000
+        val code = c.responseCode
+        val len = c.contentLengthLong
+        c.disconnect()
+        if (code !in 200..299) -1L else len
+    }.getOrDefault(-1L)
+
+    /**
      * State from the release asset, or null when this app declares none or the
      * probe fails — in which case the caller falls through to GHCR.
      *
@@ -239,18 +263,7 @@ object Fleet {
      */
     private fun releaseStatus(app: App, installed: Installed?): State? {
         if (app.releaseUrl.isBlank()) return null
-        val size = runCatching {
-            val c = (java.net.URL(app.abiReleaseUrl).openConnection() as java.net.HttpURLConnection)
-            c.requestMethod = "HEAD"
-            c.instanceFollowRedirects = true
-            c.connectTimeout = 10_000
-            c.readTimeout = 10_000
-            val code = c.responseCode
-            val len = c.contentLengthLong
-            c.disconnect()
-            if (code !in 200..299) return@runCatching -1L
-            len
-        }.getOrDefault(-1L)
+        val size = releaseSize(app)
         if (size < 0) return null
         val i = installed ?: return State.Missing(size)
         releaseSha256(app)?.let { remote ->
@@ -288,9 +301,36 @@ object Fleet {
             ?.takeIf { s -> s.length == 64 && s.all { it in '0'..'9' || it in 'a'..'f' } }
     }.getOrNull()
 
-    /** Download the GHCR blob, verify sha, install/update [app] (foreign pkg). */
+    /**
+     * Download the blob, verify it, install/update [app] (foreign pkg).
+     *
+     * THE FAILURE MUST BE PUBLISHED HERE, not left to the caller.
+     *
+     * This threw and said nothing to [UpdateProgress]. Every caller runs it on
+     * its own thread and reports the throwable its own way — the Constellation
+     * page raises a four-second Toast — while the progress row, whose only
+     * input is UpdateProgress, kept rendering the last [State.Downloading]
+     * frame it was given. Forever. A download that had already died therefore
+     * displayed as one still running, which is exactly the "sticks on
+     * downloading and never progresses" the owner reported: the Toast is gone
+     * in four seconds and the frozen bar is what remains.
+     *
+     * A terminal outcome is part of running the pass, so it belongs to the pass.
+     */
     fun install(ctx: Context, app: App) {
-        commit(ctx, app, download(ctx, app))
+        try {
+            commit(ctx, app, download(ctx, app))
+        } catch (c: java.util.concurrent.CancellationException) {
+            UpdateProgress.update(UpdateProgress.State.Cancelled)
+            throw c
+        } catch (t: Throwable) {
+            UpdateProgress.update(UpdateProgress.State.Failed(
+                message = t.message ?: t.javaClass.simpleName,
+                appId = app.id,
+                pkg = app.pkg,
+            ))
+            throw t
+        }
     }
 
     /**
@@ -318,16 +358,39 @@ object Fleet {
 
     fun download(ctx: Context, app: App): VerifiedApk {
         UpdateProgress.update(UpdateProgress.State.CheckingManifest)
+        // NAME WHAT DECLINED, AND WHY — the same rule [commit] already applies
+        // to install channels. A source that could not serve it used to
+        // disappear into a bare `continue`, so the final message could only say
+        // that two unnamed things had failed for unnamed reasons. That is what
+        // turned "the transfer stalled at 182 MB of 265 MB with no new data for
+        // two minutes" into "no source could provide a verified APK".
+        val declined = mutableListOf<String>()
         for (source in sources) {
-            val apk = source.fetch(ctx, app) ?: continue
+            val apk = try {
+                source.fetch(ctx, app)
+                    ?: run { declined += "${source.name} → not configured for this app"; null }
+            } catch (c: java.util.concurrent.CancellationException) {
+                throw c
+            } catch (t: Throwable) {
+                // Falling through to the next source is still right — GHCR
+                // carries a digest and may well succeed where the release CDN
+                // did not — but the reason has to survive the fall.
+                Log.w(TAG, "source '${source.name}' could not serve ${app.id}: ${t.message}", t)
+                declined += "${source.name} → ${t.message ?: t.javaClass.simpleName}"
+                null
+            } ?: continue
             // WHICH SOURCE SERVED IT is the first question to ask of a stale
             // artifact, and it used to be unanswerable from the logs.
             Log.i(TAG, "download ${app.kind} ${app.id}: source=${source.name} " +
                        "→ ${apk.evidence}, ${apk.length} bytes")
             return apk
         }
-        error("no source could provide a verified APK for ${app.id} " +
-            "(tried ${sources.joinToString { it.name }})")
+        val why = "could not download ${app.id}: " + declined.joinToString(" | ")
+        // Publish before throwing: [install] catches this too, but a BATCH
+        // catches it per-app and moves on, which would leave the row frozen on
+        // this app's last progress frame while the next app downloads.
+        UpdateProgress.update(UpdateProgress.State.Failed(why, appId = app.id, pkg = app.pkg))
+        error(why)
     }
 
     /** [GhcrSource] needs the manifest layer; the resolution logic (ABI tag
@@ -826,6 +889,8 @@ object Fleet {
         }
         if (staged.isEmpty()) {
             UpdateProgress.endBatch()
+            UpdateProgress.update(UpdateProgress.State.Failed(
+                "all ${batch.size} download(s) failed — nothing was installed"))
             return Pass(0, todo.size, batch.size, silent, channel,
                 "no install attempted: all ${batch.size} download(s) failed — see the " +
                 "per-entry 'installAll download' warnings above for the reason")

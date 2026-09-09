@@ -275,10 +275,26 @@ class UpdateOverlayFragment : Fragment() {
                 progressBar.isIndeterminate = true
             }
             is UpdateProgress.State.Downloading -> {
-                titleView.text = batch("Downloading ${state.percent}%")
-                detailView.text = "${state.bytes.toMib()} / ${state.total.toMib()} MiB"
-                progressBar.isIndeterminate = state.total <= 0
-                progressBar.progress = state.percent
+                // An unknown total must READ as unknown. Showing "0%" and
+                // "12.40 / -0.00 MiB" for a download whose bytes are genuinely
+                // moving is the single hardest state to tell apart from a stuck
+                // one, and a determinate bar pinned at zero says "stuck" as
+                // loudly as a bar can.
+                if (state.total > 0) {
+                    titleView.text = batch("Downloading ${state.percent}%")
+                    detailView.text = "${state.bytes.toMib()} / ${state.total.toMib()} MiB"
+                    progressBar.isIndeterminate = false
+                    progressBar.progress = state.percent
+                } else {
+                    titleView.text = batch("Downloading…")
+                    detailView.text = "${state.bytes.toMib()} MiB so far · total size unknown"
+                    progressBar.isIndeterminate = true
+                }
+            }
+            is UpdateProgress.State.Waiting -> {
+                titleView.text = batch("Waiting")
+                detailView.text = state.reason
+                progressBar.isIndeterminate = true
             }
             is UpdateProgress.State.Installing -> {
                 titleView.text = batch("Installing…")

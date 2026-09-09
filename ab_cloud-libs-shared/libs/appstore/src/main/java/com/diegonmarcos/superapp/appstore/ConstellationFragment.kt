@@ -319,10 +319,30 @@ class ConstellationFragment : Fragment() {
         val prefix = if (batch == null) "" else "$batch  ·  "
         when (state) {
             is UpdateProgress.State.Downloading -> {
-                bar.isIndeterminate = false
-                bar.progress = state.percent
-                label.text = prefix + "Downloading  ${state.percent}%  ·  " +
-                    "${human(state.bytes)} / ${human(state.total)}"
+                // THE FOUR STATES MUST NOT SHARE A PICTURE. This branch drew a
+                // determinate bar unconditionally, so a download with no
+                // declared Content-Length sat at a hard 0% while bytes were
+                // genuinely arriving — identical, to the person watching, to a
+                // transfer that had stopped. Unknown total ⇒ say so, on an
+                // indeterminate bar, and report the bytes actually written.
+                if (state.total > 0) {
+                    bar.isIndeterminate = false
+                    bar.progress = state.percent
+                    label.text = prefix + "Downloading  ${state.percent}%  ·  " +
+                        "${human(state.bytes)} / ${human(state.total)}"
+                } else {
+                    bar.isIndeterminate = true
+                    label.text = prefix + "Downloading  ·  ${human(state.bytes)} so far  ·  " +
+                        "total size unknown"
+                }
+            }
+            // Held by a constraint, not by a failing network. Without its own
+            // branch this fell into `else` and rendered as nothing at all, so
+            // an auto-update parked on "wait for Wi-Fi" (task #46) was
+            // indistinguishable from one that had silently died.
+            is UpdateProgress.State.Waiting -> {
+                bar.isIndeterminate = true
+                label.text = prefix + "Waiting  ·  " + state.reason
             }
             is UpdateProgress.State.CheckingManifest -> {
                 bar.isIndeterminate = true

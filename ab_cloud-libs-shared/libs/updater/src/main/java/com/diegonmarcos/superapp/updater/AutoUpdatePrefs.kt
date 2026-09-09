@@ -121,4 +121,41 @@ object AutoUpdatePrefs {
     fun canInstallSilently(ctx: Context): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
             ctx.packageManager.canRequestPackageInstalls()
+
+    /**
+     * Metered per the ACTIVE network. Unknown network ⇒ metered: the cost of
+     * guessing wrong is the user's mobile data, and a deferred pass costs only
+     * the wait until the next one.
+     *
+     * There were two byte-identical copies of this, one per worker, and their
+     * own comments record that they once DISAGREED — so which data policy
+     * applied to a pass depended on which of the two racing workers won.
+     * Deliberately the active network rather than WorkManager's UNMETERED
+     * constraint, which asks the system default network and reports metered on
+     * a permanently-VPN'd phone even over Wi-Fi.
+     */
+    private fun isMetered(ctx: Context): Boolean {
+        val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java) ?: return true
+        val caps = cm.activeNetwork?.let { cm.getNetworkCapabilities(it) } ?: return true
+        return !caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+    }
+
+    /**
+     * Why an AUTOMATIC pass must not download right now, in a sentence fit to
+     * show a user — or null when nothing is holding it.
+     *
+     * Task #46 (never auto-download over mobile data) was honoured by a log
+     * line and an early return, which is correct behaviour reported as nothing
+     * at all: a pass parked on an unmet constraint produced the same silence as
+     * a download that had died. Returning the reason as a STRING is what lets
+     * the caller publish [UpdateProgress.State.Waiting] instead, so "held back
+     * on purpose" and "broken" stop looking alike.
+     *
+     * Only ever describes the automatic path. A user-initiated install is
+     * consent, and consent is not a constraint.
+     */
+    fun deferredReason(ctx: Context): String? =
+        if (requireUnmetered(ctx) && isMetered(ctx))
+            "on mobile data — auto-update waits for Wi-Fi. Install now to use mobile data anyway"
+        else null
 }

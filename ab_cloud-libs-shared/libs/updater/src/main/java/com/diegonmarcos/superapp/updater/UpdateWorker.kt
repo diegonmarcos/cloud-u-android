@@ -3,8 +3,6 @@ package com.diegonmarcos.superapp.updater
 import com.diegonmarcos.superapp.updater.install.UpdateInstaller
 import com.diegonmarcos.superapp.updater.source.UpdateChecker
 import android.content.Context
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -59,14 +57,17 @@ class UpdateWorker(
             // updated the superapp forever and never once touched the other
             // apps. Unattended only — a forced "check for updates" is the user
             // asking about THIS app.
-            // The metered gate below protects the SELF download only, and it sits
-            // after this line, so the fleet pass — the far bigger payload, N APKs
-            // against one — was downloading over mobile data on every unattended
-            // wake-up. Fleet.autoPass has no metered check of its own (Fleet.kt
-            // does not import ConnectivityManager at all), so the gate has to be
-            // here, at the call site.
-            if (!force && !(AutoUpdatePrefs.requireUnmetered(applicationContext) && isMetered(applicationContext)))
-                updateFleet()
+            // ONE metered decision for both halves of the pass, taken once.
+            // The gate used to sit only in front of the SELF download, so the
+            // fleet pass — the far bigger payload, N APKs against one — went
+            // over mobile data on every unattended wake-up. Fleet.autoPass has
+            // no metered check of its own, so the gate belongs here, at the
+            // call site, and the same answer must govern both downloads: two
+            // separate evaluations could disagree if the radio changed between
+            // them, and the second one is the larger bill.
+            val deferred = if (force) null else AutoUpdatePrefs.deferredReason(applicationContext)
+            if (deferred == null) updateFleet()
+            else Log.i("Updater/Worker", "fleet auto-update deferred — $deferred")
             // THE BUG, and it is a nesting bug. Fleet.autoPass raises both flags
             // for itself and lowers them UNCONDITIONALLY in its own finally — it
             // has no idea it was called from inside a larger unattended pass. So
@@ -85,8 +86,8 @@ class UpdateWorker(
             val available = UpdateChecker(applicationContext).available()
                 ?: return@withContext Result.success()
             // Ask (don't auto-download) on metered unless the user forced it.
-            if (!force && AutoUpdatePrefs.requireUnmetered(applicationContext) && isMetered(applicationContext)) {
-                Log.i("Updater/Worker", "update available but on metered network — prompting instead of auto-downloading")
+            if (deferred != null) {
+                Log.i("Updater/Worker", "update available but $deferred — prompting instead of auto-downloading")
                 UpdateProgress.update(UpdateProgress.State.UpdateAvailable(available.remoteSize))
                 return@withContext Result.success()
             }
@@ -166,15 +167,6 @@ class UpdateWorker(
             // do-nothing reasons applied.
             Log.i("Updater/Worker", "fleet auto-update: ${pass.reason}")
         }.onFailure { Log.w("Updater/Worker", "fleet auto-update failed: ${it.message}", it) }
-    }
-
-    /** True when the active network is metered (mobile data, or Wi-Fi the user
-     *  marked metered). No active network → treat as metered (conservative:
-     *  don't silently spend the user's data). */
-    private fun isMetered(ctx: Context): Boolean {
-        val cm = ctx.getSystemService(ConnectivityManager::class.java) ?: return true
-        val caps = cm.activeNetwork?.let { cm.getNetworkCapabilities(it) } ?: return true
-        return !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
     }
 
     companion object {

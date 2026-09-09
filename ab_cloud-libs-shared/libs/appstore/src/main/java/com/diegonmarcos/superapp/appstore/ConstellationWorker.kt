@@ -6,8 +6,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.os.Build
 import android.util.Log
 import androidx.work.Constraints
@@ -21,6 +19,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.diegonmarcos.superapp.updater.Advisory
 import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
+import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Fleet
 // AUTO_UPDATE_* knobs are baked into the libs:updater BuildConfig (shared AU
 // knobs), NOT the app BuildConfig — reference them explicitly.
@@ -48,8 +47,13 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
         // which on a permanently-VPN'd phone reports metered even over Wi-Fi;
         // this asks the ACTIVE network, which inherits NOT_METERED from the
         // VPN's underlying transport. Next pass retries, so this only defers.
-        if (AutoUpdatePrefs.requireUnmetered(applicationContext) && isMetered(applicationContext)) {
-            Log.i(TAG, "auto-update: skipped, metered network and require_unmetered is set")
+        AutoUpdatePrefs.deferredReason(applicationContext)?.let { why ->
+            Log.i(TAG, "auto-update: deferred — $why")
+            // SAY SO. Returning silently made a pass held back BY POLICY look
+            // exactly like one that had died: no progress, no error, nothing on
+            // the Constellation page. The pass is deferred, not broken, and the
+            // user is the only one who can act on the difference.
+            UpdateProgress.update(UpdateProgress.State.Waiting(why))
             return@withContext Result.success()
         }
         try {
@@ -106,18 +110,6 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
             Log.w(TAG, "fleet auto-update failed: ${t.message}")
         }
         Result.success()
-    }
-
-    /** Metered per the ACTIVE network. Unknown network ⇒ metered: the cost of
-     *  guessing wrong is the user's mobile data, and a deferred pass costs only
-     *  the wait until the next one. This used to return false (⇒ download), which
-     *  also disagreed with the identically-named helper in UpdateWorker; since
-     *  the two workers race for the same Fleet lease, which policy applied to a
-     *  given pass was decided by whoever won. */
-    private fun isMetered(ctx: Context): Boolean {
-        val cm = ctx.getSystemService(ConnectivityManager::class.java) ?: return true
-        val caps = cm.activeNetwork?.let { cm.getNetworkCapabilities(it) } ?: return true
-        return !caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
     }
 
     private fun cancel(ctx: Context, id: Int) {
