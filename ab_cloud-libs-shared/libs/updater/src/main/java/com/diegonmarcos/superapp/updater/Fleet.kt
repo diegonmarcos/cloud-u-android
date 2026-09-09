@@ -777,6 +777,11 @@ object Fleet {
             if (UpdateProgress.cancelRequested) {
                 Log.i(TAG, "installAll cancelled by user during download")
                 UpdateProgress.update(UpdateProgress.State.Cancelled)
+                // Same endBatch the CancellationException path below already
+                // does. Without it batchLabel outlives the cancelled batch and
+                // every observer keeps drawing a phantom "app · 2/5" row for
+                // work that stopped.
+                UpdateProgress.endBatch()
                 return Pass(0, todo.size, batch.size, silent, channel,
                     "cancelled by the user during download")
             }
@@ -810,6 +815,7 @@ object Fleet {
             if (UpdateProgress.cancelRequested) {
                 Log.i(TAG, "installAll cancelled by user after $acted install(s)")
                 UpdateProgress.update(UpdateProgress.State.Cancelled)
+                UpdateProgress.endBatch()
                 return Pass(acted, todo.size, batch.size, silent, channel,
                     "cancelled by the user after $acted install(s)")
             }

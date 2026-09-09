@@ -26,6 +26,7 @@ import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
 import com.diegonmarcos.superapp.updater.BootstrapInstall
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.UpdateProgress
+import com.diegonmarcos.superapp.updater.Updater
 import kotlin.concurrent.thread
 
 /**
@@ -74,6 +75,7 @@ class ConstellationFragment : Fragment() {
     private var progressRow: LinearLayout? = null
     private var progressLabel: TextView? = null
     private var progressBar: ProgressBar? = null
+    private var progressCancel: TextView? = null
 
     /**
      * Attached with [UpdateProgress.addObserver], never setListener: that slot is
@@ -121,7 +123,7 @@ class ConstellationFragment : Fragment() {
     /** The observer holds a view; leaving it attached would outlive the view tree. */
     override fun onDestroyView() {
         UpdateProgress.removeObserver(progressObserver)
-        progressRow = null; progressLabel = null; progressBar = null
+        progressRow = null; progressLabel = null; progressBar = null; progressCancel = null
         super.onDestroyView()
     }
 
@@ -276,12 +278,29 @@ class ConstellationFragment : Fragment() {
             max = 100
             isIndeterminate = true
         }
+        // Cancel. The machinery was already here and already correct —
+        // UpdateProgress.cancelRequested is polled by both download loops in
+        // ApkSource and by both phases of Fleet.installAll, and the shell
+        // overlay has driven it through Updater.cancelNow all along. This row
+        // simply never offered the button, so a download started from the
+        // table could only be waited out.
+        val cancel = btn(ctx, "Cancel", 0xFF4A4A55.toInt()) {
+            Updater.cancelNow(requireContext())
+        }.apply { visibility = View.GONE }
+
         row.addView(label)
         row.addView(bar, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 6)).apply {
             topMargin = dp(ctx, 4)
         })
+        row.addView(cancel, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(ctx, 6)
+            gravity = android.view.Gravity.END
+        })
         progressRow = row; progressLabel = label; progressBar = bar
+        progressCancel = cancel
         // Re-attaching on every render would stack observers, so drop the old one
         // first — the field is the same lambda instance for the fragment's life.
         UpdateProgress.removeObserver(progressObserver)
@@ -325,6 +344,16 @@ class ConstellationFragment : Fragment() {
                 label.setTextColor(cBlk)
                 label.text = prefix + "Failed — " + state.message
             }
+            // Cancelled had no branch at all, so it fell into `else` and — with
+            // a batch still labelled — left the row sitting there showing the
+            // batch it had just abandoned. A cancel the user asked for is not
+            // a failure to report; it is work that stopped, so the row goes.
+            is UpdateProgress.State.Cancelled -> {
+                UpdateProgress.reset()
+                progressCancel?.visibility = View.GONE
+                row.visibility = View.GONE
+                return
+            }
             // Between apps of a batch the state dips through Done; hiding there
             // would flicker the row out and back for every app in the pass.
             else -> {
@@ -334,6 +363,15 @@ class ConstellationFragment : Fragment() {
             }
         }
         if (state !is UpdateProgress.State.Failed) label.setTextColor(cUpd)
+        // Offer Cancel only while something is actually cancellable. Failed
+        // has already stopped, and the batch-gap `else` above is a moment
+        // between apps rather than a job of its own.
+        progressCancel?.visibility = when (state) {
+            is UpdateProgress.State.Downloading,
+            is UpdateProgress.State.CheckingManifest,
+            is UpdateProgress.State.Installing -> View.VISIBLE
+            else -> View.GONE
+        }
         row.visibility = View.VISIBLE
     }
 
@@ -682,8 +720,15 @@ class ConstellationFragment : Fragment() {
                 // worth showing, but it now also feeds the advisory so a third
                 // consecutive failure raises the banner and the notification
                 // that point at Direct install.
-                Advisory.recordFailure(ctx, app.id, app.label, t.message ?: "install failed")
-                view?.post { Toast.makeText(ctx, "${app.label}: ${t.message}", Toast.LENGTH_LONG).show() }
+                // A user cancel is not a failure. Now that this page offers a
+                // Cancel button, counting cancels here would let three of them
+                // raise the "install is broken — use Direct" advisory, which
+                // would be the app telling the user their own choice was a
+                // malfunction.
+                if (!UpdateProgress.cancelRequested) {
+                    Advisory.recordFailure(ctx, app.id, app.label, t.message ?: "install failed")
+                    view?.post { Toast.makeText(ctx, "${app.label}: ${t.message}", Toast.LENGTH_LONG).show() }
+                }
             }
             val st = Fleet.status(ctx, app)
             body.post { paint(app.id, st); updateSummary(current()) }
