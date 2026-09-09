@@ -212,16 +212,7 @@ class JmapClient internal constructor(
                             put("name", "Email/query")
                             put("path", "/ids")
                         }
-                        putJsonArray("properties") {
-                                // `replyTo`, `cc`, `bcc`: this page's rows are CACHED and the upsert
-                                // replaces the whole row, so omitting one here would wipe what another
-                                // fetch stored. See [EMAIL_BODY_PROPERTIES] and [CopiesOnTheWireTest].
-                            listOf(
-                                "id", "threadId", "subject", "preview",
-                                "receivedAt", "from", "replyTo", "to", "cc", "bcc",
-                                "hasAttachment", "keywords",
-                            ).forEach { add(it) }
-                        }
+                        putJsonArray("properties") { EMAIL_LIST_PROPERTIES.forEach { add(it) } }
                     }
                     add("g0")
                 }
@@ -507,16 +498,7 @@ class JmapClient internal constructor(
                         addJsonObject {
                             put("accountId", accountId)
                             putJsonArray("ids") { batch.forEach { add(it) } }
-                            putJsonArray("properties") {
-                                // `replyTo`, `cc`, `bcc`: the delta sync writes these rows straight
-                                // into the cache, and the `@Upsert` replaces the row whole — see
-                                // [EMAIL_BODY_PROPERTIES].
-                                listOf(
-                                    "id", "threadId", "subject", "preview",
-                                    "receivedAt", "from", "replyTo", "to", "cc", "bcc",
-                                    "hasAttachment", "keywords",
-                                ).forEach { add(it) }
-                            }
+                            putJsonArray("properties") { EMAIL_LIST_PROPERTIES.forEach { add(it) } }
                         }
                         add("g0")
                     }
@@ -642,12 +624,7 @@ class JmapClient internal constructor(
                             put("name", "Email/query")
                             put("path", "/ids")
                         }
-                        putJsonArray("properties") {
-                            listOf(
-                                "id", "threadId", "subject", "preview", "receivedAt",
-                                "from", "hasAttachment", "keywords", "mailboxIds",
-                            ).forEach { add(it) }
-                        }
+                        putJsonArray("properties") { EMAIL_INDEX_PROPERTIES.forEach { add(it) } }
                     }
                     add("g0")
                 }
@@ -726,10 +703,7 @@ class JmapClient internal constructor(
                         putJsonArray("properties") {
                             // Headers only — responses stay tiny so the crawl reaches even years-old
                             // mail fast. Body search is served by the server's own full-text index.
-                            listOf(
-                                "id", "threadId", "subject", "preview", "receivedAt",
-                                "from", "hasAttachment", "keywords", "mailboxIds",
-                            ).forEach { add(it) }
+                            EMAIL_INDEX_PROPERTIES.forEach { add(it) }
                         }
                     }
                     add("g0")
@@ -1004,14 +978,10 @@ class JmapClient internal constructor(
                             put("accountId", accountId)
                             putJsonArray("ids") { batch.forEach { add(it) } }
                             putJsonArray("properties") {
-                                listOf(
-                                    // `replyTo`, `cc`, `bcc`: thread members are cached too
-                                    // ([MailRepository.fetchThreadMembers]) — see
-                                    // [EMAIL_BODY_PROPERTIES] for why every such path must ask.
-                                    "id", "threadId", "subject", "preview", "receivedAt",
-                                    "from", "replyTo", "to", "cc", "bcc",
-                                    "hasAttachment", "keywords", "mailboxIds",
-                                ).forEach { add(it) }
+                                // Thread members are cached too ([MailRepository.fetchThreadMembers]),
+                                // so this is the list set — plus `mailboxIds`, which is how the caller
+                                // decides which folder to file each member under.
+                                (EMAIL_LIST_PROPERTIES + "mailboxIds").forEach { add(it) }
                             }
                         }
                         add("g0")
@@ -2586,6 +2556,38 @@ class JmapClient internal constructor(
             "from", "replyTo", "to", "cc", "bcc", "messageId", "inReplyTo", "references",
             "hasAttachment", "keywords",
             "htmlBody", "textBody", "attachments", "bodyValues",
+        )
+
+                /**
+                 * What every fetch that CACHES a list row asks the server for. ONE list, where there used
+                 * to be three identical copies each carrying its own warning that the copies must agree:
+                 * the cache's `@Upsert` replaces the row whole, so a path that omits a property erases
+                 * what another path stored. A warning repeated three times is not a mechanism — this is.
+                 *
+                 * `attachments` (RFC 8621 §4.1.4) is the reason the list can draw a chip per file rather
+                 * than one paperclip meaning "something is in here". It is a DERIVED property: the server
+                 * computes it from the message structure it already parsed, it carries no body content,
+                 * and asking for it needs neither `fetchTextBodyValues` nor `fetchHTMLBodyValues`. So it
+                 * rides the page's existing chained `Email/get` and costs ZERO extra requests — which is
+                 * the whole point. A fetch per visible row would be 50 round trips per page on a phone,
+                 * and this app has been made slow by per-message work before.
+                 */
+        internal val EMAIL_LIST_PROPERTIES = listOf(
+            "id", "threadId", "subject", "preview",
+            "receivedAt", "from", "replyTo", "to", "cc", "bcc",
+            "hasAttachment", "keywords", "attachments",
+        )
+
+                /**
+                 * The search and crawl property set. Deliberately NOT [EMAIL_LIST_PROPERTIES]: neither
+                 * path writes an `emails` row (search returns straight to the caller, the crawl feeds the
+                 * FTS table, which has no attachment column), so `attachments` there would be bytes spent
+                 * on nothing — and the crawl walks the WHOLE account, where "nothing" is measured in
+                 * years of mail.
+                 */
+        internal val EMAIL_INDEX_PROPERTIES = listOf(
+            "id", "threadId", "subject", "preview", "receivedAt",
+            "from", "hasAttachment", "keywords", "mailboxIds",
         )
 
             /** The two header properties the reader's unsubscribe banner is built from (RFC 8621

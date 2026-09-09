@@ -100,6 +100,11 @@ data class ImapMessage(
          *  or restores reads it. Kept ONLY so a later read — the notification preview — can name a
          *  section without asking the server to describe the message twice. */
     val textPart: ImapTextPart? = null,
+        /** The message's file parts, read out of the SAME BODYSTRUCTURE as [textPart] and
+         *  [hasAttachment] — filename, MIME type and encoded size, with no body. Additive and empty by
+         *  default. What lets the message list draw a chip per file instead of one paperclip meaning
+         *  "something is in here", at no cost on the wire: see [attachmentParts]. */
+    val attachments: List<MimeAttachment> = emptyList(),
 )
 
 /** Result of selecting a mailbox. */

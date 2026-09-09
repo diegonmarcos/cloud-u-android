@@ -987,6 +987,10 @@ class ImapSession(private var socket: Socket) : Closeable {
             // The same structure the line above reduces to a boolean, read a second way: which
             // section holds the text and how to decode it. Costs no command.
             textPart = firstTextPart(map["BODYSTRUCTURE"]),
+            // And a third read of that same structure: WHICH files, not just whether there are any.
+            // The boolean above and this list must never disagree, so they are computed from one
+            // value in one place rather than from two fetches at two times.
+            attachments = attachmentParts(map["BODYSTRUCTURE"]),
         )
     }
 
