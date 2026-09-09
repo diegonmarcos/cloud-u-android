@@ -23,7 +23,8 @@ import androidx.fragment.app.Fragment
 import org.json.JSONArray
 
 /**
- * Configs → Launcher — theme picker for the SuperApp's Home / Launcher
+ * Configs → Launcher → Theme (tab 1 of that page; One-Hand is tab 2) — theme
+ * picker for the SuperApp's Home / Launcher
  * mode. The themes list is data-driven from
  * build.json::ui.launcher_themes (baked into BuildConfig as a base64
  * JSON blob). Tapping a theme persists it via [LauncherThemePrefs] and

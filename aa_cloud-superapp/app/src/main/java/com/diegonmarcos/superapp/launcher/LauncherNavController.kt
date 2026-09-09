@@ -32,24 +32,29 @@ class LauncherNavController(private val host: NavHost) {
     /** Guards the walk re-sync from firing while a walk step drives goSection. */
     var inWalkNav: Boolean = false
 
-    /** Which tab each tabbed section is currently sitting on, by section id.
-     *  A [SectionTabsFragment] is destroyed and rebuilt every time its section
-     *  is (re-)entered, and its own selection dies with it — so the strip can
-     *  only be restored to the tab the user left if that tab is remembered OUT
-     *  here, on the controller, which outlives the fragment. Written by the
-     *  strip on every selection, read wherever a strip is built. */
+    /** Which tab each strip is currently sitting on. A [SectionTabsFragment]
+     *  is destroyed and rebuilt every time it is (re-)entered, and its own
+     *  selection dies with it — so the strip can only be restored to the tab
+     *  the user left if that tab is remembered OUT here, on the controller,
+     *  which outlives the fragment. Written by the strip on every selection,
+     *  read wherever a strip is built.
+     *
+     *  The key is a section id for a section strip and
+     *  [SectionTabsFragment.pageTabKey] for a page strip, so Configs ▸
+     *  Launcher's tab cannot be mistaken for the Configs SECTION's. */
     private val activeTabBySection = mutableMapOf<String, String>()
 
-    /** Record the tab a section is now showing. Called by [SectionTabsFragment]
-     *  for the landing tab and for every user selection after it. */
-    fun recordActiveTab(sectionId: String, pageId: String) {
-        activeTabBySection[sectionId] = pageId
+    /** Record the tab a strip is now showing. Called by [SectionTabsFragment]
+     *  for the landing tab and for every user selection after it, and by
+     *  [openSectionPage] when a deep link names a tab rather than a page. */
+    fun recordActiveTab(tabKey: String, pageId: String) {
+        activeTabBySection[tabKey] = pageId
     }
 
-    /** The tab [sectionId] was last left on, or "" if it has not been visited.
+    /** The tab [tabKey] was last left on, or "" if it has not been visited.
      *  Blank is the pre-existing behaviour (strip falls to [startIndex]), so an
      *  unvisited section is unaffected. */
-    fun activeTabFor(sectionId: String): String = activeTabBySection[sectionId].orEmpty()
+    fun activeTabFor(tabKey: String): String = activeTabBySection[tabKey].orEmpty()
 
     fun goHome() {
         val ctx = host.navContext()
@@ -183,6 +188,19 @@ class LauncherNavController(private val host: NavHost) {
         section.tabs && section.pages.count { it.action.isBlank() } >= 2
 
     fun openSectionPage(sectionId: String, pageId: String, args: Bundle? = null) {
+        // A page MERGED INTO another page's tab strip keeps its own id as a
+        // navigation target. Configs ▸ One-Hand is Launcher's second tab now,
+        // and `page:config/onehand` is spoken by more places than could be
+        // rewritten safely — launcher shortcuts, edge gestures, the radial
+        // menus, and the App-Tabs history already stored on the device — so
+        // the id resolves to "the owner page, on that tab" instead of dying
+        // with the standalone entry. Recorded BEFORE the open because the
+        // strip reads its landing tab off the controller as it builds.
+        Sections.tabOwnerOf(sectionId, pageId)?.let { owner ->
+            recordActiveTab(SectionTabsFragment.pageTabKey(sectionId, owner.id), pageId)
+            openSectionPage(sectionId, owner.id, args)
+            return
+        }
         // Establish the section grid as the back-stack BASE *first*, so Back from
         // this child returns to its parent section (e.g. Configs), not wherever it
         // was launched from (Home, the Home-Apps sheet, the Canopus arc menu).

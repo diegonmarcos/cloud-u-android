@@ -39,7 +39,7 @@ object SectionPages {
         val section = Sections.byId(sectionId) ?: return emptyList()
         return (if (includeHidden) section.allPages else section.pages).map { p ->
             Page(p.id, p.label, p.iconName ?: "", p.action, p.isAction) {
-                factoryFor(sectionId, p.id, p.label, p.url)
+                factoryFor(sectionId, p.id, p.label, p.url, p.tabs)
             }
         }
     }
@@ -49,7 +49,14 @@ object SectionPages {
         pageId: String,
         label: String,
         url: String = "",
+        tabs: List<String> = emptyList(),
     ): Fragment = when {
+        // A page that declares `tabs` IS a strip over them — the same
+        // SectionTabsFragment a tabbed SECTION wears, so this app has one tab
+        // mechanism rather than two to keep in step. Checked before `url` and
+        // before every id below, so grouping two pages behind one is a
+        // build.json edit here too, not a branch.
+        tabs.isNotEmpty() -> SectionTabsFragment.forPage(sectionId, pageId)
         // A page that declares a `url` IS that page. Checked first and by
         // data, so embedding the next one is a build.json edit, not a branch.
         url.isNotBlank() -> WebPageFragment.newInstance(url)
@@ -66,7 +73,11 @@ object SectionPages {
         sectionId == "drive" && pageId == "connections" -> DriveConnectionsFragment.newInstance()
         sectionId == "config" && pageId == "profile"   -> ProfileFragment.newInstance()
         sectionId == "config" && pageId == "ai"        -> AiFragment.newInstance()
-        sectionId == "config" && pageId == "launcher" -> LauncherConfigFragment.newInstance()
+        // Launcher's THEME tab. The `launcher` id names the two-tab strip now
+        // (build.json::ui.sections[config].pages[launcher].tabs), so the theme
+        // screen needed an id of its own — nothing it stores moved with it,
+        // LauncherThemePrefs and friends key off fixed store names.
+        sectionId == "config" && pageId == "theme" -> LauncherConfigFragment.newInstance()
         sectionId == "config" && pageId == "kde"            -> com.diegonmarcos.superapp.kdeconnect.KdeConnectFragment.newInstance()
         sectionId == "config" && pageId == "constellation"  -> com.diegonmarcos.superapp.appstore.ConstellationFragment()
         sectionId == "config" && pageId == "wg"             -> WireGuardFragment.newInstance()

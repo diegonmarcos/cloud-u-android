@@ -4090,15 +4090,28 @@
             "icon": "ic_ai_sparkle"
           },
           {
+            "_doc": "Launcher is ONE page wearing TWO tabs now, not two sibling Configs entries. Launcher and One-Hand were always the same question asked twice — how this launcher behaves under your thumb — and splitting it across two grid tiles made the user leave one page to reach the other half of the same decision (pick a theme, then go somewhere else to say how you reach it one-handed). `tabs` lists PAGE IDS of this same section, in strip order: SectionPages hands a page that declares them to the SAME SectionTabsFragment a tabbed section wears, so there is one tab mechanism in this app, not two. Both tab ids stay real declared pages (hidden below), which is what keeps `page:config/onehand` alive as a target — see LauncherNavController.openSectionPage, which resolves a tab id to its owner page and lands on that tab.",
             "id": "launcher",
             "label": "Launcher",
-            "icon": "ic_home"
+            "icon": "ic_home",
+            "tabs": [
+              "theme",
+              "onehand"
+            ]
           },
           {
-            "_doc": "One-Hand edge-gesture overlay (libs:launcher-onehand). OneHandFragment hosts the master toggle + the two special-permission deep-links (Draw over other apps, Accessibility). Data-driven engine config lives in build.json::onehand. Sits directly after Launcher: both are about how this launcher behaves under your thumb, so they read as a pair.",
+            "_doc": "Tab 1 of Launcher — everything the standalone Launcher page used to show (profiles, theme picker, screensaver + toggles, set-as-default-launcher). Its OWN id had to be new, because `launcher` is now the strip that CONTAINS it and a page cannot be a tab of itself. Nothing persisted moves with it: LauncherThemePrefs/LauncherProfilePrefs/LauncherSettingsPrefs key off fixed store names ('launcher_theme'/'launcher_profile'/'launcher_settings'), never off the page id. hidden = it is reached through the strip, not as its own Configs tile.",
+            "id": "theme",
+            "label": "Theme",
+            "icon": "ic_home",
+            "hidden": true
+          },
+          {
+            "_doc": "Tab 2 of Launcher — One-Hand edge-gesture overlay (libs:launcher-onehand). OneHandFragment hosts the master toggle + the two special-permission deep-links (Draw over other apps, Accessibility). Data-driven engine config lives in build.json::onehand. KEPT ITS ID: `hidden` drops it from the Configs grid, the Home Apps Configs row, the Canopus arc and the Sirius tree (all of which list Section.pages), while Section.allPages keeps `page:config/onehand` resolvable — so every existing deep link, launcher shortcut, edge gesture and App-Tabs history entry still arrives, now on this tab. Its prefs (onehand_prefs, home_swipe_prefs, floatingnav) are untouched for the same reason the id is.",
             "id": "onehand",
             "label": "One-Hand",
-            "icon": "ic_onehand"
+            "icon": "ic_onehand",
+            "hidden": true
           },
           {
             "_doc": "Update ALL constellation apps (not just self). Opens the Constellation page + runs Fleet.installAll; the shared update overlay shows per-install progress with a Cancel button. MainActivity.dispatchHomeAction('update_all').",

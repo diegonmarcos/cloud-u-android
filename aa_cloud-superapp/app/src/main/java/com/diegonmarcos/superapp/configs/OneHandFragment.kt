@@ -28,7 +28,10 @@ import com.diegonmarcos.superapp.floatingnav.FloatingNavService
 import com.diegonmarcos.superapp.settings.HomeSwipePrefs
 
 /**
- * Configs > One-Hand. Master toggle + a per-sector action editor laid out to
+ * Configs > Launcher > One-Hand (the second tab of that page; it was a
+ * standalone Configs entry until Theme and One-Hand were merged into the one
+ * page they always described together). Master toggle + a per-sector action
+ * editor laid out to
  * MIRROR the phone: the left handle's Top/Center/Down live in the LEFT column,
  * the right handle's in the RIGHT column. Grant the two permissions in the
  * centralized Configs > Permissions page.

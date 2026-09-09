@@ -337,6 +337,18 @@ object Sections {
          *  top-level children instead of Cloud | Labs | C3. `page:cloud/quant`
          *  still resolves — see [Section.allPages]. */
         val hidden: Boolean = false,
+
+        /** Page ids of THIS section that this page renders behind one tab
+         *  strip, in strip order — the page-level twin of
+         *  [Section.tabs]. Configs ▸ Launcher is the case: Theme and One-Hand
+         *  are one decision, so they are one page with two tabs rather than
+         *  two sibling tiles. Empty ⇒ an ordinary page.
+         *
+         *  A tab is a REAL declared page (normally `hidden`), never an inline
+         *  label: that is what keeps `page:<section>/<tab>` a live target
+         *  after the tab stops being its own entry — see
+         *  [tabOwnerOf] and [LauncherNavController.openSectionPage]. */
+        val tabs: List<String> = emptyList(),
         /** true = this entry DOES something and returns (Update All, ...)
          *  rather than opening a page. Declared, not inferred: `import`,
          *  `keyboard` and `constellation` all carry an action: target yet
@@ -562,6 +574,9 @@ object Sections {
                         mirrorSection = po.optString("mirror_section", ""),
                         actionsFromSection = po.optString("actions_from_section", ""),
                         hidden   = po.optBoolean("hidden", false),
+                        tabs     = po.optJSONArray("tabs")?.let { ta ->
+                            (0 until ta.length()).map { ta.getString(it) }
+                        }.orEmpty(),
                         isAction = po.optBoolean("is_action", false),
                     ))
                 }
@@ -856,6 +871,33 @@ object Sections {
      *  .syncModeForPage]) is handed a bare page id by the tab strip. */
     fun modeForPageId(pageId: String): String? = all().firstNotNullOfOrNull { sec ->
         sec.allPages.firstOrNull { it.id == pageId && it.mode.isNotBlank() }?.mode
+    }
+
+    /**
+     * The page whose tab strip [pageId] is a tab of, or null when [pageId] is
+     * a page in its own right.
+     *
+     * This is what lets a page be MERGED INTO another page's strip without
+     * killing its target: `page:config/onehand` names a page that no longer
+     * has a screen of its own, and answering "it is Launcher's second tab"
+     * here is cheaper — and cannot rot — compared with rewriting every deep
+     * link, launcher shortcut, edge gesture and stored history entry that
+     * still says `onehand`. Searched over [Section.allPages] because a tab is
+     * normally `hidden`.
+     */
+    fun tabOwnerOf(sectionId: String, pageId: String): Page? =
+        byId(sectionId)?.allPages?.firstOrNull { it.id != pageId && pageId in it.tabs }
+
+    /** [owner]'s tabs as declared pages of [sectionId], in strip order. A tab
+     *  id with no page behind it is dropped rather than drawn as an empty
+     *  tab — the strip must never offer something nothing can render. The
+     *  owner's own id is dropped for a harder reason: rendering a tab asks
+     *  for that page's fragment, and a page listed among its own tabs would
+     *  ask for the strip that is asking, forever. */
+    fun tabPagesOf(sectionId: String, owner: Page): List<Page> {
+        val all = byId(sectionId)?.allPages.orEmpty()
+        return owner.tabs.filter { it != owner.id }
+            .mapNotNull { id -> all.firstOrNull { it.id == id } }
     }
 
     /** `<section>` to `<page>` for the page that DECLARES this dispatch

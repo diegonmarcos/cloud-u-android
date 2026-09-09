@@ -34,10 +34,31 @@ import com.google.android.material.tabs.TabLayout
  *
  * Sections with more pages than [MAX_PANES] never reach here — the nav
  * controller routes them to the icon-rail + detail-pane layout instead.
+ *
+ * A PAGE can wear the same strip ([forPage]): Configs ▸ Launcher is one page
+ * over the Theme and One-Hand tabs. This app gets ONE tab mechanism that way
+ * instead of a second widget that has to be restyled and re-fixed in parallel
+ * — the strip already knows how to list pages of a section, and a page's tabs
+ * ARE pages of its section. Only three things differ, all off [ownerPageId]:
+ * the strip lists the OWNER'S tabs instead of the section's pages, it records
+ * its selection under its own key so it cannot overwrite the section's, and it
+ * stays single-pane on a tablet because it is already living inside the
+ * activity's 60% detail column rather than splitting the window itself.
  */
 class SectionTabsFragment : Fragment(), Collapsible {
 
     private val sectionId: String get() = arguments?.getString(ARG_SECTION_ID).orEmpty()
+
+    /** The page this strip belongs to, or "" when the strip IS the section. */
+    private val ownerPageId: String get() = arguments?.getString(ARG_OWNER_PAGE).orEmpty()
+
+    /** Where this strip's active tab is remembered on the controller. A
+     *  section strip keeps using the bare section id — byte-identical to the
+     *  behaviour before pages could have tabs — and a page strip gets its own
+     *  key, so Configs ▸ Launcher sitting on One-Hand can never be mistaken
+     *  for the Configs SECTION sitting on a tab. */
+    private val tabKey: String get() =
+        if (ownerPageId.isBlank()) sectionId else pageTabKey(sectionId, ownerPageId)
 
     /** Stable hosts, one per rendered pane — see `values/ids.xml`. */
     private val paneIds = intArrayOf(
@@ -73,15 +94,22 @@ class SectionTabsFragment : Fragment(), Collapsible {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
-        val pages = Sections.byId(sectionId)?.pages.orEmpty()
+        // The section's own pages, or — when a PAGE owns this strip — that
+        // page's declared tabs. Both are pages of the same section, so
+        // everything below this line is unaware of the difference.
+        val owner = Sections.byId(sectionId)?.allPages?.firstOrNull { it.id == ownerPageId }
+        val pages = if (owner != null) Sections.tabPagesOf(sectionId, owner)
+                    else Sections.byId(sectionId)?.pages.orEmpty()
         // A page that declares an `action` is a LAUNCH tab, not a destination:
         // C3's Watchdog and Morpheus fire `extapp:` and leave the app. It wears
         // a tab so the strip reads Observability | Topology | Watchdog |
         // Morpheus, but it has no fragment, so it never claims a pane.
         val panePages = pages.filter { it.action.isBlank() }
-        val twoPane = (activity as? ShellActivity)?.isTwoPane() == true
+        val twoPane = (activity as? ShellActivity)?.isTwoPane() == true && ownerPageId.isBlank()
         // One pane per content page on a tablet; phones keep the single
-        // swapping pane.
+        // swapping pane. A PAGE strip is single-pane on every device: it is
+        // opened INTO the tablet's 60% detail column, so fanning its tabs out
+        // side by side would divide that column, not the window.
         val paneCount = if (twoPane) panePages.size.coerceIn(1, MAX_PANES) else 1
 
         val root = LinearLayout(ctx).apply {
@@ -156,7 +184,7 @@ class SectionTabsFragment : Fragment(), Collapsible {
         // neither would fire onTabSelected for the page we start on.
         pages.getOrNull(start)?.let {
             (activity as? ShellActivity)?.nav?.syncModeForPage(it.id)
-            (activity as? ShellActivity)?.nav?.recordActiveTab(sectionId, it.id)
+            (activity as? ShellActivity)?.nav?.recordActiveTab(tabKey, it.id)
         }
 
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -183,7 +211,7 @@ class SectionTabsFragment : Fragment(), Collapsible {
                 // on SELECTION, not at render time: with every pane on screen
                 // rendering both would call it twice and the last would win.
                 (activity as? ShellActivity)?.nav?.syncModeForPage(page.id)
-                (activity as? ShellActivity)?.nav?.recordActiveTab(sectionId, page.id)
+                (activity as? ShellActivity)?.nav?.recordActiveTab(tabKey, page.id)
                 if (paneCount == 1) render(0, page.id)
             }
             override fun onTabUnselected(tab: TabLayout.Tab) = Unit
@@ -243,10 +271,17 @@ class SectionTabsFragment : Fragment(), Collapsible {
      *  for, else the persisted Apps/Admin mode when this section has a page
      *  named for it, else the first page. Never a launch tab — landing on one
      *  would fire its external app on arrival, so those are skipped here and
-     *  only reachable by an explicit tap. */
+     *  only reachable by an explicit tap.
+     *
+     *  A PAGE strip is not built by goSection and so is never handed an
+     *  initial page; it asks the controller which tab it was left on instead.
+     *  That is also the channel a deep link to a tab arrives on — see
+     *  [LauncherNavController.openSectionPage] — and the Apps/Admin mode is
+     *  not a fallback it can use, since a page's tabs are not modes. */
     private fun startIndex(pages: List<Sections.Page>): Int {
-        val wanted = arguments?.getString(ARG_INITIAL_PAGE).orEmpty()
-            .ifBlank { ModePrefs(requireContext()).mode }
+        val remembered = if (ownerPageId.isBlank()) ModePrefs(requireContext()).mode
+                         else (activity as? ShellActivity)?.nav?.activeTabFor(tabKey).orEmpty()
+        val wanted = arguments?.getString(ARG_INITIAL_PAGE).orEmpty().ifBlank { remembered }
         return pages.indexOfFirst { it.id == wanted && it.action.isBlank() }
             .takeIf { it >= 0 }
             ?: pages.indexOfFirst { it.action.isBlank() }.coerceAtLeast(0)
@@ -272,12 +307,30 @@ class SectionTabsFragment : Fragment(), Collapsible {
 
         private const val ARG_SECTION_ID = "section_id"
         private const val ARG_INITIAL_PAGE = "initial_page"
+        private const val ARG_OWNER_PAGE = "owner_page"
+
+        /** Where a PAGE strip's active tab is remembered on the controller.
+         *  Shared with [LauncherNavController.openSectionPage], which writes
+         *  the tab a deep link asked for before opening the owner page — so
+         *  the two must agree on the key, and there is one definition of it. */
+        fun pageTabKey(sectionId: String, pageId: String): String = "$sectionId/$pageId"
 
         fun newInstance(sectionId: String, initialPage: String = ""): SectionTabsFragment =
             SectionTabsFragment().apply {
                 arguments = Bundle().apply {
                     putString(ARG_SECTION_ID, sectionId)
                     putString(ARG_INITIAL_PAGE, initialPage)
+                }
+            }
+
+        /** The strip for a PAGE that declares `tabs` — Configs ▸ Launcher.
+         *  Which pages it lists comes from that page's declaration, so this
+         *  takes no list of its own. */
+        fun forPage(sectionId: String, pageId: String): SectionTabsFragment =
+            SectionTabsFragment().apply {
+                arguments = Bundle().apply {
+                    putString(ARG_SECTION_ID, sectionId)
+                    putString(ARG_OWNER_PAGE, pageId)
                 }
             }
     }
