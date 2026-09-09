@@ -126,7 +126,7 @@ class SectionFragment : Fragment() {
         showPage(if (stillBelow) pageId else section.page(id)?.leaf()?.id)
     }
 
-    /** Shows [id] and brings both strips in line with it. [replaceContent] is
+    /** Shows [id] and brings every strip above it in line. [replaceContent] is
      *  false on a config change, where the child fragment is restored already
      *  and replacing it would drop its own state. */
     private fun showPage(id: String?, replaceContent: Boolean = true) {
