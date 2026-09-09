@@ -59,8 +59,11 @@ n=$(grep -c 'ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance' "$J/keyboard/i
 [ "$n" = 3 ] && ok "T3 icon mapped in all 3 KeyboardIconsSet maps" || bad "T3 icon maps: $n/3"
 has "$J/latin/inputlogic/InputLogic.java" 'case KeyCode.ENHANCE' "T3 InputLogic dispatches ENHANCE"
 has "$J/latin/inputlogic/InputLogic.java" 'TextEnhancer.enhance' "T3 ENHANCE calls TextEnhancer"
-grep -E 'val default = listOf\(.*TRANSLATE, ENHANCE,' "$J/latin/utils/ToolbarUtils.kt" >/dev/null \
-  && ok "T3 ENHANCE in default first-row toolbar list" || bad "T3 ENHANCE not in defaultToolbarPref"
+row1=$(awk '/val default = listOf\(/{f=1} f{print} f && /^    \)/{exit}' "$J/latin/utils/ToolbarUtils.kt")
+case "$row1" in
+  *ENHANCE*TRANSLATE*|*TRANSLATE*ENHANCE*) ok "T3 ENHANCE and TRANSLATE in default first-row toolbar list" ;;
+  *) bad "T3 ENHANCE not in defaultToolbarPref first row" ;;
+esac
 [ -f "$K/res/drawable/ic_toolbar_enhance.xml" ] && ok "T3 drawable exists" || bad "T3 ic_toolbar_enhance.xml missing"
 
 # T4 strings + per-provider titles
