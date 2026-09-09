@@ -67,7 +67,12 @@ class ExternalAppsTest {
         assertTrue("expected at least the Comms + IDE extapp tiles", extapps.size >= 4)
 
         for (t in extapps) {
+            // `#<target>` is a destination inside the companion app, not part of
+            // the fork key — split it off the way launchExternalApp does, or the
+            // Dashboard's extapp:cloud-me#page:projects/health reads as an app
+            // called "cloud-me#page:projects".
             val payload = t.removePrefix("extapp:")
+                .substringBefore(com.diegonmarcos.superapp.launcher.StackAnchors.FRAGMENT)
             val parts = payload.split("/", limit = 2)
             val app = Sections.externalApp(parts[0])
             assertNotNull("extapp target '$t' references unknown app '${parts[0]}'", app)

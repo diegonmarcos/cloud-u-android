@@ -1462,8 +1462,26 @@ open class ShellActivity : AppCompatActivity(),
     /**
      * Open a companion app declared in build.json::ui.external_apps.
      *
-     * Grammar: `extapp:<appId>/<forkKey>` (forkKey optional). Resolution,
-     * in priority order — first hit wins:
+     * Grammar: `extapp:<appId>/<forkKey>#<target>` (both optional).
+     *
+     * The `#<target>` half is a destination INSIDE the companion app, split off
+     * first so it can never be mistaken for part of a fork key — the same
+     * fragment convention `page:c3/observability#ntfy` already uses in
+     * [onTileClicked]. It travels as the `shortcut_action` extra, which is the
+     * extra THIS app reads on its own launcher intent
+     * ([handleShortcutIntent]), carrying the same target grammar. So a
+     * constellation app that wants to be deep-linkable implements the handler
+     * it would have needed for its own shortcuts and nothing else; Cloud-Me is
+     * the first, for the Fin and Health dashboard tiles. An app that ignores
+     * the extra simply opens at its own front door, which is what every
+     * fragment-less target already does.
+     *
+     * SINGLE_TOP|CLEAR_TOP only when a target is present: a plain launch must
+     * keep resuming the companion app exactly where the user left it, but a
+     * deep link that silently resumed some other page would be a dead icon
+     * wearing a live one's clothes.
+     *
+     * Resolution, in priority order — first hit wins:
      *   1. the specific fork package (forks[forkKey]),
      *   2. the hub package (hub_package),
      *   3. neither installed → download + install install_apk_url (a direct
@@ -1475,7 +1493,10 @@ open class ShellActivity : AppCompatActivity(),
      * getLaunchIntentForPackage returns null for them and we fall through
      * to the hub switcher — exactly the intended behaviour.
      */
-    private fun launchExternalApp(payload: String) {
+    private fun launchExternalApp(rawPayload: String) {
+        val payload = rawPayload.substringBefore(StackAnchors.FRAGMENT)
+        val deepTarget = rawPayload.substringAfter(StackAnchors.FRAGMENT, "")
+            .takeIf { it.isNotBlank() }
         val parts = payload.split("/", limit = 2)
         val app = Sections.externalApp(parts[0]) ?: run {
             findViewById<View>(R.id.fragment_container).snack("Unknown app: ${parts[0]}")
@@ -1490,6 +1511,11 @@ open class ShellActivity : AppCompatActivity(),
         for (pkg in candidates) {
             val launch = packageManager.getLaunchIntentForPackage(pkg) ?: continue
             launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (deepTarget != null) {
+                launch.putExtra("shortcut_action", deepTarget)
+                launch.addFlags(android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                                android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            }
             val ok = runCatching {
                 val lbl = runCatching {
                     packageManager.getApplicationLabel(

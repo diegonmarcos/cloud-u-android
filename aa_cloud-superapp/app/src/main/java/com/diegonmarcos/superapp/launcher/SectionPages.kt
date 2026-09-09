@@ -12,11 +12,9 @@ import com.diegonmarcos.superapp.apps.RecentAppsFragment
 
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.ai.AiFragment
-import com.diegonmarcos.superapp.health.HealthFragment
 import com.diegonmarcos.superapp.chat.ChatPages
 import com.diegonmarcos.superapp.mail.MailPages
 import com.diegonmarcos.superapp.ops.OpsPages
-import com.diegonmarcos.superapp.fin.MyFinDashboardFragment
 // libs:wallet MOVED to ac_cloud-wallet (constellation APK). No WalletFragment here.
 
 /**
@@ -72,11 +70,15 @@ object SectionPages {
         sectionId == "config" && pageId == "kde"            -> com.diegonmarcos.superapp.kdeconnect.KdeConnectFragment.newInstance()
         sectionId == "config" && pageId == "constellation"  -> com.diegonmarcos.superapp.appstore.ConstellationFragment()
         sectionId == "config" && pageId == "wg"             -> WireGuardFragment.newInstance()
-        sectionId == "myfin"   && pageId == "dashboard"     -> MyFinDashboardFragment.newInstance()
+        // "myfin" section is GONE — the dashboard moved to Cloud-Me (Buro > Fin)
+        // and libs:fin left with it; tile target extapp:cloud-me#page:buro/fin.
         sectionId == "cal"     && pageId == "month"         -> CalendarMonthFragment.newInstance()
         sectionId == "cal"     && pageId == "agenda"        -> CalendarAgendaFragment.newInstance()
         // "wallet" section is dead — tile target extapp:cloud-wallet bypasses openSectionPage.
-        sectionId == "health"                               -> HealthFragment.newInstance(pageId)
+        // "health" has no pages any more — the MyHealth surface moved to Cloud-Me
+        // (Projects > Health); tile target extapp:cloud-me#page:projects/health. The
+        // section survives in build.json for its `metrics` taxonomy alone, which
+        // Configs > Permissions reads to count the Health Connect grants.
         sectionId == "wg"     && pageId == "config"         -> WireGuardFragment.newInstance()
         sectionId == "config" && pageId == "onehand" ->
             com.diegonmarcos.superapp.configs.OneHandFragment.newInstance()

@@ -837,8 +837,11 @@ dependencies {
     // libs:vault MOVED to ac_cloud-vault (standalone constellation APK hosting vault.diegonmarcos.com).
     implementation project(':libs:chat')
     // libs:wallet MOVED to ac_cloud-wallet (standalone constellation APK).
+    // libs:health stays for Configs → Permissions (HealthMetrics +
+    // HealthConnectGateway count and request the Health Connect grants); its
+    // PAGES moved to ac_cloud-me. libs:fin left with the MyFin dashboard — see
+    // build.json::modules._libs_fin_tombstone.
     implementation project(':libs:health')
-    implementation project(':libs:fin')
     implementation project(':libs:kde-connect')
     // libs:shizuku-adb-debug-tools — self-contained "adb shell" surface
     // via Shizuku (ShizukuAdb + AdbDiagnostics). DevControlServer exposes

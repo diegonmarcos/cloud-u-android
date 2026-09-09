@@ -181,7 +181,6 @@
         "libs:ops",
         "libs:chat",
         "libs:health",
-        "libs:fin",
         "libs:launcher-apptabs",
         "libs:kde-connect",
         "libs:shizuku-adb-debug-tools",
@@ -269,17 +268,10 @@
       "depends_on": [
         "libs:core"
       ],
-      "comment": "MyHealth — native Android Health Connect dashboard. Reads aggregated records (Steps, Distance, Floors, Elevation, HR, RHR, HRV, VO2max, BP, BloodGlucose, SpO2, Temperature, RespiratoryRate, Sleep+stages, Exercise, Weight/BodyFat/Lean/Bone/Water, Hydration, Nutrition, Cycle) via androidx.health.connect:connect-client. All of Garmin Connect / Google Fit / Samsung Health / Fitbit / Oura sync INTO Health Connect on-device — single SDK gets the union. LOCAL-ONLY: persists rollups + caches into HealthStore (libs:core, SharedPreferences). Zero network. No OAuth, no webhooks, no cloud ingester. Compose surface — pages declared in build.json::ui.sections[id=health]."
+      "comment": "MyHealth — native Android Health Connect dashboard. Reads aggregated records (Steps, Distance, Floors, Elevation, HR, RHR, HRV, VO2max, BP, BloodGlucose, SpO2, Temperature, RespiratoryRate, Sleep+stages, Exercise, Weight/BodyFat/Lean/Bone/Water, Hydration, Nutrition, Cycle) via androidx.health.connect:connect-client. All of Garmin Connect / Google Fit / Samsung Health / Fitbit / Oura sync INTO Health Connect on-device — single SDK gets the union. LOCAL-ONLY: persists rollups + caches into HealthStore (libs:core, SharedPreferences). Zero network. No OAuth, no webhooks, no cloud ingester. The Compose PAGES moved to ac_cloud-me (Projects > Health) and the SuperApp no longer routes to any of them; the module stays because Configs > Permissions uses HealthMetrics + HealthConnectGateway to count and request the Health Connect grants. Taxonomy still read from build.json::ui.sections[id=health].metrics."
     },
     "_libs_browser_tombstone": "libs:browser MOVED to ac_cloud-browser (constellation APK). Removed from app.depends_on and from this module list 2026-07. The Tools tile target is now extapp:cloud-browser. launchUri http/https now sends ACTION_VIEW to com.diegonmarcos.cloudbrowser instead of instantiating BrowserHostFragment.",
-    "libs:fin": {
-      "dir": "../ab_cloud-libs-shared/libs/fin",
-      "type": "library",
-      "depends_on": [
-        "libs:core"
-      ],
-      "comment": "MyFin — personal finance dashboard. Beta renders from build.json::ui.myfin_mock (accounts, monthly stats, top expense categories, recent transactions, net worth) — all data-driven so the user can iterate the layout by editing JSON without rebuilding Kotlin. Real aggregator (Plaid / GoCardless / SaltEdge / manual OFX import) lands in a follow-up. MyFinDashboardFragment is the only surface for now; pages: dashboard."
-    },
+    "_libs_fin_tombstone": "libs:fin MOVED to ac_cloud-me (Buro > Fin). Removed from app.depends_on and from this module list, along with ui.myfin_mock — MyFinDashboardFragment had exactly one referrer here (SectionPages' `myfin` dispatch) and that section is gone. The Cloud > Dashboard tile target is now extapp:cloud-me#page:buro/fin. settings.gradle derives the gradle module graph from this map, so dropping the entry is what actually removes :libs:fin from the build.",
     "libs:launcher-apptabs": {
       "dir": "../ab_cloud-libs-shared/libs/launcher-apptabs",
       "type": "library",
@@ -2560,17 +2552,18 @@
                 "target": "https://paca.diegonmarcos.com"
               },
               {
-                "_doc": "Native MyFin section — beta dashboard rendered from ui.myfin_mock. Was an external GitHub Pages link until libs:fin landed; tile now routes through SectionPages dispatch → MyFinDashboardFragment.",
+                "_doc": "MyFin — MIGRATED to Cloud-Me (Buro > Fin), which renders the same libs:fin dashboard from its own build.json::ui.myfin_mock. The SuperApp's `myfin` section, its libs:fin dependency and its copy of the mock are all gone; the icon stays and hands the destination to the app that now owns the screen. Grammar: `extapp:<appId>#<target>` — launchExternalApp launches Cloud-Me and passes everything after the `#` as the `shortcut_action` extra, which Cloud-Me's MainActivity routes through the same `page:` grammar this tile used to use in-process. Not installed → the same download-and-install path every other extapp tile uses.",
                 "id": "myfin",
                 "label": "MyFin",
                 "icon": "ic_fin",
-                "target": "page:myfin/dashboard"
+                "target": "extapp:cloud-me#page:buro/fin"
               },
               {
+                "_doc": "MyHealth — MIGRATED to Cloud-Me (Projects > Health), which hosts the same libs:health Compose surface and now owns the only copy of it. The SuperApp's `health` section keeps nothing but the metric taxonomy Configs > Permissions still counts against; its pages are gone. Same `extapp:<appId>#<target>` hand-off as the MyFin tile beside it.",
                 "id": "myhealth",
                 "label": "MyHealth",
                 "icon": "ic_heart",
-                "target": "page:health/summary"
+                "target": "extapp:cloud-me#page:projects/health"
               },
               {
                 "id": "mysocials",
@@ -3917,21 +3910,6 @@
         ]
       },
       {
-        "_doc": "MyFin — personal finance dashboard (beta). Reads from build.json::ui.myfin_mock until a real aggregator lands. MyFinDashboardFragment in libs:fin reads UI_MYFIN_MOCK_B64 from BuildConfig (data-driven — edit JSON, rebuild, see new numbers).",
-        "id": "myfin",
-        "label": "MyFin",
-        "icon": "ic_fin",
-        "module": null,
-        "bottom_nav": false,
-        "pages": [
-          {
-            "id": "dashboard",
-            "label": "Dashboard",
-            "icon": "ic_fin"
-          }
-        ]
-      },
-      {
         "_doc": "Wallet — MIGRATED to Cloud-Wallet (ac_cloud-wallet, com.diegonmarcos.cloudwallet). libs:wallet (Compose card-stack deck) was extracted from the SuperApp into a standalone constellation APK. The home tile target is now extapp:cloud-wallet (see ui.sections[home].tiles[Cloud][wallet]), so MainActivity.launchExternalApp handles launching; openSectionPage('wallet','cards') is dead code as of the migration. Section entry kept as a tombstone for reference; module:null + bottom_nav:false means it is not shown in drawer or bottom nav.",
         "id": "wallet",
         "label": "Wallet",
@@ -3947,31 +3925,13 @@
         ]
       },
       {
-        "_doc": "MyHealth — native Health Connect dashboard. Reads the aggregated record set Garmin Connect / Google Fit / Samsung Health / Fitbit / Oura all sync into via androidx.health.connect:connect-client (one SDK = union of every source on-device). LOCAL-ONLY: HealthStore (libs:core, SharedPreferences) caches rollups, write-rate stats, source-app breakdowns, and last-sync timestamps. ZERO network calls — no OAuth, no webhooks, no cloud ingester.",
-        "_doc_pages": "Three first-class pages: Summary (per-metric drill-in with 7d + 30d average tables), Timeline (date-picker → that day's per-metric values), Configs (Sources / Permissions / Stats / Raw / About sub-tabs + per-metric source toggles). Per-metric drill-down lives INSIDE each top-level page as Compose state — the section's drawer menu shows 3 entries, not 15.",
-        "_doc_metrics": "Data-driven metric taxonomy — read by SummaryPage / TimelinePage / ConfigsPage to render the per-metric tiles + drill-downs. Each metric maps to one-or-more Health Connect record types via `records` (matched at runtime by class simple-name) + the perm subset via `perm_keys`. Add a metric = one entry here + tile icon. Removing a metric here removes it from all 3 top-level pages.",
+        "_doc": "MyHealth — the PAGES are GONE: the Compose surface moved to Cloud-Me (Projects > Health), so there is one Health screen in the constellation instead of two copies of the same Health Connect reader, and the Cloud > Dashboard tile deep-links into it (extapp:cloud-me#page:projects/health). This entry survives because libs:health/build.gradle looks the metric taxonomy up by SECTION ID — `ui.sections.find { it.id == 'health' }.metrics` — and Configs > Permissions still reads the result as HealthMetrics.allPermissions to count and request the 34 Health Connect grants. Deleting the section would silently turn that row into '0 / 0'. A pageless section is legal (Sections.kt: `optJSONArray(\"pages\")` tolerates absent) and with no pages, no module and bottom_nav:false it is reachable from nothing.",
+        "_doc_metrics": "Data-driven metric taxonomy — read by libs:health (UI_HEALTH_METRICS_B64) and by Configs > Permissions. Each metric maps to one-or-more Health Connect record types via `records` (matched at runtime by class simple-name) + the perm subset via `perm_keys`. This is now the SuperApp's only stake in Health: the pages that used to render these tiles live in Cloud-Me, which declares its own copy of this list for the same reason (its libs:health reads its own build.json).",
         "id": "health",
         "label": "MyHealth",
         "icon": "ic_heart",
         "module": null,
         "bottom_nav": false,
-        "pages": [
-          {
-            "id": "summary",
-            "label": "Summary",
-            "icon": "ic_p_c3_reports"
-          },
-          {
-            "id": "timeline",
-            "label": "Timeline",
-            "icon": "ic_p_cal_day"
-          },
-          {
-            "id": "configs",
-            "label": "Configs",
-            "icon": "ic_settings"
-          }
-        ],
         "_doc_taxonomy": "Metric grouping mirrors Health Connect's own UI categories (verified against es-ES locale: Actividad / Constantes vitales / Medidas corporales / Nutrición / Seguimiento del ciclo / Sueño) so the per-metric counts in MyHealth match exactly what the HC permission screen shows. Vo2Max sits under Activity (not Heart) per HC; Exercise stays under Activity (no separate Workouts category in HC). Total perms across all metrics = 34, matching HC's count when every category is granted.",
         "metrics": [
           {
@@ -4289,126 +4249,7 @@
         }
       }
     ],
-    "_doc_myfin_mock": "MyFin beta dashboard data — fully editable here, baked into libs:fin's BuildConfig at gradle config time so MyFinDashboardFragment reads it via BuildConfig.UI_MYFIN_MOCK_B64. Currency strings are display-only (the fragment just prints what's here); flip to a real aggregator by swapping the loader, not by replacing this block. Numbers are illustrative.",
-    "myfin_mock": {
-      "currency": "EUR",
-      "net_worth": 124850.42,
-      "month_label": "This month",
-      "month": {
-        "income": 5400.0,
-        "expenses": 3120.5,
-        "savings": 2279.5,
-        "savings_rate_pct": 42
-      },
-      "accounts": [
-        {
-          "name": "Santander Checking",
-          "type": "checking",
-          "balance": 4250.18
-        },
-        {
-          "name": "Nubank Savings",
-          "type": "savings",
-          "balance": 18900.0
-        },
-        {
-          "name": "Revolut EUR",
-          "type": "wallet",
-          "balance": 842.55
-        },
-        {
-          "name": "Wise Multi-currency",
-          "type": "wallet",
-          "balance": 2107.31
-        },
-        {
-          "name": "DEGIRO Brokerage",
-          "type": "investment",
-          "balance": 78650.2
-        },
-        {
-          "name": "BTC / ETH (Self-Custody)",
-          "type": "crypto",
-          "balance": 18200.18
-        },
-        {
-          "name": "Visa Platinum",
-          "type": "card",
-          "balance": -1840.0
-        }
-      ],
-      "top_categories": [
-        {
-          "name": "Rent",
-          "amount": 1450.0,
-          "pct": 46
-        },
-        {
-          "name": "Groceries",
-          "amount": 420.5,
-          "pct": 13
-        },
-        {
-          "name": "Restaurants",
-          "amount": 310.8,
-          "pct": 10
-        },
-        {
-          "name": "Transport",
-          "amount": 205.2,
-          "pct": 7
-        },
-        {
-          "name": "Subscriptions",
-          "amount": 189.99,
-          "pct": 6
-        }
-      ],
-      "recent_tx": [
-        {
-          "date": "2026-06-08",
-          "payee": "Edeka Supermarkt",
-          "amount": -42.18,
-          "category": "Groceries"
-        },
-        {
-          "date": "2026-06-08",
-          "payee": "Deutsche Bahn",
-          "amount": -18.5,
-          "category": "Transport"
-        },
-        {
-          "date": "2026-06-07",
-          "payee": "Salary — LEAFY GmbH",
-          "amount": 5400.0,
-          "category": "Income"
-        },
-        {
-          "date": "2026-06-07",
-          "payee": "Burgermeister Kreuzberg",
-          "amount": -12.4,
-          "category": "Restaurants"
-        },
-        {
-          "date": "2026-06-06",
-          "payee": "Spotify Premium",
-          "amount": -9.99,
-          "category": "Subscriptions"
-        },
-        {
-          "date": "2026-06-06",
-          "payee": "DEGIRO — VWCE buy",
-          "amount": -800.0,
-          "category": "Investment"
-        },
-        {
-          "date": "2026-06-05",
-          "payee": "Berlin Rent — June",
-          "amount": -1450.0,
-          "category": "Rent"
-        }
-      ]
-    },
+    "_doc_myfin_mock_tombstone": "myfin_mock is GONE from the SuperApp, with the MyFin section and the libs:fin dependency that read it. The block now lives ONLY in ac_cloud-me/build.json::ui.myfin_mock, which is what libs:fin bakes into UI_MYFIN_MOCK_B64 for Cloud-Me's Buro > Fin. Two copies of the same mock in two repos is how they drift; the app that still draws it keeps it.",
     "_doc_dynamic_island_action": "What happens when the user taps the dynamic-island pill in the toolbar. Format: `app:<packageName>` opens that app's launcher activity, `notifications` opens the Notification Centre (legacy default), `shortcut:<id>` fires one of MainActivity's shortcut intents. Falls back to a silent Toast if the target app isn't installed — does NOT silently re-open notifications, to keep the user's explicit binding the source of truth.",
     "dynamic_island_action": "app:com.termux.nix",
     "_doc_home_apps_tabs": "Tabs at the top of the Home Apps swipe-up sheet (AppDrawerSheetFragment). Cloud = the existing HomeGroupedFragment (cloud-service tile grid derived from home_groups). Phone = PhoneAppsFragment (Android-launcher folder grid of installed apps grouped by phone_folders). Order = display order.",
@@ -6656,7 +6497,7 @@
         "forks": {}
       },
       {
-        "_doc": "Cloud-Me — the personal-administration app (ac_cloud-me): Buro / Agenda / Me / Projects / Studying, plus Health in the drawer. Like cloud-wallet it is a standalone constellation APK with no forks, so extapp:cloud-me resolves straight to hub_package; the Cloud tile opens it when installed and otherwise downloads install_apk_url. install_apk_url mirrors ac_cloud-me/build.json::release.gh_release (asset Cloud-Me.apk, published by ship-cloud-me.yml). Shares the constellation signing key.",
+        "_doc": "Cloud-Me — the personal-administration app (ac_cloud-me): Buro / Agenda / Profile / Projects / Wallet, with Fin under Buro and Health under Projects. It owns what MyFin and MyHealth used to be here, which is why three tiles point at it: Tools 'Me' opens it plain, and the two Dashboard tiles carry a destination (extapp:cloud-me#page:buro/fin, extapp:cloud-me#page:projects/health). Like cloud-wallet it is a standalone constellation APK with no forks, so extapp:cloud-me resolves straight to hub_package; the Cloud tile opens it when installed and otherwise downloads install_apk_url. install_apk_url mirrors ac_cloud-me/build.json::release.gh_release (asset Cloud-Me.apk, published by ship-cloud-me.yml). Shares the constellation signing key.",
         "id": "cloud-me",
         "label": "Cloud-Me",
         "hub_package": "com.diegonmarcos.cloudme",
