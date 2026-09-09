@@ -4460,7 +4460,7 @@
     ],
     "_doc_phone_grid_columns": "Column count for the Phone tab's folder grid. Mirrors tile_columns (6) so the two tabs share the same density rhythm.",
     "phone_grid_columns": 6,
-    "_doc_phone_folders": "Every launchable app is routed to exactly one folder by PhoneAppClassifier: folders are walked in `order`, and the first keyword that matches wins, so a lower order beats a higher one. Keyword forms: (1) `pkg:com.foo.bar` exact packageName; (2) `pkg^com.foo.` packageName.startsWith; (3) `lbl:name` exact case-insensitive label; (4) `lbl~frag` label contains (min 3 chars); (5) a bare string matches anywhere in \"packageName label\" (min 4 chars) — sweeping and collision-prone, so it is used sparingly. Every app installed at the 2026-09-07 rebuild is pinned with an exact `pkg:` rule, which is why the folder lists read as inventories; `pkg^` rules only cover families that will keep growing (our own com.diegonmarcos.cloudlib.*, com.termux.*, VPN vendors). An app no keyword claimed then goes through the METADATA pass before any sink: `match_metadata`, declared beside `match_keywords`, routes on what Android itself publishes about the package, so a newly installed app is placed without a keyword edit. Three rule forms: `cat:game` matches ApplicationInfo.category by the platform constant name lowercased (game, audio, video, image, social, news, maps, productivity, accessibility); `intent:android.intent.category.APP_EMAIL` matches a launcher intent category the package resolves for, i.e. a role the platform grants it; `perm:android.permission.BODY_SENSORS` matches a permission declared in its manifest. Precedence inside the pass is by SIGNAL STRENGTH, not by `order` — category (the app states its own genre) beats intent (the platform grants it a role) beats permission (we infer from what it asks for), and `order` only breaks ties within one signal; otherwise a storage permission on a game would beat cat:game purely because Storage sorts earlier. Keywords always win over metadata: the keyword lists are curated and correct, metadata only keeps an un-curated app off the sink pile. Two sinks, neither with any rules: `others` (order 930, sink=true) catches everything both passes missed and is the triage queue — an app landing there means it needs a rule; `misc` (order 910) is the manual exile, give it explicit keywords to push something there on purpose. Neither carries a section prefix, so both render last under the Other subhead. Manufacturer (Google / Samsung / non-Play-Store) is metadata for Smart Folders (see phone_smart_folders below) — NOT a primary grouping criterion. Order is a three-digit string, one hundred-block per section in phone_sections order, folders alphabetical by label inside the block (110, 120, ...); it drives both render order and match precedence, so a new folder takes the next free number in its block.",
+    "_doc_phone_folders": "Every launchable app is routed to exactly one folder by PhoneAppClassifier: folders are walked in `order`, and the first keyword that matches wins, so a lower order beats a higher one. Keyword forms: (1) `pkg:com.foo.bar` exact packageName; (2) `pkg^com.foo.` packageName.startsWith; (3) `lbl:name` exact case-insensitive label; (4) `lbl~frag` label contains (min 3 chars); (5) a bare string matches anywhere in \"packageName label\" (min 4 chars) — sweeping and collision-prone, so it is used sparingly. Every app installed at the 2026-09-07 rebuild is pinned with an exact `pkg:` rule, which is why the folder lists read as inventories; `pkg^` rules only cover families that will keep growing (our own com.diegonmarcos.cloudlib.*, com.termux.*, VPN vendors). An app no keyword claimed then goes through the METADATA pass before any sink: `match_metadata`, declared beside `match_keywords`, routes on what Android itself publishes about the package, so a newly installed app is placed without a keyword edit. Three rule forms: `cat:game` matches ApplicationInfo.category by the platform constant name lowercased (game, audio, video, image, social, news, maps, productivity, accessibility); `intent:android.intent.category.APP_EMAIL` matches a launcher intent category the package resolves for, i.e. a role the platform grants it; `perm:android.permission.BODY_SENSORS` matches a permission declared in its manifest. Precedence inside the pass is by SIGNAL STRENGTH, not by `order` — category (the app states its own genre) beats intent (the platform grants it a role) beats permission (we infer from what it asks for), and `order` only breaks ties within one signal; otherwise a storage permission on a game would beat cat:game purely because Storage sorts earlier. Keywords always win over metadata: the keyword lists are curated and correct, metadata only keeps an un-curated app off the sink pile. Two sinks, neither with any rules: `others` (order 930, sink=true) catches everything both passes missed and is the triage queue — an app landing there means it needs a rule; `misc` (order 910) is the manual exile, give it explicit keywords to push something there on purpose. Neither carries a section prefix, so both render last under the Other subhead. The `match_keywords` lists cover THIRD-PARTY packages only: a keyword for one of our own constellation apps is derived at load time from ui.external_apps[].folder and must not be written here as well, or the identity would have two copies again and they could disagree. Manufacturer (Google / Samsung / non-Play-Store) is metadata for Smart Folders (see phone_smart_folders below) — NOT a primary grouping criterion. Order is a three-digit string, one hundred-block per section in phone_sections order, folders alphabetical by label inside the block (110, 120, ...); it drives both render order and match precedence, so a new folder takes the next free number in its block.",
     "phone_folders": [
       {
         "id": "svc_gov",
@@ -4631,10 +4631,7 @@
           "pkg:cld.termux.nix.boot",
           "pkg:com.arlosoft.macrodroid",
           "pkg:com.diegonmarcos.cloudkeyboardlibs",
-          "pkg:com.diegonmarcos.ide",
           "pkg^com.diegonmarcos.ide.",
-          "pkg:com.diegonmarcos.morpheus",
-          "pkg:com.diegonmarcos.watchdog",
           "pkg:com.foxdebug.acode",
           "pkg:com.github.android",
           "pkg:com.google.android.apps.enterprise.cpanel",
@@ -4677,7 +4674,6 @@
         "label": "_Keyboards",
         "match_keywords": [
           "pkg:ch.icoaching.typewise",
-          "pkg:com.diegonmarcos.cloudkeyboard",
           "pkg:com.gingersoftware.android.keyboard",
           "pkg:com.google.android.inputmethod.latin",
           "pkg:com.grammarly.android.keyboard"
@@ -4705,8 +4701,6 @@
           "pkg:ch.protonvpn.android",
           "pkg:com.azure.authenticator",
           "pkg:com.beemdevelopment.aegis",
-          "pkg:com.diegonmarcos.cloudvault",
-          "pkg:com.diegonmarcos.cloudwallet",
           "pkg:com.google.android.apps.authenticator2",
           "pkg:com.google.android.apps.credentialmanager",
           "pkg:com.opera.max.global",
@@ -4733,7 +4727,6 @@
         "match_keywords": [
           "pkg:com.android.settings",
           "pkg:com.binarysmith.webclipwidget.ad",
-          "pkg:com.diegonmarcos.cloudme",
           "pkg:com.diegonmarcos.superapp",
           "pkg:com.mi.earphone",
           "pkg:com.rsupport.rs.activity.rsupport.aas2",
@@ -4797,8 +4790,6 @@
         "match_keywords": [
           "pkg:chat.rocket.android",
           "pkg:com.beeper.android",
-          "pkg:com.diegonmarcos.comms.chat",
-          "pkg:com.diegonmarcos.comms.matrix",
           "pkg:com.facebook.orca",
           "pkg:com.garmin.android.apps.messenger",
           "pkg:com.google.android.apps.tachyon",
@@ -4809,7 +4800,6 @@
           "pkg:com.whatsapp",
           "pkg:com.whatsapp.w4b",
           "pkg:im.vector.app",
-          "pkg:io.element.android.x",
           "pkg:io.heckel.ntfy",
           "pkg:org.telegram.messenger"
         ],
@@ -4821,10 +4811,9 @@
         "id": "prod_mail",
         "order": "430",
         "label": "@Mail",
-        "_doc_match_keywords": "This list is the CENTRAL classification: it is what puts a mail app in the \"@\" section, and therefore what makes its notifications survive the Notify ▸ Inboxes filter (PhoneTaxonomy.sectionPrefixOf → the first character of this folder's label). Any package named as a mail client anywhere else in this file has to appear HERE too, or that other list is describing an app the taxonomy has never heard of: app.sterna was added to sections[phone].phone_app_groups[Inboxes] on 2026-09-09 and not here, so upstream Sterna Mail fell to the `others` sink, came back prefix-less, and was pruned from every Notify tab except All. Keyed on package, never on label — the 2026-09-09 mail rename changed the product name and left every package id alone, which is exactly why this key survived it.",
+        "_doc_match_keywords": "This list is the CENTRAL classification: it is what puts a mail app in the \"@\" section, and therefore what makes its notifications survive the Notify ▸ Inboxes filter (PhoneTaxonomy.sectionPrefixOf → the first character of this folder's label). Any THIRD-PARTY package named as a mail client anywhere else in this file has to appear HERE too, or that other list is describing an app the taxonomy has never heard of (our own mail app is not in this list any more — it names this folder from ui.external_apps[cloud-mail].folder instead): app.sterna was added to sections[phone].phone_app_groups[Inboxes] on 2026-09-09 and not here, so upstream Sterna Mail fell to the `others` sink, came back prefix-less, and was pruned from every Notify tab except All. Keyed on package, never on label — the 2026-09-09 mail rename changed the product name and left every package id alone, which is exactly why this key survived it.",
         "match_keywords": [
           "pkg:app.sterna",
-          "pkg:com.diegonmarcos.comms.mail",
           "pkg:com.fsck.k9",
           "pkg:com.google.android.gm",
           "pkg:com.mailtemi.email",
@@ -4844,7 +4833,6 @@
         "label": "@News & Reading",
         "match_keywords": [
           "pkg:com.checkitt",
-          "pkg:com.diegonmarcos.cloudnews",
           "pkg:com.flyersoft.moonreader",
           "pkg:com.google.android.apps.magazines",
           "pkg:com.rama.mako",
@@ -4860,9 +4848,7 @@
         "order": "450",
         "label": "@Phone & Contacts",
         "match_keywords": [
-          "pkg:com.diegonmarcos.cloudcontacts",
           "pkg:com.diegonmarcos.comms.contacts",
-          "pkg:com.diegonmarcos.comms.dialer",
           "pkg:com.google.android.apps.messaging",
           "pkg:com.samsung.android.app.contacts",
           "pkg:com.samsung.android.dialer",
@@ -4878,7 +4864,6 @@
         "order": "510",
         "label": ".Calendar & Tasks",
         "match_keywords": [
-          "pkg:com.diegonmarcos.cloudcalendar",
           "pkg:com.gianlu.timeless",
           "pkg:com.google.android.apps.tasks",
           "pkg:com.google.android.calendar",
@@ -4900,7 +4885,6 @@
         "label": ".Docs & Notes",
         "match_keywords": [
           "pkg:com.adeeteya.markdown_editor",
-          "pkg:com.collabora.libreoffice",
           "pkg:com.google.android.apps.docs.editors.docs",
           "pkg:com.google.android.apps.docs.editors.sheets",
           "pkg:com.google.android.keep",
@@ -4956,7 +4940,6 @@
         "label": "=Maps & Weather",
         "match_keywords": [
           "pkg:aplicacion.tiempo",
-          "pkg:com.diegonmarcos.cloudnav",
           "pkg:com.google.android.apps.maps",
           "pkg:com.google.earth",
           "pkg:com.mapswithme.maps.pro",
@@ -4995,7 +4978,6 @@
         "match_keywords": [
           "pkg:com.android.chrome",
           "pkg:com.brave.browser",
-          "pkg:com.diegonmarcos.cloudbrowser",
           "pkg:com.duckduckgo.mobile.android",
           "pkg:com.google.android.googlequicksearchbox",
           "pkg:io.raindrop.raindropio"
@@ -5062,7 +5044,6 @@
         "label": ">Video",
         "match_keywords": [
           "pkg:com.amazon.avod.thirdpartyclient",
-          "pkg:com.diegonmarcos.mediacenter",
           "pkg:com.google.android.videos",
           "pkg:com.google.android.youtube",
           "pkg:com.netflix.mediaclient",
@@ -6476,11 +6457,12 @@
         }
       ]
     },
-    "_doc_external_apps": "Companion Android apps the SuperApp launches instead of rendering an in-app fragment. A tile target of `extapp:<id>` (see ui.sections[communication]) resolves here: MainActivity.launchExternalApp tries the app's package (hub_package); if not installed it snacks '<label> not installed' (install via Configs ▸ Constellation, which pulls the APK from GHCR). Fully data-driven: package ids live ONLY here, never in Kotlin. The ex-Cloud-Comms forks are now STANDALONE constellation apps (ea_cloud-{dialer,chat,mail,matrix}, each its own ship-cloud-<id>.yml CI); the cloud-comms hub is decommissioned (archived). They keep their com.diegonmarcos.comms.<fork> package ids. install_apk_url points at the shared rolling 'latest' GitHub release asset cloud-comms-<fork>.apk (uploaded by build.sh gh-release-fork per each fork's build.json::release.gh_release), mirroring how the other standalone apps use /releases/latest/download/. forkless (forks:{}), so extapp:<id> resolves straight to hub_package.",
+    "_doc_external_apps": "Companion Android apps the SuperApp launches instead of rendering an in-app fragment. A tile target of `extapp:<id>` (see ui.sections[communication]) resolves here: MainActivity.launchExternalApp tries the app's package (hub_package); if not installed it snacks '<label> not installed' (install via Configs ▸ Constellation, which pulls the APK from GHCR). Fully data-driven: package ids live ONLY here, never in Kotlin. The ex-Cloud-Comms forks are now STANDALONE constellation apps (ea_cloud-{dialer,chat,mail,matrix}, each its own ship-cloud-<id>.yml CI); the cloud-comms hub is decommissioned (archived). They keep their com.diegonmarcos.comms.<fork> package ids. install_apk_url points at the shared rolling 'latest' GitHub release asset cloud-comms-<fork>.apk (uploaded by build.sh gh-release-fork per each fork's build.json::release.gh_release), mirroring how the other standalone apps use /releases/latest/download/. forkless (forks:{}), so extapp:<id> resolves straight to hub_package. `folder` names the ui.phone_folders id this app classifies into, and it is the ONLY place that fact is written: PhoneFolders.loadFromBuildConfig derives a `pkg:` keyword for hub_package, alt_package, install_package and every fork from it. Our own apps used to be listed twice — identity here, an identical `pkg:` keyword there — with nothing tying the copies together, which is how an app could be installable and sectionless at the same time. Adding a constellation app is now one entry here and no second edit; omitting `folder` leaves the app in the sink, so test-app-identity-resolves.sh requires it.",
     "external_apps": [
       {
         "id": "cloud-dialer",
         "label": "Cloud Dialer (Fossify)",
+        "folder": "prod_phone",
         "hub_package": "com.diegonmarcos.comms.dialer",
         "install_package": "com.diegonmarcos.comms.dialer",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/cloud-comms-dialer.apk",
@@ -6490,6 +6472,7 @@
         "_doc": "Cloud Contacts — standalone NATIVE multi-channel people hub (ac_cloud-contacts, WebView/Tailwind, cloud-news pattern — NOT a Fossify fork). Merges device (local + Gmail) contacts with LinkedIn/Instagram imports; the person screen is a channel switchboard (WhatsApp/Telegram/Matrix/Cloud Chat/Cloud Mail/SMS/Cloud Dialer/LinkedIn/Instagram) driven by build.json::channels — no default call action. install_apk_url mirrors ac_cloud-contacts/build.json::release.gh_release (asset Cloud-Contacts.apk, published by ship-cloud-contacts.yml). Signs with the shared constellation key.",
         "id": "cloud-contacts",
         "label": "Cloud Contacts",
+        "folder": "prod_phone",
         "hub_package": "com.diegonmarcos.cloudcontacts",
         "install_package": "com.diegonmarcos.cloudcontacts",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Contacts.apk",
@@ -6498,6 +6481,7 @@
       {
         "id": "cloud-chat",
         "label": "Cloud Chat (Mattermost)",
+        "folder": "prod_chat",
         "hub_package": "com.diegonmarcos.comms.chat",
         "install_package": "com.diegonmarcos.comms.chat",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/cloud-comms-chat.apk",
@@ -6507,6 +6491,7 @@
         "_doc": "Cloud Mail — since 2026-09-09 a CLONE of Sterna Mail (ac_cloud-mail, commits 8b7ca107d/e7274372f), no longer the FairEmail fork the label used to name. The package ids below did NOT move: applicationId stays com.diegonmarcos.comms.mail so the replacement installs over what is in the field, and app.sterna is only the clone's R/BuildConfig namespace, never a package on any device. That is the whole reason every lookup in this file keys on package and not on this label.",
         "id": "cloud-mail",
         "label": "Cloud Mail (Sterna)",
+        "folder": "prod_mail",
         "hub_package": "com.diegonmarcos.comms.mail",
         "install_package": "com.diegonmarcos.comms.mail",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/cloud-comms-mail.apk",
@@ -6515,6 +6500,7 @@
       {
         "id": "cloud-matrix",
         "label": "Messenger (Element)",
+        "folder": "prod_chat",
         "hub_package": "com.diegonmarcos.comms.matrix",
         "_doc_alt_package": "The store ships a resigned STOCK Element X, so the installed applicationId is io.element.android.x, not hub_package (same fact the fleet records as alt_id). Without this the Suite/Comms tile can't see the installed app and offers a fresh install of something already on the phone. Remove once the matrix fork is repackaged to hub_package.",
         "alt_package": "io.element.android.x",
@@ -6525,6 +6511,7 @@
       {
         "id": "cloud-ide",
         "label": "Cloud-IDE",
+        "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.ide",
         "install_package": "com.diegonmarcos.ide",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-IDE-Hub.apk",
@@ -6538,6 +6525,7 @@
         "_doc": "Cloud-Nav — the dedicated maps/navigation/tracker app (ac_cloud-nav). libs:maps was MOVED out of the SuperApp into this standalone app, so the Cloud 'Navigation' tile (target extapp:cloud-nav) opens it if installed, else downloads + installs install_apk_url. Single app (no forks), so the forkless extapp:cloud-nav resolves straight to hub_package. install_apk_url mirrors ac_cloud-nav/build.json::release.gh_release (asset Cloud-Nav.apk, published by ship-cloud-nav.yml).",
         "id": "cloud-nav",
         "label": "Cloud-Nav",
+        "folder": "prod_maps",
         "hub_package": "com.diegonmarcos.cloudnav",
         "install_package": "com.diegonmarcos.cloudnav",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Nav.apk",
@@ -6546,6 +6534,7 @@
       {
         "id": "cloud-calendar",
         "label": "Cloud-Calendar",
+        "folder": "prod_plan",
         "hub_package": "com.diegonmarcos.cloudcalendar",
         "install_package": "com.diegonmarcos.cloudcalendar",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Calendar.apk",
@@ -6554,6 +6543,7 @@
       {
         "id": "cloud-news",
         "label": "Cloud-News",
+        "folder": "hlth_news",
         "hub_package": "com.diegonmarcos.cloudnews",
         "install_package": "com.diegonmarcos.cloudnews",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-News.apk",
@@ -6563,6 +6553,7 @@
         "_doc": "Cloud-Keyboard — the standalone IME app (ac_cloud-keyboard). The vendored HeliBoard (libs:keyboard) was extracted into this standalone APK, so Configs → Keyboard (action extapp:cloud-keyboard) opens its SettingsActivity if installed, else downloads + installs install_apk_url. Its SettingsActivity carries MAIN/LAUNCHER (libs/keyboard manifest), so getLaunchIntentForPackage resolves the forkless extapp:cloud-keyboard straight to hub_package. install_apk_url mirrors ac_cloud-keyboard/build.json::release.gh_release (asset Cloud-Keyboard.apk, published by ship-cloud-keyboard.yml). Signs with the shared constellation key.",
         "id": "cloud-keyboard",
         "label": "Cloud-Keyboard",
+        "folder": "sys_keyboards",
         "hub_package": "com.diegonmarcos.cloudkeyboard",
         "install_package": "com.diegonmarcos.cloudkeyboard",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Keyboard.apk",
@@ -6572,6 +6563,7 @@
         "_doc": "Cloud-Wallet — standalone cards/passes/tickets app (ac_cloud-wallet). libs:wallet (Compose card-stack deck) was MOVED out of the SuperApp into this standalone APK; the Cloud 'Wallet' tile (target extapp:cloud-wallet) opens it if installed, else downloads + installs install_apk_url. Single app (no forks), so the forkless extapp:cloud-wallet resolves straight to hub_package. install_apk_url mirrors ac_cloud-wallet/build.json::release.gh_release (asset Cloud-Wallet.apk, published by ship-cloud-wallet.yml). Signs with the shared constellation key (vault A0_keys/providers/android/release.jks).",
         "id": "cloud-wallet",
         "label": "Cloud-Wallet",
+        "folder": "sys_security",
         "hub_package": "com.diegonmarcos.cloudwallet",
         "install_package": "com.diegonmarcos.cloudwallet",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Wallet.apk",
@@ -6581,6 +6573,7 @@
         "_doc": "Cloud-Me — the personal-administration app (ac_cloud-me): Buro / Agenda / Profile / Projects / Wallet, with Fin under Buro and Health under Projects. It owns what MyFin and MyHealth used to be here, which is why three tiles point at it: Tools 'Me' opens it plain, and the two Dashboard tiles carry a destination (extapp:cloud-me#page:buro/fin, extapp:cloud-me#page:projects/health). Like cloud-wallet it is a standalone constellation APK with no forks, so extapp:cloud-me resolves straight to hub_package; the Cloud tile opens it when installed and otherwise downloads install_apk_url. install_apk_url mirrors ac_cloud-me/build.json::release.gh_release (asset Cloud-Me.apk, published by ship-cloud-me.yml). Shares the constellation signing key.",
         "id": "cloud-me",
         "label": "Cloud-Me",
+        "folder": "sys_settings",
         "hub_package": "com.diegonmarcos.cloudme",
         "install_package": "com.diegonmarcos.cloudme",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Me.apk",
@@ -6590,6 +6583,7 @@
         "_doc": "Cloud-Browser — standalone WebView browser app (ac_cloud-browser). libs:browser (BrowserHostFragment + multi-tab BrowserTabPrefs) was MOVED out of the SuperApp into this standalone APK; the Tools 'Browser' tile (target extapp:cloud-browser) opens it if installed, else downloads + installs install_apk_url. Also handles http/https VIEW intents (declared in its manifest) so any app can open links in it. install_apk_url mirrors ac_cloud-browser/build.json::release.gh_release (asset Cloud-Browser.apk, published by ship-cloud-browser.yml). Signs with the shared constellation key.",
         "id": "cloud-browser",
         "label": "Cloud-Browser",
+        "folder": "prod_web",
         "hub_package": "com.diegonmarcos.cloudbrowser",
         "install_package": "com.diegonmarcos.cloudbrowser",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Browser.apk",
@@ -6599,6 +6593,7 @@
         "_doc": "Cloud-Vault — standalone Vaultwarden client app (ac_cloud-vault). Hosts vault.diegonmarcos.com (self-hosted Vaultwarden) in a dedicated BrowserHostFragment APK; the Cloud 'Vault' tile (target extapp:cloud-vault) opens it if installed, else downloads + installs install_apk_url. install_apk_url mirrors ac_cloud-vault/build.json::release.gh_release (asset Cloud-Vault.apk, published by ship-cloud-vault.yml). Signs with the shared constellation key.",
         "id": "cloud-vault",
         "label": "Cloud-Vault",
+        "folder": "sys_security",
         "hub_package": "com.diegonmarcos.cloudvault",
         "install_package": "com.diegonmarcos.cloudvault",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Vault.apk",
@@ -6608,6 +6603,7 @@
         "_doc": "C3-Watchdog — standalone watchdog app (ac_c3-watchdog). Added so the Cloud Tools Primary tile can use extapp:c3-watchdog like every other tile in that group; with no entry here launchExternalApp has no package to open and no APK to offer.",
         "id": "c3-watchdog",
         "label": "C3-Watchdog",
+        "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.watchdog",
         "install_package": "com.diegonmarcos.watchdog",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/C3-Watchdog.apk",
@@ -6617,6 +6613,7 @@
         "_doc": "C3-Morpheus — standalone morpheus app (ac_c3-morpheus). Added so the C3 tab strip can use extapp:c3-morpheus; with no entry here launchExternalApp has no package to open and no APK to offer. The applicationId stays com.diegonmarcos.morpheus (the directory and GHCR image carry the c3- prefix, the package id does not). install_apk_url mirrors ac_c3-morpheus/build.json::release.gh_release.asset_name (C3-Morpheus.apk, the arm64 rolling-latest asset — the x86_64 build publishes separately as C3-Morpheus-x86_64.apk, which no phone needs).",
         "id": "c3-morpheus",
         "label": "C3-Morpheus",
+        "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.morpheus",
         "install_package": "com.diegonmarcos.morpheus",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/C3-Morpheus.apk",
@@ -6626,6 +6623,7 @@
         "_doc": "Cloud Media Center — standalone gallery app (ac_cloud-media-center), a Google-Photos/Samsung-Gallery replacement: on-device MediaStore gallery + PhotoPrism cloud library (WebDAV) + camera-roll auto-backup, plus YouTube (NewPipeExtractor) and mirrored-Instagram profiles. Single-app fork (forkless), so extapp:cloud-media-center resolves straight to hub_package. NOT YET SHIPPED: ac_cloud-media-center has no build engine/CI wired yet (ship-cloud-media-center.yml EXISTS at 1_cicd/src/cicd/ but is not yet regenerated into .github/workflows/, and no build.sh engine exists for the app yet, so nothing builds; no release published), so install_apk_url below is the intended rolling-latest location mirrored from release.gh_release.asset_name but currently 404s until CI produces an artifact. Do not treat this URL as live.",
         "id": "cloud-media-center",
         "label": "Cloud Media Center",
+        "folder": "media_video",
         "hub_package": "com.diegonmarcos.mediacenter",
         "install_package": "com.diegonmarcos.mediacenter",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/cloud-media-center.apk",
@@ -6635,6 +6633,7 @@
         "_doc": "Collabora Office (ac_cloud-sheets) — MIRRORED upstream APK, not compiled: the office engine needs Collabora's Gerrit + an NDK megabuild that no GHA runner can hold, so ship-cloud-sheets.yml downloads the official F-Droid-repo APK, verifies a PINNED sha256, and republishes it (release asset Cloud-Sheets.apk + ghcr cloud-sheets; layer digest == upstream sha256 is the byte-identity proof). Signed by COLLABORA, not us — fine for install, but it can never join signature-gated CLOUD_EXEC flows. Pin lives in ac_cloud-sheets/build.json (25.04.9.1 / vc115, 2026-08-30).",
         "id": "cloud-sheets",
         "label": "Collabora Office",
+        "folder": "prod_docs",
         "hub_package": "com.collabora.libreoffice",
         "install_package": "com.collabora.libreoffice",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Sheets.apk",

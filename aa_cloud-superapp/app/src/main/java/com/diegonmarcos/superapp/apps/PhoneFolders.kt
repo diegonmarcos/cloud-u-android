@@ -18,6 +18,11 @@ import org.json.JSONArray
  * Adjust `match_keywords` to tune the [PhoneAppClassifier], and
  * `match_metadata` to let a folder claim apps by what Android says
  * about them instead of by a hand-written package list.
+ *
+ * `match_keywords` covers THIRD-PARTY packages only. Our own apps are
+ * classified from `build.json::ui.external_apps`, whose entries name the
+ * folder they belong to, so their identity and their taxonomy are one
+ * record and cannot drift apart — see [constellationKeywordsByFolder].
  */
 object PhoneFolders {
     data class Folder(
@@ -42,8 +47,30 @@ object PhoneFolders {
         val sink: Boolean = false,
     )
 
-    /** Folders in display order — by `order`, then `id` as a tie-breaker. */
-    fun loadFromBuildConfig(): List<Folder> = runCatching {
+    /**
+     * Folders in display order — by `order`, then `id` as a tie-breaker, with
+     * the constellation's own packages folded into the folder each of them
+     * names.
+     *
+     * The two reads are caught separately on purpose. An unreadable
+     * `ui.external_apps` costs the constellation apps their classification;
+     * an unreadable `ui.phone_folders` costs EVERY app its classification, and
+     * a surface that filters by section shows nothing at all. Letting the
+     * first failure produce the second would trade a bad outcome for the worst
+     * one available.
+     */
+    fun loadFromBuildConfig(): List<Folder> {
+        val declared = parseDeclaredFolders()
+        val ours = runCatching { constellationKeywordsByFolder() }.getOrDefault(emptyMap())
+        return declared
+            .map { folder ->
+                val extra = ours[folder.id] ?: return@map folder
+                folder.copy(matchKeywords = folder.matchKeywords + extra)
+            }
+            .sortedWith(compareBy({ it.order }, { it.id }))
+    }
+
+    private fun parseDeclaredFolders(): List<Folder> = runCatching {
         val json = String(Base64.decode(BuildConfig.UI_PHONE_FOLDERS_B64, Base64.NO_WRAP))
         val arr = JSONArray(json)
         (0 until arr.length()).map { idx ->
@@ -63,8 +90,50 @@ object PhoneFolders {
                 pinned        = o.optBoolean("pin", false),
                 sink          = o.optBoolean("sink", false),
             )
-        }.sortedWith(compareBy({ it.order }, { it.id }))
+        }
     }.getOrDefault(emptyList())
+
+    /**
+     * folder id → the `pkg:` keywords `build.json::ui.external_apps` declares
+     * for it, one per package of every entry naming that folder.
+     *
+     * Our own apps used to be written down twice: their identity here, and an
+     * identical `pkg:` keyword over in `ui.phone_folders` that did the
+     * classifying. Nothing tied the two copies together, so an app could be
+     * installable and sectionless at once — which is how the mail app was
+     * pruned from every Notify tab on 2026-09-09. The identity entry now names
+     * its folder and the keyword is derived, so there is one edit to make and
+     * no second edit to forget.
+     */
+    private fun constellationKeywordsByFolder(): Map<String, List<String>> {
+        val json = String(Base64.decode(BuildConfig.EXTERNAL_APPS_B64, Base64.NO_WRAP))
+        val arr = JSONArray(json)
+        val out = HashMap<String, MutableList<String>>()
+        for (idx in 0 until arr.length()) {
+            val entry = arr.getJSONObject(idx)
+            val folderId = entry.optString("folder")
+            if (folderId.isEmpty()) continue
+            val keywords = out.getOrPut(folderId) { mutableListOf() }
+            for (field in PACKAGE_FIELDS) {
+                entry.optString(field).takeIf { it.isNotEmpty() }?.let { keywords += "pkg:${it.lowercase()}" }
+            }
+            entry.optJSONObject("forks")?.let { forks ->
+                val ids = forks.keys()
+                while (ids.hasNext()) {
+                    forks.optString(ids.next()).takeIf { it.isNotEmpty() }
+                        ?.let { keywords += "pkg:${it.lowercase()}" }
+                }
+            }
+        }
+        return out.mapValues { it.value.distinct() }
+    }
+
+    /** Every field of an `ui.external_apps` entry that holds a package name.
+     *  All three are classified, not just the hub: `alt_package` is the
+     *  resigned stock build actually installed on the device, and
+     *  `install_package` is what the APK we ship arrives as. Classifying only
+     *  one of them would leave the other in the sink. */
+    private val PACKAGE_FIELDS = listOf("hub_package", "alt_package", "install_package")
 
     /** id of the sink folder for apps that neither a keyword nor a
      *  metadata rule claimed. Prefers the explicit `sink: true` folder
