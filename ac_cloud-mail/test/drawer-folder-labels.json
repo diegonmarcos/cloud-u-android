@@ -1,0 +1,125 @@
+{
+  "_doc": "What the folder sidebar actually has to draw, as data, so test-mail-folder-sidebar.sh asserts against real names instead of invented ones. Never hardcode this list into the test (FIRE RULE #4).",
+  "_doc_synced": "Measured on 2026-09-09 against the live account via cloud-mail-mcp mail_list_folders. These are the folders the account SYNCS - the built-in five are the short ones; the long ones are the user's own 'Fx  <emoji> <topic>' scheme, and they are what wraps. unseen is carried because the drawer appends the unread count to the label (R.string.inbox_folder_unread, '%1$s  (%2$d)'), so the string measured must be the string drawn.",
+  "synced": [
+    {
+      "name": "INBOX",
+      "unseen": 0
+    },
+    {
+      "name": "Sent",
+      "unseen": 0
+    },
+    {
+      "name": "Drafts",
+      "unseen": 0
+    },
+    {
+      "name": "Archive",
+      "unseen": 0
+    },
+    {
+      "name": "Junk",
+      "unseen": 28
+    },
+    {
+      "name": "Trash",
+      "unseen": 0
+    },
+    {
+      "name": "Fa    🏛️ Gov & Official",
+      "unseen": 0
+    },
+    {
+      "name": "Fb    💬 Socials",
+      "unseen": 54
+    },
+    {
+      "name": "Fc    💰 Finance",
+      "unseen": 135
+    },
+    {
+      "name": "Fd    💼 Work & Professional",
+      "unseen": 2
+    },
+    {
+      "name": "Fe    💻 Dev & Tech",
+      "unseen": 1395
+    },
+    {
+      "name": "Ff    🛍️ Shopping & Commerce",
+      "unseen": 0
+    },
+    {
+      "name": "Fg    📰 Subscriptions & Newsletters",
+      "unseen": 0
+    },
+    {
+      "name": "Fh    ✈️ Travel",
+      "unseen": 89
+    },
+    {
+      "name": "Fi    🏠 Utilities & Services",
+      "unseen": 222
+    },
+    {
+      "name": "Fj    👪 Personal",
+      "unseen": 0
+    },
+    {
+      "name": "Fk    🎓 Education",
+      "unseen": 0
+    },
+    {
+      "name": "Fz    📭 Others",
+      "unseen": 615
+    },
+    {
+      "name": "Sent Items",
+      "unseen": 0
+    }
+  ],
+  "_doc_builtin": "The longest folder_* string in each locale the app ships. A role folder is drawn from the string resource, not from the server's name, so German 'Alle Nachrichten' is what the sidebar has to fit and 'All mail' is not.",
+  "builtin": [
+    "Bandeja de entrada",
+    "Boîte de réception",
+    "Alle Nachrichten",
+    "Todos los mensajes",
+    "Wersje robocze",
+    "Отправленные",
+    "Todos os e-mails",
+    "Alle berichten",
+    "Tutti i messaggi",
+    "Posteingang",
+    "Posta in arrivo",
+    "Postvak IN",
+    "Caixa de entrada"
+  ],
+  "_doc_advance": "Per-character advance in em, by class. An estimate and named as one: no font metrics exist in this container, so the test cannot claim pixel truth. The classes come from Roboto's real proportions - i/l/t/punctuation/space are the narrow ones, m/w the wide ones, caps and digits sit between lowercase and wide, and an emoji is drawn about one and a bit em square. Deliberately GENEROUS on lowercase (0.55 against Roboto's ~0.50 mean) so the assertion errs towards calling a label too wide rather than towards passing one that wraps on the phone.",
+  "advance_em": {
+    "narrow": {
+      "chars": "iljtfrI1.,'!|()[]:; ",
+      "em": 0.3
+    },
+    "wide": {
+      "chars": "mwMW",
+      "em": 0.9
+    },
+    "upper_or_digit": {
+      "em": 0.62
+    },
+    "emoji": {
+      "_doc": "codepoint > U+2500; U+FE0F (variation selector) draws nothing",
+      "em": 1.15
+    },
+    "default": {
+      "em": 0.55
+    }
+  },
+  "_doc_known_wrapping": "The labels that STILL do not fit at the chosen width and point size, and are accepted as wrapping. Fitting the widest of them needs a ~384dp sheet, and Material 3 caps a modal drawer at 360dp so a phone keeps a scrim to tap back through; the alternative, an ellipsis, is forbidden - a folder whose name cannot be read is worse than one on two lines. This list is asserted in BOTH directions: a name in it that turns out to fit is stale and fails, and a name outside it that does not fit is a regression and fails.",
+  "known_wrapping": [
+    "Fg    📰 Subscriptions & Newsletters",
+    "Fi    🏠 Utilities & Services  (222)",
+    "Fd    💼 Work & Professional  (2)"
+  ]
+}

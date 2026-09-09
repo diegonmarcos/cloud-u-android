@@ -171,6 +171,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -200,6 +201,7 @@ import app.sterna.ui.messageFolderRole
 import app.sterna.ui.rememberMotionEnabled
 import app.sterna.ui.showsDraftBadge
 import app.sterna.ui.DRAWER_SHEET_WIDTH_DP
+import app.sterna.ui.FOLDER_LABEL_TEXT_SIZE_SP
 import app.sterna.ui.PaneLayout
 import app.sterna.ui.PaneSplit
 import app.sterna.ui.showsRecipients
@@ -1899,7 +1901,7 @@ private fun DrawerContent(
                     }
                     NavigationDrawerItem(
                         icon = { Icon(Icons.Filled.AllInbox, contentDescription = null) },
-                        label = { Text(unifiedLabel) },
+                        label = { DrawerLabel(unifiedLabel) },
                         selected = ui.unified,
                         onClick = {
                             viewModel.selectUnified()
@@ -1917,7 +1919,7 @@ private fun DrawerContent(
                 }
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Filled.MarkEmailUnread, contentDescription = null) },
-                    label = { Text(unreadLabel) },
+                    label = { DrawerLabel(unreadLabel) },
                     selected = ui.unreadView,
                     onClick = {
                         viewModel.selectUnread()
@@ -1962,7 +1964,7 @@ private fun DrawerContent(
                                 Icon(folderIcon(mailbox.role), contentDescription = null)
                             }
                         },
-                        label = { Text(label) },
+                        label = { DrawerLabel(label) },
                         // The inbox is always watched (no menu); notifying about one's own
                         // sent/drafts/trash/junk would be noise (#16). Management actions stay
                         // limited to user-created folders (no role).
@@ -2010,7 +2012,7 @@ private fun DrawerContent(
                 }
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Filled.CreateNewFolder, contentDescription = null) },
-                    label = { Text(stringResource(R.string.inbox_new_folder)) },
+                    label = { DrawerLabel(stringResource(R.string.inbox_new_folder)) },
                     selected = false,
                     onClick = onCreateFolder,
                     modifier = Modifier.padding(horizontal = 12.dp),
@@ -2018,7 +2020,7 @@ private fun DrawerContent(
                 HorizontalDivider()
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                    label = { Text(stringResource(R.string.inbox_settings)) },
+                    label = { DrawerLabel(stringResource(R.string.inbox_settings)) },
                     selected = false,
                     onClick = {
                         onOpenSettings()
@@ -2803,6 +2805,21 @@ private fun folderIcon(role: String?): ImageVector = when (role) {
     "archive" -> Icons.Filled.Archive
     else -> Icons.Filled.Folder
 }
+
+/**
+ * One row's label in the folder sidebar, at [FOLDER_LABEL_TEXT_SIZE_SP] instead of Material's
+ * labelLarge. Every row goes through here, not just the folders: a sidebar where the folders are
+ * one size and "All inboxes" another reads as a rendering fault rather than as a smaller list.
+ *
+ * No `maxLines` and no `overflow` on purpose. The width and the point size are the two things
+ * moved against wrapping (see PaneLayout); a name still too long for them wraps and stays
+ * readable, which is the outcome an ellipsis would take away.
+ */
+@Composable
+private fun DrawerLabel(text: String) = Text(
+    text,
+    style = MaterialTheme.typography.labelLarge.copy(fontSize = FOLDER_LABEL_TEXT_SIZE_SP.sp),
+)
 
 /**
  * The name to show for a folder. Standard folders — those the server tags with an RFC 8621 /
