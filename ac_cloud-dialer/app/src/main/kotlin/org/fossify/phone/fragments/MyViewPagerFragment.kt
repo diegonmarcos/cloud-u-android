@@ -14,6 +14,7 @@ import org.fossify.phone.activities.MainActivity
 import org.fossify.phone.activities.SimpleActivity
 import org.fossify.phone.adapters.ContactsAdapter
 import org.fossify.phone.adapters.RecentCallsAdapter
+import org.fossify.phone.databinding.FragmentHomeBinding
 import org.fossify.phone.databinding.FragmentLettersLayoutBinding
 import org.fossify.phone.databinding.FragmentRecentsBinding
 import org.fossify.phone.extensions.config
@@ -84,5 +85,16 @@ abstract class MyViewPagerFragment<BINDING : MyViewPagerFragment.InnerBinding>(c
     class RecentsInnerBinding(val binding: FragmentRecentsBinding) : InnerBinding {
         override val fragmentList = null
         override val recentsList = binding.recentsList
+    }
+
+    /**
+     * Cloud Dialer: the Home page. Its only list is the short recent-calls
+     * preview, which is bound to the same RecentCallsAdapter the call history
+     * uses — so it belongs under recentsList, and the shared act-mode and
+     * font-size handling above reaches it for free.
+     */
+    class HomeInnerBinding(val binding: FragmentHomeBinding) : InnerBinding {
+        override val fragmentList = null
+        override val recentsList = binding.homeRecentCallsList
     }
 }

@@ -12,7 +12,21 @@
     <color name="spam_danger_on_red">#FFFFFF</color>
     <color name="spam_danger_surface">#FBE9E7</color>
 
-    <!-- Recents card fill (Material 3 surface-container equivalent, hand-authored
-         since this app doesn't use the Material3 dynamic color role system). -->
-    <color name="call_surface_container">#F2F0F4</color>
+    <!-- Cloud Dialer interface refresh: the Material 3 surface-container roles,
+         hand-authored because this app is a View fork and does not carry the
+         Material 3 dynamic colour role system. Every raised thing in the app —
+         a recents row, a Home card, a chart bar — is painted from these three
+         and from nothing else, which is what stops the surfaces drifting apart
+         the way the app's did before.
+
+         Everything else on screen (text, accents, backgrounds) still comes from
+         the owner's chosen theme through commons' getProper*Color, so these
+         must stay neutral enough to sit under any accent. -->
+    <color name="surface_container">#F2F0F4</color>
+    <color name="surface_container_high">#ECE9F0</color>
+    <color name="outline_variant">#CAC4D0</color>
+
+    <!-- Kept as the name the recents card drawable was written against, now an
+         alias so there is one surface value rather than two that can disagree. -->
+    <color name="call_surface_container">@color/surface_container</color>
 </resources>

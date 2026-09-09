@@ -361,7 +361,10 @@ class SettingsActivity : SimpleActivity() {
                 RadioItem(TAB_CONTACTS, getString(R.string.contacts_tab)),
                 RadioItem(TAB_FAVORITES, getString(R.string.favorites_tab)),
                 RadioItem(TAB_CALL_HISTORY, getString(R.string.call_history_tab)),
-                RadioItem(TAB_LAST_USED, getString(R.string.last_used_tab))
+                // Cloud Dialer: TAB_LAST_USED is commons' sentinel and the
+                // shipping default of this setting; this fork reads it as Home,
+                // the page the app lands on. See MainActivity.getDefaultTab.
+                RadioItem(TAB_LAST_USED, getString(R.string.home_tab))
             )
 
             RadioGroupDialog(this@SettingsActivity, items, config.defaultTab) {
@@ -376,7 +379,7 @@ class SettingsActivity : SimpleActivity() {
             TAB_CONTACTS -> R.string.contacts_tab
             TAB_FAVORITES -> R.string.favorites_tab
             TAB_CALL_HISTORY -> R.string.call_history_tab
-            else -> R.string.last_used_tab
+            else -> R.string.home_tab
         }
     )
 

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cloud Dialer: one bar of the monthly-talk-time and time-of-day charts. The
+     colour is a placeholder — HomeFragment tints it with the theme's primary
+     colour so the charts follow the owner's chosen accent. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/surface_container_high" />
+    <corners android:radius="@dimen/home_bar_corner_radius" />
+</shape>

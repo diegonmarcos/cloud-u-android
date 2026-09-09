@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cloud Dialer: one person on the Home page's "who you talk to" lists. Tapping
+    the row calls them back, so the whole row is the touch target and it is at
+    least a thumb tall.
+-->
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/top_contact_holder"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:minHeight="@dimen/minimum_touch_target"
+    android:paddingTop="@dimen/small_margin"
+    android:paddingBottom="@dimen/small_margin">
+
+    <org.fossify.commons.views.MyTextView
+        android:id="@+id/top_contact_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_toStartOf="@+id/top_contact_value"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textDirection="firstStrongLtr"
+        android:textSize="@dimen/bigger_text_size"
+        tools:text="Ana Ruiz" />
+
+    <org.fossify.commons.views.MyTextView
+        android:id="@+id/top_contact_detail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/top_contact_name"
+        android:layout_toStartOf="@+id/top_contact_value"
+        android:alpha="0.6"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textSize="@dimen/normal_text_size"
+        tools:text="+34 600 111 222 · 24 calls" />
+
+    <org.fossify.commons.views.MyTextView
+        android:id="@+id/top_contact_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_centerVertical="true"
+        android:layout_marginStart="@dimen/normal_margin"
+        android:textSize="@dimen/bigger_text_size"
+        android:textStyle="bold"
+        tools:text="3h 40m" />
+
+</RelativeLayout>

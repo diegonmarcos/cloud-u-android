@@ -128,4 +128,43 @@
         Haven't found some strings? There's more at
         https://github.com/FossifyOrg/Commons/tree/master/commons/src/main/res
     -->
+
+    <!-- Home: the call statistics page (Cloud Dialer) -->
+    <string name="home_tab">Home</string>
+    <string name="home_window_caption">Last %1$d months</string>
+    <string name="home_recent_calls">Recent calls</string>
+    <string name="home_see_all">See all</string>
+    <string name="home_missed_calls">Missed calls</string>
+    <string name="home_missed_this_month">this month</string>
+    <string name="home_missed_in_window">%1$d in the last %2$d months</string>
+    <string name="home_time_on_calls">Time on calls</string>
+    <string name="home_this_month">this month</string>
+    <string name="home_trend_more">%1$s more than last month</string>
+    <string name="home_trend_less">%1$s less than last month</string>
+    <string name="home_trend_same">The same as last month</string>
+    <string name="home_trend_no_previous">Nothing to compare with yet</string>
+    <string name="home_total_in_window">%1$s in the last %2$d months</string>
+    <string name="home_top_contacts">Who you talk to</string>
+    <string name="home_by_talk_time">By time on the phone</string>
+    <string name="home_by_call_count">By number of calls</string>
+    <string name="home_contact_detail">%1$s · %2$s</string>
+    <string name="home_call_mix">Incoming, outgoing and missed</string>
+    <string name="home_incoming">Incoming</string>
+    <string name="home_outgoing">Outgoing</string>
+    <string name="home_missed">Missed</string>
+    <string name="home_other_calls">%1$d rejected, blocked or voicemail calls are in the total but have no direction of their own.</string>
+    <string name="home_average_call">Average call</string>
+    <string name="home_average_call_note">Over calls that connected, so a missed call never shortens it.</string>
+    <string name="home_time_of_day">Time of day</string>
+    <string name="home_busiest_hour">Busiest around %1$s</string>
+    <string name="home_no_statistics">No calls yet. Your statistics appear here as soon as you make or take one.</string>
+    <string name="home_call_log_access">Your statistics are built from the call history on this phone.</string>
+    <string name="home_duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="home_duration_minutes">%1$dm</string>
+
+    <plurals name="home_calls">
+        <item quantity="one">%1$d call</item>
+        <item quantity="other">%1$d calls</item>
+    </plurals>
+
 </resources>

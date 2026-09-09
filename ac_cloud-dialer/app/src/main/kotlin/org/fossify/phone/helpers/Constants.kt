@@ -3,6 +3,7 @@ package org.fossify.phone.helpers
 import org.fossify.commons.helpers.TAB_CALL_HISTORY
 import org.fossify.commons.helpers.TAB_CONTACTS
 import org.fossify.commons.helpers.TAB_FAVORITES
+import org.fossify.phone.R
 
 // shared prefs
 const val SPEED_DIAL = "speed_dial"
@@ -42,7 +43,69 @@ const val ALWAYS_SHOW_FULLSCREEN = "always_show_fullscreen"
 
 const val ALL_TABS_MASK = TAB_CONTACTS or TAB_FAVORITES or TAB_CALL_HISTORY
 
-val tabsList = arrayListOf(TAB_CONTACTS, TAB_FAVORITES, TAB_CALL_HISTORY)
+/**
+ * Cloud Dialer: the visibility mask of a tab that is always on screen.
+ *
+ * Home is not part of showTabs and cannot be switched off from Settings ▸
+ * Manage shown tabs. It is the page the app opens on, so hiding it would leave
+ * the app with no landing page; and the three maskable values are commons'
+ * own TAB_* bits, which we do not get to extend from here.
+ */
+const val ALWAYS_VISIBLE_TAB = 0
+
+/** Home is the first page of the pager, so it is also the fallback landing page. */
+const val HOME_TAB_INDEX = 0
+
+/**
+ * Cloud Dialer: one page of the main pager and its entry in the bottom tab
+ * strip. Everything the tab strip and the pager need about a page lives in
+ * this one table, in display order — adding a page is adding a row, not
+ * editing four parallel if-chains in MainActivity that could disagree about
+ * which index means which page.
+ */
+data class DialerTab(
+    val visibilityMask: Int,
+    val labelResourceId: Int,
+    val layoutResourceId: Int,
+    val selectedIconResourceId: Int,
+    val deselectedIconResourceId: Int,
+)
+
+val dialerTabs = listOf(
+    DialerTab(
+        visibilityMask = ALWAYS_VISIBLE_TAB,
+        labelResourceId = R.string.home_tab,
+        layoutResourceId = R.layout.fragment_home,
+        selectedIconResourceId = R.drawable.ic_home_filled_vector,
+        deselectedIconResourceId = R.drawable.ic_home_vector,
+    ),
+    DialerTab(
+        visibilityMask = TAB_CONTACTS,
+        labelResourceId = R.string.contacts_tab,
+        layoutResourceId = R.layout.fragment_contacts,
+        selectedIconResourceId = R.drawable.ic_person_vector,
+        deselectedIconResourceId = R.drawable.ic_person_outline_vector,
+    ),
+    DialerTab(
+        visibilityMask = TAB_FAVORITES,
+        labelResourceId = R.string.favorites_tab,
+        layoutResourceId = R.layout.fragment_favorites,
+        selectedIconResourceId = R.drawable.ic_star_vector,
+        deselectedIconResourceId = R.drawable.ic_star_outline_vector,
+    ),
+    DialerTab(
+        visibilityMask = TAB_CALL_HISTORY,
+        labelResourceId = R.string.call_history_tab,
+        layoutResourceId = R.layout.fragment_recents,
+        selectedIconResourceId = R.drawable.ic_clock_filled_vector,
+        deselectedIconResourceId = R.drawable.ic_clock_vector,
+    ),
+)
+
+/** The tabs actually on screen, in display order, for a given showTabs mask. */
+fun visibleDialerTabs(showTabs: Int) = dialerTabs.filter {
+    it.visibilityMask == ALWAYS_VISIBLE_TAB || showTabs and it.visibilityMask != 0
+}
 
 private const val PATH = "org.fossify.phone.action."
 const val ACCEPT_CALL = PATH + "ACCEPT_CALL"

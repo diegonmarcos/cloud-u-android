@@ -29,4 +29,43 @@
         <item name="android:layout_centerHorizontal">true</item>
     </style>
 
+    <!-- Cloud Dialer interface refresh: the Home page's three text roles and its
+         card container, so a statistic looks the same wherever it appears and a
+         new card is a <LinearLayout style="@style/HomeCard"> rather than eight
+         copied attributes that slowly stop matching. -->
+    <style name="HomeCard">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:orientation">vertical</item>
+        <item name="android:background">@drawable/home_card_background</item>
+        <item name="android:padding">@dimen/home_card_padding</item>
+        <item name="android:layout_marginStart">@dimen/card_margin_horizontal</item>
+        <item name="android:layout_marginEnd">@dimen/card_margin_horizontal</item>
+        <item name="android:layout_marginTop">@dimen/normal_margin</item>
+    </style>
+
+    <style name="HomeCardTitle">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">@dimen/text_title_small</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:alpha">0.7</item>
+    </style>
+
+    <style name="HomeStatValue">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">@dimen/text_display_small</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="HomeStatLabel">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">@dimen/normal_text_size</item>
+        <item name="android:alpha">0.7</item>
+    </style>
+
 </resources>

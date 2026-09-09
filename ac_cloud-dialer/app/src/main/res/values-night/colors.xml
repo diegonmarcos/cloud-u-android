@@ -8,5 +8,10 @@
     <color name="spam_danger_on_red">#680003</color>
     <color name="spam_danger_surface">#3A0906</color>
 
-    <color name="call_surface_container">#211F26</color>
+    <!-- The dark counterparts of the surface-container roles. Material 3 raises
+         a dark surface by getting lighter rather than by casting a shadow, so
+         these climb where the light ones descend. -->
+    <color name="surface_container">#211F26</color>
+    <color name="surface_container_high">#2B2930</color>
+    <color name="outline_variant">#49454F</color>
 </resources>

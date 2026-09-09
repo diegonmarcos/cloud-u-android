@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cloud Dialer: one bar of a Home chart — a month of talk time, or an hour of
+    the day. The bar grows from the bottom of a fixed-height frame, so twelve
+    months and twenty-four hours share the same baseline and the same code.
+
+    The height of chart_bar_fill is the only thing HomeFragment sets: the label
+    and the frame are declared here so the chart's shape lives in the layout.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_weight="1"
+    android:gravity="center_horizontal"
+    android:orientation="vertical">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/home_chart_height"
+        android:layout_marginStart="@dimen/home_bar_horizontal_inset"
+        android:layout_marginEnd="@dimen/home_bar_horizontal_inset">
+
+        <View
+            android:id="@+id/chart_bar_fill"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/home_bar_minimum_height"
+            android:layout_gravity="bottom"
+            android:background="@drawable/home_bar_background" />
+
+    </FrameLayout>
+
+    <org.fossify.commons.views.MyTextView
+        android:id="@+id/chart_bar_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/tiny_margin"
+        android:alpha="0.6"
+        android:maxLines="1"
+        android:textSize="@dimen/small_text_size"
+        tools:text="J" />
+
+</LinearLayout>

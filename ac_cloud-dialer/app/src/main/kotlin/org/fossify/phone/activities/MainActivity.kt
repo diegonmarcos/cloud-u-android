@@ -5,7 +5,6 @@ import android.app.Activity
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.res.Configuration
-import android.graphics.drawable.Drawable
 import android.graphics.drawable.Icon
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
@@ -37,12 +36,14 @@ import org.fossify.phone.extensions.config
 import org.fossify.phone.extensions.handleFullScreenNotificationsPermission
 import org.fossify.phone.extensions.launchCreateNewContactIntent
 import org.fossify.phone.fragments.ContactsFragment
+import org.fossify.phone.fragments.HomeFragment
 import org.fossify.phone.fragments.FavoritesFragment
 import org.fossify.phone.fragments.MyViewPagerFragment
 import org.fossify.phone.fragments.RecentsFragment
+import org.fossify.phone.helpers.HOME_TAB_INDEX
 import org.fossify.phone.helpers.OPEN_DIAL_PAD_AT_LAUNCH
 import org.fossify.phone.helpers.RecentsHelper
-import org.fossify.phone.helpers.tabsList
+import org.fossify.phone.helpers.visibleDialerTabs
 import org.fossify.phone.models.Events
 import org.greenrobot.eventbus.EventBus
 import org.greenrobot.eventbus.Subscribe
@@ -135,7 +136,7 @@ class MainActivity : SimpleActivity() {
         }
 
         if (!binding.mainMenu.isSearchOpen) {
-            refreshItems(true)
+            refreshItems()
         }
 
         val configFontSize = config.fontSize
@@ -196,10 +197,11 @@ class MainActivity : SimpleActivity() {
 
     private fun refreshMenuItems() {
         val currentFragment = getCurrentFragment()
+        val isListOfContacts = currentFragment is ContactsFragment || currentFragment is FavoritesFragment
         binding.mainMenu.requireToolbar().menu.apply {
             findItem(R.id.clear_call_history).isVisible = currentFragment == getRecentsFragment()
-            findItem(R.id.sort).isVisible = currentFragment != getRecentsFragment()
-            findItem(R.id.filter).isVisible = currentFragment != getRecentsFragment()
+            findItem(R.id.sort).isVisible = isListOfContacts
+            findItem(R.id.filter).isVisible = isListOfContacts
             findItem(R.id.create_new_contact).isVisible = currentFragment == getContactsFragment()
             findItem(R.id.change_view_type).isVisible = currentFragment == getFavoritesFragment()
             findItem(R.id.column_count).isVisible = currentFragment == getFavoritesFragment() && config.viewType == VIEW_TYPE_GRID
@@ -316,57 +318,18 @@ class MainActivity : SimpleActivity() {
             .build()
     }
 
+    private fun visibleTabs() = visibleDialerTabs(config.showTabs)
+
     private fun setupTabColors() {
-        val activeView = binding.mainTabsHolder.getTabAt(binding.viewPager.currentItem)?.customView
-        updateBottomTabItemColors(activeView, true, getSelectedTabDrawableIds()[binding.viewPager.currentItem])
-
-        getInactiveTabIndexes(binding.viewPager.currentItem).forEach { index ->
-            val inactiveView = binding.mainTabsHolder.getTabAt(index)?.customView
-            updateBottomTabItemColors(inactiveView, false, getDeselectedTabDrawableIds()[index])
+        val currentIndex = binding.viewPager.currentItem
+        visibleTabs().forEachIndexed { index, tab ->
+            val isActive = index == currentIndex
+            val iconResourceId = if (isActive) tab.selectedIconResourceId else tab.deselectedIconResourceId
+            val tabView = binding.mainTabsHolder.getTabAt(index)?.customView
+            updateBottomTabItemColors(tabView, isActive, iconResourceId)
         }
 
-        val bottomBarColor = getBottomNavigationBackgroundColor()
-        binding.mainTabsHolder.setBackgroundColor(bottomBarColor)
-    }
-
-    private fun getInactiveTabIndexes(activeIndex: Int) = (0 until binding.mainTabsHolder.tabCount).filter { it != activeIndex }
-
-    private fun getSelectedTabDrawableIds(): List<Int> {
-        val showTabs = config.showTabs
-        val icons = mutableListOf<Int>()
-
-        if (showTabs and TAB_CONTACTS != 0) {
-            icons.add(R.drawable.ic_person_vector)
-        }
-
-        if (showTabs and TAB_FAVORITES != 0) {
-            icons.add(R.drawable.ic_star_vector)
-        }
-
-        if (showTabs and TAB_CALL_HISTORY != 0) {
-            icons.add(R.drawable.ic_clock_filled_vector)
-        }
-
-        return icons
-    }
-
-    private fun getDeselectedTabDrawableIds(): ArrayList<Int> {
-        val showTabs = config.showTabs
-        val icons = ArrayList<Int>()
-
-        if (showTabs and TAB_CONTACTS != 0) {
-            icons.add(R.drawable.ic_person_outline_vector)
-        }
-
-        if (showTabs and TAB_FAVORITES != 0) {
-            icons.add(R.drawable.ic_star_outline_vector)
-        }
-
-        if (showTabs and TAB_CALL_HISTORY != 0) {
-            icons.add(R.drawable.ic_clock_vector)
-        }
-
-        return icons
+        binding.mainTabsHolder.setBackgroundColor(getBottomNavigationBackgroundColor())
     }
 
     private fun initFragments() {
@@ -417,59 +380,38 @@ class MainActivity : SimpleActivity() {
     private fun setupTabs() {
         binding.viewPager.adapter = null
         binding.mainTabsHolder.removeAllTabs()
-        tabsList.forEachIndexed { index, value ->
-            if (config.showTabs and value != 0) {
-                binding.mainTabsHolder.newTab().setCustomView(R.layout.bottom_tablayout_item).apply {
-                    customView?.findViewById<ImageView>(R.id.tab_item_icon)?.setImageDrawable(getTabIcon(index))
-                    customView?.findViewById<TextView>(R.id.tab_item_label)?.text = getTabLabel(index)
-                    AutofitHelper.create(customView?.findViewById(R.id.tab_item_label))
-                    binding.mainTabsHolder.addTab(this)
-                }
+        visibleTabs().forEach { tab ->
+            val icon = resources.getColoredDrawableWithColor(tab.deselectedIconResourceId, getProperTextColor())
+            binding.mainTabsHolder.newTab().setCustomView(R.layout.bottom_tablayout_item).apply {
+                customView?.findViewById<ImageView>(R.id.tab_item_icon)?.setImageDrawable(icon)
+                customView?.findViewById<TextView>(R.id.tab_item_label)?.text = getString(tab.labelResourceId)
+                AutofitHelper.create(customView?.findViewById(R.id.tab_item_label))
+                binding.mainTabsHolder.addTab(this)
             }
         }
 
         binding.mainTabsHolder.onTabSelectionChanged(
             tabUnselectedAction = {
-                updateBottomTabItemColors(it.customView, false, getDeselectedTabDrawableIds()[it.position])
+                updateBottomTabItemColors(it.customView, false, visibleTabs()[it.position].deselectedIconResourceId)
             },
             tabSelectedAction = {
                 getCurrentFragment()?.onSearchQueryChanged(binding.mainMenu.getCurrentQuery())
                 binding.viewPager.currentItem = it.position
-                updateBottomTabItemColors(it.customView, true, getSelectedTabDrawableIds()[it.position])
+                updateBottomTabItemColors(it.customView, true, visibleTabs()[it.position].selectedIconResourceId)
 
-                val lastPosition = binding.mainTabsHolder.tabCount - 1
-                if (it.position == lastPosition && config.showTabs and TAB_CALL_HISTORY > 0) {
+                // Opening the call history is the owner acknowledging the misses
+                // it lists, which is what dismisses the system's notification.
+                if (visibleTabs()[it.position].visibilityMask == TAB_CALL_HISTORY) {
                     clearMissedCalls()
                 }
             }
         )
 
-        binding.mainTabsHolder.beGoneIf(binding.mainTabsHolder.tabCount == 1)
         storedShowTabs = config.showTabs
         storedStartNameWithSurname = config.startNameWithSurname
     }
 
-    private fun getTabIcon(position: Int): Drawable {
-        val drawableId = when (position) {
-            0 -> R.drawable.ic_person_vector
-            1 -> R.drawable.ic_star_vector
-            else -> R.drawable.ic_clock_vector
-        }
-
-        return resources.getColoredDrawableWithColor(drawableId, getProperTextColor())
-    }
-
-    private fun getTabLabel(position: Int): String {
-        val stringId = when (position) {
-            0 -> R.string.contacts_tab
-            1 -> R.string.favorites_tab
-            else -> R.string.call_history_tab
-        }
-
-        return resources.getString(stringId)
-    }
-
-    private fun refreshItems(openLastTab: Boolean = false) {
+    private fun refreshItems() {
         if (isDestroyed || isFinishing) {
             return
         }
@@ -477,13 +419,24 @@ class MainActivity : SimpleActivity() {
         binding.apply {
             if (viewPager.adapter == null) {
                 viewPager.adapter = ViewPagerAdapter(this@MainActivity)
-                viewPager.currentItem = if (openLastTab) config.lastUsedViewPagerPage else getDefaultTab()
+                viewPager.currentItem = getDefaultTab()
                 viewPager.onGlobalLayout {
                     refreshFragments()
                 }
             } else {
                 refreshFragments()
             }
+        }
+    }
+
+    /**
+     * Cloud Dialer: Home's "see all" and its missed-calls card both land on the
+     * call history, which is the page that holds the rows they summarise.
+     */
+    fun openCallHistoryTab() {
+        val callHistoryIndex = visibleTabs().indexOfFirst { it.visibilityMask == TAB_CALL_HISTORY }
+        if (callHistoryIndex >= 0) {
+            binding.mainTabsHolder.getTabAt(callHistoryIndex)?.select()
         }
     }
 
@@ -495,31 +448,24 @@ class MainActivity : SimpleActivity() {
 
     fun refreshFragments() {
         cacheContacts()
+        getHomeFragment()?.refreshItems()
         getContactsFragment()?.refreshItems()
         getFavoritesFragment()?.refreshItems()
         getRecentsFragment()?.refreshItems()
     }
 
-    private fun getAllFragments(): ArrayList<MyViewPagerFragment<*>?> {
-        val showTabs = config.showTabs
-        val fragments = arrayListOf<MyViewPagerFragment<*>?>()
-
-        if (showTabs and TAB_CONTACTS > 0) {
-            fragments.add(getContactsFragment())
+    private fun getAllFragments(): List<MyViewPagerFragment<*>?> = visibleTabs().map { tab ->
+        when (tab.visibilityMask) {
+            TAB_CONTACTS -> getContactsFragment()
+            TAB_FAVORITES -> getFavoritesFragment()
+            TAB_CALL_HISTORY -> getRecentsFragment()
+            else -> getHomeFragment()
         }
-
-        if (showTabs and TAB_FAVORITES > 0) {
-            fragments.add(getFavoritesFragment())
-        }
-
-        if (showTabs and TAB_CALL_HISTORY > 0) {
-            fragments.add(getRecentsFragment())
-        }
-
-        return fragments
     }
 
     private fun getCurrentFragment(): MyViewPagerFragment<*>? = getAllFragments().getOrNull(binding.viewPager.currentItem)
+
+    private fun getHomeFragment(): HomeFragment? = findViewById(R.id.home_fragment)
 
     private fun getContactsFragment(): ContactsFragment? = findViewById(R.id.contacts_fragment)
 
@@ -527,33 +473,18 @@ class MainActivity : SimpleActivity() {
 
     private fun getRecentsFragment(): RecentsFragment? = findViewById(R.id.recents_fragment)
 
-    private fun getDefaultTab(): Int {
-        val showTabsMask = config.showTabs
-        return when (config.defaultTab) {
-            TAB_LAST_USED -> if (config.lastUsedViewPagerPage < binding.mainTabsHolder.tabCount) config.lastUsedViewPagerPage else 0
-            TAB_CONTACTS -> 0
-            TAB_FAVORITES -> if (showTabsMask and TAB_CONTACTS > 0) 1 else 0
-            else -> {
-                if (showTabsMask and TAB_CALL_HISTORY > 0) {
-                    if (showTabsMask and TAB_CONTACTS > 0) {
-                        if (showTabsMask and TAB_FAVORITES > 0) {
-                            2
-                        } else {
-                            1
-                        }
-                    } else {
-                        if (showTabsMask and TAB_FAVORITES > 0) {
-                            1
-                        } else {
-                            0
-                        }
-                    }
-                } else {
-                    0
-                }
-            }
-        }
-    }
+    /**
+     * Which page the app lands on. Home unless the owner explicitly chose one
+     * of the other three in Settings, because a page whose whole job is to
+     * summarise his calling life is worth nothing behind a swipe.
+     *
+     * commons' TAB_LAST_USED is the shipping default of that setting and has no
+     * spare bit of its own, so this fork reads it as "Home" and Settings labels
+     * it that way — see SettingsActivity.setupDefaultTab.
+     */
+    private fun getDefaultTab(): Int = visibleTabs()
+        .indexOfFirst { it.visibilityMask == config.defaultTab }
+        .coerceAtLeast(HOME_TAB_INDEX)
 
     private fun launchSettings() {
         hideKeyboard()

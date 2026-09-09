@@ -25,6 +25,29 @@
     <dimen name="recents_avatar_size">40dp</dimen>
     <dimen name="call_button_corner_radius">24dp</dimen>
 
+    <!-- Cloud Dialer interface refresh: the top of the type scale.
+         The app already leans on commons' small/normal/bigger/big text sizes,
+         which follow the owner's font-size preference; these three are the
+         Material 3 display and title steps that scale had no answer for, and
+         are what a statistic gets to be read at a glance rather than read. -->
+    <dimen name="text_display_small">32sp</dimen>
+    <dimen name="text_headline_small">22sp</dimen>
+    <dimen name="text_title_small">15sp</dimen>
+
+    <!-- The smallest thing a thumb may be asked to hit, and the height a list
+         row needs so that hitting it one-handed on a large phone is not a
+         matter of aim. Material 3 puts the floor at 48dp. -->
+    <dimen name="minimum_touch_target">48dp</dimen>
+    <dimen name="list_row_minimum_height">64dp</dimen>
+
+    <!-- Home page -->
+    <dimen name="home_card_corner_radius">20dp</dimen>
+    <dimen name="home_card_padding">16dp</dimen>
+    <dimen name="home_chart_height">64dp</dimen>
+    <dimen name="home_bar_corner_radius">3dp</dimen>
+    <dimen name="home_bar_minimum_height">2dp</dimen>
+    <dimen name="home_bar_horizontal_inset">2dp</dimen>
+
     <!-- keep these 2 values in dp to avoid scaling -->
     <dimen name="dialpad_text_size">28dp</dimen>
     <dimen name="dialpad_letters_text_size">12dp</dimen>
