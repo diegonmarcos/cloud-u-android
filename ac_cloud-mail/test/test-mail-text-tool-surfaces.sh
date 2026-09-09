@@ -152,8 +152,14 @@ else:
     fails += 1
 # A refusal that returns quietly is the bug this is here to prevent: it looks like a tool that ran
 # and produced nothing. The guard has to report, like every other way out of run().
-tail = src[src.index(guard):src.index(guard) + 400]
-if "TextToolOutcome(tool, null," in tail:
+# Scoped to the guard's OWN block, not a window of characters after it: a fixed window reached the
+# next branch's outcome and passed on a guard whose own report had been deleted. Watched failing.
+# Scoped to the guard's OWN block and to COMMENT-FREE code, both learned by watching this
+# assertion pass on a mutant: a fixed character window reached the NEXT branch's outcome, and a
+# bare substring match was satisfied by the very line it was meant to check, commented out.
+tail = src[src.index(guard):src.index("\n        }", src.index(guard))]
+tail = "\n".join(l for l in tail.splitlines() if not l.strip().startswith("//"))
+if "outcome = TextToolOutcome(tool, null," in tail:
     print("  ok: D2 a refused run reports, rather than returning silently")
 else:
     print("  FAIL: D2 the guard returns without an outcome -- a refusal would look like a no-op")
