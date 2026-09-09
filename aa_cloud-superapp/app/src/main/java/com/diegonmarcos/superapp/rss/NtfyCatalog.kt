@@ -42,6 +42,35 @@ object NtfyCatalog {
     /** Human title for [topic]; the topic itself when none is declared. */
     fun labelOf(topic: String): String = labels()[topic]?.takeIf { it.isNotBlank() } ?: topic
 
+    @Volatile private var cachedTaxon: Map<String, String>? = null
+
+    private fun taxons(): Map<String, String> {
+        cachedTaxon?.let { return it }
+        val o = config().optJSONObject("taxon") ?: JSONObject()
+        val out = HashMap<String, String>(o.length())
+        for (k in o.keys()) out[k] = o.optString(k)
+        cachedTaxon = out
+        return out
+    }
+
+    /**
+     * The phone-taxonomy SECTION PREFIX this cloud publisher belongs to —
+     * the same one-character vocabulary `ui.phone_sections` declares, so the
+     * Notify tabs can narrow a cloud stream by the categories they were
+     * built from ("_" Sys, "@" Inboxes & AI, "." Data Apps, …).
+     *
+     * Cloud messages carry no package and therefore no classifier can be run
+     * on them: a topic or an in-app producer name is all there is. Without
+     * this map every cloud publisher passed unfiltered and the SuperApp
+     * updater showed up on all six tabs — an obviously system-level stream
+     * appearing under Inboxes and under Data Apps.
+     *
+     * Blank when the key is not declared, and a blank prefix is treated as
+     * "All tab only": a publisher nobody has categorised should not silently
+     * claim a category.
+     */
+    fun taxonOf(key: String): String = taxons()[key].orEmpty()
+
     /**
      * The topic carrying out-of-band install/repair advisories.
      *

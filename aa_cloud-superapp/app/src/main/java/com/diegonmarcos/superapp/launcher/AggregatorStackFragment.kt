@@ -5,6 +5,7 @@ import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.system.CrashLogger
 import com.diegonmarcos.superapp.notificationcenter.NotificationCenterFragment
 import com.diegonmarcos.superapp.notificationcenter.PhoneNotificationListenerService
+import com.diegonmarcos.superapp.rss.NtfyCatalog
 import com.diegonmarcos.superapp.rss.RssFeedFragment
 import com.diegonmarcos.superapp.cloud.CalendarMonthFragment
 import com.diegonmarcos.superapp.cloud.CalendarAgendaFragment
@@ -376,6 +377,21 @@ class AggregatorStackFragment : Fragment(),
         // ids working unchanged, so adding a section stays a build.json-only
         // change.
         val prefix = PhoneTaxonomy.sectionPrefixOf(packageName, label)
+        return prefix.isNotEmpty() && want.contains(prefix)
+    }
+
+    /** The same narrowing for a CLOUD group, whose key is an ntfy topic or an
+     *  in-app producer name rather than a package. Nothing can be classified
+     *  from those, so the section prefix is declared per publisher in
+     *  `ui.ntfy.taxon`; an undeclared publisher shows on the All tab only,
+     *  rather than on every tab as the SuperApp updater did. */
+    private fun cloudTaxonomyKeeps(groupKey: String): Boolean {
+        val want = when {
+            toolsMode    != "all" -> toolsMode
+            servicesMode != "all" -> servicesMode
+            else                  -> return true
+        }
+        val prefix = NtfyCatalog.taxonOf(groupKey)
         return prefix.isNotEmpty() && want.contains(prefix)
     }
 
@@ -1095,7 +1111,9 @@ class AggregatorStackFragment : Fragment(),
 
         body.addView(shadeLabel(ctx, "IN-APP FEED"))
         val stored = NotificationStore.all(ctx)
-        val local = stored.groupBy { it.source.ifBlank { "SuperApp" } }.map { (source, entries) ->
+        val local = stored.groupBy { it.source.ifBlank { "SuperApp" } }
+            .filterKeys { cloudTaxonomyKeeps(it) }
+            .map { (source, entries) ->
             NotifGroup(
                 key   = source,
                 label = source,
@@ -1151,9 +1169,9 @@ class AggregatorStackFragment : Fragment(),
     ) {
         val scopes = com.diegonmarcos.superapp.rss.NtfyScopes.load()
         val catalog = com.diegonmarcos.superapp.rss.NtfyScopes.fallbackChannels()
-        val topics = if (panel.scopes.isEmpty()) catalog else catalog.filter {
+        val topics = (if (panel.scopes.isEmpty()) catalog else catalog.filter {
             com.diegonmarcos.superapp.rss.NtfyScopes.scopeOf(it, scopes).id in panel.scopes
-        }
+        }).filter { cloudTaxonomyKeeps(it) }
         if (topics.isEmpty()) {
             // Nothing is being polled, which is not the same as everything being
             // quiet. Name the reason and the scopes that produced it.
