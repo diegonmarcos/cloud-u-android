@@ -92,6 +92,10 @@ class AggregatorStackFragment : Fragment(),
     private data class PanelRefs(val body: View, val chevron: View)
     private val panelRefs = mutableListOf<PanelRefs>()
 
+    /** The panels this page declared. An inbox card reads it to find out
+     *  whether a sibling card is about the same taxonomy folder it is. */
+    private var pagePanels: List<Sections.StackPanel> = emptyList()
+
     /** In-page `anchor:` links for this stack. Generic — the registry is fed
      *  from the panels' own declarations, so no panel kind is special-cased
      *  here and no page is either. */
@@ -184,6 +188,10 @@ class AggregatorStackFragment : Fragment(),
             column.addView(emptyHint(ctx, "No panels for ${sec.label} · $mode"))
             return scroll
         }
+        // Kept for the whole life of the view: an inbox card decides what it is
+        // allowed to speak for by looking at what its SIBLINGS on this page are
+        // about — see [inboxFolderId].
+        pagePanels = panels
         panelRefs.clear()
         originCards.clear()
         bodyRefreshers.clear()
@@ -2360,6 +2368,62 @@ class AggregatorStackFragment : Fragment(),
         (listOf(app.hubPackage, app.altPackage, app.installPackage) + app.forks.values)
             .filterNot { it.isBlank() }.toSet()
 
+    /** The central-list FOLDER — the KIND — this card is the inbox for, or ""
+     *  when it speaks only for its own app's packages.
+     *
+     *  DERIVED, never declared, and that is the point. The panel already names
+     *  one app (`extapp:<id>`); `ui.phone_folders` already says which folder
+     *  that app classifies into; so the card is the inbox for that folder, and
+     *  its list is that folder's slice of the SAME feed Notify draws rather
+     *  than a second, narrower restatement of it. Nothing new is written down,
+     *  and a folder retuned in build.json moves this card with it.
+     *
+     *  Why this was worth changing: keyed on the app's own packages alone, a
+     *  card could only ever show what OUR companion app posted. The mail card
+     *  read one package while the mail on the phone arrived from every other
+     *  mail client the user actually has, so the card reported "nothing
+     *  captured" beside a feed that was full — a true sentence about the wrong
+     *  question.
+     *
+     *  A folder TWO cards on this page would both claim is claimed by NEITHER.
+     *  Chat · Matrix and Chat · Mattermost both classify into @Chat, and
+     *  letting both expand would draw every chat notification twice on one
+     *  page — the same double-draw the title-matching route was removed for.
+     *  Those cards stay on their own roster, and the kind summary above them
+     *  still reports the folder's full count, so what they do not list is
+     *  disclosed rather than hidden. */
+    private fun inboxFolderId(ctx: android.content.Context, panel: Sections.StackPanel): String {
+        val mine = inboxApp(panel)?.let { folderOfApp(ctx, it) }.orEmpty()
+        if (mine.isEmpty()) return ""
+        val claimants = pagePanels.count {
+            inboxApp(it)?.let { app -> folderOfApp(ctx, app) }.orEmpty() == mine
+        }
+        return if (claimants == 1) mine else ""
+    }
+
+    /** The one section folder every package of [app] agrees on, or "" when
+     *  they disagree or land somewhere sectionless. A hub and its resigned
+     *  stock alt are the same app to the user and must be the same kind; if
+     *  the classification does not think so, the card is not entitled to speak
+     *  for a kind at all. */
+    private fun folderOfApp(ctx: android.content.Context, app: Sections.ExternalApp): String =
+        inboxPackages(app)
+            .map { PhoneTaxonomy.folderIdOf(it, app.label, ctx) }
+            .distinct().singleOrNull()
+            ?.takeIf { isSectionFolder(it) }
+            .orEmpty()
+
+    /** A folder that belongs to a section, i.e. whose label opens with a
+     *  prefix character. The Misc exile and the Others sink open with a letter
+     *  and are not kinds — they are where an unclassified app waits. */
+    private fun isSectionFolder(folderId: String): Boolean =
+        PhoneTaxonomy.folderLabelOf(folderId).firstOrNull()?.isLetterOrDigit() == false
+
+    /** A folder label as a KIND reads on screen: "@Mail" is how the user sorts
+     *  their launcher, "Mail" is what a notification is. */
+    private fun kindLabel(folderId: String): String =
+        PhoneTaxonomy.folderLabelOf(folderId).dropWhile { !it.isLetterOrDigit() }
+
     private fun renderInboxNotifications(
         ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel,
     ) {
@@ -2384,7 +2448,13 @@ class AggregatorStackFragment : Fragment(),
                 "target, so no notifications can be shown under it")
             return
         }
-        body.addView(shadeLabel(ctx, "NOTIFICATIONS"))
+        val folderId = inboxFolderId(ctx, panel)
+        // The header says WHAT the list below is a list of. A card speaking for
+        // a kind draws every app of that kind, so calling it "notifications"
+        // and leaving the reader to infer the scope is how a page ends up
+        // looking wrong when it is right.
+        body.addView(shadeLabel(ctx,
+            if (folderId.isEmpty()) "NOTIFICATIONS" else "NOTIFICATIONS · ${kindLabel(folderId)}"))
         if (!isNotificationAccessGranted(ctx)) {
             // Drawing an empty list here would be a failure reporting success —
             // the same distinction [renderPhoneCenter] makes for a whole page.
@@ -2394,12 +2464,21 @@ class AggregatorStackFragment : Fragment(),
                 "inbox is quiet."))
             return
         }
+        val feed = PhoneNotificationStore.all(ctx)
+        // Classify the whole feed once, then select from it — the card
+        // CONSUMES the stream every other surface reads instead of asking the
+        // store its own narrower question.
+        PhoneTaxonomy.prime(ctx, feed.associate { it.packageName to it.appLabel })
         val packages = inboxPackages(app)
-        val stored = PhoneNotificationStore.all(ctx).filter { it.packageName in packages }
+        val stored = if (folderId.isEmpty()) feed.filter { it.packageName in packages }
+            else feed.filter { PhoneTaxonomy.folderIdOf(it.packageName, it.appLabel, ctx) == folderId }
         if (stored.isEmpty()) {
             // Granted and empty is a real, different state: amber, and it names
-            // the app so it cannot be read as a dead card.
-            body.addView(stateLine(ctx, "silent · nothing captured from ${app.label}", SIGNAL_WARN))
+            // what came up empty — the KIND when this card speaks for one, the
+            // app when it speaks only for itself. The two are different claims
+            // and the line has to say which one it is making.
+            val subject = if (folderId.isEmpty()) app.label else kindLabel(folderId)
+            body.addView(stateLine(ctx, "silent · nothing captured from $subject", SIGNAL_WARN))
             return
         }
         // Grouped by package, not folded into one box: a hub and its forks are
@@ -2413,7 +2492,11 @@ class AggregatorStackFragment : Fragment(),
         val groups = stored.groupBy { it.packageName }.map { (pkg, entries) ->
             NotifGroup(
                 key           = pkg,
-                label         = entries.firstOrNull { it.appLabel.isNotBlank() }?.appLabel ?: app.label,
+                // The package's own label, falling back to the package: a card
+                // speaking for a kind draws apps the declaration never named,
+                // so [app] is no longer the right thing to call an unlabelled
+                // group.
+                label         = entries.firstOrNull { it.appLabel.isNotBlank() }?.appLabel ?: pkg,
                 sub           = pkg,
                 launchPackage = pkg,
                 // PHONE_NS, the same namespace [renderPhoneCenter] writes: a row

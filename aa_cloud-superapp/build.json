@@ -2106,7 +2106,7 @@
           }
         ],
         "_doc_moved_cloud": "stack_cloud / tiles_cloud USED to hang here — GHA runs, repo commits and the Dagu deeplink. They are now sections[c3].stack_observability, under Cloud ▸ C3 ▸ Observability — which IS the c3 section's own Observability tab, not a copy of it beside the pages it points at. Nothing else keyed off them: `page:infos/cloud` addresses the PAGE, not these lists.",
-        "_doc_stack_msgs": "Projects ▸ Inboxes. Every card here draws the posting app's own notification boxes under its counts, and WHICH app that is comes from the `url` this panel declares: \"extapp:<id>\", an id from ui.external_apps. That declaration is the ONLY route — a panel that omits it renders its counts and nothing else, silently, because a missing declaration is a gap for whoever edits this file and not something the person holding the phone can act on (AggregatorStackFragment.inboxApp logs it to logcat instead). The card title used to double as a second, implicit route; it was removed because it bound notifications to a human-readable string, so relabelling a card silently moved or dropped its boxes.",
+        "_doc_stack_msgs": "Projects ▸ Inboxes. A card here is the inbox for a KIND, and the kind is DERIVED from the central classification rather than declared a second time. The panel names one app with `url`: \"extapp:<id>\", an id from ui.external_apps; ui.phone_folders says which folder that app's packages classify into; and the card draws that folder's slice of the SAME phone notification feed Notify ▸ Inboxes reads. No membership is written down here, so retuning a folder in ui.phone_folders moves this page with it — which is the whole reason the classification is keyed on PACKAGE and not on a label a rename would move. Before this, each card narrowed the feed to its own app's package roster alone, so the mail card said 'nothing captured' about one package while the phone's actual mail arrived from every other client the owner uses: a true sentence about the wrong question. A folder TWO cards would both claim is claimed by NEITHER — Chat · Matrix and Chat · Mattermost both classify into @Chat, and letting both expand would draw every chat notification twice on one page; those two fall back to their own roster instead. The `extapp:` declaration is still the ONLY route to an app: a panel that omits it renders its counts and nothing else, silently, because a missing declaration is a gap for whoever edits this file and not something the person holding the phone can act on (AggregatorStackFragment.inboxApp logs it to logcat instead). The card title used to double as a second, implicit route; it was removed because it bound notifications to a human-readable string, so relabelling a card silently moved or dropped its boxes.",
         "stack_msgs": [
           {
             "kind": "mail_accounts",
@@ -4082,29 +4082,30 @@
         "_doc_pages_order": "Order here is the single source of truth — drives both the Configs section page-grid AND (via home_groups tiles_from_section: 'config') the Home Apps Configs row. WireGuard appears in the row via an explicit `tiles` entry on the home_groups row with insert_after_id, since WG lives in its own section.",
         "pages": [
           {
-            "_doc": "Panel is the page you open to FLIP something, not to configure it — the two things the owner touches many times a day, sitting behind one strip: the ntfy notification centre and the device/fleet switches. It leads the Configs grid for that reason; every other entry here is opened to change a setting once. `tabs` lists page ids of this same section in strip order, so it wears the SectionTabsFragment strip Launcher established in 07964787e — no second tab widget in this app.",
+            "_doc": "Panel is the page you open to FLIP something, not to configure it — the two things the owner touches many times a day, sitting behind one strip: the device/fleet switches and the ntfy notification centre. It leads the Configs grid for that reason; every other entry here is opened to change a setting once. `tabs` lists page ids of this same section in strip order, so it wears the SectionTabsFragment strip Launcher established in 07964787e — no second tab widget in this app.",
+            "_doc_tabs_order": "TAB ORDER IS THE LANDING RULE, so Control leading this array is the whole of 'Panel opens on Control' and there is nothing else to declare. SectionTabsFragment.startIndex falls back to the FIRST tab with a fragment behind it, so a `default_tab` flag would be a second answer to a question this array already answers, and the two could disagree. Control leads because flipping a switch is the errand that brings the owner here — Notify is the thing that ALREADY interrupted them, and it is one tap away plus reachable directly as page:config/notify. The first-tab rule is only the FALLBACK, though: a strip already visited in this process is restored to the tab the user left (LauncherNavController.activeTabBySection, an in-memory map on the controller, so it survives navigation and dies with the process). Cold open lands on Control; for the rest of that process the owner gets the tab they left. That is how EVERY strip in this app behaves and Panel deliberately is not the exception — a page that forgot where you were while its siblings remembered would read as a bug, not as a policy.",
             "id": "panel",
             "label": "Panel",
             "icon": "ic_settings",
             "tabs": [
-              "notify",
-              "control"
+              "control",
+              "notify"
             ]
           },
           {
-            "_doc": "Tab 1 of Panel — the EXISTING ntfy notification centre, not a copy of it. `mirror_page` names sections[communication].pages[my-rss] and LauncherNavController.aggregatorPage renders that page's own fragment, so the cards, the filter row and the stack_my-rss declaration all stay owned by the Notify section. mirror_page is the page-level twin of `mirror_section` (Cloud ▸ Configs / Cloud ▸ C3) and exists for the same reason those do: a tab that IS the other surface cannot drift from it, a second copy of it always does. Mirroring one PAGE rather than the section is what keeps this one tab instead of the Notify section's own six-tab strip nested inside ours.",
+            "_doc": "Tab 1 of Panel — the switch board, and the tab the page opens on (see _doc_tabs_order above). Which controls exist, how they are grouped and what they are called is declared in ui.control_panel below; the CAPABILITY behind each id (what reads its state, what writes it, what blocks it) lives in configs/DeviceControls.kt, next to the read-back that verifies it. hidden = it is reached through the Panel strip, not as its own Configs tile.",
+            "id": "control",
+            "label": "Control",
+            "icon": "ic_settings",
+            "hidden": true
+          },
+          {
+            "_doc": "Tab 2 of Panel — the EXISTING ntfy notification centre, not a copy of it. `mirror_page` names sections[communication].pages[my-rss] and LauncherNavController.aggregatorPage renders that page's own fragment, so the cards, the filter row and the stack_my-rss declaration all stay owned by the Notify section. mirror_page is the page-level twin of `mirror_section` (Cloud ▸ Configs / Cloud ▸ C3) and exists for the same reason those do: a tab that IS the other surface cannot drift from it, a second copy of it always does. Mirroring one PAGE rather than the section is what keeps this one tab instead of the Notify section's own six-tab strip nested inside ours.",
             "id": "notify",
             "label": "Notify",
             "icon": "ic_rss",
             "facet": true,
             "mirror_page": "communication/my-rss",
-            "hidden": true
-          },
-          {
-            "_doc": "Tab 2 of Panel — the switch board. Which controls exist, how they are grouped and what they are called is declared in ui.control_panel below; the CAPABILITY behind each id (what reads its state, what writes it, what blocks it) lives in configs/DeviceControls.kt, next to the read-back that verifies it. hidden = it is reached through the Panel strip, not as its own Configs tile.",
-            "id": "control",
-            "label": "Control",
-            "icon": "ic_settings",
             "hidden": true
           },
           {

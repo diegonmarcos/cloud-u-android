@@ -47,7 +47,7 @@ command -v jq >/dev/null 2>&1 || { echo "ERROR: jq required" >&2; exit 2; }
 # is a LOWER bound on what the device would match, and a package this says is
 # classified really is.
 CLASSIFY='
-def sect($pkg):
+def fold($pkg):
   ($pkg | ascii_downcase) as $p
   | ( [ .ui.phone_folders[] | select((.match_keywords // []) | length > 0) ]
       | sort_by(.order) ) as $folders
@@ -58,15 +58,22 @@ def sect($pkg):
               elif ($k | startswith("pkg^")) then ($p | startswith($k[4:]))
               elif ($k | startswith("lbl:")) or ($k | startswith("lbl~")) then false
               else (($k | length) >= 4 and ($p | contains($k)))
-              end ) ) ) // null ) as $folder
-  # A section is joined by the FIRST CHARACTER of the folder label (see
-  # ui.phone_sections prefixes and PhoneTaxonomy.sectionPrefixOf). An
-  # alphanumeric first character means the folder belongs to no section at all,
-  # which is what Misc and the Others sink are.
+              end ) ) ) // null );
+# A section is joined by the FIRST CHARACTER of the folder label (see
+# ui.phone_sections prefixes and PhoneTaxonomy.sectionPrefixOf). An
+# alphanumeric first character means the folder belongs to no section at all,
+# which is what Misc and the Others sink are.
+def sect($pkg):
+  fold($pkg) as $folder
   | if $folder == null then "" else
       ($folder.label[0:1]) as $c
       | if ($c | test("^[A-Za-z0-9]$")) then "" else $c end
     end;
+# The folder id is the KIND. Projects > Inboxes derives the kind of a card from
+# it rather than declaring one, so the tester needs the answer the app gets.
+def fid($pkg):
+  fold($pkg) as $folder
+  | if $folder == null then "" else $folder.id end;
 '
 
 echo "== T1: every extapp:<id> target resolves in ui.external_apps =="
@@ -127,8 +134,8 @@ echo "== T5: every app the central list puts in an Inboxes section reaches the I
 # 2026-09-09 while every one of the checks above passed: `ui.phone_folders`
 # placed the messengers in "@Chat" through a `match_metadata` rule, and the
 # surface reading that classification could not run the metadata pass, so the
-# apps resolved on paper and arrived nowhere. These three assertions are the
-# rest of the route, from the central list to the tab.
+# apps resolved on paper and arrived nowhere. These assertions are the rest of
+# the route, from the central list to the tab.
 FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
 TAXO="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/PhoneTaxonomy.kt"
 
@@ -184,6 +191,58 @@ done < <(jq -r '
   | .prefix as $p
   | [ $p, ([ $opts[] | select(contains($p)) ] | length > 0) ]
   | @tsv' "$BJ" | sort -u)
+
+echo "== T6: every Projects > Inboxes card derives ONE kind from the central list =="
+# The cards on stack_msgs do not declare which notifications they carry; they
+# derive it, by asking ui.phone_folders which folder their declared app
+# classifies into (AggregatorStackFragment.inboxFolderId). Two things have to
+# hold for that to be well defined, and both are static facts about build.json.
+#
+#   T6a  An app's packages must AGREE. A hub and its resigned stock alt are one
+#        app to the owner; if the classification splits them across folders the
+#        card has no single kind and falls back to its own roster, silently
+#        showing less than the page promises.
+#   T6b  A folder claimed by two cards is claimed by NEITHER, or the page draws
+#        the same notification twice. That is by design, not a failure — this
+#        prints which folders are contested so the design stays visible.
+while IFS=$'\t' read -r title id kinds count; do
+  [ "$count" -le 1 ] && ok "card '$title' (extapp:$id) derives kind '${kinds}'" \
+                     || bad "card '$title' (extapp:$id) packages classify into $count different folders ($kinds), so it has no single kind"
+done < <(jq -r "$CLASSIFY"'
+  . as $root
+  | ( .ui.sections[] | .stack_msgs // empty )[]
+  | ( [ .url, ((.links // [])[] | .url) ] | map(select(type == "string" and startswith("extapp:")))
+      | first // "" ) as $target
+  | select($target != "")
+  | .title as $title
+  | ($target | ltrimstr("extapp:") | split("/")[0] | split("#")[0]) as $id
+  | ( [ $root.ui.external_apps[] | select(.id == $id) ] | first ) as $app
+  | select($app != null)
+  | ( [ $app.hub_package, $app.alt_package, $app.install_package,
+        ((($app.forks // {}) | to_entries[]).value) ]
+      | map(select(. != null and . != "")) ) as $pkgs
+  # `.` is a closure evaluated where it is USED, so a bare fid(.) would be read
+  # off $root — the same trap documented in T2. Bind the package first.
+  | ( [ $pkgs[] | . as $pk | ($root | fid($pk)) ] | unique ) as $kinds
+  | [ $title, $id, ($kinds | join(",")), ($kinds | length) ] | @tsv' "$BJ")
+
+while IFS=$'\t' read -r kind cards; do
+  ok "kind '$kind' is claimed by $cards cards, so none of them expands to it (no double-draw)"
+done < <(jq -r "$CLASSIFY"'
+  . as $root
+  | [ ( .ui.sections[] | .stack_msgs // empty )[]
+      | ( [ .url, ((.links // [])[] | .url) ] | map(select(type == "string" and startswith("extapp:")))
+          | first // "" ) as $target
+      | select($target != "")
+      | ($target | ltrimstr("extapp:") | split("/")[0] | split("#")[0]) as $id
+      | ( [ $root.ui.external_apps[] | select(.id == $id) ] | first ) as $app
+      | select($app != null)
+      | ( [ [ $app.hub_package, $app.alt_package, $app.install_package,
+              ((($app.forks // {}) | to_entries[]).value) ]
+            | .[] | select(. != null and . != "") | . as $pk | ($root | fid($pk)) ] | unique ) as $kinds
+      | select(($kinds | length) == 1) | $kinds[0] ]
+  | group_by(.) | map(select(length > 1)) | .[]
+  | [ .[0], (. | length) ] | @tsv' "$BJ")
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
