@@ -8,12 +8,12 @@
     "fdroid_repo": "https://www.collaboraoffice.com/downloads/fdroid/repo/",
     "fdroid_index": "https://www.collaboraoffice.com/downloads/fdroid/repo/index-v1.json",
     "package_name": "com.collabora.libreoffice",
-    "version_name": "25.04.9.1",
-    "version_code": 115,
-    "apk_name": "collabora-office-mobile-25-04-release-arm64-v8a-2026-03-03.apk",
-    "url": "https://www.collaboraoffice.com/downloads/fdroid/repo/collabora-office-mobile-25-04-release-arm64-v8a-2026-03-03.apk",
-    "sha256": "761eefbb71aabb788843bffa4deb046f89e910e30896be1cc8ab522460a8da5c",
-    "size": 278215660,
+    "version_name": "26.04.3.1",
+    "version_code": 155,
+    "apk_name": "collabora-office-mobile-26.04.3.1-155-release-arm64-v8a-2026-09-03.apk",
+    "url": "https://www.collaboraoffice.com/downloads/fdroid/repo/collabora-office-mobile-26.04.3.1-155-release-arm64-v8a-2026-09-03.apk",
+    "sha256": "b7ab381de96f429c2e762d0e54ee0fac7db03ad2fecfede9f4c558c767d18513",
+    "size": 267216449,
     "license": "MPL-2.0",
     "source_repo": "https://gerrit.libreoffice.org/plugins/gitiles/core/"
   },
@@ -50,7 +50,7 @@
       "require_unmetered_network": true,
       "require_charging": false,
       "install_mode": "silent",
-      "_doc_require_unmetered_network": "265 MB — the largest artifact in the fleet by an order of magnitude. Unmetered-only so a background auto-update pass cannot burn a mobile data plan.",
+      "_doc_require_unmetered_network": "267 MB — the largest artifact in the fleet by an order of magnitude. Unmetered-only so a background auto-update pass cannot burn a mobile data plan.",
       "max_installs_per_pass": 3
     },
     "ghcr": {

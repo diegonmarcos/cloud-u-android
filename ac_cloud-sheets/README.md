@@ -33,11 +33,11 @@ Currently pinned:
 | field        | value                                                          |
 |--------------|----------------------------------------------------------------|
 | package      | `com.collabora.libreoffice`                                    |
-| versionName  | `25.04.9.1`                                                    |
-| versionCode  | `115`                                                          |
-| apk          | `collabora-office-mobile-25-04-release-arm64-v8a-2026-03-03.apk` |
-| size         | `278215660`                                                    |
-| sha256       | `761eefbb71aabb788843bffa4deb046f89e910e30896be1cc8ab522460a8da5c` |
+| versionName  | `26.04.3.1`                                                    |
+| versionCode  | `155`                                                          |
+| apk          | `collabora-office-mobile-26.04.3.1-155-release-arm64-v8a-2026-09-03.apk` |
+| size         | `267216449`                                                    |
+| sha256       | `b7ab381de96f429c2e762d0e54ee0fac7db03ad2fecfede9f4c558c767d18513` |
 | abi          | `arm64-v8a` only (upstream ships no x86_64)                    |
 | minSdk       | `26`                                                           |
 | license      | `MPL-2.0`                                                      |
@@ -49,3 +49,19 @@ Read the new entry out of
 `version_name`, `version_code`, `apk_name`, `url`, `sha256` and `size` together
 in **one** commit. Never update the sha alone — a sha that no longer matches its
 declared version is a pin that documents nothing.
+
+**And do not let it go stale.** A pin that is merely OLD still matches its own
+sha256, so `ship-cloud-sheets.yml` publishes it happily — nothing in the
+workflow can tell "correct" from "six months behind". That gap is not cosmetic
+here, because this is the one fleet entry with a SECOND publisher: a phone can
+follow Collabora's own F-Droid repo and end up on a HIGHER versionCode than we
+mirror. The Constellation AppStore decides "outdated" by comparing
+sha256(installed base.apk) against the published `Cloud-Sheets.apk.sha256` — a
+difference, with no direction to it — so such a phone reads as permanently
+outdated, while `Fleet.commit` correctly refuses to install, because a lower
+versionCode over a higher one is a downgrade Android rejects. Download, no
+error, still outdated, forever. The pin sat at versionCode 115 from the day it
+was added while upstream reached 155.
+
+`aa_cloud-superapp/test/test-sheets-mirror-pin.sh` is what notices: T3 asserts
+the pin is upstream's NEWEST arm64-v8a release, against the live index.
