@@ -368,7 +368,7 @@
         "default": true
       },
       {
-        "_doc": "Projects \u2014 what is being worked on, travelled to, or studied. Health leads because it is the project that outlives all the others, and because this is now the ONLY MyHealth surface in the constellation: the SuperApp page was deleted and its dashboard icon deep-links here instead. Health is a container tab like Buro > Fin \u2014 Summary, Timeline and Configs are three views of one body, not three separate projects. Studying follows as the standing project; Trips is the one with a date, and History is its record. Studying was a bottom-nav section of its own until it became a tab here \u2014 study management is a project, and the freed bar slot went to Wallet, which is a different app entirely.",
+        "_doc": "Projects \u2014 what is being worked on, travelled to, or studied. Health leads because it is the project that outlives all the others, and because this is now the ONLY MyHealth surface in the constellation: the SuperApp page was deleted and its dashboard icon deep-links here instead. Health is a container tab like Buro > Fin \u2014 Summary, Timeline and Configs are three views of one body, not three separate projects. Studying follows as the standing project and Trips is the one with a date. There was a History tab after them: a travel record that never held a single trip, whose page was one note saying so, and which cost a tab slot in every session to say nothing. A record with no entries is not a record, and the trip data that would fill one lives in Cloud Wallet's bookings; when there is a history to show it will be a page under Trips, not a permanent empty tab beside it. Studying was a bottom-nav section of its own until it became a tab here \u2014 study management is a project, and the freed bar slot went to Wallet, which is a different app entirely.",
         "id": "projects",
         "label": "Projects",
         "icon": "ic_nav_trips",
@@ -406,11 +406,6 @@
             "id": "trips",
             "label": "Trips",
             "icon": "ic_nav_trips"
-          },
-          {
-            "id": "history",
-            "label": "History",
-            "icon": "ic_map_pin"
           }
         ]
       },
