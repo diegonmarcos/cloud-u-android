@@ -1052,6 +1052,16 @@ class AggregatorStackFragment : Fragment(),
      *  the body; without this every tap would re-poll every channel. */
     private val ntfyCache = mutableMapOf<String, NtfyResult>()
 
+    /** The newest timestamp we have actually MEASURED for [topic], or
+     *  [Long.MIN_VALUE] when we have not measured it at all.
+     *
+     *  Sort=Time orders the channel boxes on this. Unmeasured and unreachable
+     *  both answer MIN_VALUE and therefore sort last, which is the honest
+     *  placement: a channel we could not read has made no claim about when it
+     *  last spoke, so it may not be ranked as though it had. */
+    private fun newestMeasured(topic: String): Long =
+        ntfyCache[topic]?.takeIf { it.ok }?.rows?.maxOfOrNull { it.ts } ?: Long.MIN_VALUE
+
     /** Which groups the user has folded away, keyed on the same stable
      *  identity we grouped on. Held on the fragment, not on the view, because
      *  every toggle tap rebuilds the body from scratch — a collapse state
@@ -1243,10 +1253,22 @@ class AggregatorStackFragment : Fragment(),
      *                 notifications".
      *
      * The topic list comes from the baked `ui.ntfy` catalog, so a channel added
-     * upstream lands here by data on the next build. Ordering is alphabetical
-     * under both Sort modes: a topic whose poll has not landed yet has no
-     * timestamp to sort on, and groups that reshuffle as fetches complete are
-     * worse than groups that hold still and carry their age in the chip.
+     * upstream lands here by data on the next build.
+     *
+     * ORDERING OBEYS THE SORT TOGGLE, like every other box on the page. It used
+     * to be alphabetical under BOTH modes, which made this the one construction
+     * site where Sort=Time did nothing — and since every Notify tab draws its
+     * channels through here, the page the owner actually looked at was ordered
+     * by name on all six of them while build.json said "time" on all six.
+     *
+     * The reason it was alphabetical is still true and is still respected: a
+     * channel whose poll has not landed has no timestamp to claim, and groups
+     * that reshuffle under the thumb as fetches complete are worse than groups
+     * that hold still and carry their age in the chip. So the order is decided
+     * ONCE, here, from the last measurement [ntfyCache] holds, and the poll
+     * landing never re-sorts. A never-measured channel sorts after every
+     * measured one rather than pretending to be either fresh or stale, and the
+     * pull-down gesture is what promotes it once a measurement exists.
      */
     private fun renderNtfyGroups(
         ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel,
@@ -1271,7 +1293,16 @@ class AggregatorStackFragment : Fragment(),
         }
         // Every card is drawn first, then ONE request fills them all in.
         val slots = LinkedHashMap<String, Pair<TextView, LinearLayout>>()
-        for (topic in topics.sorted()) {
+        // By LABEL, not by topic id: "sort by app" means the name the reader
+        // can see, which is what [renderGroups] already orders its boxes by.
+        val byLabel = compareBy(String.CASE_INSENSITIVE_ORDER) { t: String ->
+            com.diegonmarcos.superapp.rss.NtfyCatalog.labelOf(t)
+        }
+        val ordered =
+            if (sortMode == "app") topics.sortedWith(byLabel)
+            else topics.sortedWith(
+                compareByDescending<String> { newestMeasured(it) }.then(byLabel))
+        for (topic in ordered) {
             val group = NotifGroup(
                 key   = topic,
                 label = com.diegonmarcos.superapp.rss.NtfyCatalog.labelOf(topic),
