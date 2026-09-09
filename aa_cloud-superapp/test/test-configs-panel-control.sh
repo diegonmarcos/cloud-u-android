@@ -31,6 +31,7 @@ GRADLE="$APP/app/build.gradle"
 SECTIONS="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/Sections.kt"
 PAGES="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt"
 NAV="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherNavController.kt"
+TABS="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
 CONTROLS="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/DeviceControls.kt"
 FRAGMENT="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/ControlFragment.kt"
 
@@ -39,15 +40,23 @@ check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
+order = [p['id'] for p in pages]
 panel = next((p for p in pages if p['id'] == 'panel'), None)
 if panel is None:                    print('no `panel` page in config')
-elif panel.get('tabs') != ['notify', 'control']:
+elif panel.get('tabs') != ['control', 'notify']:
                                      print('tabs = %r' % (panel.get('tabs'),))
 elif panel.get('hidden'):            print('the strip itself must stay listed')
-elif pages[0]['id'] != 'panel':      print('Panel is not first: %s' % pages[0]['id'])
+elif order[0] != 'panel':            print('Panel is not first: %s' % order[0])
+# Panel is the page opened many times a day and About is the page opened once
+# ever, so Panel ahead of About is the ordering rule that outlives "Panel is
+# first" — asserted separately, or moving one entry above Panel would quietly
+# take this with it.
+elif 'about' not in order:           print('no `about` page to order against')
+elif order.index('panel') > order.index('about'):
+                                     print('Panel sits after About: %r' % order)
 else:                                print('OK')
 PY
-)" "panel: tabs = [notify, control], visible, first in the Configs grid"
+)" "panel: tabs = [control, notify], visible, first in the Configs grid and ahead of About"
 
 echo "== T2: both tabs are REAL hidden pages of the SAME section, never the owner =="
 # The strip contract established in 07964787e: a tab is a declared page, so
@@ -238,6 +247,32 @@ grep -q 'pageId == "notify"' "$PAGES"            && r_fail="$r_fail notify:shado
 [ -z "$r_fail" ] \
   && ok "config/control → ControlFragment; config/notify left to the mirror" \
   || bad "page routing wrong:$r_fail"
+
+echo "== T12: the tab a strip OPENS ON is the first declared tab, and nothing else =="
+# "Control is first" and "Panel opens on Control" are only the same statement
+# while startIndex's fallback stays "the first tab with a fragment". If someone
+# adds a default_tab flag, the array and the flag become two answers to one
+# question and the reorder above silently stops deciding anything.
+land_fail=""
+grep -q 'pages.indexOfFirst { it.action.isBlank() }.coerceAtLeast(0)' "$TABS" \
+  || land_fail="$land_fail no-first-tab-fallback"
+grep -qE '"default_tab"|"initial_tab"|"selected_tab"' "$BJ" \
+  && land_fail="$land_fail second-source-of-truth-in-json"
+grep -qE 'defaultTab|initialTab' "$SECTIONS" \
+  && land_fail="$land_fail second-source-of-truth-in-kotlin"
+# WHICH design this app has, pinned so changing it has to be deliberate: the
+# strip is restored to the tab the user left, from an IN-MEMORY map on the
+# controller — so the first-tab rule decides a cold open, and the rest of the
+# process gets the last tab looked at. A move to SharedPreferences would make
+# a phone that once opened Notify open Notify forever, which is a different
+# product decision and must not arrive as a refactor.
+grep -q 'activeTabFor(tabKey)' "$TABS" \
+  || land_fail="$land_fail strip-does-not-restore"
+grep -q 'private val activeTabBySection = mutableMapOf<String, String>()' "$NAV" \
+  || land_fail="$land_fail tab-memory-is-no-longer-in-memory"
+[ -z "$land_fail" ] \
+  && ok "first declared tab is the landing tab; last-viewed tab is remembered per process only" \
+  || bad "the declared tab order does not decide what opens:$land_fail"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
