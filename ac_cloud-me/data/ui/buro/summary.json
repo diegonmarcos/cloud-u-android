@@ -1,0 +1,57 @@
+[
+  {
+    "kind": "note",
+    "title": "One card per tab",
+    "body": "Each card says what its tab holds and where that comes from — kept by the owner, mocked until a feed exists, or deliberately unreadable from here. No card carries a figure: a card is JSON baked at build time and could only ever show a value that was true when it was typed, and two of these tabs have nothing to count at all, where a zero would claim a measurement nobody took. Tap a card to read the real thing."
+  },
+  {
+    "kind": "cards",
+    "items": [
+      {
+        "title": "Wallet",
+        "subtitle": "Pay · IDs · Vcards · Events",
+        "icon": "ic_wallet",
+        "accent": "#42A5F5",
+        "body": "Kept by the owner, and the only tab here with records of its own. Payment cards, identity and civil documents, contact cards, and the tickets, passes and bookings under Events — one JSON file per record, shipped as assets and browsed as folders, so the tab works with no network and no account.",
+        "meta": [
+          { "label": "Source", "value": "the owner" },
+          { "label": "Holds", "value": "data/files/wallet" }
+        ],
+        "target": "page:buro/wallet"
+      },
+      {
+        "title": "Docs",
+        "subtitle": "One folder per life-admin domain",
+        "icon": "ic_p_folder",
+        "accent": "#7E57C2",
+        "body": "Empty here, and meant to be. Housing, vehicle, insurance and the rest are folders, not records: nothing about a contract, a policy or a payment is stored on the phone, so the tab has no documents to count and each card opens the file app at the matching folder instead.",
+        "meta": [
+          { "label": "Source", "value": "none here — the files live in Cloud IDE" }
+        ],
+        "target": "page:buro/docs"
+      },
+      {
+        "title": "Fin",
+        "subtitle": "Acct · Budget · Portfolio",
+        "icon": "ic_fin",
+        "accent": "#66BB6A",
+        "body": "Mocked, not measured. The accounting dashboard draws three views of one question, but the figures behind them are still the beta fixture libs:fin was written against rather than a live aggregator feed — so read that screen as the shape of the answer, not the answer. Opens on Acct.",
+        "meta": [
+          { "label": "Source", "value": "ui.myfin_mock — placeholder, no live feed yet" }
+        ],
+        "target": "page:buro/fin"
+      },
+      {
+        "title": "Vault",
+        "subtitle": "Credentials",
+        "icon": "ic_vault",
+        "accent": "#FFA726",
+        "body": "Empty by design, and not waiting for a source to arrive. Passwords and identities live in Cloud Vault, which holds the only copy and the only key; Cloud Me never reads them, because counting them would mean unlocking the vault from here.",
+        "meta": [
+          { "label": "Source", "value": "none — held by Cloud Vault" }
+        ],
+        "target": "page:buro/vault"
+      }
+    ]
+  }
+]

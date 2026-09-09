@@ -8,7 +8,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 python3 - <<'PY'
-import json, os, sys
+import json, os, re, sys
 
 ui   = json.load(open("build.json"))["ui"]
 secs = ui["sections"]
@@ -17,7 +17,7 @@ bad  = []
 
 # section id → every navigable page id (tabs and sub-tabs, at any depth)
 def declared(pages, folder):
-    """(page id, content file or None) for every page below `pages`.
+    """(page id, content file or None, label) for every page below `pages`.
 
     A container tab holds no content of its own and its children live one
     folder deeper, so the folder path IS the tab path — and it recurses,
@@ -27,15 +27,15 @@ def declared(pages, folder):
     for p in pages:
         subs = p.get("pages", [])
         if subs:
-            yield p["id"], None
+            yield p["id"], None, p.get("label", "")
             yield from declared(subs, f"{folder}/{p['id']}")
         else:
-            yield p["id"], f"{folder}/{p['id']}.json"
+            yield p["id"], f"{folder}/{p['id']}.json", p.get("label", "")
 
-pages, files = {}, {}
+pages, files, summaries = {}, {}, {}
 for s in secs:
     ids = []
-    for pid, f in declared(s.get("pages", []), f"data/ui/{s['id']}"):
+    for pid, f, label in declared(s.get("pages", []), f"data/ui/{s['id']}"):
         ids.append(pid)
         if f is None:
             continue
@@ -43,6 +43,8 @@ for s in secs:
             bad.append(f"missing page file {f}")
         else:
             files[f] = json.load(open(f))
+            if label == "Summary":
+                summaries[f] = files[f]
     # Sections.kt::Section.page() resolves an id against the tab strip AND
     # every sub-strip in ONE flat list, so two pages in a section sharing an
     # id are not two destinations — the second is unreachable and the first
@@ -71,6 +73,38 @@ def walk(o):
         for v in o: yield from walk(v)
 
 blocks = [o for st in files.values() for o in walk(st)]
+
+# A Summary page is the one place in the app that speaks ABOUT other pages
+# instead of showing their data, which is exactly where a page with nothing in
+# it gets misreported. Two ways that happens, both silent:
+#
+#   • a card quotes `0` — but a summary card is JSON baked at build time, so it
+#     cannot have measured anything. A zero there is a claim that a count was
+#     taken and came back empty, when in fact no source was ever wired up.
+#   • a card says nothing about where its subject comes from, so a reader
+#     cannot tell a real feed from a hand-written list from a placeholder.
+#
+# Requiring a `Source` meta row on every summary card fixes both: naming the
+# source is what forces "none yet" to be written down rather than shown as a
+# zero. Buro > Summary and Projects > Health > Summary > Overview both live by
+# this rule; the check is what keeps the next one honest too.
+ZERO = re.compile(r"(?<![\w.,])0(?![\w.,])")
+for path, stack in sorted(summaries.items()):
+    for card in (o for b in walk(stack) if b.get("kind") == "cards"
+                 for o in b.get("items", [])):
+        who = f"{path}: card '{card.get('title', '?')}'"
+        sources = [m.get("value", "") for m in card.get("meta", [])
+                   if str(m.get("label", "")).lower() == "source"]
+        if not sources:
+            bad.append(f"{who} declares no Source meta row — say where it comes from, "
+                       f"'none yet' included")
+        elif not str(sources[0]).strip():
+            bad.append(f"{who} has an empty Source value")
+        spoken = [str(card.get(k, "")) for k in ("title", "subtitle", "body")]
+        spoken += [f"{m.get('label','')} {m.get('value','')}" for m in card.get("meta", [])]
+        if any(ZERO.search(t) for t in spoken):
+            bad.append(f"{who} shows a bare 0 — a summary card measures nothing, "
+                       f"so say it has no data instead")
 
 for t in {o["target"] for o in list(walk(secs)) + blocks
           if isinstance(o.get("target"), str) and o["target"]}:

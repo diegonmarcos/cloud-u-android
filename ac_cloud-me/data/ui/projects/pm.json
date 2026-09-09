@@ -41,35 +41,65 @@
         "subtitle": "Agenda · Day · ToDo",
         "accent": "#42A5F5",
         "body": "The next thirty days of events and every open VTODO, both from the same CalDAV account Agenda reads.",
-        "target": "page:agenda/todo"
+        "target": "page:agenda/todo",
+        "meta": [
+          {
+            "label": "Source",
+            "value": "CalDAV — the account Agenda reads"
+          }
+        ]
       },
       {
         "title": "Myfin",
         "subtitle": "Personal finance",
         "accent": "#66BB6A",
         "body": "Net worth, the month's income and spending, accounts, categories and recent transactions — the accounting dashboard under Buro.",
-        "target": "page:buro/fin"
+        "target": "page:buro/fin",
+        "meta": [
+          {
+            "label": "Source",
+            "value": "ui.myfin_mock — placeholder, no live feed yet"
+          }
+        ]
       },
       {
         "title": "Myhealth",
         "subtitle": "Health & fitness",
         "accent": "#EC407A",
         "body": "Steps, sleep, resting heart rate and workouts, read locally from Health Connect. The only MyHealth surface in the constellation.",
-        "target": "page:projects/health"
+        "target": "page:projects/health",
+        "meta": [
+          {
+            "label": "Source",
+            "value": "Health Connect"
+          }
+        ]
       },
       {
         "title": "Nav Maps Tracker",
         "subtitle": "Cloud-Nav location tracker",
         "accent": "#7E57C2",
         "body": "Trips, distance and places logged. The track itself lives in Cloud Nav; this is the way into it.",
-        "target": "extapp:cloud-nav"
+        "target": "extapp:cloud-nav",
+        "meta": [
+          {
+            "label": "Source",
+            "value": "Cloud Nav"
+          }
+        ]
       },
       {
         "title": "Studying",
         "subtitle": "Courses and hours",
         "accent": "#FFA726",
         "body": "The standing project — its own tab in this section.",
-        "target": "page:projects/studying"
+        "target": "page:projects/studying",
+        "meta": [
+          {
+            "label": "Source",
+            "value": "none yet"
+          }
+        ]
       }
     ]
   }
