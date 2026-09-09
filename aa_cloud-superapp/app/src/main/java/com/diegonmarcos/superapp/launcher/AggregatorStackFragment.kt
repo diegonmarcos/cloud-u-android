@@ -33,6 +33,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.lifecycle.lifecycleScope
 import com.diegonmarcos.superapp.apps.PhoneTaxonomy
 import com.diegonmarcos.superapp.ui.Haptics
@@ -111,6 +112,30 @@ class AggregatorStackFragment : Fragment(),
     // blank while looking like they had simply loaded nothing.
     private val originCards   = mutableListOf<Pair<String, View>>()
     private val bodyRefreshers = mutableListOf<() -> Unit>()
+
+    // ── pull-down to refresh ───────────────────────────────────────────
+    //
+    // The gesture re-runs [bodyRefreshers] — the same re-render a filter tap
+    // does — with the ntfy cards forced back to the network. It is armed only
+    // where that list is non-empty, because a spinner over a page with nothing
+    // to re-ask is a control reporting a fetch it never made, and this codebase
+    // already treats a control that misreports state as a defect.
+    private var refreshHost: SwipeRefreshLayout? = null
+    /** Outstanding channel polls for the refresh in flight. The spinner stops
+     *  when this reaches zero — or when the watchdog fires, because
+     *  `View.post` silently drops its runnable on a detached view and a
+     *  decrement that never happens is a spinner that never stops. */
+    private var refreshPending = 0
+    /** Every notification id DRAWN on this page since the last render. The
+     *  refresh diffs it against [refreshBefore] so the outcome line can say
+     *  how much actually arrived — "refreshed" alone cannot distinguish a
+     *  fetch that brought something from one that brought nothing. */
+    private val pageRowIds = LinkedHashSet<String>()
+    private var refreshBefore: Set<String> = emptySet()
+    /** Set for the duration of a refresh render pass: [renderNtfyGroups] must
+     *  go back to the network instead of repainting [ntfyCache], which is
+     *  what would make the gesture answer with what it already had. */
+    private var ntfyForceRepoll = false
     /** The vertical column holding the cards — where the "everything is
      *  filtered out" note is appended. */
     private var cardColumn: LinearLayout? = null
@@ -172,6 +197,37 @@ class AggregatorStackFragment : Fragment(),
         }
         scroll.addView(column)
         cardColumn = column
+        // The pull-down host, wrapping the ScrollView and nothing else.
+        //
+        // NESTED SCROLLING: SwipeRefreshLayout takes its first non-spinner
+        // child as the drag target and asks it canScrollVertically(-1) before
+        // it claims a drag (SwipeRefreshLayout.canChildScrollUp). ScrollView
+        // answers that correctly, so a drag anywhere below the top scrolls the
+        // page as it always did and only a pull from the very top arms the
+        // spinner. It must stay a SINGLE child for that lookup to find the
+        // ScrollView — the cards go in the column inside it, never in here.
+        val host = SwipeRefreshLayout(ctx).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
+            addView(scroll)
+            setColorSchemeColors(SIGNAL_OK)
+            setOnRefreshListener { startRefresh() }
+            // DISARMED until the panels are built and we know this page has
+            // something re-queryable. Every early return below leaves it this
+            // way on purpose: "section not found" and "no panels" are pages
+            // with no source at all, and a gesture that spun there would be
+            // claiming a fetch that cannot exist.
+            isEnabled = false
+        }
+        refreshHost = host
+        // Nothing has been drawn yet, so the previous view's row ids are not
+        // this view's; keeping them would have the first pull report every
+        // notification on the page as an arrival.
+        pageRowIds.clear()
+        refreshBefore = emptySet()
+        refreshPending = 0
         // Dropped before anything can return early: these name views from the
         // PREVIOUS onCreateView, and a stale reference would have an archive
         // click filing a box into a destroyed container.
@@ -181,12 +237,12 @@ class AggregatorStackFragment : Fragment(),
         val sec = Sections.byId(sectionId)
         if (sec == null) {
             column.addView(emptyHint(ctx, "Section not found: $sectionId"))
-            return scroll
+            return host
         }
         val panels = Sections.aggregatorStackFor(sec, mode)
         if (panels.isEmpty()) {
             column.addView(emptyHint(ctx, "No panels for ${sec.label} · $mode"))
-            return scroll
+            return host
         }
         // Kept for the whole life of the view: an inbox card decides what it is
         // allowed to speak for by looking at what its SIBLINGS on this page are
@@ -237,6 +293,13 @@ class AggregatorStackFragment : Fragment(),
         column.addView(archive)
         syncArchiveHeader()
         if (filters.isNotEmpty()) applySource(ctx, filters)
+        // ARM THE GESTURE, and only now: [bodyRefreshers] is what a refresh
+        // actually re-runs, so a page that registered none has no way to fetch
+        // anything and must not offer a gesture that would report otherwise.
+        // Every Notify tab registers several (the phone card, the cloud card,
+        // each inbox card); a link-grid or dashboard page registers none and
+        // simply does not pull.
+        host.isEnabled = bodyRefreshers.isNotEmpty()
         // A cross-page `page:<section>/<page>#<anchor>` link left its fragment
         // waiting for whichever stack answers to that page. Two posts deep:
         // the first waits for the first layout pass (offsets are all zero
@@ -246,7 +309,7 @@ class AggregatorStackFragment : Fragment(),
         StackAnchors.consumePending("$sectionId/$mode")?.let { id ->
             scroll.post { anchors.dispatch(StackAnchors.PREFIX + id) }
         }
-        return scroll
+        return host
     }
 
     /** Current choice for the filter with [id], or [fallback] if the page
@@ -402,13 +465,26 @@ class AggregatorStackFragment : Fragment(),
         showMode     = selection(ctx, filters, "show", showMode)
         toolsMode    = selection(ctx, filters, FILTER_TOOLS, "all")
         servicesMode = selection(ctx, filters, FILTER_SERVICES, "all")
-        // Each card is about to rebuild its bodies and re-file its own archived
-        // boxes. Emptying the Archive first is what stops it growing a second
-        // copy of every box per toggle tap.
+        rebuildBodies()
+        applySource(ctx, filters)
+    }
+
+    /**
+     * Re-render every registered notification body. The ONE path for it, shared
+     * by a toggle tap and by the pull-down gesture, because both do exactly the
+     * same thing to the page and the two rules below have to hold for both.
+     *
+     * Emptying the Archive first is what stops a rebuild growing a second copy
+     * of every archived box, since each card re-files its own as it draws.
+     * Clearing [pageRowIds] is the same rule for the refresh's arithmetic: the
+     * ids are re-collected as the bodies draw, so a stale set would leave a
+     * later pull comparing against notifications that are no longer on screen.
+     */
+    private fun rebuildBodies() {
         archiveBox?.removeAllViews()
+        pageRowIds.clear()
         for (refresh in bodyRefreshers) refresh()
         syncArchiveHeader()
-        applySource(ctx, filters)
     }
 
     /** Keep a phone-stream app under the two taxonomy rows. Both default to
@@ -1321,8 +1397,12 @@ class AggregatorStackFragment : Fragment(),
             placeGroup(ctx, block, topic, body)
 
             val cached = ntfyCache[topic]
+            // Paint the last measurement first so the box does not flash empty
+            // while the poll is out, but still QUEUE the poll when the user
+            // asked for fresh data: repainting a cache in answer to a pull-down
+            // is the spinner reporting a fetch that never happened.
             if (cached != null) paintNtfyGroup(ctx, state, rowsBox, cached, topic, panel.limit)
-            else slots[topic] = state to rowsBox
+            if (cached == null || ntfyForceRepoll) slots[topic] = state to rowsBox
         }
         if (slots.isEmpty()) return
 
@@ -1337,6 +1417,12 @@ class AggregatorStackFragment : Fragment(),
         // Grey cards that move around between visits are the hardest kind of
         // broken to report, and one request cannot produce them.
         val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        // Whether THIS card's poll is one the spinner is waiting on, decided
+        // now and carried into the callbacks: by the time they run the refresh
+        // may already be over, and a card drawn by an ordinary render must not
+        // decrement a counter it never incremented.
+        val counted = refreshHost?.isRefreshing == true
+        if (counted) refreshPending++
         runCatching {
             executor.execute {
                 val byTopic = pollTopics(slots.keys.toList())
@@ -1346,9 +1432,11 @@ class AggregatorStackFragment : Fragment(),
                         ntfyCache[topic] = result
                         paintNtfyGroup(ctx, slot.first, slot.second, result, topic, panel.limit)
                     }
+                    if (counted) ntfyPollSettled()
                 }
             }
         }.onFailure {
+            if (counted) ntfyPollSettled()
             // Could not even schedule the poll — say so rather than leaving
             // the rows reading "checking…" forever, which looks like progress.
             for ((_, slot) in slots) {
@@ -1398,7 +1486,10 @@ class AggregatorStackFragment : Fragment(),
         }
         state.text = "${rows.size} · ${ago(System.currentTimeMillis() - rows.first().ts)}"
         state.setTextColor(SIGNAL_OK)
-        for (r in rows) rowsBox.addView(notifRowView(ctx, r, ""))
+        for (r in rows) {
+            rowsBox.addView(notifRowView(ctx, r, ""))
+            if (r.id.isNotBlank()) pageRowIds += r.id
+        }
     }
 
     /**
@@ -1519,7 +1610,10 @@ class AggregatorStackFragment : Fragment(),
                 else GroupState("${g.rows.size} · ${ago(now - g.newest)}", 0x99FFFFFF.toInt())
             val block = groupBlock(ctx, g, chip, body)
             val rows = block.findViewWithTag<LinearLayout>(GROUP_ROWS_TAG)
-            for (r in g.rows) rows?.addView(notifRowView(ctx, r, g.launchPackage))
+            for (r in g.rows) {
+                rows?.addView(notifRowView(ctx, r, g.launchPackage))
+                if (r.id.isNotBlank()) pageRowIds += r.id
+            }
             placeGroup(ctx, block, g.key, body)
         }
         // Counted as rendered even when every box went to the Archive: the user
@@ -2878,6 +2972,114 @@ class AggregatorStackFragment : Fragment(),
         render()
     }
 
+    // ── pull-down to refresh ───────────────────────────────────────────
+
+    /**
+     * The gesture's whole job: re-ask every source this page has, then SAY what
+     * came back.
+     *
+     * The watermark is deliberately NOT advanced here. [visitSeenAt] answers
+     * "what arrived since you were last on this page", and moving it on a
+     * refresh would clear every "N new" chip at the exact moment the refresh
+     * had earned them — the gesture would erase its own result.
+     *
+     * Neither is [ntfyCache] cleared, though every channel IS re-polled: the
+     * cache is also the ordering key for Sort=Time, so dropping it would send
+     * every channel box back to alphabetical on the one gesture meant to bring
+     * the newest to the top, and would blank the boxes while the poll was out.
+     */
+    private fun startRefresh() {
+        val host = refreshHost ?: return
+        if (bodyRefreshers.isEmpty()) {
+            // Belt and braces — the gesture is disarmed on such a page in
+            // onCreateView. Nothing here can be re-queried, so nothing is
+            // claimed and the spinner stops immediately rather than animating
+            // over a fetch that never happened.
+            host.isRefreshing = false
+            return
+        }
+        refreshBefore = HashSet(pageRowIds)
+        refreshPending = 0
+        ntfyForceRepoll = true
+        rebuildBodies()
+        ntfyForceRepoll = false
+        // WATCHDOG. Every scheduled poll decrements the counter on both its
+        // success and its failure path, but `View.post` silently drops its
+        // runnable on a detached view, and a decrement that never happens is a
+        // spinner that never stops — which reads as a hang and is the one
+        // failure this gesture would be judged by.
+        host.postDelayed({
+            if (host.isRefreshing) {
+                refreshPending = 0
+                finishRefresh(timedOut = true)
+            }
+        }, REFRESH_TIMEOUT_MS)
+        // The stores are read synchronously, so a page with no channel poll out
+        // is already done and must not sit spinning until the watchdog.
+        if (refreshPending == 0) finishRefresh(timedOut = false)
+    }
+
+    /** One channel poll landed, or failed to be scheduled. */
+    private fun ntfyPollSettled() {
+        if (refreshPending > 0) refreshPending--
+        if (refreshPending == 0 && refreshHost?.isRefreshing == true) {
+            finishRefresh(timedOut = false)
+        }
+    }
+
+    /**
+     * Stop the spinner and state the OUTCOME — which is a different claim from
+     * "done", and the difference is the point.
+     *
+     * A refresh that fetched nothing must not read like one that fetched
+     * something, so the line counts the notifications that were NOT on the page
+     * before this pull. And a channel we could not reach is not a channel that
+     * was quiet: an unreachable count is reported separately and takes the grey
+     * that means "we did not measure", never the green that means "nothing is
+     * wrong". A gesture that always says success is exactly the misreporting
+     * control this page was built to stop being.
+     */
+    private fun finishRefresh(timedOut: Boolean) {
+        val host = refreshHost ?: return
+        host.isRefreshing = false
+        val column = cardColumn ?: return
+        val ctx = column.context
+        val fresh = pageRowIds.count { it !in refreshBefore }
+        // Only channels THIS page polled are in the cache, so this is a count
+        // about the tab in front of the reader and not about the fleet.
+        val unreachable = ntfyCache.count { !it.value.ok }
+        val at = android.text.format.DateFormat.getTimeFormat(ctx)
+            .format(java.util.Date())
+        val outcome = when {
+            timedOut  -> "did not finish · sources did not answer"
+            fresh > 0 -> "$fresh new"
+            else      -> "nothing new"
+        }
+        // NOT called "unread": on this page unread is a per-notification state
+        // the reader controls by swiping, and reusing the word for "we could
+        // not reach the publisher" would collide with it in the one place both
+        // could plausibly appear.
+        val notReached = if (unreachable > 0)
+            " · $unreachable channel${if (unreachable == 1) "" else "s"} not reached" else ""
+        // Grey wins whenever any part of the answer is unknown: an incomplete
+        // measurement may not be painted as a clean result just because the
+        // half that did answer had nothing to report.
+        val color = when {
+            timedOut || unreachable > 0 -> SIGNAL_UNKNOWN
+            fresh > 0                   -> SIGNAL_OK
+            else                        -> 0x88FFFFFF.toInt()
+        }
+        // One line, reused rather than appended: a refresh note per pull would
+        // push the notifications the pull just fetched off the top of the page.
+        val note = column.findViewWithTag<TextView>(REFRESH_NOTE_TAG)
+            ?: stateLine(ctx, "", color).also {
+                it.tag = REFRESH_NOTE_TAG
+                column.addView(it, 0)
+            }
+        note.text = "Refreshed $at · $outcome$notReached"
+        note.setTextColor(color)
+    }
+
     /** A non-empty store that rendered nothing. Only Show=Unread can do this —
      *  sorting never removes a row — so the label needs no explanation, only
      *  the count it is hiding, which is the one thing here that is data. */
@@ -2975,6 +3177,15 @@ class AggregatorStackFragment : Fragment(),
         private const val FILTER_ARCHIVE_OPEN = "__archive_open"
         private const val ARCHIVE_LABEL         = "Archive"
         private const val ARCHIVE_RESTORE_LABEL = "Restore"
+
+        /** Marks the pull-down outcome line so each refresh REPLACES it, the
+         *  same tag-lookup the source-empty note and the group chips use. */
+        private const val REFRESH_NOTE_TAG = "stack_refresh_note"
+        /** How long a pull-down may keep the spinner up before it gives up and
+         *  says so. Comfortably past the poll's own 4s connect timeout, so a
+         *  slow-but-alive mesh reports its real answer rather than a timeout;
+         *  this only catches the case where a callback never runs at all. */
+        private const val REFRESH_TIMEOUT_MS = 20_000L
 
         private const val TAG = "AggregatorStack"
 

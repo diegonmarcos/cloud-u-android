@@ -899,6 +899,17 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.drawerlayout:drawerlayout:1.2.0'
     implementation 'androidx.fragment:fragment-ktx:1.8.5'
+    // SwipeRefreshLayout — the pull-down gesture on the Notify pages
+    // (AggregatorStackFragment). The platform widget rather than a touch
+    // listener of our own: it already owns the parts that are easy to get
+    // subtly wrong — it asks its child canScrollVertically(-1) before it
+    // claims the drag, so a mid-page drag still scrolls the ScrollView and
+    // only a pull from the very top arms the spinner. 1.1.0, not the 1.2.0
+    // release: 1.1.0 is the long-settled pin, needs only androidx.core 1.1.0
+    // (we ship core-ktx 1.13.1) and pulls no new transitive artifacts, and
+    // this module's toggles are the kind that must not cost a resolution
+    // surprise on a build we cannot run locally.
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
     // EncryptedSharedPreferences for ConfigsPrefs (imported bulk-config
     // blob). Same alpha pin libs:mail uses for JmapPrefs.
     implementation 'androidx.security:security-crypto:1.1.0-alpha06'
