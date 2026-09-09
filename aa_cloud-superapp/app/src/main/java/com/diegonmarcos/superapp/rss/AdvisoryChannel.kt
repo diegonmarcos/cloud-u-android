@@ -31,8 +31,6 @@ import java.net.URL
  */
 object AdvisoryChannel {
 
-    private const val BASE = "https://rss.diegonmarcos.com"
-
     /** One message as the channel view shows it. [link] is non-null when the
      *  message carries something installable. */
     data class Message(
@@ -62,10 +60,21 @@ object AdvisoryChannel {
      * answers and only one of them means "keep waiting".
      */
     fun recent(topic: String, days: Int = 30): List<Message> {
-        val c = (URL("$BASE/$topic/json?poll=1&since=${days}d").openConnection()
-            as HttpURLConnection).apply {
+        // HOURS, NOT DAYS. ntfy's `since` accepts s/m/h, a Unix timestamp, a
+        // message id or `all` — `d` is none of them, and `since=30d` answered
+        // HTTP 400 {"code":40008,"error":"invalid since parameter"} on every
+        // call (measured against the live server). The window is unchanged;
+        // only the unit ntfy actually parses is.
+        val c = (URL("${NtfyCatalog.readBaseUrl()}/$topic/json?poll=1&since=${days * 24}h")
+            .openConnection() as HttpURLConnection).apply {
             connectTimeout = 10_000
             readTimeout = 15_000
+            // NO REDIRECTS. ntfy answers this directly, so a 3xx means we are
+            // talking to something else. Followed, the public edge's SSO bounce
+            // becomes HTTP 200 full of login HTML that parses to zero messages
+            // — a channel that is refusing us would render as a channel with
+            // nothing to say, which is the one thing this screen must never do.
+            instanceFollowRedirects = false
         }
         val code = c.responseCode
         val body = (if (code in 200..299) c.inputStream else c.errorStream)
