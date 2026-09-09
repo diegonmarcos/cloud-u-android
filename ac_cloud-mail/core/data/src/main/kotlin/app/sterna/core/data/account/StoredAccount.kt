@@ -138,9 +138,14 @@ data class StoredAccount(
             manual: List<StoredIdentity>,
             server: List<StoredIdentity>,
         ): List<StoredIdentity> {
-            // signatureHtml is part of the key: differing only there is a genuine difference.
-            fun key(i: StoredIdentity) =
-                listOf(i.email.trim().lowercase(), i.name, i.signature, i.signatureHtml)
+            // signatureHtml is part of the key: differing only there is a genuine difference. So are
+            // the named signatures and the default among them (#206) — an override whose ONLY edit
+            // was adding a second signature is not a frozen copy of the server's identity, and
+            // leaving them out of the key would delete that edit on the next save.
+            fun key(i: StoredIdentity) = listOf(
+                i.email.trim().lowercase(), i.name, i.signature, i.signatureHtml,
+                i.signatures, i.defaultSignatureId,
+            )
             val serverKeys = server.map(::key).toSet()
             return manual
                 .filterNot { key(it) in serverKeys }

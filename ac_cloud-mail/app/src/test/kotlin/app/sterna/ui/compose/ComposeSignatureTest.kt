@@ -33,24 +33,51 @@ class ComposeSignatureTest {
         assertEquals("", signatureBlock("", delimiter = true))
         assertEquals("", signatureBlock("   \n ", delimiter = true))
         assertEquals("", bodyWithSignature(quoted = "", signature = "", delimiter = true))
+        // The DIVIDER is not part of the signature block, so it is still written: it says where the
+        // owner's words stop, which is true of a reply from an identity that has no signature too.
         assertEquals(
-            "\n\nOn …, Alice wrote:\n> hi",
+            "\n\n---\nOn …, Alice wrote:\n> hi",
             bodyWithSignature("\n\nOn …, Alice wrote:\n> hi", "", delimiter = true),
         )
     }
 
     @Test fun replyPutsTheSignatureAboveTheQuoteByDefault() {
+        // THE order the owner asked for, whole: the answer being written, the signature, the "---"
+        // divider, then the quoted original. Task #192 pinned this string WITHOUT the divider and
+        // called the behaviour correct, because it only ever compared the signature's position to the
+        // quote's and never to the four-part layout that was actually reported.
         val quote = "\n\nOn …, Alice wrote:\n> hi"
         val body = bodyWithSignature(quote, sig, delimiter = true)
-        assertTrue(body.indexOf("-- ") < body.indexOf("Alice wrote"))
-        assertEquals("\n\n-- \nAlex Rivera\nAcme\n\nOn …, Alice wrote:\n> hi", body)
+        assertTrue(body.indexOf("-- ") < body.indexOf("---"))
+        assertTrue(body.indexOf("---") < body.indexOf("Alice wrote"))
+        assertEquals("\n\n-- \nAlex Rivera\nAcme\n\n---\nOn …, Alice wrote:\n> hi", body)
+    }
+
+    @Test fun theAnswerBeingWrittenSitsAboveTheSignatureAndTheDividerAboveTheQuote() {
+        // The whole reported layout in one assertion, with the answer actually present rather than
+        // implied by "the caret opens at offset 0": reply, signature, divider, quote.
+        val quote = "\n\nOn …, Alice wrote:\n> hi"
+        val body = "Thanks Alice." + bodyWithSignature(quote, sig, delimiter = true)
+        assertEquals(
+            "Thanks Alice.\n" +
+                "\n" +
+                "-- \n" +
+                "Alex Rivera\n" +
+                "Acme\n" +
+                "\n" +
+                "---\n" +
+                "On …, Alice wrote:\n" +
+                "> hi",
+            body,
+        )
     }
 
     @Test fun replyCanPutTheSignatureBelowTheQuote() {
         val quote = "\n\nOn …, Alice wrote:\n> hi"
         val body = bodyWithSignature(quote, sig, signatureBelowQuote = true, delimiter = true)
         assertTrue(body.indexOf("Alice wrote") < body.indexOf("-- "))
-        assertEquals("\n\nOn …, Alice wrote:\n> hi\n\n-- \nAlex Rivera\nAcme", body)
+        // The setting moves the SIGNATURE only: the divider still introduces the quote.
+        assertEquals("\n\n---\nOn …, Alice wrote:\n> hi\n\n-- \nAlex Rivera\nAcme", body)
     }
 
     @Test fun theSignatureIsTrimmedButKeepsItsInnerLineBreaks() {
@@ -105,43 +132,58 @@ class ComposeSignatureTest {
     }
 
     @Test fun onAReplyTheSignatureGoesAboveTheQuote_underTheAnswerBeingWritten() {
-        // The layout a reply opens with: answer, signature, quote. Inserting must reproduce it,
-        // not drop the signature at the very top above what the user has already typed.
-        val quote = "\n\nOn …, Alice wrote:\n> hi"
-        val body = "Hi Bob,$quote"
+        // The layout a reply opens with: answer, signature, divider, quote. Inserting must reproduce
+        // it, not drop the signature at the very top above what the user has already typed — nor, as
+        // it did before #206, at the very END below the quoted original.
+        val body = "Hi Bob,\n\n---\nOn …, Alice wrote:\n> hi"
         assertEquals(
-            "Hi Bob,\n\n-- \nAlex Rivera\nAcme\n\nOn …, Alice wrote:\n> hi",
-            insertSignatureBlock(body, sig, quote, signatureBelowQuote = false, delimiter = true),
+            "Hi Bob,\n\n-- \nAlex Rivera\nAcme\n\n---\nOn …, Alice wrote:\n> hi",
+            insertSignatureBlock(body, sig, signatureBelowQuote = false, delimiter = true),
+        )
+    }
+
+    @Test fun theSignatureStillLandsAboveAQuoteTheOwnerHasEdited() {
+        // THE regression this replaced. The old insert located the quote as a verbatim TAIL of the
+        // body (`body.endsWith(quoted)`); trimming one line off the quotation — the ordinary way a
+        // reply gets written — made that false and appended the signature at the very end, UNDER the
+        // quoted original. The divider is the composer's own mark, so editing the quote cannot move it.
+        val edited = "Hi Bob,\n\n---\nOn …, Alice wrote:\n> hi (rest of the quote deleted)"
+        assertEquals(
+            "Hi Bob,\n\n-- \nAlex Rivera\nAcme\n\n---\nOn …, Alice wrote:\n> hi (rest of the quote deleted)",
+            insertSignatureBlock(edited, sig, delimiter = true),
         )
     }
 
     @Test fun onAReplyTheBelowQuoteSettingPutsItAtTheEnd() {
-        val quote = "\n\nOn …, Alice wrote:\n> hi"
+        val body = "Hi Bob,\n\n---\nOn …, Alice wrote:\n> hi"
         assertEquals(
-            "Hi Bob,$quote\n\n-- \nAlex Rivera\nAcme",
-            insertSignatureBlock("Hi Bob,$quote", sig, quote, signatureBelowQuote = true, delimiter = true),
+            "$body\n\n-- \nAlex Rivera\nAcme",
+            insertSignatureBlock(body, sig, signatureBelowQuote = true, delimiter = true),
         )
     }
 
     @Test fun anUntouchedReplyEndsUpExactlyAsThePrefillWouldHaveBuiltIt() {
+        // The real D5 case: the identity being left had NO signature, so the body this insert is
+        // handed is the prefill built with a blank one. Adding a signature to it must land the body
+        // exactly where the prefill would have put it had that identity been selected all along.
         val quote = "\n\nOn …, Alice wrote:\n> hi"
+        val noSignaturePrefill = bodyWithSignature(quote, "", delimiter = true)
         assertEquals(
             bodyWithSignature(quote, sig, delimiter = true),
-            insertSignatureBlock(quote, sig, quote, delimiter = true),
+            insertSignatureBlock(noSignaturePrefill, sig, delimiter = true),
         )
         assertEquals(
             bodyWithSignature(quote, sig, signatureBelowQuote = true, delimiter = true),
-            insertSignatureBlock(quote, sig, quote, signatureBelowQuote = true, delimiter = true),
+            insertSignatureBlock(noSignaturePrefill, sig, signatureBelowQuote = true, delimiter = true),
         )
     }
 
     @Test fun aQuoteTheUserHasEditedAwayFallsBackToTheEnd() {
         // The tail is no longer the quote we opened with: rather than guess a spot inside the
         // user's text, the block goes at the end where it is visible and movable.
-        val quote = "\n\nOn …, Alice wrote:\n> hi"
         assertEquals(
             "Hi Bob, (quote deleted)\n\n-- \nAlex Rivera\nAcme",
-            insertSignatureBlock("Hi Bob, (quote deleted)", sig, quote, delimiter = true),
+            insertSignatureBlock("Hi Bob, (quote deleted)", sig, delimiter = true),
         )
     }
 
@@ -194,7 +236,7 @@ class ComposeSignatureTest {
         // Signature above the quote (the default): what follows the block must come through.
         val body = bodyWithSignature("\n\nOn …, Alice wrote:\n> hi", sig, delimiter = true)
         assertEquals(
-            "<br><br>-- <br><b>Alex</b><br><br>On …, Alice wrote:<br>&gt; hi",
+            "<br><br>-- <br><b>Alex</b><br><br>---<br>On …, Alice wrote:<br>&gt; hi",
             htmlBodyWithSignature(RichBody.plain(body), sig, "<b>Alex</b>", delimiter = true),
         )
     }
@@ -375,11 +417,11 @@ class ComposeSignatureTest {
     @Test fun withoutTheDelimiterTheReplyLayoutIsUnchanged() {
         val quote = "\n\nOn …, Alice wrote:\n> hi"
         assertEquals(
-            "\n\nAlex Rivera\nAcme\n\nOn …, Alice wrote:\n> hi",
+            "\n\nAlex Rivera\nAcme\n\n---\nOn …, Alice wrote:\n> hi",
             bodyWithSignature(quote, sig, delimiter = false),
         )
         assertEquals(
-            "\n\nOn …, Alice wrote:\n> hi\n\nAlex Rivera\nAcme",
+            "\n\n---\nOn …, Alice wrote:\n> hi\n\nAlex Rivera\nAcme",
             bodyWithSignature(quote, sig, signatureBelowQuote = true, delimiter = false),
         )
     }
@@ -399,17 +441,18 @@ class ComposeSignatureTest {
 
     @Test fun withoutTheDelimiterTheInsertMatchesWhatThePrefillWouldHaveWritten() {
         val quote = "\n\nOn …, Alice wrote:\n> hi"
+        val noSignaturePrefill = bodyWithSignature(quote, "", delimiter = false)
         assertEquals(
             bodyWithSignature("", sig, delimiter = false),
             insertSignatureBlock("", sig, delimiter = false),
         )
         assertEquals(
             bodyWithSignature(quote, sig, delimiter = false),
-            insertSignatureBlock(quote, sig, quote, delimiter = false),
+            insertSignatureBlock(noSignaturePrefill, sig, delimiter = false),
         )
         assertEquals(
             bodyWithSignature(quote, sig, signatureBelowQuote = true, delimiter = false),
-            insertSignatureBlock(quote, sig, quote, signatureBelowQuote = true, delimiter = false),
+            insertSignatureBlock(noSignaturePrefill, sig, signatureBelowQuote = true, delimiter = false),
         )
     }
 
@@ -424,7 +467,7 @@ class ComposeSignatureTest {
     @Test fun withoutTheDelimiterTheQuoteBelowTheSignatureStillSurvives() {
         val body = bodyWithSignature("\n\nOn …, Alice wrote:\n> hi", sig, delimiter = false)
         assertEquals(
-            "<br><br><b>Alex</b><br><br>On …, Alice wrote:<br>&gt; hi",
+            "<br><br><b>Alex</b><br><br>---<br>On …, Alice wrote:<br>&gt; hi",
             htmlBodyWithSignature(RichBody.plain(body), sig, "<b>Alex</b>", delimiter = false),
         )
     }

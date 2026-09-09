@@ -7,11 +7,13 @@ import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.ui.graphics.vector.ImageVector
 import app.sterna.R
+import app.sterna.core.data.account.StoredSignature
 import app.sterna.core.data.pgp.PgpMode
 import app.sterna.core.data.pgp.encrypts
 import app.sterna.core.data.text.RichBody
 import app.sterna.core.data.text.Span
 import app.sterna.core.data.text.richBodyFrom
+import app.sterna.core.data.text.sanitiseReceivedHtml
 import app.sterna.core.data.text.htmlEscape
 import app.sterna.core.data.text.htmlEscapeMultiline
 import app.sterna.core.data.text.htmlToText
@@ -828,39 +830,144 @@ internal fun signatureBlock(signature: String, delimiter: Boolean): String = whe
     else -> "\n\n${signature.trim()}"
 }
 
-/** The composer's initial body: the [quoted] original with the signature block above it, or below when
- *  [signatureBelowQuote] is set. A reply's quote starts with its own blank lines, so the caret sits at
- *  the top of an empty first line either way. */
+/**
+ * What a signature is CALLED in the composer's picker (#206): the name the owner gave it, or — for the
+ * one migrated from the single pre-#206 signature, which has no name they ever chose — its own first
+ * non-blank line, so the row still says which sign-off it is rather than reading "(unnamed)".
+ */
+internal fun signatureMenuLabel(signature: StoredSignature): String =
+    signature.name.ifBlank {
+        signature.text.lineSequence().firstOrNull { it.isNotBlank() }?.trim()?.take(40).orEmpty()
+    }
+
+/**
+ * The line that introduces the quoted original in a composed reply (#206).
+ *
+ * THREE hyphens, deliberately not the two of [SIGNATURE_DELIMITER]: [cutAtSignatureDelimiter] matches
+ * a line that is exactly "--" or "-- ", so a three-hyphen line is not mistaken for the sender's
+ * signature delimiter and a reply to a reply does not truncate itself at its own divider.
+ */
+internal const val QUOTE_DIVIDER = "---"
+
+/**
+ * A composed reply as its PARTS (#206) — the answer being written, the signature, the quoted original —
+ * rather than as a string with remembered offsets into it.
+ *
+ * WHY A TYPE AND NOT A CONCATENATION. The previous shape ([bodyWithSignature] below, which now only
+ * builds one of these) decided the whole layout in one `block + quoted` expression and left every
+ * later caller to FIND the parts again by searching the string: `body.endsWith(quoted)`,
+ * `lastIndexOf(block)`, `dropLast(quoted.length)`. Each of those is an offset remembered from a body
+ * that the owner is, by definition, typing into. When one of the searches missed — a quote the owner
+ * had edited, so `endsWith` was false — the signature was appended at the very END instead, landing
+ * under the quoted original. That is the "the quote drifts between what I am typing and my signature"
+ * the owner reported, and it is why the order is composed here from named parts and read back at a
+ * delimiter that is written for the purpose, instead of being rediscovered by substring search.
+ *
+ * The order [render] emits is the one the owner asked for:
+ *
+ *     <the reply they are writing>
+ *     <the signature>
+ *     ---
+ *     <the quoted original message>
+ */
+internal data class ReplyBody(
+    /** What the owner has written. Empty in a prefill: the caret opens at offset 0, above everything. */
+    val answer: String = "",
+    val signature: String = "",
+    /** The quoted original, attribution line included, or empty when there is nothing to quote. */
+    val quoted: String = "",
+    val delimiter: Boolean,
+    /** The "Signature below the quoted text" setting (#90), which moves ONLY the signature. */
+    val signatureBelowQuote: Boolean = false,
+) {
+    /** These parts as the single string the editor holds. */
+    fun render(): String {
+        val block = signatureBlock(signature, delimiter)
+        val quote = quotedSection(quoted)
+        return if (signatureBelowQuote) answer + quote + block else answer + block + quote
+    }
+}
+
+/**
+ * [quoted] as the section that goes below the divider, or "" when there is nothing to quote.
+ *
+ * The divider is emitted whenever there IS a quote, whether or not a signature precedes it: it marks
+ * where the owner's own words stop and the original begins, which is a fact about the quote and not
+ * about the signature. Making it conditional on the signature too would mean a reply from an identity
+ * with no signature got a different structure from every other reply, and [splitAtQuoteDivider] could
+ * then no longer find the quote in it.
+ *
+ * The leading blank lines [quoted] arrives with are dropped and reissued here, so the spacing above the
+ * divider is this function's decision rather than the caller's.
+ */
+private fun quotedSection(quoted: String): String =
+    if (quoted.isBlank()) "" else "\n\n$QUOTE_DIVIDER\n${quoted.trim('\n')}"
+
+/**
+ * A composed body split into (everything above the quoted original, the quoted original), at the
+ * [QUOTE_DIVIDER] line — or the whole body and "" when it carries no quote.
+ *
+ * The LAST divider wins, for [lastBlockIndex]'s reason: the quote is the tail, and an owner who types
+ * "---" in their own answer must not have the rest of their reply treated as quoted history.
+ *
+ * The blank lines that separated the two are trimmed off the first half, because they belong to the
+ * divider and [quotedSection] reissues them. Leaving them attached is how a rebuild grows a blank line
+ * every time it runs: the answer would keep the separator it already had and then be given another.
+ */
+internal fun splitAtQuoteDivider(body: String): Pair<String, String> {
+    val mark = "\n$QUOTE_DIVIDER\n"
+    val at = body.lastIndexOf(mark)
+    if (at < 0) return body to ""
+    return body.substring(0, at).trimEnd('\n') to body.substring(at + mark.length)
+}
+
+/** The composer's initial body for a reply: [quoted] under the signature, under the answer still to be
+ *  written. One [ReplyBody], so the prefill and every later rebuild agree by construction. */
 internal fun bodyWithSignature(
     quoted: String,
     signature: String,
     signatureBelowQuote: Boolean = false,
     delimiter: Boolean,
-): String {
-    val block = signatureBlock(signature, delimiter)
-    if (block.isEmpty()) return quoted
-    return if (signatureBelowQuote) quoted + block else block + quoted
-}
+): String = ReplyBody(
+    answer = "",
+    signature = signature,
+    quoted = quoted,
+    delimiter = delimiter,
+    signatureBelowQuote = signatureBelowQuote,
+).render()
 
 /**
  * [body] with [signature]'s block added where the prefill would have put it — used when the "From"
  * identity changes and the identity being left had NO signature (D5).
  *
- * With the signature above [quoted] (the default) the block goes immediately before it; below the
- * quote, or with no quote, at the very end. A quote the user has edited away is no longer found as the
- * tail, and the block then lands at the end rather than in an arbitrary spot.
+ * The body is taken APART at its [QUOTE_DIVIDER] and put back together as a [ReplyBody], so the
+ * signature lands under the answer and above the quote for the same reason the prefill did: because
+ * that is the order the parts are assembled in, not because a search happened to succeed.
+ *
+ * WHAT THIS REPLACED, and the defect it was. The previous version was handed the quoted original as a
+ * string and located it with `body.endsWith(quoted)`. The owner trimming one line off the quote —
+ * which is the ordinary way a reply is written — made that false, and the fallback appended the block
+ * to the END of the body, putting the signature UNDER the quoted original. The divider is a mark the
+ * composer wrote itself and the owner has no reason to delete, so it survives their editing the quote.
  */
 internal fun insertSignatureBlock(
     body: String,
     signature: String,
-    quoted: String = "",
     signatureBelowQuote: Boolean = false,
     delimiter: Boolean,
 ): String {
     val block = signatureBlock(signature, delimiter)
     if (block.isEmpty()) return body
-    if (signatureBelowQuote || quoted.isEmpty() || !body.endsWith(quoted)) return body + block
-    return body.dropLast(quoted.length) + block + quoted
+    val (above, quoted) = splitAtQuoteDivider(body)
+    // No quote to order against (a new mail, a forward, or a reply whose quote the owner deleted
+    // outright), and below-the-quote is the setting that asks for exactly this: append.
+    if (quoted.isEmpty() || signatureBelowQuote) return body + block
+    return ReplyBody(
+        answer = above,
+        signature = signature,
+        quoted = quoted,
+        delimiter = delimiter,
+    ).render()
 }
 
 /**
@@ -935,7 +1042,14 @@ internal fun htmlBodyWithSignature(
     val found = signatureBlockAt(body.text, signature, delimiter) ?: return toHtml(body)
     if (!signatureBlockIsIntact(body, found.start, found.end)) return toHtml(body)
     val head = if (found.withDelimiter) "<br><br>$SIGNATURE_DELIMITER<br>" else "<br><br>"
-    return toHtml(body, verbatim = Span(found.start, found.end) to head + signatureHtml.trim())
+    // SANITISED here, at the one point a stored signature becomes markup on the wire, for the reason
+    // [readerBody] sanitises at its own single point: a policy applied at the assembly cannot be
+    // forgotten by a later caller. A signature is stored content that gets RENDERED — by the
+    // recipient, by this app when the sent copy is read back out of Sent, and by the composer's own
+    // preview — and "the owner supplied it" is not "the owner wrote it": Import HTML reads a file off
+    // the device, and backup/restore and K-9 import both write this field without anyone typing it.
+    val markup = sanitiseReceivedHtml(signatureHtml.trim())
+    return toHtml(body, verbatim = Span(found.start, found.end) to head + markup)
 }
 
 /**

@@ -17,6 +17,7 @@ import app.sterna.core.data.account.AccountCredentials
 import app.sterna.core.data.account.MailProtocol
 import app.sterna.core.data.account.StoredAccount
 import app.sterna.core.data.account.StoredIdentity
+import app.sterna.core.data.account.StoredSignature
 import app.sterna.core.data.account.pgpPublicKeyBackfill
 import app.sterna.core.data.account.pgpPublicKeyCacheValue
 import app.sterna.core.data.db.OutboxState
@@ -77,6 +78,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -385,13 +387,71 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
         _replyQuote.value = null
     }
 
-    /** The identity's plain-text signature, with a legacy raw-HTML one flattened first. */
-    private fun signatureTextOf(identity: StoredIdentity?): String =
-        identity?.withSplitSignature()?.signature.orEmpty()
+    /**
+     * The signature the composer's picker is on, or null while it is on the identity's default (#206).
+     *
+     * Null is not "no signature": it means "whatever this identity's default is", so switching From
+     * before touching the picker follows the new identity's own default rather than pinning the one
+     * that happened to be showing.
+     */
+    private val _selectedSignature = MutableStateFlow<StoredSignature?>(null)
+    val selectedSignature: StateFlow<StoredSignature?> = _selectedSignature.asStateFlow()
 
-    /** The identity's HTML signature (imported, or served by JMAP), empty when it is plain text. */
+    /** What the compose screen's signature picker offers: the signatures of the identity being sent
+     *  from, migrated on read, so a pre-#206 account offers exactly its one existing signature. */
+    val signatureOptions: StateFlow<List<StoredSignature>> =
+        _selectedFrom
+            .map { it?.identity?.resolvedSignatures().orEmpty() }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * The signature this compose is actually using: the picker's choice when that choice still belongs
+     * to [identity], else [identity]'s own default (#206).
+     *
+     * The re-check against the identity's own list is the point. A choice made before a "From" switch
+     * names a signature the new identity may never have had, and carrying it over would put one
+     * persona's sign-off on another's mail — the same degradation [StoredAccount.defaultIdentity] does
+     * for a stale identity id, for the same reason.
+     */
+    private fun activeSignature(identity: StoredIdentity?): StoredSignature? {
+        val available = identity?.resolvedSignatures().orEmpty()
+        val chosen = _selectedSignature.value?.id
+        return available.firstOrNull { it.id == chosen } ?: identity?.defaultSignature()
+    }
+
+    /** The chosen signature's plain text, with a legacy raw-HTML one flattened first (by the
+     *  migration in [StoredIdentity.resolvedSignatures]). */
+    private fun signatureTextOf(identity: StoredIdentity?): String =
+        activeSignature(identity)?.text.orEmpty()
+
+    /** The chosen signature's HTML source, empty when the owner wrote plain text. */
     private fun signatureHtmlOf(identity: StoredIdentity?): String =
-        identity?.withSplitSignature()?.signatureHtml.orEmpty()
+        activeSignature(identity)?.html.orEmpty()
+
+    /**
+     * Switch the signature mid-compose, and report what that asks of the body — the SAME
+     * [SignatureChange] the "From" picker reports (#206).
+     *
+     * Deliberately not a second rewrite mechanism: swapping one signature's block for another's in a
+     * half-written body is exactly what changing identity already had to do, down to leaving an edited
+     * block alone. Reusing it means the two pickers cannot drift about what "the signature moved" does
+     * to the owner's text.
+     */
+    suspend fun selectSignature(signature: StoredSignature): SignatureChange? {
+        val identity = selectedIdentity()
+        val old = signatureTextOf(identity)
+        _selectedSignature.value = signature
+        val new = signatureTextOf(identity)
+        if (old == new) return null
+        val delimiter = settings.signatureDelimiter.first()
+        if (old.isNotBlank()) return SignatureChange.Swap(old, new, delimiter)
+        if (new.isBlank()) return null
+        return SignatureChange.Insert(
+            signature = new,
+            belowQuote = settings.signatureBelowQuote.first(),
+            delimiter = delimiter,
+        )
+    }
 
     /**
      * The body a reply/forward opens with: the [quoted] original, plus the signature per the three

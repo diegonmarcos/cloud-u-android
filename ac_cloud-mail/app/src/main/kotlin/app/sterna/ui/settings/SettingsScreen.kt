@@ -131,7 +131,6 @@ import app.sterna.core.data.settings.SwipeAction
 import app.sterna.core.data.settings.ThemeMode
 import app.sterna.core.data.settings.DeliveryMode
 import app.sterna.core.data.settings.NotificationContent
-import app.sterna.core.data.text.htmlToText
 import app.sterna.push.PushController
 import app.sterna.push.PushStatus
 import app.sterna.ui.SCREEN_SLIDE_MS
@@ -1820,8 +1819,6 @@ private fun AccountDetailScreen(
                         val override = identities.firstOrNull { it.email.trim().lowercase() == emailKey }
                         val shown = (override ?: server).withSplitSignature()
                         val name = shown.name
-                        val signature = shown.signature
-                        val hasHtmlSignature = shown.signatureHtml.isNotBlank()
                         val rowId = override?.id ?: server.id
                         val isDefault = defaultIdentityId == rowId || defaultIdentityId == server.id
                         val expanded = rowId in expandedRows
@@ -1830,7 +1827,7 @@ private fun AccountDetailScreen(
                             IdentityRowHeader(
                                 email = server.email,
                                 isDefault = isDefault,
-                                signature = signatureStateOf(signature, shown.signatureHtml),
+                                signature = signatureStateOf(shown),
                                 expanded = expanded,
                                 onToggle = { expandedRows = expandedRows.toggleIdentityRow(rowId) },
                             )
@@ -1854,46 +1851,25 @@ private fun AccountDetailScreen(
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                                 )
-                                OutlinedTextField(
-                                    value = signature,
-                                    // Editing the text drops the imported HTML, which would
-                                    // otherwise send something other than what was typed.
-                                    onValueChange = { v ->
-                                        overrideServer(server) { it.copy(signature = v, signatureHtml = "") }
+                                // The identity's NAMED signatures (#206), migrated on read from the
+                                // single pre-#206 one, so an override that has never been touched
+                                // still offers exactly the signature the owner already had.
+                                SignatureListEditor(
+                                    signatures = shown.resolvedSignatures(),
+                                    defaultSignatureId = shown.defaultSignatureId,
+                                    delimiter = signatureDelimiter,
+                                    onChange = { list ->
+                                        overrideServer(server) { it.copy(signatures = list) }
                                     },
-                                    label = { Text(stringResource(R.string.settings_signature_label)) },
-                                    minLines = 2,
-                                    supportingText = {
-                                        Text(
-                                            stringResource(
-                                                if (hasHtmlSignature) {
-                                                    R.string.settings_signature_supporting_html
-                                                } else {
-                                                    R.string.settings_signature_supporting
-                                                },
-                                            ),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
+                                    onDefaultChange = { id ->
+                                        overrideServer(server) { it.copy(defaultSignatureId = id) }
                                     },
-                                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                                )
-                                SignaturePreview(signature, signatureDelimiter)
-                                OutlinedButton(
-                                    onClick = {
-                                        // Both halves: the flattened text the composer inserts,
-                                        // and the HTML sent as-is while untouched.
-                                        pendingImport = { html ->
-                                            overrideServer(server) {
-                                                it.copy(signature = htmlToText(html), signatureHtml = html)
-                                            }
-                                        }
+                                    onImportHtml = { apply ->
+                                        pendingImport = apply
                                         importLauncher.launch("text/html")
                                     },
-                                    modifier = Modifier.padding(top = 12.dp),
-                                ) {
-                                    Text(stringResource(R.string.settings_import_html))
-                                }
+                                    newId = { java.util.UUID.randomUUID().toString() },
+                                )
                             }
                             HorizontalDivider(Modifier.padding(top = 12.dp))
                         }
@@ -1925,7 +1901,7 @@ private fun AccountDetailScreen(
                         IdentityRowHeader(
                             email = trimmedEmail,
                             isDefault = identity.id == defaultIdentityId,
-                            signature = signatureStateOf(identity.signature, identity.signatureHtml),
+                            signature = signatureStateOf(identity),
                             expanded = expanded,
                             onToggle = { expandedRows = expandedRows.toggleIdentityRow(identity.id) },
                         )
@@ -1967,42 +1943,23 @@ private fun AccountDetailScreen(
                                 },
                                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                             )
-                            OutlinedTextField(
-                                value = identity.signature,
-                                // Editing the text drops the imported HTML (see the server group).
-                                onValueChange = { v ->
-                                    update { it.copy(signature = v, signatureHtml = "") }
+                            // The identity's NAMED signatures (#206); see the server group above.
+                            SignatureListEditor(
+                                signatures = identity.resolvedSignatures(),
+                                defaultSignatureId = identity.defaultSignatureId,
+                                delimiter = signatureDelimiter,
+                                onChange = { list -> update { it.copy(signatures = list) } },
+                                onDefaultChange = { id -> update { it.copy(defaultSignatureId = id) } },
+                                onImportHtml = { apply ->
+                                    pendingImport = apply
+                                    importLauncher.launch("text/html")
                                 },
-                                label = { Text(stringResource(R.string.settings_signature_label)) },
-                                minLines = 2,
-                                supportingText = {
-                                    Text(
-                                        stringResource(
-                                            if (identity.signatureHtml.isNotBlank()) {
-                                                R.string.settings_signature_supporting_html
-                                            } else {
-                                                R.string.settings_signature_supporting
-                                            },
-                                        ),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
-                                },
-                                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                                newId = { java.util.UUID.randomUUID().toString() },
                             )
-                            SignaturePreview(identity.signature, signatureDelimiter)
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                OutlinedButton(onClick = {
-                                    pendingImport = { html ->
-                                        update { it.copy(signature = htmlToText(html), signatureHtml = html) }
-                                    }
-                                    importLauncher.launch("text/html")
-                                }) {
-                                    Text(stringResource(R.string.settings_import_html))
-                                }
                                 // Remove is gated so one identity remains across BOTH groups.
                                 if (totalIdentities > 1) {
                                     Spacer(Modifier.weight(1f))
@@ -2870,34 +2827,6 @@ private fun IdentityRowHeader(
 /**
  * What the signature will look like in a message, delimiter included (#90). Derived from the same
  */
-@Composable
-private fun SignaturePreview(signature: String, delimiter: Boolean) {
-    val preview = signaturePreview(signature, delimiter) ?: return
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-        Text(
-            stringResource(R.string.settings_signature_preview_title),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            preview,
-            style = MaterialTheme.typography.bodySmall,
-            // Monospace: the delimiter is two hyphens and a trailing space, which a proportional
-            // face makes hard to tell from a decorative dash rule.
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(top = 2.dp),
-        )
-        if (signatureHasOwnDelimiter(signature, delimiter)) {
-            Text(
-                stringResource(R.string.settings_signature_duplicate_delimiter),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-    }
-}
 
 /** The "Default sender" identity radio and its caption (#78). Shared by the server and manual
  *  groups, so either can be chosen as the composer's pre-selection. */

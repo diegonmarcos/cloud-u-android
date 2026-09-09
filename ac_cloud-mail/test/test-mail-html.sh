@@ -13,7 +13,7 @@
 #   H5  a link whose visible text names a host it does not go to is marked with the real one
 #   H6  a sent HTML mail carries a text/plain alternative, generated from the body and not by
 #       stripping tags out of the HTML
-#   H7  the reply order -- answer, signature, quote -- still holds, in BOTH alternatives
+#   H7  the reply order -- answer, signature, "---", quote -- still holds, in BOTH alternatives
 #   H8  an old plain-text draft still opens
 #   H9  the AI tools still resolve to their own engines and still refuse to rewrite markup
 #  H10  the executed unit tests exist and are named
@@ -149,11 +149,15 @@ has "$JMAP" 'putJsonArray("htmlBody")' "H6 a text/html part is declared on the w
 has "$JMAP" 'if (htmlBody != null) putJsonObject("html") { put("value", htmlBody) }' \
   "H6 the html part carries a value of its own, beside the text one"
 
-# ── H7 the order the last task pinned, now in both alternatives ──
-# The plain-text assembly, unchanged -- this is the assertion test-mail-compose-signature-order.sh
-# owns, repeated here because THIS change is the one that could have quietly replaced it.
-has "$TEXT" 'return if (signatureBelowQuote) quoted + block else block + quoted' \
-  "H7 the default is still block + quoted -- signature ABOVE the quote"
+# ── H7 the order, now in both alternatives ──
+# This is the assertion test-mail-compose-signature-order.sh OWNS, repeated here because a change to
+# the html side is what could quietly replace it. #206 corrected both copies together: the old text
+# pinned `block + quoted`, an order with no divider in it at all, and a second copy of a wrong
+# assertion is how a defect survives being reported twice.
+has "$TEXT" 'return if (signatureBelowQuote) answer + quote + block else answer + block + quote' \
+  "H7 the default is answer + signature + divider + quote"
+has "$TEXT" 'internal const val QUOTE_DIVIDER = "---"' \
+  "H7 the divider that separates the answer from the quoted original exists"
 # The HTML alternative must not have grown a second ordering decision. It serialises the SAME body
 # the plain one flattens, so the order cannot drift: there is nothing to drift from.
 has "$TEXT" 'internal fun htmlBodyWithSignature(' "H7 the html alternative has one assembly too"

@@ -1,5 +1,6 @@
 package app.sterna.ui.settings
 
+import app.sterna.core.data.account.StoredIdentity
 import app.sterna.ui.compose.SIGNATURE_DELIMITER
 import app.sterna.ui.compose.signatureBlock
 
@@ -32,6 +33,17 @@ internal fun signatureStateOf(signature: String, signatureHtml: String): Signatu
     signature.isNotBlank() -> SignatureState.TEXT
     else -> SignatureState.NONE
 }
+
+/**
+ * What a COLLAPSED identity row reports about its signatures (#206): the state of the one composing
+ * would pre-select.
+ *
+ * Read through [StoredIdentity.defaultSignature] rather than off the legacy `signature` pair, or a row
+ * whose named signatures have been edited would keep describing the pre-#206 text underneath them —
+ * the header would say "plain text" while the default is HTML.
+ */
+internal fun signatureStateOf(identity: StoredIdentity): SignatureState =
+    identity.defaultSignature()?.let { signatureStateOf(it.text, it.html) } ?: SignatureState.NONE
 
 /** What the composer will actually put in the message for [signature]; null when a blank signature
  * adds nothing. The delimiter is never stored in the field, only added when the body is built

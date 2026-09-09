@@ -518,6 +518,11 @@
     <string name="settings_identity_default_hint">Выбирается заранее при написании</string>
     <string name="settings_email_address_label">Адрес электронной почты</string>
     <string name="settings_signature_label">Подпись (обычный текст или HTML)</string>
+    <string name="compose_signature">Подпись</string>
+    <string name="compose_choose_signature">Выбрать подпись</string>
+    <string name="settings_signature_name_label">Название подписи</string>
+    <string name="settings_signature_add">Добавить подпись</string>
+    <string name="settings_signature_default">Использовать по умолчанию</string>
     <string name="settings_import_html">Импортировать HTML</string>
     <string name="settings_remove">Удалить</string>
     <string name="settings_add_identity">Добавить личность</string>

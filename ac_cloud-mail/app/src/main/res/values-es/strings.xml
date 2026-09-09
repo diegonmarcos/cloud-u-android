@@ -518,6 +518,11 @@
     <string name="settings_identity_default_hint">Preseleccionado al redactar</string>
     <string name="settings_email_address_label">Dirección de correo</string>
     <string name="settings_signature_label">Firma (texto sin formato o HTML)</string>
+    <string name="compose_signature">Firma</string>
+    <string name="compose_choose_signature">Elegir firma</string>
+    <string name="settings_signature_name_label">Nombre de la firma</string>
+    <string name="settings_signature_add">Añadir firma</string>
+    <string name="settings_signature_default">Usar de forma predeterminada</string>
     <string name="settings_import_html">Importar HTML</string>
     <string name="settings_remove">Quitar</string>
     <string name="settings_add_identity">Añadir identidad</string>

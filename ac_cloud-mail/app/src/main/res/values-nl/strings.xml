@@ -518,6 +518,11 @@
     <string name="settings_identity_default_hint">Vooraf geselecteerd bij het opstellen</string>
     <string name="settings_email_address_label">E-mailadres</string>
     <string name="settings_signature_label">Handtekening (platte tekst of HTML)</string>
+    <string name="compose_signature">Ondertekening</string>
+    <string name="compose_choose_signature">Ondertekening kiezen</string>
+    <string name="settings_signature_name_label">Naam van de ondertekening</string>
+    <string name="settings_signature_add">Ondertekening toevoegen</string>
+    <string name="settings_signature_default">Standaard gebruiken</string>
     <string name="settings_import_html">HTML importeren</string>
     <string name="settings_remove">Verwijderen</string>
     <string name="settings_add_identity">Identiteit toevoegen</string>

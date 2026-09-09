@@ -27,8 +27,9 @@ class ComposerBodyLeavesTheParcelTest {
         assertPinned(
             SCREEN, "var initialBody by resume.baselineState",
             "the baseline is a SECOND full copy of the body in the parcel, and it comes back as " +
-                "TEXT because `insertSignatureBlock(quoted = initialBody)` and `rewrite(initialBody)` " +
-                "are handed it verbatim — a digest would break the signature rules instead.",
+                "TEXT because `rewrite(initialBody)` is handed it verbatim — a digest would break " +
+                "the signature rules instead. (#206 dropped the `quoted =` argument that used to " +
+                "be handed this too: the body now carries its own QUOTE_DIVIDER.)",
         )
     }
 

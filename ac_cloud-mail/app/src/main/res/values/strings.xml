@@ -772,6 +772,11 @@
     <string name="settings_email_not_server">Your server may reject sending from this address.</string>
     <string name="settings_identity_not_created">Couldn\'t add %1$s on the server: %2$s. The address is saved on this phone only.</string>
     <string name="settings_signature_label">Signature (plain text or HTML)</string>
+    <string name="compose_signature">Signature</string>
+    <string name="compose_choose_signature">Choose signature</string>
+    <string name="settings_signature_name_label">Signature name</string>
+    <string name="settings_signature_add">Add signature</string>
+    <string name="settings_signature_default">Use by default</string>
     <string name="settings_signature_supporting">Plain text, added to the message body when you write — edit or remove it there like any other text.</string>
     <string name="settings_signature_supporting_html">An HTML version is saved; it is sent as is if you don\'t change the signature in the message.</string>
     <string name="settings_signature_preview_title">In a message it will read:</string>

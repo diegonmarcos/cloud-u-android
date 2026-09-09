@@ -218,6 +218,8 @@ fun ComposeScreen(
     val attachmentStatus by viewModel.attachmentStatus.collectAsStateWithLifecycle()
     val fromOptions by viewModel.fromOptions.collectAsStateWithLifecycle()
     val selectedFrom by viewModel.selectedFrom.collectAsStateWithLifecycle()
+    val signatureOptions by viewModel.signatureOptions.collectAsStateWithLifecycle()
+    val selectedSignature by viewModel.selectedSignature.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
     val pgpAvailable by viewModel.pgpAvailable.collectAsStateWithLifecycle()
     val pgpMode by viewModel.pgpMode.collectAsStateWithLifecycle()
@@ -544,12 +546,48 @@ fun ComposeScreen(
         textToolTarget = null
     }
 
-    // Which compose this is, for the signature rules: a forward carries its original at send time, so
-    // its body holds no quote, while both a reply and a forward obey the two settings.
-    val isReplyBody = replyTo != null && composeOpening(mode).quotes
+    // Which compose this is, for the signature rules: both a reply and a forward obey the two settings.
+    // Whether the body HOLDS a quote is no longer asked here — the body answers that itself, at its
+    // QUOTE_DIVIDER, which stays true as the owner edits it.
     val isReplyOrForward = replyTo != null
     // Changing "From" reads those settings from DataStore, which suspends.
     val scope = rememberCoroutineScope()
+
+    /**
+     * Apply a [SignatureChange] to the body and to its unsaved-changes baseline (D5, #206).
+     *
+     * ONE implementation, reached by both the "From" picker and the signature picker: they ask the
+     * same question of the body ("this signature became that one"), and two copies of this would let
+     * them disagree about what happens to a block the owner has edited.
+     */
+    fun applySignatureChange(change: SignatureChange?) {
+        val rewrite: (String) -> String? = when (change) {
+            null -> return
+            is SignatureChange.Swap -> { text ->
+                replaceSignatureBlock(text, change.from, change.to, change.delimiter)
+            }
+            is SignatureChange.Insert -> { text ->
+                insertSignatureBlock(text, change.signature, change.belowQuote, change.delimiter)
+            }
+        }
+        // The rewrite works on the TEXT; the user's styling is carried across it by diffing (#131), so
+        // a bold word above the signature stays bold and stays put.
+        rewriteRichBody(RichBody(body.text, ranges, blocks, links), body.selection.start, rewrite)?.let { rewritten ->
+            body = TextFieldValue(
+                rewritten.text,
+                TextRange(body.selection.start.coerceAtMost(rewritten.text.length)),
+            )
+            ranges = rewritten.ranges
+            blocks = rewritten.blocks
+            links = rewritten.links
+            rewriteRichBody(RichBody(initialBody, baselineRanges, baselineBlocks, baselineLinks), 0, rewrite)?.let {
+                initialBody = it.text
+                baselineRanges = it.ranges
+                baselineBlocks = it.blocks
+                baselineLinks = it.links
+            }
+        }
+    }
 
     // Land in the recipient field with the keyboard up, unless the recipients are already filled — a
     // reply, a reopened draft, or a mailto: link — in which case the subject or the body takes the
@@ -1376,44 +1414,64 @@ fun ComposeScreen(
                                     // Changing "From" makes the signature follow the identity (D5): the
                                     // block is swapped while still there verbatim, an edited or deleted
                                     scope.launch {
-                                        // The quoted original this compose opened with: the reply
-                                        // baseline, and nothing for a new mail or a forward.
-                                        val quoted = if (isReplyBody) initialBody else ""
-                                        val rewrite: (String) -> String? =
-                                            when (val change = viewModel.selectFrom(option, isReplyOrForward)) {
-                                                null -> return@launch
-                                                is SignatureChange.Swap -> { text ->
-                                                    replaceSignatureBlock(
-                                                        text, change.from, change.to, change.delimiter,
-                                                    )
-                                                }
-                                                is SignatureChange.Insert -> { text ->
-                                                    insertSignatureBlock(
-                                                        text, change.signature, quoted, change.belowQuote,
-                                                        change.delimiter,
-                                                    )
-                                                }
-                                            }
-                                        // The rewrite works on the TEXT; the user's styling is carried
-                                        // across it by diffing (#131), so a bold word above the
-                                        // signature stays bold and stays put.
-                                        rewriteRichBody(RichBody(body.text, ranges, blocks, links), body.selection.start, rewrite)?.let { rewritten ->
-                                            body = TextFieldValue(
-                                                rewritten.text,
-                                                TextRange(body.selection.start.coerceAtMost(rewritten.text.length)),
-                                            )
-                                            ranges = rewritten.ranges
-                                            blocks = rewritten.blocks
-                                            links = rewritten.links
-                                            rewriteRichBody(RichBody(initialBody, baselineRanges, baselineBlocks, baselineLinks), 0, rewrite)?.let {
-                                                initialBody = it.text
-                                                baselineRanges = it.ranges
-                                                baselineBlocks = it.blocks
-                                                baselineLinks = it.links
-                                            }
-                                        }
+                                        applySignatureChange(viewModel.selectFrom(option, isReplyOrForward))
                                     }
                                     fromMenu = false
+                                },
+                            )
+                        }
+                    }
+                }
+                FieldDivider()
+            }
+
+            // Signature — switch which of the identity's signatures this message carries (#206). Shown
+            // on the same terms as the "From" row above: only when there is more than one to choose
+            // between, because a picker with a single entry asks the owner a question with one answer.
+            if (signatureOptions.size > 1) {
+                var signatureMenu by remember { mutableStateOf(false) }
+                // What the body is CURRENTLY carrying: the picker's choice, or — before it has been
+                // touched — the identity's default, which is what the prefill inserted.
+                val showing = signatureOptions.firstOrNull { it.id == selectedSignature?.id }
+                    ?: selectedFrom?.identity?.defaultSignature()
+                Box {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { signatureMenu = true }
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        FieldLabel(stringResource(R.string.compose_signature))
+                        Text(
+                            text = showing?.let { signatureMenuLabel(it) } ?: "—",
+                            style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        IconButton(onClick = { signatureMenu = true }) {
+                            Icon(
+                                Icons.Filled.ExpandMore,
+                                contentDescription = stringResource(R.string.compose_choose_signature),
+                            )
+                        }
+                    }
+                    DropdownMenu(
+                        expanded = signatureMenu,
+                        onDismissRequest = { signatureMenu = false },
+                        shape = MaterialTheme.shapes.medium,
+                    ) {
+                        signatureOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(signatureMenuLabel(option)) },
+                                onClick = {
+                                    // Reaches the body through the SAME rewrite the "From" picker uses,
+                                    // so an edited block is left alone here exactly as it is there.
+                                    scope.launch {
+                                        applySignatureChange(viewModel.selectSignature(option))
+                                    }
+                                    signatureMenu = false
                                 },
                             )
                         }
