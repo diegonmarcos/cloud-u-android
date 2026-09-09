@@ -2562,16 +2562,17 @@
                 "target": "extapp:cloud-me#page:projects/health"
               },
               {
+                "_doc": "A rule between the four Cloud-Me deep links and the two web destinations, which are the odd ones out. NOT a tile: it declares no target and GroupedTilesFragment draws it as a bare '|' that is not clickable, not focusable and hidden from accessibility, because a cell that looks tappable and does nothing is a defect this app already fixed once in the tab strips. Sections.TileGroup.destinations drops it, so every surface that reads tiles as places to go — the derived Apps page, the flat aggregator fallback, Recently Used — never sees it.",
+                "id": "dashboard-sep",
+                "label": "|",
+                "separator": true
+              },
+              {
+                "_doc": "MySocials — a static site on github.io, not a Cloud-Me page and not a mesh service. It sits AFTER the rule with PM Boards because what the rule divides is 'opens another app on this phone' from 'opens a web page': it was left on the Cloud-Me side when the two new tiles pushed it along, which made the rule's own description false and grouped a browser link with four deep links it has nothing in common with.",
                 "id": "mysocials",
                 "label": "MySocials",
                 "icon": "ic_database",
                 "target": "https://diegonmarcos.github.io/mySocials/"
-              },
-              {
-                "_doc": "A rule between the four Cloud-Me deep links and PM Boards, which is a web service and the odd one out. NOT a tile: it declares no target and GroupedTilesFragment draws it as a bare '|' that is not clickable, not focusable and hidden from accessibility, because a cell that looks tappable and does nothing is a defect this app already fixed once in the tab strips. Sections.TileGroup.destinations drops it, so every surface that reads tiles as places to go — the derived Apps page, the flat aggregator fallback, Recently Used — never sees it.",
-                "id": "dashboard-sep",
-                "label": "|",
-                "separator": true
               },
               {
                 "_doc": "PM Boards — the aa-sui_paca project-management tool (Kanban boards). Opens the cloud service over the browser/WebView. Leftmost tile of Tools Dashboards. NOTE: paca is not deployed yet (blocked on the WG mesh) — the route 404s until aa-sui_paca ships.",

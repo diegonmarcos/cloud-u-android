@@ -128,7 +128,7 @@ assert "myfin_mock" not in d["ui"], "ui.myfin_mock outlived the MyFin page"
 PY
 
 echo "== T5: the Dashboard row reads left-to-right as declared, and every tile in it goes somewhere =="
-python3 - "$BJ" <<'PY' && ok "MyBuro · MyProjects · MyFin · MyHealth · MySocials · | · PM Boards, separator inert" || bad "the Dashboard row is out of order, or carries a tile that leads nowhere"
+python3 - "$BJ" <<'PY' && ok "MyBuro · MyProjects · MyFin · MyHealth · | · MySocials · PM Boards, separator inert" || bad "the Dashboard row is out of order, or carries a tile that leads nowhere"
 import json, sys
 d = json.load(open(sys.argv[1]))
 cloud = next(s for s in d["ui"]["sections"] if s["id"] == "cloud")
@@ -136,13 +136,24 @@ group = next(g for g in cloud["tile_groups"] if g["title"] == "Dashboard")
 tiles = group["tiles"]
 
 # Order is the product decision this row exists to express: the four Cloud-Me
-# deep links first, then MySocials, then a rule, then PM Boards last because it
-# is a web service and — see its own _doc — a route that 404s until paca ships.
-# Nothing about a JSON array's order fails on its own when someone appends to
-# it, which is exactly why it is asserted here.
+# deep links first, then a rule, then the two web destinations, with PM Boards
+# last because — see its own _doc — its route 404s until paca ships. What the
+# rule divides is "opens another app on this phone" from "opens a web page", so
+# MySocials belongs on the far side of it with PM Boards and not among the deep
+# links. Nothing about a JSON array's order fails on its own when someone
+# appends to it, which is exactly why it is asserted here.
 order = [t.get("id") for t in tiles]
 assert order == ["myburo", "myprojects", "myfin", "myhealth",
-                 "mysocials", "dashboard-sep", "pmboards"], order
+                 "dashboard-sep", "mysocials", "pmboards"], order
+
+# The rule earns its place only if it actually separates the two kinds. If a
+# later edit drops a browser link above it or a deep link below it, the glyph
+# starts dividing nothing and its own _doc becomes false.
+cut = order.index("dashboard-sep")
+for t in tiles[:cut]:
+    assert t["target"].startswith("extapp:"), f"{t['id']} is above the rule but is not a deep link"
+for t in tiles[cut + 1:]:
+    assert t["target"].startswith("http"), f"{t['id']} is below the rule but is not a web link"
 
 # The separator is a glyph, not a control. A cell with no target that is still
 # clickable is the dead-tap defect; declaring it keeps GroupedTilesFragment and
