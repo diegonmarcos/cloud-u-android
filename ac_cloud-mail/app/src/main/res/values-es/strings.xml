@@ -996,4 +996,18 @@
     <string name="widget_latest_description">Muestra los mensajes más recientes de todas tus bandejas de entrada.</string>
     <string name="widget_latest_empty">Sin mensajes</string>
     <string name="widget_latest_hidden">Mensaje oculto</string>
+    <!-- Home: what this phone knows about each account's mail. home_stat_number carries the
+         numbers so every value goes through the platform's own locale formatting, exactly as the
+         drawer's folder badges do; home_stat_unread_unavailable is what an IMAP account shows,
+         where no folder row can carry an unread count at all and a 0 would be a claim. -->
+    <string name="home_title">Inicio</string>
+    <string name="home_no_accounts_title">Todavía no hay ninguna cuenta</string>
+    <string name="home_no_accounts_body">Añade una cuenta de correo y sus estadísticas aparecerán aquí.</string>
+    <string name="home_account_server">%1$s · %2$s</string>
+    <string name="home_stat_number">%1$d</string>
+    <string name="home_stat_unread">Sin leer</string>
+    <string name="home_stat_unread_unavailable">No se cuenta en IMAP</string>
+    <string name="home_stat_cached">Mensajes en este teléfono</string>
+    <string name="home_stat_folders">Carpetas</string>
+    <string name="home_stat_subscribed">Carpetas suscritas</string>
 </resources>

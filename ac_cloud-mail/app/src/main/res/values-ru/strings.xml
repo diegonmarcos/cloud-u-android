@@ -1013,4 +1013,18 @@
     <string name="widget_latest_description">Показывает самые свежие письма из всех папок «Входящие».</string>
     <string name="widget_latest_empty">Нет писем</string>
     <string name="widget_latest_hidden">Сообщение скрыто</string>
+    <!-- Home: what this phone knows about each account's mail. home_stat_number carries the
+         numbers so every value goes through the platform's own locale formatting, exactly as the
+         drawer's folder badges do; home_stat_unread_unavailable is what an IMAP account shows,
+         where no folder row can carry an unread count at all and a 0 would be a claim. -->
+    <string name="home_title">Главная</string>
+    <string name="home_no_accounts_title">Учётных записей пока нет</string>
+    <string name="home_no_accounts_body">Добавьте почтовую учётную запись, и здесь появится её статистика.</string>
+    <string name="home_account_server">%1$s · %2$s</string>
+    <string name="home_stat_number">%1$d</string>
+    <string name="home_stat_unread">Непрочитанные</string>
+    <string name="home_stat_unread_unavailable">В IMAP не подсчитывается</string>
+    <string name="home_stat_cached">Сообщения на этом телефоне</string>
+    <string name="home_stat_folders">Папки</string>
+    <string name="home_stat_subscribed">Папки с подпиской</string>
 </resources>

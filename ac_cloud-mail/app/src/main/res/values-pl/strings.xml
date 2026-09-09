@@ -1010,4 +1010,18 @@
     <string name="widget_latest_description">Pokazuje najnowsze wiadomości ze wszystkich skrzynek odbiorczych.</string>
     <string name="widget_latest_empty">Brak wiadomości</string>
     <string name="widget_latest_hidden">Wiadomość ukryta</string>
+    <!-- Home: what this phone knows about each account's mail. home_stat_number carries the
+         numbers so every value goes through the platform's own locale formatting, exactly as the
+         drawer's folder badges do; home_stat_unread_unavailable is what an IMAP account shows,
+         where no folder row can carry an unread count at all and a 0 would be a claim. -->
+    <string name="home_title">Ekran główny</string>
+    <string name="home_no_accounts_title">Nie ma jeszcze żadnego konta</string>
+    <string name="home_no_accounts_body">Dodaj konto pocztowe, a jego statystyki pojawią się tutaj.</string>
+    <string name="home_account_server">%1$s · %2$s</string>
+    <string name="home_stat_number">%1$d</string>
+    <string name="home_stat_unread">Nieprzeczytane</string>
+    <string name="home_stat_unread_unavailable">Nie liczone przy IMAP</string>
+    <string name="home_stat_cached">Wiadomości na tym telefonie</string>
+    <string name="home_stat_folders">Foldery</string>
+    <string name="home_stat_subscribed">Subskrybowane foldery</string>
 </resources>

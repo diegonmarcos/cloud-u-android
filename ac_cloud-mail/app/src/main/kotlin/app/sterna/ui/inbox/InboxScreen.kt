@@ -60,6 +60,7 @@ import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DoneAll
@@ -239,6 +240,8 @@ fun InboxScreen(
     /** Open a saved draft in compose for editing (#63) — tapping a row in the Drafts folder. */
     onEditDraft: (emailId: String, accountId: String?) -> Unit,
     onOpenSettings: () -> Unit,
+    /** The Home page: this phone's mail statistics, per account. Reached from the drawer only. */
+    onOpenHome: () -> Unit,
     /** Advanced search, carrying whatever is already typed in the search bar so it isn't retyped. */
     onOpenSearch: (query: String) -> Unit,
     onOpenScheduled: () -> Unit,
@@ -1707,6 +1710,7 @@ fun InboxScreen(
                         onSwitchAccount = onSwitchAccount,
                         onOpenAccountSettings = onOpenAccountSettings,
                         onOpenSettings = onOpenSettings,
+                        onOpenHome = onOpenHome,
                         onCreateFolder = { showCreateFolder = true },
                         onAddSubfolder = { folderToAddChild = it },
                         onRenameFolder = { folderToRename = it },
@@ -1734,6 +1738,7 @@ fun InboxScreen(
                         onSwitchAccount = onSwitchAccount,
                         onOpenAccountSettings = onOpenAccountSettings,
                         onOpenSettings = onOpenSettings,
+                        onOpenHome = onOpenHome,
                         onCreateFolder = { showCreateFolder = true },
                         onAddSubfolder = { folderToAddChild = it },
                         onRenameFolder = { folderToRename = it },
@@ -1763,6 +1768,7 @@ private fun DrawerContent(
     onSwitchAccount: (String) -> Unit,
     onOpenAccountSettings: (String) -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenHome: () -> Unit,
     /** The four dialogs the drawer opens live with the screen, not with the sheet: hoisted as
      *  callbacks so a dialog outlives the modal sheet closing under it. */
     onCreateFolder: () -> Unit,
@@ -1919,6 +1925,21 @@ private fun DrawerContent(
                     }
                 }
                 HorizontalDivider(Modifier.padding(bottom = 12.dp))
+                // FIRST of the drawer's navigation affordances, above "All inboxes" and well above
+                // the 28 folder rows: Home describes every account at once, so it belongs with the
+                // rows that are not one folder rather than sorted in among the ones that are. It is
+                // a DESTINATION and not a view of the list — like the Settings row at the foot of
+                // this sheet, it never draws selected and it closes the drawer behind itself.
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.Home, contentDescription = null) },
+                    label = { DrawerLabel(stringResource(R.string.home_title)) },
+                    selected = false,
+                    onClick = {
+                        onOpenHome()
+                        scope.launch { drawerState.close() }
+                    },
+                    modifier = drawerRowModifier,
+                )
                 if (accounts.size > 1) {
                     val unifiedLabel = if (ui.unified && ui.unreadCount > 0) {
                         stringResource(R.string.inbox_all_inboxes_unread, ui.unreadCount)

@@ -993,4 +993,18 @@
     <string name="widget_latest_description">Toont de nieuwste berichten uit al je postvakken IN.</string>
     <string name="widget_latest_empty">Geen berichten</string>
     <string name="widget_latest_hidden">Bericht verborgen</string>
+    <!-- Home: what this phone knows about each account's mail. home_stat_number carries the
+         numbers so every value goes through the platform's own locale formatting, exactly as the
+         drawer's folder badges do; home_stat_unread_unavailable is what an IMAP account shows,
+         where no folder row can carry an unread count at all and a 0 would be a claim. -->
+    <string name="home_title">Start</string>
+    <string name="home_no_accounts_title">Nog geen account</string>
+    <string name="home_no_accounts_body">Voeg een e-mailaccount toe, dan verschijnen hier de statistieken.</string>
+    <string name="home_account_server">%1$s · %2$s</string>
+    <string name="home_stat_number">%1$d</string>
+    <string name="home_stat_unread">Ongelezen</string>
+    <string name="home_stat_unread_unavailable">Niet geteld bij IMAP</string>
+    <string name="home_stat_cached">Berichten op deze telefoon</string>
+    <string name="home_stat_folders">Mappen</string>
+    <string name="home_stat_subscribed">Geabonneerde mappen</string>
 </resources>

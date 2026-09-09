@@ -52,6 +52,7 @@ import app.sterna.ui.compose.ComposeScreen
 import app.sterna.ui.compose.IncognitoKeyboard
 import app.sterna.ui.connect.ConnectScreen
 import app.sterna.core.jmap.model.Email
+import app.sterna.ui.home.HomeScreen
 import app.sterna.ui.inbox.InboxScreen
 import app.sterna.ui.inbox.InboxViewModel
 import app.sterna.ui.inbox.MessageAnchor
@@ -405,6 +406,7 @@ private fun MainNavHost(
                     }
                 },
                 onOpenSettings = { entry.navigateOnce { nav.navigate("settings") } },
+                onOpenHome = { entry.navigateOnce { nav.navigate("home") } },
                 // The words already typed in the search bar travel with the navigation.
                 onOpenSearch = { q -> entry.navigateOnce { nav.navigate("search?q=${Uri.encode(q)}") } },
                 onOpenScheduled = { entry.navigateOnce { nav.navigate("scheduled") } },
@@ -651,6 +653,11 @@ private fun MainNavHost(
                 onAccountsChanged = onAccountsChanged,
                 initialAccountId = entry.arguments?.getString("accountId")?.ifBlank { null },
             )
+        }
+        // The mail statistics of every configured account. A destination like "snoozed" and not a
+        // start destination: the app still opens on the inbox, which is what the reader came for.
+        composable("home") { entry ->
+            HomeScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
         }
         composable("scheduled") { entry ->
             ScheduledSendsScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
