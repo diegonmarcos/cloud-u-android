@@ -43,7 +43,9 @@
                 android:background="@drawable/toolbar_expand_key_background"
                 style="?attr/suggestionWordStyle"
                 android:contentDescription="@string/more_keys_strip_description" />
-            <HorizontalScrollView
+            <!-- Paged rather than free-scrolling: the first row holds more icons than fit, and a
+                 free drag came to rest mid-icon. See PagedToolbarScrollView. -->
+            <helium314.keyboard.latin.suggestions.PagedToolbarScrollView
                 android:id="@+id/toolbar_container"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
@@ -56,7 +58,7 @@
                     android:orientation="horizontal"
                     style="?attr/suggestionWordStyle">
                 </LinearLayout>
-            </HorizontalScrollView>
+            </helium314.keyboard.latin.suggestions.PagedToolbarScrollView>
         </LinearLayout>
         <!-- Row 2: TEXT RECOMMENDATION (word suggestions + second row keys) -->
         <LinearLayout
