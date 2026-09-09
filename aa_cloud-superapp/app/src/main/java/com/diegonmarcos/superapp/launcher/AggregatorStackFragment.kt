@@ -36,6 +36,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.diegonmarcos.superapp.apps.PhoneTaxonomy
+import com.diegonmarcos.superapp.ui.Haptics
 import com.diegonmarcos.superapp.core.NotificationStore
 import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.async
@@ -232,7 +233,7 @@ class AggregatorStackFragment : Fragment(),
         // taxonomy value resets its sibling row (see resetTaxonomySibling),
         // and that reset has to be visible, not just stored.
         val repainters = mutableListOf<() -> Unit>()
-        for (filter in filters) {
+        for (filter in filters.filterNot { it.id.startsWith(SETTING_PREFIX) }) {
             host.addView(caption(ctx, filter.label))
             val track = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -291,8 +292,40 @@ class AggregatorStackFragment : Fragment(),
             paint()
             host.addView(track)
         }
-        return host
+
+        // ── Collapse ────────────────────────────────────────────────────────
+        // Five of the six Notify tabs exist precisely BECAUSE their filters
+        // are already chosen for them, so five rows of controls sit above
+        // the content restating a decision nobody has to make. They start
+        // folded away behind one line; the All tab, where the filters are
+        // the point, starts open.
+        //
+        // The default is declared as a filter with a "__"-prefixed id, which
+        // filterRow skips rendering (see the loop above): a page-level
+        // setting written in exactly the same JSON shape as a visible
+        // toggle. That buys per-page persistence for free — reopening the
+        // row is remembered by StackFilters under this page id, like every
+        // other choice on it.
+        val wrap = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        var open = selection(ctx, filters, FILTER_COLLAPSED, "no") != "yes"
+        val header = caption(ctx, "").apply {
+            setPadding(dp(2), dp(4), dp(2), dp(6))
+            setOnClickListener {
+                Haptics.tap(it)
+                open = !open
+                StackFilters.select(ctx, filterPage, FILTER_COLLAPSED, if (open) "no" else "yes")
+                text = collapseLabel(open)
+                host.isVisible = open
+            }
+        }
+        header.text = collapseLabel(open)
+        host.isVisible = open
+        wrap.addView(header)
+        wrap.addView(host)
+        return wrap
     }
+
+    private fun collapseLabel(open: Boolean) = if (open) "Filters  ▾" else "Filters  ▸"
 
     /** The two taxonomy rows are ONE choice spread over two rows: an app is a
      *  Tool or a Service, never both, so a value left set in each would AND to
@@ -1372,6 +1405,36 @@ class AggregatorStackFragment : Fragment(),
             }
             tag = GROUP_STATE_TAG
         })
+        // Clear all — the group-level twin of a swipe. A chatty app arrives
+        // with a dozen rows, and swiping each one away is the wrong amount of
+        // work for a decision the user made once, about the app rather than
+        // about any single notification. Its own click listener, so it does
+        // not reach the header's collapse handler.
+        header.addView(ImageView(ctx).apply {
+            setImageResource(R.drawable.ic_check_all)
+            alpha = 0.55f
+            contentDescription = ctx.getString(R.string.notif_mark_group_read)
+            val sz = dp(18)
+            layoutParams = LinearLayout.LayoutParams(sz, sz).apply { leftMargin = dp(8) }
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                Haptics.tap(it)
+                for (r in g.rows) readIds = StackFilters.markRead(ctx, filterPage, r.id, true)
+                if (showMode == "unread") {
+                    // The group just emptied itself out of this view, so it
+                    // leaves with its header rather than sitting there as a
+                    // bar with nothing under it.
+                    block.isVisible = false
+                } else {
+                    // Rows stay but must repaint as read. Rebuilding them
+                    // against the new readIds is cheaper than threading a
+                    // painter callback per row all the way out to here.
+                    rows.removeAllViews()
+                    for (r in g.rows) rows.addView(notifRowView(ctx, r, g.launchPackage))
+                }
+            }
+        })
         val chevron = ImageView(ctx).apply {
             setImageResource(R.drawable.ic_chevron_right)
             alpha = 0.5f
@@ -2235,6 +2298,11 @@ class AggregatorStackFragment : Fragment(),
          *  read them and the sibling-reset rule pairs them explicitly. */
         private const val FILTER_TOOLS    = "tools"
         private const val FILTER_SERVICES = "services"
+        /** Filter ids starting with this are PAGE SETTINGS, not visible
+         *  toggles: same JSON shape, same per-page persistence, but
+         *  [filterRow] skips drawing a control for them. */
+        private const val SETTING_PREFIX  = "__"
+        private const val FILTER_COLLAPSED = "__collapsed"
 
         /** Segmented-control palette: one filled pill on a faint track. */
         private const val FILTER_TRACK       = 0x14FFFFFF

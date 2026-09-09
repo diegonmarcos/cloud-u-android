@@ -186,18 +186,21 @@ class SuitePhoneAppsFragment : Fragment() {
                 setPadding(0, dp(ctx, 8), 0, dp(ctx, 8))
             })
         }
-        // ── Active Apps — the most-recently-used apps, rendered below the
-        //    last curated group (Configs) and above the More footer.
-        //    Data-driven: build.json::sections[id=suite].active_apps →
-        //    UsageStatsManager recency via libs:datamanager. Hidden when the
-        //    usage-access grant is missing (recentUsed → empty) or nothing
-        //    launchable matches. Constellation packages filtered out — the
-        //    superapp is always hot, and the rest belong to Cloud ▸ Apps.
+        // ── Active Apps — apps that are STILL RUNNING: holding a foreground
+        //    service open, or sitting in the foreground. Not "recently
+        //    used": ranking by recency returned the same head of the list as
+        //    Last Apps below, so the two sections rendered as twins.
+        //    Data-driven: build.json::sections[id=phone].active_apps →
+        //    AppUsageProvider.activeNow via libs:datamanager. Hidden when
+        //    the usage-access grant is missing (activeNow → empty) or
+        //    nothing launchable matches. Constellation packages filtered out
+        //    — the superapp is always hot, and the rest belong to Cloud ▸
+        //    Apps.
         if (BuildConfig.UI_SUITE_ACTIVE_APPS_ENABLED) {
             usageSection(
                 ctx, root, columns,
                 title = BuildConfig.UI_SUITE_ACTIVE_APPS_TITLE,
-                apps = AppUsageProvider.recentUsed(ctx)
+                apps = AppUsageProvider.activeNow(ctx)
                     .asSequence()
                     .filter { it !in ourApps }
                     .mapNotNull { resolve(it) }

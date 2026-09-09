@@ -1196,7 +1196,7 @@
           {
             "id": "show",
             "label": "Show",
-            "default": "all",
+            "default": "unread",
             "options": [
               {
                 "id": "all",
@@ -1205,6 +1205,21 @@
               {
                 "id": "unread",
                 "label": "Unread"
+              }
+            ]
+          },
+          {
+            "id": "__collapsed",
+            "label": "Filters",
+            "default": "no",
+            "options": [
+              {
+                "id": "no",
+                "label": "Expanded"
+              },
+              {
+                "id": "yes",
+                "label": "Collapsed"
               }
             ]
           }
@@ -1464,7 +1479,7 @@
           {
             "id": "show",
             "label": "Show",
-            "default": "all",
+            "default": "unread",
             "options": [
               {
                 "id": "all",
@@ -1473,6 +1488,21 @@
               {
                 "id": "unread",
                 "label": "Unread"
+              }
+            ]
+          },
+          {
+            "id": "__collapsed",
+            "label": "Filters",
+            "default": "yes",
+            "options": [
+              {
+                "id": "no",
+                "label": "Expanded"
+              },
+              {
+                "id": "yes",
+                "label": "Collapsed"
               }
             ]
           }
@@ -1569,7 +1599,7 @@
           {
             "id": "show",
             "label": "Show",
-            "default": "all",
+            "default": "unread",
             "options": [
               {
                 "id": "all",
@@ -1578,6 +1608,21 @@
               {
                 "id": "unread",
                 "label": "Unread"
+              }
+            ]
+          },
+          {
+            "id": "__collapsed",
+            "label": "Filters",
+            "default": "yes",
+            "options": [
+              {
+                "id": "no",
+                "label": "Expanded"
+              },
+              {
+                "id": "yes",
+                "label": "Collapsed"
               }
             ]
           }
@@ -1674,7 +1719,7 @@
           {
             "id": "show",
             "label": "Show",
-            "default": "all",
+            "default": "unread",
             "options": [
               {
                 "id": "all",
@@ -1683,6 +1728,21 @@
               {
                 "id": "unread",
                 "label": "Unread"
+              }
+            ]
+          },
+          {
+            "id": "__collapsed",
+            "label": "Filters",
+            "default": "yes",
+            "options": [
+              {
+                "id": "no",
+                "label": "Expanded"
+              },
+              {
+                "id": "yes",
+                "label": "Collapsed"
               }
             ]
           }
@@ -1779,7 +1839,7 @@
           {
             "id": "show",
             "label": "Show",
-            "default": "all",
+            "default": "unread",
             "options": [
               {
                 "id": "all",
@@ -1788,6 +1848,21 @@
               {
                 "id": "unread",
                 "label": "Unread"
+              }
+            ]
+          },
+          {
+            "id": "__collapsed",
+            "label": "Filters",
+            "default": "yes",
+            "options": [
+              {
+                "id": "no",
+                "label": "Expanded"
+              },
+              {
+                "id": "yes",
+                "label": "Collapsed"
               }
             ]
           }
@@ -1884,7 +1959,7 @@
           {
             "id": "show",
             "label": "Show",
-            "default": "all",
+            "default": "unread",
             "options": [
               {
                 "id": "all",
@@ -1893,6 +1968,21 @@
               {
                 "id": "unread",
                 "label": "Unread"
+              }
+            ]
+          },
+          {
+            "id": "__collapsed",
+            "label": "Filters",
+            "default": "yes",
+            "options": [
+              {
+                "id": "no",
+                "label": "Expanded"
+              },
+              {
+                "id": "yes",
+                "label": "Collapsed"
               }
             ]
           }
@@ -2529,7 +2619,7 @@
         "module": null,
         "bottom_nav": true,
         "is_aggregator": true,
-        "_doc_active_apps": "Phone-only 'Active Apps' section rendered BELOW the last curated group (Configs) and ABOVE the All Apps / Smart Folders sections (SuitePhoneAppsFragment renders all three inline on one scrollable page now — no separate 'more' screen). Lists the `limit` most-recently-used apps (libs:datamanager AppUsageProvider.recentUsed → same UsageStatsManager data as the Phone 'Recent 7' smart folder). Empty (section hidden) when usage-access is not granted. Baked to scalar BuildConfig fields UI_SUITE_ACTIVE_APPS_{ENABLED,TITLE,LIMIT}.",
+        "_doc_active_apps": "Phone-only \"Active Apps\" section at the top of SuitePhoneAppsFragment, directly above Last Apps. Lists apps that are STILL RUNNING — holding a foreground service open, or currently in the foreground — most recently active first (libs:datamanager AppUsageProvider.activeNow, replaying FOREGROUND_SERVICE_START/STOP and ACTIVITY_RESUMED/STOPPED so a START with no matching STOP counts as alive). It is deliberately NOT a recency ranking: recentUsed returned the same head of the list as Last Apps, so the two sections rendered as twins. An app you opened and then left behind, with no service and no visible activity, belongs to Last Apps and not here. Empty (section hidden) when usage-access is not granted. Baked to scalar BuildConfig fields UI_SUITE_ACTIVE_APPS_{ENABLED,TITLE,LIMIT}.",
         "active_apps": {
           "enabled": true,
           "title": "Active Apps",

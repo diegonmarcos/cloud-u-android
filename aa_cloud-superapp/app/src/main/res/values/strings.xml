@@ -159,4 +159,7 @@
          biometric (DevicePolicyManager.lockNow does NOT). -->
     <string name="accessibility_lock_screen_summary">Lock the screen on home double-tap</string>
     <string name="accessibility_lock_screen_description">Allows the Cloud SuperApp home screen to lock the device on a double-tap. Preserves Smart Lock (Trusted Device / Trusted Place) + fingerprint / face unlock — same UX as pressing the power button. Observes no app activity (zero accessibility events declared).</string>
+    <!-- Notification group header: the double-tick button that marks every
+         notification from that one app as read. -->
+    <string name="notif_mark_group_read">Mark all read</string>
 </resources>
