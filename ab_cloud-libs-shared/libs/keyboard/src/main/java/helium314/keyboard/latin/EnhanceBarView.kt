@@ -11,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import android.text.SpannableString
 import android.text.Spanned
+import android.text.TextUtils
 import android.text.style.BackgroundColorSpan
 import android.util.TypedValue
 import android.view.Gravity
@@ -21,6 +22,7 @@ import android.widget.ArrayAdapter
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ListPopupWindow
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.edit
@@ -40,10 +42,10 @@ import kotlin.math.abs
  *
  *   ┌──────────────────────────────────────────────────────┐
  *   │ [Clarity ▾] [Formal ▾] [One paragraph ▾] [English ▾] ✕│  the Text Enhancements options
- *   │ what will be rewritten (from the field, dim)          │  source — read-only
- *   │ the rewrite, editable                                 │  output — keys are routed here
+ *   │ what will be rewritten (dim)   312 words · ~420 tokens│  source — read-only, sized
+ *   │ the rewrite, editable, scrolls                        │  output — keys are routed here
  *   │ status                                                │
- *   │ [Generate] [Copy] [Paste] [Replace] [Clear]           │
+ *   │ [Generate] [Copy] [Paste] [Replace] [Undo] [Clear]    │
  *   └──────────────────────────────────────────────────────┘
  *
  * Tapping the ENHANCE toolbar key opens this; long-pressing it keeps the old
@@ -67,6 +69,15 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
 
     companion object {
         private const val TAG = "EnhanceBar"
+        /**
+         * How long the field is left alone after a selection change before it is re-read. Every
+         * keystroke reports a selection change, and one read is an IPC round trip plus a
+         * re-layout of the source line, so reading per keystroke made typing with the bar open
+         * stutter; a burst of typing now costs one read after the last key.
+         */
+        private const val FIELD_SETTLE_MS = 150L
+        /** Lines of rewrite visible at once; more scrolls rather than growing into the keyboard. */
+        private const val OUTPUT_LINES = 5
     }
 
     // Same palette as the translate bar — the two panels are one feature to the eye.
@@ -82,6 +93,8 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
 
     /** The field text this session rewrites, and where it sits; re-read after every apply. */
     private var target: TextEnhancer.Target? = null
+    /** The last Paste/Replace: what the field held, and what it holds now, so Undo can put it back. */
+    private var lastApplied: Pair<TextEnhancer.Target, String>? = null
 
     private val buffer = StringBuilder()
     // Caret / selection over `buffer` in UTF-16 offsets; equal = collapsed caret,
@@ -101,13 +114,18 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
     private var editingOutput = false
 
     private val sourceView: TextView
+    private val sizeView: TextView
     private val outputView: TranslateInputView
     private val statusView: TextView
+    private val undoChip: TextView
     private val options: List<Option>
 
-    private val io = Executors.newSingleThreadExecutor()
+    // Cached, not single-threaded: a Generate stuck in a provider's read timeout must not
+    // hold the next Generate in a queue behind it for the whole timeout.
+    private val io = Executors.newCachedThreadPool()
     private val ui = Handler(Looper.getMainLooper())
     private val seq = AtomicInteger()
+    private val reload = Runnable { reloadTarget() }
 
     /** One option chip, backed by a registry list from build.json::keyboard_ai and its preference. */
     private inner class Option(val key: String, val entries: List<AiRouter.Style>, val fallback: String) {
@@ -153,23 +171,39 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         })
         addView(optionRow, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
 
-        // ── Row 2: what will be rewritten ────────────────────────────────────
+        // ── Row 2: what will be rewritten, and how much of it there is ───────
         // Tapping it is also how the keys go back to the app's field after a
         // detour into the output box — "type over there" is what the row means.
+        // Two lines with a visible "…": the whole field is read whatever this
+        // shows, and the size beside it is what says so.
         sourceView = TextView(context).apply {
             textSize = 14f; setTextColor(muted); maxLines = 2; setPadding(0, dp(6), 0, 0)
+            ellipsize = TextUtils.TruncateAt.END
             isClickable = true
             setOnClickListener { focusField() }
         }
-        addView(sourceView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        sizeView = TextView(context).apply {
+            textSize = 12f; setTextColor(hintColor); setPadding(dp(8), dp(6), 0, 0)
+            gravity = Gravity.END
+        }
+        val sourceRow = LinearLayout(context).apply { orientation = HORIZONTAL; gravity = Gravity.TOP }
+        sourceRow.addView(sourceView, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+        sourceRow.addView(sizeView, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+        addView(sourceRow, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
 
         // ── Row 3: the rewrite, editable ─────────────────────────────────────
+        // Inside a height-capped scroller: a rewrite of several paragraphs used to
+        // show its first four lines and no more, which read as "the rest was
+        // dropped". A vertical drag now scrolls; a horizontal drag still selects.
         outputView = TranslateInputView(context).apply {
-            textSize = 16f; setTextColor(Color.WHITE); maxLines = 4; setPadding(0, dp(6), 0, 0)
+            textSize = 16f; setTextColor(Color.WHITE); setPadding(0, dp(6), 0, 0)
             isClickable = true
         }
         attachOutputTouch()
-        addView(outputView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        addView(CappedScrollView(context, outputView.lineHeight * OUTPUT_LINES + dp(6)).apply {
+            isVerticalScrollBarEnabled = true
+            addView(outputView)
+        }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
 
         // ── Row 4: status ────────────────────────────────────────────────────
         statusView = TextView(context).apply {
@@ -183,6 +217,8 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         actions.addView(chip(str(R.string.enhance_bar_copy)) { copyOutput() }); actions.gap()
         actions.addView(chip(str(R.string.enhance_bar_paste)) { applyOutput() }); actions.gap()
         actions.addView(chip(str(R.string.enhance_bar_replace)) { generate(true) }); actions.gap()
+        undoChip = chip(str(R.string.enhance_bar_undo)) { undo() }.apply { visibility = GONE }
+        actions.addView(undoChip); actions.gap()
         actions.addView(chip(str(R.string.enhance_bar_clear)) { clear() })
         addView(HorizontalScrollView(context).apply {
             isHorizontalScrollBarEnabled = false
@@ -201,6 +237,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
     /** Called by LatinIME every time the bar is shown — fresh session, preferences re-read. */
     fun onShown() {
         seq.incrementAndGet()
+        ui.removeCallbacks(reload)
         busy = false; applyWhenReady = false
         editingOutput = false
         buffer.setLength(0); setCaret(0)
@@ -210,10 +247,14 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         showStatus("")
     }
 
-    /** The source line is what the app's field holds; re-read it after the user types. */
+    /**
+     * The source line is what the app's field holds; re-read it once the user pauses.
+     * Coalesced: LatinIME calls this on every selection update, which is every keystroke.
+     */
     fun onFieldChanged() {
         if (visibility != VISIBLE || busy) return
-        reloadTarget()
+        ui.removeCallbacks(reload)
+        ui.postDelayed(reload, FIELD_SETTLE_MS)
     }
 
     /**
@@ -281,23 +322,35 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
 
     // ── the four actions ─────────────────────────────────────────────────────
 
-    /** Ask the model for a rewrite of the source; [thenApply] = the Replace button. */
+    /**
+     * Ask the model for a rewrite of the source; [thenApply] = the Replace button. Tapping
+     * while a run is in flight starts over rather than being ignored: the old run's reply is
+     * dropped by the sequence check, so a provider that hangs never locks the button until
+     * its timeout.
+     */
     private fun generate(thenApply: Boolean) {
         // Read the field NOW. The snapshot taken when the bar opened is stale by
         // definition — the user types after opening it, which is the normal way to
         // use this, and enhancing what the field held before that is never right.
         editingOutput = false
+        ui.removeCallbacks(reload)
         reloadTarget()
         val t = target
         if (t == null || t.text.isBlank()) { showStatus(str(R.string.enhance_bar_no_source)); return }
-        if (busy) return
         busy = true
         applyWhenReady = thenApply
         val id = seq.incrementAndGet()
         val style = AiRouter.enhanceStyle(context)
-        showStatus(context.getString(R.string.enhance_in_progress, AiRouter.provider(context).label))
+        val providerLabel = AiRouter.provider(context).label
+        showStatus(context.getString(R.string.enhance_in_progress, providerLabel))
         io.execute {
-            val result = runCatching { AiRouter.complete(context, style.prompt, t.text) }
+            val result = runCatching {
+                TextEnhancer.rewrite(context, style, t.text) { done, total ->
+                    if (total > 1) ui.post {
+                        if (id == seq.get()) showStatus(context.getString(R.string.enhance_in_progress_part, providerLabel, done + 1, total))
+                    }
+                }
+            }
             ui.post {
                 if (id != seq.get()) return@post   // a newer run, or the bar was reopened
                 busy = false
@@ -325,14 +378,37 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         val connection = provider?.get() ?: return
         // The field moved under us (the user typed, or the host app rewrote it) — the
         // stored range no longer describes what is on screen, so applying would corrupt it.
-        if (!t.sameAs(TextEnhancer.target(context, connection))) {
+        if (!TextEnhancer.stillThere(context, connection, t)) {
             showStatus(str(R.string.enhance_stale)); reloadTarget(); return
         }
         if (TextEnhancer.apply(context, connection, t, text)) {
+            // Undo needs to find the rewrite again later, which takes real coordinates.
+            lastApplied = if (t.addressable) t to text else null
+            undoChip.visibility = if (lastApplied != null) VISIBLE else GONE
             showStatus(str(R.string.enhance_bar_replaced))
             editingOutput = false   // the text lives in the field now — type there
             reloadTarget()   // the field is now the rewrite: enhancing again starts from it
             renderOutput()
+        } else {
+            showStatus(str(R.string.enhance_no_cursor))
+        }
+    }
+
+    /**
+     * Put the original back over the rewrite. The field is checked for holding exactly the
+     * rewrite at that spot first; anything else there means the user (or the app) moved on,
+     * and overwriting it would be a second accident on top of the one being undone.
+     */
+    private fun undo() {
+        val (original, replacement) = lastApplied ?: return
+        val connection = provider?.get() ?: return
+        val applied = TextEnhancer.Target(replacement, original.start, original.start + replacement.length, original.fromSelection)
+        if (!TextEnhancer.stillThere(context, connection, applied)) { showStatus(str(R.string.enhance_stale)); return }
+        if (TextEnhancer.apply(context, connection, applied, original.text)) {
+            lastApplied = null
+            undoChip.visibility = GONE
+            showStatus(str(R.string.enhance_bar_undone))
+            reloadTarget()
         } else {
             showStatus(str(R.string.enhance_no_cursor))
         }
@@ -349,18 +425,43 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         buffer.setLength(0); setCaret(0); renderOutput(); showStatus("")
     }
 
-    /** Re-read what the ENHANCE key would rewrite right now and show it. */
+    /** Re-read what the ENHANCE key would rewrite right now and show it, with its size. */
     private fun reloadTarget() {
         val connection = provider?.get()
         target = if (connection == null) null else TextEnhancer.target(context, connection)
         val text = target?.text.orEmpty()
-        if (text.isBlank()) {
-            sourceView.text = str(R.string.enhance_bar_no_source)
-            sourceView.setTypeface(null, Typeface.ITALIC)
-        } else {
-            sourceView.text = text
-            sourceView.setTypeface(null, Typeface.NORMAL)
+        val shown = if (text.isBlank()) str(R.string.enhance_bar_no_source) else text
+        // Setting the same text again still re-lays out the line; a paused user rereads often.
+        if (sourceView.text.toString() != shown) {
+            sourceView.text = shown
+            sourceView.setTypeface(null, if (text.isBlank()) Typeface.ITALIC else Typeface.NORMAL)
         }
+        sizeView.text = if (text.isBlank()) "" else sizeOf(text)
+    }
+
+    /**
+     * Words, and tokens because both providers are language models billed per token. The
+     * token figure is an estimate (no tokenizer ships in the keyboard) and is marked "~".
+     * When the text exceeds one request's budget the number of requests is shown too.
+     */
+    private fun sizeOf(text: String): String {
+        val words = wordCount(text)
+        val tokens = AiRouter.estimateTokens(text)
+        val requests = TextEnhancer.pieces(text, AiRouter.maxChars).size
+        return if (requests > 1) context.getString(R.string.enhance_bar_size_parts, words, tokens, requests)
+        else context.getString(R.string.enhance_bar_size, words, tokens)
+    }
+
+    /** Runs of non-whitespace, counted without allocating a split. */
+    private fun wordCount(text: String): Int {
+        var count = 0
+        var inWord = false
+        for (c in text) {
+            val space = c.isWhitespace()
+            if (!space && !inWord) count++
+            inWord = !space
+        }
+        return count
     }
 
     // ── caret + selection over `buffer` ──────────────────────────────────────
@@ -557,6 +658,17 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
     }
 
     // ── view helpers ─────────────────────────────────────────────────────────
+    /** A ScrollView that grows with its content up to [maxHeight] and scrolls past it. */
+    private class CappedScrollView(context: Context, private val maxHeight: Int) : ScrollView(context) {
+        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+            val size = MeasureSpec.getSize(heightMeasureSpec)
+            val mode = MeasureSpec.getMode(heightMeasureSpec)
+            val capped = if (mode == MeasureSpec.UNSPECIFIED || size > maxHeight)
+                MeasureSpec.makeMeasureSpec(maxHeight, MeasureSpec.AT_MOST) else heightMeasureSpec
+            super.onMeasure(widthMeasureSpec, capped)
+        }
+    }
+
     private fun chip(label: String, color: Int = chipColor, onTap: () -> Unit) = TextView(context).apply {
         text = label; setTextColor(Color.WHITE); textSize = 13f
         setPadding(dp(12), dp(3), dp(12), dp(3))

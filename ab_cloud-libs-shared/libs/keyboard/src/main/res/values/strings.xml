@@ -348,6 +348,12 @@
     <string name="enhance_bar_menu_cut">Cut</string>
     <string name="enhance_bar_menu_copy">Copy</string>
     <string name="enhance_bar_menu_select_all">Select all</string>
+    <string name="enhance_bar_undo">Undo</string>
+    <string name="enhance_bar_undone">Original restored</string>
+    <!-- Size of what Generate will send. Tokens are an estimate (no tokenizer on the phone), hence the tilde. -->
+    <string name="enhance_bar_size">%1$d words · ~%2$d tokens</string>
+    <string name="enhance_bar_size_parts">%1$d words · ~%2$d tokens · %3$d requests</string>
+    <string name="enhance_in_progress_part">Enhancing with %1$s… part %2$d of %3$d</string>
     <!-- Standalone Cloud Keyboard self-update entry (Configs menu) -->
     <string name="keyboard_update">Update Cloud Keyboard</string>
     <string name="keyboard_update_summary">Download and install the latest version</string>

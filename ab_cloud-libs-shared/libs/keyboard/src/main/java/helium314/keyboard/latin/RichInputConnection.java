@@ -283,11 +283,27 @@ public final class RichInputConnection implements PrivateCommandPerformer {
     }
 
     private void reloadCursorPosition() {
-        if (!isConnected()) return;
-        final ExtractedText et = mIC.getExtractedText(new ExtractedTextRequest(), 0);
+        final ExtractedText et = getExtractedText();
         if (et == null) return;
         mExpectedSelStart = et.selectionStart + et.startOffset;
         mExpectedSelEnd = et.selectionEnd + et.startOffset;
+    }
+
+    /**
+     * The editor's text together with where the selection sits in it, in one round trip; null
+     * when the app does not support extraction. This is the only InputConnection call that
+     * returns text and coordinates that agree with each other by construction — the
+     * before/after-cursor calls are each capped by their caller and are placed by
+     * {@link #mExpectedSelStart}, which is an estimate this class keeps repairing. The text
+     * enhancer reads a whole field through this so that the range it later overwrites is exactly
+     * the text it sent. The request carries no size hint, which the platform documents as "no
+     * limit"; an editor may still hand back less than everything, and callers treat that as
+     * the editor's answer rather than assuming more exists.
+     */
+    @Nullable public ExtractedText getExtractedText() {
+        mIC = mParent.getCurrentInputConnection();
+        if (!isConnected()) return null;
+        return mIC.getExtractedText(new ExtractedTextRequest(), 0);
     }
 
     private void checkBatchEdit() {

@@ -72,8 +72,16 @@ object AiRouter {
      */
     val rewritePreamble: String get() = registry.optString("rewrite_preamble")
     val timeoutMs: Int get() = registry.optInt("timeout_ms", 30_000)
-    /** Field-text cap sent to the model; also what the enhancer reads around the cursor. */
+    /** Input budget of ONE request; longer text is cut into pieces of this size by [TextEnhancer.rewrite]. */
     val maxChars: Int get() = registry.optInt("max_chars", 4096)
+    /**
+     * Rough width of a token, used only to show the user what a request costs before sending
+     * it. No tokenizer ships in the keyboard, and every provider's differs; four characters per
+     * token is the usual figure for Latin-script text and the registry can override it.
+     */
+    val charsPerToken: Int get() = registry.optInt("chars_per_token", 4).coerceAtLeast(1)
+    /** An estimate — see [charsPerToken]; shown with a "~" for that reason. */
+    fun estimateTokens(text: CharSequence): Int = (text.length + charsPerToken - 1) / charsPerToken
     /**
      * Completion cap sent with every request. Must be set: some OpenRouter upstream providers
      * read a missing max_tokens as "reserve the whole context window for the completion", then
@@ -233,7 +241,12 @@ object AiRouter {
                 )
             }
             val reply = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-            return reply.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content").trim()
+            val choice = reply.getJSONArray("choices").getJSONObject(0)
+            // A reply that hit max_tokens is cut mid-text. Applied, it would replace the whole
+            // field with a fragment — the one outcome worse than no rewrite — so it is a failure.
+            if (choice.optString("finish_reason") == "length")
+                throw IllegalStateException("${p.label} cut the reply off at $maxTokens tokens — enhance a shorter selection [model ${model(context, p)}]")
+            return choice.getJSONObject("message").getString("content").trim()
         } finally {
             conn.disconnect()
         }
