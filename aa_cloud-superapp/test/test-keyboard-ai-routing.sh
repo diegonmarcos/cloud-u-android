@@ -21,8 +21,11 @@
 #   T8  the AI Model Routing table: slugs non-empty and unique, every price renders
 #       #.## in a unit that never rounds a real cost to 0.00, size sorts numerically
 #       and not lexically, a row missing size/quant/category renders the unknown
-#       marker instead of a blank, and routing still resolves by stored id so the
-#       re-sort cannot move which model Enhance or Grammar calls. Online it also
+#       marker instead of a blank, ONE LINE PER MODEL (one no-wrap Cell per column,
+#       one Row per model, header and rows declaring the same eight columns in the
+#       same order over one shared scroll state, each column wide enough for its
+#       longest value in the registry), and routing still resolves by stored id so
+#       the re-sort cannot move which model Enhance or Grammar calls. Online it also
 #       re-reads OpenRouter for the quant and trained_for values baked into
 #       build.json — that is the refresh procedure for the columns with no runtime
 #       refresh (build.json keyboard_ai._doc_refresh)
@@ -249,16 +252,100 @@ hasf "$S" 'm.quant.joinToString("/").ifEmpty { unknown }' "T8 missing quantisati
 hasf "$S" 'm.trainedFor.joinToString(", ").ifEmpty { unknown }' "T8 missing category renders the unknown marker"
 hasf "$S" 'm.note ?: unknown' "T8 missing observation renders the unknown marker"
 hasf "$S" 'val unknown = stringResource(R.string.ai_table_unknown)' "T8 the unknown marker is one string resource"
-hasf "$S" 'Text(m.id, color = dim, style = body, maxLines = 1, softWrap = false)' "T8 the slug is never wrapped and never ellipsised"
+# ONE LINE PER MODEL. Nine assertions, because two lines per model is what this table was and the
+# way back is a single wrapped cell or a single column added to the rows and not to the header.
+if python3 - "$S" "$LIBS/build.json" "$K/res/values/strings.xml" <<'EOF'
+import json, re, sys, xml.etree.ElementTree as ET
+src = open(sys.argv[1]).read()
+reg = json.load(open(sys.argv[2]))["keyboard_ai"]
+strings = {e.get("name"): "".join(e.itertext()) for e in ET.parse(sys.argv[3]).getroot()}
+
+# Every cell goes through Cell(), and Cell is where the no-wrap guarantee lives. One place, so a new
+# column cannot be added with the wrapping left on by accident.
+assert re.search(r"private fun Cell\(.*?\n\s+Text\(text, modifier, color = color, style = style, "
+                 r"textAlign = align, maxLines = 1, softWrap = false\)", src, re.S), \
+    "Cell() no longer renders exactly one unwrapped line — every cell in the table inherits this"
+
+body = src[src.index("private fun AiPricingTable("):]
+body = body[:body.index("\n@Composable")]
+assert "Text(" not in body.replace("Text(setting.title", "").replace("Text(it,", "").replace("Text(note,", ""), \
+    "a table cell is a bare Text( instead of a Cell( — it does not carry the no-wrap guarantee"
+
+# Exactly two Rows in the table: the header and the one the model loop emits. A third Row is a
+# second line per model, which is the layout this replaced.
+rows = re.findall(r"Row\((.*?)\) \{", body)
+assert len(rows) == 2, f"{len(rows)} Rows in the table, expected 2 (header + one per model): {rows}"
+assert all(r == "Modifier.fillMaxWidth().padding(top = 6.dp).horizontalScroll(scroll)" for r in rows), \
+    f"a table Row is not the shared-scroll strip: {rows}"
+assert body.count("forEach") == 1, "more than one pass over the models — one row per model means one loop"
+
+# weight() cannot appear inside a horizontalScroll: the scroller measures its child with an infinite
+# width, so a weighted cell resolves to zero. The old pinned name column was weight(1f).
+assert "weight(" not in body, "weight() inside the scrolling row measures to zero width"
+
+# Header and rows must declare the SAME columns in the SAME order, or every cell sits under the
+# wrong heading. This is the check a column added to one and not the other fails.
+head, rowcells = body.split("sortedWith(byModelSize)")
+cols = lambda t: re.findall(r"Cell\([^\n]*?,\s*(col\w+),", t)
+assert cols(head) == cols(rowcells), f"header columns {cols(head)} != row columns {cols(rowcells)}"
+order = cols(head)
+assert len(order) == 8, f"{len(order)} columns, expected 8"
+
+# Each column is wide enough for its longest value. Roboto at the table's size averages well under
+# 7 dp per character, so this catches a value that outgrows its column by a wide margin -- the case
+# where softWrap = false turns into a silent clip -- rather than measuring text to the pixel.
+DP_PER_CHAR = 7.0
+width = {m[1]: (m[2], float(m[3])) for m in
+         re.finditer(r"private val (col\w+) = Modifier\.(width|widthIn\(min = )\(?(\d+(?:\.\d+)?)\.dp", src)}
+width = {n: (kind, dp) for n, (kind, dp) in width.items()}
+assert set(width) == set(order), f"declared widths {sorted(width)} != columns used {sorted(order)}"
+
+ms = [m for pv in reg["providers"].values() for m in pv["models"]]
+# Positional, in the order the header declares them. A ninth column fails the length check above
+# and lands the author here, which is the point.
+longest = [
+    ("colName",    max(m["name"] + (strings["ai_model_open_suffix"] if m.get("open") else "") for m in ms)),
+    ("colPrice",   max(("%.2f" % (m[k] * 100) for m in ms for k in ("prompt", "completion") if k in m), key=len)),
+    ("colPrice",   ""),
+    ("colSize",    max((f'{m["params_b"]}B' for m in ms if "params_b" in m), key=len)),
+    ("colQuant",   max(("/".join(m.get("quant", [])) for m in ms), key=len)),
+    ("colTrained", max((", ".join(m.get("trained_for", [])) for m in ms), key=len)),
+    ("colNote",    max((m.get("note", "") for m in ms), key=len)),
+    ("colSlug",    max((m["id"] for m in ms), key=len)),
+]
+assert [c for c, _ in longest] == order, f"this check is paired to {[c for c, _ in longest]}, table renders {order}"
+heads = ["ai_pricing_col_" + n for n in
+         ("model", "in", "out", "size", "quant", "trained", "note", "slug")]
+over = []
+for (col, val), h in zip(longest, heads):
+    kind, dp = width[col]
+    if kind != "width": continue          # widthIn is a floor: it grows instead of clipping
+    for text in (val, strings[h]):
+        if len(text) * DP_PER_CHAR > dp:
+            over.append(f"{col} is {dp:.0f} dp but must hold {len(text)} chars ({text!r})")
+assert not over, "\n    ".join(over)
+EOF
+then ok "T8 one row per model: one no-wrap Cell everywhere, 2 Rows, header and rows same 8 columns, each wide enough"
+else bad "T8 one row per model"; fi
+
+# The model code is the string you copy when something needs the exact identifier, so its column is
+# a floor and not a fixed width: last in the row, nothing to its right, and it can never be cut.
+hasf "$S" 'private val colSlug = Modifier.widthIn(min = 280.dp)' "T8 the model code column grows rather than clips"
 # Header and rows must share ONE scroll state, or the columns slide out from under their headings.
 n=$(grep -cF 'rememberScrollState()' "$S")
 [ "$n" = 1 ] && ok "T8 header and rows share one scroll state" || bad "T8 $n scroll states — rows would scroll apart from the header"
-n=$(grep -cF 'Row(Modifier.fillMaxWidth().horizontalScroll(scroll))' "$S")
-[ "$n" = 2 ] && ok "T8 one scrolling strip for the header and one for the rows" || bad "T8 $n horizontal strips, expected 2"
-# The strip must be a horizontalScroll, not a LazyRow: a lazy list inside the settings LazyColumn
-# is the same-axis nesting that makes the two scrolls fight on a phone.
+n=$(grep -cF 'Row(Modifier.fillMaxWidth().padding(top = 6.dp).horizontalScroll(scroll))' "$S")
+[ "$n" = 2 ] && ok "T8 one scrolling strip for the header and one carrying the whole model row" || bad "T8 $n horizontal strips, expected 2"
+# ONE horizontal scroller per row and nothing scrollable inside it. A scroller nested on the same
+# axis is the gesture the inner one steals; the settings list below is vertical and does not fight.
+n=$(grep -cF 'horizontalScroll(' "$S")
+[ "$n" = 2 ] && ok "T8 no scroller nested inside the row — nothing contests a sideways drag" || bad "T8 $n horizontalScroll calls, expected 2"
 grep -qF 'LazyRow(' "$S" && bad "T8 LazyRow in the table — nest that in the settings list and the scrolls fight" \
   || ok "T8 the strip is a horizontalScroll, perpendicular to the settings list's vertical scroll"
+# Colours come from the theme. A literal here is wrong under the dark and Samsung-black themes.
+grep -qE 'Color\(0x|Color\.(White|Black|Gray|Red|Blue|Green)' "$S" \
+  && bad "T8 a colour literal in the table — the dark and power-saving themes supply their own" \
+  || ok "T8 every colour in the table comes from the theme"
 # Table and picker must agree, and both sort by the same presentation comparator.
 n=$(grep -cF 'sortedWith(byModelSize)' "$S")
 [ "$n" = 2 ] && ok "T8 table and model picker use the same order" || bad "T8 sortedWith(byModelSize) used $n times, expected 2 (table + picker)"

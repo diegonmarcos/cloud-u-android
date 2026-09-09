@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -20,8 +21,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -125,24 +128,58 @@ private fun quantKey(m: AiRouter.Model) = m.quant.minOfOrNull { bitsOf(it) } ?: 
 private fun bitsOf(q: String) = q.filter { it.isDigit() }.toIntOrNull() ?: Int.MAX_VALUE
 
 /**
+ * One table cell.
+ *
+ * Single line, never wrapped, for every cell in the table without exception: the ROW is the model,
+ * and one cell wrapping is enough to take that model onto a second line — which is the layout this
+ * table has just left. Content wider than the cell is reached by scrolling the row sideways, which
+ * is why the widths below are each column's longest value and not a share of the screen.
+ */
+@Composable
+private fun Cell(text: String, modifier: Modifier, color: Color, style: TextStyle, align: TextAlign = TextAlign.Start) =
+    Text(text, modifier, color = color, style = style, textAlign = align, maxLines = 1, softWrap = false)
+
+/**
+ * Column widths, each the longest value that column can hold, at roughly 7 dp per character for the
+ * table's text size. They are read back out of this file by test-keyboard-ai-routing.sh and checked
+ * against the registry, so a note or a category list that outgrows its column fails there rather
+ * than being silently clipped on a phone. Widening a column costs nothing but sideways scrolling.
+ *
+ * The model code is last and is a widthIn floor rather than a fixed width: it is the string you copy
+ * when something needs the exact identifier, so it is the one column that must never be cut, and
+ * nothing sits to its right for an over-long id to push out of line.
+ */
+private val colName = Modifier.width(208.dp)
+private val colPrice = Modifier.width(72.dp)
+private val colSize = Modifier.width(56.dp)
+private val colQuant = Modifier.width(128.dp)
+private val colTrained = Modifier.width(880.dp)
+private val colNote = Modifier.width(576.dp)
+private val colSlug = Modifier.widthIn(min = 280.dp)
+
+/**
  * The routing table for [p]. Prices are the live catalog's when fetched (refreshed on open once the
  * cache is older than keyboard_ai.catalog_ttl_ms), else the registry's baked ones with their as-of
  * date; every other column is baked and has no runtime refresh (see build.json _doc_refresh).
  *
- * NINE columns do not fit a phone, so the row is two lines rather than nine squeezed cells:
+ * ONE LINE PER MODEL. Eight columns do not fit a phone and the answer is to scroll, not to fold:
+ * every model is a single row holding name, both prices, size, quantisation, what it is trained
+ * for, the observation and the model code, and the row runs off the right-hand edge.
  *
- *   line 1, pinned    name | in | out      — what the page is for, readable without scrolling
- *   line 2, scrolls   size | quant | trained for | observations | model code
+ * The header and every row are separate Rows sharing ONE scroll state, so the columns stay under
+ * their headings however far the table is scrolled. There is exactly one horizontal scroller per
+ * row and none inside it: the model code column used to be described as scrollable, but it never
+ * had a scroller of its own — it is simply the widest column, at the end of the strip that scrolls.
+ * That strip now carries the whole row, so no gesture is contested. Sideways drags belong to the
+ * row; vertical drags belong to the settings list, which is the perpendicular axis. What would
+ * break that is a scroller nested on the SAME axis, which is why the row is a horizontalScroll and
+ * never a LazyRow.
  *
- * The second line is one horizontally scrolling strip sharing ONE scroll state with its header, so
- * the columns stay under their headings however far it is scrolled. Splitting the row is what buys
- * the strip the full screen width to scroll in: pinning name and both prices on the same line as
- * the strip would leave it about a third of the width, and the slug column is long by design.
- *
- * The strip scrolls horizontally inside the settings list's vertical LazyColumn. Perpendicular
- * axes, so the two do not fight: Compose gives a drag to whichever scrollable matches its
- * direction. What breaks is nesting the SAME axis, which is why the strip is a horizontalScroll
- * and not a lazy row.
+ * Nothing is pinned. A frozen leading column is buildable here — a fixed cell outside the scroller
+ * inside the same Row — but the name column's own longest value is 208 dp of a phone's ~336 dp of
+ * usable width, so freezing it would leave the other seven columns a third of the screen to scroll
+ * in. Unfrozen, a row at rest already shows name, in and out, which is the comparison the page
+ * exists for.
  */
 @Composable
 private fun AiPricingTable(setting: Setting, p: AiRouter.Provider) {
@@ -156,50 +193,44 @@ private fun AiPricingTable(setting: Setting, p: AiRouter.Provider) {
         }
     }
     val prices = live?.second
+    // The theme's own content colour — literally what Text uses when no colour is passed. Name and
+    // both prices keep it while every other cell is dimmed, so the comparison the page exists for
+    // reads first. Never a literal: the dark and Samsung-black themes each supply their own.
+    val plain = Color.Unspecified
     val dim = MaterialTheme.colorScheme.onSurfaceVariant
     // Shown wherever the registry has no value. An explicit mark, never an empty cell: blank in a
     // price or size column reads as zero, and "unknown size" and "0B" are not the same claim.
     val unknown = stringResource(R.string.ai_table_unknown)
-    // ONE state shared by the strip's header and every row, or the columns scroll apart from their headings.
+    // ONE state shared by the header and every row, or the columns scroll apart from their headings.
     val scroll = rememberScrollState()
-    val colPrice = Modifier.width(72.dp)
-    val colSize = Modifier.width(56.dp)
-    val colQuant = Modifier.width(104.dp)
-    val colTrained = Modifier.width(232.dp)
-    val colNote = Modifier.width(300.dp)
     val label = MaterialTheme.typography.labelMedium
     val body = MaterialTheme.typography.bodyMedium
     Column(Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 12.dp)) {
         Text(setting.title, style = MaterialTheme.typography.bodyLarge)
         setting.description?.let { Text(it, Modifier.padding(top = 2.dp), color = dim, style = MaterialTheme.typography.bodyMedium) }
-        Row(Modifier.padding(top = 6.dp)) {
-            Text(stringResource(R.string.ai_pricing_col_model), Modifier.weight(1f), color = dim, style = label)
-            Text(stringResource(R.string.ai_pricing_col_in), colPrice, color = dim, style = label, textAlign = TextAlign.End)
-            Text(stringResource(R.string.ai_pricing_col_out), colPrice, color = dim, style = label, textAlign = TextAlign.End)
-        }
-        Row(Modifier.fillMaxWidth().horizontalScroll(scroll)) {
-            Text(stringResource(R.string.ai_pricing_col_size), colSize, color = dim, style = label)
-            Text(stringResource(R.string.ai_pricing_col_quant), colQuant, color = dim, style = label)
-            Text(stringResource(R.string.ai_pricing_col_trained), colTrained, color = dim, style = label)
-            Text(stringResource(R.string.ai_pricing_col_note), colNote, color = dim, style = label)
-            Text(stringResource(R.string.ai_pricing_col_slug), color = dim, style = label, maxLines = 1, softWrap = false)
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp).horizontalScroll(scroll)) {
+            Cell(stringResource(R.string.ai_pricing_col_model), colName, dim, label)
+            Cell(stringResource(R.string.ai_pricing_col_in), colPrice, dim, label, TextAlign.End)
+            Cell(stringResource(R.string.ai_pricing_col_out), colPrice, dim, label, TextAlign.End)
+            Cell(stringResource(R.string.ai_pricing_col_size), colSize, dim, label)
+            Cell(stringResource(R.string.ai_pricing_col_quant), colQuant, dim, label)
+            Cell(stringResource(R.string.ai_pricing_col_trained), colTrained, dim, label)
+            Cell(stringResource(R.string.ai_pricing_col_note), colNote, dim, label)
+            Cell(stringResource(R.string.ai_pricing_col_slug), colSlug, dim, label)
         }
         p.models.sortedWith(byModelSize).forEach { m ->
             val pr = prices?.get(m.id) ?: m.baked
-            Row(Modifier.padding(top = 6.dp)) {
-                Text(ctx.labelFor(m), Modifier.weight(1f), style = body)
-                Text(pr?.prompt?.let { cents(it) } ?: unknown, colPrice, style = body, textAlign = TextAlign.End)
-                Text(pr?.completion?.let { cents(it) } ?: unknown, colPrice, style = body, textAlign = TextAlign.End)
-            }
-            Row(Modifier.fillMaxWidth().horizontalScroll(scroll)) {
-                Text(m.paramsB?.let { "${it}B" } ?: unknown, colSize, color = dim, style = body)
-                Text(m.quant.joinToString("/").ifEmpty { unknown }, colQuant, color = dim, style = body)
-                Text(m.trainedFor.joinToString(", ").ifEmpty { unknown }, colTrained, color = dim, style = body)
-                Text(m.note ?: unknown, colNote, color = dim, style = body)
-                // The code you copy when something needs the exact identifier. Never ellipsised and
-                // never wrapped: a shortened id is the one thing this column must not produce, so it
-                // runs past the edge at full width and the strip scrolls to reach it.
-                Text(m.id, color = dim, style = body, maxLines = 1, softWrap = false)
+            // Name and both prices stay at full contrast and the rest is dimmed: they are what the
+            // page is for, and they are what a row shows before it is scrolled.
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp).horizontalScroll(scroll)) {
+                Cell(ctx.labelFor(m), colName, plain, body)
+                Cell(pr?.prompt?.let { cents(it) } ?: unknown, colPrice, plain, body, TextAlign.End)
+                Cell(pr?.completion?.let { cents(it) } ?: unknown, colPrice, plain, body, TextAlign.End)
+                Cell(m.paramsB?.let { "${it}B" } ?: unknown, colSize, dim, body)
+                Cell(m.quant.joinToString("/").ifEmpty { unknown }, colQuant, dim, body)
+                Cell(m.trainedFor.joinToString(", ").ifEmpty { unknown }, colTrained, dim, body)
+                Cell(m.note ?: unknown, colNote, dim, body)
+                Cell(m.id, colSlug, dim, body)
             }
         }
         val note = live?.first?.let { stringResource(R.string.ai_pricing_live, p.label, DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it))) }
