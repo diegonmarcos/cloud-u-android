@@ -405,8 +405,23 @@ class AggregatorStackFragment : Fragment(),
 
     /** Keep a phone-stream app under the two taxonomy rows. Both default to
      *  "all" and only one can be narrowed at a time, so this is a single
-     *  prefix comparison in practice. */
-    private fun taxonomyKeeps(packageName: String, label: String): Boolean {
+     *  prefix comparison in practice.
+     *
+     *  [ctx] IS REQUIRED, and it is the whole reason the Inboxes tab was
+     *  missing a category of apps. `ui.phone_folders` classifies by two rules:
+     *  `match_keywords`, hand-written per package, and `match_metadata`, which
+     *  asks Android what the package declares about itself. The metadata pass
+     *  only runs when the lookup is given a Context; without one it is skipped
+     *  silently, every app that no keyword happens to name falls to the
+     *  `others` sink, and a sink folder carries no section prefix — which the
+     *  comparison below turns into "shown on no tab at all". @Chat reaches
+     *  most messengers through `intent:…APP_MESSAGING` and not through a
+     *  keyword, so context-less meant the entire chat category was invisible.
+     *  Appending packages to the keyword list would have hidden that one app
+     *  at a time instead of fixing it. */
+    private fun taxonomyKeeps(
+        ctx: android.content.Context, packageName: String, label: String,
+    ): Boolean {
         val want = when {
             toolsMode    != "all" -> toolsMode
             servicesMode != "all" -> servicesMode
@@ -418,7 +433,7 @@ class AggregatorStackFragment : Fragment(),
         // person reading the filter. Membership also keeps single-character
         // ids working unchanged, so adding a section stays a build.json-only
         // change.
-        val prefix = PhoneTaxonomy.sectionPrefixOf(packageName, label)
+        val prefix = PhoneTaxonomy.sectionPrefixOf(packageName, label, ctx)
         return prefix.isNotEmpty() && want.contains(prefix)
     }
 
@@ -1103,6 +1118,11 @@ class AggregatorStackFragment : Fragment(),
             body.addView(stateLine(ctx, "silent · nothing captured", SIGNAL_WARN))
             return
         }
+        // Classify the WHOLE feed in one pass before any of it is filtered.
+        // The taxonomy lookup reads the PackageManager for packages no keyword
+        // claimed, and asked per notification it would repeat those reads on
+        // the thread drawing this card — see PhoneTaxonomy.prime.
+        PhoneTaxonomy.prime(ctx, stored.associate { it.packageName to it.appLabel })
         val groups = stored
             .groupBy { it.packageName.ifBlank { it.appLabel } }
             .map { (key, entries) ->
@@ -1125,7 +1145,7 @@ class AggregatorStackFragment : Fragment(),
             // Phone-taxonomy rows. Filtering here rather than hiding rendered
             // views keeps renderGroups' own count honest, so an empty result
             // still lands on filteredAwayNote instead of a bare page.
-            .filter { taxonomyKeeps(it.launchPackage, it.label) }
+            .filter { taxonomyKeeps(ctx, it.launchPackage, it.label) }
         // The store IS the complete phone namespace, so this prune sees
         // everything it is allowed to retire.
         StackFilters.pruneRead(ctx, filterPage, PHONE_NS,

@@ -121,6 +121,70 @@ done < <(jq -r "$CLASSIFY"'
         | ltrimstr("app:") ] | unique | .[] ) as $pkg
   | [ $pkg, ($root | sect($pkg)) ] | @tsv' "$BJ")
 
+echo "== T5: every app the central list puts in an Inboxes section reaches the Inboxes UI =="
+# T1-T4 stop at "the app resolves to a section". That is only half the trip, and
+# the missing half is what let Notify > Inboxes lose the whole chat category on
+# 2026-09-09 while every one of the checks above passed: `ui.phone_folders`
+# placed the messengers in "@Chat" through a `match_metadata` rule, and the
+# surface reading that classification could not run the metadata pass, so the
+# apps resolved on paper and arrived nowhere. These three assertions are the
+# rest of the route, from the central list to the tab.
+FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
+TAXO="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/PhoneTaxonomy.kt"
+
+# T5a — a folder with NO match rule at all can never claim an app, so a section
+# built only out of such folders is a tab that can only ever be empty. The Misc
+# exile and the Others sink are rule-less on purpose and carry no prefix, which
+# is why the selection is by prefix and not by folder.
+while IFS=$'\t' read -r fid label rules; do
+  [ "$rules" -gt 0 ] && ok "folder $fid ('$label') declares $rules match rule(s)" \
+                     || bad "folder $fid ('$label') sits in a section but declares no match_keywords and no match_metadata, so nothing can ever reach it"
+done < <(jq -r '
+  .ui.phone_folders[]
+  | select((.label[0:1] | test("^[A-Za-z0-9]$")) | not)
+  | [ .id, .label, (((.match_keywords // []) | length) + ((.match_metadata // []) | length)) ]
+  | @tsv' "$BJ")
+
+# T5b — THE CHECK THAT WOULD HAVE CAUGHT ALL THREE REPORTS. A folder that
+# classifies by `match_metadata` is reachable only when the lookup is handed a
+# Context: PhoneAppClassifier skips the metadata pass for AppMetadata.NONE, and
+# PhoneTaxonomy passes NONE exactly when its `ctx` argument is null. So a
+# context-less call site silently downgrades the central classification to its
+# keyword half, and every app that only a metadata rule would have placed
+# becomes sectionless — which taxonomyKeeps reads as "show on no tab".
+METADATA_FOLDERS="$(jq -r '[ .ui.phone_folders[] | select(((.match_metadata // []) | length) > 0) ] | length' "$BJ")"
+CTXLESS="$(grep -nE '(sectionPrefixOf|folderIdOf)\([^)]*\)' "$FRAG" \
+           | grep -vE '(sectionPrefixOf|folderIdOf)\([^)]*,[^)]*,[^)]*\)' || true)"
+[ -z "$CTXLESS" ] \
+  && ok "every taxonomy lookup in AggregatorStackFragment passes a Context ($METADATA_FOLDERS folders classify by match_metadata and need it)" \
+  || { while IFS= read -r line; do
+         bad "context-less taxonomy lookup — match_metadata folders cannot be reached from it: ${line}"
+       # A here-string, not a pipe: a piped `while` runs in a subshell, so every
+       # bad() it called would increment a FAIL the exit status never sees — a
+       # checker that prints failures and still reports success.
+       done <<< "$CTXLESS"; }
+
+# T5c — and the memo must not freeze a context-less answer, or the first such
+# caller would make every later, correct caller wrong for the life of the
+# process. Same defect, one indirection further away.
+grep -q 'if (ctx != null || keywordId != sinkId) cache\[pkg\] = id' "$TAXO" \
+  && ok "PhoneTaxonomy memoises only answers the metadata pass could not change" \
+  || bad "PhoneTaxonomy caches provisional (context-less, unclaimed) answers, freezing apps out of their section"
+
+# T5d — the section an app resolves to must be selectable on the page that is
+# supposed to show it. An option id is a SET of prefixes (see
+# _doc_filters_my-rss), so membership, not equality.
+while IFS=$'\t' read -r prefix covered; do
+  [ "$covered" = "true" ] && ok "section '$prefix' is selectable on Notify > Inboxes" \
+                          || bad "section '$prefix' is declared in ui.phone_sections but no filters_rss-inboxes option offers it, so its apps reach no tab"
+done < <(jq -r '
+  ( [ .ui.sections[] | .["filters_rss-inboxes"] // empty ] | first // [] ) as $f
+  | [ $f[] | select(.id == "tools" or .id == "services") | .options[].id ] as $opts
+  | .ui.phone_sections[]
+  | .prefix as $p
+  | [ $p, ([ $opts[] | select(contains($p)) ] | length > 0) ]
+  | @tsv' "$BJ" | sort -u)
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
