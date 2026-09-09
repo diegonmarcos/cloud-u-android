@@ -772,7 +772,6 @@ class ConstellationFragment : Fragment() {
         // path broke in the module move — every fleet-driven action is a no-op,
         // so the store cannot pull the very build that would repopulate it.
         // checkNow does not care whether the fleet parsed.
-        com.diegonmarcos.superapp.updater.Updater.checkNow(ctx)
         Toast.makeText(ctx, "Updating $what (+ SuperApp)…", Toast.LENGTH_SHORT).show()
         thread(name = "fleet-update-all") {
             // Mode.AUTO, not Mode.UPDATES. For an APP the two are identical, so
@@ -783,12 +782,29 @@ class ConstellationFragment : Fragment() {
             // typically exactly one. It was not stopping. It only ever had one
             // eligible entry, for the same reason the background pass ignored
             // all 36 lib entries. AUTO makes a missing lib eligible.
-            val n = Fleet.installAll(ctx, targets, Fleet.Mode.AUTO)
+            val pass = Fleet.installAllPass(ctx, targets, Fleet.Mode.AUTO)
+            // `acted == 0` is not "up to date". It is equally "everything was
+            // blocked", which is what a device out of PackageInstaller session
+            // headroom hits — and reporting that as success is how a total
+            // failure across every app and lib looked like good news. The pass
+            // already knows which happened; say what it says.
             view?.post {
                 Toast.makeText(ctx,
-                    if (n == 0) "Everything up to date ($what)" else "$n update(s) queued",
+                    when {
+                        pass.acted > 0 -> "${pass.acted} update(s) queued"
+                        pass.considered == 0 -> "Everything up to date ($what)"
+                        else -> pass.reason
+                    },
                     Toast.LENGTH_LONG).show()
             }
+            // The HOST update goes LAST. It still runs unconditionally, so the
+            // button stays the repair tool it was built to be when the baked
+            // fleet is empty — an empty fleet just makes the batch above a
+            // fast no-op. But running it FIRST meant a successful self-install
+            // replaced the APK and Android killed the process, taking the
+            // whole fleet batch with it. UpdateWorker already orders it this
+            // way for exactly that reason.
+            com.diegonmarcos.superapp.updater.Updater.checkNow(ctx)
             checkAll(ctx)
         }
     }

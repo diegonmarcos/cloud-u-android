@@ -208,9 +208,18 @@ internal class UpdateInstaller(private val context: Context) {
             // slots to work in and keeping the newest, which is the one the
             // user is most likely looking at right now. Losing a pending prompt
             // is recoverable; a permanently stuck installer is not.
-            mine.size >= NEAR_CAP ->
+            // BUDGET_CAP, not NEAR_CAP. freeSessionSlots hits zero at
+            // NEAR_CAP - HEADROOM held sessions, which is eight BELOW the
+            // number this branch used to wait for — so a device carrying 32
+            // to 39 unanswered prompts had a budget of zero while this reaper
+            // still considered it healthy and reclaimed nothing. Every pass
+            // then took no apps and reported "0 installable", permanently,
+            // with no way out but answering prompts by hand. Reaping at the
+            // number the budget actually uses makes the two agree by
+            // construction rather than by coincidence.
+            mine.size >= BUDGET_CAP ->
                 idle.sortedBy(::createdAt)
-                    .take((idle.size - (NEAR_CAP - HEADROOM)).coerceAtLeast(1))
+                    .take((mine.size - BUDGET_CAP + HEADROOM).coerceAtLeast(1))
 
             // Below the cap there is no urgency, so only reclaim sessions old
             // enough that they cannot still be a prompt awaiting an answer.
@@ -234,6 +243,14 @@ internal class UpdateInstaller(private val context: Context) {
         const val NEAR_CAP = 40
         /** Slots to free when we are already at the cap. */
         const val HEADROOM = 8
+        /**
+         * The held-session count at which [freeSessionSlots] reports zero —
+         * the point where installs actually stop. Derived, never a second
+         * literal: the reaper and the budget must be talking about the same
+         * number, and when they were not, the eight-session gap between them
+         * was a state a device could never leave.
+         */
+        const val BUDGET_CAP = NEAR_CAP - HEADROOM
         const val STALE_SESSION_MS = 60L * 60L * 1000L
     }
 }

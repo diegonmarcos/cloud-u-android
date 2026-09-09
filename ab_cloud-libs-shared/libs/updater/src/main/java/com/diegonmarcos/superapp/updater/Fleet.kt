@@ -579,7 +579,25 @@ object Fleet {
         apps: List<App>,
         mode: Mode = Mode.ALL,
         limit: Int = Int.MAX_VALUE,
-    ): Int = runBatch(ctx, apps, mode, limit, owner = "installAll($mode)").acted
+    ): Int = installAllPass(ctx, apps, mode, limit).acted
+
+    /**
+     * [installAll] with the pass kept instead of reduced to a count.
+     *
+     * `acted == 0` is ambiguous and the UI was reading it as good news: it
+     * means either "nothing needed doing" or "everything was blocked", and
+     * the Constellation page printed "Everything up to date" for both. A
+     * device with no session headroom therefore reported success while
+     * installing nothing, for every app and every lib at once. [Pass.reason]
+     * already says which of the two happened — this just stops throwing it
+     * away on the way out.
+     */
+    fun installAllPass(
+        ctx: Context,
+        apps: List<App>,
+        mode: Mode = Mode.ALL,
+        limit: Int = Int.MAX_VALUE,
+    ): Pass = runBatch(ctx, apps, mode, limit, owner = "installAll($mode)")
 
     /**
      * THE unattended entry point. Both periodic workers call this and nothing
@@ -732,8 +750,15 @@ object Fleet {
         // from one pass, and Android refuses new ones past 50 with "Too many
         // active sessions for UID".
         val slots = UpdateInstaller(ctx).freeSessionSlots()
-        val batch = if (limit >= todo.size) todo
-                    else todo.take(minOf(limit, slots))
+        // The budget applies to EVERY caller, with no exemption for "Update
+        // all". That branch passed limit = Int.MAX_VALUE, took the first arm,
+        // and opened one session per fleet entry — up to 58 against Android's
+        // 50-per-UID cap. The overflow then failed inside phase 2's catch, so
+        // `acted` stayed 0 and the page rendered "Everything up to date": a
+        // total failure printed as success, for every app and every lib at
+        // once. A tap that installs in waves is a far smaller cost than a
+        // tap that silently installs nothing.
+        val batch = todo.take(minOf(limit, slots))
         // THE SILENT ZERO. take(0) used to return an empty batch and the pass
         // reported "acted on 0 app(s)" — the same line it prints when there is
         // genuinely nothing to do. These are opposite situations: one is
