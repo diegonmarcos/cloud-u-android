@@ -182,7 +182,15 @@ main, run = pathlib.Path(sys.argv[1]), sys.argv[2]
 fails = 0
 # Matched as a whole name: "TextToolRunner(" is a substring of "rememberTextToolRunner(", and a
 # check that cannot tell the constructor from its own factory reports every caller as a door.
-for call in ("client.enhance(", "client.translate(", "client.summarise(", "TextToolRunner("):
+# The tool calls carry THIS APP'S own prompt and model now (enhanceWith/summariseWith) rather than
+# an empty argument that asked the keyboard to resolve the setting. Same doors, renamed - the guard
+# is about which file may open one, not about what the call is called.
+#
+# NOT IN THIS LIST, deliberately: client.settingsSnapshot(). It runs no tool and produces no text
+# for a surface to draw; it is read once by MailTextToolsPrefs to seed this app's copy of the
+# owner's settings. Guarding it here would be guarding the settings screens against offering
+# settings, and the surface rule has nothing to say about them.
+for call in ("client.enhanceWith(", "client.translate(", "client.summariseWith(", "TextToolRunner("):
     pat = re.compile(r'(?<![A-Za-z])' + re.escape(call))
     where = [p for p in sorted(main.rglob("*.kt")) if pat.search(p.read_text(encoding='utf-8'))]
     if [str(p) for p in where] == [run]:

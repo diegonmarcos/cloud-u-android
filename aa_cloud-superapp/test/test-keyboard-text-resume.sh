@@ -3,12 +3,12 @@
 # prompt, and the settings screens show the prompts the code really sends. This is the
 # static proof of both, WITHOUT a gradle build (this runner cannot build):
 #
-#   T1  the summary prompts have exactly ONE home in the whole repo, and cloud-mail
+#   T1  the summary prompts have ONE home PER APPLICATION and the two are independent, and cloud-mail
 #       holds no copy of them
 #   T2  the prompt a settings screen DISPLAYS is the value the feature SENDS — same
 #       function, one call, no re-assembly inside the preview row
 #   T3  no prompt is a string literal in Kotlin, in either application
-#   T4  exactly one bullet-summary prompt exists and BOTH applications resolve to it
+#   T4  each application sends its OWN summary prompt, and both land on ONE summariser
 #   T5  a Resume never writes over the text it summarised
 #   T6  the bullet shape is CHECKED after the reply, not assumed, and prose is reported
 #   T7  the toolbar row is untouched — no new key, no change to paging
@@ -32,21 +32,47 @@ lacks() { grep -qF -- "$2" "$1" && bad "$3 ($1)" || ok "$3"; }
 
 echo "== keyboard Text Resume / mail AI Resume: one prompt, shown as sent =="
 
-# ── T1 one home ──────────────────────────────────────────────────────────────
-# Two build.json files carrying `summaries` is the exact failure the fleet spent today
-# removing twice: two copies that agree on the day they are written and never again.
+# ── T1 one home PER APPLICATION ──────────────────────────────────────────────
+# INVERTED, DELIBERATELY, AND THIS IS THE POINT OF THE CHANGE. This block used to demand exactly
+# ONE build.json carrying the summary prompts, on the reasoning that two copies agree on the day
+# they are written and never again. That reasoning is sound and it was answering the wrong
+# question. One home meant one owner, and the owner was the keyboard: from cloud-mail the summary
+# prompt could be READ and not changed, because it was not cloud-mail's. The owner asked for their
+# own set in mail. Two copies that are ALLOWED to disagree is the requirement, not the defect.
+#
+# So: exactly two homes, one per application, and neither application reads the other's.
 homes=$(grep -rlF '"summary_preamble"' "$ROOT" --include=build.json 2>/dev/null | grep -v /z_archive/ | sort)
 n=$(printf '%s\n' "$homes" | grep -c . )
-[ "$n" = 1 ] && ok "T1 summary prompts live in exactly one build.json ($homes)" \
+[ "$n" = 2 ] && ok "T1 summary prompts live in exactly two build.json files, one per app" \
              || bad "T1 $n build.json files declare summary prompts: $(echo $homes)"
-[ "$homes" = "$LIBS/build.json" ] && ok "T1 that one home is the shared-library registry" \
-                                  || bad "T1 the home moved to $homes"
-# cloud-mail must hold no summary prompt of its own, in data or in code.
-# Its own tests are allowed to name the block they assert about; its SOURCE is not.
-if grep -rlF '"summaries"' "$ROOT/ac_cloud-mail" --include=build.json --include=*.json \
-     --include=*.kt --include=*.java 2>/dev/null | grep -q .; then
-  bad "T1 cloud-mail declares its own summaries block"
-else ok "T1 cloud-mail declares no summaries block"; fi
+printf '%s\n' "$homes" | grep -qxF "$LIBS/build.json" \
+  && ok "T1 the keyboard's home is the shared-library registry" \
+  || bad "T1 the keyboard's home moved: $(echo $homes)"
+printf '%s\n' "$homes" | grep -qxF "$ROOT/ac_cloud-mail/build.json" \
+  && ok "T1 cloud-mail declares its own summary prompts" \
+  || bad "T1 cloud-mail has no summary prompts of its own - it would be reading the keyboard's"
+# THE ASSERTION THAT CARRIES THE REQUIREMENT: the two are separate stores, so an edit to one
+# cannot reach the other. Each app's build wiring may read its OWN block and no other.
+# COMMENTS STRIPPED. Both build files EXPLAIN that one block began as a copy of the other, and
+# that sentence is what stops the next reader from "fixing" the duplication. Naming the other
+# block in prose is not reading it; only code that resolves it is.
+# A DEREFERENCE, NOT THE WORD. Prose that names the other block is not reading it, and both build
+# files deliberately name it: mail's says its registry began as a copy of keyboard_ai, and its
+# missing-block error tells whoever hits it not to repoint the build at keyboard_ai. Those two
+# sentences are what stop the next reader from "fixing" the duplication, so the check has to be
+# narrower than a word search - it matches only the forms that actually resolve the block,
+# ["x"] / .x / ("x"), which is what a build or a parser would have to write.
+reads() {  # reads <block> <dir>...: does anything actually resolve <block>?
+  local block="$1"; shift
+  grep -rhE --include=*.gradle --include=*.gradle.kts --include=*.kt --include=*.java \
+    -- "[\[(]\"$block\"|\.$block\b" "$@" 2>/dev/null | grep -q .
+}
+reads 'keyboard_ai' "$ROOT/ac_cloud-mail/app" \
+  && bad "T1 cloud-mail reads keyboard_ai - editing mail's prompts would not be editing what it sends" \
+  || ok "T1 cloud-mail never reads keyboard_ai"
+reads 'mail_ai' "$LIBS/libs" "$ROOT/ac_cloud-keyboard" \
+  && bad "T1 the keyboard reads mail_ai - editing mail's prompts would change the keyboard" \
+  || ok "T1 the keyboard never reads mail_ai"
 
 # ── T2 displayed == sent ─────────────────────────────────────────────────────
 # The whole requirement is the word "actually": a screen showing a prompt the code does
@@ -127,18 +153,29 @@ then ok "T3/T4/T6 registry: one bullet prompt, shape constrained, nothing hardco
 else bad "T3/T4/T6 registry: $(printf '%s' "$err" | sed -n 's/^AssertionError: //p' | head -3 | tr '\n' ' ')
 $(printf '%s' "$err" | tail -4)"; fi
 
-# ── T4 both applications resolve to that one prompt ──────────────────────────
-# cloud-mail names no summary: it passes the default summaryId, so what it sends is
-# whatever the keyboard's Text Resume is set to. There is nothing to keep in step.
-hasf "$MAIL/app/sterna/ui/text/TextToolRun.kt" 'TextTool.RESUME -> client.summarise(text)' \
-     "T4 cloud-mail calls summarise() without naming a summary id"
-hasf "$TT/TextToolsClient.kt" 'fun summarise(text: String, summaryId: String = TextTools.SUMMARY_CONFIGURED)' \
-     "T4 the default summaryId is 'the one pinned in Text Resume'"
+# ── T4 each application sends ITS OWN prompt, to ONE summariser ──────────────
+# INVERTED with T1, and for the same reason. cloud-mail used to name no summary at all: it passed
+# the default summaryId, so what it sent was whatever the KEYBOARD's Text Resume was set to. That
+# is exactly why the owner could not change it from mail. It now sends its own composed prompt.
+#
+# What must NOT be duplicated is the summariser underneath - the budget, the truncation note, the
+# bullet enforcement, the HTTP call. Those assertions are unchanged below, and they are the line:
+# the CONFIGURATION is copied, the ENGINE is not.
+hasf "$MAIL/app/sterna/ui/text/TextToolRun.kt" 'client.summariseWith(' \
+     "T4 cloud-mail sends a summary prompt of its own"
+hasf "$MAIL/app/sterna/ui/text/TextToolRun.kt" 'MailTextToolsPrefs.summaryPrompt(context)' \
+     "T4 the prompt it sends is the one ITS OWN Text Resume page is set to"
+hasf "$TT/TextToolsClient.kt" 'fun summariseWith(' \
+     "T4 the client exposes the call that carries the caller's own prompt"
 # Exactly two senders of a summary in the whole tree: the keyboard's bar, and the binder
 # cloud-mail reaches it through. A third is a third copy of this plumbing.
+# Still exactly two FILES sending a summary in the whole tree: the keyboard's bar, and the binder
+# cloud-mail reaches it through. The binder now has two methods rather than one - summarise() for
+# a caller that wants this app's settings, summariseWith() for one that brought its own - but they
+# land on the same AiRouter.summarise. A third FILE would be a third copy of this plumbing.
 callers=$(grep -rlF 'AiRouter.summarise(' "$LIBS/libs" --include=*.kt | sort)
 [ "$(printf '%s\n' "$callers" | grep -c .)" = 2 ] \
-  && ok "T4 exactly two callers of AiRouter.summarise (bar + binder)" \
+  && ok "T4 exactly two files call AiRouter.summarise (bar + binder)" \
   || bad "T4 callers of AiRouter.summarise: $(echo $callers)"
 printf '%s\n' "$callers" | grep -q 'EnhanceBarView.kt' && ok "T4 the keyboard's Resume is one of them" || bad "T4 keyboard caller missing"
 printf '%s\n' "$callers" | grep -q 'TextToolsService.kt' && ok "T4 cloud-mail's binder is the other" || bad "T4 binder caller missing"

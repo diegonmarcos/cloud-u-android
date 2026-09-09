@@ -63,4 +63,59 @@ interface ITextTools {
      * every method below and an older installed keyboard would answer the wrong call.
      */
     String[] summarise(in String text, in String summaryId);
+
+    /**
+     * Rewrite [text] against a system prompt and a model THE CALLER chose.
+     *
+     * WHY THIS EXISTS, AND IT IS NOT AN OPTIMISATION. [enhance] resolves the prompt and the model
+     * out of the SERVING app's preferences. That makes the serving app the only owner of those
+     * settings: a second app calling it gets the keyboard's Enhance style whether it wants it or
+     * not, and the only screen that could change it is the keyboard's own. The owner asked for
+     * cloud-mail to have its own Enhance settings, editable in cloud-mail, and this is the method
+     * that lets an app have them — it hands over its whole decision and keeps nothing here.
+     *
+     * WHAT STAYS ON THIS SIDE: the HTTP call, the auth header, the timeout, the chunking of input
+     * past the provider's budget, the error wording, and above all the API KEY. The caller names a
+     * provider; it never sees that provider's credential. One engine, several sets of settings.
+     *
+     * [systemPrompt] is the FULLY COMPOSED prompt — preamble, style, tone, length and output
+     * language already joined by the caller from the caller's own registry. Nothing here adds to
+     * it, because anything added here would be a setting this side still owned.
+     *
+     * [providerId] and [modelId] empty = fall back to whatever the serving app has configured.
+     * That is the honest answer for a caller that has not chosen yet, and it is what the very
+     * first launch after an upgrade does before its settings are seeded.
+     */
+    String[] enhanceWith(in String text, in String systemPrompt, in String providerId, in String modelId);
+
+    /**
+     * Summarise [text] against a system prompt and a model THE CALLER chose — [enhanceWith]'s
+     * reasoning applied to Text Resume, and appended for the same wire-format rule.
+     *
+     * Still NOT [enhanceWith] with a different prompt: this one sends ONE request and states the
+     * cut when the input did not fit, where a rewrite splits and rejoins. Crossing them yields a
+     * summary per piece, concatenated — longer than the text it summarised.
+     *
+     * [bullets] true = the caller's prompt asked for a list, so hold the model to one. It travels
+     * because it is a property OF THE CALLER'S PROMPT, and the caller is now the only side that
+     * knows which of its prompts asked for bullets. The enforcement itself does not travel.
+     */
+    String[] summariseWith(in String text, in String systemPrompt, boolean bullets, in String providerId, in String modelId);
+
+    /** Readable name of [providerId], for progress and error text; the configured one when empty. */
+    String providerLabelFor(in String providerId);
+
+    /**
+     * The serving app's CURRENT text-tool choices, as JSON, so a caller adopting its own copy of
+     * these settings can start from what the owner already configured rather than from defaults.
+     *
+     * READ ONCE, AT SEEDING, AND NEVER AGAIN. A caller that kept reading this would be back to
+     * having no settings of its own. Keys mirror the preference names; see MailTextToolsPrefs.
+     *
+     * NO CREDENTIAL IS IN IT. The API key is deliberately absent and must stay absent: this method
+     * exists so a second app can copy the owner's CHOICES, not their account. A snapshot that
+     * carried the token would put the key in a second app's storage, which is the one thing the
+     * whole binder design exists to prevent.
+     */
+    String settingsSnapshot();
 }

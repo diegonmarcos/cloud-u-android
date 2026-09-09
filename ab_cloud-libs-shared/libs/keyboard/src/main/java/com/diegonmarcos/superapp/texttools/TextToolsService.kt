@@ -9,7 +9,10 @@ import com.diegonmarcos.superapp.translate.TranslatePrefs
 import com.diegonmarcos.superapp.translate.Translator
 import helium314.keyboard.latin.AiRouter
 import helium314.keyboard.latin.TextEnhancer
+import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
+import helium314.keyboard.latin.utils.prefs
+import org.json.JSONObject
 
 /**
  * Serves [ITextTools] out of the app that owns the Text tools.
@@ -21,14 +24,27 @@ import helium314.keyboard.latin.utils.Log
  * crosses the binder. There is no second copy of the credential path because there is
  * no second holder of the credential.
  *
- * It also means there is exactly ONE store of these settings. A caller cannot pick a
- * different model or a different translation target from the one AI Model Routing and
- * Translation settings hold, because it never gets to choose — it hands over text.
+ * ONE ENGINE, SEVERAL SETS OF SETTINGS — and the two halves of that sentence are why this
+ * class has two families of methods.
+ *
+ * [enhance], [translate] and [summarise] resolve the prompt, the model and the translation
+ * target out of THIS app's preferences. They are what the keyboard's own surfaces need, and
+ * for a while they were all a sibling app had, which made this app the only owner of every
+ * one of those settings: cloud-mail's Text pages could only ever be the keyboard's pages,
+ * and the owner could look at their mail settings without being able to change any of them.
+ *
+ * [enhanceWith] and [summariseWith] take the prompt and the model FROM THE CALLER. An app
+ * that holds its own copy of the registry and its own preferences sends its decision and
+ * gets its own rewrite. What it still does not get, and what makes the split safe, is the
+ * engine: the HTTP call, the chunking, the summary budget, the bullet enforcement, the error
+ * wording and the API KEY all stay here in one copy. Duplicating settings is what the owner
+ * asked for; duplicating the credential path is what this module exists to prevent, and the
+ * two are not the same request.
  *
  * ROUTING, AND IT MUST NOT BE CROSSED:
- *   [enhance]   -> AiRouter / TextEnhancer  — the OpenRouter-shape provider.
- *   [summarise] -> AiRouter                 — the SAME provider, a different prompt set.
- *   [translate] -> Translator / TranslateEngines — the translation library.
+ *   [enhance]/[enhanceWith]     -> AiRouter / TextEnhancer  — the OpenRouter-shape provider.
+ *   [summarise]/[summariseWith] -> AiRouter                 — the SAME provider, another prompt.
+ *   [translate]                 -> Translator / TranslateEngines — the translation library.
  * The LLM pair and the translator may never reach each other's engine. They cost different money,
  * they answer differently, and a caller cannot tell from a reply which one produced it.
  * [enhance] and [summarise] deliberately DO share an engine: they are one feature's plumbing asked
@@ -130,8 +146,117 @@ class TextToolsService : Service() {
             }
         }
 
+        /**
+         * [enhance], against a prompt and a model the CALLER owns.
+         *
+         * The difference from [enhance] is only where the two decisions come from: there, this
+         * app's preferences; here, the caller's. Everything that makes a rewrite a rewrite —
+         * TextEnhancer.rewrite's splitting on paragraph/line/sentence, the rejoin, the timeout,
+         * the wording of every failure — is the same code on the same side of the binder, and the
+         * provider key is still read here and never sent anywhere.
+         *
+         * The caller hands over a FULLY COMPOSED system prompt. Nothing is appended to it: this
+         * app's preamble, style, tone, length and language are this app's settings, and mixing
+         * them into another app's prompt is precisely the sharing the owner asked to be undone.
+         */
+        override fun enhanceWith(
+            text: String?,
+            systemPrompt: String?,
+            providerId: String?,
+            modelId: String?,
+        ): Array<String> {
+            val body = text.orEmpty()
+            if (body.isBlank()) return failed("Nothing to enhance")
+            val prompt = systemPrompt.orEmpty()
+            // An empty prompt would send the text with no instructions at all, and the model
+            // would answer it as a message rather than rewrite it. That is a caller bug and it
+            // says so, rather than quietly falling back to THIS app's prompt — which would hand
+            // the caller settings it does not own and cannot see.
+            if (prompt.isBlank()) return failed("No prompt was sent with this rewrite")
+            val route = AiRouter.routeOf(this@TextToolsService, providerId, modelId)
+            return try {
+                ok(TextEnhancer.rewrite(
+                    this@TextToolsService,
+                    AiRouter.Style(CALLER_STYLE_ID, CALLER_STYLE_ID, prompt),
+                    body,
+                    route = route,
+                ))
+            } catch (e: AiRouter.NoTokenException) {
+                failed("No API key for ${e.provider.label} — set one in AI Routing")
+            } catch (e: Exception) {
+                Log.w(TAG, "enhanceWith failed", e)
+                failed(e.message ?: e.javaClass.simpleName)
+            }
+        }
+
+        /**
+         * [summarise], against a prompt and a model the CALLER owns — [enhanceWith]'s split
+         * applied to Text Resume.
+         *
+         * Still the one-request summariser, not the chunking rewriter, and still AiRouter's own
+         * budget, truncation note and bullet enforcement. [bullets] travels because only the
+         * caller now knows which of ITS prompts asked for a list; what to DO about that answer
+         * stays here, so both apps enforce bullets the same way.
+         */
+        override fun summariseWith(
+            text: String?,
+            systemPrompt: String?,
+            bullets: Boolean,
+            providerId: String?,
+            modelId: String?,
+        ): Array<String> {
+            val body = text.orEmpty()
+            if (body.isBlank()) return failed("Nothing to summarise")
+            val prompt = systemPrompt.orEmpty()
+            if (prompt.isBlank()) return failed("No prompt was sent with this summary")
+            val route = AiRouter.routeOf(this@TextToolsService, providerId, modelId)
+            return try {
+                ok(AiRouter.summarise(
+                    this@TextToolsService,
+                    AiRouter.Style(CALLER_STYLE_ID, CALLER_STYLE_ID, prompt, bullets),
+                    body,
+                    route,
+                ))
+            } catch (e: AiRouter.NoTokenException) {
+                failed("No API key for ${e.provider.label} — set one in AI Routing")
+            } catch (e: Exception) {
+                Log.w(TAG, "summariseWith failed", e)
+                failed(e.message ?: e.javaClass.simpleName)
+            }
+        }
+
         override fun enhanceProviderLabel(): String =
             AiRouter.provider(this@TextToolsService).label
+
+        override fun providerLabelFor(providerId: String?): String =
+            AiRouter.routeOf(this@TextToolsService, providerId, null).provider.label
+
+        /**
+         * This app's current text-tool choices, for a sibling seeding its own copy of them.
+         *
+         * WITHOUT THE TOKEN, and that omission is the design rather than an oversight. A caller
+         * adopting these settings is adopting the owner's CHOICES — which provider, which model,
+         * which style, which summary shape, which translation target. The credential is not a
+         * choice, it is an account, and it stays the single copy that only this process holds.
+         * Anything added to this object later has to pass the same test.
+         */
+        override fun settingsSnapshot(): String {
+            val context = this@TextToolsService
+            val prefs = context.prefs()
+            val provider = AiRouter.provider(context)
+            val models = JSONObject()
+            AiRouter.providers.forEach { p -> models.put(p.id, AiRouter.model(context, p)) }
+            return JSONObject()
+                .put(Settings.PREF_AI_PROVIDER, provider.id)
+                .put(SNAPSHOT_MODELS, models)
+                .put(Settings.PREF_ENHANCE_STYLE, prefs.getString(Settings.PREF_ENHANCE_STYLE, AiRouter.defaultStyle))
+                .put(Settings.PREF_ENHANCE_TONE, prefs.getString(Settings.PREF_ENHANCE_TONE, AiRouter.defaultTone))
+                .put(Settings.PREF_ENHANCE_LENGTH, prefs.getString(Settings.PREF_ENHANCE_LENGTH, AiRouter.defaultLength))
+                .put(Settings.PREF_ENHANCE_LANGUAGE, prefs.getString(Settings.PREF_ENHANCE_LANGUAGE, AiRouter.defaultLanguage))
+                .put(Settings.PREF_SUMMARY_STYLE, prefs.getString(Settings.PREF_SUMMARY_STYLE, AiRouter.defaultSummary))
+                .put(TranslatePrefs.KEY_DEFAULT_TARGET, TranslatePrefs.defaultTarget(context))
+                .toString()
+        }
 
         override fun translateLanguages(): List<String> =
             TranslateEngines.client?.supportedLanguages().orEmpty().ifEmpty { TranslatePrefs.FALLBACK_LANGS }
@@ -139,6 +264,16 @@ class TextToolsService : Service() {
 
     private companion object {
         const val TAG = "TextToolsService"
+
+        /**
+         * The id and label given to a prompt that arrived over the binder. It is not one of this
+         * app's styles and must never be mistaken for one — the caller's own screen holds the name
+         * the user sees, and inventing a local label here would put a second name on one setting.
+         */
+        const val CALLER_STYLE_ID = "caller"
+
+        /** [settingsSnapshot] key holding provider id → chosen model id. */
+        const val SNAPSHOT_MODELS = "ai_models"
 
         /** Slot 0 carries the result and slot 1 stays empty — see [ITextTools]. */
         fun ok(text: String) = arrayOf(text, "")

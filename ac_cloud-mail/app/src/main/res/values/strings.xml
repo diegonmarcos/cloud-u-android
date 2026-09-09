@@ -489,7 +489,7 @@
          TextToolsSection); nothing under this heading is a screen in this app. -->
     <string name="settings_text_section">Text</string>
     <string name="settings_text_ai_routing_title">AI Routing</string>
-    <string name="settings_text_ai_routing_summary">Provider, model and API key used by Text Enhance</string>
+    <string name="settings_text_ai_routing_summary">Which provider and model this app's Text tools use</string>
     <string name="settings_text_enhance_title">Text Enhancement</string>
     <string name="settings_text_enhance_summary">Style, tone, length and output language of a rewrite</string>
     <!-- "Resume" is the owner's product name for SUMMARISE. Not a CV, not resuming
@@ -497,9 +497,20 @@
     <string name="settings_text_resume_title">Text Resume</string>
     <string name="settings_text_resume_summary">How a message is summarised, and the prompt that does it</string>
     <string name="settings_text_translation_title">Translation</string>
-    <string name="settings_text_translation_summary">Default target language and engine status</string>
-    <string name="settings_text_missing_title">Cloud Keyboard not installed</string>
-    <string name="settings_text_missing_body">These settings live in the Cloud Keyboard app, which also holds the API key the Text tools use. Install it and this opens its page.</string>
+    <string name="settings_text_translation_summary">Default target language for this app's Translate</string>
+    <string name="settings_text_prompt_preview_title">What this sends</string>
+    <string name="settings_text_prompt_preview_empty">The choices above add no instructions, so the text is sent as it stands.</string>
+    <string name="settings_text_provider">Provider</string>
+    <string name="settings_text_model">Model</string>
+    <string name="settings_text_ai_routing_note">Which provider and model this app\'s Text tools use. These are Cloud Mail\'s own settings — changing them here does not change Cloud Keyboard\'s.</string>
+    <string name="settings_text_key_note">The API key is not stored here. Cloud Keyboard holds it and makes the request on this app\'s behalf, so there is only ever one copy of it on the device.</string>
+    <string name="settings_text_enhance_style">Style</string>
+    <string name="settings_text_enhance_tone">Tone</string>
+    <string name="settings_text_enhance_length">Length</string>
+    <string name="settings_text_enhance_language">Output language</string>
+    <string name="settings_text_resume_shape">Summary shape</string>
+    <string name="settings_text_translation_note">The language Translate turns a message into. These are Cloud Mail\'s own settings — changing them here does not change Cloud Keyboard\'s.</string>
+    <string name="settings_text_translation_target">Target language tag (e.g. en, pt, de)</string>
 
     <!-- The two Text tools on a message. Two entries, two engines: Enhance goes through the
          OpenRouter model chosen in AI Routing, Translate through the translation library. -->

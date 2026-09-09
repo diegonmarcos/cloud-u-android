@@ -180,13 +180,23 @@ object TextEnhancer {
      * ponytail: pieces are rewritten independently; feed the previous piece's last sentence
      * as context if the seams ever read badly.
      */
-    fun rewrite(context: Context, style: AiRouter.Style, text: String, progress: (Int, Int) -> Unit = { _, _ -> }): String {
+    fun rewrite(
+        context: Context,
+        style: AiRouter.Style,
+        text: String,
+        progress: (Int, Int) -> Unit = { _, _ -> },
+        // Which provider and model every piece goes to. Defaulted to this app's own choice, so
+        // the keyboard's callers are unchanged; a sibling app that holds its own AI Model Routing
+        // settings passes its route instead. The chunking, the seams and the credential lookup are
+        // the same either way — the route decides where the request goes, not how it is built.
+        route: AiRouter.Route = AiRouter.route(context),
+    ): String {
         val lead = text.length - text.trimStart().length
         val pieces = pieces(text.substring(lead), AiRouter.maxChars)
         val out = StringBuilder(text.substring(0, lead))
         pieces.forEachIndexed { i, piece ->
             progress(i, pieces.size)
-            if (piece.body.isNotEmpty()) out.append(AiRouter.complete(context, style.prompt, piece.body))
+            if (piece.body.isNotEmpty()) out.append(AiRouter.complete(context, style.prompt, piece.body, route))
             out.append(piece.tail)
         }
         return out.toString()

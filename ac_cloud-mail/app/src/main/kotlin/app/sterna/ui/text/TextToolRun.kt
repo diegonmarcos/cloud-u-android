@@ -27,9 +27,10 @@ import kotlinx.coroutines.withContext
  * exactly one line in this app where they could be crossed — and one line to assert on.
  *
  * [RESUME] is "AI Resume", the owner's name for SUMMARISE — condense this message. Not a
- * curriculum vitae, and not resuming anything that was paused. It shares ENHANCE's provider, key,
- * model and error wording on purpose (one binder method, `summarise`, over the same engine); what
- * it does NOT share is the prompt, which comes from the keyboard's summary registry.
+ * curriculum vitae, and not resuming anything that was paused. It shares ENHANCE's provider, key
+ * and error wording on purpose (one binder, one engine); what it does NOT share is the prompt,
+ * which comes from THIS APP'S own summary registry — `build.json::mail_ai`, editable on this
+ * app's Text Resume page, and unrelated to the keyboard's copy of the same prompts.
  *
  * [label] and [icon] live here rather than at each call site because a tool that reads "Translate"
  * on one screen and shows a different glyph on another is two tools as far as the user is
@@ -96,6 +97,14 @@ class TextToolOutcome(val tool: TextTool, val text: String?, val error: String?)
 class TextToolRunner internal constructor(
     private val client: TextToolsClient,
     val surface: TextToolSurface,
+    /**
+     * Application context, for [MailTextToolsPrefs] — THIS app's own text-tool settings.
+     *
+     * A runner used to need no context at all, because it had no settings to read: every choice
+     * behind a run lived in the keyboard and the keyboard applied it. It needs one now, and that
+     * is the change the owner asked for.
+     */
+    private val context: android.content.Context,
 ) {
 
     /** Non-null while a call is in flight; the screen shows progress for exactly this tool. */
@@ -106,8 +115,14 @@ class TextToolRunner internal constructor(
     var outcome by mutableStateOf<TextToolOutcome?>(null)
         private set
 
-    /** Named in the progress line. Null when nothing is bound, which the run itself reports. */
-    fun providerLabel(): String? = client.enhanceProviderLabel()
+    /**
+     * Named in the progress line. Null when nothing is bound, which the run itself reports.
+     *
+     * Asks for the label of THIS app's chosen provider, not the serving app's. The two can differ
+     * now, and naming the keyboard's provider over a run routed to cloud-mail's would be a
+     * progress line that lies about where the request went.
+     */
+    fun providerLabel(): String? = client.providerLabelFor(MailTextToolsPrefs.providerId(context))
 
     fun dismiss() { outcome = null }
 
@@ -139,13 +154,34 @@ class TextToolRunner internal constructor(
         busy = tool
         scope.launch {
             val result = withContext(Dispatchers.IO) {
+                // Bring the owner's existing configuration across the first time, before the
+                // first run reads it. Idempotent, and a no-op once seeded.
+                MailTextToolsPrefs.seedFromKeyboard(context, client)
+                val provider = MailTextToolsPrefs.providerId(context)
+                val model = MailTextToolsPrefs.modelId(context, provider)
                 // THE routing decision, and the only one. Enhance goes to the OpenRouter
                 // provider; Translate goes to the translation library. They are different
                 // engines with different costs, and a reply does not say which one answered.
+                //
+                // Every call carries THIS APP'S settings — its composed prompt, its provider, its
+                // model, its translation target — rather than an empty argument meaning "use
+                // yours". That empty argument was the coupling: it made the keyboard's store the
+                // only store, and cloud-mail's Text pages a view of settings it could not change.
                 when (tool) {
-                    TextTool.ENHANCE -> client.enhance(text)
-                    TextTool.TRANSLATE -> client.translate(text)
-                    TextTool.RESUME -> client.summarise(text)
+                    TextTool.ENHANCE -> client.enhanceWith(
+                        text,
+                        MailTextToolsPrefs.enhancePrompt(context),
+                        provider,
+                        model,
+                    )
+                    TextTool.TRANSLATE -> client.translate(text, MailTextToolsPrefs.translateTarget(context))
+                    TextTool.RESUME -> client.summariseWith(
+                        text,
+                        MailTextToolsPrefs.summaryPrompt(context),
+                        MailTextToolsPrefs.summaryWantsBullets(context),
+                        provider,
+                        model,
+                    )
                 }
             }
             outcome = TextToolOutcome(tool, result.text, result.error)
@@ -167,14 +203,23 @@ class TextToolRunner internal constructor(
 @Composable
 fun rememberTextToolRunner(surface: TextToolSurface): TextToolRunner {
     val app = LocalContext.current.applicationContext
-    return remember(app, surface) { TextToolRunner(sharedClient(app), surface) }
+    return remember(app, surface) { TextToolRunner(sharedClient(app), surface, app) }
 }
 
 private var shared: TextToolsClient? = null
 
+/**
+ * THE binding, one per process — the runner's, and the settings screens'.
+ *
+ * The screens need it too, and for one thing only: seeding cloud-mail's own store from whatever
+ * the owner had already configured, once. A second client for that would open a second binding to
+ * the same service and spend its own rebind budget, so they share this one.
+ */
 @Synchronized
-private fun sharedClient(app: android.content.Context): TextToolsClient =
+internal fun textToolsClient(app: android.content.Context): TextToolsClient =
     shared ?: TextToolsClient(app).also { shared = it }
+
+private fun sharedClient(app: android.content.Context): TextToolsClient = textToolsClient(app)
 
 /**
  * The reader's ONE runner, reachable from both places on the screen that need it.

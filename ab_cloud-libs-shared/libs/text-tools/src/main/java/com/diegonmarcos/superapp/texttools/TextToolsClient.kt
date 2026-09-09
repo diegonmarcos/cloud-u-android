@@ -115,9 +115,55 @@ class TextToolsClient(context: Context) {
     fun summarise(text: String, summaryId: String = TextTools.SUMMARY_CONFIGURED): TextTools.Result =
         call("summarise") { it.summarise(text, summaryId) }
 
+    /**
+     * Rewrite [text] against a prompt and a model THIS app chose — the call for an app that
+     * holds its own AI Model Routing and Text Enhancement settings.
+     *
+     * [enhance] asks the serving app to decide; this one decides here and sends the decision.
+     * That is the whole difference, and it is the difference between having settings and only
+     * being shown someone else's. What is still not sent, in either direction, is the API key.
+     *
+     * [systemPrompt] must be fully composed by the caller — preamble, style, tone, length and
+     * language already joined. Nothing on the far side adds to it.
+     */
+    fun enhanceWith(
+        text: String,
+        systemPrompt: String,
+        providerId: String,
+        modelId: String,
+    ): TextTools.Result = call("enhanceWith") { it.enhanceWith(text, systemPrompt, providerId, modelId) }
+
+    /**
+     * Summarise [text] against a prompt and a model THIS app chose — [enhanceWith] for Text
+     * Resume. [bullets] tells the far side whether this caller's prompt asked for a list, which
+     * is now the only side that knows.
+     */
+    fun summariseWith(
+        text: String,
+        systemPrompt: String,
+        bullets: Boolean,
+        providerId: String,
+        modelId: String,
+    ): TextTools.Result =
+        call("summariseWith") { it.summariseWith(text, systemPrompt, bullets, providerId, modelId) }
+
     /** What to name the provider in progress and error text; null when nothing is bound. */
     fun enhanceProviderLabel(): String? =
         boundOrRebind()?.let { runCatching { it.enhanceProviderLabel() }.getOrNull() }
+
+    /** Readable name of [providerId] — what to call THIS app's chosen provider on screen. */
+    fun providerLabelFor(providerId: String): String? =
+        boundOrRebind()?.let { runCatching { it.providerLabelFor(providerId) }.getOrNull() }
+
+    /**
+     * The serving app's current text-tool choices as JSON, or null when nothing is bound.
+     *
+     * FOR SEEDING A COPY OF THEM, ONCE. A caller that reads this on every use has not got its
+     * own settings, it has a cache of somebody else's. Contains no credential, by construction
+     * on the far side — see `ITextTools.settingsSnapshot`.
+     */
+    fun settingsSnapshot(): String? =
+        boundOrRebind()?.let { runCatching { it.settingsSnapshot() }.getOrNull() }
 
     /** Target languages the translation engine can reach; empty when nothing is bound. */
     fun translateLanguages(): List<String> =

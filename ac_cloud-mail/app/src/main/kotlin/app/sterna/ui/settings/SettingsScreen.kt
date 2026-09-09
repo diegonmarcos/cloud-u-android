@@ -219,21 +219,6 @@ fun SettingsScreen(
             // The About rows leave the app: one opener for all, so two rows tapped together open
             // once (#106).
             val leaveOnce = rememberLeaveOnce(entry)
-            // The Text rows open the Cloud Keyboard's pages. When it is not installed the
-            // intent is refused and the tap has to SAY that, which is what this holds.
-            var textToolMissing by remember { mutableStateOf(false) }
-            if (textToolMissing) {
-                AlertDialog(
-                    onDismissRequest = { textToolMissing = false },
-                    title = { Text(stringResource(R.string.settings_text_missing_title)) },
-                    text = { Text(stringResource(R.string.settings_text_missing_body)) },
-                    confirmButton = {
-                        TextButton(onClick = { textToolMissing = false }) {
-                            Text(stringResource(android.R.string.ok))
-                        }
-                    },
-                )
-            }
             SettingsHub(
                 onBack = onBack,
                 onOpenAccounts = { entry.navigateOnce { nav.navigate("accounts") } },
@@ -246,18 +231,30 @@ fun SettingsScreen(
                 onOpenStorage = { entry.navigateOnce { nav.navigate("storage") } },
                 onOpenBackup = { entry.navigateOnce { nav.navigate("backup") } },
                 onOpenUrl = { url -> leaveOnce { openUrl(context, url) } },
-                // Same double-tap guard as the URL rows, and for the same reason: both
-                // leave this app. A tap that finds no Cloud Keyboard installed says so —
-                // a settings row that silently does nothing reads as a broken app.
-                onOpenTextTool = { entry ->
-                    leaveOnce {
-                        openTextTool(context, entry).also { opened ->
-                            if (!opened) textToolMissing = true
-                        }
-                    }
-                },
+                // The Text rows are pages of THIS app now, so they navigate like every other row
+                // in the hub rather than leaving for the keyboard. navigateOnce, not leaveOnce:
+                // the guard that matters is the one against a tap landing mid-slide and stacking
+                // two copies of the page, which is the guard the in-app rows all use.
+                onOpenTextTool = { textEntry -> entry.navigateOnce { nav.navigate(textEntry.route) } },
                 currentAccountLabel = currentLabel,
             )
+        }
+        // Configs ▸ Text. Four pages of THIS app, over this app's own store — they used to be
+        // intents into the Cloud Keyboard's settings, which is why nothing on them could be
+        // edited from here. The routes are declared once, in TEXT_TOOLS_ENTRIES, and the test
+        // holds this graph against that list so a row cannot point at a destination that is not
+        // registered.
+        composable("textAiRouting") { entry ->
+            MailAiRoutingScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
+        }
+        composable("textEnhance") { entry ->
+            MailTextEnhanceScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
+        }
+        composable("textResume") { entry ->
+            MailTextResumeScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
+        }
+        composable("textTranslation") { entry ->
+            MailTranslationScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
         }
         composable("accounts") { entry ->
             AccountsScreen(
@@ -388,8 +385,9 @@ private fun SettingsHub(
                 stringResource(R.string.settings_accounts_summary),
                 onOpenAccounts,
             )
-            // Data, not a screen: every row here opens the Cloud Keyboard's own settings
-            // page rather than one rebuilt in this app. See TextToolsSection.
+            // Data, not hand-written rows: every row here opens one of THIS app's own Text
+            // pages, over this app's own store. They used to open the Cloud Keyboard's pages,
+            // which is why nothing on them could be edited from here. See TextToolsSection.
             SettingsSection(stringResource(R.string.settings_text_section)) {
                 TEXT_TOOLS_ENTRIES.forEach { entry ->
                     SettingsCategoryRow(

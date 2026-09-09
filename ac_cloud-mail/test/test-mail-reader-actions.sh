@@ -174,17 +174,20 @@ has "$SCREENS/AiRoutingScreen.kt" 'AiRouter.rewritePreamble' "P1 AI Routing show
 # ── the fourth Configs entry, and that it resolves to a real page ──
 SEC="$UI/settings/TextToolsSection.kt"
 NAV="$KB/helium314/keyboard/settings/SettingsNavHost.kt"
-n=$(grep -c 'screen = "' "$SEC")
+# The rows are destinations in THIS APP now. They used to be names in the keyboard's allowlist,
+# opened by an intent, which is why nothing they showed could be edited from mail.
+n=$(grep -c 'route = "' "$SEC")
 [ "$n" = 4 ] && ok "P1 Configs > Text declares four entries" || bad "P1 declares $n entries, expected 4"
-has "$SEC" 'screen = "text_resume"' "P1 Text Resume is one of them"
-grep -qE '^\s*"text_resume" to ' "$NAV" && ok "P1 text_resume resolves to a real keyboard destination" \
-  || bad "P1 text_resume is not allowlisted -- the row would open the keyboard's front page"
+has "$SEC" 'route = "textResume"' "P1 Text Resume is one of them"
+grep -qE '^\s*composable\("textResume"\)' "$UI/settings/SettingsScreen.kt" \
+  && ok "P1 textResume resolves to a real page in mail's own settings graph" \
+  || bad "P1 textResume is not registered -- the row would open nothing"
 # ...and after Text Enhancement, as asked
 python3 - "$SEC" <<'PY'
 import re, sys
 src = open(sys.argv[1], encoding='utf-8').read()
-order = re.findall(r'screen = "([a-z_]+)"', src)
-want = ["ai_routing", "text_enhance", "text_resume", "translation"]
+order = re.findall(r'route = "([A-Za-z_]+)"', src)
+want = ["textAiRouting", "textEnhance", "textResume", "textTranslation"]
 if order != want:
     print(f"  FAIL: P1 entry order is {order}, expected {want}")
     sys.exit(1)
@@ -213,23 +216,38 @@ RUN="$UI/text/TextToolRun.kt"
 n=$(grep -c "when (tool)" "$RUN")
 [ "$n" = 1 ] && ok "A0 tool -> engine is still mapped in exactly one place" \
   || bad "A0 tool->engine mapped in $n places -- a third copy of the routing"
-has "$RUN" 'TextTool.RESUME -> client.summarise(text)' "A0 Resume routes through the shared client"
+# Through the SHARED client still - one binder, one engine - but carrying THIS APP'S prompt and
+# model rather than an empty argument meaning "use the keyboard's". The engine is reused; the
+# settings are not, which is the split the owner asked for.
+has "$RUN" 'TextTool.RESUME -> client.summariseWith(' "A0 Resume routes through the shared client"
+has "$RUN" 'MailTextToolsPrefs.summaryPrompt(context)' "A0 ...and sends mail's own Resume prompt"
 # no second client, no second binding, no credential anywhere in mail
 n=$(grep -rc 'TextToolsClient(' "$APP/app/src/main" | grep -v ':0$' | wc -l)
 [ "$n" = 1 ] && ok "A0 exactly one file constructs the binder client" \
   || bad "A0 $n files construct a TextToolsClient"
-hits=$(grep -rlE 'openrouter|AiRouter|PREF_AI_TOKEN' "$APP/app/src" 2>/dev/null)
+# NARROWED to the credential itself. The old pattern rejected any mention of openrouter|AiRouter,
+# which held while mail had no text settings of its own to name; mail now owns its routing
+# registry and legitimately names providers and models. Choosing a model is not holding the key.
+hits=$(grep -rlE 'PREF_AI_TOKEN|ai_token_|OPENROUTER_API|openrouter\.ai/api' "$APP/app/src" 2>/dev/null)
 [ -z "$hits" ] && ok "A0 mail still reaches no AI provider credential" || bad "A0 mail reaches the credential: $hits"
 # the binder method was APPENDED, never inserted: transaction codes are the wire format
 python3 - "$LIBS/libs/text-tools/src/main/aidl/com/diegonmarcos/superapp/texttools/ITextTools.aidl" <<'PY'
 import re, sys
 src = open(sys.argv[1], encoding='utf-8').read()
-methods = re.findall(r'^\s+(?:String\[\]|String|List<String>)\s+(\w+)\(', src, re.M)
-want = ['enhance', 'translate', 'enhanceProviderLabel', 'translateLanguages', 'summarise']
-if methods != want:
-    print(f"  FAIL: A0 AIDL method order is {methods}, expected {want} -- summarise must be APPENDED")
+methods = re.findall(r'^\s+(?:String\[\]|String|List<String>|boolean|void)\s+(\w+)\(', src, re.M)
+# A PREFIX, NOT AN EQUALITY. Transaction codes are assigned by declaration order, so the rule is
+# that a method may only ever be APPENDED - the existing ones must keep their positions. Written
+# as `methods == want` this check asserted that no method may ever be added at all, which is the
+# opposite of the rule it is named for: the next correct append failed it, and the only way to
+# clear it was to edit the expected list, which is not a check.
+frozen = ['enhance', 'translate', 'enhanceProviderLabel', 'translateLanguages', 'summarise']
+if methods[:len(frozen)] != frozen:
+    print(f"  FAIL: A0 AIDL order changed: {methods[:len(frozen)]} != {frozen}"
+          " -- an existing method moved, so old installs would answer the wrong call")
     sys.exit(1)
-print("  ok: A0 summarise was appended, so no existing transaction code moved")
+added = methods[len(frozen):]
+print(f"  ok: A0 the {len(frozen)} original methods keep their transaction codes"
+      + (f"; {len(added)} appended after them ({', '.join(added)})" if added else ""))
 PY
 [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
 

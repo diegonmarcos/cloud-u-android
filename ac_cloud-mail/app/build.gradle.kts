@@ -31,6 +31,28 @@ val commsApplicationId: String = (groovy.json.JsonSlurper()
     .let { it["mail"] as Map<String, Any> }
     .let { it["app_id"] as String }
 
+// cloud-mail's OWN text-tool registry: build.json::mail_ai — providers, model lists, the
+// Enhance prompts, the Resume prompts, the translation defaults.
+//
+// READ FROM THIS APP'S build.json AND NOWHERE ELSE, and that is the whole point. It began
+// as a copy of ab_cloud-libs-shared/build.json::keyboard_ai and is now independent of it:
+// an edit to the keyboard's registry cannot reach this build, and an edit here cannot reach
+// the keyboard's. Falling back to the shared file when this key is missing would quietly
+// re-link the two apps the first time someone deleted the block, so a missing mail_ai is a
+// build failure with a sentence explaining what to restore.
+@Suppress("UNCHECKED_CAST")
+val mailAiRouting: Map<String, Any> = ((groovy.json.JsonSlurper()
+    .parse(rootProject.file("build.json")) as Map<String, Any>)["mail_ai"] as Map<String, Any>?)
+    ?: error(
+        "build.json::mail_ai is missing. It is cloud-mail's own copy of the text-tool " +
+            "registry (AI routing, Enhance, Resume, Translation) and this app reads no other. " +
+            "Restore it from git rather than pointing this build at keyboard_ai — sharing that " +
+            "block is exactly what made mail's Text settings uneditable."
+    )
+val mailAiRoutingB64: String = groovy.json.JsonOutput.toJson(mailAiRouting)
+    .toByteArray(Charsets.UTF_8)
+    .let { java.util.Base64.getEncoder().encodeToString(it) }
+
 // Minutes since 2026-01-01 plus a 3,000,000 base, from the stamp CI already bakes
 // into the release tag. Monotonic, independent of how the tree was assembled, and
 // well inside the 2^31 ceiling for centuries. Falls back to upstream's own number
@@ -84,6 +106,11 @@ android {
         // Shown on the Settings About row. Bump alongside versionCode/versionName at each
         // release (a static literal, so builds stay reproducible — never derive from clock).
         buildConfigField("String", "VERSION_DATE", "\"2026-09-06\"")
+        // build.json::mail_ai — read by app.sterna.ui.text.MailAiRegistry. THIS APP'S OWN
+        // registry, not the keyboard's: base64 for the same reason the keyboard bakes its
+        // copy that way, because the prompts carry quotes and newlines that a plain
+        // buildConfigField string would not survive.
+        buildConfigField("String", "MAIL_AI_ROUTING_B64", "\"$mailAiRoutingB64\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The launcher/settings/notification label. Substituted verbatim into the manifest,
         // so without -PtestApp the merged manifest still reads android:label="@string/app_name"

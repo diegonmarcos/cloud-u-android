@@ -222,6 +222,37 @@ object AiRouter {
         context.prefs().getString(Settings.PREF_AI_MODEL_PREFIX + p.id, p.defaultModel)?.takeIf { it.isNotBlank() } ?: p.defaultModel
     fun token(context: Context, p: Provider = provider(context)): String =
         context.prefs().getString(Settings.PREF_AI_TOKEN_PREFIX + p.id, "")?.trim() ?: ""
+
+    /**
+     * WHICH provider and WHICH model one request goes to — the routing decision, split out from
+     * the request itself so it can come from somewhere other than this app's preferences.
+     *
+     * It exists because two applications now hold their own AI Model Routing settings while
+     * sharing this one call path. The keyboard's own callers build a route from the keyboard's
+     * prefs and behave exactly as they always did; cloud-mail builds one from cloud-mail's prefs
+     * and hands it over the binder. Note what is NOT in here: the token. A route names a provider,
+     * and the credential for that provider is looked up on this side, every time, from this app's
+     * store — so choosing a model has never been a way to reach a key.
+     */
+    class Route(val provider: Provider, val model: String)
+
+    /** The route this app's own preferences select. */
+    fun route(context: Context): Route = provider(context).let { Route(it, model(context, it)) }
+
+    /**
+     * The route [providerId]/[modelId] name, falling back to [route] for anything the caller left
+     * empty or this build does not know.
+     *
+     * A CALLER'S UNKNOWN PROVIDER IS NOT AN ERROR HERE. The two apps carry their own copies of the
+     * registry and one can be a release behind the other, so a model id this build has never heard
+     * of is a routine consequence of shipping them separately. Refusing the call would turn every
+     * such skew into a dead feature; falling back to the configured route keeps it working and
+     * costs the caller its preference, which the caller can see and change.
+     */
+    fun routeOf(context: Context, providerId: String?, modelId: String?): Route {
+        val p = providers.firstOrNull { it.id == providerId } ?: return route(context)
+        return Route(p, modelId?.takeIf { it.isNotBlank() } ?: model(context, p))
+    }
     fun style(context: Context): Style {
         val id = context.prefs().getString(Settings.PREF_ENHANCE_STYLE, defaultStyle) ?: defaultStyle
         return styles.firstOrNull { it.id == id } ?: styles.first { it.id == defaultStyle }
@@ -261,9 +292,9 @@ object AiRouter {
      *
      * Blocking; throws whatever [complete] throws. Never call on the main thread.
      */
-    fun summarise(context: Context, style: Style, text: String): String {
+    fun summarise(context: Context, style: Style, text: String, route: Route = route(context)): String {
         val sent = text.take(maxChars)
-        val reply = complete(context, style.prompt, sent)
+        val reply = complete(context, style.prompt, sent, route)
         val shaped = if (style.bullets) enforceBullets(reply) else reply
         if (sent.length == text.length) return shaped
         return shaped + "\n\n" + String.format(summaryTruncatedNote, sent.length, text.length)
@@ -366,12 +397,17 @@ object AiRouter {
      * turn the exception into a visible message. Never call on the main thread.
      */
     @JvmStatic
-    fun complete(context: Context, system: String, user: String): String {
-        val p = provider(context)
+    fun complete(context: Context, system: String, user: String): String =
+        complete(context, system, user, route(context))
+
+    /** As above, to a route the caller chose. The token is still read HERE, from this app's store. */
+    @JvmStatic
+    fun complete(context: Context, system: String, user: String, route: Route): String {
+        val p = route.provider
         val token = token(context, p)
         if (p.needsToken && token.isEmpty()) throw NoTokenException(p)
         val body = JSONObject()
-            .put("model", model(context, p))
+            .put("model", route.model)
             .put("temperature", 0.2)
             .put("max_tokens", maxTokens)
             .put("messages", JSONArray()
@@ -409,7 +445,7 @@ object AiRouter {
                 }
                 throw IllegalStateException(
                     "${p.label} HTTP $code${msg?.let { ": $it" } ?: ""}" +
-                        "${detail?.let { " ($it)" } ?: ""} [model ${model(context, p)}]"
+                        "${detail?.let { " ($it)" } ?: ""} [model ${route.model}]"
                 )
             }
             val reply = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
@@ -417,7 +453,7 @@ object AiRouter {
             // A reply that hit max_tokens is cut mid-text. Applied, it would replace the whole
             // field with a fragment — the one outcome worse than no rewrite — so it is a failure.
             if (choice.optString("finish_reason") == "length")
-                throw IllegalStateException("${p.label} cut the reply off at $maxTokens tokens — enhance a shorter selection [model ${model(context, p)}]")
+                throw IllegalStateException("${p.label} cut the reply off at $maxTokens tokens — enhance a shorter selection [model ${route.model}]")
             return choice.getJSONObject("message").getString("content").trim()
         } finally {
             conn.disconnect()
