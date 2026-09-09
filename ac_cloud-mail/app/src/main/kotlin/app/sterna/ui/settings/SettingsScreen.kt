@@ -220,6 +220,21 @@ fun SettingsScreen(
             // The About rows leave the app: one opener for all, so two rows tapped together open
             // once (#106).
             val leaveOnce = rememberLeaveOnce(entry)
+            // The Text rows open the Cloud Keyboard's pages. When it is not installed the
+            // intent is refused and the tap has to SAY that, which is what this holds.
+            var textToolMissing by remember { mutableStateOf(false) }
+            if (textToolMissing) {
+                AlertDialog(
+                    onDismissRequest = { textToolMissing = false },
+                    title = { Text(stringResource(R.string.settings_text_missing_title)) },
+                    text = { Text(stringResource(R.string.settings_text_missing_body)) },
+                    confirmButton = {
+                        TextButton(onClick = { textToolMissing = false }) {
+                            Text(stringResource(android.R.string.ok))
+                        }
+                    },
+                )
+            }
             SettingsHub(
                 onBack = onBack,
                 onOpenAccounts = { entry.navigateOnce { nav.navigate("accounts") } },
@@ -232,6 +247,16 @@ fun SettingsScreen(
                 onOpenStorage = { entry.navigateOnce { nav.navigate("storage") } },
                 onOpenBackup = { entry.navigateOnce { nav.navigate("backup") } },
                 onOpenUrl = { url -> leaveOnce { openUrl(context, url) } },
+                // Same double-tap guard as the URL rows, and for the same reason: both
+                // leave this app. A tap that finds no Cloud Keyboard installed says so —
+                // a settings row that silently does nothing reads as a broken app.
+                onOpenTextTool = { entry ->
+                    leaveOnce {
+                        openTextTool(context, entry).also { opened ->
+                            if (!opened) textToolMissing = true
+                        }
+                    }
+                },
                 currentAccountLabel = currentLabel,
             )
         }
@@ -351,6 +376,7 @@ private fun SettingsHub(
     onOpenStorage: () -> Unit,
     onOpenBackup: () -> Unit,
     onOpenUrl: (String) -> Unit,
+    onOpenTextTool: (TextToolsEntry) -> Unit,
     currentAccountLabel: String,
 ) {
     DetailScaffold(title = stringResource(R.string.settings_hub_title), onBack = onBack) { padding ->
@@ -363,6 +389,17 @@ private fun SettingsHub(
                 stringResource(R.string.settings_accounts_summary),
                 onOpenAccounts,
             )
+            // Data, not a screen: every row here opens the Cloud Keyboard's own settings
+            // page rather than one rebuilt in this app. See TextToolsSection.
+            SettingsSection(stringResource(R.string.settings_text_section)) {
+                TEXT_TOOLS_ENTRIES.forEach { entry ->
+                    SettingsCategoryRow(
+                        entry.icon,
+                        stringResource(entry.title),
+                        stringResource(entry.summary),
+                    ) { onOpenTextTool(entry) }
+                }
+            }
             SettingsSection(stringResource(R.string.settings_group_app)) {
                 SettingsCategoryRow(Icons.Filled.Palette, stringResource(R.string.settings_appearance_title), stringResource(R.string.settings_appearance_summary), onOpenAppearance)
                 SettingsCategoryRow(Icons.AutoMirrored.Filled.List, stringResource(R.string.settings_reading_title), stringResource(R.string.settings_reading_summary), onOpenReading)

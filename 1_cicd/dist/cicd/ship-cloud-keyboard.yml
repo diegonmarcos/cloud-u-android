@@ -43,6 +43,7 @@ on:
       - "ab_cloud-libs-shared/libs/analytics/**"
       - "ab_cloud-libs-shared/libs/keyboard/**"
       - "ab_cloud-libs-shared/libs/media/**"
+      - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ab_cloud-libs-shared/libs/translate/**"
       - "ab_cloud-libs-shared/libs/voice/**"
       - "ac_cloud-keyboard/**"

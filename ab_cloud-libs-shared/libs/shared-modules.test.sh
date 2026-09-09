@@ -45,7 +45,13 @@ PY
 
 # 4. settings.gradle must actually honour `dir`, or every entry above is inert.
 while read -r sg; do
-    command grep -q '_spec?.dir' "$sg" \
+    # Matches the BEHAVIOUR, not one spelling of it. This used to grep the literal
+    # `_spec?.dir`, which is the loop variable ten of the eleven settings.gradle files
+    # happen to use; cloud-mail calls the same variable `spec` and was reported as
+    # ignoring `dir` while honouring it perfectly. A rule that fails on a rename is a
+    # rule nobody can fix by fixing the code, and this one sat red long enough that the
+    # first REAL failure under it would have read as more of the same noise.
+    command grep -qE '[A-Za-z_]*spec\?\.dir' "$sg" \
         && note ok "$sg honours dir" \
         || note FAIL "$sg ignores build.json::modules.dir"
 done < <(python3 - <<'PYSG'

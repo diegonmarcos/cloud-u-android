@@ -236,6 +236,13 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":libs:openpgp-api"))
 
+    // Enhance and Translate. NOT the engines - this is the binder they are reached
+    // across; both live in the Cloud Keyboard, along with the routing settings and the
+    // provider key. Taking :libs:keyboard instead would pull an IME with an ndk-build
+    // native decoder into an email client, and copying the engine would put a second
+    // API key in a second store.
+    implementation(project(":libs:text-tools"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.unifiedpush.connector)

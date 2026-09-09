@@ -428,6 +428,19 @@
     <!-- Settings -->
     <string name="settings_hub_title">Settings</string>
     <string name="settings_group_app">App</string>
+
+    <!-- Configs ▸ Text. The three rows open the Cloud Keyboard's own pages (see
+         TextToolsSection); nothing under this heading is a screen in this app. -->
+    <string name="settings_text_section">Text</string>
+    <string name="settings_text_ai_routing_title">AI Routing</string>
+    <string name="settings_text_ai_routing_summary">Provider, model and API key used by Text Enhance</string>
+    <string name="settings_text_enhance_title">Text Enhancement</string>
+    <string name="settings_text_enhance_summary">Style, tone, length and output language of a rewrite</string>
+    <string name="settings_text_translation_title">Translation</string>
+    <string name="settings_text_translation_summary">Default target language and engine status</string>
+    <string name="settings_text_missing_title">Cloud Keyboard not installed</string>
+    <string name="settings_text_missing_body">These settings live in the Cloud Keyboard app, which also holds the API key the Text tools use. Install it and this opens its page.</string>
+
     <string name="settings_group_current_account">This account · %1$s</string>
     <string name="settings_group_current_account_generic">This account</string>
     <string name="settings_back">Back</string>

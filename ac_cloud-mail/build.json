@@ -35,6 +35,12 @@
     "libs:openpgp-api": {
       "type": "library",
       "comment": "OpenKeychain OpenPGP API, vendored by upstream under libs/. App-local: nothing else in the constellation consumes it."
+    },
+    "libs:text-tools": {
+      "type": "library",
+      "_doc": "The ITextTools binder, shared BY REFERENCE from ab_cloud-libs-shared/libs/. This app CALLS it; cloud-keyboard serves it. It is the whole of what mail links to reach Enhance and Translate - the engines, the routing settings and the provider key stay in the keyboard's process and only text crosses, so this app has no second copy of any of them.",
+      "_doc_why_by_reference": "The analytics note above says no module was shared by reference from ab_cloud-libs-shared any more; that was true of libs:analytics, a Java/AGP-9 module this Kotlin/Compose tree on AGP 8.9 could not consume. This one is a Kotlin Android library on the same toolchain with core-ktx as its only dependency, which is why it can be.",
+      "dir": "../ab_cloud-libs-shared/libs/text-tools"
     }
   },
   "forks": {
