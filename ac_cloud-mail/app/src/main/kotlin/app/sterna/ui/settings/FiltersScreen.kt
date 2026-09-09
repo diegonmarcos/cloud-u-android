@@ -217,13 +217,18 @@ private fun BoxScope.FiltersNote(text: String, onRetry: (() -> Unit)? = null) {
  */
 @Composable
 private fun ForeignScriptBody(foreign: ForeignScript) {
+    // Bound to a local ONCE: `body` is a public property of a data class declared in :core:data,
+    // and Kotlin will not smart-cast across a module boundary — it cannot prove the getter answers
+    // the same thing twice. Read through the property in both branches, the null check and the
+    // draw are two different reads, which is the shape this binding removes.
+    val body = foreign.body
     Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Text(
             stringResource(R.string.settings_filters_foreign_body_title, foreign.name),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (foreign.body == null) {
+        if (body == null) {
             // The list named it and the blob would not come down. Saying so is the whole point:
             // silence here is indistinguishable from an empty script, and an empty script is the
             // one case where a save costs nothing.
@@ -237,7 +242,7 @@ private fun ForeignScriptBody(foreign: ForeignScript) {
             // Monospace and horizontally scrollable: Sieve is indented code, and re-wrapping it
             // silently changes what the owner is being asked to judge.
             Text(
-                foreign.body,
+                body,
                 style = MaterialTheme.typography.bodySmall,
                 fontFamily = FontFamily.Monospace,
                 softWrap = false,
