@@ -6,6 +6,7 @@ import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
 import com.diegonmarcos.superapp.updater.PackageInstallerReceiver
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
+import com.diegonmarcos.superapp.updater.apk.ApkIntegrity
 import com.diegonmarcos.superapp.updater.apk.VerifiedApk
 import android.app.PendingIntent
 import android.content.Context
@@ -14,6 +15,18 @@ import android.content.pm.PackageInstaller
 import android.os.Build
 import android.util.Log
 import java.io.File
+
+/**
+ * The install was DECLINED before the session opened — the candidate is older
+ * than what is installed, or there is not enough room to stage it.
+ *
+ * Its own type because the answer is permanent for these bytes and this phone:
+ * no amount of retrying makes an old APK new or a full disk empty, so a worker
+ * that treated every throw as transient would re-arm itself against a fact
+ * that cannot change. Callers catch this to fail ONCE, with the reason already
+ * on screen, instead of looping.
+ */
+internal class InstallRefused(message: String) : IllegalStateException(message)
 
 /**
  * Wraps PackageInstaller — Android's only no-root path to install an APK.
@@ -48,6 +61,7 @@ internal class UpdateInstaller(private val context: Context) {
 
     private fun installLocked(apk: File, targetPackage: String) {
         UpdateProgress.update(UpdateProgress.State.Installing)
+        refuseDowngrade(apk, targetPackage)
         // ASK ABOUT SPACE BEFORE SPENDING AN INSTALL ATTEMPT ON IT.
         //
         // The bytes are already on disk once — the download lands in cacheDir —
@@ -67,7 +81,14 @@ internal class UpdateInstaller(private val context: Context) {
         val expected = apk.length()
         val free = freeStagingBytes()
         if (free in 0 until expected) {
-            error("not enough free space to install $targetPackage: the APK is " +
+            // refuse(), not a bare error(): this throw happens BEFORE commit, so
+            // PackageInstaller never runs and the receiver that normally puts a
+            // failure in front of the user never fires. Thrown silently it left
+            // the screen reading "Installing…" for an install that had already
+            // been declined — the same shape of invisible outcome the receiver
+            // exists to end, one step upstream of it.
+            refuse(targetPackage, apk,
+                "not enough free space to install $targetPackage: the APK is " +
                 "${expected / 1_000_000} MB and the install session has to stage a second " +
                 "copy of it, but only ${free / 1_000_000} MB is free. Free about " +
                 "${(2 * expected) / 1_000_000} MB and try again — the download is already on " +
@@ -191,6 +212,77 @@ internal class UpdateInstaller(private val context: Context) {
             throw t
         }
         Log.i(tag, "PackageInstaller session $sessionId committed for ${apk.name}")
+    }
+
+    /**
+     * REFUSE AN OLDER BUILD THAN THE ONE ALREADY ON THE PHONE.
+     *
+     * The update signal in this fleet is a DIGEST: the check asks whether
+     * GHCR's APK hashes differently from the installed one. A digest is an
+     * identity, not an ordering — "different" is equally "newer" and "older" —
+     * so anything that republishes a stale artefact under the moving tag reads
+     * as an update and gets installed over a newer build. A mirror pin that
+     * never moved did exactly that to the store, at the level above this one.
+     *
+     * The comparison here is the APK's OWN declared versionCode, read out of
+     * the candidate's binary manifest before a byte is staged, against what
+     * PackageManager reports for the package on the device. Both numbers come
+     * from the artefacts themselves rather than from a pin, a sidecar or a
+     * checksum recorded elsewhere, which is what makes them trustworthy: a
+     * pinned value can disagree with the bytes it names, and in this fleet it
+     * has. The ship engine writes that number as 3,000,000 + minutes since
+     * 2026-01-01, so it is monotonic in wall-clock time by construction and
+     * ordering it is meaningful rather than conventional.
+     *
+     * STRICTLY older is refused; EQUAL is allowed. A same-version reinstall is
+     * the normal outcome of a non-reproducible rebuild, and it is exactly what
+     * the digest check legitimately fires on — refusing it would block the
+     * ordinary case in the name of the rare one.
+     *
+     * Two unknowns, both allowed through on purpose. An unparseable candidate
+     * and an absent installed package each mean "no ordering exists", not "the
+     * ordering is wrong", and refusing an install over a number we failed to
+     * obtain is its own unexplained failure. Android's own check
+     * (INSTALL_FAILED_VERSION_DOWNGRADE) still sits behind this one; the point
+     * of doing it here is to answer BEFORE staging a quarter-gigabyte, and to
+     * answer in a sentence rather than as an asynchronous error code.
+     */
+    private fun refuseDowngrade(apk: File, targetPackage: String) {
+        val candidate = ApkIntegrity.identify(context, apk) ?: run {
+            Log.w(tag, "cannot read a versionCode out of ${apk.name} — no ordering to check")
+            return
+        }
+        val installed = installedVersionCode(targetPackage) ?: return
+        if (candidate.versionCode >= installed) return
+        refuse(targetPackage, apk,
+            "refused to install an older $targetPackage over a newer one: the published " +
+            "APK declares versionCode ${candidate.versionCode} and this phone already has " +
+            "$installed. Nothing was installed and nothing was replaced. This is a problem " +
+            "with what was published, not with this phone — the update will arrive on its " +
+            "own once a newer build is published")
+    }
+
+    /** The installed versionCode of [pkg], or null when it is not installed. */
+    private fun installedVersionCode(pkg: String): Long? = runCatching {
+        val info = context.packageManager.getPackageInfo(pkg, 0)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) info.longVersionCode
+        else @Suppress("DEPRECATION") info.versionCode.toLong()
+    }.getOrNull()
+
+    /**
+     * Decline an install and SAY SO, then throw.
+     *
+     * Everything downstream of commit() reports itself through
+     * [PackageInstallerReceiver]. A refusal upstream of commit() has no such
+     * channel, so it publishes its own terminal state — otherwise the only
+     * difference between "we decided not to" and "it hung" is a logcat line
+     * the owner cannot read.
+     */
+    private fun refuse(targetPackage: String, apk: File, why: String): Nothing {
+        Log.w(tag, why)
+        UpdateProgress.update(UpdateProgress.State.Failed(
+            why, appId = targetPackage, pkg = targetPackage, apkPath = apk.absolutePath))
+        throw InstallRefused(why)
     }
 
     /**

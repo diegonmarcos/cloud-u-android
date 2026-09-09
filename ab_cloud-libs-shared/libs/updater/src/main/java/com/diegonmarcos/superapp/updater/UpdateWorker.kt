@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.updater
 
+import com.diegonmarcos.superapp.updater.install.InstallRefused
 import com.diegonmarcos.superapp.updater.install.UpdateInstaller
 import com.diegonmarcos.superapp.updater.source.UpdateChecker
 import android.content.Context
@@ -13,12 +14,13 @@ import kotlinx.coroutines.withContext
  * WorkManager job: check → (gate) → download → install. Scheduled by
  * Updater.start(). Runs at build.json::release.auto_update.interval_hours.
  *
- * Metered gate: when build.json::auto_update.require_unmetered_network is true,
- * an *automatic* run on a metered network (mobile data) does NOT silently
- * download — it publishes UpdateAvailable so the overlay asks the user. Auto
- * silent download only happens on unmetered (Wi-Fi). A run started with
- * KEY_FORCE=true (the "Update now" prompt button or the manual "Check for
- * updates" button) is explicit user consent and downloads on any network.
+ * Metered gate: when the Wi-Fi-only preference is on, a run on a metered
+ * network (mobile data) does NOT download — it publishes UpdateAvailable
+ * carrying the size, so the screen can ask. Only a run started with
+ * KEY_CONSENTED=true (the "Update now" button, pressed against a size the user
+ * has just been shown) downloads over metered. KEY_FORCE alone means a human
+ * asked to LOOK: it ignores the Auto-update toggle and draws progress, and it
+ * is deliberately NOT authority to spend mobile data.
  */
 class UpdateWorker(
     appContext: Context,
@@ -27,6 +29,14 @@ class UpdateWorker(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val force = inputData.getBoolean(KEY_FORCE, false)
+        // FORCE and CONSENT are two different permissions and used to be one.
+        // `force` answers "did a human ask for this?" — it decides whether the
+        // Auto-update toggle applies and whether progress is drawn. `consented`
+        // answers the narrower question "has that human been told what this
+        // will cost and said yes?", which is the only one that may unlock a
+        // download over mobile data. Collapsing them made every manual tap an
+        // unlimited spending authorisation, silently.
+        val consented = inputData.getBoolean(KEY_CONSENTED, false)
         // The toggle governs UNATTENDED updates, not the user asking directly.
         // This check used to run BEFORE `force` was read, so turning auto-update
         // off also silently killed "Check for updates": the worker returned
@@ -65,7 +75,11 @@ class UpdateWorker(
             // call site, and the same answer must govern both downloads: two
             // separate evaluations could disagree if the radio changed between
             // them, and the second one is the larger bill.
-            val deferred = if (force) null else AutoUpdatePrefs.deferredReason(applicationContext)
+            // Keyed on CONSENT, not on `force`. An automatic pass has neither and
+            // is gated exactly as before; a manual check has force but not
+            // consent, so on a metered connection it stops at the manifest and
+            // publishes the size for the user to approve; "Update now" has both.
+            val deferred = if (consented) null else AutoUpdatePrefs.deferredReason(applicationContext)
             if (deferred == null) updateFleet()
             else Log.i("Updater/Worker", "fleet auto-update deferred — $deferred")
             // THE BUG, and it is a nesting bug. Fleet.autoPass raises both flags
@@ -87,7 +101,7 @@ class UpdateWorker(
                 ?: return@withContext Result.success()
             // Ask (don't auto-download) on metered unless the user forced it.
             if (deferred != null) {
-                Log.i("Updater/Worker", "update available but $deferred — prompting instead of auto-downloading")
+                Log.i("Updater/Worker", "update available but $deferred — prompting instead of downloading")
                 UpdateProgress.update(UpdateProgress.State.UpdateAvailable(available.remoteSize))
                 return@withContext Result.success()
             }
@@ -104,6 +118,13 @@ class UpdateWorker(
             // Cancel button: state is already Cancelled — leave it, unwind cleanly.
             Log.i("Updater/Worker", "update cancelled by user")
             Result.success()
+        } catch (refused: InstallRefused) {
+            // TERMINAL, so do not re-arm. Retrying asks the same question of the
+            // same bytes and gets the same answer forever, which is a background
+            // loop that can never succeed. The installer has already published
+            // State.Failed, so the refusal is on the screen either way.
+            Log.w("Updater/Worker", "refused: ${refused.message}")
+            Result.failure()
         } catch (t: Throwable) {
             Log.w("Updater/Worker", "check failed: ${t.message}", t)
             Result.retry()
@@ -171,5 +192,6 @@ class UpdateWorker(
 
     companion object {
         const val KEY_FORCE = "force"
+        const val KEY_CONSENTED = "consented"
     }
 }

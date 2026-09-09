@@ -18,7 +18,7 @@
     "_doc_excluded": "Upstream's own release plumbing, not app source: their Forgejo CI and self-hosted runner compose (we ship through cloud-mail-engine.sh), their marketing brochure, and the F-Droid listing copy — which names their product and their store entry, neither of which we publish to."
   },
   "modules": {
-    "_doc": "The gradle module graph, as data. settings.gradle loops over this instead of carrying a hardcoded include list, so the graph lives in exactly one place (FIRE RULE #6) — and the same list drives the ship workflow's path triggers and the publish gate's source hash. Upstream's own settings.gradle.kts holds these five as literals; that copy is deliberately not carried over. All five resolve at their default path (:core:jmap -> core/jmap); no module is shared by reference from ab_cloud-libs-shared any more, see the analytics block below.",
+    "_doc": "The gradle module graph, as data. settings.gradle loops over this instead of carrying a hardcoded include list, so the graph lives in exactly one place (FIRE RULE #6) - and the same list drives the ship workflow's path triggers and the publish gate's source hash. Upstream's own settings.gradle.kts holds the five upstream modules as literals; that copy is deliberately not carried over. The five upstream modules resolve at their default path (:core:jmap -> core/jmap); the entries carrying a `dir` are shared BY REFERENCE from ab_cloud-libs-shared and are the app's only links into the constellation - the Text tools binder, and the self-update chain the whole fleet uses. libs:analytics remains excluded, see the analytics block below.",
     "app": {},
     "core:jmap": {
       "type": "library",
@@ -41,6 +41,24 @@
       "_doc": "The ITextTools binder, shared BY REFERENCE from ab_cloud-libs-shared/libs/. This app CALLS it; cloud-keyboard serves it. It is the whole of what mail links to reach Enhance and Translate - the engines, the routing settings and the provider key stay in the keyboard's process and only text crosses, so this app has no second copy of any of them.",
       "_doc_why_by_reference": "The analytics note above says no module was shared by reference from ab_cloud-libs-shared any more; that was true of libs:analytics, a Java/AGP-9 module this Kotlin/Compose tree on AGP 8.9 could not consume. This one is a Kotlin Android library on the same toolchain with core-ktx as its only dependency, which is why it can be.",
       "dir": "../ab_cloud-libs-shared/libs/text-tools"
+    },
+    "libs:core": {
+      "_doc_dir": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/ - settings.gradle points projectDir here instead of at a local copy, so a fix lands in every consuming app at build time and copies cannot drift.",
+      "_doc": "Pulled in by :libs:updater, which needs its NotificationStore to surface an install result. Also merges the signature-level CONSTELLATION_DATA permission into this app's manifest, which is what makes the constellation's same-key trust on by default.",
+      "dir": "../ab_cloud-libs-shared/libs/core",
+      "type": "library"
+    },
+    "libs:devtools": {
+      "_doc_dir": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/ - settings.gradle points projectDir here instead of at a local copy, so a fix lands in every consuming app at build time and copies cannot drift.",
+      "_doc": "Not named by app.depends_on and not linked in app/build.gradle.kts: libs:core pulls it in with an `api` dependency. Listed here because settings.gradle must be able to resolve the gradle path, and because the ship workflow's path triggers are generated from this map - a module that can trigger a rebuild has to be visible to the map that generates them.",
+      "dir": "../ab_cloud-libs-shared/libs/devtools",
+      "type": "library"
+    },
+    "libs:updater": {
+      "_doc_dir": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/ - settings.gradle points projectDir here instead of at a local copy, so a fix lands in every consuming app at build time and copies cannot drift.",
+      "_doc": "The fleet's self-update chain: GHCR manifest check, resumable download, digest verification, and the one serialised PackageInstaller path whose every terminal status is surfaced. This is the SAME library Constellation - the owner's app store - drives its own updates with, pulling the SAME image (forks.mail.image) the store distributes, so mail updating itself and the store updating mail are one mechanism rather than two.",
+      "dir": "../ab_cloud-libs-shared/libs/updater",
+      "type": "library"
     }
   },
   "forks": {
@@ -78,7 +96,9 @@
     "ghcr": {
       "registry": "ghcr.io",
       "namespace": "diegonmarcos",
-      "media_type": "application/vnd.android.package-archive"
+      "media_type": "application/vnd.android.package-archive",
+      "_doc_image_from_fork": "This app publishes under forks.mail.image, which is also the name constellation-fleet.json carries and the name the ship engine's publish-fork pushes to. Naming it AGAIN here as release.ghcr.image would be a second copy of a string that already lives in this file: let the two drift and the updater asks GHCR for a repository that does not exist, gets a 404, and reads 404 as 'no build for this ABI yet - up to date'. The app would then report itself current forever without ever reaching its own image. :libs:updater resolves the pointer.",
+      "image_from_fork": "mail"
     },
     "gh_release": {
       "_doc": "Rolling GH release 'latest' (shared across the ea_cloud-* apps; each contributes a distinctly-named APK asset), overwritten every main push so https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/cloud-comms-mail.apk stays stable. Published by `build.sh gh-release-fork mail` (ship-cloud-mail.yml), which uploads dist/cloud-comms-mail.apk with --clobber. Consumed by aa_cloud-superapp ui.external_apps[cloud-mail].install_apk_url. The immutable timestamped per-build release (RSS notification) is separate and stays --latest=false.",
@@ -88,7 +108,35 @@
       "draft": false,
       "prerelease": false,
       "generate_release_notes": false
-    }
+    },
+    "auto_update": {
+      "_doc": "Read by :libs:updater/build.gradle at configure time; nothing about the update policy is written in Kotlin. The two runtime toggles the owner can actually move (Auto-update, and Wi-Fi only) live in SharedPreferences and default from here.",
+      "enabled": true,
+      "tag": "latest",
+      "interval_hours": 6,
+      "_doc_require_unmetered_network": "NEVER download an update over mobile data unless the owner asked for it. Gates the AUTOMATIC pass only; a deliberate press may spend the data, but only after the screen has shown it the size.",
+      "require_unmetered_network": true,
+      "require_charging": false,
+      "install_mode": "silent",
+      "_doc_max_installs_per_pass": "Most install sessions ONE unattended background pass may open. Mail updates only itself, so one is the whole of what a pass can ever need - it is not a fleet host and must not behave like one.",
+      "max_installs_per_pass": 1
+    },
+    "variants": [
+      {
+        "_doc": "The ONLY ABI ship-cloud-mail.yml builds (its matrix is arm64-v8a alone), so it is the only one declared. publish-fork gives arm64 the bare tag; a suffixed variant tag would name something nobody publishes. AbiUpdateTag falls back to auto_update.tag for any ABI absent from this map, so an x86_64 device degrades to the universal tag rather than to a 404 - and gains a real entry here the day a second variant is built.",
+        "id": "arm64",
+        "abis": [
+          "arm64-v8a"
+        ],
+        "supported_abis": [
+          "arm64-v8a",
+          "armeabi-v7a"
+        ],
+        "gh_asset": "cloud-comms-mail.apk",
+        "ghcr_tag_suffix": "",
+        "update_tag": "latest"
+      }
+    ]
   },
   "analytics": {
     "_doc": "DISABLED, and the endpoints kept on purpose. :libs:analytics is a Java/AGP-9 module that was compiled into the FairEmail tree and read these values from this file at build time; the clone is Kotlin/Compose on AGP 8.9 and does not include it, so nothing consumes them today. The site_id below is a registered Umami site that cannot be re-derived from anything in this repo — deleting the block would lose it, and re-registering would orphan the existing history. Whoever wires a Compose-side telemetry hook reads these two endpoints and flips enabled.",

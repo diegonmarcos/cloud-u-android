@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.updater.source
 
 import com.diegonmarcos.superapp.updater.BuildConfig
 import com.diegonmarcos.superapp.updater.AbiUpdateTag
+import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
 import com.diegonmarcos.superapp.updater.apk.ApkIntegrity
@@ -31,7 +32,13 @@ internal class UpdateChecker(private val context: Context) {
 
     /** Manifest-only check — NO blob download. Returns [Available] when GHCR has
      *  a differing APK for this ABI, null when already up to date. Cheap enough
-     *  to run on metered networks so the caller can decide download vs. prompt. */
+     *  to run on metered networks so the caller can decide download vs. prompt.
+     *
+     *  Every path that REACHES AN ANSWER records it through
+     *  [AutoUpdatePrefs.recordCheck], so a settings page can report when the app
+     *  last looked and what it found without a second network round-trip. The
+     *  throwing paths deliberately record nothing — see recordCheck's own note
+     *  on why a failed lookup must not refresh the clock. */
     fun available(): Available? {
         UpdateProgress.update(UpdateProgress.State.CheckingManifest)
         try {
@@ -43,16 +50,19 @@ internal class UpdateChecker(private val context: Context) {
             // APK bytes differ (non-reproducible build) → no spurious update.
             if (layer.revision != null && layer.revision == BuildConfig.GIT_SHORT_SHA) {
                 Log.i(tag, "remote revision ${layer.revision} == installed — up to date")
+                AutoUpdatePrefs.recordCheck(context, "", layer.size)
                 UpdateProgress.reset()
                 return null
             }
             val currentDigest = "sha256:" + currentInstalledApkSha256()
             if (currentDigest == layer.digest) {
                 Log.i(tag, "current matches remote: $currentDigest")
+                AutoUpdatePrefs.recordCheck(context, "", layer.size)
                 UpdateProgress.reset()
                 return null
             }
             Log.i(tag, "update available: $currentDigest → ${layer.digest}")
+            AutoUpdatePrefs.recordCheck(context, layer.digest.substringAfter(':').take(12), layer.size)
             return Available(layer.digest, layer.size, layer.title, token)
         } catch (e: GhcrClient.HttpException) {
             // A 404 means the GHCR tag for THIS device's ABI hasn't been
@@ -61,6 +71,7 @@ internal class UpdateChecker(private val context: Context) {
             // surface a scary URL error. Any other status is a real failure.
             if (e.code == 404) {
                 Log.i(tag, "no remote build for this ABI yet (404: ${e.target}) — treating as up to date")
+                AutoUpdatePrefs.recordCheck(context, "", 0L)
                 UpdateProgress.reset()
                 return null
             }

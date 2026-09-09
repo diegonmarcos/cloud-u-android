@@ -97,21 +97,39 @@ object Updater {
      * One-shot manual check. The "Check for updates" button calls this so the
      * user can install a new APK immediately instead of waiting for the next
      * periodic tick. REPLACE policy means rapid taps cancel the previous run.
-     * FORCE=true: a manual tap is explicit consent, so it downloads on any
-     * network (no metered prompt).
+     *
+     * FORCE, BUT NOT CONSENT TO SPEND. A tap means "look now, and ignore the
+     * Auto-update toggle while you do it" — it does not mean "and put a
+     * quarter-gigabyte on my mobile bill without mentioning it". This used to
+     * be the same call as [downloadNow], so the manual button on a metered
+     * connection downloaded whatever it found in silence; the fleet's largest
+     * APK is 267 MB, and the rule that came out of paying for one is that a
+     * deliberate press MAY spend the data but has to say the number first.
+     *
+     * So a manual check on a metered connection stops at the manifest — which
+     * is kilobytes — and publishes [UpdateProgress.State.UpdateAvailable]
+     * carrying the download size. The screen turns that into a question, and
+     * answering it calls [downloadNow]. On Wi-Fi nothing is withheld and there
+     * is nothing to ask, so the tap downloads as before.
      */
-    fun checkNow(context: Context) = enqueueForced(context)
+    fun checkNow(context: Context) = enqueueUserInitiated(context, consented = false)
 
     /**
      * The "Update now" button on the metered prompt (UpdateProgress.State
-     * .UpdateAvailable). Same forced one-shot as checkNow — re-checks and then
-     * downloads over the metered network with the user's explicit consent.
+     * .UpdateAvailable). Same visible one-shot as [checkNow], plus the one
+     * thing that button adds: the user has now seen the size and said yes, so
+     * this run downloads over the metered network.
      */
-    fun downloadNow(context: Context) = enqueueForced(context)
+    fun downloadNow(context: Context) = enqueueUserInitiated(context, consented = true)
 
-    private fun enqueueForced(context: Context) {
+    private fun enqueueUserInitiated(context: Context, consented: Boolean) {
         val request = OneTimeWorkRequestBuilder<UpdateWorker>()
-            .setInputData(Data.Builder().putBoolean(UpdateWorker.KEY_FORCE, true).build())
+            .setInputData(
+                Data.Builder()
+                    .putBoolean(UpdateWorker.KEY_FORCE, true)
+                    .putBoolean(UpdateWorker.KEY_CONSENTED, consented)
+                    .build()
+            )
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)

@@ -20,6 +20,9 @@ object AutoUpdatePrefs {
     private const val KEY_ENABLED = "enabled"
     private const val KEY_REQUIRE_SILENT = "require_silent"
     private const val KEY_REQUIRE_UNMETERED = "require_unmetered"
+    private const val KEY_LAST_CHECK_AT = "last_check_at"
+    private const val KEY_LAST_REMOTE_DIGEST = "last_remote_digest"
+    private const val KEY_LAST_REMOTE_BYTES = "last_remote_bytes"
 
     /**
      * Master runtime on/off for auto-update. This is what the "Auto-update"
@@ -138,6 +141,60 @@ object AutoUpdatePrefs {
         val cm = ctx.getSystemService(android.net.ConnectivityManager::class.java) ?: return true
         val caps = cm.activeNetwork?.let { cm.getNetworkCapabilities(it) } ?: return true
         return !caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+    }
+
+    /**
+     * What the last COMPLETED check found.
+     *
+     * Persisted, not held in a field, because the two questions a settings page
+     * asks - "when did you last look?" and "what did you find?" - both outlive
+     * the process that answered them. A successful self-install KILLS this
+     * process by definition (Android tears the app down to replace its APK), so
+     * an in-memory answer is guaranteed to be missing at exactly the moment the
+     * user goes looking for it.
+     *
+     * [remoteDigest12] empty means the check ran and found nothing newer. That
+     * is a different fact from "no check has ever run", which is [lastCheck]
+     * returning null, and the two must not render as the same blank.
+     */
+    class LastCheck(
+        val atMillis: Long,
+        val remoteDigest12: String,
+        val remoteBytes: Long,
+    ) {
+        val upToDate: Boolean get() = remoteDigest12.isEmpty()
+    }
+
+    /** The last completed check, or null when none has ever finished. */
+    fun lastCheck(ctx: Context): LastCheck? {
+        val p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val at = p.getLong(KEY_LAST_CHECK_AT, 0L)
+        if (at <= 0L) return null
+        return LastCheck(
+            atMillis = at,
+            remoteDigest12 = p.getString(KEY_LAST_REMOTE_DIGEST, "").orEmpty(),
+            remoteBytes = p.getLong(KEY_LAST_REMOTE_BYTES, 0L),
+        )
+    }
+
+    /**
+     * Record a check that REACHED AN ANSWER. Never called for a check that
+     * threw: a failed lookup establishes nothing about the published build, and
+     * writing the clock anyway would make "we have not been able to check since
+     * Tuesday" render as "checked just now, all fine" - the same class of lie
+     * as reporting an install nobody observed.
+     *
+     * [remoteDigest12] is empty for "up to date"; commit(), not apply(), because
+     * the very next thing a successful pass does is install an APK that kills
+     * this process.
+     */
+    @SuppressLint("ApplySharedPref")
+    fun recordCheck(ctx: Context, remoteDigest12: String, remoteBytes: Long) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putLong(KEY_LAST_CHECK_AT, System.currentTimeMillis())
+            .putString(KEY_LAST_REMOTE_DIGEST, remoteDigest12)
+            .putLong(KEY_LAST_REMOTE_BYTES, remoteBytes)
+            .commit()
     }
 
     /**

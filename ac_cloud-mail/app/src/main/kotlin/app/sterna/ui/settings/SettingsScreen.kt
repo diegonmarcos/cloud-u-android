@@ -62,6 +62,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.role
@@ -230,6 +231,7 @@ fun SettingsScreen(
                 onOpenPrivacy = { entry.navigateOnce { nav.navigate("privacy") } },
                 onOpenStorage = { entry.navigateOnce { nav.navigate("storage") } },
                 onOpenBackup = { entry.navigateOnce { nav.navigate("backup") } },
+                onOpenUpdate = { entry.navigateOnce { nav.navigate("update") } },
                 onOpenUrl = { url -> leaveOnce { openUrl(context, url) } },
                 // The Text rows are pages of THIS app now, so they navigate like every other row
                 // in the hub rather than leaving for the keyboard. navigateOnce, not leaveOnce:
@@ -348,6 +350,9 @@ fun SettingsScreen(
         composable("storage") { entry ->
             StorageScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
         }
+        composable("update") { entry ->
+            UpdateScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
+        }
         composable("backup") { entry ->
             BackupScreen(
                 viewModel = viewModel,
@@ -371,6 +376,7 @@ private fun SettingsHub(
     onOpenPrivacy: () -> Unit,
     onOpenStorage: () -> Unit,
     onOpenBackup: () -> Unit,
+    onOpenUpdate: () -> Unit,
     onOpenUrl: (String) -> Unit,
     onOpenTextTool: (TextToolsEntry) -> Unit,
     currentAccountLabel: String,
@@ -404,6 +410,17 @@ private fun SettingsHub(
                 SettingsCategoryRow(Icons.Filled.Lock, stringResource(R.string.settings_privacy_title), stringResource(R.string.settings_privacy_summary), onOpenPrivacy)
                 SettingsCategoryRow(Icons.Filled.Storage, stringResource(R.string.settings_storage_title), stringResource(R.string.settings_storage_summary), onOpenStorage)
                 SettingsCategoryRow(Icons.Filled.Backup, stringResource(R.string.settings_backup_title), stringResource(R.string.settings_backup_summary), onOpenBackup)
+                // The only row in this group that can replace the app it is part of.
+                // Its page is the app's self-update, driven by the constellation's
+                // shared updater against the same GHCR image the Constellation store
+                // publishes for Cloud Mail - one update path, reached from here or
+                // from the store, never two.
+                // Refresh, not SystemUpdate: this tree cannot be compiled here, and Refresh
+                // is in the CORE material-icons set that ships with material3, so it resolves
+                // whether or not material-icons-extended is on the classpath. An icon name
+                // that turns out not to exist is a build failure, and this app has already
+                // spent a day not compiling.
+                SettingsCategoryRow(Icons.Filled.Refresh, stringResource(R.string.settings_update_title), stringResource(R.string.settings_update_summary), onOpenUpdate)
             }
             // Server-side settings that apply to the current account only; the header names it.
             val accountGroupTitle = if (currentAccountLabel.isNotBlank()) {

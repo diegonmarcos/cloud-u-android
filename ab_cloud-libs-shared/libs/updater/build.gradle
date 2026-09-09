@@ -24,6 +24,30 @@ def fleetFile = file("${rootDir}/data/constellation-fleet.json")
 def fleetB64 = fleetFile.exists() ? fleetFile.text.bytes.encodeBase64().toString() : ""
 def ghcr = buildJson.release.ghcr
 def au   = buildJson.release.auto_update
+// WHICH GHCR IMAGE THIS APP UPDATES ITSELF FROM, named exactly once.
+//
+// Most apps publish a single artefact and say so in release.ghcr.image. A FORK
+// app publishes under build.json::forks.<key>.image instead, and that is the
+// name the ship engine pushes to and the name constellation-fleet.json carries
+// - so for those apps release.ghcr.image would be a SECOND copy of a string
+// that already exists in the same file. Two copies of an image name is not a
+// tidiness problem here: get them out of step and UpdateChecker asks GHCR for
+// a repository that does not exist, GHCR answers 404, and 404 is deliberately
+// read as "no build for this ABI yet - up to date". The app would then report
+// itself current, forever, having never once reached its own image.
+//
+// So a fork app points at its fork entry with release.ghcr.image_from_fork
+// instead of restating the value. Unresolvable is a hard build failure rather
+// than an empty string, for the same reason: an empty image is not a broken
+// build, it is a silently un-updatable one.
+def ghcrImage = ghcr.image ?: (ghcr.image_from_fork
+    ? buildJson.forks?.get(ghcr.image_from_fork)?.image
+    : null)
+if (!ghcrImage) {
+    throw new GradleException("${rootDir}/build.json: :libs:updater needs release.ghcr.image, " +
+        "or release.ghcr.image_from_fork naming a forks.<key> that declares one. Without it " +
+        "this app cannot reach its own published APK and would report itself up to date forever.")
+}
 // Short git sha = code-identity stamp (matches build.sh oras-push manifest
 // revision annotation) so UpdateChecker can skip an identical-code rebuild.
 def shortSha = (System.getenv('GITHUB_SHA')
@@ -64,7 +88,7 @@ android {
 
         buildConfigField "String",  "GHCR_REGISTRY",        "\"${ghcr.registry}\""
         buildConfigField "String",  "GHCR_NAMESPACE",       "\"${ghcr.namespace}\""
-        buildConfigField "String",  "GHCR_IMAGE",           "\"${ghcr.image}\""
+        buildConfigField "String",  "GHCR_IMAGE",           "\"${ghcrImage}\""
         buildConfigField "String",  "GHCR_MEDIA_TYPE",      "\"${ghcr.media_type}\""
         buildConfigField "String",  "AUTO_UPDATE_TAG",      "\"${au.tag}\""
         buildConfigField "String",  "AUTO_UPDATE_TAG_MAP",  "\"${auTagMap}\""

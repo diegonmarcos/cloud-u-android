@@ -270,6 +270,16 @@ dependencies {
     // API key in a second store.
     implementation(project(":libs:text-tools"))
 
+    // Self-update. The SAME library Constellation - the owner's app store - drives its
+    // own updates with, pulling the SAME GHCR image the store distributes for this app.
+    // Linking it is reusing the store's engine, not adding a second one: Constellation
+    // exposes no component another app can invoke (libs:appstore declares none, and the
+    // SuperApp exports only its MAIN launchers), so "update mail now, on demand" has
+    // nothing to delegate TO. Pulls :libs:core transitively, which the install-result
+    // notification needs and which merges the constellation's signature-level
+    // permission into this app.
+    implementation(project(":libs:updater"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.unifiedpush.connector)

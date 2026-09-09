@@ -31,6 +31,7 @@ import app.sterna.widget.RecentMailWidgetPush
 import app.sterna.widget.UnreadWidgetDraw
 import app.sterna.widget.UnreadWidgetPresence
 import app.sterna.widget.UnreadWidgetPush
+import com.diegonmarcos.superapp.updater.Updater
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -230,6 +231,15 @@ class SternaApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        // Arm the periodic self-update check. Idempotent, and it CANCELS itself when
+        // the Auto-update toggle is off, so this one call is both the arm and the
+        // disarm - there is no second place that has to remember to stop it.
+        //
+        // In Application rather than MainActivity because the schedule should survive
+        // however the app was entered: a notification tap, a share, a widget. Nothing
+        // is downloaded here; the worker decides that, and on mobile data it asks
+        // first. See ui/settings/UpdateScreen.kt for what the owner sees.
+        Updater.start(this)
     }
 }
 

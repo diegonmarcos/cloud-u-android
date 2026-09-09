@@ -22,6 +22,7 @@ on:
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
+      - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-mail/**"
 permissions:
   contents: write   # gh release create (RSS feed entries)
