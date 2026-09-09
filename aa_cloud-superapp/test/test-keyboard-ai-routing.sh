@@ -19,7 +19,9 @@
 #       exists there, 'open' matches hugging_face_id, and baked $/M match the live
 #       price within 1 % (a drift = bump pricing_as_of + values)
 #   T8  the AI Model Routing table: slugs non-empty and unique, every price renders
-#       #.## in a unit that never rounds a real cost to 0.00, size sorts numerically
+#       #.### dollars per million -- the provider's own unit, unscaled, with a
+#       published per-token price pinned to the exact cell it must produce so no
+#       stray factor can creep back onto that path -- size sorts numerically
 #       and not lexically, a row missing size/quant/category renders the unknown
 #       marker instead of a blank, ONE LINE PER MODEL (one no-wrap Cell per column,
 #       one Row per model, header and rows declaring the same eight columns in the
@@ -172,19 +174,20 @@ for pid, pv in d["providers"].items():
     assert all(n.strip() for n in names), f"{pid}: a model row has an empty short name"
     assert len(set(names)) == len(names), f"{pid}: duplicate short name {sorted(n for n in names if names.count(n) > 1)}"
 
-    # Every price cell is US cents per million tokens at two decimals (AiRoutingScreen.cents).
-    # A real cost that renders 0.00 would read as free, so the unit must keep every price
-    # above a hundredth of a cent, and two different prices must not collapse into one cell.
+    # Every price cell is US dollars per million tokens at three decimals, printed UNCHANGED from
+    # the registry (AiRoutingScreen.usdPerMillionTokens). Three decimals is not a style choice: at
+    # two, 0.065 / 0.07 / 0.075 $/M all render "0.07" and the column hides a real price difference.
+    # A real cost that renders as zero would read as free, so that is checked too.
     seen = {}
     for m in ms:
         for k in ("prompt", "completion"):
             if k not in m: continue
-            cell = "%.2f" % (m[k] * 100)
-            assert re.fullmatch(r"\d+\.\d{2}", cell), f"{pid}/{m['id']}: {k} renders {cell!r}, not #.##"
+            cell = "%.3f" % m[k]
+            assert re.fullmatch(r"\d+\.\d{3}", cell), f"{pid}/{m['id']}: {k} renders {cell!r}, not #.###"
             assert m[k] == 0 or float(cell) > 0, \
-                f"{pid}/{m['id']}: {k}={m[k]} $/M renders as {cell} cents — the unit is lying about a real cost"
+                f"{pid}/{m['id']}: {k}={m[k]} $/M renders as {cell} — the column is lying about a real cost"
             if cell in seen and seen[cell] != m[k]:
-                raise AssertionError(f"{pid}: {m[k]} and {seen[cell]} $/M both render {cell} — the unit hides a real price difference")
+                raise AssertionError(f"{pid}: {m[k]} and {seen[cell]} $/M both render {cell} — the column hides a real price difference")
             seen[cell] = m[k]
 
     for m in ms:
@@ -240,11 +243,62 @@ for old in ["google/gemini-2.5-flash", "anthropic/claude-haiku-4.5", "openai/gpt
             "google/gemma-3-27b-it", "z-ai/glm-5.3-flash", "moonshotai/kimi-k2-0905"]:
     assert old in [m["id"] for m in orm], f"{old} was removed — every phone that had it selected silently re-routes"
 EOF
-then ok "T8 table data: unique slugs, #.## cents, numeric sort, unknown markers reachable, routing pinned"; else bad "T8 table data"; fi
+then ok "T8 table data: unique slugs, #.### dollars per million, numeric sort, unknown markers reachable, routing pinned"; else bad "T8 table data"; fi
 
 # T8 rendering, read off the Kotlin (this runner cannot build, so the render is proved by its source)
 S="$J/settings/screens/AiRoutingScreen.kt"
-hasf "$S" 'String.format(Locale.US, "%.2f", v * CENTS_PER_USD)' "T8 prices render two decimals in a fixed locale"
+hasf "$S" 'String.format(Locale.US, "%.${PRICE_DECIMALS}f", v)' "T8 prices render in a fixed locale, with no scaling in the formatter"
+
+# T8 the WHOLE conversion, provider wire format -> rendered cell, pinned to exact strings.
+#
+# A price crosses two scalings between OpenRouter and the screen: refreshPricing multiplies the
+# published per-TOKEN figure to reach per-MILLION, and the formatter prints it. Neither is checked
+# by looking at the other, so this block reads BOTH factors out of the Kotlin and renders four
+# prices whose published value is public knowledge. If a stray hundred reappears anywhere on that
+# path -- the defect this replaced, where the column silently printed cents -- claude-haiku-4.5
+# stops reading 1.000 and the exact string below fails.
+if python3 - "$J/latin/AiRouter.kt" "$S" <<'EOF'
+import re, sys
+from decimal import Decimal, ROUND_HALF_UP
+
+router = open(sys.argv[1], encoding="utf-8").read()
+screen = open(sys.argv[2], encoding="utf-8").read()
+
+# The scale refreshPricing applies to the provider's per-token price, taken from the source.
+ingest = re.search(r'getString\("prompt"\)\.toDouble\(\) \* ([0-9.e_]+)', router)
+assert ingest, "refreshPricing no longer scales the catalog's per-token price -- find where it moved"
+scale = float(ingest.group(1).replace("_", ""))
+assert scale == 1e6, f"per-token price scaled by {scale:g}, expected 1e6 to reach per-million"
+
+# The formatter's decimals, and the proof it does NOT scale: its value argument must be bare 'v'.
+dec = re.search(r"private val PRICE_DECIMALS = (\d+)|private const val PRICE_DECIMALS = (\d+)", screen)
+assert dec, "PRICE_DECIMALS is gone -- the column's precision is no longer declared in one place"
+decimals = int(dec.group(1) or dec.group(2))
+fmt = re.search(r'private fun usdPerMillionTokens\(v: Double\) = (.+)$', screen, re.M)
+assert fmt, "the price formatter changed shape -- re-read it before trusting this check"
+body = fmt.group(1).strip()
+assert body.endswith(", v)"), \
+    f"the formatter no longer prints its argument as given ({body!r}) -- a scaling crept back into the cell"
+
+def cell(per_token_string):
+    """Exactly what the table renders: ingest scaling, then Java's HALF_UP %.Nf on the double."""
+    usd_per_million = float(per_token_string) * scale
+    return str(Decimal(usd_per_million).quantize(Decimal(1).scaleb(-decimals), rounding=ROUND_HALF_UP))
+
+# id, the price string OpenRouter's catalog publishes (USD per token), the cell the table must show.
+# Chosen because these four are quoted per million in public price lists as $1, $5, $0.40 and
+# $0.05 -- so the rendered cell is checkable against the vendor's own page by eye.
+KNOWN = [
+    ("anthropic/claude-haiku-4.5",       "prompt",     "0.000001",   "1.000"),
+    ("anthropic/claude-haiku-4.5",       "completion", "0.000005",   "5.000"),
+    ("openai/gpt-4.1-mini",              "prompt",     "0.0000004",  "0.400"),
+    ("meta-llama/llama-3.1-8b-instruct", "prompt",     "0.00000005", "0.050"),
+]
+wrong = [f"{i} {k}: catalog {v} $/token renders {cell(v)!r}, must be {want!r}"
+         for i, k, v, want in KNOWN if cell(v) != want]
+assert not wrong, "\n    ".join(wrong)
+EOF
+then ok "T8 a published per-token price renders the exact dollars-per-million cell"; else bad "T8 per-token price to rendered cell"; fi
 hasf "$S" 'compareBy<AiRouter.Model>({ sizeKey(it) }, { quantKey(it) }, { it.name })' "T8 sort is size, then quantisation, then name"
 hasf "$S" 'private fun sizeKey(m: AiRouter.Model) = m.paramsB ?: Int.MAX_VALUE' "T8 models with no published size sort last"
 hasf "$S" 'm.paramsB?.let { "${it}B" } ?: unknown' "T8 missing size renders the unknown marker"
@@ -305,7 +359,7 @@ ms = [m for pv in reg["providers"].values() for m in pv["models"]]
 # and lands the author here, which is the point.
 longest = [
     ("colName",    max(m["name"] + (strings["ai_model_open_suffix"] if m.get("open") else "") for m in ms)),
-    ("colPrice",   max(("%.2f" % (m[k] * 100) for m in ms for k in ("prompt", "completion") if k in m), key=len)),
+    ("colPrice",   max(("%.3f" % m[k] for m in ms for k in ("prompt", "completion") if k in m), key=len)),
     ("colPrice",   ""),
     ("colSize",    max((f'{m["params_b"]}B' for m in ms if "params_b" in m), key=len)),
     ("colQuant",   max(("/".join(m.get("quant", [])) for m in ms), key=len)),

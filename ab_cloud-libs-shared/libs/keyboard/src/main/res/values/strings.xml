@@ -291,10 +291,10 @@
     <string name="ai_model_title">Model</string>
     <string name="ai_model_open_suffix"> (open)</string>
     <string name="ai_pricing_title">Prices</string>
-    <string name="ai_pricing_summary">US cents per million tokens — prompt in / completion out. Prices refresh from the provider\'s public catalog when this page opens; size, quantisation and category are built in. Swipe a row sideways for the rest of the columns</string>
+    <string name="ai_pricing_summary">US dollars per million tokens — prompt in / completion out. Prices refresh from the provider\'s public catalog when this page opens; size, quantisation and category are built in. Swipe a row sideways for the rest of the columns</string>
     <string name="ai_pricing_col_model">Model</string>
-    <string name="ai_pricing_col_in">in ¢/M</string>
-    <string name="ai_pricing_col_out">out ¢/M</string>
+    <string name="ai_pricing_col_in">in $/M</string>
+    <string name="ai_pricing_col_out">out $/M</string>
     <string name="ai_pricing_col_size">size</string>
     <string name="ai_pricing_col_quant">quant</string>
     <string name="ai_pricing_col_trained">trained for</string>

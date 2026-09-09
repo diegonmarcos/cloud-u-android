@@ -100,17 +100,22 @@ fun createAiRoutingSettings(context: Context): List<Setting> = listOf(
 }
 
 /**
- * The registry and [AiRouter.refreshPricing] both hold prices in USD per million tokens, because
- * that is the unit OpenRouter publishes. The table prints US CENTS per million instead. At the two
- * decimals this column uses, dollars lie: the two cheapest models in the registry, $0.05 and
- * $0.065 per million, both render "0.07" — the same cell for a 30 % price difference — and a model
- * an order of magnitude cheaper would render "0.00", i.e. free. In cents they are 5.00 and 6.50,
- * and the unit still has two decimal places of headroom before it rounds anything real to zero.
+ * The registry and [AiRouter.refreshPricing] both hold prices in UNITED STATES DOLLARS PER MILLION
+ * TOKENS, because that is the unit OpenRouter publishes and the unit every provider quotes. The
+ * table prints that number UNCHANGED, and the heading names the unit. There is no conversion here
+ * on purpose: a price the screen scales is a price that disagrees with the provider's own list,
+ * and the reader has no way to tell which of the two is lying.
+ *
+ * This column briefly printed US cents instead — the same prices multiplied by a hundred — to stop
+ * two prices rounding into one cell. The rounding problem was real but the unit change was the
+ * wrong remedy for it: at two decimals $0.065, $0.07 and $0.075 per million all render "0.07", and
+ * that is a want of PRECISION, not of unit. Three decimals separate every price in the registry,
+ * and leave a price a further order of magnitude cheaper still visible rather than reading "0.000".
  */
-private const val CENTS_PER_USD = 100
+private const val PRICE_DECIMALS = 3
 
-/** Always two decimals, always a dot: the column's shape is asserted, so it cannot follow the locale. */
-private fun cents(v: Double) = String.format(Locale.US, "%.2f", v * CENTS_PER_USD)
+/** Always three decimals, always a dot: the column's shape is asserted, so it cannot follow the locale. */
+private fun usdPerMillionTokens(v: Double) = String.format(Locale.US, "%.${PRICE_DECIMALS}f", v)
 
 /**
  * Presentation order, and ONLY presentation: size, then quantisation, then name. Routing resolves
@@ -224,8 +229,8 @@ private fun AiPricingTable(setting: Setting, p: AiRouter.Provider) {
             // page is for, and they are what a row shows before it is scrolled.
             Row(Modifier.fillMaxWidth().padding(top = 6.dp).horizontalScroll(scroll)) {
                 Cell(ctx.labelFor(m), colName, plain, body)
-                Cell(pr?.prompt?.let { cents(it) } ?: unknown, colPrice, plain, body, TextAlign.End)
-                Cell(pr?.completion?.let { cents(it) } ?: unknown, colPrice, plain, body, TextAlign.End)
+                Cell(pr?.promptUsdPerMillionTokens?.let { usdPerMillionTokens(it) } ?: unknown, colPrice, plain, body, TextAlign.End)
+                Cell(pr?.completionUsdPerMillionTokens?.let { usdPerMillionTokens(it) } ?: unknown, colPrice, plain, body, TextAlign.End)
                 Cell(m.paramsB?.let { "${it}B" } ?: unknown, colSize, dim, body)
                 Cell(m.quant.joinToString("/").ifEmpty { unknown }, colQuant, dim, body)
                 Cell(m.trainedFor.joinToString(", ").ifEmpty { unknown }, colTrained, dim, body)

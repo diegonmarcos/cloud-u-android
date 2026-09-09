@@ -25,8 +25,15 @@ import java.net.URL
  * and translation once it opts in. Blocking — never call on the IME main thread.
  */
 object AiRouter {
-    /** USD per million tokens. */
-    class Pricing(val prompt: Double, val completion: Double)
+    /**
+     * A model's price, in UNITED STATES DOLLARS PER MILLION TOKENS, which is the unit the routing
+     * table displays unchanged. The names carry the unit because this number reaches the screen
+     * through two different paths — the baked registry and the live catalog — and a bare "prompt"
+     * gave neither path anywhere to state what it was handing over. OpenRouter publishes dollars
+     * per TOKEN, so [refreshPricing] scales by a million on the way in; the registry is authored
+     * in this unit already.
+     */
+    class Pricing(val promptUsdPerMillionTokens: Double, val completionUsdPerMillionTokens: Double)
     /**
      * One row of the routing table. [id] is the provider's exact model id — the string a request
      * is sent with and the one the prefs store, so it is the only field routing ever resolves by.
@@ -163,7 +170,7 @@ object AiRouter {
 
     // ---- live pricing: provider catalog → prefs cache {"fetched": epochMs, "prices": {id: [prompt, completion]}} ----
 
-    /** Cached live prices for [p] ($/M), with the fetch time; null when never fetched. */
+    /** Cached live prices for [p], in dollars per million tokens, with the fetch time; null when never fetched. */
     fun livePricing(context: Context, p: Provider): Pair<Long, Map<String, Pricing>>? {
         val raw = context.prefs().getString(Settings.PREF_AI_PRICING_PREFIX + p.id, null) ?: return null
         return runCatching {
