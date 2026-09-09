@@ -1241,14 +1241,18 @@ class AggregatorStackFragment : Fragment(),
             body.addView(stateLine(ctx, "no channels in scope", SIGNAL_UNKNOWN))
             return
         }
-        val executor = java.util.concurrent.Executors.newFixedThreadPool(4)
+        // Every card is drawn first, then ONE request fills them all in.
+        val slots = LinkedHashMap<String, Pair<TextView, LinearLayout>>()
         for (topic in topics.sorted()) {
             val group = NotifGroup(
                 key   = topic,
                 label = com.diegonmarcos.superapp.rss.NtfyCatalog.labelOf(topic),
                 sub   = topic,
                 rows  = emptyList(),
-                url   = "https://rss.diegonmarcos.com/$topic",
+                // The HUMAN address, deliberately the gated public one: this
+                // opens in the in-app browser, which carries the Authelia
+                // cookie. Only the programmatic poll needs the open route.
+                url   = "${com.diegonmarcos.superapp.rss.NtfyCatalog.webBaseUrl()}/$topic",
             )
             // "checking…", never OK: an unpolled channel must not spend even its
             // first frame looking healthy.
@@ -1258,23 +1262,39 @@ class AggregatorStackFragment : Fragment(),
             placeGroup(ctx, block, topic, body)
 
             val cached = ntfyCache[topic]
-            if (cached != null) {
-                paintNtfyGroup(ctx, state, rowsBox, cached, topic, panel.limit)
-                continue
-            }
-            runCatching {
-                executor.execute {
-                    val result = pollTopic(topic)
-                    state.post {
+            if (cached != null) paintNtfyGroup(ctx, state, rowsBox, cached, topic, panel.limit)
+            else slots[topic] = state to rowsBox
+        }
+        if (slots.isEmpty()) return
+
+        // ONE REQUEST FOR ALL OF THEM. ntfy takes a comma-separated topic list
+        // and stamps every envelope with its own `topic`, which is how the
+        // fleet's own rss-gateway polls it. Twenty-six separate requests also
+        // WORKED, right up until they did not: ntfy allows a burst of 60 with
+        // one token back per 10s (`visitor-request-limit-burst` in
+        // infra-obs_ntfy/src/templates/server.yml.tpl), so a page that spends
+        // 26 of them per visit puts the second visit inside a minute over the
+        // line and hands back HTTP 429 for a scattered handful of channels.
+        // Grey cards that move around between visits are the hardest kind of
+        // broken to report, and one request cannot produce them.
+        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        runCatching {
+            executor.execute {
+                val byTopic = pollTopics(slots.keys.toList())
+                body.post {
+                    for ((topic, slot) in slots) {
+                        val result = byTopic.getValue(topic)
                         ntfyCache[topic] = result
-                        paintNtfyGroup(ctx, state, rowsBox, result, topic, panel.limit)
+                        paintNtfyGroup(ctx, slot.first, slot.second, result, topic, panel.limit)
                     }
                 }
-            }.onFailure {
-                // Could not even schedule the poll — say so rather than leaving
-                // the row reading "checking…" forever, which looks like progress.
-                state.text = "unavailable · not polled"
-                state.setTextColor(SIGNAL_UNKNOWN)
+            }
+        }.onFailure {
+            // Could not even schedule the poll — say so rather than leaving
+            // the rows reading "checking…" forever, which looks like progress.
+            for ((_, slot) in slots) {
+                slot.first.text = "unavailable · not polled"
+                slot.first.setTextColor(SIGNAL_UNKNOWN)
             }
         }
         executor.shutdown()
@@ -1286,7 +1306,9 @@ class AggregatorStackFragment : Fragment(),
     ) {
         rowsBox.removeAllViews()
         if (!result.ok) {
-            state.text = "unavailable · ${result.error}"
+            // The verdict already says what went wrong and what to do about
+            // it; prefixing "unavailable" only buried the useful half.
+            state.text = result.error
             state.setTextColor(SIGNAL_UNKNOWN)
             return
         }
@@ -1304,7 +1326,10 @@ class AggregatorStackFragment : Fragment(),
             // Empty channel and hidden-by-filter are different facts, so they get
             // different words and different colours.
             if (result.rows.isEmpty()) {
-                state.text = "silent 7d · publisher?"
+                // The window it was actually asked about, not a literal that
+                // went stale the moment the declared window changed.
+                state.text =
+                    "silent ${com.diegonmarcos.superapp.rss.NtfyCatalog.pollWindow()} · publisher?"
                 state.setTextColor(SIGNAL_WARN)
             } else {
                 state.text = "nothing new"
@@ -1317,42 +1342,88 @@ class AggregatorStackFragment : Fragment(),
         for (r in rows) rowsBox.addView(notifRowView(ctx, r, ""))
     }
 
-    /** ntfy's poll API. Any non-200, any exception and any unparseable body is
-     *  UNAVAILABLE — the honest answer is that we did not measure, not that the
-     *  channel is empty. */
-    private fun pollTopic(topic: String): NtfyResult = try {
-        val url = java.net.URL("https://rss.diegonmarcos.com/$topic/json?poll=1&since=7d")
-        val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
-            connectTimeout = 4000; readTimeout = 4000; requestMethod = "GET"
-        }
-        try {
-            if (conn.responseCode != 200) NtfyResult(false, "HTTP ${conn.responseCode}", emptyList())
-            else {
-                val rows = mutableListOf<NotifRow>()
-                conn.inputStream.bufferedReader().forEachLine { line ->
-                    if (line.isNotBlank()) runCatching {
-                        val o = org.json.JSONObject(line)
-                        if (o.optString("event") == "message") {
-                            val ts = o.optLong("time", 0L) * 1000L
-                            rows += NotifRow(
-                                ts    = ts,
-                                title = o.optString("title").ifBlank { topic },
-                                text  = o.optString("message"),
-                                // ntfy mints a stable per-message id. Falling
-                                // back to topic+ts keeps a row swipeable on a
-                                // server old enough not to send one.
-                                id    = ntfyNs(topic) +
-                                    o.optString("id").ifBlank { ts.toString() },
-                            )
+    /**
+     * ntfy's poll API, for EVERY topic on the card in one request. Any
+     * non-200, any exception and any unparseable body is UNAVAILABLE — the
+     * honest answer is that we did not measure, not that the channel is empty.
+     * Every requested topic gets an entry back, so a card can never be left
+     * reading "checking…".
+     *
+     * THE ADDRESS IS NOT THE PUBLIC HOSTNAME. This built
+     * `https://rss.diegonmarcos.com/<topic>/json` itself, which is the route
+     * Caddy hands to Authelia's `forward_auth`; every card on the page read
+     * "unavailable · HTTP 401" for that one reason, on all twenty-six channels
+     * at once. The origin now comes from [NtfyCatalog.pollUrl] — one declared
+     * place, so this file cannot drift away from the advisory screen again,
+     * which is exactly what it had already done.
+     *
+     * A topic that answers nothing is SILENT, not missing: ntfy returns 200
+     * with an empty body for an address nobody has ever published to, so the
+     * demultiplexed empty list is a real measurement and paints amber, while
+     * a transport failure paints every card grey together because they shared
+     * one request and therefore share one fate.
+     */
+    private fun pollTopics(topics: List<String>): Map<String, NtfyResult> {
+        fun all(r: NtfyResult) = topics.associateWith { r }
+        return try {
+            val url = java.net.URL(
+                com.diegonmarcos.superapp.rss.NtfyCatalog.pollUrl(topics.joinToString(",")))
+            val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+                connectTimeout = 4000
+                // Long enough to actually finish. health_resources alone
+                // replays ~851 KB in the declared window, and a 4-second read
+                // turned the busiest channel on the fleet into "no answer" —
+                // a timeout that only fires on the channels with the most to
+                // say is worse than no timeout at all.
+                readTimeout = 15_000
+                requestMethod = "GET"
+                // NO REDIRECTS. ntfy answers directly, so a 3xx is the SSO
+                // bounce and means we are on the gated route. Followed, it
+                // becomes a 200 of login HTML that parses to zero messages —
+                // a channel refusing us would render as one with nothing to
+                // say, which is the one thing this page must never do.
+                instanceFollowRedirects = false
+            }
+            try {
+                if (conn.responseCode != 200)
+                    all(NtfyResult(false,
+                        com.diegonmarcos.superapp.rss.NtfyCatalog.readVerdict(conn.responseCode),
+                        emptyList()))
+                else {
+                    val rows = topics.associateWith { mutableListOf<NotifRow>() }
+                    conn.inputStream.bufferedReader().forEachLine { line ->
+                        if (line.isNotBlank()) runCatching {
+                            val o = org.json.JSONObject(line)
+                            // Each envelope names its own topic — that field is
+                            // the whole reason one request can fill many cards.
+                            val topic = o.optString("topic")
+                            if (o.optString("event") == "message") rows[topic]?.let { bucket ->
+                                val ts = o.optLong("time", 0L) * 1000L
+                                bucket += NotifRow(
+                                    ts    = ts,
+                                    title = o.optString("title").ifBlank { topic },
+                                    text  = o.optString("message"),
+                                    // ntfy mints a stable per-message id.
+                                    // Falling back to topic+ts keeps a row
+                                    // swipeable on a server old enough not to
+                                    // send one.
+                                    id    = ntfyNs(topic) +
+                                        o.optString("id").ifBlank { ts.toString() },
+                                )
+                            }
                         }
                     }
+                    rows.mapValues { (_, v) -> NtfyResult(true, "", v) }
                 }
-                NtfyResult(true, "", rows)
-            }
-        } finally { conn.disconnect() }
-    } catch (_: Throwable) {
-        // Includes the mesh being down, which is unknown — not healthy, not empty.
-        NtfyResult(false, "no answer", emptyList())
+            } finally { conn.disconnect() }
+        } catch (_: Throwable) {
+            // Nothing answered at all, so there is no status code to interpret.
+            // On a phone that is almost always the mesh being down, and saying
+            // so is the difference between the owner reconnecting WireGuard and
+            // the owner filing another bug about the fleet.
+            all(NtfyResult(false,
+                com.diegonmarcos.superapp.rss.NtfyCatalog.UNREACHABLE_VERDICT, emptyList()))
+        }
     }
 
     /**

@@ -75,52 +75,112 @@ object NtfyCatalog {
      * The origin every programmatic ntfy READ must use: the service itself on
      * the WireGuard mesh, ahead of the public edge's authorization gate.
      *
-     * ## Being on the mesh is not being authorized
+     * ## The public hostname has no anonymous poll route — not one that is shut
      * `rss.diegonmarcos.com` and this address are the SAME ntfy container
-     * (`10.0.0.6:8090`), reached two different ways. The public hostname is
-     * `wg_only` — so the mesh is what makes it REACHABLE — and behind that it
-     * is still gated by Caddy's three-tier rule
-     * (`cloud-u-containers/infra-sec_caddy/src/caddyfile.nix::mkNtfyBlock`):
-     * an `Authorization: Bearer eyJ…` JWT, an `Authorization: Bearer tk_…`
-     * ntfy token, or an Authelia session cookie. A poll carrying none of the
-     * three falls to the cookie tier and Authelia refuses it. MEASURED from a
-     * mesh peer, credentials stripped:
+     * (`10.0.0.6:8090`) reached two ways, but they are not the same SURFACE.
+     * Caddy's `mkNtfyBlock`
+     * (`cloud-u-containers/infra-sec_caddy/src/caddyfile.nix`) opens exactly
+     * one prefix to anonymous callers — `handle /feed* { reverse_proxy … }`,
+     * unauthenticated because `feed_auth: "none"` — and that prefix is served
+     * by the rss-gateway SIDECAR, not by ntfy. The sidecar
+     * (`infra-obs_ntfy/src/code/rss-gateway.py`) publishes `/feed/health`,
+     * `/feed/profiles.json`, `/feed/channels.json`, `/feed/<profile>.atom` and
+     * `/feed/c/<topic>.atom`. There is no `/feed/<topic>/json` in it, and
+     * every path outside `/feed*` falls through to
+     * `handle { forward_auth authelia }`. So the poll API is reachable
+     * anonymously by NO public path: the gated one bounces to SSO and the
+     * ungated one does not implement it. MEASURED anonymously from a mesh
+     * peer with the credential stripped (2026-09-09):
      *
-     *     GET https://rss.diegonmarcos.com/fleet_advisory/json?poll=1  -> 401
-     *     GET http://10.0.0.6:8090/fleet_advisory/json?poll=1          -> 200
-     *
-     * Reachability and authorization are different questions and the mesh only
-     * answers the first one. The 401 was the gate working, not the network
-     * failing.
+     *     GET /feed/channels.json                 -> 200
+     *     GET /feed/fleet_advisory/json?poll=1     -> 404  (sidecar: no route)
+     *     GET /fleet_advisory/json?poll=1          -> 302  auth.diegonmarcos.com
+     *     GET http://10.0.0.6:8090/…/json?poll=1   -> 200  (all 26 channels)
      *
      * ## Why the ungated path rather than a token
      * The gate is CORRECT and stays. ntfy's own access control already grants
      * what a read needs — `auth-default-access: read-write` in
-     * `cloud-infra/a_solutions/infra-obs_ntfy/src/templates/server.yml.tpl` —
-     * and the fleet already treats wg0 as the auth boundary for reading this
-     * service: the `/feed*` RSS routes on the same host are declared
-     * `feed_auth: "none"` for exactly that reason. So a read has an authorized
-     * path already; it was knocking on the wrong door. Minting a bearer for it
+     * `infra-obs_ntfy/src/templates/server.yml.tpl` — and the fleet already
+     * treats wg0 as the auth boundary for reading this service, which is the
+     * same judgement that made `/feed*` `feed_auth: "none"`. Minting a bearer
      * would add a credential that can expire, on a screen whose whole job is
      * to be trustworthy when other things are broken.
      *
-     * Browser links stay on the public hostname — a WebView carries the
-     * Authelia session cookie and satisfies the third tier, which is the tier
-     * that exists for humans.
+     * `/feed/c/<topic>.atom` is a real anonymous per-channel route and needs
+     * no mesh, but it is not a substitute: it answers 404 for
+     * `cloud-sa-notifications`, `fleet_advisory` and `infra_mail-health` —
+     * the three channels that matter most — because the sidecar's valid-channel
+     * set is the union of its profiles config and the RSS taxonomy, and those
+     * three are in neither. Twenty-three of twenty-six is not every channel.
      *
-     * Declared in `build.json::ui.ntfy.base_url` when present so the origin can
-     * move without a code change (FIRE RULE #6); the fallback is the address
-     * [com.diegonmarcos.superapp.recovery.AdvisoryFeed] measured and has been
-     * polling successfully all along. That sibling deliberately keeps its own
-     * copy of this constant rather than calling here — it is the escape hatch
-     * for a device too stale to update, and a lifeline with one dependency is
-     * a lifeline with one fewer way to fail.
+     * Human links go to [webBaseUrl] instead: a WebView carries the Authelia
+     * session cookie and satisfies the gate, which is the tier built for
+     * people.
+     *
+     * Declared in `build.json::ui.ntfy.base_url` so the origin can move without
+     * a code change (FIRE RULE #6). [com.diegonmarcos.superapp.recovery
+     * .AdvisoryFeed] deliberately keeps its own copy rather than calling here —
+     * it is the escape hatch for a device too stale to update, and a lifeline
+     * with one dependency is a lifeline with one fewer way to fail.
      *
      * Cleartext to `10.0.0.6` is permitted by `res/xml/network_security_config
      * .xml`, which enumerates the mesh peers.
      */
     fun readBaseUrl(): String =
         config().optString("base_url").ifBlank { "http://10.0.0.6:8090" }.trimEnd('/')
+
+    /** The origin a HUMAN is sent to — the topic page, opened in the in-app
+     *  browser, where the Authelia cookie makes the gate a non-event. Never
+     *  used for a programmatic read; see [readBaseUrl] for why. */
+    fun webBaseUrl(): String =
+        config().optString("web_base_url").ifBlank { "https://rss.diegonmarcos.com" }.trimEnd('/')
+
+    /**
+     * How far back a channel card looks, in a unit ntfy actually parses.
+     *
+     * `since` accepts s/m/h, a Unix timestamp, a message id or `all`. It does
+     * NOT accept `d`, and `since=7d` answered
+     * `HTTP 400 {"code":40008,"error":"invalid since parameter"}` on every
+     * call — so a poll asking in days fails even on the origin that would
+     * have answered it. Declared rather than written here because the right
+     * window is a product decision that changes with how chatty the fleet is:
+     * `health_resources` alone replays 851 KB over 24h and 3.6 MB over 168h,
+     * and a shade only ever shows the newest handful.
+     */
+    fun pollWindow(): String = config().optString("poll_window").ifBlank { "24h" }
+
+    /** THE one place a programmatic ntfy read URL is built. Two files used to
+     *  compose this string themselves and they drifted onto different hosts —
+     *  which is how the Notify cards kept answering 401 after the advisory
+     *  screen was already fixed. */
+    fun pollUrl(topic: String, window: String = pollWindow()): String =
+        "${readBaseUrl()}/$topic/json?poll=1&since=$window"
+
+    /**
+     * Why a read failed, in words that tell the owner what to DO.
+     *
+     * "unavailable" collapses three different problems with three different
+     * responses into one shrug: a channel refusing us needs a credential, a
+     * channel we cannot reach needs the mesh back, and a channel that does not
+     * exist needs the catalog fixed. A 3xx is its own answer — ntfy replies
+     * directly, so a redirect means we are talking to the SSO portal and are
+     * on the gated route rather than the open one.
+     *
+     * ntfy answers 200 with an empty body for a topic nobody ever published
+     * to, so a 404 here is always the wrong ADDRESS, never a quiet channel.
+     */
+    fun readVerdict(code: Int): String = when {
+        code == 401 || code == 403 -> "not authorised · this channel needs a credential"
+        code == 404                -> "no such topic · check the catalog"
+        code in 300..399           -> "login required · gated route, not the open one"
+        code in 500..599           -> "server error · HTTP $code"
+        else                       -> "HTTP $code"
+    }
+
+    /** The verdict when nothing answered at all. Distinct from [readVerdict]
+     *  on purpose: no status code means we never got to ask, and off-mesh is
+     *  overwhelmingly the reason on a phone. */
+    const val UNREACHABLE_VERDICT = "cannot reach · phone off the mesh?"
 
     /**
      * The topic carrying out-of-band install/repair advisories.

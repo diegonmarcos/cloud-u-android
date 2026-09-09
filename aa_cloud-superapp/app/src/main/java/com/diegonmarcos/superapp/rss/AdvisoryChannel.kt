@@ -60,12 +60,14 @@ object AdvisoryChannel {
      * answers and only one of them means "keep waiting".
      */
     fun recent(topic: String, days: Int = 30): List<Message> {
-        // HOURS, NOT DAYS. ntfy's `since` accepts s/m/h, a Unix timestamp, a
-        // message id or `all` — `d` is none of them, and `since=30d` answered
-        // HTTP 400 {"code":40008,"error":"invalid since parameter"} on every
-        // call (measured against the live server). The window is unchanged;
-        // only the unit ntfy actually parses is.
-        val c = (URL("${NtfyCatalog.readBaseUrl()}/$topic/json?poll=1&since=${days * 24}h")
+        // HOURS, NOT DAYS, and built by NtfyCatalog rather than here. `since`
+        // accepts s/m/h, a Unix timestamp, a message id or `all` — `d` is none
+        // of them, and `since=30d` answered HTTP 400 {"code":40008} on every
+        // call. The window is unchanged; only the unit ntfy parses is. The
+        // composition moved to [NtfyCatalog.pollUrl] because this screen and
+        // the Notify cards each built their own copy of this URL and drifted
+        // onto different hosts.
+        val c = (URL(NtfyCatalog.pollUrl(topic, "${days * 24}h"))
             .openConnection() as HttpURLConnection).apply {
             connectTimeout = 10_000
             readTimeout = 15_000
@@ -80,7 +82,11 @@ object AdvisoryChannel {
         val body = (if (code in 200..299) c.inputStream else c.errorStream)
             ?.bufferedReader()?.use { it.readText() } ?: ""
         c.disconnect()
-        if (code !in 200..299) throw RuntimeException("HTTP $code")
+        // The message IS the diagnosis. A bare "HTTP 401" tells the reader
+        // that something is wrong and nothing about which of the three
+        // different things it is, so it goes out in the words that name the
+        // next move.
+        if (code !in 200..299) throw RuntimeException(NtfyCatalog.readVerdict(code))
 
         return body.lineSequence()
             .mapNotNull { runCatching { JSONObject(it) }.getOrNull() }

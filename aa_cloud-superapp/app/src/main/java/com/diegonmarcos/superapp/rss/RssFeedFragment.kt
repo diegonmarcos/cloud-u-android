@@ -168,8 +168,13 @@ class RssFeedFragment : Fragment(R.layout.fragment_rss_feed) {
                 // the subtitle next to the URL that was already there. The raw
                 // topic stays visible because it is what you publish to.
                 row.findViewById<TextView>(R.id.r_name).text = NtfyCatalog.labelOf(topic)
-                val url = "https://rss.diegonmarcos.com/$topic"
-                row.findViewById<TextView>(R.id.r_url).text  = "$topic · rss.diegonmarcos.com/$topic"
+                // The topic page a PERSON opens, so the gated public host is
+                // the right one — the in-app browser carries the Authelia
+                // cookie. Declared alongside the poll origin so the two can
+                // never silently become the same string again.
+                val url = "${NtfyCatalog.webBaseUrl()}/$topic"
+                row.findViewById<TextView>(R.id.r_url).text  =
+                    "$topic · ${NtfyCatalog.webBaseUrl().substringAfter("://")}/$topic"
                 row.setOnClickListener {
                     // The topic page is ordinary web content on our own host,
                     // so it belongs in the app's browser. Handing it to
@@ -248,7 +253,7 @@ class RssFeedFragment : Fragment(R.layout.fragment_rss_feed) {
                                 // channel, which is a plain web page and so
                                 // renders in the app's own browser.
                                 (activity as? TileGridFragment.TileClickListener)
-                                    ?.onTileClicked("https://rss.diegonmarcos.com/$topic")
+                                    ?.onTileClicked("${NtfyCatalog.webBaseUrl()}/$topic")
                             }
                         }
                         slot.addView(row)
