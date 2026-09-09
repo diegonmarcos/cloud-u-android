@@ -73,5 +73,9 @@
       "prerelease": false,
       "generate_release_notes": false
     }
+  },
+  "source_identity": {
+    "_doc": "This app is a MIRROR, not a build: the workflow downloads the official Collabora Office APK, verifies it against upstream.sha256 and republishes those exact bytes. Its output is therefore a pure function of `upstream`, so cloud-android-source-identity.sh hashes THAT instead of the directory tree. Hashing the tree asked the wrong question — a README fix or any repo-wide touch moved the tree sha and republished a byte-identical 250MB APK, which every phone then downloaded as an update. That happened on 2026-09-01: a repo-wide restore commit rewrote ac_cloud-sheets/ and shipped Collabora Office to the fleet again for no reason. With mode=pin the only thing that can trigger a republish is a pin bump, which is exactly when the bytes actually differ.",
+    "mode": "pin"
   }
 }

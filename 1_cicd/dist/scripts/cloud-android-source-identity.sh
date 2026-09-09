@@ -149,7 +149,34 @@ EOF
 # computed and stored by git. A path git does not know (untracked, or removed)
 # hashes as the literal "missing" so its disappearance still moves the
 # identity instead of silently hashing to the same value.
+# ── mirrors identify by their PIN, not by their directory ──────────
+# A mirror does not build anything: it downloads an upstream artifact,
+# verifies it against `upstream.sha256` and republishes those exact bytes.
+# Its output is therefore a pure function of the pin, and hashing its
+# directory asks the wrong question — every README fix, every doc edit, every
+# repo-wide touch moves the tree sha and republishes an APK that is
+# byte-identical to the one already there.
+#
+# That is not theoretical. On 2026-09-01 a repo-wide restore commit rewrote
+# ac_cloud-sheets/, the tree sha moved, and 250 MB of unchanged Collabora
+# Office went through GHCR, through a GitHub release, and down onto every
+# phone as an "update" — for an app nobody had touched.
+#
+# Declared per app as `build.json::source_identity.mode = "pin"`, so the rule
+# lives with the app it describes and any future mirror gets it by saying so.
+_pin_identity() {
+    bj="$ROOT/$APP/build.json"
+    [ -f "$bj" ] || return 1
+    command -v jq >/dev/null 2>&1 || return 1
+    [ "$(jq -r '.source_identity.mode // empty' "$bj" 2>/dev/null)" = "pin" ] || return 1
+    # The whole `upstream` object, compactly and with keys sorted, so the
+    # identity moves when the pin moves and stays put when it does not.
+    # Sorted because a reformat of build.json must not read as a new release.
+    jq -Sc '.upstream // {}' "$bj"
+}
+
 _explain() {
+    _pin_identity && return 0
     _paths | LC_ALL=C sort -u | while IFS= read -r p; do
         h="$(git -C "$ROOT" rev-parse "HEAD:$p" 2>/dev/null || printf 'missing')"
         printf '%s  %s\n' "$h" "$p"
