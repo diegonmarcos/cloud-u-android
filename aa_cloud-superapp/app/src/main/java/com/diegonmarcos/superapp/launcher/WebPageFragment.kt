@@ -6,21 +6,30 @@ import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
+import android.widget.ImageButton
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.R
 
 /**
- * A section page that IS a web page — declare `url` on the page in
- * build.json and it renders here instead of needing a Kotlin screen.
+ * THE embedded browser. Two ways in, one implementation:
+ *
+ *  • a section page that IS a web page — declare `url` on the page in
+ *    build.json and [SectionPages.factoryFor] renders it here instead of
+ *    needing a Kotlin screen (Cloud ▸ Linktree, Projects ▸ C3);
+ *  • any plain http(s) target in the tile/action grammar — MySocials,
+ *    PM Boards, an RSS item — routed here by ShellActivity.launchUri.
  *
  * Cloud ▸ Linktree is the reason it exists: the linktree is already a
  * maintained site, and porting it to tiles meant keeping two copies of the
  * same link list in step forever. One field in build.json is the whole
- * integration; [SectionPages.factoryFor] picks this up for ANY page that
- * declares a url, so the next embedded page needs no code either.
+ * integration; the same fragment then costs nothing to reuse for every
+ * other plain web URL, which is why launchUri opens it rather than
+ * shipping the user out to a browser app.
  *
- * Deliberately chrome-less: no address bar, no tabs. This is a page of the
- * app that happens to be rendered from the web, not a browser — a real
+ * Deliberately chrome-less apart from Back: no address bar, no tabs. This
+ * is a page of the app that happens to be rendered from the web — a real
  * browsing session is what ac_cloud-browser (extapp:cloud-browser) is for.
  */
 class WebPageFragment : Fragment() {
@@ -28,8 +37,10 @@ class WebPageFragment : Fragment() {
     private var web: WebView? = null
 
     /** Disabled until the WebView actually has history, so a back press on
-     *  the first page pops the fragment like every other page instead of
-     *  being swallowed here. */
+     *  the first page falls through to the FragmentManager and pops this
+     *  page like every other one — which IS "close the browser". Keeping it
+     *  enabled with an internal close call would have to re-implement the
+     *  pop the dispatcher already does. */
     private val backToPreviousPage = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
             web?.takeIf { it.canGoBack() }?.goBack()
@@ -43,7 +54,7 @@ class WebPageFragment : Fragment() {
     ): View {
         val url = arguments?.getString(ARG_URL).orEmpty()
         val wv = WebView(requireContext()).apply {
-            layoutParams = ViewGroup.LayoutParams(
+            layoutParams = FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
@@ -105,8 +116,59 @@ class WebPageFragment : Fragment() {
         requireActivity().onBackPressedDispatcher
             .addCallback(viewLifecycleOwner, backToPreviousPage)
         web = wv
-        return wv
+        return FrameLayout(requireContext()).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
+            )
+            addView(wv)
+            addView(backControl())
+        }
     }
+
+    /**
+     * The on-screen Back control. An embedded page reached from a tile has
+     * no toolbar affordance of its own and the system gesture is a swipe
+     * most phones also give to the site itself, so without a visible
+     * control a user who follows a link two pages deep has no way out that
+     * does not gamble on the gesture landing.
+     *
+     * Floats over the content rather than taking a bar of its own: the
+     * embedded page IS the screen, and a chrome bar would be the address
+     * bar this fragment deliberately does not have.
+     */
+    private fun backControl(): View = ImageButton(requireContext()).apply {
+        setImageResource(R.drawable.ic_back)
+        contentDescription = getString(R.string.action_back)
+        background = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.OVAL
+            setColor(0xCC1A0033.toInt())
+        }
+        // Bottom-start: out of the thumb's way for scrolling, and clear of
+        // the bottom-end corner where sites park their own cookie and chat
+        // widgets.
+        layoutParams = FrameLayout.LayoutParams(dp(44), dp(44)).apply {
+            gravity = android.view.Gravity.BOTTOM or android.view.Gravity.START
+            setMargins(dp(16), dp(16), dp(16), dp(16))
+        }
+        setOnClickListener { goBackOrClose() }
+    }
+
+    /** One meaning of Back, shared by the control and the gesture: step back
+     *  through the page's own history while it has one, otherwise leave the
+     *  browser. The dispatcher does the leaving — [backToPreviousPage] is
+     *  disabled in exactly that case, so this cannot recurse into itself. */
+    private fun goBackOrClose() {
+        val wv = web
+        if (wv != null && wv.canGoBack()) {
+            wv.goBack()
+            return
+        }
+        requireActivity().onBackPressedDispatcher.onBackPressed()
+    }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
 
     override fun onDestroyView() {
         // A WebView outliving its fragment leaks the whole view hierarchy.

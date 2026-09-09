@@ -8,6 +8,7 @@ import com.diegonmarcos.superapp.ui.Haptics
 import com.diegonmarcos.superapp.ui.IslandWaveView
 import com.diegonmarcos.superapp.launcher.Pages
 import com.diegonmarcos.superapp.launcher.TileGridFragment
+import com.diegonmarcos.superapp.launcher.WebPageFragment
 import com.diegonmarcos.superapp.launcher.CircularMenuTree
 import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.launcher.StackAnchors
@@ -1364,16 +1365,25 @@ open class ShellActivity : AppCompatActivity(),
     private fun launchUri(uri: String) {
         if (uri.isBlank()) return
 
-        // http(s):// → hand off to Cloud-Browser (external constellation APK).
-        // Cloud-Browser's manifest declares http/https VIEW filter; a targeted
-        // ACTION_VIEW routes straight to it when installed. If not yet installed,
-        // launchExternalApp downloads + installs it first (URL lost, acceptable).
+        // http(s):// → the app's OWN embedded browser, the same
+        // [WebPageFragment] Cloud ▸ Linktree renders in.
+        //
+        // This used to hand every web URL to the Cloud-Browser APK by
+        // package-targeted ACTION_VIEW, which meant a plain link tile —
+        // MySocials, PM Boards — took the user OUT of superapp on the first
+        // tap, and when Cloud-Browser was not installed it triggered an APK
+        // download that dropped the URL on the floor. A link with no
+        // app-specific handler is content this app can render itself, so it
+        // renders it: no task switch, no install prompt, no lost URL.
+        //
+        // The distinction that matters is handler-specific vs. plain web, not
+        // which page the tile happens to sit on — so this is the branch that
+        // changed, not the two pages that complained. Everything below still
+        // leaves: app:// resolves a package, and Intent.parseUri covers
+        // intent:// and every custom scheme, all of which name an app that
+        // no WebView can stand in for.
         if (uri.startsWith("http://") || uri.startsWith("https://")) {
-            val viewIntent = android.content.Intent(android.content.Intent.ACTION_VIEW,
-                                                     android.net.Uri.parse(uri))
-            viewIntent.setPackage("com.diegonmarcos.cloudbrowser")
-            val launched = runCatching { startActivity(viewIntent); true }.getOrElse { false }
-            if (!launched) launchExternalApp("cloud-browser")
+            openEmbeddedBrowser(uri)
             return
         }
 
@@ -1431,6 +1441,22 @@ open class ShellActivity : AppCompatActivity(),
             if (ok) return
         }
         findViewById<View>(R.id.fragment_container).snack("No app handles: $uri")
+    }
+
+    /**
+     * Render a web URL inside superapp, on the back stack, as an ordinary
+     * page. Same push the drawer's Business Card and every section page use,
+     * so Back, the toolbar and the tablet detail pane all behave here exactly
+     * as they do everywhere else — the embedded browser is a page, not a mode.
+     *
+     * Tagged by URL so re-tapping the same link returns to the copy already
+     * open instead of stacking a second live WebView behind the first; see
+     * [pushContent] for what an untagged re-open costs.
+     */
+    private fun openEmbeddedBrowser(url: String) {
+        val frag = WebPageFragment.newInstance(url)
+        if (!isTwoPane()) applyChrome(frag)
+        pushContent(frag, "web:$url")
     }
 
     /**
