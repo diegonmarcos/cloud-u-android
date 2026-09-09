@@ -485,6 +485,9 @@ fun ComposeScreen(
     // and accepted, not claimed here as though it were held.
     var linkDialog by rememberSaveable { mutableStateOf(false) }
     var expanded by rememberSaveable { mutableStateOf(false) }
+    // Whether the To field may fold its chips into a "+N" summary. False for everything except a
+    // reply-all, where the whole point is that the recipient list is visible before a word is typed.
+    var showAllRecipients by rememberSaveable { mutableStateOf(false) }
     var applied by rememberSaveable { mutableStateOf(false) }
     // "Ask for a read receipt" (RFC 8098), per message, from the overflow menu.
     // rememberSaveable, and NOT a ViewModel flow like the padlock beside it: the padlock survives a
@@ -566,6 +569,8 @@ fun ComposeScreen(
                 cc = if (it.cc.isNotBlank()) it.cc.trimEnd(',', ';', ' ') + ", " else ""
                 bcc = if (it.bcc.isNotBlank()) it.bcc.trimEnd(',', ';', ' ') + ", " else ""
                 if (it.expand) expanded = true
+                // A reply-all shows every recipient it is about to answer — see DraftFields.
+                showAllRecipients = it.showAllRecipients
                 // Caret at the end of the prefilled subject ("Re: …"), which is where an edit
                 // continues; it used to sit at offset 0 by accident of the String field.
                 subject = TextFieldValue(it.subject, TextRange(it.subject.length))
@@ -1432,6 +1437,8 @@ fun ComposeScreen(
                 onSuggest = viewModel::suggest,
                 onClearSuggestions = viewModel::clearSuggestions,
                 focusRequester = toFocus,
+                // Reply-all: never summarise the recipients. See DraftFields.showAllRecipients.
+                neverCollapse = showAllRecipients,
                 // Whenever the recipients still have to be typed: a fresh mail and a forward. A reply
                 // and a reopened draft already have them and focus the body (#63); a mailto: link
                 // focuses the first field it left empty (#83).
@@ -1811,6 +1818,14 @@ private fun RecipientChipsField(
     trailing: (@Composable () -> Unit)? = null,
     /** When encrypting, flags a recipient with no available public key. */
     missingKey: (String) -> Boolean = { false },
+    /**
+     * Never fold the chips into a "+N" summary, however many there are.
+     *
+     * Set by a reply-all. The summary is a space-saving default and a perfectly good one on a
+     * message the user addressed themselves; on a reply-all it hides exactly the fact the user has
+     * to see, which is how many people the answer is about to reach.
+     */
+    neverCollapse: Boolean = false,
 ) {
     val (chips, input) = splitRecipients(value)
 
@@ -1855,7 +1870,7 @@ private fun RecipientChipsField(
 
     val chipScroll = rememberScrollState()
     // Collapse to a one-line summary past what fits without scrolling (about two per line).
-    val collapsed = !expanded && chips.size > 2
+    val collapsed = !expanded && chips.size > 2 && !neverCollapse
     // Open on first composition when asked (the To field on a fresh compose), so it self-focuses.
     LaunchedEffect(Unit) { if (autoFocus) expanded = true }
     // The input isn't composed while collapsed, so focus it once the field expands.

@@ -44,12 +44,15 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -74,6 +77,7 @@ import androidx.compose.material.icons.automirrored.filled.Forward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Reply
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.ReplyAll
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Archive
@@ -85,18 +89,21 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.MarkEmailUnread
 import androidx.compose.material.icons.filled.MoreVert
 import app.sterna.ui.text.rememberTextToolRunner
+import app.sterna.ui.text.LocalTextToolRunner
+import app.sterna.ui.text.TextTool
 import app.sterna.ui.text.TextToolScope
 import app.sterna.ui.text.TextToolPanel
-import app.sterna.ui.text.TextTool
 import app.sterna.core.data.text.htmlToText
 import app.sterna.ui.compose.bodySource
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Print
@@ -124,9 +131,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
@@ -432,6 +441,16 @@ private fun MessagePager(
     // The finger's travel across the pager, watched without consuming anything, so the fling below
     // can demand 25 dp of it. See PagerFlingDistance.kt.
     val pagerTravel = remember { PagerTouchTravel() }
+    // ONE runner for the whole reader. AI Resume is started from the toolbar — fixed chrome at THIS
+    // level (#62) — and shown in a box under the sender, which is inside the swiped page. Provided
+    // rather than threaded so four signatures, two of them pinned line for line by tests, do not
+    // each gain a parameter they never look at. See LocalTextToolRunner.
+    val textTools = rememberTextToolRunner()
+    // Swiping to another message drops the previous one's summary and any error with it. A box
+    // headed by this sender holding a summary of the last one is the worst of the two failures
+    // available here: it looks right.
+    LaunchedEffect(activeMessage?.emailId) { textTools.dismiss() }
+    CompositionLocalProvider(LocalTextToolRunner provides textTools) {
     Scaffold(
         topBar = {
             Column {
@@ -511,6 +530,7 @@ private fun MessagePager(
                 }
             }
         }
+    }
     }
 }
 
@@ -764,6 +784,66 @@ private fun MessageActions(
     val readingModeUseful = remember(loaded.email, derivedNotice, noContent) {
         readingModesDiffer(loaded.email, derivedNotice, noContent)
     }
+    // Text tools on a RECEIVED message. onApply is null and stays null: this body is a record
+    // of what somebody sent, so the result is shown to read or copy and the stored message is
+    // never written to. See TextToolScope.
+    //
+    // The reader's ONE runner, not a fresh one: AI Resume is started here and drawn under the
+    // sender, which is a different subtree of the same composition.
+    val textTools = LocalTextToolRunner.current
+    val textToolScope = rememberCoroutineScope()
+    TextToolPanel(textTools, onApply = null)
+    // Flattened HERE, where the reader's own HTML-vs-text notion already lives, and only ever
+    // to be SENT: the message keeps its markup, and nothing flattened is ever written back.
+    // The quoted thread is cut — a translation of the whole history is not what was asked for,
+    // and it is what the user pays for by the token.
+    fun textToolSource(): String {
+        val (raw, isHtml) = bodySource(loaded.email)
+        return TextToolScope.receivedScope(if (isHtml) htmlToText(raw) else raw)
+    }
+    val inTrash by viewModel.inTrash.collectAsStateWithLifecycle()
+    val resolvedMailbox by viewModel.mailboxId.collectAsStateWithLifecycle()
+    // The tag/label surface (part five) and its state: the mailboxes this message is in, and the
+    // account's mailboxes to name them by. Read here because the icon's own presence depends on
+    // whether this protocol HAS a set to edit.
+    var labelSheet by remember(active.emailId) { mutableStateOf(false) }
+    val messageMailboxIds by viewModel.mailboxIds.collectAsStateWithLifecycle()
+
+    // ── THE ACTION ROW, AND WHY IT HOLDS WHAT IT HOLDS ────────────────────────────────────────
+    //
+    // COUNT FIRST, because this is the thing that breaks quietly. A TopAppBar on a 360 dp phone
+    // spends 48 dp on the navigation icon and leaves ~312 dp, i.e. SIX 48 dp actions. The row had
+    // five (star, archive, delete, reply, overflow). The owner asked for three more — AI Resume
+    // before the star, tag/move after it, and Unsubscribe — which is eight. Eight does not fit,
+    // and a row that does not fit does not warn: it clips the last icons off the edge, and the
+    // ones it eats are the ones added last.
+    //
+    // So this is stated rather than discovered. The row is, left to right:
+    //
+    //     [AI Resume] [Star] [Tag] [Unsubscribe?] [Reply-all] [⋮]
+    //
+    // six at most, five whenever the message offers no way out of a list — which is most messages.
+    // The owner's three positions relative to the star are honoured exactly. What moved OUT to the
+    // overflow is Archive and Delete, and that is the trade being made openly: they are the two
+    // actions on this screen that already have a faster route (a swipe on the list, which is how
+    // triage is actually done), while the three arriving have no route at all if they are not here.
+    // Nothing was dropped and nothing was truncated.
+
+    // AI Resume — BEFORE the star, as asked. Summarises this message into the box under the sender.
+    // Absent while there is no body to summarise: an AI icon on a header-only row would spend a
+    // network call to summarise nothing.
+    val resumable = messages.firstOrNull()?.body != null
+    if (resumable) {
+        IconButton(
+            enabled = textTools.busy == null,
+            onClick = { textTools.run(textToolScope, TextTool.RESUME, textToolSource()) },
+        ) {
+            Icon(
+                Icons.Filled.AutoAwesome,
+                contentDescription = stringResource(R.string.text_tool_resume),
+            )
+        }
+    }
     // Follow (flag) toggle, promoted from the overflow menu to the bar now that
     // the subject no longer takes the title space (Codeberg #44).
     val flagged = loaded.email.isFlagged
@@ -776,49 +856,50 @@ private fun MessageActions(
             tint = if (flagged) MaterialTheme.colorScheme.tertiary else LocalContentColor.current,
         )
     }
-    val inTrash by viewModel.inTrash.collectAsStateWithLifecycle()
-    val resolvedMailbox by viewModel.mailboxId.collectAsStateWithLifecycle()
-    // Archive, promoted from the overflow to the bar. Routes through the shared inbox VM (like
-    // delete) so the reader reuses the same count nudge and Undo; the resolved mailbox is passed
-    // since the body fetch can drop it, and the page's accountId so a unified-inbox archive hits the
-    // message's own account.
-    IconButton(onClick = {
-        onArchive(
-            loaded.email.copy(
-                mailboxId = resolvedMailbox ?: loaded.email.mailboxId,
-                accountId = accountId ?: loaded.email.accountId,
-            ),
-        )
-    }) {
-        Icon(
-            Icons.Filled.Archive,
-            contentDescription = stringResource(R.string.message_archive),
-        )
+    // Tags — AFTER the star, as asked. It opens the label surface, which offers ADD and REMOVE
+    // over mailboxes and user keywords; it is deliberately NOT called "Move", because on JMAP a
+    // message belongs to several mailboxes at once and "move" is not a thing that can be done to
+    // one. Offered only when the account HAS a mailbox set to edit: on IMAP a message lives in
+    // exactly one folder, and the honest control there is the overflow's "Move to folder".
+    if (folders.isNotEmpty() && messageMailboxIds.isNotEmpty()) {
+        IconButton(onClick = { labelSheet = true }) {
+            Icon(
+                Icons.AutoMirrored.Filled.Label,
+                contentDescription = stringResource(R.string.message_labels),
+            )
+        }
     }
-    // Delete routes through the inbox's held-back delete (Undo shows on the list) so the reader
-    // behaves like swipe/bulk; in Trash it destroys, so the icon reads "delete forever" (#23).
-    IconButton(onClick = {
-        // The displayed email can carry a null mailboxId (the body fetch drops it), which would
-        // misroute the delete and lose Undo — pass the folder the VM resolved (#23). Same for the
-        // owning account: in the unified inbox the page's nav-passed accountId is authoritative.
-        onDelete(
-            loaded.email.copy(
-                mailboxId = resolvedMailbox ?: loaded.email.mailboxId,
-                accountId = accountId ?: loaded.email.accountId,
-            ),
-        )
-    }) {
-        Icon(
-            if (inTrash) Icons.Filled.DeleteForever else Icons.Filled.Delete,
-            contentDescription = stringResource(
-                if (inTrash) R.string.inbox_delete_forever else R.string.message_delete,
-            ),
-        )
+    // Unsubscribe — present ONLY when this message actually offers a way out, which is the same
+    // decision the banner and the overflow entry make (offeredUnsubscribeAction), so the three can
+    // never disagree about whether there is one. An icon on every message that fails on most is
+    // worse than an icon on half of them that always works. It never fires on tap: see
+    // askUnsubscribe, which puts up the confirmation naming what is about to be contacted.
+    offeredUnsubscribeAction(unsubscribe, unsubscribeState)?.let { action ->
+        IconButton(onClick = { viewModel.askUnsubscribe() }) {
+            Icon(
+                Icons.Filled.Unsubscribe,
+                contentDescription = stringResource(
+                    if (action == UnsubscribeAction.OPEN_PAGE) {
+                        R.string.message_unsubscribe_open_page
+                    } else {
+                        R.string.message_unsubscribe
+                    },
+                ),
+            )
+        }
     }
-    IconButton(onClick = { onReply("reply", replyTargetId, accountId) }) {
+    // REPLY-ALL is the default now, with the double arrow that conventionally means it. Plain
+    // single reply moved into the overflow and is one tap away there.
+    //
+    // The owner asked for this explicitly and it is built as asked — but reply-all as a default is
+    // precisely the configuration in which a private answer reaches a whole list, so the composer
+    // is opened with its recipient fields EXPANDED (see ComposeScreen's `expandRecipients`): every
+    // address the reply will go to is on screen, above the cursor, before a word is typed. The
+    // default is then never a surprise; it is a list the sender is looking at while they write.
+    IconButton(onClick = { onReply("replyAll", replyTargetId, accountId) }) {
         Icon(
-            Icons.AutoMirrored.Filled.Reply,
-            contentDescription = stringResource(R.string.message_reply),
+            Icons.AutoMirrored.Filled.ReplyAll,
+            contentDescription = stringResource(R.string.message_reply_all),
         )
     }
     // Keyed on the settled message so an open menu never carries over across a page settle.
@@ -837,20 +918,6 @@ private fun MessageActions(
     ) { uri ->
         // A cancelled picker (null) does nothing — no toast.
         if (uri != null) viewModel.exportSource(uri, exportName, exportFor)
-    }
-    // Text tools on a RECEIVED message. onApply is null and stays null: this body is a record
-    // of what somebody sent, so the result is shown to read or copy and the stored message is
-    // never written to. See TextToolScope.
-    val textTools = rememberTextToolRunner()
-    val textToolScope = rememberCoroutineScope()
-    TextToolPanel(textTools, onApply = null)
-    // Flattened HERE, where the reader's own HTML-vs-text notion already lives, and only ever
-    // to be SENT: the message keeps its markup, and nothing flattened is ever written back.
-    // The quoted thread is cut — a translation of the whole history is not what was asked for,
-    // and it is what the user pays for by the token.
-    fun textToolSource(): String {
-        val (raw, isHtml) = bodySource(loaded.email)
-        return TextToolScope.receivedScope(if (isHtml) htmlToText(raw) else raw)
     }
     IconButton(onClick = { menuOpen = true }) {
         Icon(
@@ -885,11 +952,14 @@ private fun MessageActions(
                 )
             }
         } else {
-            // Reply variants (plain Reply is the toolbar icon).
+            // Reply variants (reply-ALL is the toolbar icon now). Plain single reply lives here —
+            // still one tap from the same place forward and forward-as-attachment always were, and
+            // deliberately first in the menu, since it is the entry someone opens this menu FOR
+            // once the default answers everybody.
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.message_reply_all)) },
-                leadingIcon = { Icon(Icons.AutoMirrored.Filled.ReplyAll, contentDescription = null) },
-                onClick = { menuOpen = false; onReply("replyAll", replyTargetId, accountId) },
+                text = { Text(stringResource(R.string.message_reply)) },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Reply, contentDescription = null) },
+                onClick = { menuOpen = false; onReply("reply", replyTargetId, accountId) },
             )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.message_forward)) },
@@ -980,9 +1050,51 @@ private fun MessageActions(
                     )
                 }
             }
-            // Triage actions (Archive moved out to the toolbar; mark-unread
-            // took its slot here — #50 follow-up).
+            // Triage actions. Archive and Delete are HERE rather than on the row: the row's six
+            // slots went to the three actions the owner named, and these two are the only ones on
+            // this screen with a faster route already — a swipe on the message list, which is where
+            // triage actually happens. Nothing was dropped; see the count note above the row.
             HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.message_archive)) },
+                leadingIcon = { Icon(Icons.Filled.Archive, contentDescription = null) },
+                onClick = {
+                    menuOpen = false
+                    // The resolved folder and the page's own account, for the same reason the
+                    // toolbar passed them: the fetched body can carry neither, and an archive
+                    // without them misroutes and loses its Undo (#23).
+                    onArchive(
+                        loaded.email.copy(
+                            mailboxId = resolvedMailbox ?: loaded.email.mailboxId,
+                            accountId = accountId ?: loaded.email.accountId,
+                        ),
+                    )
+                },
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        stringResource(
+                            if (inTrash) R.string.inbox_delete_forever else R.string.message_delete,
+                        ),
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        if (inTrash) Icons.Filled.DeleteForever else Icons.Filled.Delete,
+                        contentDescription = null,
+                    )
+                },
+                onClick = {
+                    menuOpen = false
+                    onDelete(
+                        loaded.email.copy(
+                            mailboxId = resolvedMailbox ?: loaded.email.mailboxId,
+                            accountId = accountId ?: loaded.email.accountId,
+                        ),
+                    )
+                },
+            )
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.message_mark_unread)) },
                 leadingIcon = { Icon(Icons.Filled.MarkEmailUnread, contentDescription = null) },
@@ -1084,6 +1196,31 @@ private fun MessageActions(
                 )
             }
         }
+    }
+    // The label surface (part five). Fed the SERVER's membership set, never the cached row's single
+    // mailboxId — that one value is the misconception this sheet exists to correct. The account's
+    // mailboxes name the ids and supply what "add" can offer, which is every mailbox the message is
+    // not already in.
+    if (labelSheet) {
+        val tags = messageTags(
+            mailboxIds = messageMailboxIds,
+            mailboxes = accountFolders,
+            keywords = loaded.email.keywords,
+            // Nothing is excluded here, unlike the chip row under the sender: this is the sheet
+            // where a message's membership is EDITED, and hiding the folder it was opened from
+            // would hide the one row a user came here to remove.
+            currentMailboxId = null,
+            nameOf = { mailboxDisplayName(it.role, it.name) },
+        )
+        LabelSheet(
+            tags = tags,
+            addableMailboxes = accountFolders.filter { it.id !in messageMailboxIds },
+            nameOf = { mailboxDisplayName(it.role, it.name) },
+            onAddMailbox = { id -> labelSheet = false; viewModel.addMailbox(id) },
+            onRemoveMailbox = { id -> labelSheet = false; viewModel.removeMailbox(id) },
+            onRemoveKeyword = { name -> labelSheet = false; viewModel.setUserKeyword(name, false) },
+            onDismiss = { labelSheet = false },
+        )
     }
     // The move-to-folder picker (#73): the same dialog the list's selection bar opens, fed the open
     // message's own account's folders. Picking one hands the message (stamped with the resolved
@@ -1521,6 +1658,12 @@ private fun MessageContent(
     // The per-sender filter rule offered from the participants panel. The Trash is named from the
     // account's OWN cached folder list (no network), the script state is read once when the panel
     // opens, and which of the four answers all that makes is senderRuleEntry()'s.
+    // The message's tags (parts three and five). BOTH kinds, because JMAP has two: the mailboxes
+    // this message belongs to (`mailboxIds` — a SET, which is what a label is on this fleet's
+    // server, where every drawer category is a mailbox) and its user keywords (`keywords` without
+    // the `$` prefix, which mark a message and file nothing).
+    val messageMailboxIds by viewModel.mailboxIds.collectAsStateWithLifecycle()
+    val currentMailboxId by viewModel.mailboxId.collectAsStateWithLifecycle()
     val senderRules by viewModel.senderRules.collectAsStateWithLifecycle()
     val accountAddresses by viewModel.accountAddresses.collectAsStateWithLifecycle()
     // The header's arrival line counts IDENTITIES, not `accountAddresses`: the latter folds in the
@@ -1595,6 +1738,39 @@ private fun MessageContent(
         val body = readerBody(full, plainText, printDerivedNotice, printNoContent)
         val doc = buildPrintDocument(header, printLabels, body, msg.inlineImages)
         printDocument(activity, doc, printJobName(header.subject, appName), blockRemote = !showRemote)
+    }
+    // Decided HERE, once, and handed down already decided — the header renders, it does not judge.
+    // An id with no mailbox to name it is dropped rather than drawn raw, and the folder the message
+    // was OPENED from is left out: repeating it to a reader standing in it is noise, while every
+    // other mailbox is the news the row exists to carry.
+    val tagEmail = (state as? MessageState.Loaded)?.email
+    val tags = remember(messageMailboxIds, accountMailboxes, tagEmail, currentMailboxId) {
+        messageTags(
+            mailboxIds = messageMailboxIds,
+            mailboxes = accountMailboxes,
+            keywords = tagEmail?.keywords.orEmpty(),
+            currentMailboxId = currentMailboxId,
+            nameOf = { mailboxDisplayName(it.role, it.name) },
+        )
+    }
+    // The sender panel's routing/identity rows. Decided here, and only from what the message
+    // ACTUALLY carries: the two timestamps (and the second only when it disagrees with the first),
+    // Return-Path, Authentication-Results, List-Id, Message-ID. `metadataHeaders` is empty until the
+    // panel has been opened once, so on a message nobody taps the sender of, this costs nothing.
+    val metadataHeaders by viewModel.metadataHeaders.collectAsStateWithLifecycle()
+    val metadataEmail = (state as? MessageState.Loaded)?.email
+    val metadata = remember(metadataEmail, metadataHeaders) {
+        if (metadataEmail == null) {
+            emptyList()
+        } else {
+            messageMetadata(
+                email = metadataEmail,
+                headers = metadataHeaders,
+                receivedAtMillis = parseIsoMillis(metadataEmail.receivedAt),
+                sentAtMillis = parseHeaderDateMillis(sentAtHeader(metadataHeaders)),
+                formatTime = { millis -> MailDates.formatFull(java.time.Instant.ofEpochMilli(millis).toString()) },
+            )
+        }
     }
     val senderRule = SenderRuleOffer(
         entryFor = { isSender, address ->
@@ -1676,6 +1852,9 @@ private fun MessageContent(
                 // mail to a stranger, the second sends NOTHING and takes the question away.
                 onSendReadReceipt = viewModel::sendReadReceipt,
                 onDeclineReadReceipt = viewModel::declineReadReceipt,
+                tags = tags,
+                metadata = metadata,
+                onSenderPanelOpened = viewModel::loadMetadataHeaders,
             )
         }
     }
@@ -1728,6 +1907,17 @@ private fun ConversationBody(
     readReceiptState: ReadReceiptState = ReadReceiptState.Idle,
     onSendReadReceipt: () -> Unit = {},
     onDeclineReadReceipt: () -> Unit = {},
+    /** The message's tags, already decided by [messageTags] where the ViewModel is in scope: its
+     *  mailbox memberships and its user keywords, as one list that says which each one is. Decided
+     *  ONCE, up there, so the chip row here and the label sheet on the toolbar cannot answer "what
+     *  is a tag" differently. Declared LAST and passed by name — everything above it up to
+     *  `onCryptoAction` is positional, so an insertion higher up shifts `crypto` by one. */
+    tags: List<MessageTag> = emptyList(),
+    /** The sender panel's routing/identity rows, already decided by [messageMetadata] where the
+     *  ViewModel is in scope. Empty until [onSenderPanelOpened] has been called and answered. */
+    metadata: List<MetadataRow> = emptyList(),
+    /** Pull the routing headers, once, when the sender panel is opened — never when a message is. */
+    onSenderPanelOpened: () -> Unit = {},
 ) {
     val msg = messages.firstOrNull() ?: return
     val full = msg.body
@@ -1925,6 +2115,9 @@ private fun ConversationBody(
                 // type, one of which queues mail to a stranger.
                 onSendReadReceipt = onSendReadReceipt,
                 onDeclineReadReceipt = onDeclineReadReceipt,
+                tags = tags,
+                metadata = metadata,
+                onSenderPanelOpened = onSenderPanelOpened,
             )
         }
         // Spinner until the body has laid out (cached/prefetched mail beats the 500ms, so none flashes).
@@ -1977,6 +2170,9 @@ private fun ReplyForwardBar(onReply: (mode: String) -> Unit) {
  * The collapsing message header (sender, date, star/attachment, plus any attachment list and calendar
  * invite). Rendered as an overlay above the body WebView and translated up with the scroll.
  */
+// combinedClickable: the sender row answers a tap (open the panel) and a LONG press (copy the
+// address) from one modifier. Two separate modifiers would race for the same gesture.
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun MessageHeader(
     msg: ThreadMessage,
@@ -2012,6 +2208,17 @@ private fun MessageHeader(
     readReceiptState: ReadReceiptState = ReadReceiptState.Idle,
     onSendReadReceipt: () -> Unit = {},
     onDeclineReadReceipt: () -> Unit = {},
+    /** The message's tags, already decided by [messageTags] where the ViewModel is in scope: its
+     *  mailbox memberships and its user keywords, as one list that says which each one is. Decided
+     *  ONCE, up there, so the chip row here and the label sheet on the toolbar cannot answer "what
+     *  is a tag" differently. Declared LAST and passed by name — everything above it up to
+     *  `onCryptoAction` is positional, so an insertion higher up shifts `crypto` by one. */
+    tags: List<MessageTag> = emptyList(),
+    /** The sender panel's routing/identity rows, already decided by [messageMetadata] where the
+     *  ViewModel is in scope. Empty until [onSenderPanelOpened] has been called and answered. */
+    metadata: List<MetadataRow> = emptyList(),
+    /** Pull the routing headers, once, when the sender panel is opened — never when a message is. */
+    onSenderPanelOpened: () -> Unit = {},
 ) {
     val sender = msg.header.from.firstOrNull()
     // The user's own message (Sent/Drafts, or sent under one of the account's identities): the sender
@@ -2036,12 +2243,31 @@ private fun MessageHeader(
                 .fillMaxWidth()
                 .padding(start = 16.dp, end = 16.dp, top = 14.dp),
         )
+        val clipboard = LocalClipboardManager.current
+        val context = LocalContext.current
+        // Tap opens the panel; LONG-PRESS copies the address. Copied in the form a mail client
+        // pastes back into a recipient field — `Display Name <a@b.example>`, RFC 5322 name-addr —
+        // rather than the bare address, because the name is half of what makes a pasted recipient
+        // legible. formatAddress quotes a name holding a comma or a colon: unquoted, "Doe, Jane"
+        // pastes as TWO recipients and the second one bounces.
+        //
+        // The address copied is the one the row SHOWS. On the user's own mail (Sent, Drafts) that
+        // row names the recipients, so this copies the recipient; anywhere else it is the sender.
+        val copyTarget = recipient ?: sender
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClickLabel = stringResource(R.string.message_participants_title)) {
-                    showParticipants = true
-                }
+                .combinedClickable(
+                    onClickLabel = stringResource(R.string.message_participants_title),
+                    onLongClickLabel = stringResource(R.string.message_copy_address),
+                    onLongClick = copyTarget?.let {
+                        {
+                            clipboard.setText(AnnotatedString(formatAddress(it)))
+                            Toast.makeText(context, R.string.message_address_copied, Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onClick = { showParticipants = true },
+                )
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -2131,6 +2357,21 @@ private fun MessageHeader(
                 )
             }
         }
+        // The message's tags, under the sender (part three). Read-only here: a chip says where this
+        // message is and what it is marked with, and the toolbar's tag icon is where those are
+        // edited. Two kinds are drawn and they are told apart, because they are not the same thing —
+        // a mailbox is somewhere the message IS, a keyword is something it is MARKED with, and
+        // removing one of each does very different amounts of damage. See MessageTags.
+        //
+        // Absent entirely when the message has none, which on a single-folder account is every
+        // message: an always-present empty strip is a row of furniture.
+        if (tags.isNotEmpty()) {
+            MessageTagRow(tags)
+        }
+        // AI Resume — the summary, in a box under the sender, exactly where the owner asked for it.
+        // It draws the SHARED runner's state (the same progress and the same verbatim error Enhance
+        // and Translate show) and writes nothing back to the message. See ResumeBox.
+        ResumeBox(LocalTextToolRunner.current, msg.id)
         // OpenPGP status card: locked/unlock prompt, progress, verdict, or failure.
         if (crypto != CryptoUiState.None) {
             HorizontalDivider()
@@ -2193,6 +2434,17 @@ private fun MessageHeader(
             from = msg.header.from,
             to = full?.to ?: emptyList(),
             cc = full?.cc ?: emptyList(),
+            // Both off the FULL body, like To and Cc: the cached list row carries neither, so they
+            // populate when the fetch lands rather than being wrongly reported as absent.
+            bcc = full?.bcc ?: emptyList(),
+            // Filtered HERE to the case worth a row: a Reply-To that is simply the sender again
+            // says nothing, and a row that says nothing on ordinary mail is a row nobody reads on
+            // the one message where it matters.
+            replyTo = (full?.replyTo ?: emptyList()).filter { reply ->
+                msg.header.from.none { it.email.equals(reply.email, ignoreCase = true) }
+            },
+            metadata = metadata,
+            onOpened = onSenderPanelOpened,
             deliveredTo = deliveredTo,
             // Decided HERE and handed over already decided: the panel renders, it does not judge.
             originalSender = originalSenderToShow(full?.originalSender, msg.header.from),
@@ -2200,6 +2452,51 @@ private fun MessageHeader(
             senderRule = senderRule,
             onDismiss = { showParticipants = false },
         )
+    }
+}
+
+/**
+ * The message's tags under the sender: where it IS, and what it is MARKED with.
+ *
+ * The two are drawn differently on purpose. A mailbox chip carries a folder icon because it names
+ * somewhere the message can be found; a keyword chip carries a label icon because it names
+ * something written on the message. They are the two multi-valued fields JMAP gives a message
+ * (`mailboxIds` and `keywords`) and they behave differently under removal, so a reader who cannot
+ * tell them apart here will be surprised by the sheet that edits them.
+ *
+ * READ-ONLY. Editing lives behind the toolbar's tag icon, where removing a mailbox can ask first.
+ * A chip with a close button in a header that scrolls under a finger is a mailbox removed by
+ * accident.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MessageTagRow(tags: List<MessageTag>) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        for (tag in tags) {
+            AssistChip(
+                onClick = {},
+                enabled = false,
+                label = { Text(tag.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                leadingIcon = {
+                    Icon(
+                        when (tag.kind) {
+                            TagKind.MAILBOX -> Icons.Filled.Folder
+                            TagKind.KEYWORD -> Icons.AutoMirrored.Filled.Label
+                        },
+                        contentDescription = stringResource(
+                            when (tag.kind) {
+                                TagKind.MAILBOX -> R.string.message_tag_mailbox
+                                TagKind.KEYWORD -> R.string.message_tag_keyword
+                            },
+                        ),
+                        modifier = Modifier.size(16.dp),
+                    )
+                },
+            )
+        }
     }
 }
 
@@ -2226,14 +2523,28 @@ private fun ParticipantsSheet(
     from: List<EmailAddress>,
     to: List<EmailAddress>,
     cc: List<EmailAddress>,
+    /** Blind copies. Present only on the user's OWN mail — a received message never carries the
+     *  Bcc it was sent under, which is the entire point of a Bcc. Shown when it exists, absent
+     *  when it does not, exactly like every other row here. */
+    bcc: List<EmailAddress>,
+    /** Where an answer actually goes, when that is not the sender. See [MetadataLabel.REPLY_TO]. */
+    replyTo: List<EmailAddress>,
+    /** The routing and identity rows, already decided by [messageMetadata] at the call site: the
+     *  timestamps, Return-Path, Authentication-Results, List-Id and Message-ID this message
+     *  actually carries, and NOTHING for the ones it does not. An empty "DKIM:" line reads as a
+     *  verdict rather than as an absence, which is why this is a list and not a record. */
+    metadata: List<MetadataRow>,
     deliveredTo: String?,
     originalSender: EmailAddress?,
     onComposeTo: (address: String) -> Unit,
     senderRule: SenderRuleOffer,
+    /** Pull the routing headers. Called once when the panel opens, alongside the filter rule's own
+     *  round-trip — never on opening a MESSAGE, which is the common case and pays for neither. */
+    onOpened: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    // The one round-trip this feature costs, paid when the panel is opened and not when a message is.
-    LaunchedEffect(Unit) { senderRule.onOpened() }
+    // The round-trips this panel costs, paid when it is OPENED and not when a message is.
+    LaunchedEffect(Unit) { senderRule.onOpened(); onOpened() }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
@@ -2258,8 +2569,70 @@ private fun ParticipantsSheet(
             ParticipantGroup(R.string.participants_from, from, isSender = true, onComposeTo, senderRule)
             ParticipantGroup(R.string.participants_to, to, isSender = false, onComposeTo, senderRule)
             ParticipantGroup(R.string.participants_cc, cc, isSender = false, onComposeTo, senderRule)
+            // The blind copies, on the user's own mail. A received message carries none — that is
+            // what "blind" means — so the group renders nothing there rather than an empty heading.
+            ParticipantGroup(R.string.participants_bcc, bcc, isSender = false, onComposeTo, senderRule)
+            // Reply-To gets a group of its own rather than a metadata line: it is a PARTICIPANT, it
+            // is who a reply reaches, and it is writable-to like the others. Already filtered at the
+            // call site to the case where it differs from the sender.
+            ParticipantGroup(R.string.participants_reply_to, replyTo, isSender = false, onComposeTo, senderRule)
+            MetadataGroup(metadata)
         }
     }
+}
+
+/**
+ * The routing and identity block: what this message says about its own delivery, so a reader can
+ * judge whether it is what it claims to be.
+ *
+ * Renders EXACTLY the rows it was given and invents none. [messageMetadata] has already dropped
+ * every field the message does not carry, because the failure mode here is not a missing row — it
+ * is a present, empty one. "Authentication-Results:" with nothing after it reads as a verdict of
+ * nothing, and a reader who learns to see that on ordinary mail will not notice it on the one
+ * message where the verdict matters.
+ *
+ * The verdicts are shown VERBATIM, never summarised into a tick or a cross. `Authentication-Results`
+ * is the receiving server's own sentence about SPF, DKIM and DMARC; condensing it would be this app
+ * passing a judgement it is not in a position to pass, on a header it did not write.
+ */
+@Composable
+private fun MetadataGroup(rows: List<MetadataRow>) {
+    if (rows.isEmpty()) return
+    HorizontalDivider()
+    Text(
+        stringResource(R.string.participants_delivery),
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+    )
+    for (row in rows) {
+        Text(
+            stringResource(
+                when (row.label) {
+                    MetadataLabel.RECEIVED_AT -> R.string.metadata_received
+                    MetadataLabel.SENT_AT -> R.string.metadata_sent
+                    MetadataLabel.REPLY_TO -> R.string.metadata_reply_to
+                    MetadataLabel.RETURN_PATH -> R.string.metadata_return_path
+                    MetadataLabel.AUTHENTICATION -> R.string.metadata_authentication
+                    MetadataLabel.LIST_ID -> R.string.metadata_list_id
+                    MetadataLabel.MESSAGE_ID -> R.string.metadata_message_id
+                },
+            ),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 6.dp),
+        )
+        // Bounded at four lines: Authentication-Results is routinely long and entirely
+        // sender-adjacent text, and an unbounded one could push everything below it off the panel.
+        Text(
+            row.value,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 4,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 24.dp, end = 24.dp),
+        )
+    }
+    Spacer(Modifier.height(8.dp))
 }
 
 /**

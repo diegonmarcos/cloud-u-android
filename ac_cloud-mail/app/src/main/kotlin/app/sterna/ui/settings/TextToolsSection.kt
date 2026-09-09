@@ -6,13 +6,14 @@ import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.Summarize
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.ui.graphics.vector.ImageVector
 import app.sterna.R
 import com.diegonmarcos.superapp.texttools.TextTools
 
 /**
- * Configs ▸ Text — AI Routing, Text Enhancement, Translation.
+ * Configs ▸ Text — AI Routing, Text Enhancement, Text Resume, Translation.
  *
  * THESE ARE NOT SCREENS IN THIS APP, and that is the whole design. Each row opens the
  * Cloud Keyboard's own settings page, deep-linked by name. One copy of each page exists
@@ -40,7 +41,7 @@ internal class TextToolsEntry(
     @StringRes val summary: Int,
 )
 
-/** The three entries, in the order they are shown. */
+/** The four entries, in the order they are shown. */
 internal val TEXT_TOOLS_ENTRIES = listOf(
     TextToolsEntry(
         screen = "ai_routing",
@@ -53,6 +54,15 @@ internal val TEXT_TOOLS_ENTRIES = listOf(
         icon = Icons.Filled.AutoFixHigh,
         title = R.string.settings_text_enhance_title,
         summary = R.string.settings_text_enhance_summary,
+    ),
+    // "Text Resume" — the owner's product name for SUMMARISE, kept exactly. It is not a curriculum
+    // vitae and it does not resume a paused operation; it is the settings page for the AI Resume
+    // button on a message, and the prompt it sends is shown on it. After Text Enhancement, as asked.
+    TextToolsEntry(
+        screen = "text_resume",
+        icon = Icons.Filled.Summarize,
+        title = R.string.settings_text_resume_title,
+        summary = R.string.settings_text_resume_summary,
     ),
     TextToolsEntry(
         screen = "translation",

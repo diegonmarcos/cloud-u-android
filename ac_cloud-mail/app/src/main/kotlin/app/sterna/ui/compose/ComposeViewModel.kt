@@ -120,6 +120,16 @@ data class DraftFields(
     /** Reveal the Cc/Bcc row (used when restoring a draft that had them). */
     val expand: Boolean = false,
     /**
+     * Show EVERY recipient chip rather than the usual "two and +N" summary.
+     *
+     * Set for a reply-all, and it is a safety property rather than a preference. Reply-all is the
+     * default reply action on the reader now, which is precisely the configuration in which a
+     * private answer reaches an entire list — and a To field that has folded eight recipients into
+     * "+6" is how nobody notices. Every address the message will go to is on screen, above the
+     * cursor, before a word is typed.
+     */
+    val showAllRecipients: Boolean = false,
+    /**
      * Tick the "ask for a read receipt" box (RFC 8098) — set when reopening a message that already
      */
     val requestReceipt: Boolean = false,
@@ -1204,6 +1214,7 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
             bodyBlocks = fields.bodyBlocks,
             bodyLinks = fields.bodyLinks,
             expand = fields.expand,
+            showAllRecipients = fields.showAllRecipients,
         )
         _attachments.value = fields.attachments
         inReplyTo = fields.inReplyTo
@@ -1897,6 +1908,11 @@ class ComposeViewModel(application: Application) : AndroidViewModel(application)
                 to = replyAllRecipients(original, selves),
                 subject = withPrefix(original.subject, opening.subjectPrefix),
                 body = replyBody(if (quoteBody) quote(original, zone) else ""),
+                // The one field a reply-all sets and a reply does not, and the reason is the reader's
+                // toolbar: reply-all is the DEFAULT action there now, so the composer has to make
+                // "this goes to all of them" impossible to miss rather than something to go looking
+                // for behind a "+6". Every recipient chip stays on screen.
+                showAllRecipients = true,
                 // Travels with the body above and says exactly what that body holds: when the original
                 // was not cached, THIS is how the quote reaches the screen, so it is the only thing
                 // that can let the composer keep quiet about a quote it is showing after a process

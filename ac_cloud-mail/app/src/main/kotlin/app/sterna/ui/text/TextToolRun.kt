@@ -1,6 +1,7 @@
 package app.sterna.ui.text
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -13,12 +14,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Which of the two tools, and therefore WHICH ENGINE. The pairing is the point of the enum:
- * [ENHANCE] is the OpenRouter model chosen in AI Routing, [TRANSLATE] is the translation
- * library, and [TextToolRunner.run] is the single place that maps one to the other so there
- * is exactly one line in this app where they could be crossed — and one line to assert on.
+ * Which tool, and therefore WHICH ENGINE. The pairing is the point of the enum: [ENHANCE] and
+ * [RESUME] both go to the OpenRouter model chosen in AI Routing, [TRANSLATE] to the translation
+ * library, and [TextToolRunner.run] is the single place that maps one to the other so there is
+ * exactly one line in this app where they could be crossed — and one line to assert on.
+ *
+ * [RESUME] is "AI Resume", the owner's name for SUMMARISE — condense this message. Not a
+ * curriculum vitae, and not resuming anything that was paused. It shares ENHANCE's provider, key,
+ * model and error wording on purpose (one binder method, `summarise`, over the same engine); what
+ * it does NOT share is the prompt, which comes from the keyboard's summary registry.
  */
-enum class TextTool { ENHANCE, TRANSLATE }
+enum class TextTool { ENHANCE, TRANSLATE, RESUME }
 
 /** How a finished run ended. Exactly one of [text] and [error] is set. */
 class TextToolOutcome(val tool: TextTool, val text: String?, val error: String?)
@@ -71,6 +77,7 @@ class TextToolRunner internal constructor(private val client: TextToolsClient) {
                 when (tool) {
                     TextTool.ENHANCE -> client.enhance(text)
                     TextTool.TRANSLATE -> client.translate(text)
+                    TextTool.RESUME -> client.summarise(text)
                 }
             }
             outcome = TextToolOutcome(tool, result.text, result.error)
@@ -97,3 +104,21 @@ private var shared: TextToolsClient? = null
 @Synchronized
 private fun sharedClient(app: android.content.Context): TextToolsClient =
     shared ?: TextToolsClient(app).also { shared = it }
+
+/**
+ * The reader's ONE runner, reachable from both places on the screen that need it.
+ *
+ * The toolbar and the message header live in different subtrees — the toolbar is fixed chrome at
+ * the pager level (#62), the header is inside the swiped page — but AI Resume is started from the
+ * first and shown in the second, over one call. Passing a runner down through MessagePage,
+ * MessageContent, ConversationBody and MessageHeader would add a parameter to four signatures,
+ * two of which are pinned line for line by tests, to carry a value none of them look at.
+ *
+ * Provided once per reader, so a page and the bar above it are always talking about the same call
+ * in flight. Deliberately without a default: a composable that reads this outside the reader has a
+ * bug, and an error here says so at the first frame rather than silently starting a second runner
+ * whose progress nobody would ever see.
+ */
+val LocalTextToolRunner = compositionLocalOf<TextToolRunner> {
+    error("No TextToolRunner provided — MessagePager provides one for the whole reader")
+}

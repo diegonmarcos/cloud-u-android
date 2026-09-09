@@ -40,12 +40,21 @@ fun TextToolPanel(runner: TextToolRunner, onApply: ((String) -> Unit)?) {
     val busy = runner.busy
     val outcome = runner.outcome
     if (busy == null && outcome == null) return
+    // AI Resume reports somewhere else: the owner asked for its summary in a box UNDER THE SENDER,
+    // not in a modal over the message. Same runner, same progress and the same verbatim error — see
+    // ResumeBox — so this is a routing decision about where one outcome is drawn, not a second copy
+    // of the machinery. Returning early here is what keeps a dialog from opening over that box.
+    if ((busy ?: outcome?.tool) == TextTool.RESUME) return
 
     val clipboard = LocalClipboardManager.current
     val toolName = stringResource(
         when (busy ?: outcome!!.tool) {
             TextTool.ENHANCE -> R.string.text_tool_enhance
             TextTool.TRANSLATE -> R.string.text_tool_translate
+            // Unreachable — the early return above sends RESUME to its own box — but a `when` over
+            // an enum has to be exhaustive, and a branch is cheaper than an else that would swallow
+            // a fourth tool added later.
+            TextTool.RESUME -> R.string.text_tool_resume
         },
     )
 

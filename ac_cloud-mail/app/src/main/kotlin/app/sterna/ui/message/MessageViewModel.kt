@@ -33,6 +33,7 @@ import app.sterna.core.data.mail.FilterRulesState
 import app.sterna.core.data.mail.UnsubscribeAction
 import app.sterna.core.data.mail.UnsubscribeHeader
 import app.sterna.core.data.mail.UnsubscribeMailPreview
+import app.sterna.core.data.mail.UnsubscribeBodyScan
 import app.sterna.core.data.mail.UnsubscribeOptions
 import app.sterna.core.data.mail.confirmationTarget
 import app.sterna.core.data.mail.preferredAction
@@ -658,6 +659,104 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /**
+     * The routing and identity headers the sender panel shows — Authentication-Results,
+     * Return-Path, Date, List-Id. Empty until the panel has been opened once.
+     *
+     * THE SAME on-demand fetch [viewHeaders] makes, and deliberately not a widening of the body
+     * fetch: adding four `header:...:asText` properties to the request every message pays for
+     * would cost every reader a bigger response, and give every server a fourth property to reject
+     * (which is why the two that ARE on that fetch each need their own refusal fallback). One
+     * round-trip, paid when somebody taps the sender, exactly as the per-sender filter rule on the
+     * same panel already does.
+     *
+     * Its own state, NOT [_headers]: that one being non-null is what puts the raw-headers sheet on
+     * screen, so filling it here would open a sheet nobody asked for.
+     */
+    private val _metadataHeaders = MutableStateFlow<List<EmailHeader>>(emptyList())
+    val metadataHeaders = _metadataHeaders.asStateFlow()
+
+    /** Fetch the panel's headers once per opened message; a failure leaves the rows simply absent,
+     *  which is the same thing the panel does for a message that carries none. */
+    fun loadMetadataHeaders() {
+        val id = loadedId ?: return
+        if (_metadataHeaders.value.isNotEmpty()) return
+        viewModelScope.launch {
+            val fetched = runCatching {
+                val credentials = credentials() ?: return@runCatching emptyList<EmailHeader>()
+                repo.rawHeaders(credentials, id)
+            }.getOrDefault(emptyList())
+            if (loadedId == id) _metadataHeaders.value = fetched
+        }
+    }
+
+    // ---- labels: mailbox membership and user keywords (RFC 8621 §4.1.1) ----
+    //
+    // TWO DIFFERENT THINGS, kept apart on purpose — see MessageMetadata.kt, where the reader's own
+    // rule for what a tag IS lives. `mailboxIds` is the SET of mailboxes the message belongs to at
+    // once (this fleet's categories are mailboxes, so that is what a label is); `keywords` is the
+    // per-message flag set, of which everything without a `$` is a user tag.
+
+    /** Every mailbox the OPEN message belongs to, read from the server when the reader settles.
+     *  Empty on IMAP, where there is no set to read — the label surface says so rather than
+     *  offering an edit that would have to be a copy. */
+    private val _mailboxIds = MutableStateFlow<Set<String>>(emptySet())
+    val mailboxIds = _mailboxIds.asStateFlow()
+
+    /** Re-read the membership from the server. Called on load and after every add/remove, because
+     *  the local row holds ONE mailbox id and cannot represent the answer. */
+    fun refreshMailboxIds() {
+        val id = loadedId ?: return
+        viewModelScope.launch {
+            val fetched = runCatching {
+                val credentials = credentials() ?: return@runCatching emptySet<String>()
+                repo.mailboxMembership(credentials, id)
+            }.getOrDefault(emptySet())
+            if (loadedId == id) _mailboxIds.value = fetched
+        }
+    }
+
+    /**
+     * Put the open message in [mailboxId] as well, keeping every mailbox it is already in.
+     *
+     * ADD, not "move": the patch names one membership and says nothing about the others. A failure
+     * lands in [actionStatus] like every other gesture on the open message and never destroys the
+     * message the user is reading.
+     */
+    fun addMailbox(mailboxId: String) = act({ refreshMailboxIds() }) { c, id ->
+        repo.addToMailbox(c, id, mailboxId)
+    }
+
+    /**
+     * Take the open message OUT of [mailboxId], keeping every other mailbox it is in.
+     *
+     * The message is NOT closed afterwards, even when the mailbox removed is the folder it was
+     * opened from. It still exists and is still somewhere; closing the reader would tell the user
+     * it had been deleted, which is the misconception this whole surface exists to correct.
+     */
+    fun removeMailbox(mailboxId: String) = act({ refreshMailboxIds() }) { c, id ->
+        repo.removeFromMailbox(c, id, mailboxId)
+    }
+
+    /** Set or clear one USER keyword — the other kind of tag. `$`-prefixed system keywords are the
+     *  star's and the unread state's, and the repository refuses them here. */
+    fun setUserKeyword(keyword: String, value: Boolean) = act({ reloadKeywords(keyword, value) }) { c, id ->
+        repo.setUserKeyword(c, id, keyword, value)
+    }
+
+    /** Reflect a confirmed keyword change on the message already on screen, so the chip row moves
+     *  with the tap instead of waiting for the next sync. */
+    private fun reloadKeywords(keyword: String, value: Boolean) {
+        val current = (_state.value as? MessageState.Loaded)?.email ?: return
+        _state.value = MessageState.Loaded(
+            current.copy(
+                keywords = current.keywords.toMutableMap().apply {
+                    if (value) put(keyword, true) else remove(keyword)
+                },
+            ),
+        )
+    }
+
+    /**
      * "Save as .eml": [MailRepository.rawSource]'s bytes, one per octet, into the document picked at
      */
     fun exportSource(uri: Uri, proposedName: String, ownerId: String) {
@@ -1027,6 +1126,8 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
         // BUTTON, and until the fetch returns it would still be wired to the previous message's
         // list — a tap unsubscribing from something the reader is no longer looking at.
         _unsubscribe.value = null
+        _mailboxIds.value = emptySet()
+        _metadataHeaders.value = emptyList()
         _unsubscribeState.value = UnsubscribeState.Idle
         _unsubscribeConfirm.value = null
         // And the read receipt, one degree worse: its button answers a NAMED stranger, captured from
@@ -1136,7 +1237,14 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
                 _mailboxId.value = anchor.mailboxId ?: listEmail?.mailboxId
                 // Read off the OPENED message: the two headers only ever ride with the body fetch,
                 // never with the cached list row painted a moment ago.
+                // The HEADERS decide first and are never overridden: RFC 2369 / RFC 8058 are a
+                // machine-readable promise from the sender, and a guess must not outrank one.
+                // Only when they gave nothing does the body scan run — see UnsubscribeBodyScan for
+                // what that guess is worth and why its result is only ever "open a page".
                 _unsubscribe.value = UnsubscribeHeader.parse(anchor.listUnsubscribe, anchor.listUnsubscribePost)
+                    ?: scanBodyForUnsubscribe(anchor)
+                // The message's own mailbox set, which the cached row cannot hold.
+                refreshMailboxIds()
                 // OpenPGP: reflect the crypto state; a decrypt is attempted once the page settles in
                 // front of the user, not while the pager pre-composes neighbours.
                 when (val c = opened.crypto) {
@@ -1183,6 +1291,20 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
                 _state.value = MessageState.Error(readFailureText(t))
             }
         }
+    }
+
+    /**
+     * The last resort for a message that offers no `List-Unsubscribe` header: the link its own body
+     * buries in the footer. Null far more often than not, which is the point — an icon that appears
+     * on every message and fails on most is worse than one that appears on half and always works.
+     *
+     * The words are a localised `string-array` resource, not a list in Kotlin: which words mean
+     * "unsubscribe" is a per-language fact, and the translators already own that file.
+     */
+    private fun scanBodyForUnsubscribe(email: Email): UnsubscribeOptions? {
+        val words = getApplication<Application>().resources
+            .getStringArray(R.array.unsubscribe_body_words).toList()
+        return UnsubscribeBodyScan.scan(email.htmlContent(), email.textContent(), words)
     }
 
     /**

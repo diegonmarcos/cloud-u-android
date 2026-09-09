@@ -382,6 +382,51 @@
     <string name="participants_cc">Cc</string>
     <!-- Which of your own addresses the message was addressed to (multi-alias accounts) -->
     <string name="participants_received_at">Received at</string>
+    <string name="participants_bcc">Bcc</string>
+    <string name="participants_reply_to">Reply to</string>
+    <string name="participants_delivery">Delivery and identity</string>
+    <string name="metadata_received">Received</string>
+    <string name="metadata_sent">Sent (sender\'s clock)</string>
+    <string name="metadata_reply_to">Reply-To</string>
+    <string name="metadata_return_path">Return-Path (envelope sender)</string>
+    <string name="metadata_authentication">Authentication-Results</string>
+    <string name="metadata_list_id">Mailing list</string>
+    <string name="metadata_message_id">Message-ID</string>
+    <string name="message_copy_address">Copy address</string>
+    <string name="message_address_copied">Address copied</string>
+    <string name="message_tag_mailbox">Mailbox</string>
+    <string name="message_tag_keyword">Keyword</string>
+    <string name="message_labels">Tags and mailboxes</string>
+    <string name="message_labels_explainer">A message can be in several mailboxes at once. Adding one does not take it out of the others.</string>
+    <string name="message_labels_in">This message is in</string>
+    <string name="message_labels_add">Add to</string>
+    <string name="message_labels_none">No tags</string>
+    <string name="message_label_remove">Remove %1$s</string>
+    <string name="message_label_remove_title">Remove from this mailbox?</string>
+    <string name="message_label_remove_body">The message leaves %1$s and stays in every other mailbox it is in. If that was the only place you browse it from, you will not see it there any more.</string>
+    <string name="message_label_remove_confirm">Remove</string>
+    <!-- "Resume" is the owner\'s product name for SUMMARISE: condense this message. Not a
+         curriculum vitae, and not resuming a paused operation. Translators: use "summarise". -->
+    <string name="text_tool_resume">AI Resume</string>
+    <!-- Words that mark an unsubscribe link in a message BODY, for senders who send no
+         List-Unsubscribe header. Per-language by nature, which is why this is a resource and not a
+         list in Kotlin. Matched case-insensitively against both the link URL and its text; see
+         UnsubscribeBodyScan for what the match is worth. -->
+    <string-array name="unsubscribe_body_words">
+        <item>unsubscribe</item>
+        <item>opt-out</item>
+        <item>opt out</item>
+        <item>désabonner</item>
+        <item>desabonner</item>
+        <item>abbestellen</item>
+        <item>abmelden</item>
+        <item>cancelar suscripción</item>
+        <item>darse de baja</item>
+        <item>descadastrar</item>
+        <item>cancelar inscrição</item>
+        <item>disiscriviti</item>
+        <item>uitschrijven</item>
+    </string-array>
     <!-- Who a forwarding service (an alias, a redirection) SAYS really wrote the message.
          "(unverified)" is load-bearing: the header is sender-controlled and nothing checks
          that the message was relayed at all, so the label must not assert what it shows. -->
@@ -436,6 +481,10 @@
     <string name="settings_text_ai_routing_summary">Provider, model and API key used by Text Enhance</string>
     <string name="settings_text_enhance_title">Text Enhancement</string>
     <string name="settings_text_enhance_summary">Style, tone, length and output language of a rewrite</string>
+    <!-- "Resume" is the owner's product name for SUMMARISE. Not a CV, not resuming
+         anything. Translators: use "summarise". -->
+    <string name="settings_text_resume_title">Text Resume</string>
+    <string name="settings_text_resume_summary">How a message is summarised, and the prompt that does it</string>
     <string name="settings_text_translation_title">Translation</string>
     <string name="settings_text_translation_summary">Default target language and engine status</string>
     <string name="settings_text_missing_title">Cloud Keyboard not installed</string>
