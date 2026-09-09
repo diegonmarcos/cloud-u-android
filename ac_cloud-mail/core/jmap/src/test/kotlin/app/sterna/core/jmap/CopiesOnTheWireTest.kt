@@ -132,6 +132,31 @@ class CopiesOnTheWireTest {
 
     @Test fun `the body fetch asks for cc and bcc`() = assertAsksForCopies(cachingPaths()[3])
 
+    /**
+     * `attachments` (RFC 8621 §4.1.4) — the SAME rule, for the property the message list draws its
+     * chips from, asserted on the wire rather than in the source text.
+     *
+     * It belongs in this file and not beside the chips, because it is not a fact about the list: it
+     * is a fact about the CACHE. `attachmentsJson` is one column of a row four paths write and the
+     * `@Upsert` replaces whole, exactly like `cc` and `bcc` above. A path that stops asking would not
+     * fail to show chips -- it would ERASE the chips every other path stored, on the next sync, which
+     * is a defect that looks like flicker and reads like nothing.
+     */
+    @Test fun `every fetch that fills the cache asks the server for the attachment parts`() {
+        val missing = cachingPaths().mapNotNull { path ->
+            val asked = propertiesAskedBy(path)
+            if ("attachments" in asked) null else "${path.name} (cached at ${path.cachedAt}) asked for $asked"
+        }
+
+        assertEquals(
+            "these fetch paths cache a message without its attachment parts; their @Upsert then " +
+                "erases the column every other path filled, and the list quietly loses its chips:\n" +
+                missing.joinToString("\n"),
+            emptyList<String>(),
+            missing,
+        )
+    }
+
     /** The guard as one statement, so a review reads the whole set of cached paths at once. */
     @Test fun `every fetch that fills the cache asks the server for cc and bcc`() {
         val missing = cachingPaths().mapNotNull { path ->
