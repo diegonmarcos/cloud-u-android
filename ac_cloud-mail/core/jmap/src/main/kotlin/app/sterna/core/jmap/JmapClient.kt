@@ -1107,21 +1107,28 @@ class JmapClient internal constructor(
         }
     }
 
-    /** Move an email so it belongs to exactly [targetMailboxId]. Returns the new state.
-     *  Throws when the server rejects the update (per-id `notUpdated`). */
+    /**
+     * Move an email out of [sourceMailboxId] and into [targetMailboxId]. Returns the new state.
+     * Throws when the server rejects the update (per-id `notUpdated`).
+     *
+     * [sourceMailboxId] is REQUIRED and has no default. A null default would read as "the caller
+     * does not know", and the patch this builds would then only ADD the target — turning every
+     * move into a copy that leaves the message in the folder it was supposed to leave. Callers
+     * all have the source in hand; passing null is a deliberate statement that there is nothing
+     * to leave (an add-only file, which [addToMailbox] says better).
+     */
     suspend fun move(
         session: JmapSession,
         accountId: String,
         emailId: String,
         targetMailboxId: String,
         auth: JmapAuth,
+        sourceMailboxId: String?,
     ): String? {
         val args = emailSet(session, auth) {
             put("accountId", accountId)
             putJsonObject("update") {
-                putJsonObject(emailId) {
-                    putJsonObject("mailboxIds") { put(targetMailboxId, true) }
-                }
+                putJsonObject(emailId) { putMembershipPatch(add = targetMailboxId, remove = sourceMailboxId) }
             }
         }
         val result = emailSetResult(args)
@@ -1130,21 +1137,86 @@ class JmapClient internal constructor(
         return result.newState
     }
 
+    /**
+     * Put [emailId] IN [mailboxId], leaving every other mailbox it belongs to alone.
+     *
+     * This is one of the two honest operations on a JMAP message's folder membership — see
+     * [putMembershipPatch]. A message belongs to a SET of mailboxes at once, so "add" and
+     * "remove" are the primitives and "move" is the pair of them; there is no single-folder
+     * slot to overwrite, and code that writes one destroys labels.
+     */
+    suspend fun addToMailbox(
+        session: JmapSession,
+        accountId: String,
+        emailId: String,
+        mailboxId: String,
+        auth: JmapAuth,
+    ): String? = patchMembership(session, accountId, emailId, auth, add = mailboxId, remove = null)
+
+    /**
+     * Take [emailId] OUT of [mailboxId], leaving every other mailbox it belongs to alone.
+     *
+     * The server refuses a patch that would empty the set (RFC 8621 §4.1: a message must be in at
+     * least one mailbox), and that refusal arrives as a per-id `notUpdated` this throws on — which
+     * is the right outcome. Removing the last mailbox is not "hide it", it is "lose it", and the
+     * caller has to say that out loud with a destroy rather than reach it by subtraction.
+     */
+    suspend fun removeFromMailbox(
+        session: JmapSession,
+        accountId: String,
+        emailId: String,
+        mailboxId: String,
+        auth: JmapAuth,
+    ): String? = patchMembership(session, accountId, emailId, auth, add = null, remove = mailboxId)
+
+    private suspend fun patchMembership(
+        session: JmapSession,
+        accountId: String,
+        emailId: String,
+        auth: JmapAuth,
+        add: String?,
+        remove: String?,
+    ): String? {
+        val args = emailSet(session, auth) {
+            put("accountId", accountId)
+            putJsonObject("update") {
+                putJsonObject(emailId) { putMembershipPatch(add = add, remove = remove) }
+            }
+        }
+        val result = emailSetResult(args)
+        result.failed[emailId]?.let {
+            throw JmapException("Server rejected the mailbox change ($it)", errorType = it)
+        }
+        return result.newState
+    }
+
             /**
              * Codeberg #29, over [postWithRetry] so each request still backs off on the rate limit, split
              */
+    /**
+     * [sourceMailboxIds] maps each id to the mailbox it is LEAVING. A bulk move drains several
+     * folders at once (the unified inbox does exactly that), so the source is per id and not one
+     * value for the batch: patching every message with the first row's source would remove a
+     * membership the other messages never had, and leave theirs behind.
+     *
+     * An id missing from the map, or mapped to null, is only ADDED to [targetMailboxId]. See
+     * [move]'s note on why that is a deliberate statement rather than a default.
+     */
     suspend fun move(
         session: JmapSession,
         accountId: String,
         emailIds: List<String>,
         targetMailboxId: String,
         auth: JmapAuth,
+        sourceMailboxIds: Map<String, String?>,
     ): EmailSetResult = setInBatches(session, emailIds, rethrowTransportFailure = false) { batch ->
         emailSet(session, auth) {
             put("accountId", accountId)
             putJsonObject("update") {
                 batch.forEach { id ->
-                    putJsonObject(id) { putJsonObject("mailboxIds") { put(targetMailboxId, true) } }
+                    putJsonObject(id) {
+                        putMembershipPatch(add = targetMailboxId, remove = sourceMailboxIds[id])
+                    }
                 }
             }
         }
@@ -2505,6 +2577,7 @@ class JmapClient internal constructor(
         /** How often the server should ping the EventSource connection, in seconds. */
         private const val PING_SECONDS = 90L
 
+
                 /**
                  * Shared by [getEmail] and [getEmailsWithBody], so a body served from the cache can never
                  */
@@ -2752,4 +2825,30 @@ internal fun deliveryRefusals(deliveryStatus: JsonObject?): List<String> {
         val reply = (entry["smtpReply"] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
         if (reply == null) recipient else "$recipient: $reply"
     }
+}
+
+/**
+ * THE one place a message's mailbox membership is edited, as RFC 8620 §5.3 patch paths:
+ * `mailboxIds/<id>` = true puts it in one mailbox, `mailboxIds/<id>` = null takes it out of one,
+ * and every other mailbox the message belongs to is untouched.
+ *
+ * WHY THIS IS A FUNCTION, AND TOP-LEVEL SO A TEST CAN EXECUTE IT. JMAP `mailboxIds` is the
+ * message's COMPLETE folder membership, and in this app's labels model every category IS a
+ * mailbox. Patching the whole property with `{target: true}` therefore does not move a message:
+ * it deletes every other label and folder it was in, on the server, permanently. That is data
+ * loss wearing the clothes of a rendering bug, it shipped once already (00127a847), and it came
+ * back with the rewrite because the fix lived at five call sites instead of in one function.
+ *
+ * [add] and [remove] are independent, which is what makes ADD and REMOVE the primitives and a
+ * move the pair of them. Removing the mailbox that is also being added is dropped rather than
+ * emitted: the two paths contradict each other inside one patch, and which of them a server
+ * honours is not a thing to leave to a server.
+ *
+ * Only `Email/set` UPDATE goes through here. `Email/set` create and `Email/import` legitimately
+ * write the whole `mailboxIds` object, because a message that does not exist yet has no
+ * membership to preserve.
+ */
+internal fun JsonObjectBuilder.putMembershipPatch(add: String?, remove: String?) {
+    if (add != null) put("mailboxIds/$add", JsonPrimitive(true))
+    if (remove != null && remove != add) put("mailboxIds/$remove", JsonNull)
 }

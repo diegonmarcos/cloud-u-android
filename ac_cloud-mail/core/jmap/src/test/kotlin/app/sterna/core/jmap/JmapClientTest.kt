@@ -1152,7 +1152,7 @@ class JmapClientTest {
         server.enqueue(MockResponse().setBody(SET_NOTFOUND_JSON))
         val session = JmapSession(apiUrl = server.url("/jmap/api/").toString())
         try {
-            runBlocking { client.move(session, "acc1", "e1", "mbTrash", BasicAuth("u", "p")) }
+            runBlocking { client.move(session, "acc1", "e1", "mbTrash", BasicAuth("u", "p"), sourceMailboxId = "mbInbox") }
             throw AssertionError("expected JmapException")
         } catch (e: JmapException) {
             // The repository keys the ghost prune off the typed SetError, not the message text.
@@ -1343,7 +1343,7 @@ class JmapClientTest {
         server.dispatcher = dispatcher
         val ids = (1..12).map { "e$it" }
 
-        val result = client.move(sessionAdvertising(5), "acc1", ids, "mbArchive", BasicAuth("u", "p"))
+        val result = client.move(sessionAdvertising(5), "acc1", ids, "mbArchive", BasicAuth("u", "p"), ids.associateWith { "mbInbox" })
 
         assertEquals(3, server.requestCount)
         val perRequest = dispatcher.bodies.map { setIdsOf(it) }
@@ -1355,8 +1355,16 @@ class JmapClientTest {
         assertTrue(result.failed.isEmpty())
         // The newest state we hold: the LAST batch's. An older one would merely re-read wider.
         assertEquals("s3", result.newState)
-        // Each request is a well-formed move of its own ids.
-        assertTrue(dispatcher.bodies.all { it.contains("\"mailboxIds\":{\"mbArchive\":true}") })
+        // Each request is a well-formed move of its own ids — and a move is a PATCH of the
+        // membership, not a replacement of it. This line used to assert the replacement
+        // ("mailboxIds":{"mbArchive":true}), which is the wholesale write that strips every other
+        // mailbox a message is in; the assertion was pinning the data loss in place.
+        assertTrue(dispatcher.bodies.all { it.contains("\"mailboxIds/mbArchive\":true") })
+        assertTrue(dispatcher.bodies.all { it.contains("\"mailboxIds/mbInbox\":null") })
+        assertTrue(
+            "a move must never write the whole mailboxIds property",
+            dispatcher.bodies.none { it.contains("\"mailboxIds\":{") },
+        )
     }
 
     @Test fun destroy_splitsIntoRequestsOfAtMostTheAdvertisedLimit() = runBlocking {
@@ -1392,7 +1400,7 @@ class JmapClientTest {
         server.dispatcher = dispatcher
         val ids = (1..250).map { "e$it" }
 
-        val result = client.move(sessionAdvertising(null), "acc1", ids, "mbArchive", BasicAuth("u", "p"))
+        val result = client.move(sessionAdvertising(null), "acc1", ids, "mbArchive", BasicAuth("u", "p"), ids.associateWith { "mbInbox" })
 
         assertEquals(3, server.requestCount)
         assertEquals(listOf(100, 100, 50), dispatcher.bodies.map { setIdsOf(it).size })
@@ -1404,7 +1412,7 @@ class JmapClientTest {
         server.dispatcher = dispatcher
         val ids = (1..12).map { "e$it" }
 
-        val result = client.move(sessionAdvertising(5), "acc1", ids, "mbArchive", BasicAuth("u", "p"))
+        val result = client.move(sessionAdvertising(5), "acc1", ids, "mbArchive", BasicAuth("u", "p"), ids.associateWith { "mbInbox" })
 
         // Stopped: batch 3 was never sent. On a dead connection every further batch would only
         // grind through postWithRetry's backoff.
@@ -1452,7 +1460,7 @@ class JmapClientTest {
     @Test fun setBatched_emptyListSkipsTheNetworkEntirely() = runBlocking {
         val session = sessionAdvertising(5)
         val auth = BasicAuth("u", "p")
-        assertTrue(client.move(session, "acc1", emptyList(), "mb", auth).done.isEmpty())
+        assertTrue(client.move(session, "acc1", emptyList(), "mb", auth, emptyMap()).done.isEmpty())
         assertTrue(client.destroy(session, "acc1", emptyList(), auth).done.isEmpty())
         assertTrue(client.setSeenAll(session, "acc1", emptyList(), true, auth).done.isEmpty())
         assertEquals(0, server.requestCount)
@@ -1466,7 +1474,7 @@ class JmapClientTest {
         server.dispatcher = dispatcher
         val ids = (1..12).map { "e$it" }
 
-        val result = client.move(sessionAdvertising(5), "acc1", ids, "mbArchive", BasicAuth("u", "p"))
+        val result = client.move(sessionAdvertising(5), "acc1", ids, "mbArchive", BasicAuth("u", "p"), ids.associateWith { "mbInbox" })
 
         assertEquals(3, server.requestCount)
         // The other two batches keep their whole credit, and so do batch 2's three good ids.
@@ -1492,7 +1500,7 @@ class JmapClientTest {
         server.dispatcher = dispatcher
         val ids = listOf("e1", "e2", "e3", "e4")
 
-        val result = client.move(sessionAdvertising(5), "acc1", ids, "mbArchive", BasicAuth("u", "p"))
+        val result = client.move(sessionAdvertising(5), "acc1", ids, "mbArchive", BasicAuth("u", "p"), ids.associateWith { "mbInbox" })
 
         assertEquals(1, server.requestCount)
         assertEquals(ids, setIdsOf(dispatcher.bodies.single()))

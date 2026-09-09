@@ -268,7 +268,7 @@ class SignedOutAccountWiringTest {
                 "members.forEach { markRecentlyMutated(credentials.id, it.id) }",
                 "$guard(credentials.id, accountStore.accounts().map { it.id })",
                 "val result = runCatching {",
-                "client.move(ctx.session, ctx.accountId, members.map { it.id }, inbox, ctx.auth)",
+                "client.move(ctx.session, ctx.accountId, members.map { it.id }, inbox, ctx.auth, fromArchive)",
             ),
             block("unarchiveThreadsOnReply", "members.forEach { markRecentlyMutated(credentials.id, it.id) }", 4),
         )
@@ -308,7 +308,7 @@ class SignedOutAccountWiringTest {
         val body = lines("unarchiveThreadsOnReply")
         val rescue = body.indexOf("unlistFromTrashPurge(credentials.id, members.map { it.id })")
         val mark = body.indexOf("members.forEach { markRecentlyMutated(credentials.id, it.id) }")
-        val move = body.indexOf("client.move(ctx.session, ctx.accountId, members.map { it.id }, inbox, ctx.auth)")
+        val move = body.indexOf("client.move(ctx.session, ctx.accountId, members.map { it.id }, inbox, ctx.auth, fromArchive)")
         assertTrue(
             "unarchiveThreadsOnReply no longer rescues from the trash purge / no longer marks its " +
                 "members recently-mutated / no longer moves; its body is:\n" + body.joinToString("\n"),

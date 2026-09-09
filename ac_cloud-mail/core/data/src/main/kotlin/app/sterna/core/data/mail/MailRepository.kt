@@ -2779,6 +2779,92 @@ class MailRepository(
         advanceEmailState(newState, credentials.id, mb)
     }
 
+    // ---- labels: JMAP mailbox membership, and per-message keywords ----
+    //
+    // THE TWO ARE DIFFERENT THINGS AND THIS APP KEEPS THEM APART.
+    //
+    //   mailboxIds   RFC 8621 §4.1.1. A message belongs to a SET of mailboxes AT ONCE. This is
+    //                what a label is on a JMAP server, and what the drawer's categories are here.
+    //                Editing it means ADD one or REMOVE one; "move" is those two together, and on
+    //                a message in three mailboxes it is not even a well-defined word.
+    //   keywords     RFC 8621 §4.1.1 as well, but a per-message FLAG set: `$seen`, `$flagged`,
+    //                `$draft`, `$answered`, `$forwarded` are protocol, and anything without the
+    //                leading `$` is a name the user (or their server-side filters) chose.
+    //
+    // A surface that showed one and called it the other would be lying about which server state a
+    // tap changes, so both are offered and both are named.
+
+    /**
+     * Every mailbox [emailId] is currently in, straight from the server.
+     *
+     * Asked of the server rather than of the cache on purpose: the local row carries ONE
+     * `mailboxId` — the folder the listing filed it under — and that single value is exactly the
+     * misconception this whole area exists to correct. A cache that cannot represent the answer
+     * must not be the one that gives it.
+     *
+     * Empty on IMAP, where a message really does live in one folder and there is no set to read.
+     */
+    suspend fun mailboxMembership(credentials: AccountCredentials, emailId: String): Set<String> {
+        if (credentials.protocol == MailProtocol.IMAP) return emptySet()
+        val ctx = connect(credentials)
+        return client.mailboxIdsOf(ctx.session, ctx.accountId, listOf(emailId), ctx.auth)[emailId].orEmpty()
+    }
+
+    /**
+     * Put [emailId] in [mailboxId] as well, keeping every mailbox it is already in.
+     *
+     * JMAP only. On IMAP this would have to be a COPY, which duplicates the message and gives the
+     * duplicate its own uid, its own read state and its own life — that is not what "add a label"
+     * promises, so it is refused rather than approximated.
+     */
+    suspend fun addToMailbox(credentials: AccountCredentials, emailId: String, mailboxId: String) {
+        require(credentials.protocol != MailProtocol.IMAP) { "adding a mailbox needs JMAP" }
+        markRecentlyMutated(credentials.id, emailId)
+        val ctx = connect(credentials)
+        val newState = client.addToMailbox(ctx.session, ctx.accountId, emailId, mailboxId, ctx.auth)
+        advanceEmailState(newState, credentials.id, emailDao.mailboxOf(credentials.id, emailId))
+    }
+
+    /**
+     * Take [emailId] out of [mailboxId], keeping every other mailbox it is in.
+     *
+     * The local row is NOT deleted here even when the mailbox removed is the one it was filed
+     * under. The message still exists and is still in its other mailboxes; deleting the row would
+     * be this app deciding that its own single-folder cache is the truth, which is the same
+     * mistake one level down. The next sync files it under a mailbox it is actually in.
+     */
+    suspend fun removeFromMailbox(credentials: AccountCredentials, emailId: String, mailboxId: String) {
+        require(credentials.protocol != MailProtocol.IMAP) { "removing a mailbox needs JMAP" }
+        markRecentlyMutated(credentials.id, emailId)
+        val ctx = connect(credentials)
+        val newState = client.removeFromMailbox(ctx.session, ctx.accountId, emailId, mailboxId, ctx.auth)
+        advanceEmailState(newState, credentials.id, emailDao.mailboxOf(credentials.id, emailId))
+    }
+
+    /**
+     * Set or clear one user keyword on [emailId] — the other kind of tag.
+     *
+     * Refuses the `$`-prefixed system keywords: `$seen` and `$flagged` have their own paths that
+     * also nudge the unread counters and the star, and a second writer of the same server state
+     * that skips those is how the two come to disagree.
+     */
+    suspend fun setUserKeyword(
+        credentials: AccountCredentials,
+        emailId: String,
+        keyword: String,
+        value: Boolean,
+    ) {
+        require(!keyword.startsWith("$")) { "system keywords go through their own paths" }
+        markRecentlyMutated(credentials.id, emailId)
+        if (credentials.protocol == MailProtocol.IMAP) {
+            imapTarget(emailId)?.let { (mb, uid) -> imap.setFlag(credentials, mb, uid, keyword, value) }
+            return
+        }
+        val ctx = connect(credentials)
+        val newState = client.setKeyword(ctx.session, ctx.accountId, emailId, keyword, value, ctx.auth)
+        advanceEmailState(newState, credentials.id, emailDao.mailboxOf(credentials.id, emailId))
+    }
+
     private fun imapTarget(emailId: String): Pair<String, Long>? = ImapMailService.targetOf(emailId)
 
     /** Archive a message. Resolution order — a real Archive folder, else All Mail (Gmail-style
@@ -2821,7 +2907,9 @@ class MailRepository(
         // Network-first: the local row is dropped only after the server acknowledged, so a failed
         // archive never hides a message that is still on the server.
         val newState = try {
-            client.move(ctx.session, ctx.accountId, emailId, target, ctx.auth)
+            // `mb` is the folder this message is LEAVING. Threading it through is what makes the
+            // patch an edit of the membership rather than a replacement of it — see putMembershipPatch.
+            client.move(ctx.session, ctx.accountId, emailId, target, ctx.auth, sourceMailboxId = mb)
         } catch (e: JmapException) {
             if (e.errorType != SET_ERROR_NOT_FOUND) throw e
             pruneServerGone(credentials.id, listOf(emailId))
@@ -2921,7 +3009,7 @@ class MailRepository(
         val ctx = connect(credentials)
         val mb = moved?.mailboxId ?: emailDao.mailboxOf(credentials.id, emailId)
         val newState = try {
-            client.move(ctx.session, ctx.accountId, emailId, targetMailboxId, ctx.auth)
+            client.move(ctx.session, ctx.accountId, emailId, targetMailboxId, ctx.auth, sourceMailboxId = mb)
         } catch (e: JmapException) {
             if (e.errorType != SET_ERROR_NOT_FOUND) throw e
             pruneServerGone(credentials.id, listOf(emailId))
@@ -3044,7 +3132,11 @@ class MailRepository(
     private suspend fun jmapMoveAll(ctx: Context, emailIds: List<String>, target: String): BulkResult {
         val localAccountId = ctx.credentials.id
         val rows = byIdsChunked(emailIds) { chunk -> emailDao.emailsByIds(localAccountId, chunk) }
-        return runCatching { client.move(ctx.session, ctx.accountId, emailIds, target, ctx.auth) }
+        // Per ID, not one source for the batch: a bulk move drains SEVERAL folders at once (the
+        // unified inbox does exactly that), and one shared source would clear a membership the
+        // other messages never had while leaving theirs in place.
+        val sources = rows.associate { it.id to it.mailboxId }
+        return runCatching { client.move(ctx.session, ctx.accountId, emailIds, target, ctx.auth, sources) }
             .map { result ->
                 val moved = emailIds.filter { it in result.done }.toSet()
                 moved.forEach { recentLocalMoves.mark(localAccountId, it) }
@@ -3153,9 +3245,13 @@ class MailRepository(
         members.forEach { markRecentlyMutated(credentials.id, it.id) }
         // The widest window of the three: a sign-out landing inside it un-archives the thread ON THE
         // ACCOUNT with no Undo. Outside the runCatching, so its refusal is not read as a failed move.
+        // Every member was selected FROM the archive folder, so that is the membership each one
+        // leaves. Built here rather than inside the runCatching, which is pinned line for line by
+        // SignedOutAccountWiringTest to hold the sign-out guard immediately above the server call.
+        val fromArchive = members.associate { it.id to archive }
         checkAccountStillConfigured(credentials.id, accountStore.accounts().map { it.id })
         val result = runCatching {
-            client.move(ctx.session, ctx.accountId, members.map { it.id }, inbox, ctx.auth)
+            client.move(ctx.session, ctx.accountId, members.map { it.id }, inbox, ctx.auth, fromArchive)
         }.getOrNull() ?: return emptyList()
         val moved = members.filter { it.id in result.done }
         if (moved.isEmpty()) return emptyList()
@@ -3591,8 +3687,12 @@ class MailRepository(
         // JMAP: ids are stable across moves, so one Email/set per source folder, then a re-fetch.
         val ctx = connect(credentials)
         targets.groupBy { it.sourceMailboxId }.forEach { (source, group) ->
+            val undone = group.associate { it.emailId to it.destMailboxId }
             val result = runCatching {
-                client.move(ctx.session, ctx.accountId, group.map { it.emailId }, source, ctx.auth)
+                // Undo puts them BACK in `source`; what they LEAVE is wherever the original move
+                // put them, which is that move's own destination — per id, since one Undo batch can
+                // hold messages that went to different folders.
+                client.move(ctx.session, ctx.accountId, group.map { it.emailId }, source, ctx.auth, undone)
             }.getOrNull() ?: return@forEach
             val ids = group.map { it.emailId }.filter { it in result.done }
             if (ids.isEmpty()) return@forEach
@@ -3666,7 +3766,7 @@ class MailRepository(
         val mb = row?.mailboxId ?: emailDao.mailboxOf(credentials.id, emailId)
         val trash = trashMailboxId(ctx) ?: createTrashFolder(ctx)
         val newState = try {
-            client.move(ctx.session, ctx.accountId, emailId, trash, ctx.auth)
+            client.move(ctx.session, ctx.accountId, emailId, trash, ctx.auth, sourceMailboxId = mb)
         } catch (e: JmapException) {
             if (e.errorType != SET_ERROR_NOT_FOUND) throw e
             pruneServerGone(credentials.id, listOf(emailId))
