@@ -7308,6 +7308,13 @@
         "role": "routes"
       },
       {
+        "_doc": "Cloud Writer — the application the owner asked for, and the only peer with a MODEL PER TOOL: Text Enhance, Grammar Check and Summary each resolve their own, which is what \"here we will define the AI model to do Summary, Grammar Only, Text Enhance\" asked for. It routes exactly as Cloud Mail does — its own registry (ac_cloud-writer/build.json::writer_ai), its own composed prompts, its own provider, and NO key: it calls enhanceWith/summariseWith and the serving app spends the credential.",
+        "_doc_not_serves_yet": "cloud-writer is FIRST in TextTools.SERVICE_PACKAGES, so it becomes the server the day its manifest publishes the ITextTools action — not the day this row is edited. This row reads `routes` because that APK does not publish it, for a reason no manifest can fix: the owner's provider key lives in cloud-keyboard's SharedPreferences under cloud-keyboard's uid and no install moves it, so a serving cloud-writer would take Enhance, Summary, Translate and Grammar from every consumer on its first bind and answer 'No API key' to all four. When it does serve, this row becomes `serves` and Cloud Keyboard's drops to `routes` IN THE SAME COMMIT — AiFleetRoster documents that exactly one app serves, and two `serves` rows with one real server makes this console report a peer that cannot answer.",
+        "package": "com.diegonmarcos.cloudwriter",
+        "label": "Cloud Writer",
+        "role": "routes"
+      },
+      {
         "_doc": "This app. It holds no provider key and no route of its own — it links libs:text-tools only to ASK the keyboard about its routing state. Listed because the owner asked for the fleet view to include this app; 'holds no key, routes nothing, this is the console' is the true answer for it.",
         "package": "com.diegonmarcos.superapp",
         "label": "Cloud SuperApp",

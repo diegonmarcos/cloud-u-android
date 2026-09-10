@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Español (es). Alcanza es-ES, es-MX, es-AR y cualquier otra variante, que es
+  el motivo por el que 1_cicd/src/i18n-policy.json pide values-es y no
+  values-es-rES.
+-->
+<resources>
+
+    <string name="app_name">Cloud Writer</string>
+
+    <string name="tool_enhance">Mejorar texto</string>
+    <string name="tool_grammar">Revisar gramática</string>
+    <string name="tool_summary">Resumen</string>
+    <string name="tool_translate">Traducir</string>
+
+    <string name="status_checking">Comprobando qué aplicación atiende las herramientas de texto…</string>
+    <string name="status_no_serving_app">Ninguna aplicación de este teléfono atiende las herramientas de texto. Instala Cloud Keyboard: es la que guarda los ajustes de enrutado de IA y la clave del proveedor que usan estas herramientas.</string>
+    <string name="status_serving_app_too_old">La aplicación que atiende las herramientas de texto no ha dicho nada sobre su enrutado de IA, así que es anterior a esa parte del contrato. Actualízala.</string>
+    <string name="status_served_by">Atendido por %1$s, a través de %2$s</string>
+    <string name="status_provider_unknown">un proveedor sin nombre</string>
+
+    <string name="input_label">Tu texto</string>
+    <string name="input_hint">Escribe o pega un texto, o compártelo con Cloud Writer</string>
+    <string name="output_label">Resultado</string>
+    <string name="output_hint">El resultado aparece aquí, y puedes editarlo</string>
+
+    <string name="action_copy">Copiar</string>
+    <string name="action_clear">Limpiar</string>
+    <string name="copied">Copiado al portapapeles</string>
+    <string name="nothing_to_copy">No hay nada que copiar: el cuadro de resultado está vacío.</string>
+
+    <string name="working">%1$s: trabajando…</string>
+    <string name="done">%1$s: listo</string>
+
+    <string name="run_busy">Todavía se está ejecutando una herramienta. Espera a que termine antes de empezar otra.</string>
+    <string name="run_nothing_to_send">No hay nada que enviar: el cuadro de texto está vacío.</string>
+    <string name="run_grammar_unavailable">Revisar gramática no puede ejecutarse en esta versión: falta su instrucción en el registro. No se ha enviado nada, porque recurrir al estilo predeterminado reescribiría el texto en lugar de corregirlo.</string>
+    <string name="run_no_reason">Las herramientas de texto no han devuelto ni un resultado ni un motivo.</string>
+
+    <string name="models_heading">Modelo por herramienta</string>
+    <string name="models_note">Mejorar texto, Revisar gramática y Resumen usan cada una su propio modelo. Traducir no tiene ninguno que elegir: va al motor de traducción, nunca a un modelo de chat.</string>
+    <string name="provider_label">Proveedor</string>
+    <string name="model_for_tool">Modelo para %1$s</string>
+
+    <string name="token_note">Cloud Writer no guarda ninguna clave de API. Indica un proveedor y un modelo; la aplicación que atiende las herramientas hace la petición con su propia credencial, y entre ambas solo viaja el texto.</string>
+
+</resources>

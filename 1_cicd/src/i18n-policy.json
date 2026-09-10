@@ -22,6 +22,7 @@
     "ab_cloud-libs-shared/libs/mail":         { "require": ["es"] },
     "ab_cloud-libs-shared/libs/translate":    { "require": ["es"] },
     "ac_cloud-mail/app":                      { "require": ["es"] },
+    "ac_cloud-writer/app":                    { "require": ["es"] },
     "ac_cloud-ide/hub":                       { "require": ["es"] },
 
     "ab_cloud-libs-shared/libs/core":            { "exempt": "One string, the library's own name, never drawn on screen." },

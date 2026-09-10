@@ -443,6 +443,28 @@
       }
     },
     {
+      "id": "writer",
+      "label": "cloud-writer",
+      "package": "com.diegonmarcos.cloudwriter",
+      "alt_id": null,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-writer",
+      "tag": "latest",
+      "asset": "Cloud-Writer.apk",
+      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Writer.apk",
+      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-writer",
+      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-writer",
+      "blocked": false,
+      "kind": "app",
+      "assets": {
+        "arm64-v8a": "Cloud-Writer.apk",
+        "armeabi-v7a": "Cloud-Writer.apk",
+        "x86_64": "Cloud-Writer-x86_64.apk",
+        "x86": "Cloud-Writer-x86_64.apk"
+      }
+    },
+    {
       "id": "ae-tool_termux-boot",
       "label": "termux-boot",
       "package": "cld.termux.nix.boot",

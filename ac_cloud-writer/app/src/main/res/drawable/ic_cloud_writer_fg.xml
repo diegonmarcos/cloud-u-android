@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A pen over a line of text: a tool that changes what is written, which is
+     what all four tools here do. Deliberately not the keyboard's glyph and not
+     the mail envelope — Cloud Writer sits next to both in the launcher and the
+     whole point of a separate application is that it is a different product.
+
+     A vector rather than a PNG set, so there is one file instead of five
+     densities and it stays sharp everywhere. Same accent the other panels use
+     (rgb 120, 200, 255). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- the written lines, drawn first so the pen sits over them. The last one
+         is short and dim: the sentence that is still being worked on. -->
+    <path
+        android:strokeColor="#5A7A8C"
+        android:strokeWidth="4"
+        android:pathData="M30,44 L64,44 M30,56 L58,56" />
+    <path
+        android:strokeColor="#404040"
+        android:strokeWidth="4"
+        android:pathData="M30,68 L48,68" />
+
+    <!-- the pen: a nib on a stroke, running up to the right -->
+    <path
+        android:strokeColor="#78C8FF"
+        android:strokeWidth="6"
+        android:pathData="M56,72 L76,36" />
+    <path
+        android:fillColor="#78C8FF"
+        android:pathData="M52,80 L57,69 L62,72 Z" />
+</vector>

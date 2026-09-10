@@ -1,0 +1,93 @@
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+def buildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
+def a = buildJson.android
+
+// build.json::writer_ai — THIS APP'S OWN registry, read at run time by
+// com.diegonmarcos.cloudwriter.WriterRegistry.
+//
+// Baked as BASE64, exactly as libs/keyboard bakes keyboard_ai and cloud-mail
+// bakes mail_ai, and for the same reason: the prompts carry quotes, commas and
+// newlines that a plain buildConfigField string does not survive.
+//
+// It FAILS THE BUILD rather than defaulting when the block is missing. A
+// registry that silently resolved to empty would produce an app whose tool
+// menu draws nothing and whose failure looks like a broken binder rather than
+// a missing file.
+def writerAi = buildJson.writer_ai
+if (writerAi == null) {
+    throw new GradleException(
+        "build.json::writer_ai is missing. It is cloud-writer's own copy of the text-tool " +
+        "registry (providers, models, Enhance prompts, Resume prompts, languages) and this app " +
+        "reads no other. Restore it from git rather than pointing this build at keyboard_ai or " +
+        "mail_ai - sharing one registry between two apps is exactly what made a second app's " +
+        "Text settings uneditable (task 209).")
+}
+def writerAiB64 = groovy.json.JsonOutput.toJson(writerAi).bytes.encodeBase64().toString()
+
+// versionCode MUST move on every build, or nothing lands.
+//
+// Same encoding as ac_c3-morpheus, ac_c3-watchdog, ac_cloud-mail and lib-apks,
+// and for the same reason: minutes since 2026-01-01 UTC over a 3,000,000 base.
+// A build counter (GITHUB_RUN_NUMBER) is per-WORKFLOW, so the moment an app is
+// built by a different workflow than the one that produced the installed APK
+// the number handed out can be SMALLER and Android refuses the update outright.
+// Wall clock only moves forward and is identical for every workflow, runner and
+// trigger. COMMS_BUILD_TIMESTAMP is honoured when CI provides one so the code
+// matches the release tag; otherwise build time.
+def codeFinal = { ->
+    def base  = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
+    def built = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    def stamp = System.getenv('COMMS_BUILD_TIMESTAMP')
+    if (stamp) {
+        try {
+            built = java.time.LocalDateTime.parse(stamp,
+                java.time.format.DateTimeFormatter.ofPattern('yyyyMMdd.HHmmss'))
+        } catch (ignored) { }
+    }
+    long mins = java.time.Duration.between(base, built).toMinutes()
+    return mins > 0 ? (int) (3000000L + mins) : 3000000
+}()
+
+android {
+    namespace 'com.diegonmarcos.cloudwriter'
+    compileSdk a.compile_sdk
+
+    defaultConfig {
+        applicationId a.application_id
+        minSdk        a.min_sdk
+        targetSdk     a.target_sdk
+        versionCode   codeFinal
+        versionName   a.version_name
+        ndk { abiFilters a.abi_filters as String[] }
+
+        buildConfigField "String", "WRITER_AI_ROUTING_B64", "\"${writerAiB64}\""
+    }
+
+    buildFeatures { buildConfig = true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}
+
+dependencies {
+    // THE ONLY CONSTELLATION LINK, and it is a boundary rather than an engine:
+    // the ITextTools AIDL, TextToolsClient and the addresses. The engines, the
+    // routing preferences and the provider API key stay in the serving app's
+    // process; only text crosses the binder. Shared BY REFERENCE from
+    // ab_cloud-libs-shared (build.json::modules."libs:text-tools".dir), so this
+    // app links the same copy cloud-mail and cloud-keyboard link.
+    implementation project(':libs:text-tools')
+
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+}

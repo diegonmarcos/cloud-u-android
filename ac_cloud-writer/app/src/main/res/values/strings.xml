@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Every string this application draws. There is a values-es/ twin for all of
+  them: the owner reads this phone in Spanish, and 1_cicd/src/scripts/
+  cloud-android-i18n-guard.py fails the build on a partial locale, which is how
+  cloud-mail stopped accumulating English strings inside a Spanish app.
+
+  The FAILURE reasons are here too, not only the labels. A tool that cannot run
+  says why, and it says it in the language the phone is set to — an English
+  sentence is exactly as unreadable as a blank screen to somebody who does not
+  read English, and these sentences appear precisely when something has already
+  gone wrong.
+-->
+<resources>
+
+    <string name="app_name">Cloud Writer</string>
+
+    <!-- The owner's four tools. "Summary" is called Resume elsewhere in this
+         fleet; both mean SUMMARISE, and neither means a curriculum vitae. -->
+    <string name="tool_enhance">Text Enhance</string>
+    <string name="tool_grammar">Grammar Check</string>
+    <string name="tool_summary">Summary</string>
+    <string name="tool_translate">Translate</string>
+
+    <!-- The status line. Three states, named separately, because they are three
+         different repairs: an install, an update of the peer, or nothing. -->
+    <string name="status_checking">Checking which app is serving the text tools…</string>
+    <string name="status_no_serving_app">No app on this phone is serving the text tools. Install Cloud Keyboard — it holds the AI routing settings and the provider key that these tools use.</string>
+    <string name="status_serving_app_too_old">The app serving the text tools said nothing about its AI routing, so it is older than that part of the contract. Update it.</string>
+    <string name="status_served_by">Served by %1$s, through %2$s</string>
+    <string name="status_provider_unknown">an unnamed provider</string>
+
+    <string name="input_label">Your text</string>
+    <string name="input_hint">Type or paste a text, or share one into Cloud Writer</string>
+    <string name="output_label">Result</string>
+    <string name="output_hint">The result lands here, and you can edit it</string>
+
+    <string name="action_copy">Copy</string>
+    <string name="action_clear">Clear</string>
+    <string name="copied">Copied to the clipboard</string>
+    <string name="nothing_to_copy">Nothing to copy — the result box is empty.</string>
+
+    <string name="working">%1$s — working…</string>
+    <string name="done">%1$s — done</string>
+
+    <!-- Refusals. Every one of these exists so that a tap that does nothing
+         still says something. -->
+    <string name="run_busy">One tool is still running. Wait for it to finish before starting another.</string>
+    <string name="run_nothing_to_send">Nothing to send — the text box is empty.</string>
+    <string name="run_grammar_unavailable">Grammar Check cannot run in this build: its prompt is missing from the registry. Nothing was sent, because falling back to the default style would rewrite the text instead of correcting it.</string>
+    <string name="run_no_reason">The text tools answered with neither a result nor a reason.</string>
+
+    <string name="models_heading">Model per tool</string>
+    <string name="models_note">Text Enhance, Grammar Check and Summary each run on their own model. Translate has none to choose: it goes to the translation engine, never to a chat model.</string>
+    <string name="provider_label">Provider</string>
+    <string name="model_for_tool">Model for %1$s</string>
+
+    <string name="token_note">Cloud Writer holds no API key. It names a provider and a model; the app that serves the tools makes the request with its own credential, and only the text crosses between them.</string>
+
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The same palette the other Cloud panels use, so the fleet reads as one
+         system. The window background matches the screen's own so there is no
+         white flash before the first frame paints. NoActionBar: this screen is
+         one column of controls and a title bar over it would spend a line of a
+         phone screen on a word the launcher icon already said. -->
+    <style name="Theme.CloudWriter" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#0b0e14</item>
+        <item name="android:statusBarColor">#101520</item>
+        <item name="android:navigationBarColor">#0b0e14</item>
+    </style>
+</resources>

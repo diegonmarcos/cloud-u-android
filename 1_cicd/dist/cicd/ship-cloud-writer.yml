@@ -1,0 +1,298 @@
+name: "Ship → Cloud Writer APK (build + push to GHCR via ORAS + attach to GH Release)"
+
+# Cloud Writer on a phone: the owner asked for one application that owns Text
+# Enhance, Translate, Grammar Check and Summary, with its own model choice for
+# each of them separately, and got a design document instead. This workflow is
+# what puts Cloud-Writer.apk on the rolling release so he can install it.
+#
+# NOTHING OUTSIDE ac_cloud-writer/ AND ITS ONE DECLARED SHARED MODULE CAN FAIL
+# THIS RELEASE, and nothing here can fail anyone else's. That is the standing
+# fleet rule after a day and a half with no SuperApp APK, and it is a property
+# of the module map rather than a promise in a comment: build.json::modules
+# declares :app and :libs:text-tools, the trigger paths below are derived from
+# exactly that list by cloud-android-ship-repo-workflow-engine.sh, and the
+# publish gate hashes exactly the same list. cloud-writer is in no other
+# application's gradle graph, so it cannot fail ship-cloud-mail,
+# ship-cloud-keyboard or ship-cloud-superapp either.
+#
+# Same data-driven publish path as every other application: the engine reads
+# ac_cloud-writer/build.json::release, so no registry, tag or artifact name is
+# written in this file.
+#
+#   1. ORAS push as OCI artifact → ghcr.io/diegonmarcos/cloud-writer:<tags>
+#   2. GH Release attachment     → Cloud-Writer.apk on the rolling `latest` release
+#
+# One matrix job per ABI variant (build.json::release.variants[].id): arm64
+# (the canonical phone build) + x86_64 (Waydroid / desktop emulators),
+# published to the SAME rolling `latest` release under distinct filenames and
+# to GHCR under the tag suffix -x86_64.
+#
+# Cloud Writer has NO native (CMake/NDK) code at all — one Kotlin activity and
+# a binder client — so the Android SDK setup omits cmake and ndk.
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "Build variant"
+        required: false
+        type: choice
+        default: "debug"
+        options:
+          - debug
+          - release
+      push_oras:
+        description: "Push APK to GHCR via ORAS"
+        required: false
+        type: boolean
+        default: true
+      create_release:
+        description: "Create GitHub Release"
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    tags:
+      - "ac_cloud-writer-v*"
+    paths:
+      # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir
+      # ac_cloud-writer/build.json::modules declares is added automatically, dead
+      # entries are dropped, and cloud-android-source-identity.sh hashes
+      # exactly this list — so nothing can trigger a build the publish
+      # gate does not weigh. Extra entries no module map can express
+      # (settings.gradle.kts references, scan roots) are kept: add them
+      # here and they stay.
+      # THE SHARED LIB ENTRY IS ab_cloud-libs-shared/libs/text-tools, derived
+      # from build.json::modules and not hand-written. It is the ITextTools
+      # boundary this application calls across, so a change to the AIDL or to
+      # TextToolsClient must rebuild this APK — most of all a change to
+      # TextTools.SERVICE_PACKAGES, which decides which peer answers.
+      # 1_cicd/src/cicd is CANONICAL and .github/workflows is the emitted copy
+      # (cloud-android-ship-repo-workflow-engine.sh copies src/cicd -> dist/cicd
+      # -> .github/workflows). ONLY the source is listed. The emitted copy used
+      # to be listed too, against the fear that editing the source alone leaves
+      # the change unrun -- but a path filter cannot catch that: if nobody
+      # regenerated, the emitted copy did not change either, so watching it
+      # triggers nothing. It only ever added spurious builds, one for every
+      # unrelated commit that regenerated this file. The real guard is
+      # generated-up-to-date.yml, which fails the build when the emitted copy
+      # does not match what the source produces.
+      - "1_cicd/src/cicd/ship-cloud-writer.yml"
+      - "ab_cloud-libs-shared/libs/text-tools/**"
+      - "ac_cloud-writer/**"
+permissions:
+  contents: write   # for gh release create + tag push reads
+  packages: write   # for ghcr push (oras)
+
+concurrency:
+  group: ship-cloud-writer-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  WORK_DIR: ac_cloud-writer
+
+jobs:
+  build_and_publish:
+    name: "Build APK + Push (${{ matrix.abi }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      # One job per ABI variant (build.json::release.variants[].id). arm64 is
+      # the canonical phone build; x86_64 is for Waydroid / desktop emulators.
+      fail-fast: false
+      matrix:
+        abi: [arm64, x86_64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so build.sh can `git rev-parse`
+
+      # ── Testers, ABOVE the publish gate on purpose ───────────────────
+      #
+      # The gate skips the whole job when this application's source is
+      # unchanged, and an assertion here can also start failing because
+      # something it reads OUTSIDE the application changed — libs:text-tools,
+      # TextTools.SERVICE_PACKAGES, the shared registry these prompts were
+      # copied from. Gating the tests on the same condition would mean the run
+      # that most needs them is the one that skips them.
+      #
+      # Static assertions only: no JDK, no Android SDK, no gradle. They cost
+      # seconds and they run before anything is built, let alone published.
+      - name: "Test → shell testers (build.json::tests.shell)"
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
+
+      - name: "Test → assertions that cannot fail"
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint "$WORK_DIR"
+
+      # Prints the coverage gap rather than a tick. There are no JVM unit tests
+      # in this application and the container that maintains it has no JVM to
+      # write them with, so the honest output is a line saying so on every run.
+      - name: "Test → JVM unit tests (coverage gap is logged, not hidden)"
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
+
+      # Publish-if-changed gate. Android builds are not byte-reproducible, so a
+      # rebuild of unchanged source published different bytes, a different
+      # sha256 sidecar and a different OCI digest — and the Constellation store
+      # compares exactly those, so every cascade rebuild showed up on every
+      # phone as an update with nothing in it. The gate hashes this app's build
+      # INPUTS (git tree shas of the app dir, the shared lib dirs its build.json
+      # module map declares, and this workflow) and compares that identity to
+      # the <asset>.source sidecar already on the release. Equal → the whole
+      # rest of this job is skipped and the release asset is left untouched.
+      - name: Publish gate (skip when source unchanged)
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" "${{ matrix.abi }}"
+
+      - name: Set up JDK 17
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        if: steps.gate.outputs.skip != 'true'
+        uses: android-actions/setup-android@v3
+        with:
+          # No cmake/ndk — cloud-writer has no native code whatsoever. Pins
+          # mirror ac_cloud-writer/flake.nix + build.json::toolchain.
+          packages: "platforms;android-35 platforms;android-34 platforms;android-26 build-tools;35.0.0 build-tools;34.0.0 platform-tools"
+
+      - name: Set up Gradle 8.10.2 (cached)
+        if: steps.gate.outputs.skip != 'true'
+        # v6, not v3: v3 bundles the old @actions/cache client, which talks to the
+        # cache service GitHub retired. Every save AND restore 400s ("Our services
+        # aren't available right now"), so the Gradle distribution, the dependency
+        # cache and the build cache were all discarded every run — org.gradle.caching
+        # was on and had nowhere to persist, and every build ran fully cold.
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.10.2"
+
+      # ── ONE shared Cloud-constellation signing key (vault) ──────────────
+      # ALL constellation apps sign with the SAME key so cross-app
+      # signature-IPC + the in-app fleet updater never hit a signature
+      # mismatch. The raw keystore + its sops-encrypted passwords live ONLY in
+      # the private vault repo (A0_keys/providers/android/release.jks +
+      # signing.secrets.yaml). build.sh::_resolve_signing reads $VAULT_DIR +
+      # sops-decrypts (SOPS_AGE_KEY) and exports ANDROID_KEYSTORE_* for gradle.
+      # NO fallback: if the key is unavailable build.sh exits 1 (desired).
+      - name: Checkout vault (shared Android signing key)
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: diegonmarcos/cloud-vault
+          token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
+          path: .vault
+
+      - name: Install ORAS + sops + gh CLI + jq
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+          command -v gh
+          curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz \
+            | sudo tar -C /usr/local/bin -xzf - oras
+          oras version
+          curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \
+            | sudo tee /usr/local/bin/sops >/dev/null
+          sudo chmod +x /usr/local/bin/sops
+          sops --version
+
+      - name: Determine variant
+        if: steps.gate.outputs.skip != 'true'
+        id: variant
+        run: |
+          if   [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "variant=${{ inputs.variant }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "variant=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "variant=debug" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Build via build.sh (engine) ─────────────────────────────────
+      - name: Build APK (engine)
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          BYPASS_NIX: "1"
+          # Shared Cloud-constellation signing key (vault checkout above).
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          # CLOUDNAV_VARIANT selects the ABI variant (build.json::release
+          # .variants[].id) → engine overrides ABI filter + artifact name.
+          CLOUDNAV_VARIANT: ${{ matrix.abi }}
+          # Kept for the engine's own `gh` calls. Unlike the SuperApp, this
+          # app/build.gradle does NOT shell out to `gh` at config phase — it
+          # has no About → Stack page to bake CI durations into.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x build.sh
+          if [ "${{ steps.variant.outputs.variant }}" = "release" ]; then
+            ./build.sh release
+          else
+            ./build.sh build
+          fi
+          ls -la dist/
+
+      - name: Upload APK as workflow artifact
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cloud-Writer-${{ matrix.abi }}-${{ steps.variant.outputs.variant }}-${{ github.sha }}
+          path: ${{ env.WORK_DIR }}/dist/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      # ── ORAS push to GHCR (engine reads build.json::release.ghcr) ──
+      - name: Login to GHCR
+        if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_oras) }}
+        run: |
+          echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" \
+            | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Push APK to GHCR via ORAS
+        if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_oras) }}
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          BYPASS_NIX: "1"
+          CLOUDNAV_VARIANT: ${{ matrix.abi }}
+          GITHUB_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_CREATE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./build.sh oras-push
+
+      # Whether anyone else can actually pull what we just pushed. The push
+      # itself says nothing about it: visibility is decided when the package is
+      # CREATED and inherited silently forever after, so this is the one cheap
+      # moment to find out. A warning, not a failure — the APK is also on the
+      # GH release, which is public by construction, so a private mirror
+      # degrades the install route without breaking it.
+      - name: Is the GHCR package publicly pullable
+        if: ${{ always() && steps.gate.outputs.skip != 'true' }}
+        continue-on-error: true
+        run: sh 1_cicd/dist/scripts/cloud-android-ghcr-visibility.sh diegonmarcos cloud-writer
+
+      # ── GitHub Release (engine reads build.json::release.gh_release) ──
+      - name: Publish to GitHub Releases
+        if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          BYPASS_NIX: "1"
+          CLOUDNAV_VARIANT: ${{ matrix.abi }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+        run: ./build.sh gh-release
+
+      - name: Stamp source identity on the published assets
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$WORK_DIR" "${{ matrix.abi }}"
