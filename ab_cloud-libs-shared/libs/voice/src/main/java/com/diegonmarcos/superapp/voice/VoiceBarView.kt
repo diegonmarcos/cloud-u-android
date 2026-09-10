@@ -247,7 +247,7 @@ class VoiceBarView(context: Context) : LinearLayout(context) {
         val t = text(); if (t.isEmpty()) { toast("Nothing to translate"); return }
         val target = targets[targetIndex]
         hintView.text = "Translating → $target…"
-        Translator.liveTranslate(t, target) { result ->
+        Translator.liveTranslate(context, t, target) { result ->
             when {
                 result == null -> {
                     hintView.text = "Listening…"

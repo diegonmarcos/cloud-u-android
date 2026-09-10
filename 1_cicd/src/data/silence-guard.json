@@ -29,11 +29,41 @@
     },
 
     {
+      "label": "TRANSLATE key — long press",
+      "_doc": "Long-press on the TRANSLATE toolbar key: translate the selection, or the whole field, in place. `if (ic == null) return` walked away without a word, so a keyboard attached to no editor was indistinguishable from a dead key, an uninstalled engine, a target language never set, and a translation that failed. Same defect as the Enhance key, same costume as the three bar controls above.",
+      "source": "ab_cloud-libs-shared/libs/translate/src/main/java/com/diegonmarcos/superapp/translate/Translator.kt",
+      "entry": "fun translate(context: Context, ic: InputConnection?, keyboardLang: String)",
+      "reporters": ["ended("],
+      "quiet": {
+        "reporter": "endedQuietly(",
+        "reason_argument": 1,
+        "reasons_allowed": ["superseded by a newer run"]
+      },
+      "messages": {
+        "reporter": "ended(",
+        "resource_argument": 3,
+        "_doc_locales": "libs:translate now owns a resource catalogue and is declared `require: [es]` in 1_cicd/src/i18n-policy.json, so the fleet i18n guard checks the catalogue as a whole. It is still checked here as well, because the property this guard holds is one the i18n guard cannot see: that each individual EXIT names a resource, and that no two exits name the same sentence.",
+        "locales": {
+          "values": "ab_cloud-libs-shared/libs/translate/src/main/res/values/strings.xml",
+          "values-es": "ab_cloud-libs-shared/libs/translate/src/main/res/values-es/strings.xml"
+        }
+      }
+    },
+
+    {
       "label": "Translate bar — Insert / Replace",
       "_doc": "The two chips that put the translation into the application's field. Its `icp?.get()` returned null and the function walked away: the owner taps Insert, the translation stays in the bar, and nothing anywhere says the keyboard has lost sight of the field.",
       "source": "ab_cloud-libs-shared/libs/translate/src/main/java/com/diegonmarcos/superapp/translate/TranslateBarView.kt",
       "entry": "private fun apply(mode: String)",
-      "reporters": ["toast(", "showStatus("]
+      "reporters": ["toast(", "showStatus("],
+      "messages": {
+        "reporter": "toast(",
+        "resource_argument": 0,
+        "locales": {
+          "values": "ab_cloud-libs-shared/libs/translate/src/main/res/values/strings.xml",
+          "values-es": "ab_cloud-libs-shared/libs/translate/src/main/res/values-es/strings.xml"
+        }
+      }
     },
 
     {
@@ -41,7 +71,15 @@
       "_doc": "Copy with no translation ready returned in silence, so the owner had no way to tell 'still translating' from 'the clipboard already has it'.",
       "source": "ab_cloud-libs-shared/libs/translate/src/main/java/com/diegonmarcos/superapp/translate/TranslateBarView.kt",
       "entry": "private fun copy()",
-      "reporters": ["toast(", "showStatus("]
+      "reporters": ["toast(", "showStatus("],
+      "messages": {
+        "reporter": "toast(",
+        "resource_argument": 0,
+        "locales": {
+          "values": "ab_cloud-libs-shared/libs/translate/src/main/res/values/strings.xml",
+          "values-es": "ab_cloud-libs-shared/libs/translate/src/main/res/values-es/strings.xml"
+        }
+      }
     },
 
     {
@@ -49,16 +87,32 @@
       "_doc": "The arrow between the two language chips. With the source set to Auto and nothing detected yet there is no language to swap INTO, and it returned without saying so, which reads as a dead arrow.",
       "source": "ab_cloud-libs-shared/libs/translate/src/main/java/com/diegonmarcos/superapp/translate/TranslateBarView.kt",
       "entry": "private fun swap()",
-      "reporters": ["toast(", "showStatus("]
+      "reporters": ["toast(", "showStatus("],
+      "messages": {
+        "reporter": "toast(",
+        "resource_argument": 0,
+        "locales": {
+          "values": "ab_cloud-libs-shared/libs/translate/src/main/res/values/strings.xml",
+          "values-es": "ab_cloud-libs-shared/libs/translate/src/main/res/values-es/strings.xml"
+        }
+      }
     },
 
     {
       "label": "Translate bar — Paste",
       "source": "ab_cloud-libs-shared/libs/translate/src/main/java/com/diegonmarcos/superapp/translate/TranslateBarView.kt",
       "entry": "private fun paste()",
-      "reporters": ["toast(", "showStatus("]
+      "reporters": ["toast(", "showStatus("],
+      "messages": {
+        "reporter": "toast(",
+        "resource_argument": 0,
+        "locales": {
+          "values": "ab_cloud-libs-shared/libs/translate/src/main/res/values/strings.xml",
+          "values-es": "ab_cloud-libs-shared/libs/translate/src/main/res/values-es/strings.xml"
+        }
+      }
     }
   ],
 
-  "_doc_not_covered": "The Translate bar's messages are plain English literals, not string resources, so this guard checks that they EXIST and not that they are translated. libs:translate owns no res/values/strings.xml at all and therefore does not appear in i18n-policy.json; giving it one is a separate task that has to add the module to that policy in the same change, or the i18n guard fails on an unlisted module. The long-press menu's Copy/Cut selection items also return silently on an empty selection; they are left off this list because the menu is opened over the text it acts on, so the empty case is visible on screen rather than invisible. Adding them is a JSON entry here plus a message in the Kotlin."
+  "_doc_not_covered": "The Translate bar's messages were plain English literals when this manifest was written, so it could only check that they EXIST. They are string resources now: libs:translate owns res/values and res/values-es, and the module is declared `require: [es]` in 1_cicd/src/i18n-policy.json, so every sentence on the translate path is checked in both locales here AND by the fleet i18n guard. What is still NOT covered: the long-press menu's Copy/Cut selection items return silently on an empty selection, left off because the menu is opened over the text it acts on, so the empty case is visible on screen rather than invisible; and libs:voice (VoiceBarView) still holds its own English literals and has no resource catalogue at all, which is the same task as this one and a separate change."
 }

@@ -20,6 +20,7 @@
 
     "aa_cloud-superapp/app":                  { "require": ["es"] },
     "ab_cloud-libs-shared/libs/mail":         { "require": ["es"] },
+    "ab_cloud-libs-shared/libs/translate":    { "require": ["es"] },
     "ac_cloud-mail/app":                      { "require": ["es"] },
     "ac_cloud-ide/hub":                       { "require": ["es"] },
 

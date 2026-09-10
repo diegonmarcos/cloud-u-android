@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Español (España). El teléfono de la propietaria está en español y lee estas
+  frases en español: son traducciones escritas a mano, no el inglés copiado.
+
+  cloud-android-i18n-guard.py comprueba que cada clave de values/strings.xml
+  exista también aquí y que conserve los mismos especificadores de formato,
+  pero NO puede comprobar que la traducción signifique algo. Esa parte la tiene
+  que mirar alguien que lea español.
+-->
+<resources>
+
+    <!-- ── el punto de entrada de una sola pasada: mantener pulsado TRADUCIR ── -->
+    <string name="translate_no_input_connection">No hay ningún campo de texto conectado: toca primero el texto que quieres traducir</string>
+    <string name="translate_nothing_to_translate">No hay nada que traducir: el campo está vacío o esta aplicación no permite que el teclado lo lea</string>
+    <string name="translate_failed">No se ha podido traducir: %1$s</string>
+    <string name="translate_stale">El texto ha cambiado durante la traducción: no se ha sustituido nada</string>
+
+    <string name="translate_in_progress">Traduciendo → %1$s…</string>
+
+    <!-- ── motivos que da el propio motor ─────────────────────────────────-->
+    <string name="translate_no_engine_registered">No hay ningún motor de traducción registrado</string>
+    <string name="translate_engine_not_connected">Motor de traducción no conectado: instala o actualiza la aplicación complementaria Cloud Keyboard Libs</string>
+    <string name="translate_engine_call_failed">El motor de traducción no ha respondido</string>
+    <string name="translate_engine_exception">El motor de traducción ha informado de un error: %1$s</string>
+    <string name="translate_no_language_detected">No se ha podido detectar el idioma: elige un idioma de origen</string>
+    <string name="translate_engine_failed_model">El motor ha fallado: puede que el modelo de idioma sin conexión todavía se esté descargando</string>
+    <string name="translate_empty_reply">El motor no ha devuelto ninguna traducción</string>
+    <string name="translate_no_target">No hay ningún idioma de destino: elige uno en los ajustes de Traducción</string>
+    <string name="translate_reason_unknown">motivo desconocido</string>
+
+    <!-- ── la barra de traducción ─────────────────────────────────────────-->
+    <string name="translate_bar_hint">Escribe para traducir…</string>
+    <string name="translate_bar_working">Traduciendo…</string>
+    <string name="translate_bar_slow">Todavía traduciendo… la primera vez se descarga el modelo de idioma y hace falta conexión una sola vez</string>
+    <string name="translate_bar_wait">Espera a que termine la traducción…</string>
+    <string name="translate_bar_clipboard_empty">El portapapeles está vacío</string>
+    <string name="translate_bar_copied">Copiado</string>
+    <string name="translate_bar_taken_over">La aplicación se ha quedado con ese texto: usa Insertar o Sustituir</string>
+    <string name="translate_bar_insert">Insertar</string>
+    <string name="translate_bar_replace">Sustituir</string>
+    <string name="translate_bar_paste">Pegar</string>
+    <string name="translate_bar_copy">Copiar</string>
+    <string name="translate_bar_clear">Borrar</string>
+    <string name="translate_bar_no_field">No hay ningún campo de texto donde escribir: toca primero donde lo quieras</string>
+    <string name="translate_bar_type_first">Escribe algo para traducir primero</string>
+    <string name="translate_bar_no_detection">Todavía no se ha detectado ningún idioma: escribe algo o elige uno en lugar de Auto</string>
+
+</resources>

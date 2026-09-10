@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.translate
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import android.widget.Toast
@@ -25,20 +26,51 @@ import java.util.concurrent.atomic.AtomicInteger
  *    result for an old generation is dropped;
  *  - every failure surfaces as a [Result.error] string instead of a silent null.
  *
+ * WHY EVERY ENTRY POINT HERE TAKES A CONTEXT. Not one of these sentences may be
+ * a Kotlin literal: the owner's phone is set to Spanish, and a literal reaches
+ * her in English no matter what the phone is set to. The reasons are produced
+ * deep in [translateBlocking] and surface far away — on a toast, or on the
+ * bar's status line — so the Context has to be threaded all the way down rather
+ * than resolved at the edge. That is the whole reason [liveTranslate] grew a
+ * Context parameter it did not need for anything else.
+ *
  * The engine implementation is registered per-app in Application.onCreate
  * (LocalTranslateEngineClient in-process ML Kit, or AidlTranslateEngineClient
  * binding the cloud-keyboard-libs companion). Lives in libs:translate; the
  * cloud-keyboard tree (libs/keyboard) consumes it.
  */
 object Translator {
+    private const val TAG = "Translator"
+
     const val AUTO = "auto"
-    /** Shown by the bar before the first keystroke too — the fix is an install, not a retry. */
-    const val NOT_CONNECTED = "Translate engine not connected — install/update the Cloud Keyboard Libs companion app"
+
+    /**
+     * Shown by the bar before the first keystroke too — the fix is an install,
+     * not a retry. A function rather than a constant because the sentence has to
+     * come out of the resource table in the language the phone is set to.
+     */
+    @JvmStatic
+    fun notConnected(context: Context): String =
+        context.getString(R.string.translate_engine_not_connected)
+
+    /** The sentence shown when a bound engine refuses to answer at all. */
+    @JvmStatic
+    fun engineCallFailed(context: Context): String =
+        context.getString(R.string.translate_engine_call_failed)
 
     /** One translate outcome: [text] non-null = success; otherwise [error] says why (user-readable). */
     class Result(@JvmField val text: String?, @JvmField val detected: String?, @JvmField val error: String?) {
         val ok: Boolean get() = text != null
     }
+
+    /**
+     * The one reason an exit from [translate] is allowed to say nothing, spelled
+     * once so the silence guard can hold the list to exactly this. A superseded
+     * run is not a failure the owner needs told about: the long-press that
+     * superseded it is already on screen saying its own piece, and a second
+     * message on top of it would describe an event she deliberately caused.
+     */
+    private const val SUPERSEDED = "superseded by a newer run"
 
     // ponytail: one worker thread. A binder call already in flight cannot be
     // aborted; the service-side ML Kit timeouts (TranslateEngine) bound it.
@@ -54,10 +86,10 @@ object Translator {
     /** Engine reply = {sourceTag, text[, errorMessage]}; slot 2 is the engine's own reason for a failure. */
     private fun Array<String>.reason(): String? = getOrNull(2)?.takeIf { it.isNotEmpty() }
 
-    private fun translateBlocking(client: TranslateEngineClient, text: String, from: String, to: String, hint: String?): Result {
+    private fun translateBlocking(context: Context, client: TranslateEngineClient, text: String, from: String, to: String, hint: String?): Result {
         val key = "$from|$to|$hint|$text"
         synchronized(cache) { cache[key] }?.let { return it }
-        if (!client.isConnected()) return Result(null, null, NOT_CONNECTED)
+        if (!client.isConnected()) return Result(null, null, notConnected(context))
         val r: Result = try {
             var res = if (from == AUTO) client.translate(text, to) else client.translateFrom(text, from, to)
             var detected = res.getOrNull(0) ?: "und"
@@ -69,13 +101,14 @@ object Translator {
             val why = res.reason()
             when {
                 why != null -> Result(null, null, why)
-                detected == "und" && from == AUTO -> Result(null, null, "Couldn't detect the language — pick a source")
-                detected == "und" -> Result(null, null, "Engine failed — offline model still downloading?")
-                out.isEmpty() -> Result(null, detected, "No translation returned")
+                detected == "und" && from == AUTO -> Result(null, null, context.getString(R.string.translate_no_language_detected))
+                detected == "und" -> Result(null, null, context.getString(R.string.translate_engine_failed_model))
+                out.isEmpty() -> Result(null, detected, context.getString(R.string.translate_empty_reply))
                 else -> Result(out, detected, null)
             }
         } catch (e: Exception) {
-            Result(null, null, "Translate failed: " + (e.message ?: e.javaClass.simpleName))
+            Log.w(TAG, "engine call threw", e)
+            Result(null, null, context.getString(R.string.translate_engine_exception, e.message ?: e.javaClass.simpleName))
         }
         if (r.ok) synchronized(cache) { cache[key] = r }
         return r
@@ -98,12 +131,14 @@ object Translator {
     @JvmStatic
     @JvmOverloads
     fun translateNow(context: Context, text: String, to: String = "", hint: String? = null): Result {
-        val client = TranslateEngines.client ?: return Result(null, null, "No translate engine registered")
+        val appCtx = context.applicationContext
+        val client = TranslateEngines.client
+            ?: return Result(null, null, appCtx.getString(R.string.translate_no_engine_registered))
         if (text.isBlank()) return Result("", null, null)
-        val target = to.ifEmpty { TranslatePrefs.defaultTarget(context.applicationContext) }
+        val target = to.ifEmpty { TranslatePrefs.defaultTarget(appCtx) }
             .ifEmpty { hint.orEmpty() }
-        if (target.isEmpty()) return Result(null, null, "No target language set — pick one in Translation settings")
-        return translateBlocking(client, text, AUTO, target, hint?.takeIf { it != target })
+        if (target.isEmpty()) return Result(null, null, appCtx.getString(R.string.translate_no_target))
+        return translateBlocking(appCtx, client, text, AUTO, target, hint?.takeIf { it != target })
     }
 
     /**
@@ -112,22 +147,26 @@ object Translator {
      * Callback on the main thread; superseded requests never call back.
      */
     @JvmStatic
-    fun liveTranslate(text: String, from: String, to: String, hint: String?, onResult: (Result) -> Unit) {
+    fun liveTranslate(context: Context, text: String, from: String, to: String, hint: String?, onResult: (Result) -> Unit) {
+        val appCtx = context.applicationContext
         val client = TranslateEngines.client
-        if (client == null) { onResult(Result(null, null, "No translate engine registered")); return }
+        if (client == null) {
+            onResult(Result(null, null, appCtx.getString(R.string.translate_no_engine_registered)))
+            return
+        }
         if (text.isBlank()) { onResult(Result("", null, null)); return }
         val gen = generation.incrementAndGet()
         executor.execute {
             if (gen != generation.get()) return@execute   // superseded while queued — skip the engine call
-            val r = translateBlocking(client, text, from, to, hint)
+            val r = translateBlocking(appCtx, client, text, from, to, hint)
             main.post { if (gen == generation.get()) onResult(r) }
         }
     }
 
     /** Auto-detect convenience (voice bar): null = failure, "" = blank input. */
     @JvmStatic
-    fun liveTranslate(text: String, targetLang: String, onResult: (String?) -> Unit) =
-        liveTranslate(text, AUTO, targetLang, null) { onResult(it.text) }
+    fun liveTranslate(context: Context, text: String, targetLang: String, onResult: (String?) -> Unit) =
+        liveTranslate(context, text, AUTO, targetLang, null) { onResult(it.text) }
 
     /**
      * One-shot, in place: translate the selection (or the whole field) and
@@ -139,33 +178,85 @@ object Translator {
      * download timeout; if the field no longer holds what was sent, the reply
      * is dropped instead of select-all + overwrite wiping what the user typed
      * meanwhile. A newer long-press supersedes an older one.
+     *
+     * NO EXIT FROM HERE IS SILENT, and cloud-android-silence-guard.py fails the
+     * build if one becomes silent again. The bug this rule was written for: the
+     * null-InputConnection clause below simply returned. The owner long-pressed
+     * TRANSLATE, the toolbar key visibly depressed, and nothing whatsoever
+     * followed — indistinguishable from a dead key, a missing engine, a target
+     * language she had never set, and a translation that failed. It is the same
+     * shape as the Enhance key defect (2ee735033) and it hid the fact that an
+     * input method attached to no editor cannot translate anything at all.
      */
     @JvmStatic
     fun translate(context: Context, ic: InputConnection?, keyboardLang: String) {
-        if (ic == null) return
         val appCtx = context.applicationContext
+
+        // NO EDITOR MEANS NO TEXT TO READ AND NOWHERE TO WRITE. The input method
+        // is on screen but bound to nothing the platform will let it read: the
+        // field lost focus, the host application detached, or the surface under
+        // the cursor is one no InputConnection is offered for. There is nothing
+        // to attempt, which is exactly why the old code walked away — but the
+        // owner cannot see the binding, only that the key did nothing.
+        if (ic == null)
+            return ended(appCtx, "pre-flight", "the input method has no connected editor",
+                R.string.translate_no_input_connection)
+
         val client = TranslateEngines.client
-        if (client == null) { toast(appCtx, "Translate: no engine registered"); return }
+        if (client == null)
+            return ended(appCtx, "pre-flight", "no TranslateEngineClient is registered",
+                R.string.translate_no_engine_registered)
+
         val target = TranslatePrefs.defaultTarget(appCtx).ifEmpty { keyboardLang }
         val selected = ic.getSelectedText(0)?.toString()?.takeIf { it.isNotBlank() }
         val text = (selected ?: fieldText(ic))?.trim()
-        if (text.isNullOrBlank()) { toast(appCtx, "Translate: nothing to translate"); return }
+
+        // BLANK MEANS TWO THINGS AND THE PLATFORM WILL NOT SAY WHICH — the field
+        // is genuinely empty, or it holds text the application never exposes to
+        // an input method (canvas editors, web views, custom drawing surfaces).
+        // Both come back as the same empty buffer, so the message names both
+        // readings rather than picking one and being wrong half the time.
+        if (text.isNullOrBlank())
+            return ended(appCtx, "pre-flight", "the field reads back ${text?.length ?: -1} characters",
+                R.string.translate_nothing_to_translate)
+
         val hadSelection = selected != null
         val hint = keyboardLang.takeIf { it.isNotEmpty() && it != target }
         val gen = oneShot.incrementAndGet()
-        toast(appCtx, "Translating → ${target.uppercase()}…")
+        Log.i(TAG, "run $gen: target=$target, selection=$hadSelection, chars=${text.length}")
+        toast(appCtx, appCtx.getString(R.string.translate_in_progress, target.uppercase()))
         executor.execute {
-            if (gen != oneShot.get()) return@execute
-            val r = translateBlocking(client, text, AUTO, target, hint)
+            if (gen != oneShot.get()) return@execute endedQuietly("run $gen", SUPERSEDED)
+            val r = translateBlocking(appCtx, client, text, AUTO, target, hint)
             main.post {
-                if (gen != oneShot.get()) return@post
+                if (gen != oneShot.get()) return@post endedQuietly("run $gen", SUPERSEDED)
                 val out = r.text
-                if (out == null) { toast(appCtx, r.error ?: "Translate failed"); return@post }
+                if (out == null)
+                    return@post ended(appCtx, "run $gen", "the engine produced no translation: ${r.error}",
+                        R.string.translate_failed, r.error ?: appCtx.getString(R.string.translate_reason_unknown))
                 val now = (if (hadSelection) ic.getSelectedText(0)?.toString() else fieldText(ic))?.trim()
-                if (now != text) { toast(appCtx, "Field changed while translating — nothing replaced"); return@post }
+                if (now != text)
+                    return@post ended(appCtx, "run $gen", "the field moved while translating",
+                        R.string.translate_stale)
                 replaceInField(ic, hadSelection, out)
             }
         }
+    }
+
+    /**
+     * End a long-press without replacing any text, and say so — in the log for
+     * whoever is reading a bug report, and on screen for the owner holding the
+     * phone. [message] is a string resource because every sentence this keyboard
+     * shows has to reach her in her own language.
+     */
+    private fun ended(context: Context, label: String, why: String, message: Int, vararg args: Any) {
+        Log.i(TAG, "$label ended without a translation: $why")
+        toast(context, context.getString(message, *args))
+    }
+
+    /** As [ended], but log-only; [why] may only ever be [SUPERSEDED]. */
+    private fun endedQuietly(label: String, why: String) {
+        Log.i(TAG, "$label ended without a translation and without a message: $why")
     }
 
     private val oneShot = AtomicInteger()

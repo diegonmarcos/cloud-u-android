@@ -89,11 +89,11 @@ class AidlTranslateEngineClient(private val context: Context) : TranslateEngineC
         return null
     }
 
-    private fun notConnected() = arrayOf("und", "", Translator.NOT_CONNECTED)
+    private fun notConnected() = arrayOf("und", "", Translator.notConnected(context))
 
     override fun translate(text: String, targetTag: String): Array<String> {
         val e = engineOrRebind() ?: return notConnected()
-        return runCatching { e.translate(text, targetTag) }.getOrNull() ?: arrayOf("und", "", "Translate engine call failed")
+        return runCatching { e.translate(text, targetTag) }.getOrNull() ?: arrayOf("und", "", Translator.engineCallFailed(context))
     }
 
     // A companion APK older than the translateFrom() AIDL method answers the
@@ -104,7 +104,7 @@ class AidlTranslateEngineClient(private val context: Context) : TranslateEngineC
         val e = engineOrRebind() ?: return notConnected()
         return runCatching { e.translateFrom(text, sourceTag, targetTag) }.getOrNull()
             ?: runCatching { e.translate(text, targetTag) }.getOrNull()
-            ?: arrayOf("und", "", "Translate engine call failed")
+            ?: arrayOf("und", "", Translator.engineCallFailed(context))
     }
 
     override fun supportedLanguages(): List<String> =

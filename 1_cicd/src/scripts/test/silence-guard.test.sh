@@ -25,6 +25,7 @@ GUARD="1_cicd/src/scripts/cloud-android-silence-guard.py"
 MANIFEST="1_cicd/src/data/silence-guard.json"
 SOURCE="ab_cloud-libs-shared/libs/keyboard/src/main/java/helium314/keyboard/latin/TextEnhancer.kt"
 BAR="ab_cloud-libs-shared/libs/translate/src/main/java/com/diegonmarcos/superapp/translate/TranslateBarView.kt"
+TRANSLATOR="ab_cloud-libs-shared/libs/translate/src/main/java/com/diegonmarcos/superapp/translate/Translator.kt"
 ES="ab_cloud-libs-shared/libs/keyboard/src/main/res/values-es/strings.xml"
 EN="ab_cloud-libs-shared/libs/keyboard/src/main/res/values/strings.xml"
 FAILURES=0
@@ -39,15 +40,31 @@ trap 'rm -rf "$WORK"' EXIT
 # index: the guard has to be provable against the edit somebody is about to
 # commit, not only against what is already committed.
 PRISTINE="$WORK/pristine"
-mkdir -p "$PRISTINE/$(dirname "$SOURCE")" "$PRISTINE/$(dirname "$EN")" \
-         "$PRISTINE/$(dirname "$ES")" "$PRISTINE/$(dirname "$GUARD")" \
-         "$PRISTINE/$(dirname "$BAR")" "$PRISTINE/$(dirname "$MANIFEST")"
-cp "$ROOT/$SOURCE"   "$PRISTINE/$SOURCE"
-cp "$ROOT/$BAR"      "$PRISTINE/$BAR"
-cp "$ROOT/$EN"       "$PRISTINE/$EN"
-cp "$ROOT/$ES"       "$PRISTINE/$ES"
-cp "$ROOT/$GUARD"    "$PRISTINE/$GUARD"
-cp "$ROOT/$MANIFEST" "$PRISTINE/$MANIFEST"
+# WHICH FILES THE COPY HOLDS IS DERIVED, NOT LISTED. It used to be six cp lines,
+# so an entry point added to the manifest was tested against a sandbox that did
+# not contain its source. The guard then said "does not exist — nothing to
+# guard", every mutation aimed at it failed for that reason instead of its own,
+# and the new entry point was never once exercised. The manifest is the list.
+MANIFEST_FILES="$(python3 - "$ROOT/$MANIFEST" <<'MANIFEST_PY'
+import json, sys
+for entry in json.load(open(sys.argv[1], encoding="utf-8"))["entry_points"]:
+    print(entry["source"])
+    for relative in entry.get("messages", {}).get("locales", {}).values():
+        print(relative)
+MANIFEST_PY
+)"
+if [ -z "$MANIFEST_FILES" ]; then
+    echo "FAIL   $MANIFEST names no files — nothing to copy and nothing to prove."
+    exit 1
+fi
+for relative in $MANIFEST_FILES "$GUARD" "$MANIFEST"; do
+    if [ ! -f "$ROOT/$relative" ]; then
+        echo "FAIL   $MANIFEST names $relative but it does not exist."
+        exit 1
+    fi
+    mkdir -p "$PRISTINE/$(dirname "$relative")"
+    cp "$ROOT/$relative" "$PRISTINE/$relative"
+done
 
 run_guard() { ( cd "$1" && CLOUD_ANDROID_ROOT="$1" python3 "$GUARD" 2>&1 ); }
 
@@ -168,25 +185,52 @@ text = open(path, encoding="utf-8").read()
 if kind == "insert_goes_silent":
     # The defect as it actually stood in this file until the guard grew to see it:
     # Insert/Replace could not reach the field and walked away without a word.
-    old = 'val ic = icp?.get() ?: run { toast("No text field to write into — tap where you want it first"); return }'
+    old = ('val ic = icp?.get() ?: run { '
+           'toast(context.getString(R.string.translate_bar_no_field)); return }')
     assert old in text, "test bug: cannot find the apply() field check"
     text = text.replace(old, "val ic = icp?.get() ?: return", 1)
 
 elif kind == "swap_goes_silent":
-    old = '?: run { toast("No language detected yet — type something, or pick one instead of Auto"); return })'
+    old = '?: run { toast(context.getString(R.string.translate_bar_no_detection)); return })'
     assert old in text, "test bug: cannot find the swap() detection check"
     text = text.replace(old, "?: return)", 1)
 
 elif kind == "attribution_on_the_next_line":
     # The sentence is still there, one line above the exit. That is one edit away
     # from not being there at all, and the guard must not read it as attached.
-    old = 'val out = translated ?: run { toast(if (editor.isNotEmpty) "Wait for the translation…" else "Type something to translate first"); return }'
+    old = ('val out = translated ?: run { toast(if (editor.isNotEmpty) '
+           'context.getString(R.string.translate_bar_wait) else '
+           'context.getString(R.string.translate_bar_type_first)); return }')
     assert old in text, "test bug: cannot find the copy() translation check"
     text = text.replace(old,
-        'toast("Wait for the translation…")\n        val out = translated ?: return', 1)
+        'toast(context.getString(R.string.translate_bar_wait))\n'
+        '        val out = translated ?: return', 1)
 
 else:
     raise SystemExit("test bug: unknown bar mutation %s" % kind)
+
+open(path, "w", encoding="utf-8").write(text)
+KOTLIN
+}
+
+edit_translator() { python3 - "$2/$TRANSLATOR" "$1" <<'KOTLIN'
+import sys
+path, kind = sys.argv[1], sys.argv[2]
+text = open(path, encoding="utf-8").read()
+
+if kind == "translate_goes_silent":
+    # THE DEFECT, PUT BACK VERBATIM. This is what `fun translate` shipped with:
+    # long-press TRANSLATE with no editor attached and the key did nothing and
+    # said nothing, which reads as a dead key, a missing engine, an unset target
+    # language and a failed translation all at once.
+    old = '''        if (ic == null)
+            return ended(appCtx, "pre-flight", "the input method has no connected editor",
+                R.string.translate_no_input_connection)'''
+    assert old in text, "test bug: cannot find the null-InputConnection exit"
+    text = text.replace(old, "        if (ic == null) return", 1)
+
+else:
+    raise SystemExit("test bug: unknown translator mutation %s" % kind)
 
 open(path, "w", encoding="utf-8").write(text)
 KOTLIN
@@ -254,6 +298,10 @@ expect_caught "an exit message with no Spanish is caught" \
 expect_caught "two exit messages reading identically is caught" \
     'says exactly what' \
     duplicate_english enhance_nothing_readable
+
+expect_caught "the long-press TRANSLATE key going silent again is caught" \
+    'TRANSLATE key — long press\]: silent exit' \
+    edit_translator translate_goes_silent
 
 expect_caught "the Translate bar's Insert losing its message is caught" \
     'Insert / Replace\]: silent exit' \

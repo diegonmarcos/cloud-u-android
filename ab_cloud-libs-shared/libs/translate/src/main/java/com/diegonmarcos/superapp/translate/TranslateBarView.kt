@@ -219,13 +219,13 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
 
         // ── Row 4: actions ───────────────────────────────────────────────────
         val actions = LinearLayout(context).apply { orientation = HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        insertBtn = chip("Insert") { apply(TranslatePrefs.APPLY_INSERT) }
-        replaceBtn = chip("Replace") { apply(TranslatePrefs.APPLY_REPLACE) }
+        insertBtn = chip(context.getString(R.string.translate_bar_insert)) { apply(TranslatePrefs.APPLY_INSERT) }
+        replaceBtn = chip(context.getString(R.string.translate_bar_replace)) { apply(TranslatePrefs.APPLY_REPLACE) }
         actions.addView(insertBtn); actions.gap()
         actions.addView(replaceBtn); actions.gap()
-        actions.addView(chip("Paste") { paste() }); actions.gap()
-        actions.addView(chip("Copy") { copy() }); actions.gap()
-        actions.addView(chip("Clear") { clear() })
+        actions.addView(chip(context.getString(R.string.translate_bar_paste)) { paste() }); actions.gap()
+        actions.addView(chip(context.getString(R.string.translate_bar_copy)) { copy() }); actions.gap()
+        actions.addView(chip(context.getString(R.string.translate_bar_clear)) { clear() })
         addView(actions, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
 
         renderInput(); renderChips(); highlightPrimary()
@@ -267,8 +267,8 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
         // would otherwise "Translating…" for 300 ms and then fail, one key at a time.
         val client = TranslateEngines.client
         showStatus(when {
-            client == null -> "No translate engine registered"
-            !client.isConnected() -> Translator.NOT_CONNECTED
+            client == null -> context.getString(R.string.translate_no_engine_registered)
+            !client.isConnected() -> Translator.notConnected(context)
             else -> ""
         })
     }
@@ -331,7 +331,7 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     private fun paste() {
         val clip = clipboard().primaryClip
         val text = if (clip != null && clip.itemCount > 0) clip.getItemAt(0).coerceToText(context).toString() else ""
-        if (text.isEmpty()) { toast("Clipboard is empty"); return }
+        if (text.isEmpty()) { toast(context.getString(R.string.translate_bar_clipboard_empty)); return }
         editor.insert(text)
         onChanged()
     }
@@ -387,10 +387,10 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
         val text = editor.text
         if (text.isBlank()) { showStatus(""); if (liveCommit) pushOutput(""); return }
         val job = Runnable {
-            showStatus("Translating…")
-            val slowJob = Runnable { showStatus("Still translating… first use downloads the language model (needs network once)") }
+            showStatus(context.getString(R.string.translate_bar_working))
+            val slowJob = Runnable { showStatus(context.getString(R.string.translate_bar_slow)) }
             slow = slowJob; ui.postDelayed(slowJob, SLOW_MS)
-            Translator.liveTranslate(text, fromTag, toTag, keyboardLang) { r ->
+            Translator.liveTranslate(context, text, fromTag, toTag, keyboardLang) { r ->
                 if (editor.text != text) return@liveTranslate   // stale
                 slow?.let { ui.removeCallbacks(it) }
                 onResult(r)
@@ -402,7 +402,7 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
 
     private fun onResult(r: Translator.Result) {
         val out = r.text
-        if (out == null) { translated = null; showStatus(r.error ?: "Translate failed"); return }
+        if (out == null) { translated = null; showStatus(r.error ?: context.getString(R.string.translate_failed, context.getString(R.string.translate_reason_unknown))); return }
         translated = out
         val det = r.detected
         if (fromTag == AUTO && det != null && det != "und") { detectedTag = det; renderChips() }
@@ -415,11 +415,11 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     // ── actions ──────────────────────────────────────────────────────────────
     private fun apply(mode: String) {
         val out = translated
-        if (out == null) { if (editor.isNotEmpty) toast("Wait for the translation…"); return }
+        if (out == null) { if (editor.isNotEmpty) toast(context.getString(R.string.translate_bar_wait)); return }
         // The field is gone (the host closed it, or focus moved) and the bar cannot
         // write anywhere. Saying so is the whole difference between a chip that is
         // busy and a chip that is broken: the translation is still here, above.
-        val ic = icp?.get() ?: run { toast("No text field to write into — tap where you want it first"); return }
+        val ic = icp?.get() ?: run { toast(context.getString(R.string.translate_bar_no_field)); return }
         if (output == Output.OWNED) {
             // Already in the field as our composing region — finishing it is the
             // whole apply. Committing again is what produced the second copy.
@@ -439,17 +439,17 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     }
 
     private fun copy() {
-        val out = translated ?: run { toast(if (editor.isNotEmpty) "Wait for the translation…" else "Type something to translate first"); return }
+        val out = translated ?: run { toast(if (editor.isNotEmpty) context.getString(R.string.translate_bar_wait) else context.getString(R.string.translate_bar_type_first)); return }
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
             .setPrimaryClip(ClipData.newPlainText("translation", out))
-        toast("Copied")
+        toast(context.getString(R.string.translate_bar_copied))
     }
 
     private fun clear() { editor.clear(); onChanged() }
 
     private fun swap() {
         val f = if (fromTag == AUTO) (detectedTag
-            ?: run { toast("No language detected yet — type something, or pick one instead of Auto"); return })
+            ?: run { toast(context.getString(R.string.translate_bar_no_detection)); return })
             else fromTag
         fromTag = toTag; toTag = f; detectedTag = null
         renderChips(); onChanged()
@@ -516,7 +516,7 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
         // is no longer one of them.
         insertBtn.visibility = View.VISIBLE
         replaceBtn.visibility = View.VISIBLE
-        showStatus("The app took that text over — use Insert or Replace")
+        showStatus(context.getString(R.string.translate_bar_taken_over))
     }
 
     /**
@@ -533,7 +533,7 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     // ── rendering ────────────────────────────────────────────────────────────
     private fun renderInput() {
         if (editor.isEmpty) {
-            inputView.text = "Type to translate…"
+            inputView.text = context.getString(R.string.translate_bar_hint)
             inputView.setTextColor(hintColor)
             inputView.setTypeface(null, Typeface.ITALIC)
             inputView.caret = -1

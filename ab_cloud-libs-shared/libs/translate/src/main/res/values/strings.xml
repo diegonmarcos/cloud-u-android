@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  WHY THIS FILE EXISTS. Every sentence below used to be a Kotlin string literal
+  inside Translator.kt or TranslateBarView.kt. The owner's phone is set to
+  Spanish, so each one of them reached her in English: the long-press TRANSLATE
+  toast, the translate bar's status line, and every reason the engine can give
+  for refusing. That is the same failure cloud-mail shipped 44 times over, and
+  the reason 1_cicd/src/scripts/cloud-android-i18n-guard.py now fails the build
+  on a partial locale.
+
+  Adding a key here without adding it to values-es/strings.xml fails that guard.
+  The guard cannot tell whether the Spanish is GOOD, only that it is PRESENT, so
+  copying English into the Spanish file passes it and still leaves the owner
+  reading English. Do not do that.
+-->
+<resources>
+
+    <!-- ── the one-shot entry point: long-press TRANSLATE ──────────────────
+         Every exit from Translator.translate() names exactly one of these, and
+         no two of them may read alike: the owner has to be able to tell which
+         failure she is looking at. cloud-android-silence-guard.py enforces both
+         halves of that. -->
+
+    <!-- The defect this file was opened for. The input method had no connected
+         editor, so the key did nothing at all and said nothing at all. -->
+    <string name="translate_no_input_connection">No text field is connected — tap the text you want to translate first</string>
+    <string name="translate_nothing_to_translate">Nothing to translate — the field is empty, or this application does not let the keyboard read it</string>
+    <string name="translate_failed">Translation failed — %1$s</string>
+    <string name="translate_stale">The text changed while translating — nothing was replaced</string>
+
+    <!-- Progress, not an exit: shown before the engine is called. -->
+    <string name="translate_in_progress">Translating → %1$s…</string>
+
+    <!-- ── reasons the engine itself gives ────────────────────────────────
+         These arrive as Translator.Result.error and are shown either by the
+         toast above or by the bar's status line, so they need Spanish just as
+         much as the exits do. -->
+    <string name="translate_no_engine_registered">No translation engine is registered</string>
+    <string name="translate_engine_not_connected">Translation engine not connected — install or update the Cloud Keyboard Libs companion application</string>
+    <string name="translate_engine_call_failed">The translation engine did not answer</string>
+    <string name="translate_engine_exception">The translation engine reported an error: %1$s</string>
+    <string name="translate_no_language_detected">Could not detect the language — choose a source language</string>
+    <string name="translate_engine_failed_model">The engine failed — the offline language model may still be downloading</string>
+    <string name="translate_empty_reply">The engine returned no translation</string>
+    <string name="translate_no_target">No target language is set — choose one in Translation settings</string>
+    <!-- Only ever substituted into translate_failed, and only if a failure
+         somehow arrives carrying no reason at all. -->
+    <string name="translate_reason_unknown">reason unknown</string>
+
+    <!-- ── the translate bar ──────────────────────────────────────────────-->
+    <string name="translate_bar_hint">Type to translate…</string>
+    <string name="translate_bar_working">Translating…</string>
+    <string name="translate_bar_slow">Still translating… the first use downloads the language model and needs the network once</string>
+    <string name="translate_bar_wait">Wait for the translation to finish…</string>
+    <string name="translate_bar_clipboard_empty">The clipboard is empty</string>
+    <string name="translate_bar_copied">Copied</string>
+    <string name="translate_bar_taken_over">The application took that text over — use Insert or Replace</string>
+    <string name="translate_bar_insert">Insert</string>
+    <string name="translate_bar_replace">Replace</string>
+    <string name="translate_bar_paste">Paste</string>
+    <string name="translate_bar_copy">Copy</string>
+    <string name="translate_bar_clear">Clear</string>
+    <string name="translate_bar_no_field">No text field to write into — tap where you want it first</string>
+    <string name="translate_bar_type_first">Type something to translate first</string>
+    <string name="translate_bar_no_detection">No language detected yet — type something, or choose one instead of Auto</string>
+
+</resources>
