@@ -355,6 +355,29 @@ else
     bad "no cache lookup -- every rotation re-runs the package-manager scan"
 fi
 
+echo "== T14: a fetch started before a refresh cannot re-poison the cache =="
+# invalidateCache() clearing the map is not enough on its own. A thread that
+# started BEFORE the refresh is still running after it, holding a result built
+# from the app list that was just discarded, and it writes that result into the
+# cleared map when it finishes. The generation counter is what makes the clear
+# stick: the thread captures it before starting and publishes only if it still
+# matches.
+if printf '%s\n' "$INVALIDATE" | grep -qF 'sCacheGeneration++'; then
+    ok "invalidateCache() advances the cache generation"
+else
+    bad "invalidateCache() does not advance the generation -- an in-flight fetch can undo the clear"
+fi
+if printf '%s\n' "$ASYNC" | grep -qF 'val generation = sCacheGeneration'; then
+    ok "the background fetch captures the generation before it starts"
+else
+    bad "the fetch does not capture a generation -- it cannot tell if it was invalidated mid-flight"
+fi
+if printf '%s\n' "$ASYNC" | grep -qF 'generation == sCacheGeneration'; then
+    ok "the fetch publishes only while its generation is still current"
+else
+    bad "the fetch publishes unconditionally -- a stale result can land after the clear"
+fi
+
 echo
 echo "-- test-phone-apps-strip-and-lazy-smart-folders: $PASS passed, $FAIL failed --"
 [ "$FAIL" -eq 0 ]

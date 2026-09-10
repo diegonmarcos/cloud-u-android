@@ -336,9 +336,14 @@ class PhoneAppsFragment : Fragment() {
             // outlives the fragment that started it, and holding that
             // fragment's Activity for the duration is a leak worth not having.
             val appContext = ctx.applicationContext
+            // Captured BEFORE the thread starts, checked before it publishes —
+            // see [sCacheGeneration].
+            val generation = sCacheGeneration
             Thread {
                 val computed = runCatching { computeSmartFolders(appContext, exclude) }.getOrNull()
-                if (computed != null) sCachedSmart = sCachedSmart + (exclude to computed)
+                if (computed != null && generation == sCacheGeneration) {
+                    sCachedSmart = sCachedSmart + (exclude to computed)
+                }
                 body.post {
                     // The user may well have navigated away while the package
                     // manager was answering. A detached body belongs to a
@@ -675,6 +680,26 @@ class PhoneAppsFragment : Fragment() {
          *  between two callers can only cost one recomputation. */
         @Volatile private var sCachedSmart: Map<Set<String>, List<SmartRendered>> = emptyMap()
 
+        /** Bumped by [invalidateCache]. A background selection captures this
+         *  before it starts and publishes only if it still matches.
+         *
+         *  WITHOUT IT THE REFRESH BUTTON HAS A HOLE. A thread that started
+         *  BEFORE the user refreshed is still running afterwards, holding a
+         *  result computed from the app list that was just thrown away. When it
+         *  finished it wrote that result into the cache — after the clear — and
+         *  the next render could serve it. The section would then show the app
+         *  set from before the refresh, which is the exact staleness the clear
+         *  exists to prevent, and it would survive until something invalidated
+         *  again. Narrow, because the thread the refresh starts has to lose a
+         *  race it begins with a head start in; real, because nothing made it
+         *  impossible.
+         *
+         *  A plain Int is enough: every [invalidateCache] caller is on the main
+         *  thread (the PACKAGE_ADDED receiver and the two refresh taps), so the
+         *  increment cannot interleave with itself. @Volatile is what makes the
+         *  new value visible to the background threads that read it. */
+        @Volatile private var sCacheGeneration = 0
+
         /** Invalidate every cache slot.
          *
          *  NO LONGER UNUSED. This said "Currently unused; killing + reopening
@@ -695,6 +720,7 @@ class PhoneAppsFragment : Fragment() {
             // freshly enumerated All Apps — the two halves of one page
             // disagreeing, which reads as the refresh not having worked.
             sCachedSmart = emptyMap()
+            sCacheGeneration++
         }
 
         /** Warm-up: kick a background Thread that enumerates installed
