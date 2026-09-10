@@ -479,3 +479,139 @@ vendored and says so in those words; the day a tree lands under any name at
 all, it gates it. When `ac_cloud-notes/` does exist, add the ship-workflow gate
 too: the repo-wide check catches vendoring, the ship gate catches the
 materialised tree at build time, and they are not the same event.
+
+---
+
+## 7. AMENDMENT 2026-09-10 (second run) — AFFiNE is the wrong product for this vault, licence aside
+
+Everything in sections 1 through 6 was re-verified independently against
+upstream `canary` at `cfda4858d550` (committed 2026-09-09). All of it holds.
+Two things are added here. The first makes the licence position worse than
+section 6 recorded. The second decides the question on its own, and would
+decide it the same way even if AFFiNE relicensed to MIT tomorrow.
+
+### 7.1 The MPL-2.0 carve-back does not reach the Rust crate
+
+Section 1 read the EE licence as ambiguous — "at best MPL-2.0" — on the
+strength of its second paragraph. That paragraph is narrower than it looks.
+It downgrades to MPL-2.0 only the part of the Software
+
+> "served client-side as an image, font, cascading stylesheet (CSS), file which
+> produces or is compiled, arranged, augmented, or combined into client-side
+> JavaScript".
+
+`packages/common/native` is a Rust crate. `app/build.gradle:155-164` compiles
+it, through `affine_mobile_native`, into `libaffine_mobile_native.so` and
+packages that `.so` into the APK. A native shared object is not an image, not
+a font, not CSS, and is not compiled into client-side JavaScript — it is
+loaded over JNI. **The carve-back does not apply to it.** For the Rust path
+the operative sentence is the unqualified one: *"it is forbidden to copy,
+merge, publish, distribute, sublicense, and/or sell the Software."*
+
+So the EE reach is not one ambiguous edge, it is three edges of which only the
+first is arguable:
+
+| # | Edge | Evidence | MPL carve-back? |
+|---|------|----------|-----------------|
+| 1 | `:service` Apollo codegen reads the EE backend schema | `service/build.gradle:16` → `../../../../../backend/server/src/schema.gql`; `app/build.gradle:89` `implementation project(':service')` | Arguable — output is generated Kotlin |
+| 2 | `affine_mobile_native` → `affine_common` | `mobile-native/Cargo.toml:20`, plain `[dependencies]` | **No** — compiled `.so` |
+| 3 | `affine_nbstore` → `affine_common` | `nbstore/Cargo.toml:16`, plain `[dependencies]`; `mobile-native/Cargo.toml:21` depends on nbstore unconditionally | **No** — compiled `.so` |
+
+`Cargo.toml:18` fixes the mapping: `affine_common = { path = "./packages/common/native" }`,
+and the root LICENSE now names `packages/common/native` explicitly alongside
+`packages/backend` rather than leaving it to be derived. `cloud-u-android` is a
+**public** repository, so vendoring that tree here is publishing it, which is
+the exact verb the EE licence forbids.
+
+### 7.2 The finding that actually decides it: AFFiNE cannot open the owner's notes
+
+The owner's notes already exist. `diegonmarcos/cloud-notes` is an Obsidian
+vault: 466 blobs, of which **179 are `.md`**, 11 are `.canvas`, plus a real
+`.obsidian/` configuration directory. Markdown files in folders on disk.
+
+AFFiNE does not store documents as files. Its on-device schema is
+`packages/frontend/native/schema/src/lib.rs`:
+
+```sql
+CREATE TABLE "snapshots" ( doc_id VARCHAR PRIMARY KEY NOT NULL, data BLOB NOT NULL, ... );
+CREATE TABLE "updates"   ( doc_id VARCHAR NOT NULL, data BLOB NOT NULL, ... );
+```
+
+Documents are opaque y-octo CRDT blobs keyed by `doc_id` inside a single SQLite
+database. There is no path column and no filename anywhere in the schema. A
+built Cloud Notes APK, installed on the owner's phone, would therefore open on
+an **empty workspace standing next to 179 markdown files it cannot read**. The
+best case is a one-way import that converts the vault into blobs and ends
+Obsidian-compatibility permanently; there is no folder-vault mode to point at
+`cloud-notes/`.
+
+This is worth stating plainly because it is independent of everything in
+sections 1-6: **even if the EE problem vanished, AFFiNE would not deliver what
+the owner asked for.** The licence blocker was hiding a product blocker.
+
+It also kills the sync story. The fleet syncs files with Syncthing. Syncthing
+replicates a directory of markdown fine; against a single binary SQLite file
+being written by a CRDT engine it produces whole-database conflict copies.
+
+### 7.3 Option 4 — a different product, the one the vault actually implies
+
+Sections 1-6 offered three options. A fourth was missing, and on 7.2 it is the
+only one that reaches the owner's goal. What his vault implies is not "a notes
+app" but *an Android editor for a directory of markdown files* — which is what
+Obsidian is doing for him today, and the only thing the tile has to replace.
+
+Candidates, all verified by reading the repository rather than a landing page:
+
+| Candidate | Licence (evidence) | Build system | Local-first | Fits clone-and-own? |
+|---|---|---|---|---|
+| **Markor** `gsantner/markor` | **Apache-2.0** — `LICENSE.txt`. GitHub's API reports `NOASSERTION` only because a copyright preamble precedes the Apache text; the body is verbatim Apache-2.0 | Plain Gradle: `settings.gradle`, `gradlew`, single `app/` module. No Node, no Rust, no NDK | Edits `.md` files in a directory. No account, no backend | **Yes** — same shape as `ac_cloud-mail` and `cloud-keyboard` |
+| Quillpad `quillpad/quillpad` | GPL-3.0 (API-classified) | Gradle KTS, `app/` module | Local, but own database — not a markdown folder | Yes, but loses 7.2's whole point |
+| Orgzly Revived | GPL-3.0 (API-classified) | Gradle, `app/` module | Org-mode files in a directory | Yes — but org-mode, not the owner's markdown |
+| Joplin | `NOASSERTION`, TypeScript | React Native | Own SQLite store | No — RN toolchain, and repeats the 7.2 mistake |
+| Notesnook | GPL-3.0, TypeScript | React Native | Own store | No — same two problems |
+
+**Recommendation: Markor, cloned and built.** The reasoning, against the two
+precedents named in the brief:
+
+- It matches the **`ac_cloud-mail` / `cloud-keyboard` precedent exactly** — a
+  plain Gradle Android tree with one `app/` module, which is the shape this
+  fleet's CI already compiles. None of AFFiNE's cost applies: no yarn install,
+  no `affine bundle`, no `cap sync`, no Rust cross-compile to `arm64-v8a`, no
+  `uniffi-bindgen`, no NDK.
+- **It opens the existing vault unmodified.** 179 `.md` files, in place, on day
+  one. Nothing to import and nothing to convert.
+- **Apache-2.0 permits exactly what we need**: redistributing a modified,
+  rebranded APK, requiring only that we retain the licence and NOTICE and state
+  our changes. No EE clause, no per-seat subscription, no forbidden verb.
+- **De-clouding it is nearly a no-op**, which is the honest version of the
+  claim. `app/build.gradle:43-55` already separates `flavorGplay` (which sets
+  `IS_GPLAY_BUILD`) from `flavorDefault`, whose block is *empty*. There is no
+  Firebase, no analytics and no crashlytics anywhere in its `dependencies`.
+  Building `flavorDefault` is de-Googled by construction. The real de-cloud
+  surface is small and nameable: `INTERNET` and `REQUEST_INSTALL_PACKAGES` in
+  `app/src/main/AndroidManifest.xml:18,20`, and the in-app update check they
+  serve.
+- **Mirror-and-pin survives as a fallback**, which it never did for AFFiNE.
+  Markor publishes a real signed APK per release —
+  `net.gsantner.markor-v163-2.16.1-flavorDefault-release.apk`, 12,065,877
+  bytes, well inside GitHub's 100 MB blob cap. So if the clone-and-build ever
+  stalls, there are bytes to mirror. AFFiNE had none: 0 `.apk`/`.aab` assets
+  across 100 releases, `releaseType: 'AAB'`.
+
+### 7.4 Still not an agent's call
+
+Nothing was created this run either: no `ac_cloud-notes/`, no `build.json`, no
+ship workflow, no Constellation entry, and the SuperApp's `Notes (Obsidian)`
+tile — `aa_cloud-superapp/build.json:2473`, deep-linking `obsidian://open` — is
+untouched. Swapping the owner's notes application for a different product is a
+product decision, and 7.2 makes it a decision about his existing vault, which
+raises the stakes rather than lowering them.
+
+The question is now a single one, and it is no longer "is AFFiNE lawful":
+
+> **Cloud Notes as Markor — an Android editor opening your existing Obsidian
+> vault directly — instead of AFFiNE? Yes or no.**
+
+A "yes" is a normal clone-and-own run of the kind this fleet does routinely. A
+"no, still AFFiNE" means committing to sever all three EE edges in 7.1 *and*
+accepting that the 179 markdown files do not come with it.
