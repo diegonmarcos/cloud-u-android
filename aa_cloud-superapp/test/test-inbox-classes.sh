@@ -22,6 +22,11 @@
 #   T5 every panel's `class` is declared, and exactly one class is the catch-all
 #   T6 no class names a package the central classification has never heard of
 #   T7 the classification is DATA — no package roster in the Kotlin that reads it
+#   T8 the DIALER's destination is asserted by name — #175's fourth kind was
+#      `dialer` and #243's fourth class is RSS, so the dialer had to be moved
+#      somewhere on purpose, and unnamed it falls silently to the catch-all
+#   T9 provenance survives aggregation — a card's list still says which
+#      application each entry came from, which is what the per-app page did well
 #
 # No ripgrep. Several testers here were written while rg was absent from the
 # runner and were passing on its absence; this one uses grep and python3, both
@@ -193,6 +198,44 @@ check(landed != "",
       "an app that NO class claims resolves to no class at all: its notifications "
       "would silently stop appearing on this page")
 
+# ── T8: THE DIALER'S DESTINATION IS A DECISION ───────────────────────
+# ui.inbox_classes replaced task #175's four kinds — mail, chat, messenger,
+# DIALER — with the owner's four of 2026-09-10 — Mail, Chat, Messenger, RSS.
+# The dialer therefore stopped being a class of its own and had to land
+# somewhere, and the failure mode is not a crash: unnamed, it falls to the
+# catch-all and sits in Other beside every app nobody has classified, which is
+# the same visibility a missed call had BEFORE #175 gave it a box. That regroup
+# would have quietly undone #175 and passed every other assertion in this file.
+#
+# So the destination is asserted by NAME. WANT is a literal on purpose — it is
+# the record of the decision, and reading it back out of build.json would be
+# comparing the data to itself and could only ever pass. The package is read
+# from ui.external_apps so a fork rename cannot make this tester silently stop
+# checking anything, and the lookup is class_of(), the same precedence
+# InboxClasses.classIdOf implements — so this asserts where the dialer ACTUALLY
+# lands, not where a second copy of the rule says it should.
+DIALER_WANT = "messenger"
+dialer_pkgs = set()
+for a in external:
+    if a.get("id") == "cloud-dialer":
+        for key in ("package", "hub_package", "alt_package", "install_package"):
+            p = a.get(key)
+            if isinstance(p, str) and p.strip():
+                dialer_pkgs.add(p.lower())
+check(bool(dialer_pkgs),
+      "ui.external_apps declares no 'cloud-dialer' entry with a package, so this tester "
+      "can no longer tell where dialer notifications go — if the fork was renamed, rename "
+      "it here; if it was retired, delete T8 deliberately rather than letting it go blind")
+for p in sorted(dialer_pkgs):
+    landed_dialer = class_of(p)
+    check(landed_dialer == DIALER_WANT,
+          "the dialer package '%s' lands in class '%s', but this tester records the decision "
+          "that it belongs in '%s'. Task #175 gave the dialer its own kind box and #243 "
+          "retired that kind; landing in the catch-all is how it loses the visibility #175 "
+          "gave it. Moving it is allowed — change ui.inbox_classes AND DIALER_WANT here, so "
+          "the decision is changed rather than forgotten."
+          % (p, landed_dialer or "no class at all", DIALER_WANT))
+
 # Which panels actually render, and which classes they name.
 panels = []
 for sec in ui["sections"]:
@@ -311,6 +354,84 @@ if grep -qF "UI_INBOX_CLASSES_B64" "$APP/app/build.gradle"; then
     ok "app/build.gradle bakes ui.inbox_classes into BuildConfig"
 else
     bad "app/build.gradle never bakes UI_INBOX_CLASSES_B64 — the roster would never reach the app"
+fi
+
+echo "== T9: an aggregated card still says which app each entry came from =="
+# The owner's objection to a pure aggregate, in his own terms: a Mail card that
+# shows fifteen unread but cannot tell him whether they are Cloud Mail or Gmail
+# is LESS useful than the per-app page it replaced. Aggregating the header is
+# the feature; aggregating the list would be the regression, and it is a
+# regression no data assertion above could see — ui.inbox_classes would be
+# perfectly valid while every card rendered one anonymous heap.
+#
+# Asserted on the RENDERER, which is where provenance is either kept or lost,
+# and scoped to renderClassInbox's own braces so a groupBy in a neighbouring
+# function cannot answer for it. Comments are stripped first: this KDoc talks
+# about packages and labels at length, and a guard that cannot tell prose from
+# code passes on its own explanation.
+FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
+[ -f "$FRAG" ] || { echo "  FAIL: missing $FRAG"; exit 1; }
+python3 - "$FRAG" <<'PY'
+import io, re, sys
+
+src = io.open(sys.argv[1], encoding="utf-8").read()
+src = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
+src = re.sub(r"^[ \t]*//.*$", "", src, flags=re.M)
+src = re.sub(r"[ \t]//.*$", "", src, flags=re.M)
+
+# Fail CLOSED. A renamed function must break this tester loudly, because the
+# alternative — grepping a body we never found and reporting "no problem" — is
+# the false green this repository has actually shipped.
+start = src.find("private fun renderClassInbox(")
+if start < 0:
+    print("  FAIL: renderClassInbox not found in AggregatorStackFragment.kt — if the class "
+          "card renderer was renamed, rename it here; this tester cannot check a body it "
+          "cannot find")
+    sys.exit(1)
+
+# The body is from the first brace after the signature to its match.
+open_at = src.find("{", start)
+depth, end = 0, -1
+for i in range(open_at, len(src)):
+    if src[i] == "{":
+        depth += 1
+    elif src[i] == "}":
+        depth -= 1
+        if depth == 0:
+            end = i
+            break
+if end < 0:
+    print("  FAIL: renderClassInbox's braces do not balance — cannot scope the check")
+    sys.exit(1)
+body = src[open_at:end]
+
+fails = []
+def check(cond, msg):
+    if not cond:
+        fails.append(msg)
+
+# One card's notifications are split PER APPLICATION before they are drawn.
+check(re.search(r"groupBy\s*\{\s*it\.packageName\s*\}", body) is not None,
+      "renderClassInbox does not group the class feed by packageName — the card would "
+      "render one anonymous heap and the owner could not tell Cloud Mail from Gmail")
+# Each group is NAMED by the app it came from, and carries the package id under
+# it. Both, because the label alone is ambiguous between two forks of one app
+# and the package alone is not something the owner should have to decode.
+check(re.search(r"label\s*=\s*[^\n]*appLabel", body) is not None,
+      "renderClassInbox builds a group with no appLabel — the entries would not name "
+      "the application they arrived from")
+check(re.search(r"sub\s*=\s*pkg\b", body) is not None,
+      "renderClassInbox builds a group whose sub-line is not the package id — two apps "
+      "sharing a label would be indistinguishable inside the card")
+
+for m in fails:
+    print("  FAIL: " + m)
+sys.exit(1 if fails else 0)
+PY
+if [ $? -eq 0 ]; then
+    ok "a class card groups its list per application and names each one"
+else
+    bad "provenance inside an aggregated card"
 fi
 
 echo
