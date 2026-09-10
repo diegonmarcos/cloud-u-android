@@ -33,46 +33,40 @@ lacks() { grep -qF -- "$2" "$1" && bad "$3 ($1)" || ok "$3"; }
 echo "== keyboard Text Resume / mail AI Resume: one prompt, shown as sent =="
 
 # ── T1 one home PER APPLICATION ──────────────────────────────────────────────
-# INVERTED, DELIBERATELY, AND THIS IS THE POINT OF THE CHANGE. This block used to demand exactly
-# ONE build.json carrying the summary prompts, on the reasoning that two copies agree on the day
-# they are written and never again. That reasoning is sound and it was answering the wrong
-# question. One home meant one owner, and the owner was the keyboard: from cloud-mail the summary
-# prompt could be READ and not changed, because it was not cloud-mail's. The owner asked for their
-# own set in mail. Two copies that are ALLOWED to disagree is the requirement, not the defect.
+# INVERTED ONCE, THEN DERIVED. This block first demanded exactly ONE build.json carrying the
+# summary prompts, on the reasoning that two copies agree on the day they are written and never
+# again. That reasoning is sound and it was answering the wrong question: one home meant one
+# owner, the owner was the keyboard, and from cloud-mail the summary prompt could be READ and not
+# changed. So it was inverted to demand exactly TWO homes, one per application.
 #
-# So: exactly two homes, one per application, and neither application reads the other's.
-homes=$(grep -rlF '"summary_preamble"' "$ROOT" --include=build.json 2>/dev/null | grep -v /z_archive/ | sort)
-n=$(printf '%s\n' "$homes" | grep -c . )
-[ "$n" = 2 ] && ok "T1 summary prompts live in exactly two build.json files, one per app" \
-             || bad "T1 $n build.json files declare summary prompts: $(echo $homes)"
-printf '%s\n' "$homes" | grep -qxF "$LIBS/build.json" \
-  && ok "T1 the keyboard's home is the shared-library registry" \
-  || bad "T1 the keyboard's home moved: $(echo $homes)"
-printf '%s\n' "$homes" | grep -qxF "$ROOT/ac_cloud-mail/build.json" \
-  && ok "T1 cloud-mail declares its own summary prompts" \
-  || bad "T1 cloud-mail has no summary prompts of its own - it would be reading the keyboard's"
-# THE ASSERTION THAT CARRIES THE REQUIREMENT: the two are separate stores, so an edit to one
-# cannot reach the other. Each app's build wiring may read its OWN block and no other.
-# COMMENTS STRIPPED. Both build files EXPLAIN that one block began as a copy of the other, and
-# that sentence is what stops the next reader from "fixing" the duplication. Naming the other
-# block in prose is not reading it; only code that resolves it is.
-# A DEREFERENCE, NOT THE WORD. Prose that names the other block is not reading it, and both build
-# files deliberately name it: mail's says its registry began as a copy of keyboard_ai, and its
-# missing-block error tells whoever hits it not to repoint the build at keyboard_ai. Those two
-# sentences are what stop the next reader from "fixing" the duplication, so the check has to be
-# narrower than a word search - it matches only the forms that actually resolve the block,
-# ["x"] / .x / ("x"), which is what a build or a parser would have to write.
-reads() {  # reads <block> <dir>...: does anything actually resolve <block>?
-  local block="$1"; shift
-  grep -rhE --include=*.gradle --include=*.gradle.kts --include=*.kt --include=*.java \
-    -- "[\[(]\"$block\"|\.$block\b" "$@" 2>/dev/null | grep -q .
-}
-reads 'keyboard_ai' "$ROOT/ac_cloud-mail/app" \
-  && bad "T1 cloud-mail reads keyboard_ai - editing mail's prompts would not be editing what it sends" \
-  || ok "T1 cloud-mail never reads keyboard_ai"
-reads 'mail_ai' "$LIBS/libs" "$ROOT/ac_cloud-keyboard" \
-  && bad "T1 the keyboard reads mail_ai - editing mail's prompts would change the keyboard" \
-  || ok "T1 the keyboard never reads mail_ai"
+# THE LITERAL 2 WAS THE NEXT BUG, and it fired the first time a third participant arrived:
+# ac_cloud-writer - the application the owner asked for, with its own registry and a model per
+# tool - turned this check red while breaking nothing, and it did so inside the SuperApp's
+# release, which is a build cloud-writer must not be able to fail. Worse, the two pairwise "never
+# reads the other's block" checks named keyboard_ai and mail_ai and their directories in the
+# script, so the new application was not merely uncounted: it was invisible to the very assertion
+# that exists to catch a shared store.
+#
+# The requirement was never the number. It is: EVERY participant has a home of its own, the set of
+# homes is DECLARED rather than discovered by accident, and no participant resolves another's
+# block. All three are derived from aa_cloud-superapp/test/ai-registries.json - the file that
+# already declares every AI registry here and whose own note says a copy nothing lists is a copy
+# nothing checks. A fourth participant is one JSON entry and no edit to this file.
+REGISTRIES="$APP/test/ai-registries.json"
+[ -f "$REGISTRIES" ] || { echo "  FAIL: $REGISTRIES is missing - T1 has no subjects"; exit 1; }
+
+t1_out="$(python3 "$APP/test/ai-registry-homes.py" "$REGISTRIES" "$ROOT")"
+t1_rc=$?
+printf '%s\n' "$t1_out"
+# The helper prints its own ok:/FAIL: lines; fold its verdict into this file's counters so one
+# failure there is one failure here rather than a line nobody totals.
+t1_ok=$(printf '%s\n' "$t1_out" | grep -c '^  ok: ')
+t1_bad=$(printf '%s\n' "$t1_out" | grep -c '^  FAIL: ')
+PASS=$((PASS + t1_ok)); FAIL=$((FAIL + t1_bad))
+if [ "$t1_rc" != "0" ] && [ "$t1_bad" = "0" ]; then
+  echo "  FAIL: T1 helper exited $t1_rc without saying why - its verdict is not evidence"
+  FAIL=$((FAIL + 1))
+fi
 
 # ── T2 displayed == sent ─────────────────────────────────────────────────────
 # The whole requirement is the word "actually": a screen showing a prompt the code does
