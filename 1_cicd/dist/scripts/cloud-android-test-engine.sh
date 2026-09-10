@@ -93,7 +93,7 @@ shell)
         exit 1
     fi
 
-    total=0; failed=0; quarantined=0; revived=0
+    total=0; failed=0; quarantined=0; revived=0; flaky=0
     for t in "$tdir"/test-*.sh; do
         [ -e "$t" ] || continue
         base="$(basename "$t")"
@@ -111,6 +111,22 @@ shell)
         [ -x "$t" ] || chmod +x "$t" 2>/dev/null || true
         if "$t"; then rc=0; else rc=$?; fi
 
+        # ── unstable: the verdict itself is not trustworthy ──────────────
+        # Distinct from quarantine ON PURPOSE. Quarantine says "this FAILS,
+        # here is why" and turns fatal the moment it passes. That cannot
+        # describe a tester which passes on one machine and fails on another
+        # over byte-identical input: quarantining it would go fatal wherever it
+        # passes, and not quarantining it goes fatal wherever it fails. Such a
+        # tester currently proves nothing either way, and saying so out loud on
+        # every run is more honest than picking whichever colour is convenient.
+        # Both outcomes are logged; neither is fatal; the gap is counted.
+        unstable="$(_json ".tests.shell.unstable[\"$base\"]")"
+        if [ -n "$unstable" ]; then
+            warn "$base is UNSTABLE (exit $rc — proves nothing either way): $unstable"
+            flaky=$((flaky + 1))
+            continue
+        fi
+
         if [ -n "$reason" ]; then
             if [ "$rc" -eq 0 ]; then
                 # The entry outlived its reason. Fatal ON PURPOSE.
@@ -126,8 +142,9 @@ shell)
         [ "$rc" -eq 0 ] || { err "$base FAILED (exit $rc)"; failed=$((failed + 1)); }
     done
 
-    echo "── shell testers [$APP_NAME]: $total ran, $failed failed, $quarantined quarantined, $revived revived ──"
+    echo "── shell testers [$APP_NAME]: $total ran, $failed failed, $quarantined quarantined, $flaky unstable, $revived revived ──"
     [ "$quarantined" -eq 0 ] || _uncovered "$quarantined tester(s) allowed to fail — see ::warning:: lines above"
+    [ "$flaky" -eq 0 ] || _uncovered "$flaky tester(s) marked UNSTABLE — their result is not evidence in either direction"
     [ "$failed" -eq 0 ] && [ "$revived" -eq 0 ]
     ;;
 

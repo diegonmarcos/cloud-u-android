@@ -22,7 +22,13 @@
     "shell": {
       "dir": "test",
       "_doc_requires": "Tools the testers shell out to, checked BEFORE any of them runs. A missing tool does not make a tester fail — it makes the tester answer from the tool's absence, and every one of these scripts discards stderr, so 'command not found' never reaches the log. Mail's testers use python3 for their whole-string comparisons; naming it converts a silent green into a loud red.",
-      "requires": ["python3"],
+      "requires": [
+        "python3"
+      ],
+      "_doc_unstable": "Filename -> why its verdict cannot be trusted. SEPARATE FROM quarantine, which asserts 'this fails' and goes fatal the moment it passes. A tester that passes on one machine and fails on another over byte-identical input fits neither list: quarantining it goes fatal wherever it passes. It is logged loudly on every run, in both directions, and counted as a coverage gap - because it is one.",
+      "unstable": {
+        "test-mail-attachment-chips.sh": "A5 'the chips are drawn inside the row's own column' extracts EmailListItem's body with awk range /^fun EmailListItem\\(/,/^}/ and greps it for AttachmentChips(. It FAILS ON THE GITHUB RUNNER (run 34441555819: 67 passed, 1 failed) and PASSES on the container this was developed in (68 passed, 0 failed) — on byte-identical EmailListItem.kt and byte-identical tester, verified with git diff against the exact commit CI tested. The PROPERTY HOLDS: AttachmentChips( is at line 345, inside EmailListItem which spans 136-424. So the assertion, not the code, is what differs. The mechanism is NOT conclusively isolated: the leading suspect is the awk implementation (this container has only mawk; the escape \\( in an ERE range pattern is not portable), but that could not be reproduced here because no second awk is installed. This is the same CLASS as the rg finding — a verdict that depends on which tool the machine happens to have. It needs rewriting to a portable extraction, not a code change."
+      },
       "_doc_quarantine": "Filename → the REASON that tester may fail, and it must read as a reason, not a label. This list is deliberately short, enumerated and visible: it is NOT a continue-on-error, because a quarantined tester that starts PASSING fails the build so the entry cannot outlive its reason. Anything not named here is fatal.",
       "quarantine": {
         "test-mail-html.sh": "H9 asserts the literal source text `enum class TextTool { ENHANCE, TRANSLATE, RESUME }`, but the enum legitimately grew constructor parameters and is now declared across several lines. The three constants are all still there — the assertion pins the DECLARATION'S FORMATTING, not the property it means to protect. STALE TEST, not a defect. Remove this entry when H9 is rewritten to assert the three constants instead of the one-line declaration.",
