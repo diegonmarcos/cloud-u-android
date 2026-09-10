@@ -152,13 +152,35 @@ class StoredSignatureMigrationTest {
 
     @Test fun typedPlainTextStaysPlainTextAndUntouched() {
         // The label promises "plain text OR HTML": a plain signature must not be put through an HTML
-        // pipeline that escapes or reflows it.
-        val typed = StoredSignature.of("s", "Home", "Alex Rivera\nAcme & co <not a tag")
+        // pipeline that escapes or reflows it. The ampersand and the angle bracket are the two
+        // characters an HTML pipeline would rewrite, so they are what makes this assertion mean
+        // something — the bracket is followed by a SPACE, which is what keeps this string on the
+        // plain side of [looksLikeHtml]; see the companion test below for the other side.
+        val typed = StoredSignature.of("s", "Home", "Alex Rivera\nAcme & co, 5 < 6")
         assertTrue(!typed.isHtml)
         assertEquals("", typed.html)
-        assertEquals("Alex Rivera\nAcme & co <not a tag", typed.text)
-        assertEquals("Alex Rivera\nAcme & co <not a tag", typed.source())
+        assertEquals("Alex Rivera\nAcme & co, 5 < 6", typed.text)
+        assertEquals("Alex Rivera\nAcme & co, 5 < 6", typed.source())
         assertEquals("", typed.renderableHtml())
+    }
+
+    @Test fun proseWhoseAngleBracketTouchesALetterIsTreatedAsMarkup() {
+        // The known sharp edge of [looksLikeHtml], pinned rather than hidden. Its discriminator is
+        // `<[a-zA-Z/!]`, so "<not" and "<also" read as an opening tag and the signature is filed as
+        // HTML even though the owner meant prose. This is DELIBERATELY not "fixed" here: the same
+        // discriminator decides how a legacy stored signature is split, so loosening it would change
+        // what existing installs migrate to — a bigger decision than one test.
+        //
+        // What the test does guarantee is that being mis-filed costs the owner nothing: their words
+        // survive in the plain half, and the stray bracket is escaped rather than swallowed on the
+        // way to a renderer.
+        val prose = StoredSignature.of("s", "Home", "see <also the appendix")
+        assertTrue("the heuristic files this as markup", prose.isHtml)
+        assertEquals("the words are not lost", "see <also the appendix", prose.text)
+        assertEquals("the owner still edits what they typed", "see <also the appendix", prose.source())
+        val rendered = prose.renderableHtml()
+        assertTrue("the stray bracket is escaped", rendered.contains("&lt;"))
+        assertTrue("and the sentence survives it", rendered.contains("appendix"))
     }
 
     @Test fun theEditorShowsTheSourceSoTypedMarkupSurvivesRecomposition() {
