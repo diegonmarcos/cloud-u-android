@@ -22,10 +22,10 @@ import android.widget.ArrayAdapter
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ListPopupWindow
-import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.edit
+import com.diegonmarcos.superapp.translate.CappedScrollView
 import com.diegonmarcos.superapp.translate.TranslateInputView
 import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.settings.Settings
@@ -324,12 +324,15 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
 
     /**
      * Navigation and clipboard toolbar keys, applied to the output box instead of the
-     * app's field while the bar is open. Returns false when the key is not one of
-     * them — or when the box is empty and the action would do nothing — so LatinIME
-     * can fall back to its normal handling.
+     * app's field while the bar is open. Returns false only when the key is not one of
+     * them, so LatinIME can fall back to its normal handling.
+     *
+     * An EMPTY box is NOT such a case, though it used to be: LatinIME only asks while
+     * the box owns the keys, so falling through then applied the key to the app's field
+     * behind the bar — invisible to a user looking at the box, and for CUT or SELECT_ALL
+     * destructive of text this bar never owned. Empty means the action does nothing.
      */
     fun onEdit(keyCode: Int): Boolean {
-        if (buffer.isEmpty() && keyCode != KeyCode.CLIPBOARD_PASTE) return false
         when (keyCode) {
             KeyCode.ARROW_LEFT -> stepCaret(-1)
             KeyCode.ARROW_RIGHT -> stepCaret(1)
@@ -340,9 +343,9 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
             KeyCode.ARROW_DOWN, KeyCode.MOVE_END_OF_LINE -> setCaret(buffer.length)
             KeyCode.CLIPBOARD_SELECT_ALL -> select(0, buffer.length)
             KeyCode.CLIPBOARD_SELECT_WORD -> selectWordAt(selLo())
-            KeyCode.CLIPBOARD_COPY -> { copySelection(); return true }
-            KeyCode.CLIPBOARD_CUT -> { cutSelection(); return true }
-            KeyCode.CLIPBOARD_PASTE -> { pasteIntoBox(); return true }
+            KeyCode.CLIPBOARD_COPY -> copySelection()
+            KeyCode.CLIPBOARD_CUT -> cutSelection()
+            KeyCode.CLIPBOARD_PASTE -> pasteIntoBox()
             else -> return false
         }
         renderOutput()
@@ -738,6 +741,8 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
             // is drawn only while the box actually has them.
             outputView.caret = if (editingOutput) selStart else -1
         }
+        // Posted: the layout still describes the text set BEFORE this call.
+        outputView.post { outputView.revealCaret() }
     }
 
     private fun showStatus(msg: String) {
@@ -746,17 +751,6 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
     }
 
     // ── view helpers ─────────────────────────────────────────────────────────
-    /** A ScrollView that grows with its content up to [maxHeight] and scrolls past it. */
-    private class CappedScrollView(context: Context, private val maxHeight: Int) : ScrollView(context) {
-        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-            val size = MeasureSpec.getSize(heightMeasureSpec)
-            val mode = MeasureSpec.getMode(heightMeasureSpec)
-            val capped = if (mode == MeasureSpec.UNSPECIFIED || size > maxHeight)
-                MeasureSpec.makeMeasureSpec(maxHeight, MeasureSpec.AT_MOST) else heightMeasureSpec
-            super.onMeasure(widthMeasureSpec, capped)
-        }
-    }
-
     private fun chip(label: String, color: Int = chipColor, onTap: () -> Unit) = TextView(context).apply {
         text = label; setTextColor(Color.WHITE); textSize = 13f
         setPadding(dp(12), dp(3), dp(12), dp(3))

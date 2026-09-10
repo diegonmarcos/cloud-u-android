@@ -54,10 +54,15 @@ enum class TranslateEdit {
  *
  * Input model: while the bar is open, LatinIME routes printable keys +
  * backspace into [buffer]; nothing touches the app field until the user
- * applies (Insert at cursor / Replace selection-or-field / Copy). The
- * previous "live commit" model (translation written into the field as you
- * type, rewound by length on every change) is kept as an opt-in setting —
- * it breaks as soon as the host app touches its own text.
+ * applies (Insert at cursor / Replace selection-or-field / Copy).
+ *
+ * Live commit (on by default) additionally streams the translation into the app
+ * field as you type. Two buffers then exist — [buffer] and the host's field — and
+ * [Output] is the rule that keeps them from fighting: the bar's buffer is always
+ * the user's, the bar owns exactly ONE span of the host field, it owns that span
+ * as a composing region so the platform tracks it, and it gives the span up the
+ * moment the host says otherwise. [onHostOutputDropped] carries the argument for
+ * why that arrangement cannot loop.
  *
  * Settings + recent pairs: [TranslatePrefs]. Engine: [Translator].
  * Lives in libs:translate; the cloud-keyboard tree (libs/keyboard) hosts it in LatinIME.
@@ -71,6 +76,8 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         private val DEFAULT_LANGS = TranslatePrefs.FALLBACK_LANGS
         /** Pinned above the full alphabetical list in the picker, in this order. */
         private val MOST_USED = listOf("en", "es", "de", "pt", "fr", "ko", "ja")
+        /** Height of the input box, in lines; it scrolls past this rather than clipping. */
+        private const val INPUT_LINES = 3
         private const val DEBOUNCE_MS = 300L
         private const val SLOW_MS = 8000L
         private const val AUTO = Translator.AUTO
@@ -91,13 +98,48 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
     private var detectedTag: String? = null
     private var translated: String? = null
 
+    /**
+     * Who owns the translation the bar has put into the host app's field.
+     *
+     * The bar's own [buffer] is never in question — nothing outside this class
+     * writes to it, so the SOURCE text is always the user's. What needs an owner is
+     * the OUTPUT: the span of the host field holding the last translation, which the
+     * bar has to be able to revise on the next keystroke without either deleting
+     * words it never wrote or leaving a second copy of its own behind.
+     */
+    private enum class Output {
+        /** Nothing of the bar's is in the field, or what was there is the app's for good. */
+        NONE,
+
+        /**
+         * The translation is in the field as a COMPOSING region. That is the
+         * platform's own primitive for "provisional text I intend to revise": it
+         * tracks the span across the host app's edits, [InputConnection.setComposingText]
+         * replaces exactly it, and the host leaves it alone instead of running its
+         * own autocorrect over half a translation.
+         */
+        OWNED,
+
+        /**
+         * The host dropped the composing region — the user tapped into the app, or
+         * the app rewrote its own field. What the bar wrote is the app's text now,
+         * and revising it would mean guessing; both guesses are wrong. Deleting eats
+         * words the bar never wrote. Appending leaves the duplicate the owner
+         * reported. So the bar stops writing and hands back Insert/Replace.
+         *
+         * Terminal for the session: nothing moves out of LOST except a fresh
+         * [onShown]. That is what bounds the re-sync engine — see [onHostOutputDropped].
+         */
+        LOST,
+    }
+
     private val buffer = StringBuilder()
     // Caret / selection over `buffer`, in the same units (UTF-16 offsets). Equal =
     // a collapsed caret; unequal = a selection, and selStart is the drag anchor so
     // it may be greater than selEnd — use selLo()/selHi() to read a range.
     private var selStart = 0
     private var selEnd = 0
-    private var lastOutput = ""          // live-commit mode: what we've committed to the app field
+    private var output = Output.NONE     // live-commit mode: who owns the text in the app field
     private var liveCommit = TranslatePrefs.DEFAULT_LIVE_COMMIT
     private var applyMode = TranslatePrefs.DEFAULT_APPLY_MODE
 
@@ -136,11 +178,18 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
 
         // ── Row 2: input buffer ──────────────────────────────────────────────
         inputView = TranslateInputView(context).apply {
-            textSize = 16f; setTextColor(Color.WHITE); maxLines = 3; setPadding(0, dp(6), 0, 0)
+            textSize = 16f; setTextColor(Color.WHITE); setPadding(0, dp(6), 0, 0)
             isClickable = true
         }
         attachInputTouch()
-        addView(inputView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        // Capped and SCROLLABLE, not capped by maxLines: the bar must stay short
+        // enough to leave the keys visible, but a maxLines cap makes everything past
+        // the last line unreachable — the caret walks off the box and the user is
+        // editing text they cannot see. INPUT_LINES is a window, not a limit.
+        addView(CappedScrollView(context, inputView.lineHeight * INPUT_LINES + dp(6)).apply {
+            isFillViewport = true
+            addView(inputView, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+        }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
 
         // ── Row 3: live preview / status ─────────────────────────────────────
         previewView = TextView(context).apply {
@@ -171,7 +220,7 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
 
     /** Called by LatinIME each time the bar is shown — fresh session, settings re-read. */
     fun onShown() {
-        buffer.setLength(0); setCaret(0); lastOutput = ""; translated = null; detectedTag = null
+        buffer.setLength(0); setCaret(0); output = Output.NONE; translated = null; detectedTag = null
         liveCommit = TranslatePrefs.liveCommit(context)
         applyMode = TranslatePrefs.applyMode(context)
         val langs = toLangs()
@@ -285,11 +334,15 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
 
     /**
      * Editing keys the IME hands over while the bar is open (see [TranslateEdit]).
-     * Returns false when the buffer is empty and the action would be a no-op, so
-     * the caller can fall back to its normal handling.
+     *
+     * ALWAYS consumed, and the return type is kept only so the caller reads as a
+     * chain. These keys are routed here solely because the bar is open, so letting
+     * one fall through applies it to the app's field BEHIND the bar — invisible to
+     * a user who is looking at the bar, and for CUT or SELECT_ALL destructive of
+     * text the bar never owned. An empty buffer means the action does nothing; it
+     * does not mean somebody else should do it instead.
      */
     fun onEdit(action: TranslateEdit): Boolean {
-        if (buffer.isEmpty() && action != TranslateEdit.PASTE) return false
         when (action) {
             TranslateEdit.LEFT -> stepCaret(-1)
             TranslateEdit.RIGHT -> stepCaret(1)
@@ -299,9 +352,9 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
             TranslateEdit.LINE_END -> setCaret(buffer.length)
             TranslateEdit.SELECT_ALL -> select(0, buffer.length)
             TranslateEdit.SELECT_WORD -> selectWordAt(selLo())
-            TranslateEdit.COPY -> { copySelection(); return true }
-            TranslateEdit.CUT -> { cutSelection(); return true }
-            TranslateEdit.PASTE -> { paste(); return true }
+            TranslateEdit.COPY -> copySelection()
+            TranslateEdit.CUT -> cutSelection()
+            TranslateEdit.PASTE -> paste()
         }
         renderInput()
         return true
@@ -432,8 +485,10 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         val out = translated
         if (out == null) { if (buffer.isNotEmpty()) toast("Wait for the translation…"); return }
         val ic = icp?.get() ?: return
-        if (liveCommit) {
-            lastOutput = ""   // already in the field — just end the session
+        if (output == Output.OWNED) {
+            // Already in the field as our composing region — finishing it is the
+            // whole apply. Committing again is what produced the second copy.
+            releaseOutput(ic, keep = true)
         } else if (mode == TranslatePrefs.APPLY_REPLACE) {
             val hadSelection = !ic.getSelectedText(0).isNullOrEmpty()
             Translator.replaceInField(ic, hadSelection, out)
@@ -461,22 +516,79 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
         renderChips(); onChanged()
     }
 
-    /** Live-commit mode only: replace the previously-committed translation in the app field with [out]. */
+    /**
+     * Live-commit mode: put [out] in the field as the bar's composing region,
+     * replacing whatever the bar put there before.
+     *
+     * One InputConnection call, because the composing region IS the platform's
+     * re-sync primitive — it survives the host reflowing its own text, and
+     * setComposingText replaces it atomically with no character count to get wrong.
+     *
+     * The version this replaces retracted by length and then committed, and when it
+     * could not CONFIRM the retract it committed anyway: the old translation stayed
+     * and a new one landed after it. That is the text appearing twice, and then
+     * three times, that the owner reported.
+     */
     private fun pushOutput(out: String) {
+        if (output == Output.LOST) return      // not the bar's to revise any more
         val ic = icp?.get() ?: return
+        if (out.isEmpty()) { releaseOutput(ic, keep = false); return }
+        output = Output.OWNED
+        ic.setComposingText(out, 1)
+    }
+
+    /**
+     * End the composing region. [keep] true leaves the text in the field as the app's
+     * own — the user applied it, or the bar is closing on top of it; false takes it
+     * back out, which is what an emptied buffer means.
+     */
+    private fun releaseOutput(ic: InputConnection, keep: Boolean) {
+        if (output != Output.OWNED) { output = Output.NONE; return }
+        // NONE *before* the calls, and this order is load-bearing. finishComposingText
+        // makes the host report a composing span of -1, which is the same signal a host
+        // takeover sends; releasing while still OWNED would have the bar read its own
+        // hand-over as the app stealing the text and go LOST for no reason.
+        output = Output.NONE
         ic.beginBatchEdit()
-        // Only retract our own previous output. Deleting lastOutput.length blindly
-        // eats whatever is actually there if the field moved underneath us (the user
-        // tapped elsewhere, the app rewrote the field, autocorrect fired) — and with
-        // live commit now on by default that would be everyone's data loss, not an
-        // opt-in's. If what precedes the cursor is not what we wrote, leave it alone.
-        if (lastOutput.isNotEmpty()) {
-            val before = ic.getTextBeforeCursor(lastOutput.length, 0)?.toString()
-            if (before == lastOutput) ic.deleteSurroundingText(lastOutput.length, 0)
-        }
-        if (out.isNotEmpty()) ic.commitText(out, 1)
-        lastOutput = out
+        if (!keep) ic.setComposingText("", 1)
+        ic.finishComposingText()
         ic.endBatchEdit()
+    }
+
+    /**
+     * The host field reported that the bar's composing region is gone — LatinIME
+     * passes a composing span of -1 for exactly this. The user tapped into the app,
+     * or the app rewrote its own text; either way what the bar wrote is the app's now.
+     *
+     * WHY THE UPDATE LOOP TERMINATES. This handler is the only thing in the bar that
+     * reacts to the host field, and it neither writes to the field nor touches
+     * [buffer] — so it cannot cause the update it is reacting to, which is the loop a
+     * naive listener falls into. The bar's own writes report a span of >= 0 and never
+     * reach the body at all; its own [releaseOutput] does report -1, but sets NONE
+     * first, so the guard below returns. That leaves a host-originated drop as the
+     * only way in, and OWNED -> LOST as the only transition: one-way, and terminal
+     * until the next [onShown]. The handler therefore does work at most ONCE per
+     * session, and after it nothing writes to the field at all.
+     */
+    fun onHostOutputDropped() {
+        if (output != Output.OWNED) return
+        output = Output.LOST
+        // There still has to be a way to get the translation out, and live commit
+        // is no longer one of them.
+        insertBtn.visibility = View.VISIBLE
+        replaceBtn.visibility = View.VISIBLE
+        showStatus("The app took that text over — use Insert or Replace")
+    }
+
+    /**
+     * The bar is closing. A composing region left behind would leave the host app's
+     * text provisional and underlined for a field nothing is watching any more, so it
+     * is handed over as the app's own on the way out.
+     */
+    fun onHidden() {
+        pending?.let { ui.removeCallbacks(it) }
+        slow?.let { ui.removeCallbacks(it) }
+        icp?.get()?.let { releaseOutput(it, keep = true) }
     }
 
     // ── rendering ────────────────────────────────────────────────────────────
@@ -501,6 +613,9 @@ class TranslateBarView(context: Context) : LinearLayout(context) {
             inputView.text = buffer.toString()
             inputView.caret = selStart
         }
+        // Posted: the layout still describes the text set BEFORE this call, and
+        // scrolling against a stale layout lands on the wrong line.
+        inputView.post { inputView.revealCaret() }
     }
 
     private fun showStatus(msg: String) {

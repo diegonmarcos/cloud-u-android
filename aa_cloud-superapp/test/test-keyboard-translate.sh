@@ -14,6 +14,11 @@
 #   T7  AIDL: translateFrom stays LAST (transaction codes follow declaration
 #       order — an older companion must still answer translate()), both copies equal
 #   T8  ownership rule: no "HeliBoard" wording in the translate-owned files
+#   T9  output re-sync engine: the bar owns ONE span of the app's field, owns it
+#       as a composing region, gives it up when the host drops it, and never
+#       writes after that — the three symptoms of "re-pastes the same text"
+#   T10 the shared text box: no bar clips its own text, and no bar lets an
+#       editing key fall through onto the field hidden behind it
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$APP/.."
@@ -99,6 +104,58 @@ done
 # T8 ownership wording
 for f in "$T"/*.kt "$M"/*.kt "$M"/*.java "$AIDL_CLIENT" "$SERVICE"; do
   lacks "$f" 'HeliBoard\|sync-heliboard' "T8 no HeliBoard wording in ${f##*/}"
+done
+
+# T9 output re-sync engine (TranslateBarView)
+has "$T/TranslateBarView.kt" 'private enum class Output {' "T9 output ownership is a declared state, not a loose string"
+for st in NONE OWNED LOST; do has "$T/TranslateBarView.kt" "^        $st," "T9 Output.$st declared"; done
+has "$T/TranslateBarView.kt" 'ic.setComposingText(out, 1)' "T9 live output is a composing region, not a bare commit"
+lacks "$T/TranslateBarView.kt" 'deleteSurroundingText' "T9 no retract-by-length — the call that duplicated the text"
+lacks "$T/TranslateBarView.kt" 'lastOutput' "T9 the character-count guess is gone entirely"
+has "$T/TranslateBarView.kt" 'if (output == Output.LOST) return' "T9 a lost span is never written to again"
+has "$T/TranslateBarView.kt" 'fun onHostOutputDropped()' "T9 the host-takeover signal has a handler"
+has "$T/TranslateBarView.kt" 'fun onHidden()' "T9 the region is handed over when the bar closes"
+# Termination: the handler must not write to the field or to the buffer, or it
+# would cause the very update it reacts to. Checked over its body, not the file.
+# An empty body must FAIL, not pass by finding nothing to complain about — a
+# check whose window has drifted off the code is worse than no check.
+resync=$(awk '/fun onHostOutputDropped\(\)/,/^    }/' "$T/TranslateBarView.kt")
+if [ -z "$resync" ]; then
+  bad "T9 onHostOutputDropped body not found (anchor drifted) — loop proof unchecked"
+else
+  echo "$resync" | grep -qE 'ic\.|icp|buffer\.|onChanged\(' \
+    && bad "T9 the drop handler writes to the field or the buffer — it can re-enter" \
+    || ok "T9 the drop handler only reads state and shows views, so it cannot loop"
+  echo "$resync" | grep -q 'output = Output.LOST' \
+    && ok "T9 the drop handler's only transition is OWNED -> LOST" \
+    || bad "T9 drop handler does not reach LOST"
+fi
+has "$J/latin/LatinIME.java" 'mTranslateBar.onHostOutputDropped();' "T9 LatinIME reports the dropped composing span"
+has "$J/latin/LatinIME.java" 'isTranslateBarActive() && composingSpanEnd < 0' "T9 and only when the span is actually gone"
+has "$J/latin/LatinIME.java" 'mTranslateBar.onHidden();' "T9 LatinIME hands the region over before hiding the bar"
+awk '/void toggleTranslateBar/,/^    }/' "$J/latin/LatinIME.java" | grep -q 'commitTyped' \
+  && ok "T9 a half-typed word is committed before the bar starts composing" \
+  || bad "T9 opening the bar would replace the user's word in progress"
+# The design's own proof, run: python3 translate-resync-model.py
+if python3 "$(dirname "$0")/translate-resync-model.py" >/tmp/kb-tr-model.$$ 2>&1; then
+  ok "T9 re-sync state machine: $(grep -c '  ok:' /tmp/kb-tr-model.$$) model assertions pass"
+else
+  bad "T9 re-sync state machine model: $(grep '^FAILED' /tmp/kb-tr-model.$$)"
+fi
+rm -f /tmp/kb-tr-model.$$
+
+# T10 the shared text box, used by BOTH bars
+has "$T/TranslateInputView.kt" 'class CappedScrollView' "T10 the capped scroller lives with the box it belongs to"
+lacks "$J/latin/EnhanceBarView.kt" 'private class CappedScrollView' "T10 the enhance bar no longer keeps its own copy"
+has "$J/latin/EnhanceBarView.kt" 'import com.diegonmarcos.superapp.translate.CappedScrollView' "T10 it uses the shared one"
+has "$T/TranslateBarView.kt" 'CappedScrollView(context, inputView.lineHeight \* INPUT_LINES' "T10 the translate input scrolls instead of clipping"
+lacks "$T/TranslateBarView.kt" 'maxLines = 3; setPadding(0, dp(6), 0, 0)' "T10 the input box is no longer capped by maxLines"
+has "$T/TranslateInputView.kt" 'fun revealCaret()' "T10 the caret is kept inside the scrolled window"
+# Falling through applies the key to the field BEHIND the bar — for CUT, destructively.
+for f in "$T/TranslateBarView.kt" "$J/latin/EnhanceBarView.kt"; do
+  awk '/fun onEdit\(/,/^    }/' "$f" | grep -q 'buffer.isEmpty() &&' \
+    && bad "T10 ${f##*/} onEdit falls through on an empty buffer" \
+    || ok "T10 ${f##*/} onEdit never lets an editing key reach the hidden field"
 done
 
 echo "== $PASS ok, $FAIL failed =="

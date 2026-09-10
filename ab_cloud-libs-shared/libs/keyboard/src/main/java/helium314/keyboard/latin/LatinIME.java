@@ -809,6 +809,10 @@ public class LatinIME extends InputMethodService implements
         if (mTranslateBar.getVisibility() == View.VISIBLE) {
             hideTranslateBar();
         } else {
+            // Commit whatever word was mid-compose in the field before the bar opens.
+            // The bar composes its own text there, and setComposingText would otherwise
+            // REPLACE the user's half-typed word with a translation of something else.
+            mInputLogic.commitTyped(mSettings.getCurrent(), LastComposedWord.NOT_A_SEPARATOR);
             // Re-bind on EVERY open: the active subtype language is the bar's
             // detection fallback + default target, and the user may have switched
             // language since the bar was first created.
@@ -821,7 +825,11 @@ public class LatinIME extends InputMethodService implements
     }
 
     public void hideTranslateBar() {
-        if (mTranslateBar != null) mTranslateBar.setVisibility(View.GONE);
+        if (mTranslateBar == null) return;
+        // Before it goes: a composing region left behind would leave the app's own text
+        // provisional and underlined with nothing watching it any more.
+        mTranslateBar.onHidden();
+        mTranslateBar.setVisibility(View.GONE);
     }
 
     /**
@@ -1252,6 +1260,16 @@ public class LatinIME extends InputMethodService implements
         if (isEnhanceBarActive() && composingSpanEnd < 0) {
             final EnhanceBarView bar = mEnhanceBar;
             bar.post(bar::onFieldChanged);
+        }
+
+        // SuperApp: the translate bar streams its live translation into the field as a
+        // COMPOSING region, so a composing span of -1 is the platform saying that region
+        // is gone — the user tapped into the app, or the app rewrote its own text. The
+        // bar then stops revising what is no longer its own instead of appending a second
+        // copy of the translation. Called directly, not posted: it reads nothing from the
+        // connection and writes nothing back, so it has no ordering to respect.
+        if (isTranslateBarActive() && composingSpanEnd < 0) {
+            mTranslateBar.onHostOutputDropped();
         }
 
         // This call happens whether our view is displayed or not, but if it's not then we should

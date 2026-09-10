@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.TypedValue
+import android.widget.ScrollView
 import android.widget.TextView
 
 /**
@@ -50,4 +51,47 @@ class TranslateInputView(context: Context) : TextView(context) {
     /** Buffer offset under a touch point, clamped into the text (-1 before the first layout pass). */
     fun offsetAt(x: Float, y: Float): Int =
         if (layout == null) text.length else getOffsetForPosition(x, y).coerceIn(0, text.length)
+
+    /**
+     * Scroll the caret's line into view when this box is inside a [CappedScrollView].
+     *
+     * Nothing else will do it: an unfocused TextView gets no scrolling from the
+     * platform, so once the text passes the box's cap the caret keeps moving
+     * outside the window and the user is typing blind at text they cannot see.
+     *
+     * Call it from a `post` — the layout still describes the PREVIOUS text at the
+     * moment the caller sets a new one, and a stale layout would scroll to the
+     * wrong line. A null layout here means the measure pass has not run yet, so
+     * there is nothing off-screen to reveal and the next caret move will do it.
+     */
+    fun revealCaret() {
+        val scroller = parent as? ScrollView ?: return
+        val l = layout ?: return
+        val at = caret
+        if (at < 0 || at > text.length) return
+        val line = l.getLineForOffset(at)
+        val top = l.getLineTop(line) + totalPaddingTop
+        val bottom = l.getLineBottom(line) + totalPaddingTop
+        if (top < scroller.scrollY) scroller.smoothScrollTo(0, top)
+        else if (bottom > scroller.scrollY + scroller.height)
+            scroller.smoothScrollTo(0, bottom - scroller.height)
+    }
+}
+
+/**
+ * A ScrollView that grows with its content up to [maxHeight] and scrolls past it.
+ *
+ * The partner of [TranslateInputView]: a bar's text box has to stay small enough to
+ * leave the keys visible, and capping it with `maxLines` alone makes every line past
+ * the cap unreachable rather than merely off-screen. Shared rather than copied —
+ * libs:keyboard already depends on this module, so EnhanceBarView uses this one too.
+ */
+class CappedScrollView(context: Context, private val maxHeight: Int) : ScrollView(context) {
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val size = MeasureSpec.getSize(heightMeasureSpec)
+        val mode = MeasureSpec.getMode(heightMeasureSpec)
+        val capped = if (mode == MeasureSpec.UNSPECIFIED || size > maxHeight)
+            MeasureSpec.makeMeasureSpec(maxHeight, MeasureSpec.AT_MOST) else heightMeasureSpec
+        super.onMeasure(widthMeasureSpec, capped)
+    }
 }
