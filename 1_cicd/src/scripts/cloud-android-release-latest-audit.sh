@@ -78,12 +78,25 @@ command -v git >/dev/null 2>&1 || { echo "git is required" >&2; exit 3; }
 #                         the repository-root .github/workflows, so a release
 #                         command in there is not one of our publishers and
 #                         pinning it would be editing someone else's CI.
+#   this file             THE AUDITOR IS NOT A PUBLISHER. It names the command
+#                         in order to search for it, so it matches itself: the
+#                         awk test `bare ~ /gh release create/` and the
+#                         single-quoted pattern below are both code, and the
+#                         strip() below only removes DOUBLE-quoted strings.
+#                         Left in, the audit reports itself as a hijacker.
+#                         This was not visible until the file was committed —
+#                         `git grep` sees only tracked files, so the run that
+#                         proved the audit green had the auditor outside its
+#                         own subject set. Excluded by exact basename, never a
+#                         glob: a pattern loose enough to swallow a real
+#                         publisher would be the same bug wearing a fix.
 _subjects() {
     git -C "$ROOT" grep -l -F 'gh release create' -- \
         '*.sh' '*.yml' \
         ':(exclude)z_archive/**' \
         ':(exclude)*/test/*' \
         ':(exclude)*/.github/**' \
+        ':(exclude)*/cloud-android-release-latest-audit.sh' \
         2>/dev/null || true
 }
 
