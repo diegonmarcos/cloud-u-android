@@ -1,0 +1,148 @@
+name: "Ship → firestack netstack aar (build from owned source + publish as the pinned artifact)"
+
+# THE LIBRARY THAT MUST NEVER BLOCK A SUPERAPP RELEASE.
+#
+# ab_cloud-libs-shared/libs/firewall/firestack is an owned clone of celzero's
+# firestack (MPL-2.0) — a Go/gVisor netstack compiled to an Android aar by
+# gomobile. Until 2026-09-10 the SuperApp APK job built it INLINE, before every
+# gradle invocation, which made it a veto on every Android change in the fleet.
+# On 2026-09-09 that veto fired: commit 9a0ad74b8 broke the aar build, the APK
+# job died inside it, `Publish to GitHub Releases` was skipped, and the owner's
+# phone served an APK from 16:35 for a day and a half while roughly forty
+# commits of unrelated work sat stranded in the repository.
+#
+# This workflow is the second half of the owner's ruling ("a lib that would
+# never block superapp release"). The aar is built HERE, on firestack's own
+# cadence, and published as an immutable release asset. The SuperApp consumes
+# the checksum it pins in ab_cloud-libs-shared/build.json::firestack.artifact
+# and never runs Go at all. So when this workflow is red, THIS workflow is red
+# — the APK keeps building and keeps publishing from the aar it already pins.
+#
+# THE COST, PAID EXPLICITLY: a red firestack used to be impossible to miss
+# because it took the phone down with it. It is quiet now, and that is the
+# trade. Two things replace the noise:
+#   1. This workflow's own conclusion, which is what GitHub notifies the repo
+#      owner about on a failed run on the default branch.
+#   2. A NON-FATAL reporting step in ship-cloud-superapp.yml ("firestack pin
+#      health") that says on every APK build how old the pinned aar is and
+#      whether firestack's own last run was red. It reports; it never vetoes.
+#      That split is the fleet's own hard-won lesson — a signal that should
+#      report must not be wired as something that can veto, which is how a
+#      third party's pricing page came to gate this very publish step.
+#
+# The ntfy route the phone already subscribes to is NOT usable from here:
+# ab_cloud-libs-shared/../aa_cloud-superapp/build.json::ui.ntfy.base_url is
+# http://10.0.0.6:8090, on the WireGuard mesh, which a GitHub runner cannot
+# reach. Reporting therefore rides the SuperApp workflow, which the owner
+# already reads every day.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Create the release and upload the aars (off = build + checksum only)"
+        required: false
+        type: boolean
+        default: true
+  push:
+    branches: [main]
+    paths:
+      # Hand-written and validated (not derived): this workflow has no WORK_DIR
+      # naming an app directory, so cloud-android-ship-repo-workflow-engine.sh
+      # only checks that these paths exist rather than rewriting them from a
+      # module map. That is deliberate — firestack's inputs are a Go source
+      # tree and two shell engines, which no gradle module map can express.
+      - "1_cicd/src/cicd/ship-firestack-aar.yml"
+      - "ab_cloud-libs-shared/libs/firewall/firestack"
+      - "ab_cloud-libs-shared/libs/firewall/build-firestack.sh"
+      - "ab_cloud-libs-shared/libs/firewall/publish-firestack.sh"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ship-firestack-aar-${{ github.ref }}
+  # NOT cancel-in-progress. Cancelling mid-publish can leave a release created
+  # with only some of its per-ABI assets attached, and a pin adopted from that
+  # release would fail the checksum for the missing ABI only — on one matrix leg
+  # of a later APK build, which is a confusing place to learn about it.
+  cancel-in-progress: false
+
+jobs:
+  build_and_publish:
+    name: "Build + publish firestack aar"
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # gomobile bind needs an NDK to cross-compile the Go code and a JDK to
+      # turn the generated bindings into classes.jar. build-firestack.sh picks
+      # the newest NDK under $ANDROID_HOME/ndk rather than pinning one, so this
+      # list only has to contain at least one.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-36 platforms;android-26 build-tools;36.0.0 platform-tools ndk;28.0.13004108"
+
+      # Same mitigation, same reasoning, same key as ship-cloud-superapp.yml:
+      # the tidy inside `gomobile bind` reads sum.golang.org tiles out of
+      # GOMODCACHE, so a warm cache is what stops the build depending on a
+      # third-party service being healthy. Keyed on go.sum so a pin change
+      # invalidates it.
+      - name: Cache firestack Go modules + checksum-db tiles
+        uses: actions/cache@v4
+        with:
+          path: ab_cloud-libs-shared/.cache/gomodcache
+          key: firestack-gomodcache-${{ runner.os }}-${{ hashFiles('ab_cloud-libs-shared/libs/firewall/firestack/go.sum') }}
+          restore-keys: firestack-gomodcache-${{ runner.os }}-
+
+      - name: Install jq + unzip
+        run: sudo apt-get update -y && sudo apt-get install -y jq unzip
+
+      # The invariants #202 and #203 wrote down about this build. Run BEFORE the
+      # build so a broken contract is reported as a contract failure rather than
+      # as twenty minutes of gomobile output.
+      - name: Guards on the firestack build contract (fatal on failure)
+        run: bash ab_cloud-libs-shared/libs/firewall/build-firestack.test.sh
+
+      - name: Build every ABI and publish the aars
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.publish }}" != "true" ]; then
+            bash ab_cloud-libs-shared/libs/firewall/publish-firestack.sh --no-publish
+          else
+            bash ab_cloud-libs-shared/libs/firewall/publish-firestack.sh
+          fi
+
+      # Keeps a copy reachable even if the release is later deleted, and gives a
+      # --no-publish run something to inspect.
+      - name: Upload the aars as workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firestack-aar-${{ github.sha }}
+          path: ab_cloud-libs-shared/.cache/firestack-publish/*.aar
+          if-no-files-found: error
+          retention-days: 30
+
+      # This is what makes the quiet failure legible. The APK's own workflow
+      # reads the conclusion of this workflow's last run; a one-line note here
+      # tells whoever opens a red run what it does and does not affect, so
+      # nobody re-couples the two in a panic.
+      - name: What a failure here does not break
+        if: failure()
+        run: |
+          echo "::warning title=firestack aar is red::The firestack netstack aar did NOT build or" \
+               "publish. This does NOT block the SuperApp APK: the APK consumes the aar pinned in" \
+               "ab_cloud-libs-shared/build.json::firestack.artifact and does not build firestack from" \
+               "source. Fix firestack, publish a new aar, then advance that pin. Do NOT restore an" \
+               "inline source build in the APK job to work around this."

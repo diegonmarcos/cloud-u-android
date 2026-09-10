@@ -71,8 +71,18 @@ on:
       # gate does not weigh. Extra entries no module map can express
       # (settings.gradle.kts references, scan roots) are kept: add them
       # here and they stay.
+      # ab_cloud-libs-shared/build.json is watched because it carries
+      # firestack.artifact — the tag and per-ABI checksums of the prebuilt
+      # netstack aar this APK links against. Advancing that pin IS a change to
+      # what ships, and without this entry the adopting commit would touch no
+      # watched path, start no build, and leave the new aar unused with
+      # everything reporting green. It is also then part of the publish gate's
+      # source identity (cloud-android-source-identity.sh hashes exactly this
+      # list; a file entry hashes as its git blob), so a pin advance correctly
+      # republishes and an unrelated edit elsewhere in that file does not.
       - "1_cicd/src/cicd/ship-cloud-superapp.yml"
       - "aa_cloud-superapp/**"
+      - "ab_cloud-libs-shared/build.json"
       - "ab_cloud-libs-shared/libs/analytics/**"
       - "ab_cloud-libs-shared/libs/appstore/**"
       - "ab_cloud-libs-shared/libs/battery/**"
@@ -408,3 +418,28 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$WORK_DIR" "${{ matrix.abi }}"
+
+      # ── firestack health: REPORTS, NEVER VETOES ────────────────────────
+      #
+      # The APK no longer builds firestack from source, which is the whole point
+      # — a red firestack cannot stop a publish any more. The cost is that a red
+      # firestack became QUIET, where before it was impossible to miss because
+      # it took the phone down with it. This step is what is paid instead.
+      #
+      # It runs LAST, AFTER the publish and after the publish guard, and it is
+      # `continue-on-error` — so there is no ordering and no outcome by which it
+      # can affect whether the APK ships. That placement is deliberate and is
+      # the fleet's own lesson, learned twice this week: something that should
+      # REPORT must not be wired as something that can VETO. A live third-party
+      # pricing check had been wired onto this very publish step, and an inline
+      # Go build was wired onto it before that. This one only ever prints.
+      #
+      # Do not "strengthen" this into a gate. If the pinned aar is stale that is
+      # information for the owner, not grounds to withhold an APK carrying forty
+      # other commits.
+      - name: firestack pin health (report only — never blocks the APK)
+        if: ${{ always() && steps.gate.outputs.skip != 'true' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sh 1_cicd/dist/scripts/cloud-android-firestack-pin-health.sh "${{ github.repository }}"

@@ -923,30 +923,29 @@ step_sync_firewall() {
   log "  browse: $ref"
 }
 
-# ── firestack netstack AAR build (Phase 2) ──────────────────────────────
-# VENDORED + hermetic gomobile build, mirroring libs:net/libwg-go's
-# self-download-Go approach. All params are data-driven from
-# build.json::upstreams.firestack — nothing hardcoded here (FIRE RULE #6).
-#   sync-firestack : clone/update the firestack source tracker
-#   firestack      : self-download pinned Go → firestack's own `make` → aar
-step_sync_firestack() {
-  local repo branch ref
-  # Config moved to ab_cloud-libs-shared/build.json::firestack (the module
-  # owns its engine's config; see the _doc_moved note there).
-  local sharedbj="$LIBS_DIR/../build.json"
-  repo="$(prefer_host jq -r '.firestack.repo // empty' "$sharedbj")"
-  branch="$(prefer_host jq -r '.firestack.ref // empty' "$sharedbj")"
-  ref="$LIBS_DIR/firewall/firestack"
-  command -v git >/dev/null 2>&1 || { errlog "sync-firestack: git is required"; exit 1; }
-  if [ -d "$ref/.git" ]; then
-    log "sync-firestack: updating firestack clone ($branch): $ref"
-    git -C "$ref" fetch --depth 1 origin "$branch" && git -C "$ref" reset --hard FETCH_HEAD
-  else
-    log "sync-firestack: cloning firestack (MPL-2.0, $branch): $ref"
-    git clone --depth 1 --branch "$branch" "$repo" "$ref"
-  fi
-  log "sync-firestack: firestack source at $ref"
-}
+# ── firestack netstack AAR (Phase 2) ────────────────────────────────────
+# `sync-firestack` USED TO BE HERE AND IS DELIBERATELY GONE.
+#
+# It ran `git clone --branch n2 https://github.com/celzero/firestack.git` into
+# ab_cloud-libs-shared/libs/firewall/firestack, and `git reset --hard
+# FETCH_HEAD` over it on every later call. The owner's ruling is that firestack
+# "should not be a fork but a clone" — copied in ONCE, owned outright, edited
+# directly, never tracking upstream again — which is the fleet's rule already
+# applied to the keyboard and to Cloud Office. A step whose job is to overwrite
+# the owned tree with somebody else's branch is the opposite of owning it, and
+# `reset --hard` would have destroyed our own patches without asking. The
+# `repo` and `ref` keys it read are gone from build.json with it.
+#
+# The tree is ours now. To change firestack, edit
+# ab_cloud-libs-shared/libs/firewall/firestack/ directly, as you would any
+# other source in this repository. The MPL-2.0 LICENSE and celzero's copyright
+# stay exactly where they are: cloning gives us the working copy, not the
+# copyright.
+#
+#   firestack         : build the aar from our own source (self-downloaded
+#                       pinned Go → make → gomobile bind). NOT on the APK path.
+#   firestack-publish : build it and publish it as the pinned artifact the APK
+#                       consumes — ab_cloud-libs-shared/libs/firewall/publish-firestack.sh
 
 # Vendor the status-bar Line 0 animated pets from KartikLabhshetwar/zoomies
 # (sprites CC BY-ND 4.0 — used UNMODIFIED + credited). DATA-DRIVEN: reads which
@@ -1045,8 +1044,8 @@ case "$CMD" in
   sync-qrcodes) step_sync_qrcodes ;;
   sync-net)     step_sync_net ;;
   sync-firewall) step_sync_firewall ;;
-  sync-firestack) step_sync_firestack ;;
   firestack)     step_firestack ;;
+  firestack-publish) in_nix bash "$LIBS_DIR/firewall/publish-firestack.sh" "$@" ;;
   sync-zoomies) step_sync_zoomies ;;
   sync-keyboard-dicts) step_sync_keyboard_dicts ;;
   help|*)
