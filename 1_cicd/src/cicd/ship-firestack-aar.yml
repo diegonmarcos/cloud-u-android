@@ -52,8 +52,18 @@ on:
       # only checks that these paths exist rather than rewriting them from a
       # module map. That is deliberate — firestack's inputs are a Go source
       # tree and two shell engines, which no gradle module map can express.
+      #
+      # firestack/** WITH THE GLOB. Written as a bare directory first, and a
+      # GitHub path filter does not match files inside one — `foo` matches a
+      # FILE named foo, never foo/bar.go. So this workflow watched nothing at
+      # all: the 2026-09-10 proof commit broke intra/settings/dsopts.go and no
+      # aar build started (run list jumps 01cb755ec -> nothing). That is the
+      # failure the generator's own comments warn about — "a workflow watching
+      # nothing real never runs and nobody gets an error" — and it survived the
+      # generator's validation because it only checks the path EXISTS, which a
+      # directory does. Found by running the experiment rather than by reading.
       - "1_cicd/src/cicd/ship-firestack-aar.yml"
-      - "ab_cloud-libs-shared/libs/firewall/firestack"
+      - "ab_cloud-libs-shared/libs/firewall/firestack/**"
       - "ab_cloud-libs-shared/libs/firewall/build-firestack.sh"
       - "ab_cloud-libs-shared/libs/firewall/publish-firestack.sh"
 
