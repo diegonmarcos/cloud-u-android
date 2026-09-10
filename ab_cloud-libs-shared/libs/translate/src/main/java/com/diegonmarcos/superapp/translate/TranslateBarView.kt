@@ -416,7 +416,10 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     private fun apply(mode: String) {
         val out = translated
         if (out == null) { if (editor.isNotEmpty) toast("Wait for the translation…"); return }
-        val ic = icp?.get() ?: return
+        // The field is gone (the host closed it, or focus moved) and the bar cannot
+        // write anywhere. Saying so is the whole difference between a chip that is
+        // busy and a chip that is broken: the translation is still here, above.
+        val ic = icp?.get() ?: run { toast("No text field to write into — tap where you want it first"); return }
         if (output == Output.OWNED) {
             // Already in the field as our composing region — finishing it is the
             // whole apply. Committing again is what produced the second copy.
@@ -436,7 +439,7 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     }
 
     private fun copy() {
-        val out = translated ?: return
+        val out = translated ?: run { toast(if (editor.isNotEmpty) "Wait for the translation…" else "Type something to translate first"); return }
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
             .setPrimaryClip(ClipData.newPlainText("translation", out))
         toast("Copied")
@@ -445,7 +448,9 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     private fun clear() { editor.clear(); onChanged() }
 
     private fun swap() {
-        val f = if (fromTag == AUTO) (detectedTag ?: return) else fromTag
+        val f = if (fromTag == AUTO) (detectedTag
+            ?: run { toast("No language detected yet — type something, or pick one instead of Auto"); return })
+            else fromTag
         fromTag = toTag; toTag = f; detectedTag = null
         renderChips(); onChanged()
     }

@@ -147,5 +147,23 @@
       "endpoint": "https://analytics.diegonmarcos.com/matomo",
       "site_id": "1"
     }
+  },
+  "tests": {
+    "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. Until this block existed ship-cloud-keyboard.yml called the publish gate and assembleRelease and nothing else: it never invoked the test engine at all, so the green it reported meant only that the Kotlin compiled. The assertions that DO cover this keyboard were filed under aa_cloud-superapp/test/ and gate the superapp's release, not this one — a keyboard could ship broken with every one of them passing.",
+    "shell": {
+      "dir": "test",
+      "_doc_requires": "Tools a tester shells out to, checked BEFORE anything runs. A missing tool does not fail a tester, it makes the tester answer from the tool's absence: four testers in this repository passed only because ripgrep was not installed and their invocation failed open. Neither tester here uses ripgrep, deliberately. python3 is the silence guard itself; awk extracts the Kotlin function bodies the structural assertions read, and an absent awk would hand them empty bodies to agree with.",
+      "requires": [
+        "python3",
+        "awk"
+      ],
+      "_doc_quarantine": "Filename to the REASON it may fail. Empty, and it should stay that way: a quarantined tester that starts PASSING fails the build, so an entry cannot outlive its reason. Anything not named here is fatal.",
+      "quarantine": {}
+    },
+    "unit": {
+      "_doc": "No JVM unit tests exist in this app (0 files under */src/test/) and none can be written from the container that maintains it, which has no JVM. Left disabled rather than pointed at an empty task so the engine LOGS the gap on every run instead of printing a green tick for a suite that is not there.",
+      "task": null,
+      "enabled": false
+    }
   }
 }

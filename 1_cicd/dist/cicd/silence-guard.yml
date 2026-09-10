@@ -1,0 +1,44 @@
+name: "silence guard — a user-facing action that ends without saying why fails the build"
+
+# WHY THIS FILE IS HERE AND NOT ONLY IN .github/workflows/. Its generated copy has
+# been running on every push since the Enhance fix landed, but it had no source in
+# 1_cicd/src/cicd/ at all — it was written straight into .github/workflows/, which
+# the generator copies INTO and never reads back. So the one workflow that guards
+# against a silent failure was itself outside the pipeline that guarantees a
+# workflow is what its source says, and regenerating the fleet would not have
+# reproduced it. Declaring it here closes that.
+#
+# WHY IT RUNS ON EVERY PUSH AND EVERY PULL REQUEST, WITH NO PATH FILTER.
+# The failure this catches is not "somebody edited TextEnhancer", it is "somebody
+# added a guard clause that returns without saying anything". That is the shape the
+# original defect had: the Enhance key was pressed, nothing happened, and the owner
+# could not tell a dead key from a missing API key from a network failure. It cost
+# weeks of not knowing that a whole class of application was unsupported — and the
+# same shape was then found sitting in the Translate bar's Insert, Copy and swap.
+#
+# It is separate from i18n-guard.yml on purpose. That guard cannot see this class of
+# bug at all: libs:keyboard is an exempt module in i18n-policy.json, so the Spanish
+# half of the Enhance messages is checked HERE and nowhere else.
+#
+# Both steps matter. The first proves the tree is clean; the second proves the guard
+# would have said so if it were not. A guard only ever watched succeeding is
+# indistinguishable from one that returns 0 unconditionally.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  silence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No listed action can end without telling the owner why
+        run: python3 1_cicd/src/scripts/cloud-android-silence-guard.py
+      - name: The guard still fails when an exit goes silent
+        run: bash 1_cicd/src/scripts/test/silence-guard.test.sh

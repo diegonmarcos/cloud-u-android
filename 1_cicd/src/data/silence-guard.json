@@ -1,0 +1,64 @@
+{
+  "_doc": "Every user-facing action in cloud-keyboard that is allowed to end, and the rule that it may not end without saying so. WHY THIS FILE EXISTS: the guard behind it started as one hardcoded target, TextEnhancer.run, because that is where the defect was found. The defect was never about Enhance. The Translate bar's Insert, Copy and the language swap arrow each reached a null-check and returned with no message, no toast and no state change, which is the same failure wearing a different costume — the owner taps, nothing happens, and a dead control is indistinguishable from a crash, a missing permission and a network failure. Listing the entry points here rather than in the script means the next one costs a JSON entry, not a patch to a Kotlin parser.",
+
+  "_doc_fields": "label: what a failure line calls this action, so the owner reads a control name and not a file path. source: repo-relative Kotlin file. entry: the EXACT signature line the guard finds the function by — if it stops matching, the guard reports that it is checking nothing rather than reporting a clean sweep of nothing. reporters: the calls that count as telling the user something; a `return` inside the entry that names none of them is a silent exit and fails. quiet (optional): the one door an exit may leave by without a sentence, and the enumerated list of reasons it may claim. messages (optional): present only where the reporter names an Android string resource, which is what lets the guard also check both locales and the format-argument count.",
+
+  "version": 1,
+
+  "entry_points": [
+    {
+      "label": "Enhance key",
+      "source": "ab_cloud-libs-shared/libs/keyboard/src/main/java/helium314/keyboard/latin/TextEnhancer.kt",
+      "entry": "fun run(context: Context, connection: RichInputConnection, style: AiRouter.Style)",
+      "reporters": ["ended("],
+      "quiet": {
+        "reporter": "endedQuietly(",
+        "reason_argument": 1,
+        "_doc_reasons_allowed": "The complete list of reasons an exit may take without putting a sentence on screen. It has exactly one member and the point of pinning it here is that growing it is an edit somebody has to make on purpose, in this file, next to the sentence saying why the list is short.",
+        "reasons_allowed": ["superseded by a newer run"]
+      },
+      "messages": {
+        "reporter": "ended(",
+        "resource_argument": 3,
+        "_doc_locales": "libs:keyboard is an exempt module in 1_cicd/src/i18n-policy.json, so the fleet i18n guard cannot see these strings at all. The owner reads this keyboard in Spanish. Both locales are therefore checked HERE and nowhere else.",
+        "locales": {
+          "values": "ab_cloud-libs-shared/libs/keyboard/src/main/res/values/strings.xml",
+          "values-es": "ab_cloud-libs-shared/libs/keyboard/src/main/res/values-es/strings.xml"
+        }
+      }
+    },
+
+    {
+      "label": "Translate bar — Insert / Replace",
+      "_doc": "The two chips that put the translation into the application's field. Its `icp?.get()` returned null and the function walked away: the owner taps Insert, the translation stays in the bar, and nothing anywhere says the keyboard has lost sight of the field.",
+      "source": "ab_cloud-libs-shared/libs/translate/src/main/java/com/diegonmarcos/superapp/translate/TranslateBarView.kt",
+      "entry": "private fun apply(mode: String)",
+      "reporters": ["toast(", "showStatus("]
+    },
+
+    {
+      "label": "Translate bar — Copy",
+      "_doc": "Copy with no translation ready returned in silence, so the owner had no way to tell 'still translating' from 'the clipboard already has it'.",
+      "source": "ab_cloud-libs-shared/libs/translate/src/main/java/com/diegonmarcos/superapp/translate/TranslateBarView.kt",
+      "entry": "private fun copy()",
+      "reporters": ["toast(", "showStatus("]
+    },
+
+    {
+      "label": "Translate bar — swap languages",
+      "_doc": "The arrow between the two language chips. With the source set to Auto and nothing detected yet there is no language to swap INTO, and it returned without saying so, which reads as a dead arrow.",
+      "source": "ab_cloud-libs-shared/libs/translate/src/main/java/com/diegonmarcos/superapp/translate/TranslateBarView.kt",
+      "entry": "private fun swap()",
+      "reporters": ["toast(", "showStatus("]
+    },
+
+    {
+      "label": "Translate bar — Paste",
+      "source": "ab_cloud-libs-shared/libs/translate/src/main/java/com/diegonmarcos/superapp/translate/TranslateBarView.kt",
+      "entry": "private fun paste()",
+      "reporters": ["toast(", "showStatus("]
+    }
+  ],
+
+  "_doc_not_covered": "The Translate bar's messages are plain English literals, not string resources, so this guard checks that they EXIST and not that they are translated. libs:translate owns no res/values/strings.xml at all and therefore does not appear in i18n-policy.json; giving it one is a separate task that has to add the module to that policy in the same change, or the i18n guard fails on an unlisted module. The long-press menu's Copy/Cut selection items also return silently on an empty selection; they are left off this list because the menu is opened over the text it acts on, so the empty case is visible on screen rather than invisible. Adding them is a JSON entry here plus a message in the Kotlin."
+}

@@ -51,6 +51,19 @@ APP_NAME="$(basename "$APP_DIR")"
 err()  { echo "::error::$*"; }
 warn() { echo "::warning::$*"; }
 
+# jq is how EVERY answer in this script is read out of build.json, including the
+# tests.shell.requires list that exists to make missing tooling fatal. Without jq
+# every _json call returns empty and the script carries on with its defaults: the
+# requires list reads as empty, so the preflight that refuses to run on missing
+# tooling passes by having no tooling to check, and the quarantine map reads as
+# empty, so a quarantined tester's failure becomes a build failure with no
+# explanation. That is a verdict drawn from a tool's absence — the exact shape
+# every comment in this file warns about — sitting in the reader itself.
+command -v jq >/dev/null 2>&1 || {
+    err "jq is not installed — every value this script reads out of build.json would come back empty and it would test the DEFAULTS rather than what the app declares. Refusing to run."
+    exit 1
+}
+
 _json() {  # _json <jq-filter> — empty string when absent or no build.json
     [ -f "$BUILD_JSON" ] || { printf ''; return 0; }
     jq -r "$1 // empty" "$BUILD_JSON" 2>/dev/null || printf ''

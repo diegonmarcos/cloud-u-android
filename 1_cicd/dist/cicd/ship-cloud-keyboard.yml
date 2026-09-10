@@ -70,6 +70,34 @@ jobs:
         with:
           fetch-depth: 0
 
+      # THE TESTS RUN BEFORE THE PUBLISH GATE, AND WITHOUT ITS CONDITION.
+      #
+      # This app had no test/ directory and no build.json::tests block, so this
+      # workflow never invoked the test engine at all — it went straight from the
+      # gate to assembleRelease. The green it printed for weeks meant the Kotlin
+      # compiled and nothing else, while the assertions that do cover this keyboard
+      # sat in aa_cloud-superapp/test/ gating a different app's release.
+      #
+      # They sit above the gate on purpose. The gate skips the whole job when this
+      # app's source is unchanged, and an assertion can also start failing because
+      # something it reads OUTSIDE the app changed — libs:translate, libs:keyboard,
+      # the guard's own entry-point manifest. Gating the tests on the same condition
+      # would mean the run that most needs them is the one that skips them.
+      #
+      # Static assertions only: no JDK, no Android SDK, no gradle. They cost seconds
+      # and they run before anything is built, let alone published.
+      - name: "Test → shell testers (build.json::tests.shell)"
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
+
+      - name: "Test → assertions that cannot fail"
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint "$WORK_DIR"
+
+      # Prints the coverage gap rather than a tick. There are no JVM unit tests in
+      # this app and the container that maintains it has no JVM to write them with,
+      # so the honest output is a line saying so on every run.
+      - name: "Test → JVM unit tests (coverage gap is logged, not hidden)"
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
+
       # Publish-if-changed gate. Android builds are not byte-reproducible, so a
       # rebuild of unchanged source published different bytes, a different
       # sha256 sidecar and a different OCI digest — and the Constellation store

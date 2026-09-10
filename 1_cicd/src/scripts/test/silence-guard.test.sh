@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║ enhance-silence-guard.test — prove the guard fails, not just     ║
-# ║ that it runs                                                     ║
+# ║ silence-guard.test — prove the guard fails, not just that it     ║
+# ║ runs                                                             ║
 # ╚══════════════════════════════════════════════════════════════════╝
 #
 # WHY THIS EXISTS. A guard that has only ever been watched succeeding is
@@ -21,8 +21,10 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
-GUARD="1_cicd/src/scripts/cloud-android-enhance-silence-guard.py"
+GUARD="1_cicd/src/scripts/cloud-android-silence-guard.py"
+MANIFEST="1_cicd/src/data/silence-guard.json"
 SOURCE="ab_cloud-libs-shared/libs/keyboard/src/main/java/helium314/keyboard/latin/TextEnhancer.kt"
+BAR="ab_cloud-libs-shared/libs/translate/src/main/java/com/diegonmarcos/superapp/translate/TranslateBarView.kt"
 ES="ab_cloud-libs-shared/libs/keyboard/src/main/res/values-es/strings.xml"
 EN="ab_cloud-libs-shared/libs/keyboard/src/main/res/values/strings.xml"
 FAILURES=0
@@ -38,11 +40,14 @@ trap 'rm -rf "$WORK"' EXIT
 # commit, not only against what is already committed.
 PRISTINE="$WORK/pristine"
 mkdir -p "$PRISTINE/$(dirname "$SOURCE")" "$PRISTINE/$(dirname "$EN")" \
-         "$PRISTINE/$(dirname "$ES")" "$PRISTINE/$(dirname "$GUARD")"
-cp "$ROOT/$SOURCE" "$PRISTINE/$SOURCE"
-cp "$ROOT/$EN"     "$PRISTINE/$EN"
-cp "$ROOT/$ES"     "$PRISTINE/$ES"
-cp "$ROOT/$GUARD"  "$PRISTINE/$GUARD"
+         "$PRISTINE/$(dirname "$ES")" "$PRISTINE/$(dirname "$GUARD")" \
+         "$PRISTINE/$(dirname "$BAR")" "$PRISTINE/$(dirname "$MANIFEST")"
+cp "$ROOT/$SOURCE"   "$PRISTINE/$SOURCE"
+cp "$ROOT/$BAR"      "$PRISTINE/$BAR"
+cp "$ROOT/$EN"       "$PRISTINE/$EN"
+cp "$ROOT/$ES"       "$PRISTINE/$ES"
+cp "$ROOT/$GUARD"    "$PRISTINE/$GUARD"
+cp "$ROOT/$MANIFEST" "$PRISTINE/$MANIFEST"
 
 run_guard() { ( cd "$1" && CLOUD_ANDROID_ROOT="$1" python3 "$GUARD" 2>&1 ); }
 
@@ -155,6 +160,69 @@ open(path, "w", encoding="utf-8").write(out)
 PY
 }
 
+edit_bar() { python3 - "$2/$BAR" "$1" <<'KOTLIN'
+import sys
+path, kind = sys.argv[1], sys.argv[2]
+text = open(path, encoding="utf-8").read()
+
+if kind == "insert_goes_silent":
+    # The defect as it actually stood in this file until the guard grew to see it:
+    # Insert/Replace could not reach the field and walked away without a word.
+    old = 'val ic = icp?.get() ?: run { toast("No text field to write into — tap where you want it first"); return }'
+    assert old in text, "test bug: cannot find the apply() field check"
+    text = text.replace(old, "val ic = icp?.get() ?: return", 1)
+
+elif kind == "swap_goes_silent":
+    old = '?: run { toast("No language detected yet — type something, or pick one instead of Auto"); return })'
+    assert old in text, "test bug: cannot find the swap() detection check"
+    text = text.replace(old, "?: return)", 1)
+
+elif kind == "attribution_on_the_next_line":
+    # The sentence is still there, one line above the exit. That is one edit away
+    # from not being there at all, and the guard must not read it as attached.
+    old = 'val out = translated ?: run { toast(if (editor.isNotEmpty) "Wait for the translation…" else "Type something to translate first"); return }'
+    assert old in text, "test bug: cannot find the copy() translation check"
+    text = text.replace(old,
+        'toast("Wait for the translation…")\n        val out = translated ?: return', 1)
+
+else:
+    raise SystemExit("test bug: unknown bar mutation %s" % kind)
+
+open(path, "w", encoding="utf-8").write(text)
+KOTLIN
+}
+
+# No mutation argument, so the sandbox directory arrives as $1 rather than $2 —
+# expect_caught appends it after whatever the case passed.
+empty_manifest() { python3 - "$1/$MANIFEST" <<'JSON'
+import json, sys
+# A manifest with no entry points would let the guard sweep nothing and print a
+# green tick for it - the exact shape of "the ship workflow ran zero testers and
+# passed" that this whole suite exists to end.
+path = sys.argv[1]
+data = json.load(open(path, encoding="utf-8"))
+data["entry_points"] = []
+json.dump(data, open(path, "w", encoding="utf-8"), indent=2)
+JSON
+}
+
+move_entry_source() { python3 - "$2/$MANIFEST" "$1" <<'JSON'
+import json, sys
+# What a renamed or moved Kotlin file looks like to the manifest. The guard must
+# say it has lost the code rather than sweep what is left and report it clean -
+# a guard that quietly stops covering something is the failure it exists to catch.
+path, label = sys.argv[1], sys.argv[2]
+data = json.load(open(path, encoding="utf-8"))
+for entry in data["entry_points"]:
+    if entry["label"] == label:
+        entry["source"] = entry["source"].replace(".kt", "Moved.kt")
+        break
+else:
+    raise SystemExit("test bug: no entry point labelled %s" % label)
+json.dump(data, open(path, "w", encoding="utf-8"), indent=2)
+JSON
+}
+
 expect_caught "a new silent return in the entry point is caught" \
     'silent exit — .return. with no' \
     edit_source silent_return
@@ -176,7 +244,7 @@ expect_caught "a message left without the argument it formats is caught" \
     edit_source drop_format_argument
 
 expect_caught "the guard losing sight of the entry point is caught" \
-    'cannot find the enhance entry point' \
+    'cannot find the entry point' \
     edit_source rename_entry
 
 expect_caught "an exit message with no Spanish is caught" \
@@ -187,8 +255,28 @@ expect_caught "two exit messages reading identically is caught" \
     'says exactly what' \
     duplicate_english enhance_nothing_readable
 
+expect_caught "the Translate bar's Insert losing its message is caught" \
+    'Insert / Replace\]: silent exit' \
+    edit_bar insert_goes_silent
+
+expect_caught "the Translate bar's language swap losing its message is caught" \
+    'swap languages\]: silent exit' \
+    edit_bar swap_goes_silent
+
+expect_caught "a message one line ABOVE the exit does not count as attribution" \
+    'Copy\]: silent exit' \
+    edit_bar attribution_on_the_next_line
+
+expect_caught "a manifest with no entry points is caught" \
+    'lists no entry points' \
+    empty_manifest
+
+expect_caught "an entry point whose source file moved is caught" \
+    'does not exist .+ nothing to guard' \
+    move_entry_source "Translate bar — Copy"
+
 if [ "$FAILURES" -eq 0 ]; then
-    echo "PASS — the guard fails on every way an exit can go silent or ambiguous."
+    echo "PASS — the guard fails on every way an exit can go silent or ambiguous, in every listed action."
     exit 0
 fi
 echo "FAIL — see above."
