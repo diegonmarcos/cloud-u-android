@@ -383,7 +383,14 @@ open class ShellActivity : AppCompatActivity(),
         is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.PageEntry ->
             SectionPages.pagesFor(e.sectionId, includeHidden = true)
                 .firstOrNull { it.id == e.pageId }?.label ?: e.label
-        else -> e.label
+        // Named, not `else`: every Entry subtype carries its own `label`, but the
+        // sealed base declares only `ts` and `key`, so an `else` branch leaves `e`
+        // typed as Entry and `e.label` does not resolve. Matching each remaining
+        // subtype restores the smart cast — and keeps this exhaustive the way
+        // recentTabIcon below already is, so a fifth Entry fails here at compile
+        // time instead of silently taking a fallback.
+        is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.TargetEntry -> e.label
+        is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.ExternalAppEntry -> e.label
     }
 
     /** Same drawable name every other launcher surface uses for this
