@@ -2,8 +2,11 @@
 
 Status: **NO. Extraction does not work, and the reason is not the size of the
 `.so`.** Extends `cloud-sheets-clone-feasibility.md` (commit `62515ee90`); does
-not replace it. Nothing was built, nothing paid was enabled, no APK was
-downloaded in full.
+not replace it. Nothing was built and nothing paid was enabled. §1-§10 were
+written without downloading any APK in full; **§11 is a second pass that did
+download all 267,216,449 bytes**, confirms §2's blocker, and corrects three
+claims — the ABI limit, the trademark blocker, and the reach of §4's vtable
+argument. The verdict is unchanged.
 
 **Verdict in one sentence:** the prebuilt engine cannot be reused, because the
 engine hands the shell a *link-time* half — eight static archives and three
@@ -35,10 +38,10 @@ appear:
   **It was not done, and the recommendation does not depend on it** — it is one
   more thing the reuse path would have to prove and the compile path never has
   to ask.
-- whether `liblo-native-code.so` itself carries "Collabora Office" product
-  strings. The `.so` is 199 MB; only its ELF headers and symbol tables were read
-  (0.18 % of the file). The trademark finding in §5 rests on `assets/`, which
-  *was* read.
+- ~~whether `liblo-native-code.so` itself carries "Collabora Office" product
+  strings.~~ **Answered in §11**: the full 199 MB was scanned. Two occurrences,
+  neither a product identity, and `Collabora Productivity` appears zero times.
+  This weakens §5's trademark finding — see §11, correction 2.
 
 Gerrit's **gitiles** web UI is behind a GitHub OAuth redirect and returned a
 login page to every fetch. Its **REST API** (`/projects/<p>/commits/<sha>/files/
@@ -653,9 +656,138 @@ made. Run it by hand if the question is reopened.
 - `ac_cloud-sheets/build.json` and its state before `05b0c6c15`.
 
 **Not established:** the ancestry of `20a46c332c38…` relative to `794af008…`
-(needs a full monorepo clone); whether `liblo-native-code.so` carries product
-name strings in its own `.rodata` (only 0.18 % of the file was read).
+(needs a full monorepo clone). *The `.rodata` question that stood here is now
+answered — see §11.*
 
 **Not reachable:** Gerrit gitiles (`/plugins/gitiles/...`) — 302s to a GitHub
 OAuth login page on every path. The REST API was used instead and is quoted
 throughout.
+
+---
+
+## 11. Second pass: the whole APK, not a range request (2026-09-10)
+
+§1-§10 were written from the ZIP central directory and 0.18 % of the engine,
+read over HTTP ranges. This section re-checks the load-bearing claims against
+**all 267,216,449 bytes**, downloaded once and deleted afterwards.
+
+Provenance, checked two ways rather than assumed: the bytes published as our own
+`Cloud-Sheets.apk` hash to
+`b7ab381de96f429c2e762d0e54ee0fac7db03ad2fecfede9f4c558c767d18513`, which is
+byte-for-byte the `hash` field Collabora's F-Droid `index-v1.json` publishes for
+`collabora-office-mobile-26.04.3.1-155-release-arm64-v8a-2026-09-03.apk`. Two
+independent sources, one hash. **The artefact on our `latest` release is
+Collabora's APK unmodified** — its manifest declares `com.collabora.libreoffice`
+and it is signed `META-INF/COLLABOR.RSA`, subject *Collabora Productivity
+Limited*. That is the mirror artefact from before `05b0c6c15`; it is stale, it is
+not what `build.json` describes any more, and it is the likely mechanism behind
+the "installs silently / reported outdated" reports.
+
+### Confirmed, from the full archive
+
+| claim | §  | verified |
+|---|---|---|
+| 6,375 central-directory entries | 2 | 6,375 |
+| `liblo-native-code.so` 199,472,488 bytes, STORED | 2 | exact |
+| `libandroidapp.so` 6,322,632 bytes, STORED | 2 | exact |
+| zero `.a` and zero `.h`/`.hxx` anywhere | 2 | 0 of 6,375 |
+| no `setuprc` / `setup.ini` | 3 | absent |
+| `assets/program/` holds exactly six files | 3 | exact |
+| `buildid=20a46c332c38` | 4 | exact |
+| F-Droid keeps 3 versions × 4 ABIs | 6 | 12 entries |
+| `license: Unknown`, `sourceCode: None` | 5 | exact |
+
+Every one of the 15 `lib/arm64-v8a/*.so` files is `ELF64`, `e_machine=0xB7`
+(AArch64). `target_link_libraries(androidapp …)` re-fetched from
+`online@794af008` still lists the eight `.a` archives at `CMakeLists.txt.in:154-167`.
+**§2's conclusion holds on the full archive: an APK is a runtime container and
+this one carries no link-time half.**
+
+### Three corrections
+
+**1. The ABI limit is not real.** §6 and the surrounding discussion imply
+arm64-v8a is all upstream offers. It is not — the same `26.04.3.1-155` release
+ships four ABIs, and `x86_64` is the largest of them:
+
+| ABI | bytes | sha256 |
+|---|---|---|
+| arm64-v8a | 267,216,449 | `b7ab381de96f429c2e762d0e54ee0fac7db03ad2fecfede9f4c558c767d18513` |
+| x86_64 | 278,455,828 | `58f44ce7492fc1ad3e543accd0620d15dd6eabcdc7839b95e60b00589618cacb` |
+| armeabi-v7a | 199,722,591 | `85b12a5dcd1c02bbaef86c90a9ee71bb65f9145a88a02d9dfadc346fd3321151` |
+| x86 | 254,285,287 | `f0a492219d20a10c6bc0afe99a34dcd7d7fecb1caa7c2ecf12ef1e94fad753fe` |
+
+The *pinned* APK carries one ABI because `build.json::release.variants` asks for
+one. ABI coverage is therefore not an argument against reuse in either
+direction, and it is not a reason to fund anything.
+
+**2. The trademark blocker in §5 is overstated.** It was argued that the product
+name is "baked into the engine's own artefacts" and cannot be fixed. Both halves
+of that are weaker than stated:
+
+- `assets/share/registry/main.xcd` is **plain XML**, and holds exactly one
+  `ooName` value (`Collabora Office`) and one `ooVendor` value (`Collabora
+  Productivity Limited`). Editing them is a Modification of Covered Software,
+  which MPL-2.0 §2.1 and §3.2 expressly permit; it is not "rewriting a compiled
+  artefact".
+- Scanning **100 %** of `liblo-native-code.so` — the check §10 listed as not
+  established — finds `Collabora Office` exactly **twice**, and neither is a
+  product identity: one is a Calc help string ("You may automate formula
+  extension in Collabora Office Calc / General settings."), one is an MPL
+  licence header inside embedded source. `Collabora Productivity` appears
+  **zero** times. The engine binary carries no vendor identity to strip.
+
+The `--with-app-name=Collabora Office` / `--with-vendor=Collabora Productivity
+Limited` configure line does appear in `libandroidapp.so` — but that is the
+*shell*, which is rebuilt under every plan, so it becomes ours.
+
+Trademark is a **checklist item, not a blocker**. It is still real: MPL-2.0 §2.3
+grants no trademark rights, so shipping unedited would misidentify our app's
+engine. It is satisfied by editing two XML values.
+
+**3. §4's vtable argument does not reach the strongest version of the idea.**
+§4 is correct that pairing *Collabora's engine* with *our rebuilt
+`libandroidapp.so`* crosses an unguarded 119-slot vtable. But there is a variant
+it does not address: reuse **both** `.so` files verbatim — they were built
+together, so the vtable is consistent by construction — and rebuild only
+`classes.dex` and `assets/dist`.
+
+That variant matters because **patch 0001 touches no engine file and no C++ at
+all**. Its nine files are three browser sources
+(`Control.Menubar.ts`, `CanvasTileLayer.js`, `Clipboard.js` → `assets/dist/`,
+which ships as 3,384 asset entries), four Android Java/manifest/gradle files
+(→ `classes.dex`), and `settings.gradle`. Nothing in Text Enhance needs the
+engine recompiled. So the honest answer to "does the shortcut deliver the
+feature" is **yes, it could** — #224's rebrand, #225's Drive integration and
+#236's canvas text-input path are all reachable without touching the engine.
+
+### Why the answer is still no
+
+Not impossibility — cost of ownership. To rebuild `classes.dex` at all, gradle
+runs `android/lib`'s `externalNativeBuild`, which is the CMake target that needs
+the eight missing archives. Skipping it means deleting `externalNativeBuild` and
+pointing `jniLibs.srcDirs` at extracted binaries: **a permanent fork of
+upstream's build system**, carried forever, to save one $35 compile once. Added
+to that, and unchanged by this pass:
+
+- We would redistribute a 199 MB binary whose source commit we cannot name.
+  `buildid=20a46c332c38` is 12 characters; Gerrit's REST API refuses abbreviated
+  shas, and the GitHub mirror returns **HTTP 422** for it — and for our own
+  pinned `794af008` too, because the 26.04 mobile line exists only on Gerrit.
+  MPL-2.0 §3.2(a) is probably satisfiable by pointing at the branch plus the
+  buildid, but we would be asserting it unverified on every APK we ship.
+- The pinned URL is pruned after about three releases (12 index entries).
+- Upgrades stay a guessing game with no assertion available (§7), and we could
+  never fix an engine bug or take an engine security patch except by swapping
+  the whole binary and hoping.
+
+**Recommendation unchanged: compile. Fund #240.** The reuse path is cheaper once
+and more expensive every time after.
+
+### Also true, and separate from this decision
+
+`ac_cloud-sheets/build.json::build.host` is `null`, so nothing builds Cloud
+Office today, and the `latest` release still serves Collabora's own signed APK
+under the name `Cloud-Sheets.apk` while `release.gh_release.asset_name` now says
+`Cloud-Office.apk`. Whatever is decided about #240, that stale artefact should
+be pulled — a phone auto-updating from `latest` is installing Collabora Office,
+not ours.
