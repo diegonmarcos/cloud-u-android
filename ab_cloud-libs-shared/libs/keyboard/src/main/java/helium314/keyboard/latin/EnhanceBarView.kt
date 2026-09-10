@@ -380,11 +380,12 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
         showStatus(context.getString(R.string.enhance_in_progress, providerLabel))
         io.execute {
             val result = runCatching {
-                TextEnhancer.rewrite(context, style, t.text) { done, total ->
+                // progress by name: rewrite() takes route after it, so a trailing lambda binds to route.
+                TextEnhancer.rewrite(context, style, t.text, progress = { done, total ->
                     if (total > 1) ui.post {
                         if (id == seq.get()) showStatus(context.getString(R.string.enhance_in_progress_part, providerLabel, done + 1, total))
                     }
-                }
+                })
             }
             ui.post {
                 if (id != seq.get()) return@post   // a newer run, or the bar was reopened

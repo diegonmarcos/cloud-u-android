@@ -49,8 +49,12 @@ AARBUILT="$(cfgv '.firestack.build.aar_built')"
 API="$(cfgv '.firestack.build.android_api')"
 TAGS="$(cfgv '.firestack.build.gomobile_tags')"
 # go-patch-overlay is a build tool, not a module dependency, so go.mod cannot
-# pin it. Empty is tolerated: the Makefile carries the same default.
+# pin it. REQUIRED here, not tolerated as empty: this script is what seeds the
+# module cache, and it can only seed a version it was told. Falling through to
+# the Makefile's own default would leave the tool unseeded and the build would
+# die on it under GOPROXY=off, twenty minutes later and nowhere near the cause.
 GPOV="$(cfgv '.firestack.build.go_patch_overlay_version')"
+[ -n "$GPOV" ] || { errlog "firestack: build.json has no .firestack.build.go_patch_overlay_version"; exit 1; }
 VARIANT="${SUPERAPP_VARIANT:-}"
 GT="$(jq -r --arg v "$VARIANT" \
       '.firestack.build.gomobile_targets[$v] // .firestack.build.gomobile_targets[""] // empty' "$CFG")"
@@ -120,6 +124,22 @@ log "firestack: seeding module cache from committed pins (go.mod/go.sum)"
 ( cd "$SRC" && go mod download ) || {
   errlog "firestack: seeding failed — the committed go.mod/go.sum do not cover this build."
   errlog "firestack: fix the pins in a commit; do NOT relax verification to get past this."
+  exit 1
+}
+
+# The seed above covers the modules go.mod REQUIRES. It cannot cover a build
+# tool go.mod deliberately does not require, and the Makefile installs exactly
+# one of those: `go install github.com/felixge/go-patch-overlay@$(GOPATCHOVERLAY_VERSION)`
+# in the $(GOMOBILE) recipe. That install was therefore the one piece of
+# resolution still happening INSIDE the GOPROXY=off build, where it could only
+# fail — "module lookup disabled by GOPROXY=off", exit 2, no aar, no APK. It was
+# invisible while the tool was `@latest` on a runner whose module cache happened
+# to carry it; pinning the version did not put it in the cache, it only made the
+# gap deterministic. Seeded here, with the proxy still on, by the same rule as
+# every other module: resolve once, then resolve nothing.
+log "firestack: seeding pinned build tool go-patch-overlay@$GPOV"
+( cd "$SRC" && go install "github.com/felixge/go-patch-overlay@$GPOV" ) || {
+  errlog "firestack: could not seed go-patch-overlay@$GPOV — check .firestack.build.go_patch_overlay_version in build.json"
   exit 1
 }
 

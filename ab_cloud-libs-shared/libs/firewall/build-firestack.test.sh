@@ -136,6 +136,38 @@ for dir in "${CALLER_DIRS[@]}"; do
 done
 [ "$covered" -gt 0 ] || note FAIL "matched no workflow to any firestack caller — the WORK_DIR mapping broke"
 
+# 6. Every tool a recipe installs at an EXPLICIT @version is, by construction,
+#    outside go.mod — that is the only reason to write the version there — so the
+#    `go mod download` seed cannot reach it and the engine must seed it SEPARATELY,
+#    before GOPROXY=off. This is what went red in run 34446987088: go-patch-overlay
+#    was pinned in build.json and never seeded, so its `go install ...@version` was
+#    the one piece of resolution still running inside the offline build, where the
+#    only outcome available to it was "module lookup disabled by GOPROXY=off".
+#    Derived from the Makefiles, so the SECOND pinned tool is covered the day it is
+#    added rather than the day it costs a ship run.
+bindline=$(grep -nE '^[^#]*GOPROXY=off.*make ' "$ENGINE" 2>/dev/null | head -1 | cut -d: -f1)
+for gm in "${GOMODS[@]}"; do
+    mod=$(dirname "$gm"); mk="$mod/Makefile"
+    [ -f "$mk" ] || continue
+    # Recipe lines only (leading TAB), and only installs carrying an @version.
+    while read -r pkg; do
+        [ -n "$pkg" ] || continue
+        # index(), not a regex: a package path is full of dots and slashes, and
+        # letting them stay metacharacters is how this kind of check matches
+        # something it was not asked about and calls it a pass. Line numbers
+        # come from the file itself, not from a filtered stream, or the
+        # ordering comparison below would be against renumbered lines.
+        seedline=$(awk -v p="$pkg@" 'index($0, p) && $0 !~ /^[[:space:]]*#/ { print NR; exit }' "$ENGINE")
+        if [ -z "$seedline" ]; then
+            note FAIL "${mk#./} installs $pkg at a pinned version but $ENGINE never seeds it — GOPROXY=off will refuse it mid-build"
+        elif [ -n "$bindline" ] && [ "$seedline" -ge "$bindline" ]; then
+            note FAIL "$ENGINE seeds $pkg at line $seedline, at or after the offline build at line $bindline — too late to help"
+        else
+            note ok "engine seeds pinned build tool $pkg before the offline build"
+        fi
+    done < <(sed -n 's/^	.*go[[:space:]]\{1,\}install[[:space:]]\{1,\}\([^ 	@]\{1,\}\)@.*/\1/p' "$mk" | sort -u)
+done
+
 [ "$fail" -eq 0 ] && echo "PASS — the firestack build resolves nothing; pins are committed and every caller is covered." \
                   || echo "FAIL — see above."
 exit "$fail"
