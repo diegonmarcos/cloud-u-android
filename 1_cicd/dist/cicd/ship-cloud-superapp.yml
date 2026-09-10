@@ -93,6 +93,7 @@ on:
       - "ab_cloud-libs-shared/libs/ops/**"
       - "ab_cloud-libs-shared/libs/search/**"
       - "ab_cloud-libs-shared/libs/shizuku-adb-debug-tools/**"
+      - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ab_cloud-libs-shared/libs/updater/**"
 permissions:
   contents: write   # for gh release create + tag push reads
@@ -139,6 +140,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" "${{ matrix.abi }}"
 
+      # The 34 testers under aa_cloud-superapp/test/ — until this step existed
+      # no workflow ran a single one of them, so a tester nobody's pipeline
+      # called was indistinguishable from no tester at all. They need no JDK,
+      # no SDK and no gradle, so they go first and fail in seconds.
+      #
+      # DELIBERATELY NOT gated on steps.gate.outputs.skip: the gate answers
+      # "would these bytes differ?", which is the right question for publishing
+      # and the wrong one for testing — editing a tester does not move the APK,
+      # and gating here would let a new assertion land without ever running.
+      - name: Shell testers (static assertions — fatal on failure)
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
+
+      - name: Guard against assertions that cannot fail
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint "$WORK_DIR"
+
       - name: Set up JDK 17
         if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-java@v4
@@ -175,6 +191,32 @@ jobs:
           # HeliBoard toolchain (AGP 8.13.2 needs Gradle 8.13+; Kotlin 2.3.20
           # Compose-compiler plugin). Mirrors HeliBoard main's wrapper.
           gradle-version: "8.14"
+
+      # ── firestack Go module cache ───────────────────────────────────────
+      # RECOVERED FROM THE GENERATED COPY. This step existed only in
+      # .github/workflows/ship-cloud-superapp.yml and never in this source, so
+      # it was live on every run while being invisible here — and the next
+      # `./build.sh workflow` would have deleted it without a word. That is the
+      # same source-vs-generated split that let the ABI gate and the GHCR
+      # auto-delete gate live in a file nobody executed, running the other way.
+      #
+      # MITIGATION, not the fix. The fix is in build-firestack.sh: the build
+      # seeds from the committed go.mod/go.sum and then runs with GOPROXY=off,
+      # so it resolves nothing. What this cache buys is the one hole that fix
+      # cannot close: `gomobile bind` shells out to `go mod tidy` in a throwaway
+      # module that has no go.sum, so tidy re-verifies the whole graph against
+      # sum.golang.org — 257 tile fetches on a cold runner, any one of which can
+      # return a stream error and cost the publish. Those tiles live in
+      # GOMODCACHE, so once this cache is warm the tidy needs no network at all.
+      # A cold cache still reaches out; only persisting it removes the lottery.
+      # Keyed on go.sum: a pin change correctly invalidates it.
+      - name: Cache firestack Go modules + checksum-db tiles
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/cache@v4
+        with:
+          path: ab_cloud-libs-shared/.cache/gomodcache
+          key: firestack-gomodcache-${{ runner.os }}-${{ hashFiles('ab_cloud-libs-shared/libs/firewall/firestack/go.sum') }}
+          restore-keys: firestack-gomodcache-${{ runner.os }}-
 
       # ── ONE shared Cloud-constellation signing key (vault) ──────────────
       # ALL constellation apps (Cloud-Comms hub+forks, Cloud-Nav, Cloud-IDE,
@@ -228,6 +270,15 @@ jobs:
       # devShell would just re-download them. The engine still reads
       # build.json + build.gradle for everything else (toolchain pins,
       # module graph, registry config, tags).
+      # Kept even though this app has NO JVM unit tests. The step costs a
+      # second and prints the COVERAGE-GAP line naming the gap, so "superapp
+      # has no unit tests" is a fact visible in every run's log rather than
+      # something a reader has to infer from a step that is not there. A
+      # missing step and a passing one look identical in a green summary.
+      - name: JVM unit tests (fatal on failure)
+        if: steps.gate.outputs.skip != 'true'
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
+
       - name: Build APK (engine)
         if: steps.gate.outputs.skip != 'true'
         working-directory: ${{ env.WORK_DIR }}

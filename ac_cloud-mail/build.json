@@ -17,6 +17,24 @@
     ],
     "_doc_excluded": "Upstream's own release plumbing, not app source: their Forgejo CI and self-hosted runner compose (we ship through cloud-mail-engine.sh), their marketing brochure, and the F-Droid listing copy — which names their product and their store entry, neither of which we publish to."
   },
+  "tests": {
+    "_doc": "What CI runs to prove this app works, and what it is allowed to fail on. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. Before this block existed, NEITHER test system ran in CI: the ship workflow called assembleRelease and nothing else, so every assertion under test/ and every JVM test under */src/test/ was decoration that compiled and never executed. A green run meant 'it compiled', while reports cited the assertions as proof they had passed.",
+    "shell": {
+      "dir": "test",
+      "_doc_requires": "Tools the testers shell out to, checked BEFORE any of them runs. A missing tool does not make a tester fail — it makes the tester answer from the tool's absence, and every one of these scripts discards stderr, so 'command not found' never reaches the log. Mail's testers use python3 for their whole-string comparisons; naming it converts a silent green into a loud red.",
+      "requires": ["python3"],
+      "_doc_quarantine": "Filename → the REASON that tester may fail, and it must read as a reason, not a label. This list is deliberately short, enumerated and visible: it is NOT a continue-on-error, because a quarantined tester that starts PASSING fails the build so the entry cannot outlive its reason. Anything not named here is fatal.",
+      "quarantine": {
+        "test-mail-html.sh": "H9 asserts the literal source text `enum class TextTool { ENHANCE, TRANSLATE, RESUME }`, but the enum legitimately grew constructor parameters and is now declared across several lines. The three constants are all still there — the assertion pins the DECLARATION'S FORMATTING, not the property it means to protect. STALE TEST, not a defect. Remove this entry when H9 is rewritten to assert the three constants instead of the one-line declaration.",
+        "test-mail-text-tools.sh": "K1 asserts no ITextTools AIDL method carries a credential — 'mail may choose a model, and may never hold, read, store or send the key that pays for it'. It now fails on two real signatures: `setAiRouting(in String providerId, in String apiKey, in String modelId, boolean clearKey)` and `revealAiKey(in String providerId)`. This is a GENUINE FINDING, not a stale test: the AI provider key now crosses the IPC binder in both directions. Quarantined ONLY so the rest of the suite can be switched on in the same change — it is an open question for the owner (is the cross-app key surface intended?), and the fix belongs in application code, which this CI task must not touch. Remove this entry the moment the AIDL or the assertion is settled."
+      }
+    },
+    "unit": {
+      "_doc": "The JVM unit test task, run by the app's OWN gradlew on the runner's JVM. NO EMULATOR IS INVOLVED — src/test/ is the JVM source set; only src/androidTest/ needs a device. The variant matches forks.mail.build.gradle_task (assembleRelease) so the test compilation reuses that build's outputs instead of configuring a second variant.",
+      "task": "testReleaseUnitTest",
+      "enabled": true
+    }
+  },
   "modules": {
     "_doc": "The gradle module graph, as data. settings.gradle loops over this instead of carrying a hardcoded include list, so the graph lives in exactly one place (FIRE RULE #6) - and the same list drives the ship workflow's path triggers and the publish gate's source hash. Upstream's own settings.gradle.kts holds the five upstream modules as literals; that copy is deliberately not carried over. The five upstream modules resolve at their default path (:core:jmap -> core/jmap); the entries carrying a `dir` are shared BY REFERENCE from ab_cloud-libs-shared and are the app's only links into the constellation - the Text tools binder, and the self-update chain the whole fleet uses. libs:analytics remains excluded, see the analytics block below.",
     "app": {},

@@ -168,6 +168,26 @@
       "_doc_no_upstream": "core is shared infra (DB, theming, prefs, the updater) — original code."
     }
   },
+  "tests": {
+    "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. Until this block existed the 34 testers under test/ were run only by hand by agents — the ship workflow called assembleRelease and nothing else — so a tester nobody's workflow called was indistinguishable from no tester at all.",
+    "shell": {
+      "dir": "test",
+      "_doc_requires": "Tools a tester shells out to. Checked BEFORE anything runs, because a missing tool does not fail a tester — it makes the tester answer from the tool's absence. test-no-conflict-markers.sh assigns HITS=$(rg ...) and passes when HITS is empty: with no rg on PATH it certifies a tree that has conflict markers in it, and this was demonstrated by planting one. test-comms-tile-retarget.sh's absent() helper does the same in reverse. Both discard stderr, so 'command not found' never appears. Naming the tools here converts that silent green into a loud red.",
+      "requires": ["rg", "jq", "python3"],
+      "_doc_quarantine": "Filename → the REASON it may fail. Enumerated and visible, NOT a blanket tolerance: a quarantined tester that starts PASSING fails the build, so an entry cannot outlive its reason. Anything not named here is fatal.",
+      "quarantine": {
+        "test-app-identity-resolves.sh": "Reports ui.phone_folders 'prod_docs' restating pkg:com.collabora.libreoffice, which ui.external_apps 'cloud-sheets' already owns. Reads as a GENUINE duplicate-ownership finding in the identity data, and the tester even names the fix (drop the keyword; the entry's `folder` classifies it). Left to the owner: aa_cloud-superapp is under concurrent edit and the fix is a data change in this same file.",
+        "test-arc-menu-section-nav.sh": "T1 'CanopusStar no longer emits page: targets (routing changed?)' — the tester's own parenthesis concedes it cannot tell a routing refactor from a regression. Needs an owner decision on which it is before it can be either fixed or rewritten.",
+        "test-constellation-appstore.sh": "Three failures (fleet entry superapp incomplete, foreign-pkg install via UpdateInstaller, MainActivity constellation route). Unverified whether the Constellation AppStore work landed partially or the assertions ran ahead of it — these have never executed in CI, so there is no last-known-good run to diff against.",
+        "test-constellation-v2.sh": "T2 'manifest missing release_url/asset' — same origin as the appstore tester above and probably the same root cause in the generated fleet manifest."
+      }
+    },
+    "unit": {
+      "_doc": "No JVM unit tests exist in this app (0 files under */src/test/) — the 34 shell testers are its entire suite. Left disabled rather than pointed at an empty task so the engine LOGS the gap on every run instead of printing a green tick for a suite that is not there.",
+      "task": null,
+      "enabled": false
+    }
+  },
   "modules": {
     "_doc": "Single source of truth for the Gradle module graph. settings.gradle iterates this list. Adding a new feature module = one entry here + mkdir + minimal build.gradle.",
     "app": {

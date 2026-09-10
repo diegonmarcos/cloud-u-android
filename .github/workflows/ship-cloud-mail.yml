@@ -69,6 +69,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" "${{ matrix.combo.abi }}"
 
+      # Static assertions, and they run BEFORE anything is built: they need no
+      # JDK, no vault, no gradle, and finish in seconds, so a wiring regression
+      # fails the job in under a minute instead of after a 30-minute build.
+      #
+      # DELIBERATELY NOT gated on steps.gate.outputs.skip. The publish gate
+      # answers "would these bytes differ?", which is the right question for
+      # publishing and the wrong one for testing — a change to a tester itself
+      # does not move the APK, and skipping the suite there would mean a new
+      # assertion could land without ever executing once.
+      - name: Shell testers (static assertions — fatal on failure)
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
+
+      - name: Guard against assertions that cannot fail
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint "$WORK_DIR"
+
       - name: Set up JDK 17
         if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-java@v4
@@ -110,6 +125,22 @@ jobs:
         if: steps.gate.outputs.skip != 'true'
         run: |
           echo "COMMS_BUILD_TIMESTAMP=$(date -u '+%Y%m%d.%H%M%S')" >> "$GITHUB_ENV"
+
+      # The JVM unit test source set. NO EMULATOR: src/test/ runs on the
+      # runner's own JVM — only src/androidTest/ needs a device, and that suite
+      # has its own workflow. Placed before the assemble so a failing assertion
+      # stops the job before it spends the signing and publish steps.
+      #
+      # Gated on the publish gate, unlike the shell testers above: this task
+      # compiles and runs 751 test classes, so when the gate has already proved
+      # the source did not move, re-running them buys nothing for the minutes
+      # it costs on a shared runner.
+      - name: JVM unit tests (fatal on failure)
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ github.workspace }}
+        env:
+          BYPASS_NIX: "1"
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
       - name: Build fork APK (fork's own gradle wrapper + constellation signing)
         if: steps.gate.outputs.skip != 'true'
