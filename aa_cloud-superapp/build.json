@@ -2539,6 +2539,13 @@
                 "label": "C3",
                 "icon": "ic_p_watchdog",
                 "target": "page:c3/topology"
+              },
+              {
+                "_doc": "Camera — the fleet's OWN camera (ac_cloud-camera, applicationId cld.camera, our signed build of GrapheneOS Camera), not a third-party one. The owner asked for it 'as last' in this row on 2026-09-10, and LAST HERE IS ARRAY POSITION: GroupedTilesFragment walks group.tiles in declared order and applies no sort of any kind, so appending is what makes it last and reordering this array is the only way to move it. There is no `order` field to set and none is wanted — a second way to express position is a second thing to disagree with the first. target=extapp:cloud-camera → MainActivity.launchExternalApp opens cld.camera if installed, else downloads + installs ui.external_apps[id=cloud-camera].install_apk_url. icon ic_camera is its own drawable rather than ic_photos, which the Media Center tile already carries; Sections.iconResFor falls back to ic_link_tile without complaining when a name resolves to nothing, so a shared or misspelt icon is a silent defect and test-camera-tiles.sh pins the file's existence.",
+                "id": "camera",
+                "label": "Camera",
+                "icon": "ic_camera",
+                "target": "extapp:cloud-camera"
               }
             ]
           },
@@ -5190,13 +5197,11 @@
         "order": "530",
         "label": ".Storage",
         "match_keywords": [
-          "pkg:cld.camera",
           "pkg:com.google.android.apps.docs",
           "pkg:com.google.android.apps.photos",
           "pkg:com.google.android.apps.subscriptions.red",
           "pkg:com.microsoft.skydrive",
           "pkg:com.musicvideo.photoeditor.squarefit",
-          "pkg:com.sec.android.app.camera",
           "pkg:com.sec.android.gallery3d",
           "pkg:pl.mobimax.cameraopus",
           "pkg:com.alphainventor.filemanager",
@@ -5252,11 +5257,13 @@
           "pkg:com.google.audio.hearing.visualization.accessibility.scribe",
           "pkg:com.persapps.multitimer",
           "pkg:com.samsung.android.ardrawing",
+          "pkg:com.sec.android.app.camera",
           "pkg:com.sec.android.app.clockpackage",
           "pkg:com.sec.android.app.popupcalculator",
           "pkg:com.sec.android.app.voicenote",
           "pkg:es.gob.interior.policia.midni"
         ],
+        "_doc_samsung_camera": "The Samsung stock camera (com.sec.android.app.camera) is HERE because the owner asked for it in Tools · Primary on 2026-09-10, and this is the general-purpose folder of that section — the same landing the last such request got, one entry below. IT IS A MOVE, NOT A COPY: it lived in .Storage (prod_storage, order 530) with the gallery and the two other camera apps until this commit, and prod_storage is walked BEFORE this folder, so leaving the old keyword behind would have kept it in .Storage while the diff read as done. Moving it back is one line — delete this keyword and restore pkg:com.sec.android.app.camera to prod_storage.match_keywords. NOTE WHAT DID NOT MOVE: pl.mobimax.cameraopus (Camera Opus, third-party) and cld.camera (our own Cloud Camera, whose classification now comes from ui.external_apps[id=cloud-camera].folder rather than from a keyword) both stay in .Storage. prod_storage still carries the metadata rules cat:image and intent:…APP_GALLERY, but the keyword pass runs across every folder BEFORE the metadata pass (PhoneAppClassifier.classify), so the keyword below is what decides and no gallery rule can pull the camera back.",
         "_doc_midni": "miDNI (es.gob.interior.policia.midni) is the Spanish National Police's digital DNI, and by the Service/Tool split at the top of this file it is a SERVICE — it is worthless without the provider, and ui._doc_phone_sections names 'government and identity' as Buro's own territory; it lived in -Gov & ID until 2026-09-10. The owner asked for it in Tools · Primary and that is where it is. Recorded here rather than argued: identity you must produce on demand is something you reach for like a calculator, not something you file like a tax return, and where an app SITS is the owner's call. Moving it back is one line — delete this keyword and restore it to svc_gov.",
         "match_metadata": [
           "intent:android.intent.category.APP_CALCULATOR"
@@ -6963,6 +6970,16 @@
         "hub_package": "com.collabora.libreoffice",
         "install_package": "com.collabora.libreoffice",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Sheets.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "Cloud Camera — our own signed build of GrapheneOS Camera, renamed onto cld.camera so it can coexist with an officially-signed GrapheneOS build (ac_cloud-camera/build.json::android.application_id and app/build.gradle.kts both say cld.camera). Added so the Cloud ▸ Apps ▸ Tools Primary tile can use extapp:cloud-camera like every other tile in that row; with no entry here launchExternalApp has no package to open and no APK to offer, exactly the gap the c3-watchdog entry above was written to close. install_apk_url mirrors ac_cloud-camera/build.json::release.gh_release (asset Cloud-Camera.apk on the rolling `latest` release, published by ship-cloud-camera.yml) and was confirmed to answer 200 on 2026-09-10, so this tile offers a real install rather than a dead one. folder=prod_storage is NOT a new placement: cld.camera was already classified into .Storage by a literal `pkg:` keyword there, and that keyword was deleted in this same commit — for our own apps identity and taxonomy are ONE record (see _doc_external_apps, and test-app-identity-resolves.sh T8b, which fails on any keyword that restates a package this list owns).",
+        "id": "cloud-camera",
+        "label": "Cloud Camera",
+        "folder": "prod_storage",
+        "hub_package": "cld.camera",
+        "install_package": "cld.camera",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Camera.apk",
         "forks": {}
       }
     ],
