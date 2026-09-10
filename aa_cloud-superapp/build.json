@@ -5032,11 +5032,13 @@
         ]
       },
       {
+        "_doc_match_keywords": "Keyed on package because that is the only thing that survives a rename. com.collabora.libreoffice is here for the reason prod_mail states for its own list: a third-party package named anywhere else in this file has to appear HERE too, and Cloud Office is named in ui.external_apps[cloud-sheets]. It cannot arrive by metadata instead — PhoneAppClassifier matches `cat:productivity` against ApplicationInfo.category and refuses CATEGORY_UNDEFINED, while upstream's manifest declares no android:appCategory at all. Without this line the largest app in the fleet landed in the `others` sink, came back prefix-less, and was pruned from every Notify tab except All, while the launcher grid filed it under Docs & Notes from ui.external_apps.folder - the two surfaces disagreeing about the same app.",
         "id": "prod_docs",
         "order": "520",
         "label": ".Docs & Notes",
         "match_keywords": [
           "pkg:com.adeeteya.markdown_editor",
+          "pkg:com.collabora.libreoffice",
           "pkg:com.google.android.apps.docs.editors.docs",
           "pkg:com.google.android.apps.docs.editors.sheets",
           "pkg:com.google.android.keep",

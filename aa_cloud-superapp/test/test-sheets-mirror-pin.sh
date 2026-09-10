@@ -190,6 +190,18 @@ ROSTER=$(jq -r '.ui.external_apps[] | select(.id == "cloud-sheets") | .label' "$
   && ok "hub_package is still upstream's $P_PKG" \
   || bad "hub_package no longer matches upstream.package_name ($P_PKG) — a rebrand renamed the package we do not build"
 
+echo "== T8: the central classification knows this package =="
+# The launcher grid files Cloud Office from ui.external_apps[cloud-sheets].folder,
+# but PhoneTaxonomy - which Notify filters by - reads ui.phone_folders alone. The
+# two only agree if the package is named in both. It cannot arrive by metadata:
+# PhoneAppClassifier refuses CATEGORY_UNDEFINED and upstream declares no
+# android:appCategory, so a missing keyword means the sink, silently.
+FOLDER=$(jq -r '.ui.external_apps[] | select(.id == "cloud-sheets") | .folder' "$SUP")
+jq -e --arg f "$FOLDER" --arg p "pkg:$P_PKG" \
+  '.ui.phone_folders[] | select(.id == $f) | .match_keywords | index($p)' "$SUP" >/dev/null 2>&1 \
+  && ok "phone_folders[$FOLDER] names pkg:$P_PKG" \
+  || bad "phone_folders[$FOLDER] does not name pkg:$P_PKG — the grid files it under $FOLDER while Notify drops it in the sink"
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
