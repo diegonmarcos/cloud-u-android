@@ -78,13 +78,13 @@ object ArcMenu {
         // Same two-arc content the Sirius menu builds on descent: the section's
         // pages from the host, PLUS the actions declared for that section in
         // build.json::onehand.circular_menu.nodes[].actions (KDE Connect,
-        // Animations, Copy Info, Update All ...). Declared once, shown by both
+        // Animations, Update All ...). Declared once, shown by both
         // stars — the bottom star is the one that opens Configs, so this is
         // where they have to appear.
         // The inner ring is the host's business. This used to merge the
         // circular_menu node whose childKey matched cfg.section, but EVERY
         // ArcMenu shares one cfg — so the recents star got the Configs
-        // actions (KDE Connect, Animations, Copy Info) on its inner ring.
+        // actions (KDE Connect, Animations) on its inner ring.
         val items = host.itemsFor(cfg.section)
         if (items.isEmpty()) return null
         val v = ArcView(decor.context, cfg.radiusDp, cx, cy, items, host) { decor.removeView(it) }
@@ -229,7 +229,7 @@ object ArcMenu {
                 if (s.action) {
                     // Actions arc: label only, no icon lookup at all. Shrink
                     // further when the word is wider than its disc so a long
-                    // one ("Copy Info") can't spill onto its neighbour.
+                    // one ("KDE Connect") can't spill onto its neighbour.
                     val t = items[i].label
                     lblA.textSize = actionTextPx
                     val room = s.nr * 1.8f

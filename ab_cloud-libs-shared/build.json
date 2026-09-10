@@ -2839,7 +2839,7 @@
       ]
     },
     "arc_menu": {
-      "_doc_actions": "Deliberately empty. KDE Connect, Animations and Copy Info moved into ui.sections[config].pages as is_action entries, which feed the arc's inner ring AND the Configs grid from one list. The block stays because it is still the right home for an action that belongs on the STAR only - one that would be noise in the grid.",
+      "_doc_actions": "Deliberately empty. KDE Connect and Animations moved into ui.sections[config].pages as is_action entries, which feed the arc's inner ring AND the Configs grid from one list. The block stays because it is still the right home for an action that belongs on the STAR only - one that would be noise in the grid.",
       "actions": [],
       "enabled": true,
       "section": "config",

@@ -268,7 +268,7 @@ open class ShellActivity : AppCompatActivity(),
                         // kept them off the arc-menu's inner actions arc.
                         ArcMenu.Item(it.label, it.iconName, it.action.ifBlank { "page:$section/${it.id}" }, it.isAction)
                     } +
-                        // Inner ring (KDE Connect, Animations, Copy Info),
+                        // Inner ring (KDE Connect, Animations),
                         // read from this star's own block. It used to hang off
                         // the Configs node in circular_menu.nodes, which broke
                         // when that ring stopped listing Configs at all.
@@ -1707,13 +1707,6 @@ open class ShellActivity : AppCompatActivity(),
                 applyLauncherSettings()          // re-applies the live views (stars/waves/pets)
                 findViewById<View>(R.id.fragment_container)
                     ?.snack("Animations ${if (on) "on" else "off"}")
-            }
-            actionType == "about_copy_all" -> {
-                // The About page builds its clipboard snapshot while rendering,
-                // so the only way to copy it is to render it. Arm the one-shot
-                // flag, then open the page — it copies itself and disarms.
-                com.diegonmarcos.superapp.devcontrol.DevControlFragment.copyOnOpen = true
-                onTileClicked("page:config/about")
             }
             actionType == "open_home_apps" -> {
                 if (currentSection != "home") goHome()

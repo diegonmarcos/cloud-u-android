@@ -1630,7 +1630,6 @@ class DevControlFragment : Fragment() {
                 Toast.LENGTH_SHORT).show()
         }
         column.addView(actionButton(ctx, "Copy All Infos") { copyAll() })
-        if (copyOnOpen) { copyOnOpen = false; copyAll() }
 
         // ── Section index ────────────────────────────────────────────────
         // Built last, shown first. The page is ~30 sections in eight macro
@@ -2170,11 +2169,6 @@ class DevControlFragment : Fragment() {
 
     companion object {
         fun newInstance() = DevControlFragment()
-
-        /** One-shot: when set, the next render copies its own snapshot to the
-         *  clipboard and clears the flag. Set by the Sirius-star "Copy Info"
-         *  action, which can't read the snapshot without rendering the page. */
-        var copyOnOpen = false
 
         // Neutral gray for utility buttons (Regenerate token, Open Wireless Debugging).
         private val GRAY = 0xFF4B5563.toInt()

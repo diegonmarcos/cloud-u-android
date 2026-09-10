@@ -341,7 +341,7 @@ class LauncherNavController(private val host: NavHost) {
      * A section's own page grid — Pages and Actions as two labelled groups,
      * off the same `is_action` flag the bottom star splits its two arcs by,
      * with the extras declared on that section's radial node (KDE Connect,
-     * Animations, Copy Info) merged in so the grid and the star list the same
+     * Animations) merged in so the grid and the star list the same
      * actions from one declaration.
      *
      * Pulled out of [goSection] because Cloud ▸ Configs has to render THE
@@ -371,7 +371,7 @@ class LauncherNavController(private val host: NavHost) {
     }
 
     /** The extras declared on a section's radial node (KDE Connect,
-     *  Animations, Copy Info), so the grid and the star list the same actions
+     *  Animations), so the grid and the star list the same actions
      *  from one declaration in build.json. */
     private fun starActionsOf(section: Sections.Section): List<TileGridFragment.Tile> {
         val ctx = host.navContext()

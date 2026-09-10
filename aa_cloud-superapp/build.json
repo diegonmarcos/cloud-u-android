@@ -552,7 +552,7 @@
       ]
     },
     "arc_menu": {
-      "_doc_actions": "Deliberately empty. KDE Connect, Animations and Copy Info moved into ui.sections[config].pages as is_action entries, which feed the arc's inner ring AND the Configs grid from one list. The block stays because it is still the right home for an action that belongs on the STAR only - one that would be noise in the grid.",
+      "_doc_actions": "Deliberately empty. KDE Connect and Animations moved into ui.sections[config].pages as is_action entries, which feed the arc's inner ring AND the Configs grid from one list. The block stays because it is still the right home for an action that belongs on the STAR only - one that would be noise in the grid.",
       "actions": [],
       "enabled": true,
       "section": "config",
@@ -2688,7 +2688,7 @@
             "icon": "ic_settings",
             "facet": true,
             "actions_from_section": "config",
-            "_doc": "Android's own settings screens (tiles_configs) plus THE Configs section's Actions underneath — the same Update All / KDE Connect / Animations / Copy Info the Configs grid and the star show, borrowed by `actions_from_section` rather than listed a third time."
+            "_doc": "Android's own settings screens (tiles_configs) plus THE Configs section's Actions underneath — the same Update All / KDE Connect / Animations the Configs grid and the star show, borrowed by `actions_from_section` rather than listed a third time."
           }
         ],
         "_doc_phone_app_groups": "Curated phone apps for Phone ▸ Apps ▸ Quickmarks. THIRD-PARTY ONLY: anything the constellation already offers a way into is reached from Cloud ▸ Apps, and SuitePhoneAppsFragment filters those out of this page's enumerated sections (All Apps, Smart Folders, Active Apps). This list is NOT filtered at runtime — a curated entry that never renders is worse than no entry — so keep our own packages out of it here. Group order = render order; each renders as a subhead + UI_PHONE_GRID_COLUMNS-col grid. Missing packages are silently hidden.",
@@ -4263,13 +4263,6 @@
             "label": "Animations",
             "icon": "ic_mode_apps",
             "action": "action:toggle_animations",
-            "is_action": true
-          },
-          {
-            "id": "copy_info",
-            "label": "Copy Info",
-            "icon": "ic_p_import",
-            "action": "action:about_copy_all",
             "is_action": true
           },
           {
