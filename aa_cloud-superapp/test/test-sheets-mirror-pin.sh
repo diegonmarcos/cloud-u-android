@@ -162,6 +162,34 @@ has "$UPD/Fleet.kt" 'identity.versionCode < installedCode' \
 has "$UPD/Fleet.kt" 'apk.file.delete()' \
   "a refused downgrade drops the cached artifact instead of re-offering it"
 
+echo "== T7: every name the fleet OWNS agrees, and none of them is upstream's =="
+# WHY. The rebrand to "Cloud Office" is data, spread over two build.json files
+# that no engine reconciles: ac_cloud-sheets/build.json::name feeds the
+# Constellation AppStore row (via regen.sh -> constellation-fleet.json::label),
+# while the superapp holds the launcher tile and the updater's notification
+# label. Rename one and the store, the home screen and the install notification
+# disagree about what the user just tapped. Derived from build.json rather than
+# spelled out, so the NEXT rename needs no edit here.
+SUP="$APP/build.json"
+OURS=$(jq -r '.name' "$BJ")
+TILE=$(jq -r '[.. | objects | select(.target? == "extapp:cloud-sheets") | .label] | first // ""' "$SUP")
+ROSTER=$(jq -r '.ui.external_apps[] | select(.id == "cloud-sheets") | .label' "$SUP")
+[ -n "$OURS" ] && [ "$OURS" != "null" ] \
+  && ok "ac_cloud-sheets/build.json::name is set ($OURS)" \
+  || bad "ac_cloud-sheets/build.json::name is missing — the AppStore row would fall back to the id"
+[ "$TILE" = "$OURS" ] && ok "launcher tile label matches ($TILE)" \
+  || bad "launcher tile says '$TILE' but the fleet name is '$OURS' — home screen and AppStore disagree"
+[ "$ROSTER" = "$OURS" ] && ok "ui.external_apps[cloud-sheets].label matches ($ROSTER)" \
+  || bad "external_apps label says '$ROSTER' but the fleet name is '$OURS' — the install notification names a different app"
+
+# The package id is UPSTREAM's and must survive every rebrand: we mirror
+# upstream's bytes, so renaming the package would point the store at an app
+# that does not exist. This is the assertion that stops a "full rebrand" from
+# reaching too far.
+[ "$(jq -r '.ui.external_apps[] | select(.id=="cloud-sheets") | .hub_package' "$SUP")" = "$P_PKG" ] \
+  && ok "hub_package is still upstream's $P_PKG" \
+  || bad "hub_package no longer matches upstream.package_name ($P_PKG) — a rebrand renamed the package we do not build"
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

@@ -2459,8 +2459,9 @@
                 "target": "obsidian://open"
               },
               {
+                "_doc": "Cloud Office (ac_cloud-sheets) — the MIRRORED Collabora Office APK. This tile label and ui.external_apps[cloud-sheets].label are the two names the fleet owns; Android's own launcher and the app's title bar read the name out of upstream's manifest and still say \"Collabora Office\", because we republish upstream's bytes unmodified and cannot relabel them without forking and re-signing.",
                 "id": "sheets",
-                "label": "Office",
+                "label": "Cloud Office",
                 "icon": "ic_sheets",
                 "target": "extapp:cloud-sheets"
               },
@@ -6781,9 +6782,9 @@
         "forks": {}
       },
       {
-        "_doc": "Collabora Office (ac_cloud-sheets) — MIRRORED upstream APK, not compiled: the office engine needs Collabora's Gerrit + an NDK megabuild that no GHA runner can hold, so ship-cloud-sheets.yml downloads the official F-Droid-repo APK, verifies a PINNED sha256, and republishes it (release asset Cloud-Sheets.apk + ghcr cloud-sheets; layer digest == upstream sha256 is the byte-identity proof). Signed by COLLABORA, not us — fine for install, but it can never join signature-gated CLOUD_EXEC flows. Pin lives in ac_cloud-sheets/build.json (25.04.9.1 / vc115, 2026-08-30).",
+        "_doc": "Cloud Office (ac_cloud-sheets) — MIRRORED upstream APK, not compiled: the app is Collabora Online in a WebView over a LibreOffice-core engine, needing Collabora's Gerrit + a Linux-only NDK megabuild that no GHA runner can hold, so ship-cloud-sheets.yml downloads the official F-Droid-repo APK, verifies a PINNED sha256, and republishes it (release asset Cloud-Sheets.apk + ghcr cloud-sheets; layer digest == upstream sha256 is the byte-identity proof). Signed by COLLABORA, not us — fine for install, but it can never join signature-gated CLOUD_EXEC flows. `label` is OUR name and is all the rebrand can reach: hub_package/install_package stay com.collabora.libreoffice and the launcher label Android draws comes from upstream's manifest. Pin lives in ac_cloud-sheets/build.json (26.04.3.1 / vc155, 2026-09-03).",
         "id": "cloud-sheets",
-        "label": "Collabora Office",
+        "label": "Cloud Office",
         "folder": "prod_docs",
         "hub_package": "com.collabora.libreoffice",
         "install_package": "com.collabora.libreoffice",
