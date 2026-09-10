@@ -208,6 +208,8 @@ import app.sterna.ui.showsDraftBadge
 import app.sterna.ui.DRAWER_SHEET_WIDTH_DP
 import app.sterna.ui.drawerRowHeight
 import app.sterna.ui.FOLDER_LABEL_TEXT_SIZE_SP
+import app.sterna.ui.FOLDER_LABEL_LINE_HEIGHT_SP
+import app.sterna.ui.DRAWER_FOLDER_MENU_TAP_SIZE_DP
 import app.sterna.ui.PaneLayout
 import app.sterna.ui.PaneSplit
 import app.sterna.ui.showsRecipients
@@ -2094,9 +2096,24 @@ private fun DrawerContent(
                             {
                                 Box {
                                     var folderMenu by remember { mutableStateOf(false) }
-                                    IconButton(onClick = { folderMenu = true }) {
-                                        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.inbox_folder_options))
-                                    }
+                                    // Deliberately NOT an IconButton. That applies
+                                    // `minimumInteractiveComponentSize` and so reserved 48dp to draw
+                                    // a 24dp glyph, IGNORING the row's own cap — which is why the
+                                    // sidebar could not get under 48dp however far the cap came
+                                    // down, and why it was reported as "still too much line
+                                    // spacing" twice after being fixed. The tap lives on a
+                                    // DRAWER_FOLDER_MENU_TAP_SIZE_DP box instead, stated rather
+                                    // than inherited, and the glyph and its contentDescription are
+                                    // untouched. Same structural fix as the tag strip's (a01045f34).
+                                    Icon(
+                                        Icons.Filled.MoreVert,
+                                        contentDescription = stringResource(R.string.inbox_folder_options),
+                                        modifier = Modifier
+                                            .size(DRAWER_FOLDER_MENU_TAP_SIZE_DP.dp)
+                                            .clip(CircleShape)
+                                            .clickable { folderMenu = true }
+                                            .padding(4.dp),
+                                    )
                                     DropdownMenu(folderMenu, onDismissRequest = { folderMenu = false }, shape = MaterialTheme.shapes.medium) {
                                         val watched = mailbox.id in watchedFolders
                                         DropdownMenuItem(
@@ -2981,11 +2998,19 @@ private fun folderIcon(role: String?): ImageVector = when (role) {
  * No `maxLines` and no `overflow` on purpose. The width and the point size are the two things
  * moved against wrapping (see PaneLayout); a name still too long for them wraps and stays
  * readable, which is the outcome an ellipsis would take away.
+ *
+ * The LINE HEIGHT is set as well as the font size, and it has to be: `copy(fontSize = …)` alone
+ * left labelLarge's 20sp line box in place, so every row drew 12sp of glyph in a box sized for
+ * 14sp. That stranded 4sp of leading on every line of every row and, because the row cap must hold
+ * two boxes for the names that wrap, it set a 40dp floor under the whole sidebar.
  */
 @Composable
 private fun DrawerLabel(text: String) = Text(
     text,
-    style = MaterialTheme.typography.labelLarge.copy(fontSize = FOLDER_LABEL_TEXT_SIZE_SP.sp),
+    style = MaterialTheme.typography.labelLarge.copy(
+        fontSize = FOLDER_LABEL_TEXT_SIZE_SP.sp,
+        lineHeight = FOLDER_LABEL_LINE_HEIGHT_SP.sp,
+    ),
 )
 
 /**

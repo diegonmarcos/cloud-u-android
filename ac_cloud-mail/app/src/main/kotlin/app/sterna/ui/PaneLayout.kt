@@ -40,6 +40,23 @@ const val DRAWER_SHEET_WIDTH_DP = 360
 const val FOLDER_LABEL_TEXT_SIZE_SP = 12
 
 /**
+ * The LINE BOX a folder label draws in, which is not the same lever as [FOLDER_LABEL_TEXT_SIZE_SP]
+ * and is the one that was missed.
+ *
+ * `labelLarge` is 14sp of glyph inside a 20sp line box. Shrinking only `fontSize` to 12sp left that
+ * 20sp box untouched — every row went on paying Material's leading for 14sp text while drawing
+ * 12sp, and because the cap has to hold two boxes for the names that still wrap, that 4sp of dead
+ * leading set the floor under the whole sidebar at 40dp. Stating the line height is what lets
+ * [DRAWER_ROW_HEIGHT_DP] come down at all.
+ *
+ * 16 keeps labelLarge's proportion almost exactly (14/20 is 1.43; 12/16 is 1.33, marginally
+ * tighter, which is the request). It is not smaller than the glyphs need: at 12sp an accented
+ * capital runs about 14dp from Ñ's tilde to a descender, so 16dp clears the diacritics a Spanish
+ * folder list is full of rather than clipping them.
+ */
+const val FOLDER_LABEL_LINE_HEIGHT_SP = 16
+
+/**
  * Everything on a folder row that is NOT the label, in dp — the budget the label does not get.
  *
  *   12  drawer-item horizontal padding (left)      Modifier.padding(horizontal = 12.dp)
@@ -47,14 +64,18 @@ const val FOLDER_LABEL_TEXT_SIZE_SP = 12
  *   48  the icon slot: 24 chevron-or-indent + 24 folder icon
  *   12  M3 icon-to-label gap
  *   12  M3 label-to-badge gap
- *   48  the badge slot: the folder-options IconButton's touch target
+ *   32  the badge slot: [DRAWER_FOLDER_MENU_TAP_SIZE_DP]
  *   24  M3 NavigationDrawerItem content end
  *   12  drawer-item horizontal padding (right)
+ *
+ * The badge slot was 48 while the folder-options control was an `IconButton`. Narrowing it to
+ * [DRAWER_FOLDER_MENU_TAP_SIZE_DP] hands the label the 16dp back, which is why only one real folder
+ * name still wraps where three did — see test/drawer-folder-labels.json::known_wrapping.
  *
  * Kept here rather than inline in the row so the wrapping test can compute the same budget the
  * screen does; a number that lived only in InboxScreen could drift from the one being asserted.
  */
-const val DRAWER_FOLDER_ROW_CHROME_DP = 184
+const val DRAWER_FOLDER_ROW_CHROME_DP = 168
 
 /** How much width a folder LABEL actually gets at [DRAWER_SHEET_WIDTH_DP]. */
 fun folderLabelBudgetDp(drawerWidthDp: Int = DRAWER_SHEET_WIDTH_DP): Int =
@@ -70,29 +91,54 @@ fun folderLabelBudgetDp(drawerWidthDp: Int = DRAWER_SHEET_WIDTH_DP): Int =
 const val MATERIAL_DRAWER_ROW_HEIGHT_DP = 56
 
 /**
- * The smallest a control carrying a tap target may be drawn: Material's own
- * `minimumInteractiveComponentSize`, which every `IconButton` reserves.
+ * What Material reserves under anything tappable: `minimumInteractiveComponentSize`, which every
+ * `IconButton` applies unconditionally and which IGNORES the constraints handed to it.
  *
- * The floor under [DRAWER_ROW_HEIGHT_DP] and not a style choice — the folder-options `IconButton`
- * measures itself at this height and ignores the constraints handed to it, so a shorter row does
- * not shrink the button, it draws it outside the row.
+ * This used to be the floor under [DRAWER_ROW_HEIGHT_DP], and that is precisely why two rounds of
+ * making the sidebar denser could not reach it — the number recorded here is what the row was
+ * charged, so lowering the cap to it and stopping looked like the end of the road. It is kept as
+ * the figure the row is now measured AGAINST: the folder-options control is no longer an
+ * `IconButton`, so the reservation is gone and the row is allowed under it. A change that puts an
+ * `IconButton` back in a folder row silently restores every dp of it, which is what
+ * DrawerRowDensityLintTest watches for.
  */
 const val MIN_TOUCH_TARGET_DP = 48
 
 /**
+ * The tappable box around the folder-options icon — the one control on a folder row.
+ *
+ * Deliberately under Material's [MIN_TOUCH_TARGET_DP], and the reason the row can be 32dp at all.
+ * An `IconButton` here reserved 48dp to draw a 24dp glyph, so 24 of the 48dp row was blank held for
+ * a tap, under a label whose line box is [FOLDER_LABEL_LINE_HEIGHT_SP]. The same structural waste
+ * was removed from the reading view's tag strip for the same reason (a01045f34).
+ *
+ * 32 rather than the chevron's bare 24dp because this one opens a destructive menu (rename, delete)
+ * and deserves the larger target of the two. The glyph stays 24dp and its contentDescription is
+ * unchanged, so nothing about the screen reader's view of this row moves.
+ *
+ * ponytail: a 32dp target is a deliberate trade against Material's 48dp guidance, taken because the
+ * owner has asked for this sidebar to be denser three times. If it proves hard to hit, the upgrade
+ * is a long-press on the whole row — a target far bigger than 48dp — not a taller row.
+ */
+const val DRAWER_FOLDER_MENU_TAP_SIZE_DP = 32
+
+/**
  * How tall one drawer row is allowed to be, at `fontScale 1`.
  *
- * 48 and not Material's [MATERIAL_DRAWER_ROW_HEIGHT_DP], because at 56 a row holds one 20dp line
- * box of label and 36dp of nothing — and the sidebar draws 28 folders, so that "nothing" is the
- * difference between reading the folder list and scrolling for it. The gap was always there;
- * what made it show was folder labels ceasing to wrap onto the second line that used to fill it.
+ * 32, down from 48, and the number is now set by CONTENT rather than by a tap target. Two things
+ * had to move before it could: the label's line box, which was still Material's 20sp leading for
+ * 12sp text (see [FOLDER_LABEL_LINE_HEIGHT_SP]), and the folder-options `IconButton`'s 48dp
+ * reservation (see [DRAWER_FOLDER_MENU_TAP_SIZE_DP]). Lowering this constant alone — the obvious
+ * move, and the one already made twice — could not go under 48 while either was in place.
  *
- * It cannot go below [MIN_TOUCH_TARGET_DP]: the folder-options button owns that height whatever
- * the row says. And it does not need to go above, because a label that still wraps draws two
- * label-large line boxes — 40dp — which 48 holds without clipping, so the wrapping that was
- * deliberately kept readable stays readable.
+ * What holds it at 32 is the wrapping that was deliberately kept readable: a folder name too long
+ * for the sheet draws two [FOLDER_LABEL_LINE_HEIGHT_SP] line boxes, 32dp, which this holds exactly.
+ * Going lower would slice the second line off the one real folder name that still wraps.
+ *
+ * For the 28-folder account in test/drawer-folder-labels.json this is ~450dp of height returned to
+ * the list — more than a phone screen of scrolling.
  */
-const val DRAWER_ROW_HEIGHT_DP = 48
+const val DRAWER_ROW_HEIGHT_DP = 32
 
 /**
  * The row height at THIS font scale — the cap actually handed to a drawer row.

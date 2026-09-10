@@ -142,6 +142,45 @@ class MessageTagRowDensityTest {
         )
     }
 
+    // -- 4. and at zero tags it is not there at all ------------------------------------------------
+
+    /**
+     * ZERO TAGS COSTS ZERO HEIGHT — the half of "mostly blank" that no dp value can fix.
+     *
+     * A block that is mostly blank is usually a block that should not be drawn in that state, and on
+     * a single-folder account that state is every message. The strip is reached only through
+     * `if (tags.isNotEmpty())`, so at zero tags nothing is composed: no `FlowRow`, and in particular
+     * not its `bottom` padding, which is the one piece of the strip that would otherwise still take
+     * height while saying nothing.
+     *
+     * Asserted on the CALL SITE rather than inside `MessageTagRow`, because an emptiness check
+     * written inside the composable would still have composed the `FlowRow` around it. Dropping the
+     * guard is a silent regression: every number in this file would go on passing while an empty
+     * strip reappeared under every sender.
+     *
+     * Scoped to the whole file rather than to the enclosing composable's body, deliberately:
+     * [bodyOf] finds a function's opening brace by scanning for the first `)` after its name, which
+     * works for `MessageTagRow(tags: List<MessageTag>)` and does NOT work for the caller — its
+     * parameter list contains `(EmailBodyPart, String) -> Unit`, so the scan stops inside a
+     * parameter type and returns an empty body. A rule handed an empty body passes everything. The
+     * call-site count below is what makes the whole-file scope exact instead of merely broad.
+     */
+    @Test fun `a message with no tags draws no strip at all`() {
+        val source = flat(SOURCE)
+        assertEquals(
+            "MessageTagRow is expected to be called from exactly one place, so that the guard " +
+                "asserted below covers every way the strip can reach the screen.",
+            1,
+            Regex("""MessageTagRow\(tags\)""").findAll(source).count(),
+        )
+        assertTrue(
+            "The tag strip must be reached only through `if (tags.isNotEmpty())`, or a message " +
+                "with nothing to say draws an empty FlowRow and its bottom padding anyway — which " +
+                "on a single-folder account is every message the owner opens.",
+            source.contains("if (tags.isNotEmpty()) { MessageTagRow(tags) }"),
+        )
+    }
+
     private companion object {
 
         /** `AssistChipTokens.ContainerHeight` was 32dp, but `Surface` reserved 48dp regardless. */
@@ -182,6 +221,13 @@ class MessageTagRowDensityTest {
             }
             error("braces never balance after $name")
         }
+
+        /**
+         * [body] with its comments gone and its whitespace collapsed, so a rule matches the CODE
+         * and not a comment that happens to quote the thing being looked for.
+         */
+        fun flat(body: String): String =
+            body.replace(Regex("""//[^\n]*"""), " ").replace(Regex("""\s+"""), " ")
 
         /** The single dp figure [pattern] captures, insisting there is exactly one to be sure of. */
         fun dpIn(body: String, pattern: String): Int {

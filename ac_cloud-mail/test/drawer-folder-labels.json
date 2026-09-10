@@ -117,9 +117,8 @@
     }
   },
   "_doc_known_wrapping": "The labels that STILL do not fit at the chosen width and point size, and are accepted as wrapping. Fitting the widest of them needs a ~384dp sheet, and Material 3 caps a modal drawer at 360dp so a phone keeps a scrim to tap back through; the alternative, an ellipsis, is forbidden - a folder whose name cannot be read is worse than one on two lines. This list is asserted in BOTH directions: a name in it that turns out to fit is stale and fails, and a name outside it that does not fit is a regression and fails.",
+  "_doc_known_wrapping_shrank": "Was three names, is one. Narrowing the folder-options control from an IconButton's 48dp touch reservation to a 32dp tappable box (DRAWER_FOLDER_MENU_TAP_SIZE_DP) handed 16dp back to the label, taking the budget from 176dp to 192dp: 'Fi  Utilities & Services  (222)' at 183dp and 'Fd  Work & Professional  (2)' at 177dp now fit on one line. Only 'Fg  Subscriptions & Newsletters' at 200dp still wraps, and it is what holds DRAWER_ROW_HEIGHT_DP at 32dp rather than lower.",
   "known_wrapping": [
-    "Fg    📰 Subscriptions & Newsletters",
-    "Fi    🏠 Utilities & Services  (222)",
-    "Fd    💼 Work & Professional  (2)"
+    "Fg    📰 Subscriptions & Newsletters"
   ]
 }

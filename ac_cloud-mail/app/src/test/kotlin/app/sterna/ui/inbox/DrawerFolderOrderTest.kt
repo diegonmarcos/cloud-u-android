@@ -2,6 +2,7 @@ package app.sterna.ui.inbox
 
 import app.sterna.core.jmap.model.Mailbox
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 /**
@@ -97,6 +98,57 @@ class DrawerFolderOrderTest {
             ),
             mailboxTree(folders, emptySet(), displayName)
                 .map { Triple(it.mailbox.name, it.depth, it.hasChildren) },
+        )
+    }
+
+    /**
+     * THE COMPARATOR'S RESULT ON A CONSTRUCTED LIST, including an accent — the case #244 asked for
+     * explicitly, pinned here so that what the sort does to `ñ` is a decision on the record rather
+     * than a surprise in the drawer.
+     *
+     * Ordering is by CODE POINT, so `Ñ` (U+00D1) sorts after every unaccented letter, lower case
+     * included: `Zebra`, `archive`, `Ñoño`. A Spanish reader would expect `archive`, `Ñoño`, `Zebra`
+     * — ñ filed just after n — and a locale `Collator` would deliver exactly that. It is NOT used,
+     * and the reason is the owner's own folder names: his scheme marks a group header by the CASE of
+     * the second character ("AO SIZE" heading "Aa Large", "Ab Medium"), and a collator weighs base
+     * letters before case, so it answers "Aa Large" before "AO SIZE" and files every header after
+     * the members it introduces. Case is a tertiary difference and no collator strength recovers it
+     * once the base letters differ, so the two cannot both be had from one comparator.
+     *
+     * The accented names are therefore the accepted cost of the grouping, and this test states the
+     * trade rather than hiding it. If the owner would rather have Spanish collation than his group
+     * headers, the change is `drawerFolderOrder` and the expectation below.
+     */
+    @Test fun `the comparator's result on Zebra, archive, Ñoño and Inbox, accents included`() {
+        // Fed in an order that is none of the candidate answers, so a no-op sort cannot pass.
+        val folders = listOf(
+            folder("Ñoño"),
+            folder("Zebra"),
+            folder("Inbox", role = "inbox"),
+            folder("archive"),
+        )
+        assertEquals(
+            listOf(
+                // Pinned by ROLE, never by name: a mail client that sorts its inbox into the middle
+                // of the list is a bug report, and rank is weighed before any name comparison.
+                "Inbox",
+                // Then code point: 'Z' 0x5A, 'a' 0x61, 'Ñ' 0xD1.
+                "Zebra",
+                "archive",
+                "Ñoño",
+            ),
+            order(folders),
+        )
+        // And the same four under Spanish collation, recorded as what is being given up: `archive`
+        // would lead and `Ñoño` would sit between it and `Zebra`. Asserted as a DIFFERENCE so this
+        // reads as a live trade-off rather than a comment nobody checks.
+        val spanishCollated = listOf("archive", "Ñoño", "Zebra")
+        assertNotEquals(
+            "code-point order now agrees with Spanish collation for these names, so the grouping " +
+                "trade-off documented above has stopped costing anything and the decision to keep " +
+                "code-point order should be revisited.",
+            spanishCollated,
+            order(folders).filter { it != "Inbox" },
         )
     }
 
