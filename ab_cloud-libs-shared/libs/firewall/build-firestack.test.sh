@@ -123,69 +123,70 @@ else
     fi
 fi
 
-# 5. EVERY workflow that reaches this engine caches the module cache, not just
-#    the one someone happened to be looking at. Two workflows build this aar and
-#    a fix in one leaves the other failing on its own schedule, so the set is
-#    derived from the tree: scripts that call the engine -> their project dir ->
-#    the workflows whose WORK_DIR points at it.
-mapfile -t CALLER_DIRS < <(
-    grep -rl 'build-firestack\.sh' --include='*.sh' . 2>/dev/null \
-      | grep -v "$ENGINE" \
-      | xargs -r -n1 dirname | sed 's|^\./||' | sort -u
-)
-[ "${#CALLER_DIRS[@]}" -gt 0 ] || note FAIL "no script calls $ENGINE — did the engine get renamed?"
-
-# A workflow reaches a caller dir in one of TWO ways, and both have to count.
-# WORK_DIR is how an APP workflow names the directory it builds in. But a
-# workflow can also just RUN one of the caller scripts by path, and
-# ship-firestack-aar.yml does exactly that — it invokes
-# libs/firewall/publish-firestack.sh directly and deliberately declares no
-# WORK_DIR, because the generator would then rewrite its trigger paths from a
-# gradle module map that cannot describe a Go source tree.
+# 5. The workflow that BUILDS the aar caches the Go module cache. The tidy
+#    inside `gomobile bind` reads sum.golang.org tiles out of GOMODCACHE, so a
+#    warm cache is what stops the aar depending on a third-party service being
+#    healthy.
 #
-# Matching only on WORK_DIR therefore went BLIND to the third workflow that
-# builds this aar the day it was added: it reported "libs/firewall has no
-# shipping workflow of its own" and skipped the module-cache assertion entirely.
-# That is the same shape as this whole tester going unrun before #203 — a guard
-# that quietly checks nothing looks exactly like a guard that passes.
-covered=0
-for dir in "${CALLER_DIRS[@]}"; do
-    found=0
-    for wf in .github/workflows/*.yml; do
-        reaches=0
-        grep -qE "^[[:space:]]*WORK_DIR:[[:space:]]*$dir[[:space:]]*$" "$wf" && reaches=1
-        # ...or the workflow EXECUTES a script in that dir. It must be an
-        # execution, not a mention: the first draft of this matched any literal
-        # occurrence of the path and immediately failed publish-gate-guard.yml,
-        # which names lib-apks/build.sh in a COMMENT and builds no aar at all.
-        # A guard that fails on workflows it was not asked about teaches people
-        # to ignore it, so the pattern requires an interpreter or ./ in front of
-        # the path and refuses YAML comment lines outright.
-        for caller in "$dir"/*.sh; do
-            [ -e "$caller" ] || continue
-            # awk with index(), not a regex: a script path is full of dots and
-            # slashes, and leaving them as metacharacters is how this kind of
-            # check matches something it was not asked about and calls it a pass.
-            grep -qE "^[[:space:]]*(run:[[:space:]]*)?(bash|sh|\./)" "$wf" || continue
-            awk -v p="$caller" '
-                /^[[:space:]]*#/            { next }
-                index($0, p) == 0           { next }
-                /(bash|sh|\.\/)[[:space:]]*[^[:space:]]*$/ { hit = 1 }
-                index($0, "bash " p) || index($0, "sh " p) { hit = 1 }
-                END                         { exit hit ? 0 : 1 }
-            ' "$wf" && reaches=1
-        done
-        [ "$reaches" = 1 ] || continue
-        found=1; covered=$((covered+1))
-        if grep -q 'gomodcache' "$wf"; then
-            note ok "${wf#.github/workflows/} (builds $dir) caches the Go module cache"
+#    DECLARED, NOT DERIVED FROM SHELL TEXT. This was derived twice and was wrong
+#    both times, because "which script builds the aar" was answered by grepping
+#    shell files for the engine's name and no pattern can separate a call from a
+#    mention. Attempt one matched a workflow that names lib-apks/build.sh in a
+#    COMMENT. Attempt two required an interpreter before the path, and matched
+#    a FAILURE MESSAGE in build-firestack.test.sh's sibling tester that reads
+#    "fetch-firestack.sh invokes build-firestack.sh" — the prose describing the
+#    thing tripped the detector for it, and CI went red on run 34473051246 with
+#    "test-ai-model-registry.yml builds aa_cloud-superapp/test". A guard that
+#    fails on files it was not asked about is worse than no guard: it teaches
+#    people to ignore it.
+#
+#    So the set is DATA (FIRE RULE 6 — replace a heuristic, do not keep tuning
+#    it). It is also now a set of ONE, and that is the point of the 2026-09-10
+#    decoupling rather than an oversight: ship-cloud-superapp.yml and
+#    ship-cloud-libs.yml used to compile this aar on the way to their APKs, and
+#    they FETCH it now (libs/firewall/fetch-firestack.sh), so they run no Go and
+#    a Go module cache is nothing to them. Exactly one workflow still runs
+#    gomobile, and this is the assertion that it is not doing so cold.
+mapfile -t AAR_WORKFLOWS < <(jq -r '(.firestack.build.aar_building_workflows // [])[]' \
+                              ab_cloud-libs-shared/build.json 2>/dev/null)
+if [ "${#AAR_WORKFLOWS[@]}" -eq 0 ]; then
+    note FAIL "build.json declares no .firestack.build.aar_building_workflows — nothing checks that the aar build has a warm module cache"
+else
+    for wf in "${AAR_WORKFLOWS[@]}"; do
+        f=".github/workflows/$wf"
+        if [ ! -f "$f" ]; then
+            note FAIL "build.json names $wf as building the aar, but $f does not exist"
+        elif grep -q 'gomodcache' "$f"; then
+            note ok "$wf (the aar build) caches the Go module cache"
         else
-            note FAIL "${wf#.github/workflows/} builds $dir but does not cache the Go module cache — it keeps hitting sum.golang.org"
+            note FAIL "$wf builds the aar but does not cache the Go module cache — it keeps hitting sum.golang.org"
         fi
     done
-    [ "$found" = 1 ] || note ok "$dir has no shipping workflow of its own"
+fi
+
+# The other side of the same coin, so the declaration cannot silently fall
+# behind: a workflow that RUNS a firestack build script must be listed above.
+#
+# COMMENT LINES ARE SKIPPED, and that is not a detail — ship-cloud-superapp.yml
+# and ship-cloud-libs.yml both discuss build-firestack.sh at length in comments
+# explaining the 2026-09-09 outage, and counting those made this check demand
+# they be declared as aar builders when they are precisely the workflows that
+# stopped being any such thing.
+#
+# ponytail: a `run:` line is the signal and an `echo` that merely NAMED one of
+# these scripts would still be a false positive. Tightening that means parsing
+# YAML rather than lines, which is not worth it for a cache-warmth check — but
+# the ceiling is here in writing rather than waiting to surprise someone.
+for f in .github/workflows/*.yml; do
+    awk '/^[[:space:]]*#/ { next }
+         /publish-firestack\.sh|build-firestack\.sh/ { hit = 1 }
+         END { exit hit ? 0 : 1 }' "$f" 2>/dev/null || continue
+    b=$(basename "$f")
+    case " ${AAR_WORKFLOWS[*]} " in
+        *" $b "*) note ok "$b runs a firestack build script and is declared as an aar builder" ;;
+        *) note FAIL "$b runs a firestack build script but is not in build.json::firestack.build.aar_building_workflows" ;;
+    esac
 done
-[ "$covered" -gt 0 ] || note FAIL "matched no workflow to any firestack caller — the WORK_DIR mapping broke"
 
 # 6. Every tool a recipe installs at an EXPLICIT @version is, by construction,
 #    outside go.mod — that is the only reason to write the version there — so the
