@@ -149,6 +149,19 @@ jobs:
       # "would these bytes differ?", which is the right question for publishing
       # and the wrong one for testing — editing a tester does not move the APK,
       # and gating here would let a new assertion land without ever running.
+      # ripgrep is NOT on the ubuntu-latest image — run 34441463781 proved it,
+      # by refusing to run rather than by passing. Four of this app's testers
+      # call rg with stderr discarded, so without it installed they do not fail:
+      # test-no-conflict-markers.sh assigns HITS="$(rg …)" and reports "no
+      # conflict markers" when the command was never found, and
+      # test-comms-tile-retarget.sh's absent() helper reports every "no dead
+      # reference survives" check as PASSING. Both were therefore green on this
+      # runner for reasons unrelated to the code. Installing it is what makes
+      # those assertions mean anything; build.json::tests.shell.requires is the
+      # check that stops them going quietly vacuous again.
+      - name: Install ripgrep (a tester's missing tool must never be a pass)
+        run: sudo apt-get install -y -qq ripgrep
+
       - name: Shell testers (static assertions — fatal on failure)
         run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
 
