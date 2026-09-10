@@ -1,0 +1,74 @@
+# ╔═══════════════════════════════════════════════════════════════════════╗
+# ║ Test → AI model registry (baked prices vs the live provider catalogue) ║
+# ║                                                                        ║
+# ║ The AI Model Routing table is BAKED data: cloud-keyboard and cloud-    ║
+# ║ mail each compile their own copy of it into their own BuildConfig.     ║
+# ║ Baked data goes stale silently, and this repository already learned    ║
+# ║ how silently: test-keyboard-ai-routing.sh's live block re-read         ║
+# ║ OpenRouter, found a row that disagreed, printed the disagreement —     ║
+# ║ and then reported "0 failed" and exited 0, because the drift branch    ║
+# ║ was an echo rather than a failure. Nothing in CI ran the script        ║
+# ║ either, so even that green was never looked at. Both halves are fixed; ║
+# ║ this workflow is the half that makes a machine look.                   ║
+# ║                                                                        ║
+# ║ WHY IT IS ALSO ON A SCHEDULE, not only on push: a baked price goes     ║
+# ║ wrong when the PROVIDER changes its mind, which produces no commit at  ║
+# ║ all. A push-triggered check can only ever catch drift that someone     ║
+# ║ happened to push on top of, so on its own it would keep the exact      ║
+# ║ silence this job exists to end.                                        ║
+# ║                                                                        ║
+# ║ Builds nothing: it is grep, python3 and curl over the registries       ║
+# ║ named in aa_cloud-superapp/test/ai-registries.json. Adding a third     ║
+# ║ app's copy of the table to that manifest brings it under this gate     ║
+# ║ with no change here.                                                   ║
+# ╚═══════════════════════════════════════════════════════════════════════╝
+name: "Test → AI model registry (baked prices vs live catalogue)"
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # 06:15 UTC daily. Drift arrives without a commit, so the clock — not the
+    # push — is what has to ask the question.
+    - cron: "15 6 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "1_cicd/src/cicd/test-ai-model-registry.yml"
+      - "aa_cloud-superapp/test/test-keyboard-ai-routing.sh"
+      - "aa_cloud-superapp/test/ai-registries.json"
+      - "ab_cloud-libs-shared/build.json"
+      - "ac_cloud-mail/build.json"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-ai-model-registry-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  registry-drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The tester decides the verdict and owns every assertion; this step only
+      # runs it, once, and lets its exit code be the gate — a drifted row now
+      # leaves a red run naming the app, the model, the baked value and the live
+      # one. The output is kept because the summary step reads it rather than
+      # paying for a second pass over the provider's endpoints.
+      - name: AI model registry — baked values vs the live provider catalogue
+        run: bash aa_cloud-superapp/test/test-keyboard-ai-routing.sh 2>&1 | tee /tmp/registry-drift.log; exit "${PIPESTATUS[0]}"
+
+      # A genuinely unreachable OpenRouter makes the live blocks SKIP rather than
+      # fail, which is right for one run and wrong as a standing state: skipping
+      # forever looks identical to passing forever. Lift the skip and fail lines
+      # into the run summary so a week of "green" that never actually reached the
+      # provider is visible without opening a log.
+      - name: Summarise what was checked and what was skipped
+        if: always()
+        run: |
+          grep -E "^  (skip|FAIL):" /tmp/registry-drift.log >> "$GITHUB_STEP_SUMMARY" \
+            || echo "Every live catalogue check reached OpenRouter and agreed with the registries." >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,10 @@
+{
+  "_doc": "Every AI model routing registry in this repository. cloud-keyboard and cloud-mail each bake their OWN copy of the model table into their own BuildConfig, and that is deliberate — mail's text-tool settings are free to diverge from the keyboard's. What is NOT free to diverge is the truth: every copy prices the same OpenRouter models, so every copy has to be cross-checked against the live catalogue. The live blocks of test-keyboard-ai-routing.sh iterate THIS list, so a third app that copies the table is covered the moment it is listed here — and until it is listed, nothing anywhere checks it. That is exactly how one copy stayed unexamined while the other was tested.",
+  "_doc_fields": "path: repo-relative build.json holding the registry. key: its top-level object in that file. label: the name a failure line prints, so a drift says WHICH app is stale rather than just which model.",
+  "_doc_ci": "1_cicd/src/cicd/test-ai-model-registry.yml runs those blocks on a schedule as well as on push. The schedule is the point: a baked price goes stale because the provider changed its mind, which produces no commit, so a push-triggered check alone can never see it.",
+  "version": 1,
+  "registries": [
+    { "path": "ab_cloud-libs-shared/build.json", "key": "keyboard_ai", "label": "cloud-keyboard" },
+    { "path": "ac_cloud-mail/build.json", "key": "mail_ai", "label": "cloud-mail" }
+  ]
+}

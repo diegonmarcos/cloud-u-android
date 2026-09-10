@@ -130,23 +130,34 @@ for pid, pv in d["providers"].items():
         assert sum(1 for m in pv["models"] if m.get("open")) >= 5, f"{pid}: fewer than 5 open-weight models"
 EOF
 then ok "T7 model entries well-formed, catalog providers carry baked prices"; else bad "T7 pricing shape"; fi
+ROOT="$(cd "$APP/.." && pwd)"
+REGISTRIES="$APP/test/ai-registries.json"
 CATALOG=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['keyboard_ai']['providers']['openrouter']['catalog_url'])" "$LIBS/build.json")
 if curl -sS --max-time 30 -o /tmp/kb-ai-catalog.$$ "$CATALOG" 2>/dev/null; then
-  if python3 - "$LIBS/build.json" /tmp/kb-ai-catalog.$$ <<'EOF'
-import json, sys
-pv = json.load(open(sys.argv[1]))["keyboard_ai"]["providers"]["openrouter"]
-cat = {m["id"]: m for m in json.load(open(sys.argv[2]))["data"]}
+  if python3 - "$ROOT" "$REGISTRIES" /tmp/kb-ai-catalog.$$ <<'EOF'
+import json, os, sys
+root, manifest, catalog = sys.argv[1], sys.argv[2], sys.argv[3]
+cat = {m["id"]: m for m in json.load(open(catalog))["data"]}
 bad = []
-for m in pv["models"]:
-    c = cat.get(m["id"])
-    if not c: bad.append(f"{m['id']}: not in catalog"); continue
-    if bool(m.get("open")) != bool(c.get("hugging_face_id")): bad.append(f"{m['id']}: open={m.get('open', False)} but hugging_face_id={c.get('hugging_face_id')!r}")
-    for k in ("prompt", "completion"):
-        live = float(c["pricing"][k]) * 1e6
-        if abs(live - m[k]) > 0.01 * max(live, m[k]): bad.append(f"{m['id']}: {k} baked {m[k]} vs live {live:.4f}")
+# Every registry in the manifest, not just the keyboard's: two apps bake their own copy of this
+# table, and checking one of them is how a stale row survives untouched in the other.
+for r in json.load(open(manifest))["registries"]:
+    pv = json.load(open(os.path.join(root, r["path"])))[r["key"]]["providers"]["openrouter"]
+    for m in pv["models"]:
+        c = cat.get(m["id"])
+        if not c: bad.append(f"{r['label']} {m['id']}: not in catalog"); continue
+        if bool(m.get("open")) != bool(c.get("hugging_face_id")): bad.append(f"{r['label']} {m['id']}: open={m.get('open', False)} but hugging_face_id={c.get('hugging_face_id')!r}")
+        for k in ("prompt", "completion"):
+            # The catalogue publishes DOLLARS PER TOKEN, as a string; the registry is authored in
+            # DOLLARS PER MILLION TOKENS. This *1e6 is the ONLY conversion on this path and it is
+            # the same one AiRouter.refreshPricing applies to the live price, so a factor that
+            # crept in on either side shows up here as a hundred-fold or million-fold disagreement
+            # rather than as a plausible-looking number on the settings screen.
+            live = float(c["pricing"][k]) * 1e6
+            if abs(live - m[k]) > 0.01 * max(live, m[k]): bad.append(f"{r['label']} {m['id']}: {k} baked {m[k]} vs live {live:.4f} $/M")
 assert not bad, "\n    ".join(bad)
 EOF
-  then ok "T7 live catalog: ids exist, open flags match, baked prices within 1 %"; else bad "T7 live catalog cross-check"; fi
+  then ok "T7 live catalog: every registry's ids, open flags and baked prices within 1 %"; else bad "T7 live catalog cross-check"; fi
 else
   echo "  skip: T7 live catalog unreachable ($CATALOG) — offline, baked prices unverified"
 fi
@@ -419,9 +430,18 @@ grep -rqF 'AiRouter' "$LIBS/libs/translate/src/main/java" \
 
 # T8 live: the quantisation and trained_for values baked into build.json, re-read from OpenRouter.
 # This is the refresh procedure for the two columns that have no runtime refresh on a phone.
-if curl -sS --max-time 15 -o /dev/null "$CATALOG" 2>/dev/null && python3 - "$LIBS/build.json" <<'EOF'
-import json, sys, urllib.request, collections
-pv = json.load(open(sys.argv[1]))["keyboard_ai"]["providers"]["openrouter"]
+#
+# Reachability is probed FIRST and on its own line, because "the catalogue did not answer" and "the
+# catalogue answered and disagrees with us" are opposite results and only one of them is allowed to
+# be quiet. They used to share a single `if curl … && python3 …` whose else-branch was an `echo`, so
+# a real drift printed its own traceback and the suite still ended `0 failed` and exited 0 — the
+# check ran, found the truth, and reported green. An unreachable catalogue skips; a catalogue that
+# contradicts the registry fails the build.
+if ! curl -sS --max-time 15 -o /dev/null "$CATALOG" 2>/dev/null; then
+  echo "  skip: T8 live OpenRouter cross-check unreachable ($CATALOG) — quant/trained_for unverified"
+elif python3 - "$ROOT" "$REGISTRIES" <<'EOF'
+import json, os, sys, urllib.request, collections
+root, manifest = sys.argv[1], sys.argv[2]
 def get(u):
     with urllib.request.urlopen(u, timeout=40) as r: return json.load(r)
 ranked = collections.defaultdict(set)
@@ -429,19 +449,25 @@ for c in ("programming", "roleplay", "marketing", "marketing/seo", "technology",
           "translation", "legal", "finance", "health", "trivia", "academia"):
     for m in get("https://openrouter.ai/api/v1/models?category=" + c.replace("/", "%2F"))["data"]:
         ranked[m["id"]].add(c)
+# Both registries list the same model ids, so the per-model endpoint call is fetched once and
+# reused — checking the second copy costs no extra requests.
+endpoints = {}
 drift = []
-for m in pv["models"]:
-    live_cats = ranked.get(m["id"], set())
-    if set(m.get("trained_for", [])) != live_cats:
-        drift.append(f"{m['id']}: trained_for {sorted(m.get('trained_for', []))} vs live {sorted(live_cats)}")
-    eps = get(f"https://openrouter.ai/api/v1/models/{m['id']}/endpoints")["data"]["endpoints"]
-    live_q = sorted({e.get("quantization") for e in eps if e.get("quantization")} - {"unknown"})
-    if sorted(m.get("quant", [])) != live_q:
-        drift.append(f"{m['id']}: quant {sorted(m.get('quant', []))} vs live {live_q}")
+for r in json.load(open(manifest))["registries"]:
+    pv = json.load(open(os.path.join(root, r["path"])))[r["key"]]["providers"]["openrouter"]
+    for m in pv["models"]:
+        live_cats = ranked.get(m["id"], set())
+        if set(m.get("trained_for", [])) != live_cats:
+            drift.append(f"{r['label']} {m['id']}: trained_for {sorted(m.get('trained_for', []))} vs live {sorted(live_cats)}")
+        if m["id"] not in endpoints:
+            endpoints[m["id"]] = get(f"https://openrouter.ai/api/v1/models/{m['id']}/endpoints")["data"]["endpoints"]
+        live_q = sorted({e.get("quantization") for e in endpoints[m["id"]] if e.get("quantization")} - {"unknown"})
+        if sorted(m.get("quant", [])) != live_q:
+            drift.append(f"{r['label']} {m['id']}: quant {sorted(m.get('quant', []))} vs live {live_q}")
 assert not drift, "\n    ".join(drift)
 EOF
-then ok "T8 live: baked quantisation and trained_for still match OpenRouter"
-else echo "  skip/FAIL above: T8 live OpenRouter cross-check (offline = skip; a listed drift = refresh those fields and bump pricing_as_of)"; fi
+then ok "T8 live: every registry's baked quantisation and trained_for still match OpenRouter"
+else bad "T8 live: quant/trained_for drifted from OpenRouter (each drift listed above) — refresh those fields in the registry the line names, then bump its pricing_as_of"; fi
 
 echo "== $PASS ok, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
