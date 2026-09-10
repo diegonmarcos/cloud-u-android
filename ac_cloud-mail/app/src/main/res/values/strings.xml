@@ -489,7 +489,7 @@
          TextToolsSection); nothing under this heading is a screen in this app. -->
     <string name="settings_text_section">Text</string>
     <string name="settings_text_ai_routing_title">AI Routing</string>
-    <string name="settings_text_ai_routing_summary">Which provider and model this app's Text tools use</string>
+    <string name="settings_text_ai_routing_summary">Which provider and model this app\'s Text tools use</string>
     <string name="settings_text_enhance_title">Text Enhancement</string>
     <string name="settings_text_enhance_summary">Style, tone, length and output language of a rewrite</string>
     <!-- "Resume" is the owner's product name for SUMMARISE. Not a CV, not resuming
@@ -497,7 +497,7 @@
     <string name="settings_text_resume_title">Text Resume</string>
     <string name="settings_text_resume_summary">How a message is summarised, and the prompt that does it</string>
     <string name="settings_text_translation_title">Translation</string>
-    <string name="settings_text_translation_summary">Default target language for this app's Translate</string>
+    <string name="settings_text_translation_summary">Default target language for this app\'s Translate</string>
     <string name="settings_text_prompt_preview_title">What this sends</string>
     <string name="settings_text_prompt_preview_empty">The choices above add no instructions, so the text is sent as it stands.</string>
     <string name="settings_text_provider">Provider</string>

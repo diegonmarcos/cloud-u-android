@@ -28,9 +28,16 @@
              Every app shares the com.diegonmarcos.* prefix, and two installed
              packages declaring the same provider authority makes the second
              one refuse to install at all. ${applicationId} is unique by
-             construction; a hand-written suffix per app is not. -->
+             construction; a hand-written suffix per app is not.
+
+             The android:name is a NAMED SUBCLASS for the same reason the
+             authority is suffixed: a component name must be unique inside a
+             package too. Naming androidx's FileProvider directly collided with
+             the one cloud-mail declares for its attachments the moment that app
+             took this module, and neither provider can be given up. See
+             UpdaterFileProvider. -->
         <provider
-            android:name="androidx.core.content.FileProvider"
+            android:name="com.diegonmarcos.superapp.updater.UpdaterFileProvider"
             android:authorities="${applicationId}.updater.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
