@@ -97,6 +97,24 @@ done
     echo "$APP: --paths-from names no such file: $PATHS_FROM" >&2; exit 3; }
 [ -d "$ROOT/$APP" ] || { echo "no such app dir: $APP (root=$ROOT)" >&2; exit 2; }
 
+# ── _paths MUST NOT SIT ON THE LEFT OF A PIPE ──────────────────────────────
+# It refuses with `exit 3` when it cannot see the app's ship workflow, and that
+# refusal is the guard against a partial input set. On the left of a pipe the
+# exit kills only the subshell: `sort` still succeeds, the caller receives the
+# handful of lines already printed, AND A ZERO STATUS. So `paths` handed out a
+# short list while claiming success, and `explain`/`compute` hashed it into a
+# confident 64-hex identity for inputs that were never all read — which the
+# publish gate then compares equal on the next run and skips. A silently
+# suppressed update, which this file's own comments call strictly worse than
+# the phantom updates it exists to stop; the guard was already spelled out for
+# --paths-from and for _external, and this was the third door.
+# ab_cloud-libs-shared/lib-apks/build.sh derives its per-asset scopes from this
+# very `paths` output, so a partial answer there scopes a gate to a partial
+# input set — the same failure one layer down.
+# Redirecting into a file keeps _paths in THIS shell, where exit means exit.
+PATHS_TMP="$(mktemp)"
+trap 'rm -f "$PATHS_TMP"' EXIT INT TERM
+
 # ── the app's ship workflow ────────────────────────────────────────
 # Found by its declared WORK_DIR, not by filename: two lib aggregators build a
 # directory under ab_cloud-libs-shared/ whose name does not match their slug.
@@ -231,7 +249,8 @@ _explain() {
     if [ -z "$PATHS_FROM" ]; then
         _pin_identity && return 0
     fi
-    _paths | LC_ALL=C sort -u | while IFS= read -r p; do
+    _paths >"$PATHS_TMP"
+    LC_ALL=C sort -u "$PATHS_TMP" | while IFS= read -r p; do
         h="$(git -C "$ROOT" rev-parse "HEAD:$p" 2>/dev/null || printf 'missing')"
         printf '%s  %s\n' "$h" "$p"
     done
@@ -241,7 +260,7 @@ _explain() {
 }
 
 case "$CMD" in
-    paths)   _paths | LC_ALL=C sort -u ;;
+    paths)   _paths >"$PATHS_TMP"; LC_ALL=C sort -u "$PATHS_TMP" ;;
     explain) _explain ;;
     compute) _explain | sha256sum | cut -d' ' -f1 ;;
     *)       echo "unknown command: $CMD" >&2; exit 2 ;;

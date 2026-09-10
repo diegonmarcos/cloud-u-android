@@ -1,0 +1,67 @@
+name: "foreign gate guard — nothing outside an application's own source may fail its release"
+
+# WHY THIS WORKFLOW EXISTS.
+# Four outages, one shape. A stale Cloud Sheets tester blocked the SuperApp
+# (#242). A live third-party price check vetoed the phone's APK (#247). The
+# firestack aar build broke and took the SuperApp's release with it (#250). And
+# cloud-writer — a new application that broke nothing — turned a SuperApp tester
+# red merely by existing, because that tester counted how many build.json files
+# declare a summary prompt and the count went from two to three. Every one of
+# those cost the owner a day with a stale APK on his phone, and in every one the
+# application being released was fine.
+#
+# cloud-android-test-engine.sh now declines to fail a release over a tester whose
+# verdict was reached with source the application does not own. That is a
+# mechanism for NOT failing, and this repository has shipped several of those
+# that never fired: an assertion comparing an expression to itself, a pipeline's
+# status read through `tail`, a bracket expression matching one character, and
+# four testers that passed only because ripgrep was absent. A gate that never
+# fires looks exactly like a gate that works.
+#
+# So the mechanism gets the same treatment every other guard here gets: a test
+# that breaks it on purpose, in BOTH polarities. Own source failing must still be
+# fatal; foreign source failing must not be; and the underivable-path-set case —
+# where every path would read as foreign and the suite could never go red again —
+# must refuse to run rather than report a cheerful green.
+#
+# WHY EVERY PUSH AND EVERY PULL REQUEST, WITH NO PATH FILTER, and why this is
+# NOT folded into a ship workflow. The rule's whole point is that one
+# application's release must not turn red for a repository-wide reason. If this
+# check lived inside ship-cloud-superapp it would be the very thing it forbids:
+# a fleet-level property failing under an application's name. It is FLEET, it
+# fails once, fleet-wide, and it says so in its own title.
+#
+# It is deliberately NOT in health.yml for the same reason i18n-guard.yml and
+# silence-guard.yml are not: that workflow runs on a six-hourly cron, so a hole
+# in the release gate would sit undetected for up to six hours and then fail a
+# run nobody is watching. The test needs no gradle, no JDK, no gh and no
+# network — bash, sh, awk and jq — so narrowing when it runs could only cost a
+# miss.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  foreign-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # jq is what the test engine reads build.json with, and it refuses to run
+      # without it rather than testing its own defaults. Installed here so the
+      # fixture exercises the real reader.
+      - name: Install jq
+        run: sudo apt-get install -y -qq jq
+
+      # The engine must still fail a release over the application's OWN source,
+      # must not fail one over anyone else's, and must refuse outright when it
+      # cannot tell the two apart. Seventeen assertions, each of which was
+      # watched failing before it was watched passing.
+      - name: A foreign failure cannot fail a release, and an own one still can
+        run: bash 1_cicd/src/scripts/test/foreign-gate.test.sh
