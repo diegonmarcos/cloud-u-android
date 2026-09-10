@@ -65,7 +65,7 @@
         "image": "cloud-unix-termux-boot",
         "tag": "latest",
         "asset": "Cloud-Unix-Termux-Boot.apk",
-        "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Unix-Termux-Boot.apk",
+        "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Unix-Termux-Boot.apk",
         "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/a_solutions/ae-tool_termux-boot",
         "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-unix-termux-boot",
         "blocked": false,
@@ -6790,7 +6790,7 @@
         }
       ]
     },
-    "_doc_external_apps": "Companion Android apps the SuperApp launches instead of rendering an in-app fragment. A tile target of `extapp:<id>` (see ui.sections[communication]) resolves here: MainActivity.launchExternalApp tries the app's package (hub_package); if not installed it snacks '<label> not installed' (install via Configs ▸ Constellation, which pulls the APK from GHCR). Fully data-driven: package ids live ONLY here, never in Kotlin. The ex-Cloud-Comms forks are now STANDALONE constellation apps (ea_cloud-{dialer,chat,mail,matrix}, each its own ship-cloud-<id>.yml CI); the cloud-comms hub is decommissioned (archived). They keep their com.diegonmarcos.comms.<fork> package ids. install_apk_url points at the shared rolling 'latest' GitHub release asset cloud-comms-<fork>.apk (uploaded by build.sh gh-release-fork per each fork's build.json::release.gh_release), mirroring how the other standalone apps use /releases/latest/download/. forkless (forks:{}), so extapp:<id> resolves straight to hub_package. `folder` names the ui.phone_folders id this app classifies into, and it is the ONLY place that fact is written: PhoneFolders.loadFromBuildConfig derives a `pkg:` keyword for hub_package, alt_package, install_package and every fork from it. Our own apps used to be listed twice — identity here, an identical `pkg:` keyword there — with nothing tying the copies together, which is how an app could be installable and sectionless at the same time. Adding a constellation app is now one entry here and no second edit; omitting `folder` leaves the app in the sink, so test-app-identity-resolves.sh requires it.",
+    "_doc_external_apps": "Companion Android apps the SuperApp launches instead of rendering an in-app fragment. A tile target of `extapp:<id>` (see ui.sections[communication]) resolves here: MainActivity.launchExternalApp tries the app's package (hub_package); if not installed it snacks '<label> not installed' (install via Configs ▸ Constellation, which pulls the APK from GHCR). Fully data-driven: package ids live ONLY here, never in Kotlin. The ex-Cloud-Comms forks are now STANDALONE constellation apps (ea_cloud-{dialer,chat,mail,matrix}, each its own ship-cloud-<id>.yml CI); the cloud-comms hub is decommissioned (archived). They keep their com.diegonmarcos.comms.<fork> package ids. install_apk_url points at the shared rolling 'latest' GitHub release asset cloud-comms-<fork>.apk (uploaded by build.sh gh-release-fork per each fork's build.json::release.gh_release), mirroring how the other standalone apps use /releases/download/latest/. forkless (forks:{}), so extapp:<id> resolves straight to hub_package. `folder` names the ui.phone_folders id this app classifies into, and it is the ONLY place that fact is written: PhoneFolders.loadFromBuildConfig derives a `pkg:` keyword for hub_package, alt_package, install_package and every fork from it. Our own apps used to be listed twice — identity here, an identical `pkg:` keyword there — with nothing tying the copies together, which is how an app could be installable and sectionless at the same time. Adding a constellation app is now one entry here and no second edit; omitting `folder` leaves the app in the sink, so test-app-identity-resolves.sh requires it.",
     "external_apps": [
       {
         "id": "cloud-dialer",
@@ -6798,7 +6798,7 @@
         "folder": "prod_phone",
         "hub_package": "com.diegonmarcos.comms.dialer",
         "install_package": "com.diegonmarcos.comms.dialer",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/cloud-comms-dialer.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-dialer.apk",
         "forks": {}
       },
       {
@@ -6808,7 +6808,7 @@
         "folder": "prod_phone",
         "hub_package": "com.diegonmarcos.cloudcontacts",
         "install_package": "com.diegonmarcos.cloudcontacts",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Contacts.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Contacts.apk",
         "forks": {}
       },
       {
@@ -6817,7 +6817,7 @@
         "folder": "prod_chat",
         "hub_package": "com.diegonmarcos.comms.chat",
         "install_package": "com.diegonmarcos.comms.chat",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/cloud-comms-chat.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-chat.apk",
         "forks": {}
       },
       {
@@ -6827,7 +6827,7 @@
         "folder": "prod_mail",
         "hub_package": "com.diegonmarcos.comms.mail",
         "install_package": "com.diegonmarcos.comms.mail",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/cloud-comms-mail.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-mail.apk",
         "forks": {}
       },
       {
@@ -6838,7 +6838,7 @@
         "_doc_alt_package": "The store ships a resigned STOCK Element X, so the installed applicationId is io.element.android.x, not hub_package (same fact the fleet records as alt_id). Without this the Suite/Comms tile can't see the installed app and offers a fresh install of something already on the phone. Remove once the matrix fork is repackaged to hub_package.",
         "alt_package": "io.element.android.x",
         "install_package": "com.diegonmarcos.comms.matrix",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/cloud-comms-matrix.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-comms-matrix.apk",
         "forks": {}
       },
       {
@@ -6847,7 +6847,7 @@
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.ide",
         "install_package": "com.diegonmarcos.ide",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-IDE-Hub.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-IDE-Hub.apk",
         "forks": {
           "files": "com.diegonmarcos.ide.files",
           "utils": "com.diegonmarcos.ide.utils",
@@ -6861,7 +6861,7 @@
         "folder": "prod_maps",
         "hub_package": "com.diegonmarcos.cloudnav",
         "install_package": "com.diegonmarcos.cloudnav",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Nav.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Nav.apk",
         "forks": {}
       },
       {
@@ -6870,7 +6870,7 @@
         "folder": "prod_plan",
         "hub_package": "com.diegonmarcos.cloudcalendar",
         "install_package": "com.diegonmarcos.cloudcalendar",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Calendar.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Calendar.apk",
         "forks": {}
       },
       {
@@ -6879,7 +6879,7 @@
         "folder": "hlth_news",
         "hub_package": "com.diegonmarcos.cloudnews",
         "install_package": "com.diegonmarcos.cloudnews",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-News.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-News.apk",
         "forks": {}
       },
       {
@@ -6889,7 +6889,7 @@
         "folder": "sys_keyboards",
         "hub_package": "com.diegonmarcos.cloudkeyboard",
         "install_package": "com.diegonmarcos.cloudkeyboard",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Keyboard.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Keyboard.apk",
         "forks": {}
       },
       {
@@ -6899,7 +6899,7 @@
         "folder": "sys_security",
         "hub_package": "com.diegonmarcos.cloudwallet",
         "install_package": "com.diegonmarcos.cloudwallet",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Wallet.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Wallet.apk",
         "forks": {}
       },
       {
@@ -6909,7 +6909,7 @@
         "folder": "sys_settings",
         "hub_package": "com.diegonmarcos.cloudme",
         "install_package": "com.diegonmarcos.cloudme",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Me.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Me.apk",
         "forks": {}
       },
       {
@@ -6919,7 +6919,7 @@
         "folder": "prod_web",
         "hub_package": "com.diegonmarcos.cloudbrowser",
         "install_package": "com.diegonmarcos.cloudbrowser",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Browser.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Browser.apk",
         "forks": {}
       },
       {
@@ -6929,7 +6929,7 @@
         "folder": "sys_security",
         "hub_package": "com.diegonmarcos.cloudvault",
         "install_package": "com.diegonmarcos.cloudvault",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Vault.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Vault.apk",
         "forks": {}
       },
       {
@@ -6939,7 +6939,7 @@
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.watchdog",
         "install_package": "com.diegonmarcos.watchdog",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/C3-Watchdog.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/C3-Watchdog.apk",
         "forks": {}
       },
       {
@@ -6949,7 +6949,7 @@
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.morpheus",
         "install_package": "com.diegonmarcos.morpheus",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/C3-Morpheus.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/C3-Morpheus.apk",
         "forks": {}
       },
       {
@@ -6959,7 +6959,7 @@
         "folder": "media_video",
         "hub_package": "com.diegonmarcos.mediacenter",
         "install_package": "com.diegonmarcos.mediacenter",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/cloud-media-center.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-media-center.apk",
         "forks": {}
       },
       {
@@ -6969,7 +6969,7 @@
         "folder": "prod_docs",
         "hub_package": "com.collabora.libreoffice",
         "install_package": "com.collabora.libreoffice",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Sheets.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Sheets.apk",
         "forks": {}
       },
       {
@@ -6979,7 +6979,7 @@
         "folder": "prod_storage",
         "hub_package": "cld.camera",
         "install_package": "cld.camera",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Camera.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Camera.apk",
         "forks": {}
       }
     ],

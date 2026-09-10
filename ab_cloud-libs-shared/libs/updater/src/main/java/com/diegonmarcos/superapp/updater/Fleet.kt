@@ -204,7 +204,7 @@ object Fleet {
             // genuinely cannot tell whether an update is waiting.
             installed?.let {
                 if (e.code == 404) State.Installed(it.versionName, it.versionCode, it.sha.take(12), it.bytes)
-                else State.Error("HTTP ${e.code}")
+                else State.Error(registryFailure(e.code))
             } ?: State.Missing()
         } catch (t: Throwable) {
             // An installed app whose remote check THREW must not masquerade as
@@ -217,6 +217,33 @@ object Fleet {
             installed?.let { State.Error("check failed: ${t.message ?: t.javaClass.simpleName}") }
                 ?: State.Missing()
         }
+    }
+
+    /**
+     * What a failed registry probe MEANS, in words the owner can act on.
+     *
+     * This used to render as the bare string "HTTP 403", which is the least
+     * useful thing it could have said. On 2026-09-10 Cloud Terminal (Nix)
+     * showed exactly that, and a bare 403 gives no way to tell apart the three
+     * situations that produce it — so diagnosing it took a walk back through
+     * the release assets, the workflow list and 431 GHCR packages to establish
+     * that cloud-nixdroid had simply never been pushed. That work should have
+     * been one line on the phone.
+     *
+     * GHCR deliberately refuses to distinguish "private" from "does not
+     * exist" to an anonymous caller: both answer 403 DENIED at the /token
+     * endpoint, because confirming absence would leak the existence of private
+     * packages. So this cannot claim which one it is — but it CAN say that the
+     * two are indistinguishable and name both remedies, which is the actual
+     * next step either way. Reaching this branch at all already means the
+     * release asset did not answer, so neither channel is serving this app.
+     */
+    private fun registryFailure(code: Int): String = when (code) {
+        401, 403 ->
+            "not published (HTTP $code): no release asset, and its registry " +
+            "package is either private or was never pushed"
+        in 500..599 -> "registry is down (HTTP $code) — try again later"
+        else -> "registry refused the check (HTTP $code)"
     }
 
     /**

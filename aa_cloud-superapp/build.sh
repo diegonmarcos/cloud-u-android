@@ -763,8 +763,11 @@ step_gh_release() {
   # When release.gh_release.rolling_tag is set, the engine publishes
   # the APK to a SINGLE GitHub Release with that tag, overwriting any
   # existing asset (--clobber). This is what the ship workflow runs on
-  # every main push so /releases/latest/download/<asset_name> is a
-  # permanent download URL the linktree footer can link to.
+  # every main push so /releases/download/<rolling_tag>/<asset_name> is a
+  # permanent download URL the linktree footer can link to. Name the tag
+  # explicitly like that: /releases/latest/download/<asset_name> is GitHub's
+  # "whichever release is newest" route, not this release, and every per-app
+  # tagged release published here steals it — see data/regen.sh.
   if [ -n "$rolling_tag" ] && [ "$rolling_tag" != "null" ]; then
     log "gh-release: rolling mode — tag=$rolling_tag ← $asset"
     # Create the release iff it doesn't exist yet (idempotent). Note

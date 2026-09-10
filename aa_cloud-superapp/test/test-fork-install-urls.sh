@@ -7,7 +7,7 @@
 #     → ship-cloud-<fork>.yml calls `build.sh gh-release-fork`  (uploads asset
 #       to the shared /releases/latest release, same as the other ac_cloud-* apps)
 #     → aa_cloud-superapp build.json ui.external_apps[cloud-<fork>].install_apk_url
-#       == https://.../releases/latest/download/<asset>
+#       == https://.../releases/download/latest/<asset>
 # So a tap on a not-installed comms tile does a one-tap install from a stable URL
 # instead of the "not installed" snack.
 set -u
@@ -20,7 +20,10 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
 # fork key → superapp external_apps id
 FORKS="dialer:cloud-dialer chat:cloud-chat mail:cloud-mail matrix:cloud-matrix"
-REL="releases/latest/download"
+# The tag is named EXPLICITLY. /releases/latest/download/ is a different
+# GitHub route that resolves "whichever release is newest" and so gets
+# hijacked by every per-app tagged release — see data/regen.sh.
+REL="releases/download/latest"
 
 echo "== T1: each fork build.json declares a rolling-'latest' gh_release =="
 for pair in $FORKS; do

@@ -46,6 +46,30 @@ UNIX="$(cd "$HERE/../.." && pwd)"
 regen_constellation() {
     command -v jq >/dev/null 2>&1 || { echo "ERROR: jq required" >&2; return 1; }
     # owner/repo = the monorepo these apps ship from (invariant identity).
+    #
+    # EVERY ASSET URL BELOW NAMES ITS TAG EXPLICITLY, as
+    # <rel>/download/<tag>/<asset> — never <rel>/<tag>/download/<asset>.
+    #
+    # The two are different GitHub routes and only one of them is stable.
+    # `/releases/latest/download/<asset>` is a MAGIC route: GitHub resolves
+    # "whichever release is currently latest" and only then looks for the asset
+    # on it. Our rolling release is TAGGED the literal word `latest`, so the two
+    # coincide right up to the moment any per-app tagged release is published —
+    # cloud-comms-mail-*, firestack-aar-*, cloud-unix-termux-boot-v* all are —
+    # whereupon the magic route resolves to THAT release, which does not carry
+    # our assets, and every install URL in the fleet answers 302 then 404.
+    #
+    # Measured 2026-09-10: at 11:57:46Z
+    # /releases/latest/download/cloud-nixdroid.apk redirected to
+    # /releases/download/firestack-aar-20260910.114222/cloud-nixdroid.apk → 404
+    # (x-github-request-id CAF4:289D54:E9BFD0:14410E7:6AA29B0B). Three minutes
+    # later the same URL served 200. It FLAPS with whatever shipped last, which
+    # is why this read for days as an intermittent phone fault rather than as a
+    # broken URL, and why Cloud Terminal (Nix) — the one app with no registry
+    # package to fall back to — was the one that surfaced it, as a bare 403.
+    #
+    # `/releases/download/<tag>/<asset>` names the tag and resolves to nothing
+    # else, so no later publish can hijack it.
     local rel="https://github.com/diegonmarcos/cloud-u-android/releases"
     local tree="https://github.com/diegonmarcos/cloud-u-android/tree/main"
     local pkg="https://github.com/diegonmarcos/cloud-u-android/pkgs/container"
@@ -142,7 +166,8 @@ regen_constellation() {
                            --arg img "$limgprefix$lmod" \
                            --arg rel "$rel" --arg tree "$tree" --arg pkg "$pkg" \
                            --arg libdir "$lrel" '
-                    ($rel + "/latest/download/" + $asset) as $url
+                    ($rel + "/download/" + (.release.gh_release.rolling_tag // "latest")
+                          + "/" + $asset) as $url
                     # First scan root to offer a module wins. The scan roots
                     # OVERLAP: ab_cloud-libs and ab_cloud-libs-shared/lib-apks
                     # both harness the same consolidated ab_cloud-libs-shared/libs,
@@ -171,7 +196,8 @@ regen_constellation() {
             # Publishes a rolling `latest` release → stable direct-download URL.
             apps="$(jq --argjson acc "$apps" --arg id "$id" --arg dir "$reldir" \
                        --arg rel "$rel" --arg tree "$tree" --arg pkg "$pkg" '
-                ($rel + "/latest/download/" + .release.gh_release.asset_name) as $url
+                ($rel + "/download/" + (.release.gh_release.rolling_tag // "latest")
+                      + "/" + .release.gh_release.asset_name) as $url
                 | ('"$variant_assets"') as $assets
                 | $acc + [ ( { id: $id,
                              label: (.name // $id),
@@ -250,8 +276,8 @@ regen_constellation() {
                              # mismatch" and pointed at the wrong thing entirely.
                              release_url: (
                                if (.release.gh_release.rolling_tag // "") != ""
-                               then $rel + "/" + .release.gh_release.rolling_tag
-                                    + "/download/" + ($f.image + ".apk")
+                               then $rel + "/download/" + .release.gh_release.rolling_tag
+                                    + "/" + ($f.image + ".apk")
                                else $rel end ),
                              repo_url: ($tree + "/" + $dir),
                              ghcr_page: ($pkg + "/" + $f.image),

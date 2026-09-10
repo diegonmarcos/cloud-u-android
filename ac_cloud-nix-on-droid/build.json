@@ -39,8 +39,8 @@
   },
   "release": {
     "ghcr": {
-      "_doc": "ENABLED. It was disabled when packages came out private \u2014 the cause was the login preferring secrets.GHCR_TOKEN, a PAT, which creates an ACCOUNT-owned package that is born private and cannot be patched. Every workflow here logs in with GITHUB_TOKEN now, which creates the package FOR THE REPOSITORY and takes the repository's visibility; verified on cloud-u-linux, whose first GITHUB_TOKEN push produced a public package. The workflow checks after every push and says so if it ever regresses.",
-      "enabled": true,
+      "_doc": "DISABLED, and disabled is the TRUTH rather than a preference: ship-cloud-nix-on-droid.yml has no GHCR step at all \u2014 no docker/login, no oras push \u2014 so nothing has ever created the cloud-nixdroid package. Verified 2026-09-10 by enumerating all 431 container packages under the diegonmarcos account: cloud-nixdroid is not among them, and /user/packages/container/cloud-nixdroid answers 404 to a token that reads cloud-terminal fine. This key said `true` while that was so, which is not a harmless overstatement: regen.sh emitted the image name into the fleet manifest, the updater probed it whenever the release channel hiccuped, and GHCR answers an anonymous caller 403 DENIED \u2014 not 404 \u2014 for a package that does not exist, because confirming absence would leak private package names. That 403 is what the owner saw on the phone. gh_release below is genuinely the only channel for this app, exactly as its own _doc says. To give it a registry channel, add the push step to the workflow and flip this back \u2014 in that order, so the declaration never leads the pipeline again.",
+      "enabled": false,
       "registry": "ghcr.io",
       "namespace": "diegonmarcos",
       "image": "cloud-nixdroid",

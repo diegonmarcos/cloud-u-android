@@ -127,7 +127,7 @@ echo "== T7: LIVE — the CDNs honour the Range requests resume depends on =="
 # whoever owns download-resume should data-drive it. Left as a named gap rather
 # than half-done here.
 if command -v curl >/dev/null; then
-  REL="https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Sheets.apk"
+  REL="https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Sheets.apk"
   HEADS=$(curl -sIL --max-time 45 -H 'Range: bytes=1000-1099' "$REL" | tr -d '\r')
   CR=$(printf '%s' "$HEADS" | grep -i '^content-range:' | tail -1)
   LAST=$(printf '%s' "$HEADS" | grep -i '^HTTP/' | tail -1)
