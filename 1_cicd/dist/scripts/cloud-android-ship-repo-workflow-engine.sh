@@ -38,8 +38,8 @@ LIB_SRC="$CLOUD_ANDROID_ROOT/9_others/src"
 # ship-superapp-data-regen.yml) that a purge would silently delete; and the
 # dotfiles tier is additive on purpose because its targets mix managed config
 # with per-machine state.
-rm -rf "$CICD_DIST/scripts" "$CICD_DIST/cicd" "$CICD_DIST/actions"
-mkdir -p "$CICD_DIST/scripts" "$CICD_DIST/cicd" "$CICD_DIST/actions" \
+rm -rf "$CICD_DIST/scripts" "$CICD_DIST/cicd" "$CICD_DIST/actions" "$CICD_DIST/data"
+mkdir -p "$CICD_DIST/scripts" "$CICD_DIST/cicd" "$CICD_DIST/actions" "$CICD_DIST/data" \
          "$GIT_DIST/hooks" "$GIT_DIST/modules"
 
 # ── scripts: copy source → dist with read-only header ──────────────
@@ -240,6 +240,246 @@ for b in bad:
     print("  " + b, file=sys.stderr)
 sys.exit(1 if bad else 0)
 PYEOF
+
+# ── cicd: a ship run that published nothing must not be green ──────
+#
+# The guard existed on ship-cloud-superapp ALONE, written after the 2026-09-05
+# update deadlock, and was never generalised — so the other 27 ship workflows
+# could each report success having published nothing, which is the failure the
+# owner pays for most often: he installs, sees no change, and reports the
+# FEATURE as broken.
+#
+# INJECTED, not hand-copied into 28 files. The condition that decides whether a
+# leg was SELECTED to publish is the publish step's own `if:`, and it is carried
+# across here verbatim. That is the whole point: hand-copying it would create a
+# second answer to "was this app selected?", the two would drift, and the guard
+# would start firing on runs where publishing nothing is correct — which is how
+# a guard gets disabled within a day. This repository has already paid for two
+# copies of one idea twice (#228, #209).
+#
+# The body lives in cloud-android-publish-guard.sh — ONE implementation, called
+# by all of them.
+#
+# REFUSES TO GENERATE if a ship workflow runs the publish gate and no step in
+# that job carries `id: publish`. A new ship workflow therefore cannot be added
+# without answering the question, and `generated files are up to date` runs this
+# on every push, so it cannot rot back out either.
+log_step "inject the published-nothing guard"
+python3 - "$CLOUD_ANDROID_ROOT" <<'PYGUARD' || exit 1
+import glob, os, re, sys
+
+root = sys.argv[1]
+BEG = "      # ── MANAGED-PUBLISH-GUARD: injected by cloud-android-ship-repo-workflow-engine.sh ──"
+END = "      # ── end MANAGED-PUBLISH-GUARD ──"
+DOC = [
+    "      # Runs on everything but a cancellation, and is HANDED the two facts it",
+    "      # judges: the publish gate's own answer to \"did this source move?\", and the",
+    "      # `id: publish` step's own `if:` rendered to true/false. Putting that `if:`",
+    "      # on this step instead — the obvious generalisation — would stop the guard",
+    "      # running in exactly the case it exists for, a publish skipped by its own",
+    "      # condition. Copied verbatim from that step, so there is one copy in the",
+    "      # file and the two cannot drift.",
+    "      # Edit 1_cicd/src/scripts/cloud-android-publish-guard.sh, never this block.",
+]
+bad = []
+
+def strip_managed(lines):
+    out, i = [], 0
+    while i < len(lines):
+        if lines[i] == BEG:
+            while i < len(lines) and lines[i] != END:
+                i += 1
+            i += 1                                    # past END
+            if i < len(lines) and lines[i].strip() == "":
+                i += 1                                # and its trailing blank
+            while out and out[-1].strip() == "":
+                out.pop()                             # and its leading blank
+            continue
+        out.append(lines[i]); i += 1
+    return out
+
+for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/ship-*.yml"))):
+    name = os.path.basename(wf)
+    text = open(wf).read()
+    lines = strip_managed(text.split("\n"))
+
+    marks = [i for i, l in enumerate(lines) if l == "        id: publish"]
+    if not marks:
+        # Only workflows that actually gate a publish owe a guard. A workflow
+        # with no publish gate publishes nothing this can be asserted about.
+        if "cloud-android-publish-gate.sh check" in text:
+            bad.append("%s: runs the publish gate but no step carries `id: publish`"
+                       " -- the published-nothing guard would have no subject" % name)
+        new = "\n".join(lines)
+        if new != text:
+            open(wf, "w").write(new)
+        continue
+
+    for m in reversed(marks):                          # back to front: indices hold
+        start = m
+        while start >= 0 and not lines[start].startswith("      - "):
+            start -= 1
+        if start < 0:
+            bad.append("%s: `id: publish` outside any step" % name); continue
+
+        end = start + 1
+        while end < len(lines) and (lines[end].strip() == ""
+                                    or lines[end].startswith("        ")):
+            end += 1
+        while end > start + 1 and lines[end - 1].strip() == "":
+            end -= 1
+
+        cond = "true"
+        for j in range(start + 1, end):
+            if not lines[j].startswith("        if:"):
+                continue
+            # A wrapped `if:` cannot be carried across by this line-based
+            # rewrite, and half a condition is worse than none. Refuse.
+            if j + 1 < end and lines[j + 1].startswith("          "):
+                bad.append("%s: the `id: publish` step's `if:` spans several lines;"
+                           " put it on one line so the guard can carry it verbatim" % name)
+                cond = None
+                break
+            v = lines[j].split("if:", 1)[1].strip()
+            if v.startswith("${{") and v.endswith("}}"):
+                v = v[3:-2].strip()
+            cond = v
+            break
+        if cond is None:
+            continue
+
+        # The gate's answer, but ONLY where a gate exists. Two ship workflows
+        # (ship-cloud-libs, which gates per-asset inside its own build.sh, and
+        # ship-garmin-watchface, which has no gate at all) define no step with
+        # `id: gate`, and a reference to a step that is not there renders as an
+        # empty string that reads like an answer. publish-gate-blast-radius
+        # already forbids exactly that, fleet-wide, and caught this. Where there
+        # is no gate, the literal `false` is the truthful value: no gate skipped
+        # this application, because there is no gate.
+        jstart = 0
+        for j in range(start, -1, -1):
+            if re.match(r"^  [A-Za-z_][A-Za-z0-9_-]*:\s*$", lines[j]):
+                jstart = j; break
+        jend = len(lines)
+        for j in range(start + 1, len(lines)):
+            if re.match(r"^  [A-Za-z_][A-Za-z0-9_-]*:\s*$", lines[j]):
+                jend = j; break
+        gate = ("${{ steps.gate.outputs.skip }}"
+                if any(l == "        id: gate" for l in lines[jstart:jend]) else "false")
+
+        app = re.sub(r"^ship-|\.yml$", "", name)
+        for j in range(start, -1, -1):
+            mo = re.match(r"^\s*WORK_DIR:\s*(\S+)\s*$", lines[j])
+            if mo:
+                app = mo.group(1); break
+
+        guard = ["", BEG] + DOC + [
+            "      - name: A run that published nothing must not be green",
+            "        if: ${{ !cancelled() }}",
+            "        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh"
+            ' "%s" "${{ steps.publish.outcome }}" "%s"'
+            ' "${{ %s }}" "${{ github.event_name }}"' % (app, gate, cond),
+            END,
+            "",
+        ]
+        lines[end:end] = guard
+
+    new = "\n".join(lines)
+    if new != text:
+        open(wf, "w").write(new)
+        print("  guarded %s" % name)
+
+for b in bad:
+    print("  " + b, file=sys.stderr)
+sys.exit(1 if bad else 0)
+PYGUARD
+
+# ── the test-coverage inventory, as data ──────────────────────────
+#
+# 24 of the 28 ship workflows executed no test of any kind, so for 24
+# applications the pipeline's only question was "did Gradle exit 0" — and an
+# application with zero testers produced the same green tick as one with fifty
+# passing ones. A gap nobody can see is a gap nobody schedules.
+#
+# DERIVED, not written down. A hand-maintained inventory is a list that is true
+# on the day it is written and silently wrong a week later — this repository has
+# had three of those (a workflow watching nothing real, a dist artefact with no
+# source, a tester counting participants). Everything countable is counted from
+# the tree here; the only authored half is the one that cannot be derived,
+# "what would the cheapest meaningful first test be", which lives in
+# 1_cicd/src/data/test-coverage.json.
+#
+# REFUSES if an application has no note, or a note names something that is no
+# longer here — so adding a ship workflow forces an answer about its coverage,
+# and deleting one cannot leave a stale entry behind. `generated files are up to
+# date` runs this on every push, so the counts cannot drift.
+log_step "test-coverage inventory"
+python3 - "$CLOUD_ANDROID_ROOT" <<'PYCOV' || exit 1
+import glob, json, os, re, sys
+
+root = sys.argv[1]
+notes_path = os.path.join(root, "1_cicd/src/data/test-coverage.json")
+notes = json.load(open(notes_path))["apps"]
+apps, bad, seen = {}, [], set()
+
+for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/ship-*.yml"))):
+    name = os.path.basename(wf)
+    text = open(wf).read()
+    m = re.search(r"^  WORK_DIR:\s*(\S+)\s*$", text, re.M)
+    key = m.group(1) if m else name
+    seen.add(key)
+    if key not in notes:
+        bad.append("%s: no entry in 1_cicd/src/data/test-coverage.json for %r --"
+                   " every ship workflow owes an answer about what it does not test" % (name, key))
+        continue
+
+    d = os.path.join(root, key)
+    bj = os.path.join(d, "build.json")
+    cfg = json.load(open(bj)) if os.path.isfile(bj) else {}
+    tests = cfg.get("tests") or {}
+    tdir = os.path.join(d, (tests.get("shell") or {}).get("dir") or "test")
+
+    units = 0
+    for dirpath, _, files in os.walk(d):
+        if os.sep + "src" + os.sep + "test" + os.sep in dirpath + os.sep:
+            units += sum(1 for f in files if f.endswith((".kt", ".java")))
+
+    unit = tests.get("unit") or {}
+    apps[key] = {
+        "workflow": name,
+        "shell_testers": len(glob.glob(os.path.join(tdir, "test-*.sh"))),
+        "unit_test_sources": units,
+        "unit_task_declared": bool(unit.get("task")) and unit.get("enabled") is not False,
+        "ship_runs_testers": "cloud-android-test-engine.sh" in text,
+        "ship_has_published_nothing_guard":
+            "cloud-android-publish-guard.sh" in text and "id: publish" in text,
+        "first_test": notes[key],
+    }
+
+for k in notes:
+    if k not in seen:
+        bad.append("1_cicd/src/data/test-coverage.json: %r has no ship workflow --"
+                   " delete the entry rather than leaving a note about nothing" % k)
+
+covered = sum(1 for a in apps.values() if a["shell_testers"] or a["unit_task_declared"])
+out = {
+    "_doc": "GENERATED by cloud-android-ship-repo-workflow-engine.sh from the tree"
+            " plus 1_cicd/src/data/test-coverage.json. Do not edit.",
+    "applications": len(apps),
+    "with_executed_tests": covered,
+    "with_no_tests_at_all": len(apps) - covered,
+    "apps": apps,
+}
+dest = os.path.join(root, "1_cicd/dist/data/test-coverage.json")
+os.makedirs(os.path.dirname(dest), exist_ok=True)
+open(dest, "w").write(json.dumps(out, indent=2, sort_keys=True) + "\n")
+print("  %d applications, %d with tests, %d with none"
+      % (len(apps), covered, len(apps) - covered))
+
+for b in bad:
+    print("  " + b, file=sys.stderr)
+sys.exit(1 if bad else 0)
+PYCOV
 
 # ── cicd: copy YAMLs → dist/cicd then into .github/workflows ───────
 log_step "dist/cicd → .github/workflows"

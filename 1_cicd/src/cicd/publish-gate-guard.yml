@@ -44,3 +44,18 @@ jobs:
       # code that runs.
       - name: One library changes, one library republishes
         run: bash 1_cicd/src/scripts/test/publish-gate-blast-radius.test.sh
+
+      # The gate's OTHER half, and the one that cost more. The gate above stops
+      # a publish that should not happen; this stops a run going GREEN when the
+      # publish that should have happened did not. That guard lived on
+      # ship-cloud-superapp alone for four days while the other 27 ship
+      # workflows could each report success having shipped nothing — which the
+      # owner only ever discovers by installing and seeing no change, and then
+      # reporting the FEATURE as broken.
+      #
+      # Here rather than in a 29th workflow: it is the same subject (what a
+      # publish gate is allowed to conclude), it needs no gradle, no gh and no
+      # network, and this workflow already runs on every push with no path
+      # filter for exactly the reason that one would need too.
+      - name: A guard on 1 of 28 workflows is a guard on none
+        run: bash 1_cicd/src/scripts/test/publish-guard.test.sh

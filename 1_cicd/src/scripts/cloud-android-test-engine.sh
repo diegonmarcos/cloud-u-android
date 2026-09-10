@@ -91,7 +91,16 @@ _json() {  # _json <jq-filter> — empty string when absent or no build.json
 # ── coverage ledger ───────────────────────────────────────────────────────
 # Printed by every phase, including the phases that ran nothing. A partial run
 # must never be readable as a full one.
-_uncovered() { echo "COVERAGE-GAP [$APP_NAME] $*"; }
+#
+# ALSO ON THE RUN'S FRONT PAGE, not only 400 lines into a step log. An
+# application with zero testers and an application with fifty passing ones
+# produced INDISTINGUISHABLE green ticks, and that is the lie: 24 of the 28 ship
+# workflows ask nothing but "did Gradle exit 0". The gap has to be as visible as
+# the pass, or "we never checked this" quietly becomes "this passed".
+_uncovered() {
+    echo "COVERAGE-GAP [$APP_NAME] $*"
+    [ -z "${GITHUB_STEP_SUMMARY:-}" ] || echo "COVERAGE-GAP [$APP_NAME] $*" >>"$GITHUB_STEP_SUMMARY"
+}
 
 case "$CMD" in
 

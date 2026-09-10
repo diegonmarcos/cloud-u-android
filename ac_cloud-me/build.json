@@ -77,7 +77,7 @@
     }
   },
   "ui": {
-    "_doc": "Cloud Me's whole navigation is this block: five bottom-nav sections in `order`, everything else reached from the hamburger drawer (bottom_nav:false) or the toolbar gear (toolbar:true). A section's `pages` are its tab strip, and a page may declare `pages` of its own \u2014 a second strip below the first, which is what Buro > Fin is. Page CONTENT is not here: each page is a file at data/ui/<section>/<page>.json (a sub-page at .../<page>/<sub>.json), loaded by app/build.gradle into `stack_<page id>` at build time. A section with a `target` and no `pages` (Wallet, Health) hands that target to MainActivity.onTarget instead of showing a page of its own — Wallet launches another app, Health jumps to Projects > Health. The same `page:<section>/<page>` grammar arrives from OUTSIDE the app too: the SuperApp's Dashboard icons launch Cloud Me with a `shortcut_action` extra carrying one of these strings.",
+    "_doc": "Cloud Me's whole navigation is this block: five bottom-nav sections in `order`, everything else reached from the hamburger drawer (bottom_nav:false) or the toolbar gear (toolbar:true). A section's `pages` are its tab strip, and a page may declare `pages` of its own \u2014 a second strip below the first, which is what Buro > Fin is. Page CONTENT is not here: each page is a file at data/ui/<section>/<page>.json (a sub-page at .../<page>/<sub>.json), loaded by app/build.gradle into `stack_<page id>` at build time. A section with a `target` and no `pages` (Wallet, Health) hands that target to MainActivity.onTarget instead of showing a page of its own \u2014 Wallet launches another app, Health jumps to Projects > Health. The same `page:<section>/<page>` grammar arrives from OUTSIDE the app too: the SuperApp's Dashboard icons launch Cloud Me with a `shortcut_action` extra carrying one of these strings.",
     "permissions": {
       "runtime": [
         {
@@ -288,7 +288,7 @@
         "order": 1,
         "pages": [
           {
-            "_doc": "Summary — Buro's index, and FIRST because 'what does life-admin look like right now' is the question this section answers; Wallet, Docs, Fin and Vault are each one part of that answer. Same shape as Projects ▸ Summary (`pm`): a note plus one card per sibling TAB, every card carrying a `page:buro/<id>` target so it opens the tab that owns the records instead of restating them. Deliberately carries NO figures. Two of these tabs have nothing to count — Docs stores no documents and Vault is forbidden to read any — and a card showing `0` for either would report a measurement that was never taken; a card that says what its tab can answer stays true whether or not a source ever arrives. Fin does have figures, but they are ui.myfin_mock rather than a live feed, so its card says that instead of quoting them. The id is `summary`, which is free HERE: Section.page() resolves ids across the tab strip AND every sub-strip of ONE section in a flat list, and Buro's other ids are wallet/docs/fin/acct/budget/portfolio/vault — Health's own `summary` sub-page lives in the `projects` section and cannot collide. test-ui-pages.sh fails if that ever stops holding.",
+            "_doc": "Summary \u2014 Buro's index, and FIRST because 'what does life-admin look like right now' is the question this section answers; Wallet, Docs, Fin and Vault are each one part of that answer. Same shape as Projects \u25b8 Summary (`pm`): a note plus one card per sibling TAB, every card carrying a `page:buro/<id>` target so it opens the tab that owns the records instead of restating them. Deliberately carries NO figures. Two of these tabs have nothing to count \u2014 Docs stores no documents and Vault is forbidden to read any \u2014 and a card showing `0` for either would report a measurement that was never taken; a card that says what its tab can answer stays true whether or not a source ever arrives. Fin does have figures, but they are ui.myfin_mock rather than a live feed, so its card says that instead of quoting them. The id is `summary`, which is free HERE: Section.page() resolves ids across the tab strip AND every sub-strip of ONE section in a flat list, and Buro's other ids are wallet/docs/fin/acct/budget/portfolio/vault \u2014 Health's own `summary` sub-page lives in the `projects` section and cannot collide. test-ui-pages.sh fails if that ever stops holding.",
             "id": "summary",
             "label": "Summary",
             "icon": "ic_p_c3_reports"
@@ -382,7 +382,7 @@
         "order": 4,
         "pages": [
           {
-            "_doc": "Summary — the project-management overview, first because it is the answer to 'what is going on' and every other tab here is one project inside that answer. It is the page the SuperApp used to draw as Projects ▸ My-PM: the same five panels (Calendar, Tasks, Myfin, Myhealth, Nav tracker), except that in the SuperApp four of the five were hardcoded mock numbers with no source, while every one of them is a LIVE surface of THIS app — Agenda reads CalDAV, Buro ▸ Fin draws the accounting dashboard, Projects ▸ Health reads Health Connect. So the panels open the real thing instead of restating a frozen copy of it, and My-PM in the SuperApp becomes a deep link here (extapp:cloud-me#page:projects/pm) exactly as its MyFin and MyHealth dashboard tiles already do. The id is `pm`, not `summary`: Section.page() in Sections.kt resolves a page id across the tab strip AND every sub-strip in one flat list, so a second `summary` in this section would shadow Health's own Summary sub-page and break that tab. Page ids are unique per section, and test-ui-pages.sh now fails when they are not.",
+            "_doc": "Summary \u2014 the project-management overview, first because it is the answer to 'what is going on' and every other tab here is one project inside that answer. It is the page the SuperApp used to draw as Projects \u25b8 My-PM: the same five panels (Calendar, Tasks, Myfin, Myhealth, Nav tracker), except that in the SuperApp four of the five were hardcoded mock numbers with no source, while every one of them is a LIVE surface of THIS app \u2014 Agenda reads CalDAV, Buro \u25b8 Fin draws the accounting dashboard, Projects \u25b8 Health reads Health Connect. So the panels open the real thing instead of restating a frozen copy of it, and My-PM in the SuperApp becomes a deep link here (extapp:cloud-me#page:projects/pm) exactly as its MyFin and MyHealth dashboard tiles already do. The id is `pm`, not `summary`: Section.page() in Sections.kt resolves a page id across the tab strip AND every sub-strip in one flat list, so a second `summary` in this section would shadow Health's own Summary sub-page and break that tab. Page ids are unique per section, and test-ui-pages.sh now fails when they are not.",
             "id": "pm",
             "label": "Summary",
             "icon": "ic_p_c3_reports"
@@ -393,7 +393,7 @@
             "icon": "ic_nav_health",
             "pages": [
               {
-                "_doc": "Summary — the index of the two trees beside it, one card per page, each card saying what that page is and where its numbers come from. It carries no measurements of its own on purpose: a card cannot read Health Connect, so a Steps card showing a step count would be showing a number typed into JSON months ago, and it would be indistinguishable from the real one two taps away. Metrics is the page Summary used to BE — the whole taxonomy, every record, 7-day beside 30-day — and it is unchanged and still first-class, one tap rather than zero. Overview leads because the question this tab answers is 'what is on this screen', and the 34-row metric dump was never an answer to it.",
+                "_doc": "Summary \u2014 the index of the two trees beside it, one card per page, each card saying what that page is and where its numbers come from. It carries no measurements of its own on purpose: a card cannot read Health Connect, so a Steps card showing a step count would be showing a number typed into JSON months ago, and it would be indistinguishable from the real one two taps away. Metrics is the page Summary used to BE \u2014 the whole taxonomy, every record, 7-day beside 30-day \u2014 and it is unchanged and still first-class, one tap rather than zero. Overview leads because the question this tab answers is 'what is on this screen', and the 34-row metric dump was never an answer to it.",
                 "id": "summary",
                 "label": "Summary",
                 "icon": "ic_p_health_activity",
@@ -411,7 +411,7 @@
                 ]
               },
               {
-                "_doc": "Nutrition — what goes in, as three different kinds of thing, which is why it is a tree and not a tab. Meals and Planner are RECORDS the owner writes: what was eaten, and what is meant to be eaten. Neither has a store yet — no CalDAV category, no NocoDB table, no file under data/files — so both pages say exactly that instead of drawing a plausible week. Tracking is the opposite: it is the Nutrition metric of the Health Connect taxonomy (NutritionRecord + HydrationRecord) on a page of its own, so its numbers are measured by whatever producer syncs them and none of them are typed here. When Meals gains a store it becomes a `cards` stack the way Workout > Gym is; until then an empty state that names the missing source is the honest page.",
+                "_doc": "Nutrition \u2014 what goes in, as three different kinds of thing, which is why it is a tree and not a tab. Meals and Planner are RECORDS the owner writes: what was eaten, and what is meant to be eaten. Neither has a store yet \u2014 no CalDAV category, no NocoDB table, no file under data/files \u2014 so both pages say exactly that instead of drawing a plausible week. Tracking is the opposite: it is the Nutrition metric of the Health Connect taxonomy (NutritionRecord + HydrationRecord) on a page of its own, so its numbers are measured by whatever producer syncs them and none of them are typed here. When Meals gains a store it becomes a `cards` stack the way Workout > Gym is; until then an empty state that names the missing source is the honest page.",
                 "id": "nutrition",
                 "label": "Nutrition",
                 "icon": "ic_p_health_nutrition",
@@ -434,7 +434,7 @@
                 ]
               },
               {
-                "_doc": "Workout — everything the body is asked to do, which is three different things and so is a tree. Gym is the PLAN: a decision, not a measurement, with no Health Connect record type behind it, an ordinary `cards` stack at data/ui/projects/health/workout/gym.json — one item per movement, both names, sets, repetitions, rest, a form note and its own drawable — so editing the programme is editing that list and never Kotlin. Timeline is the RECORD, moved down from the Health level: it reads one day of every Health Connect metric, and a day of training reads next to the plan it was training for rather than three tabs away from it. Steps is the WALK, and it is the Activity metric narrowed to steps, distance and active calories, because daily walking is not a workout session and reading it beside VO2 max and power buried it. Gym keeps its own page rather than becoming a `cards` block inside Workout: the strip is the navigation, and a plan that long wants the whole screen.",
+                "_doc": "Workout \u2014 everything the body is asked to do, which is three different things and so is a tree. Gym is the PLAN: a decision, not a measurement, with no Health Connect record type behind it, an ordinary `cards` stack at data/ui/projects/health/workout/gym.json \u2014 one item per movement, both names, sets, repetitions, rest, a form note and its own drawable \u2014 so editing the programme is editing that list and never Kotlin. Timeline is the RECORD, moved down from the Health level: it reads one day of every Health Connect metric, and a day of training reads next to the plan it was training for rather than three tabs away from it. Steps is the WALK, and it is the Activity metric narrowed to steps, distance and active calories, because daily walking is not a workout session and reading it beside VO2 max and power buried it. Gym keeps its own page rather than becoming a `cards` block inside Workout: the strip is the navigation, and a plan that long wants the whole screen.",
                 "id": "workout",
                 "label": "Workout",
                 "icon": "ic_gym",
@@ -715,6 +715,20 @@
     "matomo": {
       "endpoint": "https://analytics.diegonmarcos.com/matomo",
       "site_id": "1"
+    }
+  },
+  "tests": {
+    "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh; the ship workflow calls it. Until 2026-09-10 no workflow called ANY tester for this application, so test-ui-pages.sh sat in the tree unexecuted and the ship run's only question was whether Gradle exited 0.",
+    "shell": {
+      "dir": "test",
+      "_doc_requires": "Tools a tester shells out to. A missing tool must be LOUD AND FATAL: a tester whose command is not found produces a verdict from the tool's ABSENCE, which reads as a pass. Both testers here read build.json with python3 and nothing else.",
+      "requires": [
+        "python3"
+      ]
+    },
+    "unit": {
+      "_doc": "No JVM test source set exists yet (src/test/ is empty). Declared and disabled rather than omitted, so the engine prints the COVERAGE-GAP line naming the gap on every run instead of the gap being invisible.",
+      "enabled": false
     }
   }
 }

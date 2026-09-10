@@ -296,6 +296,7 @@ jobs:
 
       # ── GitHub Release (engine reads build.json::release.gh_release) ──
       - name: Publish to GitHub Releases
+        id: publish
         if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}
         working-directory: ${{ env.WORK_DIR }}
         env:
@@ -305,6 +306,21 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF: ${{ github.ref }}
         run: ./build.sh gh-release
+
+      # ── MANAGED-PUBLISH-GUARD: injected by cloud-android-ship-repo-workflow-engine.sh ──
+      # Runs on everything but a cancellation, and is HANDED the two facts it
+      # judges: the publish gate's own answer to "did this source move?", and the
+      # `id: publish` step's own `if:` rendered to true/false. Putting that `if:`
+      # on this step instead — the obvious generalisation — would stop the guard
+      # running in exactly the case it exists for, a publish skipped by its own
+      # condition. Copied verbatim from that step, so there is one copy in the
+      # file and the two cannot drift.
+      # Edit 1_cicd/src/scripts/cloud-android-publish-guard.sh, never this block.
+      - name: A run that published nothing must not be green
+        if: ${{ !cancelled() }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ac_cloud-writer" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}" "${{ github.event_name }}"
+      # ── end MANAGED-PUBLISH-GUARD ──
+
 
       - name: Stamp source identity on the published assets
         if: steps.gate.outputs.skip != 'true'

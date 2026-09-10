@@ -65,6 +65,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Every application's testers, and — for the 24 that have none — the
+      # COVERAGE-GAP line naming exactly what this run did NOT check. Until this
+      # step existed, an application with zero testers and one with fifty
+      # passing testers produced indistinguishable green ticks, and the ship
+      # workflow's only question was "did Gradle exit 0". Needs no JDK, no SDK
+      # and no gradle, so it costs seconds and fails before anything is built.
+      #
+      # DELIBERATELY NOT gated on the publish gate: the gate answers "would
+      # these bytes differ?", which is the right question for publishing and the
+      # wrong one for testing — editing a tester does not move the APK, and
+      # gating here would let a new assertion land without ever running once.
+      - name: "Test → this application's testers, and what is not covered"
+        run: |
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
+
       # Publish-if-changed gate. Android builds are not byte-reproducible, so a
       # rebuild of unchanged source published different bytes, a different
       # sha256 sidecar and a different OCI digest — and the Constellation store
@@ -187,6 +204,7 @@ jobs:
         run: sh 1_cicd/dist/scripts/cloud-android-ghcr-visibility.sh diegonmarcos cloud-wallet
 
       - name: Publish to GitHub Releases
+        id: publish
         if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}
         working-directory: ${{ env.WORK_DIR }}
         env:
@@ -196,6 +214,21 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF: ${{ github.ref }}
         run: ./build.sh gh-release
+
+      # ── MANAGED-PUBLISH-GUARD: injected by cloud-android-ship-repo-workflow-engine.sh ──
+      # Runs on everything but a cancellation, and is HANDED the two facts it
+      # judges: the publish gate's own answer to "did this source move?", and the
+      # `id: publish` step's own `if:` rendered to true/false. Putting that `if:`
+      # on this step instead — the obvious generalisation — would stop the guard
+      # running in exactly the case it exists for, a publish skipped by its own
+      # condition. Copied verbatim from that step, so there is one copy in the
+      # file and the two cannot drift.
+      # Edit 1_cicd/src/scripts/cloud-android-publish-guard.sh, never this block.
+      - name: A run that published nothing must not be green
+        if: ${{ !cancelled() }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ac_cloud-wallet" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}" "${{ github.event_name }}"
+      # ── end MANAGED-PUBLISH-GUARD ──
+
 
       - name: Stamp source identity on the published assets
         if: steps.gate.outputs.skip != 'true'

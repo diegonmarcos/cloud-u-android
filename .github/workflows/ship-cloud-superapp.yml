@@ -389,29 +389,20 @@ jobs:
           GITHUB_REF: ${{ github.ref }}
         run: ./build.sh gh-release
 
-      # A GREEN RUN THAT SHIPPED NOTHING IS THE WORST POSSIBLE OUTCOME, and it
-      # is how the 2026-09-05 update deadlock formed: the publish step above was
-      # SKIPPED (a workflow_dispatch with create_release defaulting to false,
-      # which had also cancelled the push run that would have published), every
-      # other step succeeded, and the run reported success while devices kept
-      # being served the previous day's APK. A skipped step is not a failure to
-      # GitHub, so it has to be one to us.
-      #
-      # The engine itself reads the asset back off the release and compares it
-      # to the local file (build.sh::_verify_release_asset), so a publish that
-      # RAN is already proven. The only hole left is a publish that did not run
-      # at all — which is precisely what happened — so that is what this closes.
+      # ── MANAGED-PUBLISH-GUARD: injected by cloud-android-ship-repo-workflow-engine.sh ──
+      # Runs on everything but a cancellation, and is HANDED the two facts it
+      # judges: the publish gate's own answer to "did this source move?", and the
+      # `id: publish` step's own `if:` rendered to true/false. Putting that `if:`
+      # on this step instead — the obvious generalisation — would stop the guard
+      # running in exactly the case it exists for, a publish skipped by its own
+      # condition. Copied verbatim from that step, so there is one copy in the
+      # file and the two cannot drift.
+      # Edit 1_cicd/src/scripts/cloud-android-publish-guard.sh, never this block.
       - name: A run that published nothing must not be green
-        if: ${{ always() && steps.gate.outputs.skip != 'true' }}
-        run: |
-          if [ "${{ steps.publish.outcome }}" = "success" ]; then
-            echo "publish: ok — the rolling release carries this run's APK"
-            exit 0
-          fi
-          echo "::error title=Nothing was published::The 'Publish to GitHub Releases' step did" \
-               "not succeed (outcome=${{ steps.publish.outcome }}). Devices are still being" \
-               "served the PREVIOUS APK, so this run built something nobody can install."
-          exit 1
+        if: ${{ !cancelled() }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "aa_cloud-superapp" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}" "${{ github.event_name }}"
+      # ── end MANAGED-PUBLISH-GUARD ──
+
 
       - name: Stamp source identity on the published assets
         if: steps.gate.outputs.skip != 'true'
