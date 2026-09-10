@@ -50,7 +50,7 @@
         "label": "Cloud",
         "url": "http://10.0.0.6:3117/v1/chat/completions",
         "needs_token": false,
-        "default_model": "claude-sonnet-4-6",
+        "default_model": "claude-sonnet-4-6-PLANTED",
         "models": [
           {
             "id": "claude-sonnet-4-6",

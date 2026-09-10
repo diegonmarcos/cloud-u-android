@@ -266,6 +266,7 @@ shell)
     }
 
     total=0; failed=0; quarantined=0; revived=0; flaky=0; foreign=0; unbounded=0
+    reaching=""
     for t in "$tdir"/test-*.sh; do
         [ -e "$t" ] || continue
         base="$(basename "$t")"
@@ -351,6 +352,13 @@ shell)
             continue
         fi
 
+        # Recorded whether it passed or failed. A tester that reaches outside
+        # this application is one a stranger can downgrade LATER, and the run
+        # where that first happens is the worst moment to discover it. Naming
+        # them while they are green is what lets the owner split the mixed ones
+        # before their own-source half is riding on somebody else's commit.
+        if [ -n "$reach" ]; then reaching="$reaching $base"; fi
+
         if [ "$rc" -ne 0 ] && [ -n "$reach" ]; then
             # FOREIGN. The tester ran, it failed, and its verdict was reached
             # with source this application does not own. It keeps running and it
@@ -394,6 +402,12 @@ shell)
         [ -z "${GITHUB_STEP_SUMMARY:-}" ] || echo "$_banner" >>"$GITHUB_STEP_SUMMARY"
         _uncovered "$foreign tester(s) reached outside $APP_NAME and were NOT allowed to fail this release — their findings are real and belong to whoever owns the named path"
     fi
+    # Standing, on green runs too: these are the testers whose exit status is
+    # no longer purely a statement about this application, so an own-source
+    # assertion sharing a file with a cross-application one is riding on a
+    # stranger not breaking it first. Splitting the file is what gets the fatal
+    # half back, and this line is the list of files to split.
+    [ -z "$reaching" ] || _uncovered "tester(s) whose verdict depends on source outside $APP_NAME, and which therefore CANNOT fail this release:$reaching"
     [ "$unbounded" -eq 0 ] || _uncovered "$unbounded tester(s) hand the repository root to another program — their reach cannot be observed, so they were judged as this application's own"
     [ "$quarantined" -eq 0 ] || _uncovered "$quarantined tester(s) allowed to fail — see ::warning:: lines above"
     [ "$flaky" -eq 0 ] || _uncovered "$flaky tester(s) marked UNSTABLE — their result is not evidence in either direction"

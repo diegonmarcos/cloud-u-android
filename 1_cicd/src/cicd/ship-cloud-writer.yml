@@ -22,7 +22,13 @@ name: "Ship → Cloud Writer APK (build + push to GHCR via ORAS + attach to GH R
 # release red — the #242 shape, pointed the other way. Since
 # cloud-android-test-engine.sh classifies each tester by the source its verdict
 # was actually reached with, that failure is a warning and this APK still ships.
-# BEING PROVEN, NOT ASSERTED: run id recorded here once the plant has shipped.
+#
+# PROVEN, NOT ASSERTED. On 2026-09-10 the SuperApp's constellation-fleet.json was
+# deliberately edited to offer Cloud-Writer-PLANTED.apk, and run 34522666643
+# published Cloud-Writer.apk on both ABIs while the log carried
+# "FAIL   W8 the Constellation entry offers 'Cloud-Writer-PLANTED.apk'" and
+# "FOREIGN-DOWNGRADED [ac_cloud-writer]". The plant was reverted in the commit
+# after it. Before that change the same edit would have made this workflow red.
 #
 # Same data-driven publish path as every other application: the engine reads
 # ac_cloud-writer/build.json::release, so no registry, tag or artifact name is
