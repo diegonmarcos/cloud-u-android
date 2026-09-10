@@ -1,0 +1,5 @@
+[package]
+name = "affine_nbstore"
+
+[dependencies]
+affine_common = { workspace = true, features = ["napi"] }

@@ -1,0 +1,5 @@
+apollo {
+    service("affine") {
+        schemaFiles.from("../../../../../backend/server/src/schema.gql")
+    }
+}
