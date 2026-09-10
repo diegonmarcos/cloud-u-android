@@ -57,7 +57,7 @@ has "$AIDL_CLIENT" 'unbindService(this)' "T2 dead binding is unbound before rebi
 has "$AIDL_CLIENT" 'override fun onNullBinding' "T2 null binder logged"
 has "$AIDL_CLIENT" 'private fun engineOrRebind()' "T2 use-time rebind exists"
 has "$AIDL_CLIENT" 'const val REBIND_MS' "T2 rebind is rate-limited"
-has "$AIDL_CLIENT" 'Translator.NOT_CONNECTED' "T2 not-connected reason is the shared constant"
+has "$AIDL_CLIENT" 'Translator.notConnected(' "T2 not-connected reason comes from the one shared helper"
 for fn in 'override fun translate(' 'override fun translateFrom(' 'override fun supportedLanguages()' 'override fun isConnected()'; do
   awk -v f="$fn" 'index($0,f){p=1} p&&/engineOrRebind\(\)/{found=1} p&&/^    }|^    override fun|^    private companion/{if(index($0,f)==0){exit}} END{exit !found}' "$AIDL_CLIENT" \
     && ok "T2 $fn goes through engineOrRebind()" || bad "T2 $fn bypasses engineOrRebind()"
@@ -71,7 +71,19 @@ for c in ID_TIMEOUT_S DOWNLOAD_TIMEOUT_S TRANSLATE_TIMEOUT_S; do has "$M/Transla
 
 # T4 one-shot
 has "$T/Translator.kt" 'val hint = keyboardLang.takeIf { it.isNotEmpty() && it != target }' "T4 one-shot passes the keyboard language as detection hint"
-has "$T/Translator.kt" 'if (now != text) { toast(appCtx, "Field changed while translating' "T4 stale-field guard before replaceInField"
+has "$T/Translator.kt" 'if (now != text)' "T4 stale-field guard compares the field against what was sent"
+python3 - "$T/Translator.kt" <<'PY' && ok "T4 the guard returns BEFORE replaceInField, and says why" \
+                                      || bad "T4 stale-field guard no longer precedes replaceInField ($T/Translator.kt)"
+import re, sys
+code = open(sys.argv[1], encoding='utf-8').read()
+i = code.find('if (now != text)')
+j = code.find('replaceInField(ic, hadSelection, out)')
+# The guard must exist, sit before the write, and take an early exit that puts
+# a reason on screen — a bare `if` that fell through would leave the stale
+# replacement happening anyway.
+between = code[i:j] if 0 <= i < j else ''
+sys.exit(0 if between and 'return@post ended(' in between else 1)
+PY
 has "$T/Translator.kt" 'val gen = oneShot.incrementAndGet()' "T4 newer long-press supersedes"
 
 # T5 bar
@@ -79,10 +91,28 @@ has "$T/TranslateBarView.kt" 'private const val DEBOUNCE_MS' "T5 debounce consta
 has "$T/TranslateBarView.kt" 'ui.postDelayed(job, DEBOUNCE_MS)' "T5 debounce applied"
 has "$T/Translator.kt" 'if (gen != generation.get()) return@execute' "T5 superseded live request skips the engine"
 has "$T/Translator.kt" 'override fun removeEldestEntry' "T5 LRU cache"
-has "$T/TranslateBarView.kt" '!client.isConnected() -> Translator.NOT_CONNECTED' "T5 not-connected shown on open"
+has "$T/TranslateBarView.kt" '!client.isConnected() -> Translator.notConnected(' "T5 not-connected shown on open"
 has "$T/TranslateBarView.kt" 'fun swap()' "T5 swap direction"
 has "$T/TranslateBarView.kt" 'TranslatePrefs.recentPairs(context)' "T5 recent pairs in the picker"
-for a in 'chip("Insert")' 'chip("Replace")' 'chip("Copy")' 'chip("Clear")'; do has "$T/TranslateBarView.kt" "$a" "T5 action $a"; done
+# label resource -> the action it must invoke. The pair is the assertion:
+# a chip whose label drifted onto the wrong handler is the regression that
+# matters, and the old literal-only grep could not have seen it.
+while IFS='|' read -r res action; do
+  python3 - "$T/TranslateBarView.kt" "$res" "$action" <<'PY' \
+    && ok "T5 action chip $res -> $action" \
+    || bad "T5 chip $res is missing or not wired to $action ($T/TranslateBarView.kt)"
+import re, sys
+code = open(sys.argv[1], encoding='utf-8').read()
+m = re.search(r'chip\(context\.getString\(R\.string\.%s\)\)\s*\{([^}]*)\}'
+              % re.escape(sys.argv[2]), code)
+sys.exit(0 if m and sys.argv[3] in m.group(1) else 1)
+PY
+done <<'CHIPS'
+translate_bar_insert|TranslatePrefs.APPLY_INSERT
+translate_bar_replace|TranslatePrefs.APPLY_REPLACE
+translate_bar_copy|copy()
+translate_bar_clear|clear()
+CHIPS
 
 # T6 settings surface
 for key in $(grep -o 'const val KEY_[A-Z_]*' "$T/TranslatePrefs.kt" | awk '{print $3}' | grep -v KEY_RECENT_PAIRS); do
