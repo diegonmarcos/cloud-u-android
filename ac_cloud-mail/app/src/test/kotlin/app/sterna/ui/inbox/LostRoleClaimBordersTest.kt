@@ -79,11 +79,12 @@ class LostRoleClaimBordersTest {
                 "BEFORE toMailbox() carries no lost claim, and a folder that lost its election " +
                 "leaves the drawer, both move pickers and the unread view while it is already out " +
                 "of search — reachable from nowhere, its mail still on the server.",
-            listOf(
-                "mailboxDao.observeAll(accountId).map { rows -> rows.map { it.toMailbox() } }",
-                "rows.map { it.toMailbox().copy(unreadForList = unread[it.id] ?: 0) }",
-            ),
-            codeLines(MAIL_REPOSITORY).filter { "it.toMailbox()" in it },
+            // ONE crossing since #247 collapsed the IMAP and JMAP branches into a single combine.
+            // Matched on `.toMailbox()` rather than `it.toMailbox()`: the receiver is now a named
+            // `row`, and a needle carrying the old implicit `it` would match nothing and pass this
+            // rule over a repository that had stopped calling the mapper at all.
+            listOf("val mailbox = row.toMailbox()"),
+            codeLines(MAIL_REPOSITORY).filter { ".toMailbox()" in it },
         )
     }
 

@@ -1344,7 +1344,24 @@ class MailRepository(
         // is to fill `unreadEmails` from a batched `STATUS (UNSEEN)` during the folder sync — one
         // exchange for the whole list, refreshed on sync rather than on open — not to widen this.
         combine(mailboxDao.observeAll(accountId), observeUnreadByMailbox(accountId)) { rows, unread ->
-            rows.map { it.toMailbox().copy(unreadForList = unread[it.id] ?: 0) }
+            rows.map { row ->
+                val mailbox = row.toMailbox()
+                // ABSENT IS NOT ZERO. The aggregate above is a `GROUP BY accountId, mailboxId` over
+                // the cached `emails` table, so a folder holding no cached rows — any folder the
+                // user has not opened yet — produces NO GROUP AT ALL rather than a group of 0.
+                // Read through `?: 0` that absence overwrote the row's stored counter, and on JMAP
+                // that counter is real: `Mailbox/get` names no `properties`, so the server returns
+                // `unreadEmails` for every mailbox and `toMailbox` has already put it here. The
+                // drawer therefore badged the one folder whose mail was in the cache and left the
+                // rest blank — which, to the person holding the phone, is indistinguishable from
+                // having no unread mail anywhere.
+                //
+                // The fallback is per FOLDER, not per account, because that is the grain the
+                // absence has: a synced folder keeps the live count (mode-appropriate, snooze-
+                // aware), an unsynced one keeps the server's. On IMAP the stored counter is 0
+                // anyway (`imapMailboxEntity` writes no count), so this changes nothing there.
+                unread[row.id]?.let { mailbox.copy(unreadForList = it) } ?: mailbox
+            }
         }
 
     /**
