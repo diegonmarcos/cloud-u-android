@@ -1,37 +1,84 @@
 {
   "id": "ac_cloud-sheets",
   "name": "Cloud Office",
-  "_doc": "MIRROR, NOT A BUILD. Every other ac_cloud-* dir here holds source we compile. This one holds no source at all, and deliberately: Collabora Office for Android is the Collabora Online web app inside a WebView (android/lib/.../COWebView.java) over a LibreOffice-core engine, built from Collabora's own Gerrit monorepo with an NDK megabuild over the whole external/ tree — hours of compute, a toolchain we do not carry, a Linux-only native build, and a result we could not sign as com.collabora.libreoffice anyway. So ship-cloud-sheets.yml downloads the OFFICIAL APK from Collabora's F-Droid repo, verifies it against the sha256 pinned below, and republishes those exact bytes as our release asset + GHCR artifact so the Constellation AppStore can install and auto-update it like any fleet member. The pin is the whole security story: an unpinned mirror is a supply-chain hole, so a sha mismatch FAILS the job rather than publishing whatever upstream served. Bumping the version means editing upstream.* here (version_name, version_code, apk_name, url, sha256, size) in one commit — never just the sha.",
-  "_doc_name": "\"Cloud Office\" is OUR name for this app and it is the only name the fleet controls: this field is what data/regen.sh copies into constellation-fleet.json, so it is what the Constellation AppStore shows. The name Android's own launcher and the app's own title bar show comes from the APK manifest and is upstream's \"Collabora Office\" — we mirror upstream's bytes and cannot relabel them without forking and re-signing. Renaming this field does NOT move the publish identity, because source_identity.mode=pin hashes `upstream` only.",
-  "_doc_upstream_source": "upstream.source_repo below names LibreOffice core, which is the ENGINE but not where this app is built from. The Android app itself lives in Collabora's Gerrit monorepo (git clone https://gerrit.collaboraoffice.com/online), whose GitHub mirror CollaboraOnline/online keeps the mobile tree on branch distro/collabora/co-25.04-mobile under android/ — android/app (document browser, settings) and android/lib (LOActivity + COWebView, the WebView that hosts Collabora Online). CollaboraOnline/online@main carries only docker/ and kubernetes/; the source moved to Gerrit. Correcting source_repo itself is deliberately deferred to the next pin bump: it lives INSIDE `upstream`, so editing it alone would move the publish identity and re-run a 267 MB mirror job for a comment. A pin bump pays that cost anyway. Phones are unaffected either way — the AppStore compares the published .sha256 sidecar, which is the pinned sha and does not move on a republish.",
+  "_doc": "SOURCE BUILD, as of this commit. This directory used to be a MIRROR: ship-cloud-sheets.yml downloaded Collabora's official APK, checked it against a pinned sha256 and republished those exact bytes. That gave a strong supply-chain guarantee and zero ownership — we could not rename the app, could not move its menus, and above all could not make Text Enhance work, because the feature needs code inside the web layer and the Android shell. The owner chose ownership. So we now build from source, and the sha256-of-upstream's-bytes guarantee is replaced by a pinned-revision guarantee; see supply_chain below, which states plainly what is weaker.",
+  "_doc_no_source_in_git": "THE SOURCE IS NOT IN THIS REPOSITORY AND MUST NOT BE. LibreOffice core with external/ present is multi-gigabyte; this repo has a hard rule that no file may approach 100 MB, has already had to repair a 90 MB repository, and shards its transcripts to stay under GitHub's blob limit. Committing the tree would wreck it. Instead: two pinned upstreams fetched at build time, and every edit we own as a numbered patch in patches/. The fleet's other forks (dialer, matrix, vault, media-center) vendor their patched source instead — they moved to that on 2026-08-19 — and we deliberately cannot follow them, for size and nothing else. patches/README.md justifies the divergence in full.",
   "upstream": {
-    "vendor": "Collabora Productivity",
-    "project": "Collabora Office for Android",
-    "fdroid_repo": "https://www.collaboraoffice.com/downloads/fdroid/repo/",
-    "fdroid_index": "https://www.collaboraoffice.com/downloads/fdroid/repo/index-v1.json",
-    "package_name": "com.collabora.libreoffice",
-    "version_name": "26.04.3.1",
-    "version_code": 155,
-    "apk_name": "collabora-office-mobile-26.04.3.1-155-release-arm64-v8a-2026-09-03.apk",
-    "url": "https://www.collaboraoffice.com/downloads/fdroid/repo/collabora-office-mobile-26.04.3.1-155-release-arm64-v8a-2026-09-03.apk",
-    "sha256": "b7ab381de96f429c2e762d0e54ee0fac7db03ad2fecfede9f4c558c767d18513",
-    "size": 267216449,
-    "license": "MPL-2.0",
-    "source_repo": "https://gerrit.libreoffice.org/plugins/gitiles/core/"
+    "online": {
+      "_doc": "Collabora Online — the web app in the WebView (browser/) AND the Android shell around it (android/). This is the ONLY tree we patch.",
+      "vendor": "Collabora Productivity",
+      "url": "https://gerrit.collaboraoffice.com/online",
+      "_doc_url": "GERRIT, NOT GITHUB, AND THAT IS NOT A PREFERENCE. The GitHub mirror (CollaboraOnline/online) carries the Android tree only on distro/collabora/co-25.04-mobile; the 26.04 mobile line — the one matching the 26.04.3.1 APK this app shipped while it was a mirror — exists only on Collabora's own Gerrit. Pinning the GitHub mirror would have quietly moved the owner back a whole release line. github_mirror stays recorded as a read-only convenience for code search; it is never the fetch source.",
+      "github_mirror": "https://github.com/CollaboraOnline/online",
+      "ref": "distro/collabora/co-26.04-mobile",
+      "revision": "794af0088b0369878461cc53de45129eaf08824a",
+      "_doc_revision": "A COMMIT SHA, NOT A BRANCH. VERIFIED: patches/0001 applies cleanly to this exact revision with `git am --keep-non-patch` from a clean checkout, watched, not assumed. The SAME patch generated against 25.04-mobile FAILED here on three files — 'error: browser/src/map/Clipboard.js: patch does not apply' — which is precisely the silent drift a floating ref would have caused and the reason the sha is written down. tests/patches-apply.sh refuses anything that is not a full 40-character sha.",
+      "patch_mode": "apply",
+      "_doc_patch_mode": "apply = the series in patches/ is applied with `git am` at materialize time against `revision`. The fleet's other forks are `vendored` (patched source committed, patches kept only as history). Reading this field is how an engine tells the two apart without knowing which app it is looking at.",
+      "license": "MPL-2.0",
+      "configure": {
+        "_doc": "THE REBRAND IS THESE FLAGS, NOT A PATCH. android/appSettings.gradle is generated from @APP_NAME@ / @ANDROID_PACKAGE_NAME@ / @VENDOR@ placeholders (see android/appSettings.gradle.in and configure.ac), so upstream already exposes every branding value as a knob. Patching the generated file would hardcode into the tree what a flag sets, and the patch would then conflict on every upstream touch of that file.",
+        "--with-app-name": "Cloud Office",
+        "--with-android-package-name": "com.diegonmarcos.cloudoffice",
+        "--with-vendor": "diegonmarcos.com",
+        "--with-info-url": "https://linktree.diegonmarcos.com"
+      },
+      "gerrit_url": "https://gerrit.collaboraoffice.com/online",
+      "_doc_fetch_cost": "MEASURED, so nobody plans CI around a guess: Gerrit refuses blob filtering (`warning: filtering not recognized by server, ignoring`) and will not serve an arbitrary sha (`upload-pack: not our ref`). A `git fetch --depth 1 origin distro/collabora/co-26.04-mobile` from this container produced a 471 MB .git and took roughly ten minutes. Any CI step fetching this needs that budget and a cache; it is not a thirty-second checkout."
+    },
+    "core": {
+      "_doc": "LibreOffice core as Collabora ships it — the document ENGINE behind the WebView. We build it and we NEVER patch it. That is what keeps our series to nine files instead of a fork of an office suite, and it is why `patches/` stays reviewable by hand.",
+      "url": "https://gerrit.collaboraoffice.com/core",
+      "ref": "distro/collabora/co-26.04",
+      "revision": "c1013fad0d38683630b48c01b6d5208b8d81181e",
+      "_doc_revision": "Read from the ref's tip on 2026-09-10 via `git ls-remote`. Matched to the 26.04 online pin above: core and online must come from the same release line or the engine and the web layer disagree about the protocol between them. UNVERIFIED beyond existing — nothing here has built it, and no patch is applied to it, so the only claim made is that this sha was the tip of that ref at that reading.",
+      "license": "MPL-2.0"
+    }
+  },
+  "supply_chain": {
+    "_doc": "WHAT REPLACES THE sha256 PIN, AND WHAT IS GENUINELY WEAKER. Stated here rather than in a README because the next person to touch this will read build.json.",
+    "_doc_before": "BEFORE: one sha256 over Collabora's release APK. Strong and simple — the bytes either matched what Collabora published or the job failed. It also meant the app was signed by Collabora, and installing ours was byte-identical to installing from their F-Droid repo.",
+    "_doc_after": "AFTER: two pinned git revisions, both full commit shas, both verified at fetch time by tests/patches-apply.sh, plus a patch series that must apply exactly or the build stops. A commit sha is a hash over the whole tree's history, so it is not a weaker hash — it is a hash of a different thing.",
+    "_doc_weaker": "GENUINELY WEAKER, THREE WAYS, AND NONE OF THEM IS RECOVERABLE BY TRYING HARDER. (1) We no longer verify a Collabora-signed artefact; we verify source and then trust our own build of it. (2) The build now has a large dependency surface — an NDK toolchain, the whole external/ tree LibreOffice downloads during its build, and a build host — none of which the sha256 pin ever had to trust, and external/'s own tarball hashes are checked by LibreOffice's build rather than by us. (3) The result is signed with the fleet key, so a compromise of that key now reaches Cloud Office too, where before it could not. The honest summary: we traded a narrow, verifiable guarantee for ownership, and the owner made that trade knowingly.",
+    "_doc_reproducible": "Reproducible in the sense that matters here: same two pins + same patch series + same configure flags + same toolchain = same source going into the compiler. Bit-identical APK output is NOT claimed and should not be until someone has actually diffed two builds."
   },
   "android": {
-    "application_id": "com.collabora.libreoffice",
+    "application_id": "com.diegonmarcos.cloudoffice",
+    "_doc_application_id": "OURS NOW, AND IT CANNOT BE UPSTREAM'S. com.collabora.libreoffice belongs to bytes signed with Collabora's key; a rebuilt app signed with the fleet key cannot claim it, and Android would refuse the install anyway (signature mismatch on update). WHAT THE OWNER WILL EXPERIENCE: the new app does NOT replace the installed Collabora Office. It installs alongside it, as a second launcher icon, and the two coexist — different package names are different apps to Android in every respect. Documents opened by file association will offer both until the old one is removed. Nothing migrates automatically: the old app's settings and recent-files list stay with the old app. Removing the old one is a manual uninstall and is safe, because Collabora Office stores documents in normal storage rather than in its private data directory.",
     "min_sdk": 26,
     "abi_filters": [
       "arm64-v8a"
-    ],
-    "_doc_application_id": "Upstream's own id, unchanged — these are upstream's bytes, signed with upstream's key. We are a mirror, so we neither rename the package nor re-sign it; installing ours is byte-identical to installing from Collabora's F-Droid repo."
+    ]
+  },
+  "signing": {
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. Cloud Office MUST be inside that set and this is not optional here: Text Enhance crosses an application boundary to the Cloud Keyboard over ITextTools, which is guarded by com.diegonmarcos.cloud.permission.CONSTELLATION_DATA at protectionLevel=signature. Signed with anything else, the platform refuses the bind and Text Enhance cannot work at all — it would fail with 'Text tools need the Cloud Keyboard app' on a phone where the keyboard is plainly installed. build.sh::_resolve_signing resolves the key from $VAULT_DIR + sops and FAILS LOUD if it cannot; there is no fallback and no generated key. See SIGNING.md.",
+    "vault_keystore": "A0_keys/providers/android/release.jks",
+    "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
+  },
+  "build": {
+    "_doc": "WE DO NOT BUILD THIS ANYWHERE IN THIS REPO'S NORMAL CI. An NDK megabuild over LibreOffice core plus the whole external/ tree does not fit a standard GitHub-hosted runner in either time or disk. The host is a CONFIGURATION VALUE, deliberately, so that choosing it is a separate decision from this work — a sibling task is establishing which host can carry the compile, and nothing here bakes in an answer.",
+    "host": null,
+    "_doc_host": "null = no build host has been established yet, and the workflow must FAIL LOUDLY rather than fall back to a hosted runner that will die four hours in with a full disk. Set it to the runner label once the host exists; nothing else in this file changes.",
+    "gradle_task": "assembleArm64-v8aRelease",
+    "modules": {
+      "text-tools": {
+        "_doc": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/text-tools — the ITextTools binder contract and its client, the same directory cloud-mail and the Cloud Keyboard build. materialize places it at android/text-tools inside the fetched online tree; patch 0001's settings.gradle include expects it there. A COPY MUST NEVER BE VENDORED: the AIDL's method order is a wire format, and two copies that disagree about it make an installed keyboard answer the wrong call.",
+        "dir": "../ab_cloud-libs-shared/libs/text-tools",
+        "materialize_to": "android/text-tools"
+      }
+    }
+  },
+  "text_enhance": {
+    "_doc": "Cloud Office is a CALLER of the fleet enhancer, never a second copy of it. Routing, the model registry, the prompt chunking for oversized input, the timeout and the provider API KEY all stay in the Cloud Keyboard behind ITextTools; this app calls enhanceWith(), which exists precisely so a caller can hold its own settings and hand over its whole decision. cloud-mail was split from the keyboard the same way and for the same reason.",
+    "_doc_settings_are_not_shared": "The owner's standing rule: a user-editable settings surface is an independently editable copy per app, never a shared link. What is shared is the network transport and the credential. Cloud Office's own choices live in its own SharedPreferences file ('cloud_text_enhance') with defaults from android/lib/src/main/assets/cloud_text_enhance.json, added by patch 0001.",
+    "service_package": "com.diegonmarcos.cloudkeyboard",
+    "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"
   },
   "release": {
     "kind": "app",
     "variants": [
       {
-        "_doc": "arm64-v8a ONLY. Collabora publishes one ABI per release channel and the pinned index entry declares abis [\"arm64-v8a\"]; there is no x86_64 artifact to mirror, so there is no second matrix job.",
+        "_doc": "arm64-v8a only, as the mirror was. Every additional ABI is another full NDK megabuild of LibreOffice core, and no phone in this fleet needs one.",
         "id": "arm64",
         "abis": [
           "arm64-v8a"
@@ -39,8 +86,8 @@
         "supported_abis": [
           "arm64-v8a"
         ],
-        "artifact_debug": "Cloud-Sheets.apk",
-        "gh_asset": "Cloud-Sheets.apk",
+        "artifact_debug": "Cloud-Office.apk",
+        "gh_asset": "Cloud-Office.apk",
         "ghcr_tag_suffix": "",
         "update_tag": "latest"
       }
@@ -52,14 +99,14 @@
       "require_unmetered_network": true,
       "require_charging": false,
       "install_mode": "silent",
-      "_doc_require_unmetered_network": "267 MB — the largest artifact in the fleet by an order of magnitude. Unmetered-only so a background auto-update pass cannot burn a mobile data plan.",
+      "_doc_require_unmetered_network": "Still the largest artifact in the fleet by an order of magnitude. Unmetered-only so a background auto-update pass cannot burn a mobile data plan.",
       "max_installs_per_pass": 3
     },
     "ghcr": {
       "enabled": true,
       "registry": "ghcr.io",
       "namespace": "diegonmarcos",
-      "image": "cloud-sheets",
+      "image": "cloud-office",
       "media_type": "application/vnd.android.package-archive",
       "tags": [
         "latest",
@@ -70,14 +117,11 @@
     "gh_release": {
       "enabled": true,
       "rolling_tag": "latest",
-      "asset_name": "Cloud-Sheets.apk",
+      "asset_name": "Cloud-Office.apk",
       "draft": false,
       "prerelease": false,
       "generate_release_notes": false
     }
   },
-  "source_identity": {
-    "_doc": "This app is a MIRROR, not a build: the workflow downloads the official Collabora Office APK, verifies it against upstream.sha256 and republishes those exact bytes. Its output is therefore a pure function of `upstream`, so cloud-android-source-identity.sh hashes THAT instead of the directory tree. Hashing the tree asked the wrong question — a README fix or any repo-wide touch moved the tree sha and republished a byte-identical 250MB APK, which every phone then downloaded as an update. That happened on 2026-09-01: a repo-wide restore commit rewrote ac_cloud-sheets/ and shipped Collabora Office to the fleet again for no reason. With mode=pin the only thing that can trigger a republish is a pin bump, which is exactly when the bytes actually differ.",
-    "mode": "pin"
-  }
+  "_doc_source_identity": "source_identity.mode=\"pin\" IS DELIBERATELY GONE. It existed because a mirror's output was a pure function of `upstream`, so hashing the directory republished 250 MB whenever an unrelated repo-wide commit moved the tree sha — which happened on 2026-09-01. That reasoning DIES with the mirror: our output is now a function of the pins AND the patch series AND the configure flags, all of which live in this directory. Falling back to the default path hash is therefore correct, and leaving mode=pin would have been an active bug — every patch added here would have produced a byte-different APK that the gate believed was unchanged, and the phones would never have seen it."
 }

@@ -1,0 +1,591 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cloud Office <me@diegonmarcos.com>
+Date: Thu, 10 Sep 2026 06:50:01 +0000
+Subject: [PATCH] cloud-office: Text Enhance reads the canvas selection, not
+ the blank buffer
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Enhance has been a menu item that did nothing. Collabora's Android text input is
+a hidden contenteditable that never holds the document text — the real selection
+lives in the canvas and in core behind it — so the Cloud Keyboard's Enhance read
+an empty buffer and returned silently. Weeks were lost to a feature that looked
+present and was not.
+
+Copy is the one operation on this platform that demonstrably gets the real
+selection, so this follows copy rather than inventing a second path:
+
+  1. The Edit menu's Text Enhance sets a one-shot flag on Clipboard and sends
+     core the same `gettextselection` copy sends. Core answers
+     `textselectioncontent:`, and the handler that already routes the Action_Copy
+     PostMessage API routes ours the same way — returning before the real
+     clipboard is touched, so an enhance cannot destroy what the owner copied.
+  2. The answer crosses to the shell over COOLMessageHandler, the bridge already
+     carrying SAVE, PRINT and .uno:Paste. The enhancer itself is NOT
+     reimplemented: routing, model registry, chunking of oversized input, the
+     timeout and the provider API key stay behind ITextTools in the Cloud
+     Keyboard. Cloud Office calls enhanceWith(), the method that exists so a
+     caller can hold its own settings and send its whole decision — the split
+     cloud-mail already made. No key is stored or read on this side.
+  3. The result goes back through LOActivity.paste(), the same native call the
+     ordinary paste path uses, so core replaces the selection through its own
+     paste and the owner can undo it in ONE step. Delete-then-insert would have
+     been two.
+
+Writer only. The spreadsheet Edit menu is deliberately untouched: a Calc
+selection can span cells and one plain-text rewrite pasted back over it would
+scatter across them, which is worse than the feature being absent there.
+
+Plain text in both directions, deliberately: formatting inside the enhanced range
+does not survive, because the alternative is letting a model emit arbitrary markup
+into a document, and a rewrite that invents a table is worse than one that
+flattens a bold word.
+
+Nothing here is silent. No selection, a missing keyboard, no API key, a provider
+error, an empty reply and a failed paste each end in a message on screen — the
+silence WAS the defect.
+
+The selection is never written to logcat. This fleet uploads logcat from its
+diagnostics screens, so a logged selection is a selection that leaves the phone.
+
+Settings also moves into the document's own Edit menu; it was previously reachable
+only by closing the document you were editing, which is why nobody found it.
+---
+ android/app/src/main/AndroidManifest.xml      |  17 +-
+ android/lib/build.gradle                      |   6 +
+ .../src/main/assets/cloud_text_enhance.json   |  13 +
+ .../androidlib/CloudTextEnhance.java          | 255 ++++++++++++++++++
+ .../libreoffice/androidlib/LOActivity.java    |  45 +++-
+ android/settings.gradle                       |  12 +-
+ browser/src/control/Control.Menubar.ts        |  31 ++-
+ browser/src/layer/tile/CanvasTileLayer.js     |  17 ++
+ browser/src/map/Clipboard.js                  |  14 +
+ 9 files changed, 405 insertions(+), 5 deletions(-)
+ create mode 100644 android/lib/src/main/assets/cloud_text_enhance.json
+ create mode 100644 android/lib/src/main/java/org/libreoffice/androidlib/CloudTextEnhance.java
+
+diff --git a/android/app/src/main/AndroidManifest.xml b/android/app/src/main/AndroidManifest.xml
+index 4f2fdbe24..ad1ae13d5 100644
+--- a/android/app/src/main/AndroidManifest.xml
++++ b/android/app/src/main/AndroidManifest.xml
+@@ -179,8 +179,23 @@
+         <activity
+             android:name=".SettingsActivity"
+             android:label="@string/app_name_settings"
++            android:exported="false"
+             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+-            android:theme="@style/Theme.AppCompat.Light" />
++            android:theme="@style/Theme.AppCompat.Light">
++            <!--
++              Reachable BY ACTION so the Settings row in the document's own Edit menu can
++              open it. android/lib (LOActivity) cannot name this class: it is
++              org.libreoffice.androidapp here, LOActivity is org.libreoffice.androidlib
++              there, and the applicationId is a third string again. An explicit
++              ComponentName assembled from getPackageName() would be a guess that compiles
++              and fails at run time. exported stays false — this is our own app opening its
++              own screen, and nothing outside the APK has any business starting it.
++            -->
++            <intent-filter>
++                <action android:name="org.libreoffice.androidapp.SETTINGS" />
++                <category android:name="android.intent.category.DEFAULT" />
++            </intent-filter>
++        </activity>
+ 
+         <provider
+             android:name="androidx.core.content.FileProvider"
+diff --git a/android/lib/build.gradle b/android/lib/build.gradle
+index f0bcb94d4..8751ab6a6 100644
+--- a/android/lib/build.gradle
++++ b/android/lib/build.gradle
+@@ -82,6 +82,12 @@ android {
+ dependencies {
+     implementation fileTree(dir: 'libs', include: ['*.jar'])
+ 
++    // The Text tools binder. Cloud Office is a CALLER: it holds its own Text Enhance
++    // settings and sends its own composed prompt through enhanceWith(), while the routing,
++    // the chunking and the provider API KEY stay in the Cloud Keyboard, which is the only
++    // app that ever sees the credential.
++    implementation project(':text-tools')
++
+     implementation 'androidx.appcompat:appcompat:1.7.1'
+     implementation 'com.google.android.material:material:1.13.0'
+     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
+diff --git a/android/lib/src/main/assets/cloud_text_enhance.json b/android/lib/src/main/assets/cloud_text_enhance.json
+new file mode 100644
+index 000000000..ccc4e1109
+--- /dev/null
++++ b/android/lib/src/main/assets/cloud_text_enhance.json
+@@ -0,0 +1,13 @@
++{
++  "_doc": "Cloud Office's OWN Text Enhance choices — the defaults this app starts from before the owner changes anything. It is a separate file from the Cloud Keyboard's registry on purpose: the owner's standing rule is that a user-editable settings surface is an independently editable copy per app, never a shared link. What is shared is the engine and the provider credential, reached over ITextTools; what is not shared is which style this app rewrites in. See MailTextToolsPrefs in cloud-mail, which was split from the keyboard for exactly this reason.",
++  "_doc_prompt": "The FULLY COMPOSED system prompt is built here and sent whole through ITextTools.enhanceWith. Nothing is added on the serving side — anything added there would be a setting the keyboard still owned, which is the thing this split exists to end.",
++  "preamble": "You rewrite text taken from an office document. Return ONLY the rewritten text, with no preamble, no explanation, no quotation marks around it, and no markdown fences. Preserve the author's meaning and language unless told otherwise.",
++  "default_style": "improve",
++  "styles": [
++    { "id": "improve", "label": "Improve writing", "prompt": "Improve the clarity, flow and word choice of the text. Keep its length close to the original." },
++    { "id": "formal", "label": "Make formal", "prompt": "Rewrite the text in a formal, professional register suitable for business correspondence." },
++    { "id": "concise", "label": "Make concise", "prompt": "Tighten the text. Remove redundancy and filler while keeping every fact and instruction." },
++    { "id": "grammar", "label": "Fix grammar only", "prompt": "Correct spelling, grammar and punctuation ONLY. Do not change wording, tone, or sentence structure otherwise." }
++  ],
++  "_doc_plain_text": "PLAIN TEXT, BOTH DIRECTIONS, AND THAT IS A DECISION. The selection is fetched as text/plain and pasted back as text/plain, so bold, italics, hyperlinks and list markers INSIDE the enhanced range do not survive; the range takes the formatting at the insertion point. Fetching text/html instead would preserve them, but the model would then be free to emit arbitrary markup into the document, and a rewrite that invents a table is far worse than one that flattens a bold word. Revisit this only with a way to constrain the model's output to the tags the selection already had."
++}
+diff --git a/android/lib/src/main/java/org/libreoffice/androidlib/CloudTextEnhance.java b/android/lib/src/main/java/org/libreoffice/androidlib/CloudTextEnhance.java
+new file mode 100644
+index 000000000..7a9f0492e
+--- /dev/null
++++ b/android/lib/src/main/java/org/libreoffice/androidlib/CloudTextEnhance.java
+@@ -0,0 +1,255 @@
++/* -*- Mode: java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
++/*
++ * Cloud Office — Text Enhance.
++ *
++ * This file is not upstream Collabora. It is the Android half of a path with three legs, and
++ * every leg deliberately reuses something that already worked rather than inventing a second
++ * way to do the same thing.
++ *
++ *   LEG 1 — GET THE REAL SELECTED TEXT.
++ *   Collabora's Android text input is a hidden contenteditable that never holds the document
++ *   text; the selection lives in the canvas and in the core process behind it. That is why the
++ *   Cloud Keyboard's Enhance read a blank buffer and silently did nothing for weeks. The only
++ *   thing on this platform that demonstrably gets the real selection is COPY, so this follows
++ *   copy exactly: the browser asks core `gettextselection`, core answers `textselectioncontent:`,
++ *   and Control.Menubar's cloudtextenhance handler forwards that answer here. It is the same
++ *   round trip the Action_Copy PostMessage API makes, with the same one-shot flag on Clipboard
++ *   so the real clipboard is never touched.
++ *
++ *   LEG 2 — REACH THE ENHANCER.
++ *   Not reimplemented here. The routing, the model registry, the chunking of oversized input,
++ *   the timeout and above all the provider API KEY live in the Cloud Keyboard and are reached
++ *   over the existing ITextTools binder. This app calls enhanceWith(), which is the method that
++ *   exists precisely so a caller can hold its OWN settings and hand over its whole decision —
++ *   see cloud-mail, split from the keyboard for the same reason. No key is ever sent, stored or
++ *   read on this side.
++ *
++ *   LEG 3 — PUT IT BACK AS A REAL DOCUMENT EDIT.
++ *   Not a synthetic key event, not a contenteditable write. LOActivity.paste() is the same
++ *   native call the ordinary paste path uses, so core replaces the current selection through its
++ *   own paste, which is ONE undo action. Delete-then-insert would have been two, and the owner
++ *   must be able to undo an enhance in one step.
++ *
++ * NOTHING HERE IS EVER SILENT. Every exit — no selection, peer missing, no key, provider error,
++ * empty reply — ends in a message on screen. The defect this feature is fixing WAS the silence.
++ */
++
++package org.libreoffice.androidlib;
++
++import android.app.Activity;
++import android.content.Context;
++import android.content.SharedPreferences;
++import android.os.Handler;
++import android.os.Looper;
++import android.util.Log;
++import android.widget.Toast;
++
++import com.diegonmarcos.superapp.texttools.TextTools;
++import com.diegonmarcos.superapp.texttools.TextToolsClient;
++
++import org.json.JSONArray;
++import org.json.JSONObject;
++
++import java.io.ByteArrayOutputStream;
++import java.io.InputStream;
++import java.nio.charset.Charset;
++import java.util.concurrent.ExecutorService;
++import java.util.concurrent.Executors;
++
++final class CloudTextEnhance {
++
++    private static final String TAG = "CloudTextEnhance";
++
++    /**
++     * The message the browser sends over COOLMessageHandler when the owner picks Text Enhance
++     * and core has answered with the selection.
++     *
++     * IT IS OUR MESSAGE, NOT A COOL ONE, so beforeMessageFromWebView must return false for it and
++     * never forward it to postMobileMessageNative — core has no such command and would log an
++     * unknown-message error for every enhance.
++     */
++    static final String MESSAGE = "CLOUD_TEXT_ENHANCE";
++
++    /** The paste mimetype, matching the mimetype leg 1 asked core for. See PLAIN TEXT below. */
++    private static final String MIME = "text/plain;charset=utf-8";
++
++    /**
++     * PLAIN TEXT IN, PLAIN TEXT OUT — a stated decision, not an accident.
++     *
++     * Bold, italics, hyperlinks and list markers INSIDE the enhanced range do not survive; the
++     * replacement takes the formatting active at the insertion point. Asking core for text/html
++     * would preserve them, but it would also let the model emit arbitrary markup into a document,
++     * and a rewrite that invents a table is far worse than one that flattens a bold word.
++     */
++    private static final String ASSET = "cloud_text_enhance.json";
++
++    /**
++     * Cloud Office's OWN settings file, in Cloud Office's data directory, under Cloud Office's
++     * uid. Android itself keeps it apart from the keyboard's — no sharedUserId, no settings
++     * provider — which is why these key names may safely match the keyboard's own.
++     */
++    private static final String PREFS = "cloud_text_enhance";
++    private static final String KEY_PROVIDER = "ai_provider";
++    private static final String KEY_MODEL_PREFIX = "ai_model_";
++    private static final String KEY_STYLE = "enhance_style";
++
++    private final LOActivity activity;
++    private final TextToolsClient client;
++
++    /** Every ITextTools call BLOCKS — the binder contract says so. Never the main thread. */
++    private final ExecutorService worker = Executors.newSingleThreadExecutor();
++    private final Handler main = new Handler(Looper.getMainLooper());
++
++    CloudTextEnhance(LOActivity activity) {
++        this.activity = activity;
++        this.client = new TextToolsClient(activity);
++    }
++
++    /**
++     * Leg 1's answer has arrived: [selection] is what core says is selected, verbatim.
++     *
++     * NO SELECTION IS A REFUSAL WITH A MESSAGE, NOT A NO-OP. The alternative considered was to
++     * enhance the paragraph at the cursor, which was rejected: it needs a second selection round
++     * trip and it silently edits text the owner never pointed at. Refusing names the fix, and a
++     * named fix is what the silence never gave anyone.
++     */
++    void onSelection(String selection) {
++        final String text = selection == null ? "" : selection.trim();
++        if (text.isEmpty()) {
++            say("Select the text you want to enhance first");
++            return;
++        }
++        // The peer being absent is a different repair from the peer being asleep, and telling the
++        // owner to install an app they already have is how the translate bar lost their trust.
++        if (!client.isServingAppInstalled()) {
++            say(TextTools.NOT_INSTALLED);
++            return;
++        }
++
++        say("Enhancing…");
++        worker.execute(new Runnable() {
++            @Override
++            public void run() {
++                enhance(text);
++            }
++        });
++    }
++
++    /** Runs on [worker]. Never touches the document directly — that is main-thread work. */
++    private void enhance(String text) {
++        final JSONObject config = readConfig();
++        if (config == null) {
++            say("Text Enhance is misconfigured: " + ASSET + " is missing or unreadable");
++            return;
++        }
++
++        final SharedPreferences prefs =
++                activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
++        // Empty provider/model is the honest first-launch answer, and ITextTools documents it:
++        // the serving app falls back to whatever the owner already configured there. It is not
++        // an error and must not be reported as one.
++        final String providerId = prefs.getString(KEY_PROVIDER, "");
++        final String modelId = prefs.getString(KEY_MODEL_PREFIX + providerId, "");
++        final String prompt = composePrompt(config, prefs.getString(
++                KEY_STYLE, config.optString("default_style", "")));
++
++        // CHUNKING IS NOT DONE HERE, ON PURPOSE. Splitting an oversized selection, sending the
++        // pieces and rejoining them is already implemented once behind this binder, and it is
++        // where the provider's token budget is actually known. A second copy here would drift
++        // from the first and be wrong in a way nothing on screen would show.
++        final TextTools.Result result = client.enhanceWith(text, prompt, providerId, modelId);
++
++        if (!result.ok) {
++            // A network error, a missing key, a provider error and a dead binder all arrive here
++            // carrying a readable reason, because the binder contract refuses to squash a failure
++            // into an empty result. Show it. Never swallow it.
++            say("Text Enhance failed: " + result.error);
++            return;
++        }
++
++        final String enhanced = result.text;
++        if (enhanced == null || enhanced.trim().isEmpty()) {
++            // Pasting this would wipe the owner's text with the model's silence.
++            say("Text Enhance returned nothing — the document was not changed");
++            return;
++        }
++
++        main.post(new Runnable() {
++            @Override
++            public void run() {
++                replaceSelection(enhanced);
++            }
++        });
++    }
++
++    /**
++     * LEG 3. Core's own paste, over the still-live selection, which is ONE undo step.
++     *
++     * The selection is still exactly where leg 1 read it: nothing between the menu tap and here
++     * moves the cursor, because the enhance ran on a worker thread and the document was never
++     * touched. If that ever stops being true the replacement lands in the wrong place, so whoever
++     * adds a document operation to this path has to re-establish the selection first.
++     */
++    private void replaceSelection(String enhanced) {
++        try {
++            activity.paste(MIME, enhanced.getBytes(Charset.forName("UTF-8")));
++        } catch (Throwable t) {
++            // A native paste that throws must not look like a successful enhance.
++            Log.w(TAG, "paste of enhanced text failed", t);
++            say("Text Enhance could not write into the document: " + t.getMessage());
++        }
++    }
++
++    /**
++     * The fully composed system prompt — preamble plus the chosen style, joined HERE.
++     *
++     * ITextTools.enhanceWith requires the caller to compose it whole; anything the serving side
++     * appended would be a setting the keyboard still owned.
++     */
++    private String composePrompt(JSONObject config, String styleId) {
++        final StringBuilder out = new StringBuilder(config.optString("preamble", ""));
++        final JSONArray styles = config.optJSONArray("styles");
++        if (styles == null) return out.toString();
++        for (int i = 0; i < styles.length(); ++i) {
++            final JSONObject style = styles.optJSONObject(i);
++            if (style != null && styleId.equals(style.optString("id"))) {
++                out.append("\n\n").append(style.optString("prompt", ""));
++                break;
++            }
++        }
++        return out.toString();
++    }
++
++    /** The styles asset, read fresh. Small, read once per enhance, not worth a cache. */
++    private JSONObject readConfig() {
++        InputStream in = null;
++        try {
++            in = activity.getAssets().open(ASSET);
++            final ByteArrayOutputStream buffer = new ByteArrayOutputStream();
++            final byte[] chunk = new byte[4096];
++            int read;
++            while ((read = in.read(chunk)) != -1) buffer.write(chunk, 0, read);
++            return new JSONObject(new String(buffer.toByteArray(), Charset.forName("UTF-8")));
++        } catch (Exception e) {
++            Log.e(TAG, "cannot read " + ASSET, e);
++            return null;
++        } finally {
++            if (in != null) try { in.close(); } catch (Exception ignored) { }
++        }
++    }
++
++    /**
++     * The only way this class speaks, and it always speaks.
++     *
++     * A Toast rather than a log line because the whole defect being fixed is a failure nobody
++     * could see. Safe from any thread: it hops to the main looper itself.
++     */
++    private void say(final String message) {
++        main.post(new Runnable() {
++            @Override
++            public void run() {
++                Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
++            }
++        });
++    }
++}
+diff --git a/android/lib/src/main/java/org/libreoffice/androidlib/LOActivity.java b/android/lib/src/main/java/org/libreoffice/androidlib/LOActivity.java
+index bd007f218..6be885266 100644
+--- a/android/lib/src/main/java/org/libreoffice/androidlib/LOActivity.java
++++ b/android/lib/src/main/java/org/libreoffice/androidlib/LOActivity.java
+@@ -1343,10 +1343,20 @@ public class LOActivity extends AppCompatActivity {
+      */
+     @JavascriptInterface
+     public void postMobileMessage(String message) {
+-        Log.d(TAG, "postMobileMessage: " + message);
+-
+         String[] messageAndParameterArray= message.split(" ", 2); // the command and the rest (that can potentially contain spaces too)
+ 
++        if (CloudTextEnhance.MESSAGE.equals(messageAndParameterArray[0])) {
++            // NEVER LOG THIS ONE'S PAYLOAD. It is the owner's document text, and this fleet
++            // ships a diagnostics path that reads logcat and uploads it, so a selection that
++            // reaches the log is a selection that leaves the phone. The length is enough to
++            // debug the bridge with.
++            Log.d(TAG, "postMobileMessage: " + messageAndParameterArray[0] + " ("
++                    + (messageAndParameterArray.length > 1 ? messageAndParameterArray[1].length() : 0)
++                    + " chars, not logged)");
++        } else {
++            Log.d(TAG, "postMobileMessage: " + message);
++        }
++
+         if (beforeMessageFromWebView(messageAndParameterArray)) {
+             postMobileMessageNative(message);
+             afterMessageFromWebView(messageAndParameterArray);
+@@ -1358,6 +1368,15 @@ public class LOActivity extends AppCompatActivity {
+      */
+     public native void postMobileMessageNative(String message);
+ 
++    /** Cloud Office Text Enhance. Created lazily: most sessions never enhance anything. */
++    private CloudTextEnhance mCloudTextEnhance;
++
++    private CloudTextEnhance getCloudTextEnhance() {
++        if (mCloudTextEnhance == null)
++            mCloudTextEnhance = new CloudTextEnhance(this);
++        return mCloudTextEnhance;
++    }
++
+     /**
+      * Passing messages from JS (instead of the websocket communication).
+      */
+@@ -1501,6 +1520,28 @@ public class LOActivity extends AppCompatActivity {
+             case "downloadas":
+                 initiateSaveAs(messageAndParam[1]);
+                 return false;
++            case CloudTextEnhance.MESSAGE:
++                // OURS, NOT CORE'S — return false so it is never forwarded to
++                // postMobileMessageNative, which has no such command and would log an
++                // unknown-message error on every enhance.
++                getCloudTextEnhance().onSelection(
++                        messageAndParam.length > 1 ? messageAndParam[1] : "");
++                return false;
++            case "CLOUD_SETTINGS": {
++                // Reached BY ACTION, not by class name — see the intent-filter on
++                // SettingsActivity in android/app's manifest for why.
++                Intent settings = new Intent("org.libreoffice.androidapp.SETTINGS");
++                settings.setPackage(getPackageName());
++                if (settings.resolveActivity(getPackageManager()) != null) {
++                    startActivity(settings);
++                } else {
++                    // A menu row that does nothing is the defect this app is being fixed
++                    // for. If the filter is ever dropped, say so instead of shrugging.
++                    Toast.makeText(this, "Settings are unavailable in this build",
++                            Toast.LENGTH_LONG).show();
++                }
++                return false;
++            }
+             case "exportfile":
+                 initiateExportFile(messageAndParam[1]);
+                 return false;
+diff --git a/android/settings.gradle b/android/settings.gradle
+index 3cbe24935..ac15c6e6d 100644
+--- a/android/settings.gradle
++++ b/android/settings.gradle
+@@ -1 +1,11 @@
+-include ':app', ':lib'
++include ':app', ':lib', ':text-tools'
++
++// SHARED BY REFERENCE, not copied. ab_cloud-libs-shared/libs/text-tools is the ITextTools
++// binder contract and its client, and cloud-mail and the Cloud Keyboard already build the
++// SAME directory the same way. A copy vendored in here would be a second contract to drift
++// from the first, and the AIDL's transaction codes are a WIRE FORMAT: two copies that
++// disagree about method order make an installed keyboard answer the wrong call.
++//
++// materialize places it at android/text-tools; the path is stable because the engine puts
++// it there, not because of where this tree happens to sit on disk.
++project(':text-tools').projectDir = new File(settingsDir, 'text-tools')
+diff --git a/browser/src/control/Control.Menubar.ts b/browser/src/control/Control.Menubar.ts
+index 6176ca087..56220ede8 100644
+--- a/browser/src/control/Control.Menubar.ts
++++ b/browser/src/control/Control.Menubar.ts
+@@ -142,6 +142,21 @@ class Menubar extends window.L.Control {
+ 				{name: _UNO('.uno:PasteSpecial', 'text'), uno: '.uno:PasteSpecial'},
+ 				{name: _UNO('.uno:SelectAll', 'text'), uno: '.uno:SelectAll'},
+ 				{type: 'separator'},
++				// Cloud Office. Next to Copy deliberately: it takes the same selection
++				// Copy takes, by the same route, so putting it anywhere else would
++				// suggest it works on something else.
++				//
++				// WRITER ONLY, FOR NOW. The spreadsheet Edit menu below is deliberately
++				// untouched: a Calc selection can span cells, and pasting one plain-text
++				// rewrite back over it would scatter the result across them. That is the
++				// "mangles the document" outcome, which is worse than the feature being
++				// absent there.
++				{name: _('Text Enhance'), id: 'cloudtextenhance', type: 'action'},
++				// The app's config, IN the main menu. It was previously reachable only
++				// from the document-browser screen — that is, only by closing the
++				// document you were editing, which is why nobody found it.
++				{name: _('Settings'), id: 'cloudsettings', type: 'action', mobileapp: true},
++				{type: 'separator'},
+ 				{uno: '.uno:SearchDialog', id: 'searchreplace'},
+ 				{name: _('Find'), id: 'find', type: 'action', shortcut: 'home-search'},
+ 				{type: 'separator'},
+@@ -2506,7 +2521,21 @@ class Menubar extends window.L.Control {
+ 			command = $(itNode).data('uno');
+ 		}
+ 
+-		if (id === 'save') {
++		if (id === 'cloudtextenhance') {
++			// LEG 1. Follow COPY, because copy is the one thing on this platform that
++			// demonstrably gets the real document selection: ask core for it and let the
++			// textselectioncontent: handler forward the answer to the Android shell. The
++			// flag is what tells that handler the answer is ours and must not reach the
++			// clipboard.
++			if (this._map._clip) {
++				this._map._clip.setEnhanceRequest(true);
++				app.socket.sendMessage('gettextselection mimetype=text/plain;charset=utf-8');
++			}
++		} else if (id === 'cloudsettings') {
++			if (window.COOLMessageHandler) {
++				window.COOLMessageHandler.postMobileMessage('CLOUD_SETTINGS');
++			}
++		} else if (id === 'save') {
+ 			// Save only when not read-only.
+ 			if (!this._map.isReadOnlyMode()) {
+ 				this._map.fire('postMessage', {msgId: 'UI_Save', args: { source: 'filemenu' }});
+diff --git a/browser/src/layer/tile/CanvasTileLayer.js b/browser/src/layer/tile/CanvasTileLayer.js
+index 473890e65..e82da32bb 100644
+--- a/browser/src/layer/tile/CanvasTileLayer.js
++++ b/browser/src/layer/tile/CanvasTileLayer.js
+@@ -936,6 +936,23 @@ window.L.CanvasTileLayer = window.L.Layer.extend({
+ 				return;
+ 			}
+ 
++			if (this._map._clip && this._map._clip.isEnhanceRequest()) {
++				// Cloud Office Text Enhance asked for the selection. THIS is the real
++				// document selection — the same bytes copy would have put on the
++				// clipboard — which is the whole point: the hidden contenteditable that
++				// Android text input uses never holds the document text, so anything
++				// reading it gets a blank buffer and enhances nothing.
++				//
++				// Hand it to the shell and return WITHOUT touching the clipboard, exactly
++				// as the Action_Copy branch above does.
++				this._map._clip.setEnhanceRequest(false);
++				if (window.COOLMessageHandler) {
++					window.COOLMessageHandler.postMobileMessage(
++						'CLOUD_TEXT_ENHANCE ' + textMsgContent);
++				}
++				return;
++			}
++
+ 			let textMsgHtml = '';
+ 			let textMsgPlainText = '';
+ 			if (textMsgContent.startsWith('{')) {
+diff --git a/browser/src/map/Clipboard.js b/browser/src/map/Clipboard.js
+index ea469fba3..909020099 100644
+--- a/browser/src/map/Clipboard.js
++++ b/browser/src/map/Clipboard.js
+@@ -33,6 +33,12 @@ window.L.Clipboard = window.L.Class.extend({
+ 		this._navigatorClipboardPasteSpecial = false;
+ 		// Is handling an 'Action_Copy' in progress?
+ 		this._isActionCopy = false;
++		// Is a Cloud Office Text Enhance waiting for the selection?
++		// Same one-shot shape as _isActionCopy above, and for the same reason: the
++		// answer to 'gettextselection' must reach the requester WITHOUT touching the
++		// real clipboard, or an enhance would silently overwrite whatever the owner
++		// had copied.
++		this._isEnhanceRequest = false;
+ 		// Is handling a 'copy-markdown' in progress?
+ 		this._copyAsMarkdown = false;
+ 
+@@ -1417,6 +1423,14 @@ window.L.Clipboard = window.L.Class.extend({
+ 		return this._isActionCopy;
+ 	},
+ 
++	setEnhanceRequest: function(isEnhanceRequest) {
++		this._isEnhanceRequest = isEnhanceRequest;
++	},
++
++	isEnhanceRequest: function() {
++		return this._isEnhanceRequest;
++	},
++
+ 	// complexselection: message
+ 	onComplexSelection: function (/*text*/) {
+ 		// Mark this selection as complex.
