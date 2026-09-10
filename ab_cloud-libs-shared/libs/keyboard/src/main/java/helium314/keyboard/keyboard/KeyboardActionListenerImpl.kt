@@ -241,6 +241,12 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     }
 
     override fun onMoveDeletePointer(steps: Int) {
+        // The swipe-to-delete drag, offered to the keyboard's own box first. It used to
+        // go straight to the host's connection, so dragging on the backspace key while a
+        // bar was open put a selection into the application's field that the user — who
+        // was looking at the bar — could not see, and the DELETE on finger-up then went
+        // to the bar's buffer instead, leaving that selection armed behind it.
+        if (latinIME.onCaretSlide(steps, true)) return
         inputLogic.finishInput()
         val end = connection.expectedSelectionEnd
         val actualSteps = actualSteps(steps)
@@ -257,6 +263,12 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
     }
 
     override fun onUpWithDeletePointerActive() {
+        // Routed as a key, so LatinIME hands it to whichever box owns editing; the
+        // host's selection is only the right question when the host owns it.
+        if (latinIME.onCaretSlide(0, true)) {
+            onCodeInput(KeyCode.DELETE, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
+            return
+        }
         if (!connection.hasSelection()) return
         inputLogic.finishInput()
         onCodeInput(KeyCode.DELETE, Constants.NOT_A_COORDINATE, Constants.NOT_A_COORDINATE, false)
@@ -312,6 +324,16 @@ class KeyboardActionListenerImpl(private val latinIME: LatinIME, private val inp
         // for RTL languages we want to invert pointer movement
         val rtl = RichInputMethodManager.getInstance().currentSubtype.isRtlSubtype
         val steps = if (rtl) -rawSteps else rawSteps
+        // THE SPACE BAR'S CURSOR SLIDE, offered to the keyboard's own box first.
+        //
+        // Everything below this line talks to the HOST application's connection: it
+        // moves the host's caret with setSelection, and then restartSuggestionsOnWord-
+        // TouchedByCursor re-points the composing region at whatever word the host caret
+        // now sits in. With a bar open that was not a dead gesture — it was the keyboard
+        // editing a field the user was not looking at, and stealing the composing region
+        // the translate bar was streaming its live translation into, so the next
+        // translation landed on top of a word the user had typed in the app.
+        if (latinIME.onCaretSlide(steps, false)) return true
         val moveSteps: Int
         if (steps < 0) {
             val text = connection.getTextBeforeCursor(-steps * 4, 0) ?: return false

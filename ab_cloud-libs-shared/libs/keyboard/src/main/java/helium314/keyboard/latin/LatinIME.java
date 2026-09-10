@@ -1645,34 +1645,27 @@ public class LatinIME extends InputMethodService implements
         // backspace into the bar's input buffer (the bar commits the TRANSLATION
         // to the app field as output). Functional keys (toggle bar, settings,
         // language switch…) fall through so the keyboard stays usable.
-        if (isTranslateBarActive()) {
-            if (KeyCode.DELETE == event.getKeyCode()) { mTranslateBar.backspace(); return; }
+        final com.diegonmarcos.superapp.translate.ImeTextBox box = activeTextBox();
+        // The ENHANCE_BAR key must always fall through, or the bar it opened could
+        // never be closed from the keyboard again.
+        if (box != null && KeyCode.ENHANCE_BAR != event.getKeyCode()) {
+            if (KeyCode.DELETE == event.getKeyCode()) { box.backspace(); return; }
             final int cp = event.getCodePoint();
-            if (cp > 0) { mTranslateBar.appendCodePoint(cp); return; }
-            // The bar owns its own buffer, so the toolbar's navigation and clipboard
+            if (cp > 0) { box.appendCodePoint(cp); return; }
+            // The box owns its own buffer, so the toolbar's navigation and clipboard
             // keys have to act on that buffer instead of the app's field — otherwise
             // they silently edit the text behind the bar while the user is looking at
             // the bar. Unmapped codes fall through to the normal handling below.
             final com.diegonmarcos.superapp.translate.TranslateEdit edit =
                     translateEditFor(event.getKeyCode());
-            if (edit != null && mTranslateBar.onEdit(edit)) return;
+            if (edit != null && box.onEdit(edit)) return;
         }
-        // SuperApp (patch 0011): same manual key-routing as the translate bar.
+        // SuperApp (patch 0011): the emoji search bar has a buffer of its own but no
+        // caret, so it takes typing and backspace and is not an ImeTextBox.
         if (isEmojiSearchBarActive()) {
             if (KeyCode.DELETE == event.getKeyCode()) { mEmojiSearchBar.backspace(); return; }
             final int cp = event.getCodePoint();
             if (cp > 0) { mEmojiSearchBar.appendCodePoint(cp); return; }
-        }
-        // SuperApp: same manual key-routing again, but the Text Enhancements bar asks
-        // for the keys only while its output box was tapped. Unfocused — which is how
-        // it opens — typing goes to the app's own field, because that is the text the
-        // bar reads and rewrites. The ENHANCE_BAR key itself must always fall through,
-        // or the bar could never be closed.
-        if (isEnhanceBarActive() && mEnhanceBar.consumesKeys() && KeyCode.ENHANCE_BAR != event.getKeyCode()) {
-            if (KeyCode.DELETE == event.getKeyCode()) { mEnhanceBar.backspace(); return; }
-            final int cp = event.getCodePoint();
-            if (cp > 0) { mEnhanceBar.appendCodePoint(cp); return; }
-            if (mEnhanceBar.onEdit(event.getKeyCode())) return;
         }
         if (KeyCode.VOICE_INPUT == event.getKeyCode()) {
             // SuperApp (patch 0005): toggle the bundled OFFLINE Vosk dictation bar
@@ -1690,9 +1683,60 @@ public class LatinIME extends InputMethodService implements
     }
 
     /**
-     * Toolbar keys the translate bar handles against its own buffer while it is open.
-     * The mapping lives here, not in libs:translate, so that module keeps no
-     * dependency on the keyboard. Null = not ours, handle it normally.
+     * THE ONE PLACE THAT ANSWERS "WHO OWNS EDITING RIGHT NOW".
+     *
+     * Null means the host application's field does, which is the normal case and the
+     * only one the keyboard's editing pipeline was ever written for. Non-null means one
+     * of the keyboard's OWN boxes does, and every caret-or-text operation has to go to
+     * it instead — including the ones that are not key events.
+     *
+     * That last clause is the whole reason this exists as an accessor rather than as a
+     * condition repeated at each site. Keys were already intercepted; GESTURES were not,
+     * because they had been written to call the host's InputConnection straight from the
+     * gesture handler. So the space bar's cursor slide moved the caret in the document
+     * behind the bar, invisibly, and dragged the composing region with it. A new caret
+     * feature can now miss these boxes only by failing to ask this question — and
+     * {@link #onCaretSlide} is the second half of the same answer, for the gestures.
+     *
+     * The translate bar owns editing for as long as it is open; the enhance bar only
+     * once its output box has been tapped, because until then the keys belong to the
+     * app's field, which is the text that bar reads and rewrites.
+     */
+    @Nullable
+    private com.diegonmarcos.superapp.translate.ImeTextBox activeTextBox() {
+        if (isTranslateBarActive() && mTranslateBar.consumesKeys()) return mTranslateBar;
+        if (isEnhanceBarActive() && mEnhanceBar.consumesKeys()) return mEnhanceBar;
+        return null;
+    }
+
+    /**
+     * A caret-moving GESTURE — the space bar's cursor slide, the backspace swipe —
+     * offered to the keyboard's own box before it is allowed anywhere near the host
+     * application's field. True means it was consumed and the caller must stop.
+     *
+     * {@code steps} is in GRAPHEMES, the unit the gesture layer already counts in.
+     * {@code select} extends the selection rather than collapsing it, which is what the
+     * backspace swipe needs so that the DELETE on finger-up removes the swiped range.
+     *
+     * The emoji search bar has a buffer but no caret, so there is nothing here for a
+     * slide to move — it still has to be swallowed rather than reach the field behind it.
+     *
+     * Zero steps is the ownership question on its own: it moves nothing and answers
+     * only whether the gesture belongs to a box, which is what the end of a swipe needs
+     * to know before it decides whose selection to delete.
+     */
+    public boolean onCaretSlide(final int steps, final boolean select) {
+        final com.diegonmarcos.superapp.translate.ImeTextBox box = activeTextBox();
+        if (box != null) { box.moveCaret(steps, select); return true; }
+        return isEmojiSearchBarActive();
+    }
+
+    /**
+     * Toolbar keys a bar handles against its own box while it is open. The mapping
+     * lives here, not in libs:translate, so that module keeps no dependency on the
+     * keyboard — and there is ONE of it, shared by every box, because a second copy is
+     * how the enhance bar came to answer a different set of keys from the translate bar.
+     * Null = not ours, handle it normally.
      */
     private static com.diegonmarcos.superapp.translate.TranslateEdit translateEditFor(
             final int keyCode) {

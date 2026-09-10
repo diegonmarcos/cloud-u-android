@@ -15,9 +15,7 @@ import android.text.TextUtils
 import android.text.style.BackgroundColorSpan
 import android.util.TypedValue
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
-import android.view.ViewConfiguration
 import android.widget.ArrayAdapter
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
@@ -26,14 +24,15 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.edit
 import com.diegonmarcos.superapp.translate.CappedScrollView
+import com.diegonmarcos.superapp.translate.ImeTextBox
+import com.diegonmarcos.superapp.translate.TextBoxEditor
+import com.diegonmarcos.superapp.translate.TranslateEdit
 import com.diegonmarcos.superapp.translate.TranslateInputView
-import helium314.keyboard.keyboard.internal.keyboard_parser.floris.KeyCode
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.abs
 
 /**
  * SuperApp addition — the Text Enhancements bar, hosted inside the keyboard frame
@@ -65,12 +64,14 @@ import kotlin.math.abs
  * Enhancements, so the bar and that screen can never disagree, and the prompt is
  * built by the one [AiRouter.enhanceStyle] both paths use.
  *
- * ponytail: the caret/selection buffer below is a trimmed second copy of the one
- * in TranslateBarView — the IME window cannot host a focusable EditText (see
- * [TranslateInputView]), so every bar has to own its text by hand. Hoist it into
- * a shared widget if a fourth bar ever needs it.
+ * The output box is not a private editor any more: its caret, its selection, its
+ * grapheme arithmetic and its undo are [TextBoxEditor], the same object the translate
+ * bar's box uses. That is deliberate and it is the point — the trimmed second copy that
+ * used to live here is how this box came to be missing fixes the other one had, and how
+ * it would have missed the next ones. Everything routed at a box now arrives through
+ * [ImeTextBox], which LatinIME resolves in one place.
  */
-class EnhanceBarView(context: Context) : LinearLayout(context) {
+class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
 
     /** Supplies the IME's current rich connection; null while no field is attached. */
     fun interface ConnectionProvider { fun get(): RichInputConnection? }
@@ -104,11 +105,10 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
     /** The last Paste/Replace: what the field held, and what it holds now, so Undo can put it back. */
     private var lastApplied: Pair<TextEnhancer.Target, String>? = null
 
-    private val buffer = StringBuilder()
-    // Caret / selection over `buffer` in UTF-16 offsets; equal = collapsed caret,
-    // and selStart is the drag anchor, so read ranges through selLo()/selHi().
-    private var selStart = 0
-    private var selEnd = 0
+    // The rewrite in the box, its caret and its selection — the SHARED editor, so this
+    // box gets the translate box's grapheme-correct caret, its fixed word selection and
+    // its undo without a line of it being written twice.
+    private val editor = TextBoxEditor()
     private var busy = false
     private var applyWhenReady = false
 
@@ -269,7 +269,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         busy = false; applyWhenReady = false
         editingOutput = false
         held = Held.REWRITE   // a fresh session holds nothing, and nothing is not a summary
-        buffer.setLength(0); setCaret(0)
+        editor.reset()
         options.forEach { it.render() }
         reloadTarget()
         renderOutput()
@@ -290,35 +290,39 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
      * True while the output box owns the keys. LatinIME asks before routing anything
      * here, so with the box unfocused every key lands in the app's field as usual.
      */
-    fun consumesKeys() = visibility == VISIBLE && editingOutput
+    override fun consumesKeys() = visibility == VISIBLE && editingOutput
 
     /** Hand the keys back to the app's field and re-read what it now holds. */
     private fun focusField() {
         if (!editingOutput) return
         editingOutput = false
-        select(selLo(), selLo())
+        editor.setCaret(editor.selLo())
         reloadTarget()
         renderOutput()
     }
 
     // ── key routing entry points (called from LatinIME.onEvent) ──────────────
-    fun appendCodePoint(cp: Int) {
+    override fun appendCodePoint(cp: Int) {
         // Enter is the action key on a keyboard bar, not a newline: it does what the
         // user came for — apply what is in the box (generating it first if need be).
-        if (cp == '\n'.code) { if (buffer.isEmpty()) generate(true) else applyOutput(); return }
-        insert(String(Character.toChars(cp)))
+        if (cp == '\n'.code) { if (editor.isEmpty) generate(true) else applyOutput(); return }
+        editor.insert(String(Character.toChars(cp)))
+        renderOutput()
     }
 
-    fun backspace() {
-        if (!deleteSelection()) {
-            val at = selLo()
-            if (at > 0) {
-                val from = if (at > 1 && Character.isLowSurrogate(buffer[at - 1]) &&
-                    Character.isHighSurrogate(buffer[at - 2])) at - 2 else at - 1
-                buffer.delete(from, at)
-                setCaret(from)
-            }
-        }
+    override fun backspace() {
+        editor.deleteBackward()
+        renderOutput()
+    }
+
+    /**
+     * The space bar's cursor slide and the backspace swipe. They used to move the caret
+     * in the application's own field while the user was dragging over a rewrite in here,
+     * because they called the host's connection straight from the gesture handler
+     * instead of asking who owns editing.
+     */
+    override fun moveCaret(steps: Int, select: Boolean) {
+        editor.moveCaret(steps, select)
         renderOutput()
     }
 
@@ -332,21 +336,20 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
      * behind the bar — invisible to a user looking at the box, and for CUT or SELECT_ALL
      * destructive of text this bar never owned. Empty means the action does nothing.
      */
-    fun onEdit(keyCode: Int): Boolean {
-        when (keyCode) {
-            KeyCode.ARROW_LEFT -> stepCaret(-1)
-            KeyCode.ARROW_RIGHT -> stepCaret(1)
-            KeyCode.WORD_LEFT -> setCaret(wordStart(selLo()))
-            KeyCode.WORD_RIGHT -> setCaret(wordEnd(selHi()))
+    override fun onEdit(action: TranslateEdit): Boolean {
+        when (action) {
+            TranslateEdit.LEFT -> editor.stepCaret(-1)
+            TranslateEdit.RIGHT -> editor.stepCaret(1)
+            TranslateEdit.WORD_LEFT -> editor.setCaret(editor.wordStart(editor.selLo()))
+            TranslateEdit.WORD_RIGHT -> editor.setCaret(editor.wordEnd(editor.selHi()))
             // The box is one short buffer, so up/down are its ends.
-            KeyCode.ARROW_UP, KeyCode.MOVE_START_OF_LINE -> setCaret(0)
-            KeyCode.ARROW_DOWN, KeyCode.MOVE_END_OF_LINE -> setCaret(buffer.length)
-            KeyCode.CLIPBOARD_SELECT_ALL -> select(0, buffer.length)
-            KeyCode.CLIPBOARD_SELECT_WORD -> selectWordAt(selLo())
-            KeyCode.CLIPBOARD_COPY -> copySelection()
-            KeyCode.CLIPBOARD_CUT -> cutSelection()
-            KeyCode.CLIPBOARD_PASTE -> pasteIntoBox()
-            else -> return false
+            TranslateEdit.LINE_START -> editor.setCaret(0)
+            TranslateEdit.LINE_END -> editor.setCaret(editor.length)
+            TranslateEdit.SELECT_ALL -> editor.selectAll()
+            TranslateEdit.SELECT_WORD -> editor.selectWordAt(editor.selLo())
+            TranslateEdit.COPY -> copySelection()
+            TranslateEdit.CUT -> cutSelection()
+            TranslateEdit.PASTE -> pasteIntoBox()
         }
         renderOutput()
         return true
@@ -388,7 +391,9 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
                 busy = false
                 result.onSuccess { out ->
                     held = Held.REWRITE   // a rewrite may be written back; see [Held]
-                    buffer.setLength(0); buffer.append(out); setCaret(buffer.length)
+                    // replaceAll, not a raw overwrite: whatever the user had typed or
+                    // touched up in the box is what Undo in the box menu gives back.
+                    editor.replaceAll(out)
                     renderOutput(); showStatus("")
                     if (applyWhenReady) applyOutput()
                 }.onFailure { e ->
@@ -443,7 +448,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
                 busy = false
                 result.onSuccess { out ->
                     held = Held.SUMMARY
-                    buffer.setLength(0); buffer.append(out); setCaret(buffer.length)
+                    editor.replaceAll(out)
                     renderOutput(); showStatus(str(R.string.resume_bar_done))
                 }.onFailure { e ->
                     Log.e(TAG, "resume failed", e)
@@ -462,7 +467,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         // hiding the chip, so the bar can say why instead of appearing broken — and so the rule
         // holds for every route into this method, including a Replace armed before a Resume.
         if (held == Held.SUMMARY) { showStatus(str(R.string.resume_bar_no_replace)); return }
-        val text = buffer.toString()
+        val text = editor.text
         if (text.isBlank()) { showStatus(str(R.string.enhance_bar_generate_first)); return }
         val t = target ?: return
         val connection = provider?.get() ?: return
@@ -505,7 +510,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
     }
 
     private fun copyOutput() {
-        val text = buffer.toString()
+        val text = editor.text
         if (text.isBlank()) { showStatus(str(R.string.enhance_bar_generate_first)); return }
         clipboard().setPrimaryClip(ClipData.newPlainText("enhance", text))
         toast(str(R.string.enhance_bar_copied))
@@ -513,7 +518,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
 
     private fun clear() {
         held = Held.REWRITE   // an empty box is not a summary; Paste must not stay refused
-        buffer.setLength(0); setCaret(0); renderOutput(); showStatus("")
+        editor.clear(); renderOutput(); showStatus("")
     }
 
     /** Re-read what the ENHANCE key would rewrite right now and show it, with its size. */
@@ -555,145 +560,53 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         return count
     }
 
-    // ── caret + selection over `buffer` ──────────────────────────────────────
-    private fun hasSelection() = selStart != selEnd
-    private fun selLo() = minOf(selStart, selEnd)
-    private fun selHi() = maxOf(selStart, selEnd)
-
-    private fun setCaret(at: Int) {
-        val p = at.coerceIn(0, buffer.length); selStart = p; selEnd = p
-    }
-
-    private fun select(anchor: Int, extent: Int) {
-        selStart = anchor.coerceIn(0, buffer.length); selEnd = extent.coerceIn(0, buffer.length)
-    }
-
-    /** Replace the selection — or insert at the caret — with [text]; the caret lands after it. */
-    private fun insert(text: String) {
-        if (text.isEmpty()) return
-        val lo = selLo()
-        buffer.replace(lo, selHi(), text)
-        setCaret(lo + text.length)
-        renderOutput()
-    }
-
-    private fun deleteSelection(): Boolean {
-        if (!hasSelection()) return false
-        val lo = selLo()
-        buffer.delete(lo, selHi())
-        setCaret(lo)
-        return true
-    }
-
-    /** Step one whole code point, so a caret never lands between a surrogate pair. */
-    private fun stepCaret(dir: Int) {
-        if (hasSelection()) { setCaret(if (dir < 0) selLo() else selHi()); return }
-        val at = selStart
-        val to = if (dir < 0) {
-            if (at > 1 && Character.isLowSurrogate(buffer[at - 1]) &&
-                Character.isHighSurrogate(buffer[at - 2])) at - 2 else at - 1
-        } else {
-            if (at < buffer.length - 1 && Character.isHighSurrogate(buffer[at]) &&
-                Character.isLowSurrogate(buffer[at + 1])) at + 2 else at + 1
-        }
-        setCaret(to)
-    }
-
-    private fun wordStart(at: Int): Int {
-        var i = at.coerceIn(0, buffer.length)
-        while (i > 0 && buffer[i - 1].isWhitespace()) i--
-        while (i > 0 && !buffer[i - 1].isWhitespace()) i--
-        return i
-    }
-
-    private fun wordEnd(at: Int): Int {
-        var i = at.coerceIn(0, buffer.length)
-        while (i < buffer.length && buffer[i].isWhitespace()) i++
-        while (i < buffer.length && !buffer[i].isWhitespace()) i++
-        return i
-    }
-
-    private fun selectWordAt(at: Int) {
-        if (buffer.isEmpty()) return
-        select(wordStart(minOf(at + 1, buffer.length)), wordEnd(at))
-    }
-
-    private fun selectedText() = if (hasSelection()) buffer.substring(selLo(), selHi()) else buffer.toString()
-
     private fun clipboard() = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
     private fun pasteIntoBox() {
         val clip = clipboard().primaryClip
         val text = if (clip != null && clip.itemCount > 0) clip.getItemAt(0).coerceToText(context).toString() else ""
         if (text.isEmpty()) { showStatus(str(R.string.enhance_bar_clipboard_empty)); return }
-        insert(text)
+        editor.insert(text)
+        renderOutput()
     }
 
     private fun copySelection() {
-        val text = selectedText()
+        val text = editor.selectedText()
         if (text.isEmpty()) return
         clipboard().setPrimaryClip(ClipData.newPlainText("enhance", text))
         toast(str(R.string.enhance_bar_copied))
     }
 
     private fun cutSelection() {
-        val text = selectedText()
+        val text = editor.selectedText()
         if (text.isEmpty()) return
         clipboard().setPrimaryClip(ClipData.newPlainText("enhance", text))
-        if (!deleteSelection()) { buffer.setLength(0); setCaret(0) }
+        // No selection means cut the whole rewrite — the destructive one, so it goes
+        // through clear() and stays undoable.
+        if (!editor.deleteSelection()) editor.clear()
         renderOutput()
     }
 
-    /**
-     * Tap places the caret, drag selects, long-press selects the word and opens the
-     * edit menu — the three gestures a real text field gives you, reimplemented
-     * because an unfocused TextView provides none of them.
-     */
-    private fun attachOutputTouch() {
-        outputView.setOnTouchListener(object : View.OnTouchListener {
-            private var anchor = 0
-            private var downX = 0f
-            private var downY = 0f
-            private var dragging = false
-            private val longPress = Runnable { selectWordAt(anchor); renderOutput(); showEditMenu() }
-
-            override fun onTouch(v: View, e: MotionEvent): Boolean {
-                if (buffer.isEmpty()) return false
-                when (e.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> {
-                        // Touching the box is what claims the keys; until then they
-                        // belong to the app's field.
-                        editingOutput = true
-                        anchor = outputView.offsetAt(e.x, e.y); downX = e.x; downY = e.y; dragging = false
-                        setCaret(anchor); renderOutput()
-                        ui.postDelayed(longPress, ViewConfiguration.getLongPressTimeout().toLong())
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        val slop = ViewConfiguration.get(context).scaledTouchSlop
-                        if (!dragging && (abs(e.x - downX) > slop || abs(e.y - downY) > slop)) {
-                            dragging = true; ui.removeCallbacks(longPress)
-                        }
-                        if (dragging) { select(anchor, outputView.offsetAt(e.x, e.y)); renderOutput() }
-                    }
-                    MotionEvent.ACTION_UP -> { ui.removeCallbacks(longPress); v.performClick() }
-                    MotionEvent.ACTION_CANCEL -> ui.removeCallbacks(longPress)
-                }
-                return true
-            }
-        })
-    }
+    /** Touching the box is what claims the keys; until then they belong to the app's field. */
+    private fun attachOutputTouch() =
+        outputView.attachEditing(editor, onClaim = { editingOutput = true },
+            onChange = ::renderOutput, onMenu = ::showEditMenu)
 
     private fun showEditMenu() {
         val labels = ArrayList<String>()
         val actions = ArrayList<() -> Unit>()
         fun item(label: String, run: () -> Unit) { labels.add(label); actions.add(run) }
         item(str(R.string.enhance_bar_menu_paste)) { pasteIntoBox() }
-        if (hasSelection()) {
+        if (editor.hasSelection()) {
             item(str(R.string.enhance_bar_menu_cut)) { cutSelection() }
             item(str(R.string.enhance_bar_menu_copy)) { copySelection() }
         }
-        if (selLo() != 0 || selHi() != buffer.length)
-            item(str(R.string.enhance_bar_menu_select_all)) { select(0, buffer.length); renderOutput() }
+        if (editor.selLo() != 0 || editor.selHi() != editor.length)
+            item(str(R.string.enhance_bar_menu_select_all)) { editor.selectAll(); renderOutput() }
+        // Undo of what landed IN THE BOX — a Generate or a Resume arriving on top of
+        // text the user had typed there. Distinct from the Undo chip in the action row,
+        // which puts the FIELD back; offered only when there is something to restore.
+        if (editor.canUndo()) item(str(R.string.enhance_bar_undo)) { editor.undo(); renderOutput() }
         item(str(R.string.enhance_bar_clear)) { clear() }
         val popup = ListPopupWindow(context)
         popup.anchorView = outputView
@@ -721,7 +634,7 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
 
     // ── rendering ────────────────────────────────────────────────────────────
     private fun renderOutput() {
-        if (buffer.isEmpty()) {
+        if (editor.isEmpty) {
             outputView.text = str(R.string.enhance_bar_output_hint)
             outputView.setTextColor(hintColor)
             outputView.setTypeface(null, Typeface.ITALIC)
@@ -730,16 +643,17 @@ class EnhanceBarView(context: Context) : LinearLayout(context) {
         }
         outputView.setTextColor(Color.WHITE)
         outputView.setTypeface(null, Typeface.NORMAL)
-        if (hasSelection()) {
-            outputView.text = SpannableString(buffer.toString()).apply {
-                setSpan(BackgroundColorSpan(selectionColor), selLo(), selHi(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        if (editor.hasSelection()) {
+            outputView.text = SpannableString(editor.text).apply {
+                setSpan(BackgroundColorSpan(selectionColor), editor.selLo(), editor.selHi(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
             outputView.caret = -1
         } else {
-            outputView.text = buffer.toString()
+            outputView.text = editor.text
             // The caret is the only thing that says where the keys are going, so it
             // is drawn only while the box actually has them.
-            outputView.caret = if (editingOutput) selStart else -1
+            outputView.caret = if (editingOutput) editor.selStart else -1
         }
         // Posted: the layout still describes the text set BEFORE this call.
         outputView.post { outputView.revealCaret() }

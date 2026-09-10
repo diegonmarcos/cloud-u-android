@@ -19,6 +19,10 @@
 #       writes after that — the three symptoms of "re-pastes the same text"
 #   T10 the shared text box: no bar clips its own text, and no bar lets an
 #       editing key fall through onto the field hidden behind it
+#   T11 ONE editor, ONE interception point: both bars' boxes are the same
+#       TextBoxEditor stepping whole graphemes, and every caret operation —
+#       including the GESTURES, which used to move the host app's caret behind
+#       the bar — resolves through LatinIME.activeTextBox()
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$APP/.."
@@ -152,11 +156,111 @@ has "$T/TranslateBarView.kt" 'CappedScrollView(context, inputView.lineHeight \* 
 lacks "$T/TranslateBarView.kt" 'maxLines = 3; setPadding(0, dp(6), 0, 0)' "T10 the input box is no longer capped by maxLines"
 has "$T/TranslateInputView.kt" 'fun revealCaret()' "T10 the caret is kept inside the scrolled window"
 # Falling through applies the key to the field BEHIND the bar — for CUT, destructively.
+# Checked over onEdit's BODY, and an empty body fails: an anchor that has drifted
+# off the code is worse than no check, because it reports green.
 for f in "$T/TranslateBarView.kt" "$J/latin/EnhanceBarView.kt"; do
-  awk '/fun onEdit\(/,/^    }/' "$f" | grep -q 'buffer.isEmpty() &&' \
-    && bad "T10 ${f##*/} onEdit falls through on an empty buffer" \
-    || ok "T10 ${f##*/} onEdit never lets an editing key reach the hidden field"
+  body=$(awk '/fun onEdit\(/,/^    }/' "$f")
+  if [ -z "$body" ]; then
+    bad "T10 ${f##*/} onEdit body not found (anchor drifted) — fall-through unchecked"
+  else
+    echo "$body" | grep -qE 'return false|isEmpty\)? (&&|return)' \
+      && bad "T10 ${f##*/} onEdit can fall through onto the field behind the bar" \
+      || ok "T10 ${f##*/} onEdit never lets an editing key reach the hidden field"
+  fi
 done
+
+# ── T11 one editor, one interception point ──────────────────────────────────
+E="$T/TextBoxEditor.kt"
+[ -f "$E" ] && ok "T11 the shared caret/selection buffer is a file of its own" \
+            || bad "T11 $E missing — the extraction did not happen"
+has "$E" 'class TextBoxEditor' "T11 the one buffer is a class"
+has "$E" 'interface ImeTextBox' "T11 and the one question LatinIME asks is an interface"
+
+# The unit. A caret that steps code units splits an emoji; a caret that steps
+# codepoints splits a flag, a skin tone and a variation selector. Neither is a
+# character. The platform segments graphemes and the keyboard's own pipeline
+# already uses that segmenter, so the box uses it too rather than scanning.
+has "$E" 'import android.icu.text.BreakIterator' "T11 the box asks the platform where characters begin"
+has "$E" 'fun boundaryAt' "T11 offsets from outside are snapped, in one place"
+has "$E" 'fun deleteBackward' "T11 backspace removes a whole grapheme"
+
+# The second copy is GONE, not merely discouraged. Each of these greps found a
+# real line in both bars before this change.
+for f in "$T/TranslateBarView.kt" "$J/latin/EnhanceBarView.kt"; do
+  n=${f##*/}
+  lacks "$f" 'private val buffer = StringBuilder()' "T11 $n keeps no private buffer"
+  lacks "$f" 'isLowSurrogate' "T11 $n does not re-implement surrogate arithmetic"
+  lacks "$f" 'private fun wordStart' "T11 $n does not re-implement word scanning"
+  has "$f" 'private val editor = TextBoxEditor()' "T11 $n uses the shared editor"
+  has "$f" 'ImeTextBox' "T11 $n is reachable through the one interface"
+  has "$f" 'override fun moveCaret(steps: Int, select: Boolean)' "T11 $n takes caret GESTURES, not only keys"
+done
+
+# The touch gestures live with the box too, so a gesture cannot be added to one
+# bar and forgotten in the other — which is exactly how the double tap came to be
+# missing from both.
+has "$T/TranslateInputView.kt" 'fun attachEditing' "T11 the touch gestures live with the box, once"
+has "$T/TranslateInputView.kt" 'ViewConfiguration.getDoubleTapTimeout()' "T11 double tap selects the word"
+has "$T/TranslateInputView.kt" 'editor.select(anchor, offsetAt(e.x, e.y))' "T11 drag extends the selection"
+has "$T/TranslateInputView.kt" 'ViewConfiguration.getLongPressTimeout()' "T11 long press selects the word and opens the menu"
+for f in "$T/TranslateBarView.kt" "$J/latin/EnhanceBarView.kt"; do
+  n=${f##*/}
+  lacks "$f" 'setOnTouchListener' "T11 $n keeps no touch handler of its own"
+  has "$f" '.attachEditing(editor,' "T11 $n uses the shared gestures"
+done
+
+# The defect left open by the previous agent, in the one copy that is left.
+awk '/fun selectWordAt/,/^    }/' "$E" | grep -q 'selectWhitespaceRun' \
+  && ok "T11 a long press on a space no longer selects the words on both sides" \
+  || bad "T11 selectWordAt still runs both scans outwards from the space"
+
+# Undo of a programmatic replacement: the owner gets their own text back.
+has "$E" 'fun undo(): Boolean' "T11 the shared editor can undo a whole-buffer replacement"
+has "$E" 'fun replaceAll' "T11 and every programmatic replacement goes through it"
+awk '/private fun generate/,/^    }$/' "$J/latin/EnhanceBarView.kt" | grep -q 'editor.replaceAll' \
+  && ok "T11 a generated rewrite landing in the enhance box is undoable" \
+  || bad "T11 the enhance bar still overwrites the box with no way back"
+has "$T/TranslateBarView.kt" 'if (editor.canUndo())' "T11 translate offers Undo only when there is text to restore"
+has "$J/latin/EnhanceBarView.kt" 'if (editor.canUndo())' "T11 and so does enhance — the same editor, the same menu entry"
+
+# THE GESTURES. Everything after the guard in these two talks to the HOST app's
+# connection, so the guard has to come FIRST. Body-scoped, and an empty body is
+# a failure: this is exactly the check that would otherwise drift off and report
+# green while the space bar moved a caret nobody could see.
+for fn in onMoveCursorHorizontally onMoveDeletePointer; do
+  body=$(awk "/fun $fn\\(/,/^    }/" "$J/keyboard/KeyboardActionListenerImpl.kt")
+  if [ -z "$body" ]; then
+    bad "T11 $fn body not found (anchor drifted) — gesture interception unchecked"
+  else
+    guard=$(echo "$body" | grep -n 'latinIME.onCaretSlide' | head -1 | cut -d: -f1)
+    host=$(echo "$body" | grep -n 'connection\.' | head -1 | cut -d: -f1)
+    if [ -z "$guard" ]; then
+      bad "T11 $fn never asks who owns editing — it edits the app behind the bar"
+    elif [ -n "$host" ] && [ "$guard" -gt "$host" ]; then
+      bad "T11 $fn touches the host's connection before asking (line $host before $guard)"
+    else
+      ok "T11 $fn offers the gesture to the keyboard's own box first"
+    fi
+  fi
+done
+has "$J/keyboard/KeyboardActionListenerImpl.kt" 'latinIME.onCaretSlide(0, true)' \
+  "T11 the end of a delete swipe deletes whoever's selection it actually made"
+
+# ONE accessor, and one key mapping. Two of either is how the enhance box came
+# to answer a different set of keys from the translate box.
+has "$J/latin/LatinIME.java" 'private com.diegonmarcos.superapp.translate.ImeTextBox activeTextBox()' \
+  "T11 LatinIME answers 'who owns editing' in exactly one place"
+has "$J/latin/LatinIME.java" 'public boolean onCaretSlide(final int steps, final boolean select)' \
+  "T11 and gestures go through that same answer"
+onevent=$(awk '/public void onEvent\(@NonNull final Event event\)/,/^    }/' "$J/latin/LatinIME.java")
+if [ -z "$onevent" ]; then
+  bad "T11 onEvent body not found (anchor drifted) — key routing unchecked"
+else
+  echo "$onevent" | grep -q 'mTranslateBar\.\|mEnhanceBar\.' \
+    && bad "T11 onEvent still names the bars one by one instead of asking activeTextBox()" \
+    || ok "T11 onEvent routes keys through the accessor, not through a list of bars"
+fi
+lacks "$J/latin/EnhanceBarView.kt" 'KeyCode.CLIPBOARD_' "T11 there is one key-to-edit mapping, not one per bar"
 
 echo "== $PASS ok, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
