@@ -1303,8 +1303,11 @@ class ProfileFragment : Fragment() {
 
         /**
          * The AI page's existing route. It is a LINK, not a copy: `config/ai`
-         * has no `action` of its own and resolves through
-         * SectionPages → AiFragment, so this reuses the one implementation.
+         * has no `action` of its own, so it resolves through SectionPages to
+         * whatever that page is — now the five-tab AI strip (WebSearch,
+         * LocalSearch, Text Enhance, Library, Tokens Fleet) rather than the
+         * single fragment that used to sit there. The route did not change when
+         * the page did, which is the point of naming a page and not a class.
          */
         private const val AI_ROUTE = "page:config/ai"
 

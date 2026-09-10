@@ -169,6 +169,70 @@ class TextToolsClient(context: Context) {
     fun translateLanguages(): List<String> =
         boundOrRebind()?.let { runCatching { it.translateLanguages() }.getOrNull() }.orEmpty()
 
+    /**
+     * Is the serving app INSTALLED at all — asked of the package manager, not of the binding.
+     *
+     * [isConnected] cannot answer this. It is false both for a keyboard that is not on the phone
+     * and for one that is installed but force-stopped or still binding, and a fleet console that
+     * reported those as one thing would tell the owner to install an app they already have. This
+     * asks the only question that separates them.
+     *
+     * It resolves the SERVICE rather than calling getPackageInfo because that is precisely what
+     * this module's `<queries>` grants: Android 11+ package visibility is scoped to the ITextTools
+     * intent, so the service resolves while a bare package lookup can still come back empty and
+     * look like an uninstall.
+     */
+    fun isServingAppInstalled(): Boolean = runCatching {
+        app.packageManager.queryIntentServices(
+            Intent(TextTools.ACTION).apply { setPackage(TextTools.SERVICE_PKG) },
+            0,
+        ).isNotEmpty()
+    }.getOrDefault(false)
+
+    /**
+     * The serving app's AI-Routing state as JSON — providers, their models, which model is chosen
+     * and whether a key is held. Null when nothing is bound OR when the serving app is too old to
+     * know the call.
+     *
+     * THE NULL IS TWO DIFFERENT FACTS and the caller has to separate them with [isConnected]: not
+     * bound means the peer is absent or asleep, bound-and-null means it answered nothing because
+     * its build predates this method. Both are honest states for a console to name and they are not
+     * the same repair — one is an install, the other is an update.
+     *
+     * NO CREDENTIAL IS IN THIS. Key presence and a four-character hint travel; the key does not.
+     * See `ITextTools.aiRoutingSnapshot`.
+     *
+     * BLOCKS, like everything else here. Callers put it on a background thread AND give it a
+     * deadline — a peer that has wedged will never answer, and a settings page with no deadline
+     * waits for it forever.
+     */
+    fun aiRoutingSnapshot(): String? =
+        boundOrRebind()?.let { runCatching { it.aiRoutingSnapshot() }.getOrNull() }
+
+    /**
+     * Set the serving app's provider key and/or chosen model.
+     *
+     * Empty [apiKey] leaves the stored key alone and empty [modelId] leaves the stored model alone,
+     * so either can be sent by itself; [clearKey] is the only way to remove a key, because a blank
+     * field on a console must never be a command to delete a credential.
+     */
+    fun setAiRouting(
+        providerId: String,
+        apiKey: String = "",
+        modelId: String = "",
+        clearKey: Boolean = false,
+    ): TextTools.Result = call("setAiRouting") { it.setAiRouting(providerId, apiKey, modelId, clearKey) }
+
+    /**
+     * The serving app's key for [providerId], in plaintext — a deliberate reveal, never a page load.
+     *
+     * NEVER LOG OR TOAST WHAT THIS RETURNS. This fleet uploads logcat from its diagnostics screens,
+     * so a key that reaches the log leaves the phone; a toast outlives the screen that showed it and
+     * is readable over a shoulder. Put it on the widget that asked for it and nowhere else.
+     */
+    fun revealAiKey(providerId: String): TextTools.Result =
+        call("revealAiKey") { it.revealAiKey(providerId) }
+
     private inline fun call(what: String, body: (ITextTools) -> Array<String>?): TextTools.Result {
         val t = boundOrRebind() ?: return TextTools.Result.failed(TextTools.NOT_INSTALLED)
         return runCatching { TextTools.Result.of(body(t)) }.getOrElse {

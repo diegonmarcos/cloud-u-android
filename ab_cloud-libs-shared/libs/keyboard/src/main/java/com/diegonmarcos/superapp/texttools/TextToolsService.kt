@@ -12,6 +12,7 @@ import helium314.keyboard.latin.TextEnhancer
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
+import org.json.JSONArray
 import org.json.JSONObject
 
 /**
@@ -260,6 +261,123 @@ class TextToolsService : Service() {
 
         override fun translateLanguages(): List<String> =
             TranslateEngines.client?.supportedLanguages().orEmpty().ifEmpty { TranslatePrefs.FALLBACK_LANGS }
+
+        /**
+         * This app's whole AI-Routing state for a fleet console to render — see [ITextTools].
+         *
+         * THE MODEL ROWS ARE THE REGISTRY'S OWN, copied field for field out of [AiRouter.providers]
+         * and never restated. That is the point of shipping them at all: a console that held its own
+         * list would be a second registry, and a second registry is what put a stale price and a
+         * wrong unit on this fleet's screens twice this week. Prices go out under names that carry
+         * their unit, unconverted, exactly as [AiRouter.Pricing] holds them.
+         *
+         * NO KEY CROSSES HERE. [keyHint] is at most four trailing characters, which is enough to
+         * tell two accounts apart and not enough to spend either; the plaintext is [revealAiKey]'s
+         * to hand over, alone, so that the one call that emits a secret stays the one call worth
+         * auditing.
+         */
+        override fun aiRoutingSnapshot(): String {
+            val context = this@TextToolsService
+            val providers = JSONArray()
+            AiRouter.providers.forEach { p ->
+                val token = AiRouter.token(context, p)
+                val models = JSONArray()
+                p.models.forEach { m ->
+                    // pricing() prefers the live catalog over the baked row, which is what the
+                    // keyboard's own routing table shows — so the console and the table cannot
+                    // quote different numbers for the same model on the same phone.
+                    val price = AiRouter.pricing(context, p, m)
+                    models.put(JSONObject()
+                        .put("id", m.id)
+                        .put("name", m.name)
+                        .put("open", m.open)
+                        .put("params_b", m.paramsB ?: JSONObject.NULL)
+                        .put("quant", JSONArray(m.quant))
+                        .put("trained_for", JSONArray(m.trainedFor))
+                        .put("note", m.note ?: JSONObject.NULL)
+                        .put("prompt_usd_per_million", price?.promptUsdPerMillionTokens ?: JSONObject.NULL)
+                        .put("completion_usd_per_million", price?.completionUsdPerMillionTokens ?: JSONObject.NULL))
+                }
+                providers.put(JSONObject()
+                    .put("id", p.id)
+                    .put("label", p.label)
+                    .put("needs_token", p.needsToken)
+                    .put("default_model", p.defaultModel)
+                    .put("chosen_model", AiRouter.model(context, p))
+                    .put("key_present", token.isNotEmpty())
+                    .put("key_hint", keyHint(token))
+                    .put("pricing_as_of", p.pricingAsOf ?: JSONObject.NULL)
+                    .put("models", models))
+            }
+            return JSONObject()
+                .put("app", packageName)
+                .put("default_provider", AiRouter.provider(context).id)
+                .put("providers", providers)
+                .toString()
+        }
+
+        /**
+         * Write the key and/or the model this app routes with — see [ITextTools].
+         *
+         * WHERE IT LANDS IS WHERE IT ALREADY LIVED: [Settings.PREF_AI_TOKEN_PREFIX] and
+         * [Settings.PREF_AI_MODEL_PREFIX] in this app's own preferences, the same two slots the
+         * keyboard's AI Model Routing screen writes. No new store is created for a key arriving
+         * this way, because a credential with two homes is a credential that gets forgotten in one
+         * of them.
+         *
+         * AN UNKNOWN MODEL IS REFUSED. [AiRouter.routeOf] deliberately falls back to the configured
+         * route when a caller NAMES a model this build has never heard of, which is right for a
+         * request — a version skew should not kill the feature. STORING one is the opposite case:
+         * the console would report the change as saved while every later request quietly went
+         * somewhere else, and nothing on screen would say which.
+         */
+        override fun setAiRouting(
+            providerId: String?,
+            apiKey: String?,
+            modelId: String?,
+            clearKey: Boolean,
+        ): Array<String> {
+            val context = this@TextToolsService
+            val provider = AiRouter.providers.firstOrNull { it.id == providerId }
+                ?: return failed("No provider called ${providerId.orEmpty()} in this build")
+            val model = modelId?.trim().orEmpty()
+            if (model.isNotEmpty() && provider.models.none { it.id == model }) {
+                return failed("${provider.label} has no model $model in this build")
+            }
+            val key = apiKey?.trim().orEmpty()
+            return try {
+                context.prefs().edit().apply {
+                    // Empty means "leave it alone" and clearKey means "remove it"; the two are
+                    // separate so that saving a model change through a console whose key field is
+                    // blank cannot wipe the owner's credential.
+                    if (clearKey) remove(Settings.PREF_AI_TOKEN_PREFIX + provider.id)
+                    else if (key.isNotEmpty()) putString(Settings.PREF_AI_TOKEN_PREFIX + provider.id, key)
+                    if (model.isNotEmpty()) putString(Settings.PREF_AI_MODEL_PREFIX + provider.id, model)
+                }.apply()
+                ok(provider.id)
+            } catch (e: Exception) {
+                // Deliberately not e.toString() and deliberately no key in the message: this
+                // exception is about a preference write, and the value being written is a secret.
+                Log.w(TAG, "setAiRouting failed for ${provider.id}: ${e.javaClass.simpleName}")
+                failed("Could not save ${provider.label} settings")
+            }
+        }
+
+        /**
+         * The provider's key in plaintext — the ONE method here that emits a credential, kept
+         * alone so it stays the one method worth auditing. See [ITextTools.revealAiKey] for what
+         * this widens and for why nothing on either side may log the result.
+         */
+        override fun revealAiKey(providerId: String?): Array<String> {
+            val provider = AiRouter.providers.firstOrNull { it.id == providerId }
+                ?: return failed("No provider called ${providerId.orEmpty()} in this build")
+            val token = AiRouter.token(this@TextToolsService, provider)
+            // "Holds no key yet" is a STATE, not a failure, and it has to arrive as one: an empty
+            // success slot would be read as "the reveal broke" by a caller that cannot tell the
+            // difference, and the owner would go looking for a bug instead of pasting a key.
+            if (token.isEmpty()) return failed("${provider.label} holds no key on this device yet")
+            return ok(token)
+        }
     }
 
     private companion object {
@@ -274,6 +392,24 @@ class TextToolsService : Service() {
 
         /** [settingsSnapshot] key holding provider id → chosen model id. */
         const val SNAPSHOT_MODELS = "ai_models"
+
+        /**
+         * How much of a key may appear on a fleet console: its last four characters, and only
+         * when it is long enough that four characters are not most of it.
+         *
+         * FOUR IS ENOUGH TO TELL TWO ACCOUNTS APART and short enough to be worth nothing to whoever
+         * reads it over the owner's shoulder, which is the whole job — the console shows this so
+         * the owner can confirm WHICH key a peer holds without asking for the key. A short string
+         * gets no hint at all rather than a proportionally bigger one: a hint that is most of a
+         * ten-character secret is not a hint.
+         */
+        fun keyHint(token: String): String =
+            if (token.length < HINT_MIN_LENGTH) "" else token.takeLast(HINT_CHARS)
+
+        const val HINT_CHARS = 4
+
+        /** Below this a four-character tail is too much of the whole to show. */
+        const val HINT_MIN_LENGTH = 12
 
         /** Slot 0 carries the result and slot 1 stays empty — see [ITextTools]. */
         fun ok(text: String) = arrayOf(text, "")

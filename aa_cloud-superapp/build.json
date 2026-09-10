@@ -208,6 +208,12 @@
       "dir": "../ab_cloud-libs-shared/libs/devtools",
       "type": "library"
     },
+    "libs:text-tools": {
+      "_doc": "The ITextTools binder, shared BY REFERENCE from ab_cloud-libs-shared/libs/ exactly as cloud-mail links it. This app CALLS it; cloud-keyboard serves it. Configs ▸ AI ▸ Tokens Fleet is the only consumer here, and what it wants across the boundary is the keyboard's AI-Routing state — which models its registry holds, which one is chosen, whether a provider key is set. Linking the binder is what makes that a question this app can ask at all; without it there is no channel from cloud-superapp to another app's routing settings.",
+      "_doc_not_the_engine": "This does NOT bring AiRouter, TextEnhancer or the registry into this app. Those stay in libs:keyboard, in the keyboard's process, and cloud-superapp deliberately does not link libs:keyboard — it is an IME with an ndk-build native decoder and a Compose settings tree, and a launcher does not take that as a dependency to read a model list. Everything Tokens Fleet shows is read over the binder from the app that owns it, which is also why there is no second copy of the model registry here to go stale.",
+      "dir": "../ab_cloud-libs-shared/libs/text-tools",
+      "type": "library"
+    },
     "libs:updater": {
       "dir": "../ab_cloud-libs-shared/libs/updater",
       "type": "library",
@@ -4162,9 +4168,54 @@
             "icon": "ic_kde"
           },
           {
+            "_doc": "AI is ONE page wearing FIVE tabs, declared the way Launcher and Panel declare theirs — `tabs` naming page ids of this same section, so SectionPages hands it the SAME SectionTabsFragment and this app still has one tab mechanism rather than a second one to restyle and re-fix in parallel.",
+            "_doc_tabs_order": "TAB ORDER IS THE LANDING RULE (see Panel's _doc_tabs_order), and this array is the owner's own order from the request, kept verbatim. That means a cold open lands on WebSearch, which is one of the three tabs whose agent DOES NOT EXIST YET and which says exactly that. It is deliberate rather than overlooked: the owner named the order and reordering their list to put the working tab first is not a decision to take on their behalf. Moving `tokens` to the front of this array is the whole of changing it, with no Kotlin edit.",
+            "_doc_what_is_real": "THREE OF THESE FIVE TABS HAVE NO AGENT BEHIND THEM. websearch, localsearch and library are where agents the owner described in the future tense (\"cloud-sa WILL HAVE agent for websearch\") get configured once they exist; each renders AiNotBuiltFragment, which states that the agent is not built and offers NO control at all, because a dead control reads as a broken feature rather than an absent one. textenhance and tokens are backed by things that exist today and are the only two that do anything.",
             "id": "ai",
             "label": "AI",
-            "icon": "ic_ai_sparkle"
+            "icon": "ic_ai_sparkle",
+            "tabs": [
+              "websearch",
+              "localsearch",
+              "textenhance",
+              "library",
+              "tokens"
+            ]
+          },
+          {
+            "_doc": "Tab 1 of AI — the websearch agent's settings, once cloud-superapp has a websearch agent. It does not have one, so this renders AiNotBuiltFragment and says so. hidden = reached through the AI strip, not as its own Configs tile.",
+            "id": "websearch",
+            "label": "WebSearch",
+            "icon": "ic_ai_sparkle",
+            "hidden": true
+          },
+          {
+            "_doc": "Tab 2 of AI — the local-search agent's settings, once that agent exists. Not built; AiNotBuiltFragment.",
+            "id": "localsearch",
+            "label": "LocalSearch",
+            "icon": "ic_ai_sparkle",
+            "hidden": true
+          },
+          {
+            "_doc": "Tab 3 of AI — a FLEET VIEW of the Text Enhance settings the apps that actually have the feature hold, with a deep link into each app's own editor. Deliberately NOT a third editable copy: cloud-superapp links neither libs:keyboard nor libs:text-tools' engines and has no Enhance surface anywhere, so settings stored here would be settings nothing in this app could ever spend — a page of controls that changes nothing, which is the same defect as a search box that does not search. See AiTextEnhanceFragment's header for the full reasoning and for what would have to become true to make an owned copy the right answer.",
+            "id": "textenhance",
+            "label": "Text Enhance",
+            "icon": "ic_ai_sparkle",
+            "hidden": true
+          },
+          {
+            "_doc": "Tab 4 of AI — the Library organiser agent (the one that moves files) settings, once that agent exists. Not built; AiNotBuiltFragment.",
+            "id": "library",
+            "label": "Library",
+            "icon": "ic_ai_sparkle",
+            "hidden": true
+          },
+          {
+            "_doc": "Tab 5 of AI — Tokens Fleet, and the only tab here that reaches another application. Lists every AI-Routing peer, whether it is installed and answering, whether it holds a provider key, and which model it is set to; the key can be replaced and the model changed from here. It reads the model list out of the serving app's own registry over ITextTools rather than holding a copy — see AiTokensFleetFragment. hidden = reached through the AI strip.",
+            "id": "tokens",
+            "label": "Tokens Fleet",
+            "icon": "ic_ai_sparkle",
+            "hidden": true
           },
           {
             "_doc": "Launcher is ONE page wearing TWO tabs now, not two sibling Configs entries. Launcher and One-Hand were always the same question asked twice — how this launcher behaves under your thumb — and splitting it across two grid tiles made the user leave one page to reach the other half of the same decision (pick a theme, then go somewhere else to say how you reach it one-handed). `tabs` lists PAGE IDS of this same section, in strip order: SectionPages hands a page that declares them to the SAME SectionTabsFragment a tabbed section wears, so there is one tab mechanism in this app, not two. Both tab ids stay real declared pages (hidden below), which is what keeps `page:config/onehand` alive as a target — see LauncherNavController.openSectionPage, which resolves a tab id to its owner page and lands on that tab.",
@@ -7064,7 +7115,30 @@
         "phone-apps-warmup": "apps_warmup"
       }
     },
-    "_doc_control_panel": "Configs ▸ Panel ▸ Control — the switch board, DECLARED here and implemented in configs/DeviceControls.kt. This file owns PRESENTATION ONLY: which controls appear, in which of the three groups, in what order, under what wording. It owns nothing about what a control can do.\n\nTHE THREE GROUPS ARE A QUESTION ABOUT BLAST RADIUS, not about which subsystem the code lives in. Phone = this handset's radios and hardware. Cloud = the fleet — flipping one of these changes what other machines can reach or what this app does to other APKs. System = this app's own behaviour plus the Android settings it is permitted to write. A control belongs to the group naming WHAT IT CHANGES, which is what the owner is actually deciding between when reaching for one.\n\nNEVER RENDER A SWITCH THAT LIES. Adding an id here does NOT create a switch: DeviceControls decides, per control, which of three things it is — (1) really toggleable in-process, so a switch whose state is re-read from the system after every write; (2) toggleable only through a special permission this app holds, so a switch that is DISABLED with the missing permission named on it; (3) not toggleable at all, so NOT a switch but a row that opens the exact Settings panel for it and shows the live state read-only. An id declared here with no capability behind it is dropped rather than drawn, because a control that does nothing is the same lie as a switch that does nothing.",
+    "_doc_ai_routing_peers": "THE FLEET AS Configs ▸ AI ▸ Tokens Fleet LISTS IT — which apps take part in AI Routing and what part each one plays. Baked to BuildConfig.UI_AI_ROUTING_PEERS_B64 and read by AiFleetRoster; a Kotlin list here would be exactly the hardcoded roster FIRE RULE #6 forbids. Each entry is {package, label, role}. WHETHER an app is installed and answering is NOT declared here and never could be — that is asked of the device at render time, of the package manager and of the binder.",
+    "_doc_ai_routing_peers_roles": "`serves` = this app HOLDS the provider key and the model registry and answers ITextTools; there is exactly one, and it is the only place a key exists on the phone. `routes` = this app calls that binder to get work done and holds its OWN model choice but NO key of its own — cloud-mail is the one app in this state today. `console` = this app holds neither key nor route and exists to show and edit the others, which is what cloud-superapp is here; it is listed rather than omitted because the owner asked for the fleet view to include this app, and 'this app holds no key' is the honest answer to that, not a reason to leave the row out.",
+    "_doc_ai_routing_peers_drift": "This roster is DECLARED and can therefore go stale, which FleetPeers deliberately avoids by treating an installed provider as the membership marker. The same trick does not work here: every constellation app ships that provider, so it would answer 'who is in the fleet' and not 'who does AI Routing', and every non-AI app would appear in this list with nothing to show. Adding an app to AI Routing means adding it here — one entry, no Kotlin.",
+    "ai_routing_peers": [
+      {
+        "_doc": "The one key-holder. libs:keyboard owns AiRouter, the keyboard_ai registry and the PREF_AI_TOKEN_PREFIX slot, and serves TextToolsService under the signature-level CONSTELLATION_DATA permission. Every model, price and key Tokens Fleet shows is read from THIS app over that binder.",
+        "package": "com.diegonmarcos.cloudkeyboard",
+        "label": "Cloud Keyboard",
+        "role": "serves"
+      },
+      {
+        "_doc": "Routes through the keyboard and holds its own copy of the Enhance/Resume settings and its own model choice (build.json::mail_ai, MailTextToolsPrefs) — but NO key: it calls enhanceWith/summariseWith and the keyboard spends the credential. Its row says so rather than showing an empty key field that would read as a key it had lost.",
+        "package": "com.diegonmarcos.comms.mail",
+        "label": "Cloud Mail",
+        "role": "routes"
+      },
+      {
+        "_doc": "This app. It holds no provider key and no route of its own — it links libs:text-tools only to ASK the keyboard about its routing state. Listed because the owner asked for the fleet view to include this app; 'holds no key, routes nothing, this is the console' is the true answer for it.",
+        "package": "com.diegonmarcos.superapp",
+        "label": "Cloud SuperApp",
+        "role": "console"
+      }
+    ],
+    "_doc_control_panel":"Configs ▸ Panel ▸ Control — the switch board, DECLARED here and implemented in configs/DeviceControls.kt. This file owns PRESENTATION ONLY: which controls appear, in which of the three groups, in what order, under what wording. It owns nothing about what a control can do.\n\nTHE THREE GROUPS ARE A QUESTION ABOUT BLAST RADIUS, not about which subsystem the code lives in. Phone = this handset's radios and hardware. Cloud = the fleet — flipping one of these changes what other machines can reach or what this app does to other APKs. System = this app's own behaviour plus the Android settings it is permitted to write. A control belongs to the group naming WHAT IT CHANGES, which is what the owner is actually deciding between when reaching for one.\n\nNEVER RENDER A SWITCH THAT LIES. Adding an id here does NOT create a switch: DeviceControls decides, per control, which of three things it is — (1) really toggleable in-process, so a switch whose state is re-read from the system after every write; (2) toggleable only through a special permission this app holds, so a switch that is DISABLED with the missing permission named on it; (3) not toggleable at all, so NOT a switch but a row that opens the exact Settings panel for it and shows the live state read-only. An id declared here with no capability behind it is dropped rather than drawn, because a control that does nothing is the same lie as a switch that does nothing.",
     "control_panel": {
       "groups": [
         {

@@ -118,4 +118,82 @@ interface ITextTools {
      * whole binder design exists to prevent.
      */
     String settingsSnapshot();
+
+    /**
+     * THE SERVING APP'S WHOLE AI-ROUTING STATE, AS JSON, FOR A FLEET CONSOLE TO SHOW AND EDIT.
+     * Read by cloud-superapp's Configs > AI > Tokens Fleet and by nothing else today.
+     *
+     * NO KEY IS IN IT. `key_present` says whether a provider holds one and `key_hint` carries at
+     * most its last four characters so the owner can tell two accounts apart; the key itself only
+     * ever leaves this process through revealAiKey(), which is a separate method precisely so that
+     * the one call that emits a secret is the one call an auditor has to read. Anything added to
+     * this object later has to pass that same test - see settingsSnapshot() above, which draws the
+     * same line for the same reason.
+     *
+     * IT CARRIES THE MODEL REGISTRY, and that is the main reason it exists rather than being three
+     * smaller methods. A console that listed models from a copy of its own would be a second
+     * registry to go stale, which is what produced this fleet's stale-price and wrong-unit bugs;
+     * shipping the rows themselves means the console can only ever show what the serving app
+     * actually holds. Every model row is the registry's own: id, name, open, params_b, quant,
+     * trained_for, note, and the two prices.
+     *
+     * PRICES ARE UNITED STATES DOLLARS PER MILLION TOKENS - the registry's unit, unconverted, under
+     * the key names prompt_usd_per_million / completion_usd_per_million so no reader can mistake
+     * them for the per-token figure OpenRouter publishes or for the cents this fleet briefly showed.
+     *
+     * SHAPE: {app, default_provider, providers:[{id, label, needs_token, default_model,
+     * chosen_model, key_present, key_hint, pricing_as_of, models:[...]}]}.
+     *
+     * ANSWERS null FROM AN OLDER SERVING APP, and callers must handle that. A keyboard installed
+     * before this method existed has no transaction code for it, so the reply parcel comes back
+     * untouched and this reads as null rather than throwing. A caller that is BOUND and gets null
+     * here has a peer too old to answer, which is a different thing from a peer that is not
+     * installed, and the two must not be reported as one.
+     */
+    String aiRoutingSnapshot();
+
+    /**
+     * Set this app's provider key and/or chosen model - the write half of aiRoutingSnapshot().
+     *
+     * ONE METHOD FOR BOTH because they are one errand: the owner provisioning a peer sets the
+     * account and picks the model in the same breath, and two methods would be two round trips and
+     * two ways to half-succeed. A null or empty [apiKey] leaves the stored key untouched, and a
+     * null or empty [modelId] leaves the stored model untouched, so either can be sent alone.
+     *
+     * TO CLEAR A KEY, send [clearKey] true. That is a flag rather than the empty string because
+     * empty already means "do not touch", and a console that wiped the owner's credential every
+     * time it saved a model change would be the worst possible reading of a blank field.
+     *
+     * THE KEY TRAVELS IN A BINDER CALL AND NOWHERE ELSE. Not an Intent extra, not a broadcast:
+     * this transaction is point-to-point between two processes and the platform has already
+     * refused any caller not holding CONSTELLATION_DATA, which is signature-level. It is stored
+     * where the key already lives - the serving app's own preferences, the same slot its own
+     * settings screen writes - and no new store is created for it anywhere.
+     *
+     * [modelId] must be a model id the serving app's registry actually holds; an unknown id is
+     * refused rather than stored, because a stored id nothing can resolve is a route that fails at
+     * call time with nothing on screen having said so.
+     */
+    String[] setAiRouting(in String providerId, in String apiKey, in String modelId, boolean clearKey);
+
+    /**
+     * The provider's key IN PLAINTEXT - the only method in this file that emits a credential.
+     *
+     * IT IS SEPARATE ON PURPOSE. Folding it into aiRoutingSnapshot() would mean every status
+     * refresh carried the secret and the one dangerous call would be invisible among the harmless
+     * ones; as its own method it can be grepped for, asserted about, and read by whoever audits
+     * this next. Its caller is a deliberate reveal gesture by the owner, never a page load.
+     *
+     * WHAT THIS WIDENS, stated plainly because it is a real change: before this method the key
+     * could be read by exactly one process, the serving app's own. Now it can be read by any
+     * installed package holding CONSTELLATION_DATA - that is, any APK signed with the Cloud key,
+     * which is the owner's own fleet and nothing else. A hostile app cannot hold a signature
+     * permission and cannot be granted one by any user action, so the reachable set is the fleet.
+     * That is a wider set than one, and whoever changes the signing story must revisit this.
+     *
+     * NEVER LOG WHAT THIS RETURNS, on either side. This fleet ships a diagnostics path that reads
+     * logcat and uploads it (DevControlServer /diagnostics/bundle, DiagnosticsPush), so a key that
+     * reaches the log is a key that leaves the phone.
+     */
+    String[] revealAiKey(in String providerId);
 }

@@ -196,4 +196,98 @@
     <!-- A write the device refused. %1$s = the control's label, %2$s = what
          the re-read reported. -->
     <string name="control_write_refused">%1$s: didn\'t change — %2$s</string>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         Configs ▸ AI. Five tabs: WebSearch, LocalSearch, Text Enhance, Library,
+         Tokens Fleet. Every user-visible word on that page is here — the page it
+         replaced built its whole interface from Kotlin literals, which is why
+         none of it could ever be read in Spanish.
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <!-- The three tabs whose agent does not exist yet. The headline is shared;
+         each tab supplies its own title and its own detail line. -->
+    <string name="ai_not_built_headline">This agent is not built yet.</string>
+    <string name="ai_not_built_generic_title">Agent</string>
+    <string name="ai_not_built_generic_detail">This tab will hold the agent\'s settings once the agent exists.</string>
+
+    <string name="ai_websearch_title">WebSearch</string>
+    <string name="ai_websearch_detail">When Cloud SuperApp has a web-search agent, this tab is where its provider, its budget and its result handling are configured. Nothing here searches the web today.</string>
+
+    <string name="ai_localsearch_title">LocalSearch</string>
+    <string name="ai_localsearch_detail">When Cloud SuperApp has a local-search agent — the one that searches this phone rather than the web — this tab is where it is configured. Nothing here searches this device today.</string>
+
+    <string name="ai_library_title">Library</string>
+    <string name="ai_library_detail">When Cloud SuperApp has the Library organiser agent — the one that moves files into place — this tab is where its rules and its folders are configured. No file is moved by anything on this page today.</string>
+
+    <!-- Tokens Fleet. -->
+    <string name="ai_tokens_title">Tokens Fleet</string>
+    <string name="ai_tokens_intro">The API key and the model every app in the fleet routes with. Read from the app that holds them, not from a copy stored here.</string>
+    <string name="ai_roster_empty">No AI-Routing apps are declared — build.json::ui.ai_routing_peers is empty or did not reach this build.</string>
+
+    <!-- Peer states. Each one is a DIFFERENT repair, so each gets its own
+         sentence: install it, open it, update it, or wait and retry. -->
+    <string name="ai_peer_asking">Asking…</string>
+    <string name="ai_peer_ready">Installed and answering.</string>
+    <string name="ai_peer_not_installed">Not installed on this phone. Install it to reach its settings from here.</string>
+    <string name="ai_peer_unreachable">Installed, but not answering. Open the app once — a force-stopped app stays stopped until you do.</string>
+    <string name="ai_peer_too_old">Installed, but this version is too old to answer. Update it.</string>
+    <string name="ai_peer_timed_out">No answer in time. The app may be busy or stuck; try again.</string>
+    <string name="ai_peer_routes">Installed. Routes through Cloud Keyboard and holds no key of its own.</string>
+    <string name="ai_peer_console">This app. It holds no API key and routes nothing — it is the console you are looking at.</string>
+    <!-- %1$s = the package name from the roster. -->
+    <string name="ai_peer_unknown_role">%1$s is declared with a role this build does not know.</string>
+    <string name="ai_peer_retry">Retry</string>
+
+    <!-- The key. Masked by default; revealed only on a deliberate tap. -->
+    <string name="ai_key_absent">No key set</string>
+    <string name="ai_key_masked">Key set · ••••</string>
+    <!-- %1$s = the key\'s last four characters, which is all that is ever shown. -->
+    <string name="ai_key_masked_with_hint">Key set · ••••%1$s</string>
+    <string name="ai_key_not_needed">This provider needs no key.</string>
+    <string name="ai_key_reveal">Reveal</string>
+    <string name="ai_key_hide">Hide</string>
+    <string name="ai_key_set">Set key</string>
+    <string name="ai_key_clear">Clear key</string>
+    <string name="ai_key_save">Save</string>
+    <string name="ai_key_hint_field">Paste the provider\'s API key</string>
+    <!-- %1$s = the provider\'s name, e.g. OpenRouter. -->
+    <string name="ai_key_set_title">Set the %1$s key</string>
+    <string name="ai_key_clear_title">Clear the %1$s key?</string>
+    <string name="ai_key_clear_message">The app that holds this key will have none, and everything that routes through it will stop until a new key is set.</string>
+    <string name="ai_key_reveal_failed">Could not read the key.</string>
+    <string name="ai_save_failed">Could not save that change.</string>
+
+    <!-- The model picker. Prices are UNITED STATES DOLLARS PER MILLION TOKENS,
+         printed exactly as the registry holds them — never scaled, never
+         converted. The heading is where the unit is stated. -->
+    <string name="ai_model_price_heading">Model — price in US dollars per million tokens (in / out)</string>
+    <!-- %1$s = model name, %2$s = prompt price, %3$s = completion price. -->
+    <string name="ai_model_row">%1$s · $%2$s / $%3$s per million</string>
+    <!-- %1$s = model name. Used when the registry quotes no price for it. -->
+    <string name="ai_model_row_no_price">%1$s · no price in the registry</string>
+    <!-- The peer routes to a model this build's registry does not list. The two
+         apps ship separately, so one can be a release ahead of the other. -->
+    <string name="ai_model_unknown_chosen">This app is set to %1$s, which is not in the model registry this build knows. Pick one below to change it.</string>
+    <string name="ai_models_none">This provider lists no models in the registry.</string>
+    <!-- %1$s = the date the registry\'s prices were last checked. -->
+    <string name="ai_pricing_as_of">Prices as of %1$s.</string>
+
+    <!-- Text Enhance — a fleet VIEW, with a door into the app that owns each
+         set of settings. Nothing on this tab is editable here on purpose; see
+         AiTextEnhanceFragment for the reasoning. -->
+    <string name="ai_enhance_title">Text Enhance</string>
+    <string name="ai_enhance_intro">What each app in the fleet is set to. Edit them in the app that owns them — the button opens it.</string>
+    <string name="ai_enhance_own_copy">Holds its own copy of these settings, editable in the app itself. They cannot be read from here.</string>
+    <string name="ai_enhance_unreadable">Could not read this app\'s settings.</string>
+    <string name="ai_enhance_ownership_note">Cloud SuperApp keeps no Enhance settings of its own: it has no surface that rewrites text, so a setting stored here would change nothing anywhere.</string>
+    <!-- %1$s = the app\'s name. -->
+    <string name="ai_enhance_open">Open %1$s</string>
+    <!-- %1$s = the stored value, shown as the id the owning app stores. -->
+    <string name="ai_enhance_provider">Provider: %1$s</string>
+    <string name="ai_enhance_style">Style: %1$s</string>
+    <string name="ai_enhance_tone">Tone: %1$s</string>
+    <string name="ai_enhance_length">Length: %1$s</string>
+    <string name="ai_enhance_language">Output language: %1$s</string>
+    <string name="ai_enhance_summary">Summary shape: %1$s</string>
+
 </resources>
