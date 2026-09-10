@@ -20,7 +20,7 @@
       "messages": {
         "reporter": "ended(",
         "resource_argument": 3,
-        "_doc_locales": "libs:keyboard is an exempt module in 1_cicd/src/i18n-policy.json, so the fleet i18n guard cannot see these strings at all. The owner reads this keyboard in Spanish. Both locales are therefore checked HERE and nowhere else.",
+        "_doc_locales": "Checked here even though the fleet i18n guard now also covers this module. It did not when this guard was written: libs:keyboard was exempt in 1_cicd/src/i18n-policy.json and 845fc966f made it require es. The two checks answer different questions and neither replaces the other — the i18n guard asks whether every translatable key has a Spanish value, this asks whether the specific string an EXIT reports exists at all, is not blank, is not a duplicate of another exit's, and takes the number of format arguments the call passes. A message can satisfy the first and still throw at the moment the owner needs to read it.",
         "locales": {
           "values": "ab_cloud-libs-shared/libs/keyboard/src/main/res/values/strings.xml",
           "values-es": "ab_cloud-libs-shared/libs/keyboard/src/main/res/values-es/strings.xml"

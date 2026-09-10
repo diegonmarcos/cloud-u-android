@@ -16,9 +16,11 @@ name: "silence guard — a user-facing action that ends without saying why fails
 # weeks of not knowing that a whole class of application was unsupported — and the
 # same shape was then found sitting in the Translate bar's Insert, Copy and swap.
 #
-# It is separate from i18n-guard.yml on purpose. That guard cannot see this class of
-# bug at all: libs:keyboard is an exempt module in i18n-policy.json, so the Spanish
-# half of the Enhance messages is checked HERE and nowhere else.
+# It is separate from i18n-guard.yml on purpose, and stays separate now that
+# 845fc966f has made libs:keyboard require es rather than be exempt. That guard
+# cannot see this class of bug at all — it asks whether a translatable key has a
+# Spanish value, not whether an exit says anything, whether two exits say the same
+# thing, or whether a message is handed the arguments it formats with.
 #
 # Both steps matter. The first proves the tree is clean; the second proves the guard
 # would have said so if it were not. A guard only ever watched succeeding is
