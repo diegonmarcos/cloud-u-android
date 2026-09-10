@@ -207,13 +207,6 @@ jobs:
 
       - name: Publish to GitHub Releases
         id: publish
-        # DELIBERATE BREAKAGE (task #255), reverted in the next commit. A guard
-        # nobody has watched go red is decoration, and this repository has shipped
-        # four that could never fire. continue-on-error keeps the job alive so the
-        # ONLY failing step in the run is the guard itself: the publish gate says
-        # this source moved, this step publishes nothing, and the run must not be
-        # green.
-        continue-on-error: true
         if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}
         working-directory: ${{ env.WORK_DIR }}
         env:
@@ -222,9 +215,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF: ${{ github.ref }}
-        run: |
-          echo "DELIBERATE BREAKAGE (#255): publishing nothing."
-          exit 1
+        run: ./build.sh gh-release
 
       # ── MANAGED-PUBLISH-GUARD: injected by cloud-android-ship-repo-workflow-engine.sh ──
       # Runs on everything but a cancellation, and is HANDED the two facts it
