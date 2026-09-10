@@ -1,3 +1,0 @@
-[dependencies]
-affine_common  = { workspace = true, features = ["hashcash"] }
-affine_nbstore = { workspace = true }
