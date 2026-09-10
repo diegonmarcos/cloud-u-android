@@ -24,6 +24,28 @@
 # reads, and the two package identifiers are checked against each other's
 # absence as much as their own presence.
 #
+# ── THE HEADER ABOVE WAS ITSELF THE BUG, AND T9 ONWARDS IS THE CORRECTION ──
+# "phone/apps/Tools Primary" is read above as ui.phone_sections[prefix="="],
+# the ALL-APPS taxonomy. That is a THIRD structure whose grouping is also
+# called Tools · Primary, and it is not what the owner asked to add to — he
+# capitalised QUICKMARK the second time round. The page he means is
+#
+#   Phone ▸ Apps ▸ Quickmarks ▸ Tools Primary
+#       ui.sections[id=phone].phone_app_groups[title="Tools Primary"].packages
+#       — a HAND-WRITTEN shortlist, baked into
+#       BuildConfig.UI_SUITE_PHONE_GROUPS_B64 and rendered by
+#       SuitePhoneAppsFragment. No keyword, no classifier, no folder.
+#
+# So there are THREE same-named groupings, not two, and the taxonomy assertions
+# T5/T6 pass with the camera absent from the curated list entirely — which is
+# exactly what shipped. T5/T6 stay: they pin the All-apps classification so it
+# cannot drift in silence. T9 onwards adds the surface nobody was testing, and
+# T11 is the assertion the previous two attempts were missing — it re-runs T9's
+# own predicate against a document with ONLY the Quickmark deleted and requires
+# it to answer "absent" while the package is still written elsewhere in that
+# same document. An assertion that cannot distinguish the three pages is
+# decoration, and this is the check that refuses to let it be one.
+#
 # THE SECOND FAILURE is "as last". Nothing in this row carries an `order`:
 # GroupedTilesFragment walks group.tiles in declared order and applies no sort,
 # so LAST IS ARRAY POSITION and a presence-only assertion would pass while the
@@ -48,6 +70,26 @@ for f in "$BJ" "$CAMERA_BJ" "$CAMERA_GRADLE"; do
   [ -r "$f" ] || { echo "ERROR: cannot read $f" >&2; exit 2; }
 done
 
+# Lines where a rendered list gets reordered. Two assertions depend on this —
+# T2 for the Cloud row and T12 for the Quickmarks grid — and both stated their
+# own pattern until it was demonstrated not to work.
+#
+# THE PATTERN WAS `<token>[^)]*\.(sorted|…)` AND IT COULD NOT SEE A SORT. A
+# character class excluding ')' cannot cross the ')' of `.map(::curated)`, so
+# the plainest possible way to introduce one —
+#     val packageTiles = group.entries.map(::curated).sortedBy { it.label }
+# — was planted in SuitePhoneAppsFragment and the assertion reported PASS. It
+# was a guard against nothing, exactly the shape the vacuous-assertion lint
+# exists to catch and narrow enough that the lint did not.
+#
+# Comment lines are dropped because BOTH fragments explain the no-sort rule in
+# prose, and a guard that reads its own documentation as a violation fails on
+# the sentence describing the fix.
+reordering_lines() {  # reordering_lines <kotlin-file> <token-alternation>
+  grep -nE "($2)\b.*\.(sorted|sortBy|sortedWith|reversed)" "$1" \
+    | awk '{ body = $0; sub(/^[0-9]+:[[:space:]]*/, "", body); if (body !~ /^(\/\/|\*|\/\*)/) print }'
+}
+
 CLOUD_TILE_TARGET="extapp:cloud-camera"
 SAMSUNG_PKG="com.sec.android.app.camera"
 OPUS_PKG="pl.mobimax.cameraopus"
@@ -71,7 +113,7 @@ echo "== T2: the row is rendered in DECLARED order, with no sort =="
 # stops meaning "last on the page" and T1 becomes decoration that passes.
 FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/GroupedTilesFragment.kt"
 [ -r "$FRAG" ] || { echo "ERROR: cannot read $FRAG" >&2; exit 2; }
-SORTS="$(grep -nE 'group\.tiles[^)]*\.(sorted|sortBy|sortedBy|sortedWith|reversed)' "$FRAG" || true)"
+SORTS="$(reordering_lines "$FRAG" 'group\.tiles')"
 [ -z "$SORTS" ] \
   && ok "GroupedTilesFragment renders group.tiles unsorted, so array position IS render position" \
   || bad "GroupedTilesFragment now reorders group.tiles — 'as last' can no longer be expressed by appending: $SORTS"
@@ -213,6 +255,97 @@ for pkg in "$SAMSUNG_PKG" "$HUB"; do
     && ok "'$pkg' is a well-formed Android package id" \
     || bad "'$pkg' is not a well-formed Android package id"
 done
+
+echo "== T9: the Samsung camera is a QUICKMARK of Phone ▸ Apps ▸ Tools Primary =="
+# The surface the owner actually named. Located BY TITLE and never by index:
+# ui.sections[id=phone].phone_app_groups is under concurrent edit — a Projects
+# group is being inserted between Tools Primary and Configs — so any index
+# written here would be describing yesterday's file. app/build.gradle finds the
+# section the same way (`sections.find { it.id == "phone" }`), so this reads the
+# document along the path the APK is actually baked from.
+QUICKMARK_GROUP="Tools Primary"
+# An entry is either a bare package string or {"pkg","label"} — parseEntries()
+# in SuitePhoneAppsFragment accepts both, so both are unwrapped here rather
+# than assuming the shape this group happens to use today.
+QUICKMARK_PKGS='
+  .ui.sections[] | select(.id == "phone")
+  | .phone_app_groups[] | select(.title == $t)
+  | .packages[] | if type == "object" then (.pkg // "") else . end'
+
+TITLED="$(jq -r --arg t "$QUICKMARK_GROUP" '
+  [ .ui.sections[] | select(.id == "phone")
+    | .phone_app_groups[] | select(.title == $t) ] | length' "$BJ")"
+[ "$TITLED" = "1" ] \
+  && ok "exactly one Quickmarks group is titled '$QUICKMARK_GROUP', so finding it by title is unambiguous" \
+  || bad "$TITLED Quickmarks groups are titled '$QUICKMARK_GROUP' — every assertion below reads whichever one jq returns first"
+
+CURATED="$(jq -r --arg t "$QUICKMARK_GROUP" "[ $QUICKMARK_PKGS ] | join(\",\")" "$BJ")"
+case ",$CURATED," in
+  *",$SAMSUNG_PKG,"*)
+    ok "$SAMSUNG_PKG is a curated entry of ui.sections[id=phone].phone_app_groups[title=$QUICKMARK_GROUP]" ;;
+  *)
+    bad "$SAMSUNG_PKG is NOT in the Quickmarks group '$QUICKMARK_GROUP' (it holds: $CURATED) — the owner's page renders without it no matter what the All-apps taxonomy says" ;;
+esac
+
+echo "== T10: adding the camera dropped none of the packages already curated =="
+# A superset check, not an equality one, and deliberately: miDNI is being added
+# to this same list by another change in flight, so pinning the exact contents
+# would fail on somebody else's correct work. What must not happen is a
+# rewrite that loses an entry the owner put there.
+for pkg in com.brave.browser \
+           com.google.android.apps.maps \
+           com.google.android.apps.walletnfcrel \
+           com.google.android.apps.translate \
+           com.sec.android.app.clockpackage \
+           com.sec.android.app.popupcalculator; do
+  case ",$CURATED," in
+    *",$pkg,"*) ok "$pkg is still curated in '$QUICKMARK_GROUP'" ;;
+    *)          bad "$pkg has left the Quickmarks group '$QUICKMARK_GROUP' — it was there before the camera was added and nothing asked for its removal" ;;
+  esac
+done
+
+echo "== T11: T9 reads the QUICKMARK, and is not satisfied by the other two pages =="
+# THE ASSERTION BOTH PREVIOUS ATTEMPTS LACKED. com.sec.android.app.camera is
+# written in three places in this file — the curated list, a ui.phone_folders
+# keyword, and the ui.camera_apps intent-fallback registry — so "the string is
+# in build.json" is true for all three surfaces and proves none of them. This
+# deletes ONLY the curated entry, leaves the document otherwise untouched, and
+# requires T9's own predicate to go absent against it. Both halves must hold:
+# if the decoys were gone the mutation would prove nothing, so their survival
+# is asserted too rather than assumed.
+MUTATED="$(jq --arg t "$QUICKMARK_GROUP" --arg p "$SAMSUNG_PKG" '
+  ( .ui.sections[] | select(.id == "phone")
+    | .phone_app_groups[] | select(.title == $t) | .packages )
+  |= map(select((if type == "object" then (.pkg // "") else . end) != $p))' "$BJ")"
+
+DECOYS="$(printf '%s' "$MUTATED" | jq -r --arg p "$SAMSUNG_PKG" '
+  ( [ .ui.phone_folders[] | (.match_keywords // [])[] | select(. == "pkg:" + $p) ] | length )
+  + ( [ .ui.camera_apps[]? | select((.package // "") == $p) ] | length )')"
+STILL_CURATED="$(printf '%s' "$MUTATED" | jq -r --arg t "$QUICKMARK_GROUP" "[ $QUICKMARK_PKGS ] | join(\",\")")"
+
+if [ -z "$DECOYS" ] || [ "$DECOYS" -lt 1 ]; then
+  bad "with the Quickmark deleted, $SAMSUNG_PKG survives nowhere else in the document — the wrong-surface trap this check exists to prove cannot be reproduced, so T9 is unproven"
+else
+  case ",$STILL_CURATED," in
+    *",$SAMSUNG_PKG,"*)
+      bad "T9's predicate STILL finds $SAMSUNG_PKG after the curated entry was deleted — it is reading something other than the Quickmarks group and would pass with the owner's page empty" ;;
+    *)
+      ok "deleting the curated entry makes T9 answer absent while $DECOYS other declaration(s) of $SAMSUNG_PKG remain — T9 is scoped to the Quickmark and not to the file" ;;
+  esac
+fi
+
+echo "== T12: the curated list is rendered in DECLARED order, with no sort =="
+# The same dependency T2 covers for the Cloud row. Appending is only a
+# placement claim while SuitePhoneAppsFragment maps group.entries in order and
+# chunks the result; a sort anywhere on that path makes array position
+# cosmetic, and then no diff to this file can put a tile where the owner wants
+# it.
+SUITE_FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/SuitePhoneAppsFragment.kt"
+[ -r "$SUITE_FRAG" ] || { echo "ERROR: cannot read $SUITE_FRAG" >&2; exit 2; }
+QM_SORTS="$(reordering_lines "$SUITE_FRAG" 'group\.entries|packageTiles|folderTiles')"
+[ -z "$QM_SORTS" ] \
+  && ok "SuitePhoneAppsFragment renders the curated entries unsorted, so array position IS render position" \
+  || bad "SuitePhoneAppsFragment now reorders the curated entries — where a Quickmark sits in build.json no longer decides where it draws: $QM_SORTS"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

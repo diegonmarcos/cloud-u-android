@@ -2787,6 +2787,7 @@
           },
           {
             "title": "Tools Primary",
+            "_doc_samsung_camera": "com.sec.android.app.camera is a QUICKMARK, which is what the owner asked for on 2026-09-10 and what two earlier attempts missed. Both of them read 'phone/apps/Tools Primary' as the identically-named grouping on the OTHER phone page: ui.phone_sections[prefix='='] 'Tools · Primary', the auto-classified All-apps taxonomy, whose members are ui.phone_folders and which no hand-written list feeds. This list is the curated one, read by SuitePhoneAppsFragment out of BuildConfig.UI_SUITE_PHONE_GROUPS_B64, and it is the only one an owner can add a shortcut to. Nothing is shared between the two, so a package in one says nothing about the other and a test that only asks 'is the string in build.json' cannot tell them apart. THIS IS AN ADDITION, NOT A MOVE: the same package is also a keyword of ui.phone_folders[prod_utils] and stays there, because All-apps classifies everything installed and Quickmarks is a shortlist — an app on both pages is the normal case, exactly as _doc_acode_is_in_two_places already records for Acode. APPENDED because the owner named no position: SuitePhoneAppsFragment maps this array in declared order and chunks it into rows with no sort anywhere, so array position IS render position. It is last of eight rather than last of seven because miDNI landed in this same list first, from a different request; with UI_PHONE_GRID_COLUMNS = 6 that puts the camera in row two, second tile, and moving it is a one-line reorder here.",
             "packages": [
               "com.brave.browser",
               "com.google.android.apps.maps",
@@ -2794,7 +2795,8 @@
               "com.google.android.apps.translate",
               "com.sec.android.app.clockpackage",
               "com.sec.android.app.popupcalculator",
-              { "pkg": "es.gob.interior.policia.midni", "label": "miDNI" }
+              { "pkg": "es.gob.interior.policia.midni", "label": "miDNI" },
+              "com.sec.android.app.camera"
             ]
           },
           {
