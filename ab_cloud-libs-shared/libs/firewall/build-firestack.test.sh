@@ -168,6 +168,104 @@ for gm in "${GOMODS[@]}"; do
     done < <(sed -n 's/^	.*go[[:space:]]\{1,\}install[[:space:]]\{1,\}\([^ 	@]\{1,\}\)@.*/\1/p' "$mk" | sort -u)
 done
 
+# 7. SEEDING THE MODULE IS NOT SEEDING THE TOOL, and check 6 cannot tell them
+#    apart: it only asks whether the engine mentions the package before the
+#    offline build. It said ok through runs 34462765453 and 34464514365, both of
+#    which died anyway on
+#
+#        loading deprecation for github.com/felixge/go-patch-overlay:
+#        module lookup disabled by GOPROXY=off
+#
+#    because the seed installed the binary into the DEFAULT GOBIN while the
+#    recipe installs into its own ($(GOBIN) = $(CURDIR)/bin). The recipe
+#    therefore still had work to do, ran inside GOPROXY=off, and asked the proxy
+#    a question it was forbidden to answer. The phone stayed on an APK from
+#    2026-09-09 for a day and a half.
+#
+#    What actually keeps resolution out of the offline build is make finding the
+#    recipe's TARGET already present and newer than its prerequisite, so the
+#    recipe never executes. That requires the seed to write the target binary
+#    into the very directory the Makefile names. Assert both halves.
+#
+#    Derived from the Makefile, never hardcoded: rename the bin dir or add a
+#    second tool and this check follows it.
+#    SCOPED TO WHAT THE BUILD ACTUALLY REACHES. The Makefile also has an $(XGO)
+#    recipe with the same shape, but it hangs off the linux/windows targets and
+#    this build asks for `intra`. Demanding a seed for a tool no recipe will run
+#    would be a failure nobody can act on, and a tester that cries about
+#    unreachable code is one people learn to skim. So walk the prerequisite
+#    graph from the target the engine really builds and check only what it needs.
+for gm in "${GOMODS[@]}"; do
+    mod=$(dirname "$gm"); mk="$mod/Makefile"
+    [ -f "$mk" ] || continue
+
+    # The Makefile's own GOBIN, e.g. `GOBIN=$(CURDIR)/bin` -> bin.
+    gobin_leaf=$(awk -F'/' '/^GOBIN[[:space:]]*=/ { sub(/[[:space:]]*$/, "", $NF); print $NF; exit }' "$mk")
+    [ -n "$gobin_leaf" ] || continue
+
+    # The target the engine hands to make, read from the same build.json field
+    # the engine reads it from — never a copy of the value.
+    goal=$(jq -r '.firestack.build.make_target // empty' "$mod/../../../build.json" 2>/dev/null)
+    [ -n "$goal" ] || continue
+
+    # Transitive prerequisites of that goal, textually: targets and prerequisites
+    # spell variables the same way ($(GOMOBILE)), so no expansion is needed to
+    # match them against each other. Bounded rounds — a Makefile cycle must not
+    # hang the suite.
+    reach=$(awk -v goal="$goal" '
+        /^[^\t#][^:]*:[^=]/ {
+            split($0, kv, ":"); t = kv[1]; gsub(/^[ \t]+|[ \t]+$/, "", t)
+            prereq[t] = prereq[t] " " kv[2]
+        }
+        END {
+            seen[goal] = 1; frontier = goal
+            for (round = 0; round < 12; round++) {
+                next_frontier = ""
+                n = split(frontier, cur, " ")
+                for (i = 1; i <= n; i++) {
+                    if (cur[i] == "" || !(cur[i] in prereq)) continue
+                    m = split(prereq[cur[i]], deps, " ")
+                    for (j = 1; j <= m; j++)
+                        if (deps[j] != "" && !(deps[j] in seen)) {
+                            seen[deps[j]] = 1; next_frontier = next_frontier " " deps[j]
+                        }
+                }
+                if (next_frontier == "") break
+                frontier = next_frontier
+            }
+            for (t in seen) print t
+        }' "$mk")
+
+    # Of the reachable targets, the ones whose recipe installs into GOBIN are
+    # exactly the recipes that would resolve inside the offline build.
+    while read -r target; do
+        [ -n "$target" ] || continue
+        while read -r tool; do
+            [ -n "$tool" ] || continue
+            # The engine must install this tool with GOBIN pointed at the
+            # Makefile's bin dir. Matched on the SAME LINE, so a GOBIN set
+            # elsewhere in the engine for another purpose cannot stand in for it.
+            if awk -v t="$tool" '/^[[:space:]]*#/ { next }
+                                 index($0, "go install") && index($0, t) && index($0, "GOBIN=") { found = 1 }
+                                 END { exit !found }' "$ENGINE"; then
+                note ok "engine seeds $tool into the Makefile's own GOBIN ($gobin_leaf/), so $target is already up to date and its recipe never runs"
+            else
+                note FAIL "$ENGINE seeds $tool without GOBIN=<the Makefile's $gobin_leaf/> — it lands in the default GOBIN, so make still rebuilds $target and does it inside GOPROXY=off"
+            fi
+        done < <(awk -v tgt="$target" '
+            # index(), not a regex: a make target is spelled $(GOMOBILE), and
+            # every one of those characters is a metacharacter. Matched as a
+            # regex it silently matches nothing, which turns this whole check
+            # into a green tick over an unread recipe.
+            index($0, tgt ":") == 1 { inrecipe = 1; next }
+            /^[^\t#]/ { inrecipe = 0 }
+            inrecipe && /^\t/ && index($0, "GOBIN=") && index($0, "go install") {
+                for (i = 1; i <= NF; i++)
+                    if ($i == "install") { sub(/@.*/, "", $(i+1)); print $(i+1); break }
+            }' "$mk" | sort -u)
+    done <<< "$reach"
+done
+
 [ "$fail" -eq 0 ] && echo "PASS — the firestack build resolves nothing; pins are committed and every caller is covered." \
                   || echo "FAIL — see above."
 exit "$fail"

@@ -137,9 +137,62 @@ log "firestack: seeding module cache from committed pins (go.mod/go.sum)"
 # to carry it; pinning the version did not put it in the cache, it only made the
 # gap deterministic. Seeded here, with the proxy still on, by the same rule as
 # every other module: resolve once, then resolve nothing.
-log "firestack: seeding pinned build tool go-patch-overlay@$GPOV"
-( cd "$SRC" && go install "github.com/felixge/go-patch-overlay@$GPOV" ) || {
+# SEED THE BINARIES, NOT JUST THE MODULES — AND INTO THE GOBIN THE MAKEFILE NAMES.
+#
+# Seeding the module cache was necessary and not sufficient, and runs
+# 34462765453 / 34464514365 are what proved it. The $(GOMOBILE) recipe installs
+# BOTH build tools into its own GOBIN ($SRC/bin), and that recipe runs INSIDE the
+# GOPROXY=off build. `go install pkg@version` does not stop at the module cache:
+# before it builds anything it asks the proxy whether that module is DEPRECATED,
+# and with the proxy off the only answer available is
+#
+#     loading deprecation for github.com/felixge/go-patch-overlay:
+#     module lookup disabled by GOPROXY=off
+#
+# The seed above put the module in the cache and then installed the binary into
+# the DEFAULT GOBIN, which is not the directory the Makefile looks in — so the
+# recipe ran anyway and died on the deprecation lookup, with the aar unbuilt and
+# the owner's phone left on an APK from 2026-09-09.
+#
+# The invariant is unchanged and is now actually enforced: resolve once, here,
+# with the proxy up; resolve NOTHING inside the offline build. The way to get
+# there is to leave the recipe with nothing left to do. make rebuilds
+# $(GOMOBILE) only when bin/gomobile is missing or older than go.mod, so seeding
+# both binaries into $SRC/bin means the target is already up to date and the
+# recipe never executes — no `go install` runs under GOPROXY=off because no
+# command runs there at all.
+#
+# gomobile itself carries no @version (it resolves through go.mod), which is why
+# its install was the one surviving the offline build; it is seeded here anyway
+# so that bin/gomobile EXISTS, which is the whole mechanism.
+GOBIN_MAKEFILE="$SRC/bin"
+
+log "firestack: seeding pinned build tool go-patch-overlay@$GPOV into $GOBIN_MAKEFILE"
+( cd "$SRC" && GOBIN="$GOBIN_MAKEFILE" go install "github.com/felixge/go-patch-overlay@$GPOV" ) || {
   errlog "firestack: could not seed go-patch-overlay@$GPOV — check .firestack.build.go_patch_overlay_version in build.json"
+  exit 1
+}
+
+log "firestack: seeding gomobile at the version go.mod pins"
+( cd "$SRC" && GOBIN="$GOBIN_MAKEFILE" go install golang.org/x/mobile/cmd/gomobile ) || {
+  errlog "firestack: could not seed gomobile — the committed go.mod/go.sum do not cover golang.org/x/mobile."
+  exit 1
+}
+
+# Part of the same recipe, so it belongs to the same seed: gomobile init writes
+# the NDK toolchain gomobile bind later expects. Left to the recipe it would
+# never run, because the recipe is precisely what we are arranging to skip.
+log "firestack: gomobile init (NDK toolchain), while the proxy is still up"
+( cd "$SRC" && PATH="$GOBIN_MAKEFILE:$PATH" "$GOBIN_MAKEFILE/gomobile" init ) || {
+  errlog "firestack: gomobile init failed — the offline build would fail later, at the bind, with no useful message."
+  exit 1
+}
+
+# The skip above is a TIMESTAMP argument, so assert the thing it rests on rather
+# than trusting it. If bin/gomobile is absent the recipe runs, hits the proxy and
+# dies twenty lines later quoting GOPROXY; saying so here names the real cause.
+[ -x "$GOBIN_MAKEFILE/gomobile" ] || {
+  errlog "firestack: $GOBIN_MAKEFILE/gomobile is missing after seeding — the Makefile would rebuild it inside the offline build and fail on 'module lookup disabled by GOPROXY=off'."
   exit 1
 }
 
