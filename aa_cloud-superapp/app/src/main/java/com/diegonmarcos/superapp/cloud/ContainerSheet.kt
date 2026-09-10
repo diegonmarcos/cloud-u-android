@@ -12,6 +12,7 @@ import androidx.fragment.app.FragmentActivity
 import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.launcher.TileGridFragment
 import com.diegonmarcos.superapp.ops.dagu.DaguPrefs
+import com.diegonmarcos.superapp.ui.StatusLight
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.tabs.TabLayout
 
@@ -226,10 +227,28 @@ object ContainerSheet {
 
     // ── small view helpers ───────────────────────────────────────────────
 
+    /**
+     * The outcome line under the actions, coloured by whether the action WORKED.
+     *
+     * [ok] is the same three-state reading [StatusLight] was built for -- true is a
+     * confirmed success, false a confirmed failure, and null "the call is still in
+     * flight, nobody can say yet" -- so it resolves through [StatusLight] rather than
+     * through a private palette. This method used to carry three colour literals of its
+     * own, and they had DRIFTED: its green, its red and its grey were each a different
+     * value from the ones every other status in this app uses, so the same fact about
+     * the same fleet was painted one colour on this sheet and another everywhere else.
+     * A status light is a promise the owner learns to trust at a glance, and two greens
+     * mean one of them is lying about which green means healthy.
+     *
+     * Restating the palette here also put it out of reach of the tester that recomputes
+     * the contrast ratios against the themes this app ships, including the pure-black
+     * launcher palette: a colour compiled into Kotlin is one no theme can override and
+     * nothing was checking.
+     */
     private fun show(t: TextView, text: String, ok: Boolean? = null) {
         t.visibility = View.VISIBLE
         t.text = text
-        t.setTextColor(when (ok) { true -> 0xFF34C759.toInt(); false -> 0xFFFF6B6B.toInt(); null -> 0xFF9B93AB.toInt() })
+        t.setTextColor(StatusLight.colour(t.context, StatusLight.of(ok)))
     }
 
     private fun header(ctx: Context, label: String, name: String, vm: String) =

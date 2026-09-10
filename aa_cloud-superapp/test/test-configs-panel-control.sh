@@ -355,11 +355,21 @@ done
 # assertion cannot go stale against the palette it is protecting. Scoped to
 # THESE values on purpose: another page's own unrelated green is not a second
 # status light, and banning it would make this a lie about what it protects.
+#
+# Matching the values alone caught only half the disease, and not the half that
+# happened. ContainerSheet grew a private palette by INVENTING three colours
+# rather than by copying these, so every value below missed it while the sheet
+# painted the same fleet a different green from every other page for as long as
+# it took somebody to notice by eye. The second pass therefore matches the
+# SHAPE instead -- a three-state reading painted straight from literals -- which
+# names no colour at all and so cannot be escaped by choosing different ones.
 dupes="$(python3 - "$COLORS" "$APP/app/src/main/java" <<'PYX'
 import os, re, sys
 xml = open(sys.argv[1]).read()
 hexes = [re.search(r'name="status_light_%s">#(\w{8})<' % k, xml).group(1).lower()
          for k in ('on', 'off', 'unknown')]
+shape = re.compile(r'true\s*->\s*0x[0-9a-f]{8}.{0,200}?false\s*->\s*0x[0-9a-f]{8}'
+                   r'.{0,200}?null\s*->\s*0x[0-9a-f]{8}', re.S)
 hits = []
 for root, _, files in os.walk(sys.argv[2]):
     for f in files:
@@ -367,6 +377,8 @@ for root, _, files in os.walk(sys.argv[2]):
         body = open(os.path.join(root, f), encoding='utf-8').read().lower()
         for h in hexes:
             if '0x' + h in body: hits.append('%s:%s' % (f, h))
+        if shape.search(body):
+            hits.append('%s:paints-a-three-state-reading-from-literals' % f)
 print(','.join(hits))
 PYX
 )"
