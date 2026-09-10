@@ -1,0 +1,48 @@
+{
+  "_doc": "WHAT THE ENGINE BUILD HANDS THE SHELL, AND WHETHER COLLABORA'S OWN APK CONTAINS IT. This file is the evidence behind a0_docs/eng-specs/cloud-office-prebuilt-engine-reuse.md. The question it answers: can we skip the ~12-hour engine build by extracting the engine out of the official APK we used to mirror? An APK carries a RUNTIME payload. The engine also hands the shell a LINK-TIME payload — static archives and headers — and an APK has never carried either. Every row below is checked against the live central directory of the pinned APK, so if Collabora ever starts shipping the missing half, this test turns red and the recommendation is worth revisiting.",
+  "apk": {
+    "_doc": "The artefact ac_cloud-sheets mirrored until commit 05b0c6c15. sha256 is NOT verified here — that would mean downloading 267 MB. This test range-fetches the ZIP central directory only (~600 KB). The sha256 is recorded so the pin is not lost from the repository.",
+    "url": "https://www.collaboraoffice.com/downloads/fdroid/repo/collabora-office-mobile-26.04.3.1-155-release-arm64-v8a-2026-09-03.apk",
+    "sha256": "b7ab381de96f429c2e762d0e54ee0fac7db03ad2fecfede9f4c558c767d18513",
+    "size": 267216449,
+    "version_name": "26.04.3.1",
+    "abi": "arm64-v8a"
+  },
+  "artefacts": [
+    { "lobuilddir_path": "android/jniLibs/arm64-v8a/liblo-native-code.so", "apk_path": "lib/arm64-v8a/liblo-native-code.so", "in_apk": true,  "needed_for": "runtime + shared-library link input", "required_by": "android/lib/src/main/cpp/CMakeLists.txt.in:91,145,166" },
+    { "lobuilddir_path": "instdir/program/libfreebl3.so",  "apk_path": "lib/arm64-v8a/libfreebl3.so",  "in_apk": true, "needed_for": "runtime (DT_NEEDED of the engine)", "required_by": "CMakeLists.txt.in:109" },
+    { "lobuilddir_path": "instdir/program/libnspr4.so",    "apk_path": "lib/arm64-v8a/libnspr4.so",    "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:112" },
+    { "lobuilddir_path": "instdir/program/libnss3.so",     "apk_path": "lib/arm64-v8a/libnss3.so",     "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:115" },
+    { "lobuilddir_path": "instdir/program/libnssckbi.so",  "apk_path": "lib/arm64-v8a/libnssckbi.so",  "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:118" },
+    { "lobuilddir_path": "instdir/program/libnssdbm3.so",  "apk_path": "lib/arm64-v8a/libnssdbm3.so",  "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:121" },
+    { "lobuilddir_path": "instdir/program/libnssutil3.so", "apk_path": "lib/arm64-v8a/libnssutil3.so", "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:124" },
+    { "lobuilddir_path": "instdir/program/libplc4.so",     "apk_path": "lib/arm64-v8a/libplc4.so",     "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:127" },
+    { "lobuilddir_path": "instdir/program/libplds4.so",    "apk_path": "lib/arm64-v8a/libplds4.so",    "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:130" },
+    { "lobuilddir_path": "instdir/program/libsmime3.so",   "apk_path": "lib/arm64-v8a/libsmime3.so",   "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:133" },
+    { "lobuilddir_path": "instdir/program/libsoftokn3.so", "apk_path": "lib/arm64-v8a/libsoftokn3.so", "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:136" },
+    { "lobuilddir_path": "instdir/program/libsqlite3.so",  "apk_path": "lib/arm64-v8a/libsqlite3.so",  "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:139" },
+    { "lobuilddir_path": "instdir/program/libssl3.so",     "apk_path": "lib/arm64-v8a/libssl3.so",     "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:142" },
+
+    { "lobuilddir_path": "instdir/program/services.rdb",   "apk_path": "assets/program/services.rdb",  "in_apk": true, "needed_for": "asset (copyAssets)", "required_by": "android/lib/build.gradle:184" },
+    { "lobuilddir_path": "instdir/program/types/offapi.rdb",  "apk_path": "assets/unpack/program/offapi.rdb",  "in_apk": true, "needed_for": "asset (copyUnpackAssets, no rename)", "required_by": "android/lib/build.gradle:104" },
+    { "lobuilddir_path": "instdir/program/types.rdb",         "apk_path": "assets/unpack/program/udkapi.rdb",  "in_apk": true, "needed_for": "asset (copyUnpackAssets, renamed)", "required_by": "android/lib/build.gradle:111" },
+    { "lobuilddir_path": "instdir/share/config/images_colibre.zip", "apk_path": "assets/share/config/images_colibre.zip", "in_apk": true, "needed_for": "asset (createFullConfig)", "required_by": "android/lib/build.gradle:198" },
+    { "lobuilddir_path": "instdir/share/fonts/truetype/Carlito-Regular.ttf", "apk_path": "assets/unpack/user/fonts/Carlito-Regular.ttf", "in_apk": true, "needed_for": "asset (copyUnpackAssets, filtered+flattened)", "required_by": "android/lib/build.gradle:125" },
+    { "lobuilddir_path": "instdir/LICENSE.html", "apk_path": "assets/license.html", "in_apk": true, "needed_for": "MPL-2.0 s3.4 notice", "required_by": "android/lib/build.gradle:175" },
+    { "lobuilddir_path": "instdir/NOTICE",       "apk_path": "assets/notice.txt",   "in_apk": true, "needed_for": "MPL-2.0 s3.4 notice", "required_by": "android/lib/build.gradle:175" },
+
+    { "lobuilddir_path": "instdir/program/setuprc", "apk_path": "assets/program/setuprc", "in_apk": false, "needed_for": "configure's ONLY gate on $LOBUILDDIR, and the source of CORE_VERSION_HASH", "required_by": "configure.ac:921,927" },
+    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/liblibpng.a",        "apk_path": null, "in_apk": false, "needed_for": "static link into libandroidapp.so + per-ABI configure gate", "required_by": "configure.ac:930,1107; CMakeLists.txt.in:157" },
+    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoFoundation.a","apk_path": null, "in_apk": false, "needed_for": "static link", "required_by": "configure.ac:1023-1026; CMakeLists.txt.in:162" },
+    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoNet.a",       "apk_path": null, "in_apk": false, "needed_for": "static link", "required_by": "CMakeLists.txt.in:158" },
+    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoUtil.a",      "apk_path": null, "in_apk": false, "needed_for": "static link", "required_by": "CMakeLists.txt.in:159" },
+    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoXML.a",       "apk_path": null, "in_apk": false, "needed_for": "static link", "required_by": "CMakeLists.txt.in:160" },
+    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoJSON.a",      "apk_path": null, "in_apk": false, "needed_for": "static link", "required_by": "CMakeLists.txt.in:161" },
+    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libexpat.a",         "apk_path": null, "in_apk": false, "needed_for": "static link", "required_by": "CMakeLists.txt.in:163" },
+    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libzstd.a",          "apk_path": null, "in_apk": false, "needed_for": "static link + configure gate", "required_by": "configure.ac:1055-1058; CMakeLists.txt.in:164" },
+    { "lobuilddir_path": "workdir/UnpackedTarball/poco/include/Poco/Poco.h",    "apk_path": null, "in_apk": false, "needed_for": "compile-time include dir + configure gate", "required_by": "configure.ac:1009-1012; CMakeLists.txt.in:101" },
+    { "lobuilddir_path": "workdir/UnpackedTarball/zstd/lib/zstd.h",             "apk_path": null, "in_apk": false, "needed_for": "compile-time include dir + configure gate", "required_by": "configure.ac:1051-1054; CMakeLists.txt.in:102" },
+    { "lobuilddir_path": "workdir/UnpackedTarball/libpng/png.h",                "apk_path": null, "in_apk": false, "needed_for": "compile-time include dir + configure gate", "required_by": "configure.ac:1106; CMakeLists.txt.in:103" },
+    { "lobuilddir_path": "include/COKit/COKit.hxx",                             "apk_path": null, "in_apk": false, "needed_for": "the shell/engine ABI header; symlink to the engine SOURCE tree, so a source checkout supplies it", "required_by": "CMakeLists.txt.in:104; kit/Kit.hpp:24" }
+  ]
+}

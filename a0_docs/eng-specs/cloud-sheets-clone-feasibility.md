@@ -10,6 +10,19 @@ consumes the engine as a set of prebuilt `.so` files, `.a` files, headers and an
 **days** project on free `ubuntu-latest`, gated behind **one** engine build that
 does not fit on any machine the fleet currently owns.
 
+> **EXTENDED, AND PARTLY SUPERSEDED, by
+> `cloud-office-prebuilt-engine-reuse.md`.** That document answers a question
+> this one did not ask — can we extract the prebuilt engine from the official
+> APK instead of compiling it? (No.) In doing so it read the revision
+> `build.json` actually pins, `online@794af008` on the 26.04 line, and found two
+> things here that no longer hold on it:
+> **§1's two repositories are now one monorepo** (the former core is `engine/`
+> inside `online`), and **§2c's `configure` gate is `instdir/program/setuprc`,
+> not `liblibpng.a`** (`configure.ac:921`; `liblibpng.a` is a second, per-ABI
+> check at `:930`). §8's LibreOfficeKit `nSize` interface has also been replaced
+> by a C++ vtable. Everything else here — the cost, the runners, the NDK, the
+> MPL analysis, the recommendation — stands.
+
 Investigated against Collabora's mobile branch
 `CollaboraOnline/online@distro/collabora/co-25.04-mobile` and upstream's own
 build guide, 2026-09-10.
