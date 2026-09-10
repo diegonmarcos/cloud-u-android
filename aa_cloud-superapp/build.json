@@ -1199,10 +1199,6 @@
                 "label": "Data Apps"
               },
               {
-                "id": "#",
-                "label": "Projects"
-              },
-              {
                 "id": "=>*",
                 "label": "Tools"
               }
@@ -1469,10 +1465,6 @@
                 "label": "Data Apps"
               },
               {
-                "id": "#",
-                "label": "Projects"
-              },
-              {
                 "id": "=>*",
                 "label": "Tools"
               }
@@ -1591,10 +1583,6 @@
               {
                 "id": ".",
                 "label": "Data Apps"
-              },
-              {
-                "id": "#",
-                "label": "Projects"
               },
               {
                 "id": "=>*",
@@ -1717,10 +1705,6 @@
                 "label": "Data Apps"
               },
               {
-                "id": "#",
-                "label": "Projects"
-              },
-              {
                 "id": "=>*",
                 "label": "Tools"
               }
@@ -1841,10 +1825,6 @@
                 "label": "Data Apps"
               },
               {
-                "id": "#",
-                "label": "Projects"
-              },
-              {
                 "id": "=>*",
                 "label": "Tools"
               }
@@ -1963,10 +1943,6 @@
               {
                 "id": ".",
                 "label": "Data Apps"
-              },
-              {
-                "id": "#",
-                "label": "Projects"
               },
               {
                 "id": "=>*",
@@ -2817,7 +2793,42 @@
               "com.google.android.apps.walletnfcrel",
               "com.google.android.apps.translate",
               "com.sec.android.app.clockpackage",
-              "com.sec.android.app.popupcalculator"
+              "com.sec.android.app.popupcalculator",
+              { "pkg": "es.gob.interior.policia.midni", "label": "miDNI" }
+            ]
+          },
+          {
+            "title": "Projects",
+            "_doc_surface": "QUICKMARKS, and that is the whole point of this group. The owner asked for it 'after Tools Primary and Before Configs', and Configs exists on no other surface — ui.phone_sections (the All Apps taxonomy) has no such section — so the anchor named this array and only this array. It was first built on 2026-09-10 as a '#' section in ui.phone_sections instead, which is the page the owner was not talking about; that section is gone and the folders it held went back where they came from. Position is meaning here: this group sits at index 4, between Tools Primary and Configs, and SuitePhoneAppsFragment.parseGroups preserves array order with no sort anywhere, so the index in this file is the order on the screen.",
+            "_doc_loose_tiles": "Five LOOSE packages and exactly one folder, because a quickmarks group can hold both — see the AI, Inboxes and Data Apps groups above, which each carry `packages` and `folders` together. The All-apps renderer cannot do this (PhoneAppsFragment.renderAllApps draws a section as subhead + folder grid, with no slot for an app belonging to no folder), which is why building this on that surface forced a folder named 'Projects' inside a section named 'Projects'. Nothing here needs a folder but Money.",
+            "_doc_google_health": "com.google.android.apps.fitness is Google Fit, read as the owner's 'Google Health'. The other reading is Health Connect (com.google.android.apps.healthdata, known to this repo as libs/health HealthConnectGateway.PROVIDER_PACKAGE), which is a data broker with no interface to open rather than an app you work in. Swap the pkg if that was meant.",
+            "_doc_clickup": "ClickUp ships under its parent company, Mango Technologies — co.mangotechnologies.clickup. The guessable com.clickup.android resolves to nothing, and since 149c5b9 an unresolved curated entry renders as a permanent 'Not installed' tile rather than hiding, so a wrong id here is furniture on the owner's screen.",
+            "packages": [
+              { "pkg": "co.mangotechnologies.clickup", "label": "ClickUp" },
+              { "pkg": "com.google.android.apps.fitness", "label": "Google Fit" },
+              { "pkg": "com.fatsecret.android", "label": "FatSecret" },
+              { "pkg": "mobi.eup.easygerman", "label": "Todaii German" },
+              { "pkg": "com.nomadmania.presentation", "label": "NomadMania" }
+            ],
+            "_doc_folders": "'Folder.\"Money\"(all bank apps)'. This file's own answer to which packages are the bank apps is the -Money folder in ui.phone_folders (svc_money, Services · Buro), so this list is that folder's twelve exact package ids — its thirteenth keyword is the `pkg^com.btg.pactual.` family rule, which is a classifier pattern and not something a tile can launch. Curating them HERE is a copy, not a move: quickmarks and All apps are two pages, and an app appearing on both is how every other group in this array already works. -Money stays in Buro untouched.",
+            "folders": [
+              {
+                "label": "Money",
+                "packages": [
+                  { "pkg": "es.bancosantander.apps", "label": "Santander" },
+                  { "pkg": "com.revolut.revolut", "label": "Revolut" },
+                  { "pkg": "com.transferwise.android", "label": "Wise" },
+                  { "pkg": "com.paypal.android.p2pmobile", "label": "PayPal" },
+                  { "pkg": "com.google.android.apps.walletnfcrel", "label": "Google Wallet" },
+                  { "pkg": "com.btg.pactual.banking", "label": "BTG Banking" },
+                  { "pkg": "com.btg.pactual.digital.mobile", "label": "BTG Pactual" },
+                  { "pkg": "com.btg.pactual.homebroker.mobile", "label": "BTG Home Broker" },
+                  { "pkg": "com.binance.dev", "label": "Binance" },
+                  { "pkg": "com.bitpanda.bitpanda", "label": "Bitpanda" },
+                  { "pkg": "com.fusionmedia.investing", "label": "Investing.com" },
+                  { "pkg": "com.xe.currency", "label": "XE Currency" }
+                ]
+              }
             ]
           },
           {
@@ -4791,7 +4802,7 @@
         "catch_all": true
       }
     ],
-    "_doc_phone_folders": "Every launchable app is routed to exactly one folder by PhoneAppClassifier: folders are walked in `order`, and the first keyword that matches wins, so a lower order beats a higher one. Keyword forms: (1) `pkg:com.foo.bar` exact packageName; (2) `pkg^com.foo.` packageName.startsWith; (3) `lbl:name` exact case-insensitive label; (4) `lbl~frag` label contains (min 3 chars); (5) a bare string matches anywhere in \"packageName label\" (min 4 chars) — sweeping and collision-prone, so it is used sparingly. Every app installed at the 2026-09-07 rebuild is pinned with an exact `pkg:` rule, which is why the folder lists read as inventories; `pkg^` rules only cover families that will keep growing (our own com.diegonmarcos.cloudlib.*, com.termux.*, VPN vendors). An app no keyword claimed then goes through the METADATA pass before any sink: `match_metadata`, declared beside `match_keywords`, routes on what Android itself publishes about the package, so a newly installed app is placed without a keyword edit. Three rule forms: `cat:game` matches ApplicationInfo.category by the platform constant name lowercased (game, audio, video, image, social, news, maps, productivity, accessibility); `intent:android.intent.category.APP_EMAIL` matches a launcher intent category the package resolves for, i.e. a role the platform grants it; `perm:android.permission.BODY_SENSORS` matches a permission declared in its manifest. Precedence inside the pass is by SIGNAL STRENGTH, not by `order` — category (the app states its own genre) beats intent (the platform grants it a role) beats permission (we infer from what it asks for), and `order` only breaks ties within one signal; otherwise a storage permission on a game would beat cat:game purely because Storage sorts earlier. Keywords always win over metadata: the keyword lists are curated and correct, metadata only keeps an un-curated app off the sink pile. Two sinks, neither with any rules: `others` (order 990, sink=true) catches everything both passes missed and is the triage queue — an app landing there means it needs a rule; `misc` (order 980) is the manual exile, give it explicit keywords to push something there on purpose. The sinks were 910/930 until 2026-09-10: inserting Projects between Tools · Primary and Tools · Media pushed Media into the 800s and Health into the 900s, and a sink sharing an order with a real folder makes match precedence undefined between them, so they moved to the far end of the block instead. That renumbering is not cosmetic and is not optional — test-phone-taxonomy-prefixes.sh T7 asserts a folder's hundred-block equals its prefix's position in ui.phone_sections, so ADDING A SECTION IN THE MIDDLE RENUMBERS EVERY BLOCK BELOW IT. Neither carries a section prefix, so both render last under the Other subhead. The `match_keywords` lists cover THIRD-PARTY packages only: a keyword for one of our own constellation apps is derived at load time from ui.external_apps[].folder and must not be written here as well, or the identity would have two copies again and they could disagree. Manufacturer (Google / Samsung / non-Play-Store) is metadata for Smart Folders (see phone_smart_folders below) — NOT a primary grouping criterion. Order is a three-digit string, one hundred-block per section in phone_sections order, folders alphabetical by label inside the block (110, 120, ...); it drives both render order and match precedence, so a new folder takes the next free number in its block.",
+    "_doc_phone_folders": "Every launchable app is routed to exactly one folder by PhoneAppClassifier: folders are walked in `order`, and the first keyword that matches wins, so a lower order beats a higher one. Keyword forms: (1) `pkg:com.foo.bar` exact packageName; (2) `pkg^com.foo.` packageName.startsWith; (3) `lbl:name` exact case-insensitive label; (4) `lbl~frag` label contains (min 3 chars); (5) a bare string matches anywhere in \"packageName label\" (min 4 chars) — sweeping and collision-prone, so it is used sparingly. Every app installed at the 2026-09-07 rebuild is pinned with an exact `pkg:` rule, which is why the folder lists read as inventories; `pkg^` rules only cover families that will keep growing (our own com.diegonmarcos.cloudlib.*, com.termux.*, VPN vendors). An app no keyword claimed then goes through the METADATA pass before any sink: `match_metadata`, declared beside `match_keywords`, routes on what Android itself publishes about the package, so a newly installed app is placed without a keyword edit. Three rule forms: `cat:game` matches ApplicationInfo.category by the platform constant name lowercased (game, audio, video, image, social, news, maps, productivity, accessibility); `intent:android.intent.category.APP_EMAIL` matches a launcher intent category the package resolves for, i.e. a role the platform grants it; `perm:android.permission.BODY_SENSORS` matches a permission declared in its manifest. Precedence inside the pass is by SIGNAL STRENGTH, not by `order` — category (the app states its own genre) beats intent (the platform grants it a role) beats permission (we infer from what it asks for), and `order` only breaks ties within one signal; otherwise a storage permission on a game would beat cat:game purely because Storage sorts earlier. Keywords always win over metadata: the keyword lists are curated and correct, metadata only keeps an un-curated app off the sink pile. Two sinks, neither with any rules: `others` (order 930, sink=true) catches everything both passes missed and is the triage queue — an app landing there means it needs a rule; `misc` (order 910) is the manual exile, give it explicit keywords to push something there on purpose. Neither carries a section prefix, so both render last under the Other subhead. The `match_keywords` lists cover THIRD-PARTY packages only: a keyword for one of our own constellation apps is derived at load time from ui.external_apps[].folder and must not be written here as well, or the identity would have two copies again and they could disagree. Manufacturer (Google / Samsung / non-Play-Store) is metadata for Smart Folders (see phone_smart_folders below) — NOT a primary grouping criterion. Order is a three-digit string, one hundred-block per section in phone_sections order, folders alphabetical by label inside the block (110, 120, ...); it drives both render order and match precedence, so a new folder takes the next free number in its block.",
     "phone_folders": [
       {
         "id": "svc_gov",
@@ -4808,6 +4819,7 @@
           "pkg:es.aeat.pin24h",
           "pkg:es.correos.app",
           "pkg:es.fnmtrcm.ceres.certificadoDigitalFNMT",
+          "pkg:es.gob.interior.policia.midni",
           "pkg:nl.jool.isic",
           "pkg^br.gov."
         ]
@@ -4851,6 +4863,26 @@
           "pkg:no.ruter.reise",
           "pkg:ride.app",
           "pkg:taxi.android.client"
+        ]
+      },
+      {
+        "id": "svc_money",
+        "order": "150",
+        "label": "-Money",
+        "match_keywords": [
+          "pkg:com.binance.dev",
+          "pkg:com.bitpanda.bitpanda",
+          "pkg:com.btg.pactual.banking",
+          "pkg:com.btg.pactual.digital.mobile",
+          "pkg:com.btg.pactual.homebroker.mobile",
+          "pkg:com.fusionmedia.investing",
+          "pkg:com.google.android.apps.walletnfcrel",
+          "pkg:com.paypal.android.p2pmobile",
+          "pkg:com.revolut.revolut",
+          "pkg:com.transferwise.android",
+          "pkg:com.xe.currency",
+          "pkg:es.bancosantander.apps",
+          "pkg^com.btg.pactual."
         ]
       },
       {
@@ -4916,6 +4948,7 @@
           "pkg:com.hostelworld.app",
           "pkg:com.kautra.android.autobusubilietai",
           "pkg:com.mo2o.alsa",
+          "pkg:com.nomadmania.presentation",
           "pkg:com.rome2rio.www.rome2rio",
           "pkg:com.ryanair.cheapflights",
           "pkg:com.skiplagged",
@@ -5183,6 +5216,7 @@
         "order": "510",
         "label": ".Calendar & Tasks",
         "match_keywords": [
+          "pkg:co.mangotechnologies.clickup",
           "pkg:com.gianlu.timeless",
           "pkg:com.google.android.apps.tasks",
           "pkg:com.google.android.calendar",
@@ -5290,8 +5324,7 @@
           "pkg:com.sec.android.app.camera",
           "pkg:com.sec.android.app.clockpackage",
           "pkg:com.sec.android.app.popupcalculator",
-          "pkg:com.sec.android.app.voicenote",
-          "pkg:es.gob.interior.policia.midni"
+          "pkg:com.sec.android.app.voicenote"
         ],
         "_doc_samsung_camera": "The Samsung stock camera (com.sec.android.app.camera) is HERE because the owner asked for it in Tools · Primary on 2026-09-10, and this is the general-purpose folder of that section — the same landing the last such request got, one entry below. IT IS A MOVE, NOT A COPY: it lived in .Storage (prod_storage, order 530) with the gallery and the two other camera apps until this commit, and prod_storage is walked BEFORE this folder, so leaving the old keyword behind would have kept it in .Storage while the diff read as done. Moving it back is one line — delete this keyword and restore pkg:com.sec.android.app.camera to prod_storage.match_keywords. NOTE WHAT DID NOT MOVE: pl.mobimax.cameraopus (Camera Opus, third-party) and cld.camera (our own Cloud Camera, whose classification now comes from ui.external_apps[id=cloud-camera].folder rather than from a keyword) both stay in .Storage. prod_storage still carries the metadata rules cat:image and intent:…APP_GALLERY, but the keyword pass runs across every folder BEFORE the metadata pass (PhoneAppClassifier.classify), so the keyword below is what decides and no gallery rule can pull the camera back.",
         "_doc_midni": "miDNI (es.gob.interior.policia.midni) is the Spanish National Police's digital DNI, and by the Service/Tool split at the top of this file it is a SERVICE — it is worthless without the provider, and ui._doc_phone_sections names 'government and identity' as Buro's own territory; it lived in -Gov & ID until 2026-09-10. The owner asked for it in Tools · Primary and that is where it is. Recorded here rather than argued: identity you must produce on demand is something you reach for like a calculator, not something you file like a tax return, and where an app SITS is the owner's call. Moving it back is one line — delete this keyword and restore it to svc_gov.",
@@ -5315,42 +5348,8 @@
         ]
       },
       {
-        "id": "proj_money",
-        "order": "710",
-        "label": "#Money",
-        "_doc_label": "THIS IS THE FOLDER THAT WAS '-Money' IN SERVICES · BURO, MOVED WHOLE ON 2026-09-10 — not a new folder beside it, which is why Buro is one folder shorter and nothing was left behind to go stale. The owner asked for 'Folder.\"Money\"(all bank apps)' inside Projects, and the whole of -Money IS what he calls the bank apps; splitting strict banks (Santander, Revolut, BTG) from the rest (Binance, PayPal, Wise, XE, Investing.com) would have invented a distinction he did not make and left a half-gutted -Money behind. The id changed svc_ → proj_ because nothing outside this array referenced it and a 'svc_' id under Projects would mislead the next reader; ui.external_apps[].folder names none of it. The 13 keywords are unchanged: the folder moved, its contents did not.",
-        "match_keywords": [
-          "pkg:com.binance.dev",
-          "pkg:com.bitpanda.bitpanda",
-          "pkg:com.btg.pactual.banking",
-          "pkg:com.btg.pactual.digital.mobile",
-          "pkg:com.btg.pactual.homebroker.mobile",
-          "pkg:com.fusionmedia.investing",
-          "pkg:com.google.android.apps.walletnfcrel",
-          "pkg:com.paypal.android.p2pmobile",
-          "pkg:com.revolut.revolut",
-          "pkg:com.transferwise.android",
-          "pkg:com.xe.currency",
-          "pkg:es.bancosantander.apps",
-          "pkg^com.btg.pactual."
-        ]
-      },
-      {
-        "id": "proj_projects",
-        "order": "720",
-        "label": "#Projects",
-        "_doc_match_keywords": "The five applications the owner named as Projects' own contents. They are a FOLDER and not loose tiles because PhoneAppsFragment.renderAllApps renders sections as (subhead + folder grid) — a section has no slot for an app that belongs to no folder, so 'inside the section' has to mean 'inside a folder inside the section'. The name repeats the section's for want of a better one: he named the apps, not the bucket. Every entry is a MOVE and its old keyword is deleted, because `order` decides the winner and a second copy would be a silent lie about where the app lives — com.nomadmania.presentation left +Travel (240), mobi.eup.easygerman left *Learning (910), com.fatsecret.android and com.google.android.apps.fitness left *Outdoor & Sport (920). co.mangotechnologies.clickup is the only genuinely new package: ClickUp ships under its parent company's name (Mango Technologies), NOT under the com.clickup.android that a reasonable person would guess and that resolves to nothing — verified against the id in clickup.com/download's own Play Store link. com.google.android.apps.fitness is Google FIT and is read here as the owner's 'Google Health'; the alternative reading is Health Connect (com.google.android.apps.healthdata, already known to this repo as libs/health HealthConnectGateway.PROVIDER_PACKAGE), which is a data broker with no interface to open rather than an app you work in — swap the keyword if that was meant.",
-        "match_keywords": [
-          "pkg:co.mangotechnologies.clickup",
-          "pkg:com.fatsecret.android",
-          "pkg:com.google.android.apps.fitness",
-          "pkg:com.nomadmania.presentation",
-          "pkg:mobi.eup.easygerman"
-        ]
-      },
-      {
         "id": "media_games",
-        "order": "810",
+        "order": "710",
         "label": ">Games",
         "match_keywords": [
           "pkg:com.epicgames.portal",
@@ -5365,7 +5364,7 @@
       },
       {
         "id": "media_audio",
-        "order": "820",
+        "order": "720",
         "label": ">Music & Audio",
         "match_keywords": [
           "pkg:at.zuggabecka.radiofm4",
@@ -5385,7 +5384,7 @@
       },
       {
         "id": "media_social",
-        "order": "830",
+        "order": "730",
         "label": ">Social",
         "match_keywords": [
           "pkg:com.badoo.mobile",
@@ -5402,7 +5401,7 @@
       },
       {
         "id": "media_video",
-        "order": "840",
+        "order": "740",
         "label": ">Video",
         "match_keywords": [
           "pkg:com.amazon.avod.thirdpartyclient",
@@ -5418,7 +5417,7 @@
       },
       {
         "id": "hlth_learning",
-        "order": "910",
+        "order": "810",
         "label": "*Learning",
         "match_keywords": [
           "pkg:air.nn.mobile.app.main",
@@ -5428,6 +5427,7 @@
           "pkg:com.hueber.huebermedia",
           "pkg:com.lubosmikusiak.articuli.derdiedas",
           "pkg:com.memrise.android.memrisecompanion",
+          "pkg:mobi.eup.easygerman",
           "pkg:com.rype.go",
           "pkg:com.simonandschuster.pimsleur.unified.android",
           "pkg:com.softissimo.reverso.context",
@@ -5436,8 +5436,17 @@
         ]
       },
       {
+        "id": "hlth_nutrition",
+        "order": "820",
+        "label": "*Nutrition",
+        "_doc_match_keywords": "The owner asked for a Nutrition folder under Tools · Health on 2026-09-10. FatSecret is the ONLY nutrition application this file declares — the whole keyword inventory was searched for the obvious siblings (MyFitnessPal, Yazio, Lifesum, Cronometer, a water tracker) and none of them is in it, and no device was reachable to enumerate what is actually installed. So this folder ships with one member rather than with a guess: an invented package id would render as a permanent 'Not installed' tile, and a folder with no rules at all is rejected by test-phone-taxonomy-prefixes T1. Name the others and they belong here. Google Fit stayed in *Outdoor & Sport: it counts steps, it does not count food.",
+        "match_keywords": [
+          "pkg:com.fatsecret.android"
+        ]
+      },
+      {
         "id": "hlth_outdoor",
-        "order": "920",
+        "order": "830",
         "label": "*Outdoor & Sport",
         "match_keywords": [
           "pkg:com.alltrails.alltrails",
@@ -5446,6 +5455,7 @@
           "pkg:com.garmin.android.apps.dive",
           "pkg:com.garmin.android.apps.explore",
           "pkg:com.garmin.connectiq",
+          "pkg:com.google.android.apps.fitness",
           "pkg:com.outdooractive.Outdooractive",
           "pkg:com.strava",
           "pkg:com.urbandroid.sleep",
@@ -5459,19 +5469,19 @@
       },
       {
         "id": "misc",
-        "order": "980",
+        "order": "910",
         "label": "Misc",
         "match_keywords": []
       },
       {
         "id": "others",
-        "order": "990",
+        "order": "930",
         "label": "Others",
         "match_keywords": [],
         "sink": true
       }
     ],
-    "_doc_phone_sections": "Top-level section headers in the Home Apps/Phone tab. Folders are bucketed under a section by their label's first character: Services · Buro (-), Services · Others (+), Tools · System (_), Tools · Inboxes & AI (@), Tools · Data Apps (.), Tools · Primary (=), Projects (#), Tools · Media (>), Tools · Health (*). A folder whose label starts with none of those prefixes belongs to no section and renders last (that is where the Others and Misc sinks live). The split is Service vs Tool: a SERVICE is a client for one external provider you hold an account, contract or booking with, and is worthless without that provider (Santander, Ryanair, Uber, Airalo, ImmoScout24, Gov.br); a TOOL is software that operates on your own data or device and works with any provider or none (maps, file managers, notes, keyboards, browsers, media players). Entertainment clients are tools, not services: you reach for Netflix the way you reach for a media player. Tools · Inboxes & AI is everything that carries messages in and the assistants you talk to: AI, Chat, Mail, Phone & Contacts, News & Reading — it sits ahead of the other tool sections because it is what you open first and most. Tools · Data Apps holds the tools that own a body of your data (Calendar & Tasks, Docs & Notes, Storage); Tools · Primary holds the general-purpose ones that operate on whatever you point them at (Maps & Weather, Utilities, Web). Tools · Media is what you watch, listen to and play; Tools · Health is what you open to look after yourself — moving your body, learning something, staying informed. PROJECTS (#) is the one section that is not a kind of software, it is a kind of ATTENTION: the handful of applications the owner is actively working through right now, gathered off whatever shelf they would otherwise sit on, which is why its members are moved OUT of their topical folder rather than copied — a package classifies into exactly one folder (first match by `order` wins), so a copy would be a silent lie about where the app lives. It sits immediately after Tools · Primary because that is where the owner asked for it, and being a section rather than a folder is what lets it hold several folders (Money, Projects) instead of one flat list. Expect it to churn: a project ending means its apps go back to their topical folders, and nothing else in this taxonomy is supposed to move that often. Services then split again by why you open them: BURO is the paperwork of being alive, the accounts you must keep in order (money, government and identity, telecom, housing, health, getting to work); OTHERS is discretionary, the services you open because you chose to (travel, shopping, events, jobs). Order = render order. Empty sections (every folder empty) are silently skipped. Phone tab renders one subhead per non-empty section + the folder grid below.",
+    "_doc_phone_sections": "Top-level section headers in the Home Apps/Phone tab. Folders are bucketed under a section by their label's first character: Services · Buro (-), Services · Others (+), Tools · System (_), Tools · Inboxes & AI (@), Tools · Data Apps (.), Tools · Primary (=), Tools · Media (>), Tools · Health (*). A folder whose label starts with none of those prefixes belongs to no section and renders last (that is where the Others and Misc sinks live). The split is Service vs Tool: a SERVICE is a client for one external provider you hold an account, contract or booking with, and is worthless without that provider (Santander, Ryanair, Uber, Airalo, ImmoScout24, Gov.br); a TOOL is software that operates on your own data or device and works with any provider or none (maps, file managers, notes, keyboards, browsers, media players). Entertainment clients are tools, not services: you reach for Netflix the way you reach for a media player. Tools · Inboxes & AI is everything that carries messages in and the assistants you talk to: AI, Chat, Mail, Phone & Contacts, News & Reading — it sits ahead of the other tool sections because it is what you open first and most. Tools · Data Apps holds the tools that own a body of your data (Calendar & Tasks, Docs & Notes, Storage); Tools · Primary holds the general-purpose ones that operate on whatever you point them at (Maps & Weather, Utilities, Web). Tools · Media is what you watch, listen to and play; Tools · Health is what you open to look after yourself — moving your body, learning something, staying informed. Services then split again by why you open them: BURO is the paperwork of being alive, the accounts you must keep in order (money, government and identity, telecom, housing, health, getting to work); OTHERS is discretionary, the services you open because you chose to (travel, shopping, events, jobs). Order = render order. Empty sections (every folder empty) are silently skipped. Phone tab renders one subhead per non-empty section + the folder grid below. PROJECTS IS NOT A SECTION HERE AND MUST NOT BECOME ONE. It was added as a '#' section on 2026-09-10 and removed the same day: the owner asked for it \"after Tools Primary and Before Configs\", and Configs exists only in sections[id=phone].phone_app_groups — the QUICKMARKS page — so the anchor named that array, never this one. It lives there now, at index 4. The difference is not cosmetic: a quickmarks group carries `packages` and `folders` together, so it can hold five loose applications beside one Money folder, while a section here is rendered as subhead + folder grid and has no slot for an app that belongs to no folder — which is what forced a folder called Projects inside a section called Projects, and what the owner objected to by name.",
     "phone_sections": [
       {
         "title": "Services · Buro",
@@ -5496,10 +5506,6 @@
       {
         "title": "Tools · Primary",
         "prefix": "="
-      },
-      {
-        "title": "Projects",
-        "prefix": "#"
       },
       {
         "title": "Tools · Media",

@@ -132,6 +132,15 @@ echo "== T3: every curated package list classifies into a SECTION =="
 # curated list is curated somewhere, and the next surface to grow one will not
 # announce itself to this file; the whole point of the check is to see a list
 # the author of the check never heard of.
+#
+# BOTH ENTRY SHAPES, and the second one is not optional. An element is either a
+# bare package string or {"pkg","label"} — 149c5b9 added the object form so a
+# not-installed tile could carry a readable name, and this filter said
+# `select(type == "string")`, so from that day every entry written in the new
+# shape contributed ZERO assertions here while the check went on reporting a
+# tally of passes. By 2026-09-10 that was three of the five Quickmark groups.
+# A guard that silently stops covering the thing it was written for is worse
+# than no guard, because the tally reads like coverage.
 while IFS=$'\t' read -r where pkg prefix; do
   [ -n "$prefix" ] && ok "$where / $pkg → section '$prefix'" \
                    || bad "$where / $pkg classifies to no section (add pkg:$pkg to ui.phone_folders)"
@@ -140,7 +149,9 @@ done < <(jq -r "$CLASSIFY"'
   | paths(type == "array") as $path
   | select(($path | last) == "packages")
   | ($path | map(tostring) | join(".")) as $where
-  | (getpath($path))[] | select(type == "string") | . as $pkg
+  | (getpath($path))[]
+  | (if type == "string" then . elif type == "object" then .pkg else null end) as $pkg
+  | select($pkg != null)
   | [ $where, $pkg, ($root | sect($pkg)) ] | @tsv' "$BJ")
 
 echo "== T4: every app:<package> target classifies into a SECTION =="

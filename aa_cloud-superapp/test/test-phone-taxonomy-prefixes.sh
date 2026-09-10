@@ -228,75 +228,96 @@ else
     echo "$BAD_PREFIX" | sed 's/^/        /'
 fi
 
-echo "== T9: Projects sits immediately after Tools · Primary =="
-# The owner asked for it "after Tools Primary and Before Configs" on
-# 2026-09-10. Position is render order (ui._doc_phone_sections: "Order =
-# render order"), so it is an assertion about the ARRAY, and it is worth
-# pinning because the hundred-blocks in T7 are derived from this index -- a
-# section reordered here silently misblocks every folder below it.
-AFTER="$(q '.ui.phone_sections | to_entries
-            | (map(select(.value.title == "Tools · Primary")) | first | .key) as $p
-            | .[$p + 1].value.title')"
-if [ "$AFTER" = "Projects" ]; then
-    ok "Projects is the section immediately after Tools · Primary"
+echo "== T9: Projects is a QUICKMARKS group and must not reappear as a section here =="
+# THE FAILURE THIS EXISTS TO KEEP FIXED, and it is the reverse of what stood
+# here on 2026-09-10. The owner asked for a Projects section "after Tools
+# Primary and Before Configs". Configs is a group in
+# sections[id=phone].phone_app_groups and exists NOWHERE in ui.phone_sections,
+# so the anchor named the quickmarks array and only the quickmarks array. It
+# was built here instead, in the All Apps taxonomy, and the owner rejected it.
+#
+# Both halves are asserted because only the pair says "wrong surface": a check
+# that Projects exists in phone_app_groups passes just as happily while a
+# second copy sits here, and that duplicate is exactly the shipped defect.
+# test-phone-projects-quickmark.sh owns the positive half; this owns the
+# negative, next to the prefix machinery that made the mistake possible.
+SECTION_PROJECTS="$(q '.ui.phone_sections[] | select(.title == "Projects") | .prefix' | grep -v '^$' || true)"
+if [ -z "$SECTION_PROJECTS" ]; then
+    ok "ui.phone_sections declares no 'Projects' section (it belongs to phone_app_groups)"
 else
-    bad "the section after Tools · Primary is '$AFTER', expected 'Projects'"
+    bad "ui.phone_sections declares a 'Projects' section on prefix '$SECTION_PROJECTS' — that is the All Apps page, not Quickmarks"
+fi
+# The prefix is the real membership token, so a leftover '#' folder would land
+# under the "Other" subhead rather than vanish -- visible, unexplained, and
+# invisible to the section check above.
+HASH_FOLDERS="$(q '.ui.phone_folders[] | select(.label | startswith("#")) | "\(.id) label=\(.label)"' | grep -v '^$' || true)"
+if [ -z "$HASH_FOLDERS" ]; then
+    ok "no folder label carries the retired '#' prefix"
+else
+    bad "folder(s) still labelled with the retired '#' prefix — they belong to no section and render under 'Other':"
+    echo "$HASH_FOLDERS" | sed 's/^/        /'
 fi
 
-echo "== T10: the Projects intake is a MOVE — present in the new folder, gone from the old =="
-# Both halves, deliberately. Asserting only arrival would pass while the old
-# keyword still sat in a folder with a LOWER order, which is the folder that
-# would actually win -- correct-looking in the diff, wrong on the device, and
-# exactly the shape of the leftover 'pkg^com.termux.' T4 exists for. The old
-# folder is named so the assertion says where it must NOT be, not merely that
-# one owner exists.
-for triple in "pkg:co.mangotechnologies.clickup proj_projects -" \
-              "pkg:com.fatsecret.android proj_projects hlth_outdoor" \
-              "pkg:com.google.android.apps.fitness proj_projects hlth_outdoor" \
-              "pkg:com.nomadmania.presentation proj_projects svc_travel" \
-              "pkg:mobi.eup.easygerman proj_projects hlth_learning" \
-              "pkg:es.bancosantander.apps proj_money svc_money" \
-              "pkg:com.revolut.revolut proj_money svc_money" \
-              "pkg:es.gob.interior.policia.midni prod_utils svc_gov"; do
-    set -- $triple; kw="$1"; want="$2"; gone="$3"
+echo "== T10: the apps that section took are back in their topical folders =="
+# The 2026-09-10 section was populated by MOVING five applications and the
+# whole -Money folder out of the taxonomy. Undoing a section is not just
+# deleting it: a package whose only keyword lived in a deleted folder matches
+# nothing and falls to the `others` sink, which is a silent demotion, not an
+# error. So each intake is named with the folder it must be back in.
+#
+# co.mangotechnologies.clickup is the exception and is NOT a restoration: it
+# was new in that commit and had no earlier home, so it is filed by what it is
+# -- a task board, beside Todoist and Microsoft To Do in .Calendar & Tasks.
+for pair in "pkg:co.mangotechnologies.clickup prod_plan" \
+            "pkg:com.fatsecret.android hlth_nutrition" \
+            "pkg:com.google.android.apps.fitness hlth_outdoor" \
+            "pkg:com.nomadmania.presentation svc_travel" \
+            "pkg:mobi.eup.easygerman hlth_learning" \
+            "pkg:es.bancosantander.apps svc_money" \
+            "pkg:com.revolut.revolut svc_money" \
+            "pkg:com.google.android.apps.walletnfcrel svc_money" \
+            "pkg:es.gob.interior.policia.midni svc_gov"; do
+    set -- $pair; kw="$1"; want="$2"
     owners="$(q "[.ui.phone_folders[] | select((.match_keywords // []) | index(\"$kw\")) | .id] | join(\",\")")"
     if [ "$owners" = "$want" ]; then
         ok "$kw is in $want, and in nothing else"
     else
-        bad "$kw is in '${owners:-NO FOLDER}', expected exactly '$want'${gone:+ (it must no longer be in $gone)}"
+        bad "$kw is in '${owners:-NO FOLDER}', expected exactly '$want'"
     fi
 done
 
-# svc_money moved WHOLE and must not have been left behind as a husk: an
-# empty -Money in Buro would be hidden by renderAllApps (empty folders are
-# skipped) and so would read as correct from the diff alone.
-STALE="$(q '[.ui.phone_folders[] | select(.id == "svc_money" or .label == "-Money") | .id] | join(",")')"
-if [ -z "$STALE" ]; then
-    ok "no '-Money' folder is left behind in Services · Buro"
-else
-    bad "svc_money/-Money still exists ($STALE) — the folder was copied into Projects, not moved"
-fi
+# -Money is back in Services · Buro under its own id, and no proj_ husk is left
+# behind. An orphaned proj_ folder would keep claiming these packages by
+# `order` while reading as dead data in the diff.
+MONEY="$(q '[.ui.phone_folders[] | select(.id == "svc_money") | .label] | join("")')"
+[ "$MONEY" = "-Money" ] && ok "svc_money is back in Services · Buro as '-Money'" \
+                        || bad "svc_money label is '${MONEY:-ABSENT}', expected '-Money'"
+PROJ="$(q '[.ui.phone_folders[] | select(.id | startswith("proj_")) | .id] | join(",")')"
+[ -z "$PROJ" ] && ok "no proj_* folder survives in ui.phone_folders" \
+               || bad "proj_* folder(s) still declared ($PROJ) — they belong to a section that no longer exists"
 
-echo "== T11: every package keyword in the Projects section is a well-formed package id =="
-# w258 made an unresolved curated entry render as a visible "Not installed"
-# tile instead of hiding, so a typo is now permanent furniture on the owner's
-# screen rather than a silent absence. co.mangotechnologies.clickup is the
-# live example: the guessable com.clickup.android resolves to nothing at all.
-# Two or more dot-separated segments, each starting with a letter -- the
-# Android manifest rule, minus the keyword's own "pkg:"/"pkg^" verb.
+echo "== T11: every package keyword in the taxonomy is a well-formed package id =="
+# Since 149c5b9 an unresolved curated entry renders as a visible "Not
+# installed" tile instead of hiding, so a typo is permanent furniture on the
+# owner's screen rather than a silent absence. This used to check only the
+# folders under the Projects section; with that section gone the check would
+# have gone vacuous, so it covers EVERY folder instead -- the typo risk was
+# never specific to one section.
+#
+# Two or more dot-separated segments, each starting with a letter: the Android
+# manifest rule, minus the keyword's own "pkg:"/"pkg^" verb. A trailing dot is
+# allowed because that is what a `pkg^com.termux.` family rule looks like.
 MALFORMED="$(q '
-  (.ui.phone_sections | map(select(.title == "Projects") | .prefix)) as $p
-  | .ui.phone_folders[]
-  | select(.label[0:1] as $c | $p | index($c))
+  .ui.phone_folders[]
   | . as $folder
   | (.match_keywords // [])[]
   | select(startswith("pkg:") or startswith("pkg^"))
   | .[4:] | select(test("^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+\\.?$") | not)
   | "\($folder.id) \(.)"' | grep -v '^$' || true)"
 if [ -z "$MALFORMED" ]; then
-    ok "every Projects package keyword is a well-formed Android package id"
+    ok "all $(q '[.ui.phone_folders[] | (.match_keywords // [])[] | select(startswith("pkg:") or startswith("pkg^"))] | length') package keywords are well-formed Android package ids"
 else
-    bad "malformed package id(s) in the Projects section — these can never resolve:"
+    bad "malformed package id(s) — these can never resolve:"
     echo "$MALFORMED" | sed 's/^/        /'
 fi
 
