@@ -36,6 +36,7 @@ SHELL_KT="$APP/app/src/main/java/com/diegonmarcos/superapp/ShellActivity.kt"
 NAV="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherNavController.kt"
 LAYOUT="$APP/app/src/main/res/layout/activity_main.xml"
 STRINGS="$APP/app/src/main/res/values/strings.xml"
+STRINGS_ES="$APP/app/src/main/res/values-es/strings.xml"
 RECENT="$LIBS/launcher-apptabs/src/main/java/com/diegonmarcos/superapp/apptabs/RecentTabs.kt"
 PREFS="$LIBS/launcher-apptabs/src/main/java/com/diegonmarcos/superapp/apptabs/AppTabPrefs.kt"
 CANOPUS="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/CanopusStar.kt"
@@ -153,9 +154,22 @@ for k in star_recent_tabs_desc recent_tabs_empty onehand_stars_intro onehand_sta
     && ok "string resource $k declared in values/" \
     || bad "string resource $k missing from values/"
 done
-[ ! -d "$APP/app/src/main/res/values-es" ] \
-  && ok "no partial locale invented (values/ and values-sw600dp/ only)" \
-  || bad "a values-es/ appeared — that is its own scheduled task"
+# The Spanish locale is no longer a scheduled task: it landed in 75089bd57 and
+# aa_cloud-superapp/app/src/main/res/values-es/ exists. The assertion that used
+# to live here REFUSED that directory ("a values-es/ appeared — that is its own
+# scheduled task"), so from the moment the locale was deliberately added this
+# tester was asserting the absence of work the owner had asked for. It is gone.
+#
+# What replaces it is the rule that is actually in force now: the owner reads
+# these apps in Spanish, so every user-visible string this star adds needs a
+# resource in BOTH values/ and values-es/. Checking only values/ is how a
+# string ships English-only to a Spanish phone, which is exactly the regression
+# 75089bd57 was written to repair.
+for k in star_recent_tabs_desc recent_tabs_empty onehand_stars_intro onehand_star_recent_tabs_what; do
+  grep -qF "name=\"$k\"" "$STRINGS_ES" \
+    && ok "string resource $k translated in values-es/" \
+    || bad "string resource $k missing from values-es/ — a Spanish phone would draw the English string"
+done
 grep -qF 'android:contentDescription="@string/star_recent_tabs_desc"' "$LAYOUT" \
   && ok "the new star's content description is a resource, not a literal" \
   || bad "the new star carries a hardcoded content description"
