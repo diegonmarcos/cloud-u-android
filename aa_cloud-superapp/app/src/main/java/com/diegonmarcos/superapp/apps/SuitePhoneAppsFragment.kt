@@ -26,6 +26,7 @@ import android.view.ViewGroup
 import android.view.Window
 import android.widget.FrameLayout
 import android.widget.GridLayout
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -43,7 +44,12 @@ import org.json.JSONArray
  *
  * Render shape mirrors GroupedTilesFragment (Cloud-side):
  *   • One subhead per group title.
- *   • UI_PHONE_GRID_COLUMNS-col grid of icon tiles below it.
+ *   • ONE sideways-scrollable line of icon tiles below it, never two —
+ *     the same HorizontalScrollView strip GroupedTilesFragment.tileRow
+ *     uses, for the same reason it adopted one. UI_PHONE_GRID_COLUMNS
+ *     now sets how many tiles are visible at rest rather than where the
+ *     line breaks, because there is no longer a line break. See
+ *     [tileStrip].
  *   • A group with no declared entries at all is skipped, so the
  *     visual layout never has dead headers. A group whose apps merely
  *     are not INSTALLED still renders — see below.
@@ -197,7 +203,6 @@ class SuitePhoneAppsFragment : Fragment() {
         // beat the warm-up thread here — the same fall-through renderAllApps
         // below already relies on.
         val byPkg = PhoneAppsFragment.snapshot(ctx).associateBy { it.packageName }
-        val columns = BuildConfig.UI_PHONE_GRID_COLUMNS
 
         // Phone is the THIRD-PARTY half of the launcher. Everything the
         // constellation already offers a way into lives one tab over in
@@ -260,33 +265,21 @@ class SuitePhoneAppsFragment : Fragment() {
             anyRendered = true
             root.addView(subhead(ctx, group.title))
 
-            // Render packages first, then folder tiles, in one continuous
-            // grid — so the folder cards flow naturally as the next
-            // column after the last app. Tile builders are heterogenous
-            // (View, not the same type) so we use a List<View> and
-            // chunk over it.
+            // Render packages first, then folder tiles, on ONE line — so the
+            // folder cards flow naturally as the next cell after the last app.
+            // Tile builders are heterogenous (View, not the same type) so we
+            // collect a List<View> and hand the whole lot to one strip.
+            //
+            // ONE STRIP, NOT A CHUNKED GRID (#260). This used to walk
+            // tiles.chunked(columns) and add one HORIZONTAL LinearLayout PER
+            // CHUNK to this vertical parent, and the trailing spacers that went
+            // with it existed only to keep a short last row left-aligned —
+            // which is a thing only a grid has. See [tileStrip] for why no
+            // amount of tile sizing could ever have stopped that wrapping.
             val tiles = mutableListOf<View>()
             for (a in packageTiles) tiles.add(makeAppTile(ctx, a, root))
             for ((folder, contents) in folderTiles) tiles.add(makeFolderTile(ctx, folder.label, contents, root))
-
-            for (rowChunk in tiles.chunked(columns)) {
-                val row = LinearLayout(ctx).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    )
-                }
-                for (tile in rowChunk) row.addView(tile)
-                // Pad short trailing row with weighted spacers so the last
-                // row stays left-aligned within its group.
-                repeat(columns - rowChunk.size) {
-                    row.addView(View(ctx).apply {
-                        layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
-                    })
-                }
-                root.addView(row)
-            }
+            root.addView(tileStrip(ctx, tiles))
         }
         if (!anyRendered) {
             root.addView(TextView(ctx).apply {
@@ -311,7 +304,7 @@ class SuitePhoneAppsFragment : Fragment() {
         //    Apps.
         if (BuildConfig.UI_SUITE_ACTIVE_APPS_ENABLED) {
             usageSection(
-                ctx, root, columns,
+                ctx, root,
                 title = BuildConfig.UI_SUITE_ACTIVE_APPS_TITLE,
                 apps = AppUsageProvider.activeNow(ctx)
                     .asSequence()
@@ -331,7 +324,7 @@ class SuitePhoneAppsFragment : Fragment() {
         //    front. Same knobs, same hidden-when-empty behaviour.
         if (BuildConfig.UI_SUITE_LAST_APPS_ENABLED) {
             usageSection(
-                ctx, root, columns,
+                ctx, root,
                 title = BuildConfig.UI_SUITE_LAST_APPS_TITLE,
                 apps = AppUsageProvider.lastOpened(ctx)
                     .asSequence()
@@ -363,6 +356,16 @@ class SuitePhoneAppsFragment : Fragment() {
         // frame so neither one blocks the other, and the scroll position does
         // not move because they are added BELOW the visible content.
         //
+        // A POSTED FRAME WAS NOT ENOUGH FOR SMART FOLDERS, and that is what
+        // #261 turned out to be. Deferring work to a later frame only moves
+        // which frame it janks; it is still the main thread doing it. That is
+        // a fair trade for All Apps, which is a lot of view construction and
+        // nothing else, and no trade at all for Smart Folders, whose cost is
+        // about a thousand blocking package-manager IPCs before the first View
+        // exists. So All Apps keeps the posted frame and Smart Folders gets a
+        // background thread plus a collapsed section — see
+        // [addSmartFoldersSection].
+        //
         // ponytail: one section per frame, not one row per frame. If All Apps
         // alone still drops frames on the slowest device, chunk its rows the
         // same way rather than reaching for a RecyclerView rewrite.
@@ -372,11 +375,13 @@ class SuitePhoneAppsFragment : Fragment() {
             PhoneAppsFragment.renderAllApps(ctx, root, ourApps)
 
             // ── Smart Folders — dynamic folders (Samsung, Google, Recent 7,
-            //    …), same shared renderer as PhoneAppsFragment. Self-headed.
+            //    …), same shared renderer as PhoneAppsFragment. LAZY: the
+            //    header lands on this frame, the contents arrive off a
+            //    background thread. See [addSmartFoldersSection].
             root.post {
                 if (!isAdded) return@post
                 root.addView(sectionDivider(ctx))
-                PhoneAppsFragment.renderSmartFolders(ctx, root, ourApps)
+                addSmartFoldersSection(ctx, root, ourApps)
 
                 // Refresh belongs at the VERY BOTTOM, so it has to be added
                 // from inside the last deferred section — added in buildPage's
@@ -387,6 +392,125 @@ class SuitePhoneAppsFragment : Fragment() {
                     buildPage(ctx, root)
                 })
             }
+        }
+    }
+
+    /**
+     * Smart Folders, lazily — #261.
+     *
+     * THE SHAPE THE OWNER ASKED FOR: the section starts COLLAPSED, the page is
+     * finished and interactive without it, the work happens on a background
+     * thread, and the section expands itself when the result arrives.
+     *
+     * WHAT WAS ACTUALLY SLOW, since the request was phrased as a hypothesis —
+     * "maybe the delay to open it is the Smart Folders". It is, and the cost is
+     * not the views: PhoneAppsFragment.renderSmartFoldersAsync's own
+     * documentation counts it, roughly a thousand synchronous PackageManager
+     * binder calls from the four install_source rules in build.json, plus five
+     * ranking rules that each walk a multi-day usage, network or battery
+     * history. All of it ran on the main thread inside a posted frame, so the
+     * page was drawn but frozen until it finished. The two sections above this
+     * one are merely a lot of views — real work, but bounded and with no IPC in
+     * it — which is why they stay on the posted-frame treatment they already
+     * had and this one gets a thread.
+     *
+     * THREE OUTCOMES, THREE DIFFERENT THINGS TO SAY. A section sitting
+     * collapsed and silent cannot be told apart from one still loading, and one
+     * that expands into an empty box is worse. So the header carries the state:
+     * it says "loading…" only while that is true, "none" when the rules matched
+     * nothing, "unavailable" when the computation threw — and neither of the
+     * last two auto-expands into nothing.
+     *
+     * AND IT DOES NOT FIGHT THE USER. Any tap on the header, including one
+     * while the fetch is still in flight, marks the state as theirs, and the
+     * auto-expand then declines to override it. "Expand when ready" is not
+     * "expand no matter what they just did".
+     *
+     * NO STORED PREFERENCE, DELIBERATELY. Collapsed-at-birth is the whole
+     * point: a persisted "expanded" from a previous visit would shadow it and
+     * the owner would see the old blocking behaviour on the one device that
+     * matters. Nothing on this page has ever stored a collapse state — the
+     * page-level one in AggregatorStackFragment belongs to the stack pages and
+     * their filter rows — so there is nothing here to migrate, and adding a
+     * second parallel mechanism would only create the thing to migrate later.
+     */
+    private fun addSmartFoldersSection(ctx: Context, root: LinearLayout, exclude: Set<String>) {
+        val body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        // The one line that explains an empty or failed section once it is
+        // opened. Hidden the moment real folders render into [body].
+        val status = TextView(ctx).apply {
+            text = "Working in the background…"
+            setTextColor(0x99FFFFFF.toInt())
+            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+            setPadding(dp(ctx, 4), dp(ctx, 8), 0, dp(ctx, 8))
+        }
+        val section = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE      // COLLAPSED AT BIRTH
+            addView(status)
+            addView(body)
+        }
+        val header = subhead(ctx, "").apply {
+            isClickable = true
+            isFocusable = true
+            val outVal = android.util.TypedValue()
+            ctx.theme.resolveAttribute(android.R.attr.selectableItemBackground, outVal, true)
+            if (outVal.resourceId != 0) setBackgroundResource(outVal.resourceId)
+        }
+
+        var expanded = false
+        var userChose = false
+        // Suffix on the header, and the section's entire status readout. Empty
+        // once real content has rendered, because then the folders say it.
+        var note = "loading…"
+
+        fun paint() {
+            section.visibility = if (expanded) View.VISIBLE else View.GONE
+            val chevron = if (expanded) "▾" else "▸"
+            header.text =
+                if (note.isEmpty()) "Smart Folders  $chevron"
+                else "Smart Folders  $chevron  $note"
+            // The chevron is invisible to a screen reader, and so is the
+            // difference between a section that is still working and one that
+            // came back empty. Both go in, in words.
+            val state = if (expanded) "expanded" else "collapsed"
+            header.contentDescription =
+                if (note.isEmpty()) "Smart Folders, $state"
+                else "Smart Folders, $state, $note"
+        }
+
+        header.setOnClickListener {
+            expanded = !expanded
+            // Recorded BEFORE any result can arrive, so a background answer
+            // landing a moment later leaves their choice alone.
+            userChose = true
+            paint()
+        }
+        paint()
+        root.addView(header)
+        root.addView(section)
+
+        PhoneAppsFragment.renderSmartFoldersAsync(ctx, body, exclude) { outcome ->
+            // renderSmartFoldersAsync already refuses to touch a detached view.
+            // This refuses to touch a detached fragment's own state on top of
+            // it — the callback closes over `expanded`/`note`, which belong to
+            // a view hierarchy that may no longer exist.
+            if (!isAdded) return@renderSmartFoldersAsync
+            when (outcome) {
+                true -> {
+                    status.visibility = View.GONE
+                    note = ""
+                    if (!userChose) expanded = true
+                }
+                false -> note = "none"
+                null  -> note = "unavailable"
+            }
+            if (outcome != true) {
+                status.text =
+                    if (outcome == false) "No Smart Folder matches the apps on this device."
+                    else "Smart Folders could not be built. Refresh at the bottom of the page to try again."
+            }
+            paint()
         }
     }
 
@@ -466,41 +590,85 @@ class SuitePhoneAppsFragment : Fragment() {
         ).apply { topMargin = dp(ctx, 16); bottomMargin = dp(ctx, 4) }
     }
 
-    /** A subheading plus a grid of app tiles — the shape both Quickmarks
-     *  usage sections (Active Apps, Last Apps) render. Draws nothing at all
-     *  when [apps] is empty, so a missing usage-access grant leaves no
-     *  orphan heading behind. */
+    /** A subheading plus ONE sideways-scrollable line of app tiles — the shape
+     *  both Quickmarks usage sections (Active Apps, Last Apps) render. Draws
+     *  nothing at all when [apps] is empty, so a missing usage-access grant
+     *  leaves no orphan heading behind.
+     *
+     *  THESE COUNT AS QUICKMARKS LINES TOO (#260). The owner's "all apps line
+     *  here" is plural: Active Apps and Last Apps sit inside the Quickmarks
+     *  area, above the All Apps divider, and used to chunk into rows exactly
+     *  like the curated groups did. Fixing only the curated groups would have
+     *  left two sections on the same surface still wrapping. */
     private fun usageSection(
         ctx: Context,
         root: LinearLayout,
-        columns: Int,
         title: String,
         apps: List<AppInfo>,
     ) {
         if (apps.isEmpty()) return
         root.addView(subhead(ctx, title))
-        for (rowChunk in apps.chunked(columns)) {
-            val row = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                )
-            }
-            // Enumerated, not curated: `apps` comes from AppUsageProvider, so
-            // every entry is installed by construction and none of them can be
-            // a placeholder. Passing `root` as the Snackbar anchor costs
-            // nothing and keeps one tile builder for the whole page.
-            for (a in rowChunk) row.addView(makeAppTile(ctx, a, root))
-            // Pad a short last row so its tiles keep column alignment
-            // instead of stretching across the full width.
-            repeat(columns - rowChunk.size) {
-                row.addView(View(ctx).apply {
-                    layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
-                })
-            }
-            root.addView(row)
+        // Enumerated, not curated: `apps` comes from AppUsageProvider, so
+        // every entry is installed by construction and none of them can be
+        // a placeholder. Passing `root` as the Snackbar anchor costs
+        // nothing and keeps one tile builder for the whole page.
+        root.addView(tileStrip(ctx, apps.map { makeAppTile(ctx, it, root) }))
+    }
+
+    /**
+     * ONE horizontally-scrollable line of tiles. This is the whole of #260:
+     * every row of apps in the Quickmarks area stays on a single line and
+     * scrolls sideways when the tiles do not fit.
+     *
+     * WHAT WAS ACTUALLY WRAPPING, because the answer is not what the symptom
+     * suggests. Nothing on this page was ever a flow layout, a FlexboxLayout
+     * or a GridLayoutManager — the wrap was arithmetic. Each section chunked
+     * its tiles into groups of UI_PHONE_GRID_COLUMNS and added ONE HORIZONTAL
+     * LinearLayout PER CHUNK to a vertical parent, so a group of thirteen apps
+     * drew three stacked rows by construction. No change to tile width could
+     * ever have fixed that: the second line was not overflow, it was a second
+     * View, and it would have gone on being added at exactly six tiles however
+     * wide those tiles were.
+     *
+     * WHY THE TILES HAD TO CHANGE WIDTH ANYWAY. They sized themselves with
+     * LayoutParams(0, WRAP_CONTENT, 1f) — zero width plus a weight, which only
+     * ever resolves against a parent that has a bounded width to share out. A
+     * HorizontalScrollView measures its child with an UNSPECIFIED width spec,
+     * so there is no excess to distribute and every weighted child keeps its
+     * zero. Fixed cells here are not a style preference; a weighted tile inside
+     * a scrolling row is an invisible one. See [cellWidth].
+     */
+    private fun tileStrip(ctx: Context, tiles: List<View>): View {
+        val strip = HorizontalScrollView(ctx).apply {
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            // A strip that cannot reach its final app is the same bug wearing a
+            // different hat, so the content is allowed to draw into the
+            // padding rather than being clipped at it.
+            clipToPadding = false
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            )
         }
+        val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        for (tile in tiles) row.addView(tile)
+        strip.addView(row)
+        return strip
+    }
+
+    /** Width of one tile inside a [tileStrip].
+     *
+     *  DERIVED FROM build.json::ui.phone_grid_columns, not a new constant, so a
+     *  strip shows exactly as many apps at rest as the wrapped grid used to fit
+     *  on a line — this is the same number the weighted tiles resolved to, just
+     *  computed instead of negotiated. The columns knob keeps meaning what it
+     *  meant; it governs density now rather than where the line breaks. */
+    private fun cellWidth(ctx: Context): Int {
+        val columns = BuildConfig.UI_PHONE_GRID_COLUMNS.coerceAtLeast(1)
+        // The page root carries dp(8) of padding on each side — see onCreateView.
+        val usable = ctx.resources.displayMetrics.widthPixels - 2 * dp(ctx, 8)
+        return (usable / columns).coerceAtLeast(dp(ctx, 48))
     }
 
     private fun subhead(ctx: Context, t: String) = TextView(ctx).apply {
@@ -540,7 +708,11 @@ class SuitePhoneAppsFragment : Fragment() {
         orientation = LinearLayout.VERTICAL
         gravity = android.view.Gravity.CENTER_HORIZONTAL
         val pad = dp(ctx, 6); setPadding(pad, pad, pad, pad)
-        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        // FIXED WIDTH, NOT A WEIGHT. This cell lives in a horizontally
+        // scrolling row now, and a weight there resolves to nothing — see
+        // [tileStrip]. cellWidth() reproduces the width the weight used to
+        // negotiate, so the tiles look exactly as they did.
+        layoutParams = LinearLayout.LayoutParams(cellWidth(ctx), LinearLayout.LayoutParams.WRAP_CONTENT)
         isClickable = true
         isFocusable = true
         val outVal = android.util.TypedValue()
@@ -643,7 +815,9 @@ class SuitePhoneAppsFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             val pad = dp(ctx, 6); setPadding(pad, pad, pad, pad)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            // Same fixed cell as makeAppTile, for the same reason — a folder
+            // tile is one more cell in the same scrolling strip.
+            layoutParams = LinearLayout.LayoutParams(cellWidth(ctx), LinearLayout.LayoutParams.WRAP_CONTENT)
             isClickable = true; isFocusable = true
             val outVal = android.util.TypedValue()
             ctx.theme.resolveAttribute(

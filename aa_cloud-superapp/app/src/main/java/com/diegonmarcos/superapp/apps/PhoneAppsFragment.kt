@@ -274,34 +274,143 @@ class PhoneAppsFragment : Fragment() {
          *  Stores, …). Same UX as a real folder card: tap opens the same
          *  dialog with the filtered apps. Rules operate over the SAME
          *  master `apps` list so contents track the source enumeration in
-         *  lockstep. Shared the same way as [renderAllApps]. */
+         *  lockstep. Shared the same way as [renderAllApps].
+         *
+         *  SYNCHRONOUS, which is only acceptable where the caller has already
+         *  drawn its page and nothing is waiting on the frame. What that
+         *  actually costs is counted in [renderSmartFoldersAsync] — read it
+         *  before adding a third caller of this one. */
         fun renderSmartFolders(
             ctx: Context,
             rootCol: LinearLayout,
             exclude: Set<String> = emptySet(),
         ) {
+            val rendered = smartFoldersCached(ctx, exclude)
+            if (rendered.isEmpty()) return
+            rootCol.addView(subhead(ctx, "Smart Folders"))
+            renderSmartFolderBody(ctx, rootCol, rendered)
+        }
+
+        /**
+         * The same Smart Folders, computed OFF the main thread and then
+         * rendered into [body] back on it.
+         *
+         * WHAT IS ACTUALLY SLOW HERE, because it is not the view inflation the
+         * word "render" suggests. build.json declares fourteen smart folders
+         * and four of them — google_play, fdroid, uptodown, direct — carry an
+         * install_source rule. [PhoneSmartFolders.Rule.matches] answers those
+         * by calling PackageManager.getInstallSourceInfo ONCE PER APP, and the
+         * install_source_not one calls getApplicationInfo once per app on top
+         * of that; every one is a synchronous binder round trip to the package
+         * manager. On a phone with two hundred launchable apps that is on the
+         * order of a thousand IPCs before a single View is created. Five more
+         * folders rank apps through UsageStatsManager, NetworkStatsManager and
+         * the battery estimator, each walking its own multi-day history. None
+         * of that work touches a View and all of it used to happen on the main
+         * thread — which is the delay the owner reported as this page taking
+         * forever to open.
+         *
+         * [onDone] reports which of three different things happened, because a
+         * caller that cannot tell them apart has no way to stop showing a
+         * spinner:
+         *   true  — folders were rendered into [body]
+         *   false — the rules matched nothing on this device
+         *   null  — the computation itself threw
+         */
+        fun renderSmartFoldersAsync(
+            ctx: Context,
+            body: LinearLayout,
+            exclude: Set<String> = emptySet(),
+            onDone: (Boolean?) -> Unit,
+        ) {
+            // Already computed once in this process: render on the spot and
+            // answer synchronously. THIS is what stops a rotation or a
+            // re-entry paying the thousand IPCs again — the second visit never
+            // starts a thread at all.
+            sCachedSmart[exclude]?.let { cached ->
+                renderSmartFolderBody(ctx, body, cached)
+                onDone(cached.isNotEmpty())
+                return
+            }
+            // applicationContext for the background half. The thread routinely
+            // outlives the fragment that started it, and holding that
+            // fragment's Activity for the duration is a leak worth not having.
+            val appContext = ctx.applicationContext
+            Thread {
+                val computed = runCatching { computeSmartFolders(appContext, exclude) }.getOrNull()
+                if (computed != null) sCachedSmart = sCachedSmart + (exclude to computed)
+                body.post {
+                    // The user may well have navigated away while the package
+                    // manager was answering. A detached body belongs to a
+                    // torn-down view hierarchy and must not be written to —
+                    // this is the standard crash for exactly this pattern.
+                    if (!body.isAttachedToWindow) return@post
+                    // body.context, not the captured one: by here the only
+                    // Context proven still alive is the view's own.
+                    if (computed != null) renderSmartFolderBody(body.context, body, computed)
+                    onDone(computed?.isNotEmpty())
+                }
+            }.apply {
+                // Same plain-Thread idiom as [warmUp] directly below. This app
+                // does not depend on kotlinx-coroutines and one lazy section is
+                // not the reason to start.
+                name = "PhoneAppsFragment.smartFolders"
+                isDaemon = true
+                priority = Thread.MIN_PRIORITY
+                start()
+            }
+        }
+
+        /** Selection only — creates no Views, so it is safe on a background
+         *  thread. Every expensive call named in [renderSmartFoldersAsync]'s
+         *  documentation happens inside here. */
+        private fun computeSmartFolders(
+            ctx: Context,
+            exclude: Set<String>,
+        ): List<SmartRendered> {
             val all  = sCachedApps ?: collectLaunchableAppsStatic(ctx).also { sCachedApps = it }
             val apps = if (exclude.isEmpty()) all else all.filter { it.packageName !in exclude }
-            val columns = BuildConfig.UI_PHONE_GRID_COLUMNS
-            val smart = PhoneSmartFolders.loadFromBuildConfig()
-            val visibleSmart = smart.mapNotNull { sf ->
+            return PhoneSmartFolders.loadFromBuildConfig().mapNotNull { sf ->
                 val matches = sf.select(ctx, apps)
                 if (matches.isEmpty()) null else SmartRendered(sf, matches)
             }
-            if (visibleSmart.isEmpty()) return
-            rootCol.addView(subhead(ctx, "Smart Folders"))
+        }
+
+        /** [computeSmartFolders] through the process-level cache.
+         *
+         *  KEYED ON `exclude`, because the two callers do not pass the same
+         *  set — the standalone Phone tab excludes nothing, the merged
+         *  Suite→Phone page excludes the constellation's own packages. Storing
+         *  one under the other's key is the subset leak sCachedGrouped already
+         *  documents above; a key costs one line and cannot make that mistake. */
+        private fun smartFoldersCached(
+            ctx: Context,
+            exclude: Set<String>,
+        ): List<SmartRendered> = sCachedSmart[exclude] ?: computeSmartFolders(ctx, exclude)
+            .also { sCachedSmart = sCachedSmart + (exclude to it) }
+
+        /** The view half: one subhead per `group` plus its grid. Deliberately
+         *  does NOT draw the "Smart Folders" heading itself — the lazy caller
+         *  owns that, because for it the heading is a CONTROL that collapses
+         *  the section and so has to exist before there is anything under it. */
+        private fun renderSmartFolderBody(
+            ctx: Context,
+            rootCol: LinearLayout,
+            rendered: List<SmartRendered>,
+        ) {
+            val columns = BuildConfig.UI_PHONE_GRID_COLUMNS
             // Smaller "subtile" cells for Smart Folders — denser than the
             // A-Z/category grid above, and grouped under sub-labels
             // (Usage/Stores/Dev/Rank/…) per build.json's `group` field.
             val subtileCell = dp(ctx, 44)
             val subtileColumns = columns + 1
-            visibleSmart.groupBy { it.spec.group ?: "Other" }.forEach { (group, rendered) ->
+            rendered.groupBy { it.spec.group ?: "Other" }.forEach { (group, inGroup) ->
                 rootCol.addView(subhead(ctx, group))
                 // Synthesize a Folder per Smart Folder so the existing
                 // renderFolderGrid + makeFolderCard helpers light up
                 // unchanged. id prefixed with "smart:" so it can't collide
                 // with a real folder id from build.json.
-                val syntheticFolders = rendered.map { vs ->
+                val syntheticFolders = inGroup.map { vs ->
                     PhoneFolders.Folder(
                         id            = "smart:${vs.spec.id}",
                         order         = "zz",
@@ -309,7 +418,7 @@ class PhoneAppsFragment : Fragment() {
                         matchKeywords = emptyList(),
                     )
                 }
-                val smartGrouped = rendered.associate { vs -> "smart:${vs.spec.id}" to vs.apps }
+                val smartGrouped = inGroup.associate { vs -> "smart:${vs.spec.id}" to vs.apps }
                 renderFolderGrid(rootCol, ctx, syntheticFolders, smartGrouped, subtileColumns, subtileCell)
             }
         }
@@ -556,6 +665,16 @@ class PhoneAppsFragment : Fragment() {
         @Volatile private var sCachedApps:    List<PhoneApp>? = null
         @Volatile private var sCachedGrouped: Map<String, List<PhoneApp>>? = null
 
+        /** Smart-folder SELECTION results, keyed by the caller's `exclude`
+         *  set — see [smartFoldersCached]. Separate from [sCachedGrouped]
+         *  because it is a different and far more expensive computation: the
+         *  grouped cache is a pure classification over data already in memory,
+         *  this one is the thousand package-manager round trips
+         *  [renderSmartFoldersAsync] describes. Replaced wholesale rather than
+         *  mutated, so the @Volatile publication covers the whole map; a race
+         *  between two callers can only cost one recomputation. */
+        @Volatile private var sCachedSmart: Map<Set<String>, List<SmartRendered>> = emptyMap()
+
         /** Invalidate every cache slot.
          *
          *  NO LONGER UNUSED. This said "Currently unused; killing + reopening
@@ -570,6 +689,12 @@ class PhoneAppsFragment : Fragment() {
             sCachedFolders = null
             sCachedApps = null
             sCachedGrouped = null
+            // The smart-folder selection is derived from sCachedApps, so it is
+            // stale the instant that is. Leaving it behind would make the
+            // refresh button redraw yesterday's Stores and Rank folders over a
+            // freshly enumerated All Apps — the two halves of one page
+            // disagreeing, which reads as the refresh not having worked.
+            sCachedSmart = emptyMap()
         }
 
         /** Warm-up: kick a background Thread that enumerates installed
