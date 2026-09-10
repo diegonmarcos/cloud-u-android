@@ -132,7 +132,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -2466,8 +2465,8 @@ private fun MessageHeader(
 /**
  * The message's tags under the sender: where it IS, and what it is MARKED with.
  *
- * The two are drawn differently on purpose. A mailbox chip carries a folder icon because it names
- * somewhere the message can be found; a keyword chip carries a label icon because it names
+ * The two are drawn differently on purpose. A mailbox pill carries a folder icon because it names
+ * somewhere the message can be found; a keyword pill carries a label icon because it names
  * something written on the message. They are the two multi-valued fields JMAP gives a message
  * (`mailboxIds` and `keywords`) and they behave differently under removal, so a reader who cannot
  * tell them apart here will be surprised by the sheet that edits them.
@@ -2480,31 +2479,68 @@ private fun MessageHeader(
 @Composable
 private fun MessageTagRow(tags: List<MessageTag>) {
     FlowRow(
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
+        // Wrapped lines used to sit flush against each other, because `FlowRow` separates them by
+        // nothing and every gap the eye read as separation was really blank reserved INSIDE the
+        // chips. With the pills measuring their own content that separation has to be stated.
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         for (tag in tags) {
-            AssistChip(
-                onClick = {},
-                enabled = false,
-                label = { Text(tag.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                leadingIcon = {
-                    Icon(
-                        when (tag.kind) {
-                            TagKind.MAILBOX -> Icons.Filled.Folder
-                            TagKind.KEYWORD -> Icons.AutoMirrored.Filled.Label
-                        },
-                        contentDescription = stringResource(
-                            when (tag.kind) {
-                                TagKind.MAILBOX -> R.string.message_tag_mailbox
-                                TagKind.KEYWORD -> R.string.message_tag_keyword
-                            },
-                        ),
-                        modifier = Modifier.size(16.dp),
-                    )
-                },
-            )
+            TagPill(tag)
         }
+    }
+}
+
+/**
+ * One tag drawn as a dense pill: its kind icon, then its full label, and nothing else.
+ *
+ * Deliberately NOT `AssistChip`, which is what this used to be. A chip is a Material `Surface` with
+ * an `onClick`, and that `Surface` applies `minimumInteractiveComponentSize` unconditionally — the
+ * modifier sits ahead of `clickable(enabled = …)` in the chain, so `enabled = false` suppressed the
+ * tap and kept the 48dp reservation. Under a 20dp line of text that is 28dp of blank per line, on a
+ * strip whose entire job is to say two or three short words, and it was 60% of the strip's height.
+ * The chip's own 32dp container floor plus 8dp/8dp/8dp of internal chrome spent the rest.
+ *
+ * Nothing here is tappable and nothing here needs to be: editing tags lives behind the toolbar's
+ * tag icon, so there is no touch target to protect and no reason to reserve one. The pill is 24dp —
+ * a 20dp `labelLarge` line box, unchanged from the chip, inside 2dp of padding.
+ *
+ * The label keeps the chip's `maxLines = 1` and ellipsis, so a long folder name truncates exactly
+ * where it did before; the 10dp of chrome saved per pill is 10dp more of it visible first.
+ */
+@Composable
+private fun TagPill(tag: MessageTag) {
+    Row(
+        modifier = Modifier
+            .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            when (tag.kind) {
+                TagKind.MAILBOX -> Icons.Filled.Folder
+                TagKind.KEYWORD -> Icons.AutoMirrored.Filled.Label
+            },
+            contentDescription = stringResource(
+                when (tag.kind) {
+                    TagKind.MAILBOX -> R.string.message_tag_mailbox
+                    TagKind.KEYWORD -> R.string.message_tag_keyword
+                },
+            ),
+            // Full-strength `onSurfaceVariant`, where the disabled chip faded both icon and label to
+            // `onSurface` at 38%: a strip nobody can read is not denser, it is just smaller.
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(14.dp),
+        )
+        Text(
+            tag.label,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
