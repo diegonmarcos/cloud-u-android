@@ -1,0 +1,57 @@
+name: "licence boundary guard — no Enterprise-licensed code in a published APK"
+
+# WHY THIS WORKFLOW EXISTS AT ALL.
+# AFFiNE's root LICENSE makes the tree MIT *except* packages/backend and
+# packages/common/native, which are under an Enterprise Edition licence that
+# forbids copying and distributing. Both are what this fleet does with an
+# upstream: it vendors the source into this repository, and it publishes a
+# signed APK. The Cloud Notes scoping concluded that de-clouding made the tree
+# MIT; it does not, and the reaches that survive de-clouding go through Cargo,
+# where no yarn-workspace or JavaScript audit can see them.
+#
+# The guard that establishes this was committed a week before this workflow and
+# was wired into nothing, so it never ran once. A boundary written in prose gets
+# verified by whoever wrote it, on the day they wrote it.
+#
+# WHY EVERY PUSH AND EVERY PULL REQUEST, WITH NO PATH FILTER.
+# The obvious filter is the Cloud Notes app directory, and it is exactly wrong:
+# that directory does not exist yet, the owner has not chosen its name, and a
+# path filter matching nothing never fires and reports no error. The event this
+# guard has to catch IS the commit that creates it. Filtering on a path that
+# does not exist would also fail this repository's own generator, which rejects
+# a workflow watching a path not in the tree.
+#
+# So it watches the whole repository and decides from content: the guard walks
+# the tree for a vendored upstream and gates whatever it finds, wherever it is.
+# Both steps together take about a second, so narrowing when they run would
+# save nothing and could only ever cost a miss.
+#
+# WHY NOT FOLDED INTO health.yml, for the same reason i18n-guard.yml is not:
+# that workflow runs on a six-hourly cron, so a licence violation would sit
+# undetected for up to six hours and then fail a run nobody is watching.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  licence-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Order matters. The tester runs FIRST because it is what makes the
+      # gate's verdict worth anything: it breaks the boundary nine specific
+      # ways and requires the guard to catch each one. A gate whose own
+      # failure modes are unproven contributes a green tick that reads as a
+      # legal clearance, which is worse than no gate at all.
+      - name: The guard still fails when the licence boundary is broken
+        run: bash 1_cicd/src/scripts/test/licence-boundary-guard.test.sh
+
+      - name: No Enterprise-licensed source reaches anything we sign
+        run: python3 1_cicd/src/scripts/cloud-android-licence-boundary-guard.py --repo .

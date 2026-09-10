@@ -15,9 +15,10 @@
       "_doc_restricted_dirs": "Verbatim from the root LICENSE: content under these two directories is EE-licensed, everything else is MIT. The EE text forbids copying, distributing and sublicensing — which is what shipping an APK, and what vendoring source into this repo, both are. packages/common/native has NO package.json, so it is invisible to a yarn-workspace audit; it is reachable only through Cargo.",
       "scan_roots": [
         "packages/frontend/apps/android",
-        "packages/frontend/mobile-native"
+        "packages/frontend/mobile-native",
+        "packages/frontend/native/nbstore"
       ],
-      "_doc_scan_roots": "The Android artefact's own source. Everything compiled into the APK originates under one of these two; the rest of the monorepo is desktop/server/web and is not our redistributable.",
+      "_doc_scan_roots": "Every crate and source directory that ends up inside the APK. The first two are the Android app and the Rust crate that becomes libaffine_mobile_native.so. The third is the crate affine_mobile_native names as affine_nbstore, and it is NOT under either of the other two: the root Cargo.toml maps affine_nbstore to ./packages/frontend/native/nbstore, and that crate takes affine_common as a plain non-optional dependency. Its parent packages/frontend/native is deliberately NOT a scan root -- that crate is the desktop napi module and is never linked into the APK, so flagging it would report a reach that does not ship and make the guard's verdict mean less.",
       "markers": [
         "backend/server",
         "backend/native",
@@ -42,7 +43,21 @@
         "_doc": "The reaches present in PRISTINE upstream at pinned_revision. The guard reports found-vs-known so a NEW reach introduced by an upstream bump is loud, and so the de-cloud work has an explicit checklist. A de-clouded tree must show ZERO; anything here is a to-do, not an allowance.",
         "packages/frontend/apps/android/App/service/build.gradle": "Apollo codegen reads backend/server/src/schema.gql via a relative path — removed by dropping the :service gradle module",
         "packages/frontend/mobile-native/Cargo.toml": "affine_common path-dependency on packages/common/native — NOT removed by de-clouding; needs the Rust crate patched",
-        "packages/frontend/mobile-native/src/lib.rs": "use affine_common::hashcash::Stamp for the cloud-auth proof-of-work — NOT removed by de-clouding"
+        "packages/frontend/mobile-native/src/lib.rs": "use affine_common::hashcash::Stamp for the cloud-auth proof-of-work — NOT removed by de-clouding",
+        "packages/frontend/native/nbstore/Cargo.toml": "affine_common is a NON-OPTIONAL dependency of affine_nbstore, which affine_mobile_native depends on unconditionally. The feature line napi = [\"affine_common/napi\"] adds a feature to that dependency, it does not gate it -- only `optional = true` would. So the EE crate stays in the APK's Cargo build graph, and packages/common/native must be present on disk to build at all, even with hashcash gone. This is the reach the 2026-09-09 scoping recorded as absent.",
+        "packages/frontend/native/nbstore/src/lib.rs": "use affine_common::napi_utils::to_napi_error, behind #[cfg(not(feature = \"use-as-lib\"))]. The Android build DOES set use-as-lib, so this symbol is compiled out on that path -- the source reach is real, the linked-code reach here is not. Flagged anyway because the guard's job is the source boundary: vendoring the EE directory is the prohibited copy whether or not the optimiser later drops the bytes."
+      },
+      "vendoring": {
+        "_doc": "How the guard finds a vendored upstream inside THIS repository when it is invoked with --repo. It looks for directories whose shape matches the upstream (any scan root or restricted dir present as a subdirectory) rather than for a configured location, because where the tree lands is the owner's choice and is not decided yet. A guard that only looks where it was told is one that a different directory name walks straight past.",
+        "prune_dirs": [
+          "node_modules",
+          ".git",
+          "build",
+          "target",
+          "dist",
+          "z_archive"
+        ],
+        "_doc_prune_dirs": "Never descended into, for both the tree walk and the file scan. z_archive holds retired app trees and dist holds generated copies; a hit in either is noise that would train a reader to ignore the guard."
       }
     }
   }

@@ -35,11 +35,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_POLICY = os.path.join(HERE, "..", "data", "licence-boundaries.json")
 
 
+def prune_dirs(cfg):
+    return set(cfg.get("vendoring", {}).get("prune_dirs", []))
+
+
 def scan(tree, cfg):
     """Every (path, line_no, marker, line) where the artefact's own source
     names something living under a restricted directory."""
     markers = cfg["markers"]
     exts = tuple(cfg["scan_extensions"])
+    skip = prune_dirs(cfg)
     hits = []
     for root_rel in cfg["scan_roots"]:
         root = os.path.join(tree, root_rel)
@@ -49,8 +54,7 @@ def scan(tree, cfg):
             # that is a guard that passes on an empty checkout.
             raise FileNotFoundError(root_rel)
         for dirpath, dirnames, filenames in os.walk(root):
-            dirnames[:] = [d for d in dirnames
-                           if d not in ("node_modules", ".git", "build", "target")]
+            dirnames[:] = [d for d in dirnames if d not in skip]
             for fn in filenames:
                 if not fn.endswith(exts):
                     continue
@@ -68,42 +72,67 @@ def scan(tree, cfg):
     return hits
 
 
-def main(argv):
-    if len(argv) < 2:
-        print("usage: cloud-android-licence-boundary-guard.py <tree> "
-              "[upstream-key] [policy.json]", file=sys.stderr)
-        return 2
-    tree = argv[1]
-    key = argv[2] if len(argv) > 2 else "affine"
-    policy_path = argv[3] if len(argv) > 3 else DEFAULT_POLICY
+def restricted_present(tree, cfg):
+    """Restricted-licence directories physically present in a tree.
 
-    with open(policy_path, encoding="utf-8") as fh:
-        policy = json.load(fh)
-    if key not in policy["upstreams"]:
-        print(f"ERROR: no upstream '{key}' in {policy_path}", file=sys.stderr)
-        return 2
-    cfg = policy["upstreams"][key]
+    This is a violation on its own terms and needs no marker to find. The EE
+    licence forbids copying, and vendoring upstream source into this repository
+    is a copy — so an EE directory sitting in our tree is already the thing the
+    licence prohibits, whether or not anything compiles against it.
+    """
+    return [d for d in cfg["restricted_dirs"]
+            if os.path.isdir(os.path.join(tree, d))]
 
+
+def find_vendored_trees(repo, cfg):
+    """Directories under `repo` that are a checkout of this upstream.
+
+    Found by SHAPE, not by a configured path. Which directory the tree lands in
+    is the owner's decision and has not been taken yet, so a guard pointed at a
+    fixed location would be a guard that a different directory name walks
+    straight past — and the failure it exists to catch is precisely somebody
+    creating that directory and shipping it.
+    """
+    anchors = list(cfg["scan_roots"]) + list(cfg["restricted_dirs"])
+    skip = prune_dirs(cfg)
+    found = []
+    for dirpath, dirnames, _ in os.walk(repo):
+        dirnames[:] = [d for d in dirnames if d not in skip]
+        if any(os.path.isdir(os.path.join(dirpath, a)) for a in anchors):
+            found.append(dirpath)
+            # One verdict per tree: descending further would re-report the same
+            # checkout once per nested anchor.
+            dirnames[:] = []
+    return found
+
+
+def report(tree, cfg, key, label):
+    """Verdict for one tree. 0 clean, 1 boundary crossed, 2 cannot tell."""
     try:
         hits = scan(tree, cfg)
     except FileNotFoundError as e:
-        print(f"ERROR: scan root '{e}' missing under {tree} — wrong tree, or an "
+        print(f"ERROR: scan root '{e}' missing under {label} — wrong tree, or an "
               f"incomplete checkout. Refusing to report a clean result.",
               file=sys.stderr)
         return 2
 
+    vendored = restricted_present(tree, cfg)
     known = {k: v for k, v in cfg["known_reaches"].items() if not k.startswith("_")}
-    if not hits:
-        print(f"ok     {key}: no reach into "
+
+    if not hits and not vendored:
+        print(f"ok     {key}: {label}: no reach into "
               f"{cfg['restricted_licence']} directories "
               f"({', '.join(cfg['restricted_dirs'])})")
         return 0
 
-    print(f"FAIL   {key}: the tree reaches into "
+    print(f"FAIL   {key}: {label}: the tree reaches into "
           f"{cfg['restricted_licence']} code, which forbids redistribution.",
           file=sys.stderr)
     print(f"       restricted directories: {', '.join(cfg['restricted_dirs'])}",
           file=sys.stderr)
+    for d in vendored:
+        print(f"  [vendored] {d}/ is present in this tree — {cfg['restricted_licence']}"
+              f" source copied into a repository we publish", file=sys.stderr)
     for path, ln, marker, text in hits:
         note = known.get(path)
         tag = "known" if note else "NEW"
@@ -116,6 +145,54 @@ def main(argv):
               f"An upstream bump introduced them; re-scope before shipping.",
               file=sys.stderr)
     return 1
+
+
+def main(argv):
+    args = [a for a in argv[1:] if a != "--repo"]
+    repo_mode = "--repo" in argv[1:]
+    if not args:
+        print("usage: cloud-android-licence-boundary-guard.py <tree> "
+              "[upstream-key] [policy.json]\n"
+              "       cloud-android-licence-boundary-guard.py --repo <repo-root> "
+              "[upstream-key] [policy.json]", file=sys.stderr)
+        return 2
+    target = args[0]
+    key = args[1] if len(args) > 1 else "affine"
+    policy_path = args[2] if len(args) > 2 else DEFAULT_POLICY
+
+    with open(policy_path, encoding="utf-8") as fh:
+        policy = json.load(fh)
+    if key not in policy["upstreams"]:
+        print(f"ERROR: no upstream '{key}' in {policy_path}", file=sys.stderr)
+        return 2
+    cfg = policy["upstreams"][key]
+
+    if not repo_mode:
+        return report(target, cfg, key, target)
+
+    # ── repository mode ────────────────────────────────────────────────
+    # The guard runs here on every push, before the app it protects exists.
+    # That is deliberate: the failure it must catch is somebody CREATING the
+    # vendored tree and shipping it, and a gate that is only wired when that
+    # directory appears is a gate that depends on the person creating it
+    # remembering to wire it. That is what left this guard inert for a week.
+    if not os.path.isdir(target):
+        print(f"ERROR: '{target}' is not a directory", file=sys.stderr)
+        return 2
+    trees = find_vendored_trees(target, cfg)
+    if not trees:
+        # Truthfully clean, and said in words that cannot be mistaken for
+        # "scanned a tree and found it clean" — the two have to look different
+        # in a log or the distinction stops being made.
+        print(f"ok     {key}: no {cfg['restricted_licence']} exposure: upstream "
+              f"{cfg['repo']} is not vendored anywhere in this repository, so "
+              f"nothing it contains is compiled into any artefact we sign.")
+        return 0
+    worst = 0
+    for tree in trees:
+        rc = report(tree, cfg, key, os.path.relpath(tree, target))
+        worst = max(worst, rc)
+    return worst
 
 
 if __name__ == "__main__":

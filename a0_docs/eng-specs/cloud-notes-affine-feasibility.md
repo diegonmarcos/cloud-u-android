@@ -327,11 +327,51 @@ does not do is extend by itself: section 1's patch list does not touch Rust.
 1. **Extend the de-cloud into the Rust crate.** Drop the `affine_common`
    dependency from `mobile-native/Cargo.toml`, drop `use ... Stamp`, drop
    `hashcash_mint`, drop `HashCashPlugin.kt`, and stub `ValidatorProvider` in
-   `app.tsx`. Nothing else in `mobile-native` touches `affine_common`; the
-   SQLite store (`affine_nbstore`) does not — `nbstore`'s own `affine_common`
-   dependency is behind its `napi` feature, which is the desktop/Node path, not
-   the Android `use-as-lib` path. This keeps the tree provably free of EE code.
-   Verify by re-running the three-system grep above and expecting zero hits.
+   `app.tsx` — **and then patch `affine_nbstore` as well**, which the first
+   draft of this section said was unnecessary. See the correction below.
+
+> **CORRECTION, 2026-09-10, on wiring the guard into CI.** The sentence this
+> section used to carry — *"the SQLite store (`affine_nbstore`) does not —
+> `nbstore`'s own `affine_common` dependency is behind its `napi` feature"* —
+> is wrong, and it is wrong in the direction that matters.
+>
+> `packages/frontend/native/nbstore/Cargo.toml:16` reads
+> `affine_common = { workspace = true, features = ["napi"] }`, in plain
+> `[dependencies]`. The `napi = ["affine_common/napi"]` line in `[features]`
+> **adds a feature to that dependency; it does not gate it.** Only
+> `optional = true` would. So `affine_common` is an unconditional edge of
+> `affine_nbstore`, `affine_mobile_native` depends on `affine_nbstore`
+> unconditionally, and `packages/common/native` therefore stays in the APK's
+> Cargo build graph after every step of option 1 above. The tree will not even
+> configure without that EE directory on disk.
+>
+> The scan that produced "three hits, two reaches, no others" could not have
+> seen this: it grepped `packages/frontend/apps/android/` and
+> `packages/frontend/mobile-native/`, and the nbstore crate is under neither.
+> `affine_nbstore` is a *crate name*; the directory it resolves to is
+> `packages/frontend/native/nbstore`, three levels away. That is the same trap
+> as `affine_common` itself, one layer further out — the fourth spelling of the
+> same boundary.
+>
+> Two things are NOT claimed here. The symbol use
+> (`nbstore/src/lib.rs:12`, `use affine_common::napi_utils::to_napi_error`) sits
+> behind `#[cfg(not(feature = "use-as-lib"))]`, and the Android build **does**
+> set `use-as-lib`, so that import is compiled out on the Android path. And
+> with `lto = "fat"`, dead-code elimination may well leave no EE bytes in the
+> stripped `.so`. What survives regardless is the part the licence actually
+> speaks to: the EE-licensed **source** must be vendored into a repository we
+> publish for the build to run at all, and the EE licence forbids copying and
+> distributing, not just linking. Whether any EE machine code reaches the
+> handset is an optimiser question; whether we copied EE source is not.
+>
+> Practical effect: option 1 is still the right shape, it is just one patch
+> larger — `nbstore/Cargo.toml` must drop `affine_common` and
+> `nbstore/src/lib.rs` must lose the `to_napi_error` import and its
+> `From<error::Error> for napi::Error` impl (both already dead on Android).
+> `licence-boundaries.json` now lists `packages/frontend/native/nbstore` as a
+> scan root, and the guard's case 2 asserts that a de-clouded-but-unpatched
+> tree still FAILS. Before that scan root was added, the guard reported that
+> tree CLEAN.
 2. **Re-implement hashcash clean-room.** Hashcash is Adam Back's 1997
    proof-of-work, published and unpatented; a fresh implementation owned by us
    is lawful. It must be genuinely clean-room — written without reference to
@@ -422,7 +462,20 @@ false-green shape this fleet keeps hitting:
 what makes `aa_cloud-superapp/data/regen.sh` self-register it into
 `constellation-fleet.json`; the patch series applied by `materialize-fork` from
 the pinned sha, NOT a vendored 58-workspace tree. (3) Wire this guard into that
-app's ship workflow as a gate before the Gradle step, and wire
-`licence-boundary-guard.test.sh` alongside it the way `i18n-guard.yml:33` wires
-its tester. The guard must be a gate on the real materialised tree; running it
-only against the fixture proves nothing about what ships.
+app's ship workflow as a gate before the Gradle step. The guard must be a gate
+on the real materialised tree; running it only against the fixture proves
+nothing about what ships.
+
+**Step 3 no longer waits for steps 1 and 2.** As written above it could not
+happen until `ac_cloud-notes/` existed, which is why the guard sat wired into
+nothing for a week: the gate was scheduled to be installed by the same commit
+it was supposed to gate. `1_cicd/src/cicd/licence-guard.yml` now runs on every
+push to `main` and every pull request, with no path filter, and invokes the
+guard as `--repo .`. In that mode the guard walks this repository for a tree
+whose *shape* matches the upstream, rather than a configured path — because the
+directory name is the owner's undecided choice, and the commit that creates it
+is exactly the event that must not slip through. Today it finds nothing
+vendored and says so in those words; the day a tree lands under any name at
+all, it gates it. When `ac_cloud-notes/` does exist, add the ship-workflow gate
+too: the repo-wide check catches vendoring, the ship gate catches the
+materialised tree at build time, and they are not the same event.
