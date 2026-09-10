@@ -72,15 +72,19 @@ class PaneLayoutTest {
         )
     }
 
-    @Test fun `a desk window sizes the list after a 300 dp drawer`() {
+    @Test fun `a desk window sizes the list after the permanent drawer's own width`() {
+        // The reserve is DRAWER_SHEET_WIDTH_DP, read from the constant rather than repeated as a
+        // number here: the sidebar was widened to 360 dp when its folder names stopped wrapping,
+        // and this rule went on asserting the 300 dp it had been written against — green nowhere,
+        // but only visible once the module's tests could run again.
         assertEquals(
-            "at 1200 dp the list must be 40 % of the 900 dp left beside a 300 dp drawer = 360 dp; " +
-                "480 dp means the drawer reserve was forgotten and the reader loses 120 dp",
-            PaneSplit(PaneLayout.Desk, 360), paneSplit(1200),
+            "at 1200 dp the list must be 40 % of what a ${DRAWER_SHEET_WIDTH_DP} dp drawer leaves; " +
+                "the full 480 dp means the drawer reserve was forgotten and the reader loses it",
+            PaneSplit(PaneLayout.Desk, (1200 - DRAWER_SHEET_WIDTH_DP) * 40 / 100), paneSplit(1200),
         )
         assertEquals(
-            "at 1280 dp the list must be 40 % of 980 dp = 392 dp",
-            PaneSplit(PaneLayout.Desk, 392), paneSplit(1280),
+            "at 1280 dp, the same 40 % of what the drawer leaves",
+            PaneSplit(PaneLayout.Desk, (1280 - DRAWER_SHEET_WIDTH_DP) * 40 / 100), paneSplit(1280),
         )
     }
 }

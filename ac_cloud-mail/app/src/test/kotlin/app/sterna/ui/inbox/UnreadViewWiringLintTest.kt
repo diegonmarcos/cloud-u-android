@@ -434,10 +434,10 @@ class UnreadViewWiringLintTest {
         /** The drawer entry, argument by argument — the gabarit of the unified one, its own view. */
         private val EXPECTED_ENTRY_ARGUMENTS = listOf(
             "icon = { Icon(Icons.Filled.MarkEmailUnread, contentDescription = null) }",
-            "label = { Text(unreadLabel) }",
+            "label = { DrawerLabel(unreadLabel) }",
             "selected = ui.unreadView",
             "onClick = { viewModel.selectUnread() scope.launch { drawerState.close() } }",
-            "modifier = Modifier.padding(horizontal = 12.dp)",
+            "modifier = drawerRowModifier",
         )
 
         /** No count, no number — the unified entry's rule, on this entry's own count. */
