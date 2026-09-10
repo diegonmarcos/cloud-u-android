@@ -51,6 +51,7 @@ case "$command" in
     adb)               sh "$SCRIPTS/cloud-android-ship-repo-adb.sh" "$@" ;;
     status)            sh "$SCRIPTS/cloud-android-ship-repo-status.sh" "$@" ;;
     health)            sh "$SCRIPTS/cloud-android-health-full.sh" "$@" ;;
+    i18n)              python3 "$SCRIPTS/cloud-android-i18n-guard.py" "$@" ;;
     clean)             sh "$SCRIPTS/cloud-android-ship-repo-clean.sh" ;;
     deps)              sh "$SCRIPTS/cloud-android-ship-repo-deps.sh" "$@" ;;
     ""|help)
@@ -81,6 +82,7 @@ OPS:
     adb <device>               ADB shell into device
     status <device>            Package status on device
     health                     Run health checks across devices
+    i18n                       Fail if any app is missing a translation
     clean                      Remove all dist/
     deps                       Install dependencies from config.json
 

@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cloud SuperApp — first translated locale. Until this file the app had only
+    values/ and values-sw600dp/, so its entire interface rendered in English on
+    a phone set to Spanish. The note above status_light_on in values/strings.xml
+    asked for exactly this file, by exactly this name.
+
+    WHY values-es AND NOT values-es-rES. The device asks for Spanish (Spain).
+    Android answers that request by looking for values-es-rES first and then
+    falling back to the language-only values-es, so both directories reach this
+    phone — but values-es also reaches es-MX, es-AR and every other Spanish
+    region, and values-es-rES reaches none of them. ac_cloud-mail already ships
+    values-es and the owner reads that app in Spanish today, which is the
+    working proof that this device consults this directory.
+
+    english_ime_name is absent on purpose: it is translatable="false" in
+    values/, because it is the keyboard's name in Settings and must stay
+    "Cloud Keyboard" in every locale.
+
+    TERMS DELIBERATELY LEFT IN ENGLISH, because this interface is read by a
+    systems engineer who says them in English and a Spanish word for them would
+    read as a different concept: peer, mesh, overlay, snapshot, backend, topic,
+    feed, commit, stack, workflow, endpoint, token, tag, WireGuard, ntfy, GHCR,
+    JSON, APK, TOTP, CalDAV, Drive, Vault, Wallet, Linktree, Mattermost.
+    Identifiers quoted from configuration (build.json::ui.control_panel,
+    cloud-data, versionCode, the `samples` key) are literal and are not touched.
+-->
+<resources>
+    <string name="app_name">Cloud SuperApp</string>
+    <string name="translate">Traducir</string>
+    <string name="welcome">El shell de Cloud SuperApp está en marcha.</string>
+    <string name="welcome_template">Cloud SuperApp — %1$s\nversionCode %2$d</string>
+    <string name="check_updates">Buscar actualizaciones</string>
+    <string name="check_updates_started">Buscando en GHCR una APK más reciente…</string>
+
+    <!-- Section labels (bottom nav + drawer top-level). These sit in a tab bar,
+         so each one is the shortest faithful wording rather than the most
+         complete: "Bandejas" instead of "Bandejas de entrada". -->
+    <string name="section_home">Inicio</string>
+    <string name="section_communication">Bandejas</string>
+    <string name="section_infos">Proyectos</string>
+    <string name="section_cloud">Cloud</string>
+    <string name="section_phone">Teléfono</string>
+    <string name="mode_apps">Apps</string>
+    <string name="mode_admin">Admin</string>
+    <string name="mode_toggled">Modo: %1$s</string>
+    <string name="section_mail">Correo</string>
+    <string name="section_feed">RSS</string>
+    <string name="section_chat">Chat</string>
+    <string name="section_cal">Agenda</string>
+    <string name="section_drive">Drive</string>
+    <string name="section_vault">Vault</string>
+    <string name="section_wg">WG</string>
+    <string name="section_c3">C3</string>
+    <string name="section_solutions">Soluciones</string>
+
+    <!-- Tile-grid index -->
+    <string name="tile_grid_empty">Esta sección aún no tiene subpáginas.</string>
+    <string name="home_group_actions">Acciones</string>
+
+    <!-- PageContentFragment -->
+    <string name="page_default_subtitle">%1$s / %2$s</string>
+    <string name="page_empty_title">Próximamente</string>
+    <string name="page_empty_hint">El backend ya está conectado en tu stack de CLAUDE.md. La interfaz llega en un commit posterior.\n\nFalta la clave de samples: %1$s</string>
+
+    <!-- C3 / WG Mesh (wg-mesh/v1) -->
+    <string name="mesh_title">C3 · WG Mesh</string>
+    <string name="mesh_status">%1$d peers declarados (overlay en vivo pendiente del binario de Rust)</string>
+    <string name="mesh_status_multi">%1$d meshes · %2$d peers declarados (overlay en vivo pendiente del binario de Rust)</string>
+    <string name="mesh_status_v1">%1$d nodos · %2$d peerings · %3$d transportes (snapshot wg-mesh/v1)</string>
+    <string name="mesh_section_transports">Transportes</string>
+    <string name="mesh_section_nodes">Nodos</string>
+    <string name="mesh_section_peers">Relaciones entre peers</string>
+    <!-- Table column headers: one word each, because the table has three
+         columns on a phone screen. -->
+    <string name="mesh_col_name">Peer</string>
+    <string name="mesh_col_wg_ip">IP WG</string>
+    <string name="mesh_col_endpoint_role">Endpoint · rol</string>
+
+    <!-- News feeds (open RSS — distinct from ntfy) -->
+    <string name="news_feeds_title">Noticias y RSS</string>
+    <string name="news_feeds_empty">No hay feeds de noticias declarados en build.json::ui.news_feeds</string>
+
+    <!-- RSS / ntfy channels -->
+    <string name="rss_title">RSS · canales de ntfy</string>
+    <string name="rss_loading">Consultando el registro de ntfy…</string>
+    <string name="rss_status">%1$d canales</string>
+    <string name="rss_empty">No hay canales declarados en cloud-data</string>
+    <string name="rss_error">Error: %1$s</string>
+    <string name="rss_group_other">Otros</string>
+    <string name="rss_advisory_loading">Buscando avisos…</string>
+    <string name="rss_advisory_empty">Sin avisos — no hay nada que arreglar ahora mismo</string>
+    <string name="rss_scope_empty">Aún no existe ningún canal de %1$s — esta sección está vacía a propósito, no rota. Se llenará en cuanto se publique en el registro un topic con el prefijo correspondiente.</string>
+    <plurals name="rss_advisory_status">
+        <item quantity="one">%1$d aviso</item>
+        <item quantity="other">%1$d avisos</item>
+    </plurals>
+    <string name="rss_advisory_install">Toca para instalar directamente</string>
+    <string name="about_install_header">Instalar / reparar:</string>
+    <string name="about_install_action">Instalar esta APK directamente</string>
+
+    <!-- Drive · Connections -->
+    <string name="drive_connections_title">Drive · Conexiones</string>
+    <string name="drive_connections_status">%1$d backends · %2$d públicos · %3$d privados (línea base declarada)</string>
+    <string name="drive_section_apps">Apps</string>
+    <string name="drive_section_configs">Configuración</string>
+
+    <!-- Import configs -->
+    <string name="import_title">Importar configuración</string>
+    <string name="import_subtitle">Pega abajo el JSON — las claves y las URL se guardan cifradas en reposo.</string>
+    <string name="import_input_hint">{ \"wg\": …, \"mail\": …, \"ssh\": …, \"auth\": … }</string>
+    <string name="import_save">Guardar</string>
+    <string name="import_clear">Borrar</string>
+    <string name="import_from_file">Abrir archivo…</string>
+    <string name="import_file_error">No se pudo leer el archivo: %1$s</string>
+    <string name="import_saved">Se guardaron %1$d caracteres en las prefs cifradas</string>
+    <string name="import_saved_snack">Importación guardada (cifrada)</string>
+    <string name="import_invalid">JSON no válido: %1$s</string>
+    <string name="import_cleared">Se borró toda la configuración importada</string>
+
+    <!-- C3 / Health (two tables — public + private) -->
+    <string name="c3_health_title">C3 / Estado</string>
+    <string name="c3_health_loading">Consultando cloud-data…</string>
+    <string name="c3_health_status">%1$d/%2$d servicios activos</string>
+    <string name="c3_health_status_split">%1$d públicos · %2$d privados (snapshot de cloud-data)</string>
+    <string name="c3_health_section_public">🌐 Públicos — %1$d servicios</string>
+    <string name="c3_health_section_private">🔒 Privados — %1$d servicios</string>
+    <string name="c3_health_empty">No hay servicios en cloud-data</string>
+    <string name="c3_health_error">Error: %1$s</string>
+    <string name="c3_health_col_name">Servicio</string>
+    <string name="c3_health_col_url">URL pública · auth</string>
+    <string name="c3_health_col_vm">VM</string>
+
+    <!-- Drawer 2nd-level placeholders (per build.json::ui.sections.drawer_default_children) -->
+    <string name="drawer_mail_all">Todas las bandejas</string>
+    <string name="drawer_mail_add">+ Añadir cuenta</string>
+    <string name="drawer_feed_all">Todos los feeds</string>
+    <string name="drawer_feed_add">+ Suscribirse</string>
+    <string name="drawer_chat_all">Todos los servidores</string>
+    <string name="drawer_chat_add">+ Añadir servidor</string>
+    <string name="drawer_chat_mattermost">Mattermost</string>
+    <string name="drawer_chat_matrix">Matrix-Bridges</string>
+    <string name="drawer_cal_all">Todos los calendarios</string>
+    <string name="drawer_cal_add">+ Añadir CalDAV</string>
+    <string name="drawer_vault_pw">Contraseñas</string>
+    <string name="drawer_vault_totp">TOTP</string>
+    <string name="drawer_vault_gen">Generador</string>
+    <string name="drawer_wg_tunnels">Túneles</string>
+    <string name="drawer_wg_import">+ Importar</string>
+    <string name="drawer_c3_reports">Informes</string>
+    <string name="drawer_c3_stack">Stack</string>
+    <string name="drawer_c3_health">Estado</string>
+    <string name="drawer_c3_workflows">Workflows</string>
+    <string name="drawer_solutions_professional">Profesional</string>
+    <string name="drawer_solutions_personal">Personal</string>
+    <string name="drawer_solutions_tools">Herramientas</string>
+    <string name="drawer_solutions_cloud">Cloud</string>
+    <string name="drawer_solutions_other">Otros</string>
+
+    <!-- Per-page top toolbar -->
+    <string name="action_search">Buscar</string>
+    <string name="action_refresh">Actualizar</string>
+    <string name="action_settings">Ajustes</string>
+    <string name="action_back">Atrás</string>
+    <string name="action_wallet">Wallet</string>
+
+    <!-- Launcher icon long-press shortcuts. The launcher truncates the short
+         label hard, so each one is a single word. -->
+    <string name="shortcut_update_short">Actualizar</string>
+    <string name="shortcut_update_long">Buscar actualizaciones</string>
+    <string name="shortcut_search_short">Buscar</string>
+    <string name="shortcut_search_long">Abrir la búsqueda</string>
+    <string name="shortcut_import_short">Importar</string>
+    <string name="shortcut_import_long">Importar configuración</string>
+    <string name="shortcut_linktree_short">Linktree</string>
+    <string name="shortcut_linktree_long">Abrir Linktree</string>
+
+    <!-- Drawer affordances -->
+    <string name="drawer_open">Abrir la navegación</string>
+    <string name="drawer_close">Cerrar la navegación</string>
+    <string name="drawer_tab_home">Inicio</string>
+
+    <!-- Accessibility-service strings shown in Settings → Accessibility →
+         Installed services → Cloud SuperApp. -->
+    <string name="accessibility_lock_screen_summary">Bloquear la pantalla al tocar dos veces en Inicio</string>
+    <string name="accessibility_lock_screen_description">Permite que la pantalla de inicio de Cloud SuperApp bloquee el dispositivo al tocar dos veces. Conserva Smart Lock (dispositivo de confianza / sitio de confianza) y el desbloqueo por huella o por cara — igual que pulsar el botón de encendido. No observa la actividad de ninguna aplicación (declara cero eventos de accesibilidad).</string>
+    <!-- Notification group header button. It shares one row with the app name
+         and a timestamp, so this is the short form: the group it sits on
+         supplies the "all". -->
+    <string name="notif_mark_group_read">Marcar leídas</string>
+
+    <!-- ── Configs ▸ Panel ▸ Control ──────────────────────────────────── -->
+    <string name="status_light_on">Activado</string>
+    <string name="status_light_off">Desactivado</string>
+    <string name="status_light_unknown">Desconocido</string>
+    <!-- Never shortened to "Desconocido": the owner can wait out an unknown,
+         and waiting out this one would never end. -->
+    <string name="status_light_unverifiable">No verificable</string>
+    <string name="status_light_description">%1$s: %2$s</string>
+
+    <string name="control_title">Control</string>
+    <string name="control_caption">Lo que se cambia con la frecuencia suficiente para merecer una pantalla, agrupado por LO QUE MODIFICA: el teléfono, la flota o esta aplicación.\n\nSolo lo que de verdad se puede mover es un interruptor. Una fila que termina en › abre en su lugar la pantalla del sistema que la controla — Android no deja que una aplicación cambie esas, y un interruptor que fingiera lo contrario dejaría el dispositivo exactamente como estaba. Un interruptor en gris indica qué permiso está esperando; toca la fila para ir a concedérselo.\n\nLa luz es lo que ha respondido el DISPOSITIVO justo ahora, nunca cómo está puesto el interruptor: %1$s, %2$s, o %3$s cuando no ha querido responder o todavía no se le ha preguntado. %4$s marca las filas en las que no se puede leer más que la preferencia que esta aplicación guardó — esa preferencia es lo que se pidió, así que esas filas nunca afirman estar funcionando. Las luces se refrescan cada %5$d segundos mientras esta página está abierta y se detienen del todo cuando no lo está, así que pasan a desconocido antes que a obsoleto.</string>
+    <string name="control_none_declared">No hay ningún control declarado — build.json::ui.control_panel está vacío o no llegó a esta compilación.</string>
+    <string name="control_write_refused">%1$s: no cambió — %2$s</string>
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         Configs ▸ AI. Five tabs: WebSearch, LocalSearch, Text Enhance, Library,
+         Tokens Fleet. The tab names are the agents' own names and stay as they
+         are, the same way the owner would say them out loud.
+         ══════════════════════════════════════════════════════════════════════ -->
+
+    <string name="ai_not_built_headline">Este agente todavía no existe.</string>
+    <string name="ai_not_built_generic_title">Agente</string>
+    <string name="ai_not_built_generic_detail">Esta pestaña contendrá los ajustes del agente en cuanto el agente exista.</string>
+
+    <string name="ai_websearch_title">WebSearch</string>
+    <string name="ai_websearch_detail">Cuando Cloud SuperApp tenga un agente de búsqueda web, esta pestaña será donde se configuren su proveedor, su presupuesto y qué hace con los resultados. Hoy no hay aquí nada que busque en la web.</string>
+
+    <string name="ai_localsearch_title">LocalSearch</string>
+    <string name="ai_localsearch_detail">Cuando Cloud SuperApp tenga un agente de búsqueda local — el que busca en este teléfono en lugar de en la web — esta pestaña será donde se configure. Hoy no hay aquí nada que busque en este dispositivo.</string>
+
+    <string name="ai_library_title">Library</string>
+    <string name="ai_library_detail">Cuando Cloud SuperApp tenga el agente organizador Library — el que mueve los archivos a su sitio — esta pestaña será donde se configuren sus reglas y sus carpetas. Hoy no hay nada en esta página que mueva ningún archivo.</string>
+
+    <!-- Tokens Fleet. -->
+    <string name="ai_tokens_title">Tokens Fleet</string>
+    <string name="ai_tokens_intro">La clave de API y el modelo con los que enruta cada aplicación de la flota. Se leen de la aplicación que los guarda, no de una copia guardada aquí.</string>
+    <string name="ai_roster_empty">No hay ninguna aplicación de AI-Routing declarada — build.json::ui.ai_routing_peers está vacío o no llegó a esta compilación.</string>
+
+    <!-- Peer states. Each one is a DIFFERENT repair. -->
+    <string name="ai_peer_asking">Preguntando…</string>
+    <string name="ai_peer_ready">Instalada y respondiendo.</string>
+    <string name="ai_peer_not_installed">No está instalada en este teléfono. Instálala para llegar a sus ajustes desde aquí.</string>
+    <string name="ai_peer_unreachable">Instalada, pero no responde. Ábrela una vez — una aplicación forzada a detenerse sigue detenida hasta que lo haces.</string>
+    <string name="ai_peer_too_old">Instalada, pero esta versión es demasiado antigua para responder. Actualízala.</string>
+    <string name="ai_peer_timed_out">No respondió a tiempo. La aplicación puede estar ocupada o bloqueada; inténtalo de nuevo.</string>
+    <string name="ai_peer_routes">Instalada. Enruta a través de Cloud Keyboard y no guarda ninguna clave propia.</string>
+    <string name="ai_peer_console">Esta aplicación. No guarda ninguna clave de API y no enruta nada — es la consola que estás mirando.</string>
+    <string name="ai_peer_unknown_role">%1$s está declarada con un rol que esta compilación no conoce.</string>
+    <string name="ai_peer_retry">Reintentar</string>
+
+    <!-- The key. Masked by default; revealed only on a deliberate tap. -->
+    <string name="ai_key_absent">Sin clave</string>
+    <string name="ai_key_masked">Clave puesta · ••••</string>
+    <string name="ai_key_masked_with_hint">Clave puesta · ••••%1$s</string>
+    <string name="ai_key_not_needed">Este proveedor no necesita clave.</string>
+    <string name="ai_key_reveal">Mostrar</string>
+    <string name="ai_key_hide">Ocultar</string>
+    <string name="ai_key_set">Poner clave</string>
+    <string name="ai_key_clear">Borrar clave</string>
+    <string name="ai_key_save">Guardar</string>
+    <string name="ai_key_hint_field">Pega la clave de API del proveedor</string>
+    <string name="ai_key_set_title">Poner la clave de %1$s</string>
+    <string name="ai_key_clear_title">¿Borrar la clave de %1$s?</string>
+    <string name="ai_key_clear_message">La aplicación que guarda esta clave se quedará sin ninguna, y todo lo que enrute a través de ella dejará de funcionar hasta que se ponga una nueva.</string>
+    <string name="ai_key_reveal_failed">No se pudo leer la clave.</string>
+    <string name="ai_save_failed">No se pudo guardar ese cambio.</string>
+
+    <!-- The model picker. Prices are UNITED STATES DOLLARS PER MILLION TOKENS,
+         printed exactly as the registry holds them — never scaled, never
+         converted to euros. The heading is where the unit is stated, so the
+         heading is where the currency has to survive translation intact. -->
+    <string name="ai_model_price_heading">Modelo — precio en dólares estadounidenses por millón de tokens (entrada / salida)</string>
+    <string name="ai_model_row">%1$s · %2$s $ / %3$s $ por millón</string>
+    <string name="ai_model_row_no_price">%1$s · sin precio en el registro</string>
+    <string name="ai_model_unknown_chosen">Esta aplicación está puesta en %1$s, que no está en el registro de modelos que conoce esta compilación. Elige uno de abajo para cambiarlo.</string>
+    <string name="ai_models_none">Este proveedor no lista ningún modelo en el registro.</string>
+    <string name="ai_pricing_as_of">Precios a fecha de %1$s.</string>
+
+    <!-- Text Enhance — a fleet VIEW, with a door into the app that owns each
+         set of settings. -->
+    <string name="ai_enhance_title">Text Enhance</string>
+    <string name="ai_enhance_intro">Cómo está configurada cada aplicación de la flota. Se editan en la aplicación que las guarda — el botón la abre.</string>
+    <string name="ai_enhance_own_copy">Guarda su propia copia de estos ajustes, editable en la propia aplicación. No se pueden leer desde aquí.</string>
+    <string name="ai_enhance_unreadable">No se pudieron leer los ajustes de esta aplicación.</string>
+    <string name="ai_enhance_ownership_note">Cloud SuperApp no guarda ningún ajuste de Enhance propio: no tiene ninguna superficie que reescriba texto, así que un ajuste guardado aquí no cambiaría nada en ninguna parte.</string>
+    <string name="ai_enhance_open">Abrir %1$s</string>
+    <string name="ai_enhance_provider">Proveedor: %1$s</string>
+    <string name="ai_enhance_style">Estilo: %1$s</string>
+    <string name="ai_enhance_tone">Tono: %1$s</string>
+    <string name="ai_enhance_length">Longitud: %1$s</string>
+    <string name="ai_enhance_language">Idioma de salida: %1$s</string>
+    <string name="ai_enhance_summary">Forma del resumen: %1$s</string>
+
+</resources>

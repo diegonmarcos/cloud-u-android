@@ -1,0 +1,47 @@
+{
+  "_doc": "WHY THIS FILE EXISTS. The owner's phone is set to Spanish and reads these apps in Spanish. Nothing in this repository noticed when a string landed in values/strings.xml without a translation: Android lint's MissingTranslation is the rule that would catch it, but no workflow in .github/workflows/ ever invokes a `lint` task at all (CI runs `assembleRelease` and nothing else), and the three modules that DO configure the rule have each turned it off — cloud-vault disables it in three build.gradle.kts lint blocks, cloud-matrix sets it to `ignore` in tools/lint/lint.xml, cloud-dialer downgrades it to `warning`. So the rule was reported nowhere and enforced nowhere, and cloud-mail accumulated 89 English strings inside a Spanish app while cloud-superapp, cloud-ide and libs:mail never got a translated locale at all. cloud-android-i18n-guard.py reads this file and fails the build instead.",
+
+  "locale": {
+    "_doc": "WHY `es` AND NOT `es-rES`. The owner's device asks for Spanish (Spain) — recent work set the keyboard defaults to Espanol (Espana). Android resolves a request for es-ES by trying values-es-rES first and then falling back to the language-only values-es, so BOTH directories reach this device; values-es additionally reaches es-MX, es-AR and every other Spanish region, and values-es-rES reaches none of them. The narrower directory buys nothing here and costs every other Spanish variant. It is also what the repository already does and already says: ac_cloud-mail ships values-es and the owner reads that app in Spanish today, which is direct proof the device consults it, and the comment above status_light_on in aa_cloud-superapp/app/src/main/res/values/strings.xml instructs whoever adds the first locale to add `values-es`.",
+    "qualifier": "es",
+    "values_dir": "values-es",
+    "plural_quantities": ["one", "other"]
+  },
+
+  "modules": {
+    "_doc": "Every module in the repository that owns a src/main/res/values/strings.xml must appear here, or the guard fails. That is deliberate and it is the answer to 'what happens to the NEXT app the owner builds': a new module with a new strings.xml is not silently exempt, it stops CI until somebody states in this file whether its interface has to be readable in Spanish. `require` lists locale qualifiers that must cover every translatable key. `exempt` is a sentence saying why not, and is read by a human in review.",
+
+    "aa_cloud-superapp/app":                  { "require": ["es"] },
+    "ab_cloud-libs-shared/libs/mail":         { "require": ["es"] },
+    "ac_cloud-mail/app":                      { "require": ["es"] },
+    "ac_cloud-ide/hub":                       { "require": ["es"] },
+
+    "ab_cloud-libs-shared/libs/core":            { "exempt": "One string, the library's own name, never drawn on screen." },
+    "ab_cloud-libs-shared/libs/launcher-onehand":{ "exempt": "One string, the library's own name; every label the One-Hand launcher draws comes from the host app's resources." },
+    "ab_cloud-libs-shared/keyboard-engines/app":  { "exempt": "Harness APK that hosts the keyboard engines for bench runs; it has no interface beyond its own launcher label." },
+    "ab_cloud-libs-shared/libs/keyboard":        { "exempt": "Vendored HeliBoard fork. Its 98 locales come from upstream and are refreshed by pulling upstream, not by hand-writing Spanish here; values-es currently trails the default by 163 keys, which is an upstream-sync task and not a translation task." },
+
+    "ac_cloud-browser/app":   { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
+    "ac_cloud-calendar/app":  { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
+    "ac_cloud-contacts/app":  { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
+    "ac_cloud-news/app":      { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
+    "ac_cloud-nav/app":       { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
+    "ac_cloud-wallet/app":    { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
+    "ac_cloud-me/app":        { "exempt": "Four strings, all of them the app label and its launcher shortcuts." },
+    "ac_cloud-keyboard/app":  { "exempt": "Three strings; the keyboard's interface lives in libs:keyboard, which carries upstream's locales." },
+
+    "ac_cloud-camera/app":       { "exempt": "Vendored GrapheneOS Camera fork. 192 English-only strings and no locale directory at all: upstream ships translations that this vendoring did not bring across. The repair is to vendor upstream's res/values-* rather than to hand-write Spanish, so it is an upstream-sync task. NEEDS THE OWNER'S DECISION — see the report on commit w232." },
+    "ac_cloud-chat/android/app": { "exempt": "Vendored Mattermost fork; React Native app whose interface strings live in the JS bundle's i18n catalogue, not in this strings.xml." },
+    "ac_cloud-dialer/app":       { "exempt": "Vendored Fossify Phone fork; 81 upstream locales, refreshed by pulling upstream." },
+    "ac_cloud-media-center/app": { "exempt": "Vendored ReFra fork; 44 upstream locales, refreshed by pulling upstream." },
+    "ac_cloud-vault/ui":         { "exempt": "Vendored Bitwarden fork; 62 upstream locales, refreshed by pulling upstream." },
+    "ac_cloud-vault/testharness":{ "exempt": "Debug-only harness, never installed on the owner's phone." },
+    "ac_cloud-termux/app":            { "exempt": "Vendored Termux fork; upstream owns the catalogue." },
+    "ac_cloud-termux/terminal-view":  { "exempt": "Vendored Termux fork; upstream owns the catalogue." },
+    "ac_cloud-termux/termux-shared":  { "exempt": "Vendored Termux fork; upstream owns the catalogue." },
+    "ac_cloud-nix-on-droid/app":           { "exempt": "Vendored Nix-on-Droid fork; upstream owns the catalogue." },
+    "ac_cloud-nix-on-droid/terminal-view": { "exempt": "Vendored Nix-on-Droid fork; upstream owns the catalogue." },
+    "ac_cloud-nix-on-droid/termux-shared": { "exempt": "Vendored Nix-on-Droid fork; upstream owns the catalogue." },
+    "a_solutions/ae-tool_termux-boot/app": { "exempt": "Vendored termux-boot; one string, the app label." }
+  }
+}

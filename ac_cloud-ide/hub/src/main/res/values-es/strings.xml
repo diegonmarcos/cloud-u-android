@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cloud-IDE hub — first Spanish locale. The hub is an original APK (not one
+    of the three vendored forks it switches between), it ships from
+    ship-cloud-ide.yml, and until this file it had no translated locale at
+    all: every one of its 52 strings rendered in English on a phone set to
+    Spanish. Nobody had reported it.
+
+    LEFT IN ENGLISH ON PURPOSE, because a Spanish systems engineer says them in
+    English and a translation would read as a different concept: backend, host,
+    SSH, GHCR, IPC, tag, fork, endpoint, sshd, Termux, Nix-on-Droid. Shell
+    commands and paths inside cfg_terminal_setup_steps are literal input and
+    are byte-for-byte identical to the English — translating `pkg install
+    openssh` would be a broken instruction, not a translated one.
+-->
+<resources>
+    <string name="app_name">Cloud-IDE</string>
+    <string name="hub_title">Cloud-IDE</string>
+    <string name="hub_subtitle">IPC v%1$d · %2$s</string>
+    <string name="tile_open">Toca para abrir</string>
+    <string name="tile_open_child">Toca para abrir · APK hija (instalada desde nuestro paquete)</string>
+    <string name="tile_open_foreign">Copia del TELÉFONO (instalador: %1$s) · toca para abrir · mantén pulsado para sustituirla por nuestra APK hija</string>
+    <string name="tile_install_bundled">Toca para instalar — viene dentro de Cloud-IDE</string>
+    <string name="tile_missing_bundle">Esta compilación no trae el paquete — actualiza Cloud-IDE</string>
+    <string name="tile_installing">Instalando %1$s — confirma el aviso del sistema…</string>
+    <string name="tile_configs">⚙ Configuración — Actualizar · Acerca de</string>
+    <string name="tile_launch_failed">No se pudo abrir</string>
+    <string name="overlay_grant_hint">Permite «Mostrar sobre otras aplicaciones» para que la barra de Cloud-IDE pueda quedarse encima</string>
+    <string name="cfg_overlay_bar">Barra de navegación flotante</string>
+    <string name="cfg_overlay_on">Activada · toca para desactivarla (normalmente la proporciona Cloud-SuperApp)</string>
+    <string name="cfg_overlay_off">Desactivada · la barra la proporciona Cloud-SuperApp · toca para activarla en uso independiente</string>
+
+    <!-- Configs -->
+    <string name="configs_title">Configuración</string>
+    <string name="cfg_check_updates">Buscar actualizaciones</string>
+    <string name="cfg_about">Acerca de</string>
+    <string name="cfg_autoupdate">Actualización automática: %1$s (cada %2$d h, tag \"%3$s\")</string>
+    <!-- Terminal setup instructions (shown on the Configs page) -->
+    <string name="cfg_terminal_setup_title">Configurar el terminal</string>
+    <string name="cfg_terminal_setup_steps">El terminal se conecta por SSH SOLO a través de 127.0.0.1. Arranca el sshd del entorno escuchando en LOOPBACK — así nunca es accesible desde el WiFi ni desde los datos móviles:\n\nTERMUX  (puerto 8023)\n  pkg install openssh\n  ssh-keygen -A\n  sshd -p 8023 -o ListenAddress=127.0.0.1\n\nNIX-ON-DROID  (puerto 8022)\n  nix-shell -p openssh\n  ssh-keygen -A\n  sshd -p 8022 -o ListenAddress=127.0.0.1\n\n(-o ListenAddress=127.0.0.1 escucha solo en loopback — ni 0.0.0.0, ni ninguna interfaz de red.)\n\nDespués, en esta app:\n1. Clave SSH del terminal → copiar → añadirla a ~/.ssh/authorized_keys en ese entorno.\n2. Backend del terminal → elige el entorno.\n3. Conexión del terminal → host 127.0.0.1 / puerto / usuario → Probar hasta que salga ✓.\n4. Abre el terminal desde Inicio.</string>
+    <!-- Terminal backend switcher -->
+    <string name="cfg_terminal_backend">Backend del terminal</string>
+    <string name="cfg_terminal_backend_sub">Activo: %1$s · %2$s:%3$d · toca para cambiar</string>
+    <!-- Terminal connection overrides -->
+    <string name="cfg_terminal_conn">Conexión del terminal</string>
+    <string name="cfg_terminal_conn_sub">Host / puerto / usuario SSH de %1$s — toca para editar y probar</string>
+    <string name="term_conn_host">Host</string>
+    <string name="term_conn_port">Puerto</string>
+    <string name="term_conn_user">Usuario</string>
+    <string name="term_conn_test">Probar la conexión</string>
+    <string name="term_conn_save">Guardar</string>
+    <string name="term_conn_cancel">Cancelar</string>
+    <string name="term_conn_testing">Probando…</string>
+    <string name="term_conn_ok">✓ Conectado</string>
+    <string name="term_conn_saved">Guardado</string>
+    <!-- Terminal SSH key pairing -->
+    <string name="cfg_terminal_ssh_key">Clave SSH del terminal</string>
+    <string name="cfg_terminal_ssh_key_sub">Toca para copiar la clave pública → añádela a ~/.ssh/authorized_keys en Termux y Nix-on-Droid</string>
+    <string name="cfg_terminal_ssh_key_copied">Clave pública copiada — añádela a ~/.ssh/authorized_keys en Termux y Nix-on-Droid</string>
+    <string name="upd_checking">Consultando GHCR…</string>
+    <string name="upd_uptodate">Al día (%1$s)</string>
+    <string name="upd_downloading">Descargando… %1$d%%</string>
+    <string name="upd_installing">Instalando…</string>
+    <string name="upd_done">Listo</string>
+    <string name="upd_failed">La actualización falló: %1$s</string>
+
+    <!-- About -->
+    <string name="about_title">Acerca de</string>
+    <string name="about_heading">Acerca de Cloud-IDE</string>
+    <string name="about_check_updates">Buscar actualizaciones ahora</string>
+    <string name="about_update_started">Comprobación de actualizaciones iniciada…</string>
+    <string name="about_app">App</string>
+    <string name="about_updates">Actualizaciones</string>
+    <string name="about_forks">Forks</string>
+    <string name="about_endpoints">Endpoints</string>
+    <string name="about_links">Enlaces</string>
+</resources>

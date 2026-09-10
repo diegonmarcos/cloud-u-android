@@ -1010,4 +1010,144 @@
     <string name="home_stat_cached">Mensajes en este teléfono</string>
     <string name="home_stat_folders">Carpetas</string>
     <string name="home_stat_subscribed">Carpetas suscritas</string>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         The 89 keys that landed in values/ over the past weeks without a
+         translation and rendered in English inside an otherwise Spanish app:
+         the message metadata sheet, the tags/mailboxes sheet, the Text tools
+         and the whole in-app updater.
+
+         LEFT IN ENGLISH ON PURPOSE. Reply-To, Return-Path, Message-ID and
+         Authentication-Results are RFC 5322 header names printed so they can
+         be compared against the raw source of the message — translating them
+         would make that comparison impossible. AI Routing, Text Enhance and
+         prompt are said in English by the person reading this. Wi-Fi keeps its
+         trademarked spelling.
+         ══════════════════════════════════════════════════════════════════ -->
+
+    <!-- Attachments -->
+    <string name="a11y_open_attachment">Abrir el adjunto %1$s</string>
+    <string name="list_more_attachments">+%1$d</string>
+    <string name="attachment_metered_title">¿Descargar con datos móviles?</string>
+    <string name="attachment_metered_body">%1$s ocupa %2$s. Tu conexión es de uso medido.</string>
+    <string name="attachment_metered_confirm">Descargar</string>
+
+    <!-- Message · participants and metadata -->
+    <string name="message_link_goes_to">[va a %1$s]</string>
+    <string name="participants_bcc">Cco</string>
+    <string name="participants_reply_to">Responder a</string>
+    <string name="participants_delivery">Entrega e identidad</string>
+    <!-- MetadataLabel.RECEIVED_AT / SENT_AT: two timestamps, not two header
+         names, so these are translated where Reply-To below is not. -->
+    <string name="metadata_received">Recibido</string>
+    <string name="metadata_sent">Enviado (reloj del remitente)</string>
+    <string name="metadata_reply_to">Reply-To</string>
+    <string name="metadata_return_path">Return-Path (remitente del sobre)</string>
+    <string name="metadata_authentication">Authentication-Results</string>
+    <string name="metadata_list_id">Lista de correo</string>
+    <string name="metadata_message_id">Message-ID</string>
+    <string name="message_copy_address">Copiar la dirección</string>
+    <string name="message_address_copied">Dirección copiada</string>
+
+    <!-- Message · tags and mailboxes -->
+    <string name="message_tag_mailbox">Buzón</string>
+    <string name="message_tag_keyword">Palabra clave</string>
+    <string name="message_labels">Etiquetas y buzones</string>
+    <string name="message_labels_explainer">Un mensaje puede estar en varios buzones a la vez. Añadirlo a uno no lo saca de los demás.</string>
+    <string name="message_labels_in">Este mensaje está en</string>
+    <string name="message_labels_add">Añadir a</string>
+    <string name="message_labels_none">Sin etiquetas</string>
+    <string name="message_label_remove">Quitar %1$s</string>
+    <string name="message_label_remove_title">¿Quitar de este buzón?</string>
+    <string name="message_label_remove_body">El mensaje sale de %1$s y se queda en todos los demás buzones en los que esté. Si ese era el único sitio desde el que lo consultabas, ya no lo verás ahí.</string>
+    <string name="message_label_remove_confirm">Quitar</string>
+
+    <!-- NOT A TRANSLATION AND MUST NOT BECOME ONE. This array is the word list
+         MessageViewModel scans a message body with to decide whether it offers
+         an unsubscribe action, and it is already multilingual on purpose: the
+         newsletters that reach this inbox are written in English, French,
+         German, Spanish, Portuguese, Italian and Dutch. Replacing it with the
+         Spanish entries alone would stop the app recognising every English
+         newsletter the moment the phone is set to Spanish. Copied verbatim. -->
+    <string-array name="unsubscribe_body_words">
+        <item>unsubscribe</item>
+        <item>opt-out</item>
+        <item>opt out</item>
+        <item>désabonner</item>
+        <item>desabonner</item>
+        <item>abbestellen</item>
+        <item>abmelden</item>
+        <item>cancelar suscripción</item>
+        <item>darse de baja</item>
+        <item>descadastrar</item>
+        <item>cancelar inscrição</item>
+        <item>disiscriviti</item>
+        <item>uitschrijven</item>
+    </string-array>
+
+    <!-- Settings · Text tools -->
+    <string name="settings_text_section">Texto</string>
+    <string name="settings_text_ai_routing_title">AI Routing</string>
+    <string name="settings_text_ai_routing_summary">Qué proveedor y qué modelo usan las herramientas de Texto de esta aplicación</string>
+    <string name="settings_text_ai_routing_note">Qué proveedor y qué modelo usan las herramientas de Texto de esta aplicación. Son los ajustes propios de Cloud Mail — cambiarlos aquí no cambia los de Cloud Keyboard.</string>
+    <string name="settings_text_key_note">La clave de API no se guarda aquí. La guarda Cloud Keyboard y hace la petición en nombre de esta aplicación, así que solo hay una copia de ella en el dispositivo.</string>
+    <string name="settings_text_enhance_title">Text Enhance</string>
+    <string name="settings_text_enhance_summary">Estilo, tono, longitud e idioma de salida de una reescritura</string>
+    <string name="settings_text_resume_title">Resumen de texto</string>
+    <string name="settings_text_resume_summary">Cómo se resume un mensaje, y el prompt que lo hace</string>
+    <string name="settings_text_translation_title">Traducción</string>
+    <string name="settings_text_translation_summary">Idioma de destino predeterminado de Traducir en esta aplicación</string>
+    <string name="settings_text_translation_note">El idioma al que Traducir convierte un mensaje. Son los ajustes propios de Cloud Mail — cambiarlos aquí no cambia los de Cloud Keyboard.</string>
+    <string name="settings_text_translation_target">Etiqueta del idioma de destino (p. ej. en, pt, de)</string>
+    <string name="settings_text_prompt_preview_title">Lo que se envía</string>
+    <string name="settings_text_prompt_preview_empty">Las opciones de arriba no añaden ninguna instrucción, así que el texto se envía tal cual.</string>
+    <string name="settings_text_provider">Proveedor</string>
+    <string name="settings_text_model">Modelo</string>
+    <string name="settings_text_enhance_style">Estilo</string>
+    <string name="settings_text_enhance_tone">Tono</string>
+    <string name="settings_text_enhance_length">Longitud</string>
+    <string name="settings_text_enhance_language">Idioma de salida</string>
+    <string name="settings_text_resume_shape">Forma del resumen</string>
+
+    <!-- The Text tools sheet -->
+    <string name="text_tool_enhance">Text Enhance</string>
+    <string name="text_tool_resume">Resumen con IA</string>
+    <string name="text_tool_translate">Traducir</string>
+    <string name="text_tool_running">Trabajando…</string>
+    <string name="text_tool_running_with">Trabajando con %1$s…</string>
+    <string name="text_tool_copy">Copiar</string>
+    <string name="text_tool_apply">Aplicar</string>
+    <string name="text_tool_close">Cerrar</string>
+    <string name="text_tool_stale">El borrador cambió mientras esto se ejecutaba — no se sustituyó nada</string>
+
+    <!-- Settings · Update -->
+    <string name="settings_update_title">Actualización</string>
+    <string name="settings_update_summary">Buscar una versión nueva e instalarla</string>
+    <string name="settings_update_screen_title">Actualización</string>
+    <string name="settings_update_this_build_section">Esta compilación</string>
+    <!-- Row labels in a two-column table; both agree with "versión". -->
+    <string name="settings_update_installed_label">Instalada</string>
+    <string name="settings_update_available_label">Disponible</string>
+    <string name="settings_update_last_checked_label">Última comprobación</string>
+    <string name="settings_update_never_checked">Nunca</string>
+    <string name="settings_update_available_unknown">Aún no se sabe — ninguna comprobación ha terminado</string>
+    <string name="settings_update_available_current">Al día</string>
+    <string name="settings_update_available_new">Compilación nueva %1$s · %2$s para descargar</string>
+    <string name="settings_update_now_section">Actualizar ahora</string>
+    <string name="settings_update_now_help">Busca al momento una versión más reciente de Cloud Mail, en lugar de esperar a la siguiente comprobación automática. Con datos móviles te dice cuánto ocupa la descarga y pregunta antes de gastar nada.</string>
+    <string name="settings_update_check_now">Buscar actualizaciones</string>
+    <string name="settings_update_status_checking">Comprobando…</string>
+    <string name="settings_update_status_downloading">Descargando… %1$d%% (%2$s de %3$s)</string>
+    <string name="settings_update_status_downloading_unsized">Descargando… %1$s hasta ahora (tamaño desconocido)</string>
+    <string name="settings_update_status_installing">Instalando…</string>
+    <string name="settings_update_status_done">Instalada</string>
+    <string name="settings_update_automatic_section">Actualizaciones automáticas</string>
+    <string name="settings_update_auto_title">Actualizar sola</string>
+    <string name="settings_update_auto_subtitle">Buscar una versión nueva en segundo plano e instalarla</string>
+    <string name="settings_update_wifi_only_title">Solo por Wi-Fi</string>
+    <string name="settings_update_wifi_only_subtitle">Las actualizaciones automáticas nunca se descargan con datos móviles. Buscar actualizaciones a mano sí puede usarlos, después de preguntar.</string>
+    <string name="settings_update_metered_title">¿Descargar con datos móviles?</string>
+    <string name="settings_update_metered_body">Hay una versión nueva de Cloud Mail y ocupa %1$s. Estás con datos móviles, así que descargarla ahora gastará %1$s de tu tarifa. Si no haces nada, se descargará sola la próxima vez que estés en Wi-Fi.</string>
+    <string name="settings_update_metered_download">Descargar ahora</string>
+    <string name="settings_update_metered_later">Esperar al Wi-Fi</string>
 </resources>

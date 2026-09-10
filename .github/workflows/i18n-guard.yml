@@ -1,0 +1,33 @@
+name: "i18n guard — a partial locale fails the build"
+
+# WHY THIS RUNS ON EVERY PUSH AND EVERY PULL REQUEST, WITH NO PATH FILTER.
+# The failure this catches is not "somebody edited a translation", it is
+# "somebody added an English string and did not notice". That commit touches
+# values/strings.xml, which a path filter would catch — but it also arrives as
+# one file inside a twelve-file feature commit, and the whole point is that the
+# person who introduced it finds out the same day rather than the owner finding
+# out on their phone. The guard parses XML and exits in well under a second, so
+# there is nothing to save by narrowing when it runs.
+#
+# It is deliberately NOT folded into health.yml: that workflow runs on a
+# six-hourly cron and on manual dispatch, so a missing translation would sit
+# undetected for up to six hours and then fail a run nobody is looking at.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  i18n:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every translatable key exists in every required locale
+        run: python3 1_cicd/src/scripts/cloud-android-i18n-guard.py
+      - name: The guard still fails when a translation goes missing
+        run: bash 1_cicd/src/scripts/test/i18n-guard.test.sh

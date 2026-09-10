@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    WHY THIS FILE EXISTS. libs:mail is an implementation dependency of
+    aa_cloud-superapp (app/build.gradle: implementation project(':libs:mail')),
+    so every string below is drawn INSIDE Cloud SuperApp. The app had no
+    translated locale at all, which meant these 31 strings rendered in English
+    on a phone set to Spanish alongside the app's own 186.
+
+    JMAP session field names (apiUrl, primaryAccountId, accounts) are left in
+    English on purpose: they are the literal keys of the JSON the server
+    returned, and a reader comparing this screen against the JMAP spec or a
+    curl output needs them to match character for character.
+-->
+<resources>
+    <string name="mail_section_title">Correo (JMAP)</string>
+    <string name="mail_server_hint">Servidor JMAP (https://…)</string>
+    <string name="mail_email_hint">Dirección de correo</string>
+    <string name="mail_password_hint">Contraseña</string>
+    <string name="mail_connect">Conectar</string>
+    <string name="mail_logout">Cerrar sesión</string>
+    <string name="mail_status_connecting">Descubriendo la sesión…</string>
+    <string name="mail_status_ok">Sesión correcta — cuenta %1$s</string>
+    <string name="mail_status_http">HTTP %1$d — %2$s</string>
+    <string name="mail_status_net">Error de red — %1$s</string>
+    <string name="mail_session_apiurl">apiUrl</string>
+    <string name="mail_session_account">primaryAccountId</string>
+    <string name="mail_session_accounts">accounts</string>
+
+    <!-- Slice B — Folders (Mailbox/get) -->
+    <string name="mail_folders_loading">Cargando los buzones…</string>
+    <string name="mail_folders_login_first">Inicia sesión primero en la pestaña Correo.</string>
+    <string name="mail_folders_empty">El servidor no devolvió ningún buzón.</string>
+    <string name="mail_folders_error">Error: %1$s</string>
+    <plurals name="mail_folders_count">
+        <item quantity="one">%d buzón</item>
+        <item quantity="other">%d buzones</item>
+    </plurals>
+
+    <!-- Slice C — Messages (Email/query + Email/get) -->
+    <string name="mail_messages_loading">Cargando los mensajes…</string>
+    <string name="reapply_rules_sent">Pidiendo al clasificador que vuelva a aplicar todas las reglas…</string>
+    <string name="reapply_rules_ok">Reaplicación solicitada — el clasificador la recoge en unos 10 s.</string>
+    <string name="reapply_rules_failed">La reaplicación falló: %1$s</string>
+    <string name="mail_messages_login_first">Inicia sesión primero en Correo → Cuentas.</string>
+    <string name="mail_messages_no_folder">No hay ninguna carpeta seleccionada.</string>
+    <string name="mail_messages_empty">No hay mensajes en esta carpeta.</string>
+    <string name="mail_messages_error">Error: %1$s</string>
+    <plurals name="mail_messages_count">
+        <item quantity="one">%d mensaje</item>
+        <item quantity="other">%d mensajes</item>
+    </plurals>
+
+    <!-- Slice C2 — Single message body -->
+    <string name="mail_message_loading">Cargando el cuerpo del mensaje…</string>
+    <string name="mail_message_login_first">Inicia sesión primero en Correo → Cuentas.</string>
+    <string name="mail_message_error">Error: %1$s</string>
+    <string name="mail_message_has_html">Hay cuerpo HTML — se muestra el texto</string>
+</resources>

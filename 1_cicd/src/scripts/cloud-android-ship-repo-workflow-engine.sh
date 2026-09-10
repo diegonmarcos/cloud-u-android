@@ -29,7 +29,7 @@ mkdir -p "$CICD_DIST/scripts" "$CICD_DIST/cicd" "$CICD_DIST/actions" \
 
 # ── scripts: copy source → dist with read-only header ──────────────
 log_step "dist/scripts"
-for f in "$CICD_SRC/scripts/"*.sh; do
+for f in "$CICD_SRC/scripts/"*.sh "$CICD_SRC/scripts/"*.py; do
     [ -e "$f" ] || continue
     base=$(basename "$f")
     {

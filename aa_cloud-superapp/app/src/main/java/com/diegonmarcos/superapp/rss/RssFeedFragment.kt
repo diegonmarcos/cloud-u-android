@@ -224,8 +224,13 @@ class RssFeedFragment : Fragment(R.layout.fragment_rss_feed) {
             if (!isAdded) return@launch
             outcome.fold(
                 onSuccess = { msgs ->
+                    // getQuantityString, not getString: the count decides the
+                    // wording, and Spanish picks a different item for 1 than
+                    // for 0 or 2. The size is passed twice on purpose — once
+                    // to select the item, once to fill its %1$d.
                     status.text = if (msgs.isEmpty()) getString(R.string.rss_advisory_empty)
-                                  else getString(R.string.rss_advisory_status, msgs.size)
+                                  else resources.getQuantityString(
+                                      R.plurals.rss_advisory_status, msgs.size, msgs.size)
                     val inflater = LayoutInflater.from(ctx)
                     for (m in msgs) {
                         val row = inflater.inflate(R.layout.item_rss_topic, slot, false)
