@@ -66,6 +66,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # THIS APP IS NO LONGER A MIRROR, AND THIS WORKFLOW STILL IS.
+      #
+      # ac_cloud-sheets/build.json used to carry upstream.url + upstream.sha256:
+      # one official APK, downloaded, hash-checked and republished. It now carries
+      # upstream.online + upstream.core — two pinned git revisions and a patch
+      # series — because Text Enhance could not be fixed in bytes we did not build.
+      # Every step below reads keys that no longer exist.
+      #
+      # Without this guard the job dies at "Download official Collabora Office APK"
+      # with an unexplained curl failure, which reads as a broken network rather
+      # than as a migration in progress. It cannot be allowed to SUCCEED either:
+      # succeeding would mean republishing 267 MB of Collabora's build under a name
+      # that now promises our own.
+      #
+      # So it fails FIRST, and says which thing is missing. The unblock is a build
+      # host — build.json::build.host is null until one exists — and then a source
+      # -build workflow to replace this file. Deleting this file before that exists
+      # would leave the app with no publish path at all and nothing saying so.
+      - name: Refuse to mirror an app that is now built from source
+        run: |
+          set -euo pipefail
+          bj="${WORK_DIR}/build.json"
+          if [ -n "$(jq -r '.upstream.online // empty' "$bj")" ]; then
+            echo "::error title=Cloud Office is mid-migration::ac_cloud-sheets is a SOURCE BUILD now (upstream.online is pinned), but this workflow still mirrors a prebuilt APK. It will not publish."
+            echo "Pinned online revision: $(jq -r '.upstream.online.revision' "$bj")"
+            echo "Pinned core   revision: $(jq -r '.upstream.core.revision'   "$bj")"
+            echo "Build host           : $(jq -r '.build.host // "NOT SET"'   "$bj")"
+            echo
+            echo "Unblock, in order:"
+            echo "  1. establish a build host that can carry an NDK megabuild of LibreOffice core"
+            echo "  2. set build.json::build.host to its runner label"
+            echo "  3. replace this workflow with a source build (fetch both pins, git am patches/, configure, assemble, sign)"
+            echo
+            echo "Until then the release asset already on GHCR/GH Releases is left exactly as it is."
+            exit 1
+          fi
+
       # Publish-if-changed gate. Android builds are not byte-reproducible, so a
       # rebuild of unchanged source published different bytes, a different
       # sha256 sidecar and a different OCI digest — and the Constellation store
