@@ -43,10 +43,29 @@
 #   generator's parity check is what guarantees the two agree, so a
 #   parity-fixing sync lands in the app tree and correctly republishes.
 #
+# A NARROWER SCOPE THAN THE WHOLE APP: --paths-from FILE
+#   One ship workflow publishes MANY assets: ship-cloud-libs builds every
+#   module under ab_cloud-libs-shared/libs/ as its own APK. Hashing the app's
+#   whole trigger list gives all 24 of them the SAME identity, so a change to
+#   one module republishes every one of them - which is what the fleet saw on
+#   2026-09-09, when a fix to libs/updater put 24 unchanged library APKs on the
+#   release and six update prompts on the owner's phone.
+#
+#   With --paths-from, the caller supplies the exact input set for ONE asset
+#   and the identity is scoped to it. The caller owes the same safety property
+#   the workflow list gives by construction: the UNION of the path sets it
+#   passes for all of its assets must cover the workflow's whole trigger list,
+#   or a real change could trigger a build that every asset's gate then skips.
+#   ab_cloud-libs-shared/lib-apks/build.sh derives its sets from this script's
+#   own `paths` output for exactly that reason, and
+#   1_cicd/src/scripts/test/publish-gate-blast-radius.test.sh asserts the
+#   union property rather than trusting it.
+#
 # USAGE
 #   cloud-android-source-identity.sh paths   <app-dir>   # inputs, one per line
 #   cloud-android-source-identity.sh explain <app-dir>   # per-path object ids
 #   cloud-android-source-identity.sh compute <app-dir>   # the 64-hex identity
+#     ... [--paths-from FILE]                            # scope to one asset
 set -eu
 
 ROOT="${CLOUD_ANDROID_ROOT:-$(_d="$(cd "$(dirname "$0")" && pwd)"; while [ "$_d" != "/" ] && [ ! -e "$_d/.git" ]; do _d="$(dirname "$_d")"; done; printf '%s' "$_d")}"
@@ -54,9 +73,27 @@ ROOT="${CLOUD_ANDROID_ROOT:-$(_d="$(cd "$(dirname "$0")" && pwd)"; while [ "$_d"
 CMD="${1:-}"
 APP="${2:-}"
 APP="${APP%/}"
+if [ $# -ge 2 ]; then shift 2; else shift $#; fi
+
+PATHS_FROM=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --paths-from) PATHS_FROM="${2:-}"; shift 2 ;;
+        *) echo "unknown option: $1" >&2; exit 2 ;;
+    esac
+done
 
 [ -n "$CMD" ] && [ -n "$APP" ] || {
-    echo "usage: $(basename "$0") paths|explain|compute <app-dir>" >&2; exit 2; }
+    echo "usage: $(basename "$0") paths|explain|compute <app-dir> [--paths-from FILE]" >&2; exit 2; }
+
+# Checked HERE, not where the file is read. `compute` runs `_explain |
+# sha256sum`, which puts _paths in a subshell, so an `exit 3` down there kills
+# the subshell and leaves sha256sum to hash the empty set and return 0 - a
+# confident 64-hex identity for no inputs at all, which every gate would then
+# compare equal on the next run and skip forever. This script already carries
+# that scar in _external; the guard belongs before the first pipe.
+[ -z "$PATHS_FROM" ] || [ -f "$PATHS_FROM" ] || {
+    echo "$APP: --paths-from names no such file: $PATHS_FROM" >&2; exit 3; }
 [ -d "$ROOT/$APP" ] || { echo "no such app dir: $APP (root=$ROOT)" >&2; exit 2; }
 
 # ── the app's ship workflow ────────────────────────────────────────
@@ -76,6 +113,16 @@ _workflow() {
 
 # ── the input path set ─────────────────────────────────────────────
 _paths() {
+    # An explicit set replaces the derivation entirely - including the app dir,
+    # which for a per-asset scope is the harness shared by every asset and is
+    # supplied by the caller when it belongs. Refusing a missing file rather
+    # than falling back keeps a typo from silently widening the scope back to
+    # the whole app, which would look like it worked.
+    if [ -n "$PATHS_FROM" ]; then
+        grep -v '^[[:space:]]*$' "$PATHS_FROM" || true
+        return 0
+    fi
+
     printf '%s\n' "$APP"
 
     # Fail loud rather than hash a short list. An identity that quietly omits
@@ -175,7 +222,14 @@ _pin_identity() {
 }
 
 _explain() {
-    _pin_identity && return 0
+    # A pin identity describes the WHOLE app, so it cannot answer a question
+    # scoped to one of its assets. Spelled as an `if` rather than folded into
+    # the `&&` chain below it: under `set -eu` an AND-OR list that ends false
+    # is itself a failing statement, so the compact spelling exits the script
+    # instead of falling through to the path hashing.
+    if [ -z "$PATHS_FROM" ]; then
+        _pin_identity && return 0
+    fi
     _paths | LC_ALL=C sort -u | while IFS= read -r p; do
         h="$(git -C "$ROOT" rev-parse "HEAD:$p" 2>/dev/null || printf 'missing')"
         printf '%s  %s\n' "$h" "$p"

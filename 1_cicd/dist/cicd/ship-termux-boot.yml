@@ -60,6 +60,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Gated at the PUBLISH boundary, not the build boundary as the per-app
+      # ship workflows are. The build here is short and its steps are tightly
+      # chained through step outputs; what actually reached the fleet was the
+      # republish, which put a byte-new but source-identical APK on the rolling
+      # release and offered it to every device as an update. Skipping the
+      # publish stops that without reordering a build that cannot be tried
+      # locally. The remaining cost is CI minutes on a no-op build.
+      - name: Publish gate (skip when source unchanged)
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -173,6 +188,7 @@ jobs:
           echo "media=$(jq -r '.release.ghcr.media_type' build.json)" >> "$GITHUB_OUTPUT"
 
       - name: Push APK to GHCR via ORAS
+        if: steps.gate.outputs.skip != 'true'
         working-directory: ${{ env.WORK_DIR }}/dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -209,6 +225,7 @@ jobs:
             "${{ steps.asset.outputs.name }}:${{ steps.asset.outputs.media }}"
 
       - name: Attach to the rolling 'latest' release
+        if: steps.gate.outputs.skip != 'true'
         working-directory: ${{ env.WORK_DIR }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -242,7 +259,8 @@ jobs:
           retention-days: 30
 
       - name: Attach to GitHub Release
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.create_release }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.create_release
+                && steps.gate.outputs.skip != 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -265,3 +283,13 @@ jobs:
               && [ -n "$remote_size" ] && [ "$remote_size" = "$local_size" ] \
               || { echo "::error::gh-release: $b or its .sha256 sidecar missing/size-mismatched on $tag after upload (remote=$remote_size local=$local_size)"; exit 1; }
           done
+
+      # Records the identity the published bytes were built from, so the next
+      # push has something to compare against. Only after the publish steps
+      # above ran: a stamp written for bytes that never reached the release
+      # would make every later push skip against a claim that is not true.
+      - name: Stamp the published identity
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$WORK_DIR"

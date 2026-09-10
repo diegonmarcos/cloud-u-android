@@ -179,10 +179,22 @@ jobs:
       # GH release, which is public by construction, so a private mirror
       # degrades the install route without breaking it.
       - name: Is the GHCR package publicly pullable
-        if: ${{ always() && steps.gate.outputs.skip != 'true' }}
+        # No `steps.gate` condition here. This job has no gate STEP: it
+        # publishes 24 assets and the gate is per asset, so build.sh consults
+        # it inside the oras-push and gh-release loops instead. This condition
+        # used to read `steps.gate.outputs.skip != 'true'` against a step id
+        # that does not exist in this workflow — which evaluates to the empty
+        # string, is therefore always true, and made the workflow LOOK gated
+        # while nothing weighed a single asset.
+        if: ${{ always() }}
         continue-on-error: true
         run: sh 1_cicd/dist/scripts/cloud-android-ghcr-visibility.sh diegonmarcos cloud-libs
 
+      # build.sh gates each of the 24 assets on its own module (plus the
+      # modules that module compiles against) and republishes only the ones
+      # whose source moved, then stamps <asset>.source for those it published.
+      # Needs the full history the checkout above fetches: the identity is the
+      # git tree sha of each input path.
       - name: Publish to GitHub Releases
         working-directory: ${{ env.WORK_DIR }}
         env:

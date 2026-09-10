@@ -16,6 +16,16 @@
 #       last step of a job that DID publish: uploads <asset>.source carrying
 #       the identity those bytes were built from.
 #
+# ONE JOB, MANY ASSETS: --asset NAME --paths-from FILE
+#   ship-cloud-libs builds every module under ab_cloud-libs-shared/libs/ as its
+#   own APK, so there is no single asset for build.json to name and the
+#   resolution below yields nothing - which made this gate fail open and
+#   republish all 24 on any touch to any shared module. With both options the
+#   caller gates each asset on its own inputs, so a change to libs/updater
+#   republishes the updater APK and the one library that depends on it rather
+#   than the whole set. --asset without --paths-from is refused: it would gate
+#   one asset against the whole app'"'"'s identity, which is the bug, not the fix.
+#
 # The identity lives as a small sidecar asset beside the APK, in the same
 # place and with the same lifetime as the .sha256 sidecar. It is not derived
 # from the APK, so a non-reproducible rebuild cannot perturb it, and it is
@@ -37,10 +47,27 @@ SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 CMD="${1:-}"
 APP="${2:-}"; APP="${APP%/}"
-VARIANT="${3:-}"
+if [ $# -ge 2 ]; then shift 2; else shift $#; fi
+
+VARIANT=""
+ASSET_OVERRIDE=""
+PATHS_FROM=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --asset)      ASSET_OVERRIDE="${2:-}"; shift 2 ;;
+        --paths-from) PATHS_FROM="${2:-}";     shift 2 ;;
+        --*)          echo "unknown option: $1" >&2; exit 2 ;;
+        *)            VARIANT="$1";            shift ;;
+    esac
+done
 
 [ -n "$CMD" ] && [ -n "$APP" ] || {
-    echo "usage: $(basename "$0") check|stamp <app-dir> [variant-id]" >&2; exit 2; }
+    echo "usage: $(basename "$0") check|stamp <app-dir> [variant-id]" \
+         "[--asset NAME --paths-from FILE]" >&2; exit 2; }
+
+[ -z "$ASSET_OVERRIDE" ] || [ -n "$PATHS_FROM" ] || {
+    echo "--asset needs --paths-from: gating one asset of many against the" \
+         "whole app identity republishes all of them" >&2; exit 2; }
 
 BJ="$ROOT/$APP/build.json"
 log() { printf '[publish-gate] %s\n' "$1"; }
@@ -66,13 +93,24 @@ _asset() {
     [ -n "$n" ] || n="$(jq -r '.release.gh_release.asset_name // empty' "$BJ" 2>/dev/null)"
     printf '%s' "$n"
 }
+# An explicit asset wins over build.json: a job publishing N assets has no
+# single name to declare there, and the caller is the only thing that knows
+# which of the N this call is about.
+_asset_resolved() {
+    if [ -n "$ASSET_OVERRIDE" ]; then printf '%s' "$ASSET_OVERRIDE"; else _asset; fi
+}
 _tag() {
     t="$(jq -r '.release.gh_release.rolling_tag // empty' "$BJ" 2>/dev/null)"
     printf '%s' "${t:-latest}"
 }
 
-IDENTITY="$(sh "$SELF_DIR/cloud-android-source-identity.sh" compute "$APP")"
-ASSET="$(_asset)"
+if [ -n "$PATHS_FROM" ]; then
+    IDENTITY="$(sh "$SELF_DIR/cloud-android-source-identity.sh" compute "$APP" \
+                   --paths-from "$PATHS_FROM")"
+else
+    IDENTITY="$(sh "$SELF_DIR/cloud-android-source-identity.sh" compute "$APP")"
+fi
+ASSET="$(_asset_resolved)"
 TAG="$(_tag)"
 
 case "$CMD" in
@@ -112,7 +150,12 @@ check)
         log "unchanged since $(git -C "$ROOT" rev-parse --short HEAD) — publish skipped"
         log "  $ASSET on release $TAG already carries source identity $IDENTITY"
         log "  inputs hashed:"
-        sh "$SELF_DIR/cloud-android-source-identity.sh" explain "$APP" | sed 's/^/    /'
+        if [ -n "$PATHS_FROM" ]; then
+            sh "$SELF_DIR/cloud-android-source-identity.sh" explain "$APP" \
+               --paths-from "$PATHS_FROM"
+        else
+            sh "$SELF_DIR/cloud-android-source-identity.sh" explain "$APP"
+        fi | awk '{ print "    " $0 }'
         exit 0
     fi
     out "skip=false"

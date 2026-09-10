@@ -108,6 +108,123 @@ _gradle() { _ensure_firestack; in_nix gradle --no-daemon -p "$SCRIPT_DIR" "$@"; 
 
 _bj() { python3 -c "import json,sys;print(json.load(open('$SCRIPT_DIR/build.json'))$1)" 2>/dev/null; }
 
+# ── the publish gate, per library APK ──────────────────────────────
+# This workflow is the one that publishes MANY assets from one job, and that is
+# why it went ungated for so long: cloud-android-publish-gate.sh resolves a
+# single asset name out of build.json, this build.json declares none, and the
+# gate fails open when it cannot name an asset. So every push touching ANY
+# module under the scan root republished all 24 library APKs.
+#
+# On 2026-09-09 a fix to libs/updater did exactly that: 23 of the 24 APKs it
+# put on the release were rebuilds of source that had not moved, and the
+# constellation store offered every one of them to the phone as an update.
+#
+# The gate is per ASSET here, and each asset's inputs are its own module plus
+# the modules that module compiles against - so a touch to libs/updater
+# republishes Cloud-Lib-Updater.apk and Cloud-Lib-Appstore.apk, and leaves the
+# other 22 alone.
+ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)"
+GATE="$ROOT/1_cicd/dist/scripts/cloud-android-publish-gate.sh"
+IDENTITY_ENGINE="$ROOT/1_cicd/dist/scripts/cloud-android-source-identity.sh"
+# The app directory as the gate names it - derived from where this file sits,
+# never spelled out, so moving the harness cannot leave a stale literal behind.
+GATE_APP="${SCRIPT_DIR#"$ROOT"/}"
+
+# The workflow's whole trigger list, resolved once. Every module's input set is
+# carved out of THIS list rather than derived independently, which is what
+# keeps the union of the 24 sets equal to the list: a path the workflow watches
+# is either module-scoped below or shared by all of them, never dropped.
+_trigger_paths() { sh "$IDENTITY_ENGINE" paths "$GATE_APP"; }
+
+# Input paths for ONE library APK, repo-root-relative, one per line.
+#   $1 module name    $2 file holding _trigger_paths output
+_module_paths() {
+  python3 - "$SCRIPT_DIR" "$ROOT" "$1" "$2" <<'MODULEPATHS'
+import json, os, re, sys
+
+script_dir, root, target, trigger_file = sys.argv[1:5]
+config = json.load(open(os.path.join(script_dir, 'build.json')))
+lib_config = config['lib_apks']
+scan = lib_config['scan']
+scan_roots = [os.path.normpath(os.path.join(script_dir, r))
+              for r in (scan if isinstance(scan, list) else [scan])]
+
+# Every directory holding a build.gradle is a module. The lib_apks exclude list
+# is deliberately NOT applied: an excluded module ships no APK of its own but
+# can still be compiled into one that does, and dropping it here would hide a
+# real change from the APK that contains it.
+modules = {}
+for scan_root in scan_roots:
+    for entry in sorted(os.listdir(scan_root)):
+        if os.path.isfile(os.path.join(scan_root, entry, 'build.gradle')):
+            modules[entry] = os.path.join(scan_root, entry)
+
+# The module graph exactly as each build.gradle declares it. Parsed from the
+# declaration rather than restated as data, so adding a dependency widens that
+# APK's identity with no edit here and no list to keep in step.
+dependencies = {}
+for name, path in modules.items():
+    text = open(os.path.join(path, 'build.gradle')).read()
+    dependencies[name] = {d for d in
+                          re.findall(r"""project\(['"]:libs:([A-Za-z0-9_.-]+)""", text)
+                          if d in modules}
+
+closure, pending = set(), [target]
+while pending:
+    current = pending.pop()
+    if current in closure or current not in modules:
+        continue
+    closure.add(current)
+    pending.extend(dependencies[current])
+
+if not closure:
+    sys.exit("FATAL: '%s' is not a module under %s" % (target, scan_roots))
+
+paths = {os.path.relpath(modules[name], root) for name in closure}
+
+# Anything under a scan root that is NOT a module directory belongs to no
+# single APK and can change any of them: the prebuilt aar repos, the shared
+# module test script, upstream trees compiled into another app. Hashed into
+# EVERY module's identity, so a change there republishes the whole set.
+# Deliberately over-broad - republishing too much costs bandwidth, while a
+# missed publish leaves a phone on a stale APK and says nothing.
+for scan_root in scan_roots:
+    for entry in sorted(os.listdir(scan_root)):
+        if entry not in modules:
+            paths.add(os.path.relpath(os.path.join(scan_root, entry), root))
+
+# Everything the workflow watches that is not inside a scan root is harness -
+# the vendored build.sh, the module map, the workflow itself - and belongs to
+# every APK this job builds.
+for line in open(trigger_file):
+    entry = line.strip()
+    if not entry:
+        continue
+    absolute = os.path.normpath(os.path.join(root, entry))
+    if any(absolute == r or absolute.startswith(r + os.sep) for r in scan_roots):
+        continue
+    paths.add(entry)
+
+print('\n'.join(sorted(paths)))
+MODULEPATHS
+}
+
+# True when this asset's inputs are unchanged since the bytes already on the
+# release were built. Fail-open by construction: every error path returns
+# false, so an unreadable release, a missing engine or an unparsable module
+# graph publishes rather than skips.
+#   $1 module   $2 asset file name   $3 dir holding the resolved path lists
+_gate_skip() {
+  local module="$1" asset="$2" paths_dir="$3" verdict
+  [ -f "$GATE" ] || return 1
+  _module_paths "$module" "$paths_dir/.triggers" > "$paths_dir/$module" 2>/dev/null || return 1
+  # GITHUB_OUTPUT is cleared for the call: the gate appends `skip=` to it, and
+  # 24 of those would collide into one meaningless step output for the job.
+  verdict="$(GITHUB_OUTPUT= sh "$GATE" check "$GATE_APP" \
+               --asset "$asset" --paths-from "$paths_dir/$module" 2>&1)" || return 1
+  printf '%s\n' "$verdict" | grep -qx '\[publish-gate\] skip=true'
+}
+
 # The one scan, shared by settings.gradle / app/build.gradle / regen.sh.
 # Emits: "<module>|<flavorName>|<Asset-Name.apk>|<ghcr-image>" per line.
 _libs() {
@@ -240,7 +357,18 @@ case "$CMD" in
     SHORT="${SHA:0:8}"
     reg="$(_bj "['release']['ghcr']['registry']")/$(_bj "['release']['ghcr']['namespace']")"
     mt="$(_bj "['release']['ghcr']['media_type']")"
+    PATHS_DIR="$(mktemp -d)"
+    trap 'rm -rf "$PATHS_DIR"' EXIT
+    _trigger_paths > "$PATHS_DIR/.triggers"
     while IFS='|' read -r n flavor asset image; do
+      # The SAME verdict the release publish uses, against the same sidecar, so
+      # GHCR and the release cannot drift into disagreeing about which build a
+      # tag names. The store pulls from GHCR, so an ungated push here would put
+      # the update prompt back on the phone even with the release gated.
+      if _gate_skip "$n" "$asset" "$PATHS_DIR"; then
+        log "gate: $image unchanged since the release — not repushing"
+        continue
+      fi
       # CREATE WITH GITHUB_TOKEN, UPDATE WITH THE PAT — each token for the one
       # thing it can do.
       #
@@ -280,9 +408,24 @@ case "$CMD" in
     ;;
   gh-release)
     log "Publishing library APKs to GitHub Releases (rolling latest)…"
-    # One upload call with every asset: `gh release upload` takes N files, and a
-    # per-file loop would re-resolve the release 24 times.
-    mapfile -t files < <(_libs | cut -d'|' -f3 | sed "s#^#$DIST_DIR/#")
+    PATHS_DIR="$(mktemp -d)"
+    trap 'rm -rf "$PATHS_DIR"' EXIT
+    _trigger_paths > "$PATHS_DIR/.triggers"
+    # One upload call with every asset that MOVED: `gh release upload` takes N
+    # files, and a per-file loop would re-resolve the release 24 times.
+    files=(); gated_modules=(); gated_assets=(); held=0
+    while IFS='|' read -r n flavor asset image; do
+      if _gate_skip "$n" "$asset" "$PATHS_DIR"; then
+        held=$((held + 1))
+        continue
+      fi
+      gated_modules+=("$n"); gated_assets+=("$asset"); files+=("$DIST_DIR/$asset")
+    done < <(_libs)
+    [ "$held" -eq 0 ] || log "gate: $held library APKs unchanged since the release — not republished"
+    if [ "${#files[@]}" -eq 0 ]; then
+      log "gate: no library APK's source moved — nothing to publish"
+      exit 0
+    fi
     # Sidecar sha256 per asset — a same-size collision on 2026-08-30 hid a
     # real update from the in-app updater when it compared size only; it now
     # compares this digest instead, so every asset needs its own sidecar.
@@ -308,13 +451,43 @@ case "$CMD" in
         && awk -v n="$b.sha256" '$1==n{f=1} END{exit !f}' <<<"$asset_list" \
         || { errlog "gh-release: $b or its .sha256 sidecar missing/size-mismatched on release latest after upload (remote=$remote_size local=$local_size)"; exit 1; }
     done
+    # Stamped only AFTER the hard-verify above agrees the bytes are on the
+    # release. A stamp written earlier would claim an identity the release does
+    # not carry, and every later push would skip against that claim.
+    i=0
+    while [ "$i" -lt "${#gated_assets[@]}" ]; do
+      sh "$GATE" stamp "$GATE_APP" \
+         --asset "${gated_assets[$i]}" \
+         --paths-from "$PATHS_DIR/${gated_modules[$i]}"
+      i=$((i + 1))
+    done
     log "published ${#files[@]} assets + sidecars"
     ;;
   list)
-    # Same scan the build uses — handy for confirming what will ship.
-    _libs | column -t -s'|'
+    # Same scan the build uses — handy for confirming what will ship, and the
+    # list the blast-radius test iterates so it can never drift from the set
+    # actually shipped. `column` only pretty-prints and is absent from some
+    # runners; without the fallback this exits 127 and the caller reads an
+    # empty module list as "nothing ships".
+    if command -v column >/dev/null 2>&1; then
+      _libs | column -t -s'|'
+    else
+      _libs | tr '|' '\t'
+    fi
+    ;;
+  module-paths)
+    # The input set gating ONE library APK, one path per line. Pure: no gh, no
+    # network, no gradle. This is the surface
+    # 1_cicd/src/scripts/test/publish-gate-blast-radius.test.sh drives to prove
+    # a change to one module selects that module and not the other 23.
+    MODULE="${2:-}"
+    [ -n "$MODULE" ] || { errlog "usage: build.sh module-paths <module>"; exit 2; }
+    PATHS_DIR="$(mktemp -d)"
+    trap 'rm -rf "$PATHS_DIR"' EXIT
+    _trigger_paths > "$PATHS_DIR/.triggers"
+    _module_paths "$MODULE" "$PATHS_DIR/.triggers"
     ;;
   help|*)
-    echo "Usage: build.sh <build|release|clean|oras-push|gh-release|list>"
+    echo "Usage: build.sh <build|release|clean|oras-push|gh-release|list|module-paths>"
     ;;
 esac

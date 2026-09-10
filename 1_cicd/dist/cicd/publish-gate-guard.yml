@@ -1,0 +1,46 @@
+name: "publish gate guard — a shared-library change must not republish the whole shelf"
+
+# WHY THIS WORKFLOW EXISTS.
+# Three times the fleet has republished applications nobody touched: task #146
+# (Collabora Office, 250 MB, rebuilt by a repo-wide commit), task #235
+# (cloud-ide, filed as a recurrence of #146), and on 2026-09-09 commit 34a089d7,
+# which fixed three holes in ab_cloud-libs-shared/libs/updater and put all 35
+# library APKs on the release when 2 had changed. The owner's phone offered six
+# applications at once, every one stamped sha-34a089d7.
+#
+# Both earlier fixes are still in the tree and both are still correct. They did
+# not hold because nothing asserted the property they established, so the one
+# workflow the publish gate could not structurally weigh — ship-cloud-libs,
+# which publishes 35 assets from a build.json that can name only one — stayed
+# ungated and invisible. A third fix with no test would be a third recurrence
+# waiting.
+#
+# WHY EVERY PUSH, WITH NO PATH FILTER.
+# The trigger list is one of the things under test. Filtering this workflow by
+# the same kind of list it audits would let a change to that list disable the
+# audit of that list, which is the failure it exists to catch. The test needs
+# no gradle, no gh and no network, so it costs seconds and narrowing when it
+# runs could only ever cost a miss.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  blast-radius:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The gate's own reasoning is what is being checked, so the fixture in
+      # this test drives the REAL ab_cloud-libs-shared/lib-apks/build.sh through
+      # a symlink rather than a copy: a copy passes for exactly as long as it
+      # takes the two to drift, which is how #235's fix stopped covering the
+      # code that runs.
+      - name: One library changes, one library republishes
+        run: bash 1_cicd/src/scripts/test/publish-gate-blast-radius.test.sh
