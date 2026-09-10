@@ -192,6 +192,136 @@ else
     echo "$MISBLOCKED" | sed 's/^/        /'
 fi
 
+echo "== T8: every declared section prefix is UNIQUE, one character, and not alphanumeric =="
+# THE TRAP THAT COMES WITH ADDING A SECTION, and the reason T1 alone is not
+# enough. T1 only asks whether a folder's first character is SOME declared
+# prefix. It cannot notice two sections declaring the SAME character, and that
+# failure is invisible in the diff and silent on the device: renderAllApps
+# buckets with `sections.firstOrNull { folder.label.startsWith(it.prefix) }`,
+# so the second section to declare a duplicate simply never receives a folder
+# and is skipped as empty, while its folders appear under the first section's
+# subhead. The owner sees apps in a section he never put them in and no error
+# anywhere. Minting "#" for Projects on 2026-09-10 was exactly this choice, and
+# proving the character was free was a manual enumeration; this is that
+# enumeration made permanent.
+DUP_PREFIX="$(q '.ui.phone_sections | group_by(.prefix) | map(select(length > 1))
+                 | .[] | "\(.[0].prefix) claimed by: \(map(.title) | join(", "))"' | grep -v '^$' || true)"
+if [ -z "$DUP_PREFIX" ]; then
+    ok "all $(q '.ui.phone_sections | length') section prefixes are distinct"
+else
+    bad "section prefix(es) claimed by more than one section — the later section can never receive a folder:"
+    echo "$DUP_PREFIX" | sed 's/^/        /'
+fi
+
+# One character, because the bucket is read as `label[0:1]` here, in
+# test-app-identity-resolves.sh and in PhoneTaxonomy.prefixOfFolder. And NOT
+# alphanumeric, because prefixOfFolder returns "" for a letter or digit --
+# a section keyed on "P" would collect folders that every other surface
+# reports as belonging to no section at all.
+BAD_PREFIX="$(q '.ui.phone_sections[]
+                 | select((.prefix | length) != 1 or (.prefix | test("^[A-Za-z0-9]$")))
+                 | "\(.title) prefix=\(.prefix | @json)"' | grep -v '^$' || true)"
+if [ -z "$BAD_PREFIX" ]; then
+    ok "every section prefix is exactly one non-alphanumeric character"
+else
+    bad "section prefix(es) PhoneTaxonomy.prefixOfFolder would report as sectionless:"
+    echo "$BAD_PREFIX" | sed 's/^/        /'
+fi
+
+echo "== T9: Projects sits immediately after Tools · Primary =="
+# The owner asked for it "after Tools Primary and Before Configs" on
+# 2026-09-10. Position is render order (ui._doc_phone_sections: "Order =
+# render order"), so it is an assertion about the ARRAY, and it is worth
+# pinning because the hundred-blocks in T7 are derived from this index -- a
+# section reordered here silently misblocks every folder below it.
+AFTER="$(q '.ui.phone_sections | to_entries
+            | (map(select(.value.title == "Tools · Primary")) | first | .key) as $p
+            | .[$p + 1].value.title')"
+if [ "$AFTER" = "Projects" ]; then
+    ok "Projects is the section immediately after Tools · Primary"
+else
+    bad "the section after Tools · Primary is '$AFTER', expected 'Projects'"
+fi
+
+echo "== T10: the Projects intake is a MOVE — present in the new folder, gone from the old =="
+# Both halves, deliberately. Asserting only arrival would pass while the old
+# keyword still sat in a folder with a LOWER order, which is the folder that
+# would actually win -- correct-looking in the diff, wrong on the device, and
+# exactly the shape of the leftover 'pkg^com.termux.' T4 exists for. The old
+# folder is named so the assertion says where it must NOT be, not merely that
+# one owner exists.
+for triple in "pkg:co.mangotechnologies.clickup proj_projects -" \
+              "pkg:com.fatsecret.android proj_projects hlth_outdoor" \
+              "pkg:com.google.android.apps.fitness proj_projects hlth_outdoor" \
+              "pkg:com.nomadmania.presentation proj_projects svc_travel" \
+              "pkg:mobi.eup.easygerman proj_projects hlth_learning" \
+              "pkg:es.bancosantander.apps proj_money svc_money" \
+              "pkg:com.revolut.revolut proj_money svc_money" \
+              "pkg:es.gob.interior.policia.midni prod_utils svc_gov"; do
+    set -- $triple; kw="$1"; want="$2"; gone="$3"
+    owners="$(q "[.ui.phone_folders[] | select((.match_keywords // []) | index(\"$kw\")) | .id] | join(\",\")")"
+    if [ "$owners" = "$want" ]; then
+        ok "$kw is in $want, and in nothing else"
+    else
+        bad "$kw is in '${owners:-NO FOLDER}', expected exactly '$want'${gone:+ (it must no longer be in $gone)}"
+    fi
+done
+
+# svc_money moved WHOLE and must not have been left behind as a husk: an
+# empty -Money in Buro would be hidden by renderAllApps (empty folders are
+# skipped) and so would read as correct from the diff alone.
+STALE="$(q '[.ui.phone_folders[] | select(.id == "svc_money" or .label == "-Money") | .id] | join(",")')"
+if [ -z "$STALE" ]; then
+    ok "no '-Money' folder is left behind in Services · Buro"
+else
+    bad "svc_money/-Money still exists ($STALE) — the folder was copied into Projects, not moved"
+fi
+
+echo "== T11: every package keyword in the Projects section is a well-formed package id =="
+# w258 made an unresolved curated entry render as a visible "Not installed"
+# tile instead of hiding, so a typo is now permanent furniture on the owner's
+# screen rather than a silent absence. co.mangotechnologies.clickup is the
+# live example: the guessable com.clickup.android resolves to nothing at all.
+# Two or more dot-separated segments, each starting with a letter -- the
+# Android manifest rule, minus the keyword's own "pkg:"/"pkg^" verb.
+MALFORMED="$(q '
+  (.ui.phone_sections | map(select(.title == "Projects") | .prefix)) as $p
+  | .ui.phone_folders[]
+  | select(.label[0:1] as $c | $p | index($c))
+  | . as $folder
+  | (.match_keywords // [])[]
+  | select(startswith("pkg:") or startswith("pkg^"))
+  | .[4:] | select(test("^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+\\.?$") | not)
+  | "\($folder.id) \(.)"' | grep -v '^$' || true)"
+if [ -z "$MALFORMED" ]; then
+    ok "every Projects package keyword is a well-formed Android package id"
+else
+    bad "malformed package id(s) in the Projects section — these can never resolve:"
+    echo "$MALFORMED" | sed 's/^/        /'
+fi
+
+echo "== T12: every section prefix is selectable on the Notify filter rows =="
+# Adding a section to ui.phone_sections is only half of adding a section. The
+# Notify tabs narrow by taxonomy through `filters_*` option ids, and an option
+# id is a SET of prefixes (AggregatorStackFragment.taxonomyKeeps does
+# `want.contains(prefix)`), so a prefix no option contains is a section whose
+# apps reach no tab -- installable, classified, and unreachable. Checked over
+# EVERY filters_* row, not just the first: the six rows are six copies of the
+# same option list and a prefix added to one of them is a filter that works on
+# one tab and not the other five.
+while IFS=$'\t' read -r row prefix covered; do
+    [ "$covered" = "true" ] && ok "$row offers section prefix '$prefix'" \
+                            || bad "$row has no option containing '$prefix' — that section's apps reach no tab from this row"
+done < <(q '
+  (.ui.phone_sections | map(.prefix)) as $prefixes
+  | .ui.sections[] | . as $section
+  | to_entries[] | select(.key | startswith("filters_"))
+  | .key as $row | .value as $filters
+  | [ $filters[] | select(.id == "tools" or .id == "services") | .options[] | .id ] as $opts
+  | $prefixes[] | . as $p
+  | [ "\($section.id).\($row)", $p, ([ $opts[] | select(contains($p)) ] | length > 0) ]
+  | @tsv')
+
 echo
 echo "-- test-phone-taxonomy-prefixes: $PASS passed, $FAIL failed --"
 [ "$FAIL" -eq 0 ]
