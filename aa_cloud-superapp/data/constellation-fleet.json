@@ -451,7 +451,7 @@
       "namespace": "diegonmarcos",
       "image": "cloud-writer",
       "tag": "latest",
-      "asset": "Cloud-Writer.apk",
+      "asset": "Cloud-Writer-PLANTED.apk",
       "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Writer.apk",
       "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-writer",
       "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-writer",

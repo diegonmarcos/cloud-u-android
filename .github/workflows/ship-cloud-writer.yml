@@ -15,6 +15,15 @@ name: "Ship → Cloud Writer APK (build + push to GHCR via ORAS + attach to GH R
 # application's gradle graph, so it cannot fail ship-cloud-mail,
 # ship-cloud-keyboard or ship-cloud-superapp either.
 #
+# The paragraph above was a promise about the GRADLE graph, and the gradle graph
+# was never the thing that broke. A tester is: test-cloud-writer-tools.sh reads
+# aa_cloud-superapp/data/constellation-fleet.json to check that the store offers
+# the asset this build publishes, so an edit inside the SuperApp could turn this
+# release red — the #242 shape, pointed the other way. Since
+# cloud-android-test-engine.sh classifies each tester by the source its verdict
+# was actually reached with, that failure is a warning and this APK still ships.
+# BEING PROVEN, NOT ASSERTED: run id recorded here once the plant has shipped.
+#
 # Same data-driven publish path as every other application: the engine reads
 # ac_cloud-writer/build.json::release, so no registry, tag or artifact name is
 # written in this file.
