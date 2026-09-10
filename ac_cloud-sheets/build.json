@@ -123,5 +123,25 @@
       "generate_release_notes": false
     }
   },
+  "published_artifact": {
+    "_doc": "WHAT IS ACTUALLY ON THE RELEASE SHELF RIGHT NOW, AND IT IS NOT OURS. Every other key in this file describes the app we intend to build. NOTHING HAS EVER BUILT IT: build.host is null and ship-cloud-sheets.yml exits 1 before it publishes anything. So the only office artefact on the rolling `latest` release is still Cloud-Sheets.apk from the mirror era, and it is Collabora's own signed build republished under our release name. This block records that as DATA rather than leaving it as prose in a commit message, because the repository had already started reasoning as though the source build existed — test-sheets-mirror-pin.sh deleted its published-bytes checks on the stated premise 'we build com.diegonmarcos.cloudoffice, we are its only source', which is false and stays false until #240 is funded.",
+    "_doc_verified": "READ OUT OF THE ARTEFACT ON 2026-09-10, not inferred from the filename. The ZIP central directory was range-fetched (6,375 entries), AndroidManifest.xml was decoded for its package attribute, META-INF/COLLABOR.RSA was decoded with openssl for the signing certificate, and all 267,216,449 bytes were streamed through sha256sum. All four agree with the row Collabora's own F-Droid index publishes for their arm64 APK, so these bytes are byte-identical to what their repo serves.",
+    "built_by_this_fleet": false,
+    "asset_name": "Cloud-Sheets.apk",
+    "release_tag": "latest",
+    "publisher": "Collabora Productivity",
+    "package": "com.collabora.libreoffice",
+    "version_name": "26.04.3.1",
+    "version_code": 155,
+    "abi": "arm64-v8a",
+    "size": 267216449,
+    "sha256": "b7ab381de96f429c2e762d0e54ee0fac7db03ad2fecfede9f4c558c767d18513",
+    "signer_cert_sha256": "573258c84e149b5f4d9299e7434b2b69a8410372921d4ae586ba91ec767892cc",
+    "signer_subject": "C=GB, L=Cambridge, O=Collabora Productivity Limited, OU=productivity, CN=Tomaz Vajngerl",
+    "upstream_apk_name": "collabora-office-mobile-26.04.3.1-155-release-arm64-v8a-2026-09-03.apk",
+    "fdroid_index": "https://www.collaboraoffice.com/downloads/fdroid/repo/index-v1.json",
+    "_doc_do_not_rename": "DO NOT RENAME OR DELETE THIS ASSET AS A TIDY-UP. aa_cloud-superapp/build.json's phone-apps entry points install_apk_url at this exact filename, and it is the only office app the owner can install today. Renaming it hands him a 404; deleting it takes his office suite away to fix a labelling problem. The honest fix is to publish Cloud-Office.apk beside it, which needs a build host, not a rename.",
+    "_doc_why_not_repackaged": "AND IT MUST NOT BE REPACKAGED. Injecting our dex into these bytes to make the Text Enhance menu item appear would break Collabora's signature, require re-signing with the fleet key, and put a modified binary of unclear provenance on the owner's phone while looking like a successful build. #241 answered the reuse question NO on the engine's own terms: 0 of 6,375 entries are .a or .h, and upstream needs eight static archives to link libandroidapp.so."
+  },
   "_doc_source_identity": "source_identity.mode=\"pin\" IS DELIBERATELY GONE. It existed because a mirror's output was a pure function of `upstream`, so hashing the directory republished 250 MB whenever an unrelated repo-wide commit moved the tree sha — which happened on 2026-09-01. That reasoning DIES with the mirror: our output is now a function of the pins AND the patch series AND the configure flags, all of which live in this directory. Falling back to the default path hash is therefore correct, and leaving mode=pin would have been an active bug — every patch added here would have produced a byte-different APK that the gate believed was unchanged, and the phones would never have seen it."
 }

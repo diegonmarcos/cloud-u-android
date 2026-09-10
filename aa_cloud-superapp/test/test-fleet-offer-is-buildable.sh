@@ -105,10 +105,74 @@ echo "== T4: the block rule is narrow — it must not take the fleet with it =="
 # build.json, every app in the store goes blocked, and the phone silently stops
 # updating anything. This is the assertion that catches that, and it is why the
 # rule is keyed on the KEY existing rather than on the value being null.
+#
+# THIS USED TO READ `[ "$BLOCKED_IDS" = "sheets" ]`, which is a hardcoded list
+# wearing an assertion's clothes. It stated "only sheets may be blocked", but
+# the invariant that actually matters is "nothing is blocked WITHOUT A REASON IN
+# ITS OWN build.json" — and the two differ the day a second app legitimately
+# declares build.host: null. On that day the hardcoded form goes red inside the
+# SuperApp's release, for a correct change to a different app, and the fix
+# available to whoever is paged is to edit this line — which is how a tester
+# stops being evidence. So the expectation is DERIVED from the same data
+# regen.sh reads. The regression it exists to catch is unaffected: if the
+# predicate goes true for all 35, 34 of them have no null build.host to explain
+# it and every one of those is named below.
+unexplained=""
+for id in $(jq -r '.apps[] | select(.blocked) | .id' "$FLEET"); do
+  # regen.sh derives the fleet id from the directory basename with an
+  # ac_cloud- or ac_c3- prefix stripped, so invert exactly that, and accept a
+  # fork entry's own blocked_on as an equally declared reason.
+  bj=""
+  for cand in "$UNIX/ac_cloud-$id/build.json" "$UNIX/ac_c3-$id/build.json" "$UNIX/$id/build.json"; do
+    [ -f "$cand" ] && { bj="$cand"; break; }
+  done
+  if [ -z "$bj" ]; then
+    unexplained="$unexplained $id(no-build.json)"
+  elif jq -e '((.build // {}) | has("host")) and (.build.host == null)' "$bj" >/dev/null 2>&1; then
+    :   # declared: this app requires a build host and none has been established
+  elif jq -e '[(.forks // {}) | to_entries[] | select(.value|type=="object") | .value.blocked_on] | any(. != null)' "$bj" >/dev/null 2>&1; then
+    :   # declared: a fork carrying its own blocked_on
+  else
+    unexplained="$unexplained $id"
+  fi
+done
 BLOCKED_IDS="$(jq -r '[.apps[] | select(.blocked) | .id] | sort | join(",")' "$FLEET")"
-[ "$BLOCKED_IDS" = "sheets" ] \
-  && ok "exactly one fleet entry is blocked, and it is the one with no build host (sheets)" \
-  || bad "blocked entries are '$BLOCKED_IDS' — expected only 'sheets'; a block rule that catches other apps stops their updates fleet-wide"
+[ -z "$unexplained" ] \
+  && ok "every blocked entry is explained by its own build.json (blocked: ${BLOCKED_IDS:-none})" \
+  || bad "blocked with nothing in their build.json to justify it:$unexplained — a block rule that catches other apps stops their updates fleet-wide"
+
+echo "== T5: a third party's artefact is never offered as ours =="
+# THE DEFECT #266 NAMES. ac_cloud-sheets declares Cloud-Office.apk and
+# com.diegonmarcos.cloudoffice, and nothing has ever built either: the only
+# office artefact on the rolling `latest` release is Cloud-Sheets.apk, which is
+# byte-identical to Collabora's own signed arm64 build — package
+# com.collabora.libreoffice, signed by Collabora Productivity Limited, verified
+# against their F-Droid index by sha256, size and signing certificate.
+# build.json::published_artifact records that, and this asserts the one rule
+# that must hold while it does: an artefact this fleet did not build must not be
+# offered in the store as though it did. It is not "sheets is blocked" — it is
+# keyed on the declaration, so it keeps its meaning for any future app in the
+# same position, and it goes quiet on its own the day published_artifact says
+# built_by_this_fleet: true.
+# NOT `.published_artifact.built_by_this_fleet // "absent"`. jq's alternative
+# operator fires on false as well as on null, so the one value this assertion
+# exists to catch — built_by_this_fleet: false — would have read back as
+# "absent" and taken the branch that says nothing is wrong. Ask whether the
+# record EXISTS, then read it.
+BUILT_BY_US="$(jq -r 'if (.published_artifact | type) == "object"
+                      then (.published_artifact.built_by_this_fleet | tostring)
+                      else "absent" end' "$OFFICE")"
+if [ "$BUILT_BY_US" = "false" ]; then
+  FOREIGN_PKG="$(jq -r '.published_artifact.package // ""'   "$OFFICE")"
+  FOREIGN_BY="$(jq  -r '.published_artifact.publisher // ""' "$OFFICE")"
+  [ "$BLOCKED" = "true" ] \
+    && ok "the published artefact is $FOREIGN_BY's own build ($FOREIGN_PKG) and the store does not offer it as ours" \
+    || bad "the published artefact is $FOREIGN_BY's own build ($FOREIGN_PKG), not this fleet's, yet the fleet entry is blocked=$BLOCKED — the store presents a third party's signed APK as a Cloud app"
+elif [ "$BUILT_BY_US" = "absent" ]; then
+  ok "no published_artifact record — nothing claims a foreign artefact is on the shelf"
+else
+  ok "published_artifact declares this fleet built it"
+fi
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
