@@ -2139,75 +2139,49 @@
           }
         ],
         "_doc_moved_cloud": "stack_cloud / tiles_cloud USED to hang here — GHA runs, repo commits and the Dagu deeplink. They are now sections[c3].stack_observability, under Cloud ▸ C3 ▸ Observability — which IS the c3 section's own Observability tab, not a copy of it beside the pages it points at. Nothing else keyed off them: `page:infos/cloud` addresses the PAGE, not these lists.",
-        "_doc_stack_msgs": "Projects ▸ Inboxes. A card here is the inbox for a KIND, and the kind is DERIVED from the central classification rather than declared a second time. The panel names one app with `url`: \"extapp:<id>\", an id from ui.external_apps; ui.phone_folders says which folder that app's packages classify into; and the card draws that folder's slice of the SAME phone notification feed Notify ▸ Inboxes reads. No membership is written down here, so retuning a folder in ui.phone_folders moves this page with it — which is the whole reason the classification is keyed on PACKAGE and not on a label a rename would move. Before this, each card narrowed the feed to its own app's package roster alone, so the mail card said 'nothing captured' about one package while the phone's actual mail arrived from every other client the owner uses: a true sentence about the wrong question. A folder TWO cards would both claim is claimed by NEITHER — Chat · Matrix and Chat · Mattermost both classify into @Chat, and letting both expand would draw every chat notification twice on one page; those two fall back to their own roster instead. The `extapp:` declaration is still the ONLY route to an app: a panel that omits it renders its counts and nothing else, silently, because a missing declaration is a gap for whoever edits this file and not something the person holding the phone can act on (AggregatorStackFragment.inboxApp logs it to logcat instead). The card title used to double as a second, implicit route; it was removed because it bound notifications to a human-readable string, so relabelling a card silently moved or dropped its boxes. Between each card's summary and its list sits a BY KIND box: the same feed divided by the same ui.phone_folders folders, so the reader can see where the notifications a card does not list went. Its kinds are DERIVED from that one list — there is no fourth taxonomy powering it, which would recreate the drift this page was fixed for. It obeys one rule without exception: a count of zero and a question nobody asked are different facts and must look different. A kind the notification listener was actually queried for shows a number, including 0; a kind with no source says so in words. Notification Access off means NO kind has a source, and every row says that instead of showing a confident zero the owner could not tell apart from a quiet inbox. The cloud stream is excluded and the box says why: ui.ntfy.taxon classifies a publisher by SECTION prefix and never by folder, so a cloud message has no kind to be counted under.",
+        "_doc_stack_msgs": "Projects ▸ Inboxes. A card here is a CHANNEL CLASS — Mail, Chat, Messenger, RSS — and never one app. The owner asked for this on 2026-09-10: the page used to carry one card per app (Mail · accounts, Chat · Matrix, Chat · Mattermost, Messenger (Element), Dialer (Fossy)), which meant the question \"is there anything for me in my messages\" had to be asked five times and re-asked every time an app was installed. A panel names its class with `class: <id>`, an id from ui.inbox_classes, and draws that class's slice of the SAME phone notification feed Notify ▸ Inboxes reads, with a counted summary above it. WHY THE MEMBERSHIP IS NOT WRITTEN HERE: it lives in ui.inbox_classes beside ui.phone_folders, because a package roster is a CLASSIFICATION and every classification in this file lives under ui.* keyed on package — phone_folders, ntfy.taxon, external_apps. A roster inside a stack would be the only one that no other surface and no tester could read. WHY A FIFTH CARD: four curated classes are not a catch-all, and the card this page replaced was. An app that no class claims lands in the class marked `catch_all: true` (Other) rather than vanishing — the owner installing a messaging app nobody classified must still see its notifications on the screen they check, and a screen that silently drops notifications is worse than the per-app screen it replaced. WHAT THE SUMMARY IS: counts, measured from the notification listener — how many apps or channels the class holds, how many notifications, and how long ago the newest one arrived. It is deliberately not a written digest: kind=stats on this page prints numbers declared in this file under the caption 'Mock data — live fetch pending', and replacing five mock dashboards with a sixth, or with a paid model call the owner did not ask to pay for, would be a worse card than an honest count. WHAT MAIL REACHES: mail NOTIFICATIONS, not mail content. The message bodies live in the mail app's own store; ui.mail_accounts on this page is connection config (server, user, ports) and carries no messages, which is why renderMailAccounts has always captioned its own list 'Unread / total counts pending JMAP slice C2 + IMAP slice'. The Mail card says so on the card rather than presenting the lesser thing under the greater name. RSS is the one class that is not phone packages: it declares `source: c3ntfy` and reuses the stream=channels renderer the C3 Ntfy panel already had, so it is a retitle plus a summary and not new plumbing.",
         "stack_msgs": [
           {
-            "kind": "mail_accounts",
-            "title": "Mail · accounts",
+            "kind": "class_inbox",
+            "class": "mail",
+            "title_res": "inbox_class_mail",
+            "title": "Mail",
             "url": "extapp:cloud-mail"
           },
           {
-            "kind": "chat_matrix",
-            "title": "Chat · Matrix",
-            "url": "extapp:cloud-matrix"
-          },
-          {
-            "kind": "chat_mattermost",
-            "title": "Chat · Mattermost",
+            "kind": "class_inbox",
+            "class": "chat",
+            "title_res": "inbox_class_chat",
+            "title": "Chat",
             "url": "extapp:cloud-chat"
           },
           {
-            "_doc": "Deliberately declares NO `extapp:` url, unlike its siblings. This is a summary of the very app the `chat_matrix` card above already draws the notification boxes for, and declaring cloud-matrix here too would print the same Element notifications twice on one page. It stays what it is: counts.",
-            "kind": "stats",
-            "title": "Messenger (Element)",
-            "subtitle": "Matrix · Element",
-            "rows": [
-              {
-                "label": "Rooms",
-                "value": "14"
-              },
-              {
-                "label": "Unread",
-                "value": "6"
-              },
-              {
-                "label": "Mentions",
-                "value": "2"
-              },
-              {
-                "label": "Last sync",
-                "value": "2 min ago"
-              }
-            ]
+            "_doc": "Declares extapp:cloud-matrix so the card header opens Element, the messenger the owner actually reads. The class it draws is far wider than that one app — see ui.inbox_classes[messenger] — which is the whole point of classing by channel and not by app.",
+            "kind": "class_inbox",
+            "class": "messenger",
+            "title_res": "inbox_class_messenger",
+            "title": "Messenger",
+            "url": "extapp:cloud-matrix"
           },
           {
-            "kind": "stats",
-            "title": "Dialer (Fossy)",
-            "subtitle": "Fossify Phone",
-            "url": "extapp:cloud-dialer",
-            "rows": [
-              {
-                "label": "Missed calls",
-                "value": "2"
-              },
-              {
-                "label": "Recent",
-                "value": "8"
-              },
-              {
-                "label": "Contacts",
-                "value": "341"
-              },
-              {
-                "label": "Voicemail",
-                "value": "1"
-              }
-            ]
+            "_doc": "No `url`: there is no single app behind a class whose notifications arrive as ntfy channel messages over the cloud stream, and a header that opened an arbitrary one would be a lie about where these came from.",
+            "kind": "class_inbox",
+            "class": "rss",
+            "title_res": "inbox_class_rss",
+            "title": "RSS"
+          },
+          {
+            "_doc": "The catch-all, and the reason this page cannot silently lose a notification. It draws every app the four classes above do not claim, so a newly installed messaging app is visible here from its first notification and stays visible until somebody decides which class it belongs to. It is last on purpose — it is a triage queue, not a destination.",
+            "kind": "class_inbox",
+            "class": "other",
+            "title_res": "inbox_class_other",
+            "title": "Other"
           }
         ],
         "tiles_msgs": [
           {
             "id": "mail",
+            "note_res": "inbox_note_mail",
             "label": "Mail",
             "icon": "ic_mail",
             "target": "extapp:cloud-mail"
@@ -4721,6 +4695,41 @@
     ],
     "_doc_phone_grid_columns": "Column count for the Phone tab's folder grid. Mirrors tile_columns (6) so the two tabs share the same density rhythm.",
     "phone_grid_columns": 6,
+    "_doc_inbox_classes": "CHANNEL CLASSES for Projects ▸ Inboxes (sections[infos].stack_msgs). A class answers one question — what KIND of channel did this arrive on — and a card on that page is one class. Declared here rather than inside the stack because a package roster is a CLASSIFICATION, and every classification in this file lives under ui.* keyed on package (phone_folders, ntfy.taxon, external_apps); a roster buried in a stack would be the only one no other surface and no tester could read. CLASSIFYING A NEWLY INSTALLED APP IS A DATA EDIT: add its package to a class's `packages`, or add its folder to a class's `folders`, and rebuild. There is no when(packageName) in Kotlin and there must never be one. A class draws its members from the UNION of two axes. `folders` names ui.phone_folders ids and takes every package that classifies into them, so a class that lines up with an existing folder writes down NOTHING and follows that folder for ever — mail is exactly this, which is why adding a mail client to phone_folders[prod_mail] puts it on the Mail card with no edit here. `packages` names exact package ids and exists for the classes the folder taxonomy cannot express: prod_chat holds Mattermost and WhatsApp and Telegram and ntfy together, so Chat and Messenger — which the owner asked to keep apart — cannot both be a folder. A package listed here must also be known to phone_folders, or this list would be describing an app the central taxonomy has never heard of. PRECEDENCE: an exact `packages` hit wins over a `folders` hit, so a single app can be lifted out of an otherwise-inherited folder without disturbing the folder. NO PACKAGE MAY APPEAR IN TWO CLASSES — a notification filed under two cards is drawn twice and counted twice, and test/test-inbox-classes.sh fails the build on it. THE CATCH-ALL IS NOT OPTIONAL. Exactly one class carries `catch_all: true`, and it receives every package the others do not claim. Four curated classes are not a catch-all and the per-app page they replaced was; without this the owner installs a messaging app, nothing classifies it, and its notifications quietly stop appearing on the screen they check. `source: c3ntfy` marks a class whose material is not phone packages at all but the ntfy CHANNEL stream — the same stream=channels renderer the C3 Ntfy panel uses. A class may declare both, and RSS does: the C3 channels over the cloud, plus the ntfy app's own notifications on the phone, which are the same messages arriving by the other road.",
+    "inbox_classes": [
+      {
+        "_doc": "Every package ui.phone_folders already calls mail, and nothing written down twice. IMPORTANT — what this card can and cannot reach: mail NOTIFICATIONS, never mail CONTENT. The message bodies live in the mail app's own store, which this launcher does not read; ui.mail_accounts holds connection config and no messages. The card says so on itself.",
+        "id": "mail",
+        "folders": ["prod_mail"],
+        "packages": []
+      },
+      {
+        "_doc": "Work and project-management-shaped rooms. Split out of prod_chat by hand because that folder cannot express it: it holds Mattermost next to WhatsApp. com.trello classifies into prod_plan (.Calendar & Tasks) for the launcher grid and is claimed here for this page — the two taxonomies answer different questions and are allowed to disagree, which is why `packages` beats `folders` rather than merging with it.",
+        "id": "chat",
+        "folders": [],
+        "packages": ["chat.rocket.android", "com.Slack", "com.mattermost.rn", "com.mattermost.rnbeta", "com.trello"]
+      },
+      {
+        "_doc": "Strictly personal messaging, as the owner listed it: WhatsApp, WhatsApp Business, Instagram Direct, Messenger, Telegram 'etc...'. im.vector.app (Element) is here and not in chat because the card this page used to carry called it Messenger already. com.instagram.android is the Instagram app; its Direct DMs arrive under that package and there is no separate Direct package to name. The two SMS packages are here because a text message is a personal message however the carrier delivered it.",
+        "id": "messenger",
+        "folders": [],
+        "packages": ["com.beeper.android", "com.facebook.orca", "com.garmin.android.apps.messenger", "com.google.android.apps.messaging", "com.google.android.apps.tachyon", "com.instagram.android", "com.samsung.android.messaging", "com.viber.voip", "com.whatsapp", "com.whatsapp.w4b", "im.vector.app", "org.telegram.messenger"]
+      },
+      {
+        "_doc": "C3 ntfy channels and nothing else, which is what the owner asked for — `source: c3ntfy` reuses the stream=channels renderer verbatim, so this class is a title and a summary rather than new plumbing. io.heckel.ntfy is listed too: it is the ntfy client on the phone, so its notifications ARE C3 ntfy messages taking the other road, and filing them anywhere else would split one channel across two cards.",
+        "id": "rss",
+        "folders": [],
+        "packages": ["io.heckel.ntfy"],
+        "source": "c3ntfy"
+      },
+      {
+        "_doc": "THE CATCH-ALL. Declares no members and needs none: it is every package the four classes above did not claim. Deleting this entry, or dropping its catch_all flag, makes this page capable of silently losing a notification, which is the one failure it exists to prevent. test/test-inbox-classes.sh asserts an unclassified package lands here.",
+        "id": "other",
+        "folders": [],
+        "packages": [],
+        "catch_all": true
+      }
+    ],
     "_doc_phone_folders": "Every launchable app is routed to exactly one folder by PhoneAppClassifier: folders are walked in `order`, and the first keyword that matches wins, so a lower order beats a higher one. Keyword forms: (1) `pkg:com.foo.bar` exact packageName; (2) `pkg^com.foo.` packageName.startsWith; (3) `lbl:name` exact case-insensitive label; (4) `lbl~frag` label contains (min 3 chars); (5) a bare string matches anywhere in \"packageName label\" (min 4 chars) — sweeping and collision-prone, so it is used sparingly. Every app installed at the 2026-09-07 rebuild is pinned with an exact `pkg:` rule, which is why the folder lists read as inventories; `pkg^` rules only cover families that will keep growing (our own com.diegonmarcos.cloudlib.*, com.termux.*, VPN vendors). An app no keyword claimed then goes through the METADATA pass before any sink: `match_metadata`, declared beside `match_keywords`, routes on what Android itself publishes about the package, so a newly installed app is placed without a keyword edit. Three rule forms: `cat:game` matches ApplicationInfo.category by the platform constant name lowercased (game, audio, video, image, social, news, maps, productivity, accessibility); `intent:android.intent.category.APP_EMAIL` matches a launcher intent category the package resolves for, i.e. a role the platform grants it; `perm:android.permission.BODY_SENSORS` matches a permission declared in its manifest. Precedence inside the pass is by SIGNAL STRENGTH, not by `order` — category (the app states its own genre) beats intent (the platform grants it a role) beats permission (we infer from what it asks for), and `order` only breaks ties within one signal; otherwise a storage permission on a game would beat cat:game purely because Storage sorts earlier. Keywords always win over metadata: the keyword lists are curated and correct, metadata only keeps an un-curated app off the sink pile. Two sinks, neither with any rules: `others` (order 930, sink=true) catches everything both passes missed and is the triage queue — an app landing there means it needs a rule; `misc` (order 910) is the manual exile, give it explicit keywords to push something there on purpose. Neither carries a section prefix, so both render last under the Other subhead. The `match_keywords` lists cover THIRD-PARTY packages only: a keyword for one of our own constellation apps is derived at load time from ui.external_apps[].folder and must not be written here as well, or the identity would have two copies again and they could disagree. Manufacturer (Google / Samsung / non-Play-Store) is metadata for Smart Folders (see phone_smart_folders below) — NOT a primary grouping criterion. Order is a three-digit string, one hundred-block per section in phone_sections order, folders alphabetical by label inside the block (110, 120, ...); it drives both render order and match precedence, so a new folder takes the next free number in its block.",
     "phone_folders": [
       {
@@ -5050,6 +5059,7 @@
         "label": "@Chat",
         "match_keywords": [
           "pkg:chat.rocket.android",
+          "pkg:com.Slack",
           "pkg:com.beeper.android",
           "pkg:com.facebook.orca",
           "pkg:com.garmin.android.apps.messenger",

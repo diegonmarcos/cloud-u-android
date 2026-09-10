@@ -213,6 +213,14 @@ def phoneGridColumns   = (buildJson.ui.phone_grid_columns as Number)?.intValue()
 def uiPhoneSectionsJson = groovy.json.JsonOutput.toJson(buildJson.ui.phone_sections ?: [])
 def uiPhoneSectionsB64  = uiPhoneSectionsJson.bytes.encodeBase64().toString()
 
+// Channel classes for Projects > Inboxes (build.json::ui.inbox_classes). Baked
+// beside the folder taxonomy because it is the second half of the same answer:
+// phone_folders says which folder an app is in, inbox_classes says which INBOX
+// CARD it belongs on, and a card that could not read the second would have to
+// carry a package list in Kotlin. Read by InboxClasses.
+def uiInboxClassesJson = groovy.json.JsonOutput.toJson(buildJson.ui.inbox_classes ?: [])
+def uiInboxClassesB64  = uiInboxClassesJson.bytes.encodeBase64().toString()
+
 // Camera fallbacks for action:open_camera (build.json::ui.camera_apps). Only
 // consulted when the OS resolver answers nothing — the user's default camera
 // always wins.
@@ -689,6 +697,7 @@ android {
         buildConfigField "String", "HOME_SWIPE_DOWN",  "\"${homeSwipeDown}\""
         buildConfigField "String", "UI_PHONE_FOLDERS_B64",    "\"${uiPhoneFoldersB64}\""
         buildConfigField "String", "UI_PHONE_SECTIONS_B64",   "\"${uiPhoneSectionsB64}\""
+        buildConfigField "String", "UI_INBOX_CLASSES_B64",   "\"${uiInboxClassesB64}\""
         buildConfigField "String", "UI_CAMERA_APPS_B64",     "\"${uiCameraAppsB64}\""
         buildConfigField "String", "UI_PHONE_SMART_FOLDERS_B64", "\"${uiPhoneSmartFoldersB64}\""
         buildConfigField "String", "UI_SUITE_PHONE_GROUPS_B64", "\"${uiSuitePhoneGroupsB64}\""

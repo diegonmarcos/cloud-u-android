@@ -341,4 +341,47 @@
     <string name="onehand_star_recent_tabs_what">The pages, tabs and dashboards you last opened INSIDE this app, newest first, each with the name and icon its section declares. Not the same list as Centauri beside it: that one is Android apps on the phone, this one is where you have been in here. Read from the App Tabs history, so it is the same record the Tabs grid shows and it survives closing the app. A page that has since been renamed or deleted is dropped rather than offered.</string>
     <string name="onehand_star_recent_tabs_outer">(the 9 most recent pages, live)</string>
 
+
+    <!-- Projects > Inboxes: the four CHANNEL CLASSES the owner asked for on
+         2026-09-10, replacing one card per app. The names are what the card
+         header shows; build.json::ui.sections[infos].stack_msgs points at each
+         one through `title_res`, and keeps the English word in `title` as the
+         fallback and as the string this file is searched by. -->
+    <string name="inbox_class_mail">Mail</string>
+    <string name="inbox_class_chat">Chat</string>
+    <string name="inbox_class_messenger">Messenger</string>
+    <string name="inbox_class_rss">RSS</string>
+    <!-- The catch-all card. Named for what it is to the reader — the pile that
+         has not been sorted yet — rather than "Unclassified", which describes
+         our data and not their phone. -->
+    <string name="inbox_class_other">Other</string>
+
+    <!-- The counted summary above each class card. Every number here is
+         measured from the notification listener at draw time; none of it is
+         declared, and none of it costs a model call. -->
+    <string name="inbox_summary_header">SUMMARY · %1$s</string>
+    <string name="inbox_summary_apps">Apps</string>
+    <string name="inbox_summary_channels">Channels</string>
+    <string name="inbox_summary_notifications">Notifications</string>
+    <string name="inbox_summary_latest">Latest</string>
+    <!-- Shown against Latest when the class is empty. Not "0" and not a blank:
+         there is no newest thing, which is a different fact from a zero count. -->
+    <string name="inbox_summary_latest_none">none yet</string>
+    <string name="inbox_summary_counted">Counted from the phone notification listener at the moment this card was drawn.</string>
+    <string name="inbox_summary_channels_note">Channel messages are fetched per channel after this card is drawn, so they are in the boxes below rather than in the count above.</string>
+    <string name="inbox_notifications_header">NOTIFICATIONS · %1$s</string>
+    <string name="inbox_class_silent">silent · nothing captured in %1$s</string>
+
+    <!-- WHAT MAIL ACTUALLY REACHES. The owner asked for "the summary of all
+         mails"; this screen can read mail NOTIFICATIONS and cannot read mail.
+         Saying so on the card is the difference between a smaller true claim
+         and a larger false one. -->
+    <string name="inbox_note_mail">These are mail NOTIFICATIONS, not the mail itself. The messages live in the mail app\'s own store, which this screen does not read — so a mail that arrived silently, or was already dismissed from the shade, is not counted above.</string>
+
+    <!-- Data faults. Both are addressed to the person holding the phone, and
+         both describe a missing capability rather than an empty inbox, because
+         an empty list drawn for either would be a failure reporting success. -->
+    <string name="inbox_class_undeclared">unavailable · this card names a class the build does not declare</string>
+    <string name="inbox_class_no_catch_all">Nothing here is a catch-all, so an app that no class claims is not shown on this page at all. Give one class \"catch_all\": true in build.json::ui.inbox_classes.</string>
+
 </resources>

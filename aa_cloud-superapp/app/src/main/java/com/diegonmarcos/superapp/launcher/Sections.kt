@@ -117,6 +117,12 @@ object Sections {
     data class StackPanel(
         val kind: String,
         val title: String,
+        /** Name of the string resource that supplies [title] on screen, when
+         *  the panel declares one. The card name is what the owner reads, so a
+         *  card whose name is a plain word — Mail, Chat, Messenger, RSS — has to
+         *  be translatable; `title` stays as the fallback for a build whose
+         *  resource went missing, and as the name this file is searched by. */
+        val titleRes: String = "",
         val subtitle: String = "",
         val collapsed: Boolean = false,
         /** Used by kind=link_grid (flat) — single column of links. */
@@ -154,6 +160,11 @@ object Sections {
          *  while Apps RSS declares its personal subset here instead of
          *  carrying a second copy of the channel list (FIRE RULE #6). */
         val scopes: List<String> = emptyList(),
+        /** Used by kind=class_inbox — the `ui.inbox_classes` id this card is
+         *  the inbox for. The membership itself is NOT here: a package roster
+         *  is a classification and belongs beside the other classifications
+         *  under ui.*, where every surface and every tester can read it. */
+        val classId: String = "",
         /** Which side of a page's Cloud/Phone split this panel's stream sits
          *  on. A property of the SOURCE, not of any single notification:
          *  everything the notification listener captures is from an app on
@@ -780,6 +791,7 @@ object Sections {
                     out.add(StackPanel(
                         kind            = p.optString("kind", "placeholder"),
                         title           = p.optString("title", ""),
+                        titleRes        = p.optString("title_res", ""),
                         subtitle        = p.optString("subtitle", ""),
                         collapsed       = p.optBoolean("collapsed", false),
                         links           = parseLinks(p.optJSONArray("links")),
@@ -798,6 +810,7 @@ object Sections {
                         anchor          = p.optString("anchor", ""),
                         anchors         = panelAnchors,
                         source          = p.optString("source", ""),
+                        classId         = p.optString("class", ""),
                         limit           = p.optInt("limit", 0),
                     ))
                 }

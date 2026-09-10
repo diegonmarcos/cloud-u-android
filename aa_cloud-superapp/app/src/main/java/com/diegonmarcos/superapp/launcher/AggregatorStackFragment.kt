@@ -35,6 +35,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.lifecycle.lifecycleScope
+import com.diegonmarcos.superapp.apps.InboxClasses
 import com.diegonmarcos.superapp.apps.PhoneTaxonomy
 import com.diegonmarcos.superapp.ui.Haptics
 import com.diegonmarcos.superapp.core.NotificationStore
@@ -284,7 +285,7 @@ class AggregatorStackFragment : Fragment(),
         // builds. Added to the column after them, so it still renders last.
         val archive = buildArchiveSection(ctx)
         for (panel in panels) {
-            val view = if (panel.kind == "section_title") sectionTitleView(ctx, panel.title)
+            val view = if (panel.kind == "section_title") sectionTitleView(ctx, panelTitle(ctx, panel))
                        else buildPanel(ctx, inflater, panel)
             if (panel.origin.isNotBlank()) originCards += panel.origin to view
             anchors.register(panel.anchor, view)
@@ -620,7 +621,7 @@ class AggregatorStackFragment : Fragment(),
             isClickable = true; isFocusable = true
         }
         val title = TextView(ctx).apply {
-            text = panel.title.ifBlank { panel.kind.replace('_', ' ') }
+            text = panelTitle(ctx, panel)
             setTextAppearance(android.R.style.TextAppearance_Material_Title)
             setTextColor(resources.getColor(R.color.cloud_primary, ctx.theme))
             typeface = Typeface.DEFAULT_BOLD
@@ -704,6 +705,11 @@ class AggregatorStackFragment : Fragment(),
         "feed"               -> renderFeed(ctx, body, panel)
         "stats"              -> refreshable(body) {
             renderStats(ctx, body, panel); renderInboxNotifications(ctx, body, panel) }
+        // One card per CHANNEL CLASS, which is what this page became when the
+        // owner replaced one-card-per-app. Refreshable for the same reason the
+        // inbox kinds are: the boxes underneath answer to the page's own
+        // Sort/Show toggles.
+        "class_inbox"        -> refreshable(body) { renderClassInbox(ctx, body, panel) }
         "cloud_dashboard"    -> renderCloudDashboard(ctx, body, panel)
         else                 -> renderPlaceholder(ctx, body, panel)
     }
@@ -2737,6 +2743,192 @@ class AggregatorStackFragment : Fragment(),
         renderGroups(ctx, body, groups)
     }
 
+    // ── kind=class_inbox: one card per CHANNEL CLASS ──────────────────
+    //
+    // The owner asked (2026-09-10) for this page to stop being one card per app
+    // and become Mail / Chat / Messenger / RSS, each with a summary of its whole
+    // class and, under it, only that class's notifications.
+    //
+    // WHICH PACKAGES ARE IN A CLASS IS DATA and is not reachable from this file.
+    // [InboxClasses] reads build.json::ui.inbox_classes; a `when (packageName)`
+    // here would put the owner's own phone behind a release every time they
+    // installed a messaging app, which is the failure the whole shape exists to
+    // avoid.
+
+    /** The card name as the phone shows it: the declared string resource when
+     *  the panel names one, otherwise the English word build.json carries.
+     *
+     *  Generic on purpose rather than a class_inbox special case — a card name
+     *  is user-visible text on every kind, and the four names the owner chose
+     *  (Mail, Chat, Messenger, RSS) are exactly the kind of plain word that
+     *  reads as untranslated rather than as deliberately kept. */
+    private fun panelTitle(ctx: android.content.Context, panel: Sections.StackPanel): String {
+        if (panel.titleRes.isNotBlank()) {
+            val id = resources.getIdentifier(panel.titleRes, "string", ctx.packageName)
+            // A resource build.json names and this build does not carry is a
+            // gap for whoever edits the file, so it goes to logcat and the card
+            // falls back to its declared word rather than rendering blank.
+            if (id != 0) return getString(id)
+            android.util.Log.w(TAG, "panel '${panel.title}' declares title_res " +
+                "'${panel.titleRes}', which this build has no string for")
+        }
+        return panel.title.ifBlank { panel.kind.replace('_', ' ') }
+    }
+
+    /** A string named in build.json, or "" when this build carries no such
+     *  resource. Same contract as [panelTitle]: the data may name a string this
+     *  build does not have, and that must not crash a card. */
+    private fun stringByName(ctx: android.content.Context, name: String): String {
+        if (name.isBlank()) return ""
+        val id = resources.getIdentifier(name, "string", ctx.packageName)
+        return if (id == 0) "" else getString(id)
+    }
+
+    private fun renderClassInbox(
+        ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel,
+    ) {
+        val name = panelTitle(ctx, panel)
+        val cls = InboxClasses.byId(panel.classId)
+        if (cls == null) {
+            // The panel names a class ui.inbox_classes does not declare. Drawing
+            // an empty list would say "nothing arrived"; this says "we cannot
+            // tell", which is the true statement and the different one.
+            android.util.Log.w(TAG, "class_inbox panel '${panel.title}' names class " +
+                "'${panel.classId}', which build.json::ui.inbox_classes does not declare")
+            body.addView(stateLine(ctx, getString(R.string.inbox_class_undeclared), SIGNAL_UNKNOWN))
+            return
+        }
+        // The catch-all is what stops this page losing a notification, so its
+        // absence is reported on every card rather than discovered by an app
+        // going missing.
+        if (InboxClasses.catchAll == null) {
+            body.addView(caption(ctx, getString(R.string.inbox_class_no_catch_all)))
+        }
+
+        val granted = isNotificationAccessGranted(ctx)
+        if (!granted) {
+            // Identical treatment to every other card on this page: a missing
+            // capability is not an empty inbox, and an empty list drawn here
+            // would be a failure reporting success.
+            body.addView(stateLine(ctx, "unavailable · permission not granted", SIGNAL_UNKNOWN))
+            body.addView(caption(ctx, "Notification Access is off, so nothing this class " +
+                "carries is captured at all. This is empty because we cannot read it, not " +
+                "because the inbox is quiet."))
+            return
+        }
+
+        // Classify the whole feed once and select from it — this card CONSUMES
+        // the stream every other surface reads rather than asking the store its
+        // own narrower question, which is how two surfaces start disagreeing
+        // about the same notification.
+        val feed = PhoneNotificationStore.all(ctx)
+        PhoneTaxonomy.prime(ctx, feed.associate { it.packageName to it.appLabel })
+        val mine = feed.filter {
+            InboxClasses.claims(cls.id, it.packageName, it.appLabel, ctx)
+        }
+        val groups = mine.groupBy { it.packageName }.map { (pkg, entries) ->
+            NotifGroup(
+                key           = pkg,
+                label         = entries.firstOrNull { it.appLabel.isNotBlank() }?.appLabel ?: pkg,
+                sub           = pkg,
+                launchPackage = pkg,
+                // PHONE_NS, the same namespace renderPhoneCenter writes: a row
+                // read here is read there too, because it is the same
+                // notification and not a copy of one.
+                rows          = entries.map {
+                    NotifRow(it.ts, it.title.ifBlank { it.appLabel }, it.text,
+                        id = PHONE_NS + it.key)
+                },
+            )
+        }
+        renderClassSummary(ctx, body, cls, name, groups, ntfyTopicsOf(panel).size)
+        stringByName(ctx, cls.noteRes).takeIf { it.isNotBlank() }
+            ?.let { body.addView(caption(ctx, it)) }
+
+        body.addView(shadeLabel(ctx, getString(R.string.inbox_notifications_header, name)))
+        // A class whose material is the ntfy CHANNEL stream reuses the panel
+        // renderer the C3 Ntfy card already had — the owner asked for "only C3
+        // ntfy channels", which is the scope that renderer already has, so this
+        // is a retitle and not new plumbing. A class may declare both, and RSS
+        // does: the same messages arrive by two roads and belong on one card.
+        if (cls.source == C3NTFY_SOURCE) renderNtfyGroups(ctx, body, panel)
+        if (groups.isNotEmpty()) {
+            renderGroups(ctx, body, groups)
+        } else if (cls.source != C3NTFY_SOURCE) {
+            // Granted and empty is a real, different state from unavailable,
+            // and the line names WHICH class came up empty rather than leaving
+            // the reader to infer the scope of the silence.
+            body.addView(stateLine(ctx, getString(R.string.inbox_class_silent, name), SIGNAL_WARN))
+        }
+    }
+
+    /**
+     * The counted summary above a class card.
+     *
+     * WHAT A SUMMARY IS ON THIS PAGE, honestly: before this, `kind=stats` printed
+     * label/value rows declared in build.json under the caption "Mock data —
+     * live fetch pending" — the Element card's "Rooms 14 · Unread 6" was a
+     * number nobody measured. The only thing on this page that was ever counted
+     * from the device is the BY KIND box. So the summary here is counts, taken
+     * from the same feed the list below is taken from: how many apps or channels
+     * the class holds, how many notifications, and how long ago the newest one
+     * arrived. No model call — a digest the owner did not ask to pay for would
+     * be a worse card than a number that is true.
+     */
+    private fun renderClassSummary(
+        ctx: android.content.Context,
+        body: LinearLayout,
+        cls: InboxClasses.InboxClass,
+        name: String,
+        groups: List<NotifGroup>,
+        channels: Int,
+    ) {
+        body.addView(shadeLabel(ctx, getString(R.string.inbox_summary_header, name)))
+        val notifications = groups.sumOf { it.rows.size }
+        val newest = groups.maxOfOrNull { it.newest } ?: 0L
+        // A c3ntfy class counts CHANNELS as well as apps, and the two are
+        // different things rather than two names for one number: the channels
+        // are ntfy topics reached over the cloud, the apps are packages on this
+        // phone. Labelling the phone-group count "Channels" would have been a
+        // number under the wrong name, which is the failure this page keeps
+        // being fixed for.
+        if (cls.source == C3NTFY_SOURCE) {
+            body.addView(kindRow(ctx,
+                getString(R.string.inbox_summary_channels), channels.toString(), true))
+        }
+        // Suppressed at zero ONLY for a channel class, where "0 apps" is noise
+        // beside the channel count. Every other class shows it, including 0:
+        // a card that promises a class and holds nothing has to say so.
+        if (cls.source != C3NTFY_SOURCE || groups.isNotEmpty()) {
+            body.addView(kindRow(ctx,
+                getString(R.string.inbox_summary_apps), groups.size.toString(), true))
+        }
+        body.addView(kindRow(ctx,
+            getString(R.string.inbox_summary_notifications), notifications.toString(), true))
+        body.addView(kindRow(ctx, getString(R.string.inbox_summary_latest),
+            if (newest > 0L) ago(System.currentTimeMillis() - newest)
+            else getString(R.string.inbox_summary_latest_none),
+            newest > 0L))
+        body.addView(caption(ctx, getString(R.string.inbox_summary_counted)))
+        // The channel boxes fetch their own messages after this card is drawn,
+        // so there is no channel message count to put in the rows above. A zero
+        // there would be a measurement nobody took.
+        if (cls.source == C3NTFY_SOURCE) {
+            body.addView(caption(ctx, getString(R.string.inbox_summary_channels_note)))
+        }
+    }
+
+    /** The ntfy topics a c3ntfy card will actually draw — the SAME expression
+     *  [renderNtfyGroups] selects with, so the summary can never count a channel
+     *  the card below does not show. */
+    private fun ntfyTopicsOf(panel: Sections.StackPanel): List<String> {
+        val scopes = com.diegonmarcos.superapp.rss.NtfyScopes.load()
+        val catalog = com.diegonmarcos.superapp.rss.NtfyScopes.fallbackChannels()
+        return (if (panel.scopes.isEmpty()) catalog else catalog.filter {
+            com.diegonmarcos.superapp.rss.NtfyScopes.scopeOf(it, scopes).id in panel.scopes
+        }).filter { cloudTaxonomyKeeps(it) }
+    }
+
     /** Grey = we do not know. Deliberately NOT red: red is a claim about the
      *  fleet, and a failed fetch is a claim about this phone's network. */
     private val SIGNAL_UNKNOWN = 0xFF9E9E9E.toInt()
@@ -3204,6 +3396,11 @@ class AggregatorStackFragment : Fragment(),
         /** `extapp:<id>` — the declared handle for a companion app, resolved
          *  through `ui.external_apps`. An id, never a package name. */
         private const val EXTAPP_PREFIX = "extapp:"
+
+        /** ui.inbox_classes `source` marking a class whose material is the ntfy
+         *  CHANNEL stream rather than phone packages. Same vocabulary as the
+         *  `origin: c3ntfy` the Notify page's channel panel already declares. */
+        private const val C3NTFY_SOURCE = "c3ntfy"
 
         /** The kinds that exist ONLY as inbox cards, and whose missing app
          *  declaration is therefore worth a log line. `stats` is deliberately

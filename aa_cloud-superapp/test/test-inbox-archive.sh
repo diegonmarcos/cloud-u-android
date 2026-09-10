@@ -25,7 +25,7 @@
 #   T8  which app an inbox is about is DATA, never a package literal in Kotlin
 #   T9  the partial per-app view still prunes no read keys
 #   T10 the "N new" watermark advances on a page that declares no filter row
-#   T11 every inbox panel in build.json DECLARES that app — the feature shipped
+#   T11 every panel in build.json that DECLARES an app names a real one — the feature shipped
 #       inert because the resolver was right and nothing was declared for it
 #   T12 an inbox that declares no app is quiet on the phone and loud in logcat
 set -uo pipefail
@@ -159,7 +159,15 @@ python3 - "$APP/build.json" <<'PY2'
 import io, json, sys
 b = json.load(io.open(sys.argv[1], encoding="utf-8"))
 ids = {a["id"] for a in b["ui"]["external_apps"]}
-KINDS = {"mail_accounts", "chat_matrix", "chat_mattermost"}
+# KEYED ON THE DECLARATION, NOT ON A LIST OF KINDS. It used to be a hardcoded
+# {mail_accounts, chat_matrix, chat_mattermost}, and on 2026-09-10 Projects >
+# Inboxes stopped being one card per app and became one card per CHANNEL CLASS
+# (kind=class_inbox) — at which point not one panel carried any of those three
+# kinds, `seen` fell to zero and this assertion reported that it had gone
+# blind. It was right to. The fix is not a fourth kind in the set: what T11
+# actually checks is that a panel which DECLARES an app names one that exists,
+# so the declaration is the right thing to key on and a fifth panel kind
+# invented tomorrow is covered without touching this file.
 bad = []
 seen = 0
 for sec in b["ui"]["sections"]:
@@ -167,17 +175,17 @@ for sec in b["ui"]["sections"]:
         if not (key.startswith("stack_") and isinstance(val, list)):
             continue
         for panel in val:
-            if panel.get("kind") not in KINDS:
+            if not isinstance(panel, dict):
+                continue
+            url = panel.get("url", "")
+            if not isinstance(url, str) or not url.startswith("extapp:"):
                 continue
             seen += 1
-            url = panel.get("url", "")
-            if not url.startswith("extapp:"):
-                bad.append("%s/%s declares no extapp: url" % (key, panel.get("title")))
-            elif url[len("extapp:"):].split("/")[0] not in ids:
+            if url[len("extapp:"):].split("/")[0] not in ids:
                 bad.append("%s/%s points at unknown app %r" % (key, panel.get("title"), url))
 if seen == 0:
-    bad.append("no inbox-kind panel found at all — the page moved and this test went blind")
-print("  ok: T11: all %d inbox panels resolve to a declared app" % seen if not bad
+    bad.append("no panel declares an extapp: target at all — the page moved and this test went blind")
+print("  ok: T11: all %d panels declaring an app resolve to a declared one" % seen if not bad
       else "  FAIL: T11: " + "; ".join(bad))
 sys.exit(1 if bad else 0)
 PY2
