@@ -440,6 +440,7 @@ case "$CMD" in
     gh release upload latest "${files[@]}" "${sidecars[@]}" --clobber 2>/dev/null \
       || gh release create latest \
            --title "Cloud Libs (rolling)" \
+           --latest \
            --notes "Auto-updated from main." \
            "${files[@]}" "${sidecars[@]}"
     # Hard-verify: every asset AND its sidecar must be on the release, at the

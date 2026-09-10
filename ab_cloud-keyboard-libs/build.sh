@@ -270,6 +270,7 @@ case "$CMD" in
     gh release upload latest "$DIST_DIR/Cloud-Keyboard-Libs.apk" "$DIST_DIR/Cloud-Keyboard-Libs.apk.sha256" --clobber 2>/dev/null \
       || gh release create latest \
            --title "Cloud Keyboard Libs (rolling)" \
+           --latest \
            --notes "Auto-updated from main." \
            "$DIST_DIR/Cloud-Keyboard-Libs.apk" "$DIST_DIR/Cloud-Keyboard-Libs.apk.sha256"
     names="$(gh release view latest --json assets --jq '.assets[].name')"

@@ -243,7 +243,13 @@ step_gh_release() {
   # Rolling release = stable download URL (…/releases/download/<rolling>/<asset>).
   if ! gh release view "$rolling" >/dev/null 2>&1; then
     log "gh-release: creating rolling release $rolling"
+    # --latest=false: `$rolling` is fa_garmin-watchface-<design>-latest, this
+    # watch face's OWN rolling head and not the fleet's release tagged `latest`.
+    # The word "latest" in the tag buys nothing — GitHub's magic route resolves
+    # by recency — so creating this unpinned would hand every app's install URL
+    # to a watch face.
     gh release create "$rolling" --title "$design (latest)" \
+      --latest=false \
       --notes "Rolling latest build of the $design watch face." \
       $( [ "$(bj '.release.gh_release.prerelease')" = "true" ] && echo --prerelease )
   fi

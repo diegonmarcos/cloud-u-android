@@ -241,6 +241,7 @@ jobs:
           gh release upload latest "$asset" "$asset.sha256" --clobber \
             || gh release create latest "$asset" "$asset.sha256" \
                  --title "Cloud constellation (rolling)" \
+                 --latest \
                  --notes "Auto-updated from main."
           name="${{ steps.asset.outputs.name }}"
           local_size="$(wc -c <"$asset")"
@@ -271,7 +272,13 @@ jobs:
           for f in ${{ env.WORK_DIR }}/dist/*.apk; do
             sha256sum "$f" | awk '{print $1}' > "$f.sha256"
           done
+          # --latest=false: this dated tag is an immutable artifact. Without
+          # the flag GitHub recomputes "latest" by recency and this release
+          # takes /releases/latest/download/<asset> from the rolling release
+          # tagged `latest`, 404-ing every install URL already baked into a
+          # phone until the next rolling publish re-pins it.
           gh release create "$tag" ${{ env.WORK_DIR }}/dist/*.apk ${{ env.WORK_DIR }}/dist/*.apk.sha256 \
+            --latest=false \
             --title "Cloud Unix Termux Boot $tag" \
             --notes "Runs ~/.termux/boot scripts in Nix-on-Droid at device boot."
           names="$(gh release view "$tag" --json assets --jq '.assets[].name')"

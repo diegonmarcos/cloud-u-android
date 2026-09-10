@@ -130,7 +130,20 @@ if [ "$PUBLISH" = "1" ]; then
   log "firestack: creating release $TAG in $REPO"
   # --notes carries the pin so the release page itself records what to pin,
   # which is the one place a reader always has when adopting an old artifact.
+  # --latest=false IS LOAD-BEARING, NOT TIDINESS.
+  # This tag is an immutable dated artifact that the APK PINS by name; it is
+  # never the thing an install URL should resolve to. Without the flag
+  # `gh release create` lets GitHub recompute "latest" by RECENCY, and this
+  # release — published on firestack's own cadence, unrelated to any app — takes
+  # /releases/latest/download/<asset> away from the rolling release tagged
+  # `latest` for the whole fleet. Measured on 2026-09-10:
+  # firestack-aar-20260910.114222 held the pointer at 11:57:46Z and
+  # cloud-nixdroid.apk answered 404 through it until the next rolling publish
+  # took it back. The commit that added this flag to all 27 build.sh engines
+  # missed THIS publisher because it is neither a build.sh nor written in their
+  # array idiom, so the very release it named as the culprit kept doing it.
   gh release create "$TAG" --repo "$REPO" \
+     --latest=false \
      --title "firestack netstack aar $TAG" \
      --notes "Prebuilt firestack netstack aar (MPL-2.0, celzero/firestack lineage; this tree is owned outright by this repository).
 

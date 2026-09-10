@@ -129,24 +129,33 @@ echo "== T3: no publisher may take the 'latest' pointer from the rolling release
 #
 # `gh release create` without --latest=false lets GitHub recompute the latest
 # release by recency, so every per-app tagged release stole the pointer until
-# the next rolling publish re-pinned it. Derived from a search, not a list: a
-# new app's engine is covered the day it is added, with nothing to remember.
-SITES="$(cd "$UNIX" 2>/dev/null && git grep -lF 'flags=("$GITHUB_REF_NAME"' -- '1_cicd/src/scripts' '*/build.sh' 2>/dev/null)"
-if [ -z "$SITES" ]; then
-  bad "found no tagged-release creation site at all — has the publish path moved? (this check would otherwise pass vacuously)"
+# the next rolling publish re-pinned it.
+#
+# THIS CHECK USED TO SEARCH FOR AN IDIOM AND SO MISSED THE ACTUAL CULPRIT.
+# It looked for the literal bash array spelling `flags=("$GITHUB_REF_NAME"`
+# under 1_cicd/src/scripts and */build.sh. That set is the 27 engines written
+# that way; it verified all 27 and reported green on the very commit that
+# introduced it — while ab_cloud-libs-shared/libs/firewall/publish-firestack.sh
+# kept creating an unpinned release on every publish, because it is neither a
+# build.sh nor written in that idiom. firestack-aar-20260910.114222 is the
+# release that commit MEASURED holding the pointer while cloud-nixdroid.apk
+# answered 404 through it. The check named the culprit and could not see it.
+#
+# The subject set now comes from the CALL — every `gh release create` this
+# repository actually invokes — and the engine, not this tester, owns the work
+# of telling a call from a log message or a YAML comment. It exits 3 rather
+# than 0 when it finds no call sites at all, so a moved publish path fails
+# loudly instead of passing with nothing to say.
+LATEST_AUDIT="$UNIX/1_cicd/dist/scripts/cloud-android-release-latest-audit.sh"
+if [ ! -f "$LATEST_AUDIT" ]; then
+  bad "release-latest audit engine missing at $LATEST_AUDIT — cannot answer whether a publisher can steal /releases/latest/"
 else
-  UNPINNED=""
-  for s in $SITES; do
-    # The flags array and the --latest=false must be on the same line, which is
-    # how every one of these engines writes it.
-    awk '/flags=\("\$GITHUB_REF_NAME"/ && !/--latest=false/ { bad = 1 } END { exit !bad }' "$UNIX/$s" \
-      && UNPINNED="$UNPINNED $s"
-  done
-  if [ -z "$UNPINNED" ]; then
-    ok "all $(echo "$SITES" | awk 'END {print NR}') tagged-release sites pass --latest=false"
-  else
-    bad "these create a tagged release that can steal /releases/latest/:$UNPINNED"
-  fi
+  AUDIT_OUT="$(CLOUD_ANDROID_ROOT="$UNIX" sh "$LATEST_AUDIT" 2>&1)"; AUDIT_RC=$?
+  case "$AUDIT_RC" in
+    0) ok "${AUDIT_OUT}" ;;
+    1) bad "$(printf '%s' "$AUDIT_OUT" | awk '{ printf "%s ", $0 }')" ;;
+    *) bad "release-latest audit could not run (exit $AUDIT_RC): $(printf '%s' "$AUDIT_OUT" | awk '{ printf "%s ", $0 }')" ;;
+  esac
 fi
 
 echo "== T4: LIVE — each artifact is fetchable with NO credentials =="
