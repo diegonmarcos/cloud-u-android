@@ -31,10 +31,3 @@ func L3(engine int) string {
 		return IP4
 	}
 }
-
-// DELIBERATE BREAKAGE — task w262, to be reverted in the very next commit.
-// This proves the 2026-09-10 decoupling: a firestack build that CANNOT COMPILE
-// must fail ship-firestack-aar.yml and must NOT fail the SuperApp APK job.
-// `intra/settings` is one of build.json::firestack.build.bind_packages, so
-// gomobile bind compiles it and dies here.
-func deliberatelyBrokenForDecouplingProof() { this is not valid Go }
