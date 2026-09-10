@@ -409,5 +409,14 @@
          an empty list drawn for either would be a failure reporting success. -->
     <string name="inbox_class_undeclared">unavailable · this card names a class the build does not declare</string>
     <string name="inbox_class_no_catch_all">Nothing here is a catch-all, so an app that no class claims is not shown on this page at all. Give one class \"catch_all\": true in build.json::ui.inbox_classes.</string>
+    <!-- Phone ▸ Apps ▸ Quickmarks: a curated tile for an app the device does
+         not have. Before 2026-09-10 such an entry was silently dropped, so
+         none of these strings had anything to describe. -->
+    <string name="phone_app_not_installed">Not installed</string>
+    <string name="phone_app_not_installed_tile_hint">%1$s — not installed. Tap to install.</string>
+    <string name="phone_install_downloading">%1$s — downloading…</string>
+    <string name="phone_install_opening_store">%1$s — opening the store…</string>
+    <string name="phone_install_no_source">Cannot install %1$s — the constellation has no download URL for it</string>
+    <string name="phone_install_unavailable">Cannot install %1$s — no app store on this device</string>
 
 </resources>

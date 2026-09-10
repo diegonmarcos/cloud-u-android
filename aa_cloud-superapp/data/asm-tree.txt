@@ -78,14 +78,23 @@ BOTTOM NAV — 5 AGGREGATOR SECTIONS
     │     Tools Dashboards ── PM Boards(paca) │ MyFin │ MyHealth │ MyData
     │   Footer: "More" → action:open_home_apps  (opens Home-Apps / Cloud tab)
     └── Phone tab ── SuitePhoneAppsFragment ── phone_app_groups ──────────────────
-          AI  ─────────────── Claude · Gemini · Termux  +  folder: Files Editor
-          Communications ──── FairEmail · Ltt.rs · Mattermost · Beeper · Dialer · Fossify Phone
-                              +  folder: Others (WhatsApp / Telegram / Gmail / Instagram / LinkedIn)
-          Data Apps ───────── Obsidian · Gallery · Calendar · Contacts · Tidal · Bitwarden
+          AI  ─────────────── Claude · Gemini · Termux · Nix  +  folder: Others (Acode / QuickEdit)
+          Inboxes ─────────── Gmail · Slack · WhatsApp Business · LinkedIn · Instagram · Google News
+                              +  folder: Others (Proton Mail / Sterna Mail / Mattermost /
+                                                 Beeper / Telegram / Feedly)
+          Data Apps ───────── Google Drive · Google Calendar · Google Contacts · OneNote ·
+                              Google Photos · Tidal
+                              +  folder: Others (My Files / X-plore / Proton Drive /
+                                                 Obsidian / Bitwarden / Git Sync)
           Tools Primary ────── Brave · Google Maps · Google Wallet · Translate · Clock · Calculator
           Tools Dashboards ─── SuperApp (self)
           Configs ─────────── Play Store · F-Droid · Settings
           Footer: "More" → action:open_home_apps_phone  (opens Home-Apps / Phone tab)
+          NOT-INSTALLED ENTRIES RENDER. A curated entry whose package is absent
+          draws a placeholder tile (dashed glyph + "Not installed") whose tap
+          installs it — store intent for a third-party app, libs:updater for a
+          fleet one. Only the ENUMERATED sections (All Apps / Smart Folders /
+          Active Apps / Last Apps) still hide what the device does not have.
 
 [5] LABS (id=tools)  ── mode-split aggregator + pages ────────────────────────────
     pages: C3 / Data & ML / Engineering / Quant & Markets / Aero & Space / Circus

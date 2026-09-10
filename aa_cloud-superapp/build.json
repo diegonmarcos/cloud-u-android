@@ -2692,62 +2692,79 @@
             "_doc": "Android's own settings screens (tiles_configs) plus THE Configs section's Actions underneath — the same Update All / KDE Connect / Animations the Configs grid and the star show, borrowed by `actions_from_section` rather than listed a third time."
           }
         ],
-        "_doc_phone_app_groups": "Curated phone apps for Phone ▸ Apps ▸ Quickmarks. THIRD-PARTY ONLY: anything the constellation already offers a way into is reached from Cloud ▸ Apps, and SuitePhoneAppsFragment filters those out of this page's enumerated sections (All Apps, Smart Folders, Active Apps). This list is NOT filtered at runtime — a curated entry that never renders is worse than no entry — so keep our own packages out of it here. Group order = render order; each renders as a subhead + UI_PHONE_GRID_COLUMNS-col grid. Missing packages are silently hidden.",
+        "_doc_phone_app_groups": "Curated phone apps for Phone ▸ Apps ▸ Quickmarks. THIRD-PARTY ONLY: anything the constellation already offers a way into is reached from Cloud ▸ Apps, and SuitePhoneAppsFragment filters those out of this page's enumerated sections (All Apps, Smart Folders, Active Apps), so keep our own packages out of it here. On 2026-09-10 the two Cloud Terminal forks (cld.termux, cld.termux.nix) left the AI group, which is what that rule had been asking for since it was written — they were the only fleet packages in here. Group order = render order; each renders as a subhead + UI_PHONE_GRID_COLUMNS-col grid.\n\nA MISSING PACKAGE IS NO LONGER HIDDEN, AND THAT IS THE POINT. This doc used to end 'Missing packages are silently hidden', and the sentence before it justified the third-party rule with 'a curated entry that never renders is worse than no entry'. Both described the same behaviour: resolve() returned null for an uninstalled package and mapNotNull dropped it, so a tile the owner had deliberately curated simply was not there and nothing said why. That is inverted as of 2026-09-10. A curated entry for a package that is not installed now renders as a PLACEHOLDER tile — outlined glyph, 'Not installed' caption, tap to install — so the list you wrote is the list you see. The old rule survives only where it was always right: the ENUMERATED sections (All Apps, Smart Folders, Active Apps) are built from what the device actually has, and a not-installed placeholder in a list enumerated from the device would be nonsense, so those still show installed apps only.\n\nENTRY SHAPE. An entry is either a bare package string or {\"pkg\", \"label\"}. `label` is the NOT-INSTALLED FALLBACK ONLY: an installed app always draws its own PackageManager label, so the two can never disagree on a real device. It exists because a placeholder has no launcher label to borrow and 'ch.protonmail.android' is not a name anybody recognises. Omit it and the tile falls back to the prettified last meaningful segment of the package id.",
         "phone_app_groups": [
           {
             "title": "AI",
+            "_doc_cloud_terminals_removed": "The owner asked to 'remove the Cloud Terminal apps from here keep only: Claude Gemini Termux Nix'. Those two clauses only look contradictory: the Cloud Terminal apps are cld.termux and cld.termux.nix, our own forks (ac_cloud-termux and ac_cloud-nix-on-droid both set applicationId cld.termux, and all three cld.termux* ids are in data/constellation-fleet.json), while the Termux and Nix he keeps are the UPSTREAM third-party builds com.termux and com.termux.nix. So the two that left are exactly the two fleet packages, which _doc_phone_app_groups above had already banned from this list, and the two that stayed are third-party. com.termux is NEW here — the group named only com.termux.nix before, so 'Termux' had no tile of its own at all.",
             "packages": [
-              "com.anthropic.claude",
-              "com.google.android.apps.bard",
-              "com.termux.nix",
-              "cld.termux.nix",
-              "cld.termux"
+              { "pkg": "com.anthropic.claude", "label": "Claude" },
+              { "pkg": "com.google.android.apps.bard", "label": "Gemini" },
+              { "pkg": "com.termux", "label": "Termux" },
+              { "pkg": "com.termux.nix", "label": "Nix" }
             ],
-            "_doc_folders": "Nested folders inside a phone_app_group — render as One-UI-style folder tiles in the same grid as plain packages (2×2 mini-icon preview, tap → modal dialog with the contents at 5 cols). Empty folders silently skipped. SuitePhoneAppsFragment is the renderer."
-          },
-          {
-            "title": "Inboxes",
-            "_doc_mail_client": "app.sterna is Sterna Mail (codeberg.org/emon/sterna-mail), the UPSTREAM build — deliberately the upstream and not our cloud-mail rebrand, so this row shows the vanilla client alongside the third-party inboxes. It replaced eu.faircode.email (FairMail) and rs.ltt.android (ltt.rs), both dropped 2026-09-09.",
-            "packages": [
-              "app.sterna",
-              "com.mattermost.rn",
-              "com.beeper.android",
-              "org.fossify.phone",
-              "com.google.android.apps.magazines"
-            ],
+            "_doc_folders": "Nested folders inside a phone_app_group — render as One-UI-style folder tiles in the same grid as plain packages (2×2 mini-icon preview, tap → modal dialog with the contents at 5 cols). SuitePhoneAppsFragment is the renderer. A folder is skipped only when it is EMPTY of declared entries; it is no longer skipped for having nothing installed, because its contents can now render as placeholders.",
+            "_doc_acode_is_in_two_places": "Acode is here AND in ui.phone_folders[prod_terminals] on the All-apps grid. Both are intended and neither is a copy of the other: Quickmarks is the owner's hand-written shortlist, the All-apps grid is the complete classification of everything installed. Do not 'fix' one to match the other.",
             "folders": [
               {
                 "label": "Others",
                 "packages": [
-                  "com.samsung.android.email.provider",
-                  "com.whatsapp.w4b",
-                  "com.google.android.gm",
-                  "org.telegram.messenger",
-                  "com.instagram.android",
-                  "com.linkedin.android"
+                  { "pkg": "com.foxdebug.acode", "label": "Acode" },
+                  { "pkg": "com.rhmsoft.edit", "label": "QuickEdit" }
+                ]
+              }
+            ]
+          },
+          {
+            "title": "Inboxes",
+            "_doc_mail_client": "app.sterna is Sterna Mail (codeberg.org/emon/sterna-mail), the UPSTREAM build — deliberately the upstream and not our cloud-mail rebrand, so this row shows the vanilla client alongside the third-party inboxes. It replaced eu.faircode.email (FairMail) and rs.ltt.android (ltt.rs), both dropped 2026-09-09. It is also what the owner's 'Sternal Mail' means: STERNA, not Stalwart. The fleet does run a Stalwart mail STORE (mail-stalwart.diegonmarcos.com, oci-mail) and that is a server with no Android client of its own, so the only Android app the phrase can name is the one already sitting in this group.",
+            "packages": [
+              { "pkg": "com.google.android.gm", "label": "Gmail" },
+              { "pkg": "com.Slack", "label": "Slack" },
+              { "pkg": "com.whatsapp.w4b", "label": "WhatsApp Business" },
+              { "pkg": "com.linkedin.android", "label": "LinkedIn" },
+              { "pkg": "com.instagram.android", "label": "Instagram" },
+              { "pkg": "com.google.android.apps.magazines", "label": "Google News" }
+            ],
+            "_doc_whatsapp": "'Whatsapp Bussines' is read as the SINGLE app WhatsApp Business (com.whatsapp.w4b), not as WhatsApp plus WhatsApp Business. w4b was already the only WhatsApp id in this group before this edit, consumer com.whatsapp is not declared anywhere in this file, and the owner's other visible rows are one app each.",
+            "_doc_dropped": "org.fossify.phone (Fossify Phone) was a visible tile here and is not in the owner's list, so it is gone from this group. It keeps its All-apps classification in ui.phone_folders[prod_phone] — dropping a Quickmark never unclassifies an app.",
+            "folders": [
+              {
+                "label": "Others",
+                "packages": [
+                  { "pkg": "ch.protonmail.android", "label": "Proton Mail" },
+                  { "pkg": "app.sterna", "label": "Sterna Mail" },
+                  { "pkg": "com.mattermost.rn", "label": "Mattermost" },
+                  { "pkg": "com.beeper.android", "label": "Beeper" },
+                  { "pkg": "org.telegram.messenger", "label": "Telegram" },
+                  { "pkg": "com.devhd.feedly", "label": "Feedly" }
                 ]
               }
             ]
           },
           {
             "title": "Data Apps",
+            "_doc_readings": "Three of the owner's names needed resolving to a package. 'MS Notes' is Microsoft OneNote (com.microsoft.office.onenote, already classified in phone_folders[prod_docs]). 'Xplorer' is X-plore File Manager (com.lonelycatgames.Xplore, already in phone_folders[prod_storage]). 'Google Password' could NOT be resolved and is deliberately absent — see _doc_google_password below.",
+            "_doc_google_password": "'Google Password' has NO TILE, and that is a decision, not an oversight. Google Password Manager is not an installable Android application: it is a surface inside Google Play services, reached through Settings or through a shortcut Chrome creates, and it has no package id of its own to put in this list. Before this commit an unresolvable id here would merely have failed to render; now it would render as a permanent placeholder offering to install an app that does not exist, which is worse than the omission. NEEDS THE OWNER'S ONE-LINE ANSWER: name the app you meant, or say 'drop it'.",
+            "_doc_dropped": "com.sec.android.gallery3d (Samsung Gallery) and com.samsung.android.app.contacts (Samsung Contacts) were visible tiles here and are not in the owner's list — he named the Google equivalents (Google Photos, Google Contacts) instead. Both keep their All-apps classification. The old folder 'Files Editor (IDE)' is gone as a folder: the owner replaced it with 'Others', and its two editors (Acode, QuickEdit) moved to the AI group's Others folder.",
             "packages": [
-              "md.obsidian",
-              "com.sec.android.gallery3d",
-              "com.samsung.android.app.contacts",
-              "com.aspiro.tidal",
-              "com.x8bit.bitwarden"
+              { "pkg": "com.google.android.apps.docs", "label": "Google Drive" },
+              { "pkg": "com.google.android.calendar", "label": "Google Calendar" },
+              { "pkg": "com.google.android.contacts", "label": "Google Contacts" },
+              { "pkg": "com.microsoft.office.onenote", "label": "OneNote" },
+              { "pkg": "com.google.android.apps.photos", "label": "Google Photos" },
+              { "pkg": "com.aspiro.tidal", "label": "Tidal" }
             ],
             "folders": [
               {
-                "label": "Files Editor (IDE)",
+                "label": "Others",
                 "packages": [
-                  "com.lonelycatgames.Xplore",
-                  "com.sec.android.app.myfiles",
-                  "com.google.android.apps.docs",
-                  "com.viscouspot.gitsync",
-                  "com.foxdebug.acode",
-                  "com.rhmsoft.edit"
+                  { "pkg": "com.sec.android.app.myfiles", "label": "My Files" },
+                  { "pkg": "com.lonelycatgames.Xplore", "label": "X-plore" },
+                  { "pkg": "me.proton.android.drive", "label": "Proton Drive" },
+                  { "pkg": "md.obsidian", "label": "Obsidian" },
+                  { "pkg": "com.x8bit.bitwarden", "label": "Bitwarden" },
+                  { "pkg": "com.viscouspot.gitsync", "label": "Git Sync" }
                 ]
               }
             ]
@@ -4898,31 +4915,19 @@
       {
         "id": "sys_dev",
         "order": "310",
-        "label": "_Dev & Terminal",
+        "_doc_label": "Renamed from '_Dev & Terminal' to '_Dev' on 2026-09-10, when every terminal left for prod_terminals below. THE LEADING UNDERSCORE IS LOAD-BEARING AND IS NOT PART OF THE NAME THE OWNER READS: ui._doc_phone_sections buckets a folder into a section by its label's FIRST CHARACTER, and '_' is Tools · System. Renaming this to a bare 'Dev' would not rename the folder, it would evict it — a label matching no declared prefix belongs to no section and renders last, down with the Misc and Others sinks. test-phone-taxonomy-prefixes.sh asserts this across every folder so the next rename cannot make the mistake quietly.",
+        "label": "_Dev",
+        "_doc_whats_left": "After the 2026-09-10 surgery this folder keeps MacroDroid, Google Admin, Google Analytics, Parallel Space, AutoClicker and Shizuku, plus our own com.diegonmarcos.cloudlib.*/ide.* families and the three constellation apps that name it from ui.external_apps (cloud-ide, c3-watchdog, c3-morpheus). It is thinner but it is not empty, so it was NOT deleted — that is the owner's call to make, not this commit's.",
         "match_keywords": [
-          "pkg:cld.termux",
-          "pkg:cld.termux.nix",
-          "pkg:cld.termux.nix.boot",
           "pkg:com.arlosoft.macrodroid",
           "pkg:com.diegonmarcos.cloudkeyboardlibs",
           "pkg^com.diegonmarcos.ide.",
-          "pkg:com.foxdebug.acode",
-          "pkg:com.github.android",
           "pkg:com.google.android.apps.enterprise.cpanel",
           "pkg:com.google.android.apps.giant",
           "pkg:com.lbe.parallel.intl",
-          "pkg:com.rhmsoft.edit",
-          "pkg:com.termux",
-          "pkg:com.termux.api",
-          "pkg:com.termux.nix",
-          "pkg:com.termux.nix.boot",
           "pkg:com.truedevelopersstudio.automatictap.autoclicker",
-          "pkg:com.viscouspot.gitsync",
-          "pkg:jp.sblo.pandora.jota.plus",
           "pkg:moe.shizuku.privileged.api",
-          "pkg^cld.termux.",
-          "pkg^com.diegonmarcos.cloudlib.",
-          "pkg^com.termux."
+          "pkg^com.diegonmarcos.cloudlib."
         ]
       },
       {
@@ -5089,6 +5094,7 @@
         "_doc_match_keywords": "This list is the CENTRAL classification: it is what puts a mail app in the \"@\" section, and therefore what makes its notifications survive the Notify ▸ Inboxes filter (PhoneTaxonomy.sectionPrefixOf → the first character of this folder's label). Any THIRD-PARTY package named as a mail client anywhere else in this file has to appear HERE too, or that other list is describing an app the taxonomy has never heard of (our own mail app is not in this list any more — it names this folder from ui.external_apps[cloud-mail].folder instead): app.sterna was added to sections[phone].phone_app_groups[Inboxes] on 2026-09-09 and not here, so upstream Sterna Mail fell to the `others` sink, came back prefix-less, and was pruned from every Notify tab except All. Keyed on package, never on label — the 2026-09-09 mail rename changed the product name and left every package id alone, which is exactly why this key survived it.",
         "match_keywords": [
           "pkg:app.sterna",
+          "pkg:ch.protonmail.android",
           "pkg:com.fsck.k9",
           "pkg:com.google.android.gm",
           "pkg:com.mailtemi.email",
@@ -5108,6 +5114,7 @@
         "label": "@News & Reading",
         "match_keywords": [
           "pkg:com.checkitt",
+          "pkg:com.devhd.feedly",
           "pkg:com.flyersoft.moonreader",
           "pkg:com.google.android.apps.magazines",
           "pkg:com.rama.mako",
@@ -5127,11 +5134,30 @@
           "pkg:com.google.android.apps.messaging",
           "pkg:com.samsung.android.app.contacts",
           "pkg:com.samsung.android.dialer",
+          "pkg:com.google.android.contacts",
           "pkg:com.samsung.android.messaging",
           "pkg:org.fossify.phone"
         ],
         "match_metadata": [
           "intent:android.intent.category.APP_CONTACTS"
+        ]
+      },
+      {
+        "_doc": "Every terminal on the device, gathered out of sys_dev on 2026-09-10 at the owner's request ('move all Terminals inside a folder called Terminals in the section Tools Inboxes & AI'). WHAT COUNTS AS A TERMINAL was read off what sys_dev actually held rather than off the names: the seven exact ids below plus the two startsWith families are precisely the termux-lineage entries that were in it, in both the upstream (com.termux*) and the fleet-fork (cld.termux*) namespace. Acode joins them because the owner put it here explicitly — it is an editor, not a shell, and it is here because he said so.\n\nTHE TWO pkg^ RULES HAD TO COME TOO. 'pkg^com.termux.' and 'pkg^cld.termux.' are the startsWith families that catch a termux sibling nobody has declared yet (termux-api, termux-boot, a future addon). Leaving either behind in sys_dev — order 310, which is walked before this folder's 460 — would have kept every such app in _Dev while the seven named ones moved, and the folder would have looked correct in the diff and been wrong on the device. Note that pkg^com.termux. does NOT cover the bare 'com.termux', and pkg^cld.termux. does not cover 'cld.termux', so both exact ids are listed as well.\n\nThe cld.termux* ids are OUR forks and ui._doc_phone_folders says fleet packages belong in ui.external_apps[].folder rather than in a match_keywords list. They are kept here verbatim because there is no external_apps entry for cloud-termux or cloud-nix-on-droid to derive them from, so dropping them would not relocate them — it would drop them into the `others` sink. Pre-existing condition, moved intact, flagged rather than silently changed.",
+        "id": "prod_terminals",
+        "order": "460",
+        "label": "@Terminals",
+        "match_keywords": [
+          "pkg:cld.termux",
+          "pkg:cld.termux.nix",
+          "pkg:cld.termux.nix.boot",
+          "pkg:com.foxdebug.acode",
+          "pkg:com.termux",
+          "pkg:com.termux.api",
+          "pkg:com.termux.nix",
+          "pkg:com.termux.nix.boot",
+          "pkg^cld.termux.",
+          "pkg^com.termux."
         ]
       },
       {
@@ -5168,7 +5194,9 @@
           "pkg:com.journable.app",
           "pkg:com.microsoft.lists.public",
           "pkg:com.microsoft.office.onenote",
+          "pkg:com.rhmsoft.edit",
           "pkg:com.samsung.android.app.notes",
+          "pkg:jp.sblo.pandora.jota.plus",
           "pkg:md.obsidian",
           "pkg:org.chromium.webapk.a64d263d6f7d935c4_v2"
         ],
@@ -5195,12 +5223,15 @@
           "pkg:com.app.applistbackup",
           "pkg:com.ghisler.android.TotalCommander",
           "pkg:com.ghostsq.commander",
+          "pkg:com.github.android",
           "pkg:com.lonelycatgames.Xplore",
           "pkg:com.mobisystems.fileman",
           "pkg:com.rarlab.rar",
           "pkg:com.sec.android.app.myfiles",
           "pkg:com.smlnskgmail.jaman.hashchecker",
+          "pkg:com.viscouspot.gitsync",
           "pkg:dk.tacit.android.foldersync.lite",
+          "pkg:me.proton.android.drive",
           "pkg:me.zhanghai.android.files",
           "pkg:pl.solidexplorer2"
         ],

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The tile glyph for a curated app the device does not have.
+
+  WHY AN OUTLINE AND NOT A FILLED ICON. There is no launcher icon to draw,
+  because the app is not there. A filled shape would read as "some app whose
+  icon failed to load"; a hairline outline with a download arrow inside it
+  reads as an empty slot waiting to be filled, which is what it is. The dashed
+  border is the same visual language a drop target uses.
+
+  WHY NO COLOUR VALUE IN THIS FILE. Both dark themes this launcher ships
+  (Samsung-black Power Saving, Minimalistic Black) recolour their surfaces, and
+  a colour baked in here would be legible on one and invisible on the other.
+  Every path uses a currentColor-style tint applied by the caller
+  (SuitePhoneAppsFragment tints from LauncherPalette.textSecondary/accent), so
+  the glyph inherits the active theme instead of arguing with it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="52dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48"
+    android:tint="#FFFFFFFF">
+
+    <!-- Rounded square, hairline, dashed: the empty slot. -->
+    <path
+        android:pathData="M12,5 L36,5 A7,7 0 0,1 43,12 L43,36 A7,7 0 0,1 36,43 L12,43 A7,7 0 0,1 5,36 L5,12 A7,7 0 0,1 12,5 Z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeAlpha="0.55"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+
+    <!-- Download arrow: shaft plus head, centred in the slot. -->
+    <path
+        android:pathData="M24,15 L24,29"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.9"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M17,23 L24,30 L31,23"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.9"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Baseline the arrow lands on, so the glyph reads as "into the device". -->
+    <path
+        android:pathData="M15,35 L33,35"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3"
+        android:strokeAlpha="0.9"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round" />
+</vector>

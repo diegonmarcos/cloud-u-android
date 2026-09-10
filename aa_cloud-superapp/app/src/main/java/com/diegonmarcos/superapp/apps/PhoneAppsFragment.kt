@@ -556,9 +556,16 @@ class PhoneAppsFragment : Fragment() {
         @Volatile private var sCachedApps:    List<PhoneApp>? = null
         @Volatile private var sCachedGrouped: Map<String, List<PhoneApp>>? = null
 
-        /** Invalidate every cache slot — call from a LauncherApps.Callback
-         *  if/when we wire package-change observation. Currently unused;
-         *  killing + reopening the app rebuilds the cache organically. */
+        /** Invalidate every cache slot.
+         *
+         *  NO LONGER UNUSED. This said "Currently unused; killing + reopening
+         *  the app rebuilds the cache organically", which stopped being true
+         *  on 2026-09-10: SuitePhoneAppsFragment registers a
+         *  PACKAGE_ADDED/PACKAGE_REMOVED receiver and calls this before
+         *  rebuilding, so a Quickmark placeholder the user just installed
+         *  turns into the real app in place. Without dropping the cache the
+         *  rebuild would redraw the same warm snapshot and the new app would
+         *  still be missing — which looks exactly like the install failing. */
         fun invalidateCache() {
             sCachedFolders = null
             sCachedApps = null

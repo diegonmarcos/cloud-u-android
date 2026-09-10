@@ -354,5 +354,14 @@
 
     <string name="inbox_class_undeclared">no disponible · esta tarjeta nombra una clase que esta compilación no declara</string>
     <string name="inbox_class_no_catch_all">Aquí no hay ninguna clase comodín, así que una app que ninguna clase reclama no se muestra en esta página. Ponle \"catch_all\": true a una clase en build.json::ui.inbox_classes.</string>
+    <!-- Phone ▸ Apps ▸ Quickmarks: mosaico curado de una app que el
+         dispositivo no tiene. Antes del 2026-09-10 esa entrada se descartaba
+         en silencio, así que estos textos no describían nada. -->
+    <string name="phone_app_not_installed">No instalada</string>
+    <string name="phone_app_not_installed_tile_hint">%1$s — no instalada. Toca para instalar.</string>
+    <string name="phone_install_downloading">%1$s — descargando…</string>
+    <string name="phone_install_opening_store">%1$s — abriendo la tienda…</string>
+    <string name="phone_install_no_source">No se puede instalar %1$s — la constelación no tiene ninguna URL de descarga para ella</string>
+    <string name="phone_install_unavailable">No se puede instalar %1$s — no hay tienda de aplicaciones en este dispositivo</string>
 
 </resources>
