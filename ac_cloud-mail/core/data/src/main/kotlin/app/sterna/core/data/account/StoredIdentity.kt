@@ -65,6 +65,27 @@ data class StoredIdentity(
         return all.firstOrNull { it.id == defaultSignatureId } ?: all.firstOrNull()
     }
 
+    /**
+     * The legacy [signature]/[signatureHtml] pair refreshed from the DEFAULT named signature (#206).
+     *
+     * [resolvedSignatures] promises that the legacy pair is read and never cleared, "so an install
+     * that rolls back to a build without [signatures] still finds the owner's signature where it has
+     * always been". Migration alone keeps that promise only until the first edit: the editor writes
+     * [signatures], nothing writes the pair, and from then on the pair holds the signature the owner
+     * REPLACED. A rollback, a backup taken afterwards, and the account-level mirror in
+     * `accountSaveFields` then all quietly serve the old signature — the newer half is kept, the older
+     * half rots, and nothing on screen says so.
+     *
+     * Mirroring at save keeps both halves saying the same thing. Idempotent where nothing has been
+     * edited: for an identity with no [signatures] of its own, the default IS the migrated pair, so
+     * copying it back changes nothing. An identity with no signature at all is returned untouched
+     * rather than blanked, which is the same "degrade, never destroy" rule [defaultSignature] follows.
+     */
+    fun withLegacyMirror(): StoredIdentity {
+        val default = defaultSignature() ?: return this
+        return copy(signature = default.text, signatureHtml = default.html)
+    }
+
     /** Splits a legacy signature holding raw HTML in [signature] (pre-1.3.13 "Import HTML")
      *  into [signatureHtml] + flattened text. Idempotent otherwise. */
     fun withSplitSignature(): StoredIdentity =

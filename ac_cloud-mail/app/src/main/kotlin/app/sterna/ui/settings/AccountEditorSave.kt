@@ -12,7 +12,8 @@ internal data class AccountSaveFields(
     val identities: List<StoredIdentity>,
     /** The default sender, or null when it no longer points at anything. */
     val defaultIdentityId: String?,
-    /** Legacy account-level signature, mirrored from the first manual identity. */
+    /** Legacy account-level signature, mirrored from the first manual identity — from that
+     *  identity's DEFAULT named signature (#206), not from whatever its pre-edit legacy field held. */
     val signature: String,
 )
 
@@ -24,8 +25,12 @@ internal fun accountSaveFields(
     serverIdentities: List<StoredIdentity>,
     defaultIdentityId: String?,
 ): AccountSaveFields {
+    // Mirrored BEFORE the heal and the account-level copy below, because this is the one funnel both
+    // identity groups reach Save through — the server-identity override and the purely-manual row
+    // alike. Doing it in the editor's two onChange callbacks instead would be two chances to write
+    // the mirror and, as #206 showed, two chances to forget it in the next box someone adds.
     val clean = StoredAccount.normalizeManualIdentities(
-        edited.filter { it.email.isNotBlank() },
+        edited.filter { it.email.isNotBlank() }.map { it.withLegacyMirror() },
         serverIdentities,
     )
     val serverIds = serverIdentities.map { it.id }

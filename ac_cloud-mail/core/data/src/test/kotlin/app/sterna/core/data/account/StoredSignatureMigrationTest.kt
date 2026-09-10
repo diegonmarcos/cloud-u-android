@@ -195,4 +195,72 @@ class StoredSignatureMigrationTest {
         assertTrue("no nested document", !rendered.contains("<iframe"))
         assertTrue("no javascript: url", !rendered.contains("javascript:"))
     }
+
+    // --- Keeping the two halves in sync ACROSS an edit --------------------------------------------
+
+    /** An owner who has edited their signature in the #206 box: the named list holds the new one. */
+    private fun edited() = StoredIdentity("a", "Alex", "alex@masto.top", signature = "Alex Rivera")
+        .copy(signatures = listOf(StoredSignature.of("s", "Work", "<b>Alex of Acme</b>")))
+
+    @Test fun anEditThroughTheNamedListLeavesTheLegacyPairBehind() {
+        // The defect [withLegacyMirror] exists for, asserted on the un-mirrored record so it stays
+        // visible: the editor writes [signatures] and NOTHING writes the legacy pair, so the pair
+        // still holds the signature the owner replaced.
+        val edited = edited()
+        assertEquals("Alex Rivera", edited.signature)
+        assertEquals("", edited.signatureHtml)
+        // …while the list the app actually reads has moved on. Both halves exist and they DISAGREE.
+        assertEquals("<b>Alex of Acme</b>", edited.defaultSignature()?.html)
+    }
+
+    @Test fun mirroringRefreshesBothHalvesFromTheDefaultSignature() {
+        val mirrored = edited().withLegacyMirror()
+        assertEquals("<b>Alex of Acme</b>", mirrored.signatureHtml)
+        assertEquals("Alex of Acme", mirrored.signature)
+        // The property that matters is the AGREEMENT, not the two literals: the plain half is
+        // exactly the HTML half flattened, which is what lets a message say the same thing in its
+        // text/plain and text/html alternatives.
+        assertEquals(mirrored.defaultSignature()?.text, mirrored.signature)
+        assertEquals(mirrored.defaultSignature()?.html, mirrored.signatureHtml)
+    }
+
+    @Test fun mirroringChangesNothingForAnIdentityThatWasNeverEdited() {
+        // A pre-#206 record's default IS its migrated legacy pair, so the mirror must be a no-op —
+        // otherwise every Save would rewrite storage for accounts nobody touched.
+        val plain = StoredIdentity("a", "Alex", "alex@masto.top", signature = "Alex Rivera")
+        assertEquals(plain, plain.withLegacyMirror())
+        val html = StoredIdentity(
+            "a", "Alex", "alex@masto.top",
+            signature = "Alex Rivera", signatureHtml = "<b>Alex Rivera</b>",
+        )
+        assertEquals(html, html.withLegacyMirror())
+    }
+
+    @Test fun mirroringAnIdentityWithNoSignatureLeavesItAloneRatherThanBlankingIt() {
+        val none = StoredIdentity("a", "Alex", "alex@masto.top")
+        assertEquals(none, none.withLegacyMirror())
+    }
+
+    @Test fun mirroringFollowsTheCHOSENDefaultAndNotMerelyTheFirst() {
+        val identity = StoredIdentity("a", "Alex", "alex@masto.top").copy(
+            signatures = listOf(
+                StoredSignature.of("home", "Home", "Alex"),
+                StoredSignature.of("work", "Work", "<b>Alex of Acme</b>"),
+            ),
+            defaultSignatureId = "work",
+        )
+        assertEquals("<b>Alex of Acme</b>", identity.withLegacyMirror().signatureHtml)
+    }
+
+    @Test fun mirroringBackToPlainTextClearsTheHtmlHalfRatherThanLeavingAStaleOne() {
+        // The reverse of the defect: an owner who DELETES the markup must not keep sending the old
+        // HTML alternative, which would make the two alternatives say different things.
+        val wasHtml = StoredIdentity(
+            "a", "Alex", "alex@masto.top",
+            signature = "Alex Rivera", signatureHtml = "<b>Alex Rivera</b>",
+        ).copy(signatures = listOf(StoredSignature.of("s", "Work", "Just Alex")))
+        val mirrored = wasHtml.withLegacyMirror()
+        assertEquals("Just Alex", mirrored.signature)
+        assertEquals("", mirrored.signatureHtml)
+    }
 }

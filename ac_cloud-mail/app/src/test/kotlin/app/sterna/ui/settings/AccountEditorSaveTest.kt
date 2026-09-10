@@ -1,6 +1,7 @@
 package app.sterna.ui.settings
 
 import app.sterna.core.data.account.StoredIdentity
+import app.sterna.core.data.account.StoredSignature
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -52,6 +53,70 @@ class AccountEditorSaveTest {
         val frozen = server.copy(id = "man-frozen")
         val fields = accountSaveFields(listOf(manual, frozen), listOf(server), null)
         assertEquals(listOf(manual), fields.identities)
+    }
+
+    // --- The signature the owner just typed, through BOTH identity groups -------------------------
+
+    /** What the #206 box hands back after the owner types HTML into it. */
+    private val typed = StoredSignature.of("s", "Work", "<b>Alex of Acme</b>")
+
+    /** The purely-manual row's edit: SettingsScreen's `update { it.copy(signatures = list) }`. */
+    private val editedManual = manual.copy(signatures = listOf(typed))
+
+    /** The server row's edit: SettingsScreen's `overrideServer`, which upserts a manual override
+     *  carrying the SERVER's id and address and the newly typed list. */
+    private val editedServerOverride = server.copy(signatures = listOf(typed))
+
+    @Test fun aSignatureTypedIntoTheBoxSurvivesTheSave() {
+        val saved = accountSaveFields(listOf(editedManual), emptyList(), null).identities.single()
+        // Both halves, and neither of them the pre-edit signature.
+        assertEquals("<b>Alex of Acme</b>", saved.signatureHtml)
+        assertEquals("Alex of Acme", saved.signature)
+        assertEquals(listOf(typed), saved.signatures)
+    }
+
+    @Test fun theSaveLeavesTheTwoHalvesAgreeing() {
+        // The rule chosen for reconciling them: the plain half is the HTML half flattened. A message
+        // carries both alternatives and they must say the same thing.
+        val saved = accountSaveFields(listOf(editedManual), emptyList(), null).identities.single()
+        assertEquals(saved.defaultSignature()?.text, saved.signature)
+        assertEquals(saved.defaultSignature()?.html, saved.signatureHtml)
+    }
+
+    @Test fun theLegacyAccountMirrorFollowsTheEditInsteadOfThePreviousSignature() {
+        // Before the mirror this returned "-- Alex", the signature the owner had REPLACED, and a
+        // rollback or a backup taken afterwards served that instead of what they wrote.
+        assertEquals(
+            "Alex of Acme",
+            accountSaveFields(listOf(editedManual), emptyList(), null).signature,
+        )
+    }
+
+    @Test fun theServerIdentityBoxAndTheManualBoxSaveTheSameWay() {
+        // #206 duplicated the box between the two groups; fixing one and not the other is the shape
+        // of bug this screen keeps shipping. Same typed signature, both routes, same stored halves.
+        val fromManual = accountSaveFields(listOf(editedManual), emptyList(), null).identities.single()
+        val fromServer =
+            accountSaveFields(listOf(editedServerOverride), listOf(server), null).identities.single()
+        assertEquals(fromManual.signature, fromServer.signature)
+        assertEquals(fromManual.signatureHtml, fromServer.signatureHtml)
+        assertEquals(fromManual.signatures, fromServer.signatures)
+    }
+
+    @Test fun anEditedServerOverrideIsNotMistakenForAFrozenCopyAndDeleted() {
+        // The override differs from the server identity ONLY in its signatures. If that were left
+        // out of the heal's key, the owner's edit would be deleted by the very next Save.
+        val fields = accountSaveFields(listOf(editedServerOverride), listOf(server), null)
+        assertEquals(1, fields.identities.size)
+        assertEquals("<b>Alex of Acme</b>", fields.identities.single().signatureHtml)
+    }
+
+    @Test fun aRoundTripThroughSaveAndReloadKeepsWhatWasWritten() {
+        // Save, then feed the saved list back in as the editor would on reopening the screen.
+        val once = accountSaveFields(listOf(editedManual), emptyList(), null).identities
+        val twice = accountSaveFields(once, emptyList(), null).identities
+        assertEquals(once, twice)
+        assertEquals("<b>Alex of Acme</b>", twice.single().defaultSignature()?.html)
     }
 
     // --- The default sender ----------------------------------------------------------------------
