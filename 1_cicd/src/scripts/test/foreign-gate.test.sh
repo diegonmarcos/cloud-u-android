@@ -139,6 +139,25 @@ grep -q '0 foreign' <<<"$OUT" \
     && ok "a foreign-reaching tester that passes is not counted as downgraded" \
     || bad "a passing foreign-reaching tester was miscounted as a downgrade"
 
+# ── 3b. running git must not make a tester foreign ────────────────────────
+# `[ ! -e "$ROOT/.git" ]` is how a tester WALKS UP TO THE REPOSITORY ROOT, and
+# five real testers here do exactly that, so .git was the single most common
+# "foreign" path in the tree. It is not any application's source, and counting
+# it would have downgraded a genuine own-source failure in every one of them —
+# the mechanism failing OPEN, the one direction it must never fail.
+#
+# The assertion names .git the way the real testers do, on a command line,
+# because that is what the trace can see: a path opened INSIDE git never
+# appears there, so a fixture that merely ran `git` would pass whether or not
+# the exemption existed. This one was watched failing with the exemption
+# removed before it was trusted passing with it.
+_clean
+_tester test-own-git.sh '#!/usr/bin/env bash' '[ ! -e "$ROOT/.git" ] && exit 0; grep -q "NOT PRESENT" "$APP/mine.txt" || exit 1'
+_run
+[ "$RC" -ne 0 ] \
+    && ok "a tester that runs git is still judged on its OWN source, not amnestied by .git" \
+    || bad ".git counted as foreign source — any tester using git would be silently downgraded"
+
 # ── 4. an underivable own-path set REFUSES TO RUN ─────────────────────────
 # The catastrophic mode. An empty set marks every path foreign, so every
 # failure downgrades and the suite can never go red again — while reporting a

@@ -228,6 +228,16 @@ shell)
                     n = match(s, /[^A-Za-z0-9_.\/-]/)
                     p = (n > 0 ? substr(s, 1, n - 1) : s)
                     if (p == "") continue
+                    # .git IS NOT SOURCE. Every git command a tester runs opens
+                    # the object store, so leaving it in marked five testers in
+                    # this repository as reading "another application", and
+                    # would have downgraded a genuine own-source failure in any
+                    # tester that shells out to git — the mechanism failing
+                    # OPEN, the one direction it must never fail. Matched as a
+                    # whole first component, so .github still counts: that is
+                    # fleet configuration, and the fleet has its own workflows
+                    # to fail in, under its own name.
+                    if (p == ".git" || index(p, ".git/") == 1) continue
                     hit = 0
                     for (k = 1; k <= nown; k++)
                         if (p == own[k] || index(p, own[k] "/") == 1) { hit = 1; break }
