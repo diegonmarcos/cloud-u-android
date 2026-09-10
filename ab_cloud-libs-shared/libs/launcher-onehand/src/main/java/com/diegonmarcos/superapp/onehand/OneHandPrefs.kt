@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.onehand
 
 import android.content.Context
+import android.content.SharedPreferences
 
 /**
  * Per-user override of each swipe's action, persisted on-device. build.json
@@ -29,6 +30,50 @@ object OneHandPrefs {
 
     fun clear(ctx: Context, handleId: String, slotKey: String) {
         prefs(ctx).edit().remove("$handleId.$slotKey").apply()
+    }
+
+    /**
+     * The keys of the per-sector edge-menu overrides, and nothing else.
+     *
+     * Every override is written as "<handleId>.<slotKey>", so the dot is what
+     * separates them from this store's flat settings — `enabled`, `trigger`,
+     * `debug_visible`, the prune marker. Those describe the FEATURE, not the
+     * menu's contents, and a reset of the menu must leave them alone. Read off
+     * the store rather than off the current handle list on purpose: an override
+     * left behind by a handle or a sector build.json no longer declares is
+     * exactly the kind of stale value the reset exists to clear, and walking the
+     * declared slots would step over it.
+     */
+    private fun edgeMenuKeys(p: SharedPreferences): List<String> =
+        p.all.keys.filter { it.contains('.') }
+
+    /** How many sectors the user has overridden — what the confirmation names. */
+    fun edgeMenuOverrideCount(ctx: Context): Int = edgeMenuKeys(prefs(ctx)).size
+
+    /**
+     * "Reset to default" for both edge menus: REMOVE the overrides so
+     * [actionFor] falls through to the baked build.json action for every slot.
+     * Returns how many were removed.
+     *
+     * IT DELETES, IT DOES NOT WRITE TODAY'S DEFAULTS BACK. The two are
+     * indistinguishable on the day they ship and diverge forever after: values
+     * written into the store would shadow every default shipped afterwards, so
+     * the owner would be pinned to whatever onehand.handles said the day he
+     * pressed the button, and would have to press it again after every update
+     * without ever being told why. With the keys gone the menu tracks build.json,
+     * which is the only thing "default" can honestly mean.
+     *
+     * The prune marker is deliberately left set: there is nothing left to prune
+     * once the overrides are gone, and clearing it would re-arm a one-time
+     * repair against a store it has already finished with.
+     */
+    fun clearEdgeMenuOverrides(ctx: Context): Int {
+        val p = prefs(ctx)
+        val keys = edgeMenuKeys(p)
+        val e = p.edit()
+        for (k in keys) e.remove(k)
+        e.apply()
+        return keys.size
     }
 
     /**

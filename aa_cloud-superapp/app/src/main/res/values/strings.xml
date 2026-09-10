@@ -423,4 +423,19 @@
     <string name="phone_install_no_source">Cannot install %1$s — the constellation has no download URL for it</string>
     <string name="phone_install_unavailable">Cannot install %1$s — no app store on this device</string>
 
+
+    <!-- Configs > Launcher > One-Hand > Edge Menu: the owner's own "reset to
+         default", asked for on 2026-09-10 after the new twelve-entry order
+         landed in build.json and his stored overrides hid it. The control
+         DELETES those overrides; it never writes today's defaults into the
+         store, which would pin the phone to this version forever. The dialog
+         names what is lost AND what is untouched, because this page holds four
+         unrelated groups of settings and only one of them is being discarded. -->
+    <string name="onehand_edge_reset_button">Reset to default (both edge menus)</string>
+    <string name="onehand_edge_reset_caption">Throws away the sector actions you picked yourself and goes back to the order built into the app. Both handles at once — the layout was designed as one set. Only the edge menus: the stars, the floating button, the Home swipes and the activation setting are left alone.</string>
+    <string name="onehand_edge_reset_title">Reset both edge menus?</string>
+    <string name="onehand_edge_reset_message">The %1$d edge-menu sectors you set yourself are deleted from this phone — the left handle and the right one. Nothing else holds a copy, so this cannot be undone.\n\nEvery sector goes back to the order built into the app, and keeps following it through future updates instead of staying pinned to today\'s.\n\nNOT touched: the Home-screen stars, the floating button and where you dragged it, the four Home swipes, how the handles are activated, and the One-Hand on/off switch.</string>
+    <string name="onehand_edge_reset_confirm">Reset</string>
+    <string name="onehand_edge_reset_done">%1$d sector overrides cleared — both edge menus follow the built-in order again</string>
+
 </resources>

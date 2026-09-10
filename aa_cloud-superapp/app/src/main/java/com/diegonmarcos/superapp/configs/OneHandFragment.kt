@@ -50,6 +50,11 @@ class OneHandFragment : Fragment() {
     private lateinit var toggle: Switch
     private lateinit var floatingToggle: Switch
 
+    /** The two mirrored columns of sector pickers, held so the reset button can
+     *  redraw them without rebuilding the rest of the page. */
+    private lateinit var edgeMenuGrid: LinearLayout
+    private var contentPadding = 0
+
     private data class Option(
         val label: String, val action: GestureAction?,
         val icon: android.graphics.drawable.Drawable? = null,
@@ -242,15 +247,21 @@ class OneHandFragment : Fragment() {
             "is a runtime override; 'None' clears it back to the build.json " +
             "default. The app list holds your build.json favourites (★) first, " +
             "then every launchable app on the phone."))
-        val options = buildOptions(cfg)
-        val row = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
-        val leftCol = column(ctx); val rightCol = column(ctx)
-        row.addView(leftCol); row.addView(rightCol)
-        root.addView(row)
-        cfg.handles.forEach { h ->
-            val target = if (h.edge == OneHandConfig.Edge.RIGHT) rightCol else leftCol
-            addHandleEditor(target, ctx, h, options, pad)
-        }
+        contentPadding = pad
+        edgeMenuGrid = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+        root.addView(edgeMenuGrid)
+        fillHandleEditors(ctx)
+
+        // The owner's own "reset to default", asked for on this surface after
+        // task #258 changed the baked order and his stored overrides hid it.
+        // ONE button for BOTH handles: the twelve entries he sent were a single
+        // layout described as two blocks, so resetting one side and not the
+        // other would leave him with half the design he asked for.
+        root.addView(android.widget.Button(ctx).apply {
+            text = getString(R.string.onehand_edge_reset_button)
+            setOnClickListener { confirmEdgeMenuReset(ctx) }
+        })
+        root.addView(caption(ctx, getString(R.string.onehand_edge_reset_caption)))
 
         // Full disclosure: the geometry is real and it is NOT editable here.
         // Saying so beats letting someone hunt for a slider that was never built.
@@ -308,6 +319,62 @@ class OneHandFragment : Fragment() {
         root.addView(caption(ctx,
             "Turns everything on for 30 seconds and off again, so a permission " +
             "check does not leave the handles enabled."))
+    }
+
+    /**
+     * (Re)draw the per-sector pickers from the CURRENT stored state.
+     *
+     * Called once while the page is built and again after a reset. A Spinner
+     * keeps whatever selection it was constructed with, so clearing the store
+     * without redrawing would leave the discarded entries on display — the
+     * classic "the button does nothing" report, from a button that did exactly
+     * what it said.
+     */
+    private fun fillHandleEditors(ctx: Context) {
+        val cfg = OneHandConfig.effective(ctx)
+        val options = buildOptions(cfg)
+        edgeMenuGrid.removeAllViews()
+        val leftColumn = column(ctx)
+        val rightColumn = column(ctx)
+        edgeMenuGrid.addView(leftColumn)
+        edgeMenuGrid.addView(rightColumn)
+        cfg.handles.forEach { handle ->
+            val target = if (handle.edge == OneHandConfig.Edge.RIGHT) rightColumn else leftColumn
+            addHandleEditor(target, ctx, handle, options, contentPadding)
+        }
+    }
+
+    /**
+     * Confirm, then discard the stored edge-menu overrides.
+     *
+     * Confirmed because it throws away work only the owner can reproduce, and
+     * confirmed in the shape the other destructive actions in this app already
+     * use (ProfileFragment's clear-credential and erase-profile): a Material
+     * dialog that SAYS WHAT IS LOST rather than asking "are you sure", Cancel on
+     * the negative button, the verb on the positive one.
+     *
+     * The message also lists what survives. This page carries four unrelated
+     * groups of settings in one scroll — stars, edge menus, the floating button,
+     * the Home swipes — and only one of them is being discarded; a reset that
+     * left the owner unsure which is a reset he will not press.
+     */
+    private fun confirmEdgeMenuReset(ctx: Context) {
+        val stored = OneHandPrefs.edgeMenuOverrideCount(ctx)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
+            .setTitle(R.string.onehand_edge_reset_title)
+            .setMessage(getString(R.string.onehand_edge_reset_message, stored))
+            .setNegativeButton(android.R.string.cancel, null)
+            .setPositiveButton(R.string.onehand_edge_reset_confirm) { _, _ ->
+                val removed = OneHandPrefs.clearEdgeMenuOverrides(ctx)
+                // Both surfaces that draw these entries, because they are two
+                // different windows: the pickers on this page, and the overlay
+                // the accessibility service owns on top of every other app.
+                fillHandleEditors(ctx)
+                OneHandController.refresh(ctx)
+                Toast.makeText(ctx, getString(R.string.onehand_edge_reset_done, removed),
+                    Toast.LENGTH_LONG).show()
+            }
+            .show()
     }
 
     // ───────────────────────── 3. Floating menu ─────────────────────────

@@ -368,4 +368,16 @@
     <string name="phone_install_no_source">No se puede instalar %1$s — la constelación no tiene ninguna URL de descarga para ella</string>
     <string name="phone_install_unavailable">No se puede instalar %1$s — no hay tienda de aplicaciones en este dispositivo</string>
 
+
+    <!-- Configs > Launcher > One-Hand > Edge Menu: el "restablecer valores
+         predeterminados" que pidio el dueno. Borra sus ajustes por sector en
+         lugar de escribir los valores actuales, para que el menu siga al
+         build.json tambien en las proximas versiones. -->
+    <string name="onehand_edge_reset_button">Restablecer valores predeterminados (ambos menús de borde)</string>
+    <string name="onehand_edge_reset_caption">Descarta las acciones de sector que elegiste tú y vuelve al orden que trae la app. Los dos asideros a la vez: el trazado se diseñó como un conjunto único. Solo los menús de borde: las estrellas, el botón flotante, los deslizamientos de la pantalla de inicio y el modo de activación se quedan como están.</string>
+    <string name="onehand_edge_reset_title">¿Restablecer los dos menús de borde?</string>
+    <string name="onehand_edge_reset_message">Se borran de este teléfono los %1$d sectores del menú de borde que configuraste tú, tanto los del asidero izquierdo como los del derecho. No queda ninguna copia en otro sitio, así que esto no se puede deshacer.\n\nCada sector vuelve al orden que trae la app y lo seguirá en las próximas actualizaciones, en lugar de quedarse fijado al de hoy.\n\nNO se tocan: las estrellas de la pantalla de inicio, el botón flotante ni el sitio al que lo arrastraste, los cuatro deslizamientos de la pantalla de inicio, el modo de activación de los asideros ni el interruptor de One-Hand.</string>
+    <string name="onehand_edge_reset_confirm">Restablecer</string>
+    <string name="onehand_edge_reset_done">Se han borrado %1$d sectores personalizados: los dos menús de borde vuelven a seguir el orden que trae la app</string>
+
 </resources>
