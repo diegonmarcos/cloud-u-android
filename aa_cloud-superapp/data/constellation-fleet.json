@@ -215,7 +215,7 @@
     },
     {
       "id": "mail",
-      "label": "Cloud Mail (Fairmail)",
+      "label": "Cloud Mail",
       "package": "com.diegonmarcos.comms.mail",
       "alt_id": null,
       "registry": "ghcr.io",
@@ -227,7 +227,11 @@
       "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-mail",
       "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-comms-mail",
       "blocked": false,
-      "kind": "app"
+      "kind": "app",
+      "assets": {
+        "arm64-v8a": "cloud-comms-mail.apk",
+        "armeabi-v7a": "cloud-comms-mail.apk"
+      }
     },
     {
       "id": "matrix",
@@ -355,21 +359,21 @@
     },
     {
       "id": "sheets",
-      "label": "Collabora Office",
-      "package": "com.collabora.libreoffice",
+      "label": "Cloud Office",
+      "package": "com.diegonmarcos.cloudoffice",
       "alt_id": null,
       "registry": "ghcr.io",
       "namespace": "diegonmarcos",
-      "image": "cloud-sheets",
+      "image": "cloud-office",
       "tag": "latest",
-      "asset": "Cloud-Sheets.apk",
-      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Sheets.apk",
+      "asset": "Cloud-Office.apk",
+      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Office.apk",
       "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-sheets",
-      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-sheets",
-      "blocked": false,
+      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-office",
+      "blocked": true,
       "kind": "app",
       "assets": {
-        "arm64-v8a": "Cloud-Sheets.apk"
+        "arm64-v8a": "Cloud-Office.apk"
       }
     },
     {
@@ -437,6 +441,22 @@
         "x86_64": "Cloud-Wallet-x86_64.apk",
         "x86": "Cloud-Wallet-x86_64.apk"
       }
+    },
+    {
+      "id": "ae-tool_termux-boot",
+      "label": "termux-boot",
+      "package": "cld.termux.nix.boot",
+      "alt_id": null,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-unix-termux-boot",
+      "tag": "latest",
+      "asset": "Cloud-Unix-Termux-Boot.apk",
+      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Unix-Termux-Boot.apk",
+      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/a_solutions/ae-tool_termux-boot",
+      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-unix-termux-boot",
+      "blocked": false,
+      "kind": "lib"
     },
     {
       "id": "keyboard-engines",
@@ -791,22 +811,6 @@
       "kind": "lib"
     },
     {
-      "id": "lib-net",
-      "label": "Lib: net",
-      "package": "com.diegonmarcos.cloudlib.net",
-      "alt_id": null,
-      "registry": "ghcr.io",
-      "namespace": "diegonmarcos",
-      "image": "cloud-lib-net",
-      "tag": "latest",
-      "asset": "Cloud-Lib-Net.apk",
-      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Lib-Net.apk",
-      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ab_cloud-libs-shared/libs/net",
-      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-lib-net",
-      "blocked": false,
-      "kind": "lib"
-    },
-    {
       "id": "lib-net-wg",
       "label": "Lib: net-wg",
       "package": "com.diegonmarcos.cloudlib.netwg",
@@ -819,6 +823,22 @@
       "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Lib-Net-Wg.apk",
       "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ab_cloud-libs-shared/libs/net-wg",
       "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-lib-net-wg",
+      "blocked": false,
+      "kind": "lib"
+    },
+    {
+      "id": "lib-net",
+      "label": "Lib: net",
+      "package": "com.diegonmarcos.cloudlib.net",
+      "alt_id": null,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-lib-net",
+      "tag": "latest",
+      "asset": "Cloud-Lib-Net.apk",
+      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Lib-Net.apk",
+      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ab_cloud-libs-shared/libs/net",
+      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-lib-net",
       "blocked": false,
       "kind": "lib"
     },
@@ -887,18 +907,18 @@
       "kind": "lib"
     },
     {
-      "id": "lib-translate",
-      "label": "Lib: translate",
-      "package": "com.diegonmarcos.cloudlib.translate",
+      "id": "lib-text-tools",
+      "label": "Lib: text-tools",
+      "package": "com.diegonmarcos.cloudlib.texttools",
       "alt_id": null,
       "registry": "ghcr.io",
       "namespace": "diegonmarcos",
-      "image": "cloud-lib-translate",
+      "image": "cloud-lib-text-tools",
       "tag": "latest",
-      "asset": "Cloud-Lib-Translate.apk",
-      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Lib-Translate.apk",
-      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ab_cloud-libs-shared/libs/translate",
-      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-lib-translate",
+      "asset": "Cloud-Lib-Text-Tools.apk",
+      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Lib-Text-Tools.apk",
+      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ab_cloud-libs-shared/libs/text-tools",
+      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-lib-text-tools",
       "blocked": false,
       "kind": "lib"
     },
@@ -919,6 +939,22 @@
       "kind": "lib"
     },
     {
+      "id": "lib-translate",
+      "label": "Lib: translate",
+      "package": "com.diegonmarcos.cloudlib.translate",
+      "alt_id": null,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-lib-translate",
+      "tag": "latest",
+      "asset": "Cloud-Lib-Translate.apk",
+      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Lib-Translate.apk",
+      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ab_cloud-libs-shared/libs/translate",
+      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-lib-translate",
+      "blocked": false,
+      "kind": "lib"
+    },
+    {
       "id": "lib-updater",
       "label": "Lib: updater",
       "package": "com.diegonmarcos.cloudlib.updater",
@@ -935,22 +971,6 @@
       "kind": "lib"
     },
     {
-      "id": "lib-voice",
-      "label": "Lib: voice",
-      "package": "com.diegonmarcos.cloudlib.voice",
-      "alt_id": null,
-      "registry": "ghcr.io",
-      "namespace": "diegonmarcos",
-      "image": "cloud-lib-voice",
-      "tag": "latest",
-      "asset": "Cloud-Lib-Voice.apk",
-      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Lib-Voice.apk",
-      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ab_cloud-libs-shared/libs/voice",
-      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-lib-voice",
-      "blocked": false,
-      "kind": "lib"
-    },
-    {
       "id": "lib-voice-vosk",
       "label": "Lib: voice-vosk",
       "package": "com.diegonmarcos.cloudlib.voicevosk",
@@ -963,6 +983,22 @@
       "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Lib-Voice-Vosk.apk",
       "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ab_cloud-libs-shared/libs/voice-vosk",
       "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-lib-voice-vosk",
+      "blocked": false,
+      "kind": "lib"
+    },
+    {
+      "id": "lib-voice",
+      "label": "Lib: voice",
+      "package": "com.diegonmarcos.cloudlib.voice",
+      "alt_id": null,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-lib-voice",
+      "tag": "latest",
+      "asset": "Cloud-Lib-Voice.apk",
+      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Lib-Voice.apk",
+      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ab_cloud-libs-shared/libs/voice",
+      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-lib-voice",
       "blocked": false,
       "kind": "lib"
     },
@@ -995,22 +1031,6 @@
       "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Lib-Watchdog.apk",
       "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ab_cloud-libs-shared/libs/watchdog",
       "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-lib-watchdog",
-      "blocked": false,
-      "kind": "lib"
-    },
-    {
-      "id": "ae-tool_termux-boot",
-      "label": "termux-boot",
-      "package": "cld.termux.nix.boot",
-      "alt_id": null,
-      "registry": "ghcr.io",
-      "namespace": "diegonmarcos",
-      "image": "cloud-unix-termux-boot",
-      "tag": "latest",
-      "asset": "Cloud-Unix-Termux-Boot.apk",
-      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/latest/download/Cloud-Unix-Termux-Boot.apk",
-      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/a_solutions/ae-tool_termux-boot",
-      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-unix-termux-boot",
       "blocked": false,
       "kind": "lib"
     }

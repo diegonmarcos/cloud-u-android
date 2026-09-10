@@ -185,7 +185,27 @@ regen_constellation() {
                              release_url: $url,
                              repo_url: ($tree + "/" + $dir),
                              ghcr_page: ($pkg + "/" + .release.ghcr.image),
-                             blocked: false,
+                             # AN APP WITH NO BUILD HOST HAS NOTHING TO OFFER.
+                             # The fork branch below has always derived `blocked`
+                             # from declared data; this branch hardcoded false, so
+                             # a top-level app had no way to say "I cannot be
+                             # published yet" and the store offered it regardless.
+                             # ac_cloud-sheets is the case that proved it: it
+                             # stopped mirroring the official Collabora APK and
+                             # became a source build, so its build.json now names
+                             # Cloud-Office.apk, com.diegonmarcos.cloudoffice and
+                             # the cloud-office GHCR image — none of which exist,
+                             # because build.host is null and ship-cloud-sheets.yml
+                             # refuses to run without one. Every field here is
+                             # correct and every one of them points at a 404.
+                             # Derived, not declared: `build.host` present-but-null
+                             # IS the statement "a host is required and there is
+                             # none", so no second field can disagree with it.
+                             # Fleet.kt::status returns State.Blocked and
+                             # ConstellationFragment hides Install/Direct, so the
+                             # row still shows and still opens — it just stops
+                             # promising an install that cannot happen.
+                             blocked: (((.build // {}) | has("host")) and (.build.host == null)),
                              kind: (.release.kind // "app") }
                              + (if ($assets | length) > 0 then { assets: $assets } else {} end) ) ]' "$bj")"
         elif jq -e '(.forks // {}) | to_entries
