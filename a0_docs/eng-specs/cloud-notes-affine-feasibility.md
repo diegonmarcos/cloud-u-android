@@ -191,10 +191,11 @@ chat feature, which is a product decision the owner has not been asked to make.
 
 ## Options for the owner
 
-1. **Fork and de-cloud (recommended).** Vendor upstream at a pinned sha, patch
-   out `:service`, `ai/`, and Firebase, rebrand, build. Result is unambiguously
-   MIT, works offline, no Google dependency, no server. Cost: a maintained patch
-   set that must be re-applied on every upstream bump, and no AI chat.
+1. **Fork and de-cloud.** Vendor upstream at a pinned sha, patch out `:service`,
+   `ai/`, and Firebase, rebrand, build. ~~Result is unambiguously MIT~~ — **this
+   claim is withdrawn; see section 6.** De-clouding removes the `:service` EE
+   reach but NOT the second one, through Rust. Cost: a maintained patch set that
+   must be re-applied on every upstream bump, and no AI chat.
 2. **Build upstream as-is.** Requires resolving the EE-vs-MPL-2.0 reading of
    `packages/backend/server/src/schema.gql`, and obtaining or synthesising a
    `google-services.json`. Keeps AI chat. Carries the licence risk and a Google
@@ -203,4 +204,225 @@ chat feature, which is a product decision the owner has not been asked to make.
    fleet already has an edge. Cheapest by far, no build tier, no fork.
 
 Option 1 is the one that matches what the owner actually asked for — an app they
-own, rebranded, on a de-Googled phone.
+own, rebranded, on a de-Googled phone. **It is not yet lawful as written.**
+Section 6 records the blocker found on 2026-09-10 and the two ways out; neither
+is an agent's call.
+
+
+---
+
+## 6. AMENDMENT 2026-09-10 — the EE boundary is tangled a SECOND way, through Rust
+
+Recorded while executing the "build it de-clouded" decision. The de-cloud work
+was **stopped before any `ac_cloud-notes/` directory, registration or tile change
+was made**, per the brief's instruction to stop if the MIT/EE boundary proved
+more tangled than section 1 described. It is.
+
+### The finding
+
+Section 1 found one reach into an EE directory: `:service` → `packages/backend/
+server/src/schema.gql`. There is a **second, independent one**, and dropping
+`:service`, `ai/` and Firebase does nothing about it:
+
+```
+packages/frontend/mobile-native/Cargo.toml:20
+    affine_common  = { workspace = true, features = ["hashcash"] }
+Cargo.toml (root workspace.dependencies)
+    affine_common = { path = "./packages/common/native" }     <-- EE directory
+packages/frontend/mobile-native/src/lib.rs:13
+    use affine_common::hashcash::Stamp;                        <-- unconditional
+packages/frontend/mobile-native/src/lib.rs:27-28
+    pub fn hashcash_mint(resource: String, bits: u32) -> String {
+      Stamp::mint(resource, Some(bits)).format()
+```
+
+`packages/common/native` is one of the **two** directories the root `LICENSE`
+carves out to the EE licence — the other being `packages/backend`. Its
+`LICENSE` is byte-identical to the backend's:
+
+```
+$ md5sum packages/common/native/LICENSE packages/backend/server/LICENSE
+866b716b3d90fbfdea30e53a6a532302  packages/common/native/LICENSE
+866b716b3d90fbfdea30e53a6a532302  packages/backend/server/LICENSE
+```
+
+`affine_mobile_native` is the crate the Gradle `cargo {}` block cross-compiles
+into `libaffine_mobile_native.so` and packages into the APK. So **EE-licensed
+Rust is statically linked into the artefact we would redistribute**, and the
+EE licence says: "it is forbidden to copy, merge, publish, distribute,
+sublicense, and/or sell the Software."
+
+### Why this is worse than the `schema.gql` question, not the same
+
+Section 1 noted that the EE licence carves *back* to MPL-2.0 anything "served
+client-side as an image, font, cascading stylesheet (CSS), file which produces
+or is compiled, arranged, augmented, or combined into client-side JavaScript"
+(`packages/common/native/LICENSE:27-31`). That carve-back gave `schema.gql` an
+arguable MPL-2.0 reading. **It does not reach this one.** A native ARM shared
+object statically linked into an APK is not client-side JavaScript and is not
+"distributed as part of AFFiNE CE". There is no second reading here.
+
+Note also that the carve-back would not have saved the clone pattern anyway:
+this fleet *vendors* upstream source into `cloud-u-android`. Committing
+`packages/common/native/` is itself a "copy", forbidden independently of what
+the binary contains.
+
+### Why the section-1 method missed it, and the check that catches it
+
+The Android app's JavaScript workspace closure is clean — verified by walking
+every `package.json` dependency edge from `@affine/android`:
+
+```
+ANDROID APP PACKAGE: @affine/android
+workspace packages reachable: 92
+EE-directory packages in closure: NONE
+```
+
+That result is **true and misleading**. `packages/common/native` has no
+`package.json` at all — it is a pure Cargo crate. It is invisible to any
+JS-level audit. The Android build reaches EE code through three different
+build systems and an audit must cover all three:
+
+| Build system | Reach into an EE directory | Removed by de-clouding? |
+|---|---|---|
+| Gradle/Apollo | `App/service/build.gradle:16` → `backend/server/src/schema.gql` | yes — drop `:service` |
+| Cargo | `mobile-native/Cargo.toml:20` → `common/native` | **no** |
+| Yarn/JS | none (92-package closure, clean) | n/a |
+
+That table is the complete set. It is the output of grepping the entire Android
+build tree for every reference to either EE directory:
+
+```
+$ grep -rn 'backend/server\|backend/native\|common/native\|affine_common\|@affine/server' \
+      packages/frontend/apps/android/ packages/frontend/mobile-native/
+packages/frontend/apps/android/App/service/build.gradle:16:  schemaFiles.from(".../backend/server/src/schema.gql")
+packages/frontend/mobile-native/Cargo.toml:20:              affine_common  = { workspace = true, features = ["hashcash"] }
+packages/frontend/mobile-native/src/lib.rs:13:              use affine_common::hashcash::Stamp;
+```
+
+Three hits, two reaches, no others.
+
+### The good news: the EE surface is one function, and it is a cloud surface
+
+Everything EE that reaches the APK is `hashcash::Stamp` — 175 lines in
+`packages/common/native/src/hashcash.rs` — surfaced as exactly one uniffi
+export, `hashcash_mint`, bridged by `plugin/HashCashPlugin.kt` and consumed at
+one place in the MIT frontend:
+
+```
+packages/frontend/apps/android/src/app.tsx:180-184
+    framework.impl(ValidatorProvider, {
+      async validate(_challenge, resource) {
+        const res = await HashCash.hash({ challenge: resource });
+```
+
+`ValidatorProvider` is the proof-of-work challenge the client solves for the
+**AFFiNE cloud** auth endpoint. On a local-first build with no server and an
+unreachable sign-in wall (section 3), it is dead weight — the same category as
+`:service` and `ai/`. **The de-cloud principle does extend to it.** What it
+does not do is extend by itself: section 1's patch list does not touch Rust.
+
+### The two ways out — owner's call, not an agent's
+
+1. **Extend the de-cloud into the Rust crate.** Drop the `affine_common`
+   dependency from `mobile-native/Cargo.toml`, drop `use ... Stamp`, drop
+   `hashcash_mint`, drop `HashCashPlugin.kt`, and stub `ValidatorProvider` in
+   `app.tsx`. Nothing else in `mobile-native` touches `affine_common`; the
+   SQLite store (`affine_nbstore`) does not — `nbstore`'s own `affine_common`
+   dependency is behind its `napi` feature, which is the desktop/Node path, not
+   the Android `use-as-lib` path. This keeps the tree provably free of EE code.
+   Verify by re-running the three-system grep above and expecting zero hits.
+2. **Re-implement hashcash clean-room.** Hashcash is Adam Back's 1997
+   proof-of-work, published and unpatented; a fresh implementation owned by us
+   is lawful. It must be genuinely clean-room — written without reference to
+   `packages/common/native/src/hashcash.rs`. Only worth it if the cloud auth
+   path is ever wanted, which today it is not.
+
+Option 1 is smaller, and is the one consistent with "no server, ever". Both
+change the project's legal posture, which is why neither was taken unilaterally.
+
+### What was deliberately NOT done, and why
+
+Nothing was created or wired. No `ac_cloud-notes/`, no `build.json`, no ship
+workflow, no `ui.external_apps` entry, no launcher tile change. Registering an
+app that must not be published would produce this fleet's two documented
+failure modes at once: a false-green ship workflow, and a Data Apps tile whose
+`extapp:` miss path calls `Updater.installApk` against a release asset that
+404s (`ShellActivity.kt:1665-1674`). An unresolved app is worse than an absent
+one — the same reasoning that kept section 1 from scaffolding.
+
+**The Obsidian tile was left alone**, and would have been safe to change: `md.obsidian`
+is reachable from five places in `aa_cloud-superapp/build.json`, only one of
+which is the Data Apps tile — the right-edge one-hand gesture (`:492`), the
+gesture action-picker vocabulary (`:525`), the star/radial menu (`:575`), the
+Data Apps *launcher folder* package list (`:2762`), and the productivity
+taxonomy rule (`:5159`). Retargeting the tile at `:2491` would not have cost
+the owner access to Obsidian. It would only have created a dead target.
+
+### Verified while here, for whoever picks this up
+
+- **Dropping Firebase genuinely removes the `google-services.json`
+  requirement**, rather than hiding it. The file has exactly one consumer: the
+  `com.google.gms.google-services` Gradle plugin, declared at
+  `App/build.gradle:15` (classpath), `App/build.gradle:27` (`apply false`) and
+  `App/app/build.gradle:12` (`alias libs.plugins.google.service`), resolving
+  through `libs.versions.toml:106`. No Kotlin file and no manifest entry reads
+  it. The Firebase SDKs consume the string resources that plugin *generates*,
+  which is why the three `firebase-*` dependencies must go with it — removing
+  the plugin alone would leave SDKs that fail at `FirebaseApp` init instead of
+  at configure time. Remove plugin + deps and the requirement is gone at its
+  source.
+- **`service/` the Kotlin package is not `:service` the Gradle module**, and
+  section 5 blurs them. Only `service/GraphQLService.kt` imports the EE-derived
+  `com.affine.pro.graphql.*`. `service/OkHttp.kt` (`AuthHttp`, `CookieStore`)
+  has MIT-only consumers — `plugin/AuthPlugin.kt` and `utils/logger/FileTree.kt`
+  — and must be kept, minus its two Firebase call sites. A patch that deletes
+  the whole package will not compile.
+- **ABI is already a single-ABI env switch**, not a matrix to invent:
+  `App/app/build.gradle:19-20` reads `AFFINE_ANDROID_NATIVE_TARGET`
+  (`arm64`|`x86_64`) into both `abiFilters` and the Cargo `targets`.
+- **Flavours exist**: `flavorDimensions = ['chanel']`, products
+  `stable`/`beta`/`internal`/`canary`, so the task is `assembleStableRelease`,
+  not `assembleRelease` — the same flavour trap that cost `ac_cloud-dialer` a
+  red CI run (see its `build.json::forks.dialer.build._doc`).
+- **The floating NDK pin is real**: `App/app/build.gradle:25`,
+  `ndkVersion = new File(sdkDirectory, "ndk").listFiles().sort().last().name`.
+
+### The guard that makes this checkable, and the next step
+
+Prose boundaries get read once. This one is now data plus a check:
+
+- `1_cicd/src/data/licence-boundaries.json` — the policy: pinned revision,
+  the two restricted directories, the scan roots, the markers, and the three
+  known reaches with what each needs.
+- `1_cicd/src/scripts/cloud-android-licence-boundary-guard.py` — scans a tree
+  against that policy. No path, upstream or crate name in the script.
+- `1_cicd/src/scripts/test/licence-boundary-guard.test.sh` — 4 cases, each
+  breaking the tree one specific way.
+
+Against real upstream at the pinned sha it reports all three reaches and exits
+1. Against a tree with them removed it exits 0, so a green result is worth
+something. Against a truncated checkout it exits 2 rather than reporting clean.
+
+Two bugs were found by RUNNING it, not by reading it, and both are the
+false-green shape this fleet keeps hitting:
+
+1. The guard's first marker set used repo-root paths (`packages/backend`). The
+   Gradle reach is written relative (`../../../../../backend/server/...`), so it
+   matched nothing and the guard confidently reported 2 of 3. Markers are now
+   directory tails.
+2. The tester's first spelling of "does the output say `[NEW]`" was
+   `case "$OUT" in *"[NEW]"*)`, where `[NEW]` is a bracket expression matching
+   one of `N`/`E`/`W`. It failed against a guard that was behaving correctly.
+   Replaced with plain substring containment.
+
+**NEXT STEP, in order.** (1) Owner picks one of the two ways out above.
+(2) Only then create `ac_cloud-notes/` on the clone-plus-patch-series shape —
+`build.json` with `mode: "single-app"` and a real `forks.notes` entry, which is
+what makes `aa_cloud-superapp/data/regen.sh` self-register it into
+`constellation-fleet.json`; the patch series applied by `materialize-fork` from
+the pinned sha, NOT a vendored 58-workspace tree. (3) Wire this guard into that
+app's ship workflow as a gate before the Gradle step, and wire
+`licence-boundary-guard.test.sh` alongside it the way `i18n-guard.yml:33` wires
+its tester. The guard must be a gate on the real materialised tree; running it
+only against the fixture proves nothing about what ships.
