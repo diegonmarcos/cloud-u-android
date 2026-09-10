@@ -54,6 +54,30 @@ for f in "$CICD_SRC/scripts/"*.sh "$CICD_SRC/scripts/"*.py; do
     chmod +x "$CICD_DIST/scripts/$base"
 done
 
+# ── prune dist artifacts whose source is gone ──────────────────────
+#
+# Every loop in this generator WRITES into dist/ and none of them removes, so a
+# renamed or deleted source leaves its old artifact behind for ever. That twin is
+# executable, carries the same GENERATED header and looks entirely current, and
+# `.github/workflows/generated-up-to-date` then fails on it — not only for the
+# commit that caused it, but for the next stranger who pushes on top, who has no
+# idea what the diff is about. Renaming the enhance silence guard did exactly that.
+#
+# dist/ is derived in full, so a file in it with no source is not history, it is
+# residue. Deliberately limited to the two dist directories this script generates:
+# .github/workflows/ is NOT pruned, because a workflow can legitimately live there
+# without a source in this tier and deleting a live one is not a generator's call.
+log_step "prune dist artifacts with no source"
+for _pair in "scripts" "cicd"; do
+    _dist="$CICD_DIST/$_pair"; _src="$CICD_SRC/$_pair"
+    for _f in "$_dist"/*; do
+        [ -e "$_f" ] || continue
+        _b=$(basename "$_f")
+        [ -e "$_src/$_b" ] || { echo "  pruned $_pair/$_b — 1_cicd/src/$_pair/$_b no longer exists"; rm -f "$_f"; }
+    done
+done
+unset _pair _dist _src _f _b
+
 # ── cicd: engine ↔ vendored build.sh parity ────────────────────────
 #
 # Every app ships a VENDORED COPY of its engine at <app>/build.sh, and the ship
