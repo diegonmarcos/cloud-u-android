@@ -282,4 +282,35 @@
     <string name="ai_enhance_language">Idioma de salida: %1$s</string>
     <string name="ai_enhance_summary">Forma del resumen: %1$s</string>
 
+    <!-- ── Added to values/ while this locale was being written ──────────
+         Four commits landed between the audit and the push (the Power Saving
+         home-app editor and the One-Hand Recent Tabs star). Translated in the
+         same pass rather than left for later, which is the whole point of the
+         guard that now runs on every push. -->
+
+    <!-- App tiles. The ● / ○ glyph is the selection marker and carries the
+         meaning on a greyscale screen, so it stays exactly where it is. -->
+    <string name="app_tile_selected">● %1$s</string>
+    <string name="app_tile_unselected">○ %1$s</string>
+    <string name="app_tile_not_installed">%1$s — no instalada</string>
+
+    <string name="power_saving_apps_title">Apps del inicio de Power Saving</string>
+    <string name="power_saving_apps_caption">Las doce apps de la pantalla de inicio de Cloud Power Saving, en este orden. Toca una para apuntar ese hueco a otro sitio. Un hueco que se deja con la app que trae de fábrica sigue a la que enviemos después; un hueco que eliges tú se queda como lo dejes.</string>
+    <string name="power_saving_slot_chooser">Fila %1$d · hueco %2$d</string>
+    <string name="power_saving_slot_default">Predeterminada (%1$s)</string>
+    <string name="power_saving_settings">Ajustes</string>
+
+    <!-- One-Hand stars. Sirius, Canopus and Centauri are the stars' own names
+         and stay; "Recent Tabs" is not a star name but a description of what
+         the fourth one holds, so it is translated — and translated the same
+         way in all four places it appears. -->
+    <string name="star_centauri_desc">Estrella Centauri — apps del teléfono abiertas hace poco</string>
+    <string name="star_recent_tabs_desc">Estrella Pestañas recientes — páginas que abriste por última vez en esta app</string>
+    <string name="recent_tabs_star_title">Pestañas recientes</string>
+    <string name="recent_tabs_empty">Aún no hay páginas</string>
+    <string name="onehand_stars_intro">En la pantalla de Inicio hay cuatro estrellas. Sirius en el centro y Canopus justo encima de la isla de navegación inferior mantienen la línea central; entre ellas hay una fila de dos, Centauri a %1$ddp a su izquierda y Pestañas recientes a la misma distancia a su derecha. Al tocar una se abre su menú; están siempre activas.</string>
+    <string name="onehand_star_recent_tabs_name">✦ Pestañas recientes — páginas de esta app</string>
+    <string name="onehand_star_recent_tabs_place">fila intermedia, a %1$ddp a la derecha del centro · comparte el abanico de media luna de Canopus</string>
+    <string name="onehand_star_recent_tabs_what">Las páginas, pestañas y paneles que abriste por última vez DENTRO de esta app, la más reciente primero, cada una con el nombre y el icono que declara su sección. No es la misma lista que la de Centauri, que está al lado: aquella son apps de Android instaladas en el teléfono, esta es por dónde has pasado aquí dentro. Se lee del historial de App Tabs, así que es el mismo registro que muestra la cuadrícula de Tabs y sobrevive a cerrar la app. Una página que se haya renombrado o borrado desde entonces se descarta en lugar de ofrecerse.</string>
+    <string name="onehand_star_recent_tabs_outer">(las 9 páginas más recientes, en vivo)</string>
 </resources>
