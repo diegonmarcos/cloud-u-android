@@ -185,9 +185,45 @@ has "$SCOPE" 'HTML IS NEVER REWRITTEN' "H9 the text-only rule is still stated"
 has "$SCOPE" 'fun historyStart(text: String): Int' "H9 the quote/signature scope walk is still there"
 has "$SCOPE" 'while (i >= 0 && lines\[i\].isBlank()) i--' \
   "H9 the walk still starts from the BOTTOM, so an interleaved reply survives"
-# The engines, not crossed. The pairing is the property; this is the one line that maps them.
-has "$UI/text/TextToolRun.kt" 'enum class TextTool { ENHANCE, TRANSLATE, RESUME }' \
-  "H9 the three tools are still the three tools"
+# The engines, not crossed. The pairing is the property: every tool the enum declares resolves to an
+# engine of its OWN, and the dispatch is the one place that maps them.
+#
+# This assertion used to express that property by restating the enum's declaration line word for
+# word. The surface split then gave the enum a constructor -- a label, an icon, and whether the tool
+# is drawn in an overflow menu -- so the one-line form went away and this failed, while every part of
+# the property it was defending still held. Restating a value the code owns is what turned a rename
+# into a false regression, so the value is READ OUT OF THE SOURCE here instead of written down again:
+# the dispatch arms name their own enum, the enum names its own constants, and what is asserted is
+# the BIJECTION between them. Rename the enum or any constant and this still passes, because the
+# compiler cannot let one side move without the other. Leave a tool undispatched, dispatch something
+# the enum does not declare, or route two tools onto one engine, and it fails.
+ROUTER="$UI/text/TextToolRun.kt"
+arms=$(grep -oE '^ *[A-Za-z_][A-Za-z_0-9]*\.[A-Z][A-Z_0-9]* ->' "$ROUTER" | sed 's/^ *//;s/ ->$//')
+enum_name=$(printf '%s\n' "$arms" | cut -d. -f1 | sort -u)
+# An extraction that came back empty must not report green -- reporting green for a property it
+# never checked is the exact failure this repository shipped once already.
+if [ -z "$arms" ] || [ "$(printf '%s\n' "$enum_name" | wc -l)" -ne 1 ]; then
+  bad "H9 no single tool-to-engine dispatch could be read out of TextToolRun.kt"
+else
+  dispatched=$(printf '%s\n' "$arms" | cut -d. -f2 | sort)
+  declared=$(awk -v e="$enum_name" \
+    '$0 ~ "^enum class " e "[ (]" { inside = 1; next }
+     inside && /^}/ { exit }
+     inside && match($0, /^    [A-Z][A-Z_0-9]*[(,]/) { print substr($0, RSTART + 4, RLENGTH - 5) }' \
+    "$ROUTER" | sort)
+  [ -n "$declared" ] && [ "$dispatched" = "$declared" ] \
+    && ok "H9 every tool $enum_name declares is dispatched exactly once ($(echo $declared))" \
+    || bad "H9 declared [$(echo $declared)] and dispatched [$(echo $dispatched)] are not the same tools"
+  # The crossing itself: two tools arriving at one engine is how RESUME quietly becomes ENHANCE,
+  # since they already share a provider, a key and their error wording.
+  engines=$(grep -oE '^ *[A-Za-z_][A-Za-z_0-9]*\.[A-Z][A-Z_0-9]* -> [a-zA-Z_.]+\(' "$ROUTER" \
+    | sed 's/.*-> //;s/($//')
+  tool_count=$(printf '%s\n' "$arms" | wc -l)
+  engine_count=$(printf '%s\n' "$engines" | sort -u | wc -l)
+  [ "$engine_count" -eq "$tool_count" ] \
+    && ok "H9 each of the $tool_count tools resolves to an engine of its own" \
+    || bad "H9 $tool_count tools resolve to only $engine_count engines -- two are crossed onto one"
+fi
 
 # ── H10 the assertions that EXECUTE the policy ──
 # The greps above prove the wiring; these named tests run the sanitiser and compare whole strings.
