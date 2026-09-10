@@ -255,15 +255,26 @@ _resolve_media_keys() {
 }
 
 # :libs:firewall consumes the firestack netstack aar, so it must exist before
-# any gradle configure/compile. Built once on demand (idempotent — skips when
-# present). Data-driven from build.json::upstreams.firestack.
+# any gradle configure/compile.
+#
+# FETCHED, NOT BUILT. This used to call build-firestack.sh, which compiled a Go
+# netstack library from source on the way to every single gradle invocation — so
+# a break in firestack was a break in the APK. On 2026-09-09 that cost the fleet
+# a day and a half: 9a0ad74b8 broke the aar build, this call died inside it,
+# `Build APK (engine)` died with it, `Publish to GitHub Releases` was skipped,
+# and roughly forty commits of unrelated work never reached the owner's phone.
+#
+# The aar is now a prebuilt artifact, pinned by tag and per-ABI checksum in
+# ab_cloud-libs-shared/build.json::firestack.artifact and published by
+# ship-firestack-aar.yml on firestack's own cadence. fetch-firestack.sh
+# downloads and verifies it and NEVER falls back to a source build — the long
+# note at the top of that file explains why a fallback would silently rebuild
+# exactly the coupling this removed.
+#
+# The source build still exists as `./build.sh firestack`. It is simply no
+# longer on the path between a Kotlin change and the owner's phone.
 _ensure_firestack() {
-  # Delegates to the module's own engine, which BOTH consumers call
-  # (see ab_cloud-libs-shared/libs/firewall/build-firestack.sh). It is
-  # idempotent - returns immediately when the aar is already there - and
-  # env-agnostic, so it is wrapped in this repo's devShell here and in
-  # lib-apks' own wrapper there.
-  in_nix bash "$LIBS_DIR/firewall/build-firestack.sh"
+  in_nix bash "$LIBS_DIR/firewall/fetch-firestack.sh"
 }
 
 step_firestack() { in_nix bash "$LIBS_DIR/firewall/build-firestack.sh" --force; }

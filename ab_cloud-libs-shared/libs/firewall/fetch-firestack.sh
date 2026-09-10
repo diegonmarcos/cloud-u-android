@@ -135,19 +135,26 @@ if [ "$GOT" != "$WANT" ]; then
   exit 1
 fi
 
-# Only now does it become the real aar. Verifying in place would leave a
-# rejected artifact sitting at the path gradle reads.
-mv "$TMP" "$AAR"
-trap - EXIT
-
 # Same shape check build-firestack.sh runs on what it produces. A checksum
 # proves we got the bytes that were published; it does not prove the bytes that
 # were published are an aar. unzip absence is FATAL here rather than a skip —
 # a tester that passes because its tool is missing is the false green this
 # repository has already shipped four of.
+#
+# CHECKED ON THE TEMP FILE, BEFORE IT BECOMES THE AAR. This ran after the `mv`
+# in the first draft, and that was a genuine hole rather than untidiness: a
+# download that failed the shape check was left sitting at the path gradle
+# reads, and because its CHECKSUM still matched the pin, the next run's
+# already-correct short-circuit would skip and hand gradle the very artifact
+# this check had just rejected. A rejected artifact must never survive at the
+# consuming path.
 command -v unzip >/dev/null 2>&1 || {
   errlog "firestack: unzip is required to verify the aar's shape (a skipped check is a false pass)"; exit 1; }
-unzip -l "$AAR" | grep -q "classes.jar"         || { errlog "firestack: pinned aar has no classes.jar"; exit 1; }
-unzip -l "$AAR" | grep -q "AndroidManifest.xml" || { errlog "firestack: pinned aar has no AndroidManifest.xml"; exit 1; }
+unzip -l "$TMP" | grep -q "classes.jar"         || { errlog "firestack: pinned aar has no classes.jar"; exit 1; }
+unzip -l "$TMP" | grep -q "AndroidManifest.xml" || { errlog "firestack: pinned aar has no AndroidManifest.xml"; exit 1; }
+
+# Only now does it become the real aar.
+mv "$TMP" "$AAR"
+trap - EXIT
 
 log "firestack: → $AAR ($(du -h "$AAR" 2>/dev/null | cut -f1), sha256 $GOT, from $TAG)"

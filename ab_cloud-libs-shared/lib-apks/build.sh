@@ -95,14 +95,17 @@ in_nix() {
   fi
 }
 
-# libs:firewall compiles the firestack netstack aar. This repo ships it as
-# Cloud-Lib-Firewall.apk, so it needs the aar just as much as the superapp does
-# — and until now had no way to produce one, which is why
-# libs/firewall/build.gradle could not declare the dependency without breaking
-# this build. Same engine the superapp calls; idempotent, so it is a no-op once
-# the aar exists. Wrapped in OUR in_nix because CI runs this repo with
-# BYPASS_NIX=1 and the SDK/NDK from setup-android.
-_ensure_firestack() { in_nix bash "$SCRIPT_DIR/../libs/firewall/build-firestack.sh"; }
+# libs:firewall consumes the firestack netstack aar. This repo ships it as
+# Cloud-Lib-Firewall.apk, so it needs the aar just as much as the superapp does.
+#
+# FETCHED, NOT BUILT, for the same reason the superapp fetches it: an aar built
+# inline is an aar whose failure takes its consumer down with it, and on
+# 2026-09-09 that is precisely what happened to the SuperApp publish. Both
+# consumers now pull the same pinned artifact
+# (ab_cloud-libs-shared/build.json::firestack.artifact), so neither can be
+# stopped by the state of the Go source. Wrapped in OUR in_nix because CI runs
+# this repo with BYPASS_NIX=1 and the SDK from setup-android.
+_ensure_firestack() { in_nix bash "$SCRIPT_DIR/../libs/firewall/fetch-firestack.sh"; }
 
 _gradle() { _ensure_firestack; in_nix gradle --no-daemon -p "$SCRIPT_DIR" "$@"; }
 
