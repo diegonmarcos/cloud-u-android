@@ -199,9 +199,25 @@
     <string name="status_light_description">%1$s: %2$s</string>
 
     <string name="control_title">Control</string>
-    <string name="control_caption">Lo que se cambia con la frecuencia suficiente para merecer una pantalla, agrupado por LO QUE MODIFICA: el teléfono, la flota o esta aplicación.\n\nSolo lo que de verdad se puede mover es un interruptor. Una fila que termina en › abre en su lugar la pantalla del sistema que la controla — Android no deja que una aplicación cambie esas, y un interruptor que fingiera lo contrario dejaría el dispositivo exactamente como estaba. Un interruptor en gris indica qué permiso está esperando; toca la fila para ir a concedérselo.\n\nLa luz es lo que ha respondido el DISPOSITIVO justo ahora, nunca cómo está puesto el interruptor: %1$s, %2$s, o %3$s cuando no ha querido responder o todavía no se le ha preguntado. %4$s marca las filas en las que no se puede leer más que la preferencia que esta aplicación guardó — esa preferencia es lo que se pidió, así que esas filas nunca afirman estar funcionando. Las luces se refrescan cada %5$d segundos mientras esta página está abierta y se detienen del todo cuando no lo está, así que pasan a desconocido antes que a obsoleto.</string>
+    <string name="control_caption">Lo que se cambia con la frecuencia suficiente para merecer una pantalla, dispuesto como una cuadrícula de iconos y agrupado por LO QUE VIENES A BUSCAR: el teléfono, la red, las herramientas, la interfaz.\n\nTOCA un icono para cambiarlo. MANTÉN PULSADO para abrir la pantalla de ajustes que hay detrás — y todos los iconos responden a una pulsación larga, incluidos los que no tienen adónde ir, que lo dicen en lugar de no hacer nada.\n\nUn icono encendido se invierte: se rellena con el color de primer plano del tema y dibuja su símbolo con el del fondo, así que encendido y apagado son los mismos dos colores intercambiados y ninguno puede volverse invisible con un tema u otro. Solo lo que de verdad se puede mover cambia al tocarlo. Un icono que Android no deja cambiar a esta aplicación abre en su lugar la pantalla del sistema que lo controla, y un icono que espera un permiso indica cuál en su etiqueta.\n\nDevoradores de batería no es una quinta categoría — son LOS MISMOS iconos otra vez, reunidos para poder apagar en un solo sitio todo lo que consume batería. Un icono cambiado ahí queda cambiado en su propio grupo en el mismo instante, porque solo hay uno.\n\nLa luz bajo un icono es lo que ha respondido el DISPOSITIVO justo ahora, nunca cómo está puesto el icono: %1$s, %2$s, o %3$s cuando no ha querido responder o todavía no se le ha preguntado. %4$s marca los iconos en los que no se puede leer más que la preferencia que esta aplicación guardó. Las luces se refrescan cada %5$d segundos mientras esta página está abierta y se detienen del todo cuando no lo está, así que pasan a desconocido antes que a obsoleto.</string>
     <string name="control_none_declared">No hay ningún control declarado — build.json::ui.control_panel está vacío o no llegó a esta compilación.</string>
     <string name="control_write_refused">%1$s: no cambió — %2$s</string>
+
+    <!-- Configs ▸ Panel ▸ Control — encabezados de grupo. Los nombra
+         build.json::ui.control_panel.groups[].label_res / subtitle_res. -->
+    <string name="control_group_device">Dispositivo</string>
+    <string name="control_group_device_sub">El hardware del propio teléfono y lo que reclama tu atención.</string>
+    <string name="control_group_network">Red</string>
+    <string name="control_group_network_sub">Todo lo que mueve datos — las antenas de este teléfono y los túneles de la flota, en un mismo sitio.</string>
+    <string name="control_group_tools">Herramientas</string>
+    <string name="control_group_tools_sub">La maquinaria con la que se gobiernan esta aplicación y la flota.</string>
+    <string name="control_group_ui">Interfaz</string>
+    <string name="control_group_ui_sub">Cómo se ve y cómo responde este lanzador bajo el pulgar.</string>
+    <string name="control_group_battery">Devoradores de batería</string>
+    <string name="control_group_battery_sub">Los mismos controles otra vez, reunidos para poder apagar desde una sola fila todo lo que consume batería.</string>
+
+    <string name="control_tile_open_action">Abrir ajustes</string>
+    <string name="control_no_menu">%1$s no tiene pantalla de ajustes — toca el icono para cambiarlo.</string>
 
     <!-- ══════════════════════════════════════════════════════════════════════
          Configs ▸ AI. Five tabs: WebSearch, LocalSearch, Text Enhance, Library,

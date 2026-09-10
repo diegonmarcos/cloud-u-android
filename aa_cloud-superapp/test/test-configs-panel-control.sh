@@ -40,6 +40,22 @@ STRINGS="$APP/app/src/main/res/values/strings.xml"
 THEME_BG="$APP/app/src/main/res/drawable/bg_gradient_black_purple.xml"
 LIBS="$(cd "$APP/../ab_cloud-libs-shared" && pwd)"
 
+# ── preflight: a missing tool or a moved file must be LOUD, never a verdict ──
+# Four testers in this repository once passed only because ripgrep was absent
+# and their call failed open, and a path written against the wrong directory
+# matches nothing exactly as quietly as a contract being kept.
+for tool in python3 jq; do
+  command -v "$tool" >/dev/null 2>&1 || {
+    echo "  ABORT: $tool is not on PATH — every assertion below would report a"
+    echo "         verdict from its ABSENCE rather than from the code."; exit 2; }
+done
+for f in "$BJ" "$GRADLE" "$SECTIONS" "$PAGES" "$NAV" "$TABS" "$CONTROLS" \
+         "$FRAGMENT" "$STATUS" "$COLORS" "$THEME_BG"; do
+  [ -f "$f" ] || {
+    echo "  ABORT: no such file: $f — a grep over nothing matches nothing, which"
+    echo "         is indistinguishable here from a contract being kept."; exit 2; }
+done
+
 echo "== T1: Configs ▸ Panel is a visible page declaring its two tabs in order =="
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
@@ -138,7 +154,7 @@ echo "== T5: every DECLARED control has a real capability behind it =="
 check "$(python3 - "$BJ" "$CONTROLS" <<'PY'
 import json, re, sys
 cp = json.load(open(sys.argv[1]))['ui']['control_panel']
-declared = [c['id'] for g in cp['groups'] for c in g['controls']]
+declared = [c['id'] for g in cp['groups'] for c in g.get('controls', [])]
 src = open(sys.argv[2]).read()
 implemented = set(re.findall(r'"([a-z_]+)" to (?:Control\(|launcherToggle\()', src))
 missing = [i for i in declared if i not in implemented]
@@ -189,26 +205,40 @@ fi
 
 echo "== T8: the UI never displays the state that was ASKED for =="
 ui_fail=""
-# isChecked may only be assigned in draw(), from the value just read back.
-assigns="$(grep -n 'isChecked *=' "$FRAGMENT" | grep -v '^\s*$' || true)"
-echo "$assigns" | grep -q 'sw.isChecked = state == true' \
+# The tile's fill may only be set from the value just read BACK.
+grep -q 'paintTile(row, on = state == true)' "$FRAGMENT" \
   || ui_fail="$ui_fail no-read-back-assignment"
-echo "$assigns" | grep -qE 'isChecked *= *(want|on)\b' \
-  && ui_fail="$ui_fail assigns-the-request"
-# Assigning isChecked fires the listener, so a refresh would re-issue the last
-# write on every resume — tearing down the mesh or the API server for a look.
-grep -q 'setOnCheckedChangeListener(null)' "$FRAGMENT" \
-  || ui_fail="$ui_fail listener-not-detached"
-# A control with no `set` must never be given a Switch.
-grep -q 'if (control.set != null)' "$FRAGMENT" \
-  || ui_fail="$ui_fail switch-not-gated-on-set"
-# A blocked switch must be disabled AND say why.
-grep -q 'sw.isEnabled = blocked.isEmpty()' "$FRAGMENT" \
-  || ui_fail="$ui_fail blocked-switch-still-enabled"
+grep -qE 'paintTile\([^)]*on = (want|on)\b' "$FRAGMENT" \
+  && ui_fail="$ui_fail paints-the-request"
+# NOT A COMPOUND BUTTON ANY MORE, and that is stronger than the detached
+# listener the list version needed. Assigning Switch.isChecked FIRES
+# OnCheckedChangeListener, so every refresh re-issued the last write unless the
+# listener was pulled first — tearing down the mesh or the API server for a
+# look at the page. A tile's fill is a plain field: a repaint cannot call
+# anything back, so there is no listener to forget to detach. A Switch or a
+# CompoundButton reappearing here brings that whole class of bug with it.
+#
+# Comments are stripped first — the file EXPLAINS which widget it stopped using
+# and why, and a grep that cannot tell prose from code would forbid saying so.
+# Exit 0 is the CLEAN answer on purpose: a python that never got as far as
+# looking must fail this check, not pass it.
+python3 - "$FRAGMENT" <<'PY' || ui_fail="$ui_fail compound-button-is-back"
+import re, sys
+code = open(sys.argv[1], encoding='utf-8').read()
+code = re.sub(r'/\*.*?\*/', '', code, flags=re.S)
+code = re.sub(r'//[^\n]*', '', code)
+sys.exit(1 if re.search(r'\b(Switch|CompoundButton)\b', code) else 0)
+PY
+# A control with no `set` must never switch under a tap.
+grep -q 'if (control.set != null) write(' "$FRAGMENT" \
+  || ui_fail="$ui_fail tap-not-gated-on-set"
+# A blocked tile must be disabled AND say why.
+grep -q 'row.tile.isEnabled = blocked.isEmpty()' "$FRAGMENT" \
+  || ui_fail="$ui_fail blocked-tile-still-enabled"
 grep -q 'row.note.text = blocked' "$FRAGMENT" \
   || ui_fail="$ui_fail blocked-reason-not-shown"
 [ -z "$ui_fail" ] \
-  && ok "switches are drawn from the device read, with the listener detached" \
+  && ok "tiles are filled from the device read; no CompoundButton to re-fire" \
   || bad "the switch board can show a state it did not verify:$ui_fail"
 
 echo "== T9: ui.control_panel reaches the APK — emitter, constant, reader =="
@@ -221,27 +251,71 @@ grep -q 'BuildConfig.UI_CONTROL_PANEL_B64' "$CONTROLS"  || cp_fail="$cp_fail kot
   && ok "build.json → uiControlPanelB64 → BuildConfig.UI_CONTROL_PANEL_B64 → DeviceControls" \
   || bad "the declaration cannot reach the UI:$cp_fail"
 
-echo "== T10: three groups, by blast radius, every control in exactly one =="
+echo "== T10: four functional groups + derived views; nothing orphaned, nothing twice =="
+# WHAT CHANGED AND WHY IT IS ASSERTED THIS WAY. The groups used to be
+# Phone / Cloud / System — a BLAST-RADIUS taxonomy — and this assertion used to
+# pin those three ids and forbid any control appearing twice. Both halves had
+# to go, and neither went quietly.
+#
+# The three groups split the radios across two of themselves (Wi-Fi, mobile
+# data, Bluetooth, airplane under Phone; the mesh tunnel and the firewall under
+# Cloud), so "turn the network off" meant visiting two groups and knowing in
+# advance which half lived where. Device / Network / Tools / UI groups by what
+# the owner came looking for instead.
+#
+# And a control now DOES appear twice on purpose: Battery Hungers gathers the
+# battery-hungry ones a second time so they can all be switched off in one
+# place. What must still be impossible is a control appearing twice among the
+# FUNCTIONAL groups — that would be two homes, which is the ambiguity the old
+# assertion was really guarding — and a derived group inventing an id, or
+# carrying a hand-written list of ids that can fall out of step with the flags.
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 cp = json.load(open(sys.argv[1]))['ui']['control_panel']
-ids = [g['id'] for g in cp['groups']]
+groups = cp['groups']
+functional = [g for g in groups if not g.get('derive')]
+derived    = [g for g in groups if g.get('derive')]
 problems = []
-if ids != ['phone', 'cloud', 'system']:
-    problems.append('groups = %r, expected [phone, cloud, system]' % ids)
+
+if not functional: problems.append('no functional group declares any control')
+if not derived:    problems.append('no derived group — Battery Hungers is gone')
+
+# A control has exactly ONE functional home.
 seen, dupes = set(), []
-for g in cp['groups']:
-    if not g.get('label'):   problems.append('group %s has no label' % g['id'])
-    if not g.get('controls'):problems.append('group %s is empty' % g['id'])
-    for c in g['controls']:
-        if c['id'] in seen:  dupes.append(c['id'])
+for g in functional:
+    if not g.get('controls'): problems.append('group %s is empty' % g['id'])
+    for c in g.get('controls', []):
+        if c['id'] in seen: dupes.append(c['id'])
         seen.add(c['id'])
-        if not c.get('label'):    problems.append('%s has no label' % c['id'])
-        if not c.get('subtitle'): problems.append('%s has no subtitle' % c['id'])
-if dupes: problems.append('control in two groups: %s' % dupes)
+        for field in ('label', 'subtitle', 'icon'):
+            if not c.get(field): problems.append('%s has no %s' % (c['id'], field))
+if dupes: problems.append('control in two FUNCTIONAL groups: %s' % sorted(set(dupes)))
+
+for g in derived:
+    # THE ONE THAT MATTERS. A derived group with its own `controls` is a second
+    # list of ids beside the flags, and the two drift — which is exactly the
+    # "on in one group, off in another" defect this design is shaped to avoid.
+    if g.get('controls'):
+        problems.append('derived group %s carries its own controls list' % g['id'])
+    flag = g['derive']
+    gathered = [c['id'] for gg in functional for c in gg.get('controls', [])
+                if c.get(flag) is True]
+    if not gathered:
+        problems.append('derived group %s gathers nothing — no control carries %r'
+                        % (g['id'], flag))
+    # Nothing invented: everything a derived view shows has a functional home.
+    for cid in gathered:
+        if cid not in seen: problems.append('%s gathered but has no home' % cid)
+
+# Every group is named through the STRING TABLE, or its heading can never be
+# translated — the owner reads this app in Spanish.
+for g in groups:
+    for key in ('label_res', 'subtitle_res'):
+        if not g.get(key): problems.append('group %s declares no %s' % (g['id'], key))
+    if not g.get('label'): problems.append('group %s has no fallback label' % g['id'])
 print('; '.join(problems) or 'OK')
 PY
-)" "Phone / Cloud / System, labelled, non-empty, no control in two of them"
+)" "one functional home per control; the derived view gathers by flag, invents nothing"
 
 echo "== T11: Control is routed by id; Notify is NOT (it goes through the facet) =="
 r_fail=""
@@ -305,7 +379,8 @@ for i, (pos, cid) in enumerate(ids):
 
 problems = []
 for g in cp['groups']:
-    for c in g['controls']:
+    # A derived group re-shows controls declared above; it owns no icon.
+    for c in g.get('controls', []):
         cid = c['id']
         icon = c.get('icon', '')
         if not icon:
@@ -407,7 +482,7 @@ m = re.search(r'fun colourRes\(state: State\).*?\n    \}', s, re.S)
 sys.exit(0 if m and re.search(r'State\.UNKNOWN\s*->\s*R\.color\.status_light_unknown', m.group(0)) else 1)
 PY
 # A read that throws must become null, not a default.
-grep -q 'runCatching { row.control.read(ctx) }.getOrNull()' "$FRAGMENT" \
+grep -q 'runCatching { control.read(ctx) }.getOrNull()' "$FRAGMENT" \
   || unknown_fail="$unknown_fail throwing-read-not-nulled"
 # A row never read, or read too long ago, has no answer to show.
 grep -q 'if (row.readAt != 0L' "$FRAGMENT" || unknown_fail="$unknown_fail never-read-not-unknown"
@@ -470,7 +545,7 @@ echo "== T17: every control ANSWERS whether its read observes anything =="
 check "$(python3 - "$BJ" "$CONTROLS" <<'PYX'
 import json, re, sys
 cp = json.load(open(sys.argv[1]))['ui']['control_panel']
-declared = [c['id'] for g in cp['groups'] for c in g['controls']]
+declared = [c['id'] for g in cp['groups'] for c in g.get('controls', [])]
 src = open(sys.argv[2]).read()
 blocks, ids = {}, [(m.start(), m.group(1)) for m in
                    re.finditer(r'"([a-z_]+)" to (?:Control\(|launcherToggle\()', src)]
@@ -643,8 +718,12 @@ import re, sys
 g = dict(re.findall(r'State\.(\w+) -> "([^"]+)"', open(sys.argv[1]).read()))
 sys.exit(0 if g.get('ON') and g.get('OFF') and g['ON'] != g['OFF'] else 1)
 PYX
-grep -q 'row.light.contentDescription = StatusLight.description(' "$FRAGMENT" \
-  || a11y_fail="$a11y_fail light-has-no-content-description"
+# The TILE carries it now, not the light: a grid of icons is one node to a
+# screen reader, and four separately-announced fragments of one row is worse
+# than the row was. It is still StatusLight's own sentence — the shared one,
+# not a second phrasing assembled in the fragment.
+grep -q 'row.tile.contentDescription = StatusLight.description(' "$FRAGMENT" \
+  || a11y_fail="$a11y_fail tile-has-no-content-description"
 grep -qE 'State\.(ON|OFF|UNKNOWN|UNVERIFIABLE) -> "(On|Off|Unknown|Not verifiable)"' "$STATUS" \
   && a11y_fail="$a11y_fail state-word-hardcoded-in-kotlin"
 grep -q 'getString(R.string.control_title)' "$FRAGMENT"   || a11y_fail="$a11y_fail title-not-a-resource"
@@ -657,13 +736,315 @@ grep -q 'getString(R.string.control_write_refused' "$FRAGMENT" \
 for f in "$APP"/app/src/main/res/values*/strings.xml; do
   [ -e "$f" ] || continue
   for k in status_light_on status_light_off status_light_unknown status_light_unverifiable \
-           status_light_description control_title control_caption control_write_refused; do
+           status_light_description control_title control_caption control_write_refused \
+           control_no_menu control_tile_open_action \
+           control_group_device control_group_device_sub \
+           control_group_network control_group_network_sub \
+           control_group_tools control_group_tools_sub \
+           control_group_ui control_group_ui_sub \
+           control_group_battery control_group_battery_sub; do
     grep -q "name=\"$k\"" "$f" || a11y_fail="$a11y_fail $(basename "$(dirname "$f")")-misses:$k"
   done
 done
 [ -z "$a11y_fail" ] \
   && ok "differing glyphs, a spoken description, and every word in the string table" \
   || bad "the light is colour-only or English-only:$a11y_fail"
+
+echo "== T21: a control drawn in TWO groups is ONE piece of state =="
+# THE DEFECT THIS FEATURE INVITES. Battery Hungers shows the same controls a
+# second time. If each tile kept its own copy of the state, flipping the mesh
+# under Network would leave the mesh tile under Battery Hungers still lit, and
+# the page would be reporting two different answers about one tunnel. Nothing
+# would crash and no build would complain.
+#
+# The invariant is that a tile holds NOTHING about the state except the id it
+# was declared with, and that a landed reading reaches EVERY tile bearing that
+# id. `firstOrNull` is the precise shape of the bug: it updates one of the two.
+dup_fail=""
+# The DATA has to actually duplicate something, or every check below guards air.
+python3 - "$BJ" <<'PY' || dup_fail="$dup_fail nothing-is-duplicated"
+import json, sys
+cp = json.load(open(sys.argv[1]))['ui']['control_panel']
+functional = [g for g in cp['groups'] if not g.get('derive')]
+drawn = [c['id'] for g in functional for c in g.get('controls', [])]
+for g in cp['groups']:
+    if g.get('derive'):
+        drawn += [c['id'] for gg in functional for c in gg.get('controls', [])
+                  if c.get(g['derive']) is True]
+sys.exit(0 if len(drawn) > len(set(drawn)) else 1)
+PY
+# A read that lands fans out to every tile of that control...
+grep -q 'for (row in rows.filter { it.id == id })' "$FRAGMENT" \
+  || dup_fail="$dup_fail landed-updates-one-tile"
+# ...and so does the disable during a write.
+grep -q 'for (row in rows.filter { it.id == decl.id }) row.tile.isEnabled = false' "$FRAGMENT" \
+  || dup_fail="$dup_fail write-disables-one-tile"
+# NOTHING may route a reading through firstOrNull. currentlyOn() is allowed to
+# ask any one tile what the last reading was precisely BECAUSE they are all
+# painted together — it reads, it never writes — so the ban is on the writers.
+python3 - "$FRAGMENT" <<'PY' || dup_fail="$dup_fail reading-routed-through-firstOrNull"
+import re, sys
+code = open(sys.argv[1], encoding='utf-8').read()
+code = re.sub(r'/\*.*?\*/', '', code, flags=re.S)
+code = re.sub(r'//[^\n]*', '', code)
+bad = []
+for fn in ('private fun landed(', 'private fun write('):
+    i = code.index(fn)
+    j = code.index('\n    private fun ', i + 1)
+    if 'firstOrNull' in code[i:j]:
+        bad.append(fn)
+sys.exit(1 if bad else 0)
+PY
+# And the derived rows must be the SAME Row values the functional groups made,
+# not a second parse of the same JSON — two parses are two objects, and two
+# objects are what a "shared" state quietly stops being.
+grep -q '.flatMap { it.rows }.filter { it.flags\[flag\] == true }' "$CONTROLS" \
+  || dup_fail="$dup_fail derived-rows-are-a-second-parse"
+[ -z "$dup_fail" ] \
+  && ok "one id, one Control, one read — fanned out to every tile that shows it" \
+  || bad "the duplicate tiles can disagree about one control:$dup_fail"
+
+echo "== T22: the battery classification is DATA — adding one needs no Kotlin =="
+# The fleet rule, asserted rather than asserted-about. If `battery_hungry`
+# appeared in the Kotlin — a `when`, a set of ids, a named field — then adding
+# a control to Battery Hungers would be a code change and a rebuild, and the
+# declaration would no longer be the source of truth it claims to be.
+data_fail=""
+python3 - "$CONTROLS" "$FRAGMENT" <<'PY' || data_fail="$data_fail flag-name-is-in-the-kotlin"
+import re, sys
+for path in sys.argv[1:]:
+    code = open(path, encoding='utf-8').read()
+    code = re.sub(r'/\*.*?\*/', '', code, flags=re.S)
+    code = re.sub(r'//[^\n]*', '', code)
+    if 'battery_hungry' in code or 'batteryHungry' in code:
+        sys.exit(1)
+sys.exit(0)
+PY
+# The generic mechanism that makes that possible: a group names the flag it
+# gathers, and a control carries EVERY boolean it declared.
+grep -q 'val flag = g.optString("derive")' "$CONTROLS" \
+  || data_fail="$data_fail derive-is-not-read-from-the-declaration"
+grep -q 'filter { o.opt(it) is Boolean }' "$CONTROLS" \
+  || data_fail="$data_fail flags-are-a-fixed-list-not-whatever-was-declared"
+# Nor may the fragment know which group is the derived one.
+python3 - "$FRAGMENT" <<'PY' || data_fail="$data_fail fragment-special-cases-a-group"
+import re, sys
+code = open(sys.argv[1], encoding='utf-8').read()
+code = re.sub(r'/\*.*?\*/', '', code, flags=re.S)
+code = re.sub(r'//[^\n]*', '', code)
+sys.exit(1 if re.search(r'group\.(id|derived)\s*==|"battery"', code) else 0)
+PY
+# PROOF IT IS ONLY DATA: adding the flag to a control that does not carry it
+# must change what the declaration yields, with the Kotlin untouched.
+python3 - "$BJ" <<'PY' || data_fail="$data_fail adding-the-flag-changes-nothing"
+import copy, json, sys
+cp = json.load(open(sys.argv[1]))['ui']['control_panel']
+def gather(cp):
+    functional = [g for g in cp['groups'] if not g.get('derive')]
+    out = []
+    for g in cp['groups']:
+        if g.get('derive'):
+            out += [c['id'] for gg in functional for c in gg.get('controls', [])
+                    if c.get(g['derive']) is True]
+    return out
+before = gather(cp)
+after = copy.deepcopy(cp)
+flag = next(g['derive'] for g in cp['groups'] if g.get('derive'))
+for g in after['groups']:
+    for c in g.get('controls', []):
+        if not c.get(flag):
+            c[flag] = True
+            sys.exit(0 if gather(after) != before else 1)
+sys.exit(1)   # every control already flagged — the check would prove nothing
+PY
+[ -z "$data_fail" ] \
+  && ok "the flag lives only in build.json; a group gathers whatever flag it names" \
+  || bad "the battery classification has leaked into Kotlin:$data_fail"
+
+echo "== T23: a hold opens the menu and does NOT also switch the control =="
+# THE DEFECT THAT REACHES THE OWNER. View.onTouchEvent runs performClick() on
+# ACTION_UP only when mHasPerformedLongPress is false, and that flag is set
+# ONLY by a performLongClick() that RETURNED TRUE. A long-press listener that
+# returns false — or a tile with no long-press listener at all — therefore
+# toggles the control on the way to opening its settings screen.
+#
+# NOT FIXED WITH A DEBOUNCE, and this keeps it that way. This app has already
+# shipped a tile that fired twice (149 duplicates in one trace) and the fix was
+# removing the second route, not swallowing the second event: a timestamp guard
+# would hide the symptom and break a genuine fast double tap with it.
+gest_fail=""
+python3 - "$FRAGMENT" <<'PY' || gest_fail="$gest_fail long-press-does-not-consume"
+import re, sys
+code = open(sys.argv[1], encoding='utf-8').read()
+code = re.sub(r'/\*.*?\*/', '', code, flags=re.S)
+code = re.sub(r'//[^\n]*', '', code)
+m = re.search(r'setOnLongClickListener\s*\{(.*?)\n        \}', code, re.S)
+if not m:
+    sys.exit(1)
+body = [ln.strip() for ln in m.group(1).splitlines() if ln.strip()]
+# The value of the lambda is its LAST expression. Anything but a bare `true`
+# lets the tap through behind the hold.
+sys.exit(0 if body and body[-1] == 'true' else 1)
+PY
+# Exactly ONE gesture path reaches a write. A second one is the double-dispatch
+# shape, whatever it is spelled.
+writes="$(grep -cE '^\s+(if \(control\.set != null\) )?write\(' "$FRAGMENT" || true)"
+[ "$writes" = "1" ] || gest_fail="$gest_fail write-called-from-$writes-places"
+# No debounce smuggled back in.
+grep -qE 'lastClick|SystemClock.uptimeMillis\(\) - last|DEBOUNCE|CLICK_GAP' "$FRAGMENT" \
+  && gest_fail="$gest_fail debounce-instead-of-one-route"
+[ -z "$gest_fail" ] \
+  && ok "the hold returns true, so the tap behind it never fires; one route to a write" \
+  || bad "tap and hold are fighting:$gest_fail"
+
+echo "== T24: no hold ever silently does nothing =="
+# A long-press that produces no response is indistinguishable from a broken
+# tile, an unregistered gesture and a frozen page — the exact failure shape
+# this repository already carries a CI guard against elsewhere (the enhance
+# silence guard). Six of the seventeen controls have no settings screen, so
+# this is not hypothetical.
+silent_fail=""
+python3 - "$FRAGMENT" <<'PY' || silent_fail="$silent_fail a-hold-can-return-silently"
+import re, sys
+code = open(sys.argv[1], encoding='utf-8').read()
+code = re.sub(r'/\*.*?\*/', '', code, flags=re.S)
+code = re.sub(r'//[^\n]*', '', code)
+m = re.search(r'private fun openOrSayThereIsNowhere\(.*?\n    \}', code, re.S)
+if not m:
+    sys.exit(1)
+body = m.group(0)
+# Both arms accounted for: one opens, the other says there is nowhere to open.
+sys.exit(0 if 'if (open != null) open(' in body and 'snack(' in body else 1)
+PY
+grep -q 'setOnLongClickListener' "$FRAGMENT" || silent_fail="$silent_fail no-long-press-at-all"
+python3 - "$FRAGMENT" <<'PY' || silent_fail="$silent_fail hold-bypasses-the-fallback"
+import re, sys
+code = open(sys.argv[1], encoding='utf-8').read()
+m = re.search(r'setOnLongClickListener\s*\{(.*?)\n        \}', code, re.S)
+sys.exit(0 if m and 'openOrSayThereIsNowhere(' in m.group(1) else 1)
+PY
+# DATA: at least one declared control really has nowhere to go, or the fallback
+# is guarding a case that cannot happen.
+python3 - "$BJ" "$CONTROLS" <<'PY' || silent_fail="$silent_fail every-control-has-a-menu-fallback-guards-nothing"
+import json, re, sys
+cp = json.load(open(sys.argv[1]))['ui']['control_panel']
+src = open(sys.argv[2], encoding='utf-8').read()
+ids = [(m.start(), m.group(1)) for m in
+       re.finditer(r'"([a-z_]+)" to (?:Control\(|launcherToggle\()', src)]
+blocks = {cid: src[pos:(ids[i+1][0] if i+1 < len(ids) else len(src))]
+          for i, (pos, cid) in enumerate(ids)}
+declared = {c['id'] for g in cp['groups'] for c in g.get('controls', [])}
+sys.exit(0 if any('open =' not in blocks.get(c, '') for c in declared) else 1)
+PY
+grep -q 'getString(R.string.control_no_menu' "$FRAGMENT" \
+  || silent_fail="$silent_fail fallback-message-not-a-resource"
+[ -z "$silent_fail" ] \
+  && ok "a hold either opens the screen or says there is not one" \
+  || bad "a hold can do nothing at all:$silent_fail"
+
+echo "== T25: black-off / white-on is an INVERSION through theme tokens =="
+# The owner asked for "icons black when off and white when on". Taken as two
+# literals that is a Samsung LIGHT-theme description, and this app ships a
+# Samsung-black Power Saving theme and a Minimalistic Black one — #000 on #000
+# is an invisible grid. So it is implemented as the two theme roles SWAPPED:
+# off is `surface` filled with `text_primary`, on is `text_primary` filled with
+# `tile_ink`. Contrast is symmetric, so proving the off tile legible proves the
+# on tile legible, on every theme, without a device.
+check "$(python3 - "$BJ" "$COLORS" "$THEME_BG" "$FRAGMENT" <<'PY'
+import json, re, sys
+bj, colours_path, bg_path, fragment = sys.argv[1:5]
+d = json.load(open(bj))['ui']
+colours = dict(re.findall(r'<color name="([^"]+)">#([0-9A-Fa-f]{6,8})</color>',
+                          open(colours_path).read()))
+window_stops = re.findall(r'olor="#([0-9A-Fa-f]{6,8})"', open(bg_path).read())
+
+def argb(h):
+    h = h[-8:] if len(h) == 8 else 'FF' + h
+    return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), int(h[6:8], 16)
+
+def over(top, bottom):
+    """Composite an alpha colour onto an opaque one — a 13%-white surface is
+       not a colour until you say what is behind it."""
+    a, r, g, b = argb(top); _, br, bg_, bb = argb(bottom)
+    f = a / 255.0
+    return 'FF%02X%02X%02X' % (round(r*f + br*(1-f)), round(g*f + bg_*(1-f)),
+                               round(b*f + bb*(1-f)))
+
+def lum(h):
+    _, r, g, b = argb(h)
+    def c(v):
+        v /= 255.0
+        return v/12.92 if v <= 0.03928 else ((v+0.055)/1.055) ** 2.4
+    return 0.2126*c(r) + 0.7152*c(g) + 0.0722*c(b)
+
+def ratio(x, y):
+    a, b = sorted((lum(x), lum(y)), reverse=True)
+    return (a + 0.05) / (b + 0.05)
+
+problems = []
+for theme in d['launcher_themes']:
+    p = theme.get('palette') or {}
+    missing = [r for r in ('tile_ink', 'text_primary', 'surface') if not p.get(r)]
+    if missing:
+        problems.append('%s declares no %s' % (theme['id'], ', '.join(missing)))
+        continue
+    if p['tile_ink'] not in colours or p['text_primary'] not in colours \
+            or p['surface'] not in colours:
+        problems.append('%s names a token that is not in colors.xml' % theme['id'])
+        continue
+    ink, fg, raw = colours[p['tile_ink']], colours[p['text_primary']], colours[p['surface']]
+    # ON: text_primary fill, tile_ink icon. Both opaque, nothing behind them.
+    on = ratio(fg, ink)
+    if on < 4.5:
+        problems.append('%s ON tile: %s icon on %s fill is %.2f:1'
+                        % (theme['id'], p['tile_ink'], p['text_primary'], on))
+    # OFF: text_primary icon on the surface fill, which may be translucent —
+    # so composite it over whatever the theme's window actually paints.
+    win = colours.get(p.get('window', ''), '')
+    backs = [win] if win else (window_stops or ['000000'])
+    for back in backs:
+        off = ratio(fg, over(raw, back))
+        if off < 4.5:
+            problems.append('%s OFF tile: %s icon on %s over #%s is %.2f:1'
+                            % (theme['id'], p['text_primary'], p['surface'], back, off))
+
+# And the fragment must express it as the SWAP, not as two colours it chose.
+code = re.sub(r'//[^\n]*', '', re.sub(r'/\*.*?\*/', '', open(fragment).read(), flags=re.S))
+if 'if (on) palette.textPrimary else palette.surface' not in code:
+    problems.append('the fill is not the text_primary/surface swap')
+if 'if (on) palette.tileInk else palette.textPrimary' not in code:
+    problems.append('the icon is not the tile_ink/text_primary swap')
+print('; '.join(problems) or 'OK')
+PY
+)" "every theme inverts legibly: on and off are the same two tokens swapped"
+
+echo "== T26: the tiles stay big enough to hit =="
+# The counter-complaint to a denser grid, pinned before it arrives. Android's
+# accessibility minimum is 48dp in both directions; a quick-settings grid below
+# it is a grid that gets mis-tapped, and the column count is data precisely so
+# the density can be argued with — which means the floor has to be asserted or
+# one edit to build.json takes it away.
+size_fail=""
+python3 - "$FRAGMENT" "$BJ" <<'PY' || size_fail="$size_fail tile-below-the-touch-minimum"
+import json, re, sys
+code = open(sys.argv[1], encoding='utf-8').read()
+def const(name):
+    m = re.search(r'private const val %s = (\d+)' % name, code)
+    return int(m.group(1)) if m else 0
+ok = (const('TOUCH_TARGET_DP') >= 48 and const('BADGE_DP') >= 48
+      and 0 < const('ICON_DP') < const('BADGE_DP'))
+columns = json.load(open(sys.argv[2]))['ui']['control_panel'].get('columns', 0)
+# 360dp is the narrowest phone this app targets; below ~64dp a column stops
+# leaving room for a 56dp badge plus its gutters.
+sys.exit(0 if ok and 2 <= columns <= 5 and 360 / columns >= 64 else 1)
+PY
+grep -q 'minimumHeight = dp(TOUCH_TARGET_DP)' "$FRAGMENT" \
+  || size_fail="$size_fail no-minimum-height-on-the-tile"
+grep -q 'minimumWidth = dp(TOUCH_TARGET_DP)' "$FRAGMENT" \
+  || size_fail="$size_fail no-minimum-width-on-the-tile"
+[ -z "$size_fail" ] \
+  && ok "badge, tile floor and column count all clear the 48dp target" \
+  || bad "the grid is denser than it is tappable:$size_fail"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

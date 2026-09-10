@@ -635,8 +635,40 @@ object DeviceControls {
      *   as a row that looks deliberate and means nothing. The repo tester is
      *   what refuses it; see test-configs-panel-control.sh.
      */
-    data class Row(val id: String, val label: String, val subtitle: String, val icon: String)
-    data class Group(val id: String, val label: String, val subtitle: String, val rows: List<Row>)
+    /**
+     * @param flags every boolean the declaration put on this control, by name.
+     *   A MAP rather than a field per flag on purpose: a derived group names
+     *   the flag it gathers (`derive`), so adding "battery_hungry": true to a
+     *   control is the whole of adding it to Battery Hungers. A named field
+     *   here would make that a Kotlin edit, and a `when (group.id)` in the
+     *   renderer would make it two.
+     */
+    data class Row(
+        val id: String,
+        val label: String,
+        val subtitle: String,
+        val icon: String,
+        val flags: Map<String, Boolean> = emptyMap(),
+    )
+
+    /**
+     * @param labelRes name of a string resource for [label], resolved by the
+     *   fragment at render time. The raw [label] stays as the English fallback
+     *   and as documentation of what the key says; a group heading that only
+     *   existed in build.json could never reach the owner in Spanish.
+     * @param derived true ⇒ this group owns no declaration of its own; its
+     *   rows are the SAME [Row] values the functional groups above hold,
+     *   gathered by a flag. Two tiles, one id, one [Control] behind it.
+     */
+    data class Group(
+        val id: String,
+        val label: String,
+        val labelRes: String,
+        val subtitle: String,
+        val subtitleRes: String,
+        val rows: List<Row>,
+        val derived: Boolean = false,
+    )
 
     /**
      * `build.json::ui.control_panel`, baked into BuildConfig at build time.
@@ -647,23 +679,71 @@ object DeviceControls {
      * group.
      */
     val groups: List<Group> by lazy {
-        val root = runCatching {
-            JSONObject(String(Base64.decode(BuildConfig.UI_CONTROL_PANEL_B64, Base64.NO_WRAP)))
-        }.getOrDefault(JSONObject())
+        val root = declaration
         val arr = root.optJSONArray("groups")
-        (0 until (arr?.length() ?: 0)).mapNotNull { i ->
+
+        // PASS ONE: the groups that DECLARE their controls. Nothing derived can
+        // be resolved before these exist, because a derived group gathers the
+        // very Row objects they produced — not copies of them, and not a second
+        // parse of the same JSON, either of which would be the duplicate state
+        // this design exists to avoid.
+        val byIndex = arrayOfNulls<Group>(arr?.length() ?: 0)
+        for (i in 0 until (arr?.length() ?: 0)) {
             val g = arr!!.getJSONObject(i)
+            if (g.optString("derive").isNotBlank()) continue
             val ca = g.optJSONArray("controls")
             val rows = (0 until (ca?.length() ?: 0)).mapNotNull { j ->
                 val o = ca!!.getJSONObject(j)
                 val id = o.optString("id")
                 if (id !in byId) null
-                else Row(id, o.optString("label", id), o.optString("subtitle", ""),
-                    o.optString("icon", ""))
+                else Row(
+                    id, o.optString("label", id), o.optString("subtitle", ""),
+                    o.optString("icon", ""),
+                    // Every boolean the declaration carried, whatever it is
+                    // called. Reading only the flags this file knows about
+                    // would make a new derived view a Kotlin edit again.
+                    o.keys().asSequence()
+                        .filter { o.opt(it) is Boolean }
+                        .associateWith { o.optBoolean(it) },
+                )
             }
-            if (rows.isEmpty()) null
-            else Group(g.optString("id"), g.optString("label", g.optString("id")),
-                g.optString("subtitle", ""), rows)
+            if (rows.isNotEmpty()) byIndex[i] = group(g, rows, derived = false)
         }
+
+        // PASS TWO: the derived views, in their declared position. A group
+        // whose flag gathers nothing is dropped exactly like an empty declared
+        // one — an empty heading says a category exists and is unreachable.
+        for (i in 0 until (arr?.length() ?: 0)) {
+            val g = arr!!.getJSONObject(i)
+            val flag = g.optString("derive")
+            if (flag.isBlank()) continue
+            val rows = byIndex.filterNotNull().filter { !it.derived }
+                .flatMap { it.rows }.filter { it.flags[flag] == true }
+            if (rows.isNotEmpty()) byIndex[i] = group(g, rows, derived = true)
+        }
+
+        byIndex.filterNotNull()
+    }
+
+    private fun group(g: JSONObject, rows: List<Row>, derived: Boolean) = Group(
+        id = g.optString("id"),
+        label = g.optString("label", g.optString("id")),
+        labelRes = g.optString("label_res"),
+        subtitle = g.optString("subtitle", ""),
+        subtitleRes = g.optString("subtitle_res"),
+        rows = rows,
+        derived = derived,
+    )
+
+    /** Tiles across the grid, declared. Presentation, so it travels with the
+     *  labels rather than being a constant the owner cannot reach. */
+    val columns: Int by lazy { declaration.optInt("columns", DEFAULT_COLUMNS).coerceIn(2, 6) }
+
+    private const val DEFAULT_COLUMNS = 4
+
+    private val declaration: JSONObject by lazy {
+        runCatching {
+            JSONObject(String(Base64.decode(BuildConfig.UI_CONTROL_PANEL_B64, Base64.NO_WRAP)))
+        }.getOrDefault(JSONObject())
     }
 }

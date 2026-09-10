@@ -65,6 +65,20 @@ object LauncherPalette {
         val textSecondary: Int,
         val accent: Int,
         val hairline: Int,
+        /**
+         * The opaque colour that sits ON a lit tile.
+         *
+         * Configs ▸ Panel ▸ Control inverts a quick-settings tile with its
+         * state: OFF fills with [surface] and draws [textPrimary] on it, ON
+         * fills with [textPrimary] and draws THIS on it. Contrast is symmetric,
+         * so a theme whose OFF tile is legible cannot have an illegible ON one.
+         *
+         * It is its own role because no existing one can stand in for it. The
+         * default theme's [surface] is 13%-alpha white, which on a white fill
+         * is a near-invisible icon, and its [windowRes] is a gradient DRAWABLE
+         * with no single colour to read.
+         */
+        val tileInk: Int,
     )
 
     /** The palette of whatever theme is selected right now. */
@@ -132,6 +146,7 @@ object LauncherPalette {
             textSecondary    = colour(ctx, name("text_secondary"),   android.R.color.darker_gray),
             accent           = colour(ctx, name("accent"),           android.R.color.white),
             hairline         = colour(ctx, name("hairline"),         android.R.color.darker_gray),
+            tileInk          = colour(ctx, name("tile_ink"),         android.R.color.black),
         )
     }
 

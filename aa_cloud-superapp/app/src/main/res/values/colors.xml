@@ -89,9 +89,6 @@
          missing grant. Here rather than as Kotlin constants for the same
          reason as the lights above: a colour compiled into the fragment
          cannot follow a theme. -->
-    <color name="control_label">#FFFFFFFF</color>
-    <color name="control_note">#AAFFFFFF</color>
-    <color name="control_section">#FF8BE9A0</color>
     <color name="control_blocked">#FFFFB199</color>
 
     <!-- ── Launcher theme palettes ──────────────────────────────────────
@@ -129,6 +126,17 @@
     <color name="theme_cloud_text_primary">#FFFFFFFF</color>
     <color name="theme_cloud_text_secondary">#AAFFFFFF</color>
 
+    <!-- tile_ink — the OPAQUE colour that sits ON a lit quick-settings tile.
+         Configs > Panel > Control inverts a tile with its state: OFF is
+         `surface` filled with `text_primary` on it, ON is `text_primary`
+         filled with `tile_ink` on it — the same two colours swapped, so a
+         theme whose OFF tile is legible cannot have an illegible ON tile.
+         It has to be its own role because no existing one can stand in:
+         `surface` is 13%-alpha white under the Cloud theme and would leave
+         the icon nearly invisible on a white fill, and `window` is a
+         gradient DRAWABLE there, not a colour at all. -->
+    <color name="theme_cloud_tile_ink">#FF14082B</color>
+
     <!-- cloud_minimalist_black — terminal. TRUE black, not near-black: the
          panel is OLED and an unlit pixel costs no power, which #121212 does.
          text_secondary was #FF335533 while it was a literal in
@@ -142,6 +150,7 @@
     <color name="theme_terminal_text_secondary">#FF7FB77F</color>
     <color name="theme_terminal_accent">#FF00FF66</color>
     <color name="theme_terminal_hairline">#3300FF66</color>
+    <color name="theme_terminal_tile_ink">#FF000000</color>
 
     <!-- cloud_power_saving — Samsung Super Power Saving. TRUE black for the
          same OLED reason. `accent` is WHITE on purpose and is not a mistake:
@@ -156,4 +165,5 @@
     <color name="theme_powersave_text_secondary">#FFBDBDBD</color>
     <color name="theme_powersave_accent">#FFFFFFFF</color>
     <color name="theme_powersave_hairline">#33FFFFFF</color>
+    <color name="theme_powersave_tile_ink">#FF000000</color>
 </resources>

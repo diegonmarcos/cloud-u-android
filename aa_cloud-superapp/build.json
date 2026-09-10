@@ -4298,6 +4298,7 @@
     "launcher_theme_surfaces": [
       "app/src/main/java/com/diegonmarcos/superapp/ui/LauncherPalette.kt",
       "app/src/main/java/com/diegonmarcos/superapp/launcher/AppIconTile.kt",
+      "app/src/main/java/com/diegonmarcos/superapp/configs/ControlFragment.kt",
       "app/src/main/java/com/diegonmarcos/superapp/launcher/PowerSavingFragment.kt",
       "app/src/main/java/com/diegonmarcos/superapp/launcher/MinimalistBlackFragment.kt",
       "app/src/main/java/com/diegonmarcos/superapp/settings/LauncherConfigFragment.kt"
@@ -4316,7 +4317,8 @@
           "text_primary": "theme_cloud_text_primary",
           "text_secondary": "theme_cloud_text_secondary",
           "accent": "theme_cloud_accent",
-          "hairline": "glass_border"
+          "hairline": "glass_border",
+          "tile_ink": "theme_cloud_tile_ink"
         },
         "features": {
           "home_3d": true,
@@ -4362,7 +4364,8 @@
           "text_primary": "theme_terminal_text_primary",
           "text_secondary": "theme_terminal_text_secondary",
           "accent": "theme_terminal_accent",
-          "hairline": "theme_terminal_hairline"
+          "hairline": "theme_terminal_hairline",
+          "tile_ink": "theme_terminal_tile_ink"
         },
         "features": {
           "home_3d": false,
@@ -4408,7 +4411,8 @@
           "text_primary": "theme_powersave_text_primary",
           "text_secondary": "theme_powersave_text_secondary",
           "accent": "theme_powersave_accent",
-          "hairline": "theme_powersave_hairline"
+          "hairline": "theme_powersave_hairline",
+          "tile_ink": "theme_powersave_tile_ink"
         },
         "features": {
           "home_3d": false,
@@ -7206,18 +7210,23 @@
         "role": "console"
       }
     ],
-    "_doc_control_panel": "Configs ▸ Panel ▸ Control — the switch board, DECLARED here and implemented in configs/DeviceControls.kt. This file owns PRESENTATION ONLY: which controls appear, in which of the three groups, in what order, under what wording. It owns nothing about what a control can do.\n\nTHE THREE GROUPS ARE A QUESTION ABOUT BLAST RADIUS, not about which subsystem the code lives in. Phone = this handset's radios and hardware. Cloud = the fleet — flipping one of these changes what other machines can reach or what this app does to other APKs. System = this app's own behaviour plus the Android settings it is permitted to write. A control belongs to the group naming WHAT IT CHANGES, which is what the owner is actually deciding between when reaching for one.\n\nNEVER RENDER A SWITCH THAT LIES. Adding an id here does NOT create a switch: DeviceControls decides, per control, which of three things it is — (1) really toggleable in-process, so a switch whose state is re-read from the system after every write; (2) toggleable only through a special permission this app holds, so a switch that is DISABLED with the missing permission named on it; (3) not toggleable at all, so NOT a switch but a row that opens the exact Settings panel for it and shows the live state read-only. An id declared here with no capability behind it is dropped rather than drawn, because a control that does nothing is the same lie as a switch that does nothing.",
+    "_doc_control_panel": "Configs ▸ Panel ▸ Control — the switch board, DECLARED here and implemented in configs/DeviceControls.kt. This file owns PRESENTATION ONLY: which controls appear, in which group, in what order, under what wording, and how many tiles fit across. It owns nothing about what a control can do.\n\nTHE GROUPS ANSWER 'WHAT AM I LOOKING FOR', NOT 'WHAT WOULD THIS BREAK'. They used to be Phone / Cloud / System, a blast-radius taxonomy: what does flipping this change — the handset, the fleet, or this app. That is a good way to think about consequences and a poor way to FIND something, and finding is the entire errand that brings anybody to a quick-settings grid. Under blast radius the radios were split across two groups (Wi-Fi, mobile data, Bluetooth and airplane mode under Phone; the mesh tunnel and the per-app firewall under Cloud), so 'turn the network off' meant visiting two of the three groups and knowing in advance which half lived where. Device / Network / Tools / UI groups by the thing the owner has in mind when they reach for the page. Every control still lands in exactly one of them; nothing needed an Others.\n\nBATTERY HUNGERS IS A SECOND VIEW, NOT A FIFTH HOME. A group that declares `derive` owns no `controls` array of its own — its rows are every control in the groups above carrying that flag, in declared order. So a battery-hungry control is drawn TWICE, once in its functional group and once here, and both tiles are the same control id, which is the only thing either of them holds. There is no second copy of the state to drift: DeviceControls.byId maps one id to one Control, one read and one write, and ControlFragment repaints EVERY tile bearing an id when that id's reading lands. Adding a control to Battery Hungers is `\"battery_hungry\": true` on the control and nothing else — no Kotlin, no second list of ids to fall out of step with the first. Removing the whole group is deleting one entry from `groups`. A second derived view (privacy, say) is another entry with another flag and still no Kotlin.\n\nWHAT COUNTS AS BATTERY-HUNGRY is a judgement about mechanism, and it is recorded per control so it can be argued with: a radio that must stay associated (mobile data, Bluetooth), an always-on VpnService (the mesh tunnel, the per-app firewall), a foreground service that polls (the floating menu reads the foreground package once a second), a background sync (fleet auto-update), a continuously animated surface (the shader backdrops behind All animations), the adbd the privileged plane keeps alive (wireless debugging), and the flash unit itself (torch). Auto-brightness is deliberately NOT here — it spends less than a screen pinned bright.\n\nGROUP WORDING IS A STRING RESOURCE, not the text in this file. `label_res` and `subtitle_res` name keys in res/values/strings.xml, resolved at render time, so the group headings reach the owner in Spanish like the rest of the page; `label` and `subtitle` remain as the English fallback and as the documentation of what the key is supposed to say. (The per-CONTROL labels and subtitles below are still raw English text in this file and are NOT translated — a pre-existing gap, 34 strings wide, untouched here.)\n\nNEVER RENDER A SWITCH THAT LIES. Adding an id here does NOT create a control: DeviceControls decides, per control, which of three things it is — (1) really toggleable in-process, so a tile whose state is re-read from the system after every write; (2) toggleable only through a special permission this app holds, so a tile that is DISABLED with the missing permission named on it; (3) not toggleable at all, so a tile that does not switch but opens the exact Settings panel for it and shows the live state read-only. An id declared here with no capability behind it is dropped rather than drawn, because a control that does nothing is the same lie as a switch that does nothing.",
     "control_panel": {
+      "_doc_columns": "Tiles across the grid. Data because tile density is the thing the owner re-litigates, and because a column count compiled into Kotlin is a rebuild to argue with. Four is Samsung's own quick-settings width and it is what keeps a tile wide enough to hit: at four columns a 360dp-wide phone gives roughly 80dp of tile, comfortably past the 48dp minimum touch target. Raising this past five starts trading that away.",
+      "columns": 4,
       "groups": [
         {
-          "id": "phone",
-          "label": "Phone",
-          "subtitle": "The handset itself.",
+          "id": "device",
+          "label": "Device",
+          "label_res": "control_group_device",
+          "subtitle": "The handset's own hardware and attention.",
+          "subtitle_res": "control_group_device_sub",
           "controls": [
             {
               "id": "torch",
               "icon": "ic_nav_torch",
               "label": "Torch",
+              "battery_hungry": true,
               "subtitle": "The flash unit, straight through CameraManager — no permission needed."
             },
             {
@@ -7231,13 +7240,16 @@
               "icon": "ic_nav_lock",
               "label": "Rotation lock",
               "subtitle": "Freezes the screen in its current orientation."
-            },
-            {
-              "id": "wireless_debugging",
-              "icon": "ic_terminal",
-              "label": "Wireless debugging",
-              "subtitle": "The adbd this app's own privileged plane talks to. Turning it off ends silent installs and self-grants until it is back on."
-            },
+            }
+          ]
+        },
+        {
+          "id": "network",
+          "label": "Network",
+          "label_res": "control_group_network",
+          "subtitle": "Everything that moves bytes — this handset's radios and the fleet's tunnels, in one place.",
+          "subtitle_res": "control_group_network_sub",
+          "controls": [
             {
               "id": "wifi",
               "icon": "ic_ctl_wifi",
@@ -7248,12 +7260,14 @@
               "id": "mobile_data",
               "icon": "ic_ctl_mobile_data",
               "label": "Mobile data",
+              "battery_hungry": true,
               "subtitle": "Carrier data is a system-only switch."
             },
             {
               "id": "bluetooth",
               "icon": "ic_route_bluetooth",
               "label": "Bluetooth",
+              "battery_hungry": true,
               "subtitle": "The adapter's own enable/disable is a no-op for a normal app."
             },
             {
@@ -7261,14 +7275,37 @@
               "icon": "ic_ctl_airplane",
               "label": "Airplane mode",
               "subtitle": "Writable as a setting, but the broadcast that moves the radios is not ours to send — writing it alone changes the icon and nothing else."
+            },
+            {
+              "id": "mesh",
+              "icon": "ic_wg",
+              "label": "WireGuard mesh",
+              "battery_hungry": true,
+              "subtitle": "The 10.0.0.x tunnel. Needs the engine APK and VPN consent."
+            },
+            {
+              "id": "firewall",
+              "icon": "ic_ctl_firewall",
+              "label": "Per-app firewall",
+              "battery_hungry": true,
+              "subtitle": "The local no-root VpnService that blocks per-app egress."
             }
           ]
         },
         {
-          "id": "cloud",
-          "label": "Cloud",
-          "subtitle": "This fleet, not this handset.",
+          "id": "tools",
+          "label": "Tools",
+          "label_res": "control_group_tools",
+          "subtitle": "The machinery this app and the fleet are driven through.",
+          "subtitle_res": "control_group_tools_sub",
           "controls": [
+            {
+              "id": "wireless_debugging",
+              "icon": "ic_terminal",
+              "label": "Wireless debugging",
+              "battery_hungry": true,
+              "subtitle": "The adbd this app's own privileged plane talks to. Turning it off ends silent installs and self-grants until it is back on."
+            },
             {
               "id": "app_api",
               "icon": "ic_code",
@@ -7276,34 +7313,26 @@
               "subtitle": "DevControlServer — the loopback HTTP surface the MCP and every script drive this app through."
             },
             {
-              "id": "mesh",
-              "icon": "ic_wg",
-              "label": "WireGuard mesh",
-              "subtitle": "The 10.0.0.x tunnel. Needs the engine APK and VPN consent."
-            },
-            {
-              "id": "firewall",
-              "icon": "ic_ctl_firewall",
-              "label": "Per-app firewall",
-              "subtitle": "The local no-root VpnService that blocks per-app egress."
-            },
-            {
               "id": "auto_update",
               "icon": "ic_refresh",
               "label": "Fleet auto-update",
+              "battery_hungry": true,
               "subtitle": "Periodic GHCR check and silent install for every constellation app."
             }
           ]
         },
         {
-          "id": "system",
-          "label": "System",
-          "subtitle": "This app's own behaviour, and the Android settings it may write.",
+          "id": "ui",
+          "label": "UI",
+          "label_res": "control_group_ui",
+          "subtitle": "How this launcher looks and feels under the thumb.",
+          "subtitle_res": "control_group_ui_sub",
           "controls": [
             {
               "id": "floating_nav",
               "icon": "ic_nav",
               "label": "Floating menu",
+              "battery_hungry": true,
               "subtitle": "The draggable overlay button, on top of any app."
             },
             {
@@ -7316,6 +7345,7 @@
               "id": "all_anim",
               "icon": "ic_sparkles",
               "label": "All animations",
+              "battery_hungry": true,
               "subtitle": "Master motion gate — off stops every animated surface at once."
             },
             {
@@ -7331,6 +7361,14 @@
               "subtitle": "Android's adaptive-brightness mode."
             }
           ]
+        },
+        {
+          "id": "battery",
+          "label": "Battery Hungers",
+          "label_res": "control_group_battery",
+          "subtitle": "The same controls again, gathered so everything draining the battery can be switched off from one row.",
+          "subtitle_res": "control_group_battery_sub",
+          "derive": "battery_hungry"
         }
       ]
     },
