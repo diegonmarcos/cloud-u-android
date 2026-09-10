@@ -15,6 +15,7 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.launcher.SectionPages
 import com.diegonmarcos.superapp.onehand.ArcMenu
 import com.diegonmarcos.superapp.onehand.CircularMenu
@@ -95,10 +96,7 @@ class OneHandFragment : Fragment() {
     private fun addStars(root: LinearLayout, ctx: Context) {
         val cm = CircularMenu.config()
 
-        root.addView(caption(ctx,
-            "Three stars sit on the Home screen, one under the other: Sirius at " +
-            "the centre, Centauri midway down, Canopus just above the bottom-nav " +
-            "island. Touching one opens its menu; they are always on."))
+        root.addView(caption(ctx, getString(R.string.onehand_stars_intro, cm.starPairOffsetXDp)))
 
         // The one distinction the whole design rests on. Everything a star can
         // show is either a place you GO or a thing you DO, and the ring it
@@ -113,7 +111,7 @@ class OneHandFragment : Fragment() {
             "menu closes. An action never has children and never navigates, " +
             "which is why it sits apart on its own smaller disc, " +
             "${cm.ringGapDp}dp inside the outer ring — the gap IS the meaning.\n\n" +
-            "Same two rings on all three stars. Only the source of each ring " +
+            "Same two rings on every star. Only the source of each ring " +
             "changes, which is the whole difference between them:"))
 
         val nodes = cm.nodes
@@ -134,6 +132,16 @@ class OneHandFragment : Fragment() {
             listOf("(the 9 most recent apps, live)"),
             CircularMenu.actionsOf("recents_menu").map { it.label })
 
+        // Centauri's twin on the same row. Its list is the ONLY one on this page
+        // that is about this app's own pages rather than the phone's apps, which
+        // is the distinction the card has to carry — the two stars are side by
+        // side and wear the identical glyph.
+        starCard(ctx, root, getString(R.string.onehand_star_recent_tabs_name),
+            getString(R.string.onehand_star_recent_tabs_place, cm.starPairOffsetXDp),
+            getString(R.string.onehand_star_recent_tabs_what),
+            listOf(getString(R.string.onehand_star_recent_tabs_outer)),
+            emptyList())
+
         val arc = ArcMenu.config()
         starCard(ctx, root, "✦ Canopus — configs",
             "above the bottom-nav island · radius ${arc.radiusDp}dp",
@@ -145,7 +153,7 @@ class OneHandFragment : Fragment() {
 
         root.addView(caption(ctx,
             "Glyph ${cm.starGlyph} and size ${cm.starSizeSp}sp are shared by all " +
-            "three (onehand.circular_menu.star), so they always match. Editing " +
+            "of them (onehand.circular_menu.star), so they always match. Editing " +
             "any ring means editing build.json and shipping an APK — these are " +
             "baked at build time, not runtime settings."))
     }

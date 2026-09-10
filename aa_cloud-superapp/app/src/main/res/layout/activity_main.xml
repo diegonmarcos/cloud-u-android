@@ -132,7 +132,33 @@
             android:shadowDx="0"
             android:shadowDy="0"
             android:shadowRadius="7"
-            android:contentDescription="Centauri Star — active apps"
+            android:contentDescription="@string/star_centauri_desc"
+            android:clickable="true"
+            android:focusable="true"
+            android:elevation="16dp"
+            android:visibility="gone" />
+
+        <!-- Recent Tabs star — the 4th star, and Centauri's twin: same midway
+             row, mirrored to the RIGHT of the centre line by the same
+             build.json::onehand.circular_menu.star.pair_offset_x_dp that pushes
+             Centauri left. Built from the generic host-driven arc star
+             (libs:launcher-onehand CanopusStar) because its CONTENT is
+             app-specific: the last pages opened inside this app, read from the
+             App Tabs LRU. Deliberately NOT the last Android apps — that is
+             Centauri, to its left. VISIBLE only on `home`. -->
+        <TextView
+            android:id="@+id/recent_tabs_star"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:text="✦"
+            android:textSize="17sp"
+            android:textColor="#F2F7FF"
+            android:shadowColor="#9CC2FF"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="7"
+            android:contentDescription="@string/star_recent_tabs_desc"
             android:clickable="true"
             android:focusable="true"
             android:elevation="16dp"

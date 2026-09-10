@@ -171,6 +171,7 @@ open class ShellActivity : AppCompatActivity(),
             supportFragmentManager.findFragmentById(R.id.overlay_container) == null
         val section = if (homeScreen) currentSection else ""
         siriusStar.update(section); canopusStar.update(section); centauriStar.update(section)
+        recentTabsStar.update(section)
     }
     override var currentLabel:   String = ""
 
@@ -288,6 +289,128 @@ open class ShellActivity : AppCompatActivity(),
             findViewById(R.id.bottom_nav_island),
         )
     }
+    /**
+     * Recent Tabs — the 4th star, Centauri's twin on the right of the midway
+     * row. Built from CanopusStar rather than a class of its own because it IS
+     * the generic host-driven arc star: same widget, same fan, and only the
+     * three placement parameters and the Host differ.
+     *
+     * Its Host is here for the same reason Canopus's is: the CONTENT is
+     * app-specific. The list is the App Tabs LRU — the history this app already
+     * records at its navigation chokepoint — filtered to the destinations that
+     * still exist and capped in data.
+     */
+    private val recentTabsStar by lazy {
+        CanopusStar(
+            activity = this,
+            star = findViewById(R.id.recent_tabs_star),
+            island = findViewById(R.id.bottom_nav_island),
+            host = object : ArcMenu.Host {
+                override fun navigate(target: String) { openRecentTab(target) }
+                override fun iconBitmap(name: String, sizePx: Int) = iconBitmapFor(name, sizePx)
+                override fun itemsFor(section: String): List<ArcMenu.Item> {
+                    // `section` is ignored — this star's subject is the history,
+                    // not a build.json section (that field is Canopus's).
+                    val items = recentTabEntries().map {
+                        // The entry's own key IS the target: it round-trips
+                        // through [onAppTabPicked], the re-navigation dispatcher
+                        // App Tabs already uses, so a tap here and a tap on an
+                        // App Tabs card cannot diverge.
+                        ArcMenu.Item(recentTabLabel(it), recentTabIcon(it), "recenttab:${it.key}")
+                    }
+                    // ArcMenu.open() refuses an empty list, so a fresh install
+                    // would give a star that does nothing when touched. One
+                    // inert entry says "empty" instead of "broken". action=false
+                    // so it sits on the OUTER arc, where the entries it stands in
+                    // for would be — an empty inner ring under an empty outer one
+                    // reads as two failures rather than one honest blank.
+                    return items.ifEmpty {
+                        listOf(ArcMenu.Item(getString(R.string.recent_tabs_empty), "", "", false))
+                    }
+                }
+            },
+            // Centauri's row, mirrored: same half-way anchor and size, the
+            // offset positive instead of negative.
+            anchorFraction = 0.5f,
+            sizeBumpSp = 2f,
+            offsetXDp = CircularMenu.config().starPairOffsetXDp,
+        )
+    }
+
+    /** The history this star draws: newest first, in-app destinations only,
+     *  the ones that still exist, capped at build.json::ui.app_tabs.star_cap. */
+    private fun recentTabEntries(): List<com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry> =
+        runCatching {
+            com.diegonmarcos.superapp.apptabs.pickRecentTabs(
+                com.diegonmarcos.superapp.apptabs.AppTabPrefs(this).all(),
+                ::recentTabStillExists,
+                BuildConfig.UI_APP_TABS_STAR_CAP,
+            )
+        }.getOrDefault(emptyList())
+
+    /**
+     * Does this stored destination still exist? The owner restructures
+     * build.json constantly, so an entry written last week can name a section
+     * or page that has since been renamed or deleted. Answering false here is
+     * what keeps the star from navigating into nothing.
+     *
+     * `includeHidden` because a hidden page is still a real, routable
+     * destination — Configs' Control tab is reached as page:config/control and
+     * would otherwise be judged dead the moment it was recorded.
+     */
+    private fun recentTabStillExists(
+        e: com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry,
+    ): Boolean = when (e) {
+        is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.SectionEntry ->
+            Sections.byId(e.sectionId) != null
+        is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.PageEntry ->
+            SectionPages.pagesFor(e.sectionId, includeHidden = true).any { it.id == e.pageId }
+        // A raw target is dispatched, not resolved against the section tree;
+        // the dispatcher already no-ops on a target it does not recognise.
+        is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.TargetEntry -> true
+        // Filtered out before this is ever asked; an Android app is Centauri's.
+        is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.ExternalAppEntry -> false
+    }
+
+    /** The page's real name, exactly as the section tree spells it — the label
+     *  stored with the entry is a snapshot and goes stale when a page is
+     *  renamed, which the owner does often. Falls back to the snapshot. */
+    private fun recentTabLabel(
+        e: com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry,
+    ): String = when (e) {
+        is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.SectionEntry ->
+            Sections.byId(e.sectionId)?.label ?: e.label
+        is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.PageEntry ->
+            SectionPages.pagesFor(e.sectionId, includeHidden = true)
+                .firstOrNull { it.id == e.pageId }?.label ?: e.label
+        else -> e.label
+    }
+
+    /** Same drawable name every other launcher surface uses for this
+     *  destination, resolved by the Host's shared iconBitmapFor. */
+    private fun recentTabIcon(
+        e: com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry,
+    ): String = when (e) {
+        is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.SectionEntry ->
+            Sections.byId(e.sectionId)?.iconName ?: e.iconName
+        is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.PageEntry ->
+            SectionPages.pagesFor(e.sectionId, includeHidden = true)
+                .firstOrNull { it.id == e.pageId }?.iconName?.ifBlank { e.iconName } ?: e.iconName
+        is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.TargetEntry -> e.iconName
+        is com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry.ExternalAppEntry -> ""
+    }
+
+    /**
+     * Open an arc entry. The key is re-resolved against the live history rather
+     * than trusted from the target string, so an entry evicted or invalidated
+     * between drawing the arc and releasing the finger simply does nothing
+     * instead of navigating somewhere that is gone.
+     */
+    private fun openRecentTab(target: String) {
+        val key = target.removePrefix("recenttab:")
+        if (key == target || key.isBlank()) return   // the empty-state entry
+        recentTabEntries().firstOrNull { it.key == key }?.let { onAppTabPicked(it) }
+    }
 
     /** Re-entrancy guards: both drawerTabs.selectTab() AND
      *  bottomNav.selectedItemId fire their selection listeners. When the
@@ -356,7 +479,7 @@ open class ShellActivity : AppCompatActivity(),
             com.diegonmarcos.superapp.apptabs.AppTabPrefs.cap = BuildConfig.UI_APP_TABS_CAP
             modePrefs = ModePrefs(this)
             currentLabel = getString(R.string.section_home)
-            siriusStar.setup(); canopusStar.setup(); centauriStar.setup()
+            siriusStar.setup(); canopusStar.setup(); centauriStar.setup(); recentTabsStar.setup()
             starsReady = true
             refreshStars()
 

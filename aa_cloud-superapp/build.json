@@ -356,7 +356,9 @@
         "size_sp": 20,
         "show_on_section": "home",
         "bottom_pct": 0.4,
-        "tap_pad_dp": 24
+        "tap_pad_dp": 24,
+        "_doc_pair_offset_x_dp": "HALF the horizontal separation, in dp, of the two stars that share the midway row: Centauri sits this far LEFT of centre and Recent Tabs the same distance RIGHT, so one number keeps the pair symmetric about the screen's vertical axis and no star can drift into the other by an edit that forgets its twin. Sirius and Canopus stay centred (offset 0) because nothing shares their row. The floor is set by TOUCH, not by looks: each star's tap box is its glyph plus tap_pad_dp on every side, about 22 + 24 + 24 = 70dp wide, so a separation below 70dp centre-to-centre gives the two stars overlapping tap targets and the wrong menu opens. 40 leaves 80dp centre-to-centre \u2014 a 10dp clear gap \u2014 and still fits the narrowest phone this app supports (a 320dp-wide screen puts the outer edge of the right star at 235dp, well inside the viewport). dp, so the separation is the same physical distance on every density.",
+        "pair_offset_x_dp": 40
       },
       "radius_dp": 130,
       "ring_gap_dp": 58,
@@ -4123,17 +4125,6 @@
         "_doc_pages_order": "Order here is the single source of truth — drives both the Configs section page-grid AND (via home_groups tiles_from_section: 'config') the Home Apps Configs row. WireGuard appears in the row via an explicit `tiles` entry on the home_groups row with insert_after_id, since WG lives in its own section.",
         "pages": [
           {
-            "_doc": "Panel is the page you open to FLIP something, not to configure it — the two things the owner touches many times a day, sitting behind one strip: the device/fleet switches and the ntfy notification centre. It leads the Configs grid for that reason; every other entry here is opened to change a setting once. `tabs` lists page ids of this same section in strip order, so it wears the SectionTabsFragment strip Launcher established in 07964787e — no second tab widget in this app.",
-            "_doc_tabs_order": "TAB ORDER IS THE LANDING RULE, so Control leading this array is the whole of 'Panel opens on Control' and there is nothing else to declare. SectionTabsFragment.startIndex falls back to the FIRST tab with a fragment behind it, so a `default_tab` flag would be a second answer to a question this array already answers, and the two could disagree. Control leads because flipping a switch is the errand that brings the owner here — Notify is the thing that ALREADY interrupted them, and it is one tap away plus reachable directly as page:config/notify. The first-tab rule is only the FALLBACK, though: a strip already visited in this process is restored to the tab the user left (LauncherNavController.activeTabBySection, an in-memory map on the controller, so it survives navigation and dies with the process). Cold open lands on Control; for the rest of that process the owner gets the tab they left. That is how EVERY strip in this app behaves and Panel deliberately is not the exception — a page that forgot where you were while its siblings remembered would read as a bug, not as a policy.",
-            "id": "panel",
-            "label": "Panel",
-            "icon": "ic_settings",
-            "tabs": [
-              "control",
-              "notify"
-            ]
-          },
-          {
             "_doc": "Tab 1 of Panel — the switch board, and the tab the page opens on (see _doc_tabs_order above). Which controls exist, how they are grouped and what they are called is declared in ui.control_panel below; the CAPABILITY behind each id (what reads its state, what writes it, what blocks it) lives in configs/DeviceControls.kt, next to the read-back that verifies it. hidden = it is reached through the Panel strip, not as its own Configs tile.",
             "id": "control",
             "label": "Control",
@@ -4283,6 +4274,17 @@
             "id": "perms",
             "label": "Permissions",
             "icon": "ic_settings"
+          },
+          {
+            "_doc": "Panel is the page you open to FLIP something, not to configure it — the two things the owner touches many times a day, sitting behind one strip: the device/fleet switches and the ntfy notification centre. It sits immediately before About at the owner's request, so the page touched many times a day is the one nearest the thumb on the Canopus arc; every other entry here is opened to change a setting once. `tabs` lists page ids of this same section in strip order, so it wears the SectionTabsFragment strip Launcher established in 07964787e — no second tab widget in this app.",
+            "_doc_tabs_order": "TAB ORDER IS THE LANDING RULE, so Control leading this array is the whole of 'Panel opens on Control' and there is nothing else to declare. SectionTabsFragment.startIndex falls back to the FIRST tab with a fragment behind it, so a `default_tab` flag would be a second answer to a question this array already answers, and the two could disagree. Control leads because flipping a switch is the errand that brings the owner here — Notify is the thing that ALREADY interrupted them, and it is one tap away plus reachable directly as page:config/notify. The first-tab rule is only the FALLBACK, though: a strip already visited in this process is restored to the tab the user left (LauncherNavController.activeTabBySection, an in-memory map on the controller, so it survives navigation and dies with the process). Cold open lands on Control; for the rest of that process the owner gets the tab they left. That is how EVERY strip in this app behaves and Panel deliberately is not the exception — a page that forgot where you were while its siblings remembered would read as a bug, not as a policy.",
+            "id": "panel",
+            "label": "Panel",
+            "icon": "ic_settings",
+            "tabs": [
+              "control",
+              "notify"
+            ]
           },
           {
             "id": "about",
@@ -4563,7 +4565,9 @@
     "_doc_home_apps_tabs": "Tabs at the top of the Home Apps swipe-up sheet (AppDrawerSheetFragment). Cloud = the existing HomeGroupedFragment (cloud-service tile grid derived from home_groups). Phone = PhoneAppsFragment (Android-launcher folder grid of installed apps grouped by phone_folders). Order = display order.",
     "_doc_app_tabs": "App Tabs (libs:launcher-apptabs) — the last-N opened SuperApp entries (sections, pages incl. sub-pages, external apps) as an LRU grid. `cap` = how many to keep; MainActivity sets AppTabPrefs.cap from BuildConfig.UI_APP_TABS_CAP at startup.",
     "app_tabs": {
-      "cap": 10
+      "_doc": "cap = how many entries the App Tabs LRU STORES (AppTabPrefs.cap, pushed in from BuildConfig at startup). star_cap = how many of them the Recent Tabs star DRAWS on its arc. Two numbers because they answer different questions: the store keeps a little more than any one surface shows, so an entry dropped by a filter (an external app, a page whose section was deleted) does not leave the arc short. star_cap must stay <= cap or the star can never fill.",
+      "cap": 10,
+      "star_cap": 9
     },
     "home_apps_tabs": [
       {

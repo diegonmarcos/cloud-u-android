@@ -58,6 +58,13 @@ object CircularMenu {
         val starBottomPct: Float,
         /** Extra touch padding (dp) around the star so it's easy to hit. */
         val starTapPadDp: Int,
+        /** HALF the horizontal separation (dp) of the two stars that share the
+         *  midway row — Centauri to the LEFT of centre, Recent Tabs the same
+         *  distance to the RIGHT. One number for both so the pair cannot be
+         *  moved apart by an edit that only remembers one of them; see
+         *  build.json::onehand.circular_menu.star._doc_pair_offset_x_dp for why
+         *  the floor is a touch-target width, not a matter of taste. */
+        val starPairOffsetXDp: Int,
         val nodes: List<Node>,
         /** Root-level inner ring: `circular_menu.actions[]`. Same split the
          *  descended levels already do, applied to level 0 — so the top ring
@@ -127,12 +134,13 @@ object CircularMenu {
             ringGapDp = cm.optInt("ring_gap_dp", 58),
             starBottomPct = star.optDouble("bottom_pct", 0.38).toFloat(),
             starTapPadDp = star.optInt("tap_pad_dp", 22),
+            starPairOffsetXDp = star.optInt("pair_offset_x_dp", 0),
             nodes = nodes,
             actions = parseActions(cm.optJSONArray("actions")),
         )
     }.getOrDefault(DISABLED)
 
-    private val DISABLED = Config(false, "✦", 18, "home", 120, 58, 0.38f, 22, emptyList())
+    private val DISABLED = Config(false, "✦", 18, "home", 120, 58, 0.38f, 22, 0, emptyList())
 
     /** Drives an open menu from an EXTERNAL touch stream — the star forwards its
      *  own gesture so press → drag → release is one continuous motion (the

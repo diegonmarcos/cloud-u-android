@@ -21,12 +21,31 @@ import android.widget.TextView
  *
  * Size/glyph/position read from build.json::onehand.circular_menu.star —
  * same config block as Sirius so both stars are always the same size.
+ *
+ * This is the app's ONLY Host-driven arc star, so it is what every arc star
+ * whose content comes from the app is built from — Canopus itself (bottom of
+ * the column, Configs) and Recent Tabs (right half of the midway row, the
+ * in-app pages the owner last opened). The three things that differ between
+ * them are parameters below rather than a second copy of this file: a copy is
+ * how the two existing stars already drifted on tap-anchoring, and a third
+ * would only widen that.
+ *
+ * @param anchorFraction how far down the gap from the star's laid-out position
+ *   to the island's top edge it parks. 1 = right above the island (Canopus);
+ *   0.5 = the midway row Centauri already occupies.
+ * @param sizeBumpSp added to the shared `size_sp`, so a star can be a touch
+ *   larger without a second size in the data.
+ * @param offsetXDp horizontal nudge from the centre line, positive = right.
+ *   0 keeps a star centred; the midway pair passes ±`pair_offset_x_dp`.
  */
 class CanopusStar(
     private val activity: Activity,
     private val star: TextView,
     private val island: View?,
     private val host: ArcMenu.Host,
+    private val anchorFraction: Float = 1f,
+    private val sizeBumpSp: Float = 0f,
+    private val offsetXDp: Int = 0,
 ) {
 
     private val cfg get() = CircularMenu.config()   // size/glyph same as Sirius
@@ -57,7 +76,7 @@ class CanopusStar(
         val gap = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP, 12f, activity.resources.displayMetrics)
         val base = s[1] - star.translationY
-        star.translationY = n[1] - gap - (base + star.height)
+        star.translationY = (n[1] - gap - (base + star.height)) * anchorFraction
     }
 
     /** Wire glyph/size/position/tap once; call [update] after for initial state. */
@@ -65,10 +84,17 @@ class CanopusStar(
         val c = cfg
         if (!c.enabled) { star.visibility = View.GONE; return }
         star.text = c.starGlyph
-        star.setTextSize(TypedValue.COMPLEX_UNIT_SP, c.starSizeSp.toFloat())
+        star.setTextSize(TypedValue.COMPLEX_UNIT_SP, c.starSizeSp.toFloat() + sizeBumpSp)
         val pad = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP, c.starTapPadDp.toFloat(), activity.resources.displayMetrics).toInt()
         star.setPadding(pad, pad, pad, pad)
+        // Horizontal place on its row. translationX (not a layout margin) for
+        // the same reason translationY carries the vertical anchor: the star is
+        // a layout_gravity="center" child, so shifting it is a post-layout
+        // nudge and nothing else in the frame has to be re-measured.
+        star.translationX = TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP, offsetXDp.toFloat(),
+            activity.resources.displayMetrics)
         // Anchor just above the bottom nav island so the arc opens upward.
         if (island != null) {
             // Re-run the anchor on every REAL layout change of either view —
@@ -94,7 +120,7 @@ class CanopusStar(
             })
         } else {
             // Genuine fallback: no island at all to anchor against.
-            star.translationY = star.rootView.height * c.starBottomPct
+            star.translationY = star.rootView.height * c.starBottomPct * anchorFraction
         }
         // Forward press→drag→release to the arc-menu.
         star.setOnTouchListener { _, e ->

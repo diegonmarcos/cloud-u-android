@@ -51,17 +51,19 @@ if panel is None:                    print('no `panel` page in config')
 elif panel.get('tabs') != ['control', 'notify']:
                                      print('tabs = %r' % (panel.get('tabs'),))
 elif panel.get('hidden'):            print('the strip itself must stay listed')
-elif order[0] != 'panel':            print('Panel is not first: %s' % order[0])
 # Panel is the page opened many times a day and About is the page opened once
-# ever, so Panel ahead of About is the ordering rule that outlives "Panel is
-# first" — asserted separately, or moving one entry above Panel would quietly
-# take this with it.
+# ever. It used to LEAD this list for that reason; the owner moved it to sit
+# IMMEDIATELY BEFORE About instead, because the tail of the list is what the
+# thumb reaches first on the Canopus arc. Adjacency is a TIGHTER rule than the
+# old "somewhere ahead of About": an entry slipped between the two is caught
+# now, where before it passed.
 elif 'about' not in order:           print('no `about` page to order against')
-elif order.index('panel') > order.index('about'):
-                                     print('Panel sits after About: %r' % order)
+elif order.index('panel') + 1 != order.index('about'):
+                                     print('Panel is not immediately before About: %r'
+                                           % order[max(0, order.index('about') - 2):])
 else:                                print('OK')
 PY
-)" "panel: tabs = [control, notify], visible, first in the Configs grid and ahead of About"
+)" "panel: tabs = [control, notify], visible, and immediately before About in the Configs grid"
 
 echo "== T2: both tabs are REAL hidden pages of the SAME section, never the owner =="
 # The strip contract established in 07964787e: a tab is a declared page, so

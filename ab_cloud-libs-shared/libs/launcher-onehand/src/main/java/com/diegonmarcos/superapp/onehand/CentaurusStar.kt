@@ -30,6 +30,12 @@ import com.diegonmarcos.superapp.datamanager.AppUsageProvider
  * translation) and Canopus (translated up to just above the bottom-nav
  * island). Computed by taking Canopus's own anchor formula and halving the
  * offset — the segment's midpoint.
+ *
+ * Horizontally it is the only star that is NOT on the centre line: it sits
+ * `pair_offset_x_dp` to the LEFT of it so the Recent Tabs star can take the
+ * mirrored place on the right and the two read as one row. The offset is
+ * negative here and positive there, from the same single value, so the pair
+ * cannot be moved apart by an edit that remembers only one of them.
  */
 class CentaurusStar(
     private val activity: Activity,
@@ -161,6 +167,13 @@ class CentaurusStar(
         val pad = TypedValue.applyDimension(
             TypedValue.COMPLEX_UNIT_DIP, c.starTapPadDp.toFloat(), activity.resources.displayMetrics).toInt()
         star.setPadding(pad, pad, pad, pad)
+        // Left half of the midway row. translationX (not a layout margin) for
+        // the same reason translationY carries the vertical anchor: the star is
+        // a layout_gravity="center" child, so shifting it is a post-layout
+        // nudge and nothing else in the frame has to be re-measured.
+        star.translationX = -TypedValue.applyDimension(
+            TypedValue.COMPLEX_UNIT_DIP, c.starPairOffsetXDp.toFloat(),
+            activity.resources.displayMetrics)
         // Midpoint between Sirius (translationY = 0, screen centre) and
         // Canopus's own anchor (translationY = just above the bottom-nav
         // island) — i.e. HALF of the same island-relative offset Canopus
