@@ -12,6 +12,7 @@ import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
+import java.io.IOException
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -205,16 +206,37 @@ object TextEnhancer {
     @JvmStatic
     fun enhance(context: Context, connection: RichInputConnection) = run(context, connection, AiRouter.enhanceStyle(context))
 
-    /** Whole-field / selection enhancement with an explicit [style] (GrammarChecker passes "grammar"). */
+    /**
+     * Whole-field / selection enhancement with an explicit [style] (GrammarChecker passes "grammar").
+     *
+     * EVERY WAY OUT OF HERE IS ATTRIBUTABLE. A run that ends without changing the text says which
+     * of the eleven reasons it was, because a silent return is indistinguishable from a crash, a
+     * dead key, a missing key, an unconfigured key and a network failure — the owner pressed
+     * ENHANCE, saw nothing, and had no way to tell those apart. That ambiguity is what hid the
+     * fact that a whole class of application was unsupported. Exits go through [ended], which
+     * both logs the reason and puts a message on screen; [endedQuietly] is the single exception
+     * and carries the one reason it is allowed to have.
+     */
     @JvmStatic
     fun run(context: Context, connection: RichInputConnection, style: AiRouter.Style) {
         val scope = scope(context)
+
+        // An editor that declares TYPE_NULL accepts no text at all, and the InputConnection
+        // contract gives commitText no way to report that it was ignored. Refused before the
+        // model is paid, because otherwise the run reads as a success that changed nothing.
+        if (Settings.getValues()?.mInputAttributes?.isTypeNull == true)
+            return ended(context, "pre-flight", "editor declared TYPE_NULL", R.string.enhance_read_only)
+
         val target = target(context, connection)
-        if (target == null || target.text.isBlank()) {
-            Log.i(TAG, "nothing to enhance: scope=$scope, target=${if (target == null) "none" else "blank"}")
-            if (scope == Scope.SELECTION) toast(context, context.getString(R.string.enhance_no_selection))
-            return
-        }
+        // BLANK MEANS TWO THINGS AND THE PLATFORM WILL NOT SAY WHICH. The field may genuinely be
+        // empty, or it may hold text the app never exposes to an input method — a canvas editor,
+        // a web view, a custom drawing surface. Both arrive here as the same empty buffer from
+        // the same InputConnection call, which is the only view of the field an input method
+        // gets, so the message names both readings rather than lying under one of them.
+        if (target == null || target.text.isBlank())
+            return ended(context, "pre-flight", "scope=$scope; the field reads back ${target?.text?.length ?: -1} characters",
+                if (scope == Scope.SELECTION) R.string.enhance_no_selection else R.string.enhance_nothing_readable)
+
         val id = seq.incrementAndGet()
         Log.i(TAG, "run $id: scope=$scope, selection=${target.fromSelection}, " +
                 "range=${target.start}..${target.end}, chars=${target.text.length}, style=${style.id}")
@@ -224,33 +246,64 @@ object TextEnhancer {
             val improved = try {
                 rewrite(context, style, target.text)
             } catch (e: AiRouter.NoTokenException) {
-                Log.i(TAG, "run $id: no token for ${e.provider.id}")
-                toast(context, context.getString(R.string.ai_no_token, e.provider.label)); return@execute
+                return@execute ended(context, "run $id", "no API key for ${e.provider.id}",
+                    R.string.ai_no_token, e.provider.label)
+            } catch (e: IOException) {
+                // The provider was never reached: no route, no name resolution, connect or read
+                // timeout. Kept apart from a provider error because the repair is a different
+                // one — this is the only failure here that is worth simply trying again.
+                Log.w(TAG, "run $id: no answer from the provider", e)
+                return@execute ended(context, "run $id", "network failure ${e.javaClass.simpleName}",
+                    R.string.enhance_offline, AiRouter.provider(context).label)
             } catch (e: Exception) {
                 Log.e(TAG, "run $id failed", e)
-                toast(context, context.getString(R.string.enhance_failed, e.message ?: e.javaClass.simpleName)); return@execute
+                return@execute ended(context, "run $id", "provider refused or replied unreadably",
+                    R.string.enhance_failed, e.message ?: e.javaClass.simpleName)
             }
-            if (id != seq.get()) return@execute // a newer run superseded this one
-            if (improved.isEmpty() || improved == target.text) {
-                Log.i(TAG, "run $id: reply is empty or identical")
-                toast(context, context.getString(R.string.enhance_unchanged)); return@execute
-            }
+            if (id != seq.get()) return@execute endedQuietly("run $id", SUPERSEDED)
+            // An empty reply and a reply identical to the source are not the same event: one is
+            // the model failing to answer, the other is the model saying there was nothing to
+            // fix. Sharing a sentence made a provider fault read as a compliment.
+            if (improved.isEmpty())
+                return@execute ended(context, "run $id", "reply was empty",
+                    R.string.enhance_empty_reply, AiRouter.provider(context).label)
+            if (improved == target.text)
+                return@execute ended(context, "run $id", "reply is identical to the source", R.string.enhance_unchanged)
 
             main.post {
-                if (id != seq.get()) return@post
+                if (id != seq.get()) return@post endedQuietly("run $id", SUPERSEDED)
                 // Field changed while we waited → the reply no longer matches what the user sees.
-                if (!stillThere(context, connection, target)) {
-                    Log.i(TAG, "run $id: field moved while enhancing, dropped")
-                    toast(context, context.getString(R.string.enhance_stale)); return@post
-                }
+                if (!stillThere(context, connection, target))
+                    return@post ended(context, "run $id", "field moved while enhancing", R.string.enhance_stale)
 
                 if (apply(context, connection, target, improved)) Log.i(TAG, "run $id: applied ${improved.length} chars")
-                else {
-                    Log.w(TAG, "run $id: cannot address ${target.start}..${target.end}, not applied")
-                    toast(context, context.getString(R.string.enhance_no_cursor))
-                }
+                else return@post ended(context, "run $id", "range ${target.start}..${target.end} is not addressable",
+                    R.string.enhance_no_cursor)
             }
         }
+    }
+
+    /**
+     * The one reason a run is allowed to end without saying anything, spelled once so the tester
+     * can hold the list to exactly this. A superseded run is not a failure the owner needs told
+     * about: the run that superseded it is on screen saying its own piece, and a second message
+     * landing on top of that would describe an event the owner deliberately caused.
+     */
+    private const val SUPERSEDED = "superseded by a newer run"
+
+    /**
+     * End a run without changing the text, and say so — in the log for whoever is reading a bug
+     * report, and on screen for the owner holding the phone. [message] is a string resource
+     * because every sentence this keyboard shows has to reach the owner in their own language.
+     */
+    private fun ended(context: Context, label: String, why: String, message: Int, vararg args: Any) {
+        Log.i(TAG, "$label ended without a rewrite: $why")
+        toast(context, context.getString(message, *args))
+    }
+
+    /** As [ended], but log-only; [why] may only ever be [SUPERSEDED]. */
+    private fun endedQuietly(label: String, why: String) {
+        Log.i(TAG, "$label ended without a rewrite and without a message: $why")
     }
 
     /**

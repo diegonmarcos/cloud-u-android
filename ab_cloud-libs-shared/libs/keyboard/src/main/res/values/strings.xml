@@ -327,6 +327,15 @@
     <string name="enhance_scope_field">Always the whole box</string>
     <string name="enhance_no_selection">Select some text first</string>
     <string name="enhance_no_cursor">This app does not say where the cursor is — select the text and try again</string>
+    <!-- Every way the ENHANCE key can end without changing the text says which one it was: a
+         silent return is indistinguishable from a crash, a dead key and a network failure.
+         enhance_nothing_readable is deliberately honest under BOTH readings of an empty buffer —
+         an empty field and a field whose app never exposes its text to an input method are the
+         same answer from the only call an input method has, so it claims neither. -->
+    <string name="enhance_read_only">This field is read-only — the keyboard cannot write into it</string>
+    <string name="enhance_nothing_readable">Nothing to enhance — the field is empty, or this app does not share its text with the keyboard</string>
+    <string name="enhance_offline">No answer from %1$s — check the connection and try again</string>
+    <string name="enhance_empty_reply">%1$s replied with nothing — try again, or pick another model in Settings → AI Model Routing</string>
     <string name="enhance_tone_title">Tone</string>
     <string name="enhance_tone_summary">How the rewritten text should sound</string>
     <string name="enhance_length_title">Length</string>

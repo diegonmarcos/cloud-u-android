@@ -538,4 +538,15 @@
     <string name="gesture_data_add_key">Agregar tecla a la barra de herramientas</string>
     <string name="gesture_data_no_known_dict">La recopilación en segundo plano solo recoge palabras procedentes de diccionarios integrados o disponibles en el &lt;a href=%s&gt;repositorio de diccionarios&lt;/a&gt;. Actualmente no tienes este diccionario habilitado.</string>
     <string name="gesture_data_swipe_o_scope">Herramienta para visualizar datos de gestos: &lt;a href=%s&gt;Swipe-O-Scope&lt;/a&gt;</string>
+    <string name="enhance_read_only">Este campo es de solo lectura: el teclado no puede escribir en él</string>
+    <string name="enhance_nothing_readable">No hay nada que mejorar: el campo está vacío o esta aplicación no comparte su texto con el teclado</string>
+    <string name="enhance_offline">Sin respuesta de %1$s: comprueba la conexión e inténtalo de nuevo</string>
+    <string name="enhance_empty_reply">%1$s no ha respondido nada: inténtalo de nuevo o elige otro modelo en Ajustes → Enrutamiento de modelos de IA</string>
+    <string name="enhance_in_progress">Mejorando con %1$s…</string>
+    <string name="ai_no_token">No hay clave de API para %1$s: añade una en Ajustes → Enrutamiento de modelos de IA</string>
+    <string name="enhance_failed">La mejora ha fallado: %1$s</string>
+    <string name="enhance_unchanged">No hay nada que mejorar aquí</string>
+    <string name="enhance_stale">El texto ha cambiado durante la mejora: se ha omitido</string>
+    <string name="enhance_no_cursor">Esta aplicación no indica dónde está el cursor: selecciona el texto e inténtalo de nuevo</string>
+    <string name="enhance_no_selection">Selecciona primero algo de texto</string>
 </resources>

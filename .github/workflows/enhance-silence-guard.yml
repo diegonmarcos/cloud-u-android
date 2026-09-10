@@ -1,0 +1,36 @@
+name: "enhance silence guard — a silent exit fails the build"
+
+# WHY THIS RUNS ON EVERY PUSH AND EVERY PULL REQUEST, WITH NO PATH FILTER.
+# The failure this catches is not "somebody edited TextEnhancer", it is
+# "somebody added a guard clause that returns without saying anything". That is
+# the shape the original defect had: the Enhance key was pressed, nothing
+# happened, and the owner could not tell a dead key from a missing API key from
+# a network failure. It cost weeks of not knowing that a whole class of
+# application was unsupported.
+#
+# It is separate from i18n-guard.yml on purpose. That guard cannot see this
+# class of bug at all: libs:keyboard is an exempt module in i18n-policy.json,
+# so the Spanish half of these messages is checked HERE and nowhere else.
+#
+# Both steps matter. The first proves the tree is clean; the second proves the
+# guard would have said so if it were not. A guard only ever watched succeeding
+# is indistinguishable from one that returns 0 unconditionally.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  enhance-silence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No exit from the enhance entry point is silent
+        run: python3 1_cicd/src/scripts/cloud-android-enhance-silence-guard.py
+      - name: The guard still fails when an exit goes silent
+        run: bash 1_cicd/src/scripts/test/enhance-silence-guard.test.sh
