@@ -9,7 +9,8 @@ import android.os.SystemClock
 import android.util.Log
 
 /**
- * Binds [TextTools.SERVICE_PKG]'s [ITextTools] and calls it.
+ * Binds the [ITextTools] of the most preferred installed app in
+ * [TextTools.SERVICE_PACKAGES] and calls it.
  *
  * The bind lifecycle is the translate client's, deliberately, because each branch of
  * it is a way that client went "not connected" for good until its process died:
@@ -60,12 +61,51 @@ class TextToolsClient(context: Context) {
 
     init { bind() }
 
+    /**
+     * WHICH app answers, decided fresh on every bind — the most preferred entry of
+     * [TextTools.SERVICE_PACKAGES] that actually publishes [TextTools.ACTION] on this phone.
+     *
+     * ASKED OF THE PACKAGE MANAGER, NOT ASSUMED. Binding down the list blindly would ask
+     * the platform to start a package that may not be installed, and `bindService` reports
+     * that as a bare `false` with no way to tell "not installed" from "installed and slow".
+     * Resolving first means the failure this method can produce is one honest state: nothing
+     * on the list is here.
+     *
+     * BY INTENT, NEVER BY `getPackageInfo`. This module's manifest grants Android 11+
+     * package visibility scoped to [TextTools.ACTION] and nothing wider, so a service that
+     * publishes the action resolves while a bare package lookup can still come back empty
+     * and read as an uninstall.
+     *
+     * RE-RESOLVED ON EVERY BIND ON PURPOSE, and that is what makes the handover free: the
+     * rebind that follows an `onBindingDied` — which is how Android reports the peer being
+     * updated, installed or removed — picks up the new answer without anything else having
+     * to notice that the fleet's text tools changed address.
+     */
+    private fun resolveServingPackage(): String? {
+        val publishing = runCatching {
+            app.packageManager.queryIntentServices(Intent(TextTools.ACTION), 0)
+                .mapNotNull { it.serviceInfo?.packageName }
+                .toSet()
+        }.getOrDefault(emptySet<String>())
+        return TextTools.SERVICE_PACKAGES.firstOrNull { it in publishing }
+    }
+
     @Synchronized
     private fun bind() {
         lastBindAttempt = SystemClock.elapsedRealtime()
+        val target = resolveServingPackage()
+        if (target == null) {
+            // Not an error and not a retry-able hiccup: no app on this phone publishes the
+            // tools. Said once per rate-limited attempt rather than swallowed, because the
+            // caller's Result already carries TextTools.NOT_INSTALLED to the user and this
+            // line is what tells whoever reads a bug report WHICH of the two was looked for.
+            Log.w(TAG, "no installed app publishes ${TextTools.ACTION} " +
+                "(looked for ${TextTools.SERVICE_PACKAGES.joinToString()})")
+            return
+        }
         val result = runCatching {
             app.bindService(
-                Intent(TextTools.ACTION).apply { setPackage(TextTools.SERVICE_PKG) },
+                Intent(TextTools.ACTION).apply { setPackage(target) },
                 conn,
                 Context.BIND_AUTO_CREATE,
             )
@@ -73,9 +113,12 @@ class TextToolsClient(context: Context) {
         if (!result.getOrDefault(false)) {
             // bindService answers false rather than throwing when the target cannot be
             // resolved, so a failed bind and a pending one look identical from outside
-            // unless this is written down.
-            Log.w(TAG, "bindService to ${TextTools.SERVICE_PKG}/${TextTools.ACTION} failed " +
-                "(exception=${result.exceptionOrNull()}) — is Cloud Keyboard installed?")
+            // unless this is written down. Reaching here means the service RESOLVED a
+            // moment ago and still would not bind — a force-stopped peer, or one whose
+            // process the platform refused to start — which is a different repair from
+            // the not-installed branch above and has to read differently.
+            Log.w(TAG, "bindService to $target/${TextTools.ACTION} failed " +
+                "(exception=${result.exceptionOrNull()}) — is $target force-stopped?")
         }
     }
 
@@ -88,8 +131,8 @@ class TextToolsClient(context: Context) {
 
     /**
      * True when the tools can actually be called right now. Not "the client object
-     * exists": this client is constructible, and constructed, on a device with no
-     * keyboard installed at all. Status lines must ask this one.
+     * exists": this client is constructible, and constructed, on a device with none of
+     * [TextTools.SERVICE_PACKAGES] installed at all. Status lines must ask this one.
      */
     fun isConnected(): Boolean = boundOrRebind() != null
 
@@ -170,24 +213,21 @@ class TextToolsClient(context: Context) {
         boundOrRebind()?.let { runCatching { it.translateLanguages() }.getOrNull() }.orEmpty()
 
     /**
-     * Is the serving app INSTALLED at all — asked of the package manager, not of the binding.
+     * Is ANY serving app INSTALLED — asked of the package manager, not of the binding.
      *
-     * [isConnected] cannot answer this. It is false both for a keyboard that is not on the phone
+     * [isConnected] cannot answer this. It is false both for a peer that is not on the phone
      * and for one that is installed but force-stopped or still binding, and a fleet console that
      * reported those as one thing would tell the owner to install an app they already have. This
      * asks the only question that separates them.
      *
-     * It resolves the SERVICE rather than calling getPackageInfo because that is precisely what
-     * this module's `<queries>` grants: Android 11+ package visibility is scoped to the ITextTools
-     * intent, so the service resolves while a bare package lookup can still come back empty and
-     * look like an uninstall.
+     * ANY, not the preferred one: the honest question a console asks is "can the tools work at
+     * all", and answering it with only the head of [TextTools.SERVICE_PACKAGES] would report a
+     * phone with a perfectly good Cloud Keyboard on it as having no text tools, and send the
+     * owner to install something that would change nothing about whether the tools run.
+     *
+     * See [resolveServingPackage] for why this is a service resolution and never getPackageInfo.
      */
-    fun isServingAppInstalled(): Boolean = runCatching {
-        app.packageManager.queryIntentServices(
-            Intent(TextTools.ACTION).apply { setPackage(TextTools.SERVICE_PKG) },
-            0,
-        ).isNotEmpty()
-    }.getOrDefault(false)
+    fun isServingAppInstalled(): Boolean = resolveServingPackage() != null
 
     /**
      * The serving app's AI-Routing state as JSON — providers, their models, which model is chosen
