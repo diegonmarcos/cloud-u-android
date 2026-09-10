@@ -1,8 +1,13 @@
 # libs:firewall — no-root per-app firewall
 
-**Original / clean-room.** No upstream source is vendored, so the app keeps
-its own license. `celzero/firestack` (MPL-2.0) is built as a separate aar for
-the staged Phase-3 merge — see below.
+**The Kotlin here is original / clean-room** — none of it is copied from
+upstream, so the app keeps its own licence. `firestack` is the exception and
+always was: `firestack/` is an OWNED CLONE of `celzero/firestack`, in-tree,
+under **MPL-2.0**, and it is compiled to a separate aar. (This paragraph used to
+say "no upstream source is vendored", which was never true of `firestack/` and
+is worth being exact about: the licence of what ships is not a detail to
+paraphrase.) The clone tracks no upstream branch — it is edited directly, like
+the de-forked keyboard tree.
 
 ## The model — per-app `AppRule` (parallel axes)
 
@@ -74,13 +79,30 @@ Direction selector).
 | `phase3-firestack/FirestackBridgeAssembly.kt` | **runner-completion seam** for the `Bridge` union |
 | `phase3-firestack/CloudVpn.kt` | `CloudVpnProvider` seam (app injects WG state; no lib→app dep) |
 
-## Phase-2 firestack aar build (wired, not yet consumed)
+## The firestack aar — a prebuilt artifact, not a build step
 
-`build.sh firestack` hermetically builds `celzero/firestack` (Go/gomobile) →
+**No APK build compiles firestack.** The aar lands at
 `libs/firewall/firestack/firestack.aar` (flatDir in `settings.gradle`, folded
-into this lib — not a loose top-level module), data-driven from
-`build.json::upstreams.firestack`. Nothing consumes the firestack aar until
-Phase 3, so a plain `build.sh build`/`test` does NOT trigger the Go build.
+into this lib — not a loose top-level module), and both consumers get there by
+running `fetch-firestack.sh`, which downloads and checksum-verifies the release
+asset pinned in `ab_cloud-libs-shared/build.json::firestack.artifact`. It has no
+source-build fallback, on purpose.
+
+The aar is produced separately by `ship-firestack-aar.yml` →
+`publish-firestack.sh`, on firestack's own cadence, one immutable release tag per
+publish. Adopting a newer one is a deliberate commit that advances that pin;
+nothing does it automatically.
+
+Why: until 2026-09-10 `build.sh` compiled this Go library before every gradle
+invocation, so when the aar build broke on 2026-09-09 the APK job died inside it,
+the publish step was skipped, and the owner's phone served a stale APK for a day
+and a half while forty unrelated commits went nowhere. A netstack the fleet does
+not maintain had veto power over every Android change; now a red firestack
+delays firestack only.
+
+`build.sh firestack` still builds it from source hermetically (self-downloaded
+pinned Go → gomobile), and `build.sh firestack-publish` builds and publishes it.
+Neither is on the path between a Kotlin change and the phone.
 
 ## Activating Phase 3 (on the build runner)
 

@@ -44,12 +44,19 @@ dependencies {
     implementation 'androidx.annotation:annotation:1.8.2'
     implementation 'androidx.fragment:fragment-ktx:1.8.5'
 
-    // firestack netstack aar — the Phase-3 merged VpnService. Produced by
-    // ../build-firestack.sh from the vendored Go source in ../firestack, which
-    // BOTH consumers now run before gradle (aa_cloud-superapp/build.sh and
-    // ab_cloud-libs-shared/lib-apks/build.sh). Resolved through the central
-    // flatDir both settings.gradle files declare — no wrapper module, the aar
-    // is self-contained because gomobile bundles every Go dependency into it.
+    // firestack netstack aar — the Phase-3 merged VpnService. A PREBUILT,
+    // PINNED artifact: both consumers run ../fetch-firestack.sh before gradle
+    // (aa_cloud-superapp/build.sh and ab_cloud-libs-shared/lib-apks/build.sh),
+    // which downloads and checksum-verifies the aar named by
+    // ab_cloud-libs-shared/build.json::firestack.artifact and NEVER builds it
+    // from source. It used to be compiled here by ../build-firestack.sh on the
+    // way to every gradle invocation, and that is what cost the fleet a day and
+    // a half of APKs on 2026-09-09 — a Go build failing inside the APK job took
+    // the publish down with it. The source build still exists as
+    // `build.sh firestack`; it just is not on this path any more.
+    // Resolved through the central flatDir both settings.gradle files declare —
+    // no wrapper module, the aar is self-contained because gomobile bundles
+    // every Go dependency into it.
     implementation(name: 'firestack', ext: 'aar')
 
     // Pure-logic unit tests for FirewallDecider / RuleSpec. org.json is a
