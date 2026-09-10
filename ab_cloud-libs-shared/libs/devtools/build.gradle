@@ -62,4 +62,11 @@ kotlin {
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
+
+    // This module ships two JUnit test classes and declared nothing to compile
+    // them against, so :libs:devtools:compileReleaseUnitTestKotlin failed on
+    // "Unresolved reference 'junit'" in every consumer that runs the unit test
+    // task — which nobody noticed until a consumer actually ran one. Same
+    // version the six sibling libs already pin.
+    testImplementation 'junit:junit:4.13.2'
 }
