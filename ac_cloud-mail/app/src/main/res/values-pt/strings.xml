@@ -1014,4 +1014,6 @@
     <string name="home_stat_cached">Mensagens neste telefone</string>
     <string name="home_stat_folders">Pastas</string>
     <string name="home_stat_subscribed">Pastas subscritas</string>
+    <string name="inbox_folders_tab_all">Todas</string>
+    <string name="inbox_folders_tab_unread">Não lidas</string>
 </resources>

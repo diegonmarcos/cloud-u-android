@@ -1150,4 +1150,6 @@
     <string name="settings_update_metered_body">Hay una versión nueva de Cloud Mail y ocupa %1$s. Estás con datos móviles, así que descargarla ahora gastará %1$s de tu tarifa. Si no haces nada, se descargará sola la próxima vez que estés en Wi-Fi.</string>
     <string name="settings_update_metered_download">Descargar ahora</string>
     <string name="settings_update_metered_later">Esperar al Wi-Fi</string>
+    <string name="inbox_folders_tab_all">Todas</string>
+    <string name="inbox_folders_tab_unread">Sin leer</string>
 </resources>

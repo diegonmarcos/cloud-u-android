@@ -13,11 +13,20 @@ class SubscribedFoldersSurfaceWiringTest {
         assertEquals(
             "the drawer tree is built from something other than MailUi.visibleMailboxes — from the " +
                 "whole list, the setting hides nothing at all; from a list built here, the rule " +
-                "lives in a Composable no test can run. The second argument is the set derived " +
-                "from the fold registry and the default (collapsedIds); what that may fold " +
-                "is CollapsedFoldersSurfaceWiringTest's business, the first argument is this " +
-                "test's and it must stay ui.visibleMailboxes.",
-            listOf("mailboxTree(ui.visibleMailboxes, collapsedIds).forEach { node ->"),
+                "lives in a Composable no test can run. Since #247 the tree is handed drawnFolders " +
+                "rather than the field itself, so BOTH lines are pinned: the filtered list must " +
+                "still be the only thing the All|Unread tab narrows, or the tab becomes a second " +
+                "place that decides which folders exist. The third argument resolves a row's " +
+                "label for the sort (DrawerFolderOrderTest); the first is this test's.",
+            listOf(
+                "val drawnFolders = foldersForTab(ui.visibleMailboxes, folderTab)",
+                "val folderDisplayName: (Mailbox) -> String = { mailboxLabel(context, it.role, it.name) }",
+            ),
+            block(INBOX_SCREEN, "val drawnFolders =", 2),
+        )
+        assertEquals(
+            "the drawer tree is no longer built from the tab-filtered list.",
+            listOf("mailboxTree(drawnFolders, collapsedIds, folderDisplayName).forEach { node ->"),
             block(INBOX_SCREEN, "mailboxTree(", 1),
         )
         assertEquals(

@@ -1016,4 +1016,6 @@
     <string name="home_stat_cached">Messages sur ce téléphone</string>
     <string name="home_stat_folders">Dossiers</string>
     <string name="home_stat_subscribed">Dossiers abonnés</string>
+    <string name="inbox_folders_tab_all">Tous</string>
+    <string name="inbox_folders_tab_unread">Non lus</string>
 </resources>

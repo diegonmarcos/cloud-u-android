@@ -1004,4 +1004,6 @@
     <string name="home_stat_cached">Nachrichten auf diesem Telefon</string>
     <string name="home_stat_folders">Ordner</string>
     <string name="home_stat_subscribed">Abonnierte Ordner</string>
+    <string name="inbox_folders_tab_all">Alle</string>
+    <string name="inbox_folders_tab_unread">Ungelesen</string>
 </resources>

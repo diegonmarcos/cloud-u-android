@@ -1334,12 +1334,17 @@ class MailRepository(
      * Cached mailboxes of [accountId], updated reactively. JMAP folders carry a live local
      */
     fun observeMailboxes(accountId: String): Flow<List<Mailbox>> =
-        if (isImapAccount(accountId)) {
-            mailboxDao.observeAll(accountId).map { rows -> rows.map { it.toMailbox() } }
-        } else {
-            combine(mailboxDao.observeAll(accountId), observeUnreadByMailbox(accountId)) { rows, unread ->
-                rows.map { it.toMailbox().copy(unreadForList = unread[it.id] ?: 0) }
-            }
+        // EVERY protocol, not JMAP alone (#247). IMAP folder rows used to be handed straight through
+        // with the `unreadEmails = 0` that `imapMailboxEntity` writes — the LIST reply carries no
+        // counts — so every IMAP folder row badged a hard 0 and the drawer could say nothing about
+        // unread mail at all. The aggregate below is the SAME two DAO flows this already collected
+        // for JMAP, read from the local `emails` table: switching IMAP onto it adds ZERO network
+        // per drawer open, which no per-folder `STATUS (UNSEEN)` round trip could have matched.
+        // ponytail: cached-only, so an IMAP folder reads low until its mail is synced. The upgrade
+        // is to fill `unreadEmails` from a batched `STATUS (UNSEEN)` during the folder sync — one
+        // exchange for the whole list, refreshed on sync rather than on open — not to widen this.
+        combine(mailboxDao.observeAll(accountId), observeUnreadByMailbox(accountId)) { rows, unread ->
+            rows.map { it.toMailbox().copy(unreadForList = unread[it.id] ?: 0) }
         }
 
     /**
@@ -2762,8 +2767,22 @@ class MailRepository(
     private fun isImapAccount(accountId: String): Boolean =
         accountStore.account(accountId)?.protocol == MailProtocol.IMAP
 
-    /** Can a drawer folder row of [accountId] carry an unread count at all? Named after the property,
-     *  not the protocol: the drawer folds a folder on the strength of the badge it would show (#185). */
+    /**
+     * Whether [accountId] DEFAULT-FOLDS its custom parent folders (#185) — the only thing this now
+     * decides, through `defaultCollapsedFolderIds`.
+     *
+     * ⛔ The name is older than the answer and is kept only because three source lints pin the
+     * identifier. It once meant "can a folder row badge unread at all?", and while IMAP rows held
+     * the hard 0 the two questions had one answer. #247 gave IMAP the same live count JMAP has, so
+     * badging is now universal and the questions have come apart.
+     *
+     * It stays `!isImapAccount` DELIBERATELY, and the value is a fold policy, not a capability. #185
+     * folds a custom parent by default because the folded row still shows what it hides; every IMAP
+     * account has nonetheless spent its whole life with folding off, and deriving the default from
+     * the new counts would fold parents open since the day they were made — the drawer would
+     * rearrange itself as a side effect of gaining counts, which is not what was asked for. Whether
+     * IMAP should now fold like JMAP is a question for the owner, not a consequence to be inherited.
+     */
     fun folderRowsBadgeUnread(accountId: String): Boolean = !isImapAccount(accountId)
 
     suspend fun setFlagged(credentials: AccountCredentials, emailId: String, flagged: Boolean) {

@@ -130,6 +130,23 @@ class TranslationParityTest {
     }
 
     /**
+     * The folder drawer's All | Unread tabs (#247), by name in the nine languages.
+     *
+     * They are two words on the busiest surface in the app, and the general rule above compares
+     * against `values/` — so it would stay green on a pair of tabs never translated at all. This
+     * app shipped 44 English labels onto a Spanish phone once (#221); two English tabs sitting on
+     * top of a translated folder list is the same accident at a smaller size.
+     */
+    @Test
+    fun `the nine languages all label the folder drawer's All and Unread tabs`() {
+        val files = listOf(File(res, "values/strings.xml")) + translations()
+        val expected = setOf("inbox_folders_tab_all", "inbox_folders_tab_unread")
+        val missing = files.associate { it.parentFile.name to (expected - keysOf(it)) }
+            .filterValues { it.isNotEmpty() }
+        assertEquals("the folder drawer's tabs are unlabelled in", emptyMap<String, Set<String>>(), missing)
+    }
+
+    /**
      * The read-receipt switch (#148), by name in the nine languages — the general parity rule
      * above compares against `values/`, so it would go green on a switch never translated at all.
      *

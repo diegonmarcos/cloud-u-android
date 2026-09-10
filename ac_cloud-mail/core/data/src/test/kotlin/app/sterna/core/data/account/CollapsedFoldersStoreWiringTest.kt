@@ -81,12 +81,13 @@ class CollapsedFoldersStoreWiringTest {
      */
     @Test fun `the drawer's badge-availability flag delegates to the one IMAP test, negated`() {
         assertEquals(
-            "MailRepository.folderRowsBadgeUnread is gone or changed shape. It must be the " +
-                "NEGATION of isImapAccount for the id it was handed: IMAP folder rows carry a " +
-                "hard 0 (ImapMailService writes `unreadEmails = 0` with no condition and " +
-                "observeMailboxes only swaps in the live count for JMAP), so they cannot badge " +
-                "what a folded row hides. Lose the `!` and the drawer folds by default on exactly " +
-                "the accounts that cannot show the badge.",
+            "MailRepository.folderRowsBadgeUnread is gone or changed shape. It must stay the " +
+                "NEGATION of isImapAccount for the id it was handed. ⛔ Read the reason on the " +
+                "function before touching it: since #247 gave every protocol the same live count, " +
+                "this no longer says whether a row CAN badge — it is the #185 default-fold policy " +
+                "and nothing else. Lose the `!` and every IMAP drawer folds its custom parents on " +
+                "next launch, after a whole account lifetime of staying open, because the counts " +
+                "arrived — a silent rearrangement nobody asked for.",
             listOf("fun folderRowsBadgeUnread(accountId: String): Boolean = !isImapAccount(accountId)"),
             block("fun folderRowsBadgeUnread(", 1, path = MAIL_REPOSITORY),
         )

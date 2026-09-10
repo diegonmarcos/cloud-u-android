@@ -1024,4 +1024,6 @@
     <string name="home_stat_cached">Wiadomości na tym telefonie</string>
     <string name="home_stat_folders">Foldery</string>
     <string name="home_stat_subscribed">Subskrybowane foldery</string>
+    <string name="inbox_folders_tab_all">Wszystkie</string>
+    <string name="inbox_folders_tab_unread">Nieprzeczytane</string>
 </resources>

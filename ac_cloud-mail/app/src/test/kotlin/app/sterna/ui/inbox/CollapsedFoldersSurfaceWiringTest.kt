@@ -44,17 +44,20 @@ class CollapsedFoldersSurfaceWiringTest {
     @Test fun `the registry becomes the folded set in ONE place, and the tree still draws the filtered list`() {
         assertEquals(
             "the drawer no longer derives what is folded through collapsedFolderIds, or no longer " +
-                "builds the tree from MailUi.visibleMailboxes. The derivation is the single point " +
-                "that decides what an untouched folder does, and it is resolved against the SAME " +
-                "list the tree is built from on the next line: handed the account's whole list it " +
-                "would put a chevron on a parent whose only child the 'only subscribed folders' " +
-                "setting hides (#174), and folding it would hide nothing. The THIRD argument is " +
+                "builds the tree from the tab-filtered list. The derivation is the single point " +
+                "that decides what an untouched folder does, and it is resolved against " +
+                "ui.visibleMailboxes: handed the account's whole list it would put a chevron on a " +
+                "parent whose only child the 'only subscribed folders' setting hides (#174), and " +
+                "folding it would hide nothing. ⛔ It is deliberately NOT resolved against " +
+                "drawnFolders, though that is what the tree draws — what is folded must not change " +
+                "under the reader as they tap All|Unread (#247); the tab narrows the drawing, " +
+                "never the registry. The THIRD argument is " +
                 "the account's answer to 'can a folder row here badge unread at all': drop it and " +
                 "the derivation goes back to folding by default on an account where nothing on " +
                 "screen can say what a folded row hides.",
             listOf(
                 "val collapsedIds = collapsedFolderIds(ui.visibleMailboxes, collapsedFolders, folderRowsBadgeUnread)",
-                "mailboxTree(ui.visibleMailboxes, collapsedIds).forEach { node ->",
+                "mailboxTree(drawnFolders, collapsedIds, folderDisplayName).forEach { node ->",
             ),
             block(INBOX_SCREEN, "val collapsedIds =", 2),
         )

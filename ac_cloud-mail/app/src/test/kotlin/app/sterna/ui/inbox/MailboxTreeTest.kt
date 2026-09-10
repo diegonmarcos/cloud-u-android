@@ -16,8 +16,10 @@ class MailboxTreeTest {
         nodes.map { Triple(it.mailbox.id, it.depth, it.hasChildren) }
 
     @Test fun `a flat list comes out flat, standard folders first`() {
-        // Custom folders keep their arrival order (sortedBy is stable); the standard ones are
-        // reordered by role — Inbox, Drafts, Sent, Trash, Junk, Archive.
+        // The standard folders are ordered by role — Inbox, Drafts, Sent, Trash, Junk, Archive —
+        // and since #247 the custom ones are ordered BY NAME behind them, where they used to keep
+        // whatever order the server had listed them in. "alpha" before "zulu" is that fix; see
+        // DrawerFolderOrderTest for the owner's own list, which is what the change was for.
         val folders = listOf(
             mailbox("zulu"),
             mailbox("archive-1", role = "archive"),
@@ -36,8 +38,8 @@ class MailboxTreeTest {
                 Triple("trash-1", 0, false),
                 Triple("junk-1", 0, false),
                 Triple("archive-1", 0, false),
-                Triple("zulu", 0, false),
                 Triple("alpha", 0, false),
+                Triple("zulu", 0, false),
             ),
             shape(mailboxTree(folders, emptySet())),
         )

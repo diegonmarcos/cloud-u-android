@@ -1027,4 +1027,6 @@
     <string name="home_stat_cached">Сообщения на этом телефоне</string>
     <string name="home_stat_folders">Папки</string>
     <string name="home_stat_subscribed">Папки с подпиской</string>
+    <string name="inbox_folders_tab_all">Все</string>
+    <string name="inbox_folders_tab_unread">Непрочитанные</string>
 </resources>

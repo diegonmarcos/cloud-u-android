@@ -1188,4 +1188,6 @@
     <string name="home_stat_cached">Messages on this phone</string>
     <string name="home_stat_folders">Folders</string>
     <string name="home_stat_subscribed">Subscribed folders</string>
+    <string name="inbox_folders_tab_all">All</string>
+    <string name="inbox_folders_tab_unread">Unread</string>
 </resources>

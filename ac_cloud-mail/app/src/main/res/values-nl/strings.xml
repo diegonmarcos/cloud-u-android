@@ -1007,4 +1007,6 @@
     <string name="home_stat_cached">Berichten op deze telefoon</string>
     <string name="home_stat_folders">Mappen</string>
     <string name="home_stat_subscribed">Geabonneerde mappen</string>
+    <string name="inbox_folders_tab_all">Alle</string>
+    <string name="inbox_folders_tab_unread">Ongelezen</string>
 </resources>

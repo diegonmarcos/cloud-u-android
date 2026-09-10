@@ -110,6 +110,8 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -1825,6 +1827,9 @@ private fun DrawerContent(
 ) {
               // Scroll the whole drawer so long folder lists (and Settings below them) stay reachable (#7).
               Column(Modifier.verticalScroll(rememberScrollState())) {
+                // Resolves the folder labels the SORT reads; the rows themselves still paint
+                // through `mailboxDisplayName`, and both answer out of the same resources.
+                val context = LocalContext.current
                 // ONE modifier for every row in this drawer, deliberately shared rather than
                 // repeated: the selected row is drawn as a filled pill, and a pill that is a
                 // different height from the rows around it reads as a rendering fault. Sharing the
@@ -2021,10 +2026,33 @@ private fun DrawerContent(
                     },
                     modifier = drawerRowModifier,
                 )
+                // All | Unread (#247). Drawer-local and not persisted on purpose: a filter the
+                // reader cannot see from outside the sheet must not be able to greet them, weeks
+                // later, as a folder list with folders missing from it.
+                var folderTab by remember { mutableStateOf(FolderTab.ALL) }
+                TabRow(selectedTabIndex = folderTab.ordinal, modifier = Modifier.padding(horizontal = 12.dp)) {
+                    Tab(
+                        selected = folderTab == FolderTab.ALL,
+                        onClick = { folderTab = FolderTab.ALL },
+                        text = { DrawerLabel(stringResource(R.string.inbox_folders_tab_all)) },
+                    )
+                    Tab(
+                        selected = folderTab == FolderTab.UNREAD,
+                        onClick = { folderTab = FolderTab.UNREAD },
+                        text = { DrawerLabel(stringResource(R.string.inbox_folders_tab_unread)) },
+                    )
+                }
+                // ONLY the drawn list narrows with the tab. The fold registry below and the badge
+                // arithmetic further down still resolve against the WHOLE account: a folded parent
+                // badges descendants the Unread tab is hiding, and it must still count them.
+                val drawnFolders = foldersForTab(ui.visibleMailboxes, folderTab)
+                // The name the sort orders by is the name the row prints, resolved through the
+                // CONTEXT rather than `mailboxDisplayName`: identical text, minus the @Composable.
+                val folderDisplayName: (Mailbox) -> String = { mailboxLabel(context, it.role, it.name) }
                 // The one place the registry AND the default become "what is folded"; see
                 // [collapsedFolderIds]. The list it resolves against is the one drawn just below.
                 val collapsedIds = collapsedFolderIds(ui.visibleMailboxes, collapsedFolders, folderRowsBadgeUnread)
-                mailboxTree(ui.visibleMailboxes, collapsedIds).forEach { node ->
+                mailboxTree(drawnFolders, collapsedIds, folderDisplayName).forEach { node ->
                     val mailbox = node.mailbox
                     val displayName = mailboxDisplayName(mailbox.role, mailbox.name)
                     // A FOLDED row badges the unread it hides — its own plus its descendants' — or
@@ -2874,13 +2902,15 @@ internal data class MailboxNode(val mailbox: Mailbox, val depth: Int, val hasChi
 /**
  * Flatten mailboxes into a depth-first tree. Nesting comes from the JMAP `parentId` or, for IMAP,
  */
-internal fun mailboxTree(mailboxes: List<Mailbox>, collapsed: Set<String>): List<MailboxNode> {
+internal fun mailboxTree(
+    mailboxes: List<Mailbox>,
+    collapsed: Set<String>,
+    displayName: (Mailbox) -> String = Mailbox::name,
+): List<MailboxNode> {
     val byId = mailboxes.associateBy { it.id }
     fun parentOf(m: Mailbox): String? = folderParentId(m, byId)
-    // Order each level by role so the standard folders come first (Inbox, Drafts, Sent, Trash,
-    // Spam, Archive), then custom folders keep their server order (sortedBy is stable).
     val childrenOf = mailboxes.groupBy { parentOf(it) }
-        .mapValues { (_, kids) -> kids.sortedBy { folderRank(it.role) } }
+        .mapValues { (_, kids) -> kids.sortedWith(drawerFolderOrder(displayName)) }
     val result = mutableListOf<MailboxNode>()
     val visited = mutableSetOf<String>()
     fun visit(parent: String?, depth: Int) {
@@ -2893,6 +2923,33 @@ internal fun mailboxTree(mailboxes: List<Mailbox>, collapsed: Set<String>): List
     visit(null, 0)
     return result
 }
+
+/**
+ * How one level of the drawer is ordered: standard folders by role first, then EVERYTHING ELSE BY
+ * NAME. The second half of that is the fix for #247 — before it, every folder the user made tied at
+ * [folderRank] 6 and `sortedBy` is stable, so the drawer showed them in whatever order the server
+ * happened to list them. The drawer had never sorted by name at all.
+ *
+ * The name compared is the DISPLAYED one, not `mailbox.name`. Nine roles are shown through a
+ * localized string resource (`mailboxRoleNameRes`) while only six of them are ranked above — `all`,
+ * `flagged` and `important` are translated AND rank 6, so they are sorted among the user's own
+ * folders. Sorting those on the raw name would order a Spanish drawer by the English word nobody on
+ * that phone can see.
+ *
+ * ⛔ CODE POINT ORDER, deliberately, and NOT the `Collator` that `FolderSelection.comparePath` uses
+ * for the move-to-folder picker. This is a knowing divergence and it is the whole point of the
+ * request. The owner names folders so that a sort produces group headers followed by their own
+ * members — `AO SIZE` then `Aa Large`, `Ab Medium`, `Ac Small`; `BO TIME` then `Ba`, `Bc`, `Bd`.
+ * That structure is carried in the CASE of the second character, and a collator compares base
+ * letters at primary strength before it ever looks at case: `Collator.compare("AO SIZE", "Aa
+ * Large")` weighs 'o' against 'a', answers "Aa" first, and files every group header AFTER the
+ * members it introduces. No collator setting recovers this — case is a tertiary difference and
+ * never reached when the base letters already differ, so `setUpperCaseFirst` would not help either.
+ * The cost is real and accepted: an accented name sorts by code point here (é after z) where the
+ * picker would place it next to e.
+ */
+internal fun drawerFolderOrder(displayName: (Mailbox) -> String): Comparator<Mailbox> =
+    compareBy<Mailbox> { folderRank(it.role) }.thenBy { displayName(it) }
 
 /** Drawer ordering rank for a folder's role: standard folders first, custom folders last. */
 internal fun folderRank(role: String?): Int = when (role) {

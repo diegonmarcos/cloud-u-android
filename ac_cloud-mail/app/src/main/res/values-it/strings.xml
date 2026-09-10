@@ -1010,4 +1010,6 @@
     <string name="home_stat_cached">Messaggi su questo telefono</string>
     <string name="home_stat_folders">Cartelle</string>
     <string name="home_stat_subscribed">Cartelle sottoscritte</string>
+    <string name="inbox_folders_tab_all">Tutte</string>
+    <string name="inbox_folders_tab_unread">Non lette</string>
 </resources>
