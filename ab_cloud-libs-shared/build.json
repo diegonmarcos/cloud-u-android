@@ -3067,7 +3067,13 @@
         "": "android/arm64",
         "arm64": "android/arm64",
         "x86_64": "android/amd64"
-      }
+      },
+      "bind_packages": [
+        "github.com/celzero/firestack/intra",
+        "github.com/celzero/firestack/intra/backend",
+        "github.com/celzero/firestack/intra/settings"
+      ],
+      "_doc_bind_packages": "The packages `gomobile bind` exports, MIRRORING firestack Makefile's INTRA_BUILD_CMD; keep in sync on firestack bumps. They are data because build-firestack.sh needs them BEFORE the bind: gomobile resolves its own throwaway per-ABI module with `go list -m all` + `go mod tidy`, both inside the GOPROXY=off build, and the engine can only pre-seed that closure by standing up a replica module that imports these same packages. Getting this list wrong does not fail silently — the engine's offline resolution check fails first."
     },
     "_doc_phase": "Phase 2 (build wiring). firestack is celzero/firestack (MPL-2.0, Go) — the gVisor-netstack + WireGuard-proxy engine behind RethinkDNS. We VENDOR + build it hermetically (user decision, matches the libs:net/libwg-go doctrine) rather than pulling the jitpack `com.github.celzero:firestack` Maven artifact. In Phase 3 the single firestack VpnService replaces BOTH FirewallVpnService (drain-engine) and GoBackend$VpnService (WireGuard); a per-connection `Bridge.Flow()` calls FirewallDecider direction-aware, and allowed flows route via the WG proxy — resolving the single-VPN-slot limit + enabling IN/OUT + the 'only under cloud VPN' condition. Nothing consumes the firestack aar yet (no consumer until Phase 3), so a plain `build.sh build`/`test` does NOT trigger the Go/gomobile build.",
     "_doc_vendored": "VENDORED IN-REPO 2026-08-30 in ONE folder beside the module that consumes it: libs/firewall/firestack holds the Go source (224 files, 2.4 MB - only what upstream tracks; upstream's bin/ is 24 MB of build output and is not tracked there either) AND receives the built firestack.aar, which is what lib-apks/settings.gradle's flatDir already points at. There is no .git inside, so the clone path is skipped - presence of go.mod marks the tree usable. To move to a newer upstream, bump ref, delete this tree and run `build.sh sync-firestack`.",

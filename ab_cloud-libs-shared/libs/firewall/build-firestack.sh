@@ -196,6 +196,123 @@ log "firestack: gomobile init (NDK toolchain), while the proxy is still up"
   exit 1
 }
 
+# SEED WHAT GOMOBILE RESOLVES FOR ITSELF, NOT JUST WHAT THIS MODULE BUILDS.
+#
+# Everything above seeds the modules THIS module builds. `gomobile bind` does
+# not build the aar from this module's dependency graph, and it resolves twice
+# more on its own — both times INSIDE the GOPROXY=off build:
+#
+#   1. getModuleVersions (x/mobile cmd/gomobile/bind.go:229-243) runs
+#      `go list -m -json -tags=<tags> all` in THIS directory to learn the
+#      versions it should write into the throwaway module it synthesises per
+#      ABI. `go list -m all` walks the whole module GRAPH — it needs the go.mod
+#      of every module in it, not only the ones this module builds — so a cache
+#      seeded by bare `go mod download` does not satisfy it. Measured on a cache
+#      seeded exactly that way: 80 lookups, every one refused.
+#
+#   2. goModTidyAt (cmd/gomobile/bind_androidapp.go:383) then runs `go mod tidy`
+#      inside that throwaway module, whose go.mod is a FLAT require list. MVS
+#      re-runs there without this module's graph pruning and can select HIGHER
+#      versions than we pin — measured: testify v1.9.0 in the flat list pulls
+#      stretchr/objx v0.5.2, where this module's own graph never goes past objx
+#      v0.1.0. A version we do not pin is by definition not in a cache seeded
+#      from our pins.
+#
+# When (1) fails, gomobile does not say so. bind.go:240-243 turns the error into
+# `return nil, nil`, and writeGoMod (bind.go:318-325) treats that nil as "no
+# module info" and writes a ZERO-BYTE go.mod. The build then dies in (2) with
+#
+#     go: error reading go.mod: missing module declaration
+#
+# which names neither GOPROXY nor the module that was missing, and points at a
+# file gomobile itself had just emptied. That is the failure that broke every
+# Cloud SuperApp publish from 2026-09-09 17:14 onward: the offline seeding was
+# right in intent and incomplete in fact, and the incompleteness was invisible.
+#
+# So resolve both HERE, with the proxy still up, by the same rule as every other
+# module: resolve once, then resolve nothing. Neither step may touch the
+# committed pins — asserted below rather than assumed.
+PINS_BEFORE="$(sha256sum "$SRC/go.mod" "$SRC/go.sum")"
+GOMOBILE_GOARCH="${GT##*/}"
+
+MODLIST="$(mktemp)"
+REPLICA="$(mktemp -d)"
+trap 'rm -rf "$REPLICA" "$MODLIST"' EXIT
+
+log "firestack: seeding the module graph gomobile's own 'go list -m all' walks (abi=$GT)"
+( cd "$SRC" && GOOS=android GOARCH="$GOMOBILE_GOARCH" go list -m -tags="$TAGS" all ) >"$MODLIST" || {
+  errlog "firestack: could not resolve the module graph gomobile needs — the committed pins do not cover it."
+  errlog "firestack: fix the pins in a commit; do NOT relax GOPROXY to get past this."
+  exit 1
+}
+
+# The replica stands in for the module gomobile will synthesise: same module
+# name, same flat require list, same local replace for this module, importing
+# the same packages the bind exports. Tidying it with the proxy UP pulls that
+# closure into GOMODCACHE, so the real tidy inside the offline build finds
+# everything already there. It is a THROWAWAY: the go.sum this tidy writes is
+# its own, in a temp directory, and is discarded with it.
+mapfile -t BINDPKGS < <(jq -r '.firestack.build.bind_packages[]? // empty' "$CFG")
+[ "${#BINDPKGS[@]}" -gt 0 ] || {
+  errlog "firestack: build.json has no .firestack.build.bind_packages — cannot pre-resolve what gomobile binds"
+  exit 1
+}
+
+{
+  echo "module gobind"
+  echo
+  echo "go ${GOVER%.*}"
+  echo
+  # `go list -m all` prints "path version"; the main module prints its path
+  # alone, which is why a bare NF==1 line becomes the local replace rather than
+  # a require. A replaced module prints "path version => ..." — the => field is
+  # skipped so the replacement, not the placeholder, is what gets seeded.
+  awk -v src="$SRC" '
+    NF == 1     { printf "replace %s => %s\n", $1, src; next }
+    $2 !~ /^=>/ { printf "require %s %s\n", $1, $2 }
+  ' "$MODLIST"
+} >"$REPLICA/go.mod"
+
+{
+  echo "package gobindseed"
+  echo
+  printf 'import _ "%s"\n' "${BINDPKGS[@]}"
+} >"$REPLICA/seed.go"
+
+log "firestack: seeding the closure gomobile's throwaway-module tidy resolves"
+( cd "$REPLICA" && GOOS=android GOARCH="$GOMOBILE_GOARCH" CGO_ENABLED=1 go mod tidy ) || {
+  errlog "firestack: could not pre-resolve what gomobile's tidy needs."
+  errlog "firestack: if .firestack.build.bind_packages no longer matches the Makefile's bind targets, fix it there."
+  exit 1
+}
+
+[ "$PINS_BEFORE" = "$(sha256sum "$SRC/go.mod" "$SRC/go.sum")" ] || {
+  errlog "firestack: seeding REWROTE the committed go.mod/go.sum — the step that enforces the pins just edited them."
+  exit 1
+}
+
+# THE CHECK THIS BUILD DID NOT HAVE.
+#
+# Run gomobile's own resolution in the state the bind will run in. If it cannot
+# resolve here it will not resolve there either — but here it is a named,
+# fatal error instead of an empty go.mod that gomobile hands to tidy.
+#
+# Empty output is a FAILURE, not a pass: `go list` exiting 0 with nothing to say
+# is precisely the shape bind.go mistakes for success, so testing the exit
+# status alone would reproduce gomobile's own bug inside the guard against it.
+log "firestack: verifying gomobile can resolve with the proxy off (pre-flight)"
+if ! offline_list="$( cd "$SRC" && GOPROXY=off GOOS=android GOARCH="$GOMOBILE_GOARCH" go list -m -tags="$TAGS" all 2>&1 )"; then
+  errlog "firestack: gomobile's 'go list -m all' cannot resolve offline. gomobile would SWALLOW this"
+  errlog "firestack: (bind.go:240-243), write an empty go.mod, and fail in tidy with 'missing module declaration'."
+  printf '         %s\n' "$(printf '%s\n' "$offline_list" | head -5)" >&2
+  exit 1
+fi
+[ -n "$offline_list" ] || {
+  errlog "firestack: gomobile's 'go list -m all' resolved offline but returned NOTHING — gomobile would read that"
+  errlog "firestack: as 'no module info' and write a zero-byte go.mod. Refusing to build an aar nobody can use."
+  exit 1
+}
+
 log "firestack: building netstack aar — $(go version); ndk=$(basename "$NDK"); abi=$GT (slow)"
 make -C "$SRC" clean || true
 # Override firestack's Makefile ANDROID23 so gomobile builds ONE ABI, not all
@@ -209,11 +326,29 @@ cp "$SRC/$AARBUILT" "$AAR"
 # Smoke-test: a truncated or empty aar resolves in gradle and fails at dex time,
 # a long way from the cause.
 [ -f "$AAR" ] || { errlog "firestack: aar not produced: $AAR"; exit 1; }
-if command -v unzip >/dev/null 2>&1; then
-  unzip -l "$AAR" | grep -q "classes.jar"         || { errlog "firestack: aar has no classes.jar"; exit 1; }
-  unzip -l "$AAR" | grep -q "AndroidManifest.xml" || { errlog "firestack: aar has no AndroidManifest.xml"; exit 1; }
-else
-  log "firestack: unzip absent — skipping aar smoke-test"
+# An aar that is present but hollow is the failure mode worth catching, so this
+# check must never be the thing that goes quiet. It used to `log` and continue
+# when unzip was missing, which turns the one assertion standing between a
+# broken aar and a published APK into a no-op on any host without unzip — and
+# unzip is NOT installed everywhere this runs. python3 is, so the listing has a
+# second source; if neither exists the build stops rather than shipping an
+# unverified aar.
+aar_entries() {
+  if command -v unzip >/dev/null 2>&1; then
+    unzip -l "$1"
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -c 'import sys,zipfile; print("\n".join(zipfile.ZipFile(sys.argv[1]).namelist()))' "$1"
+  else
+    return 127
+  fi
+}
+
+if ! entries="$(aar_entries "$AAR")"; then
+  errlog "firestack: cannot inspect $AAR — neither unzip nor python3 is available."
+  errlog "firestack: refusing to publish an aar whose contents were never checked."
+  exit 1
 fi
+printf '%s' "$entries" | grep -q "classes.jar"         || { errlog "firestack: aar has no classes.jar"; exit 1; }
+printf '%s' "$entries" | grep -q "AndroidManifest.xml" || { errlog "firestack: aar has no AndroidManifest.xml"; exit 1; }
 
 log "firestack: → $AAR ($(du -h "$AAR" 2>/dev/null | cut -f1))"

@@ -266,6 +266,98 @@ for gm in "${GOMODS[@]}"; do
     done <<< "$reach"
 done
 
+# 7. Seeding this module's own dependencies is NOT enough, and believing it was
+#    cost every APK between 2026-09-09 17:14 and 2026-09-10. `gomobile bind`
+#    resolves twice more on its own, inside the GOPROXY=off build:
+#    `go list -m -tags=<tags> all` (x/mobile cmd/gomobile/bind.go:229-243) and
+#    `go mod tidy` in the module it synthesises (bind_androidapp.go:383).
+#
+#    What made it cost a day and a half is that gomobile does not REPORT the
+#    first failure: bind.go:240-243 turns the error into `return nil, nil` and
+#    writeGoMod then writes a zero-byte go.mod, so the build dies in tidy with
+#    "missing module declaration" — pointing at a file gomobile had just
+#    emptied, naming neither GOPROXY nor the missing module.
+FIRESTACK_CFG=ab_cloud-libs-shared/build.json
+FIRESTACK_MK=ab_cloud-libs-shared/libs/firewall/firestack/Makefile
+
+if [ -f "$ENGINE" ]; then
+    bindline=$(grep -nE '^[^#]*GOPROXY=off.*make ' "$ENGINE" | head -1 | cut -d: -f1)
+
+    # Command lines only, for the same reason the seed check above says so, plus
+    # one this file learned the hard way: these steps LOG what they are about to
+    # do, and those log strings quote the very command being searched for. A
+    # detector that accepts them passes whether or not the command survives —
+    # and the log line sorts BEFORE the command, so an ordering check built on
+    # it is green by construction. Drop log/errlog lines before matching.
+    engine_cmd() { grep -nE "$1" "$ENGINE" | grep -vE '^[0-9]+:[[:space:]]*(log|errlog)[[:space:]]'; }
+
+    # 7a. The engine pre-resolves gomobile's `go list -m all` with the proxy up.
+    graphseed=$(engine_cmd '^[^#]*go list -m .*all' | grep -v 'GOPROXY=off' | head -1 | cut -d: -f1)
+    if [ -n "$graphseed" ] && [ -n "$bindline" ] && [ "$graphseed" -lt "$bindline" ]; then
+        note ok "engine seeds the module graph gomobile's own 'go list -m all' walks"
+    else
+        note FAIL "engine never seeds gomobile's 'go list -m all' before the offline bind — gomobile will swallow the failure and write an empty go.mod"
+    fi
+
+    # 7b. There is a pre-flight that runs that resolution OFFLINE, before the
+    #     bind, so the failure is named here instead of swallowed there.
+    preflight=$(engine_cmd '^[^#]*GOPROXY=off[^#]*go list -m ' | head -1 | cut -d: -f1)
+    if [ -n "$preflight" ] && [ -n "$bindline" ] && [ "$preflight" -lt "$bindline" ]; then
+        note ok "engine pre-flights gomobile's resolution with GOPROXY=off before building"
+    else
+        note FAIL "engine has no offline pre-flight before the bind — the next missing module reappears as 'missing module declaration'"
+    fi
+
+    # 7c. THE PRE-FLIGHT MUST NOT TRUST THE EXIT STATUS ALONE. `go list` exiting
+    #     0 with no output is exactly what bind.go mistakes for success, so a
+    #     pre-flight that only checks `if ! ...` reproduces the bug it guards.
+    if grep -qE '^[^#]*\[ -n "\$offline_list" \]' "$ENGINE"; then
+        note ok "offline pre-flight treats empty output as failure, not success"
+    else
+        note FAIL "offline pre-flight checks only the exit status — an empty 'go list' is the exact shape gomobile mis-reads as success"
+    fi
+
+    # 7d. The aar smoke-test must not degrade to a no-op. It used to `log` and
+    #     carry on when unzip was absent, which is a silent pass on any host
+    #     without unzip — the one check between a hollow aar and a published APK.
+    if grep -qE '^[^#]*unzip absent — skipping' "$ENGINE"; then
+        note FAIL "engine skips the aar smoke-test when unzip is missing — a silent pass on the only check that inspects the aar"
+    else
+        note ok "aar smoke-test cannot silently skip itself"
+    fi
+fi
+
+# 7e. bind_packages is DATA, and data drifts. The engine pre-resolves what
+#     gomobile binds by standing up a replica module importing these packages;
+#     if the Makefile's bind targets move and this list does not, the replica
+#     seeds the wrong closure and the offline build fails for a reason nobody
+#     will connect to a JSON file. Compare the two directly.
+if [ -f "$FIRESTACK_CFG" ] && [ -f "$FIRESTACK_MK" ]; then
+    cfg_pkgs=$(jq -r '.firestack.build.bind_packages[]? // empty' "$FIRESTACK_CFG" | sort)
+    # Expand $(IMPORT_PATH) from the Makefile's own definition rather than
+    # assuming the import path — the aar is vendored and upstream can rename it.
+    mk_pkgs=$(awk -F= '
+        $1 == "IMPORT_PATH"     { ip = $2 }
+        $1 == "INTRA_BUILD_CMD" { line = $2 }
+        END {
+            gsub(/\$\(IMPORT_PATH\)/, ip, line)
+            n = split(line, a, /[[:space:]]+/)
+            for (i = 1; i <= n; i++) if (a[i] != "") print a[i]
+        }' "$FIRESTACK_MK" | sort)
+
+    if [ -z "$cfg_pkgs" ]; then
+        note FAIL "build.json has no .firestack.build.bind_packages — the engine cannot pre-resolve what gomobile binds"
+    elif [ "$cfg_pkgs" = "$mk_pkgs" ]; then
+        note ok "build.json bind_packages matches the Makefile's bind targets"
+    else
+        note FAIL "build.json bind_packages has drifted from the Makefile's INTRA_BUILD_CMD:"
+        printf '         build.json: %s\n' $cfg_pkgs
+        printf '         Makefile:   %s\n' $mk_pkgs
+    fi
+else
+    note FAIL "cannot compare bind_packages — $FIRESTACK_CFG or $FIRESTACK_MK is missing"
+fi
+
 [ "$fail" -eq 0 ] && echo "PASS — the firestack build resolves nothing; pins are committed and every caller is covered." \
                   || echo "FAIL — see above."
 exit "$fail"
