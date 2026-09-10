@@ -201,7 +201,13 @@ jobs:
       # stable install URL the constellation points at.
       - name: Publish APK to rolling 'latest' release (stable install URL)
         id: publish
-        if: ${{ steps.gate.outputs.skip != 'true' && success() }}
+        # `success()` removed, not lost: GitHub applies it implicitly to any `if:`
+        # that names no status function, so this condition means exactly what it
+        # did. It has to go because the published-nothing guard is HANDED this
+        # expression as an argument, and a status function is only legal inside an
+        # `if:` — leaving it made six ship workflows fail to parse at all, which
+        # GitHub reports by showing the run under the FILENAME instead of the name.
+        if: ${{ steps.gate.outputs.skip != 'true' }}
         working-directory: ${{ env.WORK_DIR }}
         env:
           BYPASS_NIX: "1"
@@ -220,7 +226,7 @@ jobs:
       # Edit 1_cicd/src/scripts/cloud-android-publish-guard.sh, never this block.
       - name: A run that published nothing must not be green
         if: ${{ !cancelled() }}
-        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ac_cloud-termux" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' && success() }}" "${{ github.event_name }}"
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ac_cloud-termux" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' }}" "${{ github.event_name }}"
       # ── end MANAGED-PUBLISH-GUARD ──
 
 

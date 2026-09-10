@@ -342,6 +342,22 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/ship-*.yml"))):
             v = lines[j].split("if:", 1)[1].strip()
             if v.startswith("${{") and v.endswith("}}"):
                 v = v[3:-2].strip()
+            # A status-check function is legal ONLY inside an `if:`. This
+            # condition is HANDED to the guard as an argument, and GitHub
+            # refuses to parse a workflow that calls one anywhere else -- it
+            # then reports the run under the FILENAME instead of the workflow
+            # name, which is how six ship workflows silently stopped existing
+            # on 2026-09-10. Refusing here is the only place that can be caught
+            # before a push. `success()` is also redundant: GitHub applies it
+            # implicitly to any `if:` that names no status function, so
+            # deleting it changes nothing about when the publish runs.
+            if re.search(r"\b(success|failure|cancelled|always)\(\)", v):
+                bad.append("%s: the `id: publish` step's `if:` calls a status function"
+                           " (%s). It is redundant -- GitHub adds success() implicitly --"
+                           " and it makes this workflow unparseable once the guard is"
+                           " handed the expression. Remove it." % (name, v))
+                cond = None
+                break
             cond = v
             break
         if cond is None:

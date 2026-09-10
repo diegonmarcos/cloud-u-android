@@ -138,6 +138,23 @@ PY
     ok
 done
 
+# ── 2b. no status function may reach the guard's arguments ───────────────
+# `success()` and friends are legal ONLY inside an `if:`. Handed to the guard as
+# an argument they make GitHub refuse the whole workflow — which it reports by
+# listing the run under the FILENAME instead of the workflow name, so six ship
+# workflows can stop existing and the run list still looks populated. That
+# happened on 2026-09-10. The generator refuses at build time; this asserts it
+# on the files GitHub actually reads.
+for wf in .github/workflows/ship-*.yml; do
+    grep -q '^        run: sh .*cloud-android-publish-guard\.sh ' "$wf" || continue
+    if grep '^        run: sh .*cloud-android-publish-guard\.sh ' "$wf" \
+         | grep -qE '\b(success|failure|cancelled|always)\(\)'; then
+        bad "$(basename "$wf"): a status function is passed to the guard as an argument — GitHub will not parse this workflow"
+    else
+        ok
+    fi
+done
+
 # ── 3. the guard is REACHED — it is not sitting after a step that exits ────
 # A guard placed before its publish step would read an outcome that does not
 # exist yet and pass on an empty string it is meant to refuse.
