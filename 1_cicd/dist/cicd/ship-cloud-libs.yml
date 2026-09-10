@@ -90,6 +90,22 @@ jobs:
         with:
           gradle-version: "8.14"
 
+      # ── firestack Go module cache ───────────────────────────────────────
+      # MITIGATION, not the fix — see the same step in ship-cloud-superapp.yml.
+      # The fix is build-firestack.sh seeding from the committed pins and then
+      # building with GOPROXY=off. This cache covers the one hole that leaves:
+      # gomobile's own `go mod tidy` runs in a throwaway module with no go.sum
+      # and re-verifies the whole graph against sum.golang.org. Those checksum
+      # tiles live in GOMODCACHE, so a warm cache means no network; a cold one
+      # still reaches out. lib-apks builds the SAME aar from the SAME engine, so
+      # leaving this workflow uncached would keep the failure alive here alone.
+      - name: Cache firestack Go modules + checksum-db tiles
+        uses: actions/cache@v4
+        with:
+          path: ab_cloud-libs-shared/.cache/gomodcache
+          key: firestack-gomodcache-${{ runner.os }}-${{ hashFiles('ab_cloud-libs-shared/libs/firewall/firestack/go.sum') }}
+          restore-keys: firestack-gomodcache-${{ runner.os }}-
+
       - name: Checkout vault (shared Android signing key)
         uses: actions/checkout@v4
         with:

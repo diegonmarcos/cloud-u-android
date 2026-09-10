@@ -25,6 +25,20 @@ LIB_SRC="$CLOUD_ANDROID_ROOT/9_others/src"
 
 . "$CICD_SRC/scripts/cloud-android-ship-lib.sh"
 
+# 1_cicd/dist is DERIVED IN FULL from 1_cicd/src, so it is rebuilt from empty
+# rather than copied over. Copying over only ever adds: a file deleted from
+# src/ stayed in dist/ forever, and dist/scripts is what GitHub actually runs
+# (.github/workflows/scripts symlinks to it). That accumulation is exactly the
+# drift this generator is supposed to prevent, and it had already produced
+# three fossils -- a literal file named "*.sh" from a glob that once failed to
+# expand, and two guards that src/ deleted but dist/ kept serving.
+#
+# Only these three directories are purged. .github/workflows is NOT, because
+# it holds workflows with no source (enhance-silence-guard.yml,
+# ship-superapp-data-regen.yml) that a purge would silently delete; and the
+# dotfiles tier is additive on purpose because its targets mix managed config
+# with per-machine state.
+rm -rf "$CICD_DIST/scripts" "$CICD_DIST/cicd" "$CICD_DIST/actions"
 mkdir -p "$CICD_DIST/scripts" "$CICD_DIST/cicd" "$CICD_DIST/actions" \
          "$GIT_DIST/hooks" "$GIT_DIST/modules"
 
@@ -165,15 +179,34 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
             print(f"  dropped {name}: {e}")
 
     final = sorted(set(derived) | set(kept))
-    block = ["    paths:",
-             "      # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir",
-             f"      # {app}/build.json::modules declares is added automatically, dead",
-             "      # entries are dropped, and cloud-android-source-identity.sh hashes",
-             "      # exactly this list — so nothing can trigger a build the publish",
-             "      # gate does not weigh. Extra entries no module map can express",
-             "      # (settings.gradle.kts references, scan roots) are kept: add them",
-             "      # here and they stay.",
-             ] + [f'      - "{e}"' for e in final]
+    header = ["      # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir",
+              f"      # {app}/build.json::modules declares is added automatically, dead",
+              "      # entries are dropped, and cloud-android-source-identity.sh hashes",
+              "      # exactly this list — so nothing can trigger a build the publish",
+              "      # gate does not weigh. Extra entries no module map can express",
+              "      # (settings.gradle.kts references, scan roots) are kept: add them",
+              "      # here and they stay."]
+
+    # A comment inside paths: is an author explaining why a trigger is, or is
+    # deliberately not, there -- and this block is the only place that reasoning
+    # lives. Rebuilding from the header template alone DELETED it:
+    # ship-c3-morpheus.yml lost eight lines explaining why it watches no shared
+    # lib directory, and it lost them silently, which is a worse failure than the
+    # drift the rewrite exists to fix. Anything that is not one of OUR header
+    # lines belongs to the author and is carried through verbatim.
+    managed = {line.strip() for line in header}
+
+    def is_header_line(line):
+        text = line.strip()
+        # The second header line carries the app name, so it is matched by shape
+        # rather than by text: a renamed app must not leave its old line behind.
+        return text in managed or bool(re.match(
+            r'#\s+\S+/build\.json::modules declares is added automatically, dead$', text))
+
+    authored = [line for line in lines[start + 1:end]
+                if line.strip().startswith("#") and not is_header_line(line)]
+
+    block = ["    paths:"] + header + authored + [f'      - "{e}"' for e in final]
     new = "\n".join(lines[:start] + block + lines[end:])
     if new != text:
         open(wf, "w").write(new)

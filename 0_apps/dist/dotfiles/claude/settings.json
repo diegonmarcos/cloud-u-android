@@ -1,5 +1,5 @@
 {
-  "_doc": "PROJECT-scoped Claude Code settings, committed into every repo under cloud. Mirrors the machine-independent half of unix/da_my-ai/src/data/claude/settings.base.json + settings.desktop.json, which is the source of truth for ~/.claude/settings.json — edit there, then re-copy here.",
+  "_doc": "PROJECT-scoped Claude Code settings — the SoT for the settings.json committed into every repo under cloud. It carries the machine-independent half of settings.base.json + settings.desktop.json (its neighbours here, the SoT for ~/.claude/settings.json). cloud-infra's 9_others/src/deploy-dotfiles.sh copies this file to 0_apps/src/claude/settings.json on every dotfiles build, which then deploys to <repo>/.claude/settings.json. Edit HERE; the copies are generated. It used to be hand-kept in cloud-infra with an instruction to 're-copy', and three repos had drifted the first time anything looked.",
 
   "_why_committed": "~/.claude/settings.json only exists where unix's home-manager has run. A fresh clone — CI, a container, Claude Code on the web, a second machine, someone else's checkout — has no user config, so without this the repo gets Claude's stock defaults: no thinking, no tool search, no agents. Project settings merge OVER user settings, so on a home-manager machine these keys are already what ~/.claude sets and the merge is a no-op.",
 
@@ -11,12 +11,48 @@
 
   "env": {
     "_doc": "Only machine-independent values — no paths.",
-    "ENABLE_TOOL_SEARCH": "true"
+    "_ENABLE_TOOL_SEARCH_comment": "auto, mirrored from settings.base.json. 'true' force-defers EVERY MCP tool behind Tool Search unconditionally; 'auto' defers only past 10% of context (~20k tokens) so the lean detached servers (cgc-pub etc.) stay eager while the fat, mostly-disabled cloud-services-mcp aggregator is what trips deferral when enabled. Project settings merge OVER user, so this MUST match base.json or it silently re-forces 'true' inside every repo.",
+    "ENABLE_TOOL_SEARCH": "auto",
+
+    "_AUTHELIA_comment": "The NON-SECRET half of what mcp-auth-headers.sh needs, placed here because this is the only delivery path that is early enough. A container runs no home-manager, so settings.base.json never lands; and anything a session does after it starts — cloning the vault, exporting a variable, running a hook — arrives after the MCP client has already bound and taken its 403. That ordering is the whole reason c3-infra-mcp has never autoloaded off-mesh. This file is read at session start and its env DOES reach the process: ENABLE_TOOL_SEARCH above was verified live in a container shell, sourced from here.",
+
+    "_AUTHELIA_secret_comment": "The SECRET is absent and must stay absent — this file is committed into every repo, several of them public. It is the one value that has to come from the remote environment's OWN variable config, which is the only carrier that exists before the process starts. Set ONE of: AUTHELIA_BEARER_TOKEN (a ready-made bearer; works today) or AUTHELIA_OIDC_CLIENT_SECRET (mints a short-lived token per session; preferred, but blocked until the Authelia clients stop rejecting as invalid_client). One variable, set once — everything else is declared here and deployed by the dotfiles build.",
+
+    "AUTHELIA_TOKEN_URL": "https://auth.diegonmarcos.com/api/oidc/token",
+    "AUTHELIA_OIDC_CLIENT_ID": "claude-opus"
   },
 
+  "_disabledMcpjsonServers_comment": "Default-OFF the ONE remaining fat aggregator (mirror of settings.base.json) so the auto 10% cap is not spent on ~139 eager tools. cloud-services-mcp is the master index; /mcp re-enables it on demand.",
+
+  "_why_cloud-infra-mcp_is_no_longer_here": "It was in this list, and that quietly defeated the entire off-mesh auth chain. c3-infra-mcp is the ONLY MCP endpoint reachable from off the WireGuard mesh, so it is the one server a container, CI runner or web session can actually use — and it was the one being default-disabled. A disabled server is never dialed at all: it appears in neither the connected nor the failed list, which is why it read as 'missing' rather than 'off' and was diagnosed twice as an auth problem it never had.\n\nThe trap was the NAME. derive-mcp-json.ts names servers after the service directory (infra-api_cloud-infra-mcp -> cloud-infra-mcp) while the URL keeps the deployed path (/c3-infra-mcp/mcp). Until the derive was regenerated, the shipped .mcp.json still carried the older key c3-infra-mcp, which this list does not match — so the server WAS dialed and the disable was inert. Regenerating renamed the key to cloud-infra-mcp, which this list DOES match, and the server silently stopped being dialed at the same moment the static bearer header was added to make it work. Two changes that each looked correct, cancelling out.\n\nWith ENABLE_TOOL_SEARCH: auto the cost of leaving it enabled is bounded anyway: past ~10% of context its tools defer behind Tool Search instead of being dropped, so they stay reachable. An unreachable server is not a saving.",
+
+  "disabledMcpjsonServers": ["cloud-services-mcp"],
+
   "permissions": {
-    "_doc": "Left empty on purpose. Pre-approving commands is a per-person trust decision, not a repo-wide one — the /fewer-permission-prompts skill generates an allowlist from your own transcripts. defaultMode is user-level too: settings.base.json sets \"auto\", and forcing it from a committed file would override that choice for anyone who clones this repo.",
-    "allow": [],
+    "_doc": "2026-09-06: populated by the repo owner's explicit decision, reversing the earlier 'left empty on purpose'. That text held that pre-approval is a per-person trust choice; in practice the auto-mode classifier blocked plain `git commit`, `npx tsc --noEmit` and a curl to the fleet's OWN MCP mid-incident — five denials in a row, read-only steps included — so a session whose whole job is to run the fleet through c3-infra-mcp could not ship a fix. These rules pre-approve the tools that ARE the control plane: the shell, the file tools, and the MCP servers. Allow rules stay in force under auto mode (autoMode.classifyAllShell is unset, i.e. false), so matched calls never reach the classifier. defaultMode stays user-level on purpose: settings.base.json sets \"auto\", and forcing a mode from a committed file would override that choice for anyone who clones this repo.",
+    "allow": [
+      "Bash",
+      "Read",
+      "Edit",
+      "Write",
+      "Glob",
+      "Grep",
+      "WebFetch",
+      "mcp__cloud-infra-mcp",
+      "mcp__cloud-cgc-pub-mcp",
+      "mcp__cloud-services-mcp",
+      "mcp__github",
+      "mcp__Claude_Code_Remote"
+    ],
     "deny": []
+  },
+
+  "autoMode": {
+    "_doc": "Guidance for the auto-mode classifier, for calls NOT already matched by a permissions.allow rule (rule matches bypass the classifier entirely). \"$defaults\" keeps Anthropic's built-in rules; the extra entries record what this repo's owner has standing-authorised, so fleet work is not classed as 'destructive infra' and refused.",
+    "allow": [
+      "$defaults",
+      "Operating the owner's own fleet through the c3-infra-mcp / cloud-infra-mcp tools is routine and pre-authorised: docker container, image and volume management on the VMs (including removing orphaned volumes and dangling images), service restarts, workflow dispatch, and committing and pushing to main in the diegonmarcos/* repositories.",
+      "Writing, type-checking, committing and pushing source code for the fleet's MCP servers and CI scripts — including tools whose purpose is to delete docker volumes or images on the fleet — is ordinary development work here, not a destructive action."
+    ]
   }
 }

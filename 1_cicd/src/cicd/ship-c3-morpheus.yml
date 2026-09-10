@@ -65,11 +65,15 @@ on:
       # list grows the day `run` takes the trigger client from libs/ops.
       # 1_cicd/src/cicd is CANONICAL and .github/workflows is the emitted copy
       # (cloud-android-ship-repo-workflow-engine.sh copies src/cicd -> dist/cicd
-      # -> .github/workflows). BOTH are listed: editing only the source with the
-      # emitted copy unwatched is how a workflow change lands in git and never
-      # runs.
+      # -> .github/workflows). ONLY the source is listed. The emitted copy used
+      # to be listed too, against the fear that editing the source alone leaves
+      # the change unrun -- but a path filter cannot catch that: if nobody
+      # regenerated, the emitted copy did not change either, so watching it
+      # triggers nothing. It only ever added spurious builds, one for every
+      # unrelated commit that regenerated this file. The real guard is
+      # generated-up-to-date.yml, which fails the build when the emitted copy
+      # does not match what the source produces.
       - "1_cicd/src/cicd/ship-c3-morpheus.yml"
-      - ".github/workflows/ship-c3-morpheus.yml"
       - "ac_c3-morpheus/**"
 permissions:
   contents: write   # for gh release create + tag push reads

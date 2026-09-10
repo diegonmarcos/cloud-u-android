@@ -1,0 +1,117 @@
+name: "generated files are up to date"
+
+# WHY THIS EXISTS.
+# The pipeline is 1_cicd/src/** -> 1_cicd/dist/** -> .github/workflows/, and
+# everyone works under the rule "edit the source, never the generated file,
+# because a change to a generated file is inert". That rule only holds while
+# the generated files are actually what the sources produce. When they drift,
+# three things become possible at once and all three are silent:
+#
+#   - an edit to the source never reaches CI, because the committed output that
+#     GitHub reads still says the old thing. The author sees green and believes
+#     the change landed.
+#   - an unrelated commit regenerates, and the drifted differences land inside
+#     someone else's diff, attributed to them.
+#   - a fix made directly in the generated file works, so it stays there, and
+#     the next regeneration destroys it. ship-cloud-libs.yml had exactly this:
+#     a firestack Go module cache step that existed only in .github/workflows.
+#
+# This job regenerates and fails if anything differs from what is committed.
+#
+# NO PATH FILTER, deliberately. Drift is not caused only by edits under 1_cicd:
+# a build.json module map, a .gitignore source, an app directory appearing or
+# disappearing all change what the generator emits. A filter here would leave
+# the gate blind to the majority of its own inputs.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate-and-compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The generator reads a sibling repository when one is present, to refresh
+      # the Claude agent dotfiles from their source of truth. A runner has no
+      # such checkout, but relying on that is relying on an accident: point the
+      # override at a path that cannot exist so this job's inputs are exactly
+      # the contents of this repository and nothing else.
+      - name: Regenerate everything from source
+        env:
+          CLAUDE_SOT_DIR: /nonexistent/claude-source-of-truth
+        run: ./build.sh workflow
+
+      # A step of its own, so the generator's exit status is the step's exit
+      # status. Reading it through a pipe -- `./build.sh workflow | tail` --
+      # would report tail's status instead, and this repository has shipped
+      # that exact false green before.
+
+      - name: Committed output matches what the sources produce
+        run: |
+          set -euo pipefail
+
+          # --porcelain and NOT `git diff --exit-code`: a plain diff sees only
+          # tracked files, and the largest single piece of drift found when this
+          # gate was written was a file MISSING from 1_cicd/dist entirely
+          # (ship-c3-morpheus.yml). Regeneration recreates it as an untracked
+          # file, which `git diff` reports as nothing at all.
+          drift="$(git status --porcelain)"
+
+          if [ -n "$drift" ]; then
+            echo "::error::Generated files are out of date. Run './build.sh workflow' and commit the result."
+            echo
+            echo "Paths that differ from what the sources produce:"
+            printf '%s\n' "$drift"
+            echo
+            git --no-pager diff
+            exit 1
+          fi
+
+          echo "Generated output matches the committed tree."
+
+      # A gate that has never been watched failing is decoration. This proves,
+      # on every run, that the comparison above can actually go red: it edits a
+      # source, regenerates, and requires the change to show up in
+      # .github/workflows. If the generator silently stopped emitting, or the
+      # comparison stopped seeing, this step fails and says so.
+      - name: The gate is not vacuous - a source edit must reach .github/workflows
+        env:
+          CLAUDE_SOT_DIR: /nonexistent/claude-source-of-truth
+        run: |
+          set -euo pipefail
+
+          printf '\n# Deliberate drift introduced by the up-to-date gate, reverted below.\n' \
+            >> 1_cicd/src/cicd/health.yml
+
+          if ! ./build.sh workflow > /tmp/vacuity-proof.log 2>&1; then
+            echo "::error::the generator failed while proving the gate is live"
+            cat /tmp/vacuity-proof.log
+            git checkout -- .
+            exit 1
+          fi
+
+          drift="$(git status --porcelain)"
+
+          # Restore BEFORE asserting, so a failed assertion cannot leave the
+          # working tree dirty for anything that runs after it.
+          git checkout -- .
+          git clean -fd 1_cicd 0_apps 0_git > /dev/null
+
+          case "$drift" in
+            *".github/workflows/health.yml"*) ;;
+            *)
+              echo "::error::a source edit did not reach .github/workflows - this gate proves nothing"
+              echo "drift observed was:"
+              printf '%s\n' "$drift"
+              exit 1
+              ;;
+          esac
+
+          echo "Proven: a source edit left unregenerated makes this gate go red."
