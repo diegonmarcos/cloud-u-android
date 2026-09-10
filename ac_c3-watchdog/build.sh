@@ -667,7 +667,19 @@ step_gh_release() {
   case "${GITHUB_REF:-}" in refs/tags/*) is_tag_push=1 ;; esac
   if [ "$is_tag_push" = "1" ] && [ -n "${GITHUB_REF_NAME:-}" ]; then
     _sha256_sidecar "$DIST_DIR/$asset"
-    local flags=("$GITHUB_REF_NAME" "$DIST_DIR/$asset" "$DIST_DIR/$asset.sha256" --title "$GITHUB_REF_NAME")
+    # --latest=false IS LOAD-BEARING, NOT TIDINESS.
+    # Without it `gh release create` lets GitHub recompute which release is
+    # "latest", and a per-app tagged release published now becomes it. That
+    # hijacks /releases/latest/download/<asset> for EVERY app in the fleet,
+    # because our rolling release is tagged the literal word `latest` and the
+    # magic route resolves by recency, not by tag. The rolling branch above
+    # re-pins it on the next main push, so the breakage flaps rather than
+    # sticking — which is why it read as an intermittent phone fault for days.
+    # Measured 2026-09-10: firestack-aar-20260910.114222 held the pointer at
+    # 11:57:46Z and cloud-nixdroid.apk answered 404 through it; three minutes
+    # later a rolling publish took it back and the same URL served 200.
+    # A tagged release is an immutable per-tag artifact. It is never "latest".
+    local flags=("$GITHUB_REF_NAME" "$DIST_DIR/$asset" "$DIST_DIR/$asset.sha256" --title "$GITHUB_REF_NAME" --latest=false)
     [ "$draft" = "true" ]      && flags+=(--draft)
     [ "$prerelease" = "true" ] && flags+=(--prerelease)
     [ "$notes" = "true" ]      && flags+=(--generate-notes)

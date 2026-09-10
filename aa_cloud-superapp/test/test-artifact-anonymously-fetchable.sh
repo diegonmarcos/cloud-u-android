@@ -46,6 +46,7 @@ set -u
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APP="$(cd "$HERE/.." && pwd)"                        # → aa_cloud-superapp
+UNIX="$(cd "$APP/.." && pwd)"                         # → repo root
 FLEET="${FLEET_JSON:-$APP/data/constellation-fleet.json}"
 
 PASS=0; FAIL=0; WARN=0
@@ -119,7 +120,36 @@ else
   bad "regen.sh not found at $REGEN"
 fi
 
-echo "== T3: LIVE — each artifact is fetchable with NO credentials =="
+echo "== T3: no publisher may take the 'latest' pointer from the rolling release =="
+# Naming the tag in the URL (T1) fixes the phones that get a NEW SuperApp APK.
+# It does nothing for the phones already carrying the old baked manifest, and
+# those are the ones the owner is holding. Their URLs keep going through
+# GitHub's magic route, so the route has to keep resolving to OUR release —
+# which means no other publisher may become "latest".
+#
+# `gh release create` without --latest=false lets GitHub recompute the latest
+# release by recency, so every per-app tagged release stole the pointer until
+# the next rolling publish re-pinned it. Derived from a search, not a list: a
+# new app's engine is covered the day it is added, with nothing to remember.
+SITES="$(cd "$UNIX" 2>/dev/null && git grep -lF 'flags=("$GITHUB_REF_NAME"' -- '1_cicd/src/scripts' '*/build.sh' 2>/dev/null)"
+if [ -z "$SITES" ]; then
+  bad "found no tagged-release creation site at all — has the publish path moved? (this check would otherwise pass vacuously)"
+else
+  UNPINNED=""
+  for s in $SITES; do
+    # The flags array and the --latest=false must be on the same line, which is
+    # how every one of these engines writes it.
+    awk '/flags=\("\$GITHUB_REF_NAME"/ && !/--latest=false/ { bad = 1 } END { exit !bad }' "$UNIX/$s" \
+      && UNPINNED="$UNPINNED $s"
+  done
+  if [ -z "$UNPINNED" ]; then
+    ok "all $(echo "$SITES" | awk 'END {print NR}') tagged-release sites pass --latest=false"
+  else
+    bad "these create a tagged release that can steal /releases/latest/:$UNPINNED"
+  fi
+fi
+
+echo "== T4: LIVE — each artifact is fetchable with NO credentials =="
 # REACHABILITY CONTROL, PER CHANNEL, BEFORE ANY VERDICT.
 # This tester is globbed into the SuperApp ship path by
 # cloud-android-test-engine.sh, so a fatal verdict here can stop the owner's
