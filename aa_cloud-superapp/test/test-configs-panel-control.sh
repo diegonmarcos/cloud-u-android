@@ -1046,6 +1046,102 @@ grep -q 'minimumWidth = dp(TOUCH_TARGET_DP)' "$FRAGMENT" \
   && ok "badge, tile floor and column count all clear the 48dp target" \
   || bad "the grid is denser than it is tappable:$size_fail"
 
+echo "== T27: Battery Hungers hands off to a MEASURED per-app list, and says its unit =="
+# THE LIE THIS PREVENTS. "Battery Hungers" over the tiles alone is a group of
+# CONTROLS chosen by a human writing `battery_hungry: true` — an opinion about
+# mechanism, not a measurement, and not an answer to "which apps are eating my
+# battery". The owner asked that second question. It is answered by a hand-off
+# to libs:battery's EnergyUsageDialog, and the whole risk is that the LABEL and
+# the NUMBERS BEHIND IT drift apart: a link promising mAh over a screen-time
+# list is precisely the failure that would be believed and acted on.
+#
+# So the label's unit and the producing code's unit are asserted TOGETHER. Each
+# half alone is worthless — a label naming mAh proves nothing about the data,
+# and a function returning mAh proves nothing about what the owner was told.
+DIALOG="$LIBS/libs/battery/src/main/java/com/diegonmarcos/superapp/battery/EnergyUsageDialog.kt"
+WATCHDOG="$LIBS/libs/battery/src/main/java/com/diegonmarcos/superapp/battery/EnergyWatchdog.kt"
+STRINGS_ES="$APP/app/src/main/res/values-es/strings.xml"
+for f in "$DIALOG" "$WATCHDOG" "$STRINGS_ES"; do
+  [ -f "$f" ] || { echo "  ABORT: no such file: $f — the hand-off cannot be"
+                   echo "         checked, and absence must not read as a pass."; exit 2; }
+done
+
+details_fail=""
+
+# (a) the derived group DECLARES the hand-off — data, not a Kotlin special case
+#     keyed off the group id. Found by `derive`, never by index.
+decl="$(python3 - "$BJ" <<'PY2'
+import json, sys
+groups = json.load(open(sys.argv[1]))['ui']['control_panel']['groups']
+d = [g for g in groups if g.get('derive')]
+if len(d) != 1: print('expected exactly one derived group, got %d' % len(d)); raise SystemExit
+g = d[0]
+if not g.get('details'):     print('the derived group declares no `details` surface')
+elif not g.get('details_res'): print('`details` with no `details_res` label key')
+else: print('OK %s %s' % (g['details'], g['details_res']))
+PY2
+)"
+case "$decl" in
+  "OK "*) surface="$(echo "$decl" | awk '{print $2}')"
+          res="$(echo "$decl" | awk '{print $3}')" ;;
+  *) details_fail="$details_fail declaration:[$decl]"; surface=""; res="" ;;
+esac
+
+# (b) the declared surface is one the fragment actually implements. A name
+#     nobody maps draws NOTHING, so a typo here is a silently missing feature.
+if [ -n "$surface" ]; then
+  grep -q "DETAILS_ENERGY_USAGE = \"$surface\"" "$FRAGMENT" \
+    || details_fail="$details_fail fragment-implements-no-surface-named-$surface"
+fi
+
+# (c)+(d) THE ANTI-LIE PAIR. The label exists in BOTH locales and BOTH name the
+#     unit; a Spanish reader must not be shown a unit-less promise.
+if [ -n "$res" ]; then
+  for loc in "$STRINGS" "$STRINGS_ES"; do
+    line="$(awk -v k="name=\"$res\"" 'index($0,k)' "$loc")"
+    [ -n "$line" ] || { details_fail="$details_fail no-$res-in-$(basename "$(dirname "$loc")")"; continue; }
+    case "$line" in
+      *mAh*) : ;;
+      *) details_fail="$details_fail $(basename "$(dirname "$loc")")-label-names-no-unit" ;;
+    esac
+  done
+fi
+
+# (e) ...and the DATA really is mAh, ranked worst-first. This is the half that
+#     makes the label a fact rather than a claim.
+grep -q 'mAh = avgMa \* ms / 3_600_000.0' "$WATCHDOG" \
+  || details_fail="$details_fail watchdog-no-longer-computes-mAh"
+grep -q 'sortedByDescending { it.mAh }' "$WATCHDOG" \
+  || details_fail="$details_fail per-app-list-not-ranked-descending-by-mAh"
+
+# (f) A LINK, NOT A SECOND COPY. The fragment must reach the dialog and must
+#     not grow per-app energy arithmetic of its own — a duplicate ranking here
+#     is the drift this hand-off exists to avoid.
+grep -q 'EnergyUsageDialog().show(parentFragmentManager, EnergyUsageDialog.TAG)' "$FRAGMENT" \
+  || details_fail="$details_fail fragment-does-not-open-the-dialog"
+# ...and the check reads CODE, not prose: this file's own comments discuss mAh
+# at length, and a grep that cannot tell a sentence from a call would fail on
+# the documentation explaining why the arithmetic is elsewhere.
+frag_code="$(awk '{ t=$0; sub(/^[ \t]+/,"",t)
+                    if (t !~ /^\*/ && t !~ /^\/\// && t !~ /^\/\*/) print }' "$FRAGMENT")"
+case "$frag_code" in
+  *UsageStatsManager*|*perAppEstimate*|*mAh*)
+    details_fail="$details_fail fragment-computes-its-own-per-app-energy" ;;
+esac
+
+# (g) THE #228 RULE, AGAIN. The hand-off is a link to a page; it has no state,
+#     so it must not be given a light. A light here would be a status indicator
+#     driven by nothing — the exact shape of the private copies #228 removed.
+det_body="$(awk '/private fun detailsLink/,/^    private fun section/' "$FRAGMENT")"
+[ -n "$det_body" ] || details_fail="$details_fail detailsLink-not-found"
+case "$det_body" in
+  *StatusLight*) details_fail="$details_fail details-link-carries-a-status-light" ;;
+esac
+
+[ -z "$details_fail" ] \
+  && ok "the hand-off is declared, implemented, labelled with its unit in both locales, and the unit is what the code computes" \
+  || bad "Battery Hungers' hand-off is wrong:$details_fail"
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

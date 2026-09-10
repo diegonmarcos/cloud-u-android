@@ -221,6 +221,13 @@
     <string name="control_group_ui_sub">How this launcher looks and feels under the thumb.</string>
     <string name="control_group_battery">Battery Hungers</string>
     <string name="control_group_battery_sub">The same controls again, gathered so everything draining the battery can be switched off from one row.</string>
+    <!-- The tiles above are controls and a judgement; this opens the MEASURED
+         per-app list. The unit is named here so the owner knows what he is
+         about to read before he taps, and "estimated" is in the label because
+         the figure behind it is foreground-time x measured draw, not a
+         privileged per-app battery reading. -->
+    <string name="control_group_battery_details">Which apps are eating it? \u2192 per-app mAh (estimated)</string>
+    <string name="control_group_details_action">Open battery usage details</string>
 
     <!-- The name TalkBack announces for the long-press action, so a
          hold-to-open affordance is not invisible to somebody who cannot see

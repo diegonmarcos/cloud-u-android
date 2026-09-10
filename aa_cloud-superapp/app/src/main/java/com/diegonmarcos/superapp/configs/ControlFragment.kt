@@ -19,6 +19,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.battery.EnergyUsageDialog
 import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.ui.Haptics
 import com.diegonmarcos.superapp.ui.LauncherPalette
@@ -232,6 +233,7 @@ class ControlFragment : Fragment() {
         for (group in DeviceControls.groups) {
             root.addView(section(ctx, groupText(ctx, group.labelRes, group.label),
                 groupText(ctx, group.subtitleRes, group.subtitle)))
+            detailsLink(ctx, group)?.let { root.addView(it) }
             // Chunked into rows of `columns`; the last row is padded with
             // weightless spacers so four tiles and two tiles start at the same
             // left edge instead of the short row spreading itself out.
@@ -576,6 +578,58 @@ class ControlFragment : Fragment() {
         setPadding(0, 0, 0, dp(8))
     }
 
+    /**
+     * The hand-off under a group heading, or null for a group that declares
+     * none — see [DeviceControls.Group.details].
+     *
+     * WHY THIS IS A LINK AND NOT MORE TILES. Battery Hungers gathers the
+     * controls a human judged expensive. That is a useful thing to have in one
+     * row and it is NOT an answer to "which apps are eating my battery": these
+     * are controls, not apps, and the flag behind them is an opinion written in
+     * `build.json`, not a measurement. The measured answer already exists —
+     * `libs:battery`'s [EnergyUsageDialog], which ranks apps by mAh and states
+     * on its own face how each number was arrived at — and it was reachable
+     * only from the developer page. So this opens THAT, rather than growing a
+     * second per-app list here that would drift from it.
+     *
+     * IT IS NOT A TILE, DELIBERATELY. Every tile on this page carries a
+     * [StatusLight], and a light means a reading about whether something is
+     * working. This opens a page; there is nothing about it to be on or off,
+     * and giving it a light would be inventing a state to fill a shape.
+     *
+     * FAILS CLOSED, TWICE. A `details` naming a surface this build does not
+     * implement draws nothing, and so does one whose label is missing from the
+     * string table — an affordance with no words is one the owner cannot know
+     * the meaning of before tapping it, which on a page about power is exactly
+     * the wrong time to guess.
+     */
+    private fun detailsLink(ctx: Context, group: DeviceControls.Group): View? {
+        if (group.details.isBlank()) return null
+        val labelId = ctx.resources.getIdentifier(group.detailsRes, "string", ctx.packageName)
+        if (labelId == 0) return null
+        if (group.details != DETAILS_ENERGY_USAGE) return null
+        return TextView(ctx).apply {
+            text = ctx.getString(labelId)
+            textSize = 12f
+            setTextColor(LauncherPalette.of(ctx).accent)
+            setPadding(0, dp(6), 0, dp(2))
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { view ->
+                Haptics.tap(view)
+                EnergyUsageDialog().show(parentFragmentManager, EnergyUsageDialog.TAG)
+            }
+            // Announced as a button, not as a line of prose a screen reader
+            // would read past without offering to activate it.
+            ViewCompat.replaceAccessibilityAction(
+                this,
+                AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK,
+                ctx.getString(R.string.control_group_details_action),
+                null,
+            )
+        }
+    }
+
     private fun section(ctx: Context, label: String, subtitle: String) = LinearLayout(ctx).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, dp(16), 0, dp(4))
@@ -612,6 +666,12 @@ class ControlFragment : Fragment() {
         /** The filled round badge, and the icon centred in it. Samsung's own
          *  quick-settings proportions: a badge comfortably past the 48dp
          *  minimum touch target on its own, with the icon about half of it. */
+        /** The one surface [detailsLink] knows how to open, named as
+         *  `build.json` names it. A declaration is data; the class it resolves
+         *  to cannot be, so the mapping lives here — the same split as
+         *  [Sections.iconResFor] between a declared icon name and a drawable. */
+        private const val DETAILS_ENERGY_USAGE = "energy_usage"
+
         private const val BADGE_DP = 56
         private const val ICON_DP = 26
 

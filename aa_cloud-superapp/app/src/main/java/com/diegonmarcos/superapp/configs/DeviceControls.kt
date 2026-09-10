@@ -668,6 +668,19 @@ object DeviceControls {
         val subtitleRes: String,
         val rows: List<Row>,
         val derived: Boolean = false,
+        /**
+         * A surface this group hands off to for the question its TILES cannot
+         * answer, or "" for the groups that have no such question.
+         *
+         * Battery Hungers is the one that does. Its tiles are an editorial
+         * judgement about mechanism — which controls are known to cost power —
+         * and no tile on this page is or ever will be a measured per-app
+         * figure, because the tiles are controls and the question is about
+         * apps. The measured answer lives in libs:battery and is reached
+         * through here rather than copied to here.
+         */
+        val details: String = "",
+        val detailsRes: String = "",
     )
 
     /**
@@ -733,6 +746,8 @@ object DeviceControls {
         subtitleRes = g.optString("subtitle_res"),
         rows = rows,
         derived = derived,
+        details = g.optString("details"),
+        detailsRes = g.optString("details_res"),
     )
 
     /** Tiles across the grid, declared. Presentation, so it travels with the

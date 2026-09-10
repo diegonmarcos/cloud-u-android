@@ -215,6 +215,8 @@
     <string name="control_group_ui_sub">Cómo se ve y cómo responde este lanzador bajo el pulgar.</string>
     <string name="control_group_battery">Devoradores de batería</string>
     <string name="control_group_battery_sub">Los mismos controles otra vez, reunidos para poder apagar desde una sola fila todo lo que consume batería.</string>
+    <string name="control_group_battery_details">¿Qué aplicaciones la consumen? \u2192 mAh por aplicación (estimado)</string>
+    <string name="control_group_details_action">Abrir detalles de consumo de batería</string>
 
     <string name="control_tile_open_action">Abrir ajustes</string>
     <string name="control_no_menu">%1$s no tiene pantalla de ajustes — toca el icono para cambiarlo.</string>
