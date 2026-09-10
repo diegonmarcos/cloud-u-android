@@ -171,7 +171,7 @@ open class ShellActivity : AppCompatActivity(),
             supportFragmentManager.findFragmentById(R.id.overlay_container) == null
         val section = if (homeScreen) currentSection else ""
         siriusStar.update(section); canopusStar.update(section); centauriStar.update(section)
-        recentTabsStar.update(section)
+        recentTabsStar.update(section); polarisStar.update(section)
     }
     override var currentLabel:   String = ""
 
@@ -337,6 +337,25 @@ open class ShellActivity : AppCompatActivity(),
         )
     }
 
+    /**
+     * Polaris — the 5th star, at the TOP of the screen, and the only one that
+     * opens no menu: a tap navigates straight to
+     * build.json::onehand.search_star.target, by default action:open_search.
+     *
+     * It goes through [onTileClicked] rather than calling [openSearchSheet]
+     * directly, for the same reason every other star's Host does: the target
+     * is a data string, and the tile dispatcher is the one place that knows
+     * what data strings mean. Pointing this star somewhere else stays a
+     * build.json edit.
+     */
+    private val polarisStar by lazy {
+        com.diegonmarcos.superapp.onehand.PolarisStar(
+            activity = this,
+            star = findViewById(R.id.search_polaris_star),
+            navigate = { target -> onTileClicked(target) },
+        )
+    }
+
     /** The history this star draws: newest first, in-app destinations only,
      *  the ones that still exist, capped at build.json::ui.app_tabs.star_cap. */
     private fun recentTabEntries(): List<com.diegonmarcos.superapp.apptabs.AppTabPrefs.Entry> =
@@ -487,6 +506,7 @@ open class ShellActivity : AppCompatActivity(),
             modePrefs = ModePrefs(this)
             currentLabel = getString(R.string.section_home)
             siriusStar.setup(); canopusStar.setup(); centauriStar.setup(); recentTabsStar.setup()
+            polarisStar.setup()
             starsReady = true
             refreshStars()
 

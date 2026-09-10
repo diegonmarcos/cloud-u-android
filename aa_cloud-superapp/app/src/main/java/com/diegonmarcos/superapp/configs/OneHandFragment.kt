@@ -142,6 +142,18 @@ class OneHandFragment : Fragment() {
             listOf(getString(R.string.onehand_star_recent_tabs_outer)),
             emptyList())
 
+        // Polaris gets its own three lines rather than a starCard, because
+        // starCard always prints an outer and an inner ring and this star has
+        // neither. "Outer (0): —" would read as a star that failed to load
+        // instead of a star that goes straight somewhere.
+        val search = CircularMenu.searchStar()
+        if (search.enabled) {
+            root.addView(subhead(ctx, getString(R.string.onehand_star_search_name)))
+            root.addView(caption(ctx, getString(R.string.onehand_star_search_place, search.topOffsetDp)))
+            root.addView(caption(ctx, getString(R.string.onehand_star_search_what)))
+            root.addView(caption(ctx, "  → ${search.target}"))
+        }
+
         val arc = ArcMenu.config()
         starCard(ctx, root, "✦ Canopus — configs",
             "above the bottom-nav island · radius ${arc.radiusDp}dp",

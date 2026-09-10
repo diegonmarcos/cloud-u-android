@@ -361,7 +361,11 @@
     <!-- Configs › Launcher › One-Hand: the star reference. %1$d is the
          pair offset read from the same build.json the stars read, so this page
          cannot claim a distance the stars do not use. -->
-    <string name="onehand_stars_intro">Four stars sit on the Home screen. Sirius at the centre and Canopus just above the bottom-nav island keep the centre line; between them is a row of two, Centauri %1$ddp to its left and Recent Tabs the same distance to its right. Touching one opens its menu; they are always on.</string>
+    <string name="onehand_stars_intro">Five stars sit on the Home screen. Polaris is at the top on its own; Sirius at the centre and Canopus just above the bottom-nav island keep the centre line; between those two is a row of two, Centauri %1$ddp to its left and Recent Tabs the same distance to its right. Touching one opens its menu — except Polaris, which goes straight to search; they are always on.</string>
+    <string name="star_search_desc">Polaris star — search this app</string>
+    <string name="onehand_star_search_name">✦ Polaris — search</string>
+    <string name="onehand_star_search_place">top of the screen, %1$ddp down · centred</string>
+    <string name="onehand_star_search_what">Opens this app\'s search sheet — the same one the magnifier in the top bar opens. It is the only star with no rings: a touch goes straight there. Every menu on this page fans upward, and from the top of the screen an upward fan would draw off the edge, so this star carries one destination instead of a ring.</string>
     <string name="onehand_star_recent_tabs_name">✦ Recent Tabs — pages in this app</string>
     <string name="onehand_star_recent_tabs_place">midway row, %1$ddp right of centre · shares Canopus\'s half-moon fan</string>
     <string name="onehand_star_recent_tabs_what">The pages, tabs and dashboards you last opened INSIDE this app, newest first, each with the name and icon its section declares. Not the same list as Centauri beside it: that one is Android apps on the phone, this one is where you have been in here. Read from the App Tabs history, so it is the same record the Tabs grid shows and it survives closing the app. A page that has since been renamed or deleted is dropped rather than offered.</string>

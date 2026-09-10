@@ -98,6 +98,34 @@ object CircularMenu {
             )
         }
 
+    /**
+     * The Search (Polaris) star — `onehand.search_star`. It is the only star
+     * with no menu behind it: [target] is navigated on tap.
+     *
+     * It has a single target rather than an `actions[]` ring because it lives
+     * at the TOP of the screen and every menu in this package fans UPWARD —
+     * [ArcMenu]'s radius cap is `min(cx, width - cx, cy - topInset) - margin`,
+     * which goes negative up there and collapses the whole menu off the top
+     * edge. See build.json::onehand._doc_search_star.
+     *
+     * [topOffsetDp] is the distance from the top of the screen to the top of
+     * the star's touch box, so the star clears the top island by declaration
+     * rather than by a number typed into a layout.
+     */
+    data class SearchStar(val enabled: Boolean, val target: String, val topOffsetDp: Int)
+
+    private val SEARCH_STAR_DISABLED = SearchStar(false, "", 0)
+
+    fun searchStar(): SearchStar = runCatching {
+        val raw = String(Base64.decode(BuildConfig.ONEHAND_CONFIG_B64, Base64.DEFAULT))
+        val o = JSONObject(raw).optJSONObject("search_star") ?: return SEARCH_STAR_DISABLED
+        val target = o.optString("target")
+        // A star with nothing to open is worse than no star: it draws, it is
+        // tappable, and it does nothing. Treat a blank target as disabled.
+        if (target.isBlank()) return SEARCH_STAR_DISABLED
+        SearchStar(o.optBoolean("enabled", false), target, o.optInt("top_offset_dp", 92))
+    }.getOrDefault(SEARCH_STAR_DISABLED)
+
     /** The inner ring declared under `onehand.<block>.actions[]`, for the stars
      *  that aren't the radial pie (Centauri's recents_menu). Kept here because
      *  this is where the baked config is already decoded. */

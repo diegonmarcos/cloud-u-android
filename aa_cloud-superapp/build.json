@@ -393,6 +393,11 @@
           "_doc": "App Tabs — the last-6 LRU shelf, MOVED here from Tools Primary (user request 2026-08-31). target=page:apptabs/grid lands STRAIGHT on AppTabsFragment with no page-menu intermediate, and it is opened via pushContent, so the Back arrow returns directly to the screen it was invoked from — never a nested submenu.",
           "label": "Tabs",
           "target": "page:apptabs/grid"
+        },
+        {
+          "_doc": "Added 2026-09-10 with the edge-menu reorder, because THIS list is what the one-hand action picker offers (OneHandFragment.buildOptions reads circular_menu.actions and nothing else). The left handle's `down` sector now defaults to action:section:drive; with no entry here the picker had no option matching that string, so the spinner fell back to index 0 and displayed a working slot as 'None' — one careless tap away from persisting None over it. The side effect is that Drive also joins the Sirius star's inner ring, which is the contract this file already states: one list, offered by both menus.",
+          "label": "Drive",
+          "target": "action:section:drive"
         }
       ],
       "_doc_nodes": "Outer ring of the ALL-APPS (Sirius) star: the LEAF pages, not the five parent sections. No \"section\" key on any of them, so CircularMenu leaves childKey null and a tap navigates straight to the target instead of descending a level. Configs is deliberately absent - it has its own star (Canopus/arc_menu).",
@@ -461,33 +466,41 @@
       {
         "id": "right",
         "edge": "right",
+        "_doc_order": "THE OWNER'S SECOND BLOCK, 2026-09-10: Brave / Me / Media Center / Camera / Translator Google / Google Maps, read top to bottom. Six names for seven sectors because `center` is not one of them: a straight-in swipe is Back on BOTH handles and always has been, so the six travel down the remaining sectors in declared order — top_outer, top, top_middle, (center=back), down_middle, down, down_outer. Media Center appears HERE and only here; the first block's fifth entry is cloud-drive, which the owner corrected in a follow-up message after writing 'cloud media center' by mistake. test-onehand-edge-order.sh pins both facts, because the message a future agent finds in the history is the uncorrected one.",
         "position_pct": 50,
         "gestures": {
-          "top_outer": "app:cld.camera",
-          "top": "app:com.whatsapp.w4b",
-          "top_middle": "app:com.google.android.apps.translate",
+          "top_outer": "app:com.brave.browser",
+          "top": "app:com.diegonmarcos.cloudme",
+          "top_middle": "app:com.diegonmarcos.mediacenter",
           "center": "back",
-          "down_middle": "app:md.obsidian",
-          "down": "app:com.instagram.android",
-          "down_outer": "app:com.diegonmarcos.mediacenter"
+          "down_middle": "app:cld.camera",
+          "down": "app:com.google.android.apps.translate",
+          "down_outer": "app:com.google.android.apps.maps"
         }
       },
       {
         "id": "left",
         "edge": "left",
+        "_doc_order": "THE OWNER'S FIRST BLOCK, 2026-09-10: AI Claude / Mail / Instagram / Whatsapp Business / Drive / Gemini, read top to bottom, over the same six non-center sectors the right handle uses. AI Claude moved from down_outer (the last slot, where tasks #111 and #127 put it) to top_outer (the first) — that move is what identifies this block as the LEFT menu rather than the right one. Its target string did NOT change and must not: it is the working Telegram-bot URI documented below. Drive is action:section:drive, the SuperApp's OWN Drive section (ui.sections[id=drive]) — there is no cloud-drive Android application to launch, and the media centre is the right handle's business.",
         "position_pct": 50,
-        "_doc_down_outer": "down_outer is AI Claude — the same Telegram-bot target the Cloud > Apps tile uses (@Cloud_agent_claude_bot). GestureAction.parse only understands app:/action:/bare-OneHandAction, so the intent:// URL has to travel as an action: payload: parse strips the action: prefix, openInHost forwards the rest verbatim in the shortcut_action extra, and ShellActivity's tile grammar recognises the intent: prefix and hands it to Intent.parseUri. Keep the two targets identical — if the bot handle changes, change it here as well.",
         "gestures": {
-          "top_outer": "action:open_search",
-          "top": "app:com.x8bit.bitwarden",
-          "top_middle": "app:com.brave.browser",
+          "top_outer": "action:intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end",
+          "top": "app:com.diegonmarcos.comms.mail",
+          "top_middle": "app:com.instagram.android",
           "center": "back",
-          "down_middle": "app:com.google.android.apps.bard",
-          "down": "app:com.google.android.apps.maps",
-          "down_outer": "action:intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end"
-        }
+          "down_middle": "app:com.whatsapp.w4b",
+          "down": "action:section:drive",
+          "down_outer": "app:com.google.android.apps.bard"
+        },
+        "_doc_top_outer": "top_outer is AI Claude — the same Telegram-bot target the Cloud > Apps tile uses (@Cloud_agent_claude_bot). GestureAction.parse only understands app:/action:/bare-OneHandAction, so the intent:// URL has to travel as an action: payload: parse strips the action: prefix, openInHost forwards the rest verbatim in the shortcut_action extra, and ShellActivity's tile grammar recognises the intent: prefix and hands it to Intent.parseUri. Keep the two targets identical — if the bot handle changes, change it here as well. NOTE: search left this handle in the same commit that reordered it — top_outer used to be action:open_search, which is now the Polaris star at the top of the home screen (onehand.search_star)."
       }
     ],
+    "_doc_search_star": "POLARIS — the home screen's fifth star, asked for on 2026-09-10: 'Search (cloud-superapp) should become a new star in the launcher/one-hand, add it on the top of the screen'. It opens the SuperApp's OWN search, the SearchSheet that ShellActivity.openSearchSheet already shows for the top-bar magnifier and for action:open_search; nothing new was invented for it. Glyph, size and tap padding come from circular_menu.star, so all five stars stay one size. WHY IT CARRIES A SINGLE `target` AND NOT AN `actions[]` LIST LIKE ITS SIBLINGS: every other star opens a menu that fans UPWARD, and ArcMenu caps its radius at min(cx, width - cx, cy - topInset) - margin. At the top of the screen cy - topInset is NEGATIVE, that cap collapses to its floor, and the menu draws off the top edge. A star up here can only be a single destination, so a list would be flexibility that cannot be used. Change what it opens by changing `target` — any string the tile dispatcher understands. top_offset_dp is measured from the top of the screen to the TOP of the star's touch box, and its floor is the top island: toolbar_island sits at layout_marginTop 26dp and is one ?attr/actionBarSize (56dp on a phone) tall, so anything at or below 82dp clears it. 92 leaves 10dp. Nothing else lives up here — Sirius is centred, Centauri and Recent Tabs share the midway row, Canopus sits above the bottom island — so this star displaces none of them.",
+    "search_star": {
+      "enabled": true,
+      "target": "action:open_search",
+      "top_offset_dp": 92
+    },
     "_doc_apps": "App vocabulary offered in the per-swipe action picker (OneHandFragment). Each entry launches its package via getLaunchIntentForPackage; a package the phone doesn't have is silently skipped at fire time. Add an app = one entry — no Kotlin change.",
     "apps": [
       {
@@ -537,6 +550,23 @@
       {
         "label": "Google Maps",
         "package": "com.google.android.apps.maps"
+      },
+      {
+        "_doc_fleet": "The four fleet apps the reordered handles now default to, added 2026-09-10 so the picker shows them under their real names at the top of the list instead of leaving the owner to find them among every installed app. Packages are quoted from ui.external_apps, which is where this repository keeps app identity — cloud-mail is com.diegonmarcos.comms.mail (the applicationId did NOT move when it became a Sterna clone), and cloud-camera is cld.camera, our renamed GrapheneOS Camera build. Obsidian and Bitwarden stay in this list although they are no longer defaults: a favourite is what you can pick, not what you get.",
+        "label": "Cloud Mail",
+        "package": "com.diegonmarcos.comms.mail"
+      },
+      {
+        "label": "Cloud Me",
+        "package": "com.diegonmarcos.cloudme"
+      },
+      {
+        "label": "Cloud Media Center",
+        "package": "com.diegonmarcos.mediacenter"
+      },
+      {
+        "label": "Cloud Camera",
+        "package": "cld.camera"
       }
     ],
     "_doc_radial": "Two-finger radial menu (libs:launcher-onehand, OBSERVE-ONLY via the accessibility service's onMotionEvent — needs Android 14+). Hold TWO fingers anywhere ~still for two_finger_hold_ms → a ring of icons opens at that point; release to one finger and move it to the icon (arrow follows), lift to fire. Because it only observes touches, the app underneath also sees the fingers (may pinch) — that's the cost of not intercepting. items[] are actions: `app:<pkg>` or a global action id (back|home|recents|notifications|quick_settings|...). radius_dp = ring radius; slop_dp = how far the 2-finger centroid may drift before the hold cancels.",

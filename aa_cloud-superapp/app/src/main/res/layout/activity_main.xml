@@ -164,6 +164,32 @@
             android:elevation="16dp"
             android:visibility="gone" />
 
+        <!-- Polaris star — the 5th star and the only one at the TOP of the
+             screen (libs:launcher-onehand PolarisStar). Opens the SuperApp's
+             own search sheet on a tap; it has no menu, because every menu in
+             that package fans upward and would draw off the top edge from
+             here. layout_gravity is top, and the exact distance down comes
+             from build.json::onehand.search_star.top_offset_dp so the star
+             clears the toolbar island by declaration rather than by a margin
+             typed in twice. VISIBLE only on `home`, like its four siblings. -->
+        <TextView
+            android:id="@+id/search_polaris_star"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:text="✦"
+            android:textSize="17sp"
+            android:textColor="#F2F7FF"
+            android:shadowColor="#9CC2FF"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="7"
+            android:contentDescription="@string/star_search_desc"
+            android:clickable="true"
+            android:focusable="true"
+            android:elevation="16dp"
+            android:visibility="gone" />
+
         <!-- Launcher status strip — visible ONLY when the SuperApp is
              the default Android launcher AND the active LauncherTheme
              is Cloud. Drawn at the very top edge (where the system
