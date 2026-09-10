@@ -3205,7 +3205,7 @@
             "open": true,
             "quant": ["fp4", "fp8"],
             "trained_for": ["academia", "finance", "health", "legal", "marketing", "marketing/seo", "programming", "roleplay", "science", "technology", "translation", "trivia"],
-            "prompt": 0.075, "completion": 0.25,
+            "prompt": 0.15, "completion": 0.5,
             "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
           },
           {

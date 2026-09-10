@@ -106,6 +106,36 @@ shell)
         exit 1
     fi
 
+    # ── THE RELEASE GATE DOES NOT ENFORCE A THIRD PARTY'S LIVE STATE ─────
+    # A tester makes two different kinds of claim, and only one of them
+    # belongs in the gate that decides whether the owner's phone gets an APK:
+    #
+    #   about OUR code   — the router resolves a stored id, the picker stores
+    #                      an id, an absent value renders the unknown marker.
+    #                      Nobody outside this repository can change the
+    #                      answer. FATAL, always.
+    #   about SOMEONE     — the baked price still matches what OpenRouter
+    #   ELSE'S SERVICE     charges today. A stranger editing a number on their
+    #                      pricing page changes the answer, with no commit
+    #                      here. That is a MONITOR's question, not a gate's.
+    #
+    # Conflating them cost the owner every APK for a day and a half: run
+    # 34462765453 built a correct SuperApp, then refused to publish it because
+    # z-ai/glm-5.3-flash had doubled in price overnight — a fact with nothing
+    # to say about the launcher, the Inboxes screen or notification handling.
+    #
+    # So the gate ANNOUNCES ITSELF and each tester decides which of its own
+    # assertions that silences. The engine cannot make that call: only the
+    # tester knows which of its lines reach off-box. Whole-file quarantine
+    # cannot express it either — it would have silenced all 53 assertions
+    # about our own code to tolerate the one about theirs.
+    #
+    # Nothing here is skipped quietly. The monitor that DOES enforce these
+    # runs on a schedule, because drift arrives without a commit and a
+    # push-triggered check can only catch what someone pushed on top of.
+    CLOUD_RELEASE_GATE=1
+    export CLOUD_RELEASE_GATE
+
     total=0; failed=0; quarantined=0; revived=0; flaky=0
     for t in "$tdir"/test-*.sh; do
         [ -e "$t" ] || continue
@@ -158,6 +188,10 @@ shell)
     echo "── shell testers [$APP_NAME]: $total ran, $failed failed, $quarantined quarantined, $flaky unstable, $revived revived ──"
     [ "$quarantined" -eq 0 ] || _uncovered "$quarantined tester(s) allowed to fail — see ::warning:: lines above"
     [ "$flaky" -eq 0 ] || _uncovered "$flaky tester(s) marked UNSTABLE — their result is not evidence in either direction"
+    # Standing, unconditional, and counted as a gap even on a fully green run:
+    # what the gate declines to check has to stay as visible as what it checks,
+    # or "we never enforced this" decays into "this passed".
+    _uncovered "assertions against a live third-party service were NOT enforced here (CLOUD_RELEASE_GATE) — the scheduled 'Test → AI model registry' workflow is what enforces them; a red run there means a baked price is wrong even though this one is green"
     [ "$failed" -eq 0 ] && [ "$revived" -eq 0 ]
     ;;
 

@@ -133,7 +133,30 @@ then ok "T7 model entries well-formed, catalog providers carry baked prices"; el
 ROOT="$(cd "$APP/.." && pwd)"
 REGISTRIES="$APP/test/ai-registries.json"
 CATALOG=$(python3 -c "import json,sys;print(json.load(open(sys.argv[1]))['keyboard_ai']['providers']['openrouter']['catalog_url'])" "$LIBS/build.json")
-if curl -sS --max-time 30 -o /tmp/kb-ai-catalog.$$ "$CATALOG" 2>/dev/null; then
+
+# ── WHICH ASSERTIONS MAY VETO A PUBLISH ───────────────────────────────────
+# Everything above this line is about code in this repository, and stays fatal
+# wherever it runs. Everything below reads OpenRouter's live catalogue, so its
+# verdict is authored by a company that has never heard of this fleet.
+#
+# Those two must not share a gate. On 2026-09-10 they did, and it cost the
+# owner's phone every APK for a day and a half: z-ai/glm-5.3-flash doubled in
+# price overnight, T7 correctly noticed, the shell-tester step went red, and
+# the SuperApp's launcher, Inboxes screen and notification fixes — none of
+# which have anything to do with a price — were stranded in the repository.
+# The publish gate that caught it was right; what was wrong was letting a
+# third party's pricing page reach it at all.
+#
+# CLOUD_RELEASE_GATE is set by cloud-android-test-engine.sh when these testers
+# run as the gate on a publish. It silences THESE lines only, and says so on
+# stdout; run this script by hand, or from the scheduled "Test → AI model
+# registry" workflow, and the live blocks are fatal exactly as before. That
+# scheduled run is the one that catches a price the owner is being charged.
+live_checks_are_advisory() { [ -n "${CLOUD_RELEASE_GATE:-}" ]; }
+
+if live_checks_are_advisory; then
+  echo "  skip: T7 live catalog — release gate does not veto a publish on a third party's live state; the scheduled AI model registry monitor enforces this"
+elif curl -sS --max-time 30 -o /tmp/kb-ai-catalog.$$ "$CATALOG" 2>/dev/null; then
   if python3 - "$ROOT" "$REGISTRIES" /tmp/kb-ai-catalog.$$ <<'EOF'
 import json, os, sys
 root, manifest, catalog = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -437,7 +460,9 @@ grep -rqF 'AiRouter' "$LIBS/libs/translate/src/main/java" \
 # a real drift printed its own traceback and the suite still ended `0 failed` and exited 0 — the
 # check ran, found the truth, and reported green. An unreachable catalogue skips; a catalogue that
 # contradicts the registry fails the build.
-if ! curl -sS --max-time 15 -o /dev/null "$CATALOG" 2>/dev/null; then
+if live_checks_are_advisory; then
+  echo "  skip: T8 live OpenRouter cross-check — release gate does not veto a publish on a third party's live state; the scheduled AI model registry monitor enforces this"
+elif ! curl -sS --max-time 15 -o /dev/null "$CATALOG" 2>/dev/null; then
   echo "  skip: T8 live OpenRouter cross-check unreachable ($CATALOG) — quant/trained_for unverified"
 elif python3 - "$ROOT" "$REGISTRIES" <<'EOF'
 import json, os, sys, urllib.request, collections
