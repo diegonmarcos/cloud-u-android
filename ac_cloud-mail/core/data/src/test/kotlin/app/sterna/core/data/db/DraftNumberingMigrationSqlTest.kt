@@ -454,7 +454,12 @@ class DraftNumberingMigrationSqlTest {
             SCHEMA_VERSION,
             reached,
         )
-        assertEquals("the schema now declares v27 (the emails index (accountId, mailboxId, sortKey))", 27, SCHEMA_VERSION)
+        // ⛔ There was a second assertion here pinning SCHEMA_VERSION to the literal 27. It is gone
+        // on purpose. It restated the version this branch happened to land on, so every later
+        // migration made it false — and because FOUR migration testers each carried their own copy,
+        // v27 → v28 failed all four at once and held every Cloud Mail APK behind a red pipeline.
+        // The rule above is the one worth having and it maintains itself: whatever the database
+        // declares, the registered chain must reach it. A literal repeated per branch cannot.
     }
 
     // --- v24 → v25: the numbering each cached row was read under ---------------------------------

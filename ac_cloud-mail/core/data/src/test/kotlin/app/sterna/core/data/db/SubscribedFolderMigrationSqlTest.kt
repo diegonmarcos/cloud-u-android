@@ -373,10 +373,10 @@ class SubscribedFolderMigrationSqlTest {
             SCHEMA_VERSION,
             reached,
         )
-        assertEquals(
-            "the schema declares v27: `emails` gains the (accountId, mailboxId, sortKey) index",
-            27,
-            SCHEMA_VERSION,
-        )
+        // ⛔ A second assertion pinning SCHEMA_VERSION to the literal 27 used to sit here, and it is
+        // gone on purpose — see the same note in DraftNumberingMigrationSqlTest. Four testers each
+        // kept a private copy of "the version this branch ended on", so one migration falsified all
+        // four together. The rule above needs no maintenance: the chain must reach whatever the
+        // database declares, at every version there will ever be.
     }
 }

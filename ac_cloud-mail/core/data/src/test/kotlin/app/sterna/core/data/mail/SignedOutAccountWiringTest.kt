@@ -266,11 +266,18 @@ class SignedOutAccountWiringTest {
                 "on the SERVER, where nothing local can take it back.",
             listOf(
                 "members.forEach { markRecentlyMutated(credentials.id, it.id) }",
+                // A pure local `associate` — no session, no I/O, nothing a sign-out can invalidate.
+                // It landed between the marks and the guard and widened this window from 4 to 5.
+                // Admitted rather than moved: the rule this test exists for is that the guard is the
+                // LAST thing before the move, and that still holds exactly. Anchoring on the guard
+                // instead is not an option — `block` takes the FIRST match and the same guard line
+                // appears three times in this function, the first being the entry check.
+                "val fromArchive = members.associate { it.id to archive }",
                 "$guard(credentials.id, accountStore.accounts().map { it.id })",
                 "val result = runCatching {",
                 "client.move(ctx.session, ctx.accountId, members.map { it.id }, inbox, ctx.auth, fromArchive)",
             ),
-            block("unarchiveThreadsOnReply", "members.forEach { markRecentlyMutated(credentials.id, it.id) }", 4),
+            block("unarchiveThreadsOnReply", "members.forEach { markRecentlyMutated(credentials.id, it.id) }", 5),
         )
     }
 
