@@ -93,4 +93,67 @@
     <color name="control_note">#AAFFFFFF</color>
     <color name="control_section">#FF8BE9A0</color>
     <color name="control_blocked">#FFFFB199</color>
+
+    <!-- ── Launcher theme palettes ──────────────────────────────────────
+         One block per entry in build.json::ui.launcher_themes, whose
+         `palette` object maps a ROLE to one of these names. Nothing here is
+         referenced from Kotlin by name: LauncherPalette resolves the name the
+         active theme declares, so adding a theme is a build.json entry plus a
+         block here and no Kotlin edit at all.
+
+         WHY THEY EXIST. A launcher theme used to declare only behaviour flags.
+         Picking Minimalist Black or Power Saving therefore reached the three
+         surfaces that read no colour from the app — the system bars, the
+         chrome islands and the floating edge menu — and reached no content at
+         all, because every fragment painted 0xFF-literals picked for the
+         default gradient. Those literals are what these tokens replace.
+
+         Contrast is not a matter of taste here: text_* and accent are checked
+         against their OWN theme's window (alpha composited, not assumed
+         opaque) by test-launcher-theme-palette.sh, which recomputes the ratios
+         rather than trusting this comment. -->
+
+    <!-- cloud — the default. `window` is the existing gradient DRAWABLE, not a
+         colour: the role names whatever resource paints that surface, and for
+         this theme that is a two-stop gradient no single hex can stand in for.
+         `hairline` deliberately re-uses glass_border above rather than
+         restating its hex — one hairline, one place. -->
+    <!-- island_accent (#FFB794F4) is 8.56:1 straight on black, which is where
+         the islands sit, but only 3.95:1 once a 13%-white card is between it
+         and the background — and the theme tab's "Set as default launcher"
+         call to action is exactly that case. A brighter violet of the same hue
+         clears AA on the card AND on the gradient's purple band. -->
+    <color name="theme_cloud_accent">#FFC7AEFB</color>
+    <color name="theme_cloud_surface">#22FFFFFF</color>
+    <color name="theme_cloud_surface_selected">#447C3AED</color>
+    <color name="theme_cloud_text_primary">#FFFFFFFF</color>
+    <color name="theme_cloud_text_secondary">#AAFFFFFF</color>
+
+    <!-- cloud_minimalist_black — terminal. TRUE black, not near-black: the
+         panel is OLED and an unlit pixel costs no power, which #121212 does.
+         text_secondary was #FF335533 while it was a literal in
+         MinimalistBlackFragment — 2.49:1 on black, well under the 4.5:1 AA
+         floor for the 11-13sp it was drawn at. #FF7FB77F is 8.98:1 and still
+         reads as the dim half of a green terminal. -->
+    <color name="theme_terminal_window">#FF000000</color>
+    <color name="theme_terminal_surface">#FF0D0D0D</color>
+    <color name="theme_terminal_surface_selected">#FF10240F</color>
+    <color name="theme_terminal_text_primary">#FFB8E6B8</color>
+    <color name="theme_terminal_text_secondary">#FF7FB77F</color>
+    <color name="theme_terminal_accent">#FF00FF66</color>
+    <color name="theme_terminal_hairline">#3300FF66</color>
+
+    <!-- cloud_power_saving — Samsung Super Power Saving. TRUE black for the
+         same OLED reason. `accent` is WHITE on purpose and is not a mistake:
+         the mode's whole claim is that it looks like an ordinary phone in a
+         power-saving state, and one coloured pixel on an otherwise stock
+         screen is what breaks that. It stays a declared role so a surface
+         cannot quietly reach for the violet one instead. -->
+    <color name="theme_powersave_window">#FF000000</color>
+    <color name="theme_powersave_surface">#FF141414</color>
+    <color name="theme_powersave_surface_selected">#FF2A2A2A</color>
+    <color name="theme_powersave_text_primary">#FFFFFFFF</color>
+    <color name="theme_powersave_text_secondary">#FFBDBDBD</color>
+    <color name="theme_powersave_accent">#FFFFFFFF</color>
+    <color name="theme_powersave_hairline">#33FFFFFF</color>
 </resources>

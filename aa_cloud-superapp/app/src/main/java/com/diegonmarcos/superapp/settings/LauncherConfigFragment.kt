@@ -1,7 +1,10 @@
 package com.diegonmarcos.superapp.settings
 import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.launcher.AppIconTile
 import com.diegonmarcos.superapp.system.BackgroundOrchestrator
 import com.diegonmarcos.superapp.ui.Haptics
+import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.ShellActivity
 import com.diegonmarcos.superapp.apps.PhoneAppsFragment
 
@@ -15,11 +18,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.content.pm.LauncherApps
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.Spinner
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
@@ -43,6 +43,7 @@ class LauncherConfigFragment : Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
+        val palette = LauncherPalette.of(ctx)
         val themePrefs = LauncherThemePrefs(ctx)
         val profilePrefs = LauncherProfilePrefs(ctx)
 
@@ -62,7 +63,7 @@ class LauncherConfigFragment : Fragment() {
         // ── Profiles section ───────────────────────────────────────
         root.addView(TextView(ctx).apply {
             text = "Profile"
-            setTextColor(0xFFFFFFFF.toInt())
+            setTextColor(palette.textPrimary)
             setTextAppearance(android.R.style.TextAppearance_Material_Headline)
             setPadding(0, 0, 0, dp(ctx, 8))
         })
@@ -70,7 +71,7 @@ class LauncherConfigFragment : Fragment() {
             text = "Personal / Work / Guest. The picked profile is the " +
                 "foundation for filtering which apps + folders the Phone " +
                 "tab will surface (wired in a follow-up patch)."
-            setTextColor(0xAAFFFFFFL.toInt())
+            setTextColor(palette.textSecondary)
             setTextAppearance(android.R.style.TextAppearance_Material_Body2)
             setPadding(0, 0, 0, dp(ctx, 16))
         })
@@ -93,14 +94,14 @@ class LauncherConfigFragment : Fragment() {
         root.addView(spacer(ctx, dp(ctx, 24)))
         root.addView(TextView(ctx).apply {
             text = "Launcher theme"
-            setTextColor(0xFFFFFFFF.toInt())
+            setTextColor(palette.textPrimary)
             setTextAppearance(android.R.style.TextAppearance_Material_Headline)
             setPadding(0, 0, 0, dp(ctx, 8))
         })
         root.addView(TextView(ctx).apply {
             text = "Pick the look the home screen uses when the SuperApp " +
                 "is set as the Android default launcher."
-            setTextColor(0xAAFFFFFFL.toInt())
+            setTextColor(palette.textSecondary)
             setTextAppearance(android.R.style.TextAppearance_Material_Body2)
             setPadding(0, 0, 0, dp(ctx, 16))
         })
@@ -209,16 +210,16 @@ class LauncherConfigFragment : Fragment() {
                 "✓ SuperApp is the active default launcher."
             else
                 "SuperApp is NOT the default launcher yet."
-            setTextColor(0xFFFFFFFFL.toInt())
+            setTextColor(palette.textPrimary)
             setTextAppearance(android.R.style.TextAppearance_Material_Body2)
             setPadding(0, 0, 0, dp(ctx, 8))
         })
         root.addView(TextView(ctx).apply {
             text = "Set as default launcher →"
-            setTextColor(0xFF7C3AED.toInt())
+            setTextColor(palette.accent)
             setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
             setPadding(dp(ctx, 12), dp(ctx, 12), dp(ctx, 12), dp(ctx, 12))
-            setBackgroundColor(0x227C3AEDL.toInt())
+            setBackgroundColor(palette.surfaceSelected)
             isClickable = true; isFocusable = true
             setOnClickListener {
                 Haptics.tap(it)
@@ -239,8 +240,19 @@ class LauncherConfigFragment : Fragment() {
     }
 
     /**
-     * The twelve Cloud Power Saving slots, two rows of six, each a spinner over
-     * the launchable apps on this device.
+     * The twelve Cloud Power Saving slots, drawn as the grid they actually are.
+     *
+     * WHY IT IS NOT TWELVE SPINNERS ANY MORE. It was, and the owner's word for
+     * it was that it needed to look "more nicee": twelve stacked dropdowns of
+     * app NAMES, in a vertical column, editing a screen that is two rows of six
+     * with icons on it. Nothing about the control resembled the thing it
+     * controlled, and an app is recognised by its icon well before its name is
+     * read. Now the editor IS the grid — same shape, same order, same real
+     * icons, from the same central classification the Phone tab reads.
+     *
+     * The number of columns is the theme's own declared grid ("6x2"), not a 6
+     * written here: the pane and its editor must not be able to disagree about
+     * the layout, and one of two constants is always the one that gets missed.
      *
      * Writes back to [PowerSavingAppsPrefs], which is the same store the home
      * pane reads — the defaults it falls back to are the ones declared in
@@ -248,53 +260,79 @@ class LauncherConfigFragment : Fragment() {
      * slot the user never touches keeps tracking whatever default we ship next.
      */
     private fun addPowerSavingAppsEditor(root: LinearLayout, ctx: android.content.Context) {
-        val slots = LauncherThemes.homeAppsFor(LauncherTheme.CloudPowerSaving.id)
+        val themeId = LauncherTheme.CloudPowerSaving.id
+        val slots = LauncherThemes.homeAppsFor(themeId)
         if (slots.isEmpty()) return
 
         root.addView(spacer(ctx, dp(ctx, 32)))
-        root.addView(sectionHeader(ctx, "Power Saving home apps",
-            "The twelve apps on the Cloud Power Saving home screen — two rows of six, " +
-                "in this order. 'Default' keeps the app shipped in build.json."))
+        root.addView(sectionHeader(ctx,
+            ctx.getString(R.string.power_saving_apps_title),
+            ctx.getString(R.string.power_saving_apps_caption)))
 
         val prefs = PowerSavingAppsPrefs(ctx)
-        val installed = installedApps(ctx)
-
-        slots.forEachIndexed { index, slot ->
-            // Options are rebuilt per slot so entry 0 can name THIS slot's own
-            // default — "Default (Mail)" is readable, a bare "Default" is not.
-            val options = listOf(Option("Default (${slot.label})", null)) +
-                installed.map { Option(it.label, "app:${it.pkg}") }
-            val current = prefs.target(slot.id)
-            val selected = options.indexOfFirst { it.target == current }.coerceAtLeast(0)
-
-            root.addView(TextView(ctx).apply {
-                text = "Row ${index / 6 + 1} · slot ${index % 6 + 1} — ${slot.label}"
-                setTextColor(0xAAFFFFFFL.toInt())
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                setPadding(0, dp(ctx, 8), 0, dp(ctx, 2))
-            })
-            root.addView(Spinner(ctx).apply {
-                adapter = ArrayAdapter(
-                    ctx, android.R.layout.simple_spinner_dropdown_item, options.map { it.label },
+        root.addView(AppIconTile.grid(
+            ctx,
+            slots = prefs.resolved(themeId).map { slot ->
+                AppIconTile.Slot(
+                    id = slot.id,
+                    label = slot.label,
+                    target = slot.target,
+                    // "Selected" here means the user chose this one, as against
+                    // a slot still tracking whatever build.json ships. That is
+                    // the distinction the screen exists to make visible: which
+                    // of the twelve are yours and which are still ours.
+                    selected = prefs.target(slot.id)?.isNotBlank() == true,
                 )
-                setSelection(selected)
-                // Spinner.setSelection POSTS its callback, so a listener attached
-                // here would also receive the PROGRAMMATIC selection and persist
-                // it — merely opening this screen would write an override for all
-                // twelve slots and freeze them against every future default. The
-                // One-Hand editor shipped exactly that bug; this post() is queued
-                // after the one setSelection made, so only real choices are written.
-                var suppress = true
-                post { suppress = false }
-                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onNothingSelected(p: AdapterView<*>?) {}
-                    override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
-                        if (suppress) return
-                        prefs.setTarget(slot.id, options[pos].target)
-                    }
-                }
-            })
-        }
+            },
+            columns = LauncherThemes.gridColumnsFor(themeId),
+            showSelection = true,
+        ) { slot -> chooseAppFor(ctx, prefs, slots, slot.id, themeId) })
+    }
+
+    /**
+     * Point one slot somewhere else.
+     *
+     * A single-choice dialog rather than the Spinner it replaces, for the
+     * reason the Spinner's own comment documented at length: Spinner.setSelection
+     * POSTS its callback, so merely opening the screen re-entered the listener
+     * and could persist an override for all twelve slots, freezing them against
+     * every future default. A dialog only calls back when a human taps a row,
+     * so that whole class of bug has nowhere to live.
+     */
+    private fun chooseAppFor(
+        ctx: android.content.Context,
+        prefs: PowerSavingAppsPrefs,
+        declared: List<LauncherThemes.HomeApp>,
+        slotId: String,
+        themeId: String,
+    ) {
+        val slot = declared.firstOrNull { it.id == slotId } ?: return
+        // Derived here rather than threaded in from the caller: the row/slot
+        // numbers this dialog prints have to describe the grid the user just
+        // tapped, and a column count passed down is a copy that can be handed
+        // in stale.
+        val columns = LauncherThemes.gridColumnsFor(themeId)
+        val index = declared.indexOfFirst { it.id == slotId }
+        // Entry 0 names THIS slot's own shipped app: "Default (Mail)" is
+        // readable where a bare "Default" leaves the user guessing.
+        val options = listOf(
+            Option(ctx.getString(R.string.power_saving_slot_default, slot.label), null),
+        ) + installedApps(ctx).map { Option(it.label, "app:${it.pkg}") }
+        val current = prefs.target(slotId)
+        val selected = options.indexOfFirst { it.target == current }.coerceAtLeast(0)
+
+        androidx.appcompat.app.AlertDialog.Builder(ctx)
+            .setTitle(ctx.getString(
+                R.string.power_saving_slot_chooser,
+                index / columns + 1,
+                index % columns + 1,
+            ))
+            .setSingleChoiceItems(options.map { it.label }.toTypedArray(), selected) { dialog, which ->
+                prefs.setTarget(slotId, options[which].target)
+                dialog.dismiss()
+                rerender()
+            }
+            .show()
     }
 
     private data class Option(val label: String, val target: String?)
@@ -322,10 +360,11 @@ class LauncherConfigFragment : Fragment() {
         isSelected: Boolean,
         onClick: () -> Unit,
     ): View {
+        val palette = LauncherPalette.of(ctx)
         val tile = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             val pad = dp(ctx, 14); setPadding(pad, pad, pad, pad)
-            setBackgroundColor(if (isSelected) 0x447C3AED.toInt() else 0x22FFFFFFL.toInt())
+            setBackgroundColor(if (isSelected) palette.surfaceSelected else palette.surface)
             isClickable = true; isFocusable = true
             setOnClickListener {
                 Haptics.tap(it)
@@ -334,13 +373,13 @@ class LauncherConfigFragment : Fragment() {
         }
         tile.addView(TextView(ctx).apply {
             text = (if (isSelected) "● " else "○ ") + label
-            setTextColor(0xFFFFFFFFL.toInt())
+            setTextColor(palette.textPrimary)
             setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
         })
         if (subtitle.isNotBlank()) {
             tile.addView(TextView(ctx).apply {
                 text = subtitle
-                setTextColor(0xAAFFFFFFL.toInt())
+                setTextColor(palette.textSecondary)
                 setTextAppearance(android.R.style.TextAppearance_Material_Caption)
                 setPadding(0, dp(ctx, 4), 0, 0)
             })
@@ -353,44 +392,48 @@ class LauncherConfigFragment : Fragment() {
     }
 
     /** Section title + caption block — matches the hand-rolled headers above. */
-    private fun sectionHeader(ctx: android.content.Context, title: String, subtitle: String): View =
-        LinearLayout(ctx).apply {
+    private fun sectionHeader(ctx: android.content.Context, title: String, subtitle: String): View {
+        val palette = LauncherPalette.of(ctx)
+        return LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             addView(TextView(ctx).apply {
                 text = title
-                setTextColor(0xFFFFFFFF.toInt())
+                setTextColor(palette.textPrimary)
                 setTextAppearance(android.R.style.TextAppearance_Material_Headline)
                 setPadding(0, 0, 0, dp(ctx, 8))
             })
             addView(TextView(ctx).apply {
                 text = subtitle
-                setTextColor(0xAAFFFFFFL.toInt())
+                setTextColor(palette.textSecondary)
                 setTextAppearance(android.R.style.TextAppearance_Material_Body2)
                 setPadding(0, 0, 0, dp(ctx, 16))
             })
         }
+    }
 
     /** A label/subtitle + right-aligned switch row, persisted on toggle. */
     private fun toggleRow(
         ctx: android.content.Context,
         label: String, subtitle: String, checked: Boolean,
         onChange: (Boolean) -> Unit,
-    ): View = LinearLayout(ctx).apply {
+    ): View {
+        val palette = LauncherPalette.of(ctx)
+        return LinearLayout(ctx).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         val pad = dp(ctx, 14); setPadding(pad, pad, pad, pad)
-        setBackgroundColor(0x22FFFFFFL.toInt())
+        setBackgroundColor(palette.surface)
         addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             addView(TextView(ctx).apply {
                 text = label
-                setTextColor(0xFFFFFFFFL.toInt())
+                setTextColor(palette.textPrimary)
                 setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
             })
             if (subtitle.isNotBlank()) addView(TextView(ctx).apply {
                 text = subtitle
-                setTextColor(0xAAFFFFFFL.toInt())
+                setTextColor(palette.textSecondary)
                 setTextAppearance(android.R.style.TextAppearance_Material_Caption)
             })
         })
@@ -401,6 +444,7 @@ class LauncherConfigFragment : Fragment() {
             // itself silently no-ops when flipped ON.
             setOnCheckedChangeListener { v, isOn -> onChange(isOn); Haptics.tap(v) }
         })
+        }
     }
 
     /** A label + SeekBar row. [value] pre-positions the thumb; onChange fires
@@ -409,18 +453,20 @@ class LauncherConfigFragment : Fragment() {
         ctx: android.content.Context,
         label: String, subtitle: String, min: Int, max: Int, value: Int,
         onChange: (Int) -> Unit,
-    ): View = LinearLayout(ctx).apply {
+    ): View {
+        val palette = LauncherPalette.of(ctx)
+        return LinearLayout(ctx).apply {
         orientation = LinearLayout.VERTICAL
         val pad = dp(ctx, 14); setPadding(pad, pad, pad, pad)
-        setBackgroundColor(0x22FFFFFFL.toInt())
+        setBackgroundColor(palette.surface)
         addView(TextView(ctx).apply {
             text = label
-            setTextColor(0xFFFFFFFFL.toInt())
+            setTextColor(palette.textPrimary)
             setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
         })
         if (subtitle.isNotBlank()) addView(TextView(ctx).apply {
             text = subtitle
-            setTextColor(0xAAFFFFFFL.toInt())
+            setTextColor(palette.textSecondary)
             setTextAppearance(android.R.style.TextAppearance_Material_Caption)
             setPadding(0, 0, 0, dp(ctx, 4))
         })
@@ -434,6 +480,7 @@ class LauncherConfigFragment : Fragment() {
                 override fun onStopTrackingTouch(sb: SeekBar) { onChange(sb.progress) }
             })
         })
+        }
     }
 
     /** Device-wide brightness via Settings.System (manual mode). Needs the
@@ -559,6 +606,23 @@ object LauncherThemes {
 
     fun featuresFor(themeId: String): Features = featuresById[themeId] ?: Features.SAFE_DEFAULT
     fun featuresFor(theme: LauncherTheme): Features = featuresFor(theme.id)
+
+    /**
+     * Tiles per row, from the theme's declared `features.grid` ("6x2" ⇒ 6).
+     *
+     * The home pane and the editor that configures it BOTH read this. They each
+     * used to carry their own 6 — a private const in one file and an integer
+     * division in another — which is two constants that have to agree and no
+     * mechanism making them, so changing the grid in build.json would have
+     * silently relaid one of the two.
+     *
+     * A grid string that is not "<columns>x<rows>" falls back to the whole list
+     * on one row rather than throwing: a wrong-looking grid is recoverable, a
+     * home screen that crashes on a typo is not.
+     */
+    fun gridColumnsFor(themeId: String): Int =
+        featuresFor(themeId).grid.substringBefore('x').toIntOrNull()?.takeIf { it > 0 }
+            ?: Int.MAX_VALUE
 
     // ── Theme → toggle mapping ──────────────────────────────────────────────
     /**

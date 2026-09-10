@@ -4293,12 +4293,30 @@
       }
     ],
     "_doc_launcher_themes": "Launcher themes. `features` is the CHROME the theme draws; `toggles` is the DEVICE STATE it sets. Picking a theme applies both in one action, which is what the owner asked for: one tap, both effects. The mapping lives here and not in a Kotlin `when`, so a new theme is a new entry in this array and nothing else — no enum arm, no branch. Any toggle a theme does not name keeps its current value; a toggle marked `user_owned` in ui.launcher_settings.toggles is dropped from every mapping at parse time and can only ever be set by the user.",
+    "_doc_launcher_theme_surfaces": "The Kotlin files that draw content under a launcher theme and must therefore take every colour from LauncherPalette. test-launcher-theme-palette.sh fails if any of them contains a colour literal again. THIS LIST ONLY GROWS: the rest of the app still paints literals chosen for the default gradient, and each file converted gets added here so the ground already won cannot be lost. Adding a file before converting it fails the tester, which is the intended order.",
+    "launcher_theme_surfaces": [
+      "app/src/main/java/com/diegonmarcos/superapp/ui/LauncherPalette.kt",
+      "app/src/main/java/com/diegonmarcos/superapp/launcher/AppIconTile.kt",
+      "app/src/main/java/com/diegonmarcos/superapp/launcher/PowerSavingFragment.kt",
+      "app/src/main/java/com/diegonmarcos/superapp/launcher/MinimalistBlackFragment.kt",
+      "app/src/main/java/com/diegonmarcos/superapp/settings/LauncherConfigFragment.kt"
+    ],
     "launcher_themes": [
       {
         "id": "cloud",
         "label": "Cloud Theme",
         "subtitle": "The default rich SuperApp UI — bottom nav, dynamic island, 3D home. Top status strip trimmed to Time · Battery only.",
         "default": true,
+        "_doc_palette": "EVERY colour the launcher paints, named by ROLE and mapped to a res/values/colors.xml token (or, for `window`, a res/drawable). This is what a theme MEANS: before it existed a theme declared only behaviour flags, so picking one could reach the system bars, the chrome islands and the edge menu and could not reach a single pixel of content — the content painted 0xFF-literals chosen for the default gradient. A role missing from ANY theme fails test-launcher-theme-palette.sh, which is what stops the next theme shipping half-wired. Add a role here and it must be added to every theme; the hexes stay in colors.xml so the contrast checks and the Android resource qualifiers still see them.",
+        "palette": {
+          "window": "bg_gradient_black_purple",
+          "surface": "theme_cloud_surface",
+          "surface_selected": "theme_cloud_surface_selected",
+          "text_primary": "theme_cloud_text_primary",
+          "text_secondary": "theme_cloud_text_secondary",
+          "accent": "theme_cloud_accent",
+          "hairline": "glass_border"
+        },
         "features": {
           "home_3d": true,
           "bottom_nav": true,
@@ -4336,6 +4354,15 @@
         "id": "cloud_minimalist_black",
         "label": "Cloud Minimalist Black",
         "subtitle": "Terminal aesthetic — pure black background, monospace green app list, no chrome. One-screen scroll.",
+        "palette": {
+          "window": "theme_terminal_window",
+          "surface": "theme_terminal_surface",
+          "surface_selected": "theme_terminal_surface_selected",
+          "text_primary": "theme_terminal_text_primary",
+          "text_secondary": "theme_terminal_text_secondary",
+          "accent": "theme_terminal_accent",
+          "hairline": "theme_terminal_hairline"
+        },
         "features": {
           "home_3d": false,
           "bottom_nav": false,
@@ -4373,6 +4400,15 @@
         "id": "cloud_power_saving",
         "label": "Cloud Power Saving",
         "subtitle": "Looks like an ordinary phone — black, no accent, no chrome. Time top-left, settings top-right, twelve apps on the bottom two rows. Background work paused EXCEPT WireGuard (connectivity stays on).",
+        "palette": {
+          "window": "theme_powersave_window",
+          "surface": "theme_powersave_surface",
+          "surface_selected": "theme_powersave_surface_selected",
+          "text_primary": "theme_powersave_text_primary",
+          "text_secondary": "theme_powersave_text_secondary",
+          "accent": "theme_powersave_accent",
+          "hairline": "theme_powersave_hairline"
+        },
         "features": {
           "home_3d": false,
           "bottom_nav": false,

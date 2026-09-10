@@ -233,10 +233,35 @@ grep -q 'LauncherTheme.CloudPowerSaving *-> *PowerSavingFragment.newInstance()' 
   && ok "goHome routes CloudPowerSaving to PowerSavingFragment" \
   || bad "CloudPowerSaving has no home pane branch — it falls through to the 3D cube"
 [ -f "$PANE" ] && ok "PowerSavingFragment exists" || bad "PowerSavingFragment is missing"
-grep -q 'setBackgroundColor(Color.BLACK)' "$PANE" \
-  && ok "the pane paints full black" || bad "the pane is not black"
-grep -q 'private const val COLUMNS = 6' "$PANE" \
-  && ok "the pane lays out six per row" || bad "the pane does not lay out six per row"
+# Both of these used to be greps for a literal in the pane — `Color.BLACK` and
+# a `private const val COLUMNS = 6`. Neither is there any more, and their
+# absence is the fix rather than a regression: a colour written at the view
+# cannot follow a theme, and a column count written in the pane is a second
+# constant that has to agree with the editor's. The pane now reads both from
+# the theme record, so these assert the VALUES that record carries — which is
+# what "black" and "six per row" actually meant all along.
+grep -q 'setBackgroundResource(palette.windowRes)' "$PANE" \
+  && ok "the pane paints the theme's declared window" \
+  || bad "the pane does not take its background from the palette"
+check "$(python3 - "$BJ" "$APP/app/src/main/res/values/colors.xml" <<'PYB'
+import json, re, sys
+ui = json.load(open(sys.argv[1]))["ui"]
+ps = next(t for t in ui["launcher_themes"] if t["id"] == "cloud_power_saving")
+tok = dict(re.findall(r'<color name="([^"]+)">#([0-9A-Fa-f]{8})<', open(sys.argv[2]).read()))
+name = ps["palette"]["window"]
+hexv = tok.get(name)
+if hexv is None:
+    print("the window role names %r, which is not a colors.xml token" % name)
+elif hexv[2:].upper() != "000000":
+    print("the window is #%s, not true black — an OLED panel spends power on "
+          "every lit subpixel, so a near-black saves nothing this mode claims" % hexv[2:].upper())
+else:
+    print("OK")
+PYB
+)" "the pane's declared window is TRUE black"
+grep -q 'gridColumnsFor' "$PANE" \
+  && ok "the pane lays out the theme's declared grid width, not its own constant" \
+  || bad "the pane hardcodes its column count instead of reading features.grid"
 
 echo "== T8: the baked constants stay clear of javac's 65,535-byte cap =="
 # ui.sections is the one that has actually broken a build (BuildConfig.java:

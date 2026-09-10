@@ -2,11 +2,11 @@ package com.diegonmarcos.superapp.launcher
 import com.diegonmarcos.superapp.App
 import com.diegonmarcos.superapp.system.ScreenLocker
 import com.diegonmarcos.superapp.ui.Haptics
+import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.settings.LauncherTheme
 
 import android.content.Context
 import android.content.pm.LauncherApps
-import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Process
@@ -34,6 +34,23 @@ import androidx.fragment.app.Fragment
  * Filter row at the top is a single-line monospace prompt
  * ("$ filter:") that does a case-insensitive label substring filter
  * against the loaded app list — KISS-style index search, not regex.
+ *
+ * ── How this differs from Cloud Power Saving ─────────────────────────────
+ * Both are true black on an OLED panel and neither is the other. This one is a
+ * FULL launcher in a terminal palette: every launchable app on the device, a
+ * live filter, green monospace, scrolling. Power Saving is a REDUCED mode —
+ * twelve fixed slots on one non-scrolling screen with everything else gone.
+ * Black is what they share; the amount of phone you still have is what
+ * separates them, and collapsing them into one theme would cost whichever of
+ * the two the user actually picked.
+ *
+ * ── Where the colours come from ──────────────────────────────────────────
+ * [LauncherPalette]. Every green here used to be a hex written at the view —
+ * and a literal cannot follow a theme, which is exactly why choosing this theme
+ * recoloured the system bars and the edge menu and not one pixel of the list
+ * below them. The dim green was #FF335533: 2.49:1 against the black it is drawn
+ * on, well under the 4.5:1 the 11-13sp text it was used for needs. The
+ * theme_terminal_text_secondary token that replaced it is 8.98:1.
  */
 class MinimalistBlackFragment : Fragment() {
 
@@ -42,9 +59,13 @@ class MinimalistBlackFragment : Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
+        val palette = LauncherPalette.of(ctx)
         val root = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.BLACK)
+            // setBackgroundResource, not setBackgroundColor: the `window` role
+            // names whichever resource paints that surface, and a theme is free
+            // to make it a gradient drawable rather than a flat colour.
+            setBackgroundResource(palette.windowRes)
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -55,7 +76,7 @@ class MinimalistBlackFragment : Fragment() {
         root.addView(TextView(ctx).apply {
             text = "$ ~/apps"
             typeface = Typeface.MONOSPACE
-            setTextColor(0xFF00FF66.toInt())   // bright terminal green
+            setTextColor(palette.accent)
             textSize = 16f
             setPadding(dp(ctx, 16), dp(ctx, 28), dp(ctx, 16), dp(ctx, 8))
         })
@@ -63,8 +84,8 @@ class MinimalistBlackFragment : Fragment() {
         // Filter input — a single line, monospace, no border.
         root.addView(EditText(ctx).apply {
             hint = "filter:"
-            setHintTextColor(0xFF335533.toInt())
-            setTextColor(0xFF99FF99.toInt())
+            setHintTextColor(palette.textSecondary)
+            setTextColor(palette.textPrimary)
             typeface = Typeface.MONOSPACE
             textSize = 14f
             background = null
@@ -89,7 +110,7 @@ class MinimalistBlackFragment : Fragment() {
         }
         listContainer = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.BLACK)
+            setBackgroundResource(palette.windowRes)
         }
         scroll.addView(listContainer)
         root.addView(scroll)
@@ -98,7 +119,7 @@ class MinimalistBlackFragment : Fragment() {
         root.addView(TextView(ctx).apply {
             text = "—  esc / home → reload  •  taps to launch"
             typeface = Typeface.MONOSPACE
-            setTextColor(0xFF335533.toInt())
+            setTextColor(palette.textSecondary)
             textSize = 11f
             gravity = Gravity.START
             setPadding(dp(ctx, 16), dp(ctx, 8), dp(ctx, 16), dp(ctx, 24))
@@ -122,6 +143,7 @@ class MinimalistBlackFragment : Fragment() {
     private fun rebuildList(filter: String) {
         listContainer.removeAllViews()
         val ctx = listContainer.context
+        val palette = LauncherPalette.of(ctx)
         val needle = filter.trim().lowercase()
         val visible = if (needle.isBlank()) allApps
                       else allApps.filter { it.label.lowercase().contains(needle) }
@@ -129,7 +151,7 @@ class MinimalistBlackFragment : Fragment() {
             listContainer.addView(TextView(ctx).apply {
                 text = app.label
                 typeface = Typeface.MONOSPACE
-                setTextColor(0xFFB8E6B8.toInt())  // soft green app text
+                setTextColor(palette.textPrimary)
                 textSize = 14f
                 setPadding(dp(ctx, 16), dp(ctx, 6), dp(ctx, 16), dp(ctx, 6))
                 isClickable = true
@@ -144,7 +166,7 @@ class MinimalistBlackFragment : Fragment() {
             listContainer.addView(TextView(ctx).apply {
                 text = "— no matches —"
                 typeface = Typeface.MONOSPACE
-                setTextColor(0xFF335533.toInt())
+                setTextColor(palette.textSecondary)
                 textSize = 13f
                 setPadding(dp(ctx, 16), dp(ctx, 16), dp(ctx, 16), dp(ctx, 16))
             })

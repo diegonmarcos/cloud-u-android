@@ -27,6 +27,7 @@ import com.diegonmarcos.superapp.settings.LauncherTheme
 import com.diegonmarcos.superapp.settings.LauncherThemes
 import com.diegonmarcos.superapp.updater.UpdateOverlayFragment
 import com.diegonmarcos.superapp.settings.LauncherThemePrefs
+import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.settings.LauncherProfilePrefs
 import com.diegonmarcos.superapp.settings.LauncherConfigFragment
 import com.diegonmarcos.superapp.settings.ImportConfigsFragment
@@ -902,7 +903,6 @@ open class ShellActivity : AppCompatActivity(),
                 strip?.visibility = View.GONE
                 toolbarIsland?.visibility = View.GONE
                 bottomNavIsland?.visibility = View.GONE
-                window.decorView.setBackgroundColor(android.graphics.Color.BLACK)
             }
             else -> {
                 strip?.visibility = View.GONE
@@ -914,6 +914,15 @@ open class ShellActivity : AppCompatActivity(),
                 bottomNavIsland?.visibility = View.VISIBLE
             }
         }
+        // The backdrop every fragment is drawn over, from the theme's own
+        // palette. Unconditional, and that is the point: it used to be one
+        // `setBackgroundColor(Color.BLACK)` inside the Power Saving arm and
+        // nothing in any other arm, so switching AWAY from Power Saving left
+        // the decor black — the gradient did not come back until the process
+        // was killed. A surface painted in one branch has to be repainted in
+        // all of them, which is what a palette read outside the `when` gives.
+        window.setBackgroundDrawableResource(LauncherPalette.forTheme(this, theme).windowRes)
+
         // Apply the theme's background_pause / wireguard_required
         // policy. Reads features map declared in build.json::ui
         // .launcher_themes[theme].features so this stays declarative
@@ -987,6 +996,10 @@ open class ShellActivity : AppCompatActivity(),
      *  and, if the user is currently on Home, rebuilds the home pane
      *  so a Minimalist Black ↔ Cloud swap takes effect immediately. */
     fun notifyLauncherThemeChanged() {
+        // Before anything reads a colour. The palette is memoised per theme id,
+        // so without this the whole re-render below would repaint itself in the
+        // colours of the theme the user just left.
+        LauncherPalette.invalidate()
         applyLauncherChrome()
         applyLauncherSettings()
         if (currentSection == "home") goHome()

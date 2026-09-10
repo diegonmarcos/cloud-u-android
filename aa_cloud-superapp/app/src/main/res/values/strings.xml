@@ -290,4 +290,27 @@
     <string name="ai_enhance_language">Output language: %1$s</string>
     <string name="ai_enhance_summary">Summary shape: %1$s</string>
 
+    <!-- ── App tiles (Power Saving home pane, and the editor for it) ─────
+         The ● / ○ pair is the same vocabulary the theme and profile tiles
+         already use. It is here rather than in Kotlin because selection is
+         marked by SHAPE as well as by colour — a background tint alone is the
+         one channel a colour-blind user and a greyscale screenshot both lose —
+         and a glyph welded to a label in code can never be translated. -->
+    <string name="app_tile_selected">● %1$s</string>
+    <string name="app_tile_unselected">○ %1$s</string>
+    <!-- A slot outliving the app it points at. The tile still draws and is
+         still tappable (`extapp:` targets route to install-if-missing); this
+         is what a screen reader is told, and what stops a blank icon reading
+         as a rendering bug. %1$s = the slot's label. -->
+    <string name="app_tile_not_installed">%1$s — not installed</string>
+
+    <string name="power_saving_apps_title">Power Saving home apps</string>
+    <string name="power_saving_apps_caption">The twelve apps on the Cloud Power Saving home screen, in this order. Tap one to point that slot somewhere else. A slot left on its shipped app follows whatever we ship next; a slot you choose stays yours.</string>
+    <!-- Chooser title for one slot. %1$d = row, %2$d = position in that row. -->
+    <string name="power_saving_slot_chooser">Row %1$d · slot %2$d</string>
+    <!-- First entry of the chooser: keep whatever build.json ships for this
+         slot. Named rather than a bare "Default" so the list says WHICH app
+         that currently is. %1$s = the shipped app's label. -->
+    <string name="power_saving_slot_default">Default (%1$s)</string>
+    <string name="power_saving_settings">Settings</string>
 </resources>
