@@ -33,10 +33,25 @@ ENGINE=ab_cloud-libs-shared/libs/firewall/build-firestack.sh
 # the dependency set. None of these belongs in a build recipe.
 RESOLVERS='go[[:space:]]+mod[[:space:]]+(tidy|vendor|edit)|go[[:space:]]+get([[:space:]]|$)'
 
-# Every Go module in the repo, and the Makefile that drives it (if any). Found,
-# not listed — libwg-go is here for the same reason firestack is.
-mapfile -t GOMODS < <(find . -name go.mod -not -path './.git/*' -not -path '*/vendor/*' | sort)
-[ "${#GOMODS[@]}" -gt 0 ] || note FAIL "found no go.mod anywhere — this tester is looking in the wrong place"
+# Every Go module THIS REPOSITORY COMMITS, and the Makefile that drives it (if
+# any). Found, not listed — libwg-go is here for the same reason firestack is.
+#
+# Asked of GIT, not of the filesystem. This used to be a `find` with a prune
+# list (.git, vendor), and the omission was not one more directory to add: a
+# `find` cannot tell a module we own from a module we downloaded. The moment a
+# workflow restored ab_cloud-libs-shared/.cache/gomodcache BEFORE this tester
+# ran, every cached DEPENDENCY became a "module of ours with no committed
+# go.sum" and assertion 3 produced dozens of failures about golang.org/x/sync
+# and gopkg.in/yaml.v3 — modules nobody here is supposed to commit anything
+# for. ship-cloud-superapp.yml only escaped it because its tester step happens
+# to run before its cache step; ship-firestack-aar.yml restores the cache first
+# and went red on its first run.
+#
+# Tracked-ness is not a proxy for the property under test, it IS the property:
+# assertion 3 asks whether the pins are COMMITTED. So the question goes to the
+# thing that knows what is committed, and no prune list can rot out of date.
+mapfile -t GOMODS < <(git ls-files -- '*go.mod' ':!:*/vendor/*' | sort)
+[ "${#GOMODS[@]}" -gt 0 ] || note FAIL "git tracks no go.mod anywhere — this tester is looking in the wrong place, or is not running inside the repository"
 
 # 1. No build recipe resolves or mutates dependency state.
 #    Recipe lines only (leading TAB): a `go mod tidy` written in a comment, or
@@ -120,11 +135,47 @@ mapfile -t CALLER_DIRS < <(
 )
 [ "${#CALLER_DIRS[@]}" -gt 0 ] || note FAIL "no script calls $ENGINE — did the engine get renamed?"
 
+# A workflow reaches a caller dir in one of TWO ways, and both have to count.
+# WORK_DIR is how an APP workflow names the directory it builds in. But a
+# workflow can also just RUN one of the caller scripts by path, and
+# ship-firestack-aar.yml does exactly that — it invokes
+# libs/firewall/publish-firestack.sh directly and deliberately declares no
+# WORK_DIR, because the generator would then rewrite its trigger paths from a
+# gradle module map that cannot describe a Go source tree.
+#
+# Matching only on WORK_DIR therefore went BLIND to the third workflow that
+# builds this aar the day it was added: it reported "libs/firewall has no
+# shipping workflow of its own" and skipped the module-cache assertion entirely.
+# That is the same shape as this whole tester going unrun before #203 — a guard
+# that quietly checks nothing looks exactly like a guard that passes.
 covered=0
 for dir in "${CALLER_DIRS[@]}"; do
     found=0
     for wf in .github/workflows/*.yml; do
-        grep -qE "^[[:space:]]*WORK_DIR:[[:space:]]*$dir[[:space:]]*$" "$wf" || continue
+        reaches=0
+        grep -qE "^[[:space:]]*WORK_DIR:[[:space:]]*$dir[[:space:]]*$" "$wf" && reaches=1
+        # ...or the workflow EXECUTES a script in that dir. It must be an
+        # execution, not a mention: the first draft of this matched any literal
+        # occurrence of the path and immediately failed publish-gate-guard.yml,
+        # which names lib-apks/build.sh in a COMMENT and builds no aar at all.
+        # A guard that fails on workflows it was not asked about teaches people
+        # to ignore it, so the pattern requires an interpreter or ./ in front of
+        # the path and refuses YAML comment lines outright.
+        for caller in "$dir"/*.sh; do
+            [ -e "$caller" ] || continue
+            # awk with index(), not a regex: a script path is full of dots and
+            # slashes, and leaving them as metacharacters is how this kind of
+            # check matches something it was not asked about and calls it a pass.
+            grep -qE "^[[:space:]]*(run:[[:space:]]*)?(bash|sh|\./)" "$wf" || continue
+            awk -v p="$caller" '
+                /^[[:space:]]*#/            { next }
+                index($0, p) == 0           { next }
+                /(bash|sh|\.\/)[[:space:]]*[^[:space:]]*$/ { hit = 1 }
+                index($0, "bash " p) || index($0, "sh " p) { hit = 1 }
+                END                         { exit hit ? 0 : 1 }
+            ' "$wf" && reaches=1
+        done
+        [ "$reaches" = 1 ] || continue
         found=1; covered=$((covered+1))
         if grep -q 'gomodcache' "$wf"; then
             note ok "${wf#.github/workflows/} (builds $dir) caches the Go module cache"

@@ -93,6 +93,23 @@ jobs:
         with:
           packages: "platforms;android-36 platforms;android-26 build-tools;36.0.0 platform-tools ndk;28.0.13004108"
 
+      - name: Install jq + unzip
+        run: sudo apt-get update -y && sudo apt-get install -y jq unzip
+
+      # The invariants #202 and #203 wrote down about this build, checked BEFORE
+      # anything slow: a broken contract should read as a contract failure, not
+      # as twenty minutes of gomobile output.
+      #
+      # Also before the module cache is restored, which is where this workflow's
+      # first run died. The tester discovered Go modules with `find`, so a
+      # restored ab_cloud-libs-shared/.cache/gomodcache made every cached
+      # DEPENDENCY look like a module of ours missing a committed go.sum. That is
+      # fixed properly in the tester (it asks git what is tracked, which is the
+      # property it was actually asserting), so this ordering is no longer load-
+      # bearing — it is just the cheap check going first.
+      - name: Guards on the firestack build contract (fatal on failure)
+        run: bash ab_cloud-libs-shared/libs/firewall/build-firestack.test.sh
+
       # Same mitigation, same reasoning, same key as ship-cloud-superapp.yml:
       # the tidy inside `gomobile bind` reads sum.golang.org tiles out of
       # GOMODCACHE, so a warm cache is what stops the build depending on a
@@ -104,15 +121,6 @@ jobs:
           path: ab_cloud-libs-shared/.cache/gomodcache
           key: firestack-gomodcache-${{ runner.os }}-${{ hashFiles('ab_cloud-libs-shared/libs/firewall/firestack/go.sum') }}
           restore-keys: firestack-gomodcache-${{ runner.os }}-
-
-      - name: Install jq + unzip
-        run: sudo apt-get update -y && sudo apt-get install -y jq unzip
-
-      # The invariants #202 and #203 wrote down about this build. Run BEFORE the
-      # build so a broken contract is reported as a contract failure rather than
-      # as twenty minutes of gomobile output.
-      - name: Guards on the firestack build contract (fatal on failure)
-        run: bash ab_cloud-libs-shared/libs/firewall/build-firestack.test.sh
 
       - name: Build every ABI and publish the aars
         env:
