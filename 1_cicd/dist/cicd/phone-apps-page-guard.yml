@@ -1,0 +1,50 @@
+name: "Phone ▸ Apps page guard — the quickmarks rows stay on one line and the page never waits on Smart Folders"
+
+# WHY THIS EXISTS.
+# Two defects have shipped on this one page, and both came back or nearly did.
+#
+#   #260 — every app row in the Quickmarks area wrapped onto second and third
+#          lines. It was fixed once, reported done, and the owner raised it
+#          AGAIN as an old task, because on his phone the rows were still
+#          wrapping while the repository believed the matter closed.
+#   #261 — the page took a visible age to open. The cause was about a thousand
+#          synchronous PackageManager binder calls for Smart Folders, run on
+#          the main thread before the first frame.
+#
+# Neither fix is visible in a diff review. `tiles.chunked(columns)` and
+# `renderSmartFolders(ctx, root, ourApps)` are both perfectly ordinary Kotlin;
+# nothing about either line says "this is the bug the owner has reported twice".
+# Nothing in CI looked at this page at all, so the difference between fixed and
+# broken was invisible to every gate in the repository — the APK built green
+# either way. This job is what makes undoing either one fail the build instead
+# of reaching the phone.
+#
+# WHY IT RUNS ON EVERY PUSH AND EVERY PULL REQUEST, WITH NO PATH FILTER.
+# The regression this catches is not "somebody edited SuitePhoneAppsFragment".
+# The rules span two files today and the manifest is what decides which — a
+# path filter here would be a second, stale copy of that list, and the day a
+# region moves to a third file the gate goes quiet without saying so.
+#
+# BOTH STEPS MATTER. The first proves the page still holds its shape; the
+# second proves the guard would have said so if it did not. A guard only ever
+# watched succeeding is indistinguishable from one that returns 0
+# unconditionally, and this repository has shipped several of those.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  phone-apps-page:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The Quickmarks rows are one scrollable line and Smart Folders is lazy
+        run: python3 1_cicd/src/scripts/cloud-android-phone-apps-page-guard.py
+      - name: The guard still fails when the page goes back to wrapping or blocking
+        run: bash 1_cicd/src/scripts/test/phone-apps-page-guard.test.sh

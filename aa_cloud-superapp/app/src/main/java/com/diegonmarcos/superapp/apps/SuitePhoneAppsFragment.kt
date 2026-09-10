@@ -446,10 +446,16 @@ class SuitePhoneAppsFragment : Fragment() {
         }
         val section = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
-            visibility = View.GONE      // COLLAPSED AT BIRTH
             addView(status)
             addView(body)
         }
+        // COLLAPSED AT BIRTH — the whole point of #261, and named through
+        // `section` rather than set bare inside the apply block above. A bare
+        // `visibility = View.GONE` there is one line away from `status`'s own,
+        // and the two say completely different things: this one is the reason
+        // the page no longer waits, that one merely hides a caption. The page
+        // guard pins this statement by name, which it cannot do to a bare one.
+        section.visibility = View.GONE
         val header = subhead(ctx, "").apply {
             isClickable = true
             isFocusable = true

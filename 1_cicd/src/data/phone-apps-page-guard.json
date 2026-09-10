@@ -1,0 +1,87 @@
+{
+  "_doc": "The structural properties of the Cloud SuperApp's Phone > Apps page that #260 and #261 established, expressed so that undoing one fails the build instead of reaching the owner's phone. WHY THIS FILE EXISTS: #260 was fixed, reported done, and the owner raised it AGAIN as an old task — the rows were wrapping on the page he was looking at while the repository believed the matter closed. Nothing in CI could tell the two states apart, because nothing in CI looked at this page at all. Both fixes are one careless edit from being undone and neither is visible in a diff review: 'render the tiles in rows of six' and 'call renderSmartFolders here' both read as perfectly ordinary Kotlin. They are the two defects this page has already shipped.",
+  "_doc_fields": "label: what a failure line calls this region, so a failure names a surface the owner recognises rather than a file offset. source: repo-relative Kotlin file. entry: the EXACT declaration the guard finds the region by, WITHOUT the opening brace — the guard walks forward from it to the body brace itself, so a signature reflowed across lines still matches. If an entry stops matching, the guard reports that it is checking nothing rather than reporting a clean sweep of nothing. must_call / must_not_call: literal fragments required to be present / absent inside that region's body. Both are matched against the source with COMMENTS AND STRING LITERALS BLANKED OUT, which is the whole reason this is a script and not a grep: this file's prose documents the very constructs the rules forbid, and a grep would read the explanation of the bug as the bug.",
+  "version": 1,
+  "regions": [
+    {
+      "label": "Quickmarks — the curated groups (#260)",
+      "_doc": "The defect verbatim, as it stood until a43547a9c: `for (rowChunk in tiles.chunked(columns))` adding one horizontal LinearLayout PER CHUNK to a vertical parent. A group of thirteen apps therefore drew three stacked rows BY CONSTRUCTION — the second line was not overflow, it was a second View, so no amount of tile sizing could ever have stopped it. The owner's words were 'all apps line here are sideways scrollable no second lines!!!'.",
+      "source": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/apps/SuitePhoneAppsFragment.kt",
+      "entry": "private fun buildPage(ctx: Context, root: LinearLayout)",
+      "must_call": [
+        "tileStrip(",
+        "addSmartFoldersSection("
+      ],
+      "must_not_call": [
+        "chunked(",
+        "renderSmartFolders("
+      ],
+      "_doc_must_not_call": "`renderSmartFolders(` is written WITH its opening parenthesis on purpose, and that parenthesis is load-bearing. Without it the fragment would also match `renderSmartFoldersAsync`, which is the call this page is REQUIRED to make — the rule would then forbid the fix instead of the defect, and could never be satisfied. With it, the two are distinct: `renderSmartFoldersAsync(` does not contain `renderSmartFolders(`."
+    },
+    {
+      "label": "Quickmarks — the Active Apps and Last Apps rows (#260)",
+      "_doc": "The owner's 'all apps line here' is plural and these are the other lines it names. They sit inside the Quickmarks area, above the All Apps divider, and they chunked into rows exactly like the curated groups did. Fixing only the curated groups would have left two sections on the same surface still wrapping, which is indistinguishable from not having fixed it.",
+      "source": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/apps/SuitePhoneAppsFragment.kt",
+      "entry": "private fun usageSection(",
+      "must_call": [
+        "tileStrip("
+      ],
+      "must_not_call": [
+        "chunked("
+      ]
+    },
+    {
+      "label": "Quickmarks — the sideways-scrolling strip itself (#260)",
+      "_doc": "A strip that is not a HorizontalScrollView does not scroll sideways, and a row that is not HORIZONTAL is a column. Checked separately from its callers because every rule above is satisfied by calling tileStrip — if tileStrip itself stopped scrolling, every caller would still pass and the page would still be wrong.",
+      "source": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/apps/SuitePhoneAppsFragment.kt",
+      "entry": "private fun tileStrip(ctx: Context, tiles: List<View>): View",
+      "must_call": [
+        "HorizontalScrollView(",
+        "LinearLayout.HORIZONTAL",
+        "clipToPadding = false"
+      ],
+      "must_not_call": [
+        "chunked("
+      ]
+    },
+    {
+      "label": "Quickmarks — the tile label may not set the row height (#260)",
+      "_doc": "A long application name is the thing that most often forces a second line. The label is bounded to one line and ellipsised so it cannot dictate the cell, and the cell is a fixed width rather than a weight — a weighted child inside a HorizontalScrollView measures against an UNSPECIFIED width spec, resolves to zero, and is an invisible tile.",
+      "source": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/apps/SuitePhoneAppsFragment.kt",
+      "entry": "private fun makeAppTile(",
+      "must_call": [
+        "maxLines = 1",
+        "cellWidth(ctx)"
+      ],
+      "must_not_call": []
+    },
+    {
+      "label": "Smart Folders — the section starts collapsed and expands itself (#261)",
+      "_doc": "The owner asked for a lazy load: collapsed at birth, the page interactive without it, the fetch in the background, the section expanding when the result lands. GONE at birth is the part a well-meaning edit removes first — 'why is this section hidden?' — and removing it puts the whole page back to waiting on the fetch.",
+      "source": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/apps/SuitePhoneAppsFragment.kt",
+      "entry": "private fun addSmartFoldersSection(ctx: Context, root: LinearLayout, exclude: Set<String>)",
+      "must_call": [
+        "section.visibility = View.GONE",
+        "renderSmartFoldersAsync(",
+        "isAdded"
+      ],
+      "must_not_call": [
+        "renderSmartFolders("
+      ],
+      "_doc_must_call": "Pinned as `section.visibility = View.GONE`, through the view's name, and not as a bare `visibility = View.GONE`. The bare form is a SUBSTRING of `status.visibility = View.GONE` a few lines below, which hides a caption and has nothing to do with the page waiting — so the bare rule stayed satisfied after collapsed-at-birth was deleted, and the guard passed on a page that had gone back to opening slowly. That false green was caught by this guard's own self-test before it shipped."
+    },
+    {
+      "label": "Smart Folders — the fetch stays off the main thread (#261)",
+      "_doc": "What was actually slow was never the views. Four install_source rules in build.json answer by calling PackageManager.getInstallSourceInfo ONCE PER APP — on the order of a thousand synchronous binder round trips before a single View exists — and five more rules each walk a multi-day usage, network or battery history. `Thread {` is what moved it off the main thread; `isAttachedToWindow` is what stops the answer being written into a torn-down view hierarchy, which is the standard crash for this pattern.",
+      "source": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/apps/PhoneAppsFragment.kt",
+      "entry": "fun renderSmartFoldersAsync(",
+      "must_call": [
+        "Thread {",
+        "body.post {",
+        "isAttachedToWindow",
+        "sCacheGeneration"
+      ],
+      "must_not_call": []
+    }
+  ]
+}
