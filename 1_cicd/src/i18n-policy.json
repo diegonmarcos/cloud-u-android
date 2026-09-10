@@ -8,8 +8,15 @@
     "plural_quantities": ["one", "other"]
   },
 
+  "resource_files": {
+    "_doc": "WHICH FILES IN values/ CARRY TRANSLATIONS. The guard used to read the single filename `strings.xml`, which meant a module could put user-facing text anywhere else in values/ and never be checked — libs:keyboard did exactly that, keeping the emoji type-tab labels in superapp_media_strings.xml, and those three labels sat in English on a Spanish phone the whole time the guard reported green. It now reads every *.xml in values/ that declares a translatable resource. The exception is Android's `donottranslate` naming convention: values/ also carries per-locale BEHAVIOUR — which punctuation clusters, which layout display names — and those files exist precisely to say `this is configuration, not prose`. Demanding a Spanish donottranslate.xml would be demanding a translation of a setting.",
+    "skip_name_prefixes": ["donottranslate"]
+  },
+
   "modules": {
     "_doc": "Every module in the repository that owns a src/main/res/values/strings.xml must appear here, or the guard fails. That is deliberate and it is the answer to 'what happens to the NEXT app the owner builds': a new module with a new strings.xml is not silently exempt, it stops CI until somebody states in this file whether its interface has to be readable in Spanish. `require` lists locale qualifiers that must cover every translatable key. `exempt` is a sentence saying why not, and is read by a human in review.",
+
+    "_keyboard_was_exempt": "WHY libs/keyboard IS NO LONGER EXEMPT. Its entry used to read `Vendored HeliBoard fork ... an upstream-sync task and not a translation task`, and every clause of that was checkable and wrong. The tree is not a mirror: ab_cloud-libs-shared/libs/keyboard/README.md says `This tree is owned code: edit src/main directly and commit. There is no upstream sync, no overlay patch, no regeneration step`, and there is no patches/ directory under it. More decisively, the split is measurable. At the vendoring commit 2dba4ec53 (`vendor HeliBoard as libs:keyboard`), values/strings.xml and values-es/strings.xml each held 534 translatable keys — upstream shipped Spanish COMPLETE. Every key missing from values-es today was added to values/ by a commit of ours after that import: 149 of 149, zero from upstream. So there was never an upstream-sync task to wait for, and pulling upstream would not have moved the number by one. The keys are Text Enhancements, Text Resume, AI model routing, clipboard export/import, emoji search and pinning, grammar check and translation settings — features this repository built, on the app the owner touches on every screen.",
 
     "aa_cloud-superapp/app":                  { "require": ["es"] },
     "ab_cloud-libs-shared/libs/mail":         { "require": ["es"] },
@@ -19,7 +26,7 @@
     "ab_cloud-libs-shared/libs/core":            { "exempt": "One string, the library's own name, never drawn on screen." },
     "ab_cloud-libs-shared/libs/launcher-onehand":{ "exempt": "One string, the library's own name; every label the One-Hand launcher draws comes from the host app's resources." },
     "ab_cloud-libs-shared/keyboard-engines/app":  { "exempt": "Harness APK that hosts the keyboard engines for bench runs; it has no interface beyond its own launcher label." },
-    "ab_cloud-libs-shared/libs/keyboard":        { "exempt": "Vendored HeliBoard fork. Its 98 locales come from upstream and are refreshed by pulling upstream, not by hand-writing Spanish here; values-es currently trails the default by 163 keys, which is an upstream-sync task and not a translation task." },
+    "ab_cloud-libs-shared/libs/keyboard":        { "require": ["es"] },
 
     "ac_cloud-browser/app":   { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
     "ac_cloud-calendar/app":  { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
@@ -28,7 +35,7 @@
     "ac_cloud-nav/app":       { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
     "ac_cloud-wallet/app":    { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
     "ac_cloud-me/app":        { "exempt": "Four strings, all of them the app label and its launcher shortcuts." },
-    "ac_cloud-keyboard/app":  { "exempt": "Three strings; the keyboard's interface lives in libs:keyboard, which carries upstream's locales." },
+    "ac_cloud-keyboard/app":  { "exempt": "Three strings, all of them the app label and its launcher shortcuts; the keyboard's own interface lives in ab_cloud-libs-shared/libs/keyboard, which is required above." },
 
     "ac_cloud-camera/app":       { "exempt": "Vendored GrapheneOS Camera fork. 192 English-only strings and no locale directory at all: upstream ships translations that this vendoring did not bring across. The repair is to vendor upstream's res/values-* rather than to hand-write Spanish, so it is an upstream-sync task. NEEDS THE OWNER'S DECISION — see the report on commit w232." },
     "ac_cloud-chat/android/app": { "exempt": "Vendored Mattermost fork; React Native app whose interface strings live in the JS bundle's i18n catalogue, not in this strings.xml." },

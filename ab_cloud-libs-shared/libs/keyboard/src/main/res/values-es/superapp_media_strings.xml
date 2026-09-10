@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spanish for the emoji-surface type tabs. Mirrors values/superapp_media_strings.xml:
+     these three labels are ours, not HeliBoard's, and they sit on the emoji
+     surface the owner opens from the keyboard toolbar. -->
+<resources>
+    <string name="emoji_type_tab_emoji">Emojis</string>
+    <string name="emoji_type_tab_gif">GIF</string>
+    <string name="emoji_type_tab_sticker">Pegatinas</string>
+</resources>

@@ -33,11 +33,38 @@ trap 'rm -rf "$WORK"' EXIT
 # only against what is already committed.
 PRISTINE="$WORK/pristine"
 mkdir -p "$PRISTINE"
+
+# WHICH FILES THE SANDBOX NEEDS. The guard reads every *.xml in values/ — not
+# only strings.xml, since a module may keep user-facing text in a file of its
+# own — plus the same filenames under each locale directory the policy
+# requires. It reads nothing else, and the keyboard alone ships 116 locale
+# directories, so copying values-* wholesale would move 38 MB into every
+# sandbox to let the guard look at two of them.
+#
+# The locale list is DERIVED FROM THE POLICY rather than written here. A
+# hardcoded `values-es` in this tester is a second copy of a fact that already
+# lives in i18n-policy.json, and the day somebody adds a second required locale
+# it would be the copy that silently did not move — leaving the new locale
+# untested by the one file whose job is to test it.
+KEEP="$(python3 - "$ROOT" <<'KEEPEOF'
+import json, os, sys
+policy = json.load(open(os.path.join(sys.argv[1], "1_cicd/src/i18n-policy.json")))
+dirs = {"values"}
+for rule in policy["modules"].values():
+    if isinstance(rule, dict):
+        for locale in rule.get("require", []):
+            dirs.add("values" if locale == "default" else "values-" + locale)
+print(r"/src/main/res/(%s)/[^/]+\.xml$|/1_cicd/src/i18n-policy\.json$|/1_cicd/src/scripts/[^/]+\.py$"
+      % "|".join(sorted(dirs)))
+KEEPEOF
+)"
+
 ( cd "$ROOT" && find . \
        \( -name .git -o -name build -o -name z_archive -o -name node_modules \) -prune \
-       -o \( -name strings.xml -path '*/src/main/res/values*' \) -print0 \
+       -o \( -name '*.xml' -path '*/src/main/res/values*' \) -print0 \
        -o -path './1_cicd/src/i18n-policy.json' -print0 \
        -o -path './1_cicd/src/scripts/*.py' -print0 ) \
+  | grep -zE "$KEEP" \
   | tar -C "$ROOT" --null -T - -cf - | tar -C "$PRISTINE" -xf -
 
 # run_guard <sandbox> -> prints the guard's combined output, returns its status
@@ -150,6 +177,45 @@ expect_caught "a NEW app with no locale cannot slip in undeclared" \
 expect_caught "a Spanish key that translates nothing is caught" \
     'ghost_key. translates nothing' \
     orphan_key
+
+# ── libs:keyboard is enforced, not exempt ──────────────────────────
+#
+# WHY THESE TWO CASES EXIST. libs/keyboard carried `exempt` in the policy for
+# months on the reasoning that it was a mirror whose Spanish comes from
+# upstream. It is not a mirror (its README says so, and there is no patches/
+# directory), and the 149 keys values-es was missing had every one of them been
+# added by THIS repository after the HeliBoard vendoring — upstream shipped
+# Spanish complete. The exemption therefore suppressed a real gap on the app
+# the owner touches on every screen, and the cheapest way for it to come back
+# is somebody re-adding one line to i18n-policy.json. The first case fails the
+# moment that line returns.
+#
+# The second covers the engine change the first one needed: the guard used to
+# read the filename `strings.xml` and nothing else, so the three emoji
+# type-tab labels in superapp_media_strings.xml were never checked at all.
+ES_KEYBOARD="ab_cloud-libs-shared/libs/keyboard/src/main/res/values-es/strings.xml"
+ES_KEYBOARD_MEDIA="ab_cloud-libs-shared/libs/keyboard/src/main/res/values-es/superapp_media_strings.xml"
+
+drop_keyboard_key() { python3 - "$2/$ES_KEYBOARD" "$1" <<'PY'
+import re, sys
+path, key = sys.argv[1], sys.argv[2]
+text = open(path, encoding="utf-8").read()
+out = re.sub(r'\n *<string name="%s".*?</string>' % re.escape(key), "", text, count=1, flags=re.S)
+assert out != text, "test bug: %s not found in %s" % (key, path)
+open(path, "w", encoding="utf-8").write(out)
+PY
+}
+
+delete_keyboard_media_locale() { rm -f "$1/$ES_KEYBOARD_MEDIA"; }
+
+expect_caught "the keyboard is no longer exempt — a dropped Spanish key is caught" \
+    'libs/keyboard values-es/strings.xml: missing key `settings_screen_clipboard`' \
+    drop_keyboard_key settings_screen_clipboard
+
+expect_caught "a translatable file that is not strings.xml is checked too" \
+    'no values-es/superapp_media_strings.xml' \
+    delete_keyboard_media_locale
+
 
 if [ "$FAILURES" -eq 0 ]; then
     echo "PASS — the guard fails on every way a translation can go missing."

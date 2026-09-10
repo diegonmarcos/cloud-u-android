@@ -113,35 +113,69 @@ def discover(repo):
     return found
 
 
+def translatable_files(res, policy):
+    """Every file in values/ that declares translatable resources.
+
+    NOT just strings.xml. A module is free to put user-facing text in a file of
+    its own — libs:keyboard keeps the emoji type-tab labels in
+    superapp_media_strings.xml — and a guard that reads one filename hands
+    anybody a way to add an English string it will never look at. Those three
+    labels sit on the emoji surface and were untranslated the whole time this
+    guard was reporting green.
+
+    Files whose name the policy marks as configuration are skipped: values/
+    also carries per-locale BEHAVIOUR (which punctuation clusters, which layout
+    names) under Android's donottranslate convention, and demanding Spanish for
+    those would be demanding a translation of a setting.
+    """
+    skip = tuple(policy["resource_files"]["skip_name_prefixes"])
+    out = []
+    for name in sorted(os.listdir(os.path.join(res, "values"))):
+        if not name.endswith(".xml") or name.startswith(skip):
+            continue
+        if load(os.path.join(res, "values", name)):
+            out.append(name)
+    return out
+
+
 def check_module(repo, module, locales, policy, fail):
     res = os.path.join(repo, module, "src", "main", "res")
-    base = load(os.path.join(res, "values", "strings.xml"))
     quantities = set(policy["locale"]["plural_quantities"])
 
+    for filename in translatable_files(res, policy):
+        base = load(os.path.join(res, "values", filename))
+        check_file(res, module, filename, base, locales, quantities, fail)
+
+
+def check_file(res, module, filename, base, locales, quantities, fail):
     for locale in locales:
         values_dir = "values" if locale == "default" else "values-" + locale
-        path = os.path.join(res, values_dir, "strings.xml")
+        path = os.path.join(res, values_dir, filename)
         if not os.path.exists(path):
             fail(
-                "%s: no %s/strings.xml — %d strings render in English on a %s device"
-                % (module, values_dir, len(base), locale)
+                "%s: no %s/%s — %d strings render in English on a %s device"
+                % (module, values_dir, filename, len(base), locale)
             )
             continue
         loc = load(path)
+        # Every message below names the FILE, not just the directory: with more
+        # than one translatable file per module, "values-es" alone does not say
+        # where to go and fix it.
+        where = "%s/%s" % (values_dir, filename)
 
         for name in sorted(set(base) - set(loc)):
             fail("%s %s: missing key `%s` (%s)"
-                 % (module, values_dir, name, repr(resource_text(base[name])[:60])))
+                 % (module, where, name, repr(resource_text(base[name])[:60])))
 
         for name in sorted(set(loc) - set(base)):
             fail("%s %s: key `%s` translates nothing — no such key in values/"
-                 % (module, values_dir, name))
+                 % (module, where, name))
 
         for name in sorted(set(base) & set(loc)):
             src, dst = base[name], loc[name]
             if src.tag != dst.tag:
                 fail("%s %s: `%s` is <%s> in values/ but <%s> here"
-                     % (module, values_dir, name, src.tag, dst.tag))
+                     % (module, where, name, src.tag, dst.tag))
                 continue
 
             if src.tag == "string":
@@ -150,7 +184,7 @@ def check_module(repo, module, locales, policy, fail):
                 have = {i.get("quantity") for i in dst}
                 for missing in sorted(quantities - have):
                     fail("%s %s: plurals `%s` has no quantity=\"%s\" — %s needs it"
-                         % (module, values_dir, name, missing, locale))
+                         % (module, where, name, missing, locale))
                 by_src = {i.get("quantity"): i for i in src}
                 # `other` carries the argument in every quantity Android will
                 # pick, so it is the English item every translated item is
@@ -166,18 +200,18 @@ def check_module(repo, module, locales, policy, fail):
                     list(src), list(dst),
                 ))
 
-            for where, s, d in pairs:
+            for part, s, d in pairs:
                 if s is None or d is None:
                     continue
                 s_text, d_text = resource_text(s), resource_text(d)
                 if signature(s_text) != signature(d_text):
                     fail("%s %s: `%s`%s format specifiers changed — values/ has %s, this has %s"
-                         % (module, values_dir, name, where, describe(s_text), describe(d_text)))
+                         % (module, where, name, part, describe(s_text), describe(d_text)))
                 # aapt rejects a bare apostrophe outside a quoted run, and it is
                 # the single easiest thing to get wrong writing Spanish.
                 if re.search(r"(?<!\\)'", d_text) and not d_text.startswith('"'):
                     fail("%s %s: `%s`%s has an unescaped apostrophe — aapt will reject it; write \\'"
-                         % (module, values_dir, name, where))
+                         % (module, where, name, part))
 
 
 def main():
