@@ -543,7 +543,7 @@ class ReaderBodyTest {
                 "passing \"\" renders <p></p>, which is the empty screen this string exists for. " +
                 "quoteLabel rides the same line for the same two reasons",
             2,
-            lines(source, """plainText, derivedNotice, noContent, quoteLabel,"""),
+            lines(source, """plainText, derivedNotice, noContent, quoteLabel, deceptiveLinkLabel,"""),
         )
         assertEquals(
             "the page must RESOLVE message_quoted_text: a literal would label the quote button " +

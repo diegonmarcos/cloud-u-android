@@ -246,26 +246,26 @@ class NoPrivateHostInTreeTest {
 
         /**
          * Known files the walk must have READ — not merely have on disk. One per area that an
-         * exclusion could amputate without denting the floor: measured, adding `fastlane` to
-         * [SKIPPED_NAMES] still leaves 579 files, and `site` or `xml` are just as cheap. Every one
-         * of those three is published material (F-Droid's listing in nine languages, the public
-         * site, the manifest), which is exactly where a leak would hurt.
+         * exclusion could amputate without denting the floor: measured, adding `res` to
+         * [SKIPPED_NAMES] still leaves hundreds of files, and `core` or `xml` are just as cheap.
+         * The last three are published material (the build declaration the CI reads, every word
+         * the app shows, the manifest), which is exactly where a leak would hurt.
          */
         val WITNESSES = listOf(
             "README.md",
-            "settings.gradle.kts",
-            ".forgejo/workflows/ci.yml", // a tracked file under a dot directory
+            "settings.gradle",
+            ".gitignore", // a tracked file whose name begins with a dot
             "core/data/src/test/resources/k9s/imap-plain.k9s",
             "app/src/testApp/kotlin/app/sterna/bench/BenchProvisionReceiver.kt",
-            "fastlane/metadata/android/en-US/full_description.txt", // what F-Droid publishes
-            "site/template.html", // the public site
+            "build.json", // this app's own build declaration, read by the fleet's CI
+            "app/src/main/res/values/strings.xml", // every word the app shows
             "app/src/main/AndroidManifest.xml", // and with it, the `.xml` extension
         )
 
         /** Repo root, walked up from the module's working directory (as the other source lints do). */
         val REPO_ROOT: File by lazy {
             generateSequence(File("").absoluteFile) { it.parentFile }
-                .firstOrNull { File(it, "settings.gradle.kts").isFile && File(it, "gradlew").isFile }
+                .firstOrNull { File(it, "settings.gradle").isFile && File(it, "gradlew").isFile }
                 ?: error(
                     "cannot locate the checkout root from ${File("").absolutePath} — this test " +
                         "reads the source tree as text and needs a working directory inside it",

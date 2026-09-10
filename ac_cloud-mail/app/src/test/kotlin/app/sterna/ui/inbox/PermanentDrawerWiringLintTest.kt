@@ -140,6 +140,7 @@ class PermanentDrawerWiringLintTest {
             "onSwitchAccount = onSwitchAccount,",
             "onOpenAccountSettings = onOpenAccountSettings,",
             "onOpenSettings = onOpenSettings,",
+            "onOpenHome = onOpenHome,",
             "onCreateFolder = { showCreateFolder = true },",
             "onAddSubfolder = { folderToAddChild = it },",
             "onRenameFolder = { folderToRename = it },",
@@ -148,7 +149,7 @@ class PermanentDrawerWiringLintTest {
         )
         assertEquals(
             "the two DrawerContent calls no longer hand the sheet the same state. Both envelopes " +
-                "(permanent from 1 200 dp, modal below) must pass these sixteen arguments, whole " +
+                "(permanent from 1 200 dp, modal below) must pass these seventeen arguments, whole " +
                 "and in this order. A single one rewritten in a single branch compiles and is " +
                 "invisible to every other rule here: `folderRowsBadgeUnread = true` puts #185's " +
                 "fold-by-default back on an IMAP account, where a folder folds itself and the mail " +

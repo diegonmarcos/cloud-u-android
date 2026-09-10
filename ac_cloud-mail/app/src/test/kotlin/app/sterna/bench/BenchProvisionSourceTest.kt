@@ -142,7 +142,7 @@ class BenchProvisionSourceTest {
          */
         val REPO_ROOT: File by lazy {
             generateSequence(File("").absoluteFile) { it.parentFile }
-                .firstOrNull { File(it, "settings.gradle.kts").isFile }
+                .firstOrNull { File(it, "settings.gradle").isFile }
                 ?: error(
                     "cannot locate the repo root from ${File("").absolutePath} — this test reads " +
                         "source files as text and needs a working directory inside the checkout",

@@ -102,11 +102,22 @@ class DrawerDividerMarginLintTest {
                 "guard — the line that closes the account list. Found none before offset $anchor."
         }
         val call = callAt(text, before.last().range.first)
-        val gap = text.substring(before.last().range.first + call.length, anchor)
+        // The drawer's own navigation rows may stand between the divider and the unified
+        // entry -- Home was put there (#271) and more may follow. Each NavigationDrawerItem
+        // is removed WHOLE before the remainder is judged, so a row is allowed and anything
+        // else is not: the divider this rule pins is still the one closing the account list,
+        // with a drawer row directly beneath it.
+        var gap = text.substring(before.last().range.first + call.length, anchor)
+        while (true) {
+            val row = gap.indexOf("NavigationDrawerItem(")
+            if (row < 0) break
+            gap = gap.removeRange(row, row + callAt(gap, row).length)
+        }
         check(gap.isBlank()) {
-            "The divider this rule pins must be the one IMMEDIATELY above the unified entry's " +
-                "guard; something now sits between them, so the margin below the divider no longer " +
-                "lands under the selectable row. Text found between them was:\n$gap"
+            "Between the divider this rule pins and the unified entry's guard there may be the " +
+                "drawer's own NavigationDrawerItem rows and nothing else. Something else sits " +
+                "there now, so the margin below the divider no longer lands under a drawer row. " +
+                "What was left after removing the rows was:\n$gap"
         }
         return call
     }

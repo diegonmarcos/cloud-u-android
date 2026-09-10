@@ -544,14 +544,14 @@ class MailBySenderTest {
                 "unreadable one, " +
                 "or her own vacation script. It keeps its pointer to Settings → Filters, where " +
                 "the state is actually read and repaired, and claims nothing about a cause",
-            "Sterna Mail isn't managing this account's filter script at the moment, so no filter " +
+            "Cloud Mail isn't managing this account's filter script at the moment, so no filter " +
                 "rule can be added from here. %1\$s → %2\$s is where this account's rules are edited.",
             strings["sender_volume_foreign_script"],
         )
         assertEquals(
             "the greyed entry in the reader's menu — a menu line, so short, and the same claim: " +
                 "not managing, therefore not writable. No cause named",
-            "Sterna isn't managing this filter script",
+            "Cloud Mail isn't managing this filter script",
             strings["sender_volume_block_foreign"],
         )
     }

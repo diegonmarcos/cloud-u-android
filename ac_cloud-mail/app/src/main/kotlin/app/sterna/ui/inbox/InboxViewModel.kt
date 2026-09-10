@@ -378,6 +378,9 @@ class InboxViewModel(
         _openingAttachment.value = key
         viewModelScope.launch {
             try {
+                // unguarded: `_openingAttachment` above is this call's leave guard, and it is
+                // set before the launch and cleared in the `finally` below. It is checked at
+                // the tap, which is the only place that can also refuse a second download.
                 AttachmentOpen.openExternally(app, repo, storage, credentials, part, email.id)
             } catch (cancelled: CancellationException) {
                 throw cancelled

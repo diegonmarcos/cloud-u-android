@@ -242,8 +242,10 @@ class SenderRuleFromReaderTest {
         val screen = SOURCE.readText()
         assertTrue(
             "the participants panel must arm the read, as 'LaunchedEffect(Unit) { " +
-                "senderRule.onOpened() }' — nothing else in this screen ever asks for the script",
-            "LaunchedEffect(Unit) { senderRule.onOpened() }" in screen,
+                "senderRule.onOpened(); onOpened() }' — pinned WHOLE, because a `contains` on " +
+                "the arming call alone is blind to it being dropped from a line that still " +
+                "carries the panel's own callback. Nothing else in this screen asks for the script",
+            "LaunchedEffect(Unit) { senderRule.onOpened(); onOpened() }" in screen,
         )
         assertTrue(
             "…and that callback must be the ViewModel's read: 'onOpened = viewModel::loadSenderRules'",

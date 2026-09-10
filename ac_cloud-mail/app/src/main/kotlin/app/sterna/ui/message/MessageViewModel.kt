@@ -1462,8 +1462,9 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
                 // [AttachmentOpen]'s, shared with the message LIST, which now offers the same files a
                 // screen earlier. Two copies of this would be two chances to stop granting read
                 // permission, or for one of them to keep trusting the sender's Content-Type.
-                // Unguarded startActivity is inside it: the tap was handled above, where
-                // [openingAttachment] holds the second one back.
+                // unguarded: the startActivity inside it is not wrapped in leaveOnce because
+                // the tap was handled above, where [openingAttachment] holds the second one
+                // back -- across the download too, which leaveOnce could not cover.
                 AttachmentOpen.openExternally(app, repo, storage, credentials, part, emailId)
                 _attachmentStatus.value = null
             } catch (t: ContentTooLargeException) {

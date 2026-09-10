@@ -220,14 +220,19 @@ class QuoteOnScreenSilencesPrepareWiringTest {
         val bodies = all.withIndex().filter { it.value == bodyLine }.map { it.index }
         assertEquals("the two reply bodies of buildPrefill are the anchor of this rule", 2, bodies.size)
         bodies.forEach { at ->
+            // Within the SAME DraftFields call and not strictly the next line: reply-all now
+            // sets `showAllRecipients = true` between the two (#271). The block ends at its
+            // own closing `)`, so the claim still cannot drift onto another DraftFields --
+            // a reopened draft, a mailto: link -- and raise the screen's flag over a body
+            // that carries no quote.
+            val block = all.drop(at + 1).takeWhile { it != ")" }
             assertEquals(
-                "in $COMPOSE_VIEW_MODEL_PATH the line right after the reply body\n    $bodyLine\n" +
-                    "(line index $at) must BE 'quoted = quoteBody,': the claim travels with the " +
-                    "body it is about. Anywhere else in the file it may sit on another " +
-                    "DraftFields \u2014 a reopened draft, a mailto: link \u2014 and raise the screen's flag " +
-                    "for a body that carries no quote.",
-                "quoted = quoteBody,",
-                all.getOrNull(at + 1),
+                "in $COMPOSE_VIEW_MODEL_PATH the DraftFields opened by the reply body\n    $bodyLine\n" +
+                    "(line index $at) must carry 'quoted = quoteBody,' before it closes: the " +
+                    "claim travels with the body it is about. Lines of that call were:\n" +
+                    block.joinToString("\n"),
+                1,
+                block.count { it == "quoted = quoteBody," },
             )
         }
 

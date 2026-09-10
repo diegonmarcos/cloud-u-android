@@ -210,6 +210,9 @@ class LocalDraftReopenWiringTest {
                 // the next save writes the removal over the only copy that had it.
                 "bodyLinks = fields.bodyLinks,",
                 "expand = fields.expand,",
+                // Added with the reply-all composer (#271): the projection carries it, so the
+                // reopen must hand it over like every other column.
+                "showAllRecipients = fields.showAllRecipients,",
                 ")",
                 "_attachments.value = fields.attachments",
                 "inReplyTo = fields.inReplyTo",

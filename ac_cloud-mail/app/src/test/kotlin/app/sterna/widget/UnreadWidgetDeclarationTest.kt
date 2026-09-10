@@ -65,7 +65,7 @@ class UnreadWidgetDeclarationTest {
             listOf(
                 "if (testApp) {",
                 "applicationIdSuffix = \".test\"",
-                "manifestPlaceholders[\"appLabel\"] = \"Sterna (test)\"",
+                "manifestPlaceholders[\"appLabel\"] = \"Cloud Mail (test)\"",
                 "manifestPlaceholders[\"widgetLabel\"] = \"Unread count (test)\"",
                 "manifestPlaceholders[\"latestWidgetLabel\"] = \"Latest messages (test)\"",
                 "versionNameSuffix = \"-test\"",

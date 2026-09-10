@@ -180,20 +180,20 @@ class FilterWarningWiringTest {
         assertTrue(
             "the auto-reply case must print R.string.settings_filters_stops_auto_reply",
             Regex(
-                "ForeignScriptNotice\\.STOPS_AUTO_REPLY\\s*->\\s*R\\.string\\.settings_filters_stops_auto_reply",
+                "ForeignScriptNotice\\.STOPS_AUTO_REPLY\\s*->\\s*stringResource\\(R\\.string\\.settings_filters_stops_auto_reply",
             ).containsMatchIn(source),
         )
         assertTrue(
             "and the unreadable case must print R.string.settings_filters_unreadable — the only " +
                 "sentence that says a save will REPLACE what is on the server",
             Regex(
-                "ForeignScriptNotice\\.UNREADABLE_SCRIPT\\s*->\\s*R\\.string\\.settings_filters_unreadable",
+                "ForeignScriptNotice\\.UNREADABLE_SCRIPT\\s*->\\s*stringResource\\(R\\.string\\.settings_filters_unreadable",
             ).containsMatchIn(source),
         )
         assertTrue(
             "and the case where nothing says what the other script is keeps the generic sentence",
             Regex(
-                "ForeignScriptNotice\\.ANOTHER_SCRIPT\\s*->\\s*R\\.string\\.settings_filters_foreign_warning",
+                "ForeignScriptNotice\\.ANOTHER_SCRIPT\\s*->\\s*stringResource\\(R\\.string\\.settings_filters_foreign_warning",
             ).containsMatchIn(source),
         )
     }

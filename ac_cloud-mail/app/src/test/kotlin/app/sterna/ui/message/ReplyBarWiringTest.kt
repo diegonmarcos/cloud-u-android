@@ -95,18 +95,33 @@ class ReplyBarWiringTest {
     }
 
     @Test fun `the subtitle's promise matches where the two actions really are`() {
-        // The setting's subtitle told the user where Reply and Forward would still be found with
-        // the bar off, and it was wrong in nine languages: "Both stay available in the toolbar at
-        // the top" — Forward is not in the toolbar, it is in the overflow menu beside it. Reply's
-        // own icon is there; Reply all and Forward are menu items.
+        // The setting's subtitle tells the user where Reply and Forward are still found with the
+        // bar off, and it has been wrong in nine languages TWICE. First it said "Both stay
+        // available in the toolbar at the top" when Forward was already in the overflow menu.
+        // Then reply-ALL was promoted to the toolbar icon and plain Reply moved down into that
+        // same menu, and the sentence still promised Reply at the top (#271).
         //
-        // So the rule reads the READER, not the sentence: if Forward ever moves up into the
-        // toolbar, this fails and the sentence is rewritten with it.
+        // So the rule reads the READER, not the sentence: the toolbar icon is Reply all, and
+        // Reply and Forward are menu items. Move any of them and this fails, and whoever moves
+        // it rewrites the sentence in all nine languages with it.
         val screen = code(MESSAGE_SCREEN).replace(Regex("""\s+"""), " ")
         assertTrue(
-            "Reply must still be a toolbar icon of the reader: IconButton(onClick = { " +
-                "onReply(\"reply\", replyTargetId, accountId) }). Screen was normalised.",
-            """IconButton(onClick = { onReply("reply", replyTargetId, accountId) })""" in screen,
+            "Reply all must be the toolbar icon of the reader: IconButton(onClick = { " +
+                "onReply(\"replyAll\", replyTargetId, accountId) }). Screen was normalised.",
+            """IconButton(onClick = { onReply("replyAll", replyTargetId, accountId) })""" in screen,
+        )
+        assertTrue(
+            "and plain Reply must be a DropdownMenuItem, not a toolbar icon — the subtitle now " +
+                "says Reply all is the icon and that Reply is in the menu with Forward.",
+            Regex(
+                """DropdownMenuItem\( text = \{ Text\(stringResource\(R\.string\.message_reply\)\) }[^)]*""" +
+                    """[\s\S]{0,200}?onReply\("reply", replyTargetId, accountId\)""",
+            ).containsMatchIn(screen),
+        )
+        assertTrue(
+            "Reply must NOT also be a toolbar IconButton: two ways to reach it makes the " +
+                "sentence ambiguous again.",
+            """IconButton(onClick = { onReply("reply", replyTargetId, accountId) })""" !in screen,
         )
         assertTrue(
             "Forward must still be a DropdownMenuItem, not a toolbar icon — the subtitle says it " +

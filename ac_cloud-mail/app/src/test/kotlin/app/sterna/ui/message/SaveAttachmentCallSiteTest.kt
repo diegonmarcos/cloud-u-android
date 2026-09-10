@@ -80,11 +80,19 @@ class SaveAttachmentCallSiteTest {
      * And they never touch the app's cache on the way. `storage.cacheAttachment` belongs to the
      */
     @Test fun `saving never writes a copy into the app's cache`() {
+        // The open path moved into AttachmentOpen.kt, shared with the message list. The
+        // cache write is pinned THERE, whole and exactly once, and MessageViewModel must now
+        // carry none at all -- a cacheAttachment line reappearing beside the save path is
+        // the copy-into-the-cache this rule exists to stop.
         assertEquals(
-            "MessageViewModel must cache an attachment in exactly ONE place, the open path. A " +
-                "second line here means the save path writes a copy into the app's cache too. " +
-                "Lines found:",
+            "the open path must cache an attachment in exactly ONE place. Lines found:",
             listOf("val file = storage.cacheAttachment(part.name, bytes)"),
+            codeLines(attachmentOpen().readText()).filter { "cacheAttachment(" in it },
+        )
+        assertEquals(
+            "MessageViewModel must not cache an attachment at all: the open path owns that " +
+                "write and the save path must never make a second copy. Lines found:",
+            emptyList<String>(),
             codeLines(viewModel().readText()).filter { "cacheAttachment(" in it },
         )
         assertEquals(
@@ -361,6 +369,9 @@ class SaveAttachmentCallSiteTest {
 
     private fun screen(): File =
         locate("app/src/main/kotlin/app/sterna/ui/message/MessageScreen.kt")
+
+    private fun attachmentOpen(): File =
+        locate("app/src/main/kotlin/app/sterna/ui/attachment/AttachmentOpen.kt")
 
     /** [relative] resolved from the test's working directory, walking up. */
     private fun locate(relative: String): File {

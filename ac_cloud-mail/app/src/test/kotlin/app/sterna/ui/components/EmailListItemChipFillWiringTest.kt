@@ -48,6 +48,11 @@ class EmailListItemChipFillWiringTest {
     private val expectedBackgrounds = listOf(
         ".background(rowColor)",
         ".background(",
+        // The thread pill, the draft chip, the not-uploaded chip, and the two attachment
+        // chips (#271) -- every one of them painting the fill it was HANDED. A chip that
+        // reads the theme itself shows up here as a mismatch, which is the whole rule.
+        ".background(fill)",
+        ".background(fill)",
         ".background(fill)",
         ".background(fill)",
         ".background(fill)",
@@ -92,12 +97,21 @@ class EmailListItemChipFillWiringTest {
     /** Site 2 of 3: the thread pill is handed the fill instead of reading the theme itself. */
     @Test fun `the thread pill is given the row's fill`() {
         assertBlock(expectedThreadPillCall, "the ThreadPill call")
+        // Read out of ThreadPill's OWN parameter list, not counted across the file: the
+        // attachment chips take the fill too (#271), so a file-wide count of the parameter
+        // line says nothing about this composable and went red the day one was added.
+        val lines = codeLines()
+        val declaration = lines.indexOf("private fun ThreadPill(")
+        check(declaration >= 0) {
+            "EmailListItem.kt no longer declares `private fun ThreadPill(` — this rule reads " +
+                "its parameter list and has nothing to read without it."
+        }
         assertEquals(
             "ThreadPill must take the fill as a parameter ('fill: Color,') rather than read the " +
                 "theme itself: a pill that reads surfaceVariant on its own cannot know it is " +
                 "sitting on an unread row, which is the whole defect.",
             1,
-            codeLines().count { it == "fill: Color," },
+            lines.drop(declaration + 1).takeWhile { it != ") {" }.count { it == "fill: Color," },
         )
     }
 

@@ -962,9 +962,9 @@ class TranslationParityTest {
         /** The two labels of the unreadable-accounts startup screen, in English, whole. */
         val UNREADABLE_ENGLISH = mapOf(
             "accounts_unreadable_title" to "Your accounts could not be read",
-            "accounts_unreadable_body" to "Sterna Mail could not read the accounts saved on this " +
+            "accounts_unreadable_body" to "Cloud Mail could not read the accounts saved on this " +
                 "device. Nothing has been deleted: they are still there, and nothing will be " +
-                "written over them. Updating Sterna Mail to the latest version may bring them back.",
+                "written over them. Updating Cloud Mail to the latest version may bring them back.",
         )
 
         /** The four labels of the per-account switch, in English, whole. */

@@ -355,7 +355,7 @@
     <string name="settings_signature_below_quote_title">Firma debajo del texto citado</string>
     <string name="settings_signature_below_quote_subtitle">En una respuesta, colocarla bajo el mensaje citado en vez de encima</string>
     <string name="settings_reply_bar_title">Barra de respuesta</string>
-    <string name="settings_reply_bar_subtitle">Mostrar Responder y Reenviar en la parte inferior del mensaje. Responder sigue en la barra superior, Reenviar en su menú.</string>
+    <string name="settings_reply_bar_subtitle">Mostrar Responder y Reenviar en la parte inferior del mensaje. Con la barra desactivada, Responder a todos es el icono de la barra superior, y Responder y Reenviar están en su menú.</string>
     <string name="settings_plain_text_title">Texto sin formato</string>
     <string name="settings_plain_text_subtitle">Abrir los mensajes como texto en lugar de su HTML. El menú del lector sigue cambiando un mensaje concreto en cualquier sentido.</string>
     <string name="settings_signature_delimiter_title">Línea separadora antes de la firma</string>

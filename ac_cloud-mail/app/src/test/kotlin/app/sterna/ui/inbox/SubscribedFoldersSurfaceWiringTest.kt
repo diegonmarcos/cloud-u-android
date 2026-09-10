@@ -267,11 +267,16 @@ class SubscribedFoldersSurfaceWiringTest {
             codeLines(file).any { "visibleFolders(" in it }
         }.map { it.name }.sorted()
         assertEquals(
-            "the subscription filter moved. It belongs to the three files below and nowhere else — " +
+            "the subscription filter moved. It belongs to the four files below and nowhere else — " +
                 "in the repository or in the folder cache it would take with it every reader of the " +
                 "list: subfolderIdsOf (a delete that misses hidden children), the reader's parent " +
                 "paths, the rule editor, the watched folders.",
-            listOf("FolderSelection.kt", "InboxViewModel.kt", "SubscribedFolders.kt"),
+            listOf(
+                "AccountMailStats.kt",
+                "FolderSelection.kt",
+                "InboxViewModel.kt",
+                "SubscribedFolders.kt",
+            ),
             callers,
         )
     }

@@ -55,6 +55,11 @@ object AttachmentOpen {
             // [AttachmentMime] for why the claim cannot be the first answer.
             .setDataAndType(uri, AttachmentMime.of(part.type, mimeFromName(file.name)))
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        // unguarded: this hand-off is held back by the caller, not by leaveOnce. Both call
+        // sites refuse a second tap while one is in flight (MessageViewModel's
+        // `openingAttachment`, InboxViewModel's `_openingAttachment`), and the guard has to
+        // sit THERE: it must also cover the download this function suspends on, which starts
+        // long before there is an activity to leave for.
         app.startActivity(
             Intent.createChooser(view, app.getString(R.string.status_open_attachment))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
