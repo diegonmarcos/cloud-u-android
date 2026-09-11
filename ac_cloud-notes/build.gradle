@@ -1,0 +1,112 @@
+/*#######################################################
+ *
+ * SPDX-FileCopyrightText: 2017-2025 Gregor Santner <gsantner AT mailbox DOT org>
+ * SPDX-License-Identifier: Unlicense OR CC0-1.0
+ *
+#########################################################*/
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+import java.text.SimpleDateFormat
+
+buildscript {
+    ext {
+        version_gradle_tools = '8.13.2'
+        version_plugin_kotlin = "1.3.72"
+        enable_plugin_kotlin = false
+
+        version_compileSdk = 35
+        version_buildTools = "35.0.0"
+        version_minSdk = 17
+    }
+
+    repositories {
+        mavenCentral()
+        maven { url 'https://maven.google.com' }
+        maven { url "https://jitpack.io" }
+        google()
+    }
+
+    dependencies {
+        classpath "com.android.tools.build:gradle:${version_gradle_tools}"
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:2.1'
+        if (project.enable_plugin_kotlin) {
+            classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${version_plugin_kotlin}"
+        }
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+allprojects {
+    repositories {
+        mavenCentral()
+        maven { url 'https://maven.google.com' }
+        maven { url "https://jitpack.io" }
+        google()
+    }
+
+    tasks.matching { task -> task.name.matches('(.*generate.*Resources)|(.*map.*SourceSetPaths)|(.*process.*NavigationResources)') }.all {
+        task -> task.dependsOn copyRepoFiles
+    }
+
+    tasks.matching { it instanceof Test }.all { // Enable unit test output, html+xml output
+        testLogging.events "passed", "skipped", "failed", "standardOut", "standardError"
+        testLogging.showStandardStreams = true
+        reports{
+            junitXml { enabled true }
+            html { enabled true }
+        }
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+
+final String[] ROOT_TO_RAW_COPYFILES = ["README.md", "CHANGELOG.md", "CONTRIBUTORS.md", "LICENSE.txt", "LICENSE.md", "LICENSE"]
+task copyRepoFiles(type: Copy) {
+    from rootProject.files(ROOT_TO_RAW_COPYFILES)
+    into "app/src/main/res/raw"
+    rename { String fileName -> fileName.replace(fileName, fileName.toLowerCase()) }
+}
+
+
+@SuppressWarnings(["UnnecessaryQualifiedReference", "SpellCheckingInspection", "GroovyUnusedDeclaration"])
+// Returns used android languages as a buildConfig array: {'de', 'it', ..}"
+static String findUsedAndroidLocales() {
+    Set<String> langs = new HashSet<>()
+    new File('.').eachDirRecurse { dir ->
+        final foldername = dir.name
+        if (foldername.startsWith('values-') && !dir.absolutePath.contains("build" + File.separator + "intermediates") && !foldername.matches(".*values-((.*[0-9])|(land)|(port)).*")) {
+            dir.eachFile { file ->
+                if (file.name.toLowerCase().endsWith(".xml") && file.getText('UTF-8').contains("<string")) {
+                    langs.add(foldername.replace("values-", ""))
+                }
+            }
+        }
+    }
+    return '{' + langs.sort().collect { "\"${it}\"" }.join(",") + '}'
+}
+
+
+ext.getGitHash = providers.exec {
+    commandLine('git', 'rev-parse', 'HEAD')
+}.standardOutput.asText.get().trim()
+
+ext.getGitLastCommitMessage = providers.exec {
+    commandLine('git', 'log', '--oneline', '-1', '--format=%s')
+}.standardOutput.asText.get().trim().replaceAll("\"", "\\\\\"")
+
+@SuppressWarnings(["UnnecessaryQualifiedReference", "SpellCheckingInspection", "GroovyUnusedDeclaration"])
+// Returns the build date in a RFC3339 compatible format. TZ is always converted to UTC
+static String getBuildDate() {
+    final SimpleDateFormat RFC3339_LIKE = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm'Z'")
+    RFC3339_LIKE.setTimeZone(TimeZone.getTimeZone("UTC"))
+    Date buildDate = new Date()
+
+    // https://reproducible-builds.org/docs/source-date-epoch/
+    try { buildDate = new Date(Long.parseLong(System.getenv('SOURCE_DATE_EPOCH')) * 1000) } catch(Exception ignore) {}
+
+    return RFC3339_LIKE.format(buildDate)
+}

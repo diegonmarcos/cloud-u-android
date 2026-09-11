@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Maintained 2017-2025 by Gregor Santner <gsantner AT mailbox DOT org>
+
+To the extent possible under law, the person who associated CC0 with
+this file has waived all copyright and related or neighboring rights
+to the public domain.
+
+You should have received a copy of the CC0 legalcode along with this
+work. If not, see <https://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="settings">Cài đặt</string>
+    <string name="light">Ánh sáng</string>
+    <string name="dark">Tối</string>
+    <string name="delete">Xóa bỏ</string>
+    <string name="appearance">Xuất hiện</string>
+    <string name="rename">Đổi tên</string>
+    <string name="confirm_delete">Xác nhận xóa bỏ</string>
+    <string name="do_you_really_want_to_delete_this_witharg">Bạn có thực sự muốn xoá này %s?</string>
+    <string name="confirm_overwrite">Xác nhận ghi đè</string>
+    <string name="file_already_exists_overwerite">Tệp đã tồn tại, ghi đè lên?</string>
+    <string name="browse_filesystem">Trình duyệt hệ thống tập tin</string>
+    <string name="title">Tiêu đề</string>
+    <string name="empty_directory">Thư mục rỗng</string>
+    <string name="enter_name_of_folder">Nhập tên của thư mục của bạn</string>
+    <string name="create_folder">Tạo thư mục</string>
+    <string name="create_new_document">Tạo tài liệu mới</string>
+    <string name="move">Di chuyển</string>
+    <string name="info">Xem thông tin</string>
+    <string name="file_folder_already_exists_please_use_a_different_name">Trùng tên! Vui lòng sử dụng tên khác</string>
+    <string name="import_from_device">Nhập từ thiết bị</string>
+    <string name="import_">Nhập khẩu</string>
+    <string name="append_to_witharg">Gắn tiếp vào %s</string>
+    <string name="select_folder">Chọn thư mục</string>
+    <string name="edit">Chỉnh sửa</string>
+    <string name="search_documents">Tìm kiếm tài liệu</string>
+    <string name="share_to_arrow" tools:ignore="TypographyEllipsis">Chia sẻ về&#8230;</string>
+    <string name="share">Chia sẻ</string>
+    <string name="search">Tìm kiếm</string>
+    <string name="display_converted_markup">Màn hình hiển thị chuyển đổi đánh dấu</string>
+    <string name="editor">Biên tập viên</string>
+    <string name="folders">Thư mục</string>
+    <string name="files">Tập tin</string>
+    <string name="document">Tài liệu</string>
+    <string name="documents">Tài liệu</string>
+    <string name="html_as_plaintext">HTML (như văn bản thuần)</string>
+    <string name="document_editor_font">Phông chữ soạn thảo tài liệu</string>
+    <string name="theme">Chủ đề</string>
+    <string name="open_existing_files_in_view_mode">Mở tệp có sẵn ở chế độ xem</string>
+    <string name="about">Trong khoảng</string>
+    <string name="plaintext">Văn bản đơn thuần</string>
+    <string name="file">Tệp tin</string>
+    <string name="image">Hình ảnh</string>
+    <string name="font_size">Cỡ chữ</string>
+    <string name="render_rtl_language">Hiển thị ngôn ngữ từ phải sang trái</string>
+    <string name="error_cannot_create_notebook_dir__appspecific">Lỗi: Không thể tạo thư mục sổ ghi chép</string>
+    <string name="last_modified_witharg">Sửa đổi lần cuối: %s</string>
+    <string name="last_modified">Sửa đổi lần cuối</string>
+    <string name="select_this_folder">Chọn thư mục này</string>
+    <string name="select">Chọn</string>
+    <string name="create">Tạo ra</string>
+    <string name="select_entries">Chọn mục</string>
+    <string name="one_item_selected">Một khoản mục được chọn</string>
+    <string name="items_selected_witharg" tools:ignore="PluralsCandidate">%d khoản mục được chọn</string>
+    <string name="hide_statusbar_at_this_view">Ẩn thanh trạng thái ở chế độ này</string>
+    <string name="hide_statusbar">Ẩn thanh trạng thái</string>
+    <string name="name">Tên</string>
+    <string name="url_or_path">URL / đường dẫn</string>
+    <string name="insert_image">Chèn hình ảnh</string>
+    <string name="contributors">Những người đóng góp</string>
+    <string name="save_location">Lưu vị trí</string>
+    <string name="select_storage_folder">Chọn thư mục lưu trữ</string>
+    <string name="licenses">Giấy phép</string>
+    <string name="changelog">Nhật ký thay đổi</string>
+    <string name="more_info">Tìm hiểu thêm</string>
+    <string name="show_license_of_the_app">Hiển thị giấy phép của ứng dụng</string>
+    <string name="show_third_party_licenses">Hiển thị giấy phép của bên thứ ba</string>
+    <string name="language_change_restart_description">Thay đổi ngôn ngữ của ứng dụng. Khởi động lại ứng dụng để các thay đổi có hiệu lực</string>
+    <string name="language">Ngôn ngữ</string>
+    <string name="open_with">Mở bằng</string>
+    <string name="sort_by">Tìm theo</string>
+    <string name="date">Ngày</string>
+    <string name="deleteme____1">Tên</string>
+    <string name="size">Kích cỡ</string>
+    <string name="reverse_order">Đảo thứ tự</string>
+    <string name="contribute">Đóng góp</string>
+    <string name="project_page">Trang dự án</string>
+    <string name="press_back_again_to_exit">Bấm \'Trở lại\' lần nữa để thoát</string>
+    <string name="exit">Thoát</string>
+    <string name="undo">Hoàn nguyên</string>
+    <string name="redo">Trở lại</string>
+    <string name="more">Thêm</string>
+    <string name="notebook">Nhật ký</string>
+    <string name="help">Trợ giúp</string>
+    <string name="todo_list">Danh sách công việc</string>
+    <string name="task">Công việc</string>
+    <string name="context">Bối cảnh</string>
+    <string name="list">Danh sách</string>
+    <string name="priority">Ưu tiên</string>
+    <string name="history">Lịch sử</string>
+    <string name="sync">Đồng bộ</string>
+    <string name="search_or_custom">Tìm kiếm / Tùy chỉnh</string>
+    <string name="save">Lưu</string>
+    <string name="update">Cập nhật</string>
+    <string name="clear">Xóa</string>
+    <string name="due_date">Thời hạn</string>
+    <string name="current_date">Hôm nay</string>
+    <string name="archive">Kho lưu trữ</string>
+    <string name="add_task">Thêm tác vụ</string>
+    <string name="add_x_witharg">Thêm %s</string>
+    <string name="document_to_be_loaded_and_saved_as_witharg">Tài liệu được tải và lưu dưới dạng \"%s\"</string>
+    <string name="refresh">Làm mới</string>
+    <string name="create_shortcut">Tạo lối tắt</string>
+    <string name="tried_to_create_shortcut_for_this_notice">Cố gắng để tạo một shortcut để màn hình của bạn. Lưu ý rằng một số bệ phóng có thể hỗ trợ điều này.</string>
+    <string name="file_not_in_save_path_do_import_notice__appspecific">Tệp đã chọn không nằm trong thư mục máy tính xách tay các ứng dụng. Bạn có muốn sao chép nó vào thư mục hiện tại? Điều này sẽ ghi đè lên bất kỳ tập tin hiện có cùng tên.</string>
+    <string name="file_not_in_current_folder_do_copy__appspecific">Tệp được chọn không nằm trong thư mục này. Bạn có muốn sao chép? Hành động này sẽ ghi đè dữ liệu lên các tệp trùng tên.</string>
+    <string name="files_and_folders">Tệp và cặp</string>
+    <string name="document_browser">Trình duyệt tài liệu</string>
+    <string name="set_due_date">Đặt thời hạn</string>
+    <string name="insert_replace_date">Nhập thời gian</string>
+    <string name="create_note" needed="false">Tạo ghi chú</string>
+    <string name="special_documents" needed="false">Tài liệu đặc biệt</string>
+    <string name="keep_screen_on" needed="false">Giữ màn hình luôn bật</string>
+    <string name="disallow_screenshots">Tắt chế độ chụp màn hình</string>
+    <string name="back_to_previous_folder" needed="false">Quay lại mục trước</string>
+    <string name="app_settings" needed="false">Cài đặt App</string>
+    <string name="editor_settings" needed="false">Biên tập viên cài đặt</string>
+    <string name="remember_last_folder_location_on_startup" needed="false">Nhớ vị trí tệp sau cùng khi khởi động</string>
+    <string name="number_of_files_witharg" needed="false">Số lượng tệp: %d</string>
+    <string name="main_view">Mục hiển thị chính</string>
+    <string name="remember_last_directory">Nhớ đường dẫn sau cùng</string>
+    <string name="highlighting_delay">Đánh dấu độ trễ</string>
+    <string name="highlighting_enabled_or_not__appspecific">Tùy chọn đánh dấu văn bản</string>
+    <string name="control_font_size_in_editor">Chọn kích cỡ phông chữ bằng bộ tùy chỉnh</string>
+    <string name="textactions_show_useful_actions_description__appspecific">Hiện thanh tác vụ kèm các phím tiện lợi. Hành động văn bản giúp điều chỉnh nội dung và thực hiện tác vụ.</string>
+    <string name="load_last_opened_folder_at_startup">Tải tệp sau cùng khi khởi động</string>
+    <string name="format">Định dạng</string>
+    <string name="project">Dự án</string>
+    <string name="projects">Dự án</string>
+    <string name="none">Trống</string>
+    <string name="other">Khác</string>
+    <string name="break_page_pdf_print">Ngắt trang (PDF/Bản cứng)</string>
+    <string name="underline">Gạch chân</string>
+    <string name="underline_hex_color_wether_or_not_to_description__appspecific">Tùy chọn gạch các màu thuộc mã màu hex</string>
+    <string name="underline_hex_color_codes">Gạch chân mã màu hex</string>
+    <string name="insert_current_date_when_starting_new_task">Nhập ngày hiện hành khi khởi tạo công việc</string>
+    <string name="tasks_with_todays_date">Các công việc hôm nay</string>
+    <string name="append_contexts_and_projects">Thêm ngữ cảnh và dự án</string>
+    <string name="append_contexts_and_projects_on_end_of_task">Thêm ngữ cảnh và dự án vào cuối mỗi mục công việc khi sử dụng đúng nội dung</string>
+    <string name="rtl_rendering">Kết xuất phải sang trái</string>
+    <string name="highlight_line_ending">Đánh dấu hết dòng</string>
+    <string name="highlight_line_ending_if_two_or_more_spaces">Đánh dấu khoảng trắng cuối mỗi dòng nếu chứa nhiều khoảng trắng</string>
+    <string name="use_monospace_for_code">Sử dụng phông chữ cố định để lập trình</string>
+    <string name="disable_code_block_highlight">Tắt đánh dấu các khối mã</string>
+    <string name="auto_renumber_ordered_list">Tự động đánh số thứ tự danh sách</string>
+    <string name="auto_renumber_ordered_list_slowdown">Tùy chọn này có thể ảnh hưởng hiệu suất ứng dụng.</string>
+    <string name="general">Cài đặt chung</string>
+    <string name="line_spacing">Line Spacing</string>
+    <string name="vertical_alignment">Căn chỉnh theo chiều dọc</string>
+    <string name="open_source_licenses">Giấy phép mã nguồn mở</string>
+    <string name="rate_this_app">Đánh giá ứng dụng này</string>
+    <string name="translate">Dịch</string>
+    <string name="more_info_and_help">Nhiều thông tin hơn và trợ giúp</string>
+    <string name="report_bugs">Báo cáo lỗi</string>
+    <string name="join_community">Tham gia cộng đồng</string>
+    <string name="bug_reports_suggest_improvements">Phản hồi, báo cáo lỗi hoặc đề xuất sự cải thiện</string>
+    <string name="help_translating_this_app">Dịch ứng dụng này ra các ngôn ngữ khác</string>
+    <string name="source_code">Mã nguồn</string>
+    <string name="project_license">Giấy phép dự án</string>
+    <string name="contribute_code_to_this_project_anybody_welcome">Đóng góp mã vào dự án. Mọi người đều được làm vậy, kể cả những người mới vào</string>
+    <string name="project_team">Nhóm dự án</string>
+    <string name="community">Cộng đồng</string>
+    <string name="contributors_public_add_yourself_description">Hiển thị thông tin người đóng góp. Hãy chủ động cung cấp thông tin để được hiện ở đây sau khi đóng góp</string>
+    <string name="error_picture_selection">Không có ảnh nào được chọn, chụp hoặc lưu.</string>
+    <string name="edit_picture">Chỉnh sửa ảnh</string>
+    <string name="miscellaneous">Khác</string>
+    <string name="background">Nền</string>
+    <string name="font">Phông chữ</string>
+    <string name="close">Đóng</string>
+    <string name="favourite">Yêu thích</string>
+    <string name="rotate">Xoay</string>
+</resources>

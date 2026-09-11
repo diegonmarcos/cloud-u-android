@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+/*#######################################################
+ *
+ *   Maintained 2017-2025 by Gregor Santner <gsantner AT mailbox DOT org>
+ *
+ *   License of this file: Apache 2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+#########################################################*/
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/transparent"
+    tools:context="com.diegonmarcos.cloudnotes.activity.DocumentEditAndViewFragment"
+    tools:showIn="@layout/document__activity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- for text search view -->
+        <FrameLayout
+            android:id="@+id/topViewContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="2.5dp" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <com.diegonmarcos.cloudnotes.frontend.DraggableScrollbarScrollView
+                android:id="@+id/document__fragment__edit__content_editor__scrolling_parent"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:id="@+id/document__fragment__edit__editor_holder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:background="@color/background"
+                    android:clickable="true"
+                    android:orientation="horizontal">
+
+                    <com.diegonmarcos.cloudnotes.frontend.textview.LineNumbersView
+                        android:id="@+id/document__fragment__edit__line_numbers_view"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent" />
+
+                    <com.diegonmarcos.cloudnotes.frontend.textview.HighlightingEditor
+                        android:id="@+id/document__fragment__edit__highlighting_editor"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:alpha="0"
+                        android:background="@color/background"
+                        android:gravity="top"
+                        android:imeOptions="flagNoExtractUi"
+                        android:inputType="textMultiLine|textCapSentences"
+                        android:isScrollContainer="false"
+                        android:minHeight="1dp"
+                        android:nestedScrollingEnabled="false"
+                        android:overScrollMode="never"
+                        android:paddingLeft="@dimen/activity_horizontal_margin"
+                        android:paddingTop="@dimen/activity_vertical_margin"
+                        android:paddingRight="@dimen/activity_horizontal_margin"
+                        android:paddingBottom="@dimen/editor_bottom_margin"
+                        android:scrollbars="none"
+                        android:scrollHorizontally="false"
+                        android:textCursorDrawable="@drawable/cursor_accent" />
+                </LinearLayout>
+            </com.diegonmarcos.cloudnotes.frontend.DraggableScrollbarScrollView>
+
+            <ViewStub
+                android:id="@+id/document__fragment_webview_stub"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout="@layout/document__fragment_view" />
+        </FrameLayout>
+
+        <com.diegonmarcos.cloudnotes.opoc.frontend.GsHorizontalScrollView
+            android:id="@+id/document__fragment__edit__text_actions_bar__scrolling_parent"
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/text_actions_bar_height"
+            android:background="@color/background"
+            android:elevation="4dp"
+            android:paddingTop="4dp"
+            android:scrollbars="none"
+            android:translationZ="4dp">
+
+            <LinearLayout
+                android:id="@+id/document__fragment__edit__text_actions_bar"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:background="@color/background"
+                android:orientation="horizontal" />
+        </com.diegonmarcos.cloudnotes.opoc.frontend.GsHorizontalScrollView>
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/document__fragment_fullscreen_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background"
+        android:visibility="gone" />
+</FrameLayout>

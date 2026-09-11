@@ -2469,10 +2469,11 @@
                 "target": "extapp:cloud-contacts"
               },
               {
+                "_doc": "Cloud Notes (ac_cloud-notes, com.diegonmarcos.cloudnotes) \u2014 our own signed build of Markor, a plain-Markdown editor over a FOLDER of .md files. Replaces the `obsidian://open` deep link this tile used to carry. Two things were wrong with that target and only one of them was about branding: it is a bare scheme URI, so ShellActivity.launchUri turns it into a plain ACTION_VIEW and it raises ActivityNotFoundException on any phone without Obsidian installed \u2014 the exact hazard test-drive-page-sections.sh T9 exists to contain, and a tile that fails AFTER the tap. `extapp:cloud-notes` resolves through ui.external_apps instead: installed \u2192 launches, absent \u2192 offers the install from the Constellation store. Obsidian itself is NOT removed from the phone or from this file \u2014 md.obsidian keeps its ui.phone_folders keyword and its place in the favourites picker (a favourite is what you can pick, not what you get), so nothing dangles.",
                 "id": "notes",
-                "label": "Notes (Obsidian)",
+                "label": "Notes",
                 "icon": "ic_notes",
-                "target": "obsidian://open"
+                "target": "extapp:cloud-notes"
               },
               {
                 "_doc": "Cloud Office (ac_cloud-sheets). This tile label and ui.external_apps[cloud-sheets].label are the two names the fleet owns. Android's own launcher and the app's title bar will keep saying \"Collabora Office\" until the source build in ac_cloud-sheets first publishes, because the APK on the phone today is still the mirrored upstream one and its manifest name is not ours to change. The rebrand reaches the name upstream generates from --with-app-name only once that build runs, which needs build.json::build.host and it is null.",
@@ -7080,6 +7081,16 @@
         "hub_package": "cld.camera",
         "install_package": "cld.camera",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Camera.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "Cloud Notes \u2014 the standalone notes app (ac_cloud-notes, published by ship-cloud-notes.yml). Required by test-app-identity-resolves.sh T1: the Cloud \u25b8 Data Apps 'Notes' tile targets extapp:cloud-notes, and with no entry here Sections.externalApp returns null and the tile snacks 'Unknown app: cloud-notes' \u2014 a tile that fails AFTER the tap. package read from ac_cloud-notes/build.json::android.application_id and app/build.gradle::namespace, which agree (ac_cloud-notes/test/test-cloud-notes-identity.sh N1 is what keeps them agreeing). install_apk_url mirrors ac_cloud-notes/build.json::release.gh_release. NO per-ABI variant exists and none is missing: Markor is pure Java, so this app publishes ONE universal Cloud-Notes.apk and data/regen.sh emits no `assets` map for it \u2014 unlike cloud-writer below, whose _doc_abi note does apply. folder=prod_docs ('.Docs & Notes') is the taxonomy half of the same record \u2014 PhoneFolders derives the pkg: keyword from it, so NO literal keyword for com.diegonmarcos.cloudnotes may be added to ui.phone_folders (T8b fails on exactly that).",
+        "id": "cloud-notes",
+        "label": "Cloud Notes",
+        "folder": "prod_docs",
+        "hub_package": "com.diegonmarcos.cloudnotes",
+        "install_package": "com.diegonmarcos.cloudnotes",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Notes.apk",
         "forks": {}
       },
       {

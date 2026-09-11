@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+/*#######################################################
+ *
+ *   Maintained 2017-2025 by Gregor Santner <gsantner AT mailbox DOT org>
+ *
+ *   License of this file: Apache 2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+#########################################################*/
+-->
+<com.diegonmarcos.cloudnotes.opoc.frontend.GsLinearSplitLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:descendantFocusability="beforeDescendants"
+    android:focusableInTouchMode="true"
+    android:weightSum="100"
+    tools:background="@color/background"
+    tools:context="com.diegonmarcos.cloudnotes.activity.DocumentShareIntoFragment">
+
+    <ScrollView
+        android:id="@+id/document__fragment__edit__content_editor__scrolling_parent"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="40"
+        android:fillViewport="true">
+
+        <com.diegonmarcos.cloudnotes.frontend.textview.HighlightingEditor
+            android:id="@+id/document__fragment__share_into__highlighting_editor"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/background"
+            android:fontFamily="sans-serif-light"
+            android:gravity="top"
+            android:imeOptions="flagNoExtractUi"
+            android:inputType="textMultiLine|textCapSentences"
+            android:paddingLeft="@dimen/activity_horizontal_margin"
+            android:paddingTop="@dimen/activity_vertical_margin"
+            android:paddingRight="@dimen/activity_horizontal_margin"
+            android:scrollbars="vertical"
+            android:textColor="@color/primary_text"
+            android:textCursorDrawable="@drawable/cursor_accent"
+            tools:ignore="UnusedAttribute" />
+    </ScrollView>
+
+    <FrameLayout
+        android:id="@+id/document__share_into__fragment__placeholder_fragment"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/background"
+        android:elevation="4dp"
+        android:translationZ="4dp"
+        android:layout_weight="60" />
+
+</com.diegonmarcos.cloudnotes.opoc.frontend.GsLinearSplitLayout>

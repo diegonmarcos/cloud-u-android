@@ -1,0 +1,11 @@
+pre[class*="language-"] {
+    position: relative;
+    padding-left: 0.8em; /* left padding of the code */
+    counter-reset: linenumber;
+}
+
+pre[class*="language-"] > code {
+    position: relative;
+    white-space: inherit;
+    overflow-wrap: inherit;
+}

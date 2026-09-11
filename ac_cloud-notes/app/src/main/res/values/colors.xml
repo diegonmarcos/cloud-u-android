@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+/*#######################################################
+ *
+ *   Maintained 2017-2025 by Gregor Santner <gsantner AT mailbox DOT org>
+ *   License of this file: Apache 2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+#########################################################*/
+-->
+<resources>
+    <!-- Named colors -->
+    <color name="colorPrimary">@color/primary</color>
+    <color name="colorPrimaryDark">@color/primary</color>
+    <color name="primary_text">@color/light__primary_text</color>
+    <color name="secondary_text">@color/light__secondary_text</color>
+    <color name="file">@color/light__file</color>
+    <color name="folder">@color/light__folder</color>
+    <color name="background">@color/light__background</color>
+
+    <!-- Named colors differing common to day and night -->
+    <color name="colorAccent">@color/accent</color>
+
+    <!-- Color values -->
+    <color name="primary">#1E2135</color>
+    <color name="accent">#F04B4B</color>
+    <color name="divider">#808080</color>
+
+    <color name="accent_light">#FF9800</color>
+    <color name="default_link_color">#388E3C</color>
+
+    <color name="light__background">#EEEEEE</color>
+    <color name="light__primary_text">#DE000000</color>
+    <color name="light__secondary_text">#99000000</color>
+    <color name="light__file">#757575</color>
+    <color name="light__folder">#757575</color>
+
+    <color name="dark__background">@color/dark_grey</color>
+    <color name="dark__primary_text">#DDFFFFFF</color>
+    <color name="dark__secondary_text">#9E9E9E</color>
+    <color name="dark__file">#9E9E9E</color>
+    <color name="dark__folder">#9E9E9E</color>
+
+    <color name="ic_launcher_background">#636363</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="grey">#FF505050</color>
+    <color name="dark_grey">#FF212121</color>
+    <color name="light_grey">#FFC0C0C0</color>
+    <color name="lighter_grey">#FFE0E0E0</color>
+
+    <color name="solarized_bg_dark">#002B36</color>
+    <color name="solarized_bg_light">#FCF5E4</color>
+    <color name="solarized_fg">#657B83</color>
+    <color name="gruvbox_bg_dark">#282828</color>
+    <color name="gruvbox_fg_dark">#EBDBB2</color>
+    <color name="gruvbox_bg_light">#FBF1C7</color>
+    <color name="gruvbox_fg_light">#3C3836</color>
+    <color name="green_dark">#00FF00</color>
+    <color name="green_light">#00BB00</color>
+
+    <color name="sepia_fg_light__bg_dark">#282828</color>
+    <color name="sepia_bg_light__fg_dark">#EBDBB2</color>
+
+    <color name="nord_bg_dark">#2E3440</color>
+    <color name="nord_fg_dark">#ECEFF4</color>
+    <color name="nord_bg_light">#ECEFF4</color>
+    <color name="nord_fg_light">#2E3440</color>
+
+    <color name="link">#FF1EA3FD</color>;
+    <color name="transparent">#00FFFFFF</color>
+    <color name="light_border">@color/lighter_grey</color>
+</resources>

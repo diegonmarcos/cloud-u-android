@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+/*#######################################################
+ *
+ *   Maintained 2017-2025 by Gregor Santner <gsantner AT mailbox DOT org>
+ *
+ *   License of this file: Apache 2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+#########################################################*/
+-->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="48dp"
+    android:background="@drawable/keyboard_shortcut_button"
+    android:gravity="center_vertical|center_horizontal"
+    android:paddingLeft="4dp"
+    android:paddingTop="8dp"
+    android:paddingRight="4dp"
+    android:paddingBottom="8dp"
+    android:scaleType="fitCenter"
+    android:tint="@color/primary_text"
+    tools:ignore="ContentDescription"
+    tools:src="@drawable/ic_check_box_black_24dp" />

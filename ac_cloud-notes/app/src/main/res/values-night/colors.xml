@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Named colors -->
+    <color name="colorPrimary">@color/primary</color>
+    <color name="primary_text">@color/dark__primary_text</color>
+    <color name="secondary_text">@color/dark__secondary_text</color>
+    <color name="file">@color/dark__file</color>
+    <color name="folder">@color/dark__folder</color>
+    <color name="background">@color/dark__background</color>
+    <color name="light_border">@color/grey</color>
+
+    <!-- All values specified only in base colors.xml  -->
+
+</resources>

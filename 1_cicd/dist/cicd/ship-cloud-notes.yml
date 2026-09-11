@@ -1,0 +1,260 @@
+name: "Ship → Cloud Notes APK (build + push to GHCR via ORAS + attach to GH Release)"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ac_cloud-notes — our own signed build of Markor.
+#
+# Upstream: https://github.com/gsantner/markor, vendored at commit
+# 8d657fd20fff71719d782a3bc375c6f982d09b19 (the v2.16.1 line, versionCode 163),
+# Apache-2.0. The tree is VENDORED at the app root with the package identity
+# renamed net.gsantner → com.diegonmarcos.cloudnotes across 173 files, so this
+# APK coexists with a Play/F-Droid-signed Markor install. The FileProvider
+# authority is ${applicationId}.provider — a manifest placeholder — so it
+# followed the rename automatically and cannot collide.
+#
+# WHY MARKOR AND NOT AFFiNE (task #232): AFFiNE keeps documents as opaque CRDT
+# blobs in its own SQLite DB and has no folder-vault mode, so it would open on
+# an empty workspace beside the owner's 179 existing .md files. Markor edits
+# those files in place. See ac_cloud-notes/build.json::_doc_product_substitution
+# and a0_docs/eng-specs/cloud-notes-affine-feasibility.md §7.2.
+#
+# Shape is ship-cloud-camera.yml: single universal APK, no ABI matrix. Markor
+# is pure Java — no .c/.cpp/CMakeLists.txt/Android.mk and zero .so files in the
+# tree — so there is no ABI dimension and a build matrix would publish two
+# byte-identical files under different names.
+#
+# Every step delegates to the engine (ac_cloud-notes/build.sh) — this file
+# carries no app knowledge beyond WORK_DIR; the fork key is read out of
+# build.json so the workflow never hardcodes an app name.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "Build variant"
+        type: choice
+        default: release
+        options: [debug, release]
+      push_oras:
+        description: "Push APK to GHCR via ORAS"
+        type: boolean
+        default: true
+      create_release:
+        description: "Attach APK to the rolling GitHub Release"
+        type: boolean
+        default: true
+  push:
+    branches: [main]
+    paths:
+      # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir
+      # ac_cloud-notes/build.json::modules declares is added automatically, dead
+      # entries are dropped, and cloud-android-source-identity.sh hashes
+      # exactly this list — so nothing can trigger a build the publish
+      # gate does not weigh. Extra entries no module map can express
+      # (settings.gradle.kts references, scan roots) are kept: add them
+      # here and they stay.
+      # (settings.gradle references, scan roots) are kept: add them
+      - "1_cicd/src/cicd/ship-cloud-notes.yml"
+      - "ac_cloud-notes/**"
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: ship-cloud-notes-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  WORK_DIR: ac_cloud-notes
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Every application's testers, and — for those that have none — the
+      # COVERAGE-GAP line naming exactly what this run did NOT check. Needs no
+      # JDK, no SDK and no gradle, so it costs seconds and fails before
+      # anything is built.
+      #
+      # DELIBERATELY NOT gated on the publish gate: the gate answers "would
+      # these bytes differ?", which is the right question for publishing and the
+      # wrong one for testing — editing a tester does not move the APK, and
+      # gating here would let a new assertion land without ever running once.
+      - name: "Test → this application's testers, and what is not covered"
+        run: |
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
+
+      # Publish-if-changed gate. Android builds are not byte-reproducible, so a
+      # rebuild of unchanged source published different bytes, a different
+      # sha256 sidecar and a different OCI digest — and the Constellation store
+      # compares exactly those, so every cascade rebuild showed up on every
+      # phone as an update with nothing in it. The gate hashes this app's build
+      # INPUTS and compares that identity to the <asset>.source sidecar already
+      # on the release. Equal → the rest of this job is skipped.
+      - name: Publish gate (skip when source unchanged)
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" ""
+
+      # JDK 17 ONLY, unlike ship-cloud-camera.yml's 17+21 pair. Markor pins no
+      # java toolchain (no JavaLanguageVersion anywhere in its gradle), so
+      # nothing has to be resolved from the installed JDK set; it declares
+      # source/targetCompatibility 1.8 and builds with AGP 8.13.2 on Gradle
+      # 8.13, whose supported JDK is 17. Installing a second JDK would only
+      # change which one lands in JAVA_HOME.
+      - name: Set up JDK 17
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        if: steps.gate.outputs.skip != 'true'
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          # compileSdk 35 + buildToolsVersion 35.0.0, both read from the
+          # vendored build.gradle (version_compileSdk / version_buildTools).
+          # NO ndk/cmake entries — Markor is pure Java and never invokes the
+          # NDK, so installing one just burns runner minutes. minSdk 18 needs
+          # no platform of its own; only the compile platform is resolved.
+          sdkmanager --install "platforms;android-35" \
+                               "build-tools;35.0.0" "platform-tools"
+
+      - name: Set up Gradle (cached)
+        if: steps.gate.outputs.skip != 'true'
+        # v6, not v3: v3 bundles the old @actions/cache client, which talks to the
+        # cache service GitHub retired, so every save AND restore 400s and every
+        # build runs fully cold.
+        uses: gradle/actions/setup-gradle@v6
+        # No gradle-version pin: the engine invokes the tree's OWN ./gradlew
+        # (8.13), which is the toolchain upstream tests against.
+
+      # ── ONE shared Cloud-constellation signing key (vault) ──────────────
+      # ALL constellation apps sign with the SAME key so cross-app
+      # signature-IPC + the in-app fleet updater never hit a signature
+      # mismatch. The raw keystore + its sops-encrypted passwords live ONLY in
+      # the private vault repo. build.sh::_resolve_signing reads $VAULT_DIR +
+      # sops-decrypts (SOPS_AGE_KEY); _enforce_signature then zipaligns and
+      # apksigner-signs whatever gradle emitted. Markor declares NO
+      # signingConfigs at all, so gradle emits an unsigned APK and this is the
+      # only thing that signs it. NO fallback: no key → exit 1.
+      - name: Checkout vault (shared Android signing key)
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: diegonmarcos/cloud-vault
+          token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
+          path: .vault
+
+      - name: Install ORAS + sops + jq
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+          curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz \
+            | sudo tar -C /usr/local/bin -xzf - oras
+          oras version
+          curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \
+            | sudo tee /usr/local/bin/sops >/dev/null
+          sudo chmod +x /usr/local/bin/sops
+          sops --version
+
+      - name: Determine variant
+        if: steps.gate.outputs.skip != 'true'
+        id: variant
+        run: |
+          if   [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "variant=${{ inputs.variant }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "variant=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "variant=release" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Build via build.sh (engine) ─────────────────────────────────
+      - name: Build APK (engine)
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: |
+          chmod +x build.sh
+          # materialize-fork is a no-op for a vendored tree (no .git inside
+          # ac_cloud-notes) but is kept so re-vendoring a newer pinned_commit
+          # needs no workflow change. The fork key is read from build.json —
+          # data-driven, no app name in the workflow.
+          FORK="$(jq -r '.forks | keys[0]' build.json)"
+          echo "fork key: $FORK"
+          ./build.sh materialize-fork "$FORK"
+          ./build.sh build-fork "$FORK"
+          ls -la dist/
+
+      - name: Upload APK as workflow artifact
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cloud-Notes-${{ steps.variant.outputs.variant }}-${{ github.sha }}
+          path: ${{ env.WORK_DIR }}/dist/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      # ── ORAS push to GHCR (engine reads build.json::release.ghcr) ──
+      - name: Login to GHCR
+        if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_oras) }}
+        run: |
+          echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" \
+            | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Push APK to GHCR via ORAS
+        if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_oras) }}
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          BYPASS_NIX: "1"
+          GITHUB_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_CREATE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./build.sh publish-fork "$(jq -r '.forks | keys[0]' build.json)"
+
+      # ── GitHub Release (engine reads build.json::release.gh_release) ──
+      - name: Publish to GitHub Releases
+        id: publish
+        if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          BYPASS_NIX: "1"
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+        run: ./build.sh gh-release-fork "$(jq -r '.forks | keys[0]' build.json)"
+
+      # ── MANAGED-PUBLISH-GUARD: injected by cloud-android-ship-repo-workflow-engine.sh ──
+      # Runs on everything but a cancellation, and is HANDED the two facts it
+      # judges: the publish gate's own answer to "did this source move?", and the
+      # `id: publish` step's own `if:` rendered to true/false. Putting that `if:`
+      # on this step instead — the obvious generalisation — would stop the guard
+      # running in exactly the case it exists for, a publish skipped by its own
+      # condition. Copied verbatim from that step, so there is one copy in the
+      # file and the two cannot drift.
+      # Edit 1_cicd/src/scripts/cloud-android-publish-guard.sh, never this block.
+      - name: A run that published nothing must not be green
+        if: ${{ !cancelled() }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ac_cloud-notes" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}" "${{ github.event_name }}"
+      # ── end MANAGED-PUBLISH-GUARD ──
+
+
+      - name: Stamp source identity on the published assets
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$WORK_DIR" ""

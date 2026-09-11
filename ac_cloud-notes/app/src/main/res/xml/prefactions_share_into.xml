@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+/*#######################################################
+ *
+ *   Maintained 2017-2025 by Gregor Santner <gsantner AT mailbox DOT org>
+ *   License of this file: Apache 2.0
+ *     https://www.apache.org/licenses/LICENSE-2.0
+ *
+#########################################################*/
+--><!--suppress AndroidElementNotAllowed -->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:title="@string/share_to_arrow">
+
+    <PreferenceCategory android:title="@string/attach" />
+    <Preference
+        android:icon="@drawable/ic_lightning_black_24dp"
+        android:key="@string/pref_key__share_into__quicknote"
+        android:title="@string/quicknote" />
+    <Preference
+        android:icon="@drawable/ic_assignment_turned_in_black_24dp"
+        android:key="@string/pref_key__share_into__todo"
+        android:title="@string/todo" />
+    <Preference
+        android:icon="@drawable/ic_access_time_black_24dp"
+        android:key="@string/pref_key__share_into__most_recent_document"/>
+    <Preference
+        android:icon="@drawable/ic_gs_file_move_black_24dp"
+        android:key="@string/pref_key__select_create_document"
+        android:title="@string/select" />
+    <Preference
+        android:icon="@drawable/ic_search_black_24dp"
+        android:key="@string/pref_key__search_for_target"
+        android:title="@string/search" />
+
+    <PreferenceCategory android:title="@string/share" />
+    <Preference
+        android:icon="@drawable/ic_share_black_24dp"
+        android:key="@string/pref_key__share_into__reshare"
+        android:title="@string/share" />
+    <Preference
+        android:icon="@drawable/ic_content_copy_black_24dp"
+        android:key="@string/pref_key__share_into__clipboard"
+        android:title="@string/clipboard" />
+    <Preference
+        android:icon="@drawable/ic_open_in_browser_black_24dp"
+        android:key="@string/pref_key__share_into__open_in_browser"
+        android:title="@string/web_browser" />
+    <Preference
+        android:icon="@drawable/ic_date_range_black_24dp"
+        android:key="@string/pref_key__share_into__calendar_event"
+        android:title="@string/calendar" />
+
+</PreferenceScreen> <!-- Screen -->

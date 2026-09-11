@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+Maintained 2017-2025 by Gregor Santner <gsantner AT mailbox DOT org>
+
+To the extent possible under law, the person who associated CC0 with
+this file has waived all copyright and related or neighboring rights
+to the public domain.
+
+You should have received a copy of the CC0 legalcode along with this
+work. If not, see <https://creativecommons.org/publicdomain/zero/1.0/>.
+-->
+<resources>
+    <string name="app_name_real" translatable="false">Cloud Notes</string>
+    <string name="app_name" translatable="false">@string/app_name_real</string>
+    <!-- The DEFAULT notebook folder, used only until the owner picks one in
+         Settings. Declared as its own constant rather than derived from
+         app_name: upstream built it with app_name.toLowerCase(), which was
+         fine for a one-word name and became "Documents/cloud notes" - a
+         directory with a space in it - the moment this app was rebranded.
+         The value deliberately matches the owner's vault repo name
+         (diegonmarcos/cloud-notes), so if that vault is ever checked out
+         under Documents/ the default already points at it. -->
+    <string name="default_notebook_folder_name" translatable="false">cloud-notes</string>
+    <string name="app_license_name" translatable="false">Apache 2.0</string>
+    <string name="app_community_url" translatable="false">https://github.com/gsantner/markor/discussions/2269#discussion_bucket</string>
+    <string name="app_bugreport_url" translatable="false">https://github.com/gsantner/markor/discussions/2269#discussion_bucket</string>
+    <string name="app_translate_url" translatable="false">https://github.com/gsantner/markor/discussions/2269#discussion_bucket</string>
+
+    <string name="app_web_url" translatable="false">https://github.com/gsantner/markor</string>
+    <string name="sync_client_support_issue_url" translatable="false">https://github.com/gsantner/markor/discussions/1381</string>
+    <string name="app_source_code_url" translatable="false">https://github.com/gsantner/markor</string>
+    <string name="huuid" translatable="false">hUUID</string>
+    <string name="embed_binary" translatable="false">Embed binary</string>
+    <string name="actionbutton" translatable="false">ActionButton</string>
+
+
+    <string name="checkmark_symbol" translatable="false">\u2301</string>
+    <string name="bookmark_symbol" translatable="false">\u2605</string>
+    <string name="lightning_symbol" translatable="false">\u2714</string>
+    <string name="plus" translatable="false">+</string>
+    <string name="share_html__mime_html" translatable="false">HTML</string>
+    <string name="pdf" translatable="false">PDF</string>
+    <string name="markdown" translatable="false">Markdown</string>
+    <string name="backup" translatable="false">Backup</string>
+    <string name="front_matter" translatable="false">Front Matter</string>
+    <string name="mime_type" translatable="false">MIME type</string>
+    <string name="sha_256" translatable="false">SHA-256</string>
+
+    <string name="default_font_family" translatable="false">sans-serif-regular</string>
+    <string name="start" translatable="false">Start</string>
+    <string name="quicknote" translatable="false">QuickNote</string>
+    <string name="todo" translatable="false">To-Do</string>
+    <string name="todo_txt" translatable="false">todo.txt</string>
+    <string name="storage" translatable="false">Storage</string>
+    <string name="quicknote_default_filename" translatable="false">QuickNote.md</string>
+    <string name="todo_default_filename" translatable="false">todo.txt</string>
+    <string name="web_browser" translatable="false">Web browser</string>
+    <string name="app_drawer_launcher_special_files_description" translatable="false">App drawer launchers - To-Do, QuickNote</string>
+
+    <string name="katex_latex" translatable="false">KaTex (LaTex)\n$ a^2 + b^2 = c^2 $</string>
+    <string name="app_theme_system" translatable="false">system</string>
+    <string name="editor_basic_color_scheme_markor" translatable="false">Markor</string>
+    <string name="editor_basic_color_scheme_black_or_white" translatable="false">Black or White</string>
+    <string name="editor_basic_color_scheme_amoled" translatable="false">AMOLED</string>
+    <string name="editor_basic_color_scheme_solarized" translatable="false">Solarized</string>
+    <string name="editor_basic_color_scheme_nord" translatable="false">Nord</string>
+    <string name="editor_basic_color_scheme_gruvbox" translatable="false">Gruvbox</string>
+    <string name="editor_basic_color_scheme_greenscale" translatable="false">Greenscale</string>
+    <string name="editor_basic_color_scheme_sepia" translatable="false">Sepia</string>
+
+    <string name="hexcode" translatable="false">Hexcode</string>
+    <string name="markup_formats_supported_list" translatable="false">Markdown, todo.txt, Plaintext</string>
+
+    <!-- About Screen -->
+    <string name="copyright_license_text_official" translatable="false"><![CDATA[
+        ### Copyright © 2017-2025
+        **Gregor Santner**
+        \n**Official project sources:**
+        [Project page](https://github.com/gsantner/markor#readme) | [Source code](https://github.com/gsantner/markor) | [F-Droid](https://f-droid.org/repository/browse/?fdid=com.diegonmarcos.cloudnotes)
+    ]]></string>
+
+    <string name="inject_to_head" translatable="false">Inject -> head</string>
+    <string name="inject_to_body" translatable="false">Inject -> body</string>
+    <string name="js_css" translatable="false"><![CDATA[html: <head>CSS, JavaScript</head>]]></string>
+    <string name="inject_to_head_default" translatable="false"><![CDATA[
+    <style>
+    \nhtml, body {
+    \n/*
+    \nfont-family: sans-serif-condensed;
+    \nfont-size: 80%;
+    \n*/
+    \n}
+    \n</style>
+    \n
+    \n<script type=\"text/javascript\">
+    \nfunction onPageLoaded() {
+    \n/*
+    \nif (\'{{ post.text_converter_name }}\' == \'MarkdownTextConverter\') {
+    \n  window.scrollTo(0, document.body.scrollHeight);
+    \n}
+    \n*/
+    \n}
+    \n</script>
+    ]]></string>
+
+
+    <plurals name="item_selected" translatable="false">
+        <item quantity="one" translatable="false">@string/one_item_selected</item>
+        <item quantity="other" translatable="false">@string/items_selected_witharg</item>
+    </plurals>
+
+    <plurals name="documents" translatable="false">
+        <item quantity="one" translatable="false">@string/document</item>
+        <item quantity="other" translatable="false">@string/documents</item>
+    </plurals>
+    <string name="tag" translatable="false">Tag</string>
+    <string name="tags" translatable="false">Tags</string>
+    <string name="dotfiles" translatable="false">.dotfiles</string>
+    <string name="tagging" translatable="false">Tagging</string>
+    <string name="regex" translatable="false">Regex</string>
+    <string name="multiline" translatable="false">Multiline</string>
+
+
+    <!--
+        Preference keys
+     -->
+    <string name="pref_key__markdown__hl_delay_v2" translatable="false">pref_key__markdown__hl_delay_v2</string>
+    <string name="pref_key__asciidoc__hl_delay" translatable="false">pref_key__asciidoc__hl_delay</string>
+    <string name="pref_key__orgmode__hl_delay" translatable="false">pref_key__orgmode__hl_delay</string>
+    <string name="pref_key__quicknote_filepath" translatable="false">pref_key__quicknote_filepath</string>
+    <string name="pref_key__markdown__highlight_lineending_two_or_more_space" translatable="false">pref_key__markdown__highlight_lineending_two_or_more_space</string>
+    <string name="pref_key__asciidoc__highlight_lineending_hard_line_break" translatable="false">pref_key__asciidoc__highlight_lineending_hard_line_break</string>
+    <string name="pref_key__markdown__auto_renumber_ordered_list" translatable="false">pref_key__markdown__auto_renumber_ordered_list</string>
+    <string name="pref_key__markdown__reorder_actions" translatable="false">pref_key__markdown__reorder_actions</string>
+    <string name="pref_key__todotxt__reorder_actions" translatable="false">pref_key__todotxt__reorder_actions</string>
+    <string name="pref_key__plaintext__reorder_actions" translatable="false">pref_key__plaintext__reorder_actions</string>
+    <string name="pref_key__orgmode__reorder_actions" translatable="false">pref_key__orgmode__reorder_actions</string>
+    <string name="pref_key__asciidoc__reorder_actions" translatable="false">pref_key__asciidoc__reorder_actions</string>
+    <string name="pref_key__markdown__action_keys" translatable="false">pref_key__markdown__action_keys</string>
+    <string name="pref_key__todotxt__action_keys" translatable="false">pref_key__todotxt__action_keys</string>
+    <string name="pref_key__orgmode__action_keys" translatable="false">pref_key__orgmode__action_keys</string>
+    <string name="pref_key__plaintext__action_keys" translatable="false">pref_key__plaintext__action_keys</string>
+    <string name="pref_key__asciidoc__action_keys" translatable="false">pref_key__asciidoc__action_keys</string>
+    <string name="pref_key__todotxt__hl_delay" translatable="false">pref_key__todotxt__hl_delay</string>
+    <string name="pref_key__todo_filepath" translatable="false">pref_key__todo_filepath</string>
+    <string name="pref_key__todotxt__add_completion_date_for_todos" translatable="false">pref_key__todotxt__add_completion_date_for_todos</string>
+    <string name="pref_key__todotxt__append_contexts_and_projects_on_end_of_task" translatable="false">pref_key__todotxt__append_contexts_and_projects_on_end_of_task</string>
+    <string name="pref_key__todotxt__last_used_archive_filename" translatable="false">pref_key__todotxt__last_used_archive_filename</string>
+    <string name="pref_key__is_preview_first" translatable="false">pref_key__is_preview_first</string>
+    <string name="pref_key__is_render_rtl" translatable="false">pref_key__is_render_rtl</string>
+    <string name="pref_key__is_highlighting_activated" translatable="false">pref_key__is_highlighting_activated</string>
+    <string name="pref_key__is_dynamic_highlighting_activated" translatable="false">pref_key__is_dynamic_highlighting_activated</string>
+    <string name="pref_key__load_last_directory_at_startup" translatable="false">pref_key__load_last_directory_at_startup</string>
+    <string name="pref_key__notebook_directory" translatable="false">pref_key__notebook_directory</string>
+    <string name="pref_key__last_opened_directory" translatable="false">pref_key__last_opened_directory</string>
+    <string name="pref_key__font_family" translatable="false">pref_key__font_family</string>
+    <string name="pref_key__editor_font_size" translatable="false">pref_key__editor_font_size</string>
+    <string name="pref_key__app_theme" translatable="false">pref_key__app_theme</string>
+    <string name="pref_key__theming_hide_system_statusbar" translatable="false">pref_key__theming_hide_system_statusbar</string>
+    <string name="pref_key__language" translatable="false">pref_key__language</string>
+    <string name="pref_key__is_main_recreate_required" translatable="false">pref_key__is_main_recreate_required</string>
+    <string name="pref_key__file_browser__sort_by_type" translatable="false">pref_key__file_browser__sort_by_type</string>
+    <string name="pref_key__sort_reverse" translatable="false">pref_key__sort_reverse</string>
+    <string name="pref_key__is_highlighting_for_hexcolor_activated" translatable="false">pref_key__is_highlighting_for_hexcolor_activated</string>
+    <string name="pref_key__app_first_start_current_version" translatable="false">pref_key__app_first_start_current_version</string>
+    <string name="pref_key__editor_line_spacing" translatable="false">pref_key__editor_line_spacing</string>
+    <string name="pref_key__editor_start_editing_on_bottom" translatable="false">pref_key__editor_start_editing_on_bottom</string>
+    <string name="pref_key__editor_start_editing_in_center" translatable="false">pref_key__editor_start_editing_in_center</string>
+    <string name="pref_key__share_into__quicknote" translatable="false">pref_key__share_into__quicknote</string>
+    <string name="pref_key__share_into__todo" translatable="false">pref_key__share_into__todo</string>
+    <string name="pref_key__share_into__most_recent_document" translatable="false">pref_key__share_into__most_recent_document</string>
+    <string name="pref_key__share_into__clipboard" translatable="false">pref_key__share_into__clipboard</string>
+    <string name="pref_key__share_into__reshare" translatable="false">pref_key__share_into__reshare</string>
+    <string name="pref_key__share_into__calendar_event" translatable="false">pref_key__share_into__calendar_event</string>
+    <string name="pref_key__attach_as_link" translatable="false">pref_key__attach_as_link</string>
+    <string name="pref_key__more_info__settings" translatable="false">pref_key__more_info__settings</string>
+    <string name="pref_key__more_info__source_code" translatable="false">pref_key__more_info__source_code</string>
+    <string name="pref_key__more_info__project_license" translatable="false">pref_key__more_info__project_license</string>
+    <string name="pref_key__more_info__open_source_licenses" translatable="false">pref_key__more_info__open_source_licenses</string>
+    <string name="pref_key__more_info__bug_reports" translatable="false">pref_key__more_info__bug_reports</string>
+    <string name="pref_key__more_info__help" translatable="false">pref_key__more_info__help</string>
+    <string name="pref_key__more_info__rate_app" translatable="false">pref_key__more_info__rate_app</string>
+    <string name="pref_key__more_info__translate" translatable="false">pref_key__more_info__translate</string>
+    <string name="pref_key__more_info__join_community" translatable="false">pref_key__more_info__join_community</string>
+
+    <string name="pref_key__more_info__app" translatable="false">pref_key__more_info__app</string>
+    <string name="pref_key__more_info__project_community" translatable="false">pref_key__more_info__project_community</string>
+    <string name="pref_key__more_info__project_team" translatable="false">pref_key__more_info__project_team</string>
+    <string name="pref_key__more_info__contributors_public_info" translatable="false">pref_key__more_info__contributors_public_info</string>
+    <string name="pref_key__more_info__copy_build_information" translatable="false">pref_key__more_info__copy_build_information</string>
+    <string name="pref_key__editor_textaction_bar_item_padding" translatable="false">pref_key__editor_textaction_bar_item_padding</string>
+    <string name="pref_key__editor_disable_spelling_red_underline" translatable="false">pref_key__editor_disable_spelling_red_underline</string>
+    <string name="pref_key__highlight_code_monospace_font" translatable="false">pref_key__highlight_code_monospace_font</string>
+    <string name="pref_key__highlight_code_block_disabled" translatable="false">pref_key__highlight_code_block_disabled</string>
+    <string name="pref_key__editor_markdown_bigger_headings_3" translatable="false">pref_key__editor_markdown_bigger_headings_3</string>
+    <string name="pref_key__editor_unordered_list_character" translatable="false">pref_key__editor_unordered_list_character</string>
+    <string name="pref_key__recent_documents" translatable="false">pref_key__recent_documents</string>
+    <string name="pref_key__popular_documents" translatable="false">pref_key__popular_documents</string>
+    <string name="pref_key__favourite_files" translatable="false">pref_key__favourite_files</string>
+    <string name="pref_key__select_create_document" translatable="false">pref_key__select_create_document</string>
+    <string name="pref_key__search_for_target" translatable="false">pref_key__search_for_target</string>
+    <string name="pref_key__share_into__open_in_browser" translatable="false">pref_key__share_into__open_in_browser</string>
+    <string name="pref_key__inject_to_head" translatable="false">pref_key__inject_to_head</string>
+    <string name="pref_key__inject_to_body" translatable="false">pref_key__inject_to_body</string>
+    <string name="pref_key__markdown_render_math" translatable="false">pref_key__markdown_render_math</string>
+    <string name="pref_key__markdown_always_shown_yaml_front_matter_keys" translatable="false">pref_key__markdown_always_shown_yaml_front_matter_keys</string>
+    <string name="pref_key__markdown_newline_newparagraph" translatable="false">pref_key__markdown_newline_newparagraph</string>
+    <string name="pref_key__markdown_table_of_contents_enabled_levels" translatable="false">pref_key__markdown_table_of_contents_enabled_levels</string>
+    <string name="pref_key__is_launcher_for_special_files_enabled" translatable="false">pref_key__is_launcher_for_special_files_enabled</string>
+    <string name="pref_key__basic_color_scheme__bg_light" translatable="false">pref_key__basic_color_scheme__bg_light</string>
+    <string name="pref_key__basic_color_scheme__fg_light" translatable="false">pref_key__basic_color_scheme__fg_light</string>
+    <string name="pref_key__basic_color_scheme__bg_dark" translatable="false">pref_key__basic_color_scheme__bg_dark</string>
+    <string name="pref_key__basic_color_scheme__fg_dark" translatable="false">pref_key__basic_color_scheme__fg_dark</string>
+    <string name="pref_key__basic_color_scheme_solarized" translatable="false">pref_key__basic_color_scheme_solarized</string>
+    <string name="pref_key__basic_color_scheme_nord" translatable="false">pref_key__basic_color_scheme_nord</string>
+    <string name="pref_key__basic_color_scheme_blackorwhite" translatable="false">pref_key__basic_color_scheme_blackorwhite</string>
+    <string name="pref_key__basic_color_scheme_amoled" translatable="false">pref_key__basic_color_scheme_amoled</string>
+    <string name="pref_key__basic_color_scheme_markor" translatable="false">pref_key__basic_color_scheme_markor</string>
+    <string name="pref_key__basic_color_scheme_gruvbox" translatable="false">pref_key__basic_color_scheme_gruvbox</string>
+    <string name="pref_key__basic_color_scheme_greenscale" translatable="false">pref_key__basic_color_scheme_greenscale</string>
+    <string name="pref_key__basic_color_scheme_sepia" translatable="false">pref_key__basic_color_scheme_sepia</string>
+    <string name="pref_key__is_keep_screen_on" translatable="false">pref_key__keep_screen_on</string>
+    <string name="pref_key__is_disallow_screenshots" translatable="false">pref_key__is_disallow_screenshots</string>
+    <string name="pref_key__snippet_directory_path" translatable="false">pref_key__snippet_directory_path</string>
+
+    <string name="abid_common_delete_lines" translatable="false">abid_common_delete_lines</string>
+    <string name="abid_common_duplicate_lines" translatable="false">abid_common_duplicate_lines</string>
+    <string name="abid_common_new_line_below" translatable="false">abid_common_new_line_below</string>
+    <string name="abid_common_unordered_list_char" translatable="false">abid_common_unordered_list_char</string>
+    <string name="abid_common_ordered_list_number" translatable="false">abid_common_ordered_list_number</string>
+    <string name="abid_common_ordered_list_renumber" translatable="false">abid_common_ordered_list_renumber</string>
+    <string name="abid_common_checkbox_list" translatable="false">abid_common_checkbox_list</string>
+    <string name="abid_common_special_key" translatable="false">abid_common_special_key</string>
+    <string name="abid_common_open_link_browser" translatable="false">abid_common_open_link_browser</string>
+    <string name="abid_common_change_case" translatable="false">abid_common_change_case</string>
+    <string name="abid_common_color_picker" translatable="false">abid_common_color_picker</string>
+    <string name="abid_common_time" translatable="false">abid_common_time</string>
+    <string name="abid_common_web_jump_to_very_top_or_bottom" translatable="false">abid_common_web_jump_to_very_top_or_bottom</string>
+    <string name="abid_common_web_jump_to_table_of_contents" translatable="false">abid_common_web_jump_to_table_of_contents</string>
+    <string name="abid_common_view_file_in_other_app" translatable="false">abid_common_view_file_in_other_app</string>
+    <string name="abid_common_rotate_screen" translatable="false">abid_common_rotate_screen</string>
+    <string name="abid_common_accordion" translatable="false">abid_common_accordion</string>
+    <string name="abid_common_indent" translatable="false">abid_common_indent</string>
+    <string name="abid_common_set_indent_size" translatable="false">abid_common_set_indent_size</string>
+    <string name="abid_common_deindent" translatable="false">abid_common_deindent</string>
+    <string name="abid_common_move_text_one_line_up" translatable="false">abid_common_move_text_one_line_up</string>
+    <string name="abid_common_move_text_one_line_down" translatable="false">abid_common_move_text_one_line_down</string>
+    <string name="abid_common_insert_snippet" translatable="false">abid_common_insert_snippet</string>
+    <string name="abid_common_insert_image" translatable="false">abid_common_insert_image</string>
+    <string name="abid_common_insert_audio" translatable="false">abid_common_insert_audio</string>
+    <string name="abid_common_insert_link" translatable="false">abid_common_insert_link</string>
+
+    <string name="abid_markdown_quote" translatable="false">abid_markdown_quote</string>
+    <string name="abid_markdown_h1" translatable="false">abid_markdown_h1</string>
+    <string name="abid_markdown_h2" translatable="false">abid_markdown_h2</string>
+    <string name="abid_markdown_h3" translatable="false">abid_markdown_h3</string>
+    <string name="abid_markdown_bold" translatable="false">abid_markdown_bold</string>
+    <string name="abid_markdown_italic" translatable="false">abid_markdown_italic</string>
+    <string name="abid_markdown_strikeout" translatable="false">abid_markdown_strikeout</string>
+    <string name="abid_markdown_code_inline" translatable="false">abid_markdown_code_inline</string>
+    <string name="abid_markdown_horizontal_line" translatable="false">abid_markdown_horizontal_line</string>
+    <string name="abid_markdown_table_insert_columns" translatable="false">abid_markdown_table_insert_columns</string>
+
+    <string name="abid_asciidoc_h1" translatable="false">abid_asciidoc_h1</string>
+    <string name="abid_asciidoc_h2" translatable="false">abid_asciidoc_h2</string>
+    <string name="abid_asciidoc_h3" translatable="false">abid_asciidoc_h3</string>
+    <string name="abid_asciidoc_h4" translatable="false">abid_asciidoc_h4</string>
+    <string name="abid_asciidoc_h5" translatable="false">abid_asciidoc_h5</string>
+    <string name="abid_asciidoc_h6" translatable="false">abid_asciidoc_h6</string>
+    <string name="abid_asciidoc_checkbox_list" translatable="false">abid_asciidoc_checkbox_list</string>
+    <string name="abid_asciidoc_unordered_list_char" translatable="false">abid_asciidoc_unordered_list_char</string>
+    <string name="abid_asciidoc_ordered_list_char" translatable="false">abid_asciidoc_ordered_list_char</string>
+    <string name="abid_asciidoc_indent_level" translatable="false">abid_asciidoc_indent</string>
+    <string name="abid_asciidoc_deindent_level" translatable="false">abid_asciidoc_deindent</string>
+    <string name="abid_asciidoc_bold" translatable="false">abid_asciidoc_bold</string>
+    <string name="abid_asciidoc_italic" translatable="false">abid_asciidoc_italic</string>
+    <string name="abid_asciidoc_monospace" translatable="false">abid_asciidoc_monospace</string>
+
+    <string name="abid_asciidoc_underline" translatable="false">abid_asciidoc_underline</string>
+    <string name="abid_asciidoc_overline" translatable="false">abid_asciidoc_overline</string>
+    <string name="abid_asciidoc_linethrough" translatable="false">abid_asciidoc_linethrough</string>
+    <string name="abid_asciidoc_nobreak" translatable="false">abid_asciidoc_nobreak</string>
+    <string name="abid_asciidoc_nowrap" translatable="false">abid_asciidoc_nowrap</string>
+    <string name="abid_asciidoc_prewrap" translatable="false">abid_asciidoc_prewrap</string>
+
+    <string name="abid_asciidoc_highlight" translatable="false">abid_asciidoc_highlight</string>
+
+    <string name="abid_asciidoc_subscript" translatable="false">abid_asciidoc_subscript</string>
+    <string name="abid_asciidoc_superscript" translatable="false">abid_asciidoc_superscript</string>
+
+    <string name="abid_asciidoc_break_thematic" translatable="false">abid_asciidoc_break_thematic</string>
+    <string name="abid_asciidoc_break_page" translatable="false">abid_asciidoc_break_page</string>
+
+    <string name="abid_asciidoc_squarebrackets" translatable="false">abid_asciidoc_squarebrackets</string>
+
+    <string name="abid_asciidoc_block_comment" translatable="false">abid_asciidoc_block_comment</string>
+    <string name="abid_asciidoc_block_example" translatable="false">abid_asciidoc_block_example</string>
+    <string name="abid_asciidoc_block_listing" translatable="false">abid_asciidoc_block_listing</string>
+    <string name="abid_asciidoc_block_literal" translatable="false">abid_asciidoc_block_literal</string>
+    <string name="abid_asciidoc_block_open" translatable="false">abid_asciidoc_block_open</string>
+    <string name="abid_asciidoc_block_sidebar" translatable="false">abid_asciidoc_block_sidebar</string>
+    <string name="abid_asciidoc_block_table" translatable="false">abid_asciidoc_block_table</string>
+    <string name="abid_asciidoc_block_pass" translatable="false">abid_asciidoc_block_pass</string>
+    <string name="abid_asciidoc_block_quote" translatable="false">abid_asciidoc_block_quote</string>
+    <string name="abid_asciidoc_table_insert_columns" translatable="false">abid_asciidoc_table_insert_columns</string>
+
+    <string name="abid_asciidoc_special_key" translatable="false">abid_asciidoc_special_key</string>
+
+    <!-- used in runAsciidocSpecialKeyAction -->
+
+    <!-- https://docs.asciidoctor.org/asciidoc/latest/text/text-span-built-in-roles/ -->
+    <string name="asciidoc_underline" translatable="false">role - underline</string>
+    <string name="asciidoc_overline" translatable="false">role - overline</string>
+    <string name="asciidoc_linethrough" translatable="false">role - linethrough</string>
+    <string name="asciidoc_nobreak" translatable="false">role - nobreak</string>
+    <string name="asciidoc_nowrap" translatable="false">role - nowrap</string>
+    <string name="asciidoc_prewrap" translatable="false">role - prewrap</string>
+
+    <!-- https://docs.asciidoctor.org/asciidoc/latest/text/highlight/ -->
+    <string name="asciidoc_highlight" translatable="false">inline - highlight</string>
+
+    <!-- https://docs.asciidoctor.org/asciidoc/latest/text/subscript-and-superscript/ -->
+    <string name="asciidoc_subscript" translatable="false">inline - subscript</string>
+    <string name="asciidoc_superscript" translatable="false">inline - superscript</string>
+
+
+    <!-- https://docs.asciidoctor.org/asciidoc/latest/blocks/delimited/ -->
+    <string name="asciidoc_block_comment" translatable="false">block - comment</string>
+    <string name="asciidoc_block_example" translatable="false">block - example</string>
+    <string name="asciidoc_block_listing" translatable="false">block - listing</string>
+    <string name="asciidoc_block_literal" translatable="false">block - literal</string>
+    <string name="asciidoc_block_open" translatable="false">block - open</string>
+    <string name="asciidoc_block_sidebar" translatable="false">block - sidebar</string>
+    <string name="asciidoc_block_table" translatable="false">block - table</string>
+    <string name="asciidoc_block_pass" translatable="false">block - pass</string>
+    <string name="asciidoc_block_quote" translatable="false">block - quote</string>
+
+    <string name="asciidoc_block_code" translatable="false">block - code</string>
+    <string name="asciidoc_block_collapsible" translatable="false">block - collapsible</string>
+
+    <!-- https://docs.asciidoctor.org/asciidoc/latest/blocks/breaks/#page-breaks -->
+    <string name="asciidoc_break_thematic" translatable="false">break - thematic</string>
+    <string name="asciidoc_break_page" translatable="false">break - page</string>
+
+
+    <string name="abid_wikitext_h1" translatable="false">abid_wikitext_h1</string>
+    <string name="abid_wikitext_h2" translatable="false">abid_wikitext_h2</string>
+    <string name="abid_wikitext_h3" translatable="false">abid_wikitext_h3</string>
+    <string name="abid_wikitext_h4" translatable="false">abid_wikitext_h4</string>
+    <string name="abid_wikitext_h5" translatable="false">abid_wikitext_h5</string>
+    <string name="abid_wikitext_bold" translatable="false">abid_wikitext_bold</string>
+    <string name="abid_wikitext_italic" translatable="false">abid_wikitext_italic</string>
+    <string name="abid_wikitext_highlight" translatable="false">abid_wikitext_highlight</string>
+    <string name="abid_wikitext_strikeout" translatable="false">abid_wikitext_strikeout</string>
+    <string name="abid_wikitext_code_inline" translatable="false">abid_wikitext_code_inline</string>
+
+    <string name="abid_todotxt_toggle_done" translatable="false">abid_todotxt_toggle_done</string>
+    <string name="abid_todotxt_add_context" translatable="false">abid_todotxt_add_context</string>
+    <string name="abid_todotxt_add_project" translatable="false">abid_todotxt_add_project</string>
+    <string name="abid_todotxt_priority" translatable="false">abid_todotxt_priority</string>
+    <string name="abid_todotxt_archive_done_tasks" translatable="false">abid_todotxt_archive_done_tasks</string>
+    <string name="abid_todotxt_due_date" translatable="false">abid_todotxt_due_date</string>
+    <string name="abid_todotxt_sort_todo" translatable="false">abid_todotxt_sort_todo</string>
+
+
+    <string name="abid_orgmode_h1" translatable="false">abid_orgmode_h1</string>
+    <string name="abid_orgmode_h2" translatable="false">abid_orgmode_h2</string>
+    <string name="abid_orgmode_h3" translatable="false">abid_orgmode_h3</string>
+    <string name="abid_orgmode_bold" translatable="false">abid_orgmode_bold</string>
+    <string name="abid_orgmode_italic" translatable="false">abid_orgmode_italic</string>
+    <string name="abid_orgmode_strikeout" translatable="false">abid_orgmode_strikeout</string>
+    <string name="abid_orgmode_underline" translatable="false">abid_orgmode_underline</string>
+    <string name="abid_orgmode_code_inline" translatable="false">abid_orgmode_code_inline</string>
+
+
+    <string name="jekyll_post" translatable="false">Jekyll Post</string>
+    <string name="wikitext" translatable="false">Wikitext / Zim</string>
+    <string name="pref_key__is_multi_window_enabled" translatable="false">pref_key__is_multi_window_enabled</string>
+    <string name="pref_key__is_enable_experimental_features" translatable="false">pref_key__is_enable_experimental_features</string>
+    <string name="pref_key__app_start_tab_v2" translatable="false">pref_key__app_start_tab_v2</string>
+    <string name="pref_key__app_start_folder" translatable="false">pref_key__app_start_folder</string>
+    <string name="pref_key__swipe_to_change_mode" translatable="false">pref_key__swipe_to_change_mode</string>
+    <string name="pref_key__filesystem_folder_first" translatable="false">pref_key__filesystem_folder_first</string>
+    <string name="pref_key__show_dot_files_v2" translatable="false">pref_key__show_dot_files_v2</string>
+    <string name="pref_key__tab_width_v2" translatable="false">pref_key__tab_width_v2</string>
+    <string name="pref_key__editor_enable_line_breaking" translatable="false">pref_key__editor_enable_line_breaking</string>
+    <string name="pref_key__enable_line_numbers" translatable="false">pref_key__enable_line_numbers</string>
+    <string name="pref_key__exts_to_always_open_in_this_app" translatable="false">pref_key__exts_to_always_open_in_this_app</string>
+    <string name="pref_key__view_font_size" translatable="false">pref_key__view_font_size</string>
+    <string name="pref_key__view_mode_link_color" translatable="false">pref_key__view_mode_link_color</string>
+    <string name="pref_key__open_links_with_chrome_custom_tabs" translatable="false">pref_key__open_links_with_chrome_custom_tabs</string>
+    <string name="pref_key__request_external_storage" translatable="false">pref_key__request_external_storage</string>
+    <string name="features" translatable="false">Features</string>
+    <string name="chrome_custom_tabs" translatable="false">Chrome Custom Tabs</string>
+    <string name="asciidoc" translatable="false">AsciiDoc</string>
+    <string name="key_value" translatable="false">Key - Value</string>
+    <string name="ohm" translatable="false">Ohm (Ω)</string>
+    <string name="debug" translatable="false">Debug</string>
+    <string name="text" translatable="false">Text</string>
+    <string name="inject" translatable="false">Inject</string>
+    <string name="char_punctation_mark_arrows" translatable="false">Punctuation mark (»«)</string>
+    <string name="indent" translatable="false">Indent</string>
+    <string name="deindent" translatable="false">De-indent</string>
+    <string name="indent_level" translatable="false">Indent Level</string>
+    <string name="deindent_level" translatable="false">De-indent Level</string>
+    <string name="assets" translatable="false">Assets</string>
+    <string name="audio" translatable="false">Audio</string>
+    <string name="screenshot" translatable="false">Screenshot</string>
+    <string name="continued_overline" translatable="false">Continued overline (‾‾‾‾)</string>
+    <string name="shrug" translatable="false">Shrug (¯\_(ツ)_/¯)</string>
+    <string name="accordion" translatable="false">Accordion</string>
+    <string name="pref_key__default_encryption_password" translatable="false">pref_key__default_encryption_password</string>
+    <string name="pref_key__set_encryption_password" translatable="false">pref_key__set_encryption_password</string>
+    <string name="empty_string" translatable="false" />
+    <string name="pref_key__new_file_dialog_lastused_encryption" translatable="false">pref_key__new_file_dialog_lastused_encryption</string>
+    <string name="pref_key__new_file_dialog_lastused_extension" translatable="false">pref_key__new_file_dialog_lastused_extension</string>
+    <string name="pref_key__new_file_dialog_lastused_type" translatable="false">pref_key__new_file_dialog_lastused_type</string>
+    <string name="pref_key__file_browser_last_browsed_folder" translatable="false">pref_key__file_browser_last_browsed_folder</string>
+    <string name="pref_key__file_description_format" translatable="false">pref_key__file_description_format</string>
+    <string name="pref_key__wikitext_bigger_headings" translatable="false">pref_key__wikitext_bigger_headings</string>
+    <string name="pref_key__asciidoc_bigger_headings" translatable="false">pref_key__asciidoc_bigger_headings</string>
+    <string name="pref_key__wikitext_reorder_actions" translatable="false">pref_key__wikitext_reorder_actions</string>
+    <string name="pref_key__wikitext_action_keys" translatable="false">pref_key__wikitext_action_keys</string>
+    <string name="pref_key__wikitext_dynamic_notebook_root" translatable="false">pref_key__wikitext_dynamic_notebook_root</string>
+    <string name="pref_key__max_search_depth" translatable="false">pref_key__max_search_depth</string>
+    <string name="pref_key__filesearch_ignorelist" translatable="false">pref_key__filesearch_ignorelist</string>
+    <string name="pref_key__is_search_query_case_sensitive" translatable="false">pref_key__is_search_query_case_sensitive</string>
+    <string name="pref_key__is_search_query_use_regex" translatable="false">pref_key__is_search_query_use_regex</string>
+    <string name="pref_key__is_search_in_content" translatable="false">pref_key__is_search_in_content</string>
+    <string name="pref_key__is_only_first_content_match" translatable="false">pref_key__is_only_first_content_match</string>
+    <string name="pref_key__restore_settings" translatable="false">pref_key__restore_settings</string>
+    <string name="pref_key__backup_settings" translatable="false">pref_key__backup_settings</string>
+    <string name="pref_key__editor_tab_to_indent" translatable="false">pref_key__editor_tab_to_indent</string>
+    <string name="pref_key__editor_static_cursor" translatable="false">pref_key__editor_static_cursor</string>
+    <string name="hidden_password" translatable="false">****</string>
+    <string name="pref_key__todotxt__additional_projects_contexts" translatable="false">"pref_key__todotxt__additional_projects_contexts"</string>
+    <string name="pref_key__todotxt__due_date_offset" translatable="false">pref_key__todotxt_due_date_offset</string>
+    <string name="action_format_keyvalue" translatable="false">action_format_keyvalue</string>
+    <string name="action_format_plaintext" translatable="false">action_format_plaintext</string>
+    <string name="action_format_csv" translatable="false">action_format_csv</string>
+    <string name="action_format_asciidoc" translatable="false">action_format_asciidoc</string>
+    <string name="action_format_embedbinary" translatable="false">action_format_embedbinary</string>
+    <string name="action_format_markdown" translatable="false">action_format_markdown</string>
+    <string name="action_format_todotxt" translatable="false">action_format_todotxt</string>
+    <string name="action_format_wikitext" translatable="false">action_format_wikitext</string>
+    <string name="action_format_orgmode" translatable="false">action_format_orgmode</string>
+    <string name="pref_key__share_into_format" translatable="false">pref_key__share_into_format</string>
+    <string name="pref_key__attachment_folder_name" translatable="false">pref_key__attachment_directory_name</string>
+    <string name="pref_key__filetype_template_map" translatable="false">pref_key__filetype_template_map</string>
+    <string name="pref_key__template_title_format_map" translatable="false">pref_key__template_title_format_map</string>
+    <string name="pref_key__title_format_list" translatable="false">pref_key__title_format_list</string>
+    <string name="pref_key__format_share_as_link" translatable="false">pref_key__format_share_as_link</string>
+    <string name="squarebrackets" translatable="false">Square Brackets</string>
+    <string name="csv" translatable="false">CSV</string>
+    <string name="orgmode" translatable="false">OrgMode</string>
+    <string name="option_select_lines" translatable="false">option_select_lines</string>
+</resources>

@@ -380,6 +380,22 @@
       }
     },
     {
+      "id": "notes",
+      "label": "cloud-notes",
+      "package": "com.diegonmarcos.cloudnotes",
+      "alt_id": null,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-notes",
+      "tag": "latest",
+      "asset": "Cloud-Notes.apk",
+      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Notes.apk",
+      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-notes",
+      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-notes",
+      "blocked": false,
+      "kind": "app"
+    },
+    {
       "id": "sheets",
       "label": "Cloud Office",
       "package": "com.diegonmarcos.cloudoffice",

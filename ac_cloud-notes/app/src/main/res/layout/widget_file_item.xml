@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+/*#######################################################
+ * Copyright (c) 2014 Jeff Martin
+ * Copyright (c) 2015 Pedro Lafuente
+ * Copyright (c) 2017-2025 Gregor Santner
+ *
+ * Licensed under the MIT license.
+ * You can get a copy of the license text here:
+ *   https://opensource.org/licenses/MIT
+###########################################################*/
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:animateLayoutChanges="true"
+    android:background="@color/background"
+    android:baselineAligned="false"
+    android:clickable="true"
+    android:orientation="horizontal"
+    android:paddingLeft="10dp"
+    android:paddingTop="10dp"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingBottom="2dp"
+    tools:ignore="KeyboardInaccessibleWidget,RtlHardcoded">
+
+    <TextView
+        android:id="@+id/widget_note_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/background"
+        android:ellipsize="end"
+        android:gravity="center|start"
+        android:minHeight="19sp"
+        android:singleLine="true"
+        android:textColor="@color/primary_text"
+        android:textSize="16sp"
+        android:drawablePadding="4dp"
+        app:drawableStartCompat="@drawable/ic_file_gray_24dp"
+        app:drawableLeftCompat="@drawable/ic_file_gray_24dp" />
+</LinearLayout>

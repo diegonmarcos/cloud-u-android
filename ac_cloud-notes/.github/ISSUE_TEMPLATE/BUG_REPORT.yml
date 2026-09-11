@@ -1,0 +1,75 @@
+name: "Bug report"
+description: "Submit a report and help to improve the project"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### 👍 Thank you for contributing to the project!
+        Please note this is a **free and open-source** project. People take their own **free time** to help you, so please, be patient.
+  - type: checkboxes
+    id: before-posting
+    attributes:
+      label: "⚠️ This issue respects the following points: ⚠️"
+      description: All conditions are **required**. Your issue can be closed if these are checked incorrectly.
+      options:
+        - label: This is a **bug**. Not a [question or feature request](https://github.com/gsantner/markor/issues/new/choose).
+          required: true
+        - label: The topic is **not** already reported at [Issues](https://github.com/gsantner/markor/issues?q=#js-issues-search). _(I've searched it and checked most recent issues)_.
+          required: true
+        - label: Markor **is** up to date. See [Releases](https://github.com/gsantner/markor/tags) for the latest version. Updates are available from [F-Droid](https://f-droid.org/en/packages/com.diegonmarcos.cloudnotes/) and GitHub. 
+          required: true
+        - label: The bug is still present in the latest development version (git master). (Please [download](https://nightly.link/gsantner/markor/workflows/build-android-project/master) and try the test version of Markor, named **Marder**. Don't worry; Markor and Marder appear as completely separate applications. You can install both side-by-side, and Markor settings are not touched. In case the issue is resolved there, you don't need to create a bug report. The change will be part of the next Markor update.)
+          required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description:  What problem did you encounter? What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: |
+        Explain what you did to encounter the issue,
+      value: |
+        1. 
+        2. 
+        3. 
+    validations:
+      required: true
+  - type: textarea
+    id: information
+    attributes:
+      label: Information
+      description: What is your Android version? What device? (In case of custom ROM, what ROM?)
+      value: |
+        Android version: 
+        Device (phone model): 
+        App Version: 
+    validations:
+      required: true
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Source
+      description: Where did you get & install the application from?
+      options: ["F-Droid", "GitHub Releases", "git master branch", "Google Play", "Aptoide", "Something else (-> Additional info)"]
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Format / File type
+      description: Is the issue about a specific format (i.e. Markdown/todo.txt)?
+      options: ["Not specific", "Markdown", "todo.txt", "Wikitext, Zim", "Key-Value (json/yaml/ini..)", "Plaintext", "Binary", "Something else (-> Additional info)"]
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Additional info / Log
+      description: Leave any additional information or logs here.
+      render: shell
+      value: "-"

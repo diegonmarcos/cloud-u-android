@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    android:orientation="vertical"
+    tools:context=".activity.ActionButtonSettingsActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:theme="@style/AppTheme.Unified">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            android:theme="@style/LightTextToolbarOverlay"
+            app:title="@string/action_order">
+
+        </androidx.appcompat.widget.Toolbar>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <Switch
+        android:id="@+id/showActionBarSwitch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:color="@color/primary_text"
+        android:paddingStart="12dp"
+        android:paddingTop="@dimen/activity_horizontal_margin"
+        android:paddingEnd="12dp"
+        android:paddingBottom="@dimen/activity_horizontal_margin"
+        android:text="@string/show_bottom_action_bar"
+        android:textAppearance="@style/TextAppearance.AppCompat.Menu" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/action_order_activity_recycler"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingStart="@dimen/appbar_padding_top"
+        android:paddingLeft="@dimen/appbar_padding_top"
+        android:paddingEnd="@dimen/activity_horizontal_margin"
+        android:paddingRight="@dimen/activity_horizontal_margin" />
+
+</LinearLayout>

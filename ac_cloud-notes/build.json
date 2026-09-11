@@ -1,0 +1,104 @@
+{
+  "name": "cloud-notes",
+  "description": "Diego's Cloud Notes — our own signed build of Markor. A plain-Markdown editor that opens a FOLDER of .md files on disk, which is exactly the shape of the owner's existing Obsidian vault (179 .md files). No account, no backend, no database: the notes stay files, so Syncthing keeps replicating them and Obsidian keeps opening them. Vendored upstream tree renamed onto com.diegonmarcos.cloudnotes so it coexists with a Play/F-Droid-signed Markor on the same device.",
+  "category": "android",
+  "mode": "single-app",
+  "_doc_mode": "Hub-less single-fork app, exactly like ac_cloud-camera and ac_cloud-media-center: there is no hub module and no IPC contract — the single forks.<key> entry IS the app, built through the engine's step_build_fork machinery.",
+  "_doc_product_substitution": "TASK #232 ASKED FOR AFFiNE. THIS IS NOT AFFiNE, AND THAT IS A DECISION THE OWNER CAN OVERRULE. a0_docs/eng-specs/cloud-notes-affine-feasibility.md §7.2 is the reason: AFFiNE stores documents as opaque y-octo CRDT blobs in a single SQLite database (packages/frontend/native/schema/src/lib.rs — table `snapshots`, columns doc_id/data, no path column anywhere), so a built AFFiNE APK opens on an EMPTY workspace standing next to the owner's 179 markdown files, which it has no folder-vault mode to read. The licence and toolchain walls (EE-licensed Rust .so via affine_common, no upstream APK to mirror) are real but secondary: even with those solved AFFiNE would not have delivered what was asked. Markor edits the files in place.",
+  "build": {
+    "type": "gradle",
+    "entry": "build.sh"
+  },
+  "android": {
+    "application_id": "com.diegonmarcos.cloudnotes",
+    "compile_sdk": 35,
+    "min_sdk": 18,
+    "target_sdk": 35,
+    "version_code": 163,
+    "version_name": "2.16.1",
+    "_doc_version": "Mirrors the vendored app/build.gradle (versionCode 163 / versionName 2.16.1), which is upstream tag v2.16.1 — the tag this tree was cloned from.",
+    "_doc_min_sdk": "18 is UPSTREAM's own floor (build.gradle sets version_minSdk=17, app/build.gradle raises it to 18) and is left untouched. It is lower than the fleet's usual 29 and costs nothing: a lower floor only widens device support. target_sdk 35 is what matters for the storage-permission model — see _doc_storage_permission.",
+    "abi_filters": []
+  },
+  "_doc_abi_filters": "EMPTY ON PURPOSE, and this app publishes ONE universal APK, not a per-ABI pair. Markor is pure Java: `find . -name '*.c' -o -name '*.cpp' -o -name CMakeLists.txt -o -name Android.mk` returns nothing and the tree contains zero .so files, so there is no externalNativeBuild and no ABI dimension to split on. Identical situation to ac_cloud-camera, whose build.json carries the same empty list and the same single artefact. Publishing a second, byte-identical file under an -x86_64 name would be a fabricated artefact, not ABI coverage; ac_cloud-media-center splits because ReFra compiles libheif/libde265 and genuinely differs per ABI. Consequently no release.variants block is declared, so aa_cloud-superapp/data/regen.sh emits NO `assets` map for this entry and the updater falls through to the single flat `asset` — the same path cloud-camera already takes on the owner's arm64-v8a phone.",
+  "_doc_storage_permission": "SDK 35 / Android 15. Markor reads a user-chosen folder of markdown files, which is the one thing scoped storage makes awkward. The vendored AndroidManifest declares READ/WRITE_EXTERNAL_STORAGE at lines 16-17 with NO maxSdkVersion (so on API 33+ the platform simply stops granting them; they are the pre-Android-10 path and are not what makes this work), and android.permission.MANAGE_EXTERNAL_STORAGE at lines 22-24 with tools:ignore=\"ScopedStorage\". It ships activity/StoragePermissionActivity.java, and opoc/util/GsContextUtils.java gates on Environment.isExternalStorageManager() (line 2422) and routes to Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION (line 2394). MANAGE_EXTERNAL_STORAGE is the ONLY model that lets an editor open an arbitrary pre-existing vault directory by path and keep writing to it — SAF/ACTION_OPEN_DOCUMENT_TREE would work too but re-prompts per tree and breaks the plain-File code paths this whole app is built on. The owner must grant it ONCE, by hand: Settings ▸ Apps ▸ Cloud Notes ▸ Permissions ▸ Files and media ▸ 'Allow management of all files' (the app routes there itself on first run). It cannot be granted by an install flag and it is not granted by tapping through the normal runtime dialog.",
+  "signing": {
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: A0_keys/providers/android/release.jks (OU=Cloud Constellation) + A0_keys/providers/android/signing.secrets.yaml.",
+    "vault_keystore": "A0_keys/providers/android/release.jks",
+    "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
+  },
+  "forks": {
+    "notes": {
+      "_doc": "Plural 'forks.<key>' map — same shape as ac_cloud-camera/build.json::forks.camera. Exactly one key because this app IS the fork (no separate thin hub), matching top-level mode:'single-app'.",
+      "upstream_repo": "https://github.com/gsantner/markor.git",
+      "tracker_dir": "ac_cloud-notes",
+      "tracker_dir_note": "VENDORED: the upstream tree sits at the app root (no .git), so materialize-fork returns early and build-fork uses the committed source as-is. upstream_repo/pinned_tag/pinned_commit are PROVENANCE ONLY.",
+      "pinned_tag": "v2.16.1",
+      "pinned_commit": "8d657fd20fff71719d782a3bc375c6f982d09b19",
+      "_doc_pinned_tag": "Cloned 2026-09-11 from the default branch at commit 8d657fd2 (authored 2026-08-24), which carries versionCode 163 / versionName 2.16.1 in app/build.gradle — i.e. the v2.16.1 line. pinned_commit is the exact tree that was vendored and is the only reproducible handle; pinned_tag names the release it corresponds to.",
+      "license": "Apache-2.0",
+      "_doc_license": "Confirmed by reading the vendored LICENSE.txt: a copyright preamble ('Copyright 2017-2025 Gregor Santner') followed by the VERBATIM Apache License 2.0 body. GitHub's licence API reports NOASSERTION for this repo only because of that preamble — the file itself is unambiguous. README.md §License adds that localisation files (string*.xml) and samples are CC0-1.0, which is strictly more permissive. Both permit redistributing a modified, rebranded APK provided the licence and notices are retained, which is why LICENSE.txt, UPSTREAM-README.md, CONTRIBUTORS.md and NOTICE.md are all committed here unmodified or additive. This is the licence class cloud-android-licence-boundary-guard.py passes, and it is the wall AFFiNE could not clear.",
+      "primary_lang": "Java",
+      "build": {
+        "_doc": "Plain single-module gradle build with upstream's own wrapper (Gradle 8.13) and AGP 8.13.2. Three product flavors — flavorAtest / flavorDefault / flavorGplay — so the task MUST name one; flavorDefault is the de-Googled build (its productFlavors block is empty and IS_GPLAY_BUILD stays false), and there is no Firebase, analytics or crashlytics anywhere in dependencies. NO 'signing' key on purpose: upstream declares NO signingConfigs at all, so gradle emits an unsigned APK and the engine's _enforce_signature zipaligns + apksigners it with the ONE shared constellation key — which is the real signing guarantee anyway.",
+        "gradle_task": "assembleFlavorDefaultRelease",
+        "apk_glob": "app/build/outputs/apk/**/*.apk"
+      },
+      "blocked_on": null,
+      "comment": "Markor, renamed onto com.diegonmarcos.cloudnotes. Chosen over AFFiNE because it edits the owner's existing markdown files in place; chosen over Quillpad/Notesnook/Joplin because those keep notes in their own database, which is the same defect as AFFiNE.",
+      "app_id": "com.diegonmarcos.cloudnotes",
+      "image": "cloud-notes",
+      "_doc_owned": "NO LONGER TRACKED UPSTREAM (2026-09-11), following ac_cloud-media-center/build.json::_doc_owned exactly. The package identity was renamed off net.gsantner across 173 files, so this is our code now, not a fork we rebase. upstream_repo and pinned_commit stay as PROVENANCE ONLY — re-running materialize-fork against them would clobber the rename, and there is no reason to: divergence is the point. Apache-2.0 attribution is preserved in LICENSE.txt, UPSTREAM-README.md, CONTRIBUTORS.md and NOTICE.md, which owning the code does not change; NOTICE.md also carries the Apache-2.0 §4(b) statement of changes.",
+      "_doc_rename": "Renamed in ONE pass over the vendored tree, 173 files rewritten and 0 residual matches for net.gsantner outside the three attribution files: (1) package net.gsantner.markor -> com.diegonmarcos.cloudnotes, (2) package net.gsantner.opoc -> com.diegonmarcos.cloudnotes.opoc, (3) the directories app/src/{main,test}/java/net/gsantner/{markor,opoc} moved to .../java/com/diegonmarcos/cloudnotes{,/opoc}, (4) applicationId, namespace and the resValue manifest_package_id in app/build.gradle, (5) the flavorAtest applicationId net.gsantner.markor_test -> com.diegonmarcos.cloudnotes_test. The ContentProvider authority needed NO separate edit and that is worth stating rather than assuming: AndroidManifest.xml:145 declares android:authorities=\"${applicationId}.provider\", a manifest placeholder, so the authority follows applicationId automatically and is now com.diegonmarcos.cloudnotes.provider. That closes the device-global collision hazard (INSTALL_FAILED_CONFLICTING_PROVIDER against a real Markor install) with no hardcoded string to keep in sync. There is no Room database and therefore no @Database-named schema directory to move. LICENSE.txt, UPSTREAM-README.md and CONTRIBUTORS.md were deliberately EXCLUDED from the rewrite so attribution stays verbatim. The visible label is 'Cloud Notes' via values/string-not_translatable.xml::app_name_real, which upstream already marks translatable=\"false\".",
+      "_doc_not_vendored": "doc/ and metadata/ were NOT copied from upstream: they are the F-Droid store listing and the README's presentation GIFs (~7MB, three files over 1MB each) and no gradle task reads them. Everything build.gradle's copyRepoFiles task DOES read — README.md, CHANGELOG.md, CONTRIBUTORS.md, LICENSE.txt — is present at the tree root, because that task copies them into app/src/main/res/raw and the build fails without them. Largest committed blob is app/thirdparty/assets/mermaid/mermaid.min.js at 2,666,850 bytes, comfortably inside GitHub's 100MB per-blob cap."
+    }
+  },
+  "release": {
+    "_doc": "Per-APK distribution, same data-driven pattern as ac_cloud-camera::release. {sha} -> git short sha, {version_name} -> android.version_name.",
+    "artifact": {
+      "debug": "Cloud-Notes-debug.apk",
+      "release": "Cloud-Notes.apk"
+    },
+    "ghcr": {
+      "_doc": "ORAS push as an OCI artifact (the APK is a blob, not a container). The layer's org.opencontainers.image.title annotation comes from the pushed filename, so publish-fork pushes release.artifact.release — the Constellation AppStore reads that title to name the download.",
+      "enabled": true,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-notes",
+      "media_type": "application/vnd.android.package-archive",
+      "tags": [
+        "latest",
+        "sha-{sha}",
+        "v{version_name}"
+      ]
+    },
+    "gh_release": {
+      "_doc": "Rolling GH release 'latest', overwritten on every main push, so /releases/download/latest/Cloud-Notes.apk stays a stable URL. Consumed by aa_cloud-superapp/data/constellation-fleet.json::apps[id=notes].release_url, which regen.sh derives from this block.",
+      "enabled": true,
+      "rolling_tag": "latest",
+      "asset_name": "Cloud-Notes.apk",
+      "draft": false,
+      "prerelease": false,
+      "generate_release_notes": false
+    }
+  },
+  "tests": {
+    "_doc": "What CI runs to prove this application works, read by 1_cicd/src/scripts/cloud-android-test-engine.sh. The shell testers are STATIC assertions - no JDK, no Android SDK, no gradle - so they run above the publish gate and a change that breaks them goes red even when the gate would have skipped the build.",
+    "shell": {
+      "dir": "test",
+      "_doc_dir": "DECLARED EXPLICITLY even though 'test' is also the engine's default. A missing or wrong tests.shell.dir is not an error in cloud-android-test-engine.sh - it is a COVERAGE-GAP line and exit 0, i.e. it fails OPEN. For a brand-new app that is indistinguishable from a passing suite, so the value is stated rather than inherited.",
+      "_doc_requires": "Tools a tester shells out to, checked BEFORE anything runs, because a missing tool otherwise makes the tester answer from the tool's ABSENCE: testers in this repository once passed only because ripgrep was not installed and their invocation failed open. Nothing here uses ripgrep. python3 parses build.json and cross-checks it against app/build.gradle; awk reads upstream's ROOT_TO_RAW_COPYFILES list out of build.gradle instead of restating it.",
+      "requires": [
+        "python3",
+        "awk"
+      ],
+      "_doc_quarantine": "Filename to the REASON it may fail. Empty, and it should stay that way: a quarantined tester that starts PASSING fails the build, so an entry cannot outlive its reason.",
+      "quarantine": {}
+    },
+    "unit": {
+      "_doc": "DISABLED, and this is a real gap rather than an absence of tests: the vendored tree ships 20 JVM unit test source files under app/src/test/java (upstream's own - GsTextUtilsTest, GsFileUtilsTest, Csv2MdTableTest, the markdown highlighter pattern tests and more) and NONE of them execute. The blocker is workflow ORDER, not the tests: ship-cloud-notes.yml runs the test-engine step FIRST, deliberately, before actions/setup-java and setup-android, so that it needs no toolchain and fails in seconds. Pointing tests.unit.task at a gradle task from that step would invoke ./gradlew with no JDK and no Android SDK on PATH. Enabling this means moving the unit phase below the SDK setup steps, which every sibling ship workflow would then also want - so it is recorded here as named debt instead of being half-done in one app. The task to enable is testFlavorDefaultDebugUnitTest.",
+      "task": null,
+      "enabled": false
+    }
+  }
+}
