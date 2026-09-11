@@ -18,6 +18,85 @@ plugins {
 def ohBuildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
 if (ohBuildJson.onehand == null) ohBuildJson = new groovy.json.JsonSlurper().parse(file('../../build.json'))
 def ohCfg       = ohBuildJson.onehand ?: [:]
+
+// ── Sector label + icon, resolved ONCE from the app's own tile catalogue ──
+// The edge menu draws every sector with a label AND an icon, and it had
+// neither for `action:` sectors. The label was matched by RAW STRING against
+// circular_menu.actions — a MENU, not the set of things a sector may point at
+// — and the icon only ever came from PackageManager, which has nothing to give
+// a target that names no package. A sector missing from that list rendered as
+// its own title-cased URL with no glyph, which is how the first left sector
+// read as "missing AI Claude" three times (#111, #127, and again today), and
+// why Drive shows a label and no icon.
+//
+// Resolved here instead, at build time, against ui.sections — the SAME tile
+// data the Cloud pages draw — and emitted as `action_catalogue`, which BOTH
+// surfaces read (the accessibility overlay and the Configs picker). The
+// declaration and the catalogue can no longer disagree, because the catalogue
+// is DERIVED FROM the declaration rather than maintained beside it.
+//
+// `action:` is decoration, not identity: GestureAction.serialize() re-adds it,
+// so it is stripped on both sides before comparing and `action:section:drive`
+// and `section:drive` can never again be two different destinations.
+def ohKey = { t -> 'action:' + (t ?: '').toString().replaceFirst(/^action:/, '') }
+
+// target -> [label, icon] for every tile the app declares. `tiles_*` covers the
+// per-page tile arrays; tile_groups is the themed variant the Cloud section
+// uses, and it is where the AI Claude tile lives.
+def ohTiles = [:]
+ohBuildJson.ui?.sections?.each { sec ->
+    def lists = []
+    sec.each { k, v -> if (k.toString().startsWith('tiles_') && v instanceof List) lists << v }
+    sec.tile_groups?.each { g -> if (g.tiles instanceof List) lists << g.tiles }
+    lists.each { tl -> tl.each { t ->
+        if (t instanceof Map && !t.separator && t.target && t.label) {
+            ohTiles.putIfAbsent(ohKey(t.target), [label: t.label, icon: t.icon ?: ''])
+        }
+    } }
+}
+// `section:<id>` falls through to the SECTION itself. That is the only place
+// Drive's glyph exists: Drive is the SuperApp's OWN section, so there is no
+// installed application for the launcher to borrow an icon from.
+def ohSections = [:]
+ohBuildJson.ui?.sections?.each { s ->
+    if (s.id) ohSections[s.id.toString()] = [label: s.label ?: s.id, icon: s.icon ?: '']
+}
+def ohResolve = { t ->
+    def hit = ohTiles[ohKey(t)]
+    if (hit != null) return hit
+    def bare = (t ?: '').toString().replaceFirst(/^action:/, '')
+    if (bare.startsWith('section:')) return ohSections[bare.substring('section:'.length())]
+    return null
+}
+
+// Start from circular_menu.actions, keeping each entry's OWN label — the menu
+// names its entries, the tile only lends its glyph — and give it the icon it
+// never carried.
+def ohCatalogue = []
+def ohSeen = [] as Set
+(ohCfg.circular_menu?.actions ?: []).each { a ->
+    if (!a.target || !a.label) return
+    if (!ohSeen.add(ohKey(a.target))) return
+    ohCatalogue << [label: a.label, target: a.target, icon: a.icon ?: (ohResolve(a.target)?.icon ?: '')]
+}
+// Then every target the handles actually DECLARE, so a declared sector can
+// never be absent from the list it is looked up in. An unresolvable one fails
+// the BUILD here rather than rendering as a raw URL on the phone — that is the
+// whole point: this defect shipped green three times.
+ohCfg.handles?.each { h ->
+    h.gestures?.each { slot, v ->
+        def t = (v ?: '').toString()
+        if (!t.startsWith('action:')) return
+        if (!ohSeen.add(ohKey(t))) return
+        def r = ohResolve(t)
+        if (r == null) throw new GradleException(
+            "onehand: handle '${h.id}' sector '${slot}' targets '${t}', which no tile in " +
+            "ui.sections and no section id resolves. The edge menu would draw it as a raw " +
+            "URL with no icon. Give it a tile, or fix the target — do not ship it unnamed.")
+        ohCatalogue << [label: r.label, target: t, icon: r.icon ?: '']
+    }
+}
+ohCfg.action_catalogue = ohCatalogue
 def ohCfgB64    = groovy.json.JsonOutput.toJson(ohCfg).bytes.encodeBase64().toString()
 
 android {

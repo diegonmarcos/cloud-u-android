@@ -375,6 +375,7 @@
          predeterminados" que pidio el dueno. Borra sus ajustes por sector en
          lugar de escribir los valores actuales, para que el menu siga al
          build.json tambien en las proximas versiones. -->
+    <string name="onehand_sector_unresolved">⚠ Destino no reconocido: %1$s</string>
     <string name="onehand_edge_reset_button">Restablecer valores predeterminados (ambos menús de borde)</string>
     <string name="onehand_edge_reset_caption">Descarta las acciones de sector que elegiste tú y vuelve al orden que trae la app. Los dos asideros a la vez: el trazado se diseñó como un conjunto único. Solo los menús de borde: las estrellas, el botón flotante, los deslizamientos de la pantalla de inicio y el modo de activación se quedan como están.</string>
     <string name="onehand_edge_reset_title">¿Restablecer los dos menús de borde?</string>

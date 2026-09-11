@@ -136,6 +136,25 @@ for e in d['ui']['external_apps']:
         if e.get(k): fleet.add(e[k])
 declared_actions = {a['target'] for a in oh['circular_menu']['actions']}
 sections = {s['id'] for s in d['ui']['sections']}
+
+def _key(t):
+    return 'action:' + (t or '')[7:] if (t or '').startswith('action:') else 'action:' + (t or '')
+_tiles = set()
+for _s in d['ui']['sections']:
+    _lists = [v for k, v in _s.items() if k.startswith('tiles_') and isinstance(v, list)]
+    for _g in (_s.get('tile_groups') or []):
+        if isinstance(_g.get('tiles'), list): _lists.append(_g['tiles'])
+    for _L in _lists:
+        for _t in _L:
+            if isinstance(_t, dict) and not _t.get('separator') and _t.get('target'):
+                _tiles.add(_key(_t['target']))
+
+def resolve_target(value):
+    '''The tile/section catalogue, same rule as the engine. None = unresolvable.'''
+    if _key(value) in _tiles: return True
+    bare = value[7:] if value.startswith('action:') else value
+    if bare.startswith('section:') and bare[8:] in sections: return True
+    return None
 bad_targets = []
 for handle in oh['handles']:
     for slot, value in handle['gestures'].items():
@@ -148,13 +167,21 @@ for handle in oh['handles']:
                 bad_targets.append(handle['id'] + '.' + slot + ' fleet package not in ui.external_apps: ' + pkg)
         elif value.startswith('action:'):
             target = value[7:]
-            if target.startswith('intent://') or target.startswith('http'):
-                continue
-            if target.startswith('section:'):
-                if target[8:] not in sections:
-                    bad_targets.append(handle['id'] + '.' + slot + ' names no declared section: ' + target)
-            elif value not in declared_actions and target not in declared_actions:
-                bad_targets.append(handle['id'] + '.' + slot + ' action is not in circular_menu.actions: ' + target)
+            # NO SCHEME IS SKIPPED. This branch used to `continue` on intent://
+            # and http, and the AI Claude sector is an intent:// one — so the
+            # single sector that was broken on the phone was the single sector
+            # this tester stepped over, while reporting all twelve resolved.
+            # That is how #111 and #127 were both closed on a green run.
+            #
+            # Membership in circular_menu.actions is ALSO the wrong question:
+            # that list is a MENU, and requiring every sector to appear in it is
+            # what made the last two fixes data edits. A sector is resolvable
+            # when the app's own tile catalogue can name it — the same rule
+            # libs/launcher-onehand/build.gradle now enforces at build time, and
+            # test-onehand-sector-resolution.sh asserts in full.
+            if resolve_target(value) is None:
+                bad_targets.append(handle['id'] + '.' + slot
+                                   + ' resolves to no tile and no section: ' + target)
         else:
             bad_targets.append(handle['id'] + '.' + slot + ' is neither app: nor action: — ' + value)
 print(' ;; '.join(bad_targets))")

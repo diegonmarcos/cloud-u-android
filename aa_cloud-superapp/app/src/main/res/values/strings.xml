@@ -438,6 +438,7 @@
          store, which would pin the phone to this version forever. The dialog
          names what is lost AND what is untouched, because this page holds four
          unrelated groups of settings and only one of them is being discarded. -->
+    <string name="onehand_sector_unresolved">⚠ Unrecognised target: %1$s</string>
     <string name="onehand_edge_reset_button">Reset to default (both edge menus)</string>
     <string name="onehand_edge_reset_caption">Throws away the sector actions you picked yourself and goes back to the order built into the app. Both handles at once — the layout was designed as one set. Only the edge menus: the stars, the floating button, the Home swipes and the activation setting are left alone.</string>
     <string name="onehand_edge_reset_title">Reset both edge menus?</string>

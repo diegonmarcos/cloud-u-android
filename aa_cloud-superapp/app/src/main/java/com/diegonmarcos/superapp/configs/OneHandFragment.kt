@@ -17,6 +17,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.launcher.SectionPages
+import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.onehand.ArcMenu
 import com.diegonmarcos.superapp.onehand.CircularMenu
 import com.diegonmarcos.superapp.onehand.GestureAction
@@ -490,17 +491,31 @@ class OneHandFragment : Fragment() {
     }
 
     private fun buildOptions(cfg: OneHandConfig): List<Option> = buildList {
+        val ctx = requireContext()
         add(Option("None", null))
-        // In-app destinations, straight from circular_menu.actions — the same
-        // entries the radial star shows, so the two menus offer one list.
+        // In-app destinations, from the DERIVED action_catalogue: the
+        // circular_menu.actions entries the radial star shows PLUS every
+        // `action:` target the handles declare, each already carrying the
+        // label and icon its tile owns. Offering only the former is what let a
+        // declared sector be missing from its own picker and fall back to
+        // index 0 — "None" over a working slot, three times.
         cfg.appActions.forEach {
-            add(Option(it.label, GestureAction.AppTarget(it.target.removePrefix("action:"))))
+            add(Option(
+                it.label,
+                GestureAction.AppTarget(it.target.removePrefix("action:")),
+                // Blank is meaningful: the text-only entries carry no icon and
+                // must stay text-only. iconResFor answers ic_link_tile for a
+                // blank name, so it must never see one.
+                it.icon.takeIf { n -> n.isNotBlank() }
+                    ?.let { n -> Sections.iconResFor(ctx, n).takeIf { r -> r != 0 } }
+                    ?.let { r -> ctx.getDrawable(r) },
+            ))
         }
         // Config / global actions.
         OneHandAction.entries
             .filter { it != OneHandAction.NONE && it.supported }
             .forEach { add(Option(prettify(it.name), GestureAction.Global(it))) }
-        val pm = requireContext().packageManager
+        val pm = ctx.packageManager
         val seen = HashSet<String>()
         // Curated favourites first (from build.json), with their nice labels.
         cfg.apps.forEach {
@@ -555,14 +570,25 @@ class OneHandFragment : Fragment() {
             text = "${h.edge.name.lowercase().replaceFirstChar { it.uppercase() }} handle"
             gravity = Gravity.CENTER; setPadding(0, pad, 0, pad / 2); textSize = 16f
         })
-        val adapter = optionAdapter(ctx, options)
         for (slot in OneHandConfig.slotsFor(h.edge)) {
             col.addView(TextView(ctx).apply {
                 text = slot.label; gravity = Gravity.CENTER; setPadding(0, pad / 2, 0, 0)
             })
             val current = h.gestures[slot.key]
-            val sel = options.indexOfFirst { it.action?.serialize() == current?.serialize() }
-                .coerceAtLeast(0)
+            val hit = options.indexOfFirst { it.action?.serialize() == current?.serialize() }
+            // NOT coerceAtLeast(0). Index 0 is "None", so a target the list did
+            // not contain silently displayed a WORKING sector as empty — and
+            // because the spinner persists what it displays, one careless tap
+            // then wrote that None over the real action. That is the mechanism
+            // behind all three "AI Claude is missing" reports. A target we
+            // cannot name now gets its own visible row, carrying the unchanged
+            // action, so it reads as wrong instead of reading as unset.
+            val rowOptions =
+                if (hit >= 0) options
+                else options + Option(getString(R.string.onehand_sector_unresolved,
+                    current?.serialize().orEmpty()), current)
+            val sel = if (hit >= 0) hit else rowOptions.lastIndex
+            val adapter = optionAdapter(ctx, rowOptions)
             col.addView(Spinner(ctx).apply {
                 this.adapter = adapter; setSelection(sel)
                 // Spinner.setSelection POSTS its callback, so a listener attached
@@ -583,7 +609,7 @@ class OneHandFragment : Fragment() {
                     override fun onNothingSelected(p: AdapterView<*>?) {}
                     override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
                         if (suppress) return
-                        OneHandPrefs.setAction(ctx, h.id, slot.key, options[pos].action)
+                        OneHandPrefs.setAction(ctx, h.id, slot.key, rowOptions[pos].action)
                         OneHandController.refresh(ctx)
                     }
                 }

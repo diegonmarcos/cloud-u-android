@@ -312,7 +312,7 @@ class OneHandAccessibilityService : AccessibilityService() {
         OneHandConfig.slotsFor(h.edge).map { slot ->
             val action = h.gestures[slot.key]
             val label = action?.let { labelForAction(it) } ?: slot.label
-            val icon = (action as? GestureAction.OpenApp)?.let { appIcon(it.pkg) }
+            val icon = action?.let { iconForAction(it) }
             GesturePreviewView.Option(slot.key, label, icon)
         }
 
@@ -323,6 +323,13 @@ class OneHandAccessibilityService : AccessibilityService() {
         d.setBounds(0, 0, size, size); d.draw(android.graphics.Canvas(bmp)); bmp
     }.getOrNull()
 
+    /** The catalogue entry describing an in-app target, matched on the
+     *  prefix-insensitive key rather than on either raw spelling. Comparing
+     *  raw strings is what let `action:intent://…` and `intent://…` be two
+     *  different destinations, and a miss then drew the sector as its own URL. */
+    private fun catalogueFor(action: GestureAction.AppTarget): OneHandConfig.AppAction? =
+        cfg?.appActions?.firstOrNull { it.key == "action:" + action.target.removePrefix("action:") }
+
     private fun labelForAction(action: GestureAction): String = when (action) {
         is GestureAction.Global ->
             action.action.name.lowercase().split('_')
@@ -330,10 +337,35 @@ class OneHandAccessibilityService : AccessibilityService() {
         is GestureAction.OpenApp ->
             cfg?.apps?.firstOrNull { it.pkg == action.pkg }?.label ?: action.pkg
         is GestureAction.AppTarget ->
-            cfg?.appActions?.firstOrNull { it.target == "action:${action.target}" || it.target == action.target }
-                ?.label
+            catalogueFor(action)?.label
+                // Unreachable for a DECLARED sector: build.gradle fails the
+                // build when a declared target resolves to no tile, so this can
+                // only be reached by a stale user override naming a target that
+                // has since been removed. It stays deliberately ugly — an
+                // obviously wrong row is recoverable, a plausible wrong one is
+                // what hid this bug three times.
                 ?: action.target.split('_').joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
     }
+
+    /** The glyph for a sector. An `app:` target borrows the launcher icon; an
+     *  `action:` target names no package, so it takes the drawable its tile
+     *  declares — resolved by NAME against the host app's resources, which is
+     *  where the SuperApp keeps `ic_drive`, `ic_ai_chat` and the rest. */
+    private fun iconForAction(action: GestureAction): android.graphics.Bitmap? = when (action) {
+        is GestureAction.OpenApp -> appIcon(action.pkg)
+        is GestureAction.AppTarget -> catalogueFor(action)?.icon
+            ?.takeIf { it.isNotBlank() }?.let { drawableIcon(it) }
+        else -> null
+    }
+
+    private fun drawableIcon(name: String): android.graphics.Bitmap? = runCatching {
+        val id = resources.getIdentifier(name, "drawable", packageName)
+        if (id == 0) return null
+        val d = getDrawable(id) ?: return null
+        val size = dp(48)
+        val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        d.setBounds(0, 0, size, size); d.draw(android.graphics.Canvas(bmp)); bmp
+    }.getOrNull()
 
     /** 0=3-button, 1=2-button, 2=gesture nav. Read from the framework resource. */
     private fun isGestureNav(): Boolean = runCatching {

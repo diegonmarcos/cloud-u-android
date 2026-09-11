@@ -22,9 +22,13 @@ data class OneHandConfig(
     val longPressMs: Int,
     val edgeInsetGestureDp: Int, // inset applied only when the device is in gesture-nav mode
     val radial: Radial,
-    /** In-app destinations, read from circular_menu.actions — the SAME list the
-     *  radial star offers. Declared once, so an edge gesture and a star node
-     *  cannot drift into offering different sets of app actions. */
+    /** In-app destinations, read from the DERIVED `action_catalogue`: every
+     *  circular_menu.actions entry plus every `action:` target the handles
+     *  declare, each already carrying the label and icon its tile owns.
+     *  Derived at build time (libs/launcher-onehand/build.gradle) so a sector
+     *  cannot be absent from the list it is looked up in — which is what made
+     *  one sector render as a raw URL three times. Falls back to
+     *  circular_menu.actions for a config baked before that key existed. */
     val appActions: List<AppAction> = emptyList(),
 ) {
     enum class Edge { LEFT, RIGHT, BOTTOM }
@@ -56,8 +60,17 @@ data class OneHandConfig(
 
     data class Slot(val key: String, val label: String)
     data class AppOption(val label: String, val pkg: String)
-    /** label + raw navigation target, e.g. "Search" / "action:open_search". */
-    data class AppAction(val label: String, val target: String)
+    /** label + raw navigation target, e.g. "Search" / "action:open_search",
+     *  plus the drawable NAME the host app should draw for it ("" = none).
+     *  The icon is resolved at build time from the app's own tile catalogue:
+     *  an `action:` target names no package, so PackageManager — the only
+     *  icon source this menu used to have — can never supply one. */
+    data class AppAction(val label: String, val target: String, val icon: String = "") {
+        /** `action:` is decoration, not identity: [GestureAction.serialize]
+         *  re-adds it, so `action:section:drive` and `section:drive` are ONE
+         *  destination. Always compare on this, never on the raw string. */
+        val key: String get() = "action:" + target.removePrefix("action:")
+    }
 
     companion object {
         /** Sectors of a handle, ordered top→down (UI + preview iterate these). Left/right
@@ -109,13 +122,15 @@ data class OneHandConfig(
                         GestureAction.parse(ritems!!.optString(i))?.let { add(it) }
                 },
             )
-            val actsJson = json.optJSONObject("circular_menu")?.optJSONArray("actions")
+            val actsJson = json.optJSONArray("action_catalogue")
+                ?: json.optJSONObject("circular_menu")?.optJSONArray("actions")
             val appActions = buildList {
                 for (i in 0 until (actsJson?.length() ?: 0)) {
                     val a = actsJson!!.optJSONObject(i) ?: continue
                     val target = a.optString("target")
                     val label = a.optString("label")
-                    if (target.isNotBlank() && label.isNotBlank()) add(AppAction(label, target))
+                    if (target.isNotBlank() && label.isNotBlank())
+                        add(AppAction(label, target, a.optString("icon")))
                 }
             }
             return OneHandConfig(
