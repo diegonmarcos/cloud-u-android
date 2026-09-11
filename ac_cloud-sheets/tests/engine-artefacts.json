@@ -1,5 +1,5 @@
 {
-  "_doc": "WHAT THE ENGINE BUILD HANDS THE SHELL, AND WHETHER COLLABORA'S OWN APK CONTAINS IT. This file is the evidence behind a0_docs/eng-specs/cloud-office-prebuilt-engine-reuse.md. The question it answers: can we skip the ~12-hour engine build by extracting the engine out of the official APK we used to mirror? An APK carries a RUNTIME payload. The engine also hands the shell a LINK-TIME payload — static archives and headers — and an APK has never carried either. Every row below is checked against the live central directory of the pinned APK, so if Collabora ever starts shipping the missing half, this test turns red and the recommendation is worth revisiting.",
+  "_doc": "WHAT THE ENGINE BUILD HANDS THE SHELL, WHETHER COLLABORA'S OWN APK CONTAINS IT, AND WHETHER ANYTHING WE CHANGE NEEDS THE MISSING HALF. This file is the evidence behind a0_docs/eng-specs/cloud-office-prebuilt-engine-reuse.md and is read by two testers. `artefacts` answers the 2026-09-10 question: can the engine be extracted out of the official APK we used to mirror, instead of built? An APK carries a RUNTIME payload; the engine also hands the shell a LINK-TIME payload — static archives and headers — and an APK has never carried either, so the answer there is no. `separation` answers the 2026-09-11 question, which is the one that decides the money: the link-time half is only needed to RELINK the shell's own native library, and nothing the owner has asked for touches a line of C++. Every row is checked against live upstream, so if either answer stops being true the tester turns red rather than the recommendation quietly going stale.",
   "apk": {
     "_doc": "The artefact ac_cloud-sheets mirrored until commit 05b0c6c15. sha256 is NOT verified here — that would mean downloading 267 MB. This test range-fetches the ZIP central directory only (~600 KB). The sha256 is recorded so the pin is not lost from the repository.",
     "url": "https://www.collaboraoffice.com/downloads/fdroid/repo/collabora-office-mobile-26.04.3.1-155-release-arm64-v8a-2026-09-03.apk",
@@ -9,40 +9,325 @@
     "abi": "arm64-v8a"
   },
   "artefacts": [
-    { "lobuilddir_path": "android/jniLibs/arm64-v8a/liblo-native-code.so", "apk_path": "lib/arm64-v8a/liblo-native-code.so", "in_apk": true,  "needed_for": "runtime + shared-library link input", "required_by": "android/lib/src/main/cpp/CMakeLists.txt.in:91,145,166" },
-    { "lobuilddir_path": "instdir/program/libfreebl3.so",  "apk_path": "lib/arm64-v8a/libfreebl3.so",  "in_apk": true, "needed_for": "runtime (DT_NEEDED of the engine)", "required_by": "CMakeLists.txt.in:109" },
-    { "lobuilddir_path": "instdir/program/libnspr4.so",    "apk_path": "lib/arm64-v8a/libnspr4.so",    "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:112" },
-    { "lobuilddir_path": "instdir/program/libnss3.so",     "apk_path": "lib/arm64-v8a/libnss3.so",     "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:115" },
-    { "lobuilddir_path": "instdir/program/libnssckbi.so",  "apk_path": "lib/arm64-v8a/libnssckbi.so",  "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:118" },
-    { "lobuilddir_path": "instdir/program/libnssdbm3.so",  "apk_path": "lib/arm64-v8a/libnssdbm3.so",  "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:121" },
-    { "lobuilddir_path": "instdir/program/libnssutil3.so", "apk_path": "lib/arm64-v8a/libnssutil3.so", "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:124" },
-    { "lobuilddir_path": "instdir/program/libplc4.so",     "apk_path": "lib/arm64-v8a/libplc4.so",     "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:127" },
-    { "lobuilddir_path": "instdir/program/libplds4.so",    "apk_path": "lib/arm64-v8a/libplds4.so",    "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:130" },
-    { "lobuilddir_path": "instdir/program/libsmime3.so",   "apk_path": "lib/arm64-v8a/libsmime3.so",   "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:133" },
-    { "lobuilddir_path": "instdir/program/libsoftokn3.so", "apk_path": "lib/arm64-v8a/libsoftokn3.so", "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:136" },
-    { "lobuilddir_path": "instdir/program/libsqlite3.so",  "apk_path": "lib/arm64-v8a/libsqlite3.so",  "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:139" },
-    { "lobuilddir_path": "instdir/program/libssl3.so",     "apk_path": "lib/arm64-v8a/libssl3.so",     "in_apk": true, "needed_for": "runtime", "required_by": "CMakeLists.txt.in:142" },
-
-    { "lobuilddir_path": "instdir/program/services.rdb",   "apk_path": "assets/program/services.rdb",  "in_apk": true, "needed_for": "asset (copyAssets)", "required_by": "android/lib/build.gradle:184" },
-    { "lobuilddir_path": "instdir/program/types/offapi.rdb",  "apk_path": "assets/unpack/program/offapi.rdb",  "in_apk": true, "needed_for": "asset (copyUnpackAssets, no rename)", "required_by": "android/lib/build.gradle:104" },
-    { "lobuilddir_path": "instdir/program/types.rdb",         "apk_path": "assets/unpack/program/udkapi.rdb",  "in_apk": true, "needed_for": "asset (copyUnpackAssets, renamed)", "required_by": "android/lib/build.gradle:111" },
-    { "lobuilddir_path": "instdir/share/config/images_colibre.zip", "apk_path": "assets/share/config/images_colibre.zip", "in_apk": true, "needed_for": "asset (createFullConfig)", "required_by": "android/lib/build.gradle:198" },
-    { "lobuilddir_path": "instdir/share/fonts/truetype/Carlito-Regular.ttf", "apk_path": "assets/unpack/user/fonts/Carlito-Regular.ttf", "in_apk": true, "needed_for": "asset (copyUnpackAssets, filtered+flattened)", "required_by": "android/lib/build.gradle:125" },
-    { "lobuilddir_path": "instdir/LICENSE.html", "apk_path": "assets/license.html", "in_apk": true, "needed_for": "MPL-2.0 s3.4 notice", "required_by": "android/lib/build.gradle:175" },
-    { "lobuilddir_path": "instdir/NOTICE",       "apk_path": "assets/notice.txt",   "in_apk": true, "needed_for": "MPL-2.0 s3.4 notice", "required_by": "android/lib/build.gradle:175" },
-
-    { "lobuilddir_path": "instdir/program/setuprc", "apk_path": "assets/program/setuprc", "in_apk": false, "needed_for": "configure's ONLY gate on $LOBUILDDIR, and the source of CORE_VERSION_HASH", "required_by": "configure.ac:921,927" },
-    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/liblibpng.a",        "apk_path": null, "in_apk": false, "needed_for": "static link into libandroidapp.so + per-ABI configure gate", "required_by": "configure.ac:930,1107; CMakeLists.txt.in:157" },
-    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoFoundation.a","apk_path": null, "in_apk": false, "needed_for": "static link", "required_by": "configure.ac:1023-1026; CMakeLists.txt.in:162" },
-    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoNet.a",       "apk_path": null, "in_apk": false, "needed_for": "static link", "required_by": "CMakeLists.txt.in:158" },
-    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoUtil.a",      "apk_path": null, "in_apk": false, "needed_for": "static link", "required_by": "CMakeLists.txt.in:159" },
-    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoXML.a",       "apk_path": null, "in_apk": false, "needed_for": "static link", "required_by": "CMakeLists.txt.in:160" },
-    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoJSON.a",      "apk_path": null, "in_apk": false, "needed_for": "static link", "required_by": "CMakeLists.txt.in:161" },
-    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libexpat.a",         "apk_path": null, "in_apk": false, "needed_for": "static link", "required_by": "CMakeLists.txt.in:163" },
-    { "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libzstd.a",          "apk_path": null, "in_apk": false, "needed_for": "static link + configure gate", "required_by": "configure.ac:1055-1058; CMakeLists.txt.in:164" },
-    { "lobuilddir_path": "workdir/UnpackedTarball/poco/include/Poco/Poco.h",    "apk_path": null, "in_apk": false, "needed_for": "compile-time include dir + configure gate", "required_by": "configure.ac:1009-1012; CMakeLists.txt.in:101" },
-    { "lobuilddir_path": "workdir/UnpackedTarball/zstd/lib/zstd.h",             "apk_path": null, "in_apk": false, "needed_for": "compile-time include dir + configure gate", "required_by": "configure.ac:1051-1054; CMakeLists.txt.in:102" },
-    { "lobuilddir_path": "workdir/UnpackedTarball/libpng/png.h",                "apk_path": null, "in_apk": false, "needed_for": "compile-time include dir + configure gate", "required_by": "configure.ac:1106; CMakeLists.txt.in:103" },
-    { "lobuilddir_path": "include/COKit/COKit.hxx",                             "apk_path": null, "in_apk": false, "needed_for": "the shell/engine ABI header; symlink to the engine SOURCE tree, so a source checkout supplies it", "required_by": "CMakeLists.txt.in:104; kit/Kit.hpp:24" }
-  ]
+    {
+      "lobuilddir_path": "android/jniLibs/arm64-v8a/liblo-native-code.so",
+      "apk_path": "lib/arm64-v8a/liblo-native-code.so",
+      "in_apk": true,
+      "needed_for": "runtime + shared-library link input",
+      "required_by": "android/lib/src/main/cpp/CMakeLists.txt.in:91,145,166"
+    },
+    {
+      "provenance": "online's own CMake (android/lib/src/main/cpp/CMakeLists.txt.in), NOT the engine build",
+      "lobuilddir_path": "(none — this one is not an engine artefact at all)",
+      "apk_path": "lib/arm64-v8a/libandroidapp.so",
+      "in_apk": true,
+      "needed_for": "THE ROW THAT DECIDES #240. libandroidapp.so is online's own C++ — wsd/, kit/, net/, common/ — and it is the only thing the eight static archives and four header trees below are needed to LINK. It is 6,322,632 bytes and it is already built and shipped inside the pinned APK. patches/0001 touches nine files and not one of them is a .cpp, so this library does not have to be relinked and the link-time half does not have to exist. The 199 MB engine beside it is likewise copied, never compiled.",
+      "required_by": "android/lib/src/main/cpp/CMakeLists.txt.in:6-51 (add_library(androidapp SHARED ...))"
+    },
+    {
+      "lobuilddir_path": "instdir/program/libfreebl3.so",
+      "apk_path": "lib/arm64-v8a/libfreebl3.so",
+      "in_apk": true,
+      "needed_for": "runtime (DT_NEEDED of the engine)",
+      "required_by": "CMakeLists.txt.in:109"
+    },
+    {
+      "lobuilddir_path": "instdir/program/libnspr4.so",
+      "apk_path": "lib/arm64-v8a/libnspr4.so",
+      "in_apk": true,
+      "needed_for": "runtime",
+      "required_by": "CMakeLists.txt.in:112"
+    },
+    {
+      "lobuilddir_path": "instdir/program/libnss3.so",
+      "apk_path": "lib/arm64-v8a/libnss3.so",
+      "in_apk": true,
+      "needed_for": "runtime",
+      "required_by": "CMakeLists.txt.in:115"
+    },
+    {
+      "lobuilddir_path": "instdir/program/libnssckbi.so",
+      "apk_path": "lib/arm64-v8a/libnssckbi.so",
+      "in_apk": true,
+      "needed_for": "runtime",
+      "required_by": "CMakeLists.txt.in:118"
+    },
+    {
+      "lobuilddir_path": "instdir/program/libnssdbm3.so",
+      "apk_path": "lib/arm64-v8a/libnssdbm3.so",
+      "in_apk": true,
+      "needed_for": "runtime",
+      "required_by": "CMakeLists.txt.in:121"
+    },
+    {
+      "lobuilddir_path": "instdir/program/libnssutil3.so",
+      "apk_path": "lib/arm64-v8a/libnssutil3.so",
+      "in_apk": true,
+      "needed_for": "runtime",
+      "required_by": "CMakeLists.txt.in:124"
+    },
+    {
+      "lobuilddir_path": "instdir/program/libplc4.so",
+      "apk_path": "lib/arm64-v8a/libplc4.so",
+      "in_apk": true,
+      "needed_for": "runtime",
+      "required_by": "CMakeLists.txt.in:127"
+    },
+    {
+      "lobuilddir_path": "instdir/program/libplds4.so",
+      "apk_path": "lib/arm64-v8a/libplds4.so",
+      "in_apk": true,
+      "needed_for": "runtime",
+      "required_by": "CMakeLists.txt.in:130"
+    },
+    {
+      "lobuilddir_path": "instdir/program/libsmime3.so",
+      "apk_path": "lib/arm64-v8a/libsmime3.so",
+      "in_apk": true,
+      "needed_for": "runtime",
+      "required_by": "CMakeLists.txt.in:133"
+    },
+    {
+      "lobuilddir_path": "instdir/program/libsoftokn3.so",
+      "apk_path": "lib/arm64-v8a/libsoftokn3.so",
+      "in_apk": true,
+      "needed_for": "runtime",
+      "required_by": "CMakeLists.txt.in:136"
+    },
+    {
+      "lobuilddir_path": "instdir/program/libsqlite3.so",
+      "apk_path": "lib/arm64-v8a/libsqlite3.so",
+      "in_apk": true,
+      "needed_for": "runtime",
+      "required_by": "CMakeLists.txt.in:139"
+    },
+    {
+      "lobuilddir_path": "instdir/program/libssl3.so",
+      "apk_path": "lib/arm64-v8a/libssl3.so",
+      "in_apk": true,
+      "needed_for": "runtime",
+      "required_by": "CMakeLists.txt.in:142"
+    },
+    {
+      "lobuilddir_path": "instdir/program/services.rdb",
+      "apk_path": "assets/program/services.rdb",
+      "in_apk": true,
+      "needed_for": "asset (copyAssets)",
+      "required_by": "android/lib/build.gradle:184"
+    },
+    {
+      "lobuilddir_path": "instdir/program/types/offapi.rdb",
+      "apk_path": "assets/unpack/program/offapi.rdb",
+      "in_apk": true,
+      "needed_for": "asset (copyUnpackAssets, no rename)",
+      "required_by": "android/lib/build.gradle:104"
+    },
+    {
+      "lobuilddir_path": "instdir/program/types.rdb",
+      "apk_path": "assets/unpack/program/udkapi.rdb",
+      "in_apk": true,
+      "needed_for": "asset (copyUnpackAssets, renamed)",
+      "required_by": "android/lib/build.gradle:111"
+    },
+    {
+      "lobuilddir_path": "instdir/share/config/images_colibre.zip",
+      "apk_path": "assets/share/config/images_colibre.zip",
+      "in_apk": true,
+      "needed_for": "asset (createFullConfig)",
+      "required_by": "android/lib/build.gradle:198"
+    },
+    {
+      "lobuilddir_path": "instdir/share/fonts/truetype/Carlito-Regular.ttf",
+      "apk_path": "assets/unpack/user/fonts/Carlito-Regular.ttf",
+      "in_apk": true,
+      "needed_for": "asset (copyUnpackAssets, filtered+flattened)",
+      "required_by": "android/lib/build.gradle:125"
+    },
+    {
+      "lobuilddir_path": "instdir/LICENSE.html",
+      "apk_path": "assets/license.html",
+      "in_apk": true,
+      "needed_for": "MPL-2.0 s3.4 notice",
+      "required_by": "android/lib/build.gradle:175"
+    },
+    {
+      "lobuilddir_path": "instdir/NOTICE",
+      "apk_path": "assets/notice.txt",
+      "in_apk": true,
+      "needed_for": "MPL-2.0 s3.4 notice",
+      "required_by": "android/lib/build.gradle:175"
+    },
+    {
+      "lobuilddir_path": "instdir/program/setuprc",
+      "apk_path": "assets/program/setuprc",
+      "in_apk": false,
+      "needed_for": "configure's ONLY gate on $LOBUILDDIR, and the source of CORE_VERSION_HASH",
+      "required_by": "configure.ac:921,927"
+    },
+    {
+      "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/liblibpng.a",
+      "apk_path": null,
+      "in_apk": false,
+      "needed_for": "static link into libandroidapp.so + per-ABI configure gate",
+      "required_by": "configure.ac:930,1107; CMakeLists.txt.in:157"
+    },
+    {
+      "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoFoundation.a",
+      "apk_path": null,
+      "in_apk": false,
+      "needed_for": "static link",
+      "required_by": "configure.ac:1023-1026; CMakeLists.txt.in:162"
+    },
+    {
+      "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoNet.a",
+      "apk_path": null,
+      "in_apk": false,
+      "needed_for": "static link",
+      "required_by": "CMakeLists.txt.in:158"
+    },
+    {
+      "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoUtil.a",
+      "apk_path": null,
+      "in_apk": false,
+      "needed_for": "static link",
+      "required_by": "CMakeLists.txt.in:159"
+    },
+    {
+      "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoXML.a",
+      "apk_path": null,
+      "in_apk": false,
+      "needed_for": "static link",
+      "required_by": "CMakeLists.txt.in:160"
+    },
+    {
+      "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libPocoJSON.a",
+      "apk_path": null,
+      "in_apk": false,
+      "needed_for": "static link",
+      "required_by": "CMakeLists.txt.in:161"
+    },
+    {
+      "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libexpat.a",
+      "apk_path": null,
+      "in_apk": false,
+      "needed_for": "static link",
+      "required_by": "CMakeLists.txt.in:163"
+    },
+    {
+      "lobuilddir_path": "workdir/LinkTarget/StaticLibrary/libzstd.a",
+      "apk_path": null,
+      "in_apk": false,
+      "needed_for": "static link + configure gate",
+      "required_by": "configure.ac:1055-1058; CMakeLists.txt.in:164"
+    },
+    {
+      "lobuilddir_path": "workdir/UnpackedTarball/poco/include/Poco/Poco.h",
+      "apk_path": null,
+      "in_apk": false,
+      "needed_for": "compile-time include dir + configure gate",
+      "required_by": "configure.ac:1009-1012; CMakeLists.txt.in:101"
+    },
+    {
+      "lobuilddir_path": "workdir/UnpackedTarball/zstd/lib/zstd.h",
+      "apk_path": null,
+      "in_apk": false,
+      "needed_for": "compile-time include dir + configure gate",
+      "required_by": "configure.ac:1051-1054; CMakeLists.txt.in:102"
+    },
+    {
+      "lobuilddir_path": "workdir/UnpackedTarball/libpng/png.h",
+      "apk_path": null,
+      "in_apk": false,
+      "needed_for": "compile-time include dir + configure gate",
+      "required_by": "configure.ac:1106; CMakeLists.txt.in:103"
+    },
+    {
+      "lobuilddir_path": "include/COKit/COKit.hxx",
+      "apk_path": null,
+      "in_apk": false,
+      "needed_for": "the shell/engine ABI header; symlink to the engine SOURCE tree, so a source checkout supplies it",
+      "required_by": "CMakeLists.txt.in:104; kit/Kit.hpp:24"
+    }
+  ],
+  "separation": {
+    "_doc": "THE THREE LAYERS, AND WHICH OF THEM A BUILD OF OURS HAS TO PRODUCE. Read by tests/test-no-engine-build-required.sh, which fetches each file below out of Gerrit at upstream.online.revision and checks the claim against the real text. Nothing here is a size or a class count; every row is a mechanism, named by file. Layer 1 is the LibreOffice engine (liblo-native-code.so, 199 MB, the thing #240 would pay to compile). Layer 2 is the COOL web UI (browser/, TypeScript -> assets/dist/). Layer 3 is the Android shell (android/, Java + Gradle). patches/0001 changes layers 2 and 3 only.",
+    "_doc_fail_closed": "Every claim is a positive assertion about text that must be PRESENT, matched after comment lines are stripped, against a file fetched over the network. An unreachable Gerrit, a 404, an empty body and a missing string all FAIL. There is no path through this script that reports a verdict it did not compute — the repository has shipped four testers that passed because the tool they called was absent.",
+    "upstream_claims": [
+      {
+        "id": "jnilibs-delivers-the-engine",
+        "file": "android/lib/build.gradle",
+        "comment_prefixes": [
+          "//"
+        ],
+        "contains": "jniLibs.srcDirs = ['src/main/cpp/lib']",
+        "why": "THE MECHANISM, IN UPSTREAM'S OWN BUILD RATHER THAN IN ANDROID'S DOCUMENTATION. A .so sitting in a jniLibs source directory is PACKAGED, not compiled: Gradle copies it into the APK and the NDK is never asked for an opinion. So the engine reaches the APK through a directory we can fill from the pinned artefact, and the megabuild's only job was to fill that same directory. This is the single line that makes the engine build optional."
+      },
+      {
+        "id": "cmake-copies-the-engine-it-does-not-build-it",
+        "file": "android/lib/src/main/cpp/CMakeLists.txt.in",
+        "comment_prefixes": [
+          "#"
+        ],
+        "contains": "COMMAND ${CMAKE_COMMAND} -E copy ${LIBLO_NATIVE_CODE}",
+        "why": "Upstream ALREADY treats the engine as an external prebuilt binary: LIBLO_NATIVE_CODE is ${LOBUILDDIR_ABI}/android/jniLibs/${ANDROID_ABI}/liblo-native-code.so and CMake does one `cmake -E copy` of it into the jniLibs dir above. No compilation step anywhere in online's tree produces that file. Replacing the source of the copy with the pinned APK changes which bytes are copied, not how the build is shaped."
+      },
+      {
+        "id": "configure-still-demands-an-engine-build-tree",
+        "file": "configure.ac",
+        "comment_prefixes": [
+          "#",
+          "dnl"
+        ],
+        "contains": "You MUST use the --with-lo-builddir option when configuring the mobile",
+        "why": "THE REMAINING BLOCKER, ASSERTED AS PRESENT SO THAT ITS REMOVAL IS NEWS. --enable-androidapp refuses without --with-lo-builddir, and the directory it is given must be a real engine BUILD tree, not an engine. This is a configure gate, not a compile: it is why the prebuilt shape needs a declared prebuilt-engine mode in patches/ rather than nothing at all. If upstream ever relaxes it, this row goes red and the patch we are carrying can be dropped."
+      },
+      {
+        "id": "configure-probes-a-static-archive-no-apk-can-carry",
+        "file": "configure.ac",
+        "comment_prefixes": [
+          "#",
+          "dnl"
+        ],
+        "contains": "workdir/LinkTarget/StaticLibrary/liblibpng.a",
+        "why": "What the gate above actually probes. liblibpng.a is a link-time artefact; the `artefacts` table records that no .a and no .h exists anywhere in the 6,375-entry APK, checked by category rather than by name. So the gate cannot be satisfied from the artefact — which is exactly why the honest answer is a declared configure option and not a directory of decoys."
+      }
+    ],
+    "browser_bundle": {
+      "_doc": "LAYER 2, AND THE REASON #224 IS CHEAP. The Text Enhance menu item patches browser/src/control/Control.Menubar.ts, which `make -C browser DIST_FOLDER=... BUNDLE=RELEASE` compiles into assets/dist/bundle.js — 10,465,815 bytes in the pinned APK, one of 3,384 entries under assets/dist/. That is tsc plus webpack: Node, minutes, free. The claim checked here is that the bundle target reads no engine BUILD directory.",
+      "file": "browser/Makefile.am",
+      "engine_build_variable": "ENGINE_WORKDIR",
+      "definition_contains": "@LO_PATH@/../workdir",
+      "uses_outside_its_definition": 1,
+      "sole_use_contains": "npm test",
+      "why": "ENGINE_WORKDIR is the ONLY name in browser/Makefile.am that points into a built engine, and its one use is the mocha target. Every other engine reference is ENGINE_SRCDIR — engine SOURCE, which a clone of the monorepo already contains, and which each recipe guards with `test ! -d $(ENGINE_UI_XCU_DIR) ||` so it no-ops when absent. Pinning the count at 1 is the assertion: the day upstream makes the bundle itself read a built engine, this goes red instead of us finding out in CI."
+    },
+    "patch_series_is_not_native": {
+      "_doc": "THE CLAIM THAT MAKES BOTH NATIVE LIBRARIES TAKEABLE AS-IS. If our series ever touched a .cpp, libandroidapp.so would have to be relinked, the eight static archives would become required, and #240 would be back. Derived from the series on disk, not from a remembered file list.",
+      "dir": "patches",
+      "native_suffixes": [
+        ".c",
+        ".cc",
+        ".cpp",
+        ".cxx",
+        ".m",
+        ".mm",
+        ".h",
+        ".hpp",
+        ".hxx",
+        ".inl",
+        ".mk",
+        ".s"
+      ],
+      "native_basenames": [
+        "CMakeLists.txt",
+        "CMakeLists.txt.in",
+        "Makefile.am",
+        "Makefile.in",
+        "Makefile"
+      ],
+      "min_patches": 1,
+      "min_files_touched": 1,
+      "why": "min_patches and min_files_touched exist because the dangerous failure here is not a native file sneaking in — it is the parser matching nothing and reporting a clean series. A run that finds no patches, or a patch with no `diff --git` lines, FAILS."
+    }
+  }
 }

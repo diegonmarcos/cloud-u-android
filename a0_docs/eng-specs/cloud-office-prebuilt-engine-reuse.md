@@ -1,7 +1,12 @@
 # Cloud Office — can we ship the engine we already download instead of compiling it?
 
-Status: **NO. Extraction does not work, and the reason is not the size of the
-`.so`.** Extends `cloud-sheets-clone-feasibility.md` (commit `62515ee90`); does
+Status: **SUPERSEDED IN PART BY §12 (2026-09-11). "Can the engine be salvaged
+into a new application?" — NO, and §1-§11 prove it. "Does anything the owner
+asked for need the engine rebuilt?" — ALSO NO, and that is the question that
+decides the money. Read §12 first; #240's ~$35 is not needed for #224 or #225.**
+
+Original status (still correct for the question it asks): **NO. Extraction does
+not work, and the reason is not the size of the `.so`.** Extends `cloud-sheets-clone-feasibility.md` (commit `62515ee90`); does
 not replace it. Nothing was built and nothing paid was enabled. §1-§10 were
 written without downloading any APK in full; **§11 is a second pass that did
 download all 267,216,449 bytes**, confirms §2's blocker, and corrects three
@@ -816,3 +821,211 @@ under the name `Cloud-Sheets.apk` while `release.gh_release.asset_name` now says
 `Cloud-Office.apk`. Whatever is decided about #240, that stale artefact should
 be pulled — a phone auto-updating from `latest` is installing Collabora Office,
 not ours.
+
+---
+
+## 12. Second question: the one that decides the money (2026-09-11)
+
+§1-§11 answer **"can the engine be taken out of the APK and a new application
+built around it from our own sources?"** and the answer is still no, on the
+evidence given: the link-time half is absent (§2), `configure`'s build-directory
+check is not satisfiable (§3), and the COKit seam is a 119-slot vtable with no
+version guard (§4).
+
+**Every one of those is an objection to REBUILDING `libandroidapp.so`. None of
+them is an objection to leaving it alone.** That is the question this section
+asks, and it has a different answer.
+
+### 12.1 There are two native halves, not one
+
+Read from the downloaded artefact, not from the central directory:
+
+| entry | bytes | what it is |
+|---|---|---|
+| `lib/arm64-v8a/liblo-native-code.so` | 199,472,488 | **layer 1** — the LibreOffice engine. The thing #240 would pay to compile. |
+| `lib/arm64-v8a/libandroidapp.so` | 6,322,632 | **online's own C++** — `wsd/`, `kit/`, `net/`, `common/`, built by `android/lib/src/main/cpp/CMakeLists.txt.in`. |
+| 13 further `.so` | 8,414,760 | NSS, sqlite3, `libc++_shared`. Engine dependencies, copied. |
+
+§2's eight static archives and four header trees exist for exactly one purpose:
+linking `libandroidapp.so`. Nothing else in the tree consumes them. The same is
+true of §4's vtable: the COKit seam is **between these two binaries**, and
+`${LOBUILDDIR_ABI}/include` is on `libandroidapp.so`'s include path and nowhere
+else.
+
+### 12.2 Nothing the owner asked for is native
+
+`ac_cloud-sheets/patches/0001` is 591 lines across nine files:
+
+```
+android/app/src/main/AndroidManifest.xml                            |  17 +-
+android/lib/build.gradle                                            |   6 +
+android/lib/src/main/assets/cloud_text_enhance.json                 |  new
+android/lib/src/main/java/org/libreoffice/androidlib/CloudTextEnhance.java | new
+android/lib/src/main/java/org/libreoffice/androidlib/LOActivity.java |  ...
+android/settings.gradle                                             |  12 +-
+browser/src/control/Control.Menubar.ts                              |  31 +-
+browser/src/layer/tile/CanvasTileLayer.js                           |  17 +
+browser/src/map/Clipboard.js                                        |  14 +
+```
+
+No `.cpp`, no `.h`, no `.mk`, no `CMakeLists`. The `LOActivity.java` hunks add
+Java branches; they declare, remove and reorder **no `native` method**, and JNI
+binds by mangled name (`Java_org_libreoffice_androidlib_*`, 13 such symbols in
+the shipped `libandroidapp.so`) rather than by slot.
+
+So `libandroidapp.so` does not have to be relinked — and the moment that is
+true, §2's missing link-time half stops being required and §4's unguarded
+vtable stops being a risk, because **both sides of that seam are taken as
+Collabora's own matched pair, built together by their build**. The pairing §4
+warns against — their engine against our freshly compiled shell — is the one
+thing this shape never does.
+
+Checked on every run by `ac_cloud-sheets/tests/test-no-engine-build-required.sh`,
+which fails if a native file ever enters the series.
+
+### 12.3 The mechanism, in upstream's own gradle
+
+`android/lib/build.gradle`, in the `android { }` block:
+
+```groovy
+    sourceSets {
+        main {
+            // let gradle pack the shared library into apk
+            jniLibs.srcDirs = ['src/main/cpp/lib']
+        }
+    }
+```
+
+A `.so` in a `jniLibs` source directory is **packaged, never compiled**. And
+`CMakeLists.txt.in` does not produce the engine either — it copies it:
+
+```cmake
+set(LIBLO_NATIVE_CODE ${LOBUILDDIR_ABI}/android/jniLibs/${ANDROID_ABI}/liblo-native-code.so)
+...
+COMMAND ${CMAKE_COMMAND} -E copy ${LIBLO_NATIVE_CODE} "${CMAKE_CURRENT_SOURCE_DIR}/lib/${ANDROID_ABI}"
+```
+
+**Upstream already treats the engine as an external prebuilt binary.** The
+megabuild's entire contribution to the APK is filling one directory. We fill the
+same directory from the sha256-pinned artefact.
+
+### 12.4 Layer 2 — the COOL web UI needs no engine build at all
+
+`#224`'s menu item is `{name: _('Text Enhance'), id: 'cloudtextenhance', type:
+'action'}` in `browser/src/control/Control.Menubar.ts`. That compiles into
+`assets/dist/bundle.js` — 10,465,815 bytes, one of 3,384 entries under
+`assets/dist/` in the pinned APK — through
+`make -C browser DIST_FOLDER=... BUNDLE=RELEASE`, wired by
+`android/lib/build.gradle`'s `generateCoolReleaseAssets`. That is `tsc` plus
+webpack: Node, minutes, free.
+
+`browser/Makefile.am` names a *built* engine in exactly one variable,
+`ENGINE_WORKDIR = @LO_PATH@/../workdir` (line 117), and uses it in exactly one
+place: the `npm test` mocha target (line 1682). Every other engine reference is
+`ENGINE_SRCDIR` — engine **source**, which a clone of the monorepo already
+contains, and which each recipe guards with `test ! -d "$(ENGINE_UI_XCU_DIR)" ||`
+so it no-ops when absent. Both facts are asserted, with the count pinned at one,
+by the tester.
+
+### 12.5 What is genuinely still in the way, and it is not a compile
+
+`configure.ac:884` refuses `--enable-androidapp` without `--with-lo-builddir`,
+then probes the named directory for `instdir/program/setuprc` (`:921`),
+`workdir/LinkTarget/StaticLibrary/liblibpng.a` (`:930`) and
+`workdir/UnpackedTarball/poco/include/Poco/Poco.h` (`~:1009`). None is in an
+APK. **Manufacturing a directory of decoys to satisfy an existence probe is the
+hack this repository forbids**, so the fix is a declared option carried as
+`patches/0002`:
+
+- `--with-prebuilt-engine=<dir>` — the unpacked APK. Accepted in place of
+  `--with-lo-builddir`, and it switches off the per-ABI archive probes rather
+  than faking them.
+- `CORE_VERSION_HASH` read from `assets/program/versionrc`, which the APK **does**
+  contain: `buildid=20a46c332c38`, already the 12-character form `configure.ac:927`
+  derives. §0's open question — is that commit an ancestor of our pin — stops
+  mattering, because the engine's ancestry is no longer a build input.
+- The `androidapp` CMake target skipped, and `jniLibs.srcDirs` left pointing at
+  the extracted directory.
+- The `copyUnpackAssets` / `copyAssets` / `createFullConfig` tasks sourced from
+  the extracted `assets/` instead of `${liboInstdir}`.
+
+**This is not written.** `build.host` stays `null` until it is, and Cloud Office
+still does not build today.
+
+### 12.6 §5's trademark blocker survives, and is smaller than it looked
+
+§5 is right that `assets/share/registry/main.xcd` — an engine asset — carries
+
+```xml
+<oor:component-data oor:name="Setup" oor:package="org.openoffice"><node oor:name="Product">
+  <prop oor:name="ooName"><value>Collabora Office</value></prop>
+  <prop oor:name="ooVendor"><value>Collabora Productivity Limited</value></prop>
+```
+
+and that `--with-app-name` cannot reach it. But §5 calls the fix "rewriting
+another vendor's compiled artefacts", and that is not what this is:
+`main.xcd` is 1,678,077 bytes of **plain XML**, the two strings occur **once
+each**, and `share/registry/` is a layered configuration store that already
+ships an override directory in this very APK (`assets/share/registry/res/`,
+2 entries). Setting `/org.openoffice.Setup/Product/ooName` from an overlay
+generated out of `build.json` is a declarative build step of the same kind
+`--with-app-name` performs upstream.
+
+Two further trademark reaches are in the artefact and are **not** covered by
+that: `assets/dist/images/collabora-office-white.svg`, `full-logo.svg`,
+`full-logo-white.svg` and `toolbar-bg-logo*.svg`. Those are layer 2, they are
+regenerated by the `browser/` build we are already running, and upstream's
+`APP_BRANDING_DIR` / `liboHasBranding` knobs are the supported way to replace
+them.
+
+**MPL-2.0 §3.2(a)**, §5's genuine doubt, is unchanged in substance and improved
+in one respect: `build.json::upstream.engine.engine_revision` now records where
+the buildid is read from, so the source offer points at
+`distro/collabora/co-26.04` plus `20a46c332c38` from a file rather than from
+memory. §3.4 notices are satisfied exactly as §5 found — `assets/license.html`
+and `assets/notice.txt` come across with the assets.
+
+### 12.7 What the licence-boundary guard should have
+
+`1_cicd/src/data/licence-boundaries.json` has one upstream, `affine`, and no
+Collabora entry — so it would not catch anything here either way. It also could
+not: its model is **source copyleft** (`restricted_dirs` that must not be
+vendored, `markers` that must not be named), and Collabora Online is uniformly
+MPL-2.0, so every one of those fields would be empty or false. The boundary that
+actually binds Cloud Office is **trademark, in the signed artefact**:
+
+> `collabora-online` — permissive `MPL-2.0`, restricted `Collabora and
+> LibreOffice trade marks`. Forbidden **in the APK we sign**, not in the tree:
+> `assets/dist/images/collabora-office-white.svg`, `full-logo.svg`,
+> `full-logo-white.svg`, `toolbar-bg-logo*.svg`, and the values `Collabora
+> Office` / `Collabora Productivity Limited` at
+> `/org.openoffice.Setup/Product/{ooName,ooVendor}` in
+> `assets/share/registry/main.xcd`.
+
+**The entry is not added here**, because adding it to the present schema would
+be a lie in both directions: `restricted_present()` would report vendored MPL
+source as a licence violation, which it is not, and nothing would ever scan an
+APK, so it would report clean on the one artefact that matters. The guard needs
+an artefact mode — a scan of the built APK's entry names and of named config
+values — before the entry means anything. That is one new field
+(`boundary_kind`) plus an APK reader, and it is a decision about a legal model
+that belongs to the owner, not a silent schema extension.
+
+### 12.8 Cost
+
+**Zero dollars.** No NDK, no `external/` tarball tree, no engine build host, no
+megabuild. A GitHub-hosted `ubuntu-latest` runner with the Android SDK and Node:
+one 267 MB download, a `browser/` bundle build, a Gradle `assembleArm64-v8aRelease`
+that mostly repackages, and a signature. CI minutes only.
+
+`#240` becomes necessary only in cases nobody has asked for: changing a line of
+LibreOffice core, taking an engine security fix Collabora has not yet shipped as
+an APK, or adding a second ABI. For `#224` and `#225` it is not needed at all.
+
+### 12.9 Verdict
+
+**§1-§11's verdict stands for the question they asked, and is not the answer to
+the question that was being paid for.** The engine cannot be salvaged into a
+new application; it does not have to be. Leave both native libraries exactly as
+Collabora built them, rebuild the two layers above them, and Cloud Office is a
+free build — once `patches/0002` exists.

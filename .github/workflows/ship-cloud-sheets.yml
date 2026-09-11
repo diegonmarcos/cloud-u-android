@@ -66,12 +66,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ORDER: TESTERS FIRST, REFUSAL SECOND. It was the other way round until
+      # 2026-09-11, and that meant this app's three shell testers had NEVER RUN
+      # IN CI ONCE — the refusal below exits 1 and every later step is skipped,
+      # so the only workflow that touches ac_cloud-sheets ran no test of it at
+      # all. The refusal is about PUBLISHING, not about testing, for exactly the
+      # reason the note below gives about the publish gate: editing a tester
+      # does not move the APK, and gating a tester on a publish decision lets a
+      # new assertion land without ever executing. Tests run, then we refuse.
+      # Every application's testers, and — for the 24 that have none — the
+      # COVERAGE-GAP line naming exactly what this run did NOT check. Until this
+      # step existed, an application with zero testers and one with fifty
+      # passing testers produced indistinguishable green ticks, and the ship
+      # workflow's only question was "did Gradle exit 0". Needs no JDK, no SDK
+      # and no gradle, so it costs seconds and fails before anything is built.
+      #
+      # DELIBERATELY NOT gated on the publish gate: the gate answers "would
+      # these bytes differ?", which is the right question for publishing and the
+      # wrong one for testing — editing a tester does not move the APK, and
+      # gating here would let a new assertion land without ever running once.
+      - name: "Test → this application's testers, and what is not covered"
+        run: |
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
+
       # THIS APP IS NO LONGER A MIRROR, AND THIS WORKFLOW STILL IS.
       #
       # ac_cloud-sheets/build.json used to carry upstream.url + upstream.sha256:
       # one official APK, downloaded, hash-checked and republished. It now carries
-      # upstream.online + upstream.core — two pinned git revisions and a patch
-      # series — because Text Enhance could not be fixed in bytes we did not build.
+      # upstream.online + upstream.engine — a pinned git revision, a sha256-pinned
+      # prebuilt engine, and a patch series — because Text Enhance could not be
+      # fixed in bytes we did not build.
       # Every step below reads keys that no longer exist.
       #
       # Without this guard the job dies at "Download official Collabora Office APK"
@@ -90,35 +116,27 @@ jobs:
           bj="${WORK_DIR}/build.json"
           if [ -n "$(jq -r '.upstream.online // empty' "$bj")" ]; then
             echo "::error title=Cloud Office is mid-migration::ac_cloud-sheets is a SOURCE BUILD now (upstream.online is pinned), but this workflow still mirrors a prebuilt APK. It will not publish."
-            echo "Pinned online revision: $(jq -r '.upstream.online.revision' "$bj")"
-            echo "Pinned core   revision: $(jq -r '.upstream.core.revision'   "$bj")"
-            echo "Build host           : $(jq -r '.build.host // "NOT SET"'   "$bj")"
+            echo "Pinned online revision : $(jq -r '.upstream.online.revision'        "$bj")"
+            echo "Engine (prebuilt) sha256: $(jq -r '.upstream.engine.source.sha256'   "$bj")"
+            echo "Build host              : $(jq -r '.build.host // "NOT SET"'         "$bj")"
             echo
-            echo "Unblock, in order:"
-            echo "  1. establish a build host that can carry an NDK megabuild of LibreOffice core"
-            echo "  2. set build.json::build.host to its runner label"
-            echo "  3. replace this workflow with a source build (fetch both pins, git am patches/, configure, assemble, sign)"
+            echo "Unblock, in order — AND NOTE THIS NO LONGER STARTS WITH A MEGABUILD."
+            echo "Until 2026-09-11 this message said the first step was a host that could carry an NDK"
+            echo "megabuild of LibreOffice core. That was wrong and it cost the owner days of waiting on"
+            echo "a ~\$35 approval. patches/0001 touches nine files and not one is C++, so BOTH native"
+            echo "libraries are taken prebuilt from the sha256-pinned APK and neither is ever relinked;"
+            echo "ac_cloud-sheets/tests/test-no-engine-build-required.sh proves that against upstream on"
+            echo "every run. What is left is a Node build of browser/ and a Gradle build of android/."
+            echo "  1. write patches/0002: a declared --with-prebuilt-engine mode, because configure.ac:884"
+            echo "     still refuses --enable-androidapp without an engine BUILD tree. See"
+            echo "     build.json::upstream.engine._doc_BLOCKER_configure_gate."
+            echo "  2. set build.json::build.host (ubuntu-latest is expected to be enough: SDK + Node, no NDK)"
+            echo "  3. replace this workflow with that build (fetch the online pin, git am patches/,"
+            echo "     unzip the pinned APK into jniLibs + assets, configure, assemble, sign)"
             echo
             echo "Until then the release asset already on GHCR/GH Releases is left exactly as it is."
             exit 1
           fi
-
-      # Every application's testers, and — for the 24 that have none — the
-      # COVERAGE-GAP line naming exactly what this run did NOT check. Until this
-      # step existed, an application with zero testers and one with fifty
-      # passing testers produced indistinguishable green ticks, and the ship
-      # workflow's only question was "did Gradle exit 0". Needs no JDK, no SDK
-      # and no gradle, so it costs seconds and fails before anything is built.
-      #
-      # DELIBERATELY NOT gated on the publish gate: the gate answers "would
-      # these bytes differ?", which is the right question for publishing and the
-      # wrong one for testing — editing a tester does not move the APK, and
-      # gating here would let a new assertion land without ever running once.
-      - name: "Test → this application's testers, and what is not covered"
-        run: |
-          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
-          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
-          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
 
       # Publish-if-changed gate. Android builds are not byte-reproducible, so a
       # rebuild of unchanged source published different bytes, a different
