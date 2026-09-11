@@ -182,6 +182,16 @@ done
 grep -qF 'name="app_name"' "$STRINGS_ES" \
   && bad "values-es/ overrides app_name — the product name must not be translated" \
   || ok "values-es/ leaves app_name alone"
+# ...and the reason must be STATED to the toolchain, not just left implicit.
+# cloud-android-i18n-guard.py fails any module whose values/ key is missing
+# from values-es unless the key carries Android's own translatable="false".
+# Without the attribute these two rules contradict each other and the build is
+# red whichever way it is resolved — that is exactly how this landed the first
+# time. Asserted here so a future edit that drops the attribute is caught by
+# THIS app's tester rather than by a repo-wide guard on someone else's push.
+grep -qE 'name="app_name"[^>]*translatable="false"' "$STRINGS" \
+  && ok "app_name is marked translatable=\"false\", so the i18n guard agrees with the line above" \
+  || bad "app_name is not marked translatable=\"false\" — cloud-android-i18n-guard.py will demand a Spanish copy of the product name"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

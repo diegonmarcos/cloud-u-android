@@ -8,7 +8,16 @@
      Nothing below is formatted in Kotlin with string concatenation: the
      placeholders are positional so Spanish can reorder them. -->
 <resources>
-    <string name="app_name">WatchTower</string>
+    <!-- translatable="false": WatchTower is a PRODUCT NAME, not prose. Its two
+         siblings settle this — ac_c3-watchdog and ac_c3-morpheus carry their
+         labels as manifest literals ("Watchdog", "Morpheus") and the C3 tab
+         strip renders all three as literals too, so a Spanish app_name here
+         would be the only translated name in the family and would disagree
+         with the tab that launches it. Marked with Android's own attribute
+         rather than exempting the whole module in i18n-policy.json: the other
+         fifteen strings in this file DO have to reach him in Spanish, and an
+         exemption would have silently excused those as well. -->
+    <string name="app_name" translatable="false">WatchTower</string>
     <string name="screen_subtitle">Delivery analytics · last %1$d runs per repo</string>
     <string name="loading">Counting runs…</string>
     <string name="refresh">Refresh</string>

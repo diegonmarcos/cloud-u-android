@@ -19,6 +19,7 @@
     "_keyboard_was_exempt": "WHY libs/keyboard IS NO LONGER EXEMPT. Its entry used to read `Vendored HeliBoard fork ... an upstream-sync task and not a translation task`, and every clause of that was checkable and wrong. The tree is not a mirror: ab_cloud-libs-shared/libs/keyboard/README.md says `This tree is owned code: edit src/main directly and commit. There is no upstream sync, no overlay patch, no regeneration step`, and there is no patches/ directory under it. More decisively, the split is measurable. At the vendoring commit 2dba4ec53 (`vendor HeliBoard as libs:keyboard`), values/strings.xml and values-es/strings.xml each held 534 translatable keys — upstream shipped Spanish COMPLETE. Every key missing from values-es today was added to values/ by a commit of ours after that import: 149 of 149, zero from upstream. So there was never an upstream-sync task to wait for, and pulling upstream would not have moved the number by one. The keys are Text Enhancements, Text Resume, AI model routing, clipboard export/import, emoji search and pinning, grammar check and translation settings — features this repository built, on the app the owner touches on every screen.",
 
     "aa_cloud-superapp/app":                  { "require": ["es"] },
+    "ac_c3-watchtower/app":                   { "require": ["es"] },
     "ab_cloud-libs-shared/libs/mail":         { "require": ["es"] },
     "ab_cloud-libs-shared/libs/translate":    { "require": ["es"] },
     "ac_cloud-mail/app":                      { "require": ["es"] },
