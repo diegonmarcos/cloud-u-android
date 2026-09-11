@@ -439,13 +439,39 @@ unit)
         exit 0
     fi
 
-    [ -x "$APP_DIR/gradlew" ] || chmod +x "$APP_DIR/gradlew" 2>/dev/null || true
-    [ -f "$APP_DIR/gradlew" ] || { err "$APP_NAME declares tests.unit.task=$task but has no gradlew"; exit 1; }
+    # HOW GRADLE IS INVOKED, and why this is not just "./gradlew".
+    #
+    # Only 9 of this repository's 29 applications carry a gradle wrapper —
+    # they are the upstream forks, which inherited one. The other 20, this
+    # repo's own apps among them, pin their toolchain in flake.nix and drive
+    # gradle through their build.sh (`in_nix gradle <task>`, which is a plain
+    # `gradle` once BYPASS_NIX is set, as it is in CI). Requiring a gradlew
+    # meant those 20 could not declare tests.unit AT ALL: the first one to try
+    # got "has no gradlew" and a red ship, so the only way to a green run was
+    # to leave the JVM suite switched off — the engine enforcing exactly the
+    # "tests exist but never execute" state the rest of this file was written
+    # to end.
+    #
+    # So: the app's own wrapper when it has one, otherwise the pinned gradle
+    # the workflow already put on PATH (gradle/actions/setup-gradle), which is
+    # the same binary its build.sh would reach under BYPASS_NIX.
+    if [ -f "$APP_DIR/gradlew" ]; then
+        [ -x "$APP_DIR/gradlew" ] || chmod +x "$APP_DIR/gradlew" 2>/dev/null || true
+        GRADLE_CMD="./gradlew"
+    elif command -v gradle >/dev/null 2>&1; then
+        GRADLE_CMD="gradle"
+    else
+        # FAILS CLOSED. Never "skip because no gradle" — a declared unit task
+        # that silently does not run is the lie this whole script exists to
+        # stop, and it would read as a pass.
+        err "$APP_NAME declares tests.unit.task=$task but has neither a gradlew nor a gradle on PATH. Set up gradle before this step, or unset tests.unit.task — do not let a declared suite go unexecuted."
+        exit 1
+    fi
 
-    echo "── unit tests [$APP_NAME]: ./gradlew --no-daemon $task ──"
+    echo "── unit tests [$APP_NAME]: $GRADLE_CMD --no-daemon $task ──"
     # No `|| true`. Gradle's exit status IS the gate; a failing test returns 1
     # and that 1 is what this script returns.
-    ( cd "$APP_DIR" && ./gradlew --no-daemon "$task" )
+    ( cd "$APP_DIR" && $GRADLE_CMD --no-daemon "$task" )
     ;;
 
 # ── lint: assertions that cannot fail ─────────────────────────────────────
