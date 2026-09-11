@@ -120,26 +120,6 @@ jobs:
         with:
           gradle-version: "8.10.2"
 
-      # The JVM unit test source set, which asserts the browser's tab
-      # ordering, pin constraint, first-run seeding and search-engine
-      # resolution. NO EMULATOR: src/test/ runs on the runner's own JVM.
-      #
-      # It runs HERE and not up with the shell testers because it shells
-      # out to ./gradlew, and that step is deliberately placed before the
-      # JDK, the Android SDK and Gradle exist — its own comment says it
-      # needs none of the three, which is true of `shell` and `lint` and
-      # not of `unit`. Invoked up there it could only fail for want of a
-      # toolchain, or pass by not running. Same split as ship-cloud-mail.
-      #
-      # Gated on the publish gate, unlike the shell testers above: when
-      # the gate has already proved the source did not move, recompiling
-      # the suite buys nothing for the minutes it costs.
-      - name: JVM unit tests (fatal on failure)
-        if: steps.gate.outputs.skip != 'true'
-        working-directory: ${{ github.workspace }}
-        env:
-          BYPASS_NIX: "1"
-        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
       - name: Checkout vault (shared Android signing key)
         if: steps.gate.outputs.skip != 'true'
@@ -157,6 +137,31 @@ jobs:
             | sudo tar -C /usr/local/bin -xzf - oras
           curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \
             | sudo tee /usr/local/bin/sops >/dev/null && sudo chmod +x /usr/local/bin/sops
+
+      # The JVM unit test source set, which asserts the browser's tab
+      # ordering, pin constraint, first-run seeding and search-engine
+      # resolution. NO EMULATOR: src/test/ runs on the runner's own JVM.
+      #
+      # PLACED HERE, after the vault checkout and sops, and not up with the
+      # shell testers, for two independent reasons. It shells out through the
+      # app's build.sh, so it needs the JDK/SDK/Gradle that the step above the
+      # shell testers explicitly does not provide. And app/build.gradle's
+      # signingConfig throws "ONE shared constellation key required" during
+      # Gradle's CONFIGURATION phase — which a test task goes through even
+      # though it signs nothing — so the key has to be resolvable before the
+      # suite can be so much as enumerated. Run any earlier and it fails for
+      # want of the toolchain or the key, never on an assertion.
+      #
+      # Gated on the publish gate, unlike the shell testers: when the gate has
+      # already proved the source did not move, recompiling buys nothing.
+      - name: JVM unit tests (fatal on failure)
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ github.workspace }}
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
       - name: Determine variant
         if: steps.gate.outputs.skip != 'true'

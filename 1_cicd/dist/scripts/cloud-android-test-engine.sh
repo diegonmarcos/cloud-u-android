@@ -455,23 +455,38 @@ unit)
     # So: the app's own wrapper when it has one, otherwise the pinned gradle
     # the workflow already put on PATH (gradle/actions/setup-gradle), which is
     # the same binary its build.sh would reach under BYPASS_NIX.
+    entry="$(_json '.build.entry')"
     if [ -f "$APP_DIR/gradlew" ]; then
         [ -x "$APP_DIR/gradlew" ] || chmod +x "$APP_DIR/gradlew" 2>/dev/null || true
-        GRADLE_CMD="./gradlew"
+        set -- ./gradlew --no-daemon "$task"
+    elif [ -n "$entry" ] && [ -f "$APP_DIR/$entry" ]; then
+        # The app's OWN declared entry point (build.json::build.entry), which
+        # is what its ship workflow builds through. Running bare `gradle` here
+        # instead looks equivalent and is not: these apps' signingConfig throws
+        # "ONE shared constellation key required" during Gradle's CONFIGURATION
+        # phase, which EVERY task goes through including a test task that signs
+        # nothing. The entry script resolves that key first, so it is the only
+        # invocation that can configure the project at all.
+        #
+        # It takes no task argument on purpose — it reads tests.unit.task from
+        # the same build.json this script did, so both run the same task and
+        # there is no second place for the task name to drift.
+        chmod +x "$APP_DIR/$entry" 2>/dev/null || true
+        set -- "./$entry" test
     elif command -v gradle >/dev/null 2>&1; then
-        GRADLE_CMD="gradle"
+        set -- gradle --no-daemon "$task"
     else
         # FAILS CLOSED. Never "skip because no gradle" — a declared unit task
         # that silently does not run is the lie this whole script exists to
         # stop, and it would read as a pass.
-        err "$APP_NAME declares tests.unit.task=$task but has neither a gradlew nor a gradle on PATH. Set up gradle before this step, or unset tests.unit.task — do not let a declared suite go unexecuted."
+        err "$APP_NAME declares tests.unit.task=$task but has no gradlew, no build.json::build.entry script, and no gradle on PATH. Set one up before this step, or unset tests.unit.task — do not let a declared suite go unexecuted."
         exit 1
     fi
 
-    echo "── unit tests [$APP_NAME]: $GRADLE_CMD --no-daemon $task ──"
-    # No `|| true`. Gradle's exit status IS the gate; a failing test returns 1
-    # and that 1 is what this script returns.
-    ( cd "$APP_DIR" && $GRADLE_CMD --no-daemon "$task" )
+    echo "── unit tests [$APP_NAME]: $* ──"
+    # No `|| true`. The exit status IS the gate; a failing test returns 1 and
+    # that 1 is what this script returns.
+    ( cd "$APP_DIR" && "$@" )
     ;;
 
 # ── lint: assertions that cannot fail ─────────────────────────────────────

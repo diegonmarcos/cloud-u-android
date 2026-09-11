@@ -239,9 +239,33 @@ step_dev() {
   in_nix adb shell am start -n "$(_release_var '.android.application_id')/$APP_MAIN"
 }
 
-step_test()       { log "Test: JVM unit tests"; in_nix gradle test; }
-step_instrument() { log "Test: instrumented (needs device)"; in_nix gradle connectedAndroidTest; }
-step_lint()       { log "Lint"; in_nix gradle lint; }
+# ── test / lint / instrument ──────────────────────────────────────────
+#
+# These call _resolve_signing even though they SIGN NOTHING, and that is not
+# belt-and-braces: app/build.gradle's signingConfig throws
+# "ONE shared constellation key required" during Gradle's CONFIGURATION phase,
+# which every task goes through. Without the key resolved first, `build.sh test`
+# and `build.sh lint` did not run the tests and fail — they failed before
+# Gradle had even worked out what the tests were. Both entry points had been
+# dead since the signingConfig went in, which is part of why this app shipped
+# with no executed tests at all.
+#
+# The "no fallback" contract is untouched: the key is still REQUIRED and still
+# never substituted. This only makes the requirement resolvable for tasks that
+# must configure the project without producing an artifact.
+#
+# The unit task is read from build.json::tests.unit.task so this and the CI
+# test engine run the SAME task; `test` (all modules) if it is unset.
+step_test() {
+  log "Test: JVM unit tests"
+  _resolve_signing
+  local task; task="$(_release_var '.tests.unit.task')"
+  [ -n "$task" ] || task="test"
+  log "Test: gradle $task"
+  in_nix gradle "$task"
+}
+step_instrument() { log "Test: instrumented (needs device)"; _resolve_signing; in_nix gradle connectedAndroidTest; }
+step_lint()       { log "Lint"; _resolve_signing; in_nix gradle lint; }
 step_clean()      { log "Clean"; in_nix gradle clean; rm -rf "$DIST_DIR"; }
 step_shell()      { log "Entering Nix devShell"; exec nix develop "$SCRIPT_DIR"; }
 
