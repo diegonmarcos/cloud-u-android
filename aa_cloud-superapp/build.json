@@ -2547,6 +2547,13 @@
                 "target": "page:c3/topology"
               },
               {
+                "_doc": "Writer \u2014 hands off to the standalone Cloud Writer app (ac_cloud-writer, com.diegonmarcos.cloudwriter, read from ITS android.application_id and app/build.gradle namespace, not guessed from the slug). Same shape as the Keyboard tile beside it: target=extapp:cloud-writer \u2192 ShellActivity.launchExternalApp opens the package if installed, else downloads + installs ui.external_apps[id=cloud-writer].install_apk_url \u2014 no ACTION_VIEW, so there is no seventh ad-hoc startActivity site and no ActivityNotFoundException path. POSITION IS DELIBERATE AND IT IS NOT LAST: GroupedTilesFragment walks group.tiles in declared order with no sort, and the Camera tile below records the owner asking for the camera 'as last' in this row on 2026-09-10, so Writer goes in front of it rather than displacing a placement he named. icon ic_writer is Cloud Writer's own launcher foreground copied into this app's drawables \u2014 Sections.iconResFor falls back to ic_link_tile in silence when a name resolves to nothing, so the file's existence is pinned by test-writer-tile.sh rather than trusted.",
+                "id": "writer",
+                "label": "Writer",
+                "icon": "ic_writer",
+                "target": "extapp:cloud-writer"
+              },
+              {
                 "_doc": "Camera — the fleet's OWN camera (ac_cloud-camera, applicationId cld.camera, our signed build of GrapheneOS Camera), not a third-party one. The owner asked for it 'as last' in this row on 2026-09-10, and LAST HERE IS ARRAY POSITION: GroupedTilesFragment walks group.tiles in declared order and applies no sort of any kind, so appending is what makes it last and reordering this array is the only way to move it. There is no `order` field to set and none is wanted — a second way to express position is a second thing to disagree with the first. target=extapp:cloud-camera → MainActivity.launchExternalApp opens cld.camera if installed, else downloads + installs ui.external_apps[id=cloud-camera].install_apk_url. icon ic_camera is its own drawable rather than ic_photos, which the Media Center tile already carries; Sections.iconResFor falls back to ic_link_tile without complaining when a name resolves to nothing, so a shared or misspelt icon is a silent defect and test-camera-tiles.sh pins the file's existence.",
                 "id": "camera",
                 "label": "Camera",
@@ -7018,6 +7025,17 @@
         "hub_package": "cld.camera",
         "install_package": "cld.camera",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Camera.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "Cloud Writer \u2014 the standalone writing app (ac_cloud-writer, published by ship-cloud-writer.yml since #259). Added because the Cloud \u25b8 Tools Primary tile targets extapp:cloud-writer, and test-app-identity-resolves.sh T1 makes that an invariant rather than a convention: with no entry here Sections.externalApp returns null and the tile snacks 'Unknown app: cloud-writer' \u2014 a tile that fails AFTER the tap, which is the failure mode the C3 tile's _doc calls worse than no tile at all. package read from ac_cloud-writer/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors ac_cloud-writer/build.json::release.gh_release and answered 200 / 3,276,890 bytes on 2026-09-11. folder=prod_docs ('.Docs & Notes') is the taxonomy half of the same record \u2014 PhoneFolders derives the pkg: keyword from it, so NO literal keyword for com.diegonmarcos.cloudwriter may be added to ui.phone_folders (T8b fails on exactly that).",
+        "_doc_abi": "install_apk_url names the arm64 asset, which is the ONLY shape this schema has \u2014 all 19 entries carry one flat URL. Cloud Writer is the first companion published in two ABI variants (Cloud-Writer.apk / Cloud-Writer-x86_64.apk, both in the generated data/constellation-fleet.json under `assets`), so on an x86_64 device a flat arm64 URL is #43 again: INSTALL_FAILED_NO_MATCHING_ABIS. The per-ABI names are NOT restated here. ShellActivity.launchExternalApp resolves this URL through the fleet manifest's assets map before installing, via the one ABI rule the updater already owns (AbiUpdateTag.resolveFrom, the same rule Fleet.App.abiReleaseUrl uses) \u2014 so this field stays the arm64 default and the device picks.",
+        "id": "cloud-writer",
+        "label": "Cloud Writer",
+        "folder": "prod_docs",
+        "hub_package": "com.diegonmarcos.cloudwriter",
+        "install_package": "com.diegonmarcos.cloudwriter",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Writer.apk",
         "forks": {}
       }
     ],

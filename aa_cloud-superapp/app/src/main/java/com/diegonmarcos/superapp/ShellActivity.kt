@@ -1694,8 +1694,44 @@ open class ShellActivity : AppCompatActivity(),
             findViewById<View>(R.id.fragment_container).snack("${app.label} not installed")
             return
         }
+        // ABI. build.json::ui.external_apps gives every companion exactly ONE
+        // flat install_apk_url, and it is always the arm64 asset because that
+        // is the first variant in each app's build.json. Cloud Writer is the
+        // first companion published in two variants (Cloud-Writer.apk /
+        // Cloud-Writer-x86_64.apk), so on an x86_64 device that flat URL is
+        // the half-way ABI dimension all over again — the same defect
+        // Fleet.App.abiReleaseUrl was written to close on the update path,
+        // reappearing on the FIRST-INSTALL path, which had never carried an
+        // ABI at all. It ends in INSTALL_FAILED_NO_MATCHING_ABIS, after the
+        // user has accepted the install.
+        //
+        // The per-ABI asset names are NOT restated in external_apps. They are
+        // already in data/constellation-fleet.json, which regen.sh generates
+        // from each app's own release.variants[] — so this asks the manifest
+        // rather than adding a fourth place to declare an app's identity, and
+        // it selects with AbiUpdateTag, the ONE ABI rule the updater owns.
+        //
+        // Fails closed to the declared URL at every step: no fleet entry, no
+        // assets map, a URL that does not end in the fleet's own asset name,
+        // or no ABI match all return install_apk_url byte for byte. Every
+        // entry that works today has an empty assets map and is unchanged.
+        val fleetApp = runCatching {
+            com.diegonmarcos.superapp.updater.Fleet
+                .parse(BuildConfig.CONSTELLATION_FLEET_B64)
+                .firstOrNull { it.pkg == app.installPackage }
+        }.getOrNull()
+        val installUrl = fleetApp
+            ?.takeIf { it.asset.isNotBlank() && it.assets.isNotEmpty() }
+            ?.takeIf { app.installApkUrl.endsWith("/${it.asset}") }
+            ?.let { f ->
+                val picked = com.diegonmarcos.superapp.updater.AbiUpdateTag
+                    .currentFrom(f.assets, f.asset)
+                if (picked == f.asset) null
+                else app.installApkUrl.removeSuffix(f.asset) + picked
+            }
+            ?: app.installApkUrl
         com.diegonmarcos.superapp.updater.Updater.installApk(
-            this, app.installApkUrl, app.installPackage, app.label,
+            this, installUrl, app.installPackage, app.label,
         )
         findViewById<View>(R.id.fragment_container)
             .snack("${app.label} not installed — downloading…")
