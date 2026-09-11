@@ -1102,4 +1102,20 @@
     <string name="settings_update_metered_body">È disponibile un nuovo Cloud Mail e occupa %1$s. Sei sulla rete mobile, quindi scaricarlo ora userà %1$s del tuo traffico. Se lo lasci stare, si scarica da solo alla prossima connessione Wi-Fi.</string>
     <string name="settings_update_metered_download">Scarica ora</string>
     <string name="settings_update_metered_later">Aspetta il Wi-Fi</string>
+    <string name="settings_update_published_section">Build pubblicata</string>
+    <string name="settings_update_asset_label">APK</string>
+    <string name="settings_update_asset_unknown">Nessun nome di file nella voce di flotta di questa build</string>
+    <string name="settings_update_no_fleet_entry">Questa build non contiene una propria voce di flotta, quindi non c\'è nulla da consultare</string>
+    <string name="settings_update_size_label">Dimensione</string>
+    <string name="settings_update_published_probing">Lettura del file pubblicato…</string>
+    <string name="settings_update_published_unreachable">Non è stato possibile raggiungere la pubblicazione. Controlla la connessione e riprova.</string>
+    <string name="settings_update_published_refused">Il server ha rifiutato la richiesta: HTTP %1$d</string>
+    <string name="settings_update_size_undeclared">Il server non ha indicato alcuna dimensione</string>
+    <string name="settings_update_published_at_label">Pubblicata</string>
+    <string name="settings_update_published_at_unknown">Il server non ha indicato quando</string>
+    <string name="settings_update_links_section">Da dove proviene questa build</string>
+    <string name="settings_update_link_release">Pubblicazione su GitHub</string>
+    <string name="settings_update_link_apk">Download dell\'APK</string>
+    <string name="settings_update_link_repo">Codice sorgente</string>
+    <string name="settings_update_link_ghcr">Registro dei pacchetti</string>
 </resources>

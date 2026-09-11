@@ -50,6 +50,51 @@ val mailAiRouting: Map<String, Any> = ((groovy.json.JsonSlurper()
             "Restore it from git rather than pointing this build at keyboard_ai — sharing that " +
             "block is exactly what made mail's Text settings uneditable."
     )
+// THIS APP'S ENTRY in the constellation fleet manifest, and only this app's, baked so
+// Configs ▸ Update can say where the installed build came from.
+//
+// :libs:updater already bakes a fleet manifest, from `${rootDir}/data/constellation-fleet.json`
+// — the CONSUMING app's own data/ dir. ac_cloud-mail has no data/ dir, so that file does not
+// exist here and the library's CONSTELLATION_FLEET_B64 is the EMPTY STRING in every cloud-mail
+// build ever shipped. A screen reading it would have found no entry for itself and drawn no
+// links at all, which is a blank page that looks exactly like a working one.
+//
+// ONE ENTRY, NOT SIXTY, and that is deliberate twice over. Baking the whole manifest would put
+// 60 other apps' install addresses inside a mail APK and hand Fleet.installAll a fleet to walk;
+// build.json::release.auto_update says it in as many words — "Mail updates only itself … it is
+// not a fleet host and must not behave like one". It would also be a second copy of a file that
+// already exists once, free to drift.
+//
+// Selected by PACKAGE ID, against the same commsApplicationId the identity-assert step checks
+// the built APK with, so a renamed entry cannot hand this app someone else's release URL. A
+// missing file or a missing entry FAILS THE BUILD with a sentence: a mail APK that cannot say
+// where it came from is the defect this block exists to remove, not something to ship quietly.
+@Suppress("UNCHECKED_CAST")
+val mailFleetB64: String = run {
+    val manifest = rootProject.file("../aa_cloud-superapp/data/constellation-fleet.json")
+    if (!manifest.isFile) {
+        error(
+            "constellation-fleet.json is not at ${manifest.path}. It is the fleet's single " +
+                "source of truth for this app's release, repository and package addresses, and " +
+                "Configs ▸ Update reads nothing else. It lives in the sibling aa_cloud-superapp " +
+                "tree, which this build already needs for :libs:updater — a checkout without it " +
+                "cannot build cloud-mail at all."
+        )
+    }
+    val apps = (groovy.json.JsonSlurper().parse(manifest) as Map<String, Any>)["apps"]
+        as List<Map<String, Any>>
+    val entry = apps.firstOrNull { it["package"] == commsApplicationId }
+        ?: error(
+            "constellation-fleet.json has no entry whose \"package\" is $commsApplicationId. " +
+                "Configs ▸ Update takes every address it shows from that entry and invents " +
+                "none, so without it the page has nothing true to display. Add the entry rather " +
+                "than writing the URLs into this build file."
+        )
+    groovy.json.JsonOutput.toJson(mapOf("apps" to listOf(entry)))
+        .toByteArray(Charsets.UTF_8)
+        .let { Base64.getEncoder().encodeToString(it) }
+}
+
 val mailAiRoutingB64: String = groovy.json.JsonOutput.toJson(mailAiRouting)
     .toByteArray(Charsets.UTF_8)
     // Base64, NOT java.util.Base64 — imported above and referred to by its simple
@@ -118,6 +163,9 @@ android {
         // copy that way, because the prompts carry quotes and newlines that a plain
         // buildConfigField string would not survive.
         buildConfigField("String", "MAIL_AI_ROUTING_B64", "\"$mailAiRoutingB64\"")
+        // constellation-fleet.json's `mail` entry, wrapped as {"apps":[…]} so Fleet.parse reads
+        // it unchanged. Base64 for the same reason as the line above: the entry carries quotes.
+        buildConfigField("String", "MAIL_FLEET_B64", "\"$mailFleetB64\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // The launcher/settings/notification label. Substituted verbatim into the manifest,
         // so without -PtestApp the merged manifest still reads android:label="@string/app_name"

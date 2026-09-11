@@ -1108,4 +1108,20 @@
     <string name="settings_update_metered_body">Un nouveau Cloud Mail est disponible et il fait %1$s. Vous êtes en données mobiles : le télécharger maintenant consommera %1$s de votre forfait. Si vous n\'y touchez pas, il se téléchargera tout seul lors de votre prochaine connexion Wi-Fi.</string>
     <string name="settings_update_metered_download">Télécharger maintenant</string>
     <string name="settings_update_metered_later">Attendre le Wi-Fi</string>
+    <string name="settings_update_published_section">Build publié</string>
+    <string name="settings_update_asset_label">APK</string>
+    <string name="settings_update_asset_unknown">Aucun nom de fichier dans l\'entrée de flotte de ce build</string>
+    <string name="settings_update_no_fleet_entry">Ce build ne contient pas sa propre entrée de flotte, il n\'y a donc rien à consulter</string>
+    <string name="settings_update_size_label">Taille</string>
+    <string name="settings_update_published_probing">Lecture du fichier publié…</string>
+    <string name="settings_update_published_unreachable">Impossible d\'atteindre la publication. Vérifiez la connexion et réessayez.</string>
+    <string name="settings_update_published_refused">Le serveur a refusé la requête : HTTP %1$d</string>
+    <string name="settings_update_size_undeclared">Le serveur n\'a indiqué aucune taille</string>
+    <string name="settings_update_published_at_label">Publié</string>
+    <string name="settings_update_published_at_unknown">Le serveur n\'a pas indiqué quand</string>
+    <string name="settings_update_links_section">D\'où vient ce build</string>
+    <string name="settings_update_link_release">Publication GitHub</string>
+    <string name="settings_update_link_apk">Téléchargement de l\'APK</string>
+    <string name="settings_update_link_repo">Code source</string>
+    <string name="settings_update_link_ghcr">Registre de paquets</string>
 </resources>

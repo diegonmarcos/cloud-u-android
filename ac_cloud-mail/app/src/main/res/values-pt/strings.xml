@@ -1106,4 +1106,20 @@
     <string name="settings_update_metered_body">Está disponível um novo Cloud Mail e tem %1$s. Está em dados móveis, por isso transferi-lo agora usará %1$s do seu plano. Se não fizer nada, será transferido sozinho da próxima vez que estiver em Wi-Fi.</string>
     <string name="settings_update_metered_download">Transferir agora</string>
     <string name="settings_update_metered_later">Esperar por Wi-Fi</string>
+    <string name="settings_update_published_section">Compilação publicada</string>
+    <string name="settings_update_asset_label">APK</string>
+    <string name="settings_update_asset_unknown">A entrada de frota desta compilação não indica nenhum ficheiro</string>
+    <string name="settings_update_no_fleet_entry">Esta compilação não inclui a sua própria entrada de frota, por isso não há nada a consultar</string>
+    <string name="settings_update_size_label">Tamanho</string>
+    <string name="settings_update_published_probing">A ler o ficheiro publicado…</string>
+    <string name="settings_update_published_unreachable">Não foi possível aceder à publicação. Verifique a ligação e tente novamente.</string>
+    <string name="settings_update_published_refused">O servidor recusou o pedido: HTTP %1$d</string>
+    <string name="settings_update_size_undeclared">O servidor não indicou qualquer tamanho</string>
+    <string name="settings_update_published_at_label">Publicada</string>
+    <string name="settings_update_published_at_unknown">O servidor não indicou quando</string>
+    <string name="settings_update_links_section">De onde vem esta compilação</string>
+    <string name="settings_update_link_release">Publicação no GitHub</string>
+    <string name="settings_update_link_apk">Transferência do APK</string>
+    <string name="settings_update_link_repo">Código-fonte</string>
+    <string name="settings_update_link_ghcr">Registo de pacotes</string>
 </resources>

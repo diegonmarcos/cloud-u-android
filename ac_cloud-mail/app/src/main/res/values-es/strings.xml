@@ -1150,6 +1150,22 @@
     <string name="settings_update_metered_body">Hay una versión nueva de Cloud Mail y ocupa %1$s. Estás con datos móviles, así que descargarla ahora gastará %1$s de tu tarifa. Si no haces nada, se descargará sola la próxima vez que estés en Wi-Fi.</string>
     <string name="settings_update_metered_download">Descargar ahora</string>
     <string name="settings_update_metered_later">Esperar al Wi-Fi</string>
+    <string name="settings_update_published_section">Compilación publicada</string>
+    <string name="settings_update_asset_label">APK</string>
+    <string name="settings_update_asset_unknown">La entrada de flota de esta compilación no indica ningún archivo</string>
+    <string name="settings_update_no_fleet_entry">Esta compilación no incluye su propia entrada de flota, así que no hay nada que consultar</string>
+    <string name="settings_update_size_label">Tamaño</string>
+    <string name="settings_update_published_probing">Leyendo el archivo publicado…</string>
+    <string name="settings_update_published_unreachable">No se pudo acceder a la publicación. Comprueba la conexión y vuelve a intentarlo.</string>
+    <string name="settings_update_published_refused">El servidor rechazó la petición: HTTP %1$d</string>
+    <string name="settings_update_size_undeclared">El servidor no indicó ningún tamaño</string>
+    <string name="settings_update_published_at_label">Publicada</string>
+    <string name="settings_update_published_at_unknown">El servidor no indicó cuándo</string>
+    <string name="settings_update_links_section">De dónde viene esta compilación</string>
+    <string name="settings_update_link_release">Publicación en GitHub</string>
+    <string name="settings_update_link_apk">Descarga del APK</string>
+    <string name="settings_update_link_repo">Código fuente</string>
+    <string name="settings_update_link_ghcr">Registro de paquetes</string>
     <string name="inbox_folders_tab_all">Todas</string>
     <string name="inbox_folders_tab_unread">Sin leer</string>
 </resources>

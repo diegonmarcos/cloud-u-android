@@ -351,7 +351,15 @@ fun SettingsScreen(
             StorageScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
         }
         composable("update") { entry ->
-            UpdateScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
+            // The link rows leave the app. Same opener and same double-tap guard the About
+            // rows use (#106), handed in as a lambda so the page itself holds no Context and
+            // cannot grow a seventh ad-hoc startActivity(ACTION_VIEW) of its own (#156).
+            val context = LocalContext.current
+            val leaveOnce = rememberLeaveOnce(entry)
+            UpdateScreen(
+                onBack = { entry.navigateOnce { nav.popBackStack() } },
+                onOpenUrl = { url -> leaveOnce { openUrl(context, url) } },
+            )
         }
         composable("backup") { entry ->
             BackupScreen(

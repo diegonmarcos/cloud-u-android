@@ -1119,4 +1119,20 @@
     <string name="settings_update_metered_body">Доступен новый Cloud Mail размером %1$s. Вы используете мобильный интернет, поэтому загрузка сейчас израсходует %1$s трафика. Если ничего не делать, он загрузится сам при следующем подключении к Wi-Fi.</string>
     <string name="settings_update_metered_download">Скачать сейчас</string>
     <string name="settings_update_metered_later">Дождаться Wi-Fi</string>
+    <string name="settings_update_published_section">Опубликованная сборка</string>
+    <string name="settings_update_asset_label">APK</string>
+    <string name="settings_update_asset_unknown">В записи флота этой сборки нет имени файла</string>
+    <string name="settings_update_no_fleet_entry">Эта сборка не содержит собственной записи флота, поэтому искать нечего</string>
+    <string name="settings_update_size_label">Размер</string>
+    <string name="settings_update_published_probing">Чтение опубликованного файла…</string>
+    <string name="settings_update_published_unreachable">Не удалось связаться с релизом. Проверьте подключение и попробуйте снова.</string>
+    <string name="settings_update_published_refused">Сервер отклонил запрос: HTTP %1$d</string>
+    <string name="settings_update_size_undeclared">Сервер не сообщил размер</string>
+    <string name="settings_update_published_at_label">Опубликовано</string>
+    <string name="settings_update_published_at_unknown">Сервер не сообщил, когда</string>
+    <string name="settings_update_links_section">Откуда взялась эта сборка</string>
+    <string name="settings_update_link_release">Релиз на GitHub</string>
+    <string name="settings_update_link_apk">Загрузка APK</string>
+    <string name="settings_update_link_repo">Исходный код</string>
+    <string name="settings_update_link_ghcr">Реестр пакетов</string>
 </resources>

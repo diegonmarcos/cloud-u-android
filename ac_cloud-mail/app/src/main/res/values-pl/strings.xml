@@ -1116,4 +1116,20 @@
     <string name="settings_update_metered_body">Dostępny jest nowy Cloud Mail o rozmiarze %1$s. Korzystasz z danych komórkowych, więc pobranie go teraz zużyje %1$s Twojego pakietu. Pozostawiony sam sobie, pobierze się przy następnym połączeniu z Wi-Fi.</string>
     <string name="settings_update_metered_download">Pobierz teraz</string>
     <string name="settings_update_metered_later">Poczekaj na Wi-Fi</string>
+    <string name="settings_update_published_section">Opublikowana kompilacja</string>
+    <string name="settings_update_asset_label">APK</string>
+    <string name="settings_update_asset_unknown">Wpis floty tej kompilacji nie podaje nazwy pliku</string>
+    <string name="settings_update_no_fleet_entry">Ta kompilacja nie zawiera własnego wpisu floty, więc nie ma czego sprawdzić</string>
+    <string name="settings_update_size_label">Rozmiar</string>
+    <string name="settings_update_published_probing">Odczytywanie opublikowanego pliku…</string>
+    <string name="settings_update_published_unreachable">Nie udało się połączyć z wydaniem. Sprawdź połączenie i spróbuj ponownie.</string>
+    <string name="settings_update_published_refused">Serwer odrzucił żądanie: HTTP %1$d</string>
+    <string name="settings_update_size_undeclared">Serwer nie podał rozmiaru</string>
+    <string name="settings_update_published_at_label">Opublikowano</string>
+    <string name="settings_update_published_at_unknown">Serwer nie podał, kiedy</string>
+    <string name="settings_update_links_section">Skąd pochodzi ta kompilacja</string>
+    <string name="settings_update_link_release">Wydanie w GitHubie</string>
+    <string name="settings_update_link_apk">Pobieranie APK</string>
+    <string name="settings_update_link_repo">Kod źródłowy</string>
+    <string name="settings_update_link_ghcr">Rejestr pakietów</string>
 </resources>

@@ -38,6 +38,13 @@ hasre() { grep -qE -- "$2" "$1" 2>/dev/null && ok "$3" || bad "$3 ($1)"; }
 # keeps it, so a plain grep for the construct matches the prose about it and would
 # pass on a file whose code had been gutted. Strip comments first, always.
 code()  { sed -e 's|//.*||' -e 's|^[[:space:]]*\*.*||' "$1" 2>/dev/null; }
+# Same job, different blade: DROP whole comment lines instead of truncating at the
+# first '//'. code() cannot be used to look for a URL, because the '//' it cuts at
+# is the one inside https:// - every literal address it is shown arrives as the
+# harmless fragment `"https:` and the check passes. Verified: a deliberately
+# hardcoded repository URL scored green through code(). This keeps the line whole,
+# so a real address can be told from a scheme being stripped for display.
+codeln() { grep -v -E '^[[:space:]]*(//|\*|/\*)' "$1" 2>/dev/null; }
 # Every .kt under a directory, comments stripped - for the "mail owns no second
 # copy of this" rules, which have to look at a whole tree rather than one file.
 codetree() { find "$1" -name '*.kt' -o -name '*.kts' 2>/dev/null \
@@ -105,7 +112,8 @@ has "$APP/app/build.gradle.kts" 'project(":libs:updater")' "W1 the app module li
 has_code "$APP/app/src/main/kotlin/app/sterna/SternaApplication.kt" "Updater.start(this)" \
   "W1 the periodic self-update is armed at Application start"
 has_code "$HUB" 'composable("update")' "W1 Configs has an update destination"
-has_code "$HUB" "UpdateScreen(onBack" "W1 that destination renders the Update page"
+has_code "$HUB" "UpdateScreen(" "W1 that destination renders the Update page"
+has_code "$HUB" "onBack = { entry.navigateOnce { nav.popBackStack() } }," "W1 the page can be left again"
 has_code "$HUB" "onOpenUpdate" "W1 a hub row navigates to it"
 # THE PAGE MUST SHOW THE THREE FACTS. A page that only carries a button is the
 # hollow one the owner already had.
@@ -208,8 +216,22 @@ has_code "$PAGE" "MaterialTheme.colorScheme.error" "I1 a failure is rendered as 
 has_code "$INST" "refuseDowngrade(apk, targetPackage)" "D1 the choke point checks before staging"
 has_code "$INST" "ApkIntegrity.identify(context, apk)" "D1 the candidate's own versionCode is read from its manifest"
 has_code "$INST" "installedVersionCode(targetPackage)" "D1 compared against what the device actually has"
-has_code "$INST" "if (candidate.versionCode >= installed) return" \
-  "D1 STRICTLY older is refused and equal is allowed - a same-version rebuild must still install"
+has_code "$INST" "if (!VersionOrder.isDowngrade(candidate.versionCode, installed)) return" \
+  "D1 the ordering is asked of VersionOrder, the one definition Fleet.commit also uses"
+# WHERE THAT BOUNDARY NOW LIVES. The comparison used to be a literal `>=` here and
+# an identical `<` inside Fleet.commit: two copies of one decision, neither
+# reachable by a test, free to disagree about the case that matters. It is now a
+# pure function with no imports, driven through NEWER / SAME / OLDER / UNKNOWN by
+# VersionOrderTest. Equal must NOT be refused - a same-versionCode rebuild is how
+# a damaged install is repaired.
+has_code "$UPD/VersionOrder.kt" "compare(candidateCode, installedCode) == Order.OLDER" \
+  "D1 only a strictly OLDER candidate is a downgrade"
+has_code "$UPD/VersionOrder.kt" "candidateCode == null || installedCode == null -> Order.UNKNOWN" \
+  "D1 a version that could not be read is UNKNOWN, never coerced to zero"
+hasnt_code "$UPD/VersionOrder.kt" "?: 0" \
+  "D1 no null is defaulted to version 0 - that inverts the guard onto every unreadable APK"
+has_code "$UPD/Fleet.kt" "VersionOrder.isDowngrade(identity.versionCode, installedCode)" \
+  "D1 the fleet path asks the same function, so the two cannot drift apart"
 # The refusal has to happen before the session is opened, or the phone has already
 # paid for the staging it was about to refuse.
 r_line=$(code "$INST" | grep -n "refuseDowngrade(apk, targetPackage)" | head -1 | cut -d: -f1)
@@ -252,6 +274,67 @@ print(g.get('image') or (d.get('forks',{}).get(f,{}) or {}).get('image',''))")
 [ -n "$fleet_img" ] && [ "$fleet_img" = "$own_img" ] \
   && ok "T1 mail self-updates from the same image the store distributes ($own_img)" \
   || bad "T1 mail updates from '$own_img' but the store distributes '$fleet_img'"
+
+# ── L1 the page says WHERE the build comes from ──────────────────────────────
+# "gh apk and release links all". A page that only carries a button is the hollow
+# one the owner already had; these are the facts and the addresses he asked it to
+# surface, and each is load-bearing on its own.
+#
+# THE MANIFEST THIS PAGE READS. :libs:updater bakes its fleet from the CONSUMING
+# app's own data/ dir - and ac_cloud-mail has no data/ dir, so the library's
+# CONSTELLATION_FLEET_B64 is the EMPTY STRING in every cloud-mail build. A page
+# reading it finds no entry for itself and draws no rows at all, which from a
+# screenshot is indistinguishable from a page that works. Mail bakes its OWN
+# entry in app/build.gradle.kts, and that is what must be read.
+has_code "$PAGE" "Fleet.parse(BuildConfig.MAIL_FLEET_B64)" \
+  "L1 the page reads the manifest this app actually bakes"
+hasnt_code "$PAGE" "CONSTELLATION_FLEET_B64" \
+  "L1 the page does not read the library's copy, which is empty here"
+has_code "$APP/app/build.gradle.kts" 'it["package"] == commsApplicationId' \
+  "L1 the baked entry is selected by package id, not by the name 'mail'"
+# ONE ENTRY, NOT SIXTY. Baking the whole fleet would put 60 other apps' install
+# addresses in a mail APK and hand Fleet.installAll a fleet to walk - and
+# build.json says it outright: mail "is not a fleet host and must not behave like
+# one".
+has_code "$APP/app/build.gradle.kts" 'mapOf("apps" to listOf(entry))' \
+  "L1 exactly one entry is baked - mail is not a fleet host"
+# The facts he reasons in: a filename, a byte count and a timestamp.
+for s in settings_update_asset_label settings_update_size_label settings_update_published_at_label; do
+  has_code "$PAGE" "R.string.$s" "L1 the page shows $s"
+done
+has_code "$PAGE" "Fleet.releaseAsset(app)" \
+  "L1 the size and the publish time are PROBED, not baked - baking them ships a number CI invalidates"
+has_code "$PAGE" "withContext(Dispatchers.IO)" "L1 that probe is off the main thread"
+# A refusal must name its status code. #257 was a week spent on a generic
+# "failed" that could have said 403.
+has_code "$PAGE" "R.string.settings_update_published_refused, asset.status" \
+  "L1 a server that refuses is reported WITH its HTTP status"
+# The four addresses, each from the fleet entry and none composed from literals.
+has_code "$PAGE" "UpdateLinks.releasePageUrl(app.releaseUrl)" "L1 the GitHub release page"
+has_code "$PAGE" "app.abiReleaseUrl.takeIf" "L1 the APK download, resolved for THIS device's ABI"
+has_code "$PAGE" "app.repoUrl.takeIf" "L1 the repository"
+has_code "$PAGE" "app.ghcrPage.takeIf" "L1 the GHCR package page"
+# ...and no fifth address invented in Kotlin. A literal URL here is one the fleet
+# manifest cannot correct: change it in constellation-fleet.json and this row keeps
+# pointing at the old place until someone notices.
+#
+# codeln, not code: see the note on both. And the pattern requires a HOST CHARACTER
+# after the scheme, which is what separates an address from `removePrefix("https://")`
+# - the display trim that shortens a row's subtitle and names no host at all.
+n_lit=$(codeln "$PAGE" | grep -c -E 'https://[A-Za-z0-9]')
+[ "$n_lit" -eq 0 ] && ok "L1 the page hardcodes no URL of its own" \
+  || bad "L1 the page carries $n_lit literal URL(s) - the manifest cannot correct those"
+# ANTI-#156. Six ad-hoc startActivity(ACTION_VIEW) sites were counted in this app
+# and treated as the bug they are. The page takes an opener as a PARAMETER and no
+# Context for links, so a row added later has nothing to fire an intent with.
+has_code "$PAGE" "onOpenUrl: (String) -> Unit" "L1 the opener is a parameter"
+has_code "$HUB" "onOpenUrl = { url -> leaveOnce { openUrl(context, url) } }," \
+  "L1 wired to the same guarded opener the About rows use"
+for banned in "ACTION_VIEW" "startActivity" "Uri.parse"; do
+  n=$(code "$PAGE" | grep -cF -- "$banned")
+  [ "$n" -eq 0 ] && ok "L1 the page never calls $banned itself" \
+    || bad "L1 the page fires its own intent ($banned, $n occurrence(s))"
+done
 
 # ── S1 every R.string the page names exists ──────────────────────────────────
 miss=""

@@ -1096,4 +1096,20 @@
     <string name="settings_update_metered_body">Ein neues Cloud Mail ist verfügbar und es ist %1$s groß. Sie sind über mobile Daten verbunden, das Herunterladen verbraucht jetzt also %1$s Ihres Datenvolumens. Bleibt es liegen, lädt es sich beim nächsten WLAN von selbst herunter.</string>
     <string name="settings_update_metered_download">Jetzt herunterladen</string>
     <string name="settings_update_metered_later">Auf WLAN warten</string>
+    <string name="settings_update_published_section">Veröffentlichter Build</string>
+    <string name="settings_update_asset_label">APK</string>
+    <string name="settings_update_asset_unknown">Kein Dateiname im Flotteneintrag dieses Builds</string>
+    <string name="settings_update_no_fleet_entry">Dieser Build enthält keinen eigenen Flotteneintrag, es gibt also nichts nachzuschlagen</string>
+    <string name="settings_update_size_label">Größe</string>
+    <string name="settings_update_published_probing">Veröffentlichte Datei wird gelesen…</string>
+    <string name="settings_update_published_unreachable">Das Release war nicht erreichbar. Verbindung prüfen und erneut versuchen.</string>
+    <string name="settings_update_published_refused">Der Server hat die Anfrage abgelehnt: HTTP %1$d</string>
+    <string name="settings_update_size_undeclared">Der Server hat keine Größe angegeben</string>
+    <string name="settings_update_published_at_label">Veröffentlicht</string>
+    <string name="settings_update_published_at_unknown">Der Server hat nicht gesagt, wann</string>
+    <string name="settings_update_links_section">Woher dieser Build stammt</string>
+    <string name="settings_update_link_release">GitHub-Release</string>
+    <string name="settings_update_link_apk">APK-Download</string>
+    <string name="settings_update_link_repo">Quellcode</string>
+    <string name="settings_update_link_ghcr">Paketregistry</string>
 </resources>

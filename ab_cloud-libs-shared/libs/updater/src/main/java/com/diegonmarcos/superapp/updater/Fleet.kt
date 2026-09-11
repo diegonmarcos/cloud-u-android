@@ -258,17 +258,68 @@ object Fleet {
      * previous one. A second HEAD probe written slightly differently is how the
      * store came to report a size the downloader disagreed with.
      */
-    internal fun releaseSize(app: App): Long = runCatching {
-        val c = (java.net.URL(app.abiReleaseUrl).openConnection() as java.net.HttpURLConnection)
+    internal fun releaseSize(app: App): Long =
+        releaseAsset(app)?.takeIf { it.ok }?.bytes ?: -1L
+
+    /**
+     * What the ONE HEAD probe learned about the published asset.
+     *
+     * [releaseSize] used to be the whole of it and answered a single question
+     * with a single number, which meant a caller that also wanted the publish
+     * time or the status code had to open a second connection - and "a second
+     * HEAD probe written slightly differently" is, verbatim, how the store came
+     * to report a size the downloader disagreed with. One probe, every fact it
+     * saw, and callers pick.
+     *
+     * [status] is carried rather than collapsed into a boolean on purpose. #257
+     * ("Cloud Terminal (Nix) returns HTTP 403 on install/update") was a generic
+     * "failed" on screen for a specific, nameable refusal; a UI holding this can
+     * say 403.
+     */
+    data class ReleaseAsset(
+        /** The ABI-resolved URL that was probed - the one a link should open. */
+        val url: String,
+        /** Content-Length, or -1 when the server declined to declare one. */
+        val bytes: Long,
+        /** `Last-Modified` as epoch millis, or 0 when the server did not say. */
+        val publishedAtMillis: Long,
+        /** The HTTP status the probe ended on, after redirects. */
+        val status: Int,
+    ) {
+        val ok: Boolean get() = status in 200..299
+    }
+
+    /**
+     * HEAD the release asset for THIS device's ABI. Null only when the probe
+     * could not complete at all (no network, DNS, TLS) - a reachable server
+     * that said 403 or 404 comes back as a [ReleaseAsset] carrying that status,
+     * because "the server answered, and this is what it said" is information
+     * and must not be flattened into the same silence as "there was no server".
+     *
+     * NO Authorization HEADER, DELIBERATELY. These are public release assets,
+     * and `releases/download/...` answers with a 302 to a pre-signed object
+     * store URL that already carries its own credentials in the query string.
+     * Carrying a bearer token across that redirect is one of the documented
+     * ways to turn a working download into a 403 (#257). Nothing here needs to
+     * authenticate, so nothing here does - which also means there is no token
+     * on this path to leak into a log.
+     */
+    fun releaseAsset(app: App): ReleaseAsset? = runCatching {
+        val url = app.abiReleaseUrl
+        val c = (java.net.URL(url).openConnection() as java.net.HttpURLConnection)
         c.requestMethod = "HEAD"
         c.instanceFollowRedirects = true
         c.connectTimeout = 10_000
         c.readTimeout = 10_000
-        val code = c.responseCode
-        val len = c.contentLengthLong
+        val asset = ReleaseAsset(
+            url = url,
+            bytes = c.contentLengthLong,
+            publishedAtMillis = c.lastModified,
+            status = c.responseCode,
+        )
         c.disconnect()
-        if (code !in 200..299) -1L else len
-    }.getOrDefault(-1L)
+        asset
+    }.getOrNull()
 
     /**
      * State from the release asset, or null when this app declares none or the
@@ -476,7 +527,7 @@ object Fleet {
             val installedCode = installedInfo(ctx, app)?.versionCode
             Log.i(TAG, "candidate ${app.kind} ${app.id}: $identity " +
                        "(installed: ${installedCode ?: "none"}, ${apk.evidence})")
-            if (installedCode != null && identity.versionCode < installedCode) {
+            if (VersionOrder.isDowngrade(identity.versionCode, installedCode)) {
                 apk.file.delete()   // stale: never re-offer these exact bytes
                 error("stale candidate for ${app.id}: versionCode ${identity.versionCode} is " +
                       "OLDER than the installed $installedCode — this is a downgrade, not an " +

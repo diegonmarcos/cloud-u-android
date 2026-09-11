@@ -1099,4 +1099,20 @@
     <string name="settings_update_metered_body">Er is een nieuwe Cloud Mail beschikbaar en die is %1$s. Je zit op mobiele data, dus nu downloaden gebruikt %1$s van je bundel. Laat je het staan, dan downloadt het vanzelf zodra je weer op wifi zit.</string>
     <string name="settings_update_metered_download">Nu downloaden</string>
     <string name="settings_update_metered_later">Wachten op wifi</string>
+    <string name="settings_update_published_section">Gepubliceerde build</string>
+    <string name="settings_update_asset_label">APK</string>
+    <string name="settings_update_asset_unknown">Geen bestandsnaam in de vlootvermelding van deze build</string>
+    <string name="settings_update_no_fleet_entry">Deze build bevat geen eigen vlootvermelding, dus er valt niets op te zoeken</string>
+    <string name="settings_update_size_label">Grootte</string>
+    <string name="settings_update_published_probing">Gepubliceerd bestand wordt gelezen…</string>
+    <string name="settings_update_published_unreachable">De release was niet bereikbaar. Controleer de verbinding en probeer het opnieuw.</string>
+    <string name="settings_update_published_refused">De server weigerde het verzoek: HTTP %1$d</string>
+    <string name="settings_update_size_undeclared">De server gaf geen grootte op</string>
+    <string name="settings_update_published_at_label">Gepubliceerd</string>
+    <string name="settings_update_published_at_unknown">De server gaf niet aan wanneer</string>
+    <string name="settings_update_links_section">Waar deze build vandaan komt</string>
+    <string name="settings_update_link_release">GitHub-release</string>
+    <string name="settings_update_link_apk">APK-download</string>
+    <string name="settings_update_link_repo">Broncode</string>
+    <string name="settings_update_link_ghcr">Pakketregister</string>
 </resources>

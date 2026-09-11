@@ -6,6 +6,7 @@ import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
 import com.diegonmarcos.superapp.updater.PackageInstallerReceiver
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
+import com.diegonmarcos.superapp.updater.VersionOrder
 import com.diegonmarcos.superapp.updater.apk.ApkIntegrity
 import com.diegonmarcos.superapp.updater.apk.VerifiedApk
 import android.app.PendingIntent
@@ -253,7 +254,14 @@ internal class UpdateInstaller(private val context: Context) {
             return
         }
         val installed = installedVersionCode(targetPackage) ?: return
-        if (candidate.versionCode >= installed) return
+        // Asked of VersionOrder rather than spelled out here, because Fleet.commit
+        // asks the SAME question about the fleet's other apps and two copies of
+        // "is this a downgrade" are two chances to disagree about the boundary.
+        // The one that matters is equal: a same-versionCode rebuild must still
+        // install, because that is how a damaged install is repaired. VersionOrder
+        // is driven through all four orderings by a unit test; this line was not
+        // reachable by one.
+        if (!VersionOrder.isDowngrade(candidate.versionCode, installed)) return
         refuse(targetPackage, apk,
             "refused to install an older $targetPackage over a newer one: the published " +
             "APK declares versionCode ${candidate.versionCode} and this phone already has " +
