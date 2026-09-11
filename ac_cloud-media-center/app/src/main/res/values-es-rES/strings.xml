@@ -1333,4 +1333,5 @@
     <string name="cloud_net_add_external">Add external URL</string>
     <string name="cloud_net_external_hint">https://immich.example.com</string>
     <string name="cloud_net_remove">Remove</string>
+    <string name="folder_request_not_found">No se ha encontrado contenido en %1$s</string>
 </resources>

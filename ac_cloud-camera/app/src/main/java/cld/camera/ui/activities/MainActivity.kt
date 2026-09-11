@@ -80,6 +80,7 @@ import cld.camera.databinding.ScanResultDialogBinding
 import cld.camera.ktx.SystemSettingsObserver
 import cld.camera.ktx.applyPreviewRatio
 import cld.camera.notifier.SensorOrientationChangeNotifier
+import cld.camera.util.MediaCenter
 import cld.camera.ui.BottomTabLayout
 import cld.camera.ui.CountDownTimerUI
 import cld.camera.ui.CustomGrid
@@ -152,6 +153,7 @@ open class MainActivity : AppCompatActivity(),
     lateinit var cancelButtonView: ImageView
     lateinit var tabLayout: BottomTabLayout
     lateinit var thirdCircle: ImageView
+    lateinit var openMediaCenter: ImageButton
     lateinit var captureButton: ImageButton
 
     private lateinit var scaleGestureDetector: ScaleGestureDetector
@@ -408,6 +410,43 @@ open class MainActivity : AppCompatActivity(),
         )
 
         return duration != 0f && transition != 0f
+    }
+
+    /**
+     * Opens the folder this camera saves into, in Cloud Media Center.
+     *
+     * Three outcomes, all of them distinguishable — the point of the message branches is
+     * that the button must never quietly land on Media Center's home screen, which looks
+     * enough like success to hide a broken folder lookup.
+     */
+    private fun openCaptureFolderInMediaCenter() {
+        val relativePath = MediaCenter.captureFolderRelativePath(camConfig.storageLocation)
+        if (relativePath == null) {
+            Log.i(TAG, "capture folder is not addressable by MediaStore path")
+            showMessage(R.string.media_center_folder_unavailable)
+            return
+        }
+
+        val intent = MediaCenter.viewFolderIntent(relativePath)
+
+        // resolveActivity, not startActivity-in-a-catch: Media Center simply not being
+        // installed is an ordinary state on a fleet where apps ship independently, and
+        // #280 has cloud-camera itself absent from the phone despite a published
+        // artefact. The manifest declares a <queries> entry for the package, without
+        // which this returns null on targetSdk 30+ even when it IS installed.
+        if (packageManager.resolveActivity(intent, 0L) == null) {
+            Log.i(TAG, "Media Center did not resolve $relativePath")
+            showMessage(R.string.media_center_not_installed)
+            return
+        }
+
+        try {
+            startActivity(intent)
+            Log.i(TAG, "Opening Media Center on $relativePath")
+        } catch (e: Exception) {
+            Log.e(TAG, "unable to open Media Center", e)
+            showMessage(R.string.media_center_not_installed)
+        }
     }
 
     private fun openGallery() {
@@ -741,6 +780,12 @@ open class MainActivity : AppCompatActivity(),
             }
 
             return@setOnLongClickListener true
+        }
+
+        openMediaCenter = binding.openMediaCenter
+        openMediaCenter.setOnClickListener {
+            resetAutoSleep()
+            openCaptureFolderInMediaCenter()
         }
 
         captureButton = binding.captureButton
@@ -1325,6 +1370,9 @@ open class MainActivity : AppCompatActivity(),
         rotateView(flipCameraCircle, iconRotation)
         rotateView(cancelButtonView, iconRotation)
         rotateView(thirdOption, iconRotation)
+        // Sits in the same column as thirdOption and must turn with it, otherwise the
+        // folder glyph stays upright while every icon around it rotates.
+        rotateView(openMediaCenter, iconRotation)
 
         rotateView(exposurePlusIcon, iconRotation)
         rotateView(exposureNegIcon, iconRotation)

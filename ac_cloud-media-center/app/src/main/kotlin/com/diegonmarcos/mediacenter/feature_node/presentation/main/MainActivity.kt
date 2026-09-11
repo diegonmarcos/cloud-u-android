@@ -5,8 +5,11 @@
 
 package com.diegonmarcos.mediacenter.feature_node.presentation.main
 
+import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import android.view.WindowManager
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -44,6 +47,8 @@ import com.diegonmarcos.mediacenter.core.util.SetupMediaProviders
 import com.diegonmarcos.mediacenter.feature_node.domain.model.UIEvent
 import com.diegonmarcos.mediacenter.feature_node.domain.repository.MediaRepository
 import com.diegonmarcos.mediacenter.feature_node.domain.util.EventHandler
+import com.diegonmarcos.mediacenter.R
+import com.diegonmarcos.mediacenter.feature_node.presentation.util.Screen
 import com.diegonmarcos.mediacenter.feature_node.presentation.util.LocalHazeState
 import com.diegonmarcos.mediacenter.feature_node.presentation.util.toggleOrientation
 import com.diegonmarcos.mediacenter.ui.theme.GalleryTheme
@@ -55,6 +60,8 @@ import dev.chrisbanes.haze.materials.HazeMaterials
 import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -74,6 +81,13 @@ class MainActivity : AppCompatActivity() {
     @Inject
     lateinit var mediaSelector: MediaSelector
 
+    /**
+     * The folder ac_cloud-camera asked us to open, if any. A flow rather than a plain
+     * field because this activity is singleTop: a second tap of the camera's button
+     * arrives at [onNewIntent] on an already-running instance, and must navigate again.
+     */
+    private val folderRequest = MutableStateFlow<String?>(null)
+
     @OptIn(ExperimentalHazeMaterialsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         val activitySpan = StartupTracer.begin("MainActivity.onCreate")
@@ -91,6 +105,7 @@ class MainActivity : AppCompatActivity() {
         if (permissionGranted(Constants.PERMISSIONS)) {
             mediaDistributor.hasPermission.value = true
         }
+        folderRequest.value = FolderRequest.relativePathFrom(intent)
         StartupTracer.end(activitySpan)
         setContent {
             StartupTracer.trace("MainActivity.firstComposition") {}
@@ -126,6 +141,32 @@ class MainActivity : AppCompatActivity() {
                     eventHandler.navigateUpAction = navController::navigateUp
                     eventHandler.setFollowThemeAction = { followTheme ->
                         systemBarFollowThemeState.value = followTheme
+                    }
+                }
+                LaunchedEffect(navController) {
+                    // Wait for the graph: NavHost is composed below this effect's owner,
+                    // and navigate() on a controller with no graph throws.
+                    navController.currentBackStackEntryFlow.first()
+                    folderRequest.collect { path ->
+                        if (path == null) return@collect
+                        folderRequest.value = null
+                        val album = withContext(Dispatchers.IO) {
+                            FolderRequest.resolve(contentResolver, path)
+                        }
+                        if (album == null) {
+                            // Deliberately not a silent no-op: landing on the home screen
+                            // looks exactly like success and would hide a failed lookup.
+                            Toast.makeText(
+                                this@MainActivity,
+                                getString(R.string.folder_request_not_found, path),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            navController.navigate(
+                                Screen.AlbumViewScreen.route +
+                                    "?albumId=${album.id}&albumName=${Uri.encode(album.label)}"
+                            )
+                        }
                     }
                 }
                 LaunchedEffect(eventHandler) {
@@ -200,6 +241,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        folderRequest.value = FolderRequest.relativePathFrom(intent)
     }
 
     private fun enforceSecureFlag() {

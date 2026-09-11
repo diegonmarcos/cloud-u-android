@@ -1872,5 +1872,6 @@
     <string name="slideshow_next">Next</string>
     <string name="slideshow_previous">Previous</string>
     <string name="slideshow_exit">Exit slideshow</string>
+    <string name="folder_request_not_found">No media found in %1$s</string>
 </resources>
 

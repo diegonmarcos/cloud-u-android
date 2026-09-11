@@ -28,6 +28,9 @@
     <string name="capture">Capture</string>
     <string name="confirm">Confirm</string>
     <string name="open_gallery">Open gallery</string>
+    <string name="open_media_center">Open camera folder in Media Center</string>
+    <string name="media_center_not_installed">Cloud Media Center is not installed</string>
+    <string name="media_center_folder_unavailable">Media Center cannot open the folder this camera saves to</string>
     <string name="pause_recording">Pause recording</string>
     <string name="resume_recording">Resume recording</string>
     <string name="start_recording">Start recording</string>

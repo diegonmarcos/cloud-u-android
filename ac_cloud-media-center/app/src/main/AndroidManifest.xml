@@ -90,6 +90,21 @@
             android:configChanges="orientation|keyboard|keyboardHidden|screenSize|screenLayout|smallestScreenSize|uiMode"
             android:launchMode="singleTop"
             android:theme="@style/Theme.Gallery.Splash">
+
+            <!--
+                "Open this folder", the receiving half of the contract in
+                FolderRequest.kt. ac_cloud-camera's viewfinder button uses it to open the
+                folder that camera saves into; before it, no intent could open a single
+                album (the VIEW filters on StandaloneActivity each resolve to one item).
+
+                Returns nothing to the caller and only navigates this app's own UI over
+                the user's own media, so it carries no permission — a caller learns
+                nothing it could not learn by launching us normally.
+            -->
+            <intent-filter>
+                <action android:name="com.diegonmarcos.mediacenter.action.VIEW_FOLDER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <activity-alias

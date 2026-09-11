@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The owner's phone is in Spanish. This fork is declared `exempt` in
+    1_cicd/src/i18n-policy.json because it inherited 192 English-only strings from
+    GrapheneOS Camera and no locale directory at all, so the i18n guard skips it and
+    would NOT have caught a new English string landing here.
+
+    That exemption is about the 192 strings this vendoring failed to bring across —
+    it is not permission to add a 193rd. Strings added by this repository are
+    translated here as they are written. Android falls back to values/ per key, so
+    the untranslated upstream strings are unaffected by this file existing.
+-->
+<resources>
+    <string name="open_media_center">Abrir la carpeta de la cámara en Media Center</string>
+    <string name="media_center_not_installed">Cloud Media Center no está instalado</string>
+    <string name="media_center_folder_unavailable">Media Center no puede abrir la carpeta donde guarda esta cámara</string>
+</resources>

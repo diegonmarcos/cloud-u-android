@@ -226,6 +226,12 @@
             android:visibility="invisible"
             android:baselineAligned="false">
 
+            <!-- Bottom-anchored, not centred: the third column below now makes this row
+                 taller than 96dp, and a centred child would drift upward by half of that
+                 growth. Anchoring to the row's bottom edge (which layout_above pins to the
+                 mode tabs) with the margin that reproduces the old centre keeps this button
+                 exactly where it has always been, whatever the row's height becomes.
+                 64dp tall + 16dp margin == the centre of the old 96dp row. -->
             <FrameLayout
                 android:id="@+id/flip_camera_circle"
                 android:layout_weight="1"
@@ -233,7 +239,8 @@
                 android:layout_height="64dp"
                 android:clickable="true"
                 android:focusable="true"
-                android:layout_gravity="center">
+                android:layout_marginBottom="16dp"
+                android:layout_gravity="bottom|center_horizontal">
 
                 <ImageView
                     android:id="@+id/flip_camera_icon"
@@ -269,11 +276,15 @@
 
             </FrameLayout>
 
+            <!-- Same bottom anchoring as the flip button, for the same reason: the capture
+                 ring must not move when the third column grows. 84dp tall + 6dp margin ==
+                 the centre of the old 96dp row. -->
             <FrameLayout
                 android:layout_weight="1"
                 android:layout_width="match_parent"
                 android:layout_height="84dp"
-                android:layout_gravity="center">
+                android:layout_marginBottom="6dp"
+                android:layout_gravity="bottom|center_horizontal">
 
                 <ImageButton
                     android:id="@+id/capture_button"
@@ -327,14 +338,27 @@
 
             </FrameLayout>
 
+            <!-- Third column: the gallery thumbnail, with the Media Center button stacked
+                 directly beneath it. The extra height is owned by this column alone — the
+                 flip and capture buttons above are bottom-anchored so the row growing
+                 upward (its bottom edge is pinned above camera_mode_tabs) leaves them
+                 untouched. The `timer` view is layout_below="@id/three_buttons", i.e. it
+                 hangs off that same unmoved bottom edge, so it does not collide either. -->
+            <LinearLayout
+                android:id="@+id/third_column"
+                android:layout_weight="1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom"
+                android:orientation="vertical">
+
             <FrameLayout
                 android:id="@+id/third_option"
-                android:layout_weight="1"
                 android:layout_width="match_parent"
                 android:layout_height="96dp"
                 android:clickable="true"
                 android:focusable="true"
-                android:layout_gravity="center"
+                android:layout_gravity="center_horizontal"
                 android:importantForAccessibility="no">
 
                 <ImageView
@@ -382,6 +406,26 @@
                     android:contentDescription="@string/play_preview"/>
 
             </FrameLayout>
+
+                <!-- 48dp, not the 24dp the glyph needs: this is the minimum tap target, and
+                     it sits between the thumbnail and the mode tabs where a miss is easy.
+                     Tinted white explicitly — folder.xml fills with ?attr/colorControlNormal,
+                     which Theme.Camera (Material3.Dark) resolves light today, but this icon
+                     must not go dark-on-black if that theme parent ever changes. -->
+                <ImageButton
+                    android:id="@+id/open_media_center"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center_horizontal"
+                    android:padding="12dp"
+                    android:scaleType="fitCenter"
+                    android:background="?actionBarItemBackground"
+                    android:src="@drawable/folder"
+                    android:tint="@android:color/white"
+                    android:tooltipText="@string/open_media_center"
+                    android:contentDescription="@string/open_media_center"/>
+
+            </LinearLayout>
 
         </LinearLayout>
 

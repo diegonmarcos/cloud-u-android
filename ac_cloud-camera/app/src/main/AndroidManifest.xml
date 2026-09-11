@@ -25,6 +25,15 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="*" />
         </intent>
+        <!--
+            Cloud Media Center, for the "open capture folder" button under the gallery
+            thumbnail. Without this the app is invisible to package queries on
+            targetSdk 30+, Intent.resolveActivity() returns null even when Media Center
+            IS installed, and the button would report "not installed" forever. The
+            <intent> filter above does not cover it: that one is scoped to ACTION_VIEW,
+            and this is a private action.
+        -->
+        <package android:name="com.diegonmarcos.mediacenter" />
     </queries>
 
     <application

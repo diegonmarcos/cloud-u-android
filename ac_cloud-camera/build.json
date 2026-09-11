@@ -76,5 +76,15 @@
       "prerelease": false,
       "generate_release_notes": false
     }
+  },
+  "tests": {
+    "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh, which ship-cloud-camera.yml already invokes for shell/lint/unit — so this block is all that was needed to turn those three calls from 'SKIPPED LOUDLY' into real assertions. Before it, this app's green tick meant only that Gradle exited 0.",
+    "shell": {
+      "dir": "test",
+      "_doc_requires": "python3 parses the layout and the manifest as XML rather than grepping them. A grep for an attribute also matches that attribute inside a comment, which is how a guard in this repository came to be satisfied by its own prose. Listed here so a runner without python3 REFUSES to run instead of reporting a verdict drawn from the interpreter's absence.",
+      "requires": [
+        "python3"
+      ]
+    }
   }
 }
