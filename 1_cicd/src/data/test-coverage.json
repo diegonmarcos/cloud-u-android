@@ -6,7 +6,7 @@
     "aa_cloud-superapp":                    "Has 51 shell testers. tests.unit.enabled=false, so its step named 'JVM unit tests (fatal on failure)' executes nothing and goes green — its own task, not this one.",
     "ac_cloud-mail":                        "Has 11 shell testers and 755 JVM unit test classes, both executed. The only application in the fleet whose ship run proves anything beyond compilation.",
     "ac_cloud-keyboard":                    "Has 3 shell testers, executed.",
-    "ac_cloud-writer":                      "Has 2 shell testers, executed.",
+    "ac_cloud-writer":                      "Has 4 shell testers, executed. Two prove the routing and the absence of a credential; two prove the four configuration pages exist AND are backed by this app's own store, which is the assertion task 209 lacked.",
     "ac_cloud-me":                          "HAD one tester that no workflow ever called. Now executed, plus a second: the release contract (release.variants[].gh_asset / gh_release.asset_name / phone_install.asset_name / artifact.debug) must name ONE file, or the ship publishes an asset the phone never downloads and every run stays green.",
     "ac_cloud-matrix":                      "836 JVM unit test classes have never executed. Declare tests.unit.task and let them run — by far the largest untouched suite in the repository, and it needs no new assertion written.",
     "ac_cloud-vault":                       "634 JVM unit test classes have never executed. Same: declare tests.unit.task.",

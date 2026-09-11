@@ -73,5 +73,43 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+
+        <!-- THE FOUR CONFIGURATION PAGES.
+
+             Every one of them is an activity OF THIS APPLICATION, drawing THIS
+             APPLICATION'S preference file. None of them is an alias, a trampoline
+             or an <activity-alias> onto Cloud Keyboard's settings, and nothing in
+             this manifest declares an <intent-filter> that would let the keyboard
+             hand a page back to us or us to it. That is the whole point: the owner
+             asked for the same pages, editable here, and "the same page" reached
+             by starting the other app's activity is exactly what task 209 shipped.
+
+             android:exported="false" on all four. They are opened by MainActivity
+             and by nothing else; there is no reason for another app on the phone
+             to be able to start Cloud Writer's settings, and an exported settings
+             screen is a way for something else to drive them.
+
+             NO <service> IS ADDED HERE EITHER. The comment at the top of this file
+             still holds in full: publishing the ITextTools action would take every
+             consumer's Enhance, Summary, Translate and Grammar at once, and this
+             build still cannot honour it. Adding four pages does not change that
+             and must not be read as a step towards it. -->
+        <activity android:name="com.diegonmarcos.cloudwriter.TextEnhanceActivity"
+            android:exported="false"
+            android:label="@string/settings_screen_enhance"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name="com.diegonmarcos.cloudwriter.TranslationActivity"
+            android:exported="false"
+            android:label="@string/settings_screen_translation"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode" />
+        <activity android:name="com.diegonmarcos.cloudwriter.GrammarCheckActivity"
+            android:exported="false"
+            android:label="@string/settings_screen_grammar"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode" />
+        <activity android:name="com.diegonmarcos.cloudwriter.AiRoutingActivity"
+            android:exported="false"
+            android:label="@string/settings_screen_ai_routing"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode" />
     </application>
 </manifest>

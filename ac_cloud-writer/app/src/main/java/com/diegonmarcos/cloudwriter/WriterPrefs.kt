@@ -72,8 +72,111 @@ object WriterPrefs {
     /** Text Resume: which summary shape. */
     const val KEY_SUMMARY_STYLE = "summary_style"
 
+    /**
+     * Text Enhancement: WHAT the tool rewrites. "auto" | "selection" | "field".
+     *
+     * Honoured by [MainActivity]: the input box has a selection like the keyboard's field does,
+     * so this is a live setting here and not a copied label.
+     */
+    const val KEY_ENHANCE_SCOPE = "enhance_scope"
+
+    /**
+     * Text Enhancement: the magic-wand key on the toolbar.
+     *
+     * STORED, AND SAID OUT LOUD TO BE INERT. cloud-writer draws no toolbar, so this switch is a
+     * value this application keeps and nothing here reads. It exists because the owner asked for
+     * the SAME pages and a missing row is a page that does not match; the row carries
+     * `enhance_toolbar_writer_note` so it is never a control that silently does nothing. In the
+     * keyboard the equivalent switch is not a pref at all — it edits the toolbar-keys list — which
+     * is another reason it could not have been shared even if sharing were wanted.
+     */
+    const val KEY_ENHANCE_TOOLBAR_KEY = "enhance_toolbar_key"
+
     /** Translation: BCP-47 target tag; "" = the serving engine's own default. */
     const val KEY_TRANSLATE_TARGET = "translate_default_target"
+
+    /**
+     * Translation, the three translate-BAR settings. Stored here, this application's own, and
+     * currently read by nothing in this application — see `translate_writer_note`, which is on the
+     * page saying exactly that. Copied rather than dropped so the page matches the keyboard's.
+     */
+    const val KEY_TRANSLATE_AUTO_DETECT = "translate_auto_detect"
+    const val KEY_TRANSLATE_APPLY_MODE = "translate_apply_mode"
+    const val KEY_TRANSLATE_LIVE_COMMIT = "translate_live_commit"
+
+    /**
+     * Grammar check: "off" | "local" | "remote" | "ai".
+     *
+     * ALL FOUR ARE HONOURED BY [WriterToolRunner], and two of them by REFUSING with a reason
+     * rather than by working: "off" because the owner turned it off, and "remote" because reaching
+     * LanguageTool needs a socket this application deliberately does not have and a binder method
+     * that does not exist yet. A mode that silently did the AI rewrite instead would put "improve
+     * this text" behind a button the owner set to Remote.
+     */
+    const val KEY_GRAMMAR_MODE = "grammar_mode"
+
+    /** Grammar check, the three local fixes. Live: "local" mode applies exactly the ones that are on. */
+    const val KEY_GRAMMAR_FIX_CAPITALIZE_I = "grammar_fix_capitalize_i"
+    const val KEY_GRAMMAR_FIX_SENTENCE_CAPS = "grammar_fix_sentence_caps"
+    const val KEY_GRAMMAR_FIX_REPEATED_WORDS = "grammar_fix_repeated_words"
+
+    /**
+     * Grammar check: the LanguageTool endpoint, and the Portuguese variant and n-gram slot beside
+     * it.
+     *
+     * MESH-ONLY, AND LEFT THAT WAY. [DEFAULT_GRAMMAR_REMOTE_URL] is infra-ai_languagetool, which
+     * answers on the WireGuard mesh and nowhere else. It is copied from the keyboard unchanged;
+     * pointing this at a public LanguageTool would send the owner's text to a third party that
+     * never had it, which is a bigger change than the one word it would take to make.
+     */
+    const val KEY_GRAMMAR_REMOTE_URL = "grammar_remote_url"
+    const val KEY_GRAMMAR_PT_VARIANT = "grammar_pt_variant"
+    const val KEY_GRAMMAR_NGRAM_URL = "grammar_ngram_url"
+
+    // ---- defaults, this application's own copy of the keyboard's ----
+    //
+    // COPIED VALUES, NOT COPIED STORAGE. Each of these is the same value the keyboard's
+    // Defaults.kt holds, so an untouched cloud-writer page reads exactly like an untouched
+    // keyboard page. Changing one here changes nothing there, which is the entire point.
+
+    const val SCOPE_AUTO = "auto"
+    const val SCOPE_SELECTION = "selection"
+    const val SCOPE_FIELD = "field"
+    const val DEFAULT_ENHANCE_SCOPE = SCOPE_AUTO
+    const val DEFAULT_ENHANCE_TOOLBAR_KEY = true
+
+    const val DEFAULT_TRANSLATE_AUTO_DETECT = true
+    const val APPLY_INSERT = "insert"
+    const val APPLY_REPLACE = "replace"
+    const val DEFAULT_TRANSLATE_APPLY_MODE = APPLY_INSERT
+    const val DEFAULT_TRANSLATE_LIVE_COMMIT = true
+
+    const val GRAMMAR_OFF = "off"
+    const val GRAMMAR_LOCAL = "local"
+    const val GRAMMAR_REMOTE = "remote"
+    const val GRAMMAR_AI = "ai"
+
+    /**
+     * "ai", AND THIS IS THE ONE DEFAULT THAT DELIBERATELY DIFFERS FROM THE KEYBOARD'S.
+     *
+     * The keyboard defaults to "remote" and can honour it: it holds INTERNET and talks to
+     * LanguageTool itself. cloud-writer opens no socket at all, so a "remote" default would greet
+     * the owner with a Grammar button that refuses on its first tap — a working tool turned into a
+     * refusal by a page that was added to make things better. "ai" is what this application's
+     * Grammar button already does today, so the page describes the behaviour the owner has rather
+     * than replacing it. Remote is still in the menu and still says why it cannot run.
+     *
+     * NAMED IN THE REPORT, not slipped in. The row is the one place these two applications' pages
+     * do not read the same on first open.
+     */
+    const val DEFAULT_GRAMMAR_MODE = GRAMMAR_AI
+
+    const val DEFAULT_GRAMMAR_FIX_CAPITALIZE_I = true
+    const val DEFAULT_GRAMMAR_FIX_SENTENCE_CAPS = true
+    const val DEFAULT_GRAMMAR_FIX_REPEATED_WORDS = true
+    const val DEFAULT_GRAMMAR_REMOTE_URL = "https://languagetool.diegonmarcos.com/v2/check"
+    const val DEFAULT_GRAMMAR_PT_VARIANT = "pt-PT"
+    const val DEFAULT_GRAMMAR_NGRAM_URL = ""
 
     /**
      * Set once the values below have been seeded from whatever the owner had already configured.
@@ -142,10 +245,29 @@ object WriterPrefs {
     fun translateTarget(context: Context): String =
         prefs(context).getString(KEY_TRANSLATE_TARGET, null).orEmpty()
 
+    fun enhanceScope(context: Context): String =
+        prefs(context).getString(KEY_ENHANCE_SCOPE, null) ?: DEFAULT_ENHANCE_SCOPE
+
+    fun grammarMode(context: Context): String =
+        prefs(context).getString(KEY_GRAMMAR_MODE, null) ?: DEFAULT_GRAMMAR_MODE
+
+    fun grammarRemoteUrl(context: Context): String =
+        prefs(context).getString(KEY_GRAMMAR_REMOTE_URL, null) ?: DEFAULT_GRAMMAR_REMOTE_URL
+
+    fun string(context: Context, key: String, fallback: String): String =
+        prefs(context).getString(key, null) ?: fallback
+
+    fun flag(context: Context, key: String, fallback: Boolean): Boolean =
+        prefs(context).getBoolean(key, fallback)
+
     // ---- writes: each one lands in THIS application's file only ----
 
     fun put(context: Context, key: String, value: String) {
         prefs(context).edit().putString(key, value).apply()
+    }
+
+    fun putFlag(context: Context, key: String, value: Boolean) {
+        prefs(context).edit().putBoolean(key, value).apply()
     }
 
     /** The provider-wide model, so switching provider and back remembers each choice. */

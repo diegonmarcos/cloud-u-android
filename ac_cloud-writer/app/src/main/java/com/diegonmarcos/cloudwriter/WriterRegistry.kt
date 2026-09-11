@@ -49,10 +49,50 @@ object WriterRegistry {
      */
     class Style(val id: String, val label: String, val prompt: String, val bullets: Boolean = false)
 
-    /** One row of the routing table. [id] is the provider's exact model id — what a request sends. */
-    class Model(val id: String, val name: String, val note: String?)
+    /**
+     * One row of the routing table. [id] is the provider's exact model id — what a request sends.
+     *
+     * EVERY COLUMN THE AI MODEL ROUTING PAGE DRAWS IS A FIELD HERE, and all of them come out of
+     * build.json::writer_ai. The page has no table of its own to go stale — the defect that
+     * produced this fleet's 100x price column and its 3.5x stale price, both of which were a
+     * second copy of a number disagreeing with the first.
+     *
+     * [promptUsdPerMillion] / [completionUsdPerMillion] are UNITED STATES DOLLARS PER MILLION
+     * TOKENS, the unit the provider publishes, stored and drawn UNCONVERTED. There is no scaling
+     * anywhere between this field and the cell: a price the screen multiplies is a price that
+     * disagrees with the provider's own list and the reader cannot tell which of the two is lying.
+     * Null where the provider quotes no per-token price at all, which is the mesh bridge.
+     */
+    class Model(
+        val id: String,
+        val name: String,
+        val note: String?,
+        val open: Boolean = false,
+        val paramsB: Int? = null,
+        val quant: List<String> = emptyList(),
+        val trainedFor: List<String> = emptyList(),
+        val promptUsdPerMillion: Double? = null,
+        val completionUsdPerMillion: Double? = null,
+    )
 
-    class Provider(val id: String, val label: String, val defaultModel: String, val models: List<Model>)
+    /**
+     * [pricingAsOf] is the date the baked prices were taken, drawn under the table. It is NOT
+     * decoration: cloud-writer declares no INTERNET permission and fetches no catalogue, so every
+     * price on its page is this date's price and the page has to say so. A table that looked live
+     * and was eleven months old is exactly how a 0.966 was read as today's 0.280.
+     *
+     * [needsToken] is carried for the API-key row, which in THIS application is read-only — the
+     * key lives in the serving application. See `ai_token_writer_summary`.
+     */
+    class Provider(
+        val id: String,
+        val label: String,
+        val defaultModel: String,
+        val models: List<Model>,
+        val needsToken: Boolean = false,
+        val pricingAsOf: String? = null,
+        val catalogUrl: String? = null,
+    )
 
     private val registry: JSONObject by lazy {
         JSONObject(String(Base64.decode(BuildConfig.WRITER_AI_ROUTING_B64, Base64.DEFAULT), Charsets.UTF_8))
@@ -68,11 +108,55 @@ object WriterRegistry {
                 val modelId = m.getString("id")
                 // A row with no short name would render an empty Name cell, which reads as a
                 // broken row rather than a missing field; the id always works.
-                Model(modelId, m.optString("name").ifEmpty { modelId }, m.optString("note").ifEmpty { null })
+                Model(
+                    id = modelId,
+                    name = m.optString("name").ifEmpty { modelId },
+                    note = m.optString("note").ifEmpty { null },
+                    open = m.optBoolean("open"),
+                    // -1 is not a parameter count: `has` separates "absent" from "zero" so a
+                    // missing size draws the unknown mark rather than "0B", which is a claim.
+                    paramsB = if (m.has("params_b")) m.getInt("params_b") else null,
+                    quant = strings(m, "quant"),
+                    trainedFor = strings(m, "trained_for"),
+                    promptUsdPerMillion = if (m.has("prompt")) m.getDouble("prompt") else null,
+                    completionUsdPerMillion = if (m.has("completion")) m.getDouble("completion") else null,
+                )
             }
-            Provider(id, p.getString("label"), p.getString("default_model"), models)
+            Provider(
+                id = id,
+                label = p.getString("label"),
+                defaultModel = p.getString("default_model"),
+                models = models,
+                needsToken = p.optBoolean("needs_token"),
+                pricingAsOf = p.optString("pricing_as_of").ifEmpty { null },
+                catalogUrl = p.optString("catalog_url").ifEmpty { null },
+            )
         }.toList()
     }
+
+    private fun strings(o: JSONObject, key: String): List<String> {
+        val a = o.optJSONArray(key) ?: return emptyList()
+        return (0 until a.length()).map { a.getString(it) }
+    }
+
+    /**
+     * Presentation order for the model picker AND the price table, and ONLY presentation: size,
+     * then the lowest precision the model is served at, then name. A run resolves the stored model
+     * id, never a row position, so re-sorting cannot change which model a tool calls.
+     *
+     * Models that publish no size sort LAST rather than first. Size is the comparison the
+     * open-weight rows exist for; sorting a sizeless hosted model as 0 would put it at the top and
+     * imply it is the smallest thing on the page.
+     */
+    fun byModelSize(models: List<Model>): List<Model> =
+        models.sortedWith(compareBy({ it.paramsB ?: Int.MAX_VALUE }, { quantBits(it) }, { it.name }))
+
+    private fun quantBits(m: Model): Int =
+        m.quant.mapNotNull { q -> q.filter { it.isDigit() }.toIntOrNull() }.minOrNull() ?: Int.MAX_VALUE
+
+    /** A provider gets a price table when it has anything to show. */
+    fun hasPricing(p: Provider): Boolean =
+        p.models.any { it.promptUsdPerMillion != null || it.completionUsdPerMillion != null }
 
     /** A registry object of id → {label, prompt}. JSONObject keeps insertion order, so this is menu order. */
     private fun promptSet(key: String): List<Style> {
@@ -97,6 +181,16 @@ object WriterRegistry {
      * the Enhance list would let Enhance replace the user's paragraph with a précis of it.
      */
     val summaries: List<Style> by lazy { promptSet("summaries") }
+
+    /**
+     * Target languages the Translation page offers until the serving engine reports its own.
+     *
+     * A FALLBACK, NOT A CATALOGUE. The page redraws from `ITextTools.translateLanguages()` the
+     * moment that binder call answers; this list only fills the first frame, which happens before
+     * any call can return. Kept in build.json rather than in the page so it is not a second
+     * language list written in a second kind of place.
+     */
+    val translateFallbackLanguages: List<String> by lazy { strings(registry, "translate_fallback_langs") }
 
     val defaultProvider: String get() = registry.getString("default_provider")
     val defaultStyle: String get() = registry.getString("default_style")

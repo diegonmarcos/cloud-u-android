@@ -57,4 +57,155 @@
 
     <string name="token_note">Cloud Writer holds no API key. It names a provider and a model; the app that serves the tools makes the request with its own credential, and only the text crosses between them.</string>
 
+    <!-- ══════════════════════════════════════════════════════════════════
+         THE FOUR CONFIGURATION PAGES.
+
+         COPIED FROM cloud-keyboard, NOT SHARED WITH IT. Every string below is
+         the same wording as the matching key in ab_cloud-libs-shared/libs/
+         keyboard/src/main/res — same name, same sentence, same Spanish twin —
+         and it is cloud-writer's OWN resource. Nothing here reads the
+         keyboard's resources, its preferences or its activities; changing a
+         value on one of these pages changes nothing in the keyboard and the
+         keyboard changing changes nothing here. That separation is the whole
+         point of the task (209: "WHY I CANT EDIT NOTHING"), and it is why the
+         wording is duplicated rather than factored into a shared module — a
+         shared module is "linked" wearing a different hat.
+
+         WHERE THE WORDING DELIBERATELY DIFFERS it is marked DIVERGENCE and
+         says why. There are four, all of them places where the keyboard's
+         sentence would be a lie in this app.
+         ══════════════════════════════════════════════════════════════════ -->
+
+    <string name="settings_heading">Settings</string>
+    <string name="settings_open">Open</string>
+
+    <string name="settings_screen_enhance">Text Enhancements</string>
+    <string name="settings_screen_translation">Translation</string>
+    <string name="settings_screen_grammar">Grammar check</string>
+    <string name="settings_screen_ai_routing">AI Model Routing</string>
+    <string name="settings_screen_ai_routing_summary">Provider, API key and model used by Text Enhancements, Grammar check (AI mode) and Translation</string>
+
+    <!-- ── Page 1: Text Enhancements ────────────────────────────────── -->
+
+    <string name="enhance_scope_title">What to enhance</string>
+    <string name="enhance_scope_summary">Whether the magic wand rewrites the text you selected or everything in the box</string>
+    <string name="enhance_scope_auto">Selection, or the whole box when nothing is selected</string>
+    <string name="enhance_scope_selection">Only the selected text</string>
+    <string name="enhance_scope_field">Always the whole box</string>
+    <string name="enhance_style_title">Enhancement style</string>
+    <string name="enhance_style_summary">What the AI is asked to do with the selected text (or the whole field)</string>
+    <string name="enhance_tone_title">Tone</string>
+    <string name="enhance_tone_summary">How the rewritten text should sound</string>
+    <string name="enhance_length_title">Length</string>
+    <string name="enhance_length_summary">How long the rewritten text should be</string>
+    <string name="enhance_language_title">Output language</string>
+    <string name="enhance_language_summary">Language the result is written in; the text is translated when it differs</string>
+    <string name="enhance_toolbar_title">Show in toolbar</string>
+    <string name="enhance_toolbar_summary">Magic-wand key on the toolbar: tap to enhance the selection or the whole field</string>
+    <!-- DIVERGENCE 1. The keyboard has a toolbar; this app does not. The switch
+         is stored and is this app's own, but nothing in this app draws a
+         toolbar for it to act on, and a control that silently does nothing is
+         the defect this app was built to avoid. So the row says so. -->
+    <string name="enhance_toolbar_writer_note">Stored here, but Cloud Writer has no toolbar: this switch takes effect only if this app ever grows one. The keyboard's own magic-wand key is set in the keyboard.</string>
+    <string name="enhance_prompt_title">The prompt this sends</string>
+    <string name="enhance_prompt_summary">Exactly what the settings above tell the model to do. Read-only.</string>
+    <string name="enhance_test_title">Try it</string>
+    <string name="enhance_test_summary">Run the settings above on your own text, without leaving this screen</string>
+    <string name="enhance_test_hint">Type something to enhance…</string>
+    <string name="enhance_test_run">Enhance</string>
+    <string name="enhance_test_running">Waiting for %1$s…</string>
+    <string name="enhance_test_output">Result — edit it here</string>
+    <string name="enhance_test_copy">Copy</string>
+    <string name="enhance_test_copied">Copied</string>
+    <string name="enhance_failed">Enhancement failed: %1$s</string>
+
+    <!-- ── Page 2: Translation ──────────────────────────────────────── -->
+
+    <string name="translate_category_behavior">Translate bar</string>
+    <string name="translate_default_target_title">Default target language</string>
+    <string name="translate_default_target_active">Active keyboard language</string>
+    <string name="translate_auto_detect_title">Auto-detect source language</string>
+    <string name="translate_auto_detect_summary">Off: the source defaults to the active keyboard language. Detection falls back to it anyway when the text is too short.</string>
+    <string name="translate_apply_mode_title">Enter / primary action</string>
+    <string name="translate_apply_insert">Insert at cursor</string>
+    <string name="translate_apply_replace">Replace selection or whole field</string>
+    <string name="translate_live_commit_title">Type straight into the field</string>
+    <string name="translate_live_commit_summary">Gboard-style: the translation is written into the app as you type, instead of previewed in the bar. Fragile in apps that edit their own text.</string>
+    <!-- DIVERGENCE 2. Auto-detect, the primary action and live commit are
+         behaviours OF THE KEYBOARD'S TRANSLATE BAR. Cloud Writer has a box and
+         a Translate button, not a bar that types into another app. The three
+         settings are stored here and are this app's own, so the pages match
+         and nothing is missing, but only the default target language reaches
+         this app's Translate button today. Said out loud rather than left to
+         be discovered. -->
+    <string name="translate_writer_note">Only the default target language above changes what Cloud Writer's Translate button does. Auto-detect, the primary action and typing straight into the field are translate-BAR behaviours and belong to the keyboard; they are stored here so this page matches, and they act only if this app ever grows a bar of its own.</string>
+
+    <!-- ── Page 3: Grammar check ────────────────────────────────────── -->
+
+    <string name="grammar_mode_title">Grammar mode</string>
+    <string name="grammar_mode_off">Off</string>
+    <string name="grammar_mode_local">Local</string>
+    <string name="grammar_mode_remote">Remote</string>
+    <string name="grammar_mode_ai">AI (Model Routing)</string>
+    <string name="grammar_category_fixes">Fixes</string>
+    <string name="grammar_fix_capitalize_i">Capitalize \"i\"</string>
+    <string name="grammar_fix_sentence_caps">Capitalize sentence start</string>
+    <string name="grammar_fix_repeated_words">Remove repeated words</string>
+    <string name="grammar_remote_url_title">LanguageTool server URL</string>
+    <string name="grammar_remote_url_summary">Used in Remote mode for whole-field checks</string>
+    <string name="grammar_pt_variant_title">Portuguese variant</string>
+    <string name="grammar_pt_variant_summary">Grammar rules for a Portuguese keyboard without a region (pt-PT or pt-BR layouts already carry theirs)</string>
+    <string name="grammar_pt_variant_pt">European (pt-PT)</string>
+    <string name="grammar_pt_variant_br">Brazilian (pt-BR)</string>
+    <string name="grammar_ngram_url_title">Grammar n-gram API connect</string>
+    <string name="grammar_ngram_url_summary">Endpoint for future n-gram confusion-pair detection (placeholder — not yet active)</string>
+    <!-- Refusals for the two modes this app cannot honour. Each names the
+         reason, because a Grammar button that does nothing is the same screen
+         as a crash. -->
+    <string name="grammar_off">Grammar check is set to Off on the Grammar check page. Nothing was sent.</string>
+    <string name="grammar_remote_unreachable">Remote mode sends the text to the LanguageTool server at %1$s, and Cloud Writer opens no network connection of its own — every tool here goes through the app that serves them, and that app has no LanguageTool method yet. Pick AI (Model Routing) or Local on the Grammar check page.</string>
+    <string name="grammar_local_unchanged">Nothing to fix — the local rules found no repeated word, lowercase sentence start or lone \"i\".</string>
+    <string name="grammar_local_all_off">All three local fixes are switched off on the Grammar check page, so Local mode has nothing to apply.</string>
+
+    <!-- ── Page 4: AI Model Routing ─────────────────────────────────── -->
+
+    <string name="ai_provider_title">Provider</string>
+    <string name="ai_provider_summary">Where AI requests go. Cloud = your own mesh bridge (no key on the mesh); OpenRouter = openrouter.ai with your key</string>
+    <string name="ai_preamble_title">Shared instructions</string>
+    <string name="ai_preamble_summary">Prepended to every prompt routed through this provider. Read-only.</string>
+    <string name="ai_preamble_rewrite">When rewriting (Text Enhancements):</string>
+    <string name="ai_preamble_summary_label">When summarising (Text Resume):</string>
+    <string name="ai_token_title">API key</string>
+    <!-- DIVERGENCE 3. The keyboard's row is an editable key field. Cloud Writer
+         holds no credential and has no preference slot for one — its own tester
+         fails the build if a token-shaped key ever appears in WriterPrefs — so
+         this row is READ-ONLY and says where the key actually lives. Removing
+         the row instead would leave the owner hunting for a setting that is
+         simply somewhere else. -->
+    <string name="ai_token_writer_summary">Not held here, and there is no field for it on purpose. Cloud Writer names a provider and a model; the app that serves the tools makes the request with its own key. Set the key in that app — Cloud Keyboard → Settings → AI Model Routing.</string>
+    <string name="ai_model_title">Model</string>
+    <string name="ai_model_open_suffix"> (open)</string>
+    <string name="ai_model_cloud_title">Cloud model</string>
+    <string name="ai_model_openrouter_title">OpenRouter model</string>
+    <string name="ai_token_cloud_title">Cloud API key</string>
+    <string name="ai_token_openrouter_title">OpenRouter API key</string>
+    <string name="ai_pricing_title">Prices</string>
+    <!-- DIVERGENCE 4. The keyboard refreshes these from the provider's public
+         catalogue when the page opens. Cloud Writer declares no INTERNET
+         permission and opens no socket, so its prices are the built-in ones
+         with the date they were taken. Copying the keyboard's sentence would
+         promise a refresh that cannot happen. -->
+    <string name="ai_pricing_summary">US dollars per million tokens — prompt in / completion out. Prices, size, quantisation and category are built in and carry the date they were taken; Cloud Writer opens no connection of its own, so nothing here is fetched live. Swipe a row sideways for the rest of the columns</string>
+    <string name="ai_pricing_col_model">Model</string>
+    <string name="ai_pricing_col_in">in $/M</string>
+    <string name="ai_pricing_col_out">out $/M</string>
+    <string name="ai_pricing_col_size">size</string>
+    <string name="ai_pricing_col_quant">quant</string>
+    <string name="ai_pricing_col_trained">trained for</string>
+    <string name="ai_pricing_col_note">observations</string>
+    <string name="ai_pricing_col_slug">model code</string>
+    <string name="ai_table_unknown">—</string>
+    <string name="ai_pricing_baked">Prices as of %1$s (built in — %2$s not reached)</string>
+    <string name="ai_pricing_none">%1$s publishes no per-token price: it is your own bridge on the mesh.</string>
+
 </resources>

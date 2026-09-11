@@ -44,4 +44,108 @@
 
     <string name="token_note">Cloud Writer no guarda ninguna clave de API. Indica un proveedor y un modelo; la aplicación que atiende las herramientas hace la petición con su propia credencial, y entre ambas solo viaja el texto.</string>
 
+    <!-- Las cuatro páginas de configuración. Copiadas de cloud-keyboard, no
+         compartidas con él: cada cadena es un recurso propio de Cloud Writer,
+         con la misma redacción que la clave equivalente del teclado. Cambiar
+         un valor aquí no cambia nada en el teclado. -->
+
+    <string name="settings_heading">Ajustes</string>
+    <string name="settings_open">Abrir</string>
+
+    <string name="settings_screen_enhance">Mejoras de texto</string>
+    <string name="settings_screen_translation">Traducción</string>
+    <string name="settings_screen_grammar">Revisión gramatical</string>
+    <string name="settings_screen_ai_routing">Enrutamiento de modelos de IA</string>
+    <string name="settings_screen_ai_routing_summary">Proveedor, clave de API y modelo que usan las Mejoras de texto, la Revisión gramatical (modo IA) y la Traducción</string>
+
+    <string name="enhance_scope_title">Qué se mejora</string>
+    <string name="enhance_scope_summary">Si la varita mágica reescribe el texto que has seleccionado o todo lo que hay en el cuadro</string>
+    <string name="enhance_scope_auto">La selección o, si no hay nada seleccionado, todo el cuadro</string>
+    <string name="enhance_scope_selection">Solo el texto seleccionado</string>
+    <string name="enhance_scope_field">Siempre todo el cuadro</string>
+    <string name="enhance_style_title">Estilo de mejora</string>
+    <string name="enhance_style_summary">Lo que se le pide a la IA que haga con el texto seleccionado (o con todo el campo)</string>
+    <string name="enhance_tone_title">Tono</string>
+    <string name="enhance_tone_summary">Cómo debe sonar el texto reescrito</string>
+    <string name="enhance_length_title">Extensión</string>
+    <string name="enhance_length_summary">Extensión que debe tener el texto reescrito</string>
+    <string name="enhance_language_title">Idioma del resultado</string>
+    <string name="enhance_language_summary">Idioma en el que se escribe el resultado; el texto se traduce cuando es distinto</string>
+    <string name="enhance_toolbar_title">Mostrar en la barra de herramientas</string>
+    <string name="enhance_toolbar_summary">Tecla de varita mágica en la barra de herramientas: púlsala para mejorar la selección o todo el campo</string>
+    <string name="enhance_toolbar_writer_note">Se guarda aquí, pero Cloud Writer no tiene barra de herramientas: este interruptor solo surtirá efecto si esta aplicación llega a tener una. La tecla de varita mágica del teclado se configura en el teclado.</string>
+    <string name="enhance_prompt_title">La instrucción que se envía</string>
+    <string name="enhance_prompt_summary">Exactamente lo que los ajustes de arriba le piden al modelo. Solo lectura.</string>
+    <string name="enhance_test_title">Pruébalo</string>
+    <string name="enhance_test_summary">Prueba los ajustes de arriba con tu propio texto, sin salir de esta pantalla</string>
+    <string name="enhance_test_hint">Escribe algo para mejorarlo…</string>
+    <string name="enhance_test_run">Mejorar</string>
+    <string name="enhance_test_running">Esperando a %1$s…</string>
+    <string name="enhance_test_output">Resultado: edítalo aquí</string>
+    <string name="enhance_test_copy">Copiar</string>
+    <string name="enhance_test_copied">Copiado</string>
+    <string name="enhance_failed">La mejora ha fallado: %1$s</string>
+
+    <string name="translate_category_behavior">Barra de traducción</string>
+    <string name="translate_default_target_title">Idioma de destino predeterminado</string>
+    <string name="translate_default_target_active">Idioma del teclado activo</string>
+    <string name="translate_auto_detect_title">Detectar automáticamente el idioma de origen</string>
+    <string name="translate_auto_detect_summary">Desactivado: el idioma de origen es el del teclado activo. La detección recurre a él de todos modos cuando el texto es demasiado corto.</string>
+    <string name="translate_apply_mode_title">Intro o acción principal</string>
+    <string name="translate_apply_insert">Insertar en el cursor</string>
+    <string name="translate_apply_replace">Sustituir la selección o todo el campo</string>
+    <string name="translate_live_commit_title">Escribir directamente en el campo</string>
+    <string name="translate_live_commit_summary">Al estilo de Gboard: la traducción se escribe en la aplicación mientras tecleas, en lugar de mostrarse en la barra. Es frágil en aplicaciones que editan su propio texto.</string>
+    <string name="translate_writer_note">Solo el idioma de destino predeterminado de arriba cambia lo que hace el botón Traducir de Cloud Writer. La detección automática, la acción principal y escribir directamente en el campo son comportamientos de la BARRA de traducción y pertenecen al teclado; se guardan aquí para que esta página coincida, y solo actuarán si esta aplicación llega a tener su propia barra.</string>
+
+    <string name="grammar_mode_title">Modo de gramática</string>
+    <string name="grammar_mode_off">Desactivado</string>
+    <string name="grammar_mode_local">Local</string>
+    <string name="grammar_mode_remote">Remoto</string>
+    <string name="grammar_mode_ai">IA (enrutamiento de modelos)</string>
+    <string name="grammar_category_fixes">Correcciones</string>
+    <string name="grammar_fix_capitalize_i">Poner en mayúscula la \"i\" inglesa</string>
+    <string name="grammar_fix_sentence_caps">Poner en mayúscula el inicio de la frase</string>
+    <string name="grammar_fix_repeated_words">Eliminar las palabras repetidas</string>
+    <string name="grammar_remote_url_title">URL del servidor de LanguageTool</string>
+    <string name="grammar_remote_url_summary">Se usa en el modo Remoto para revisar todo el campo</string>
+    <string name="grammar_pt_variant_title">Variante del portugués</string>
+    <string name="grammar_pt_variant_summary">Reglas gramaticales para un teclado en portugués sin región (los diseños pt-PT y pt-BR ya llevan las suyas)</string>
+    <string name="grammar_pt_variant_pt">Europeo (pt-PT)</string>
+    <string name="grammar_pt_variant_br">Brasileño (pt-BR)</string>
+    <string name="grammar_ngram_url_title">Conexión con la API de n-gramas de gramática</string>
+    <string name="grammar_ngram_url_summary">Punto de acceso para la futura detección de pares confundibles por n-gramas (marcador de posición: aún no está activo)</string>
+    <string name="grammar_off">La revisión gramatical está en Desactivado en la página Revisión gramatical. No se ha enviado nada.</string>
+    <string name="grammar_remote_unreachable">El modo Remoto envía el texto al servidor de LanguageTool en %1$s, y Cloud Writer no abre ninguna conexión de red propia: todas las herramientas pasan por la aplicación que las atiende, y esa aplicación aún no tiene un método de LanguageTool. Elige IA (enrutamiento de modelos) o Local en la página Revisión gramatical.</string>
+    <string name="grammar_local_unchanged">No hay nada que corregir: las reglas locales no han encontrado palabras repetidas, inicios de frase en minúscula ni una \"i\" suelta.</string>
+    <string name="grammar_local_all_off">Las tres correcciones locales están desactivadas en la página Revisión gramatical, así que el modo Local no tiene nada que aplicar.</string>
+
+    <string name="ai_provider_title">Proveedor</string>
+    <string name="ai_provider_summary">Adónde van las peticiones de IA. Cloud = tu propio puente en la malla (sin clave dentro de la malla); OpenRouter = openrouter.ai con tu clave</string>
+    <string name="ai_preamble_title">Instrucciones compartidas</string>
+    <string name="ai_preamble_summary">Se antepone a cada instrucción enviada a través de este proveedor. Solo lectura.</string>
+    <string name="ai_preamble_rewrite">Al reescribir (Mejoras de texto):</string>
+    <string name="ai_preamble_summary_label">Al resumir (Resumen de texto):</string>
+    <string name="ai_token_title">Clave de API</string>
+    <string name="ai_token_writer_summary">No se guarda aquí, y no hay ningún campo para ella a propósito. Cloud Writer indica un proveedor y un modelo; la aplicación que atiende las herramientas hace la petición con su propia clave. Configura la clave en esa aplicación: Cloud Keyboard → Ajustes → Enrutamiento de modelos de IA.</string>
+    <string name="ai_model_title">Modelo</string>
+    <string name="ai_model_open_suffix"> (abierto)</string>
+    <string name="ai_model_cloud_title">Modelo de Cloud</string>
+    <string name="ai_model_openrouter_title">Modelo de OpenRouter</string>
+    <string name="ai_token_cloud_title">Clave de API de Cloud</string>
+    <string name="ai_token_openrouter_title">Clave de API de OpenRouter</string>
+    <string name="ai_pricing_title">Precios</string>
+    <string name="ai_pricing_summary">Dólares estadounidenses por millón de tokens: entrada de la petición / salida de la respuesta. Los precios, el tamaño, la cuantización y la categoría están integrados y llevan la fecha en que se tomaron; Cloud Writer no abre ninguna conexión propia, así que aquí no se obtiene nada en vivo. Desliza una fila hacia los lados para ver el resto de las columnas</string>
+    <string name="ai_pricing_col_model">Modelo</string>
+    <string name="ai_pricing_col_in">entrada $/M</string>
+    <string name="ai_pricing_col_out">salida $/M</string>
+    <string name="ai_pricing_col_size">tamaño</string>
+    <string name="ai_pricing_col_quant">cuant.</string>
+    <string name="ai_pricing_col_trained">entrenado para</string>
+    <string name="ai_pricing_col_note">observaciones</string>
+    <string name="ai_pricing_col_slug">código del modelo</string>
+    <string name="ai_table_unknown">—</string>
+    <string name="ai_pricing_baked">Precios a fecha de %1$s (integrados: no se ha podido contactar con %2$s)</string>
+    <string name="ai_pricing_none">%1$s no publica un precio por token: es tu propio puente en la malla.</string>
+
 </resources>

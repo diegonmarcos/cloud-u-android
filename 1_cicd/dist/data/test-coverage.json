@@ -228,8 +228,8 @@
       "workflow": "ship-cloud-wallet.yml"
     },
     "ac_cloud-writer": {
-      "first_test": "Has 2 shell testers, executed.",
-      "shell_testers": 2,
+      "first_test": "Has 4 shell testers, executed. Two prove the routing and the absence of a credential; two prove the four configuration pages exist AND are backed by this app's own store, which is the assertion task 209 lacked.",
+      "shell_testers": 4,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,

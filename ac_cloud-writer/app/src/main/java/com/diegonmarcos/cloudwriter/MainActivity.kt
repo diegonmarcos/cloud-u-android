@@ -107,6 +107,20 @@ class MainActivity : AppCompatActivity() {
 
         page.addView(caption(getString(R.string.token_note)))
 
+        // THE FOUR CONFIGURATION PAGES. Each opens an activity IN THIS APPLICATION over THIS
+        // APPLICATION'S preference file. None of them is an Intent into Cloud Keyboard's settings,
+        // and none of them reads a value the keyboard wrote — which is the difference between the
+        // pages the owner asked for and the pages task 209 delivered.
+        page.addView(heading(getString(R.string.settings_heading)))
+        listOf(
+            R.string.settings_screen_enhance to TextEnhanceActivity::class.java,
+            R.string.settings_screen_translation to TranslationActivity::class.java,
+            R.string.settings_screen_grammar to GrammarCheckActivity::class.java,
+            R.string.settings_screen_ai_routing to AiRoutingActivity::class.java,
+        ).forEach { (label, screen) ->
+            page.addView(button(getString(label)) { startActivity(Intent(this, screen)) })
+        }
+
         setContentView(ScrollView(this).apply {
             setBackgroundColor(BACKGROUND)
             // FrameLayout.LayoutParams, named for the class that declares it:
@@ -186,9 +200,30 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * What Text Enhance is given, per "Qué se mejora" on the Text Enhancements page.
+     *
+     * The input box has a selection exactly as the keyboard's field does, so this setting is live
+     * here rather than a copied label. "selection" with nothing selected sends nothing, and run()
+     * answers that with its empty-input sentence — which is the honest reading of "only the
+     * selected text" when there is none, and not the same thing as "auto".
+     */
+    private fun textFor(tool: WriterTool): String {
+        val whole = input.text.toString()
+        if (tool != WriterTool.ENHANCE) return whole
+        val from = input.selectionStart
+        val to = input.selectionEnd
+        val selected = if (from in 0..to && to <= whole.length) whole.substring(from, to) else ""
+        return when (WriterPrefs.enhanceScope(this)) {
+            WriterPrefs.SCOPE_FIELD -> whole
+            WriterPrefs.SCOPE_SELECTION -> selected
+            else -> selected.ifBlank { whole }
+        }
+    }
+
     private fun start(tool: WriterTool) {
         say(getString(R.string.working, getString(tool.label)))
-        runner.run(tool, input.text.toString()) { outcome ->
+        runner.run(tool, textFor(tool)) { outcome ->
             val produced = outcome.text
             if (produced != null) {
                 output.setText(produced)

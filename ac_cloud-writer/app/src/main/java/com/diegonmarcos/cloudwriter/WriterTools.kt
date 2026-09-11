@@ -105,6 +105,19 @@ class WriterToolRunner(context: Context) {
     }
 
     /**
+     * BCP-47 tags the translation engine can target right now, straight from the serving
+     * application's own engine.
+     *
+     * ASKED, NEVER KEPT. A copy of this list in cloud-writer would be a second catalogue to go
+     * stale, and the page would then offer a language the engine has since dropped. Empty when
+     * nothing is bound, and the page draws `writer_ai.translate_fallback_langs` for that one
+     * frame rather than an empty picker.
+     *
+     * BLOCKS. Callers put it on a background thread.
+     */
+    fun translateLanguages(): List<String> = client.translateLanguages()
+
+    /**
      * What to name the provider in progress and error text — the label of THIS application's
      * chosen provider, not the serving application's.
      *
@@ -142,6 +155,36 @@ class WriterToolRunner(context: Context) {
             onDone(WriterOutcome(tool, null, app.getString(R.string.run_grammar_unavailable)))
             return
         }
+        // THE MODE THE OWNER SET ON THE GRAMMAR CHECK PAGE, honoured here and honoured by
+        // refusing where this application cannot do what the mode promises.
+        //
+        // NO MODE SILENTLY DOES ANOTHER MODE'S WORK. Remoto means "send it to LanguageTool", and
+        // cloud-writer opens no socket of its own — every tool goes through the serving
+        // application, and ITextTools has no LanguageTool method. Quietly running the AI rewrite
+        // instead would put "improve this text" behind a button the owner set to Remote and hand
+        // back a rewritten paragraph. So it says which mode is set, what that mode needs, and
+        // which two modes work here.
+        if (tool == WriterTool.GRAMMAR) {
+            val mode = WriterPrefs.grammarMode(app)
+            if (mode == WriterPrefs.GRAMMAR_OFF) {
+                onDone(WriterOutcome(tool, null, app.getString(R.string.grammar_off)))
+                return
+            }
+            if (mode == WriterPrefs.GRAMMAR_REMOTE) {
+                // The reason is lifted into a local so the onDone call fits ONE LINE. That is not
+                // formatting: test-cloud-writer-tools.sh proves "no silent exit from run()" by
+                // requiring the line before every `return` to contain onDone(, and a call split
+                // across two lines is a refusal the structural check cannot see. It flagged this
+                // one the first time it was written, which is the check doing its job.
+                val why = app.getString(R.string.grammar_remote_unreachable, WriterPrefs.grammarRemoteUrl(app))
+                onDone(WriterOutcome(tool, null, why))
+                return
+            }
+            if (mode == WriterPrefs.GRAMMAR_LOCAL && !WriterLocalGrammar.anyFixEnabled(app)) {
+                onDone(WriterOutcome(tool, null, app.getString(R.string.grammar_local_all_off)))
+                return
+            }
+        }
         busy = tool
         worker.execute {
             val result = runTool(tool, text)
@@ -175,7 +218,12 @@ class WriterToolRunner(context: Context) {
                 provider,
                 WriterPrefs.modelFor(app, WriterTool.ENHANCE, provider),
             )
-            WriterTool.GRAMMAR -> client.enhanceWith(
+            // Local mode never leaves the device and never spends a token: the three switches on
+            // the Grammar check page, applied here. "off" and "remote" were already refused in
+            // run(), so reaching this branch means the mode is "local" or "ai".
+            WriterTool.GRAMMAR -> if (WriterPrefs.grammarMode(app) == WriterPrefs.GRAMMAR_LOCAL) {
+                WriterLocalGrammar.fix(app, text)
+            } else client.enhanceWith(
                 text,
                 // Non-null: refused in run() above when the registry carries no grammar style.
                 WriterRegistry.grammarPrompt().orEmpty(),
@@ -194,5 +242,75 @@ class WriterToolRunner(context: Context) {
             // read back to detect.
             WriterTool.TRANSLATE -> client.translate(text, WriterPrefs.translateTarget(app))
         }
+    }
+}
+
+/**
+ * The three "Correcciones" switches on the Grammar check page, applied on this device.
+ *
+ * WHY THIS EXISTS AT ALL: so those three switches are settings and not decoration. In the keyboard
+ * they drive its own local pass; copying the page without copying the pass would have given the
+ * owner three toggles that changed nothing, which is the same complaint as task 209 wearing
+ * different clothes.
+ *
+ * DELIBERATELY SMALL, and it does not pretend otherwise. These are the three high-confidence fixes
+ * the keyboard names, not a grammar engine: a lone English "i", a sentence that starts lowercase,
+ * and a word typed twice in a row. Anything subtler is what Remoto (LanguageTool) and IA are for,
+ * and both of those say so on the page.
+ *
+ * A RUN THAT CHANGED NOTHING REPORTS THAT IT CHANGED NOTHING. Handing back the identical string
+ * with a cheerful "done" is indistinguishable from a tool that silently failed.
+ */
+object WriterLocalGrammar {
+
+    fun anyFixEnabled(context: Context): Boolean =
+        WriterPrefs.flag(context, WriterPrefs.KEY_GRAMMAR_FIX_CAPITALIZE_I, WriterPrefs.DEFAULT_GRAMMAR_FIX_CAPITALIZE_I) ||
+            WriterPrefs.flag(context, WriterPrefs.KEY_GRAMMAR_FIX_SENTENCE_CAPS, WriterPrefs.DEFAULT_GRAMMAR_FIX_SENTENCE_CAPS) ||
+            WriterPrefs.flag(context, WriterPrefs.KEY_GRAMMAR_FIX_REPEATED_WORDS, WriterPrefs.DEFAULT_GRAMMAR_FIX_REPEATED_WORDS)
+
+    fun fix(context: Context, text: String): TextTools.Result {
+        var out = text
+        if (WriterPrefs.flag(context, WriterPrefs.KEY_GRAMMAR_FIX_REPEATED_WORDS, WriterPrefs.DEFAULT_GRAMMAR_FIX_REPEATED_WORDS))
+            out = removeRepeatedWords(out)
+        if (WriterPrefs.flag(context, WriterPrefs.KEY_GRAMMAR_FIX_CAPITALIZE_I, WriterPrefs.DEFAULT_GRAMMAR_FIX_CAPITALIZE_I))
+            out = capitaliseLoneI(out)
+        if (WriterPrefs.flag(context, WriterPrefs.KEY_GRAMMAR_FIX_SENTENCE_CAPS, WriterPrefs.DEFAULT_GRAMMAR_FIX_SENTENCE_CAPS))
+            out = capitaliseSentenceStarts(out)
+        return if (out == text) TextTools.Result.failed(context.getString(R.string.grammar_local_unchanged))
+        else TextTools.Result(out, null)
+    }
+
+    /** A lone lowercase English "i". Word-bounded, so "iPhone" and the Spanish "i" of a word are untouched. */
+    private fun capitaliseLoneI(text: String) = Regex("\\bi\\b").replace(text, "I")
+
+    /**
+     * The same word twice in a row, case-insensitively, keeping the FIRST spelling.
+     *
+     * Keeping the first rather than the second is what makes "The the" become "The": the reader
+     * typed the capital deliberately and the duplicate is the accident.
+     */
+    private fun removeRepeatedWords(text: String) =
+        Regex("\\b(\\w+)(\\s+)\\1\\b", RegexOption.IGNORE_CASE).replace(text) { m ->
+            m.groupValues[1]
+        }
+
+    /** The first letter of the text, and of whatever follows a full stop, question or exclamation mark. */
+    private fun capitaliseSentenceStarts(text: String): String {
+        val out = StringBuilder(text)
+        var expectCapital = true
+        for (at in out.indices) {
+            val c = out[at]
+            if (expectCapital && c.isLetter()) {
+                out[at] = c.uppercaseChar()
+                expectCapital = false
+            } else if (c == '.' || c == '!' || c == '?') {
+                expectCapital = true
+            } else if (!c.isWhitespace() && c != '"' && c != '\'') {
+                // Anything else that is not a quote or a space ends the run; a capital is only
+                // owed to the first LETTER after the stop, not to every character after it.
+                expectCapital = expectCapital && !c.isLetterOrDigit()
+            }
+        }
+        return out.toString()
     }
 }
