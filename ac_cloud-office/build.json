@@ -80,6 +80,75 @@
       "_doc_jni_abi_is_verified": "THE RISK #277 DID NOT WEIGH, NOW MEASURED AND CURRENTLY SAFE. Taking the native half prebuilt means OUR Java, compiled from upstream.online.revision, binds at runtime to COLLABORA'S libandroidapp.so, built for the 26.04.3.1-155 release. Those are different commits: the pin's own commit subject is 'fix(iOS): correct blank slides when presenting' (authored 2026-09-03, committed 2026-09-04 by Gerrit change 11099), an ordinary branch-tip commit and not that release tag. JNI binds BY SYMBOL NAME at first call, never at build time, so a native method added, removed or renamed between the two produces a signed, published, installable APK that dies with UnsatisfiedLinkError when the document view opens. MEASURED 2026-09-11 by extracting the .so from the pinned APK over byte ranges and reading its .dynsym: it exports exactly 8 Java_* symbols, all in org.libreoffice.androidlib (LOActivity 7, COWebViewClient 1), none of them a long overload name; the Java at the pin declares exactly those 8 and no others. They agree today. org.libreoffice.androidlib is the LIBRARY module's package and the rebrand does not touch it — --with-app-package-name sets applicationId only — so renaming the app to com.diegonmarcos.cloudoffice cannot break these symbols. tests/test-jni-abi-matches-prebuilt.sh re-checks the whole chain on every run and fails closed, so the day the pin moves away from the published bytes it reds instead of shipping a dead app."
     }
   },
+  "prebuilt_mode": {
+    "_doc": "THE COMPLETE LIST OF WHAT PREBUILT MODE MUST NEUTRALISE, MEASURED AT THE PIN ON 2026-09-11 BY CLONING IT. _doc_BLOCKER_configure_gate named three blockers and was still short: the release variant also shells out to `make -C ../../browser`, which is the npm/webpack build of the COOL web bundle we take from the pinned APK. That is FIVE anchors, not three, and the count mattering is the point — patches/0002 that hits four of five produces a build that either dies asking for Node or ships assets/dist twice. Every anchor below was read out of the tree at upstream.online.revision, not inferred, and tests/test-prebuilt-mode-anchors-exist.sh re-reads each one from Gerrit on every run so a moved anchor reds instead of producing a patch that applies to nothing. LINE NUMBERS ARE RECORDED FOR ORIENTATION AND ARE NOT THE ASSERTION; the anchor TEXT is.",
+    "_doc_not_yet_written": "patches/0002 DOES NOT EXIST. This block is the specification for it, not a claim that it is done. build.host stays null and ship-cloud-office.yml still refuses to publish.",
+    "neutralise": [
+      {
+        "id": "ndk-defaultConfig",
+        "file": "android/lib/build.gradle",
+        "line_hint": 32,
+        "anchor": "externalNativeBuild {",
+        "why": "One of TWO externalNativeBuild declarations. Taking libandroidapp.so prebuilt does not stop Gradle asking CMake to build it; this is #240 walking back in through the side door."
+      },
+      {
+        "id": "ndk-android-block",
+        "file": "android/lib/build.gradle",
+        "line_hint": 74,
+        "anchor": "path \"src/main/cpp/CMakeLists.txt\"",
+        "why": "The second declaration, in the android block rather than defaultConfig. Removing only the first leaves the native build fully wired."
+      },
+      {
+        "id": "assets-copyUnpackAssets",
+        "file": "android/lib/build.gradle",
+        "line_hint": 100,
+        "anchor": "tasks.register('copyUnpackAssets', Copy)",
+        "why": "Reads ${liboInstdir}, an engine build tree we never build. A Gradle Copy whose `from` is absent SUCCEEDS and copies nothing, so the APK ships the engine's .so files with its data half missing after a wholly green build. Must be disabled EXPLICITLY — relying on a missing directory to no-op is the defect, not the fix. NOTE its fonts.conf branch is a GENERATOR, not a copy; see assets.rebrand."
+      },
+      {
+        "id": "assets-copyAssets",
+        "file": "android/lib/build.gradle",
+        "line_hint": 172,
+        "anchor": "tasks.register('copyAssets', Copy)",
+        "why": "Same silent-empty-copy failure, for services.rdb, registry, filter, gallery and palette."
+      },
+      {
+        "id": "assets-createFullConfig",
+        "file": "android/lib/build.gradle",
+        "line_hint": 194,
+        "anchor": "tasks.register('createFullConfig', Copy)",
+        "why": "Same again for share/config, AND it is on preBuild.dependsOn, so it runs on every build of every variant."
+      },
+      {
+        "id": "cool-bundle-release",
+        "file": "android/lib/build.gradle",
+        "line_hint": 335,
+        "anchor": "tasks.register('generateCoolReleaseAssets')",
+        "why": "THE ONE _doc_BLOCKER_configure_gate MISSED. `afterEvaluate { generateReleaseAssets.dependsOn ... generateCoolReleaseAssets }` puts an npm/webpack `make -C ../../browser` on the RELEASE build graph. We take assets/dist (3,384 entries) from the pinned APK, so this must not run — and if the shell is vendored without browser/, the make target does not even exist and the build dies late instead of never starting it."
+      }
+    ],
+    "vendor_the_shell": {
+      "_doc": "MEASURED, AND IT ANSWERS THE QUESTION IN THE PREFERRED DIRECTION. The fear behind _doc_no_source_in_git is LibreOffice core with external/, which is multi-gigabyte. It does not apply to the Android shell. A depth-1 clone of upstream.online at the pin was taken on 2026-09-11: .git is 480 MB (confirming the 471 MB figure in _doc_fetch_cost) and browser/ alone is 314 MB — but android/ is 2.5 MB across 259 files, and no file in it is remotely near the 100 MB blob cap that #162 exists to respect. Vendoring android/ therefore deletes a 480 MB, multi-minute Gerrit fetch from EVERY run and collapses patch_mode `apply` into an owned tree, which is the fleet's own 'dont fork, clone' pattern and what the other four fork apps already do. NOTE ON COST: that clone did NOT reproduce the ~10 minute figure from this container today — it sat in Gerrit's counting phase for over thirty minutes with no output before completing. Another reason not to put it on the critical path of every build.",
+      "android_tree_bytes": 2621440,
+      "android_tree_files": 259,
+      "git_dir_bytes_at_pin": 503316480,
+      "browser_dir_bytes": 329252864,
+      "external_files_needed": [
+        {
+          "path": "coolkitconfig-mobile.xcu",
+          "bytes": 28069,
+          "why": "The ONLY file outside android/ the shell's gradle reads: android/lib/build.gradle's copyKitConfig takes ${rootProject.rootDir}/../coolkitconfig-mobile.xcu. Everything else it reaches for — templates/untitled.* — is android/templates/, inside the tree."
+        }
+      ],
+      "configure_generated_files": {
+        "_doc": "configure.ac:2922-2925 generates exactly four files into android/ via AC_CONFIG_FILES. Prebuilt mode does not need autotools to produce them: three are small substitutions we can emit from the values already in upstream.online.configure, and the fourth is deleted outright with the native build. THIS IS WHAT REMOVES THE configure.ac:884 --with-lo-builddir GATE ENTIRELY, rather than adding a --with-prebuilt-engine option to work around it — the gate is only reachable if we run configure, and prebuilt mode has no reason to.",
+        "android/variables.gradle": "from android/variables.gradle.in; one value, @abs_top_builddir@",
+        "android/app/appSettings.gradle": "from android/app/appSettings.gradle.in; @APP_NAME@ @VENDOR@ @INFO_URL@ @APP_PACKAGE_NAME@ are exactly upstream.online.configure, plus @COOLWSD_VERSION@ / @ANDROID_PACKAGE_VERSIONCODE@ / @CORE_VERSION_HASH@ (the last is engine.engine_revision.buildid, already read from the artefact)",
+        "android/lib/libSettings.gradle": "from android/lib/libSettings.gradle.in; @LOBUILDDIR@ becomes the extracted payload root instead of an engine build tree",
+        "android/lib/src/main/cpp/CMakeLists.txt": "from CMakeLists.txt.in — NOT generated at all in prebuilt mode, because the externalNativeBuild wiring that consumes it is removed"
+      }
+    }
+  },
   "supply_chain": {
     "_doc": "WHAT REPLACES THE sha256 PIN, AND WHAT IS GENUINELY WEAKER. Stated here rather than in a README because the next person to touch this will read build.json.",
     "_doc_before": "BEFORE: one sha256 over Collabora's release APK. Strong and simple — the bytes either matched what Collabora published or the job failed. It also meant the app was signed by Collabora, and installing ours was byte-identical to installing from their F-Droid repo.",
