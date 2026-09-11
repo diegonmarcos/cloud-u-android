@@ -259,9 +259,43 @@ else
   ok "repo mode, truncated tree: exit 2, fails closed"
 fi
 
+# ── case 10: no upstream key must mean EVERY upstream, not a default one ──
+# licence-guard.yml calls the guard with no key. The guard defaulted that to
+# "affine", so a second entry added to licence-boundaries.json would have been
+# checked by nobody while the policy's own _doc promised "add an upstream = one
+# entry here, no script change". A gate that silently covers one of two
+# upstreams is the exact failure this whole file exists to prevent, and it is
+# invisible while the policy has only one entry — so the fixture has two.
+T="$WORK/twoupstreams"; mkdir -p "$T"
+build_fixture "$T/ac_notes"
+TWO="$WORK/policy-two.json"
+python3 - "$POLICY" "$TWO" <<'PYGEN'
+import json, sys
+d = json.load(open(sys.argv[1]))
+second = json.loads(json.dumps(d["upstreams"]["affine"]))
+second["repo"] = "https://example.invalid/second.git"
+second["restricted_licence"] = "SECOND UPSTREAM PROBE"
+d["upstreams"]["zz-probe"] = second
+json.dump(d, open(sys.argv[2], "w"))
+PYGEN
+if [ $? -ne 0 ]; then
+  fail "case 10: could not build the two-upstream policy"
+else
+  OUT="$(python3 "$GUARD" --repo "$T" "" "$TWO" 2>&1)"; RC=$?
+  if ! contains "$OUT" "zz-probe"; then
+    fail "no key: the second upstream was never checked (guard fell back to a default): $OUT"
+  elif ! contains "$OUT" "affine"; then
+    fail "no key: the first upstream was not checked: $OUT"
+  elif [ "$RC" -ne 1 ]; then
+    fail "no key: a vendored tree must still fail; expected exit 1, got $RC: $OUT"
+  else
+    ok "no key: every upstream in the policy is checked, worst verdict wins"
+  fi
+fi
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
-  echo "PASS   9/9 cases"; exit 0
+  echo "PASS   10/10 cases"; exit 0
 else
   echo "FAIL   $FAILURES case(s)"; exit 1
 fi

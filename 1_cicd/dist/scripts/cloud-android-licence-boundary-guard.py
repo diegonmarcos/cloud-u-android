@@ -154,21 +154,38 @@ def main(argv):
         print("usage: cloud-android-licence-boundary-guard.py <tree> "
               "[upstream-key] [policy.json]\n"
               "       cloud-android-licence-boundary-guard.py --repo <repo-root> "
-              "[upstream-key] [policy.json]", file=sys.stderr)
+              "[upstream-key] [policy.json]\n"
+              "  upstream-key omitted = check EVERY upstream in the policy",
+              file=sys.stderr)
         return 2
     target = args[0]
-    key = args[1] if len(args) > 1 else "affine"
+    key = args[1] if len(args) > 1 else None
     policy_path = args[2] if len(args) > 2 else DEFAULT_POLICY
 
     with open(policy_path, encoding="utf-8") as fh:
         policy = json.load(fh)
-    if key not in policy["upstreams"]:
-        print(f"ERROR: no upstream '{key}' in {policy_path}", file=sys.stderr)
+
+    # NO DEFAULT UPSTREAM. This read `key = args[1] if len(args) > 1 else "affine"`,
+    # and licence-guard.yml calls it with no key at all — so the gate checked AFFiNE
+    # and nothing else, and the policy file's own _doc promised "add an upstream = one
+    # entry here, no script change". It was not true: a second entry would have sat in
+    # the data being checked by nobody, reporting green, which is the failure mode this
+    # whole guard exists to prevent. With no key, check EVERY upstream and return the
+    # worst verdict.
+    keys = [key] if key else sorted(policy["upstreams"])
+    if not keys:
+        print(f"ERROR: {policy_path} declares no upstreams", file=sys.stderr)
         return 2
-    cfg = policy["upstreams"][key]
+    for k in keys:
+        if k not in policy["upstreams"]:
+            print(f"ERROR: no upstream '{k}' in {policy_path}", file=sys.stderr)
+            return 2
 
     if not repo_mode:
-        return report(target, cfg, key, target)
+        worst = 0
+        for k in keys:
+            worst = max(worst, report(target, policy["upstreams"][k], k, target))
+        return worst
 
     # ── repository mode ────────────────────────────────────────────────
     # The guard runs here on every push, before the app it protects exists.
@@ -179,19 +196,20 @@ def main(argv):
     if not os.path.isdir(target):
         print(f"ERROR: '{target}' is not a directory", file=sys.stderr)
         return 2
-    trees = find_vendored_trees(target, cfg)
-    if not trees:
-        # Truthfully clean, and said in words that cannot be mistaken for
-        # "scanned a tree and found it clean" — the two have to look different
-        # in a log or the distinction stops being made.
-        print(f"ok     {key}: no {cfg['restricted_licence']} exposure: upstream "
-              f"{cfg['repo']} is not vendored anywhere in this repository, so "
-              f"nothing it contains is compiled into any artefact we sign.")
-        return 0
     worst = 0
-    for tree in trees:
-        rc = report(tree, cfg, key, os.path.relpath(tree, target))
-        worst = max(worst, rc)
+    for k in keys:
+        cfg = policy["upstreams"][k]
+        trees = find_vendored_trees(target, cfg)
+        if not trees:
+            # Truthfully clean, and said in words that cannot be mistaken for
+            # "scanned a tree and found it clean" — the two have to look different
+            # in a log or the distinction stops being made.
+            print(f"ok     {k}: no {cfg['restricted_licence']} exposure: upstream "
+                  f"{cfg['repo']} is not vendored anywhere in this repository, so "
+                  f"nothing it contains is compiled into any artefact we sign.")
+            continue
+        for tree in trees:
+            worst = max(worst, report(tree, cfg, k, os.path.relpath(tree, target)))
     return worst
 
 

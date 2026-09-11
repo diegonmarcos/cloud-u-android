@@ -1,64 +1,65 @@
 {
-  "_doc": "Source-licence boundary policy. One entry per upstream whose tree is NOT uniformly under one licence, naming the directories our redistributable artefact must never reach into. Consumed by 1_cicd/src/scripts/cloud-android-licence-boundary-guard.py; the guard hardcodes no path, no upstream and no symbol. Add an upstream = one entry here, no script change.",
-  "_doc_why": "AFFiNE was scoped on 2026-09-09 as 'MIT except packages/backend', and de-clouding was authorised on that basis. It was wrong by one directory: packages/common/native is EE too, and the Android Rust crate statically links it into the APK through Cargo, where no JavaScript-level audit can see it. A boundary described in prose gets read once and misremembered; a boundary described in data gets checked every build.",
-  "upstreams": {
-    "affine": {
-      "repo": "https://github.com/toeverything/AFFiNE.git",
-      "pinned_revision": "cfda4858d550c46ec1cd0b574801d7becdd6625b",
-      "_doc_pinned_revision": "Full sha, never the branch name. 'canary' is AFFiNE's default branch and moves; this fleet has already been bitten by a rolling-tag hash race. Bump this deliberately, re-run the guard, re-run the patch series.",
-      "permissive_licence": "MIT",
-      "restricted_licence": "AFFiNE Enterprise Edition",
-      "restricted_dirs": [
-        "packages/backend",
-        "packages/common/native"
-      ],
-      "_doc_restricted_dirs": "Verbatim from the root LICENSE: content under these two directories is EE-licensed, everything else is MIT. The EE text forbids copying, distributing and sublicensing — which is what shipping an APK, and what vendoring source into this repo, both are. packages/common/native has NO package.json, so it is invisible to a yarn-workspace audit; it is reachable only through Cargo.",
-      "scan_roots": [
-        "packages/frontend/apps/android",
-        "packages/frontend/mobile-native",
-        "packages/frontend/native/nbstore"
-      ],
-      "_doc_scan_roots": "Every crate and source directory that ends up inside the APK. The first two are the Android app and the Rust crate that becomes libaffine_mobile_native.so. The third is the crate affine_mobile_native names as affine_nbstore, and it is NOT under either of the other two: the root Cargo.toml maps affine_nbstore to ./packages/frontend/native/nbstore, and that crate takes affine_common as a plain non-optional dependency. Its parent packages/frontend/native is deliberately NOT a scan root -- that crate is the desktop napi module and is never linked into the APK, so flagging it would report a reach that does not ship and make the guard's verdict mean less.",
-      "markers": [
-        "backend/server",
-        "backend/native",
-        "common/native",
-        "affine_common",
-        "@affine/server"
-      ],
-      "_doc_markers": "Literal substrings that betray a reach into a restricted dir across ALL THREE of this app's build systems: a Gradle/Apollo schema path, a Cargo path-dependency crate name, a yarn workspace package name. Two traps are baked in here. (1) Cargo RENAMES the directory to a crate name, so scanning for the directory path alone finds nothing — which is how the 2026-09-09 scoping missed affine_common. (2) The Gradle reach is written as a RELATIVE path — schemaFiles.from(\"../../../../../backend/server/src/schema.gql\") — so a marker of 'packages/backend' matches nothing. Markers are therefore the directory tails, not the repo-root paths. Both traps were found by running the guard, not by reading it: the first draft used repo-root paths and silently reported only 2 of the 3 reaches.",
-      "scan_extensions": [
-        ".gradle",
-        ".kts",
-        ".toml",
-        ".rs",
-        ".kt",
-        ".java",
-        ".ts",
-        ".tsx",
-        ".js",
-        ".json"
-      ],
-      "known_reaches": {
-        "_doc": "The reaches present in PRISTINE upstream at pinned_revision. The guard reports found-vs-known so a NEW reach introduced by an upstream bump is loud, and so the de-cloud work has an explicit checklist. A de-clouded tree must show ZERO; anything here is a to-do, not an allowance.",
-        "packages/frontend/apps/android/App/service/build.gradle": "Apollo codegen reads backend/server/src/schema.gql via a relative path — removed by dropping the :service gradle module",
-        "packages/frontend/mobile-native/Cargo.toml": "affine_common path-dependency on packages/common/native — NOT removed by de-clouding; needs the Rust crate patched",
-        "packages/frontend/mobile-native/src/lib.rs": "use affine_common::hashcash::Stamp for the cloud-auth proof-of-work — NOT removed by de-clouding",
-        "packages/frontend/native/nbstore/Cargo.toml": "affine_common is a NON-OPTIONAL dependency of affine_nbstore, which affine_mobile_native depends on unconditionally. The feature line napi = [\"affine_common/napi\"] adds a feature to that dependency, it does not gate it -- only `optional = true` would. So the EE crate stays in the APK's Cargo build graph, and packages/common/native must be present on disk to build at all, even with hashcash gone. This is the reach the 2026-09-09 scoping recorded as absent.",
-        "packages/frontend/native/nbstore/src/lib.rs": "use affine_common::napi_utils::to_napi_error, behind #[cfg(not(feature = \"use-as-lib\"))]. The Android build DOES set use-as-lib, so this symbol is compiled out on that path -- the source reach is real, the linked-code reach here is not. Flagged anyway because the guard's job is the source boundary: vendoring the EE directory is the prohibited copy whether or not the optimiser later drops the bytes."
-      },
-      "vendoring": {
-        "_doc": "How the guard finds a vendored upstream inside THIS repository when it is invoked with --repo. It looks for directories whose shape matches the upstream (any scan root or restricted dir present as a subdirectory) rather than for a configured location, because where the tree lands is the owner's choice and is not decided yet. A guard that only looks where it was told is one that a different directory name walks straight past.",
-        "prune_dirs": [
-          "node_modules",
-          ".git",
-          "build",
-          "target",
-          "dist",
-          "z_archive"
-        ],
-        "_doc_prune_dirs": "Never descended into, for both the tree walk and the file scan. z_archive holds retired app trees and dist holds generated copies; a hit in either is noise that would train a reader to ignore the guard."
-      }
-    }
-  }
+    "_doc": "Source-licence boundary policy. One entry per upstream whose tree is NOT uniformly under one licence, naming the directories our redistributable artefact must never reach into. Consumed by 1_cicd/src/scripts/cloud-android-licence-boundary-guard.py; the guard hardcodes no path, no upstream and no symbol. Add an upstream = one entry here, no script change. THAT LAST SENTENCE WAS FALSE UNTIL 2026-09-11: main() read `key = args[1] if len(args) > 1 else \"affine\"` and licence-guard.yml calls the guard with no key, so a second entry added here would have been checked by nobody and the gate would have gone on reporting green. With no key the guard now checks EVERY upstream below and returns the worst verdict; case 10 of licence-boundary-guard.test.sh holds it to that with a two-upstream fixture, and goes red against the old guard.",
+    "_doc_why": "AFFiNE was scoped on 2026-09-09 as 'MIT except packages/backend', and de-clouding was authorised on that basis. It was wrong by one directory: packages/common/native is EE too, and the Android Rust crate statically links it into the APK through Cargo, where no JavaScript-level audit can see it. A boundary described in prose gets read once and misremembered; a boundary described in data gets checked every build.",
+    "upstreams": {
+        "affine": {
+            "repo": "https://github.com/toeverything/AFFiNE.git",
+            "pinned_revision": "cfda4858d550c46ec1cd0b574801d7becdd6625b",
+            "_doc_pinned_revision": "Full sha, never the branch name. 'canary' is AFFiNE's default branch and moves; this fleet has already been bitten by a rolling-tag hash race. Bump this deliberately, re-run the guard, re-run the patch series.",
+            "permissive_licence": "MIT",
+            "restricted_licence": "AFFiNE Enterprise Edition",
+            "restricted_dirs": [
+                "packages/backend",
+                "packages/common/native"
+            ],
+            "_doc_restricted_dirs": "Verbatim from the root LICENSE: content under these two directories is EE-licensed, everything else is MIT. The EE text forbids copying, distributing and sublicensing — which is what shipping an APK, and what vendoring source into this repo, both are. packages/common/native has NO package.json, so it is invisible to a yarn-workspace audit; it is reachable only through Cargo.",
+            "scan_roots": [
+                "packages/frontend/apps/android",
+                "packages/frontend/mobile-native",
+                "packages/frontend/native/nbstore"
+            ],
+            "_doc_scan_roots": "Every crate and source directory that ends up inside the APK. The first two are the Android app and the Rust crate that becomes libaffine_mobile_native.so. The third is the crate affine_mobile_native names as affine_nbstore, and it is NOT under either of the other two: the root Cargo.toml maps affine_nbstore to ./packages/frontend/native/nbstore, and that crate takes affine_common as a plain non-optional dependency. Its parent packages/frontend/native is deliberately NOT a scan root -- that crate is the desktop napi module and is never linked into the APK, so flagging it would report a reach that does not ship and make the guard's verdict mean less.",
+            "markers": [
+                "backend/server",
+                "backend/native",
+                "common/native",
+                "affine_common",
+                "@affine/server"
+            ],
+            "_doc_markers": "Literal substrings that betray a reach into a restricted dir across ALL THREE of this app's build systems: a Gradle/Apollo schema path, a Cargo path-dependency crate name, a yarn workspace package name. Two traps are baked in here. (1) Cargo RENAMES the directory to a crate name, so scanning for the directory path alone finds nothing — which is how the 2026-09-09 scoping missed affine_common. (2) The Gradle reach is written as a RELATIVE path — schemaFiles.from(\"../../../../../backend/server/src/schema.gql\") — so a marker of 'packages/backend' matches nothing. Markers are therefore the directory tails, not the repo-root paths. Both traps were found by running the guard, not by reading it: the first draft used repo-root paths and silently reported only 2 of the 3 reaches.",
+            "scan_extensions": [
+                ".gradle",
+                ".kts",
+                ".toml",
+                ".rs",
+                ".kt",
+                ".java",
+                ".ts",
+                ".tsx",
+                ".js",
+                ".json"
+            ],
+            "known_reaches": {
+                "_doc": "The reaches present in PRISTINE upstream at pinned_revision. The guard reports found-vs-known so a NEW reach introduced by an upstream bump is loud, and so the de-cloud work has an explicit checklist. A de-clouded tree must show ZERO; anything here is a to-do, not an allowance.",
+                "packages/frontend/apps/android/App/service/build.gradle": "Apollo codegen reads backend/server/src/schema.gql via a relative path — removed by dropping the :service gradle module",
+                "packages/frontend/mobile-native/Cargo.toml": "affine_common path-dependency on packages/common/native — NOT removed by de-clouding; needs the Rust crate patched",
+                "packages/frontend/mobile-native/src/lib.rs": "use affine_common::hashcash::Stamp for the cloud-auth proof-of-work — NOT removed by de-clouding",
+                "packages/frontend/native/nbstore/Cargo.toml": "affine_common is a NON-OPTIONAL dependency of affine_nbstore, which affine_mobile_native depends on unconditionally. The feature line napi = [\"affine_common/napi\"] adds a feature to that dependency, it does not gate it -- only `optional = true` would. So the EE crate stays in the APK's Cargo build graph, and packages/common/native must be present on disk to build at all, even with hashcash gone. This is the reach the 2026-09-09 scoping recorded as absent.",
+                "packages/frontend/native/nbstore/src/lib.rs": "use affine_common::napi_utils::to_napi_error, behind #[cfg(not(feature = \"use-as-lib\"))]. The Android build DOES set use-as-lib, so this symbol is compiled out on that path -- the source reach is real, the linked-code reach here is not. Flagged anyway because the guard's job is the source boundary: vendoring the EE directory is the prohibited copy whether or not the optimiser later drops the bytes."
+            },
+            "vendoring": {
+                "_doc": "How the guard finds a vendored upstream inside THIS repository when it is invoked with --repo. It looks for directories whose shape matches the upstream (any scan root or restricted dir present as a subdirectory) rather than for a configured location, because where the tree lands is the owner's choice and is not decided yet. A guard that only looks where it was told is one that a different directory name walks straight past.",
+                "prune_dirs": [
+                    "node_modules",
+                    ".git",
+                    "build",
+                    "target",
+                    "dist",
+                    "z_archive"
+                ],
+                "_doc_prune_dirs": "Never descended into, for both the tree walk and the file scan. z_archive holds retired app trees and dist holds generated copies; a hit in either is noise that would train a reader to ignore the guard."
+            }
+        }
+    },
+    "_doc_what_this_schema_cannot_express": "SOURCE COPYLEFT ONLY, AND CLOUD OFFICE NEEDS SOMETHING ELSE. Every field here describes a directory that must not be VENDORED or NAMED in a source tree. Collabora Online is uniformly MPL-2.0, so it has no such directory and an entry for it would be empty in every field — while the boundary that actually binds Cloud Office is trademark, inside the SIGNED APK: Collabora's logo assets under assets/dist/images, and the values Collabora Office / Collabora Productivity Limited at /org.openoffice.Setup/Product/{ooName,ooVendor} in assets/share/registry/main.xcd. Adding that to this schema would report vendored MPL source as a violation (it is not) and would never scan an artefact (which is the only place it lives). It needs a boundary_kind field and an APK reader first. Written down here rather than left out, because an absent entry and a considered omission look identical in a data file. See a0_docs/eng-specs/cloud-office-prebuilt-engine-reuse.md section 12.7."
 }
