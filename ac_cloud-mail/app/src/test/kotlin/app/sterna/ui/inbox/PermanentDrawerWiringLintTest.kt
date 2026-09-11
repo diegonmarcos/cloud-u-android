@@ -141,6 +141,7 @@ class PermanentDrawerWiringLintTest {
             "onOpenAccountSettings = onOpenAccountSettings,",
             "onOpenSettings = onOpenSettings,",
             "onOpenHome = onOpenHome,",
+            "onOpenStarred = onOpenStarred,",
             "onCreateFolder = { showCreateFolder = true },",
             "onAddSubfolder = { folderToAddChild = it },",
             "onRenameFolder = { folderToRename = it },",
@@ -149,13 +150,15 @@ class PermanentDrawerWiringLintTest {
         )
         assertEquals(
             "the two DrawerContent calls no longer hand the sheet the same state. Both envelopes " +
-                "(permanent from 1 200 dp, modal below) must pass these seventeen arguments, whole " +
+                "(permanent from 1 200 dp, modal below) must pass these eighteen arguments, whole " +
                 "and in this order. A single one rewritten in a single branch compiles and is " +
                 "invisible to every other rule here: `folderRowsBadgeUnread = true` puts #185's " +
                 "fold-by-default back on an IMAP account, where a folder folds itself and the mail " +
                 "under it is badged nowhere; `watchedFolders = emptySet()` unticks every 'watch " +
-                "this folder' box on a wide window while the folders stay watched. Nothing in this " +
-                "module can compose the drawer, so this list is all there is.",
+                "this folder' box on a wide window while the folders stay watched; dropping " +
+                "`onOpenStarred` from ONE branch leaves the Starred row drawn but inert on exactly " +
+                "one window size, which is the hardest kind of dead button to notice. Nothing in " +
+                "this module can compose the drawer, so this list is all there is.",
             listOf(call, call),
             blocksAt(codeLines(INBOX_SCREEN), "DrawerContent(", call.size),
         )
