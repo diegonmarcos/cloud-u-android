@@ -166,6 +166,50 @@ class StarredIsAKeywordNotAMailboxTest {
         )
     }
 
+    /**
+     * THE OTHER HALF OF THE HAND-OFF, and the quietest way this feature could ship broken.
+     *
+     * The drawer navigates to `search?flagged=true`. If the route does not DECLARE that argument,
+     * Navigation drops it silently: the screen opens, the criteria panel is blank, the result area
+     * is empty, and Starred reads as "you have no starred mail". Nothing crashes and nothing else
+     * in this suite notices — the row is still there, still navigating, still creating no mailbox.
+     */
+    @Test fun `the search route declares the flagged argument the drawer sends`() {
+        val app = codeLines(STERNA_APP)
+        assertTrue(
+            "the search route no longer declares `flagged`, so the drawer's argument is dropped " +
+                "and Starred opens on an empty form that looks like an empty mailbox",
+            app.any { it.contains("route = \"search?q={q}&from={from}&flagged={flagged}\"") },
+        )
+        assertTrue(
+            "`flagged` must be declared as a navArgument as well as named in the route pattern",
+            app.any { it.contains("navArgument(\"flagged\")") },
+        )
+    }
+
+    /**
+     * And the screen must RUN the search, not merely pre-tick the switch. A Starred entry that
+     * lands on a filled-in form with no results is the "lists nothing and passes" failure wearing
+     * a different hat.
+     */
+    @Test fun `arriving on the flagged argument runs the search`() {
+        val vm = codeLines(SEARCH_VIEW_MODEL)
+        assertTrue(
+            "SearchViewModel must read SEARCH_FLAGGED_ARG into the flagged criterion",
+            vm.any { it.contains("handle[SEARCH_FLAGGED_ARG]") },
+        )
+        assertTrue(
+            "arriving on SEARCH_FLAGGED_ARG must RUN the search, not just fill the form",
+            vm.any { it.contains("arrivedPreRun()") },
+        )
+        assertTrue(
+            "the pre-run guard must test KEY_SUBMITTED for ABSENCE (`== null`). Written `!= true`, " +
+                "emptying the criteria by hand would put the starred results back on the next " +
+                "recreation, under a form the reader had just deliberately cleared",
+            vm.any { it.contains("handle.get<Boolean>(KEY_SUBMITTED) == null") },
+        )
+    }
+
     // ── helpers ───────────────────────────────────────────────────────────────────────────────
 
     /** The body of `MailRepository.setFlagged`, comments stripped — up to the next declaration. */
@@ -252,6 +296,9 @@ class StarredIsAKeywordNotAMailboxTest {
         }
         private val MAIL_REPOSITORY: File by lazy {
             repoFile("core/data/src/main/kotlin/app/sterna/core/data/mail/MailRepository.kt")
+        }
+        private val SEARCH_VIEW_MODEL: File by lazy {
+            repoFile("app/src/main/kotlin/app/sterna/ui/search/SearchViewModel.kt")
         }
 
         /** Fails closed: an unlocatable source file aborts rather than passing on an empty scan. */
