@@ -52,6 +52,10 @@ def logSinkStream = (buildJson.diagnostics?.log_sink_stream ?: 'cloud-browser')
 def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toString() }
 def uiPermissionsRuntimeB64 = b64(buildJson.ui.permissions?.runtime ?: [])
 def uiPermissionsRolesB64   = b64(buildJson.ui.permissions?.roles   ?: [])
+// Per-app browser content (pinned-on-first-run tabs, search engines).
+// libs:browser is shared by reference and its own defaults pin NOTHING,
+// so this block is the only thing that puts tabs in THIS app's browser.
+def uiBrowserConfigB64 = b64(buildJson.ui.browser ?: [:])
 def profileDefault   = buildJson.ui.profile_default ?: [:]
 def profileName      = (profileDefault.name      ?: '').toString()
 def profileEmail     = (profileDefault.email     ?: '').toString()
@@ -154,6 +158,7 @@ android {
         buildConfigField "String", "LOG_SINK_STREAM", "\"${logSinkStream}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64",   "\"${uiPermissionsRolesB64}\""
+        buildConfigField "String", "UI_BROWSER_CONFIG_B64",      "\"${uiBrowserConfigB64}\""
         buildConfigField "String", "UI_PROFILE_NAME",      "\"${profileName}\""
         buildConfigField "String", "UI_PROFILE_EMAIL",     "\"${profileEmail}\""
         buildConfigField "String", "UI_PROFILE_INITIALS",  "\"${profileInitials}\""
@@ -214,6 +219,15 @@ dependencies {
     implementation 'androidx.fragment:fragment-ktx:1.8.5'
     implementation 'androidx.activity:activity-ktx:1.9.3'
     implementation 'com.google.android.material:material:1.12.0'
+
+    testImplementation 'junit:junit:4.13.2'
+
+    // org.json is an EMPTY STUB in the android.jar the JVM test source set
+    // compiles against — every method throws "not mocked". BrowserConfig
+    // parses the ui.browser block with it, so without a real implementation
+    // on the test classpath the config tests could only assert the
+    // exception. Standard Android fix, test-only: never reaches the APK.
+    testImplementation 'org.json:json:20240303'
 
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

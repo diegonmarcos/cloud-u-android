@@ -70,6 +70,35 @@
     }
   },
   "ui": {
+    "browser": {
+      "_doc": "PER-APP browser content. libs:browser is shared BY REFERENCE (ac_cloud-vault/build.json names the same directory), so anything hardcoded in that module reaches every app that ever links it. The MECHANISM for pinning, grouping, history, suggestion and searching lives there; the CONTENT lives here. BrowserConfig.DEFAULT in the library pins NOTHING, so an app that supplies no block gets a browser with no pinned tabs rather than somebody else's homepage set. That boundary is the rule from #209: shared code is fine, one app's configuration turning up in another is not. Baked by app/build.gradle into BuildConfig.UI_BROWSER_CONFIG_B64 and handed to BrowserHostFragment.newInstance by MainActivity.",
+      "_doc_default_pinned_tabs": "Pinned on FIRST RUN ONLY, in this order. BrowserTabPrefs.seedOnce sets a flag that is never cleared, so closing or unpinning one of these keeps it gone — a default that reappears every launch is an irritation, not a feature. The owner wrote the fourth as 'localhost:800!'; the '!' is emphasis, not a digit, and :8000 is the port that actually answers on his phone.",
+      "default_pinned_tabs": [
+        "https://diegonmarcos.github.io/cloud-mobile",
+        "https://diegonmarcos.github.io/linktree_icon-view",
+        "https://qwant.com",
+        "http://localhost:8000"
+      ],
+      "_doc_search_engines": "Address-bar engines. {q} is where the URL-encoded query goes, so an engine whose query parameter is not last still works. default_engine is the SHIPPED default; BrowserSettings persists the user's own pick and BrowserConfig.engine() resolves an unknown or unset id back to this one.",
+      "default_engine": "qwant",
+      "search_engines": [
+        {
+          "id": "qwant",
+          "label": "Qwant",
+          "template": "https://www.qwant.com/?q={q}"
+        },
+        {
+          "id": "duckduckgo",
+          "label": "DuckDuckGo",
+          "template": "https://duckduckgo.com/?q={q}"
+        },
+        {
+          "id": "google",
+          "label": "Google",
+          "template": "https://www.google.com/search?q={q}"
+        }
+      ]
+    },
     "profile_default": {
       "name": "Diego Coelho Marcos",
       "email": "me@diegonmarcos.com",
@@ -106,6 +135,21 @@
         }
       ],
       "roles": []
+    }
+  },
+  "tests": {
+    "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. Before this block existed the browser had NO tests at all and its ship workflow asserted only that Gradle exited 0.",
+    "shell": {
+      "dir": "test",
+      "_doc_requires": "Tools the testers shell out to, checked BEFORE any of them runs. A missing tool does not make a tester fail - it makes the tester answer from the tool's absence. These testers use python3 for whole-string and JSON comparisons; naming it converts a silent green into a loud red.",
+      "requires": [
+        "python3"
+      ]
+    },
+    "unit": {
+      "_doc": "The JVM unit test task. NO EMULATOR: src/test/ is the JVM source set; only src/androidTest/ needs a device. SCOPED to :app: on purpose - an unscoped testDebugUnitTest also runs libs:devtools' suite, and this app's release must not go red over a sibling library's assertions. debug and not release so the task reuses the variant a push to main actually builds, and never configures the release signingConfig, which needs the vault keystore.",
+      "task": ":app:testDebugUnitTest",
+      "enabled": true
     }
   },
   "release": {

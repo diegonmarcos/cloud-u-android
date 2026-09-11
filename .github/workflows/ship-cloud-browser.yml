@@ -80,7 +80,6 @@ jobs:
         run: |
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
-          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
 
       # Publish-if-changed gate. Android builds are not byte-reproducible, so a
       # rebuild of unchanged source published different bytes, a different
@@ -120,6 +119,27 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: "8.10.2"
+
+      # The JVM unit test source set, which asserts the browser's tab
+      # ordering, pin constraint, first-run seeding and search-engine
+      # resolution. NO EMULATOR: src/test/ runs on the runner's own JVM.
+      #
+      # It runs HERE and not up with the shell testers because it shells
+      # out to ./gradlew, and that step is deliberately placed before the
+      # JDK, the Android SDK and Gradle exist — its own comment says it
+      # needs none of the three, which is true of `shell` and `lint` and
+      # not of `unit`. Invoked up there it could only fail for want of a
+      # toolchain, or pass by not running. Same split as ship-cloud-mail.
+      #
+      # Gated on the publish gate, unlike the shell testers above: when
+      # the gate has already proved the source did not move, recompiling
+      # the suite buys nothing for the minutes it costs.
+      - name: JVM unit tests (fatal on failure)
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ github.workspace }}
+        env:
+          BYPASS_NIX: "1"
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
       - name: Checkout vault (shared Android signing key)
         if: steps.gate.outputs.skip != 'true'

@@ -50,4 +50,12 @@ dependencies {
     // but the chrome rows want Material polish too). Matches app/'s
     // pin so version skew is impossible.
     implementation 'com.google.android.material:material:1.12.0'
+
+    // RecyclerView — required by drag-to-reorder, not decoration.
+    // ItemTouchHelper is Android's drag mechanism and it drives a
+    // RecyclerView; the tab switcher used to be a GridLayout, which has
+    // no position model to move cards around in. Declared explicitly
+    // rather than leaned on transitively through material, so a material
+    // bump cannot silently take the tab grid's drag away.
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
 }

@@ -14,7 +14,12 @@ import com.diegonmarcos.superapp.updater.Updater
  * Handles VIEW intents (http/https) so other apps can open links here.
  * Wires the self-updater (Updater) so the app can silently update itself from GHCR.
  *
- * [BrowserHostFragment] has no host interface — it is fully self-contained.
+ * [BrowserHostFragment] has no host interface, but it is NOT self-configuring:
+ * libs:browser is shared by reference and deliberately ships no default
+ * tabs and no engine list of its own. This activity is where Cloud
+ * Browser's own content — the four first-run pinned tabs, the Qwant
+ * default — crosses from build.json::ui.browser into the shared host.
+ * Change those four URLs in build.json; no other app is affected.
  */
 class MainActivity : AppCompatActivity() {
 
@@ -25,7 +30,10 @@ class MainActivity : AppCompatActivity() {
         if (savedInstanceState == null) {
             val openUrl = intent?.dataString?.takeIf { it.isNotBlank() }
             supportFragmentManager.commit {
-                replace(R.id.fragment_container, BrowserHostFragment.newInstance(openUrl))
+                replace(
+                    R.id.fragment_container,
+                    BrowserHostFragment.newInstance(openUrl, BuildConfig.UI_BROWSER_CONFIG_B64),
+                )
             }
         }
 
@@ -38,10 +46,13 @@ class MainActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         // VIEW intent from another app: replace fragment with the new URL.
-        // BrowserHostFragment takes its URL via newInstance(openUrl) args only.
+        // BrowserHostFragment takes its URL via newInstance args only.
         val url = intent.dataString?.takeIf { it.isNotBlank() } ?: return
         supportFragmentManager.commit {
-            replace(R.id.fragment_container, BrowserHostFragment.newInstance(url))
+            replace(
+                R.id.fragment_container,
+                BrowserHostFragment.newInstance(url, BuildConfig.UI_BROWSER_CONFIG_B64),
+            )
         }
     }
 
