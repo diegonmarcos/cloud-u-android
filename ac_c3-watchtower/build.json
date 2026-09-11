@@ -1,0 +1,135 @@
+{
+  "name": "c3-watchtower",
+  "description": "c3-watchtower on a phone: ANALYTICS over the cloud's delivery pipeline. Watchdog watches what is running, Morpheus decides what runs, WatchTower counts what ran — per repo and per workflow, over a window: how many runs, what share of them succeeded, which workflow is failing, and how long ago the last green was.",
+  "category": "android",
+  "build": {
+    "type": "gradle",
+    "entry": "build.sh"
+  },
+  "_doc": "THE SAME SUBJECT THE OBSERVABILITY CARD SHOWS, ONE LEVEL DEEPER. aa_cloud-superapp's C3 ▸ Observability page grew an `Analytics` card (kind=feed, source=github_run_stats) that shows one aggregate line per repo. This app is that card's detail view: the same numbers, plus the per-WORKFLOW breakdown the card has no room for. Card and app read the SAME endpoint with the SAME anonymous client, so the two cannot disagree about a number — if they ever do, one of them is stale, not wrong.",
+  "_doc_why_not_pub_analytics": "WHY THIS DOES NOT READ /pub/analytics/*, WHICH IS THE OBVIOUS PLACE TO LOOK. That path is the fleet's only unauthenticated analytics surface (the Caddy edge allowlists /pub/health, /pub/ready and /pub/analytics/* without a Bearer — see aa_cloud-superapp/build.json::_doc_log_ingest), and it was the first candidate for this app. It cannot serve it. c3-public-api's routes/analytics.ts mounts @fastify/http-proxy per backend with `rewritePrefix: \"\"` onto an upstream that ALREADY INCLUDES a fixed ingest path: matomo -> /matomo.php, umami -> /api/send (POST only), openobserve -> /api/default/default/_json. Every mount is pinned to ONE write endpoint. There is no query route behind any of them, so /pub/analytics/* accepts telemetry and answers no questions. Measured 2026-09-11, all three additionally answer 500 ECONNREFUSED from the public edge (umami 10.0.0.4:3006, matomo 10.0.0.6:8080, openobserve 10.0.0.6:5080) — the backends are down, so the path serves nothing in EITHER direction today. c3-infra-api is not an alternative either: its build.json declares /c3-infra-api/public/events/* public, but events.ts mounts the route at /events, so the declared public path matches nothing and the live endpoint 302s to Authelia (measured the same day). Writing a client for any of these would have been a screen of zeroes with an architecture diagram behind it.",
+  "analytics": {
+    "_doc": "WHAT THE APP READS, AS DATA. app/build.gradle base64s this whole object into BuildConfig.ANALYTICS_JSON_B64 and MainActivity parses it — nothing here is a Kotlin constant, the same rule ac_c3-morpheus follows for its surfaces and libs/ops follows for DAGU_DEFAULT_SERVER. Adding a repo is an edit to this file; there is no second list.",
+    "source": "github_actions",
+    "_doc_source": "api.github.com/repos/<owner>/<repo>/actions/runs, ANONYMOUS. Chosen because it is the one analytics-grade source this app can reach with no credential that actually answers: aa_cloud-superapp has read it in production for months (cloud/GitHubFeed.kt), so the reachability is proven rather than hoped for, and an APK that embeds no token is an APK whose publication leaks nothing.",
+    "window_runs": 30,
+    "_doc_window_runs": "Runs fetched per repo. GitHub's anonymous quota is 60 requests/HOUR/IP shared with everything else on the device, and one run page is one request regardless of per_page, so a wider window costs nothing extra — 30 is one request per repo and gives a success rate with enough denominator to mean something. Raising it past 100 would start costing pages.",
+    "cache_minutes": 15,
+    "_doc_cache_minutes": "Mirrors GitHubFeed.TTL_MS exactly. A phone that opens this app and the SuperApp's Analytics card inside the same window must not spend the quota twice for the same answer.",
+    "repos": [
+      { "owner": "diegonmarcos", "repo": "cloud-u-android",       "label": "android" },
+      { "owner": "diegonmarcos", "repo": "cloud-infra",           "label": "cloud" },
+      { "owner": "diegonmarcos", "repo": "cloud-u-containers",    "label": "containers" },
+      { "owner": "diegonmarcos", "repo": "cloud-u-linux",         "label": "linux" },
+      { "owner": "diegonmarcos", "repo": "diegonmarcos.github.io", "label": "front" }
+    ],
+    "_doc_repos": "The five repos that actually run CI. A SUPERSET of the SuperApp Analytics card's three (android/cloud/front) on purpose: the card is the glance and is deliberately narrow, the app is the detail. Every entry is verified to answer 200 on api.github.com/repos/<owner>/<repo> — the exclusions cloud-infra's own GH Repos card documents (cloud-android and cloud-unix are 301 rename-aliases, `front` and cloud-mykonsole-dtk are 404) apply here identically and are why those four names are absent."
+  },
+  "not_wired": {
+    "_doc": "Stated here as well as on screen, so nobody has to launch the app to find out what v1 is not.",
+    "traffic_analytics": "Web/app TRAFFIC analytics — pageviews, visitors, per-app usage — is what Matomo and Umami are for, and both are down (see _doc_why_not_pub_analytics). When they are back AND a read route exists beside the ingest mounts in c3-public-api's routes/analytics.ts, that is a second `source` in the block above plus a client, never a second app.",
+    "resource_trends": "Container/VM CPU, memory and disk trends live behind c3-infra-api's /metrics, which is Bearer-gated. Reaching it means the Authelia token libs:ops already stores, which is a dependency this app does not have in v1 and would not share with the Observability card."
+  },
+  "android": {
+    "application_id": "com.diegonmarcos.watchtower",
+    "_doc_application_id": "READ THE CONVENTION OUT OF THE SIBLINGS, DO NOT PATTERN-MATCH THE DIRECTORY. ac_c3-watchdog is com.diegonmarcos.watchdog and ac_c3-morpheus is com.diegonmarcos.morpheus — the `c3-` in the directory name is NOT in the package. So this is com.diegonmarcos.watchtower, NOT com.diegonmarcos.c3.watchtower. A wrong package compiles, ships, installs, and leaves a tab that opens nothing, because the SuperApp resolves the tab by getLaunchIntentForPackage on exactly this string.",
+    "compile_sdk": 36,
+    "min_sdk": 26,
+    "target_sdk": 34,
+    "version_code": 1,
+    "version_name": "0.1.0-dev",
+    "abi_filters": [
+      "arm64-v8a"
+    ],
+    "_doc_abi_filters": "The DEFAULT for a build that names no variant. It is not the ABI set this app ships: release.variants below declares arm64 AND x86_64, and build.sh::_export_variant_abis overrides this per matrix leg. Both legs publish, under distinct asset names, and the fleet entry regen.sh derives from those variants is what the installer selects between — see the variants _doc."
+  },
+  "modules": {
+    "_doc": "settings.gradle iterates this (FIRE rule 6: never hardcode the list). One module, no shared library: the app reads one JSON API over HTTPS and draws a list, which needs nothing from ab_cloud-libs-shared. Depending on it would add its whole build to this app's critical path AND widen the ship workflow's path filter to a tree this APK cannot contain a change from — exactly the over-trigger #248/#263 are open about.",
+    "app": {
+      "type": "application"
+    }
+  },
+  "toolchain": {
+    "_doc": "Pinned for reproducibility, all derived in flake.nix. Mirrors ac_c3-morpheus / ac_c3-watchdog / aa_cloud-superapp so every Android project here shares one toolchain story.",
+    "agp": "8.7.3",
+    "gradle": "8.10.2",
+    "kotlin": "1.9.24",
+    "jdk": "17"
+  },
+  "signing": {
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. The SAME key signs every app so cross-app signature-IPC and the in-app fleet updater never hit a signature mismatch. The raw keystore and its sops-encrypted passwords live ONLY in the private vault repo. build.sh::_resolve_signing reads $VAULT_DIR and sops-decrypts (SOPS_AGE_KEY), exporting ANDROID_KEYSTORE_* for gradle. THERE IS NO FALLBACK: without the key the build fails loud rather than shipping an app signed by a random key.",
+    "vault_keystore": "A0_keys/providers/android/release.jks",
+    "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
+  },
+  "release": {
+    "_doc": "Per-APK distribution, the same data-driven block every app here has. build.sh oras-push and gh-release read it; the workflow hardcodes no registry, tag or artifact name. This block is ALSO what makes the app discoverable: aa_cloud-superapp/data/regen.sh admits a sibling on .android.application_id + .release.ghcr, so registering in the constellation is a property of this file rather than a list to edit by hand. {sha} -> git short sha, {version_name} -> android.version_name.",
+    "artifact": {
+      "debug": "C3-WatchTower.apk",
+      "release": "C3-WatchTower-release.apk"
+    },
+    "ghcr": {
+      "_doc": "Login with GITHUB_TOKEN, never a PAT: a PAT creates an ACCOUNT-owned package that is born private and cannot be patched afterwards, because visibility is decided at CREATION and inherited silently forever. GITHUB_TOKEN creates the package FOR THE REPOSITORY and it takes the repository's visibility. This is a NEW package, so it gets exactly one chance to be created correctly — the same one-shot ac_c3-morpheus's own _doc records.",
+      "enabled": true,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "c3-watchtower",
+      "media_type": "application/vnd.android.package-archive",
+      "tags": [
+        "latest",
+        "sha-{sha}",
+        "v{version_name}"
+      ]
+    },
+    "auto_update": {
+      "_doc": "The in-app updater reads release_url first and falls back to GHCR. NOTE: version_code in this file is 1 and never bumped by hand — the real code is computed in app/build.gradle from wall clock, which is what actually lands.",
+      "enabled": true,
+      "tag": "latest",
+      "interval_hours": 6,
+      "max_installs_per_pass": 3
+    },
+    "gh_release": {
+      "_doc": "rolling_tag is canonical: one release the ship workflow overwrites on every main push, so /releases/download/latest/C3-WatchTower.apk is a stable URL. Note the route shape — /releases/download/<tag>/<asset>, never /releases/latest/download/<asset>, which is the magic recency route that flaps with whatever shipped last (regen.sh's own _doc measured it 404ing).",
+      "enabled": true,
+      "rolling_tag": "latest",
+      "tag_pattern": "ac_c3-watchtower-v*",
+      "asset_name": "C3-WatchTower.apk"
+    },
+    "variants": [
+      {
+        "_doc": "Per-ABI variants with DISTINCT asset names. Without them both matrix legs upload one asset name to the rolling release and race: the second leg's --clobber deletes the first's asset mid-upload, and worse than the error, the winner is arbitrary — an x86_64 APK can land under the arm64 name and be installed on a phone (INSTALL_FAILED_NO_MATCHING_ABIS). THESE NAMES ARE THE ONLY PLACE THEY ARE WRITTEN: aa_cloud-superapp/data/regen.sh derives the fleet entry's per-ABI `assets` map from supported_abis here, and Fleet.App.abiReleaseUrl / AbiUpdateTag select from that map at install and update time. Nothing downstream restates an ABI-specific filename by hand, which is the #43 defect.",
+        "id": "arm64",
+        "abis": [
+          "arm64-v8a"
+        ],
+        "supported_abis": [
+          "arm64-v8a",
+          "armeabi-v7a"
+        ],
+        "artifact_debug": "C3-WatchTower.apk",
+        "gh_asset": "C3-WatchTower.apk",
+        "ghcr_tag_suffix": "",
+        "update_tag": "latest"
+      },
+      {
+        "id": "x86_64",
+        "abis": [
+          "x86_64"
+        ],
+        "supported_abis": [
+          "x86_64",
+          "x86"
+        ],
+        "artifact_debug": "C3-WatchTower-x86_64.apk",
+        "gh_asset": "C3-WatchTower-x86_64.apk",
+        "ghcr_tag_suffix": "-x86_64",
+        "update_tag": "latest-x86_64"
+      }
+    ]
+  },
+  "tests": {
+    "_doc": "The test engine defaults .tests.shell.dir to \"test\" and only runs files matching test-*.sh; a directory that is not declared AND a file without the prefix are both reported as a COVERAGE-GAP with exit 0, which is a green run that checked nothing. Declared explicitly so neither can happen silently.",
+    "shell": {
+      "dir": "test"
+    }
+  }
+}

@@ -1,0 +1,315 @@
+name: "Ship → C3-WatchTower APK (build + push to GHCR via ORAS + attach to GH Release)"
+
+# c3-watchtower on a phone: ANALYTICS over the cloud's delivery pipeline.
+# Watchdog watches what is running, Morpheus decides what runs, WatchTower
+# counts what ran — per repo and per workflow, over a window. One Kotlin
+# activity over one anonymous GitHub Actions read; no native code and no
+# shared library module, so this is among the leanest APK builds here.
+#
+# Same data-driven publish path as every other app: the engine reads
+# ac_c3-watchtower/build.json::release, so no registry, tag or artifact name
+# is written in this file.
+
+# Builds the C3-WatchTower APK from ac_c3-watchtower/ and publishes via two channels,
+# both data-driven by ac_c3-watchtower/build.json::release (mirror of the
+# ship-cloud-superapp.yml engine contract — the only "knob" here is which
+# build.sh subcommand to invoke; engine reads build.json for the rest):
+#
+#   1. ORAS push as OCI artifact → ghcr.io/diegonmarcos/c3-watchtower:<tags>
+#   2. GH Release attachment     → APK on the rolling `latest` release
+#
+# One matrix job per ABI variant (build.json::release.variants[].id): arm64
+# (canonical phone build) + x86_64 (Waydroid / desktop emulators), published
+# to the SAME rolling `latest` release under distinct filenames + to GHCR
+# under tag suffix -x86_64.
+#
+# WatchTower has NO native (CMake/NDK) code at all — one Kotlin activity over
+# HttpURLConnection — so the Android SDK setup omits cmake/ndk (unlike
+# SuperApp, which builds libs:net's libwg-go.so).
+#
+# WHAT TRIGGERS A REBUILD, AND WHY IT IS ONLY TWO ENTRIES. #248 ("600MB of apps
+# rebuild on every push") and #263 ("one commit rebuilt ~22 app APKs, none of
+# whose code changed") are both open, and a 22nd app is exactly the thing that
+# widens them. The `paths:` filter below is this app's own directory plus this
+# file, and nothing else — build.json::modules declares one module with no
+# `dir`, so there is no shared-library tree this APK consumes and none to
+# watch. On top of the filter, the publish gate hashes those same inputs and
+# skips the whole job when they have not moved, so even a matching push
+# publishes nothing new unless the bytes would differ.
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: "Build variant"
+        required: false
+        type: choice
+        default: "debug"
+        options:
+          - debug
+          - release
+      push_oras:
+        description: "Push APK to GHCR via ORAS"
+        required: false
+        type: boolean
+        default: true
+      create_release:
+        description: "Create GitHub Release"
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    tags:
+      - "ac_c3-watchtower-v*"
+    paths:
+      # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir
+      # ac_c3-watchtower/build.json::modules declares is added automatically, dead
+      # entries are dropped, and cloud-android-source-identity.sh hashes
+      # exactly this list — so nothing can trigger a build the publish
+      # gate does not weigh. Extra entries no module map can express
+      # (settings.gradle.kts references, scan roots) are kept: add them
+      # here and they stay.
+      # NO shared lib entry: build.json::modules declares exactly one module,
+      # :app, so there is no ab_cloud-libs-shared directory this APK consumes
+      # and watching one would rebuild it for changes it cannot contain. This
+      # list grows the day this app takes a client from libs/ops — which is
+      # also the day it starts costing the shared tree's rebuilds, so it is a
+      # deliberate trade rather than a tidy-up.
+      # 1_cicd/src/cicd is CANONICAL and .github/workflows is the emitted copy
+      # (cloud-android-ship-repo-workflow-engine.sh copies src/cicd -> dist/cicd
+      # -> .github/workflows). ONLY the source is listed. The emitted copy used
+      # to be listed too, against the fear that editing the source alone leaves
+      # the change unrun -- but a path filter cannot catch that: if nobody
+      # regenerated, the emitted copy did not change either, so watching it
+      # triggers nothing. It only ever added spurious builds, one for every
+      # unrelated commit that regenerated this file. The real guard is
+      # generated-up-to-date.yml, which fails the build when the emitted copy
+      # does not match what the source produces.
+      - "1_cicd/src/cicd/ship-c3-watchtower.yml"
+      - "ac_c3-watchtower/**"
+permissions:
+  contents: write   # for gh release create + tag push reads
+  packages: write   # for ghcr push (oras)
+
+concurrency:
+  group: ship-c3-watchtower-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  WORK_DIR: ac_c3-watchtower
+
+jobs:
+  build_and_publish:
+    name: "Build APK + Push (${{ matrix.abi }})"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      # One job per ABI variant (build.json::release.variants[].id). arm64 is
+      # the canonical phone build; x86_64 is for Waydroid / desktop emulators.
+      fail-fast: false
+      matrix:
+        abi: [arm64, x86_64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so build.sh can `git rev-parse`
+
+      # Every application's testers, and — for the 24 that have none — the
+      # COVERAGE-GAP line naming exactly what this run did NOT check. Until this
+      # step existed, an application with zero testers and one with fifty
+      # passing testers produced indistinguishable green ticks, and the ship
+      # workflow's only question was "did Gradle exit 0". Needs no JDK, no SDK
+      # and no gradle, so it costs seconds and fails before anything is built.
+      #
+      # DELIBERATELY NOT gated on the publish gate: the gate answers "would
+      # these bytes differ?", which is the right question for publishing and the
+      # wrong one for testing — editing a tester does not move the APK, and
+      # gating here would let a new assertion land without ever running once.
+      - name: "Test → this application's testers, and what is not covered"
+        run: |
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
+          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
+
+      # Publish-if-changed gate. Android builds are not byte-reproducible, so a
+      # rebuild of unchanged source published different bytes, a different
+      # sha256 sidecar and a different OCI digest — and the Constellation store
+      # compares exactly those, so every cascade rebuild showed up on every
+      # phone as an update with nothing in it. The gate hashes this app's build
+      # INPUTS (git tree shas of the app dir, the shared lib dirs its build.json
+      # module map declares, and this workflow) and compares that identity to
+      # the <asset>.source sidecar already on the release. Equal → the whole
+      # rest of this job is skipped and the release asset is left untouched.
+      - name: Publish gate (skip when source unchanged)
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" "${{ matrix.abi }}"
+
+      - name: Set up JDK 17
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        if: steps.gate.outputs.skip != 'true'
+        uses: android-actions/setup-android@v3
+        with:
+          # No cmake/ndk — watchtower has no native code whatsoever. Pins mirror
+          # ac_c3-watchtower/flake.nix + build.json::toolchain.
+          packages: "platforms;android-35 platforms;android-34 platforms;android-26 build-tools;35.0.0 build-tools;34.0.0 platform-tools"
+
+      - name: Set up Gradle 8.10.2 (cached)
+        if: steps.gate.outputs.skip != 'true'
+        # v6, not v3: v3 bundles the old @actions/cache client, which talks to the
+        # cache service GitHub retired. Every save AND restore 400s ("Our services
+        # aren't available right now"), so the Gradle distribution, the dependency
+        # cache and the build cache were all discarded every run — org.gradle.caching
+        # was on and had nowhere to persist, and every build ran fully cold.
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "8.10.2"
+
+      # ── ONE shared Cloud-constellation signing key (vault) ──────────────
+      # ALL constellation apps sign with the SAME key so cross-app
+      # signature-IPC + the in-app fleet updater never hit a signature
+      # mismatch. The raw keystore + its sops-encrypted passwords live ONLY in
+      # the private vault repo (A0_keys/providers/android/release.jks +
+      # signing.secrets.yaml). build.sh::_resolve_signing reads $VAULT_DIR +
+      # sops-decrypts (SOPS_AGE_KEY) and exports ANDROID_KEYSTORE_* for gradle.
+      # NO fallback: if the key is unavailable build.sh exits 1 (desired).
+      - name: Checkout vault (shared Android signing key)
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: diegonmarcos/cloud-vault
+          token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
+          path: .vault
+
+      - name: Install ORAS + sops + gh CLI + jq
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+          command -v gh
+          curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz \
+            | sudo tar -C /usr/local/bin -xzf - oras
+          oras version
+          curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \
+            | sudo tee /usr/local/bin/sops >/dev/null
+          sudo chmod +x /usr/local/bin/sops
+          sops --version
+
+      - name: Determine variant
+        if: steps.gate.outputs.skip != 'true'
+        id: variant
+        run: |
+          if   [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "variant=${{ inputs.variant }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "variant=release" >> "$GITHUB_OUTPUT"
+          else
+            echo "variant=debug" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ── Build via build.sh (engine) ─────────────────────────────────
+      - name: Build APK (engine)
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          BYPASS_NIX: "1"
+          # Shared Cloud-constellation signing key (vault checkout above).
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          # CLOUDNAV_VARIANT selects the ABI variant (build.json::release
+          # .variants[].id) → engine overrides ABI filter + artifact name.
+          CLOUDNAV_VARIANT: ${{ matrix.abi }}
+          # Kept for the engine's own `gh` calls. Unlike the SuperApp, this
+          # app/build.gradle does NOT shell out to `gh` at config phase — it
+          # has no About → Stack page to bake CI durations into.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x build.sh
+          if [ "${{ steps.variant.outputs.variant }}" = "release" ]; then
+            ./build.sh release
+          else
+            ./build.sh build
+          fi
+          ls -la dist/
+
+      - name: Upload APK as workflow artifact
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: C3-WatchTower-${{ matrix.abi }}-${{ steps.variant.outputs.variant }}-${{ github.sha }}
+          path: ${{ env.WORK_DIR }}/dist/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      # ── ORAS push to GHCR (engine reads build.json::release.ghcr) ──
+      - name: Login to GHCR
+        if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_oras) }}
+        run: |
+          echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" \
+            | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Push APK to GHCR via ORAS
+        if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_oras) }}
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          BYPASS_NIX: "1"
+          CLOUDNAV_VARIANT: ${{ matrix.abi }}
+          GITHUB_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_CREATE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./build.sh oras-push
+
+      # Whether anyone else can actually pull what we just pushed. The push
+      # itself says nothing about it: visibility is decided when the package is
+      # CREATED and inherited silently forever after, so this is the one cheap
+      # moment to find out. A warning, not a failure — the APK is also on the
+      # GH release, which is public by construction, so a private mirror
+      # degrades the install route without breaking it.
+      - name: Is the GHCR package publicly pullable
+        if: ${{ always() && steps.gate.outputs.skip != 'true' }}
+        continue-on-error: true
+        run: sh 1_cicd/dist/scripts/cloud-android-ghcr-visibility.sh diegonmarcos c3-watchtower
+
+      # ── GitHub Release (engine reads build.json::release.gh_release) ──
+      - name: Publish to GitHub Releases
+        id: publish
+        if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          BYPASS_NIX: "1"
+          CLOUDNAV_VARIANT: ${{ matrix.abi }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+        run: ./build.sh gh-release
+
+      # ── MANAGED-PUBLISH-GUARD: injected by cloud-android-ship-repo-workflow-engine.sh ──
+      # Runs on everything but a cancellation, and is HANDED the two facts it
+      # judges: the publish gate's own answer to "did this source move?", and the
+      # `id: publish` step's own `if:` rendered to true/false. Putting that `if:`
+      # on this step instead — the obvious generalisation — would stop the guard
+      # running in exactly the case it exists for, a publish skipped by its own
+      # condition. Copied verbatim from that step, so there is one copy in the
+      # file and the two cannot drift.
+      # Edit 1_cicd/src/scripts/cloud-android-publish-guard.sh, never this block.
+      - name: A run that published nothing must not be green
+        if: ${{ !cancelled() }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ac_c3-watchtower" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}" "${{ github.event_name }}"
+      # ── end MANAGED-PUBLISH-GUARD ──
+
+
+      - name: Stamp source identity on the published assets
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh stamp "$WORK_DIR" "${{ matrix.abi }}"

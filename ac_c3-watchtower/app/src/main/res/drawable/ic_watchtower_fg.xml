@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A tower with a bar chart for a body. Deliberately neither the watchdog
+     meter nor the morpheus fan-out graph: the three sit next to each other in
+     the launcher and the whole point of the split is that they are different
+     products. This one counts, so it is bars — rising left to right, with the
+     tallest one at the graph floor colour because the number this app exists
+     to surface is the one that is NOT green.
+
+     A vector rather than a PNG set, so there is one file instead of five
+     densities and it stays sharp everywhere. Same accent the dashboards use
+     (rgb 120,200,255). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- the tower: a mast with a lookout deck -->
+    <path
+        android:fillColor="#5A7A8C"
+        android:pathData="M51,26h6v54h-6z" />
+    <path
+        android:fillColor="#78C8FF"
+        android:pathData="M42,26h24v7h-24z" />
+
+    <!-- the graph floor the bars stand on -->
+    <path
+        android:fillColor="#5A7A8C"
+        android:pathData="M30,78h48v3h-48z" />
+
+    <!-- the bars: three readings, rising. The last is the floor colour —
+         a run that failed is still a run that happened. -->
+    <path
+        android:fillColor="#78C8FF"
+        android:pathData="M32,66h9v12h-9z" />
+    <path
+        android:fillColor="#78C8FF"
+        android:pathData="M44,56h9v22h-9z" />
+    <path
+        android:fillColor="#404040"
+        android:pathData="M68,48h9v30h-9z" />
+</vector>

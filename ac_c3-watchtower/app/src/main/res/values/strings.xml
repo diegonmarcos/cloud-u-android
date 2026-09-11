@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- EVERY user-visible string in this app, from the first commit.
+     ac_c3-morpheus and ac_c3-watchdog have no strings.xml at all — their one
+     label is a literal in the manifest — so there was no locale story to
+     inherit here, only one to start. aa_cloud-superapp ships values/ +
+     values-es/, which is the fleet's actual locale set, so this app starts
+     there rather than accreting English literals that someone extracts later.
+     Nothing below is formatted in Kotlin with string concatenation: the
+     placeholders are positional so Spanish can reorder them. -->
+<resources>
+    <string name="app_name">WatchTower</string>
+    <string name="screen_subtitle">Delivery analytics · last %1$d runs per repo</string>
+    <string name="loading">Counting runs…</string>
+    <string name="refresh">Refresh</string>
+
+    <!-- The headline aggregate, across every declared repo. -->
+    <string name="fleet_header">Fleet</string>
+    <string name="stat_runs">%1$d runs</string>
+    <string name="stat_success_rate">%1$d%% green</string>
+    <string name="stat_failures">%1$d failed</string>
+    <string name="stat_last_green">last green %1$s</string>
+    <string name="stat_no_green">no green run in this window</string>
+
+    <!-- Per-workflow breakdown: the part the Observability card has no room
+         for, and the reason to open the app rather than glance at the card. -->
+    <string name="workflows_header">By workflow · worst first</string>
+    <string name="workflow_row">%1$d/%2$d green</string>
+
+    <!-- Failure states. An empty list and a spent quota are different facts
+         and must never render the same — the exact silent failure the
+         SuperApp's GitHubFeed was fixed for. -->
+    <string name="err_rate_limited">Rate limited — GitHub\'s anonymous 60 requests/hour quota is spent. Retry in a few minutes.</string>
+    <string name="err_unreachable">Unreachable — GitHub did not answer. Check the network.</string>
+    <string name="err_empty">No workflow runs in this window.</string>
+    <string name="stale_notice">Showing the last cached counts — the live fetch failed.</string>
+</resources>

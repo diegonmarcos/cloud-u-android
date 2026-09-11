@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same palette as the watchdog panel and morpheus, so the three C3 apps
+         read as one system. No WebView here, but the dark window background is
+         still what stops a white flash before the first list paints. -->
+    <style name="Theme.WatchTower" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">#0b0e14</item>
+        <item name="android:statusBarColor">#101520</item>
+        <item name="android:navigationBarColor">#0b0e14</item>
+    </style>
+</resources>

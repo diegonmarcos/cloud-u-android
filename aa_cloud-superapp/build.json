@@ -3554,6 +3554,17 @@
             "_doc": "The second LAUNCH tab, identical in shape to Watchdog above: dispatches extapp:c3-morpheus (com.diegonmarcos.morpheus), falling back to installing ui.external_apps[id=c3-morpheus].install_apk_url. Morpheus shipped recently, so the not-installed path is the COMMON one here, not the edge case."
           },
           {
+            "id": "watchtower",
+            "label": "WatchTower",
+            "icon": "ic_p_c3_reports",
+            "mode": "admin",
+            "action": "extapp:c3-watchtower",
+            "is_action": true,
+            "_doc": "The third LAUNCH tab, identical in shape to Watchdog and Morpheus above: no facet, no fragment, only an `action`, so tapping it dispatches extapp:c3-watchtower (com.diegonmarcos.watchtower) and the C3 strip stays where it was. Not installed -> the user is told so and ui.external_apps[id=c3-watchtower].install_apk_url is offered. is_action is what stops it being counted as a page anywhere a page means content. THE APP IS BRAND NEW, so the not-installed path is the ONLY path until the first ship run publishes, exactly as Morpheus's _doc records of its own first days.",
+            "_doc_index": "INDEX 4, AFTER MORPHEUS, and the position is the requirement rather than a detail of it - the owner asked for it 'beside Morpheus'. It is also what leaves the `|` divider alone: SectionTabsFragment positions the divider with indexOfFirst { action.isNotBlank() }, which is Watchdog at index 2 both before and after this insertion. Inserting anywhere BEFORE index 2 would move the divider and silently restructure the whole strip. test/test-watchtower-tab.sh asserts the index and the divider, not merely that the tab exists.",
+            "_doc_icon": "ic_p_c3_reports - the page-family icon for output rather than structure, which is what an analytics read is. Deliberately NOT a new drawable: Sections.iconResFor falls back to ic_link_tile IN SILENCE when a name resolves to nothing, so an invented name would render as a generic link with no error anywhere."
+          },
+          {
             "id": "reports",
             "label": "Reports",
             "icon": "ic_p_c3_reports",
@@ -3607,11 +3618,17 @@
         ],
         "stack_observability": [
           {
-            "_doc": "INDEX of this page, same contract as stack_topology's: every tile is an `anchor:` id resolved by StackAnchors against the cards below, so the row is a table of contents rather than a set of deep links. One tile per feed card (GHA, Dagu, GH Repos, Gitea Repos, NTFY), in the same order the cards render below.",
+            "_doc": "INDEX of this page, same contract as stack_topology's: every tile is an `anchor:` id resolved by StackAnchors against the cards below, so the row is a table of contents rather than a set of deep links. One tile per card (Analytics, GHA, Dagu, GH Repos, Gitea Repos, NTFY), in the same order the cards render below. A CARD ADDED BELOW WITHOUT A TILE HERE IS HALF A CHANGE: that is what task #78 ('add top Index card, fix broken+duplicated More row') fixed, so leaving the Analytics card out of this row would have been #78 regressing on the same page it was fixed on.",
             "kind": "tile_row",
             "title": "Index",
             "subtitle": "Jump to a card on this page",
             "tiles": [
+              {
+                "id": "analytics",
+                "label": "Analytics",
+                "icon": "ic_p_c3_reports",
+                "target": "anchor:analytics"
+              },
               {
                 "id": "gha",
                 "label": "GHA",
@@ -3646,6 +3663,33 @@
           },
           {
             "_doc": "Five feed cards, one per data source, named exactly GHA / Dagu / GH Repos / Gitea Repos / NTFY per spec — replacing the old Index tile-row, the gha_runs/repos/dagu_dags kinds and the three scope-split ntfy cards (Advisories/My channels/Cloud channels). kind=feed is ONE generic card type reading `source` to pick its fetcher (github_runs | github_commits | gitea_commits | dagu_runs — AggregatorStackFragment.renderFeed), per this page's own long-standing instruction to keep card types generic rather than a bespoke render function per integration; a sixth source is a new `when` arm plus a client object, never a new panel `kind`. `limit` is a real config field now, not a number split between a Kotlin literal and a human-readable subtitle that could silently drift apart (the old 'Latest 3 runs per repo' text next to a separate hardcoded `3`). The Index tile-row is BACK (mirroring stack_topology's own Index) so the five cards are addressable from the top of the page, not just by scrolling — the More row below is KEPT unchanged: c3/{workflows,gha,dagu,logs,reports} are HIDDEN pages and More is their only referrer anywhere in build.json, so dropping it would silently orphan five real pages (test/test-stack-anchors-declared.sh T8 catches exactly this).",
+            "_doc": "ANALYTICS — the glance. Every other card on this page is a FEED: the latest N things that happened. This one is the only card that counts rather than lists, and that is exactly what the owner asked WatchTower to be, stated at card depth: over the last `limit` runs per repo, how many ran, what share of the FINISHED ones went green, and how long ago the last green was.\n\nWHY THE DENOMINATOR IS 'FINISHED' AND NOT 'ALL'. A run still in progress carries an empty `conclusion`. Counting those as not-green makes the rate sag every time the fleet is mid-build, which is precisely when somebody opens this page. Queued and running are neither green nor failed — they are not yet anything. renderRunStatsFeed divides by the finished count and says 'no verdicts yet' rather than '0%' when that count is zero, because a rate with an empty denominator is not a rate.\n\nSOURCE, NOT A NEW KIND. kind=feed with a sixth `source`, per this page's own long-standing instruction: a new integration is a new `when` arm in AggregatorStackFragment.renderFeed plus a client, never a new panel `kind`. It reads the SAME GitHubFeed.runs() the GHA card above reads, through the same 15-minute cache, so the two cards cost ONE fetch per repo between them and cannot disagree about a number.\n\nTHE REPO SET IS THIS ARRAY AND NOTHING ELSE, the same contract the GH Repos card documents. Deliberately the same three as the GHA card below (android/cloud/front) rather than ac_c3-watchtower's five: this is the glance and stays narrow, the app is the detail and carries the wider set. Adding a repo here is a data edit, never a Kotlin one.\n\nOPENING THE FULL THING: the card's summary row targets extapp:c3-watchtower, so a tap hands off to the app through the SAME single dispatch chokepoint every other row uses (onTileClicked -> routeTarget -> launchExternalApp) — no seventh ad-hoc ACTION_VIEW site (#156), and the click still fires exactly once (#195). It is NOT in the More row below: More opens 'the full page behind a card' and its tiles are ordinary page: targets into HIDDEN c3 pages. There is no page:c3/analytics, and inventing one to have somewhere to point would add an un-wired stub page to satisfy a row.",
+            "kind": "feed",
+            "source": "github_run_stats",
+            "anchor": "analytics",
+            "title": "Analytics",
+            "subtitle": "Delivery over the last 30 runs per repo · green rate, failures, last green",
+            "limit": 30,
+            "url": "extapp:c3-watchtower",
+            "repos": [
+              {
+                "owner": "diegonmarcos",
+                "repo": "cloud-u-android",
+                "label": "android"
+              },
+              {
+                "owner": "diegonmarcos",
+                "repo": "cloud-infra",
+                "label": "cloud"
+              },
+              {
+                "owner": "diegonmarcos",
+                "repo": "diegonmarcos.github.io",
+                "label": "front"
+              }
+            ]
+          },
+          {
             "kind": "feed",
             "source": "github_runs",
             "anchor": "gha",
@@ -6995,6 +7039,17 @@
         "hub_package": "com.diegonmarcos.morpheus",
         "install_package": "com.diegonmarcos.morpheus",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/C3-Morpheus.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "C3-WatchTower — standalone analytics app (ac_c3-watchtower). Added so the C3 tab strip's third launch tab can use extapp:c3-watchtower; Sections.externalApp() reads ONLY this array, so without an entry here the tab snacks 'Unknown app: c3-watchtower' AFTER the tap rather than offering the APK. The applicationId is com.diegonmarcos.watchtower: the directory and the GHCR image carry the c3- prefix, the package id does not — the same split ac_c3-watchdog (com.diegonmarcos.watchdog) and ac_c3-morpheus (com.diegonmarcos.morpheus) already record. install_apk_url mirrors ac_c3-watchtower/build.json::release.gh_release.asset_name (C3-WatchTower.apk, the arm64 rolling-latest asset; the x86_64 build publishes separately as C3-WatchTower-x86_64.apk, and ShellActivity re-resolves this flat URL through the fleet's per-ABI assets map via AbiUpdateTag before installing, so the name here is the fallback rather than the decision). BRAND NEW APP: until the first ship run publishes, the not-installed path is the ONLY path.",
+        "_doc_identity_copies": "#170 — an app's identity still lives in TWO hand-maintained places: this entry and ac_c3-watchtower/build.json. NOTHING WAS ADDED HERE TO MAKE THAT THREE. data/constellation-fleet.json looks like a third copy and is not: it is generated by data/regen.sh, which scans sibling build.json files for .android.application_id + .release.ghcr, so it was produced by running the script and never typed. No ui.phone_folders keyword restates the package either — PhoneFolders derives the pkg: keyword from `folder`, and a literal keyword there would be a second owner of the same fact.",
+        "id": "c3-watchtower",
+        "label": "C3-WatchTower",
+        "folder": "sys_dev",
+        "hub_package": "com.diegonmarcos.watchtower",
+        "install_package": "com.diegonmarcos.watchtower",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/C3-WatchTower.apk",
         "forks": {}
       },
       {

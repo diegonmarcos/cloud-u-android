@@ -725,13 +725,14 @@ class AggregatorStackFragment : Fragment(),
 
     private fun renderFeed(ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel) {
         when (panel.source) {
-            "github_runs"    -> renderGithubRunsFeed(ctx, body, panel)
-            "github_commits" -> renderRepoCommitsFeed(ctx, body, panel, gitea = false)
-            "gitea_commits"  -> renderRepoCommitsFeed(ctx, body, panel, gitea = true)
-            "dagu_runs"      -> renderDaguRunsFeed(ctx, body, panel)
+            "github_runs"      -> renderGithubRunsFeed(ctx, body, panel)
+            "github_run_stats" -> renderRunStatsFeed(ctx, body, panel)
+            "github_commits"   -> renderRepoCommitsFeed(ctx, body, panel, gitea = false)
+            "gitea_commits"    -> renderRepoCommitsFeed(ctx, body, panel, gitea = true)
+            "dagu_runs"        -> renderDaguRunsFeed(ctx, body, panel)
             else -> body.addView(emptyRow(ctx,
-                "(kind=feed needs a \"source\": github_runs | github_commits | " +
-                    "gitea_commits | dagu_runs — got '${panel.source}')"))
+                "(kind=feed needs a \"source\": github_runs | github_run_stats | " +
+                    "github_commits | gitea_commits | dagu_runs — got '${panel.source}')"))
         }
     }
 
@@ -849,6 +850,114 @@ class AggregatorStackFragment : Fragment(),
                 ))
             }
         }
+    }
+
+    /** "Analytics": the only card on this page that COUNTS rather than lists.
+     *
+     *  Over the last [Sections.StackPanel.limit] runs per declared repo: how
+     *  many ran, what share of the FINISHED ones went green, how many failed,
+     *  and how long ago the last green was. One aggregate line per repo, plus
+     *  a fleet total above them.
+     *
+     *  THE DENOMINATOR IS THE FINISHED RUNS, NOT ALL OF THEM. A run still in
+     *  progress carries an empty `conclusion`; counting it as "not green" would
+     *  make the rate sag every time the fleet is mid-build, which is precisely
+     *  when this page gets opened. Queued and running are neither green nor
+     *  failed — they are not yet anything. With nothing finished the card says
+     *  so rather than printing 0%, because a rate over an empty denominator is
+     *  not a rate, it is a division that did not happen.
+     *
+     *  CANCELLED IS NOT A FAILURE either. The ship workflows run under
+     *  `cancel-in-progress`, so a rapid series of pushes cancels the older runs
+     *  by design; counting those as failures would report a busy afternoon as
+     *  an outage.
+     *
+     *  It reads the SAME [GitHubFeed.runs] the GHA card above reads, through
+     *  the same fifteen-minute cache, so the two cards cost ONE request per
+     *  repo between them on a cold page open and cannot disagree about a
+     *  number. This is the glance; ac_c3-watchtower is the same subject with
+     *  the per-workflow breakdown, reached by tapping the summary row
+     *  (panel.url = extapp:c3-watchtower) through the ordinary
+     *  [onTileClicked] dispatcher — no second launch path. */
+    private fun renderRunStatsFeed(ctx: android.content.Context, body: LinearLayout, panel: Sections.StackPanel) {
+        if (panel.repos.isEmpty()) {
+            body.addView(emptyRow(ctx, "No repos declared. Add a `repos` array to the panel."))
+            return
+        }
+        val limit = panel.limit.takeIf { it > 0 } ?: 30
+        val loading = loadingRow(ctx, "Counting workflow runs…")
+        body.addView(loading)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val now = System.currentTimeMillis()
+            val results = panel.repos.mapIndexed { i, ref ->
+                async { kotlinx.coroutines.delay(i * GitHubFeed.STAGGER_MS)
+                        ref to GitHubFeed.runs(ctx, ref.owner, ref.repo, limit) }
+            }.awaitAll()
+            body.removeView(loading)
+
+            val all = results.flatMap { it.second.items }
+            if (all.isEmpty()) {
+                // The WORST status, not the first: one reachable repo with an
+                // empty window must not read as a healthy fleet when the rest
+                // were rate limited.
+                val worst = results.map { it.second.status }.firstOrNull { it != GitHubFeed.Status.OK }
+                    ?: GitHubFeed.Status.OK
+                body.addView(emptyRow(ctx, feedEmptyLabel(worst, "workflow runs")))
+                return@launch
+            }
+            if (results.any { it.second.status != GitHubFeed.Status.OK }) {
+                body.addView(emptyRow(ctx, feedStaleLabel(
+                    results.map { it.second.status }.first { it != GitHubFeed.Status.OK })))
+            }
+
+            // The fleet line, and the card's handoff to the full app. Severity
+            // is driven by whether anything failed at all, so a single red run
+            // is visible from the top of the page.
+            body.addView(runStatsRow(ctx, "Fleet", all, now, panel.url))
+            for ((ref, feed) in results) {
+                if (feed.items.isEmpty()) {
+                    body.addView(emptyRow(ctx, "${ref.label} — ${feedEmptyLabel(feed.status, "workflow runs")}"))
+                    continue
+                }
+                body.addView(runStatsRow(ctx, ref.label, feed.items, now, ""))
+            }
+        }
+    }
+
+    /** One aggregate line. [url] is blank for the per-repo rows — only the
+     *  fleet row is a handoff, so a tap anywhere in the card has exactly one
+     *  meaning. */
+    private fun runStatsRow(
+        ctx: android.content.Context,
+        label: String,
+        runs: List<GitHubFeed.Run>,
+        now: Long,
+        url: String,
+    ): View {
+        val finished = runs.filter { it.conclusion.isNotBlank() }
+        val green    = finished.filter { it.conclusion == "success" }
+        val failed   = finished.count { it.conclusion == "failure" || it.conclusion == "timed_out" }
+        val lastGreen = green.maxOfOrNull { it.tsMillis } ?: 0L
+
+        val verdict = if (finished.isEmpty()) {
+            "no verdicts yet (${runs.size} still running or queued)"
+        } else {
+            val pct = (green.size * 100) / finished.size
+            val last = if (lastGreen > 0L) "last green ${GitHubFeed.ago(now - lastGreen)}"
+                       else "no green run in this window"
+            "${runs.size} runs · $pct% green · $failed failed · $last"
+        }
+        return githubRow(
+            ctx,
+            title    = label,
+            meta     = verdict,
+            url      = url,
+            severity = when {
+                finished.isEmpty() -> "idle"
+                failed > 0         -> "error"
+                else               -> "info"
+            },
+        )
     }
 
     /** "Dagu": the last [Sections.StackPanel.limit] runs across EVERY

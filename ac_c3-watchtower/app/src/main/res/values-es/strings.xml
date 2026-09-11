@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Spanish. Same locale set aa_cloud-superapp ships (values/ + values-es/).
+     app_name is NOT translated: WatchTower is a product name, exactly as
+     Watchdog and Morpheus are, and the C3 tab strip renders those as literals
+     too. -->
+<resources>
+    <string name="screen_subtitle">Analítica de entregas · últimas %1$d ejecuciones por repo</string>
+    <string name="loading">Contando ejecuciones…</string>
+    <string name="refresh">Actualizar</string>
+
+    <string name="fleet_header">Flota</string>
+    <string name="stat_runs">%1$d ejecuciones</string>
+    <string name="stat_success_rate">%1$d%% en verde</string>
+    <string name="stat_failures">%1$d fallidas</string>
+    <string name="stat_last_green">último verde %1$s</string>
+    <string name="stat_no_green">ninguna ejecución en verde en esta ventana</string>
+
+    <string name="workflows_header">Por flujo de trabajo · peores primero</string>
+    <string name="workflow_row">%1$d/%2$d en verde</string>
+
+    <string name="err_rate_limited">Límite alcanzado — la cuota anónima de GitHub (60 peticiones/hora) está agotada. Reinténtalo en unos minutos.</string>
+    <string name="err_unreachable">Sin respuesta — GitHub no contestó. Revisa la red.</string>
+    <string name="err_empty">No hay ejecuciones en esta ventana.</string>
+    <string name="stale_notice">Mostrando los últimos datos en caché — la consulta en vivo falló.</string>
+</resources>

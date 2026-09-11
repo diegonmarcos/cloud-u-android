@@ -68,6 +68,28 @@
       }
     },
     {
+      "id": "watchtower",
+      "label": "c3-watchtower",
+      "package": "com.diegonmarcos.watchtower",
+      "alt_id": null,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "c3-watchtower",
+      "tag": "latest",
+      "asset": "C3-WatchTower.apk",
+      "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/C3-WatchTower.apk",
+      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_c3-watchtower",
+      "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/c3-watchtower",
+      "blocked": false,
+      "kind": "app",
+      "assets": {
+        "arm64-v8a": "C3-WatchTower.apk",
+        "armeabi-v7a": "C3-WatchTower.apk",
+        "x86_64": "C3-WatchTower-x86_64.apk",
+        "x86": "C3-WatchTower-x86_64.apk"
+      }
+    },
+    {
       "id": "browser",
       "label": "cloud-browser",
       "package": "com.diegonmarcos.cloudbrowser",

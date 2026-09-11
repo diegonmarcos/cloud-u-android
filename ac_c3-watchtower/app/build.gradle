@@ -1,0 +1,93 @@
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+def buildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
+def a = buildJson.android
+
+// versionCode MUST move on every build, or nothing lands.
+//
+// Same encoding as ac_c3-morpheus, ac_c3-watchdog, ac_cloud-mail and lib-apks,
+// and for the same reason: minutes since 2026-01-01 UTC over a 3,000,000 base.
+// A build counter (GITHUB_RUN_NUMBER) is per-WORKFLOW, so the moment an app is
+// built by a different workflow than the one that produced the installed APK
+// the number handed out can be SMALLER and Android refuses the update outright.
+// Wall clock only moves forward and is identical for every workflow, runner and
+// trigger. COMMS_BUILD_TIMESTAMP is honoured when CI provides one so the code
+// matches the release tag; otherwise build time.
+def codeFinal = { ->
+    def base  = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
+    def built = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    def stamp = System.getenv('COMMS_BUILD_TIMESTAMP')
+    if (stamp) {
+        try {
+            built = java.time.LocalDateTime.parse(stamp,
+                java.time.format.DateTimeFormatter.ofPattern('yyyyMMdd.HHmmss'))
+        } catch (ignored) { }
+    }
+    long mins = java.time.Duration.between(base, built).toMinutes()
+    return mins > 0 ? (int) (3000000L + mins) : 3000000
+}()
+
+// The whole analytics block travels to the app as ONE base64 blob, not as a
+// field per knob. The repo LIST is the part that matters and a list cannot be a
+// buildConfigField String without being re-encoded anyway, so encoding the
+// object entire means adding a repo — or a window, or a second source — is an
+// edit to build.json and nothing else. Same shape aa_cloud-superapp uses for
+// EXTERNAL_APPS_B64 / CONSTELLATION_FLEET_B64.
+//
+// _doc keys ride along. They are a few hundred bytes in an APK and stripping
+// them would mean the string the app parses is not the string the file holds.
+def analyticsB64 = groovy.json.JsonOutput.toJson(buildJson.analytics).bytes.encodeBase64().toString()
+
+android {
+    namespace 'com.diegonmarcos.watchtower'
+    compileSdk a.compile_sdk
+
+    defaultConfig {
+        applicationId a.application_id
+        minSdk        a.min_sdk
+        targetSdk     a.target_sdk
+        versionCode   codeFinal
+        versionName   a.version_name
+
+        // Declared, and a no-op here, exactly as in ac_c3-morpheus and
+        // ac_c3-watchdog — and that is worth stating rather than leaving as a
+        // puzzle. abiFilters filters NATIVE libraries; this APK has none (one
+        // Kotlin activity over HttpURLConnection), so both matrix legs emit
+        // byte-identical, ABI-NEUTRAL APKs under two names. The two
+        // release.variants[] entries therefore exist for the DISTRIBUTION
+        // dimension, not the compilation one: distinct asset names so the two
+        // legs cannot --clobber each other on the rolling release, and the
+        // per-ABI `assets` map regen.sh derives from supported_abis so
+        // AbiUpdateTag has a real map to select from on both install and
+        // update. Only the three apps with native code (cloud-nav,
+        // cloud-termux, cloud-nix-on-droid) read build.sh's CLOUDNAV_ABIS
+        // export, because only they have something for it to filter.
+        ndk { abiFilters a.abi_filters as String[] }
+
+        buildConfigField "String", "ANALYTICS_JSON_B64", "\"${analyticsB64}\""
+    }
+
+    buildFeatures { buildConfig = true }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+}
+
+dependencies {
+    // No shared lib module, and no HTTP library. One JSON GET against
+    // api.github.com is HttpURLConnection + org.json, both in the platform —
+    // exactly what aa_cloud-superapp's GitHubFeed.kt uses for the same call.
+    // Adding OkHttp/Retrofit here would be a dependency for one request.
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+}

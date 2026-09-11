@@ -121,7 +121,26 @@ class LauncherNavController(private val host: NavHost) {
             // route through onDrawerPageSelected -> openSectionPage, which
             // targets the detail pane on two-pane. The only thing the grid
             // shows that the rail does not is the radial-menu extras.
-            host.isTwoPane() && section.pages.size > SectionTabsFragment.MAX_PANES ->
+            //
+            // COUNT WHAT WILL ACTUALLY CLAIM A PANE, which is not the same as
+            // counting pages. This branch exists because past MAX_PANES there
+            // are no stable pane host ids left to hand out — so the quantity it
+            // must weigh is the number of panes the strip would ask for, and
+            // [SectionTabsFragment] decides that with `pages.filter {
+            // it.action.isBlank() }`: a page carrying an `action` is a LAUNCH
+            // tab that fires `extapp:` and leaves the app, so it wears a pill
+            // and never claims a pane.
+            //
+            // Counting `pages` instead made a launch tab cost a pane it does
+            // not use. C3 is where that became reachable: it has two content
+            // pages and, since WatchTower joined Watchdog and Morpheus, three
+            // launch tabs. Five visible pages tripped `5 > 4` and a TABLET
+            // silently got the rail instead of the strip — the whole C3 surface
+            // restructured by adding a tab that renders nothing. Phones were
+            // unaffected, which is exactly how this would have reached him
+            // undetected.
+            host.isTwoPane() &&
+                section.pages.count { it.action.isBlank() } > SectionTabsFragment.MAX_PANES ->
                 SectionMenuFragment.newInstance(id)
             // Tabbed section — the strip over one pane per page on a tablet,
             // over a single swapping pane on a phone. The branch above already
