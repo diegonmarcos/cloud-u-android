@@ -106,7 +106,7 @@
          is stored and is this app's own, but nothing in this app draws a
          toolbar for it to act on, and a control that silently does nothing is
          the defect this app was built to avoid. So the row says so. -->
-    <string name="enhance_toolbar_writer_note">Stored here, but Cloud Writer has no toolbar: this switch takes effect only if this app ever grows one. The keyboard's own magic-wand key is set in the keyboard.</string>
+    <string name="enhance_toolbar_writer_note">Stored here, but Cloud Writer has no toolbar: this switch takes effect only if this app ever grows one. The keyboard\'s own magic-wand key is set in the keyboard.</string>
     <string name="enhance_prompt_title">The prompt this sends</string>
     <string name="enhance_prompt_summary">Exactly what the settings above tell the model to do. Read-only.</string>
     <string name="enhance_test_title">Try it</string>
@@ -138,7 +138,7 @@
          and nothing is missing, but only the default target language reaches
          this app's Translate button today. Said out loud rather than left to
          be discovered. -->
-    <string name="translate_writer_note">Only the default target language above changes what Cloud Writer's Translate button does. Auto-detect, the primary action and typing straight into the field are translate-BAR behaviours and belong to the keyboard; they are stored here so this page matches, and they act only if this app ever grows a bar of its own.</string>
+    <string name="translate_writer_note">Only the default target language above changes what Cloud Writer\'s Translate button does. Auto-detect, the primary action and typing straight into the field are translate-BAR behaviours and belong to the keyboard; they are stored here so this page matches, and they act only if this app ever grows a bar of its own.</string>
 
     <!-- ── Page 3: Grammar check ────────────────────────────────────── -->
 

@@ -38,6 +38,10 @@
 #       This is the "his eyes, not your judgement" check.
 #   P9  the defaults are the ones reported, so the page a new install shows is
 #       the page that was described.
+#  P10  every string resource is one aapt will accept. This container has no
+#       Android SDK; a bare apostrophe XML-parses cleanly here and fails the
+#       resource merge on CI, which is exactly how run 34590327712 spent forty
+#       minutes to publish nothing.
 #
 # READS NOTHING OUTSIDE ac_cloud-writer. That is deliberate and it is the point:
 # under the foreign-source rule a tester that reaches into another application's
@@ -382,6 +386,62 @@ if extra:
     print("FAIL   P8 values-es carries %d string(s) values/ does not: %s" % (len(extra), ", ".join(extra)))
     sys.exit(1)
 print("ok     P8 all %d strings exist in both locales" % len(en))
+PYEOF
+[ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
+
+# ── P10  every string is one aapt will actually accept ─────────────────────
+#
+# THIS CHECK EXISTS BECAUSE IT ALREADY HAPPENED. Run 34590327712 failed at
+# :app:mergeDebugResources with "Invalid unicode escape sequence in string" on
+# enhance_toolbar_writer_note and translate_writer_note: two apostrophes that
+# should have been \\' and were written as a bare '. The container that maintains
+# this application has no Android SDK, so a resource file that XML-parses is the
+# most any local check could say — and XML is perfectly happy with a bare
+# apostrophe. aapt is not, and the first thing that noticed was a 40-minute CI
+# run that shipped nothing.
+#
+# An apostrophe or a double quote inside a string resource must be escaped, and a
+# backslash must introduce an escape aapt knows. Checked in BOTH locales, because
+# Spanish is where apostrophes and quotes actually get typed.
+
+python3 - "$RES" <<'PYEOF'
+import io, os, re, sys
+res = sys.argv[1]
+# The escapes aapt accepts. \\uXXXX needs four hex digits after it, which is the
+# error the failing run actually reported.
+SIMPLE = set("\\'\"nt@?#\\\\")
+bad = 0
+checked = 0
+for d in ("values", "values-es"):
+    path = os.path.join(res, d, "strings.xml")
+    body = io.open(path, encoding="utf-8").read()
+    for m in re.finditer(r'<string name="([^"]+)">(.*?)</string>', body, re.S):
+        name, text = m.group(1), m.group(2)
+        checked += 1
+        i = 0
+        while i < len(text):
+            c = text[i]
+            if c == "\\":
+                nxt = text[i + 1] if i + 1 < len(text) else ""
+                if nxt == "u":
+                    if not re.match(r"[0-9a-fA-F]{4}", text[i + 2:i + 6]):
+                        print("FAIL   P10 %s/%s: \\u is not followed by four hex digits — aapt calls this "
+                              "an invalid unicode escape and fails the resource merge" % (d, name))
+                        bad += 1
+                elif nxt not in SIMPLE:
+                    print("FAIL   P10 %s/%s: \\%s is not an escape aapt knows" % (d, name, nxt or "<end>"))
+                    bad += 1
+                i += 2
+                continue
+            if c in ("'", '"'):
+                print("FAIL   P10 %s/%s: a bare %s inside a string resource. aapt refuses it; XML does not, "
+                      "so nothing but a real build would have caught this. Write \\%s."
+                      % (d, name, c, c))
+                bad += 1
+            i += 1
+if bad:
+    sys.exit(1)
+print("ok     P10 all %d string resources in both locales are aapt-safe" % checked)
 PYEOF
 [ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
 

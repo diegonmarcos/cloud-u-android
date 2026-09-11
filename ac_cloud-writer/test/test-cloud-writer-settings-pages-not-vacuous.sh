@@ -168,6 +168,21 @@ BREAKS = [
       "    <string name=\"settings_untranslated\">Advanced</string>"),
      "would draw in English on his phone"),
 
+    # ── the escape that actually broke a build ──────────────────────────────
+    #
+    # Not hypothetical: run 34590327712 died at :app:mergeDebugResources on two
+    # bare apostrophes. XML parses them, this container has no aapt, and forty
+    # minutes of CI were spent to publish nothing.
+    ("an apostrophe is written unescaped, as it was in 34590327712", RES + "/values/strings.xml",
+     ("<string name=\"settings_heading\">Settings</string>",
+      "<string name=\"settings_heading\">The keyboard's settings</string>"),
+     "a bare ' inside a string resource"),
+
+    ("a broken unicode escape reaches a string", RES + "/values-es/strings.xml",
+     ("<string name=\"settings_heading\">Ajustes</string>",
+      "<string name=\"settings_heading\">Ajustes \\uZZZZ</string>"),
+     "is not followed by four hex digits"),
+
     # ── the defaults the report describes ───────────────────────────────────
     ("a default is changed without the report being changed", SRC + "/WriterPrefs.kt",
      ("    const val DEFAULT_GRAMMAR_MODE = GRAMMAR_AI",
