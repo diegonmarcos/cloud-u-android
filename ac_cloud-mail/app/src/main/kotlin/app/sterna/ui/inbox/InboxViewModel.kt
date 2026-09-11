@@ -2122,26 +2122,54 @@ class InboxViewModel(
 
     /** Mark every message in the current view as read. */
     fun markAllRead() {
-        viewModelScope.launch {
-            val scopes = currentScopes()
-            // The unread keys, resolved by the statement — not a whole folder read then filtered.
-            val cachedUnread = repo.cachedUnreadKeys(scopes)
-            patchThreadMembersSeen(cachedUnread.toSet(), true)
-            var allMarked = true
-            scopes.forEach { (accountId, mailboxId) ->
-                val credentials = store.credentials(accountId) ?: return@forEach
-                // Server-resolved targets (cached fallback offline): the cached rows alone leave
-                // out-of-window unread untouched. One bulk call per folder, not one per message.
-                val ids = repo.unreadIds(credentials, mailboxId)
-                runCatching { repo.setReadAll(credentials, ids, seen = true) }
-                    .onFailure { allMarked = false; reportActionFailed("markAllRead ($accountId)", it) }
-            }
-            // Clear the notifications only if everything was actually marked: offline, setReadAll
-            // fails and nothing was read, so dropping them would hide mail that is still unread.
-            if (allMarked) dismissReadNotifications(cachedUnread)
-            // Reconcile: rows marked beyond the cache don't nudge the badge — converge now.
-            refresh()
+        viewModelScope.launch { markScopesRead(currentScopes(), "markAllRead") }
+    }
+
+    /**
+     * Mark one drawer folder read, whatever is on screen — the folder-options submenu's entry.
+     *
+     * Goes through [markScopesRead], the SAME path the toolbar's [markAllRead] uses, so there is one
+     * implementation of "mark these read" and not a second one to drift from it. The only difference
+     * is the scope: one named mailbox instead of whatever the current view covers.
+     */
+    fun markFolderRead(mailboxId: String) {
+        val accountId = store.currentId() ?: return
+        viewModelScope.launch { markScopesRead(listOf(accountId to mailboxId), "markFolderRead") }
+    }
+
+    /**
+     * Mark every unread message in [scopes] read, on the SERVER and in the local mirror.
+     *
+     * `$seen` is a server keyword (RFC 8621 §4.1.1), so this is not a local flag flip: each scope's
+     * ids go out as `Email/set` through [MailRepository.setReadAll], which splits them into batches
+     * of the server's OWN advertised `maxObjectsInSet` ([JmapSession.setBatchSize] — 500 on
+     * Stalwart, 100 when nothing usable is advertised). That is why no page size is chosen here: a
+     * number picked in the UI layer would be a second, weaker opinion about a limit the server
+     * already states, and it would be wrong the day the server changed it.
+     *
+     * The local rows are patched FIRST ([patchThreadMembersSeen]) so the drawer's counts — which are
+     * local Room flows and cost no network — drop the moment the item is tapped. [refresh] then
+     * reconciles against the server, which is what puts a count BACK if the write failed: without it
+     * a failed "mark all read" would leave a zero badge over mail that is still unread.
+     */
+    private suspend fun markScopesRead(scopes: List<Pair<String, String>>, op: String) {
+        // The unread keys, resolved by the statement — not a whole folder read then filtered.
+        val cachedUnread = repo.cachedUnreadKeys(scopes)
+        patchThreadMembersSeen(cachedUnread.toSet(), true)
+        var allMarked = true
+        scopes.forEach { (accountId, mailboxId) ->
+            val credentials = store.credentials(accountId) ?: return@forEach
+            // Server-resolved targets (cached fallback offline): the cached rows alone leave
+            // out-of-window unread untouched. One bulk call per folder, not one per message.
+            val ids = repo.unreadIds(credentials, mailboxId)
+            runCatching { repo.setReadAll(credentials, ids, seen = true) }
+                .onFailure { allMarked = false; reportActionFailed("$op ($accountId)", it) }
         }
+        // Clear the notifications only if everything was actually marked: offline, setReadAll
+        // fails and nothing was read, so dropping them would hide mail that is still unread.
+        if (allMarked) dismissReadNotifications(cachedUnread)
+        // Reconcile: rows marked beyond the cache don't nudge the badge — converge now.
+        refresh()
     }
 
     // ---- multi-select ----

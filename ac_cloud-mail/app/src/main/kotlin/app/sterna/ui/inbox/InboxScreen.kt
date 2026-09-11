@@ -2135,53 +2135,62 @@ private fun DrawerContent(
                         // management actions are still limited to user-created folders (no role).
                         // What changed is the menu's existence, not any item's audience.
                         badge = {
-                            {
-                                Box {
-                                    var folderMenu by remember { mutableStateOf(false) }
-                                    // Deliberately NOT an IconButton. That applies
-                                    // `minimumInteractiveComponentSize` and so reserved 48dp to draw
-                                    // a 24dp glyph, IGNORING the row's own cap — which is why the
-                                    // sidebar could not get under 48dp however far the cap came
-                                    // down, and why it was reported as "still too much line
-                                    // spacing" twice after being fixed. The tap lives on a
-                                    // DRAWER_FOLDER_MENU_TAP_SIZE_DP box instead, stated rather
-                                    // than inherited, and the glyph and its contentDescription are
-                                    // untouched. Same structural fix as the tag strip's (a01045f34).
-                                    Icon(
-                                        Icons.Filled.MoreVert,
-                                        contentDescription = stringResource(R.string.inbox_folder_options),
-                                        modifier = Modifier
-                                            .size(DRAWER_FOLDER_MENU_TAP_SIZE_DP.dp)
-                                            .clip(CircleShape)
-                                            .clickable { folderMenu = true }
-                                            .padding(4.dp),
-                                    )
-                                    DropdownMenu(folderMenu, onDismissRequest = { folderMenu = false }, shape = MaterialTheme.shapes.medium) {
+                            Box {
+                                var folderMenu by remember { mutableStateOf(false) }
+                                // Deliberately NOT an IconButton. That applies
+                                // `minimumInteractiveComponentSize` and so reserved 48dp to draw
+                                // a 24dp glyph, IGNORING the row's own cap — which is why the
+                                // sidebar could not get under 48dp however far the cap came
+                                // down, and why it was reported as "still too much line
+                                // spacing" twice after being fixed. The tap lives on a
+                                // DRAWER_FOLDER_MENU_TAP_SIZE_DP box instead, stated rather
+                                // than inherited, and the glyph and its contentDescription are
+                                // untouched. Same structural fix as the tag strip's (a01045f34).
+                                Icon(
+                                    Icons.Filled.MoreVert,
+                                    contentDescription = stringResource(R.string.inbox_folder_options),
+                                    modifier = Modifier
+                                        .size(DRAWER_FOLDER_MENU_TAP_SIZE_DP.dp)
+                                        .clip(CircleShape)
+                                        .clickable { folderMenu = true }
+                                        .padding(4.dp),
+                                )
+                                DropdownMenu(folderMenu, onDismissRequest = { folderMenu = false }, shape = MaterialTheme.shapes.medium) {
+                                    // Watch keeps its original audience: meaningless on the inbox
+                                    // (always watched) and noise on one's own sent/drafts/trash/junk.
+                                    if (mailbox.role !in watchMenuHiddenRoles) {
                                         val watched = mailbox.id in watchedFolders
                                         DropdownMenuItem(
                                             text = { Text(stringResource(R.string.inbox_folder_watch)) },
                                             trailingIcon = { Checkbox(checked = watched, onCheckedChange = null) },
                                             onClick = { folderMenu = false; viewModel.setFolderWatched(mailbox.id, !watched) },
                                         )
-                                        if (mailbox.role == null) {
-                                            DropdownMenuItem(
-                                                text = { Text(stringResource(R.string.inbox_new_subfolder)) },
-                                                onClick = { folderMenu = false; onAddSubfolder(mailbox) },
-                                            )
-                                            DropdownMenuItem(
-                                                text = { Text(stringResource(R.string.inbox_rename)) },
-                                                onClick = { folderMenu = false; onRenameFolder(mailbox) },
-                                            )
-                                            DropdownMenuItem(
-                                                text = { Text(stringResource(R.string.inbox_delete)) },
-                                                onClick = { folderMenu = false; onDeleteFolder(mailbox) },
-                                            )
-                                        }
+                                    }
+                                    // Mark all as read. Every folder, no confirmation — the same as
+                                    // the toolbar's overflow entry this shares its code with, and
+                                    // the same as every other bulk action in this app (none of them
+                                    // confirms). A dialog here would be a style this app does not
+                                    // have, on the one action that already existed unconfirmed.
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.inbox_mark_all_read)) },
+                                        onClick = { folderMenu = false; viewModel.markFolderRead(mailbox.id) },
+                                    )
+                                    if (mailbox.role == null) {
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.inbox_new_subfolder)) },
+                                            onClick = { folderMenu = false; onAddSubfolder(mailbox) },
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.inbox_rename)) },
+                                            onClick = { folderMenu = false; onRenameFolder(mailbox) },
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.inbox_delete)) },
+                                            onClick = { folderMenu = false; onDeleteFolder(mailbox) },
+                                        )
                                     }
                                 }
                             }
-                        } else {
-                            null
                         },
                         selected = mailbox.id == ui.selectedMailboxId,
                         onClick = {

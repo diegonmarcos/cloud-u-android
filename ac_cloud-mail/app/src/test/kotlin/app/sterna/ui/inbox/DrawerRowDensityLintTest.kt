@@ -211,7 +211,15 @@ class DrawerRowDensityLintTest {
          *  declaration — measured on the flattened source, where the whole body is under 200 chars. */
         private const val LABEL_WINDOW_CHARS = 400
 
-        private const val BADGE_ANCHOR = "badge = if (mailbox.role !in watchMenuHiddenRoles)"
+        /**
+         * The folder row's badge slot is now UNCONDITIONAL — every folder carries the options menu,
+         * because "Mark all as read" applies to every folder (the Inbox, which had no menu at all,
+         * is the one with thousands of unread in it). The per-item gating moved inside the
+         * `DropdownMenu`, so `mailbox.role !in watchMenuHiddenRoles` is no longer on this line and
+         * the old anchor would never match again — which this rule treats as a hard error rather
+         * than a pass, so the density guard cannot go quietly inert.
+         */
+        private const val BADGE_ANCHOR = "badge = { Box {"
         private const val BADGE_END_ANCHOR = "selected = mailbox.id == ui.selectedMailboxId"
 
         private const val INBOX_SCREEN_PATH =
