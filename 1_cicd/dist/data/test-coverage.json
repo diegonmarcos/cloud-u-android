@@ -192,8 +192,8 @@
       "workflow": "ship-cloud-nix-on-droid.yml"
     },
     "ac_cloud-sheets": {
-      "first_test": "Mirror, not a build: assert upstream.sha256 in build.json is 64 hex characters and source_identity.mode is 'pin', so the mirror can never republish on a doc edit.",
-      "shell_testers": 0,
+      "first_test": "STALE UNTIL 2026-09-11, and worth saying why: this read 'assert upstream.sha256 is 64 hex characters and source_identity.mode is pin', naming two keys 05b0c6c15 deliberately DELETED when the app stopped being a mirror. Cloud Office is a source build now, and its testers are network-bound by nature \u2014 every claim it makes is about a REMOTE object (a pinned Gerrit revision, a pinned upstream APK), so it cannot honestly offer the no-network check the note above asks for. First test: tests/test-configure-flags-exist.sh \u2014 every --with-* in upstream.online.configure is a real AC_ARG_WITH at the pinned revision, and the flag upstream actually derives applicationId from is the one we pass, carrying android.application_id. It caught --with-android-package-name, which exists nowhere upstream and which autoconf would have warned about and ignored, shipping the megabuild as org.collabora.app. NOT COVERED: nothing compiles this app, so no tester proves the patch series BUILDS \u2014 tests/patches-apply.sh proves only that it applies, and is deliberately not a test-*.sh because it costs a 471 MB fetch.",
+      "shell_testers": 2,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
@@ -255,6 +255,6 @@
       "workflow": "ship-firestack-aar.yml"
     }
   },
-  "with_executed_tests": 5,
-  "with_no_tests_at_all": 23
+  "with_executed_tests": 6,
+  "with_no_tests_at_all": 22
 }
