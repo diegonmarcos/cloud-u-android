@@ -63,4 +63,36 @@ object VersionOrder {
      */
     fun isDowngrade(candidateCode: Long?, installedCode: Long?): Boolean =
         compare(candidateCode, installedCode) == Order.OLDER
+
+    /**
+     * Did the candidate ACTUALLY land on the device?
+     *
+     * `PackageInstaller.commit()` returns as soon as the bytes are handed over;
+     * the outcome arrives later at [PackageInstallerReceiver], and on a
+     * background pass that outcome is routinely STATUS_PENDING_USER_ACTION - a
+     * tap-to-install notification, with nothing installed. The auto-update pass
+     * used to count a commit that returned without throwing as an install, so a
+     * pass that installed NOTHING logged "installed 3 of 3 staged". Two issues
+     * (#99, #200) were closed against that sentence while the owner's apps sat
+     * unchanged: a false success is worse than a failure, because it ends the
+     * investigation.
+     *
+     * So the pass no longer believes itself. It re-reads the installed
+     * versionCode from PackageManager after the gate settles and asks this.
+     *
+     * FAIL CLOSED. A null on either side is "we do not know", and "we do not
+     * know" must never be counted as an install - that is the exact door the
+     * old code left open. Only an installed build that has actually reached the
+     * candidate's versionCode counts.
+     *
+     * @param candidateCode versionCode of the staged APK, read BEFORE commit
+     *   (a confirmed install reaps the staged file, so afterwards there is
+     *   nothing left to identify).
+     * @param installedCode versionCode PackageManager reports AFTER the install
+     *   settles.
+     */
+    fun landed(candidateCode: Long?, installedCode: Long?): Boolean = when {
+        candidateCode == null || installedCode == null -> false
+        else -> installedCode >= candidateCode
+    }
 }

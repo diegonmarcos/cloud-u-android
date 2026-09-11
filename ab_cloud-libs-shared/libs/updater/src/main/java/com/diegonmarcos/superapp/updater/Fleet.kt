@@ -993,6 +993,11 @@ object Fleet {
         // Sequential is not a style choice: PackageInstaller sessions collide,
         // and each unanswered prompt holds a session against the 50-session cap.
         var acted = 0
+        // Committed but NOT installed — the session came back needing a human
+        // (STATUS_PENDING_USER_ACTION) or died after handover. Counted apart
+        // from [acted] because conflating the two is what made "auto-update is
+        // on and nothing happens" unreadable from the log for two issues running.
+        var pending = 0
         val usedChannels = linkedSetOf<String>()
         staged.forEachIndexed { i, (app, apk) ->
             if (UpdateProgress.cancelRequested) {
@@ -1015,11 +1020,39 @@ object Fleet {
                 // every single app and fell through to PackageInstaller was
                 // reported, thirty-two times, as a silent shell install. One
                 // wrong word made a completely dead code path look healthy.
+                // READ THE CANDIDATE BEFORE COMMITTING IT. A confirmed install
+                // reaps the staged file (PackageInstallerReceiver deletes it by
+                // path), so after commit there is nothing left to identify and
+                // the only honest answer would be "unknown".
+                val candidateCode = ApkIntegrity.identify(ctx, apk.file)?.versionCode
                 val used = commit(ctx, app, apk)
                 usedChannels += used
-                acted++
-                Log.i(TAG, "installed ${app.kind} ${app.id} (${app.pkg}) " +
-                           "[${i + 1}/${staged.size}] via $used")
+                // ASK THE PACKAGE MANAGER, DO NOT BELIEVE THE COMMIT.
+                //
+                // commit() returns on HANDOVER. InstallGate then waits for the
+                // session to settle — but it opens the gate on
+                // STATUS_PENDING_USER_ACTION too (deliberately: a background
+                // pass cannot show the dialog and must not stall the batch).
+                // So "the gate released" means "we may start the next one", NOT
+                // "this one installed". Counting it as an install is what
+                // produced "auto-update: installed 3 of 3 staged" on a pass
+                // that installed zero.
+                //
+                // The device is the only witness that cannot be talked into a
+                // false green, so re-read the installed versionCode and compare.
+                val nowCode = installedInfo(ctx, app)?.versionCode
+                if (VersionOrder.landed(candidateCode, nowCode)) {
+                    acted++
+                    Log.i(TAG, "installed ${app.kind} ${app.id} (${app.pkg}) " +
+                               "[${i + 1}/${staged.size}] via $used")
+                } else {
+                    pending++
+                    Log.w(TAG, "NOT installed: ${app.kind} ${app.id} (${app.pkg}) " +
+                               "[${i + 1}/${staged.size}] committed via $used but the device " +
+                               "still reports ${nowCode ?: "no build"} (candidate " +
+                               "${candidateCode ?: "unreadable"}) — the session is waiting on " +
+                               "a confirmation this pass cannot give it")
+                }
             } catch (t: Throwable) {
                 // The APK stays in the cache, so a retry reuses it - the whole
                 // reason downloads are content-addressed.
@@ -1032,6 +1065,8 @@ object Fleet {
         val deferred = todo.size - batch.size
         return Pass(acted, todo.size, batch.size, silent, channel,
             "installed $acted of ${staged.size} staged (${todo.size} needed work" +
+            (if (pending > 0) ", $pending awaiting your confirmation — tap the " +
+                "notification; nothing was installed for those" else "") +
             (if (deferred > 0) ", $deferred deferred to the next pass" else "") + ") " +
             // Observed, not intended — see the per-app log line above.
             (if (usedChannels.isEmpty()) "via nothing: no channel accepted any of them"
