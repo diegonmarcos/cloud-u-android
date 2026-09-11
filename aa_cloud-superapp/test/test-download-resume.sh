@@ -147,9 +147,18 @@ elif [ ! -f "$FLEET_JSON" ]; then
 else
   REL=$(jq -r --arg id "$OFFICE_ID" '.apps[] | select(.id == $id) | .release_url // ""' "$FLEET_JSON")
   GHCR_REPO=$(jq -r --arg id "$OFFICE_ID" '.apps[] | select(.id == $id) | ((.namespace // "") + "/" + (.image // ""))' "$FLEET_JSON")
-  case "$REL:$GHCR_REPO" in
-    :*|*:|*:/*|*:*/) bad "no fleet entry '$OFFICE_ID' with a release_url and namespace/image in $FLEET_JSON — $OFFICE_DIR was renamed or regen.sh changed its id rule, and this probe would have reported on nothing"; REL="" ;;
-  esac
+  # TEST THE TWO VALUES SEPARATELY. The first version of this check globbed the
+  # pair CONCATENATED — case "$REL:$GHCR_REPO" in ... *:/* ) — and `*:/*`
+  # matches the "https://" inside the release URL's own scheme, so a perfectly
+  # good pair took the failure branch and reddened the SuperApp's publish. A
+  # guard whose pattern matches its own input is not a guard.
+  if [ -z "$REL" ]; then
+    bad "fleet entry '$OFFICE_ID' has no release_url in $FLEET_JSON — $OFFICE_DIR was renamed or regen.sh changed its id rule, and this probe would have reported on nothing"
+    REL=""
+  elif [ -z "${GHCR_REPO%%/*}" ] || [ -z "${GHCR_REPO#*/}" ]; then
+    bad "fleet entry '$OFFICE_ID' has no namespace/image pair in $FLEET_JSON (got '$GHCR_REPO') — the GHCR half of this probe would have asked about nothing"
+    REL=""
+  fi
 fi
 if [ -n "$REL" ] && command -v curl >/dev/null; then
   HEADS=$(curl -sIL --max-time 45 -H 'Range: bytes=1000-1099' "$REL" | tr -d '\r')
