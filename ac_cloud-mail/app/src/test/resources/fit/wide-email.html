@@ -1,0 +1,38 @@
+<!-- A SYNTHETIC desktop-authored email. Authored for this repository; it is not, and must never be
+     replaced by, anyone's real mail. Every block below is a shape that made the reader overflow
+     horizontally on a phone, and each one overflows for a DIFFERENT reason, so a fix that only
+     addresses one of them still fails this fixture.
+
+     Deliberately adversarial: every width here is declared by the MESSAGE, and every one of those
+     declarations survives sanitiseReceivedHtml (`style` is a global attribute; `width` is allowed
+     on img/table/td/th/col). That is precisely why a stylesheet rule without !important loses. -->
+
+<p>Ordinary prose, first and deliberately: the fix must fit the wide blocks below WITHOUT
+   making the readable parts of an ordinary message worse.</p>
+
+<!-- 1. A fixed-width layout table. The attribute loses to any stylesheet rule, but nothing in
+        either template used to constrain a table at all, so it laid out at 1200px. -->
+<table width="1200" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td width="380">First column, declared 380px wide.</td>
+    <td width="420">Second column, declared 420px wide.</td>
+    <td width="400">Third column, declared 400px wide.</td>
+  </tr>
+</table>
+
+<!-- 2. An image declared far wider than any phone. Clamping its width alone is not enough: without
+        `height: auto` the declared height survives and the picture is squashed. -->
+<img src="https://example.invalid/banner.png" width="2000" height="600" alt="Synthetic banner">
+
+<!-- 3. An INLINE style. This is the one that beats a non-!important stylesheet rule outright, and
+        the reason `max-width: 100%` was present and still losing. -->
+<div style="width:900px">A block whose width is set by an inline style attribute, not an attribute.</div>
+
+<!-- 4. One unbreakable token. No width cap can split it; it needs an explicit break opportunity. -->
+<p>https://example.invalid/a/very/long/path/that/never/breaks/0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789</p>
+
+<!-- 5. A <pre> the MESSAGE wrote: `white-space: pre` by default, so it scrolls forever. Distinct
+        from `pre.plain`, which is the body WE paint and was already wrapped. -->
+<pre>tests/fixture/column-one   tests/fixture/column-two   tests/fixture/column-three   tests/fixture/column-four   tests/fixture/column-five</pre>
+
+<p>Closing prose, so a regression that mangles ordinary paragraphs is visible here too.</p>

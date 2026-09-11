@@ -40,6 +40,7 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
@@ -4319,6 +4320,13 @@ private fun EmailWebView(
                 settings.javaScriptEnabled = false
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
+                // Keep the text READABLE once [FIT_CSS] has squeezed a desktop-authored page into a
+                // phone's width. Without this the two settings above are free to satisfy "it fits" by
+                // scaling the whole page down until the body is unreadable — technically fitting, and
+                // useless. TEXT_AUTOSIZING rescales text against the viewport instead, so narrowing a
+                // 1200px layout costs column width, not legibility. NARROW_COLUMNS/SINGLE_COLUMN are
+                // the deprecated predecessors and are deliberately not used.
+                settings.layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING
                 settings.allowFileAccess = false
                 settings.allowContentAccess = false
                 // Explicitly deny every path from email markup to the local filesystem, on-device
@@ -4331,6 +4339,12 @@ private fun EmailWebView(
                 settings.domStorageEnabled = false
                 settings.setGeolocationEnabled(false)
                 settings.mediaPlaybackRequiresUserGesture = true
+                // The way out for content that genuinely cannot fit — a wide invoice table shrunk by
+                // [FIT_CSS] until it is hard to read is only half a fix if he cannot zoom back into
+                // it. Stated explicitly rather than left to the platform default, because the cap
+                // above is what makes it matter. The on-screen +/- buttons stay off (obsolete, and
+                // they overlap the Reply/Forward bar); pinch is the gesture.
+                settings.setSupportZoom(true)
                 settings.builtInZoomControls = true
                 settings.displayZoomControls = false
                 webViewClient = client
@@ -4739,6 +4753,50 @@ internal const val CSP_META =
         "font-src data:; media-src data: cid: http: https:; " +
         "form-action 'none'; base-uri 'none'; frame-src 'none'; object-src 'none'\">"
 
+/**
+ * The rules that make a DESKTOP-AUTHORED email fit a phone's width, carried VERBATIM by both reader
+ * templates — the inverted dark one and the light one. They share no other CSS (each duplicates its
+ * own copy of `.s-deceptive`, `details.s-quote` and the rest), and a fit rule present in only one of
+ * them would mean the page fits in one theme and overflows in the other.
+ *
+ * Every rule here is `!important`, and that is the whole point rather than a flourish. A viewport
+ * meta, `useWideViewPort` and `loadWithOverviewMode` were ALL already set and the page still
+ * overflowed, because none of them outranks what the message itself declares:
+ *  - `style` is a GLOBAL_ATTRIBUTE and `width` is allowed on img/table/td/th/col in
+ *    [sanitiseReceivedHtml], so `<table width="1200">` and `style="width:900px"` arrive INTACT;
+ *  - an inline `style` attribute beats any stylesheet rule that is not `!important`.
+ * The previous `img { max-width: 100% }` was the only width rule in either template, it was not
+ * `!important`, and it named the one element (`img`) that is rarely what actually overflows.
+ *
+ * `body *` rather than a list of tags: email holds its width on whatever element is to hand — a
+ * table, a td, a wrapper div, a figure. Capping every descendant at the width of its own containing
+ * block is what a phone needs and costs a well-behaved responsive email nothing, since its elements
+ * are already inside that bound.
+ *
+ * TRADE, named: `table-layout: fixed` is deliberately NOT set. It would force even a table whose
+ * cells are individually wider than the screen to fit, but it re-proportions columns and destroys
+ * layouts that were rendering correctly. Capping the table instead lets auto layout reflow its cells,
+ * which fits every table whose content can wrap — and content that genuinely cannot wrap (a wide
+ * image, an unbreakable token) is handled by the rules below. What survives all of it stays
+ * reachable by pinch-zoom (`setSupportZoom`/`builtInZoomControls`), which is why that stays on.
+ */
+internal const val FIT_CSS = """
+              /* Nothing the message declares may be wider than the screen. */
+              body * { max-width: 100% !important; }
+              /* Cap the width WITHOUT distorting the picture: clamping width alone squashes a
+                 2000px-wide image into the phone's aspect ratio. `height: auto` restores the
+                 intrinsic ratio, and must be !important for the same cascade reason as the rest —
+                 a `height` attribute or inline height is exactly what it has to beat. */
+              img, video, svg, canvas { height: auto !important; }
+              /* One 200-character URL is a single unbreakable token: no width cap above can split
+                 it, so it alone keeps the page wider than the screen until it is allowed to break. */
+              td, th, li, p, div, a, span, blockquote {
+                     overflow-wrap: break-word !important; word-break: break-word !important; }
+              /* A <pre> the MESSAGE wrote keeps `white-space: pre` and scrolls forever. (`pre.plain`,
+                 the body we paint ourselves, is wrapped by its own rule in the light template — this
+                 is the message's own, in both templates.) */
+              pre, code { white-space: pre-wrap !important; overflow-wrap: break-word !important; }"""
+
 // `internal`, not private, since #149: what the page does with [ReaderBody.richHtml] — invert the page
 // or paint it in the app's colours — is the half of the reading-mode decision that lives HERE, and it
 // was the half nothing could see.
@@ -4840,7 +4898,7 @@ internal fun buildHtmlDocument(
               /* Emoji are colour glyphs, so the page filter turns a yellow face blue (issue #58).
                  Counter-invert them exactly like media, restoring their real colours. */
               img, picture, video, svg, iframe, .s-emo { filter: invert(1) hue-rotate(180deg); }
-              img { max-width: 100%; height: auto; }
+              $FIT_CSS
               a { color: #0b57d0; }
               /* Bottom spacer reserving room for the overlaying Reply/Forward bar. Transparent so it
                  shows the WebView's native surface (same trick as the page background above): a fixed
@@ -4879,7 +4937,7 @@ internal fun buildHtmlDocument(
           html, body { background-color: $bg; }
           body { margin: 16px; font-family: sans-serif; line-height: 1.45; color: $fg;
                  word-wrap: break-word; overflow-wrap: break-word; }
-          img { max-width: 100%; height: auto; }
+          $FIT_CSS
           a { color: $link; }
           pre.plain { white-space: pre-wrap; word-wrap: break-word; font-family: sans-serif; }
           /* The "text derived from HTML" line (#149). Only ever reached here: a derived body is

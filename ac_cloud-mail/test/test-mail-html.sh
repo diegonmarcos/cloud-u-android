@@ -268,6 +268,78 @@ has "$DRAFT_REOPEN" 'showAllRecipients = to.size + cc.size + bcc.size > 1,' \
 has "$REOPEN_TEST" 'a reopened draft with more than one recipient shows every recipient chip' \
   "H11 executed: the derivation is run, not just wired"
 
+# ── H12 a desktop-authored email FITS the width of a phone ──
+# The symptom was horizontal overflow on real HTML mail. The trap: a viewport meta,
+# `useWideViewPort` and `loadWithOverviewMode` were ALL already set while it overflowed, so any
+# check for those passes AGAINST the bug and proves nothing. What was wrong was the CASCADE -- the
+# only width rule in either template was `img { max-width: 100% }` with no `!important`, and the
+# message's own inline `style="width:900px"` outranks that. So H12 judges which declaration WINS.
+FITKT="$APP/app/src/test/kotlin/app/sterna/ui/message/ReaderFitDocumentTest.kt"
+FIXTURE="$APP/app/src/test/resources/fit/wide-email.html"
+
+# The emitted stylesheets, with $FIT_CSS resolved as Kotlin would and CSS comments stripped -- the
+# prose in FIT_CSS explains these very rules and would otherwise satisfy the check meant to police
+# them (a grep matching its own comment has shipped here before). Fails closed: any error, or a
+# template count other than 2, is a FAIL rather than an empty pass.
+weak=$(python3 - "$SCREEN" <<'PYEOF'
+import re,sys
+t=open(sys.argv[1]).read()
+m=re.search(r'internal const val FIT_CSS = """(.*?)"""',t,re.S)
+if not m: print("NO-FIT-CSS"); raise SystemExit
+sheets=[b.replace('$FIT_CSS',m.group(1)) for b in re.findall(r'<style>(.*?)</style>',t,re.S)]
+if len(sheets)!=2: print("TEMPLATES=%d"%len(sheets)); raise SystemExit
+bad=[]
+for c in sheets:
+    c=re.sub(r'/\*.*?\*/','',c,flags=re.S)
+    bad+= [l.strip() for l in c.split('\n')
+           if 'max-width:' in l and '!important' not in l and l.strip()]
+print('\n'.join(bad))
+PYEOF
+) || weak="PYTHON-FAILED"
+[ -z "$weak" ] && ok "H12 no max-width reaches either template without the !important that makes it beat an inline style" \
+  || bad "H12 a width rule cannot win the cascade: $weak"
+
+# Both templates must carry the rules, and carry the SAME ones: they share no other CSS, so a fit
+# rule in only one of them fits the page in one theme and overflows in the other.
+n=$(grep -c '^ *\$FIT_CSS$' "$SCREEN")
+[ "$n" -eq 2 ] && ok "H12 one shared fit stylesheet, interpolated into both templates ($n)" \
+  || bad "H12 $n of the 2 templates interpolate the shared fit stylesheet"
+has "$SCREEN" 'body \* { max-width: 100% !important; }' \
+  "H12 every element is capped, not just <img> -- email holds its width on tables and wrapper divs"
+has "$SCREEN" 'img, video, svg, canvas { height: auto !important; }' \
+  "H12 …and the aspect ratio is restored, so a clamped 2000px image is not squashed"
+has "$SCREEN" 'word-break: break-word !important' \
+  "H12 an unbreakable 200-character token is given somewhere to break"
+has "$SCREEN" 'pre, code { white-space: pre-wrap !important' \
+  "H12 a <pre> the MESSAGE wrote wraps (pre.plain is ours and was already wrapped)"
+
+# Legibility and the way out. loadWithOverviewMode can satisfy "it fits" by shrinking the page until
+# it cannot be read; TEXT_AUTOSIZING is what keeps the text readable while it narrows, and pinch-zoom
+# is what is left for content that genuinely cannot fit.
+has "$SCREEN" 'settings.layoutAlgorithm = WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING' \
+  "H12 text is autosized to the viewport, so fitting does not mean illegible"
+has "$SCREEN" 'settings.setSupportZoom(true)' "H12 zoom stays available for what cannot fit"
+has "$SCREEN" 'settings.builtInZoomControls = true' "H12 …by pinch"
+has "$SCREEN" 'settings.displayZoomControls = false' "H12 …without the obsolete on-screen buttons"
+
+# The fixture has to be too wide, or the assertions that run against it mean nothing.
+[ -f "$FIXTURE" ] && ok "H12 the synthetic wide email is in the repository" \
+  || bad "H12 the synthetic wide email is missing ($FIXTURE)"
+for shape in 'width="1200"' 'width="2000"' 'style="width:900px"' '<pre>'; do
+  grep -qF -- "$shape" "$FIXTURE" 2>/dev/null \
+    && ok "H12 fixture still overflows via $shape" \
+    || bad "H12 fixture no longer carries $shape -- it must reproduce the bug to disprove it"
+done
+has "$FITKT" 'class ReaderFitDocumentTest' "H12 executed: the cascade is judged by a unit test, not only by this grep"
+
+# Untrusted markup renders here. Fitting the page must not have cost any of the containment H3 set.
+has "$SCREEN" 'settings.javaScriptEnabled = false' "H12 the CSS is string-built, JS stays off"
+n=$(grep -c 'loadDataWithBaseURL(null,' "$SCREEN")
+[ "$n" -eq 2 ] && ok "H12 both document loads keep a null base URL ($n)" \
+  || bad "H12 $n of the 2 document loads keep a null base URL"
+has "$SCREEN" 'settings.allowFileAccessFromFileURLs = false' "H12 no file access from file URLs"
+has "$SCREEN" 'settings.allowUniversalAccessFromFileURLs = false' "H12 no universal access from file URLs"
+
 echo
 echo "== $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
