@@ -537,7 +537,7 @@
     <string name="settings_email_invalid">Voer een geldig e-mailadres in.</string>
     <string name="settings_email_not_server">Je server kan verzenden vanaf dit adres weigeren.</string>
     <string name="settings_identity_not_created">Kon %1$s niet toevoegen op de server: %2$s. Het adres is alleen op deze telefoon opgeslagen.</string>
-    <string name="settings_signature_supporting">Platte tekst, bij het opstellen aan de berichttekst toegevoegd: daar te bewerken of te verwijderen als elke andere tekst.</string>
+    <string name="settings_signature_supporting">Deze is platte tekst: hij wordt bij het schrijven aan de berichttekst toegevoegd en je kunt hem daar bewerken of verwijderen. Typ of importeer HTML om een opgemaakte handtekening te versturen.</string>
     <string name="settings_signature_supporting_html">Er is een HTML-versie opgeslagen; die wordt ongewijzigd verzonden als je de ondertekening in het bericht niet aanpast.</string>
     <string name="settings_signature_preview_title">In een bericht ziet dat er zo uit:</string>
     <string name="settings_signature_duplicate_delimiter">Je ondertekening begint al met een regel “-- ”, dus die verschijnt twee keer.</string>

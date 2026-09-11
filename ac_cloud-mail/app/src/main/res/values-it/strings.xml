@@ -537,7 +537,7 @@
     <string name="settings_email_invalid">Inserisci un indirizzo email valido.</string>
     <string name="settings_email_not_server">Il tuo server potrebbe rifiutare l\'invio da questo indirizzo.</string>
     <string name="settings_identity_not_created">Impossibile aggiungere %1$s sul server: %2$s. L\'indirizzo è salvato solo su questo telefono.</string>
-    <string name="settings_signature_supporting">Testo semplice, aggiunto al corpo del messaggio quando scrivi: puoi modificarlo o eliminarlo come qualsiasi altro testo.</string>
+    <string name="settings_signature_supporting">Questa è in testo semplice: viene aggiunta al corpo del messaggio quando scrivi e puoi modificarla o rimuoverla lì. Digita o importa HTML per inviare una firma formattata.</string>
     <string name="settings_signature_supporting_html">È salvata una versione HTML: viene inviata così com\'è se non modifichi la firma nel messaggio.</string>
     <string name="settings_signature_preview_title">In un messaggio apparirà così:</string>
     <string name="settings_signature_duplicate_delimiter">La tua firma inizia già con una riga «-- », quindi comparirà due volte.</string>

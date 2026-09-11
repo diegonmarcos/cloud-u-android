@@ -70,7 +70,9 @@ data class StoredSignature(
          */
         fun of(id: String, name: String, source: String): StoredSignature =
             if (looksLikeHtml(source)) {
-                StoredSignature(id, name, htmlToText(source), source)
+                // keepLinkTargets: the flattened half is the whole of what a recipient without HTML
+                // receives, so a link that is a WORD there ("Whatsapp") must still carry its address.
+                StoredSignature(id, name, htmlToText(source, keepLinkTargets = true), source)
             } else {
                 StoredSignature(id, name, source, "")
             }

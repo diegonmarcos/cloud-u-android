@@ -537,7 +537,7 @@
     <string name="settings_email_invalid">Wpisz prawidłowy adres e-mail.</string>
     <string name="settings_email_not_server">Twój serwer może odrzucić wysyłanie z tego adresu.</string>
     <string name="settings_identity_not_created">Nie udało się dodać %1$s na serwerze: %2$s. Adres jest zapisany tylko na tym telefonie.</string>
-    <string name="settings_signature_supporting">Zwykły tekst, dodawany do treści wiadomości podczas pisania — możesz go tam edytować lub usunąć jak każdy inny tekst.</string>
+    <string name="settings_signature_supporting">Ten podpis jest zwykłym tekstem: jest dodawany do treści wiadomości podczas pisania i możesz go tam edytować lub usunąć. Wpisz lub zaimportuj HTML, aby wysyłać podpis z formatowaniem.</string>
     <string name="settings_signature_supporting_html">Zapisano wersję HTML; zostanie wysłana bez zmian, jeśli nie zmodyfikujesz podpisu w wiadomości.</string>
     <string name="settings_signature_preview_title">W wiadomości będzie to wyglądać tak:</string>
     <string name="settings_signature_duplicate_delimiter">Twój podpis już zaczyna się wierszem „-- ”, więc pojawi się dwa razy.</string>

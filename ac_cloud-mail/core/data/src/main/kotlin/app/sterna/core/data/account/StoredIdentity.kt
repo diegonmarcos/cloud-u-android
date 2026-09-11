@@ -90,7 +90,8 @@ data class StoredIdentity(
      *  into [signatureHtml] + flattened text. Idempotent otherwise. */
     fun withSplitSignature(): StoredIdentity =
         if (signatureHtml.isBlank() && looksLikeHtml(signature)) {
-            copy(signature = htmlToText(signature), signatureHtml = signature)
+            // Link targets kept, for [StoredSignature.of]'s reason: this is the text/plain half.
+            copy(signature = htmlToText(signature, keepLinkTargets = true), signatureHtml = signature)
         } else {
             this
         }

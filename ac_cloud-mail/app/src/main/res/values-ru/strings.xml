@@ -537,7 +537,7 @@
     <string name="settings_email_invalid">Введите корректный адрес эл. почты.</string>
     <string name="settings_email_not_server">Ваш сервер может отклонить отправку с этого адреса.</string>
     <string name="settings_identity_not_created">Не удалось добавить %1$s на сервере: %2$s. Адрес сохранён только на этом телефоне.</string>
-    <string name="settings_signature_supporting">Обычный текст, добавляется в письмо при написании — там его можно изменить или удалить, как любой другой текст.</string>
+    <string name="settings_signature_supporting">Эта подпись — обычный текст: она добавляется в текст письма при написании, и там её можно изменить или удалить. Введите или импортируйте HTML, чтобы отправлять подпись с форматированием.</string>
     <string name="settings_signature_supporting_html">Сохранена HTML-версия: она отправляется как есть, если вы не измените подпись в письме.</string>
     <string name="settings_signature_preview_title">В письме это будет выглядеть так:</string>
     <string name="settings_signature_duplicate_delimiter">Ваша подпись уже начинается со строки «-- », поэтому она появится дважды.</string>

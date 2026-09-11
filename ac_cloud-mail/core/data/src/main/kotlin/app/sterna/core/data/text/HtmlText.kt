@@ -19,14 +19,22 @@ fun htmlEscapeMultiline(s: String): String =
 /**
  * Best-effort HTML→plain-text for quoting/editing an HTML-only original and for flattening an
  * imported signature. Converts block boundaries to newlines so paragraphs/rows don't collapse.
+ *
+ * [keepLinkTargets] spells each link's ADDRESS out beside its label, `Whatsapp <https://wa.me/…>`.
+ * Off by default, and deliberately: quoting a received message loses nothing when a href goes, because
+ * the reader still holds the html part and renders it. A SIGNATURE's flattened half is the opposite
+ * case — it is the only place those addresses appear in the `text/plain` alternative, so dropping them
+ * ships a recipient four words that used to be links and now go nowhere. Same flattener either way, so
+ * the two halves of one message cannot disagree about anything else.
  */
-fun htmlToText(html: String): String =
+fun htmlToText(html: String, keepLinkTargets: Boolean = false): String =
     html
         .replace(Regex("(?is)<(script|style|head)\\b.*?</\\1>"), "")
         // Source layout between tags is not content: a signature table written one row per line
         // would otherwise flatten with a blank line between every row. Only whitespace that spans
         // a line break is dropped, so a deliberate space between two inline tags survives.
         .replace(Regex(">[ \\t]*\\r?\\n[ \\t\\r\\n]*<"), "><")
+        .let { if (keepLinkTargets) spellOutLinkTargets(it) else it }
         .replace(Regex("(?i)<br\\s*/?>"), "\n")
         .replace(Regex("(?i)</(p|div|li|tr|h[1-6]|blockquote|ul|ol|table)\\s*>"), "\n")
         // A table cell boundary is a column break, not a paragraph one: keep the row on one line.
@@ -36,6 +44,51 @@ fun htmlToText(html: String): String =
         .replace(Regex("[ \\t]+\n"), "\n")
         .replace(Regex("\n{3,}"), "\n\n")
         .trim()
+
+/**
+ * Every `<a href>` rewritten as `label &lt;address&gt;`, for the [htmlToText] pass that keeps targets.
+ *
+ * The brackets are emitted ESCAPED and decoded later by [unescapeEntities], because the pass that
+ * follows this one strips `<…>` as markup: written literally, `<https://wa.me/33…>` is indentical in
+ * identical in shape to a tag and the address would be deleted by the very next line — the failure this function
+ * exists to prevent, reintroduced one step downstream.
+ *
+ * The LABEL is left as raw markup for the rest of the pass to flatten, so a `<b>Whatsapp</b>` inside
+ * the anchor is handled by the same rules as bold anywhere else.
+ */
+private fun spellOutLinkTargets(html: String): String =
+    ANCHOR.replace(html) { m ->
+        // Groups 1..3 are the three ways a href can be quoted; exactly one of them matched.
+        val href = m.groupValues.subList(1, 4).firstOrNull { it.isNotBlank() }?.trim().orEmpty()
+        val label = m.groupValues[4]
+        val text = htmlToText(label)
+        when {
+            // An anchor with no address, or none with a label to sit beside, is left exactly as it
+            // was: this pass may ADD an address, never remove or reword one.
+            href.isEmpty() || text.isBlank() -> m.value
+            // An address the sanitiser would strip off the html half must not be smuggled into the
+            // text half, where nothing sanitises it again and the two halves would then disagree.
+            !linkTargetSurvives(href) -> m.value
+            // The label already showing the address is the ordinary "https://acme.fr" line of a
+            // signature; repeating it there would print the same URL twice on one line.
+            namesTheSameTarget(text, href) -> m.value
+            else -> "$label &lt;$href&gt;"
+        }
+    }
+
+private val ANCHOR =
+    Regex("""(?is)<a\b[^>]*?\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))[^>]*>(.*?)</a\s*>""")
+
+/** Whether [label] already spells out [href], ignoring the parts a reader does not need to see. */
+private fun namesTheSameTarget(label: String, href: String): Boolean =
+    bareTarget(label) == bareTarget(href)
+
+private fun bareTarget(s: String): String =
+    s.trim().lowercase()
+        .removePrefix("https://").removePrefix("http://")
+        .removePrefix("mailto:").removePrefix("tel:")
+        .removePrefix("www.")
+        .trimEnd('/')
 
 /**
  * Decode HTML character references in [s]: common named ones plus every numeric reference

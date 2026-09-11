@@ -537,7 +537,7 @@
     <string name="settings_email_invalid">Saisissez une adresse e-mail valide.</string>
     <string name="settings_email_not_server">Votre serveur peut refuser l\'envoi depuis cette adresse.</string>
     <string name="settings_identity_not_created">Impossible d\'ajouter %1$s sur le serveur : %2$s. L\'adresse n\'est enregistrée que sur ce téléphone.</string>
-    <string name="settings_signature_supporting">Texte brut, ajouté au corps du message à la rédaction : modifiable ou supprimable comme n\'importe quel autre texte.</string>
+    <string name="settings_signature_supporting">Celle-ci est en texte brut : elle est ajoutée au corps du message à la rédaction, et vous pouvez l\'y modifier ou la supprimer. Saisissez ou importez du HTML pour envoyer une signature mise en forme.</string>
     <string name="settings_signature_supporting_html">Une version HTML est enregistrée ; elle est envoyée telle quelle si vous ne modifiez pas la signature dans le message.</string>
     <string name="settings_signature_preview_title">Dans un message, cela donnera :</string>
     <string name="settings_signature_duplicate_delimiter">Votre signature commence déjà par une ligne « -- » : elle apparaîtra donc en double.</string>

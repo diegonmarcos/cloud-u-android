@@ -304,6 +304,19 @@ private fun urlSchemeSurvives(value: String?, allowed: Set<String>): Boolean {
 }
 
 /**
+ * Whether [href] is a link target the policy above would KEEP on an `<a>`.
+ *
+ * Exported for the plain-text flattener, which spells a link's address out beside its label so the
+ * `text/plain` alternative does not ship four words that used to be links. The two alternatives of one
+ * message must name the same addresses (#90): an href THIS file strips off the html half — a
+ * `javascript:` URL, a `data:text/html` document — must not be written into the text half instead,
+ * where no sanitiser looks at it again. One policy, read from both sides, rather than a second scheme
+ * list that would drift out of step with this one.
+ */
+fun linkTargetSurvives(href: String?): Boolean =
+    urlSchemeSurvives(href, URL_ATTRIBUTE_SCHEMES.getValue("href"))
+
+/**
  * An attribute value written back into double quotes. `&` is deliberately NOT escaped: the value
  * came out of HTML and is already encoded, so escaping it again would turn a sender's `&amp;` into a
  * visible `&amp;`. Only what could end the attribute or open an element is touched.

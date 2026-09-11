@@ -537,7 +537,7 @@
     <string name="settings_email_invalid">Introduce una dirección de correo válida.</string>
     <string name="settings_email_not_server">Tu servidor podría rechazar el envío desde esta dirección.</string>
     <string name="settings_identity_not_created">No se pudo añadir %1$s en el servidor: %2$s. La dirección solo está guardada en este teléfono.</string>
-    <string name="settings_signature_supporting">Texto sin formato, añadido al cuerpo del mensaje al redactar: puedes editarlo o borrarlo allí como cualquier otro texto.</string>
+    <string name="settings_signature_supporting">Esta es de texto sin formato: se añade al cuerpo del mensaje al redactar y puedes editarla o borrarla allí. Escribe o importa HTML para enviar una firma con formato.</string>
     <string name="settings_signature_supporting_html">Se ha guardado una versión HTML; se envía tal cual si no modificas la firma en el mensaje.</string>
     <string name="settings_signature_preview_title">En un mensaje se verá así:</string>
     <string name="settings_signature_duplicate_delimiter">Tu firma ya empieza por una línea «-- », así que aparecerá dos veces.</string>

@@ -828,7 +828,7 @@
     <string name="settings_signature_name_label">Signature name</string>
     <string name="settings_signature_add">Add signature</string>
     <string name="settings_signature_default">Use by default</string>
-    <string name="settings_signature_supporting">Plain text, added to the message body when you write — edit or remove it there like any other text.</string>
+    <string name="settings_signature_supporting">This one is plain text: it goes into the message body when you write, and you can edit or remove it there. Type or import HTML to send a formatted signature.</string>
     <string name="settings_signature_supporting_html">An HTML version is saved; it is sent as is if you don\'t change the signature in the message.</string>
     <string name="settings_signature_preview_title">In a message it will read:</string>
     <string name="settings_signature_duplicate_delimiter">Your signature already starts with a “-- ” line, so it will appear twice.</string>
