@@ -1,12 +1,23 @@
 package com.diegonmarcos.cloudwriter
 
-import android.text.InputType
-import android.view.Gravity
-import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import android.widget.LinearLayout
-import android.widget.TextView
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.diegonmarcos.cloudwriter.ui.ActionRow
+import com.diegonmarcos.cloudwriter.ui.ChoiceRow
+import com.diegonmarcos.cloudwriter.ui.PageGutter
+import com.diegonmarcos.cloudwriter.ui.SectionHeader
+import com.diegonmarcos.cloudwriter.ui.ToggleRow
+import com.diegonmarcos.cloudwriter.ui.WriterTextField
 
 /**
  * PAGE 1 — "Mejoras de texto" / Text Enhancements.
@@ -32,93 +43,119 @@ import android.widget.TextView
  * that happened to match today and was a literal would be a lie a week later, and this is the third
  * time that class of defect has been paid for here.
  *
+ * HOW "RE-READ AFTER EVERY PICK" WORKS NOW, because the mechanism changed even though the
+ * behaviour did not. The View version held the preview's TextView and re-pointed it by hand from
+ * [refreshPrompt]; forgetting that call on one menu was a live failure mode and is why the tester
+ * counts the call sites. Here [refreshPrompt] bumps [promptGeneration], and [PageContent] READS
+ * that state — which is what subscribes this page to it, so a bump re-runs the body and the row is
+ * handed a freshly composed prompt. The four shaping menus still call [refreshPrompt] and the
+ * tester still counts them; what they notify is a state rather than a widget.
+ *
  * ROW 8 ACTUALLY RUNS. It goes through [WriterToolRunner], which is the same object and the same
  * binder call the main screen uses, so "it worked in the test box" and "it worked on the button"
  * cannot disagree.
  */
 class TextEnhanceActivity : WriterSettingsActivity() {
 
-    private lateinit var runner: WriterToolRunner
-    private lateinit var prompt: TextView
+    private val runner by lazy { WriterToolRunner(this) }
+
+    /** Bumped by [refreshPrompt]; read by [PageContent], which is what makes the preview follow. */
+    private val promptGeneration: MutableState<Int> = mutableStateOf(0)
+
+    private val testInput: MutableState<String> = mutableStateOf("")
+    private val testOutput: MutableState<String> = mutableStateOf("")
+    private val testStatus: MutableState<String?> = mutableStateOf(null)
 
     override fun pageTitle(): String = getString(R.string.settings_screen_enhance)
 
-    override fun buildPage() {
-        runner = WriterToolRunner(this)
+    @Composable
+    override fun PageContent() {
+        Group {
+            ChoiceRow(
+                getString(R.string.enhance_scope_title),
+                getString(R.string.enhance_scope_summary),
+                listOf(
+                    getString(R.string.enhance_scope_auto) to WriterPrefs.SCOPE_AUTO,
+                    getString(R.string.enhance_scope_selection) to WriterPrefs.SCOPE_SELECTION,
+                    getString(R.string.enhance_scope_field) to WriterPrefs.SCOPE_FIELD,
+                ),
+                WriterPrefs.enhanceScope(this),
+                WriterPrefs.DEFAULT_ENHANCE_SCOPE,
+            ) { WriterPrefs.put(this, WriterPrefs.KEY_ENHANCE_SCOPE, it) }
 
-        listRow(
-            getString(R.string.enhance_scope_title),
-            getString(R.string.enhance_scope_summary),
-            listOf(
-                getString(R.string.enhance_scope_auto) to WriterPrefs.SCOPE_AUTO,
-                getString(R.string.enhance_scope_selection) to WriterPrefs.SCOPE_SELECTION,
-                getString(R.string.enhance_scope_field) to WriterPrefs.SCOPE_FIELD,
-            ),
-            WriterPrefs.enhanceScope(this),
-            WriterPrefs.DEFAULT_ENHANCE_SCOPE,
-        ) { WriterPrefs.put(this, WriterPrefs.KEY_ENHANCE_SCOPE, it) }
+            ChoiceRow(
+                getString(R.string.enhance_style_title),
+                getString(R.string.enhance_style_summary),
+                WriterRegistry.styles.map { it.label to it.id },
+                WriterPrefs.enhanceStyleId(this),
+                WriterRegistry.defaultStyle,
+            ) { WriterPrefs.put(this, WriterPrefs.KEY_ENHANCE_STYLE, it); refreshPrompt() }
 
-        listRow(
-            getString(R.string.enhance_style_title),
-            getString(R.string.enhance_style_summary),
-            WriterRegistry.styles.map { it.label to it.id },
-            WriterPrefs.enhanceStyleId(this),
-            WriterRegistry.defaultStyle,
-        ) { WriterPrefs.put(this, WriterPrefs.KEY_ENHANCE_STYLE, it); refreshPrompt() }
+            // Tone and length are extra prompt lines appended after the style; their "keep" entries
+            // carry an empty prompt, so an untouched page sends exactly the plain style prompt.
+            ChoiceRow(
+                getString(R.string.enhance_tone_title),
+                getString(R.string.enhance_tone_summary),
+                WriterRegistry.tones.map { it.label to it.id },
+                WriterPrefs.enhanceToneId(this),
+                WriterRegistry.defaultTone,
+            ) { WriterPrefs.put(this, WriterPrefs.KEY_ENHANCE_TONE, it); refreshPrompt() }
 
-        // Tone and length are extra prompt lines appended after the style; their "keep" entries
-        // carry an empty prompt, so an untouched page sends exactly the plain style prompt.
-        listRow(
-            getString(R.string.enhance_tone_title),
-            getString(R.string.enhance_tone_summary),
-            WriterRegistry.tones.map { it.label to it.id },
-            WriterPrefs.enhanceToneId(this),
-            WriterRegistry.defaultTone,
-        ) { WriterPrefs.put(this, WriterPrefs.KEY_ENHANCE_TONE, it); refreshPrompt() }
+            ChoiceRow(
+                getString(R.string.enhance_length_title),
+                getString(R.string.enhance_length_summary),
+                WriterRegistry.lengths.map { it.label to it.id },
+                WriterPrefs.enhanceLengthId(this),
+                WriterRegistry.defaultLength,
+            ) { WriterPrefs.put(this, WriterPrefs.KEY_ENHANCE_LENGTH, it); refreshPrompt() }
 
-        listRow(
-            getString(R.string.enhance_length_title),
-            getString(R.string.enhance_length_summary),
-            WriterRegistry.lengths.map { it.label to it.id },
-            WriterPrefs.enhanceLengthId(this),
-            WriterRegistry.defaultLength,
-        ) { WriterPrefs.put(this, WriterPrefs.KEY_ENHANCE_LENGTH, it); refreshPrompt() }
+            // Picking anything but "keep" turns the enhancement into a translation as well; the
+            // registry lists the five starred languages first, then the rest alphabetically, and
+            // JSONObject keeps insertion order, so that IS the menu order.
+            ChoiceRow(
+                getString(R.string.enhance_language_title),
+                getString(R.string.enhance_language_summary),
+                WriterRegistry.languages.map { it.label to it.id },
+                WriterPrefs.enhanceLanguageId(this),
+                WriterRegistry.defaultLanguage,
+            ) { WriterPrefs.put(this, WriterPrefs.KEY_ENHANCE_LANGUAGE, it); refreshPrompt() }
 
-        // Picking anything but "keep" turns the enhancement into a translation as well; the
-        // registry lists the five starred languages first, then the rest alphabetically, and
-        // JSONObject keeps insertion order, so that IS the menu order.
-        listRow(
-            getString(R.string.enhance_language_title),
-            getString(R.string.enhance_language_summary),
-            WriterRegistry.languages.map { it.label to it.id },
-            WriterPrefs.enhanceLanguageId(this),
-            WriterRegistry.defaultLanguage,
-        ) { WriterPrefs.put(this, WriterPrefs.KEY_ENHANCE_LANGUAGE, it); refreshPrompt() }
+            ToggleRow(
+                getString(R.string.enhance_toolbar_title),
+                getString(R.string.enhance_toolbar_summary),
+                WriterPrefs.flag(this, WriterPrefs.KEY_ENHANCE_TOOLBAR_KEY, WriterPrefs.DEFAULT_ENHANCE_TOOLBAR_KEY),
+            ) { WriterPrefs.putFlag(this, WriterPrefs.KEY_ENHANCE_TOOLBAR_KEY, it) }
+        }
+        Note(getString(R.string.enhance_toolbar_writer_note))
 
-        switchRow(
-            getString(R.string.enhance_toolbar_title),
-            getString(R.string.enhance_toolbar_summary),
-            WriterPrefs.flag(this, WriterPrefs.KEY_ENHANCE_TOOLBAR_KEY, WriterPrefs.DEFAULT_ENHANCE_TOOLBAR_KEY),
-        ) { WriterPrefs.putFlag(this, WriterPrefs.KEY_ENHANCE_TOOLBAR_KEY, it) }
-        note(getString(R.string.enhance_toolbar_writer_note))
+        // THE READ THAT MAKES THE PREVIEW FOLLOW THE MENUS. Naming this state here subscribes this
+        // composition to refreshPrompt(), so a pick on any of the four shaping menus above re-runs
+        // PageContent and the row below is handed a freshly composed prompt. It looks like a
+        // statement that does nothing and it is the entire update mechanism: delete it and every
+        // menu goes on storing its value while the preview silently freezes, which is precisely
+        // the "indistinguishable from a hardcoded paragraph" defect this page has shipped before.
+        promptGeneration.value
 
-        prompt = readOnlyRow(
-            getString(R.string.enhance_prompt_title),
-            getString(R.string.enhance_prompt_summary),
-            WriterPrefs.enhancePrompt(this),
-        )
+        Group {
+            ReadOnlyRow(
+                getString(R.string.enhance_prompt_title),
+                getString(R.string.enhance_prompt_summary),
+                WriterPrefs.enhancePrompt(this),
+            )
+        }
 
-        addTestBox()
+        TestBox()
     }
 
     /**
-     * Recompose the preview from the settings, through the same call a run makes.
+     * Tell the preview its inputs moved.
      *
      * Not "append the new line" and not "rebuild the string from the ids I just wrote": one
-     * composition rule, in [WriterRegistry.enhancePrompt], read from the store the run reads.
+     * composition rule, in [WriterRegistry.enhancePrompt], read from the store the run reads. This
+     * only invalidates; the recomposition is what re-reads it.
      */
     private fun refreshPrompt() {
-        prompt.text = WriterPrefs.enhancePrompt(this)
+        promptGeneration.value = promptGeneration.value + 1
     }
 
     /**
@@ -130,73 +167,57 @@ class TextEnhanceActivity : WriterSettingsActivity() {
      * Text Enhance button does, including the refusals — an empty box and a run already in flight
      * each answer with a sentence rather than with nothing.
      */
-    private fun addTestBox() {
-        val input = EditText(this).apply {
-            hint = getString(R.string.enhance_test_hint)
-            setTextColor(BODY)
-            setHintTextColor(CAPTION)
-            textSize = 15f
-            gravity = Gravity.TOP or Gravity.START
-            minLines = 3
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-        }
-        val status = TextView(this).apply {
-            setTextColor(CAPTION)
-            textSize = 12f
-            visibility = View.GONE
-        }
-        val output = EditText(this).apply {
-            hint = getString(R.string.enhance_test_output)
-            setTextColor(BODY)
-            setHintTextColor(CAPTION)
-            textSize = 15f
-            gravity = Gravity.TOP or Gravity.START
-            minLines = 3
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
-        }
-        val run = Button(this).apply {
-            text = getString(R.string.enhance_test_run)
-            setOnClickListener {
-                status.text = getString(R.string.working, getString(R.string.tool_enhance))
-                status.visibility = View.VISIBLE
-                runner.run(WriterTool.ENHANCE, input.text.toString()) { outcome ->
-                    val produced = outcome.text
-                    if (produced != null) {
-                        output.setText(produced)
-                        status.text = getString(R.string.done, getString(R.string.tool_enhance))
-                    } else {
-                        // The engine's own reason, verbatim. A generic apology in its place is how
-                        // a provider outage, a missing key and an empty box become one state.
-                        status.text = outcome.error ?: getString(R.string.run_no_reason)
-                    }
+    @Composable
+    private fun TestBox() {
+        SectionHeader(getString(R.string.enhance_test_title), Modifier.padding(horizontal = PageGutter))
+        Group {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = PageGutter, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    getString(R.string.enhance_test_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                WriterTextField(
+                    value = testInput.value,
+                    onValueChange = { testInput.value = it },
+                    label = getString(R.string.enhance_test_hint),
+                    minLines = 3,
+                )
+                ActionRow {
+                    Button(onClick = { runTest() }) { Text(getString(R.string.enhance_test_run)) }
                 }
+                testStatus.value?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                WriterTextField(
+                    value = testOutput.value,
+                    onValueChange = { testOutput.value = it },
+                    label = getString(R.string.enhance_test_output),
+                    minLines = 3,
+                )
             }
         }
-        page.addView(
-            LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(0, PAD / 2, 0, PAD / 2)
-                addView(heading(getString(R.string.enhance_test_title)))
-                addView(caption(getString(R.string.enhance_test_summary)))
-                addView(input)
-                addView(run)
-                addView(status)
-                addView(output)
+    }
+
+    private fun runTest() {
+        testStatus.value = getString(R.string.working, getString(R.string.tool_enhance))
+        runner.run(WriterTool.ENHANCE, testInput.value) { outcome ->
+            val produced = outcome.text
+            if (produced != null) {
+                testOutput.value = produced
+                testStatus.value = getString(R.string.done, getString(R.string.tool_enhance))
+            } else {
+                // The engine's own reason, verbatim. A generic apology in its place is how a
+                // provider outage, a missing key and an empty box become one state.
+                testStatus.value = outcome.error ?: getString(R.string.run_no_reason)
             }
-        )
-    }
-
-    private fun heading(text: String) = TextView(this).apply {
-        this.text = text
-        setTextColor(HEADING)
-        textSize = 16f
-        setPadding(0, PAD / 3, 0, PAD / 6)
-    }
-
-    private fun caption(text: String) = TextView(this).apply {
-        this.text = text
-        setTextColor(CAPTION)
-        textSize = 12f
-        setPadding(0, 0, 0, PAD / 3)
+        }
     }
 }

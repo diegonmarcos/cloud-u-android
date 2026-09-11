@@ -58,11 +58,11 @@ RES = APP + "/app/src/main/res"
 BREAKS = [
     # ── the four shapes of task 209 ──────────────────────────────────────────
     ("a page is pointed at the keyboard's own settings screen", SRC + "/MainActivity.kt",
-     ("            page.addView(button(getString(label)) { startActivity(Intent(this, screen)) })",
-      "            page.addView(button(getString(label)) {\n"
-      "                startActivity(Intent().setClassName(\"com.diegonmarcos.cloudkeyboard\",\n"
-      "                    \"helium314.keyboard.settings.SettingsActivity\"))\n"
-      "            })"),
+     ("                        onClick = { startActivity(Intent(this@MainActivity, page.screen)) },",
+      "                        onClick = {\n"
+      "                            startActivity(Intent().setClassName(\"com.diegonmarcos.cloudkeyboard\",\n"
+      "                                \"helium314.keyboard.settings.SettingsActivity\"))\n"
+      "                        },"),
      "P2 this application's code names 'helium314'"),
 
     ("the settings file is renamed to the one the translate library shares", SRC + "/WriterPrefs.kt",
@@ -71,8 +71,8 @@ BREAKS = [
      "P2 WriterPrefs.FILE is not the private text_tools file"),
 
     ("a page opens a preference store of its own", SRC + "/GrammarCheckActivity.kt",
-     ("    override fun buildPage() {",
-      "    override fun buildPage() {\n"
+     ("    override fun PageContent() {",
+      "    override fun PageContent() {\n"
       "        val other = getSharedPreferences(\"shared_text_tools\", android.content.Context.MODE_PRIVATE)\n"
       "        other.getString(\"grammar_mode\", null)"),
      "getSharedPreferences calls (expected exactly 1"),
@@ -98,8 +98,17 @@ BREAKS = [
       ""),
      "P1 GrammarCheckActivity is not declared in this manifest"),
 
+    # The four pages are now one list of Page(label, summary, icon, screen) entries rather than
+    # one list of `label to class` pairs, so what is removed here is the whole entry. The assertion
+    # it must still trip is unchanged: MainActivity has to NAME every activity the manifest
+    # declares, or the owner has a settings page nothing on the phone can open.
     ("the main screen stops opening one of the pages", SRC + "/MainActivity.kt",
-     ("            R.string.settings_screen_translation to TranslationActivity::class.java,\n", ""),
+     ("                    Page(\n"
+      "                        R.string.settings_screen_translation,\n"
+      "                        R.string.settings_screen_translation_summary,\n"
+      "                        Icons.Filled.Translate,\n"
+      "                        TranslationActivity::class.java,\n"
+      "                    ),\n", ""),
      "P1 the main screen never starts TranslationActivity"),
 
     # ── the preview ─────────────────────────────────────────────────────────
@@ -108,8 +117,10 @@ BREAKS = [
       '            "You are a text rewriting engine inside a phone keyboard.",'),
      "P4 the Text Enhancements page does not build its preview"),
 
+    # Deleting the bare `promptGeneration.value` read is the Compose shape of this
+    # regression, and it is a realistic one precisely because the line looks inert.
     ("the preview stops being recomposed when a setting changes", SRC + "/TextEnhanceActivity.kt",
-     ("        prompt.text = WriterPrefs.enhancePrompt(this)", "        // left as it was"),
+     ("        promptGeneration.value\n", ""),
      "P4 nothing re-reads the preview after a pick"),
 
     ("a menu that shapes the prompt is wired without the preview", SRC + "/TextEnhanceActivity.kt",
@@ -119,8 +130,8 @@ BREAKS = [
 
     # ── the try-it box ──────────────────────────────────────────────────────
     ("the try-it box becomes decorative", SRC + "/TextEnhanceActivity.kt",
-     ("                runner.run(WriterTool.ENHANCE, input.text.toString()) { outcome ->",
-      "                output.setText(input.text.toString()); if (false) runner.run(WriterTool.SUMMARY, \"\") { outcome ->"),
+     ("        runner.run(WriterTool.ENHANCE, testInput.value) { outcome ->",
+      "        testOutput.value = testInput.value; if (false) runner.run(WriterTool.SUMMARY, \"\") { outcome ->"),
      "P5 the try-it box does not run anything through WriterToolRunner"),
 
     # ── LanguageTool and the mesh ───────────────────────────────────────────
@@ -140,8 +151,8 @@ BREAKS = [
      "P7/217 the price column scales its number"),
 
     ("the as-of date is dropped from under the table", SRC + "/AiRoutingActivity.kt",
-     ("        note(getString(R.string.ai_pricing_baked, provider.pricingAsOf ?: \"?\", provider.label))",
-      "        note(provider.label)"),
+     ("        Note(getString(R.string.ai_pricing_baked, provider.pricingAsOf ?: \"?\", provider.label))",
+      "        Note(provider.label)"),
      "P7/219 the table does not print the date"),
 
     ("a column is added without a width", SRC + "/AiRoutingActivity.kt",

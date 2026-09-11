@@ -235,7 +235,15 @@ if printf '%s\n' "$ENH" | grep -A1 'getString(R.string.enhance_prompt_summary),'
 else
     fail "P4 the Text Enhancements page does not build its preview from WriterPrefs.enhancePrompt(this)"
 fi
-if printf '%s' "$ENH" | grep -q 'prompt.text = WriterPrefs.enhancePrompt(this)'; then
+# THE SUBSCRIBING READ. The page is Compose now, so "re-read it after a pick" is no
+# longer a re-assignment of a TextView's text — it is PageContent naming the state
+# refreshPrompt() bumps, which is what makes a bump re-run the body and hand the row
+# a freshly composed prompt. That bare statement is the entire update mechanism and
+# looks exactly like a line that does nothing, so it is the first thing a tidy-up
+# would delete. Anchored to the whole line: a loose match would also be satisfied by
+# the two reads inside refreshPrompt() itself, which is the assertion checking its
+# own plumbing rather than the page.
+if printf '%s\n' "$ENH" | grep -qx '        promptGeneration.value'; then
     pass "P4 and recomposes it when a setting changes, so the paragraph moves under the owner's thumb"
 else
     fail "P4 nothing re-reads the preview after a pick; it would only update on reopening, which is indistinguishable from a literal"

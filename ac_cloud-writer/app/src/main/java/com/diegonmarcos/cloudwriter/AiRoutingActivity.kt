@@ -1,5 +1,11 @@
 package com.diegonmarcos.cloudwriter
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.diegonmarcos.cloudwriter.ui.ChoiceRow
 import java.util.Locale
 
 /**
@@ -39,6 +45,13 @@ import java.util.Locale
  *        sort is by size then precision then name — presentation only; a run resolves the stored
  *        model id, never a row position.
  *
+ * THE UI ENHANCEMENT DID NOT TOUCH ANY OF THE ABOVE, AND THAT WAS THE HARD CONSTRAINT ON IT.
+ * Restyling a table is the most natural way in the world to undo 214 (let a cell wrap so it "fits")
+ * or 217 (tidy the number on the way to the cell), so the column list, the widths, the dim
+ * boundary, the format string and the as-of note are character-for-character what they were; what
+ * changed is that the cells are Material 3 type-scale styles and colour roles instead of a 12f
+ * literal and a hex constant. The table's own contract is restated on [WriterSettingsActivity.Table].
+ *
  * DIVERGENCE — ROW 3. The keyboard's API key row is an editable field. cloud-writer holds no
  * credential and has no preference slot for one; its own tester fails the build if a token-shaped
  * key ever appears in [WriterPrefs], and the manifest publishes no service precisely so the key
@@ -49,57 +62,68 @@ class AiRoutingActivity : WriterSettingsActivity() {
 
     override fun pageTitle(): String = getString(R.string.settings_screen_ai_routing)
 
-    override fun buildPage() {
+    @Composable
+    override fun PageContent() {
+        // The provider owns the model list and the price table below, so both are read during
+        // composition and both redraw when it changes. The View version had to tear the whole page
+        // down and rebuild it by hand to get the same effect; leaving them showing the previous
+        // provider's rows would offer a model this one has never heard of, and that route fails at
+        // call time with no screen having said so.
+        var generation by remember { mutableStateOf(0) }
+        generation.let { }
         val provider = WriterRegistry.provider(WriterPrefs.providerId(this))
 
-        listRow(
-            getString(R.string.ai_provider_title),
-            getString(R.string.ai_provider_summary),
-            WriterRegistry.providers.map { it.label to it.id },
-            provider.id,
-            WriterRegistry.defaultProvider,
-        ) {
-            WriterPrefs.put(this, WriterPrefs.KEY_PROVIDER, it)
-            // The model list and the price table BELONG to the provider. Leaving them showing the
-            // previous provider's rows would offer a model this one has never heard of, and that
-            // route fails at call time with no screen having said so.
-            rebuild()
+        Group {
+            ChoiceRow(
+                getString(R.string.ai_provider_title),
+                getString(R.string.ai_provider_summary),
+                WriterRegistry.providers.map { it.label to it.id },
+                provider.id,
+                WriterRegistry.defaultProvider,
+            ) {
+                WriterPrefs.put(this, WriterPrefs.KEY_PROVIDER, it)
+                generation++
+            }
+
+            val models = WriterRegistry.byModelSize(provider.models)
+            ChoiceRow(
+                getString(R.string.ai_model_title),
+                null,
+                models.map { label(it) to it.id },
+                WriterPrefs.modelId(this, provider.id),
+                provider.defaultModel,
+            ) { WriterPrefs.putModel(this, provider.id, it) }
         }
 
-        // The two preambles every feature routed through here prepends. Stores nothing, and is
-        // read out of the registry rather than restated, for the same reason the Enhance page's
-        // prompt preview is: a second copy of a paragraph is a paragraph that will disagree.
-        readOnlyRow(
-            getString(R.string.ai_preamble_title),
-            getString(R.string.ai_preamble_summary),
-            getString(R.string.ai_preamble_rewrite) + "\n\n" + WriterRegistry.rewritePreamble +
-                "\n\n" + getString(R.string.ai_preamble_summary_label) + "\n\n" + WriterRegistry.summaryPreamble,
-        )
+        Group {
+            // The two preambles every feature routed through here prepends. Stores nothing, and is
+            // read out of the registry rather than restated, for the same reason the Enhance page's
+            // prompt preview is: a second copy of a paragraph is a paragraph that will disagree.
+            ReadOnlyRow(
+                getString(R.string.ai_preamble_title),
+                getString(R.string.ai_preamble_summary),
+                getString(R.string.ai_preamble_rewrite) + "\n\n" + WriterRegistry.rewritePreamble +
+                    "\n\n" + getString(R.string.ai_preamble_summary_label) + "\n\n" + WriterRegistry.summaryPreamble,
+            )
 
-        readOnlyRow(
-            getString(R.string.ai_token_title),
-            null,
-            getString(R.string.ai_token_writer_summary),
-        )
+            ReadOnlyRow(
+                getString(R.string.ai_token_title),
+                null,
+                getString(R.string.ai_token_writer_summary),
+            )
+        }
 
         val models = WriterRegistry.byModelSize(provider.models)
-        listRow(
-            getString(R.string.ai_model_title),
-            null,
-            models.map { label(it) to it.id },
-            WriterPrefs.modelId(this, provider.id),
-            provider.defaultModel,
-        ) { WriterPrefs.putModel(this, provider.id, it) }
-
-        if (WriterRegistry.hasPricing(provider)) priceTable(provider, models)
-        else note(getString(R.string.ai_pricing_none, provider.label))
+        if (WriterRegistry.hasPricing(provider)) PriceTable(provider, models)
+        else Note(getString(R.string.ai_pricing_none, provider.label))
     }
 
-    private fun priceTable(provider: WriterRegistry.Provider, models: List<WriterRegistry.Model>) {
-        note(getString(R.string.ai_pricing_title))
-        note(getString(R.string.ai_pricing_summary))
+    @Composable
+    private fun PriceTable(provider: WriterRegistry.Provider, models: List<WriterRegistry.Model>) {
+        Note(getString(R.string.ai_pricing_title))
+        Note(getString(R.string.ai_pricing_summary))
         val unknown = getString(R.string.ai_table_unknown)
-        table(
+        Table(
             headers = listOf(
                 getString(R.string.ai_pricing_col_model),
                 getString(R.string.ai_pricing_col_in),
@@ -130,7 +154,7 @@ class AiRoutingActivity : WriterSettingsActivity() {
             // page is for and what a row shows before it has been scrolled.
             dimFrom = 3,
         )
-        note(getString(R.string.ai_pricing_baked, provider.pricingAsOf ?: "?", provider.label))
+        Note(getString(R.string.ai_pricing_baked, provider.pricingAsOf ?: "?", provider.label))
     }
 
     /** The registry's short readable name, suffixed for open-weight models; the exact id is the last column. */

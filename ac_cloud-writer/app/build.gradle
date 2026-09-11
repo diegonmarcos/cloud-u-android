@@ -1,5 +1,9 @@
 apply plugin: 'com.android.application'
 apply plugin: 'org.jetbrains.kotlin.android'
+// THE COMPOSE COMPILER. Pinned to the Kotlin version in the root build.gradle,
+// because since Kotlin 2.0 it ships with Kotlin rather than as a separately
+// versioned artifact with a compatibility table to keep in step.
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 def buildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
 def a = buildJson.android
@@ -65,7 +69,7 @@ android {
         buildConfigField "String", "WRITER_AI_ROUTING_B64", "\"${writerAiB64}\""
     }
 
-    buildFeatures { buildConfig = true }
+    buildFeatures { buildConfig = true; compose = true }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -90,4 +94,27 @@ dependencies {
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
+
+    // JETPACK COMPOSE + MATERIAL 3, the same stack and the same BOM
+    // ac_cloud-mail resolves. cloud-writer drew every screen by hand out of
+    // LinearLayout and addView with a hardcoded four-colour palette and no
+    // theme, which is what an app inherits when its screens are copied from an
+    // IME: cloud-keyboard cannot use a layout file or an app theme, and
+    // cloud-writer is not an IME and never had that constraint.
+    //
+    // A BOM rather than per-artifact versions, so ui, material3 and tooling
+    // cannot be bumped independently into a combination nobody has built. The
+    // version is build.json::toolchain.compose_bom and the toolchain tester
+    // fails the build if the two disagree.
+    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-graphics'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.material3:material3'
+    // The per-feature icons on the home screen's four cards. The core set does
+    // not carry Translate or Spellcheck, and a feature card without its icon is
+    // the row of bare buttons this change exists to replace.
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.activity:activity-compose:1.9.3'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
 }

@@ -2,6 +2,11 @@ package com.diegonmarcos.cloudwriter
 
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
+import com.diegonmarcos.cloudwriter.ui.ChoiceRow
+import com.diegonmarcos.cloudwriter.ui.ToggleRow
 import java.util.Locale
 import java.util.concurrent.Executors
 
@@ -32,9 +37,15 @@ import java.util.concurrent.Executors
  */
 class TranslationActivity : WriterSettingsActivity() {
 
-    /** The engine's own list once it answers; null until then, and the fallback is drawn meanwhile. */
-    @Volatile
-    private var engineLanguages: List<String>? = null
+    /**
+     * The engine's own list once it answers; the fallback is drawn meanwhile.
+     *
+     * A Compose state rather than a @Volatile field with a hand-written page rebuild: the row below
+     * READS it during composition, so the arrival of the real list redraws the picker because there
+     * is nothing else it could do. The View version had to call rebuild() from the worker's post,
+     * guarded against looping.
+     */
+    private val engineLanguages: MutableState<List<String>?> = mutableStateOf(null)
 
     /** ONE for the whole page. A runner per call would be a second binding to the same service. */
     private val runner by lazy { WriterToolRunner(this) }
@@ -44,64 +55,66 @@ class TranslationActivity : WriterSettingsActivity() {
 
     override fun pageTitle(): String = getString(R.string.settings_screen_translation)
 
-    override fun buildPage() {
-        category(getString(R.string.translate_category_behavior))
+    @Composable
+    override fun PageContent() {
+        Category(getString(R.string.translate_category_behavior))
 
-        // "" is a real stored value meaning "let the engine decide", and it is the first entry
-        // rather than a missing one: a picker whose default is absent cannot show what is set.
-        val tags = engineLanguages ?: WriterRegistry.translateFallbackLanguages
-        val items = listOf(getString(R.string.translate_default_target_active) to "") +
-            tags.sortedBy { Locale(it).displayLanguage }.map { languageName(it) to it }
-        listRow(
-            getString(R.string.translate_default_target_title),
-            null,
-            items,
-            WriterPrefs.translateTarget(this),
-            "",
-        ) { WriterPrefs.put(this, WriterPrefs.KEY_TRANSLATE_TARGET, it) }
+        Group {
+            // "" is a real stored value meaning "let the engine decide", and it is the first entry
+            // rather than a missing one: a picker whose default is absent cannot show what is set.
+            val tags = engineLanguages.value ?: WriterRegistry.translateFallbackLanguages
+            val items = listOf(getString(R.string.translate_default_target_active) to "") +
+                tags.sortedBy { Locale(it).displayLanguage }.map { languageName(it) to it }
+            ChoiceRow(
+                getString(R.string.translate_default_target_title),
+                null,
+                items,
+                WriterPrefs.translateTarget(this),
+                "",
+            ) { WriterPrefs.put(this, WriterPrefs.KEY_TRANSLATE_TARGET, it) }
 
-        switchRow(
-            getString(R.string.translate_auto_detect_title),
-            getString(R.string.translate_auto_detect_summary),
-            WriterPrefs.flag(this, WriterPrefs.KEY_TRANSLATE_AUTO_DETECT, WriterPrefs.DEFAULT_TRANSLATE_AUTO_DETECT),
-        ) { WriterPrefs.putFlag(this, WriterPrefs.KEY_TRANSLATE_AUTO_DETECT, it) }
+            ToggleRow(
+                getString(R.string.translate_auto_detect_title),
+                getString(R.string.translate_auto_detect_summary),
+                WriterPrefs.flag(this, WriterPrefs.KEY_TRANSLATE_AUTO_DETECT, WriterPrefs.DEFAULT_TRANSLATE_AUTO_DETECT),
+            ) { WriterPrefs.putFlag(this, WriterPrefs.KEY_TRANSLATE_AUTO_DETECT, it) }
 
-        listRow(
-            getString(R.string.translate_apply_mode_title),
-            null,
-            listOf(
-                getString(R.string.translate_apply_insert) to WriterPrefs.APPLY_INSERT,
-                getString(R.string.translate_apply_replace) to WriterPrefs.APPLY_REPLACE,
-            ),
-            WriterPrefs.string(this, WriterPrefs.KEY_TRANSLATE_APPLY_MODE, WriterPrefs.DEFAULT_TRANSLATE_APPLY_MODE),
-            WriterPrefs.DEFAULT_TRANSLATE_APPLY_MODE,
-        ) { WriterPrefs.put(this, WriterPrefs.KEY_TRANSLATE_APPLY_MODE, it) }
+            ChoiceRow(
+                getString(R.string.translate_apply_mode_title),
+                null,
+                listOf(
+                    getString(R.string.translate_apply_insert) to WriterPrefs.APPLY_INSERT,
+                    getString(R.string.translate_apply_replace) to WriterPrefs.APPLY_REPLACE,
+                ),
+                WriterPrefs.string(this, WriterPrefs.KEY_TRANSLATE_APPLY_MODE, WriterPrefs.DEFAULT_TRANSLATE_APPLY_MODE),
+                WriterPrefs.DEFAULT_TRANSLATE_APPLY_MODE,
+            ) { WriterPrefs.put(this, WriterPrefs.KEY_TRANSLATE_APPLY_MODE, it) }
 
-        switchRow(
-            getString(R.string.translate_live_commit_title),
-            getString(R.string.translate_live_commit_summary),
-            WriterPrefs.flag(this, WriterPrefs.KEY_TRANSLATE_LIVE_COMMIT, WriterPrefs.DEFAULT_TRANSLATE_LIVE_COMMIT),
-        ) { WriterPrefs.putFlag(this, WriterPrefs.KEY_TRANSLATE_LIVE_COMMIT, it) }
+            ToggleRow(
+                getString(R.string.translate_live_commit_title),
+                getString(R.string.translate_live_commit_summary),
+                WriterPrefs.flag(this, WriterPrefs.KEY_TRANSLATE_LIVE_COMMIT, WriterPrefs.DEFAULT_TRANSLATE_LIVE_COMMIT),
+            ) { WriterPrefs.putFlag(this, WriterPrefs.KEY_TRANSLATE_LIVE_COMMIT, it) }
+        }
 
-        note(getString(R.string.translate_writer_note))
-
-        askTheEngineForItsLanguages()
+        Note(getString(R.string.translate_writer_note))
     }
 
     /**
      * Replace the fallback list with the engine's real one.
      *
-     * BLOCKS — it is a binder call — so it runs on [worker] and the redraw is posted back. Asked
-     * once per page build, and only while the fallback is still what is on screen: a redraw that
-     * fired on every build would loop.
+     * BLOCKS — it is a binder call — so it runs on [worker] and the result is posted back to the
+     * main thread, where writing the state recomposes the picker. Asked ONCE, from onResume rather
+     * than from the page body: a binder call started during composition would be started again on
+     * every recomposition, which is a new bind per keystroke-equivalent redraw.
      */
-    private fun askTheEngineForItsLanguages() {
-        if (engineLanguages != null) return
+    override fun onResume() {
+        super.onResume()
+        if (engineLanguages.value != null) return
         worker.execute {
             val reported = runner.translateLanguages()
             if (reported.isEmpty()) return@execute
-            engineLanguages = reported
-            main.post { if (!isFinishing) rebuild() }
+            main.post { if (!isFinishing) engineLanguages.value = reported }
         }
     }
 

@@ -53,8 +53,11 @@
     <string name="settings_open">Abrir</string>
 
     <string name="settings_screen_enhance">Mejoras de texto</string>
+    <string name="settings_screen_enhance_summary">Estilo, tono, extensión e idioma del resultado de una reescritura, y la instrucción que se envía</string>
     <string name="settings_screen_translation">Traducción</string>
+    <string name="settings_screen_translation_summary">Idioma de destino predeterminado y cómo se aplica una traducción</string>
     <string name="settings_screen_grammar">Revisión gramatical</string>
+    <string name="settings_screen_grammar_summary">Modo de corrección, las correcciones que se aplican en el teléfono y el servidor de LanguageTool</string>
     <string name="settings_screen_ai_routing">Enrutamiento de modelos de IA</string>
     <string name="settings_screen_ai_routing_summary">Proveedor, clave de API y modelo que usan las Mejoras de texto, la Revisión gramatical (modo IA) y la Traducción</string>
 

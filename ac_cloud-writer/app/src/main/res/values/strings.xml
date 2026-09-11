@@ -80,8 +80,15 @@
     <string name="settings_open">Open</string>
 
     <string name="settings_screen_enhance">Text Enhancements</string>
+    <!-- The one-line descriptions under the four cards on the home screen. They exist
+         because four buttons carrying nothing but a page name told the owner nothing
+         about what any of them would do, on the screen he opens every time. Each says
+         what the page CONFIGURES, not what the tool does. -->
+    <string name="settings_screen_enhance_summary">Style, tone, length and output language of a rewrite, and the instruction that gets sent</string>
     <string name="settings_screen_translation">Translation</string>
+    <string name="settings_screen_translation_summary">Default target language, and how a translation is applied</string>
     <string name="settings_screen_grammar">Grammar check</string>
+    <string name="settings_screen_grammar_summary">Correction mode, the fixes applied on the phone, and the LanguageTool server</string>
     <string name="settings_screen_ai_routing">AI Model Routing</string>
     <string name="settings_screen_ai_routing_summary">Provider, API key and model used by Text Enhancements, Grammar check (AI mode) and Translation</string>
 
