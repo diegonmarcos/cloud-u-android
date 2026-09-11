@@ -125,7 +125,8 @@ fi
 
 echo "== N3: the FileProvider authority is a placeholder, not a literal =="
 if need "$MANIFEST"; then
-    AUTH="$(grep -o 'android:authorities="[^"]*"' "$MANIFEST" | head -1)"
+    AUTH="$(awk 'match($0, /android:authorities="[^"]*"/) {
+                     print substr($0, RSTART, RLENGTH); exit }' "$MANIFEST")"
     if [ -z "$AUTH" ]; then bad "no android:authorities in the manifest at all"
     elif [ "$AUTH" = 'android:authorities="${applicationId}.provider"' ]; then
         ok 'authority is ${applicationId}.provider — derived, so it follows applicationId'
@@ -186,8 +187,12 @@ fi
 echo "== N7: no committed blob approaches GitHub's 100MB per-blob cap =="
 BIG="$(find "$APP" -type f -size +90M 2>/dev/null || true)"
 if [ -z "$BIG" ]; then
-    LARGEST="$(find "$APP" -type f -printf '%s %p\n' 2>/dev/null | sort -rn | head -1)"
-    ok "largest blob: ${LARGEST:-unknown}"
+    # awk keeps the running maximum instead of sort|head, which also died of
+    # SIGPIPE here. -printf is GNU-only and BusyBox find prints NOTHING rather
+    # than erroring, so an empty answer is reported as unknown, never as zero.
+    LARGEST="$(find "$APP" -type f -printf '%s %p\n' 2>/dev/null \
+               | awk '$1>m{m=$1;p=$2} END{if(m) print m, p}')"
+    ok "largest blob: ${LARGEST:-unknown (find -printf unsupported)}"
 else bad "blob(s) over 90MB:"; printf '        %s\n' $BIG; fi
 
 echo "== N8: the launcher label is the rebrand and stays untranslated =="
@@ -214,16 +219,24 @@ if need "$NT" && need "$APPSET"; then
     # Strip comments before matching: this file's own explanation of the
     # app_name derivation would otherwise satisfy a search meant to forbid it.
     BODY="$(sed -e 's://.*::' "$APPSET" | awk '!/^[[:space:]]*\*/ && !/^[[:space:]]*\/\*/')"
-    if printf '%s' "$BODY" | grep -qF 'R.string.default_notebook_folder_name'; then
-        ok "getDefaultNotebookFile() uses the declared constant"
-    else
-        bad "getDefaultNotebookFile() does NOT use default_notebook_folder_name"
-    fi
-    if printf '%s' "$BODY" | grep -qE 'R\.string\.app_name\)\.toLowerCase'; then
-        bad "the default folder is STILL derived from app_name.toLowerCase()"
-    else
-        ok "the default folder is no longer derived from app_name"
-    fi
+    # MATCHED WITH `case`, NOT `printf | grep -q`. This tester runs under
+    # `set -o pipefail`, and `grep -q` exits the instant it matches, which sends
+    # SIGPIPE to the still-writing printf; pipefail then reports the PIPELINE as
+    # 141 and the successful match reads as a failure. It is timing-dependent,
+    # so it passed on this container and failed on the GHA runner (run
+    # 34599213929) with "printf: write error: Broken pipe" one line above a FAIL
+    # for a string that was present the whole time. `case` needs no subprocess
+    # and no pipe, so the whole class is gone rather than worked around.
+    case "$BODY" in
+        *"R.string.default_notebook_folder_name"*)
+            ok "getDefaultNotebookFile() uses the declared constant" ;;
+        *)  bad "getDefaultNotebookFile() does NOT use default_notebook_folder_name" ;;
+    esac
+    case "$BODY" in
+        *"R.string.app_name).toLowerCase"*)
+            bad "the default folder is STILL derived from app_name.toLowerCase()" ;;
+        *)  ok "the default folder is no longer derived from app_name" ;;
+    esac
 fi
 
 echo
