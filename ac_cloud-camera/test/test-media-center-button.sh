@@ -289,6 +289,30 @@ for values_dir in ("values", "values-es"):
               key in names,
               "an English label on a Spanish phone is a regression on arrival")
 
+# A7: shipping the translation is not the same as the phone receiving it.
+#
+# androidResources.localeFilters is a HARD FILTER applied at package time. With
+# `listOf("en")` — which is what this app shipped until 2026-09-11 — values-es/
+# is compiled and then stripped out of resources.arsc, so every assertion above
+# passes, the build is green, the i18n guard is green, and the owner still reads
+# English. Source-only checks structurally cannot see this; this one reads the
+# build file that decides it.
+gradle_path = os.path.join(APP, "app/build.gradle.kts")
+gradle = open(gradle_path, encoding="utf-8").read()
+gradle = re.sub(r"//[^\n]*", "", re.sub(r"/\*.*?\*/", "", gradle, flags=re.S))
+
+m = re.search(r"localeFilters\s*\+?=\s*listOf\(([^)]*)\)", gradle)
+if m is None:
+    # No filter at all is fine — every locale ships.
+    check("A7 no localeFilters, so every locale ships", True)
+else:
+    kept = set(re.findall(r'"([^"]+)"', m.group(1)))
+    check("A7 localeFilters keeps 'es', so values-es survives packaging",
+          "es" in kept,
+          "localeFilters=%s strips values-es out of resources.arsc at package "
+          "time; the label ships English no matter what values-es says"
+          % sorted(kept))
+
 print("\n-- %d assertions, %d failed --" % (checked, len(failures)))
 for f in failures:
     print("   FAILED: %s" % f, file=sys.stderr)
