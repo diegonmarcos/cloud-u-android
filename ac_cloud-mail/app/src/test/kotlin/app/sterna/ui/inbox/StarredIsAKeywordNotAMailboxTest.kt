@@ -245,7 +245,14 @@ class StarredIsAKeywordNotAMailboxTest {
 
     /**
      * [file]'s non-blank lines with every comment taken out, whitespace collapsed. String literals
-     * are tracked so a `//` or `/*` inside one is not mistaken for a comment.
+     * are tracked, so a line-comment or block-comment opener sitting INSIDE a string is not
+     * mistaken for the start of a comment.
+     *
+     * ⛔ Neither comment opener may be written literally in this KDoc, and that is not fussiness:
+     * KOTLIN BLOCK COMMENTS NEST. A block-comment opener typed here — even inside backticks, which
+     * KDoc markup does not exempt — opens an inner comment, the `*` `/` below closes only THAT one,
+     * and the outer comment then swallows the rest of the file. It cost a ship run: "Syntax error:
+     * Unclosed comment" pointed at the last line of the file, hundreds of lines from the cause.
      */
     private fun codeLines(file: File): List<String> {
         val out = mutableListOf<String>()
