@@ -1607,7 +1607,7 @@ object Sections {
      *  ui.external_apps entry, plus [ownPackage].
      *
      *  Derived from that roster rather than matched on a "com.diegonmarcos."
-     *  prefix: two of our entries are not ours by name (cloud-sheets is
+     *  prefix: two of our entries are not ours by name (cloud-office is
      *  com.collabora.libreoffice, and the matrix/chat alt packages are the
      *  stock upstream ids), so a prefix test would leak exactly the apps a
      *  user is most likely to also have installed from a store. */

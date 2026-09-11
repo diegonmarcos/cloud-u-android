@@ -22,7 +22,7 @@ import java.util.concurrent.CancellationException
  *
  * Every app in the constellation is between 6 and 33 MB. A transfer that size
  * completes inside a single TCP session on almost any link, so the restart path
- * was effectively never taken and its absence cost nothing. cloud-sheets
+ * was effectively never taken and its absence cost nothing. cloud-office
  * (Collabora Office, one 278,215,660-byte layer — eight times the next largest
  * app) does NOT complete inside one session on a phone: the screen locks, the
  * process is backgrounded, the radio hands over between cells. Each of those

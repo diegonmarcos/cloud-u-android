@@ -22,7 +22,7 @@ and became a **119-slot C++ vtable with no version guard**, so pairing
 Collabora's engine binary with our shell source is an unverifiable silent-
 corruption risk rather than a supported configuration.
 
-Investigated 2026-09-10 against the revision `ac_cloud-sheets/build.json`
+Investigated 2026-09-10 against the revision `ac_cloud-office/build.json`
 actually pins — `online@distro/collabora/co-26.04-mobile`
 `794af0088b0369878461cc53de45129eaf08824a` — read file-by-file from Collabora's
 Gerrit REST API, and against the ZIP central directory of the pinned official
@@ -83,7 +83,7 @@ history. One repo.
 
 ### What that means for `build.json`, today
 
-`ac_cloud-sheets/build.json::upstream.core` pins
+`ac_cloud-office/build.json::upstream.core` pins
 `https://gerrit.collaboraoffice.com/core` at `distro/collabora/co-26.04`,
 revision `c1013fad0d38683630b48c01b6d5208b8d81181e`. That ref exists — but
 `git ls-remote` (15,301 refs, read today) shows `c1013fad` is its tip, and the
@@ -128,7 +128,7 @@ if test -z "$with_app_package_name" -o "$with_app_package_name" = "no"; then
 build takes the `else` and would have shipped as **`org.collabora.app`** —
 upstream's own namespace either way, so the consequence is unchanged, but the
 value is `org.collabora.app`. `build.json` now passes
-`--with-app-package-name`, and `ac_cloud-sheets/tests/test-configure-flags-exist.sh`
+`--with-app-package-name`, and `ac_cloud-office/tests/test-configure-flags-exist.sh`
 derives the required flag from upstream on every run (the `applicationId`
 placeholder in `android/app/appSettings.gradle.in` → the `$with_*` variable
 `configure.ac` assigns it from → the flag name) so it cannot regress silently.
@@ -143,7 +143,7 @@ block, and it is what carries the launcher icon, splash and online theme.
 `android/lib/src/main/cpp/CMakeLists.txt.in` and `configure.ac` between them
 name every path the shell reads out of `$LOBUILDDIR`. Checked against the live
 central directory of the pinned APK (6,375 entries, 591,403 bytes fetched of
-267,216,449 — see `ac_cloud-sheets/tests/test-engine-artefacts-in-apk.sh`).
+267,216,449 — see `ac_cloud-office/tests/test-engine-artefacts-in-apk.sh`).
 
 ### Present in the APK — the runtime half (20 rows checked, all found)
 
@@ -459,7 +459,7 @@ nothing.
 
 **The pin survives in form and is weaker in substance than it looks.**
 
-Under reuse, `ac_cloud-sheets` would fetch
+Under reuse, `ac_cloud-office` would fetch
 `collabora-office-mobile-26.04.3.1-155-release-arm64-v8a-2026-09-03.apk`
 and check `b7ab381de96f429c2e762d0e54ee0fac7db03ad2fecfede9f4c558c767d18513`
 before extracting — the same URL and the same hash the mirror used until commit
@@ -572,7 +572,7 @@ symbols wide. It is the *other* things the engine build produces — and what
 happened to the ABI behind those three symbols in this release cycle — that make
 it a dead end.
 
-### Fix these three things in `ac_cloud-sheets/build.json` regardless
+### Fix these three things in `ac_cloud-office/build.json` regardless
 
 They are live now and are wrong under either plan:
 
@@ -617,8 +617,8 @@ then `make` in `engine/`.
 
 ## 9. The tester
 
-`ac_cloud-sheets/tests/test-engine-artefacts-in-apk.sh`, table in
-`ac_cloud-sheets/tests/engine-artefacts.json`. It range-fetches the pinned APK's
+`ac_cloud-office/tests/test-engine-artefacts-in-apk.sh`, table in
+`ac_cloud-office/tests/engine-artefacts.json`. It range-fetches the pinned APK's
 ZIP central directory (~600 KB, not 267 MB) and checks all 33 declared
 artefacts, plus asserts by category that no `.a`/`.h`/`.hxx` entry exists
 anywhere in the archive. If Collabora ever starts shipping the link-time half,
@@ -627,7 +627,7 @@ this goes red and §2's conclusion is worth revisiting.
 Watched, not assumed:
 
 ```
-$ ./ac_cloud-sheets/tests/test-engine-artefacts-in-apk.sh --self-test
+$ ./ac_cloud-office/tests/test-engine-artefacts-in-apk.sh --self-test
 # central directory: 6375 entries, 591,403 bytes fetched of 267,216,449
 # engine artefacts present in the APK : 20
 # engine artefacts the APK cannot hold: 13
@@ -683,7 +683,7 @@ made. Run it by hand if the question is reopened.
   `android/README.md`, `engine/README.md`, `android/.gitignore`.
 - `core@c1013fad`: `include/LibreOfficeKit/LibreOfficeKit.h` (for the contrast in
   §4 only).
-- `ac_cloud-sheets/build.json` and its state before `05b0c6c15`.
+- `ac_cloud-office/build.json` and its state before `05b0c6c15`.
 
 **Not established:** the ancestry of `20a46c332c38…` relative to `794af008…`
 (needs a full monorepo clone). *The `.rodata` question that stood here is now
@@ -815,7 +815,7 @@ and more expensive every time after.
 
 ### Also true, and separate from this decision
 
-`ac_cloud-sheets/build.json::build.host` is `null`, so nothing builds Cloud
+`ac_cloud-office/build.json::build.host` is `null`, so nothing builds Cloud
 Office today, and the `latest` release still serves Collabora's own signed APK
 under the name `Cloud-Sheets.apk` while `release.gh_release.asset_name` now says
 `Cloud-Office.apk`. Whatever is decided about #240, that stale artefact should
@@ -854,7 +854,7 @@ else.
 
 ### 12.2 Nothing the owner asked for is native
 
-`ac_cloud-sheets/patches/0001` is 591 lines across nine files:
+`ac_cloud-office/patches/0001` is 591 lines across nine files:
 
 ```
 android/app/src/main/AndroidManifest.xml                            |  17 +-
@@ -880,7 +880,7 @@ Collabora's own matched pair, built together by their build**. The pairing §4
 warns against — their engine against our freshly compiled shell — is the one
 thing this shape never does.
 
-Checked on every run by `ac_cloud-sheets/tests/test-no-engine-build-required.sh`,
+Checked on every run by `ac_cloud-office/tests/test-no-engine-build-required.sh`,
 which fails if a native file ever enters the series.
 
 ### 12.3 The mechanism, in upstream's own gradle

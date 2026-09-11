@@ -10,11 +10,11 @@
 # build.json — but neither of them is checked against whether anything was ever
 # PUBLISHED, and that is the gap.
 #
-# Commit 05b0c6c15 turned ac_cloud-sheets from a mirror of the official
+# Commit 05b0c6c15 turned ac_cloud-office (then ac_cloud-sheets) from a mirror of the official
 # Collabora APK into a source build. Its build.json correctly began declaring
 # Cloud-Office.apk, com.diegonmarcos.cloudoffice and the cloud-office GHCR
 # image. Every one of those is right, and every one of them is a 404: build.host
-# is null, ship-cloud-sheets.yml refuses to run without one, and the only office
+# is null, ship-cloud-office.yml refuses to run without one, and the only office
 # artifact on the rolling `latest` release is still the 267 MB Cloud-Sheets.apk
 # from the mirror era. regen.sh hardcoded `blocked: false` for every top-level
 # app, so the next SuperApp APK would have shipped a tile promising an install
@@ -38,7 +38,15 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 APP="$(cd "$HERE/.." && pwd)"                    # → aa_cloud-superapp
 UNIX="$(cd "$APP/.." && pwd)"                    # → repo root
 FLEET="$APP/data/constellation-fleet.json"
-OFFICE="$UNIX/ac_cloud-sheets/build.json"
+# ONE constant, and the fleet id is DERIVED from it with regen.sh's own rule
+# (basename sans an ac_cloud- prefix) rather than spelled out a second time.
+# Before the ac_cloud-sheets -> ac_cloud-office rename these were two
+# independent literals — the path and the id "sheets" — and a rename moved one
+# without the other, which is an `exit 2` in a tester nobody would read as a
+# rename symptom.
+OFFICE_DIR="ac_cloud-office"
+OFFICE_ID="${OFFICE_DIR#ac_cloud-}"
+OFFICE="$UNIX/$OFFICE_DIR/build.json"
 
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
@@ -49,10 +57,8 @@ for f in "$FLEET" "$OFFICE"; do
   [ -f "$f" ] || { echo "ERROR: $f missing — this tester resolved a path to nothing" >&2; exit 2; }
 done
 
-# The fleet id regen.sh derives for ac_cloud-sheets: the directory basename with
-# its ac_cloud- prefix stripped.
-ENTRY="$(jq -c '.apps[] | select(.id == "sheets")' "$FLEET")"
-[ -n "$ENTRY" ] || { echo "ERROR: no fleet entry with id 'sheets' — regen.sh no longer emits it under that id" >&2; exit 2; }
+ENTRY="$(jq -c --arg id "$OFFICE_ID" '.apps[] | select(.id == $id)' "$FLEET")"
+[ -n "$ENTRY" ] || { echo "ERROR: no fleet entry with id '$OFFICE_ID' — $OFFICE_DIR was renamed without regenerating constellation-fleet.json, or regen.sh changed its id rule" >&2; exit 2; }
 
 echo "== T1: the catalogue offers exactly what the build declares =="
 # regen.sh derives all three, so a mismatch means the committed snapshot has
@@ -63,9 +69,9 @@ for pair in "label:.name" "package:.android.application_id" "asset:.release.gh_r
   offered="$(jq -r --arg f "$field" '.[$f] // ""' <<<"$ENTRY")"
   declared="$(jq -r "$source_path // \"\"" "$OFFICE")"
   if [ -n "$declared" ] && [ "$offered" = "$declared" ]; then
-    ok "fleet .$field agrees with ac_cloud-sheets/build.json $source_path ($offered)"
+    ok "fleet .$field agrees with $OFFICE_DIR/build.json $source_path ($offered)"
   else
-    bad "fleet .$field is '$offered' but ac_cloud-sheets/build.json $source_path is '$declared' — the store would name a different app than the build produces"
+    bad "fleet .$field is '$offered' but $OFFICE_DIR/build.json $source_path is '$declared' — the store would name a different app than the build produces"
   fi
 done
 
@@ -142,7 +148,7 @@ BLOCKED_IDS="$(jq -r '[.apps[] | select(.blocked) | .id] | sort | join(",")' "$F
   || bad "blocked with nothing in their build.json to justify it:$unexplained — a block rule that catches other apps stops their updates fleet-wide"
 
 echo "== T5: a third party's artefact is never offered as ours =="
-# THE DEFECT #266 NAMES. ac_cloud-sheets declares Cloud-Office.apk and
+# THE DEFECT #266 NAMES. ac_cloud-office declares Cloud-Office.apk and
 # com.diegonmarcos.cloudoffice, and nothing has ever built either: the only
 # office artefact on the rolling `latest` release is Cloud-Sheets.apk, which is
 # byte-identical to Collabora's own signed arm64 build — package

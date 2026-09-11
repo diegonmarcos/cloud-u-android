@@ -3,7 +3,7 @@
 # four states a user must be able to tell apart.
 #
 # THE FAILURE THIS EXISTS TO KEEP FIXED. Installing "Cloud Office"
-# (ghcr.io/diegonmarcos/cloud-sheets, ONE 278,215,660-byte layer — eight times
+# (ghcr.io/diegonmarcos/cloud-office, ONE 278,215,660-byte layer — eight times
 # the next largest app in the fleet) sat on "downloading" forever: no error, no
 # progress. Three things combined to produce that, all of them invisible at the
 # 25 MB every other app ships at:
@@ -121,13 +121,37 @@ echo "== T7: LIVE — the CDNs honour the Range requests resume depends on =="
 # reporting itself as a CDN regression, in a step that could stop the phone
 # getting an APK.
 #
-# ponytail: the 404 and the refused-Range cases are told apart so the report is
-# worth reading, but the URL is still hardcoded. Deriving it from
-# build.json::release needs an API call this tester does not otherwise make;
-# whoever owns download-resume should data-drive it. Left as a named gap rather
-# than half-done here.
-if command -v curl >/dev/null; then
-  REL="https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Sheets.apk"
+# THE HARDCODED URL IS GONE, and it did not need the API call the old note here
+# feared. Both values are already DERIVED next door: regen.sh builds
+# data/constellation-fleet.json from each app's build.json::release, so
+# .release_url and .ghcr_page are this app's own declaration, one file away and
+# with no network. That is what rotted on 2026-09-10 — the URL named
+# Cloud-Sheets.apk long after the shelf stopped carrying it — and what would
+# have rotted again on the ac_cloud-sheets -> ac_cloud-office rename.
+# The fleet id is derived with regen.sh's own rule (basename sans ac_cloud-),
+# so the directory and the id cannot drift apart.
+OFFICE_DIR="ac_cloud-office"           # the fleet's largest artefact, by an order of magnitude
+OFFICE_ID="${OFFICE_DIR#ac_cloud-}"
+FLEET_JSON="$ROOT/aa_cloud-superapp/data/constellation-fleet.json"
+REL=""; GHCR_REPO=""
+# FAIL CLOSED, AND ON OUR OWN DATA. The probe below stays non-fatal because it
+# asks a THIRD PARTY a live question. Deriving the URL does not: the fleet
+# manifest is this repo's own generated file, so an empty answer here means our
+# id rule or our manifest moved, and reporting SKIP for that would be the same
+# silence that let a rotted URL sit here since 2026-09-10. jq absent is the same
+# class of lie, so it is named rather than assumed.
+if ! command -v jq >/dev/null 2>&1; then
+  bad "jq unavailable — cannot derive the probe URL from $FLEET_JSON, so T7 asserted nothing"
+elif [ ! -f "$FLEET_JSON" ]; then
+  bad "$FLEET_JSON missing — cannot derive the probe URL"
+else
+  REL=$(jq -r --arg id "$OFFICE_ID" '.apps[] | select(.id == $id) | .release_url // ""' "$FLEET_JSON")
+  GHCR_REPO=$(jq -r --arg id "$OFFICE_ID" '.apps[] | select(.id == $id) | ((.namespace // "") + "/" + (.image // ""))' "$FLEET_JSON")
+  case "$REL:$GHCR_REPO" in
+    :*|*:|*:/*|*:*/) bad "no fleet entry '$OFFICE_ID' with a release_url and namespace/image in $FLEET_JSON — $OFFICE_DIR was renamed or regen.sh changed its id rule, and this probe would have reported on nothing"; REL="" ;;
+  esac
+fi
+if [ -n "$REL" ] && command -v curl >/dev/null; then
   HEADS=$(curl -sIL --max-time 45 -H 'Range: bytes=1000-1099' "$REL" | tr -d '\r')
   CR=$(printf '%s' "$HEADS" | grep -i '^content-range:' | tail -1)
   LAST=$(printf '%s' "$HEADS" | grep -i '^HTTP/' | tail -1)
@@ -139,25 +163,25 @@ if command -v curl >/dev/null; then
         *)     echo "  SKIP: release CDN Range unconfirmed ($LAST, content-range: ${CR:-none}) — reported, not fatal" ;;
       esac ;;
   esac
-  TOK=$(curl -s --max-time 20 "https://ghcr.io/token?service=ghcr.io&scope=repository:diegonmarcos/cloud-sheets:pull" \
+  TOK=$(curl -s --max-time 20 "https://ghcr.io/token?service=ghcr.io&scope=repository:${GHCR_REPO}:pull" \
         | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
   if [ -n "$TOK" ]; then
     DIG=$(curl -s --max-time 20 -H "Authorization: Bearer $TOK" \
           -H "Accept: application/vnd.oci.image.manifest.v1+json" \
-          "https://ghcr.io/v2/diegonmarcos/cloud-sheets/manifests/latest" \
+          "https://ghcr.io/v2/${GHCR_REPO}/manifests/latest" \
           | sed -n 's/.*"digest":"\(sha256:[a-f0-9]*\)".*/\1/p' | tail -1)
     # A ranged GET, not HEAD: the blob endpoint answers 307 to a presigned URL
     # and that redirect does not answer HEAD with a Content-Range.
     GR=$(curl -sL --max-time 45 -D - -o /dev/null \
          -H "Authorization: Bearer $TOK" -H 'Range: bytes=1000-1099' \
-         "https://ghcr.io/v2/diegonmarcos/cloud-sheets/blobs/$DIG" \
+         "https://ghcr.io/v2/${GHCR_REPO}/blobs/$DIG" \
          | tr -d '\r' | grep -i '^content-range:' | tail -1)
     case "$GR" in
       *bytes\ 1000-1099/*) ok "GHCR blob: 206 with $GR" ;;
       *)                   echo "  SKIP: GHCR blob Range unconfirmed (got: ${GR:-nothing})" ;;
     esac
   else echo "  SKIP: no anonymous GHCR token (offline or rate-limited)"; fi
-else echo "  SKIP: curl unavailable"; fi
+else echo "  SKIP: curl unavailable or no derivable URL"; fi
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

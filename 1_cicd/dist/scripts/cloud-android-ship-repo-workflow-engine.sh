@@ -507,6 +507,30 @@ for f in "$CICD_SRC/cicd/"*.yml; do
     cp "$f" "$CLOUD_ANDROID_ROOT/.github/workflows/$base"
 done
 
+# ── name an orphaned workflow; do not delete it ────────────────────
+#
+# The prune above deliberately stops at dist/, because "a workflow can
+# legitimately live in .github/workflows without a source in this tier and
+# deleting a live one is not a generator's call". That stays true. What was
+# missing is that the same policy makes a RENAME silent: renaming
+# ship-cloud-sheets.yml to ship-cloud-office.yml pruned the dist twin and left
+# .github/workflows/ship-cloud-sheets.yml behind, still triggering on
+# `ac_cloud-sheets/**` — a path that no longer exists. GitHub keeps running it,
+# it can never go green again, and nothing in this generator's output mentioned
+# it. The stale file is a permanent red for whoever pushes next, who did not
+# rename anything.
+#
+# So: REPORT, never remove. A source-less workflow that is intentional (
+# enhance-silence-guard.yml, ship-superapp-data-regen.yml) is listed once per
+# run and ignored; one that is residue from a rename is listed the same way and
+# is then obvious. Deleting it is still a human's `git rm`, deliberately.
+for _wf in "$CLOUD_ANDROID_ROOT/.github/workflows/"*.yml; do
+    [ -e "$_wf" ] || continue
+    _b=$(basename "$_wf")
+    [ -e "$CICD_SRC/cicd/$_b" ] || \
+        echo "  NO SOURCE: .github/workflows/$_b has no 1_cicd/src/cicd/$_b — intentional, or residue from a rename that needs 'git rm'"
+done
+
 # scripts folder for GHA (symlink inside .github/workflows)
 [ -e "$CLOUD_ANDROID_ROOT/.github/workflows/scripts" ] || \
     ln -sf ../../1_cicd/dist/scripts "$CLOUD_ANDROID_ROOT/.github/workflows/scripts"

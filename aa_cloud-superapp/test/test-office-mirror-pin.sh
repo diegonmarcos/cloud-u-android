@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tester for Cloud Office's identity and pins (ac_cloud-sheets).
+# Tester for Cloud Office's identity and pins (ac_cloud-office).
 #
 # ── WHAT CHANGED UNDER THIS FILE ──────────────────────────────────────────
 # This tester was written for a MIRROR. ac_cloud-sheets used to republish
@@ -62,11 +62,14 @@
 # release asset that 404s. That migration is the owner's call and is reported
 # rather than made here.
 #
-# Usage: ./test-sheets-mirror-pin.sh     (no network — every check is static)
+# Usage: ./test-office-mirror-pin.sh     (no network — every check is static)
 set -u
 APP="$(cd "$(dirname "$0")/.." && pwd)"          # → aa_cloud-superapp
 UNIX="$(cd "$APP/.." && pwd)"                    # → repo root
-BJ="$UNIX/ac_cloud-sheets/build.json"
+# One constant; every other name below is derived from it or from build.json.
+OFFICE_DIR="ac_cloud-office"
+OFFICE_ID="${OFFICE_DIR#ac_cloud-}"
+BJ="$UNIX/$OFFICE_DIR/build.json"
 UPD="$UNIX/ab_cloud-libs-shared/libs/updater/src/main/java/com/diegonmarcos/superapp/updater"
 
 PASS=0; FAIL=0
@@ -86,33 +89,47 @@ is_full_sha() {
 command -v jq >/dev/null 2>&1 || { echo "ERROR: jq required" >&2; exit 2; }
 [ -f "$BJ" ] || { echo "ERROR: $BJ missing" >&2; exit 2; }
 
-ONLINE_REV=$(jq -r '.upstream.online.revision // ""' "$BJ")
-ONLINE_REF=$(jq -r '.upstream.online.ref      // ""' "$BJ")
-CORE_REV=$(jq   -r '.upstream.core.revision   // ""' "$BJ")
-CORE_REF=$(jq   -r '.upstream.core.ref        // ""' "$BJ")
+ONLINE_REV=$(jq -r '.upstream.online.revision      // ""' "$BJ")
+ONLINE_REF=$(jq -r '.upstream.online.ref           // ""' "$BJ")
+ENGINE_SHA=$(jq -r '.upstream.engine.source.sha256 // ""' "$BJ")
+ENGINE_SIZE=$(jq -r '.upstream.engine.source.size  // 0'  "$BJ")
 APP_ID=$(jq     -r '.android.application_id   // ""' "$BJ")
 ASSET=$(jq      -r '.release.gh_release.asset_name // ""' "$BJ")
 OURS=$(jq       -r '.name                     // ""' "$BJ")
 
-echo "== T1: the two pins describe ONE tree, with no field left behind =="
-# The mirror's sha256 guaranteed exact bytes. What replaces it is a pair of
-# commit shas, and build.json says so in supply_chain: "two pinned git
-# revisions, both full commit shas". A branch name here would reintroduce
-# exactly the drift the shas exist to prevent — build.json records that the
-# patch series was first written against 25.04-mobile and failed on three files
-# against 26.04, which is that drift caught by hand.
+echo "== T1: both pins exist and neither can drift =="
+# THIS TEST WAS ASSERTING A KEY THAT NO LONGER EXISTS, and said nothing about it.
+# It was written when the app pinned TWO git revisions, upstream.online and
+# upstream.core, because it expected to COMPILE the LibreOffice engine. On
+# 2026-09-11 upstream.core was replaced by upstream.engine — a sha256-pinned
+# PREBUILT binary — because patches/0001 touches no C++ at all. `jq` answers
+# "" for a key that is gone, so the two core assertions below read an empty
+# string and failed on every run; the only reason that did not stop a release is
+# that this tester is FOREIGN source to aa_cloud-superapp and the test engine
+# declines to fail the SuperApp's publish over it. A tester that fails for a
+# reason that is not a defect trains everyone to ignore its output.
+#
+# The property is unchanged: NEITHER PIN MAY DRIFT. What changed is that the two
+# pins now hash different things — a commit sha over a tree's history, and a
+# sha256 over Collabora's published bytes — so each is checked in its own shape.
 is_full_sha "$ONLINE_REV" \
   && ok "upstream.online.revision is a full 40-char commit sha" \
   || bad "upstream.online.revision is not a full 40-char commit sha ('$ONLINE_REV') — a short sha or a branch name lets the patched tree move under a fixed pin"
-is_full_sha "$CORE_REV" \
-  && ok "upstream.core.revision is a full 40-char commit sha" \
-  || bad "upstream.core.revision is not a full 40-char commit sha ('$CORE_REV')"
-# The ref is not the fetch identity, but it names the release LINE, and online
-# and core must come from the same one or the web layer and the document engine
-# disagree about the protocol between them.
-[ -n "$ONLINE_REF" ] && [ -n "$CORE_REF" ] \
-  && ok "both pins name their upstream ref ($ONLINE_REF / $CORE_REF)" \
-  || bad "a pin is missing its ref (online='$ONLINE_REF' core='$CORE_REF') — nothing records which release line the sha came from"
+# The engine half keeps the ORIGINAL mirror-era guarantee: exact bytes, by
+# digest. 64 lowercase hex and a positive byte count, or it is not a pin.
+case "$ENGINE_SHA" in
+  [0-9a-f]*) [ "${#ENGINE_SHA}" -eq 64 ] && ok "upstream.engine.source.sha256 is a full 64-char digest" \
+               || bad "upstream.engine.source.sha256 is ${#ENGINE_SHA} chars, not 64 ('$ENGINE_SHA') — a truncated digest is not a pin" ;;
+  *)         bad "upstream.engine.source.sha256 is missing or not lowercase hex ('$ENGINE_SHA') — the engine is taken prebuilt, so this digest IS its supply chain" ;;
+esac
+[ "$ENGINE_SIZE" -gt 0 ] 2>/dev/null \
+  && ok "upstream.engine.source.size is recorded ($ENGINE_SIZE bytes)" \
+  || bad "upstream.engine.source.size is '$ENGINE_SIZE' — size is checked alongside the digest because a same-size collision has already fooled this fleet once"
+# The ref is not the fetch identity, but it names the release LINE the sha came
+# from, and losing it makes a pin bump unauditable.
+[ -n "$ONLINE_REF" ] \
+  && ok "the online pin names its upstream ref ($ONLINE_REF)" \
+  || bad "upstream.online.ref is empty — nothing records which release line the sha came from"
 # The whole ABI dimension for this app: every additional ABI is another full NDK
 # megabuild of LibreOffice core, and the owner's phone (SM-G996B) is arm64.
 [ "$(jq -r '.android.abi_filters | join(",")' "$BJ")" = "arm64-v8a" ] \
@@ -164,8 +181,14 @@ echo "== T4: no install path may report a failure as a success =="
 # error.
 has "$UPD/install/InstallChannel.kt" 'if (out.startsWith("Success")) null' \
   "ShellInstall decides on the pm output, not on having run pm"
-has "$UPD/Fleet.kt" 'identity.versionCode < installedCode' \
-  "commit() refuses a candidate older than the installed versionCode"
+# A STALE ASSERTION, NOT A DEFECT, and it had been failing silently. The literal
+# comparison this used to grep for was refactored into VersionOrder.isDowngrade;
+# the property is intact, the string is gone. Assert the CALL and the comparison
+# it stands on, so the check survives the next refactor of either one alone.
+has "$UPD/Fleet.kt" 'VersionOrder.isDowngrade(identity.versionCode, installedCode)' \
+  "commit() asks VersionOrder whether the candidate is older than what is installed"
+has "$UPD/VersionOrder.kt" 'compare(candidateCode, installedCode) == Order.OLDER' \
+  "VersionOrder.isDowngrade really compares the two codes"
 has "$UPD/Fleet.kt" 'apk.file.delete()' \
   "a refused downgrade drops the cached artifact instead of re-offering it"
 
@@ -178,14 +201,14 @@ echo "== T5: every name the fleet OWNS agrees =="
 # disagree about what the user just tapped. Derived from build.json rather than
 # spelled out, so the NEXT rename needs no edit here.
 SUP="$APP/build.json"
-TILE=$(jq -r '[.. | objects | select(.target? == "extapp:cloud-sheets") | .label] | first // ""' "$SUP")
-ROSTER=$(jq -r '.ui.external_apps[] | select(.id == "cloud-sheets") | .label' "$SUP")
+TILE=$(jq -r --arg t "extapp:cloud-$OFFICE_ID" '[.. | objects | select(.target? == $t) | .label] | first // ""' "$SUP")
+ROSTER=$(jq -r --arg i "cloud-$OFFICE_ID" '.ui.external_apps[] | select(.id == $i) | .label' "$SUP")
 [ -n "$OURS" ] && [ "$OURS" != "null" ] \
-  && ok "ac_cloud-sheets/build.json::name is set ($OURS)" \
-  || bad "ac_cloud-sheets/build.json::name is missing — the AppStore row would fall back to the id"
+  && ok "$OFFICE_DIR/build.json::name is set ($OURS)" \
+  || bad "$OFFICE_DIR/build.json::name is missing — the AppStore row would fall back to the id"
 [ "$TILE" = "$OURS" ] && ok "launcher tile label matches ($TILE)" \
   || bad "launcher tile says '$TILE' but the fleet name is '$OURS' — home screen and AppStore disagree"
-[ "$ROSTER" = "$OURS" ] && ok "ui.external_apps[cloud-sheets].label matches ($ROSTER)" \
+[ "$ROSTER" = "$OURS" ] && ok "ui.external_apps[cloud-$OFFICE_ID].label matches ($ROSTER)" \
   || bad "external_apps label says '$ROSTER' but the fleet name is '$OURS' — the install notification names a different app"
 
 echo "== T6: the launcher grid and the phone taxonomy agree on ONE package =="
@@ -201,11 +224,11 @@ echo "== T6: the launcher grid and the phone taxonomy agree on ONE package =="
 # android:appCategory. Move hub_package without moving the keyword and the app
 # lands in the `others` sink for Notify while the grid still shows it under its
 # folder — the two surfaces disagreeing about the same app.
-HUB=$(jq -r '.ui.external_apps[] | select(.id == "cloud-sheets") | .hub_package' "$SUP")
-FOLDER=$(jq -r '.ui.external_apps[] | select(.id == "cloud-sheets") | .folder' "$SUP")
+HUB=$(jq -r --arg i "cloud-$OFFICE_ID" '.ui.external_apps[] | select(.id == $i) | .hub_package' "$SUP")
+FOLDER=$(jq -r --arg i "cloud-$OFFICE_ID" '.ui.external_apps[] | select(.id == $i) | .folder' "$SUP")
 [ -n "$HUB" ] && [ "$HUB" != "null" ] \
-  && ok "ui.external_apps[cloud-sheets].hub_package is set ($HUB)" \
-  || bad "ui.external_apps[cloud-sheets].hub_package is unset — the launcher cannot tell whether the app is installed"
+  && ok "ui.external_apps[cloud-$OFFICE_ID].hub_package is set ($HUB)" \
+  || bad "ui.external_apps[cloud-$OFFICE_ID].hub_package is unset — the launcher cannot tell whether the app is installed"
 jq -e --arg f "$FOLDER" --arg p "pkg:$HUB" \
   '.ui.phone_folders[] | select(.id == $f) | .match_keywords | index($p)' "$SUP" >/dev/null 2>&1 \
   && ok "phone_folders[$FOLDER] names pkg:$HUB" \

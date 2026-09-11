@@ -396,7 +396,7 @@
       "kind": "app"
     },
     {
-      "id": "sheets",
+      "id": "office",
       "label": "Cloud Office",
       "package": "com.diegonmarcos.cloudoffice",
       "alt_id": null,
@@ -406,7 +406,7 @@
       "tag": "latest",
       "asset": "Cloud-Office.apk",
       "release_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Office.apk",
-      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-sheets",
+      "repo_url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-office",
       "ghcr_page": "https://github.com/diegonmarcos/cloud-u-android/pkgs/container/cloud-office",
       "blocked": true,
       "kind": "app",

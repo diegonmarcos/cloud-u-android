@@ -216,12 +216,12 @@ regen_constellation() {
                              # from declared data; this branch hardcoded false, so
                              # a top-level app had no way to say "I cannot be
                              # published yet" and the store offered it regardless.
-                             # ac_cloud-sheets is the case that proved it: it
+                             # ac_cloud-office is the case that proved it: it
                              # stopped mirroring the official Collabora APK and
                              # became a source build, so its build.json now names
                              # Cloud-Office.apk, com.diegonmarcos.cloudoffice and
                              # the cloud-office GHCR image — none of which exist,
-                             # because build.host is null and ship-cloud-sheets.yml
+                             # because build.host is null and ship-cloud-office.yml
                              # refuses to run without one. Every field here is
                              # correct and every one of them points at a 404.
                              # Derived, not declared: `build.host` present-but-null

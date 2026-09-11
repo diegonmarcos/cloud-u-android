@@ -1,4 +1,4 @@
-name: "Ship → Cloud Sheets APK (mirror official Collabora Office + push to GHCR via ORAS + attach to GH Release)"
+name: "Ship → Cloud Office APK (mirror official Collabora Office + push to GHCR via ORAS + attach to GH Release)"
 
 # NO BUILD. No engine script, no gradle, no SDK, no signing — on purpose.
 #
@@ -6,13 +6,13 @@ name: "Ship → Cloud Sheets APK (mirror official Collabora Office + push to GHC
 # own Gerrit plus an NDK megabuild over the whole external/ tree, and the result
 # still could not be signed as com.collabora.libreoffice by us. So this workflow
 # MIRRORS: it downloads the official APK from Collabora's F-Droid repo, verifies
-# it byte-for-byte against the sha256 pinned in ac_cloud-sheets/build.json, and
+# it byte-for-byte against the sha256 pinned in ac_cloud-office/build.json, and
 # republishes those exact bytes through the same two channels every other app
 # here uses, so the Constellation AppStore installs and auto-updates it like any
 # fleet member:
 #
-#   1. ORAS push as OCI artifact → ghcr.io/diegonmarcos/cloud-sheets:latest
-#   2. GH Release attachment     → Cloud-Sheets.apk on the rolling `latest` release
+#   1. ORAS push as OCI artifact → ghcr.io/diegonmarcos/cloud-office:latest
+#   2. GH Release attachment     → the asset named by release.gh_release.asset_name
 #
 # The pin is the entire security story. An unpinned mirror is a supply-chain
 # hole: whatever upstream happens to serve would get our name on it. So a sha
@@ -34,27 +34,27 @@ on:
   push:
     branches: [main]
     tags:
-      - "ac_cloud-sheets-v*"
+      - "ac_cloud-office-v*"
     paths:
       # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir
-      # ac_cloud-sheets/build.json::modules declares is added automatically, dead
+      # ac_cloud-office/build.json::modules declares is added automatically, dead
       # entries are dropped, and cloud-android-source-identity.sh hashes
       # exactly this list — so nothing can trigger a build the publish
       # gate does not weigh. Extra entries no module map can express
       # (settings.gradle.kts references, scan roots) are kept: add them
       # here and they stay.
-      - "1_cicd/src/cicd/ship-cloud-sheets.yml"
-      - "ac_cloud-sheets/**"
+      - "1_cicd/src/cicd/ship-cloud-office.yml"
+      - "ac_cloud-office/**"
 permissions:
   contents: write   # for gh release create/upload
   packages: write   # for ghcr push (oras)
 
 concurrency:
-  group: ship-cloud-sheets-${{ github.ref }}
+  group: ship-cloud-office-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  WORK_DIR: ac_cloud-sheets
+  WORK_DIR: ac_cloud-office
 
 jobs:
   mirror_and_publish:
@@ -69,7 +69,7 @@ jobs:
       # ORDER: TESTERS FIRST, REFUSAL SECOND. It was the other way round until
       # 2026-09-11, and that meant this app's three shell testers had NEVER RUN
       # IN CI ONCE — the refusal below exits 1 and every later step is skipped,
-      # so the only workflow that touches ac_cloud-sheets ran no test of it at
+      # so the only workflow that touches ac_cloud-office ran no test of it at
       # all. The refusal is about PUBLISHING, not about testing, for exactly the
       # reason the note below gives about the publish gate: editing a tester
       # does not move the APK, and gating a tester on a publish decision lets a
@@ -93,7 +93,7 @@ jobs:
 
       # THIS APP IS NO LONGER A MIRROR, AND THIS WORKFLOW STILL IS.
       #
-      # ac_cloud-sheets/build.json used to carry upstream.url + upstream.sha256:
+      # ac_cloud-office/build.json used to carry upstream.url + upstream.sha256:
       # one official APK, downloaded, hash-checked and republished. It now carries
       # upstream.online + upstream.engine — a pinned git revision, a sha256-pinned
       # prebuilt engine, and a patch series — because Text Enhance could not be
@@ -115,7 +115,7 @@ jobs:
           set -euo pipefail
           bj="${WORK_DIR}/build.json"
           if [ -n "$(jq -r '.upstream.online // empty' "$bj")" ]; then
-            echo "::error title=Cloud Office is mid-migration::ac_cloud-sheets is a SOURCE BUILD now (upstream.online is pinned), but this workflow still mirrors a prebuilt APK. It will not publish."
+            echo "::error title=Cloud Office is mid-migration::ac_cloud-office is a SOURCE BUILD now (upstream.online is pinned), but this workflow still mirrors a prebuilt APK. It will not publish."
             echo "Pinned online revision : $(jq -r '.upstream.online.revision'        "$bj")"
             echo "Engine (prebuilt) sha256: $(jq -r '.upstream.engine.source.sha256'   "$bj")"
             echo "Build host              : $(jq -r '.build.host // "NOT SET"'         "$bj")"
@@ -125,7 +125,7 @@ jobs:
             echo "megabuild of LibreOffice core. That was wrong and it cost the owner days of waiting on"
             echo "a ~\$35 approval. patches/0001 touches nine files and not one is C++, so BOTH native"
             echo "libraries are taken prebuilt from the sha256-pinned APK and neither is ever relinked;"
-            echo "ac_cloud-sheets/tests/test-no-engine-build-required.sh proves that against upstream on"
+            echo "ac_cloud-office/tests/test-no-engine-build-required.sh proves that against upstream on"
             echo "every run. What is left is a Node build of browser/ and a Gradle build of android/."
             echo "  1. write patches/0002: a declared --with-prebuilt-engine mode, because configure.ac:884"
             echo "     still refuses --enable-androidapp without an engine BUILD tree. See"
@@ -200,7 +200,7 @@ jobs:
           if [ "$ACTUAL" != "$EXPECT" ] || [ "$ACTUAL_SIZE" != "$EXPECT_SIZE" ]; then
             echo "::error::PIN MISMATCH — refusing to publish. Upstream rotated the" \
                  "artifact or the download was tampered with. Verify the new APK by" \
-                 "hand against index-v1.json, then bump ac_cloud-sheets/build.json" \
+                 "hand against index-v1.json, then bump ac_cloud-office/build.json" \
                  "::upstream.{version_name,version_code,apk_name,url,sha256,size}."
             exit 1
           fi
@@ -246,7 +246,7 @@ jobs:
       # Edit 1_cicd/src/scripts/cloud-android-publish-guard.sh, never this block.
       - name: A run that published nothing must not be green
         if: ${{ !cancelled() }}
-        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ac_cloud-sheets" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' }}" "${{ github.event_name }}"
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ac_cloud-office" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' }}" "${{ github.event_name }}"
       # ── end MANAGED-PUBLISH-GUARD ──
 
 
@@ -277,7 +277,7 @@ jobs:
             CREDS=(--username "${GITHUB_ACTOR:-diegonmarcos}" --password "${GHCR_CREATE_TOKEN}")
           fi
           # Layer title annotation comes from the filename in the file spec, so
-          # the AppStore's downloader finds Cloud-Sheets.apk by title exactly as
+          # the AppStore's downloader finds the asset by title exactly as
           # it does for every built app.
           oras push "${CREDS[@]}" "$REF:latest" \
             "${{ steps.pin.outputs.asset }}:$MT" \

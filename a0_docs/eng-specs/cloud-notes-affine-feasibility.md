@@ -91,7 +91,7 @@ Not a preference — a fact, checked three ways:
   `capacitor.config.ts` sets `releaseType: 'AAB'` — Play-only, AAB not APK.
   Play is precisely what a de-Googled phone does not have.
 
-So the Cloud Office (`ac_cloud-sheets`) mirror-and-pin pattern is not available
+So the Cloud Office (`ac_cloud-office`) mirror-and-pin pattern is not available
 here even if we wanted it. Its `_doc` block explains the trade honestly and the
 cost the fleet discovered: mirroring upstream's bytes means we cannot rebrand,
 cannot add a menu item, cannot re-sign, and the app can never join
