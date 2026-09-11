@@ -409,6 +409,10 @@ private fun MainNavHost(
                 onOpenHome = { entry.navigateOnce { nav.navigate("home") } },
                 // The words already typed in the search bar travel with the navigation.
                 onOpenSearch = { q -> entry.navigateOnce { nav.navigate("search?q=${Uri.encode(q)}") } },
+                // The drawer's Starred entry: the SAME search screen, opened on the one criterion
+                // and already run. No mailbox id anywhere in this route — a star is a keyword, so
+                // "Starred" is a query and never a folder the app could move mail into.
+                onOpenStarred = { entry.navigateOnce { nav.navigate("search?flagged=true") } },
                 onOpenScheduled = { entry.navigateOnce { nav.navigate("scheduled") } },
                 onOpenSnoozed = { entry.navigateOnce { nav.navigate("snoozed") } },
                 onOpenOutbox = { entry.navigateOnce { nav.navigate("outbox") } },
@@ -617,12 +621,14 @@ private fun MainNavHost(
             }
         }
         composable(
-            route = "search?q={q}&from={from}",
-            // Read straight from the entry's SavedStateHandle, so both survive a process death.
-            // Each fills its field; neither runs the search.
+            route = "search?q={q}&from={from}&flagged={flagged}",
+            // Read straight from the entry's SavedStateHandle, so all three survive a process death.
+            // `q` and `from` each fill their field and neither runs the search; `flagged` is the
+            // exception and runs it (the drawer's Starred entry — see SEARCH_FLAGGED_ARG).
             arguments = listOf(
                 navArgument("q") { type = NavType.StringType; nullable = true; defaultValue = null },
                 navArgument("from") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("flagged") { type = NavType.BoolType; defaultValue = false },
             ),
         ) { entry ->
             SearchScreen(

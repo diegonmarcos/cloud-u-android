@@ -70,6 +70,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.AllInbox
 import androidx.compose.material.icons.filled.MarkEmailUnread
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
@@ -249,6 +250,8 @@ fun InboxScreen(
     onOpenHome: () -> Unit,
     /** Advanced search, carrying whatever is already typed in the search bar so it isn't retyped. */
     onOpenSearch: (query: String) -> Unit,
+    /** The drawer's Starred entry: the search screen on `$flagged`, already run. Not a folder. */
+    onOpenStarred: () -> Unit,
     onOpenScheduled: () -> Unit,
     onOpenSnoozed: () -> Unit,
     onOpenOutbox: () -> Unit,
@@ -1762,6 +1765,7 @@ fun InboxScreen(
                         onOpenAccountSettings = onOpenAccountSettings,
                         onOpenSettings = onOpenSettings,
                         onOpenHome = onOpenHome,
+                        onOpenStarred = onOpenStarred,
                         onCreateFolder = { showCreateFolder = true },
                         onAddSubfolder = { folderToAddChild = it },
                         onRenameFolder = { folderToRename = it },
@@ -1790,6 +1794,7 @@ fun InboxScreen(
                         onOpenAccountSettings = onOpenAccountSettings,
                         onOpenSettings = onOpenSettings,
                         onOpenHome = onOpenHome,
+                        onOpenStarred = onOpenStarred,
                         onCreateFolder = { showCreateFolder = true },
                         onAddSubfolder = { folderToAddChild = it },
                         onRenameFolder = { folderToRename = it },
@@ -1820,6 +1825,7 @@ private fun DrawerContent(
     onOpenAccountSettings: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenHome: () -> Unit,
+    onOpenStarred: () -> Unit,
     /** The four dialogs the drawer opens live with the screen, not with the sheet: hoisted as
      *  callbacks so a dialog outlives the modal sheet closing under it. */
     onCreateFolder: () -> Unit,
@@ -2028,6 +2034,38 @@ private fun DrawerContent(
                     },
                     modifier = drawerRowModifier,
                 )
+                // Starred. LAST of the views and immediately above the folder list, so it sits
+                // directly against Inbox — where Gmail puts it — without being one of the folder
+                // rows. It is NOT one of them, and must not become one:
+                //
+                //   ⛔ THERE IS NO "STARRED" MAILBOX AND THIS APP MUST NEVER MAKE ONE. `$flagged`
+                //   is a KEYWORD on the message (RFC 8621 §4.1.1), `\Flagged` a message flag
+                //   (RFC 3501 §2.3.2) — an attribute, not a container. A real Mailbox named
+                //   "Starred" would appear in every other client he uses, and anything that then
+                //   MOVED mail into it would take that mail out of the folder it belongs in. That
+                //   is the #67 shape of bug (a MOVE that clobbered `mailboxIds`) and it is data
+                //   loss from the reader's side. This row creates nothing and moves nothing.
+                //
+                // Hence no [folderRank] either: ranking it would mean synthesising a fake Mailbox
+                // to rank, which is the very thing above. It is a DESTINATION like Home — it opens
+                // another screen — so like Home it never draws selected and closes the drawer.
+                //
+                // NO BADGE, deliberately. Its content is resolved BY THE SERVER (`Email/query`
+                // hasKeyword / `SEARCH FLAGGED`), while every number in this drawer comes from the
+                // local Room mirror at zero network. A cached count under a server-resolved list
+                // would be a number that disagrees with the list it labels, and the only way to
+                // make them agree is a network call per drawer open — which #247 explicitly bought
+                // its way out of. No count is honest; a cheap wrong one is not.
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Filled.Star, contentDescription = null) },
+                    label = { DrawerLabel(stringResource(R.string.folder_flagged)) },
+                    selected = false,
+                    onClick = {
+                        onOpenStarred()
+                        scope.launch { drawerState.close() }
+                    },
+                    modifier = drawerRowModifier,
+                )
                 // All | Unread (#247). Drawer-local and not persisted on purpose: a filter the
                 // reader cannot see from outside the sheet must not be able to greet them, weeks
                 // later, as a folder list with folders missing from it.
@@ -2089,10 +2127,14 @@ private fun DrawerContent(
                             }
                         },
                         label = { DrawerLabel(label) },
-                        // The inbox is always watched (no menu); notifying about one's own
-                        // sent/drafts/trash/junk would be noise (#16). Management actions stay
-                        // limited to user-created folders (no role).
-                        badge = if (mailbox.role !in watchMenuHiddenRoles) {
+                        // EVERY folder carries the options menu, because "Mark all as read" applies
+                        // to every folder — and the Inbox, which had no menu at all, is the one with
+                        // thousands of unread in it. The ITEMS stay gated exactly as they were: the
+                        // inbox is always watched, and notifying about one's own sent/drafts/trash/
+                        // junk would be noise (#16), so Watch is still hidden for those five roles;
+                        // management actions are still limited to user-created folders (no role).
+                        // What changed is the menu's existence, not any item's audience.
+                        badge = {
                             {
                                 Box {
                                     var folderMenu by remember { mutableStateOf(false) }

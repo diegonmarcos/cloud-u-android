@@ -52,6 +52,22 @@ const val SEARCH_QUERY_ARG = "q"
  */
 const val SEARCH_FROM_ARG = "from"
 
+/**
+ * Nav argument: open with the "flagged" criterion already on AND the search already run. This is
+ * what the drawer's Starred entry navigates to, and it is the whole of that feature.
+ *
+ * ⛔ STARRED IS NOT A MAILBOX AND THIS ARGUMENT IS WHY IT NEVER BECOMES ONE. `$flagged` is a
+ * KEYWORD on the message (RFC 8621 §4.1.1), not a container, so "starred mail" is a QUERY:
+ * `Email/query { hasKeyword: "$flagged" }` on JMAP, `SEARCH FLAGGED` on IMAP — both of which
+ * `repo.search` already issues for [SearchQuery.flagged]. Routing the drawer entry through here
+ * means no Mailbox is created on the server, no message changes folders, and there is exactly ONE
+ * implementation of "show me my starred mail" rather than a second one that would drift from this.
+ *
+ * It also answers `SearchScreen`'s own objection to a drawer entry — that one "could only list what
+ * the cache holds". This one does not: it asks the server, like every other search on that screen.
+ */
+const val SEARCH_FLAGGED_ARG = "flagged"
+
 private const val KEY_TEXT = "form.text"
 private const val KEY_FROM = "form.from"
 private const val KEY_RECIPIENT = "form.recipient"
@@ -88,8 +104,25 @@ class SearchViewModel(
         // rather than come back to an empty list under a summary that promises hits.
         if (handle.get<Boolean>(KEY_SUBMITTED) == true && !_form.value.query.isEmpty()) {
             run(_form.value.query)
+        } else if (arrivedPreRun()) {
+            // The drawer's Starred entry hands the criterion over and expects a FOLDER: a list of
+            // starred mail, not a form somebody else filled in. [search] and not [run], so the
+            // panel folds exactly as the Search button folds it — one path, one behaviour.
+            search()
         }
     }
+
+    /**
+     * Whether this screen was opened by [SEARCH_FLAGGED_ARG] and has not been used yet, so the
+     * search should run itself.
+     *
+     * The `== null` is load-bearing and is NOT `!= true`: [KEY_SUBMITTED] is written on every
+     * [run], so "absent" is the only value that means "nobody has searched on this screen yet".
+     * Read it as `!= true` and clearing the criteria would re-run the starred search on the next
+     * recreation, putting results back under a form the reader had just emptied on purpose.
+     */
+    private fun arrivedPreRun(): Boolean =
+        handle.get<Boolean>(SEARCH_FLAGGED_ARG) == true && handle.get<Boolean>(KEY_SUBMITTED) == null
 
     fun updateQuery(query: SearchQuery) {
         _form.value = _form.value.copy(query = query)
@@ -151,7 +184,9 @@ class SearchViewModel(
             recipient = handle[KEY_RECIPIENT] ?: "",
             subject = handle[KEY_SUBJECT] ?: "",
             hasAttachment = handle[KEY_ATTACHMENT] ?: false,
-            flagged = handle[KEY_FLAGGED] ?: false,
+            // Same precedence as the two criteria above: a value saved on this screen wins over
+            // the nav argument, so turning the switch OFF in a Starred search stays off.
+            flagged = handle[KEY_FLAGGED] ?: handle[SEARCH_FLAGGED_ARG] ?: false,
             afterMillis = handle[KEY_AFTER],
             beforeMillis = handle[KEY_BEFORE],
         ),
