@@ -17,9 +17,10 @@
       "_doc_patch_mode": "apply = the series in patches/ is applied with `git am` at materialize time against `revision`. The fleet's other forks are `vendored` (patched source committed, patches kept only as history). Reading this field is how an engine tells the two apart without knowing which app it is looking at.",
       "license": "MPL-2.0",
       "configure": {
-        "_doc": "THE REBRAND IS THESE FLAGS, NOT A PATCH. android/appSettings.gradle is generated from @APP_NAME@ / @ANDROID_PACKAGE_NAME@ / @VENDOR@ placeholders (see android/appSettings.gradle.in and configure.ac), so upstream already exposes every branding value as a knob. Patching the generated file would hardcode into the tree what a flag sets, and the patch would then conflict on every upstream touch of that file.",
+        "_doc": "THE REBRAND IS THESE FLAGS, NOT A PATCH. android/app/appSettings.gradle is generated from android/app/appSettings.gradle.in, whose @APP_NAME@ / @APP_PACKAGE_NAME@ / @VENDOR@ / @INFO_URL@ placeholders configure.ac substitutes (AC_CONFIG_FILES, configure.ac:2923), so upstream already exposes every branding value as a knob. Patching the generated file would hardcode into the tree what a flag sets, and the patch would then conflict on every upstream touch of that file.",
+        "_doc_flag_names": "EVERY NAME HERE IS VERIFIED AGAINST configure.ac AT THE PIN, BECAUSE AUTOCONF DOES NOT CHECK THEM FOR US. This block said \"--with-android-package-name\" from 05b0c6c15 until 2026-09-11. No such option exists at this revision — upstream's is --with-app-package-name (AC_ARG_WITH at configure.ac:292), and there is no @ANDROID_PACKAGE_NAME@ placeholder anywhere; the applicationId comes from @APP_PACKAGE_NAME@. An unknown --with-* does NOT fail configure: autoconf prints 'unrecognized options' to stderr and continues, so $with_app_package_name would have stayed empty and APP_PACKAGE_NAME would have taken its default. VERIFIED BY READING configure.ac:1155-1169: the default is org.collabora.app for an Android build, and com.collabora.office.Mobile only when enable_iosapp=yes. So the megabuild would have spent its money producing an APK whose applicationId is UPSTREAM'S, while android.application_id, the fleet manifest, the GHCR image and the launcher's installed-app probe all name com.diegonmarcos.cloudoffice — an app that would not exist. tests/test-configure-flags-exist.sh now derives the required flag from upstream on every run (placeholder -> configure.ac variable -> flag) and fails closed, so this cannot regress silently and a future upstream rename reports its new name instead of passing.",
         "--with-app-name": "Cloud Office",
-        "--with-android-package-name": "com.diegonmarcos.cloudoffice",
+        "--with-app-package-name": "com.diegonmarcos.cloudoffice",
         "--with-vendor": "diegonmarcos.com",
         "--with-info-url": "https://linktree.diegonmarcos.com"
       },
@@ -32,6 +33,7 @@
       "ref": "distro/collabora/co-26.04",
       "revision": "c1013fad0d38683630b48c01b6d5208b8d81181e",
       "_doc_revision": "Read from the ref's tip on 2026-09-10 via `git ls-remote`. Matched to the 26.04 online pin above: core and online must come from the same release line or the engine and the web layer disagree about the protocol between them. UNVERIFIED beyond existing — nothing here has built it, and no patch is applied to it, so the only claim made is that this sha was the tip of that ref at that reading.",
+      "_doc_BLOCKER_this_whole_block_is_probably_wrong": "DO NOT FUND #240 WITHOUT SETTLING THIS FIRST. On the revision we pin, `online` IS A MONOREPO and the LibreOffice engine is its `engine/` subdirectory — verified 2026-09-11 by fetching engine/sw/Library_sw.mk and engine/vcl/source/gdi/virdev.cxx at online@794af008 (both HTTP 200), and the pinned online commit's own diff touches engine/vcl/source/gdi/virdev.cxx. Re-confirmed the same day that c1013fad is still the tip of refs/heads/distro/collabora/co-26.04 in the separate `core` repo, and a0_docs/eng-specs/cloud-office-prebuilt-engine-reuse.md §1 dates that commit 2026-04-01 — five months before the 2026-09-03 APK this line is supposed to match. So following this pin would build a five-month-stale engine against a September shell, which is exactly the silent drift the 25.04->26.04 re-pin already caught once. The eng-spec's recommendation 1 is to DELETE upstream.core and build engine/ out of the online pin. That is not done here because it changes how the build fetches its source and no build or build host exists yet to verify the new shape against — it is a design decision for whoever sets build.host, NOT a doc fix. Recorded as data so the next reader cannot miss it.",
       "license": "MPL-2.0"
     }
   },
@@ -73,6 +75,19 @@
     "_doc_settings_are_not_shared": "The owner's standing rule: a user-editable settings surface is an independently editable copy per app, never a shared link. What is shared is the network transport and the credential. Cloud Office's own choices live in its own SharedPreferences file ('cloud_text_enhance') with defaults from android/lib/src/main/assets/cloud_text_enhance.json, added by patch 0001.",
     "service_package": "com.diegonmarcos.cloudkeyboard",
     "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"
+  },
+  "tests": {
+    "_doc": "WITHOUT THIS BLOCK NONE OF THIS APP'S TESTERS HAD EVER RUN, and nothing said so. cloud-android-test-engine.sh resolves .tests.shell.dir and DEFAULTS TO \"test\"; this app's directory is \"tests\", so the engine looked at ac_cloud-sheets/test, found nothing, printed one COVERAGE-GAP line and exited 0. The second half of the same defect is the glob: the engine runs only \"$dir\"/test-*.sh, and both testers here were named without that prefix, so even with the directory right they would have been skipped. Two files that call themselves 'the assertion the whole clone structure rests on' and the evidence behind the #241 verdict were decoration. Fixed by declaring the directory and by renaming the artefact tester to test-engine-artefacts-in-apk.sh.",
+    "shell": {
+      "dir": "tests",
+      "_doc_requires": "Checked BEFORE any tester runs, because a tester that shells out to a missing tool does not fail — it answers from the tool's absence. test-engine-artefacts-in-apk.sh parses a ZIP central directory in python3 and range-fetches it with curl; test-configure-flags-exist.sh reads Gerrit's REST API with curl and decodes base64. Absent any of these, both would report a verdict they never computed.",
+      "requires": [
+        "curl",
+        "python3",
+        "base64"
+      ],
+      "_doc_not_a_tester": "patches-apply.sh IS DELIBERATELY NOT NAMED test-*.sh, and that is a decision rather than the accident above. It is the strongest assertion this app has — it fetches the pin and applies the series for real — but Gerrit refuses both blob filtering and sha fetches, so it measured 471 MB and about ten minutes from this container. That is the wrong shape for a per-push tester on a workflow that triggers on every commit under ac_cloud-sheets/**, and a ten-minute network step on every doc edit is how a suite starts getting ignored. It belongs to the source-build workflow as a release gate, run once against the pin, and to agents by hand. When build.host is set and that workflow exists, it gets an explicit step there — not this prefix."
+    }
   },
   "release": {
     "kind": "app",

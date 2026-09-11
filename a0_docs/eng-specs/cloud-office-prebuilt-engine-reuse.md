@@ -103,9 +103,30 @@ AS_HELP_STRING([--with-app-package-name="org.collabora.app"],
 and there is no `--with-android-package-name` anywhere in the file. Autoconf
 does not fail on unknown `--with-*` options; it prints
 `configure: WARNING: unrecognized options:` and carries on, so the app would be
-built with `configure.ac:1160`'s default `com.collabora.office.Mobile` and
-nobody would see an error. Collabora's own build, recovered from the shipped
-binary (§4), uses `'--with-app-package-name=com.collabora.libreoffice'`.
+built with `configure.ac`'s default and nobody would see an error. Collabora's
+own build, recovered from the shipped binary (§4), uses
+`'--with-app-package-name=com.collabora.libreoffice'`.
+
+**FIXED 2026-09-11, and the default named here was wrong.** This section first
+said the fallback is `com.collabora.office.Mobile`. Re-read, the branch decides
+it — `configure.ac:1157-1163`:
+
+```
+if test -z "$with_app_package_name" -o "$with_app_package_name" = "no"; then
+    if test "$enable_iosapp" = "yes"; then
+        APP_PACKAGE_NAME="com.collabora.office.Mobile"
+    else
+        APP_PACKAGE_NAME="org.collabora.app"
+```
+
+`com.collabora.office.Mobile` is the **iOS** bundle identifier. An Android
+build takes the `else` and would have shipped as **`org.collabora.app`** —
+upstream's own namespace either way, so the consequence is unchanged, but the
+value is `org.collabora.app`. `build.json` now passes
+`--with-app-package-name`, and `ac_cloud-sheets/tests/test-configure-flags-exist.sh`
+derives the required flag from upstream on every run (the `applicationId`
+placeholder in `android/app/appSettings.gradle.in` → the `$with_*` variable
+`configure.ac` assigns it from → the flag name) so it cannot regress silently.
 
 `--with-app-branding` (`configure.ac:228`) is also absent from our configure
 block, and it is what carries the launcher icon, splash and online theme.
@@ -117,7 +138,7 @@ block, and it is what carries the launcher icon, splash and online theme.
 `android/lib/src/main/cpp/CMakeLists.txt.in` and `configure.ac` between them
 name every path the shell reads out of `$LOBUILDDIR`. Checked against the live
 central directory of the pinned APK (6,375 entries, 591,403 bytes fetched of
-267,216,449 — see `ac_cloud-sheets/tests/engine-artefacts-in-apk.sh`).
+267,216,449 — see `ac_cloud-sheets/tests/test-engine-artefacts-in-apk.sh`).
 
 ### Present in the APK — the runtime half (20 rows checked, all found)
 
@@ -553,9 +574,13 @@ They are live now and are wrong under either plan:
 1. **Delete `upstream.core`.** The engine is `engine/` inside the pinned
    `online` monorepo. Following the current `core` pin builds a tree last
    touched 2026-04-01 against a September shell.
-2. **`--with-android-package-name` → `--with-app-package-name`.** The current
-   key does not exist at the pinned revision; autoconf warns and moves on, and
-   the app would ship as `com.collabora.office.Mobile`.
+2. ~~**`--with-android-package-name` → `--with-app-package-name`.**~~ **DONE
+   2026-09-11.** The old key did not exist at the pinned revision; autoconf
+   warned and moved on, and an Android build would have shipped as
+   `org.collabora.app` (`configure.ac:1162`; the `com.collabora.office.Mobile`
+   named in the first draft of this spec is the iOS branch). `build.json` now
+   passes `--with-app-package-name`, and
+   `tests/test-configure-flags-exist.sh` asserts it against upstream.
 3. **Add `--with-app-branding=<path>`** (`configure.ac:228`). It is what carries
    the launcher icon, splash and online theme; without it the rebrand is a name
    change only.
@@ -587,7 +612,7 @@ then `make` in `engine/`.
 
 ## 9. The tester
 
-`ac_cloud-sheets/tests/engine-artefacts-in-apk.sh`, table in
+`ac_cloud-sheets/tests/test-engine-artefacts-in-apk.sh`, table in
 `ac_cloud-sheets/tests/engine-artefacts.json`. It range-fetches the pinned APK's
 ZIP central directory (~600 KB, not 267 MB) and checks all 33 declared
 artefacts, plus asserts by category that no `.a`/`.h`/`.hxx` entry exists
@@ -597,7 +622,7 @@ this goes red and §2's conclusion is worth revisiting.
 Watched, not assumed:
 
 ```
-$ ./ac_cloud-sheets/tests/engine-artefacts-in-apk.sh --self-test
+$ ./ac_cloud-sheets/tests/test-engine-artefacts-in-apk.sh --self-test
 # central directory: 6375 entries, 591,403 bytes fetched of 267,216,449
 # engine artefacts present in the APK : 20
 # engine artefacts the APK cannot hold: 13
