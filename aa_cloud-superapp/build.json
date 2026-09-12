@@ -3412,7 +3412,15 @@
             "id": "files",
             "label": "Files",
             "icon": "ic_p_folder",
-            "upstream": "filebrowser"
+            "upstream": "filebrowser",
+            "tabs": [
+              "recent",
+              "shared",
+              "photos",
+              "trash",
+              "upload"
+            ],
+            "_doc_tabs": "The five file views that the four-tab split pushed off the top strip live here as this page's own sub-strip — Recent | Shared | Photos | Trash | + Upload. They are all filebrowser/photoprism views, so Files is where they belong. This is the same page-owns-a-strip mechanism as Configs ▸ Launcher: SectionPages.kt routes a page with a non-empty `tabs` to SectionTabsFragment.forPage, and Sections.tabPagesOf drops the owner's own id so the strip cannot recurse into itself. It also satisfies the reachability rule in test-stack-anchors-declared.sh T8 — owning tabs counts as pointing at them, which is why these five need no dashboard tile."
           },
           {
             "id": "photos",
