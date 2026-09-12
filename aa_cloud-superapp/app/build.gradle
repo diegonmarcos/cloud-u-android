@@ -100,8 +100,22 @@ def leanJson = { java.io.File f, String fallback ->
     return groovy.json.JsonOutput.toJson(stripDocs(new groovy.json.JsonSlurper().parse(f)))
 }
 
+// Third time at the same wall. Doc-stripping bought ui.sections 30 KB back and
+// one season of ordinary editing has spent all of it: 48,101 bytes of compact
+// JSON is 64,136 base64 bytes, 1,399 short of the 65,535-byte javac ceiling.
+// Trimming content only moves the cliff a week, so deflate before encoding —
+// JSON is thousands of repeated key names, which is precisely what deflate
+// collapses: the same sections become 12,260 bytes. The reader sniffs the gzip
+// magic instead of being told, so blobs still baked plain keep working and the
+// next one to approach the wall changes one line here and nothing there.
+def gzB64 = { String s ->
+    def out = new java.io.ByteArrayOutputStream()
+    new java.util.zip.GZIPOutputStream(out).withStream { it.write(s.getBytes("UTF-8")) }
+    return out.toByteArray().encodeBase64().toString()
+}
+
 def uiSectionsJson  = groovy.json.JsonOutput.toJson(stripDocs(buildJson.ui.sections))
-def uiSectionsB64   = uiSectionsJson.bytes.encodeBase64().toString()
+def uiSectionsB64   = gzB64(uiSectionsJson)
 // Permissions master list — DevControlFragment's Permissions section
 // reads UI_PERMISSIONS_RUNTIME_B64 to render its row list (replaces
 // the previously hardcoded Pair list). Single source of truth:

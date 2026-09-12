@@ -626,9 +626,24 @@ object Sections {
     @Volatile private var cachedMail:     List<MailAccount>?           = null
     @Volatile private var cachedExtApps:  List<ExternalApp>?           = null
 
+    /** Decode a baked BuildConfig blob. A Java string constant tops out at
+     *  65,535 bytes and ui.sections had eaten all but 1,399 of them, so
+     *  app/build.gradle now deflates that one before base64 — 64,136 bytes
+     *  down to 12,260. The gzip magic is the switch rather than a flag,
+     *  because the dozen blobs still baked plain must keep decoding and the
+     *  next one to approach the wall should need no change on this side. */
+    fun unbake(b64: String): String {
+        val raw = Base64.decode(b64, Base64.NO_WRAP)
+        if (raw.size < 2 || raw[0] != 0x1f.toByte() || raw[1] != 0x8b.toByte())
+            return String(raw, Charsets.UTF_8)
+        return java.util.zip.GZIPInputStream(raw.inputStream()).use {
+            it.readBytes().toString(Charsets.UTF_8)
+        }
+    }
+
     fun all(): List<Section> {
         cached?.let { return it }
-        val json = String(Base64.decode(BuildConfig.UI_SECTIONS_JSON_B64, Base64.NO_WRAP))
+        val json = unbake(BuildConfig.UI_SECTIONS_JSON_B64)
         val arr = JSONArray(json)
         val parsed = mutableListOf<Section>()
         for (i in 0 until arr.length()) {

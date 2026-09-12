@@ -272,24 +272,40 @@ while IFS=$'\t' read -r name size headroom verdict; do
   [ "$verdict" = "OK" ] && ok "$name = $size bytes, $headroom to spare" \
                         || bad "$name = $size bytes, only $headroom to spare — $verdict"
 done < <(python3 - "$BJ" <<'PY'
-import json, sys, base64
+import json, sys, base64, gzip, io
 CAP, MARGIN = 65535, 4096
 d = json.load(open(sys.argv[1]))
 def strip(o):
     if isinstance(o, dict):  return {k: strip(v) for k, v in o.items() if not k.startswith("_doc")}
     if isinstance(o, list):  return [strip(v) for v in o]
     return o
-# Mirrors app/build.gradle: stripDocs, then compact JSON, then base64.
-for const, key in (("UI_SECTIONS_JSON_B64", "sections"),
-                   ("UI_LAUNCHER_THEMES_B64", "launcher_themes"),
-                   ("UI_LAUNCHER_SETTINGS_B64", "launcher_settings")):
-    n = len(base64.b64encode(json.dumps(strip(d["ui"][key]), separators=(",", ":"),
-                                        ensure_ascii=False).encode()))
+# Mirrors app/build.gradle: stripDocs, compact JSON, deflate the blobs baked
+# through gzB64, then base64. compresslevel 6 and mtime 0 are what Java's
+# GZIPOutputStream writes, so this is the size Gradle will actually emit and
+# not an optimistic estimate of it.
+def baked(obj, deflated):
+    raw = json.dumps(strip(obj), separators=(",", ":"), ensure_ascii=False).encode()
+    if deflated:
+        buf = io.BytesIO()
+        with gzip.GzipFile(fileobj=buf, mode="wb", compresslevel=6, mtime=0) as g:
+            g.write(raw)
+        raw = buf.getvalue()
+    return len(base64.b64encode(raw))
+for const, key, deflated in (("UI_SECTIONS_JSON_B64",     "sections",          True),
+                             ("UI_LAUNCHER_THEMES_B64",   "launcher_themes",   False),
+                             ("UI_LAUNCHER_SETTINGS_B64", "launcher_settings", False)):
+    n = baked(d["ui"][key], deflated)
     head = CAP - n
-    v = "OK" if head >= MARGIN else "under the %d-byte safety margin; split it into its own constant" % MARGIN
+    v = "OK" if head >= MARGIN else \
+        "under the %d-byte safety margin; bake it through gzB64 too" % MARGIN
     print("\t".join([const, str(n), str(head), v]))
 PY
 )
+# The mirror above only tells the truth while ui.sections really is deflated:
+# measuring a gzip size for a blob baked plain would hide 52 KB of payload.
+grep -q 'uiSectionsB64   = gzB64(' "$GRADLE" \
+  && ok "ui.sections is baked through gzB64, as the size check above assumes" \
+  || bad "ui.sections is baked plain — the size check above is measuring a blob that isn't emitted"
 # The two launcher blobs must go through stripDocs like ui.sections does, or the
 # prose above ships in the APK and counts against the same cap.
 for c in launcher_themes launcher_settings; do
