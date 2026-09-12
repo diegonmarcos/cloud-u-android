@@ -44,4 +44,26 @@
     <style name="WhiteOverflowButtonStyle" parent="Widget.AppCompat.ActionButton.Overflow">
         <item name="android:tint">@android:color/white</item>
     </style>
+
+    <!--
+        The two Media Center buttons under the gallery thumbnail. One style, not two
+        copies of the same eight attributes: the requirement is that a user cannot tell
+        the video button from the photo button except by its icon, and duplicated
+        attributes drift the first time one of them is touched alone.
+
+        Appearance only. The layout_* attributes stay inline on both buttons: a
+        LinearLayout child with no layout_width throws InflateException at startup, and
+        that is not a failure mode worth putting behind a style-resolution rule to save
+        two lines.
+
+        Tinted white explicitly - the glyphs fill with ?attr/colorControlNormal, which
+        Theme.Camera (Material3.Dark) resolves light today, but they must not go
+        dark-on-black if that theme parent ever changes.
+    -->
+    <style name="Widget.Camera.MediaCenterButton" parent="">
+        <item name="android:padding">12dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:background">?actionBarItemBackground</item>
+        <item name="android:tint">@android:color/white</item>
+    </style>
 </resources>

@@ -19,6 +19,15 @@
 #   * "an Intent is constructed" proves nothing resolves. A5 asserts the
 #     <queries> entry without which resolveActivity() returns null on
 #     targetSdk 30+ even when Media Center is installed.
+#   * "both buttons are 48dp" proves two numbers match, not that the pair looks
+#     alike. A8 resolves each button's style and asserts the two effective
+#     attribute sets are EQUAL apart from id, icon and description, so a
+#     background or a padding added to one alone fails.
+#   * "the not-installed string is still in the source" is what the previous
+#     version of this file asserted, and it stayed green while that string was
+#     the answer to three different questions. A9 asserts the string is
+#     unreachable except behind an explicit installed check, and absent from
+#     the catch block entirely.
 #
 # The XML assertions parse the document. They do not grep it — a grep for an
 # attribute matches that attribute inside a comment, and this repository has
@@ -113,9 +122,52 @@ for el in layout.iter():
     if name:
         by_id[name] = el
 
-# ── A1: the button exists at all (necessary, nowhere near sufficient) ──
-button = by_id.get("open_media_center")
-check("A1 layout declares @+id/open_media_center", button is not None)
+# ── style resolution ───────────────────────────────────────────────
+#
+# The pair's appearance lives in a style, not in the layout, so reading
+# layout attributes alone now answers None for every one of them — an
+# assertion that "the height is 48dp" would silently stop testing anything.
+themes_path = os.path.join(APP, "app/src/main/res/values/themes.xml")
+styles = {}
+for st in ET.parse(themes_path).getroot().findall("style"):
+    styles[st.get("name")] = {
+        it.get("name"): (it.text or "").strip() for it in st.findall("item")
+    }
+
+
+def effective(el):
+    """A view's attributes with its style resolved underneath them.
+
+    Inline attributes win over style items, which is what the inflater does.
+    Keys are bare names: 'android:layout_width' and android:layout_width from
+    the layout namespace both land on 'layout_width'.
+    """
+    out = {}
+    style_ref = el.get("style")
+    if style_ref:
+        name = style_ref.split("/")[-1]
+        seen = set()
+        chain = []
+        while name and name in styles and name not in seen:
+            seen.add(name)
+            chain.append(name)
+            name = (styles.get(name) or {}).get("parent") or None
+        for name in reversed(chain):
+            for k, v in styles[name].items():
+                if k == "parent":
+                    continue
+                out[k.split(":")[-1]] = v
+    for k, v in el.attrib.items():
+        if k.startswith(ANDROID):
+            out[k[len(ANDROID):]] = v
+    return out
+
+
+# ── A1: BOTH buttons exist — necessary, nowhere near sufficient ────────────
+video = by_id.get("open_media_center_video")
+photo = by_id.get("open_media_center_photo")
+check("A1 layout declares @+id/open_media_center_video", video is not None)
+check("A1 layout declares @+id/open_media_center_photo", photo is not None)
 
 thumb = by_id.get("third_option")
 check("A1 layout still declares @+id/third_option", thumb is not None)
@@ -124,11 +176,13 @@ check("A1 layout still declares @+id/third_circle (the gallery icon button)",
       by_id.get("third_circle") is not None)
 
 # ── A2: BELOW the thumbnail — document order inside a vertical column ──
-if button is not None and thumb is not None:
+for label, button in (("video", video), ("photo", photo)):
+    if button is None or thumb is None:
+        continue
     col_b = parent.get(button)
     col_t = parent.get(thumb)
     same = col_b is not None and col_b is col_t
-    check("A2 button and thumbnail share one parent column", same,
+    check("A2 %s button and thumbnail share one parent column" % label, same,
           "button parent is not the thumbnail's parent")
 
     if same:
@@ -138,17 +192,26 @@ if button is not None and thumb is not None:
               "BESIDE the thumbnail, not below it" % attr(col_b, "orientation"))
 
         kids = list(col_b)
-        check("A2 button comes after the thumbnail in that column",
+        check("A2 %s button comes after the thumbnail in that column" % label,
               kids.index(button) > kids.index(thumb),
               "index %d vs thumbnail %d — earlier means ABOVE"
               % (kids.index(button), kids.index(thumb)))
 
     # A tap target smaller than 48dp is a miss on a crowded viewfinder.
-    h, w = dp(attr(button, "layout_height")), dp(attr(button, "layout_width"))
-    check("A2 button is at least a 48dp tap target",
+    eff = effective(button)
+    h, w = dp(eff.get("layout_height")), dp(eff.get("layout_width"))
+    check("A2 %s button is at least a 48dp tap target" % label,
           h is not None and w is not None and h >= 48 and w >= 48,
-          "height=%r width=%r" % (attr(button, "layout_height"),
-                                  attr(button, "layout_width")))
+          "height=%r width=%r" % (eff.get("layout_height"),
+                                  eff.get("layout_width")))
+
+# He asked for the video button ABOVE the photo one.
+if video is not None and photo is not None and parent.get(video) is parent.get(photo):
+    kids = list(parent[video])
+    check("A2 the video button sits above the photo button",
+          kids.index(video) < kids.index(photo),
+          "video index %d, photo index %d"
+          % (kids.index(video), kids.index(photo)))
 
 # ── A3: the capture ring and flip button did not move ──
 #
@@ -252,7 +315,8 @@ if body is not None:
     check("A5 that function does start the activity",
           "startActivity" in body)
 
-    for key in ("media_center_not_installed", "media_center_folder_unavailable"):
+    for key in ("media_center_not_installed", "media_center_outdated",
+                "media_center_open_failed", "media_center_folder_unavailable"):
         check("A5 that function has a message for R.string.%s" % key,
               key in body,
               "every failure branch must say something; a silent no-op is "
@@ -274,9 +338,14 @@ check("A5 manifest declares <queries> visibility of Media Center",
 
 # ── A6: the owner's phone is in Spanish ──
 NEW_KEYS = (
-    "open_media_center",
+    "open_media_center_photo",
+    "open_media_center_video",
     "media_center_not_installed",
+    "media_center_outdated",
+    "media_center_open_failed",
     "media_center_folder_unavailable",
+    "install",
+    "update",
 )
 for values_dir in ("values", "values-es"):
     path = os.path.join(APP, "app/src/main/res", values_dir, "strings.xml")
@@ -312,6 +381,152 @@ else:
           "localeFilters=%s strips values-es out of resources.arsc at package "
           "time; the label ships English no matter what values-es says"
           % sorted(kept))
+
+# ── A8: the pair is indistinguishable except by icon ──────────────────
+#
+# "same size and style" is not two numbers agreeing. It is every visual
+# attribute agreeing, and the only honest way to check that is to diff the two
+# resolved attribute sets. A background, a padding or a tint added to one
+# button alone fails here — which is exactly the drift that produced a 96dp
+# thumbnail sitting above a 48dp button in the first place.
+MAY_DIFFER = {"id", "src", "contentDescription", "tooltipText"}
+
+if video is not None and photo is not None:
+    ev, ep = effective(video), effective(photo)
+
+    check("A8 both buttons carry the same style",
+          video.get("style") is not None
+          and video.get("style") == photo.get("style"),
+          "video style=%r photo style=%r — two copies of the same attributes "
+          "drift the first time one is edited alone"
+          % (video.get("style"), photo.get("style")))
+
+    style_name = (video.get("style") or "").split("/")[-1]
+    check("A8 that style is defined in themes.xml",
+          style_name in styles,
+          "style %r not found; effective() then silently resolves nothing and "
+          "every attribute below reads as absent" % style_name)
+
+    differing = sorted(
+        k for k in set(ev) | set(ep)
+        if k not in MAY_DIFFER and ev.get(k) != ep.get(k)
+    )
+    check("A8 the two buttons differ in nothing but icon and description",
+          not differing,
+          "these attributes differ: %s" % ", ".join(
+              "%s (%r vs %r)" % (k, ev.get(k), ep.get(k)) for k in differing))
+
+    # ... and they DO differ by icon, or they are the same button twice.
+    check("A8 the two buttons carry different icons",
+          ev.get("src") is not None and ev.get("src") != ep.get("src"),
+          "video src=%r photo src=%r" % (ev.get("src"), ep.get("src")))
+
+    check("A8 the two buttons are announced differently",
+          ev.get("contentDescription") is not None
+          and ev.get("contentDescription") != ep.get("contentDescription"),
+          "a screen reader would read the pair as one button said twice")
+
+    for label, eff in (("video", ev), ("photo", ep)):
+        check("A8 the %s icon exists as a drawable" % label,
+              os.path.isfile(os.path.join(
+                  APP, "app/src/main/res/drawable",
+                  (eff.get("src") or "").split("/")[-1] + ".xml")),
+              "src=%r" % eff.get("src"))
+
+# ── A9: both buttons open the SAME folder, on purpose ────────────────
+#
+# The split into a video folder and a photo folder is a later change he asked
+# NOT to have yet. Until then, a second code path is a second thing to get
+# wrong, so assert there is exactly one.
+setup = function_body(ma_src, "openMediaCenterVideo = binding.openMediaCenterVideo")
+if setup is None:
+    # Not inside its own function: fall back to the whole file, but only for
+    # locating the two bindings, never for the behaviour below.
+    setup = ma_src
+
+for field in ("binding.openMediaCenterVideo", "binding.openMediaCenterPhoto"):
+    check("A9 %s is bound" % field, field in ma_src,
+          "an unbound lateinit throws on the first rotation")
+
+check("A9 exactly one call site opens the folder",
+      ma_src.count("openCaptureFolderInMediaCenter()") == 2,
+      "expected the declaration plus one shared call; found %d occurrences "
+      "— two call sites means two code paths to keep in step, and the folder "
+      "breakdown he asked to defer has to change one target, not two"
+      % ma_src.count("openCaptureFolderInMediaCenter()"))
+
+# ── A10: "not installed" is never said unless the package IS absent ─────
+#
+# THIS is the bug the owner reported. resolveActivity() returning null was
+# reported as "not installed", which is true only sometimes and was false for
+# him: Media Center was on the phone, just older than the intent-filter. The
+# previous version of this tester asserted the string existed and went green
+# on exactly that code.
+if body is not None:
+    check("A10 the failure branch asks whether the package is installed",
+          "isPackageInstalled" in body,
+          "resolveActivity() answers 'nothing handles this intent'. It does "
+          "not answer 'the app is absent'. Only getPackageInfo does.")
+
+    def block_after(src, keyword):
+        """The braced block introduced by `keyword`, by brace depth."""
+        i = src.find(keyword)
+        if i < 0:
+            return None
+        j = src.find("{", i)
+        if j < 0:
+            return None
+        depth = 0
+        for k in range(j, len(src)):
+            if src[k] == "{":
+                depth += 1
+            elif src[k] == "}":
+                depth -= 1
+                if depth == 0:
+                    return src[j:k + 1]
+        return None
+
+    catch = block_after(body, "catch (")
+    check("A10 the function has a catch block", catch is not None)
+    if catch is not None:
+        check("A10 the catch block does not claim the app is missing",
+              "media_center_not_installed" not in catch,
+              "startActivity() failing AFTER the intent resolved is not "
+              "absence; it was reported as 'not installed' by this route too")
+        check("A10 the catch block says what actually failed",
+              "media_center_open_failed" in catch)
+
+    # "installed but too old" must be tied to the installed answer, not floating
+    # loose as a third message somebody can reach in any state.
+    idx_check = body.find("isPackageInstalled")
+    idx_outdated = body.find("media_center_outdated")
+    check("A10 the outdated message comes after the installed check",
+          idx_check >= 0 and idx_outdated > idx_check,
+          "isPackageInstalled at %d, media_center_outdated at %d"
+          % (idx_check, idx_outdated))
+
+# ── A11: the way out is offered, and only when it exists ─────────────
+recovery = function_body(
+    ma_src, "private fun showMediaCenterRecovery(")
+check("A11 showMediaCenterRecovery() exists", recovery is not None)
+
+if recovery is not None:
+    check("A11 it offers the fleet installer",
+          "getLaunchIntentForPackage" in recovery
+          and "CONSTELLATION_PACKAGE" in recovery,
+          "the artefact exists and is not on his phone; naming the problem "
+          "without offering the fix leaves him to find Constellation himself")
+
+    check("A11 it drops the action when the installer is absent",
+          "== null" in recovery or "?:" in recovery,
+          "a snackbar action that throws ActivityNotFoundException is one "
+          "more thing lying about what is on the phone")
+
+check("A11 manifest declares <queries> visibility of Constellation",
+      "com.diegonmarcos.superapp" in queried,
+      "without it getLaunchIntentForPackage() returns null on targetSdk 30+ "
+      "even when Constellation IS installed, and the action never appears; "
+      "found %r" % sorted(queried))
 
 print("\n-- %d assertions, %d failed --" % (checked, len(failures)))
 for f in failures:

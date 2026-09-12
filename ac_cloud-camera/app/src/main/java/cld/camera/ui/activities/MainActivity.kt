@@ -81,6 +81,7 @@ import cld.camera.ktx.SystemSettingsObserver
 import cld.camera.ktx.applyPreviewRatio
 import cld.camera.notifier.SensorOrientationChangeNotifier
 import cld.camera.util.MediaCenter
+import cld.camera.util.isPackageInstalled
 import cld.camera.ui.BottomTabLayout
 import cld.camera.ui.CountDownTimerUI
 import cld.camera.ui.CustomGrid
@@ -153,7 +154,8 @@ open class MainActivity : AppCompatActivity(),
     lateinit var cancelButtonView: ImageView
     lateinit var tabLayout: BottomTabLayout
     lateinit var thirdCircle: ImageView
-    lateinit var openMediaCenter: ImageButton
+    lateinit var openMediaCenterVideo: ImageButton
+    lateinit var openMediaCenterPhoto: ImageButton
     lateinit var captureButton: ImageButton
 
     private lateinit var scaleGestureDetector: ScaleGestureDetector
@@ -415,9 +417,17 @@ open class MainActivity : AppCompatActivity(),
     /**
      * Opens the folder this camera saves into, in Cloud Media Center.
      *
-     * Three outcomes, all of them distinguishable — the point of the message branches is
-     * that the button must never quietly land on Media Center's home screen, which looks
-     * enough like success to hide a broken folder lookup.
+     * Four outcomes, all of them distinguishable, and none of them a guess.
+     *
+     * The one this exists to kill: resolveActivity() returning null used to be reported
+     * as "Cloud Media Center is not installed", and that sentence was wrong every time
+     * the app WAS installed and merely predated the intent-filter it publishes now. It
+     * sent the owner looking for a missing app that was on his home screen, while the
+     * actual fix - install the newer artefact - was never named. resolveActivity() and
+     * "installed" are two different questions, so this asks both.
+     *
+     * It must never quietly land on Media Center's home screen either: that looks enough
+     * like success to hide a broken folder lookup, so there is no generic-VIEW fallback.
      */
     private fun openCaptureFolderInMediaCenter() {
         val relativePath = MediaCenter.captureFolderRelativePath(camConfig.storageLocation)
@@ -429,14 +439,20 @@ open class MainActivity : AppCompatActivity(),
 
         val intent = MediaCenter.viewFolderIntent(relativePath)
 
-        // resolveActivity, not startActivity-in-a-catch: Media Center simply not being
-        // installed is an ordinary state on a fleet where apps ship independently, and
-        // #280 has cloud-camera itself absent from the phone despite a published
-        // artefact. The manifest declares a <queries> entry for the package, without
-        // which this returns null on targetSdk 30+ even when it IS installed.
+        // The manifest declares a <queries> entry for the package, without which BOTH
+        // this and isPackageInstalled() below answer "absent" on targetSdk 30+ for an
+        // app that is installed.
         if (packageManager.resolveActivity(intent, 0L) == null) {
-            Log.i(TAG, "Media Center did not resolve $relativePath")
-            showMessage(R.string.media_center_not_installed)
+            val installed = packageManager.isPackageInstalled(MediaCenter.PACKAGE)
+            Log.i(
+                TAG,
+                "Media Center did not resolve $relativePath (package installed: $installed)"
+            )
+            showMediaCenterRecovery(
+                if (installed) R.string.media_center_outdated
+                else R.string.media_center_not_installed,
+                if (installed) R.string.update else R.string.install
+            )
             return
         }
 
@@ -444,8 +460,32 @@ open class MainActivity : AppCompatActivity(),
             startActivity(intent)
             Log.i(TAG, "Opening Media Center on $relativePath")
         } catch (e: Exception) {
+            // It resolved a moment ago, so this is not absence - a disabled component, a
+            // profile split, a dead activity. Saying "not installed" here was the same
+            // lie by a second route.
             Log.e(TAG, "unable to open Media Center", e)
-            showMessage(R.string.media_center_not_installed)
+            showMessage(R.string.media_center_open_failed)
+        }
+    }
+
+    /**
+     * Says what is wrong, and offers Constellation - the fleet installer - as the way out.
+     *
+     * The action is offered only when Constellation itself resolves. A snackbar button
+     * that throws ActivityNotFoundException would be one more thing lying about what is
+     * on the phone.
+     */
+    private fun showMediaCenterRecovery(@StringRes message: Int, @StringRes action: Int) {
+        val installer = packageManager
+            .getLaunchIntentForPackage(MediaCenter.CONSTELLATION_PACKAGE)
+
+        if (installer == null) {
+            showMessage(message)
+            return
+        }
+
+        showMessage(message, getString(action)) {
+            startActivity(installer)
         }
     }
 
@@ -782,10 +822,16 @@ open class MainActivity : AppCompatActivity(),
             return@setOnLongClickListener true
         }
 
-        openMediaCenter = binding.openMediaCenter
-        openMediaCenter.setOnClickListener {
-            resetAutoSleep()
-            openCaptureFolderInMediaCenter()
+        // Both buttons open the same folder on purpose: this camera writes photos and
+        // videos into one capture folder, so two destinations would need the folder split
+        // first. The pair exists now so that split is a change of target, not of layout.
+        openMediaCenterVideo = binding.openMediaCenterVideo
+        openMediaCenterPhoto = binding.openMediaCenterPhoto
+        for (button in listOf(openMediaCenterVideo, openMediaCenterPhoto)) {
+            button.setOnClickListener {
+                resetAutoSleep()
+                openCaptureFolderInMediaCenter()
+            }
         }
 
         captureButton = binding.captureButton
@@ -1372,7 +1418,8 @@ open class MainActivity : AppCompatActivity(),
         rotateView(thirdOption, iconRotation)
         // Sits in the same column as thirdOption and must turn with it, otherwise the
         // folder glyph stays upright while every icon around it rotates.
-        rotateView(openMediaCenter, iconRotation)
+        rotateView(openMediaCenterVideo, iconRotation)
+        rotateView(openMediaCenterPhoto, iconRotation)
 
         rotateView(exposurePlusIcon, iconRotation)
         rotateView(exposureNegIcon, iconRotation)

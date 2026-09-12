@@ -407,23 +407,34 @@
 
             </FrameLayout>
 
-                <!-- 48dp, not the 24dp the glyph needs: this is the minimum tap target, and
-                     it sits between the thumbnail and the mode tabs where a miss is easy.
-                     Tinted white explicitly — folder.xml fills with ?attr/colorControlNormal,
-                     which Theme.Camera (Material3.Dark) resolves light today, but this icon
-                     must not go dark-on-black if that theme parent ever changes. -->
+                <!-- The two Media Center buttons. Everything that decides how they look
+                     lives in the one shared style, so they differ only by icon, id and
+                     description - the point of the pair is that neither reads as the
+                     odd one out.
+
+                     Both open the SAME folder today: the camera writes photos and videos
+                     into one capture folder, and splitting the destinations is a later
+                     change that has to split the folder first. Two buttons onto one
+                     folder is deliberate, not a stub. -->
                 <ImageButton
-                    android:id="@+id/open_media_center"
+                    android:id="@+id/open_media_center_video"
+                    style="@style/Widget.Camera.MediaCenterButton"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_gravity="center_horizontal"
-                    android:padding="12dp"
-                    android:scaleType="fitCenter"
-                    android:background="?actionBarItemBackground"
-                    android:src="@drawable/folder"
-                    android:tint="@android:color/white"
-                    android:tooltipText="@string/open_media_center"
-                    android:contentDescription="@string/open_media_center"/>
+                    android:src="@drawable/videocam"
+                    android:tooltipText="@string/open_media_center_video"
+                    android:contentDescription="@string/open_media_center_video"/>
+
+                <ImageButton
+                    android:id="@+id/open_media_center_photo"
+                    style="@style/Widget.Camera.MediaCenterButton"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center_horizontal"
+                    android:src="@drawable/photo"
+                    android:tooltipText="@string/open_media_center_photo"
+                    android:contentDescription="@string/open_media_center_photo"/>
 
             </LinearLayout>
 

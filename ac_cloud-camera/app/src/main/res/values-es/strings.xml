@@ -11,7 +11,12 @@
     the untranslated upstream strings are unaffected by this file existing.
 -->
 <resources>
-    <string name="open_media_center">Abrir la carpeta de la cámara en Media Center</string>
+    <string name="open_media_center_photo">Abrir las fotos en Media Center</string>
+    <string name="open_media_center_video">Abrir los vídeos en Media Center</string>
     <string name="media_center_not_installed">Cloud Media Center no está instalado</string>
+    <string name="media_center_outdated">Cloud Media Center está instalado, pero es demasiado antiguo para abrir una carpeta. Actualízalo.</string>
+    <string name="media_center_open_failed">No se pudo abrir esa carpeta en Media Center</string>
     <string name="media_center_folder_unavailable">Media Center no puede abrir la carpeta donde guarda esta cámara</string>
+    <string name="install">Instalar</string>
+    <string name="update">Actualizar</string>
 </resources>

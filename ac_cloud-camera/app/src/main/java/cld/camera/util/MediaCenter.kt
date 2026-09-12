@@ -24,6 +24,14 @@ object MediaCenter {
 
     const val PACKAGE = "com.diegonmarcos.mediacenter"
 
+    /**
+     * Constellation, the fleet installer. Named here because it is the answer to both
+     * "Media Center is missing" and "Media Center is too old": on this fleet an app is
+     * published as a release artefact and installed from it, so the recovery for either
+     * state is the same app, not a store page.
+     */
+    const val CONSTELLATION_PACKAGE = "com.diegonmarcos.superapp"
+
     const val ACTION_VIEW_FOLDER = "com.diegonmarcos.mediacenter.action.VIEW_FOLDER"
 
     /** MediaStore RELATIVE_PATH of the folder to show, with no trailing separator. */

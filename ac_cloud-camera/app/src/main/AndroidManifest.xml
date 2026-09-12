@@ -34,6 +34,13 @@
             and this is a private action.
         -->
         <package android:name="com.diegonmarcos.mediacenter" />
+        <!--
+            Constellation, the fleet installer. The Media Center buttons offer it as the
+            recovery when Media Center is missing or too old to open a folder; without
+            this entry getLaunchIntentForPackage() returns null on targetSdk 30+ and the
+            snackbar silently drops its action.
+        -->
+        <package android:name="com.diegonmarcos.superapp" />
     </queries>
 
     <application
