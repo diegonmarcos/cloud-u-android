@@ -18,8 +18,9 @@
 #       tile — the whole named group, plus each `<section>/<tileId>` extra
 #   T4  every app that lands in that row carries a target the tile dispatcher
 #       has a branch for, so no icon can be inert
-#   T5  PM Boards is in the row, sourced from Tools Dashboards rather than
-#       copied into Data Apps
+#   T5  PM Boards stays removed — #311 deleted the tile from Projects W, which
+#       held its only definition, so it may neither return as an extra here nor
+#       be re-created as a copy inside Data Apps
 #   T6  the Configs half is intact — the page still renders every declared
 #       drive_connections backend, i.e. it was relocated, not rewritten
 #   T7  the layout puts Apps before Configs
@@ -143,12 +144,18 @@ else:
             seen.add(t.get("target")); deduped.append(t)
     row = deduped
 
-    pm = next((t for t in row if t.get("id") == "pmboards"), None)
-    if pm is None:
-        emit("T5", "PM Boards is not in the Apps row")
-    elif any(t.get("id") == "pmboards" for t in (data_apps.get("tiles") or [])):
-        emit("T5", "PM Boards was COPIED into Data Apps — it belongs to "
-                   "Tools Dashboards and must be referenced, not duplicated")
+    # #311 removed PM Boards from Projects W, and Projects W held its only tile
+    # definition — so the `cloud/pmboards` extra this page used to carry is gone
+    # with it. A reference cannot outlive its referent. What stays pinned is the
+    # shape the removal has to keep: the tile must not come back here as an extra
+    # aimed at something the owner deleted, and must not be re-created as a local
+    # copy in Data Apps, which would restore the icon while losing the deletion.
+    if any(t.get("id") == "pmboards" for t in row):
+        emit("T5", "PM Boards is back in the Apps row — #311 removed it from "
+                   "Projects W, which was its only definition")
+    if any(t.get("id") == "pmboards" for t in (data_apps.get("tiles") or [])):
+        emit("T5", "PM Boards was re-created inside Data Apps — #311 deleted "
+                   "the tile, so a copy here is a resurrection, not a reference")
 
 # ── T4 — every target in the row is a verb onTileClicked has a branch for ────
 # The `when` in ShellActivity.onTileClicked, handed in by the caller which read

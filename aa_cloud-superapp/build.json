@@ -2413,13 +2413,13 @@
               },
               {
                 "id": "mattermost",
-                "label": "Chat (Mattermost)",
+                "label": "Chat",
                 "icon": "ic_p_chat_mattermost",
                 "target": "extapp:cloud-chat"
               },
               {
                 "id": "element",
-                "label": "Messenger (Element)",
+                "label": "Messenger Matrix",
                 "icon": "ic_p_chat_matrix",
                 "target": "extapp:cloud-matrix",
                 "_doc": "Opens the standalone Cloud-Matrix app (ac_cloud-matrix, com.diegonmarcos.comms.matrix) via extapp:cloud-matrix — installed → launches; absent → install via Configs ▸ Constellation. The Cloud-Comms hub is decommissioned; the matrix fork is now its own constellation app. Replaces the old app://im.vector.app launcher."
@@ -2637,29 +2637,9 @@
             ]
           },
           {
-            "_doc": "Projects W — the work half of the two project rows, opposite Projects Me. All three tiles are paca boards, which is why the rule here does not divide two kinds of tap the way Projects Me's first rule does: it divides the board LIST from the two named boards, so a reader can tell 'show me everything' from 'take me to this one'. The owner asked for 'PM Boards | PM C3 PM X' and gave two names with no targets; the two boards did not exist, and the previous revision of this row refused to invent uuids for them. The owner then approved creating them, and they were created through paca's own API (POST /api/v1/projects as the admin user) rather than by inserting a row, because paca builds a project out of more than the projects row — creating C3 and X that way also produced their 4 task_statuses, 4 task_types, 3 project_roles and the owner's project_members entry, which is what makes each id render as a board instead of an empty shell.",
+            "_doc": "Projects W — the work half of the two project rows, opposite Projects Me. Every tile is a named paca board and there is no rule in the row: the owner removed PM Boards, PM C3 and the '|' between them, and with the board LIST gone there are no longer two kinds of tap to divide. The C3 board itself still exists in paca (uuid 91d8fa68-ce83-463d-af00-af632cf26ab7, created through POST /api/v1/projects so it carries its 4 task_statuses, 4 task_types, 3 project_roles and the owner's project_members entry); only the tile that opened it is gone, so restoring it means bringing the tile back, not recreating the board. The board list is still reachable through the three index-target tiles below.",
             "title": "Projects W",
             "tiles": [
-              {
-                "_doc": "PM Boards — the aa-sui_paca project-management tool (Kanban boards), moved here out of Projects Me because a work board is not one of the owner's personal projects. Opens the cloud service in the in-app browser at its board LIST, which is why it keeps the bare host and no /projects/<id> path: it is the way in when you do not already know which board you want. The gateway on 10.0.0.6:8095 answers 200 and /api/healthz returns {\"status\":\"ok\"}; the list is no longer empty now that C3 and X exist beside it.",
-                "id": "pmboards",
-                "label": "PM Boards",
-                "icon": "ic_pm_boards",
-                "target": "https://paca.diegonmarcos.com"
-              },
-              {
-                "_doc": "The rule — divides the board list from the two named boards. NOT a tile: it declares no target and GroupedTilesFragment draws it as a bare '|' that is not clickable, not focusable and hidden from accessibility. Sections.TileGroup.destinations drops it, so the derived Apps page, the flat aggregator fallback and Recently Used never see it. It was absent while this row held one tile, because a rule with nothing on one side of it divides nothing and T5 fails a row that ends on one; it returns now that PM C3 and PM X stand after it.",
-                "id": "projects-w-sep-1",
-                "label": "|",
-                "separator": true
-              },
-              {
-                "_doc": "PM C3 — the paca board named C3, addressed by its uuid because paca has NO other way to name a board: the projects table has id, name, description, task_id_prefix and no slug column, and the web router declares /projects/$projectId and nothing like /projects/by-name. THE UUID IS A BUILD-TIME CONSTANT BAKED INTO THE APK, AND IT DIES IF THE PACA DATABASE IS EVER RECREATED — gen_random_uuid() will hand out a different id for a board of the same name, and this tile will then open a 404 while still looking wired. Anyone restoring or reseeding paca has to come back here and to PM X. Verified 2026-09-09: GET /api/v1/projects/91d8fa68-ce83-463d-af00-af632cf26ab7 answers 200 with name C3 while an unused uuid answers 404, and the board carries the 4 task_statuses paca's own create path lays down.",
-                "id": "pmc3",
-                "label": "PM C3",
-                "icon": "ic_pm_boards",
-                "target": "https://paca.diegonmarcos.com/projects/91d8fa68-ce83-463d-af00-af632cf26ab7"
-              },
               {
                 "_doc": "PM C3-D&P-7321 — the paca board that used to be shown as plain 'PM X', renamed to the project's real name. The uuid is unchanged because the BOARD is unchanged: only the label the owner reads was wrong. Its id moved with its label (pmx became pm-c3-dp-7321) so that the id of a tile keeps naming the project it opens, and the freed 'pmx' id now belongs to the new PM X board below. Same uuid addressing and the same warning as PM C3: recreate the paca database and this target dies silently. Verified 2026-09-09: GET /api/v1/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d answers 200 with name X, and the board carries its 4 task_statuses.",
                 "id": "pm-c3-dp-7321",
@@ -3312,11 +3292,9 @@
             "upstream": "photoprism"
           },
           {
-            "_doc_apps": "The Apps section this page opens with. DERIVED, never retyped: `apps_from_tile_group` names the ONE canonical list — Cloud ▸ Apps ▸ Data Apps, the same tile_groups entry the launcher row renders — so adding an app to that row adds it here, and the two can never drift into disagreeing about what a Data App is. `apps_extra_tile_ids` picks up the strays that belong on this page but live in another group (PM Boards is in Projects W), addressed as `<sectionId>/<tileId>` so the reference says where to look. Both resolve to the tiles' own targets, so every icon dispatches through the same grammar the launcher uses and inherits its not-installed handling — see Sections.appTilesFor.",
+            "_doc_apps": "The Apps section this page opens with. DERIVED, never retyped: `apps_from_tile_group` names the ONE canonical list — Cloud ▸ Apps ▸ Data Apps, the same tile_groups entry the launcher row renders — so adding an app to that row adds it here, and the two can never drift into disagreeing about what a Data App is. `apps_extra_tile_ids` picks up the strays that belong on this page but live in another group, addressed as `<sectionId>/<tileId>` so the reference says where to look. It is empty today: its one entry was `cloud/pmboards`, and PM Boards was removed from Projects W, which was the only place the tile was ever defined — a reference cannot outlive its referent, and leaving it would have resolved to no tile and gone silently missing from the row. Both resolve to the tiles' own targets, so every icon dispatches through the same grammar the launcher uses and inherits its not-installed handling — see Sections.appTilesFor.",
             "apps_from_tile_group": "cloud/Data Apps",
-            "apps_extra_tile_ids": [
-              "cloud/pmboards"
-            ],
+            "apps_extra_tile_ids": [],
             "id": "connections",
             "label": "Connections",
             "icon": "ic_p_sol_cloud",

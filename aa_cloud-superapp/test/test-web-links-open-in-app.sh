@@ -4,8 +4,8 @@
 #
 # The regression this guards: ShellActivity.launchUri used to package-target
 # ACTION_VIEW at com.diegonmarcos.cloudbrowser for every http(s) target, so the
-# MySocials and PM Boards tiles (plain URLs in build.json) task-switched out of
-# superapp on first tap — and when Cloud-Browser was not installed the URL was
+# MySocials tile (a plain URL in build.json) task-switched out of superapp on
+# first tap — and when Cloud-Browser was not installed the URL was
 # dropped entirely in favour of an APK download. The fix routes that branch to
 # WebPageFragment, the same embedded browser Cloud > Linktree already uses.
 #
@@ -41,25 +41,28 @@ has 'goBack()'                "$WEB_KT" "Back steps through WebView history"
 has 'onBackPressedDispatcher.onBackPressed()' "$WEB_KT" "with no history left, Back closes the browser"
 has 'R.string.action_back'    "$WEB_KT" "the control carries a contentDescription (screen readers)"
 
-echo "== T4: the two reported pages are plain URLs — engine-routed, not special-cased =="
-python3 - "$BJ" <<'PY' && ok "MySocials and PM Boards targets are plain http(s) URLs" || bad "a reported tile is no longer a plain URL target"
+# The other reported page was PM Boards, and #311 removed that tile from
+# Projects W — the only group that ever defined it. It is checked here no longer
+# because it no longer exists, not because the rule stopped applying: the rule is
+# about the dispatcher branch, which MySocials still exercises.
+echo "== T4: the reported page is a plain URL — engine-routed, not special-cased =="
+python3 - "$BJ" <<'PY' && ok "MySocials target is a plain http(s) URL" || bad "the reported tile is no longer a plain URL target"
 import json,sys
 d=json.load(open(sys.argv[1]))
 found={}
 def walk(n):
     if isinstance(n,dict):
-        if n.get("id") in ("mysocials","pmboards") and "target" in n:
+        if n.get("id") == "mysocials" and "target" in n:
             found[n["id"]]=n["target"]
         for v in n.values(): walk(v)
     elif isinstance(n,list):
         for v in n: walk(v)
 walk(d)
-assert set(found)=={"mysocials","pmboards"}, found
+assert set(found)=={"mysocials"}, found
 for i,t in found.items():
     assert t.startswith("http://") or t.startswith("https://"), (i,t)
 PY
 lacks 'mysocials' "$SHELL_KT" "no per-page special case for MySocials in the dispatcher"
-lacks 'pmboards'  "$SHELL_KT" "no per-page special case for PM Boards in the dispatcher"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

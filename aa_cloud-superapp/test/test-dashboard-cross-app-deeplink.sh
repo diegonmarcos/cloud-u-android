@@ -149,11 +149,12 @@ ROWS = {
     "Projects Me": ["my-pm", "projects-me-sep-0", "mysocials",
                     "projects-me-sep-1", "myburo",
                     "projects-me-sep-2", "myhealth", "mystudy", "mytrips"],
-    # "PM Boards | PM C3 PM X", as the owner asked. The rule divides the board
-    # LIST from the two named boards; all three are http tiles, so it marks a
-    # difference in destination rather than in what tapping does.
-    "Projects W":  ["pmboards", "projects-w-sep-1", "pmc3", "pm-c3-dp-7321",
-                    "mqpm-stochbates", "pmx", "pm-zirkus"],
+    # Four named boards and no rule — task 311 removed PM Boards, PM C3 and the
+    # "|" between them. The rule had marked the board LIST off from the named
+    # boards; with the list gone there are no longer two kinds of destination in
+    # the row for it to divide, so it went with them rather than floating at the
+    # head of a row whose every tile is now the same kind of tile.
+    "Projects W":  ["pm-c3-dp-7321", "mqpm-stochbates", "pmx", "pm-zirkus"],
 }
 
 # Every target, spelled the way the ROUTER resolves it and not the way the tile
@@ -168,12 +169,12 @@ TARGETS = {
     # the board it was standing in for.
     "my-pm":     "https://paca.diegonmarcos.com/projects",
     "mysocials": "https://diegonmarcos.github.io/mySocials/",
-    "pmboards":  "https://paca.diegonmarcos.com",
-    # Board uuids, baked in at build time because paca's projects table has no
+    # A board uuid, baked in at build time because paca's projects table has no
     # slug column and its router only declares /projects/$projectId — there is
-    # no name-based route to prefer. Recreating the paca database reissues both
-    # ids and silently breaks these two tiles; see their _doc in build.json.
-    "pmc3":      "https://paca.diegonmarcos.com/projects/91d8fa68-ce83-463d-af00-af632cf26ab7",
+    # no name-based route to prefer. Recreating the paca database reissues the
+    # id and silently breaks this tile; see its _doc in build.json. Task 311
+    # removed the PM C3 tile that pinned the other uuid here; the board itself
+    # still exists in paca, so restoring it is a tile, not a board.
     "pm-c3-dp-7321": "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d",
     # The three boards that do not exist in paca yet address the project INDEX, not a uuid. Pinning
     # that here is the point: the day task 182 creates a board and wires its uuid, this line fails
