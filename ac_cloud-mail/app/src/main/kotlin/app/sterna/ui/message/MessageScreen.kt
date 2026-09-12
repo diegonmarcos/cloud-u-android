@@ -186,6 +186,7 @@ import app.sterna.core.jmap.model.EmailAddress
 import app.sterna.core.jmap.model.EmailBodyPart
 import android.text.format.DateUtils
 import app.sterna.ui.canSnoozeIn
+import app.sterna.ui.browser.InAppBrowser
 import app.sterna.ui.inbox.FolderPickerRow
 import app.sterna.ui.inbox.MoveAccountRow
 import app.sterna.ui.inbox.filterFolderRows
@@ -1458,7 +1459,7 @@ private fun MessageActions(
                         // not whatever the live state holds when the button is pressed.
                         val page = pending.options.pageUrl
                         viewModel.dismissUnsubscribeConfirm()
-                        if (page != null) leaveOnce { openExternally(context, Uri.parse(page)) }
+                        if (page != null) leaveOnce { InAppBrowser.openLink(context, Uri.parse(page)) }
                     } else {
                         viewModel.unsubscribe()
                     }
@@ -4280,7 +4281,7 @@ private fun EmailWebView(
     client.blockRemote = blockRemote
     client.stripTracking = stripTracking
     client.onOpenUrl = { uri ->
-        if (confirmLinks) pendingLink = uri else leaveOnce { openExternally(context, uri) }
+        if (confirmLinks) pendingLink = uri else leaveOnce { InAppBrowser.openLink(context, uri) }
     }
     // The body's resting scroll geometry as measured by the height poll, when it actually measured
     // rather than fell back. It is what lets the host decide the Reply/Forward bar in the same frame
@@ -4557,7 +4558,7 @@ private fun EmailWebView(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { leaveOnce { openExternally(context, uri) }; pendingLink = null }) {
+                TextButton(onClick = { leaveOnce { InAppBrowser.openLink(context, uri) }; pendingLink = null }) {
                     Text(stringResource(R.string.message_open_link_open))
                 }
             },
@@ -4568,19 +4569,6 @@ private fun EmailWebView(
             },
         )
     }
-}
-
-/**
- * Open a URL in the system's default handler, and say whether anything took it — a device with no
- * browser at all throws. Swallowing that and returning nothing reads the same on screen but not to
- * the guard above: an opener that cannot tell a hand-off from a dud would latch a dead link.
- */
-private fun openExternally(context: Context, uri: Uri): Boolean = try {
-    context.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    true
-} catch (e: Exception) {
-    // No app can handle the URL — silently ignore rather than crash.
-    false
 }
 
 /** A Compose [Color] as a CSS hex string (#RRGGBB). */

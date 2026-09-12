@@ -89,6 +89,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import app.sterna.R
 import app.sterna.core.data.autoconfig.MailAutoconfigResult
 import app.sterna.core.jmap.withLoginHint
+import app.sterna.ui.browser.InAppBrowser
 import app.sterna.ui.components.AppPasswordHelpLink
 import app.sterna.ui.components.LoadingRing
 import app.sterna.ui.components.PendingImportAccountsSection
@@ -565,11 +566,10 @@ fun ConnectScreen(
                                 )
                                 TextButton(
                                     onClick = {
-                                        leaveOnce {
-                                            runCatching {
-                                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                                            }.isSuccess
-                                        }
+                                        // A help page, so it opens in this app's own browser (#307).
+                                        // The OAuth hand-offs further down deliberately do not:
+                                        // a sign-in belongs in the browser holding the session.
+                                        leaveOnce { InAppBrowser.openLink(context, Uri.parse(url)) }
                                     },
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                                 ) {
@@ -731,11 +731,10 @@ fun ConnectScreen(
                             preset.appPasswordUrl?.let { url ->
                                 TextButton(
                                     onClick = {
-                                        leaveOnce {
-                                            runCatching {
-                                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-                                            }.isSuccess
-                                        }
+                                        // A help page, so it opens in this app's own browser (#307).
+                                        // The OAuth hand-offs further down deliberately do not:
+                                        // a sign-in belongs in the browser holding the session.
+                                        leaveOnce { InAppBrowser.openLink(context, Uri.parse(url)) }
                                     },
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                                 ) {

@@ -121,6 +121,7 @@ import androidx.navigation.compose.rememberNavController
 import app.sterna.core.data.account.ConnectionSecurity
 import app.sterna.core.data.account.MailProtocol
 import app.sterna.core.data.account.StoredIdentity
+import app.sterna.ui.browser.InAppBrowser
 import app.sterna.core.data.account.SyncWindow
 import app.sterna.core.data.account.syncWindowChoices
 import app.sterna.core.data.filter.VacationFilterLine
@@ -471,10 +472,15 @@ private fun SettingsHub(
 /** Where Sterna Mail lives; the About section links here (repo, releases, license). */
 private const val REPO_URL = "https://codeberg.org/emon/sterna-mail"
 
-/** Hands a URL to whatever handles it, and says whether anything took it. Call it through the
- *  opener from [rememberLeaveOnce]: it has no re-entrancy protection of its own (#106). */
+/** Opens a URL in the app's own browser, and says whether anything took it. Call it through the
+ *  opener from [rememberLeaveOnce]: it has no re-entrancy protection of its own (#106).
+ *
+ *  These are reference pages — the repo, the release notes, a licence, F-Droid — and reading one
+ *  used to mean leaving the app (#307). The OAuth hand-offs below deliberately do NOT come through
+ *  here: a sign-in belongs in the browser that already holds the session, and its redirect comes
+ *  back on a scheme the built-in browser refuses to navigate. */
 private fun openUrl(context: android.content.Context, url: String): Boolean =
-    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }.isSuccess
+    InAppBrowser.openLink(context, Uri.parse(url))
 
 @Composable
 private fun AppearanceScreen(viewModel: SettingsViewModel, onBack: () -> Unit) {

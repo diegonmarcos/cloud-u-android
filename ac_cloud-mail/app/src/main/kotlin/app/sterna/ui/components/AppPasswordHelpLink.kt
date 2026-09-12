@@ -1,6 +1,5 @@
 package app.sterna.ui.components
 
-import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.sterna.R
+import app.sterna.ui.browser.InAppBrowser
 import app.sterna.ui.rememberLeaveOnce
 
 /** Microsoft's app-password creation page (used for the OAuth→app-password fallback). */
@@ -31,11 +31,7 @@ fun AppPasswordHelpLink() {
     val leaveOnce = rememberLeaveOnce()
     TextButton(
         onClick = {
-            leaveOnce {
-                runCatching {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(MS_APP_PASSWORD_URL)))
-                }.isSuccess
-            }
+            leaveOnce { InAppBrowser.openLink(context, Uri.parse(MS_APP_PASSWORD_URL)) }
         },
         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
     ) {

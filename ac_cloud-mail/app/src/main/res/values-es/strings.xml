@@ -1168,4 +1168,16 @@
     <string name="settings_update_link_ghcr">Registro de paquetes</string>
     <string name="inbox_folders_tab_all">Todas</string>
     <string name="inbox_folders_tab_unread">Sin leer</string>
+
+    <!-- El navegador integrado (#307): un enlace se abre aquí en vez de abandonar el mensaje. -->
+    <string name="browser_title">Navegador</string>
+    <string name="browser_close">Cerrar el navegador</string>
+    <string name="browser_reload">Recargar la página</string>
+    <string name="browser_menu">Menú del navegador</string>
+    <string name="browser_no_app">Esa aplicación no está instalada</string>
+    <string name="browser_open_in_cloud_browser">Abrir en Cloud Browser</string>
+    <string name="browser_open_in_brave">Abrir en Brave</string>
+    <string name="browser_translate_page">Traducir la página</string>
+    <string name="browser_view_desktop">Ver como escritorio</string>
+    <string name="browser_view_mobile">Ver como móvil</string>
 </resources>

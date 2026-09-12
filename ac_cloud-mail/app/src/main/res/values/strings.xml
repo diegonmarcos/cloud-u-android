@@ -1206,4 +1206,18 @@
     <string name="home_stat_subscribed">Subscribed folders</string>
     <string name="inbox_folders_tab_all">All</string>
     <string name="inbox_folders_tab_unread">Unread</string>
+
+    <!-- The built-in browser (#307): a link opens here instead of leaving the message behind. -->
+    <string name="browser_title">Browser</string>
+    <string name="browser_close">Close browser</string>
+    <string name="browser_reload">Reload page</string>
+    <string name="browser_menu">Browser menu</string>
+    <string name="browser_no_app">That app is not installed</string>
+    <string name="browser_open_in_cloud_browser">Open in Cloud Browser</string>
+    <string name="browser_open_in_brave">Open in Brave</string>
+    <string name="browser_translate_page">Translate page</string>
+    <!-- Both states are listed with a tick on the active one, rather than one item that renames
+         itself: a single toggling label never says which way round it currently is. -->
+    <string name="browser_view_desktop">View as desktop</string>
+    <string name="browser_view_mobile">View as mobile</string>
 </resources>

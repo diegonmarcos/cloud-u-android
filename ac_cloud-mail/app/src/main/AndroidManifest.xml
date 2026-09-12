@@ -15,10 +15,15 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Package visibility (Android 11+): let Sterna see and bind the OpenKeychain
-         OpenPGP provider for message encryption/signing. -->
+         OpenPGP provider for message encryption/signing, and resolve the two browsers the
+         mini-browser's menu hands a page to by name. Without the <package> entries an explicit
+         setPackage() cannot resolve at all, and "open in Brave" would read as broken rather than
+         as not installed. -->
     <queries>
         <package android:name="org.sufficientlysecure.keychain" />
         <package android:name="org.sufficientlysecure.keychain.debug" />
+        <package android:name="com.diegonmarcos.cloudbrowser" />
+        <package android:name="com.brave.browser" />
         <intent>
             <action android:name="org.openintents.openpgp.IOpenPgpService2" />
         </intent>
@@ -91,6 +96,17 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
+
+        <!-- The app's own browser, for reading a link without leaving the message it came from.
+             An Activity and not a route in the mail NavHost because the link sites are not all on
+             one screen: the reader, an unsubscribe page, the release notes, a notification tap.
+             Not exported — nothing outside this app may aim a URL at it, which is the whole point
+             of it being a contained window rather than a browser other apps can drive. -->
+        <activity
+            android:name=".ui.browser.MiniBrowserActivity"
+            android:exported="false"
+            android:label="@string/browser_title"
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- specialUse (not dataSync): Android 15+ budgets dataSync FGS and then blocks
              background restarts, which silently killed push on newer devices (#11). The
