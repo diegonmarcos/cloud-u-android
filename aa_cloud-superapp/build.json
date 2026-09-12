@@ -2408,7 +2408,7 @@
             "title": "Data Apps",
             "tiles": [
               {
-                "_doc": "Drive ▸ Connections, relocated here from the C3 Topology index when that row became a pure in-page anchor list. The target is the SAME string the C3 tile carried — page:drive/connections, which SectionPages.factoryFor routes to DriveConnectionsFragment — and this is now its only referrer in build.json, so the page keeps exactly one entry point rather than losing it. Tile id stays `drive-conn`, not `drive`: Cloud ▸ Apps already has a `drive` tile (MyIDE files) in another group.",
+                "_doc": "Drive ▸ Apps (the page id stays `connections`; it is the tab labelled Apps since the four-tab split), relocated here from the C3 Topology index when that row became a pure in-page anchor list. The target is the SAME string the C3 tile carried — page:drive/connections, which SectionPages.factoryFor routes to DriveConnectionsFragment — and this is now its only referrer in build.json, so the page keeps exactly one entry point rather than losing it. Tile id stays `drive-conn`, not `drive`: Cloud ▸ Apps already has a `drive` tile (MyIDE files) in another group.",
                 "id": "drive-conn",
                 "label": "Drive",
                 "icon": "ic_p_sol_cloud",
@@ -3398,24 +3398,25 @@
         "module": null,
         "supports_accounts": true,
         "bottom_nav": false,
+        "tabs": true,
         "drawer_default_children": [
-          "My files",
-          "Photos",
-          "Connections",
-          "Recent",
-          "Shared",
-          "Trash"
+          "Files",
+          "Apps",
+          "Backups",
+          "Configs"
         ],
         "_doc": "Unified file storage hub — fronts filebrowser, photoprism, hedgedoc uploads, etherpad pads, borg/bup backup snapshots PLUS external cloud connections (S3 / Google Drive / Workspace / rclone remotes). Replaces RSS in the bottom-nav.",
+        "_doc_tabs": "Four tabs, in this order: Files | Apps | Backups | Configs. The tab strip is the section's own page list, so the order here IS the tab order and the four tabs are simply the four pages left visible. SectionTabsFragment.MAX_PANES is 4 — it has stable host ids for exactly four panes (values/ids.xml) — which is why this section showed no tabs while it declared nine pages: it was over the cap, not missing a flag. The other five pages (Photos, Recent, Shared, Trash, + Upload) are marked hidden rather than deleted: Sections.kt drops hidden pages from `pages` (so they are not tabs) while keeping them in `allPages` (so routing still resolves them), which is what lets every existing `page:drive/<id>` deep link keep working — `page:drive/connections` from the Cloud ▸ Apps ▸ Data Apps tile above especially. Nothing here needs Kotlin: pages with no special route fall through to PageContentFragment, and the Apps tab's icon row comes from the `apps_from_tile_group` this page already declared.",
         "pages": [
           {
             "id": "files",
-            "label": "My files",
+            "label": "Files",
             "icon": "ic_p_folder",
             "upstream": "filebrowser"
           },
           {
             "id": "photos",
+            "hidden": true,
             "label": "Photos",
             "icon": "ic_p_sol_personal",
             "upstream": "photoprism"
@@ -3425,24 +3426,27 @@
             "apps_from_tile_group": "cloud/Data Apps",
             "apps_extra_tile_ids": [],
             "id": "connections",
-            "label": "Connections",
+            "label": "Apps",
             "icon": "ic_p_sol_cloud",
             "upstream": "drive-connections"
           },
           {
             "id": "recent",
+            "hidden": true,
             "label": "Recent",
             "icon": "ic_p_logs",
             "upstream": "filebrowser_recent"
           },
           {
             "id": "shared",
+            "hidden": true,
             "label": "Shared",
             "icon": "ic_p_contacts",
             "upstream": "filebrowser_shared"
           },
           {
             "id": "trash",
+            "hidden": true,
             "label": "Trash",
             "icon": "ic_p_more",
             "upstream": "filebrowser_trash"
@@ -3455,13 +3459,14 @@
           },
           {
             "id": "upload",
+            "hidden": true,
             "label": "+ Upload",
             "icon": "ic_p_add",
             "upstream": "filebrowser_upload"
           },
           {
             "id": "settings",
-            "label": "Settings",
+            "label": "Configs",
             "icon": "ic_settings",
             "upstream": "filebrowser_settings"
           }
