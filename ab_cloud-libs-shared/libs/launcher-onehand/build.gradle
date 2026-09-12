@@ -44,15 +44,26 @@ def ohKey = { t -> 'action:' + (t ?: '').toString().replaceFirst(/^action:/, '')
 // per-page tile arrays; tile_groups is the themed variant the Cloud section
 // uses, and it is where the AI Claude tile lives.
 def ohTiles = [:]
+// A folder is a tile HOLDING tiles, and it is not a destination: it carries no
+// target of its own, so what the edge menu can actually open is the entries one
+// level down. Descend into them, or the day a tile moves inside a folder this
+// validator stops finding it and fails the build for a target that is perfectly
+// fine — which is exactly what `AI Claude` moving into `B-LLM` did.
+def ohHarvest
+ohHarvest = { List tl ->
+    tl.each { t ->
+        if (!(t instanceof Map) || t.separator) return
+        if (t.tiles instanceof List && t.tiles) { ohHarvest(t.tiles as List); return }
+        if (t.target && t.label) {
+            ohTiles.putIfAbsent(ohKey(t.target), [label: t.label, icon: t.icon ?: ''])
+        }
+    }
+}
 ohBuildJson.ui?.sections?.each { sec ->
     def lists = []
     sec.each { k, v -> if (k.toString().startsWith('tiles_') && v instanceof List) lists << v }
     sec.tile_groups?.each { g -> if (g.tiles instanceof List) lists << g.tiles }
-    lists.each { tl -> tl.each { t ->
-        if (t instanceof Map && !t.separator && t.target && t.label) {
-            ohTiles.putIfAbsent(ohKey(t.target), [label: t.label, icon: t.icon ?: ''])
-        }
-    } }
+    lists.each { tl -> ohHarvest(tl) }
 }
 // `section:<id>` falls through to the SECTION itself. That is the only place
 // Drive's glyph exists: Drive is the SuperApp's OWN section, so there is no
