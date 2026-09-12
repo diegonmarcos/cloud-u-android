@@ -208,8 +208,16 @@ done
 has "$SCREEN" 'TextToolPanel(textTools, onApply = null)' "B1 the shared panel still has nowhere to apply"
 # What is SENT is the quote-free flattened copy, not the stored body.
 has "$SCREEN" 'TextToolScope.receivedScope' "B1 the summary is made from a quote-free COPY"
-# ...and Resume reuses that same source rather than building a second one.
-has "$SCREEN" 'textTools.run(textToolScope, TextTool.RESUME, textToolSource())' "B1 Resume sends the same scoped text"
+# ...and EVERY tool the reader runs reuses that same source rather than building a second one. This
+# used to pin the one literal `TextTool.RESUME` call; since #293 the merged icon row runs whichever
+# tool was tapped through a single site, so the assertion is now the stronger one it was always
+# reaching for: there is exactly ONE run site on this screen and its text argument is the scoped
+# copy. A second site built from the stored body is what B1 exists to catch, and it would now be
+# caught whichever tool it belonged to.
+n=$(grep -c 'textTools\.run(' "$SCREEN")
+m=$(grep -c 'textTools\.run(textToolScope, tool, textToolSource())' "$SCREEN")
+[ "$n" = 1 ] && [ "$m" = 1 ] && ok "B1 the reader's only run site sends the same scoped text" \
+  || bad "B1 $n run sites on the reader, $m sending textToolSource() -- a second, unscoped source"
 
 # ── the AI plumbing is REUSED, not copied ──
 RUN="$UI/text/TextToolRun.kt"
@@ -289,10 +297,10 @@ src = open(sys.argv[1], encoding='utf-8').read()
 start = src.index("val resumable = messages.firstOrNull()?.body != null")
 end = src.index("var menuOpen by remember", start)
 row = src[start:end]
-# Two spellings, because the row draws from two places now. A Text tool takes its glyph from the
-# TextTool enum, which is where "which surface offers this" is also declared -- so the row names
-# the ACTION (Resume) and the enum owns the glyph, instead of this test pinning a second copy of a
-# choice it does not make. Everything else is still a literal Icons.Filled.X.
+# Two spellings are still matched even though only one is expected to appear. Resume left the bar
+# at #293 -- it is now an icon in the merged reading row inside the overflow -- so a TextTool glyph
+# turning up on the BAR again is the regression this looks for, and it can only be reported if it
+# is still matched. Everything else is a literal Icons.Filled.X.
 icons = re.findall(r'Icons\.(?:AutoMirrored\.)?Filled\.(\w+)|TextTool\.(\w+)\.icon', row)
 # star/unstar is one action drawn two ways; likewise delete-forever, which is no longer on the row.
 seen, order = set(), []
@@ -302,7 +310,7 @@ for literal, tool in icons:
     if key not in seen:
         seen.add(key)
         order.append(key)
-want = ["Resume", "Star", "Label", "Unsubscribe", "ReplyAll"]
+want = ["Star", "Label", "Unsubscribe", "ReplyAll"]
 if order != want:
     print(f"  FAIL: A1 the action row is {order}, expected {want}")
     sys.exit(1)
@@ -311,14 +319,22 @@ if len(order) + 1 > 6:
     print(f"  FAIL: A1 {len(order) + 1} actions do not fit a 360dp bar (6 slots)")
     sys.exit(1)
 print("  ok: A1 it fits the six slots a 360dp bar has")
-# Archive and Delete must still EXIST, in the overflow -- moved, never dropped.
+# Archive and Delete must still EXIST, in the overflow -- moved, never dropped. Resume is the same
+# story since #293: off the bar, into the merged reading icon row inside the overflow. The vacated
+# slot was deliberately NOT backfilled, so the count above is one lower than it used to be; what
+# this checks is that the action survived the move, because a removal and a relocation look
+# identical on the bar and only one of them is what was asked for.
 for entry in ("R.string.message_archive", "R.string.message_delete"):
     if f"Text(stringResource({entry}))" not in src and entry not in src:
         print(f"  FAIL: A1 {entry} was dropped rather than moved to the overflow")
         sys.exit(1)
 print("  ok: A1 Archive and Delete moved to the overflow rather than being dropped")
+if "tool == TextTool.RESUME && !resumable" not in src or "textTools.surface.tools.forEach" not in src:
+    print("  FAIL: A1 Resume left the bar without arriving in the merged reading row (#293)")
+    sys.exit(1)
+print("  ok: A1 Resume moved into the overflow's icon row, still gated on there being a body")
 PY
-[ $? -eq 0 ] && PASS=$((PASS+3)) || FAIL=$((FAIL+1))
+[ $? -eq 0 ] && PASS=$((PASS+4)) || FAIL=$((FAIL+1))
 
 # ── the sender surface shows what exists and omits what does not ──
 has "$META" 'fun messageMetadata' "S1 the metadata rows are one decision"

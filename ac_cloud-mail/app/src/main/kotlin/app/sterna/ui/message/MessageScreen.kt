@@ -100,7 +100,6 @@ import app.sterna.ui.text.LocalTextToolRunner
 import app.sterna.ui.text.TextTool
 import app.sterna.ui.text.TextToolScope
 import app.sterna.ui.text.TextToolPanel
-import app.sterna.ui.text.TextToolMenuItems
 import app.sterna.ui.text.TextToolSurface
 import app.sterna.core.data.text.htmlEscape
 import app.sterna.core.data.text.htmlToText
@@ -830,25 +829,20 @@ private fun MessageActions(
     // triage is actually done), while the three arriving have no route at all if they are not here.
     // Nothing was dropped and nothing was truncated.
 
-    // AI Resume — BEFORE the star, as asked. Summarises this message into the box under the sender.
-    // Absent while there is no body to summarise: an AI icon on a header-only row would spend a
-    // network call to summarise nothing. Absent, too, unless this surface offers Resume at all —
-    // the icon asks the same list the overflow and the runner ask, so a tool taken off
-    // TextToolSurface.READ loses its button here in the same edit, rather than leaving a live
-    // control standing behind a rule that no longer holds.
+    // AI Resume used to sit here, before the star. It has MOVED into the overflow menu, where it
+    // now shares one icon row with Translate and Show Images (#293) — the owner asked for the
+    // three reading actions together rather than one on the bar and two buried as text entries
+    // further down the same menu. The row that the count above negotiates is one slot shorter for
+    // it, and nothing was promoted into the gap: Archive and Delete stay in the overflow with the
+    // swipe route the comment describes.
+    //
+    // The condition stays here because it is about the MESSAGE, not the menu: absent while there
+    // is no body to summarise, since an AI icon on a header-only row would spend a network call to
+    // summarise nothing, and absent unless this surface offers Resume at all — it asks the same
+    // list the runner asks, so a tool taken off TextToolSurface.READ loses its button in the same
+    // edit rather than leaving a live control behind a rule that no longer holds.
     val resumable = messages.firstOrNull()?.body != null &&
         TextTool.RESUME in textTools.surface.tools
-    if (resumable) {
-        IconButton(
-            enabled = textTools.busy == null,
-            onClick = { textTools.run(textToolScope, TextTool.RESUME, textToolSource()) },
-        ) {
-            Icon(
-                TextTool.RESUME.icon,
-                contentDescription = stringResource(TextTool.RESUME.label),
-            )
-        }
-    }
     // Follow (flag) toggle, promoted from the overflow menu to the bar now that
     // the subject no longer takes the title space (Codeberg #44).
     val flagged = loaded.email.isFlagged
@@ -978,16 +972,55 @@ private fun MessageActions(
                 leadingIcon = { Icon(Icons.Filled.AttachFile, contentDescription = null) },
                 onClick = { menuOpen = false; onReply("forwardAttachment", replyTargetId, accountId) },
             )
-            // The Text tools this surface offers, drawn from TextToolSurface.READ rather than
-            // listed here. On a RECEIVED message that is Translate alone: Enhance REWRITES a text
-            // into a better version of itself, and this text is a record of what somebody else
-            // sent — there is nothing to improve and nowhere to save an improvement to. The
-            // read-side counterpart is AI Resume, on the toolbar above, which makes a separate
-            // shorter text ABOUT the message instead of touching it. Translate stays because it
-            // is meaningful in both directions.
-            TextToolMenuItems(textTools.surface) { tool ->
-                menuOpen = false
-                textTools.run(textToolScope, tool, textToolSource())
+            // The three reading actions, merged into ONE icon row (#293): Translate, then Resume
+            // under it as asked — which in a row reading left to right is Translate then Resume —
+            // then Show Images. They were scattered before: Resume was an icon on the toolbar,
+            // Translate was a text entry here, and Show Images was another text entry two
+            // dividers further down, so choosing between them meant looking in two places and
+            // scrolling past the reply block.
+            //
+            // Deliberately NOT TextToolMenuItems: that helper draws one full-width DropdownMenuItem
+            // per tool from the surface's declaration, which is exactly the stacked-text shape this
+            // replaces, and the composer still wants it. Membership is still read from the surface
+            // rather than restated — a tool taken off TextToolSurface.READ loses its icon here.
+            //
+            // Enhance is absent for the same reason it always was: it REWRITES a text into a better
+            // version of itself, and this text is a record of what somebody else sent — nothing to
+            // improve and nowhere to save an improvement to. Resume makes a separate shorter text
+            // ABOUT the message instead of touching it, which is why it belongs on a read surface.
+            //
+            // Show Images carries the guard it had as an entry, unchanged: offered only while
+            // images are actually blocked (`!showRemote`) and only outside plain-text mode, and
+            // guarded on `imageMode` rather than `plainText` because the two differ only while
+            // DataStore has not answered, and there a `plainText` guard makes the row contradict
+            // itself. The per-sender allowlist toggle stays a text entry below — it changes the
+            // NEXT message from this sender, which is a different kind of decision from the three
+            // one-tap actions on this message, and it needs its sentence to say so.
+            val imagesOnceOffered = !imageMode && !showRemote
+            Row(
+                modifier = Modifier.padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                textTools.surface.tools.forEach { tool ->
+                    if (tool == TextTool.RESUME && !resumable) return@forEach
+                    IconButton(
+                        enabled = textTools.busy == null,
+                        onClick = {
+                            menuOpen = false
+                            textTools.run(textToolScope, tool, textToolSource())
+                        },
+                    ) {
+                        Icon(tool.icon, contentDescription = stringResource(tool.label))
+                    }
+                }
+                if (imagesOnceOffered) {
+                    IconButton(onClick = { menuOpen = false; viewModel.showImagesOnce() }) {
+                        Icon(
+                            Icons.Filled.Image,
+                            contentDescription = stringResource(R.string.message_show_images),
+                        )
+                    }
+                }
             }
             // Reading mode (#149). The label says what the tap DOES, so it follows the mode actually
             // RENDERED — which is why the entry reads "Show HTML" on a message the setting opened as
@@ -1015,21 +1048,19 @@ private fun MessageActions(
                     onClick = { menuOpen = false; viewModel.setPlainText(!plainText) },
                 )
             }
-            // Image controls: one-time show only while blocked, plus the per-sender allowlist toggle.
-            // Both stand down in plain-text mode — there is no image to show, and the toggle would
-            // silently change the NEXT message. Guarded on `imageMode`, NOT on `plainText`, the same
-            // variable `showRemote` is decided on: the two differ only while DataStore has not
-            // answered, and there a `plainText` guard makes the menu contradict itself.
+            // The per-sender image allowlist. The one-time "Show images" that used to lead this
+            // block now sits in the merged icon row above (#293), which is why only the toggle is
+            // left here: it changes what the NEXT message from this sender does, so it keeps its
+            // full sentence rather than becoming a fourth anonymous icon whose meaning — this
+            // sender, every message, from now on — no tooltip can carry.
+            //
+            // Stands down in plain-text mode: there is no image to allow, and the toggle would
+            // silently change the next message anyway. Guarded on `imageMode`, NOT on `plainText`,
+            // the same variable `showRemote` is decided on: the two differ only while DataStore has
+            // not answered, and there a `plainText` guard makes the menu contradict itself.
             if (!imageMode) {
-                if (!showRemote || senderEmail != null) HorizontalDivider()
-                if (!showRemote) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.message_show_images)) },
-                        leadingIcon = { Icon(Icons.Filled.Image, contentDescription = null) },
-                        onClick = { menuOpen = false; viewModel.showImagesOnce() },
-                    )
-                }
                 if (senderEmail != null) {
+                    HorizontalDivider()
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -1047,10 +1078,15 @@ private fun MessageActions(
                     )
                 }
             }
-            // Triage actions. Archive and Delete are HERE rather than on the row: the row's six
-            // slots went to the three actions the owner named, and these two are the only ones on
-            // this screen with a faster route already — a swipe on the message list, which is where
-            // triage actually happens. Nothing was dropped; see the count note above the row.
+            // Triage actions. Archive and Delete are HERE rather than on the row: the row's slots
+            // went to the actions the owner named, and these two are the only ones on this screen
+            // with a faster route already — a swipe on the message list, which is where triage
+            // actually happens. Nothing was dropped; see the count note above the row.
+            //
+            // Resume vacating the bar for the icon row (#293) did NOT bring them back. The row is
+            // still one slot short of holding everything on a 360 dp phone, and filling a freed
+            // slot with an action that already has a swipe would spend it on the cheapest thing
+            // available rather than leave the row with headroom it can be asked for later.
             HorizontalDivider()
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.message_archive)) },

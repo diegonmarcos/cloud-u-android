@@ -106,7 +106,16 @@ PY
 # Each screen says which surface it IS, exactly once, and nothing else decides.
 has "$READER" 'rememberTextToolRunner(TextToolSurface.READ)' "S2 the reader declares itself the READ surface"
 has "$COMPOSER" 'rememberTextToolRunner(TextToolSurface.COMPOSE)' "S2 the composer declares itself the COMPOSE surface"
-has "$READER" 'TextToolMenuItems(textTools.surface)' "S2 the reader's overflow is drawn from its surface"
+# The reader stopped calling TextToolMenuItems at #293: its reading actions are now ONE icon row
+# inside the overflow, not one full-width entry per tool. What has to stay true is the part that
+# helper was protecting — that the row is drawn from the surface's list and not from a set of tools
+# the screen names itself — so the assertion follows the design instead of pinning the old call.
+# The negative is asserted too: re-adding the helper here would quietly restore the stacked-text
+# shape the owner asked to be merged away, and would draw every tool a second time.
+has "$READER" 'textTools.surface.tools.forEach' "S2 the reader's icon row is drawn from its surface"
+grep -q 'TextToolMenuItems(' "$READER" \
+  && bad "S2 the reader is back to one full-width entry per tool (#293 merged them into an icon row)" \
+  || ok "S2 the reader draws no per-tool overflow entries of its own"
 has "$COMPOSER" 'TextToolMenuItems(textTools.surface, enabled = !sending)' "S2 the composer's overflow is drawn from its surface"
 has "$PANEL" 'surface.tools.filter { it.inOverflow }.forEach' "S2 the menu iterates the surface's own list"
 # No screen may hand-write a tool entry beside the generated ones: that is how one surface keeps an
@@ -118,10 +127,22 @@ for f in "$READER" "$COMPOSER"; do
     && bad "S2 ${f##*/} hand-writes a tool entry of its own" \
     || ok "S2 ${f##*/} hand-writes no tool entry of its own"
 done
-# The toolbar icon obeys the same list -- "no menu entry" is not the same as "no icon", and the
-# icon is the one a reader forgets. Membership, not just the has-a-body check beside it.
+# Resume obeys the same list from inside the icon row -- `inOverflow = false` means "not a
+# full-width entry, and its result goes to the box under the sender", NOT "absent from the menu",
+# so membership is what decides whether it is drawn. Checked separately from the has-a-body gate
+# beside it: a message with no body hides the icon, but a Resume taken off READ must remove it.
 has "$READER" 'TextTool.RESUME in textTools.surface.tools' "S2 the AI Resume ICON is gated on membership too"
-has "$READER" 'TextTool.RESUME.icon' "S2 the icon comes from the declaration, not a second glyph choice"
+has "$READER" 'Icon(tool.icon, contentDescription = stringResource(tool.label))' \
+  "S2 the row's glyph and label come from the declaration, not a second choice per tool"
+# Show Images joined that row (#293) and must not ALSO remain a menu entry — two controls for one
+# action is what the merge removed, and the entry is the copy that would survive unnoticed because
+# it still works. The icon form is asserted present so "gone from the menu" cannot pass by the
+# action having been dropped altogether.
+has "$READER" 'contentDescription = stringResource(R.string.message_show_images)' \
+  "S2 Show Images is an icon in the merged row"
+grep -q 'Text(stringResource(R.string.message_show_images))' "$READER" \
+  && bad "S2 Show Images is still a separate menu entry as well as an icon" \
+  || ok "S2 Show Images is not duplicated as a menu entry"
 # ...and the panel decides where an outcome is drawn from the same enum rather than naming a tool.
 # Code only: the KDoc above EXPLAINS that RESUME draws itself, and matching the explanation would
 # have failed on the very comment that makes the rule readable.

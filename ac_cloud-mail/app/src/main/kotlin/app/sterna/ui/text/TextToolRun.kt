@@ -34,10 +34,16 @@ import kotlinx.coroutines.withContext
  *
  * [label] and [icon] live here rather than at each call site because a tool that reads "Translate"
  * on one screen and shows a different glyph on another is two tools as far as the user is
- * concerned. [inOverflow] says whether the tool is DRAWN as an entry in a screen's overflow menu;
- * [RESUME] is not, because it is started from its own toolbar icon and reports into the box under
- * the sender rather than into [TextToolPanel]'s dialog. That placement difference was already
- * expressed as an early return inside the panel — it is stated here instead, once.
+ * concerned. [inOverflow] says whether the tool is drawn as a full-width ENTRY in an overflow menu
+ * and, inseparably, whether its result lands in [TextToolPanel]'s dialog: [RESUME] is neither, it
+ * reports into the box under the sender instead. That was already an early return inside the panel
+ * — it is stated here instead, once.
+ *
+ * The flag does NOT mean "absent from the overflow". Since #293 the reader draws Translate, Resume
+ * and Show Images as one ICON ROW inside its overflow menu and asks only [TextToolSurface.tools],
+ * so Resume is in that menu while `inOverflow = false`. Both readings were true when Resume sat on
+ * the toolbar and only one is now; what survives is the one the panel acts on — where the OUTCOME
+ * is drawn. Flipping [RESUME] to true would send its summary into the dialog and empty the box.
  */
 enum class TextTool(
     @StringRes val label: Int,
@@ -75,7 +81,11 @@ enum class TextTool(
  * closes the path behind it in the same edit.
  */
 enum class TextToolSurface(val tools: List<TextTool>) {
-    READ(listOf(TextTool.RESUME, TextTool.TRANSLATE)),
+    // Declaration order IS draw order — the reader's icon row and the composer's overflow both
+    // walk this list as written. READ therefore reads Translate first and Resume second, which is
+    // the owner's "Resume below Translate" (#293) turned into a row that reads left to right.
+    // Reordering here moves the buttons; it is not cosmetic.
+    READ(listOf(TextTool.TRANSLATE, TextTool.RESUME)),
     COMPOSE(listOf(TextTool.ENHANCE, TextTool.TRANSLATE)),
 }
 
