@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ReFra</string>
+    <string name="app_name">Cloud Media Center</string>
     <string name="app_name_gallery">Galerie</string>
     <string name="change_app_name">App-Name</string>
     <string name="change_app_name_summary">Den auf deinem Startbildschirm angezeigten App-Namen ändern</string>
@@ -928,7 +928,7 @@
     <string name="backup_encrypt_header">Verschlüsselung</string>
     <string name="backup_restore_header">Wähle aus, was wiederhergestellt werden soll</string>
     <string name="backup_restore">Wiederherstellen</string>
-    <string name="backup_made_with_version">Erstellt mit ReFra %1$s</string>
+    <string name="backup_made_with_version">Erstellt mit Cloud Media Center %1$s</string>
     <string name="backup_empty">Diese Sicherung enthält keine wiederherstellbaren Daten.</string>
     <string name="backup_items_count">%1$d Elemente</string>
     <string name="backup_pick_file_prompt">Wähle eine Sicherungsdatei zum Wiederherstellen aus.</string>

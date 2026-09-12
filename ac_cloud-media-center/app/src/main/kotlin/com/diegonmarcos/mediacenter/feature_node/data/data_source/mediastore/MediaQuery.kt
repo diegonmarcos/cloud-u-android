@@ -83,13 +83,13 @@ object MediaQuery {
 
     /**
      * Image formats that Android's media scanner leaves as [MediaStore.Files.FileColumns.MEDIA_TYPE_NONE]
-     * (i.e. it does NOT classify them as images), but that ReFra can still decode and display via its
+     * (i.e. it does NOT classify them as images), but that Cloud Media Center can still decode and display via its
      * custom Sketch/Glide decoders. These rows exist in `MediaStore.Files` with full metadata
      * (bucket, dates, size, favorite/trash flags) — they're just not tagged as images — so surfacing
      * them keeps every MediaStore feature and the same query performance. Only used when
      * [includeUnclassifiedImages] is true (all-files access; never on the Google Play flavor).
      *
-     * Bare, lower-case extensions (no leading dot). Every entry maps to a real ReFra decoder:
+     * Bare, lower-case extensions (no leading dot). Every entry maps to a real Cloud Media Center decoder:
      *  - `jxl`                                  -> JXL coder (SketchJxlDecoder / Glide, JxlRegionDecoder)
      *  - `jp2 j2k jpf jpx j2c jpc`              -> JPEG 2000 (Jp2ImageDecoder, gemalto jp2)
      *  - `psd psb`                              -> Adobe Photoshop (PsdImageDecoder)

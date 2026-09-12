@@ -1,4 +1,4 @@
-# ReFra Gallery Context
+# Cloud Media Center Context
 
 This context defines the ubiquitous language for the gallery application's on-device media experiences and AI features.
 

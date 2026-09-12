@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ReFra</string>
+    <string name="app_name">Cloud Media Center</string>
     <string name="app_name_gallery">相簿</string>
     <string name="change_app_name">應用程式名稱</string>
     <string name="change_app_name_summary">變更啟動器上顯示的應用程式名稱</string>
@@ -926,7 +926,7 @@
     <string name="backup_encrypt_header">加密</string>
     <string name="backup_restore_header">選擇欲還原的項目</string>
     <string name="backup_restore">還原</string>
-    <string name="backup_made_with_version">由 ReFra 製作 %1$s</string>
+    <string name="backup_made_with_version">由 Cloud Media Center 製作 %1$s</string>
     <string name="backup_empty">此備份中不包含任何可還原的資料。</string>
     <string name="backup_items_count">%1$d 個項目</string>
     <string name="backup_pick_file_prompt">請選擇要還原的備份檔案。</string>

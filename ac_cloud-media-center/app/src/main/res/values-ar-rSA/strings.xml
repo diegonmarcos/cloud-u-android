@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ReFra</string>
+    <string name="app_name">Cloud Media Center</string>
     <string name="app_name_gallery">المعرض</string>
     <string name="change_app_name">اسم التطبيق</string>
     <string name="change_app_name_summary">غيّر اسم التطبيق الذي يظهر على المُطلق</string>
@@ -439,7 +439,7 @@
     <string name="vault_notification_channel_name">عمليات المخزن</string>
     <string name="vault_notification_channel_description">تقدم مهام التشفير / فك التشفير</string>
     <string name="decrypt_vault">فك تشفير الخزنة</string>
-    <string name="restore_vault_summary">The current vault and its content will be decrypted and restored.\nThis action will make your content accessible again in the ReFra.</string>
+    <string name="restore_vault_summary">The current vault and its content will be decrypted and restored.\nThis action will make your content accessible again in the Cloud Media Center.</string>
     <string name="restore_vault_title">تأكيد فك التشفير؟</string>
     <string name="yes">نعم</string>
     <string name="vault_deletion_title">تأكيد الحذف؟</string>
@@ -936,7 +936,7 @@
     <string name="backup_encrypt_header">التعمية</string>
     <string name="backup_restore_header">اختر ما تريد استعادته</string>
     <string name="backup_restore">استعِد</string>
-    <string name="backup_made_with_version">أُنشئ باستخدام ReFra %1$s</string>
+    <string name="backup_made_with_version">أُنشئ باستخدام Cloud Media Center %1$s</string>
     <string name="backup_empty">لا تحتوي هذه النُسخة الاحتياطية على أي بيانات قابلة للاستعادة.</string>
     <string name="backup_items_count">%1$d عناصر</string>
     <string name="backup_pick_file_prompt">اختر ملف النُسخة الاحتياطية الذي تريد الاستعادة منه.</string>

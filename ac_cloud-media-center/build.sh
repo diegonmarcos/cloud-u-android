@@ -275,7 +275,7 @@ _assert_apk_identity() {
   if ! printf '%s\n' "$pkgs" | grep -Fqx "$expected_id"; then
     errlog "identity-assert[$key]: APK package != $expected_id — refusing to publish"
     # Only report PACKAGE-SHAPED strings. Grepping for any dotted string picks
-    # up intent-filter pathPatterns (ReFra registers e.g. '.*\..*\..*\.apng'
+    # up intent-filter pathPatterns (Cloud Media Center registers e.g. '.*\..*\..*\.apng'
     # for file associations), which made GHA 30540989541 report
     # "Found packages: .*\..*\..*\.apng .*\..*\..*\.jxl" — useless for
     # diagnosing an identity mismatch. Application ids are lowercase dotted
@@ -504,7 +504,7 @@ step_build_fork() {
   local tracker dest task apk_glob signing
   tracker="$(_fork_json "$key" ".tracker_dir")"
   # Gradle task may be ABI-specific. A fork whose upstream dimensions its
-  # productFlavors by ABI (ReFra: flavorDimensions abi x ml) has a DIFFERENT
+  # productFlavors by ABI (Cloud Media Center: flavorDimensions abi x ml) has a DIFFERENT
   # assemble task per ABI, so one fixed string cannot serve a multi-ABI build
   # matrix. Resolution order, all from build.json (never hardcoded):
   #   1. .build.gradle_task_by_abi["$COMMS_BUNDLE_ABI"]   (ABI-dimensioned forks)
@@ -569,7 +569,7 @@ step_build_fork() {
   fi
 
   # Upstreams that read the keystore from a FILE AT A FIXED PATH plus env vars
-  # instead of a keystore.properties. ReFra:
+  # instead of a keystore.properties. Cloud Media Center:
   #   signingConfigs.release { storeFile = file("release_key.jks")
   #                            storePassword = System.getenv("SIGNING_STORE_PASSWORD")
   #                            keyAlias      = System.getenv("SIGNING_KEY_ALIAS")

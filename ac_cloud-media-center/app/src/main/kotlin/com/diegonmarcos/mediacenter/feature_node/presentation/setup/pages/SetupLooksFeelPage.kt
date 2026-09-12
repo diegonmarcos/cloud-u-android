@@ -88,12 +88,12 @@ fun SetupLooksFeelPage(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    listOf(Settings.Misc.ALIAS_REFRA, Settings.Misc.ALIAS_GALLERY).forEach { alias ->
+                    listOf(Settings.Misc.ALIAS_MEDIA_CENTER, Settings.Misc.ALIAS_GALLERY).forEach { alias ->
                         LogoChoice(
                             modifier = Modifier.weight(1f),
                             label = alias,
                             iconRes = launcherIconFor(appLogoAlias),
-                            selected = appNameAlias == alias,
+                            selected = Settings.Misc.normalizeAlias(appNameAlias) == alias,
                             onClick = { appNameAlias = alias }
                         )
                     }
@@ -106,12 +106,12 @@ fun SetupLooksFeelPage(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    listOf(Settings.Misc.ALIAS_REFRA, Settings.Misc.ALIAS_GALLERY).forEach { alias ->
+                    listOf(Settings.Misc.ALIAS_MEDIA_CENTER, Settings.Misc.ALIAS_GALLERY).forEach { alias ->
                         LogoChoice(
                             modifier = Modifier.weight(1f),
                             label = alias,
                             iconRes = launcherIconFor(alias),
-                            selected = appLogoAlias == alias,
+                            selected = Settings.Misc.normalizeAlias(appLogoAlias) == alias,
                             onClick = { appLogoAlias = alias }
                         )
                     }

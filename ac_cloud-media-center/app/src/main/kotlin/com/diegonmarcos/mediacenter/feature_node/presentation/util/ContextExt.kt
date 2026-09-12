@@ -476,7 +476,7 @@ fun Context.restartApplication() {
 
 /**
  * Resolve the launcher [activity-alias] short name for a given app-name + app-logo
- * combination. The two legacy aliases (ReFra-logo) keep their original names so existing
+ * combination. The two legacy aliases (the Cloud Media Center logo) keep their original "Launcher_ReFra" names so existing
  * installs are not disrupted; the Gallery-logo combinations use dedicated aliases.
  */
 fun launcherAliasFor(nameAlias: String, logoAlias: String): String {
@@ -491,10 +491,10 @@ fun launcherAliasFor(nameAlias: String, logoAlias: String): String {
 
 /**
  * Enable the launcher alias matching the given app-name + app-logo combination and disable
- * all others. [logoAlias] defaults to the ReFra logo for backward compatibility with callers
+ * all others. [logoAlias] defaults to the Cloud Media Center logo for backward compatibility with callers
  * that only toggle the app name.
  */
-fun Context.changeAppAlias(nameAlias: String, logoAlias: String = "ReFra") {
+fun Context.changeAppAlias(nameAlias: String, logoAlias: String = "Cloud Media Center") {
     val namespace = "com.diegonmarcos.mediacenter"
     val aliases = listOf(
         "Launcher_ReFra",

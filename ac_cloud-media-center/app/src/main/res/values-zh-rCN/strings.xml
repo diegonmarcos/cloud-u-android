@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ReFra</string>
+    <string name="app_name">Cloud Media Center</string>
     <string name="app_name_gallery">图库</string>
     <string name="change_app_name">应用名称</string>
     <string name="change_app_name_summary">更改启动器上显示的应用名称</string>
@@ -926,7 +926,7 @@
     <string name="backup_encrypt_header">加密</string>
     <string name="backup_restore_header">选择要恢复的内容</string>
     <string name="backup_restore">恢复</string>
-    <string name="backup_made_with_version">由 ReFra %1$s 创建</string>
+    <string name="backup_made_with_version">由 Cloud Media Center %1$s 创建</string>
     <string name="backup_empty">此备份文件不包含任何可恢复的数据。</string>
     <string name="backup_items_count">%1$d 项</string>
     <string name="backup_pick_file_prompt">选择要恢复的备份文件。</string>

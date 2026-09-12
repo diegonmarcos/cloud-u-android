@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ReFra</string>
+    <string name="app_name">Cloud Media Center</string>
     <string name="app_name_gallery">Галерија</string>
     <string name="change_app_name">Назив апликације</string>
     <string name="change_app_name_summary">Промените назив апликације који се приказује у покретачу</string>
@@ -439,7 +439,7 @@
     <string name="vault_notification_channel_name">Операције у сефу</string>
     <string name="vault_notification_channel_description">Напредак шифровања / дешифровања</string>
     <string name="decrypt_vault">Дешифруј сеф</string>
-    <string name="restore_vault_summary">Тренутни сеф и његов садржај ће бити дешифровани и враћени.\nОва радња ће поново учинити ваш садржај доступним у апликацији ReFra.</string>
+    <string name="restore_vault_summary">Тренутни сеф и његов садржај ће бити дешифровани и враћени.\nОва радња ће поново учинити ваш садржај доступним у апликацији Cloud Media Center.</string>
     <string name="restore_vault_title">Потврђујете дешифровање?</string>
     <string name="yes">Да</string>
     <string name="vault_deletion_title">Потврђујете брисање?</string>
@@ -930,7 +930,7 @@
     <string name="backup_encrypt_header">Шифровање</string>
     <string name="backup_restore_header">Изаберите шта желите да вратите</string>
     <string name="backup_restore">Врати</string>
-    <string name="backup_made_with_version">Направљено помоћу ReFra %1$s</string>
+    <string name="backup_made_with_version">Направљено помоћу Cloud Media Center %1$s</string>
     <string name="backup_empty">Ова резервна копија не садржи податке који се могу вратити.</string>
     <string name="backup_items_count">%1$d ставки</string>
     <string name="backup_pick_file_prompt">Изаберите датотеку резервне копије из које желите да вратите податке.</string>

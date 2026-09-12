@@ -8,7 +8,7 @@ package com.diegonmarcos.mediacenter.core.backup
 import kotlinx.serialization.Serializable
 
 /**
- * Top-level manifest describing the contents of a ReFra backup archive.
+ * Top-level manifest describing the contents of a Cloud Media Center backup archive.
  *
  * The backup is a ZIP archive containing this manifest (as `manifest.json`) plus,
  * for each vault, the fully decrypted media files under `vaults/<uuid>/<mediaId>`.

@@ -166,7 +166,7 @@ fun SettingsBackupExportScreen(navigateUp: () -> Unit) {
 
     fun launchSaf() {
         val ext = if (pendingPassword != null) "rfbk" else "zip"
-        val name = "refra-backup-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())}.$ext"
+        val name = "cloud-media-center-backup-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())}.$ext"
         exportLauncher.launch(name)
     }
 

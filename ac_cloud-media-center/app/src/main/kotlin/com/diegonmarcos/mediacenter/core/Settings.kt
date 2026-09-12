@@ -860,19 +860,30 @@ object Settings {
                 defaultValue = SelectionSheetConfig()
             )
 
-        const val ALIAS_REFRA = "ReFra"
+        const val ALIAS_MEDIA_CENTER = "Cloud Media Center"
         const val ALIAS_GALLERY = "Gallery"
+
+        /**
+         * Maps a stored app-name or app-logo alias onto the constants above. An install from
+         * before the Cloud Media Center rebrand holds the literal "ReFra", which is no longer
+         * one of the two options, so the picker would render with nothing selected. Anything
+         * that is not Gallery is the Cloud Media Center alias — exactly how
+         * launcherAliasFor already resolves it.
+         */
+        fun normalizeAlias(stored: String) =
+            if (stored == ALIAS_GALLERY) ALIAS_GALLERY else ALIAS_MEDIA_CENTER
+
         private val APP_NAME_ALIAS = stringPreferencesKey("app_name_alias")
 
         @Composable
         fun rememberAppNameAlias() =
-            rememberPreference(key = APP_NAME_ALIAS, defaultValue = ALIAS_REFRA)
+            rememberPreference(key = APP_NAME_ALIAS, defaultValue = ALIAS_MEDIA_CENTER)
 
         private val APP_LOGO_ALIAS = stringPreferencesKey("app_logo_alias")
 
         @Composable
         fun rememberAppLogoAlias() =
-            rememberPreference(key = APP_LOGO_ALIAS, defaultValue = ALIAS_REFRA)
+            rememberPreference(key = APP_LOGO_ALIAS, defaultValue = ALIAS_MEDIA_CENTER)
 
         /**
          * Version of the first-launch setup wizard the user last completed. Bump

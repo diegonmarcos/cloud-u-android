@@ -622,7 +622,7 @@
     <string name="help_tip_location_browse_title">Browse by location</string>
     <string name="help_tip_location_browse_subtitle">See your photos on a map</string>
     <string name="help_tip_location_browse_p1_title">Location browsing</string>
-    <string name="help_tip_location_browse_p1_desc">Open Locations to explore photo thumbnail clusters on an interactive map. ReFra reads GPS coordinates from photo metadata, keeps map interactions deterministic, and lets you switch between system, light and dark map appearances.</string>
+    <string name="help_tip_location_browse_p1_desc">Open Locations to explore photo thumbnail clusters on an interactive map. Cloud Media Center reads GPS coordinates from photo metadata, keeps map interactions deterministic, and lets you switch between system, light and dark map appearances.</string>
     <string name="help_tip_location_browse_p2_title">Location timeline</string>
     <string name="help_tip_location_browse_p2_desc">Tap a cluster or place to zoom in, then open a photo or its unified location timeline. Location data depends on your camera saving GPS information.</string>
     <string name="help_tip_location_viewer_title">View location from photo</string>
@@ -1149,7 +1149,7 @@
     <string name="help_tip_view_cutout_title">Cut out a subject</string>
     <string name="help_tip_view_cutout_subtitle">Lift a person or object from the background</string>
     <string name="help_tip_view_cutout_p1_title">Lift the detected subject</string>
-    <string name="help_tip_view_cutout_p1_desc">In the viewer, ReFra can detect the main subject on-device and show a highlighted suggestion. Open it to refine the mask, then copy, share or save a transparent cutout. You can also make long-press start cutout from Media Viewer settings.</string>
+    <string name="help_tip_view_cutout_p1_desc">In the viewer, Cloud Media Center can detect the main subject on-device and show a highlighted suggestion. Open it to refine the mask, then copy, share or save a transparent cutout. You can also make long-press start cutout from Media Viewer settings.</string>
     <string name="help_tip_view_cutout_p1_s1">Open a photo with a clear subject</string>
     <string name="help_tip_view_cutout_p1_s2">Tap the Cut out subject suggestion</string>
     <string name="help_tip_view_cutout_p1_s3">Refine the outline with include or exclude points</string>
@@ -1174,7 +1174,7 @@
     <string name="help_tip_settings_date_format_title">Date format</string>
     <string name="help_tip_settings_date_format_subtitle">Choose how dates appear</string>
     <string name="help_tip_settings_date_format_p1_title">Pick your format</string>
-    <string name="help_tip_settings_date_format_p1_desc">ReFra follows your system date and 12/24-hour preferences by default. Set an override only when you want a custom pattern, and use the information button to review supported format symbols.</string>
+    <string name="help_tip_settings_date_format_p1_desc">Cloud Media Center follows your system date and 12/24-hour preferences by default. Set an override only when you want a custom pattern, and use the information button to review supported format symbols.</string>
     <string name="help_tip_settings_date_format_p1_s1">Open Date format</string>
     <string name="help_tip_settings_date_format_p1_s2">Keep Follow system or enter a custom pattern</string>
     <string name="help_tip_settings_date_format_p1_s3">Preview the result and open format guidance if needed</string>
@@ -1182,7 +1182,7 @@
     <string name="help_tip_basics_setup_title">First-run setup</string>
     <string name="help_tip_basics_setup_subtitle">Grant access and pick your defaults</string>
     <string name="help_tip_basics_setup_p1_title">Getting started</string>
-    <string name="help_tip_basics_setup_p1_desc">On first launch ReFra guides you through permissions, appearance, AI models, cloud accounts and useful tips. You can revisit the setup at any time.</string>
+    <string name="help_tip_basics_setup_p1_desc">On first launch Cloud Media Center guides you through permissions, appearance, AI models, cloud accounts and useful tips. You can revisit the setup at any time.</string>
 
     <string name="help_tip_albums_ignored_manage_title">Manage ignored albums</string>
     <string name="help_tip_albums_ignored_manage_subtitle">Review and restore hidden folders</string>
@@ -1234,7 +1234,7 @@
     <string name="help_tip_media_type_albums_title">Browse by media type</string>
     <string name="help_tip_media_type_albums_subtitle">Automatic albums for photos, videos, GIFs and RAW files</string>
     <string name="help_tip_media_type_albums_p1_title">Media-type albums</string>
-    <string name="help_tip_media_type_albums_p1_desc">ReFra creates virtual albums from your unified library so you can open all photos, videos, GIFs or RAW files together. Their visibility is controlled from Timeline &amp; Albums settings.</string>
+    <string name="help_tip_media_type_albums_p1_desc">Cloud Media Center creates virtual albums from your unified library so you can open all photos, videos, GIFs or RAW files together. Their visibility is controlled from Timeline &amp; Albums settings.</string>
     <string name="help_tip_media_type_albums_p1_s1">Open Albums and scroll to Media types</string>
     <string name="help_tip_media_type_albums_p1_s2">Open a type to browse matching media</string>
     <string name="help_tip_media_type_albums_p1_s3">Use Timeline &amp; Albums settings to show or hide the section</string>
@@ -1242,7 +1242,7 @@
     <string name="help_tip_raw_develop_title">Develop RAW photos</string>
     <string name="help_tip_raw_develop_subtitle">Adjust sensor data before exporting</string>
     <string name="help_tip_raw_develop_p1_title">Use the Develop controls</string>
-    <string name="help_tip_raw_develop_p1_desc">Open a supported RAW photo in the editor to adjust white balance, exposure, highlights, output colour and demosaicing. ReFra uses a memory-safe preview while preserving full-resolution output.</string>
+    <string name="help_tip_raw_develop_p1_desc">Open a supported RAW photo in the editor to adjust white balance, exposure, highlights, output colour and demosaicing. Cloud Media Center uses a memory-safe preview while preserving full-resolution output.</string>
     <string name="help_tip_raw_develop_p1_s1">Open a RAW photo and tap Edit</string>
     <string name="help_tip_raw_develop_p1_s2">Choose options in the Develop tab</string>
     <string name="help_tip_raw_develop_p1_s3">Apply any additional crop, filter or markup</string>
@@ -1251,7 +1251,7 @@
     <string name="help_tip_people_grouping_title">Group people on-device</string>
     <string name="help_tip_people_grouping_subtitle">Find faces without uploading your library</string>
     <string name="help_tip_people_grouping_p1_title">Scan and organize people</string>
-    <string name="help_tip_people_grouping_p1_desc">With the face model installed, ReFra scans and groups people locally. You can start a fresh scan from People, hide a person, merge groups and create blurred copies when privacy matters.</string>
+    <string name="help_tip_people_grouping_p1_desc">With the face model installed, Cloud Media Center scans and groups people locally. You can start a fresh scan from People, hide a person, merge groups and create blurred copies when privacy matters.</string>
     <string name="help_tip_people_grouping_p1_s1">Install the Face Detection model</string>
     <string name="help_tip_people_grouping_p1_s2">Open Library, then People</string>
     <string name="help_tip_people_grouping_p1_s3">Tap Scan for people and wait for indexing</string>
@@ -1268,7 +1268,7 @@
     <string name="help_tip_metadata_sanitize_title">Remove sensitive metadata</string>
     <string name="help_tip_metadata_sanitize_subtitle">Sanitize supported files without recompressing pixels</string>
     <string name="help_tip_metadata_sanitize_p1_title">Choose what to remove</string>
-    <string name="help_tip_metadata_sanitize_p1_desc">From a photo\'s details, choose Remove metadata and select location only, descriptive fields or all supported metadata. ReFra writes and verifies a lossless sanitized copy before replacing the original.</string>
+    <string name="help_tip_metadata_sanitize_p1_desc">From a photo\'s details, choose Remove metadata and select location only, descriptive fields or all supported metadata. Cloud Media Center writes and verifies a lossless sanitized copy before replacing the original.</string>
     <string name="help_tip_metadata_sanitize_p1_s1">Open a supported local photo</string>
     <string name="help_tip_metadata_sanitize_p1_s2">Expand its details and tap Remove metadata</string>
     <string name="help_tip_metadata_sanitize_p1_s3">Choose the sanitization level</string>

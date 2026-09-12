@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ReFra</string>
+    <string name="app_name">Cloud Media Center</string>
     <string name="app_name_gallery">Galeria</string>
     <string name="change_app_name">Nome do app</string>
     <string name="change_app_name_summary">Altera o nome do app exibido no seu iniciador</string>
@@ -439,7 +439,7 @@
     <string name="vault_notification_channel_name">Operações do cofre</string>
     <string name="vault_notification_channel_description">Progresso das tarefas de criptografia / descriptografia</string>
     <string name="decrypt_vault">Descriptografar cofre</string>
-    <string name="restore_vault_summary">The current vault and its content will be decrypted and restored.\nThis action will make your content accessible again in the ReFra.</string>
+    <string name="restore_vault_summary">The current vault and its content will be decrypted and restored.\nThis action will make your content accessible again in the Cloud Media Center.</string>
     <string name="restore_vault_title">Confirmar a descriptografia?</string>
     <string name="yes">Sim</string>
     <string name="vault_deletion_title">Confirmar Apagamento?</string>
@@ -928,7 +928,7 @@
     <string name="backup_encrypt_header">Encryption</string>
     <string name="backup_restore_header">Choose what to restore</string>
     <string name="backup_restore">Restore</string>
-    <string name="backup_made_with_version">Created with ReFra %1$s</string>
+    <string name="backup_made_with_version">Created with Cloud Media Center %1$s</string>
     <string name="backup_empty">This backup doesn\'t contain any restorable data.</string>
     <string name="backup_items_count">%1$d items</string>
     <string name="backup_pick_file_prompt">Choose a backup file to restore from.</string>

@@ -70,7 +70,7 @@ apkVersioning {
     flavorVersionCodes.set(abiVersionCodes)
     versionCodeMultiplier.set(10)
     outputFileName.set("{appName}-{versionName}-{versionCode}{suffix}-{ml}-{abi}-{buildType}")
-    variables.put("appName", "ReFra")
+    variables.put("appName", "Cloud-Media-Center")
     val offlineSuffix = if (isOffline) "-offline" else ""
     variables.put("suffix", offlineSuffix)
 }
@@ -124,7 +124,7 @@ android {
             useSupportLibrary = true
         }
         val offlinePrefix = if (isOffline) "-offline" else ""
-        base.archivesName.set("ReFra-${versionName}-$versionCode$offlinePrefix")
+        base.archivesName.set("Cloud-Media-Center-${versionName}-$versionCode$offlinePrefix")
 
         externalNativeBuild {
             cmake {

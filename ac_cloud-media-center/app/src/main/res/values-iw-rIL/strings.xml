@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ReFra</string>
+    <string name="app_name">Cloud Media Center</string>
     <string name="app_name_gallery">גלריה</string>
     <string name="change_app_name">שם האפליקציה</string>
     <string name="change_app_name_summary">שינוי שם האפליקציה המוצג במפעיל</string>
@@ -439,7 +439,7 @@
     <string name="vault_notification_channel_name">פעולות כספת</string>
     <string name="vault_notification_channel_description">התקדמות משימות הצפנה / פענוח</string>
     <string name="decrypt_vault">פענוח הכספת</string>
-    <string name="restore_vault_summary">הכספת הנוכחית ותוכנה יפוענחו וישוחזרו.\nפעולה זו תהפוך את התוכן שלך לנגיש שוב ב-ReFra.</string>
+    <string name="restore_vault_summary">הכספת הנוכחית ותוכנה יפוענחו וישוחזרו.\nפעולה זו תהפוך את התוכן שלך לנגיש שוב ב-Cloud Media Center.</string>
     <string name="restore_vault_title">לאשר פענוח?</string>
     <string name="yes">כן</string>
     <string name="vault_deletion_title">לאשר מחיקה?</string>
@@ -932,7 +932,7 @@
     <string name="backup_encrypt_header">Encryption</string>
     <string name="backup_restore_header">Choose what to restore</string>
     <string name="backup_restore">Restore</string>
-    <string name="backup_made_with_version">Created with ReFra %1$s</string>
+    <string name="backup_made_with_version">Created with Cloud Media Center %1$s</string>
     <string name="backup_empty">This backup doesn\'t contain any restorable data.</string>
     <string name="backup_items_count">%1$d items</string>
     <string name="backup_pick_file_prompt">Choose a backup file to restore from.</string>

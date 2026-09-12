@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ReFra</string>
+    <string name="app_name">Cloud Media Center</string>
     <string name="app_name_gallery">Thư viện</string>
     <string name="change_app_name">Tên ứng dụng</string>
     <string name="change_app_name_summary">Thay đổi tên ứng dụng hiện trên trình khởi chạy</string>
@@ -439,7 +439,7 @@
     <string name="vault_notification_channel_name">Thao tác két</string>
     <string name="vault_notification_channel_description">Tiến trình các tác vụ mã hóa / giải mã</string>
     <string name="decrypt_vault">Giải mã két</string>
-    <string name="restore_vault_summary">Két hiện tại và toàn bộ nội dung của nó sẽ được giải mã và khôi phục.\nThao tác này sẽ làm cho nội dung của bạn có thể truy cập lại trong ReFra.</string>
+    <string name="restore_vault_summary">Két hiện tại và toàn bộ nội dung của nó sẽ được giải mã và khôi phục.\nThao tác này sẽ làm cho nội dung của bạn có thể truy cập lại trong Cloud Media Center.</string>
     <string name="restore_vault_title">Xác nhận giải mã?</string>
     <string name="yes">Có</string>
     <string name="vault_deletion_title">Xác nhận xóa?</string>
@@ -926,7 +926,7 @@
     <string name="backup_encrypt_header">Encryption</string>
     <string name="backup_restore_header">Choose what to restore</string>
     <string name="backup_restore">Restore</string>
-    <string name="backup_made_with_version">Created with ReFra %1$s</string>
+    <string name="backup_made_with_version">Created with Cloud Media Center %1$s</string>
     <string name="backup_empty">This backup doesn\'t contain any restorable data.</string>
     <string name="backup_items_count">%1$d items</string>
     <string name="backup_pick_file_prompt">Choose a backup file to restore from.</string>
