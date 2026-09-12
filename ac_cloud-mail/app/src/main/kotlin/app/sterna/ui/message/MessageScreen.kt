@@ -4818,7 +4818,16 @@ internal const val CSP_META =
  */
 internal const val FIT_CSS = """
               /* Nothing the message declares may be wider than the screen. */
-              body * { max-width: 100% !important; }
+              /* `min-width` has to be beaten as well, and beaten HERE, because the cascade
+                 resolves min-width AFTER max-width: a wrapper carrying `style="min-width:600px"`
+                 — the Mailchimp and HubSpot house style — wins outright over `max-width: 100%
+                 !important` and holds the page 600 pixels wide however emphatic we are about the
+                 maximum. That single line of CSS precedence is most of "the same kind of mail
+                 fits sometimes and not others". Zero is the initial value of min-width for
+                 everything that is not a flex item, so this takes nothing away; for a flex item
+                 it REPLACES the `auto` that refuses to shrink below content size, which is the
+                 one case where declaring it also helps. */
+              body * { max-width: 100% !important; min-width: 0 !important; }
               /* Cap the width WITHOUT distorting the picture: clamping width alone squashes a
                  2000px-wide image into the phone's aspect ratio. `height: auto` restores the
                  intrinsic ratio, and must be !important for the same cascade reason as the rest —
@@ -4831,7 +4840,20 @@ internal const val FIT_CSS = """
               /* A <pre> the MESSAGE wrote keeps `white-space: pre` and scrolls forever. (`pre.plain`,
                  the body we paint ourselves, is wrapped by its own rule in the light template — this
                  is the message's own, in both templates.) */
-              pre, code { white-space: pre-wrap !important; overflow-wrap: break-word !important; }"""
+              pre, code { white-space: pre-wrap !important; overflow-wrap: break-word !important; }
+              /* `white-space: nowrap` on a table cell forbids line breaking outright, and the rule
+                 above is then powerless — `overflow-wrap` only says WHERE a line may break, never
+                 THAT one may. A cell told not to wrap holds its whole content on one line and the
+                 table around it grows to match, which is the other half of why some mails overflow
+                 and others do not: inline `nowrap` is the house style for button cells, price
+                 columns and date columns in every newsletter builder there is.
+                 Only td and th, deliberately. `white-space` is inherited, so overriding it on
+                 every element would also overwrite the `pre-wrap` and `pre-line` that a mail uses
+                 on a div to keep the line breaks of a text body it converted to HTML — collapsing
+                 those is not fitting the mail, it is mangling it. Table cells are the one place
+                 nowrap is common and preserved whitespace is not, and an inner element that does
+                 declare pre-wrap still wins over what it inherits from its cell. */
+              td, th { white-space: normal !important; }"""
 
 // `internal`, not private, since #149: what the page does with [ReaderBody.richHtml] — invert the page
 // or paint it in the app's colours — is the half of the reading-mode decision that lives HERE, and it

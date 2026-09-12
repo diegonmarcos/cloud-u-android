@@ -35,4 +35,13 @@
         from `pre.plain`, which is the body WE paint and was already wrapped. -->
 <pre>tests/fixture/column-one   tests/fixture/column-two   tests/fixture/column-three   tests/fixture/column-four   tests/fixture/column-five</pre>
 
+<!-- 6. An inline `min-width`, the shape a width cap cannot beat by being emphatic: the cascade
+        resolves min-width AFTER max-width, so this wrapper holds the page 600px wide however many
+        `!important` maximums are declared. Mailchimp and HubSpot wrap every campaign in one. -->
+<div style="min-width:600px">A wrapper with an inline minimum width, which outranks any maximum.</div>
+
+<!-- 7. A cell told not to wrap. `overflow-wrap` says where a line MAY break, never that one may at
+        all, so a nowrap cell keeps its content on one line and widens the table around it. -->
+<table><tr><td style="white-space:nowrap">A table cell whose inline style forbids line breaking, holding a whole sentence of content on a single unbroken line.</td></tr></table>
+
 <p>Closing prose, so a regression that mangles ordinary paragraphs is visible here too.</p>

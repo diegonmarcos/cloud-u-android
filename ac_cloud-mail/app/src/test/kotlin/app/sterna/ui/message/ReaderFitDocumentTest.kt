@@ -69,6 +69,10 @@ class ReaderFitDocumentTest {
             "a cell with a declared width" to "width=\"380\"",
             "an image declared wider than any phone" to "width=\"2000\"",
             "an INLINE width, which is what beats a non-important rule" to "style=\"width:900px\"",
+            "an inline MINIMUM width, which the cascade resolves after any maximum" to
+                "style=\"min-width:600px\"",
+            "a cell forbidden to wrap, which no break-word rule can help" to
+                "style=\"white-space:nowrap\"",
         )
         for ((shape, markup) in shapes) {
             assertTrue(
@@ -118,7 +122,24 @@ class ReaderFitDocumentTest {
                 "the $name template must cap EVERY descendant of body, not just <img>: email holds " +
                     "its width on whatever element is to hand — a table, a td, a wrapper div. " +
                     "`img` alone was the old rule and the page overflowed anyway.\nCSS was:\n$css",
-                "body * { max-width: 100% !important; }" in css,
+                "body * { max-width: 100% !important; min-width: 0 !important; }" in css,
+            )
+            assertTrue(
+                "the $name template must cap the MINIMUM width too. The cascade resolves min-width " +
+                    "AFTER max-width, so the fixture's `style=\"min-width:600px\"` wrapper — the " +
+                    "shape every campaign builder wraps a newsletter in — outranks every maximum " +
+                    "declared here and holds the page 600px wide however emphatic the maximum is. " +
+                    "This is why the same kind of mail fitted the screen sometimes and not others." +
+                    "\nCSS was:\n$css",
+                "min-width: 0 !important" in css,
+            )
+            assertTrue(
+                "the $name template must let a table CELL wrap. `overflow-wrap` says where a line " +
+                    "may break, never that one may at all, so the fixture's " +
+                    "`style=\"white-space:nowrap\"` cell keeps a whole sentence on one line and " +
+                    "widens the table around it — inline nowrap is the house style for button, " +
+                    "price and date cells.\nCSS was:\n$css",
+                "td, th { white-space: normal !important; }" in css,
             )
             assertTrue(
                 "the $name template must restore the aspect ratio it just clamped — width alone " +

@@ -156,6 +156,12 @@ else:
 # does nothing at all when tapped.
 PREFIXES = tuple(sys.argv[2:])
 for t in row:
+    if t.get("separator"):
+        # A separator is a label, not a destination. GroupedTilesFragment draws the bare '|' and
+        # never makes it clickable, so demanding a target here demands one that must NOT exist —
+        # a target on a separator would be a tap that goes somewhere off a glyph meant to divide.
+        # Task 303 put the first one in this very row, which is what made this check fail.
+        continue
     tgt = t.get("target", "")
     if not tgt:
         emit("T4", "app '%s' has no target" % t.get("id"))

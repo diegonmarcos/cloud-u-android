@@ -304,8 +304,15 @@ PYEOF
 n=$(grep -c '^ *\$FIT_CSS$' "$SCREEN")
 [ "$n" -eq 2 ] && ok "H12 one shared fit stylesheet, interpolated into both templates ($n)" \
   || bad "H12 $n of the 2 templates interpolate the shared fit stylesheet"
-has "$SCREEN" 'body \* { max-width: 100% !important; }' \
+has "$SCREEN" 'body \* { max-width: 100% !important; min-width: 0 !important; }' \
   "H12 every element is capped, not just <img> -- email holds its width on tables and wrapper divs"
+# A maximum on its own loses. The cascade resolves min-width AFTER max-width, so one wrapper with an
+# inline minimum -- what every campaign builder emits -- holds the page at its own width no matter
+# how emphatic the maximum is, and that is why the same kind of mail fitted sometimes and not others.
+has "$SCREEN" 'min-width: 0 !important' \
+  "H12 the MINIMUM width is capped too, or one inline min-width outranks every maximum above"
+has "$SCREEN" 'td, th { white-space: normal !important; }' \
+  "H12 a cell told not to wrap is made to wrap -- overflow-wrap cannot break a line nowrap forbids"
 has "$SCREEN" 'img, video, svg, canvas { height: auto !important; }' \
   "H12 …and the aspect ratio is restored, so a clamped 2000px image is not squashed"
 has "$SCREEN" 'word-break: break-word !important' \
@@ -325,7 +332,8 @@ has "$SCREEN" 'settings.displayZoomControls = false' "H12 …without the obsolet
 # The fixture has to be too wide, or the assertions that run against it mean nothing.
 [ -f "$FIXTURE" ] && ok "H12 the synthetic wide email is in the repository" \
   || bad "H12 the synthetic wide email is missing ($FIXTURE)"
-for shape in 'width="1200"' 'width="2000"' 'style="width:900px"' '<pre>'; do
+for shape in 'width="1200"' 'width="2000"' 'style="width:900px"' \
+             'style="min-width:600px"' 'style="white-space:nowrap"' '<pre>'; do
   grep -qF -- "$shape" "$FIXTURE" 2>/dev/null \
     && ok "H12 fixture still overflows via $shape" \
     || bad "H12 fixture no longer carries $shape -- it must reproduce the bug to disprove it"

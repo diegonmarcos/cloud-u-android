@@ -144,13 +144,16 @@ groups = {g["title"]: g for g in cloud["tile_groups"]}
 # why it is written out here. Projects Me is the personal half, Projects W the
 # work half; the split is what tells the next editor which row a new tile joins.
 ROWS = {
-    "Projects Me": ["mysocials",
+    # My-PM leads the row and a rule divides it from MySocials — task 309. The rule is numbered 0
+    # rather than renumbering sep-1 and sep-2, whose ids are asserted by name below.
+    "Projects Me": ["my-pm", "projects-me-sep-0", "mysocials",
                     "projects-me-sep-1", "myburo",
                     "projects-me-sep-2", "myhealth", "mystudy", "mytrips"],
     # "PM Boards | PM C3 PM X", as the owner asked. The rule divides the board
     # LIST from the two named boards; all three are http tiles, so it marks a
     # difference in destination rather than in what tapping does.
-    "Projects W":  ["pmboards", "projects-w-sep-1", "pmc3", "pmx"],
+    "Projects W":  ["pmboards", "projects-w-sep-1", "pmc3", "pm-c3-dp-7321",
+                    "mqpm-stochbates", "pmx", "pm-zirkus"],
 }
 
 # Every target, spelled the way the ROUTER resolves it and not the way the tile
@@ -159,6 +162,11 @@ ROWS = {
 # those ids resolve against Cloud-Me's flattened page tree rather than against
 # a filename that happens to look similar.
 TARGETS = {
+    # My-PM has no personal paca board yet, so it addresses the project INDEX — pinned here for the
+    # same reason as the three boardless Projects W tiles below: the day task 182 creates the board
+    # and wires its uuid, this line fails and says so, instead of the placeholder quietly outliving
+    # the board it was standing in for.
+    "my-pm":     "https://paca.diegonmarcos.com/projects",
     "mysocials": "https://diegonmarcos.github.io/mySocials/",
     "pmboards":  "https://paca.diegonmarcos.com",
     # Board uuids, baked in at build time because paca's projects table has no
@@ -166,7 +174,13 @@ TARGETS = {
     # no name-based route to prefer. Recreating the paca database reissues both
     # ids and silently breaks these two tiles; see their _doc in build.json.
     "pmc3":      "https://paca.diegonmarcos.com/projects/91d8fa68-ce83-463d-af00-af632cf26ab7",
-    "pmx":       "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d",
+    "pm-c3-dp-7321": "https://paca.diegonmarcos.com/projects/9d336534-d0d6-4b9d-aebb-cbd59fde4d0d",
+    # The three boards that do not exist in paca yet address the project INDEX, not a uuid. Pinning
+    # that here is the point: the day task 182 creates a board and wires its uuid, this line fails
+    # and says so, instead of the placeholder quietly outliving the board it was standing in for.
+    "mqpm-stochbates": "https://paca.diegonmarcos.com/projects",
+    "pmx":       "https://paca.diegonmarcos.com/projects",
+    "pm-zirkus": "https://paca.diegonmarcos.com/projects",
     "myburo":    "extapp:cloud-me#page:buro/summary",
     "myhealth":  "extapp:cloud-me#page:projects/health",
     "mystudy":   "extapp:cloud-me#page:projects/studying",
