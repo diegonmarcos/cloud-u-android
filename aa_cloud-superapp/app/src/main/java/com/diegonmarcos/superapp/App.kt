@@ -60,6 +60,15 @@ class App : Application(), WorkManagerConfiguration.Provider {
             androidx.work.WorkManager.getInstance(this).enqueueUniqueWork(
                 "privileged-plane", androidx.work.ExistingWorkPolicy.KEEP,
                 androidx.work.OneTimeWorkRequestBuilder<com.diegonmarcos.superapp.system.PrivilegedPlaneWorker>().build())
+            // #290: the one-time worker above is the only thing that ever turns Wireless
+            // Debugging on, so once the platform clears it mid-session it stays cleared
+            // until the next launch. This keeps it armed. KEEP, so an already-scheduled
+            // chain is not restarted on every cold start.
+            androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                com.diegonmarcos.superapp.system.WirelessDebugKeeper.UNIQUE_NAME,
+                androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+                androidx.work.PeriodicWorkRequestBuilder<com.diegonmarcos.superapp.system.WirelessDebugKeeper>(
+                    15, java.util.concurrent.TimeUnit.MINUTES).build())
         }
 
         // Retry any profile edit that never reached the server. The profile is
