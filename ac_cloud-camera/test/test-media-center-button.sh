@@ -336,7 +336,14 @@ check("A5 manifest declares <queries> visibility of Media Center",
       "Media Center IS installed, and the button reports 'not installed' "
       "forever; found %r" % sorted(queried))
 
-# ── A6: the owner's phone is in Spanish ──
+# ── A6: every label this feature draws exists in the language that ships ──
+#
+# This block used to demand the same keys in values-es/ as well, because the
+# owner's phone is set to Spanish. FLEET RULE #299 reversed that: English is the
+# fleet's base language and A7 below now requires the package-time filter that
+# drops every other locale, so a values-es/ key is unreachable by construction
+# and asserting it would be asserting a string nobody can ever read. values/ is
+# what the device gets, so values/ is what is checked.
 NEW_KEYS = (
     "open_media_center_photo",
     "open_media_center_video",
@@ -347,24 +354,27 @@ NEW_KEYS = (
     "install",
     "update",
 )
-for values_dir in ("values", "values-es"):
-    path = os.path.join(APP, "app/src/main/res", values_dir, "strings.xml")
-    if not os.path.isfile(path):
-        check("A6 %s/strings.xml exists" % values_dir, False, path)
-        continue
+path = os.path.join(APP, "app/src/main/res/values/strings.xml")
+if not os.path.isfile(path):
+    check("A6 values/strings.xml exists", False, path)
+else:
     names = {s.get("name") for s in ET.parse(path).getroot().findall("string")}
     for key in NEW_KEYS:
-        check("A6 %s/strings.xml defines %s" % (values_dir, key),
+        check("A6 values/strings.xml defines %s" % key,
               key in names,
-              "an English label on a Spanish phone is a regression on arrival")
+              "the label this feature draws has no English source, and English "
+              "is the only language the filter in A7 lets through")
 
-# A7: shipping the translation is not the same as the phone receiving it.
+# A7: what the phone receives is decided by the build file, not the resources.
 #
-# androidResources.localeFilters is a HARD FILTER applied at package time. With
-# `listOf("en")` — which is what this app shipped until 2026-09-11 — values-es/
-# is compiled and then stripped out of resources.arsc, so every assertion above
-# passes, the build is green, the i18n guard is green, and the owner still reads
-# English. Source-only checks structurally cannot see this; this one reads the
+# androidResources.localeFilters is a HARD FILTER applied at package time: a
+# locale absent from the list is compiled and then stripped out of
+# resources.arsc. That cuts both ways, and both directions are failures worth
+# catching. Filtering to a language this app has no strings for would ship the
+# feature with nothing to draw; leaving the filter out altogether would let the
+# vendored locales through and the owner's Spanish phone would resolve them
+# ahead of values/, which is exactly what FLEET RULE #299 exists to stop. A
+# resource-only check structurally cannot see either case; this one reads the
 # build file that decides it.
 gradle_path = os.path.join(APP, "app/build.gradle.kts")
 gradle = open(gradle_path, encoding="utf-8").read()
@@ -372,15 +382,17 @@ gradle = re.sub(r"//[^\n]*", "", re.sub(r"/\*.*?\*/", "", gradle, flags=re.S))
 
 m = re.search(r"localeFilters\s*\+?=\s*listOf\(([^)]*)\)", gradle)
 if m is None:
-    # No filter at all is fine — every locale ships.
-    check("A7 no localeFilters, so every locale ships", True)
+    check("A7 localeFilters declares the English base language", False,
+          "no localeFilters in %s — every locale in this app's resource closure "
+          "ships, and a phone set to one of them never reads values/ "
+          "(FLEET RULE #299)" % gradle_path)
 else:
     kept = set(re.findall(r'"([^"]+)"', m.group(1)))
-    check("A7 localeFilters keeps 'es', so values-es survives packaging",
-          "es" in kept,
-          "localeFilters=%s strips values-es out of resources.arsc at package "
-          "time; the label ships English no matter what values-es says"
-          % sorted(kept))
+    check("A7 localeFilters is English and nothing else",
+          kept == {"en"},
+          "localeFilters=%s — English is the fleet's base language, so this "
+          "list must be exactly [en]: anything else it keeps is a locale the "
+          "owner's phone can resolve ahead of values/" % sorted(kept))
 
 # ── A8: the pair is indistinguishable except by icon ──────────────────
 #
