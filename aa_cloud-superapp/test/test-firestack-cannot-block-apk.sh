@@ -206,11 +206,28 @@ fi
 # change means the APK job should stop being ABLE to fail that way — it must
 # never mean the check that reports it got weakened. Guarded here because this
 # task is exactly the kind that would be tempted to touch it.
+# The guard has since been extracted out of this workflow into a shared script that every Android
+# ship calls, so the message it prints is no longer inline here. Both halves are asserted, because
+# either one alone is satisfiable while the guard is dead: a workflow that still calls the script
+# after the message was deleted from it reports nothing, and a script that still carries the message
+# but is no longer called from the workflow never runs. Neither can be softened without failing here.
 guard_line='Devices are still being'
-case "$(cat "$WORKFLOW")" in
-    *"$guard_line"*) ok "the 'run that published nothing must not be green' guard is still in place" ;;
-    *) fail "the publish guard's message is gone from ship-cloud-superapp.yml — it must not be softened" ;;
-esac
+guard_script="$ROOT/1_cicd/src/scripts/cloud-android-publish-guard.sh"
+if ! grep -q 'cloud-android-publish-guard\.sh' "$WORKFLOW"; then
+    fail "ship-cloud-superapp.yml no longer calls cloud-android-publish-guard.sh — a run that" \
+         "published nothing would go green again, which is the 2026-09-09 outage exactly"
+elif [ ! -f "$guard_script" ]; then
+    fail "the shared publish guard $guard_script is gone, and the workflow still calls it"
+else
+    case "$(cat "$guard_script")" in
+        *"$guard_line"*)
+            ok "the 'run that published nothing must not be green' guard is still in place (shared" \
+               "script, called from the workflow)" ;;
+        *)
+            fail "the publish guard's message is gone from cloud-android-publish-guard.sh — the" \
+                 "workflow still calls the guard, but the guard no longer says anything" ;;
+    esac
+fi
 
 # ── 6. firestack health reports, it does not veto ──────────────────
 #
