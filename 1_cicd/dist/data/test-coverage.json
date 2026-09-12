@@ -12,8 +12,8 @@
       "workflow": "ship-termux-boot.yml"
     },
     "aa_cloud-superapp": {
-      "first_test": "Has 55 shell testers. tests.unit.enabled=false, so its step named 'JVM unit tests (fatal on failure)' executes nothing and goes green \u2014 its own task, not this one.",
-      "shell_testers": 55,
+      "first_test": "Has 56 shell testers. tests.unit.enabled=false, so its step named 'JVM unit tests (fatal on failure)' executes nothing and goes green \u2014 its own task, not this one.",
+      "shell_testers": 56,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,

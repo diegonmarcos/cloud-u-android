@@ -455,6 +455,13 @@ class DevControlFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
         infoBuf = StringBuilder()
+        lazySections.clear()
+        currentBuf = null
+        // The context a background probe is allowed to hold. requireContext()
+        // off the main thread is the #194 throw (a fragment reaching for a
+        // host it has already been detached from); the application context
+        // cannot be detached and answers packageManager/packageName the same.
+        val appCtx = ctx.applicationContext
         val scroll = ScrollView(ctx).apply {
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -764,7 +771,7 @@ class DevControlFragment : Fragment() {
             }
             for ((idx, t) in trees.withIndex()) {
                 val (label, cols, intoBuf) = t
-                if (intoBuf) infoBuf.append("\n```\n").append(cols.last().second).append("\n```\n")
+                if (intoBuf) (currentBuf ?: infoBuf).append("\n```\n").append(cols.last().second).append("\n```\n")
                 labels += label
                 val tsize = if (cols.size > 1) 7f else 9f
                 // One horizontal row of weighted columns. Single-column trees
@@ -871,38 +878,56 @@ class DevControlFragment : Fragment() {
             row(ctx, it, "Board",      android.os.Build.BOARD)
             row(ctx, it, "Fingerprint", android.os.Build.FINGERPRINT)
             row(ctx, it, "CPU cores",  Runtime.getRuntime().availableProcessors().toString())
-            val cpuModel = runCatching {
-                File("/proc/cpuinfo").useLines { lines ->
-                    lines.firstOrNull { it.startsWith("Hardware") || it.contains("model name") }
-                        ?.substringAfter(':')?.trim()
+            // /proc/cpuinfo is scanned line by line and the two cpufreq nodes
+            // are sysfs reads — cheap individually, but this is a diagnostics
+            // page and none of it needs to happen on the way to a frame.
+            val host = it
+            viewLifecycleOwner.lifecycleScope.launch {
+                val cpuModel = row(ctx, host, "CPU model", "reading…")
+                val curFreqRow = row(ctx, host, "Cur freq", "reading…")
+                val govRow = row(ctx, host, "Governor", "reading…")
+                val facts = withContext(Dispatchers.IO) {
+                    val m = runCatching {
+                        File("/proc/cpuinfo").useLines { lines ->
+                            lines.firstOrNull { l -> l.startsWith("Hardware") || l.contains("model name") }
+                                ?.substringAfter(':')?.trim()
+                        }
+                    }.getOrNull()
+                    val f = runCatching {
+                        File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq").readText().trim().toLong()
+                    }.getOrNull()
+                    val g = runCatching {
+                        File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor").readText().trim()
+                    }.getOrNull()
+                    Triple(m, f, g)
                 }
-            }.getOrNull()
-            row(ctx, it, "CPU model",  cpuModel ?: "—")
-            val curFreq = runCatching {
-                File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq").readText().trim().toLong()
-            }.getOrNull()
-            row(ctx, it, "Cur freq",   curFreq?.let { "%d MHz".format(it / 1000) } ?: "—")
-            val gov = runCatching {
-                File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor").readText().trim()
-            }.getOrNull()
-            row(ctx, it, "Governor",   gov ?: "—")
-        }
-
-        section(ctx, column, "Thermal zones") {
-            val zones = runCatching {
-                File("/sys/class/thermal").listFiles { f -> f.name.startsWith("thermal_zone") }
-                    ?.sortedBy { it.name }
-            }.getOrNull()
-            if (zones.isNullOrEmpty()) {
-                it.addView(small(ctx, "No thermal zones readable (kernel restricts /sys/class/thermal on most modern devices)."))
-            } else {
-                for (z in zones) {
-                    val type = runCatching { File(z, "type").readText().trim() }.getOrDefault(z.name)
-                    val tempMilliC = runCatching { File(z, "temp").readText().trim().toLong() }.getOrDefault(0L)
-                    row(ctx, it, z.name, "$type — %.1f °C".format(tempMilliC / 1000.0))
-                }
+                if (!isAdded) return@launch
+                cpuModel.text = facts.first ?: "—"
+                curFreqRow.text = facts.second?.let { v -> "%d MHz".format(v / 1000) } ?: "—"
+                govRow.text = facts.third ?: "—"
             }
         }
+
+        // Two sysfs reads per zone, and a phone can expose dozens. Off-thread.
+        asyncSection(ctx, column, "Thermal zones",
+            probe = {
+                runCatching {
+                    File("/sys/class/thermal").listFiles { f -> f.name.startsWith("thermal_zone") }
+                        ?.sortedBy { it.name }
+                        ?.map { z ->
+                            val type = runCatching { File(z, "type").readText().trim() }.getOrDefault(z.name)
+                            val tempMilliC = runCatching { File(z, "temp").readText().trim().toLong() }.getOrDefault(0L)
+                            z.name to "$type — %.1f °C".format(tempMilliC / 1000.0)
+                        }
+                }.getOrNull().orEmpty()
+            },
+            render = { g, zones ->
+                if (zones.isEmpty()) {
+                    g.addView(small(ctx, "No thermal zones readable (kernel restricts /sys/class/thermal on most modern devices)."))
+                } else {
+                    for ((k, v) in zones) row(ctx, g, k, v)
+                }
+            })
 
         // SYSFS-PROC — the no-perm kernel-telemetry dump. Every field
         // here comes from a world-readable /sys or /proc file (the
@@ -974,8 +999,13 @@ class DevControlFragment : Fragment() {
         // ══ RESOURCES macro section — storage, battery, memory and raw kernel telemetry.
         column.addView(macroHeader(ctx, "🔋  RESOURCES"))
 
-        section(ctx, column, "Storage") {
-            val ctxAny = requireContext()
+        // THE worst offender on this page: dirSize() is a recursive walk of the
+        // whole private data tree and it ran TWICE, on the main thread, before
+        // the page could draw. On an install with a large cache that is seconds,
+        // not milliseconds — an ANR, not a jank.
+        asyncSection(ctx, column, "Storage", timeoutMs = 15_000,
+            probe = {
+            val ctxAny = appCtx
             val pm = ctxAny.packageManager
             @Suppress("DEPRECATION")
             val pkg = pm.getPackageInfo(ctxAny.packageName, 0)
@@ -995,18 +1025,31 @@ class DevControlFragment : Fragment() {
             val dataBytes  = (dirSize(dataDir) - cacheBytes).coerceAtLeast(0L)
             val totalBytes = apkBytes + dataBytes + cacheBytes
 
-            // Paths first.
-            row(ctx, it, "Files dir",   ctxAny.filesDir.absolutePath)
-            row(ctx, it, "Cache dir",   cacheDir.absolutePath)
-            row(ctx, it, "Data root",   dataDir.absolutePath)
-            row(ctx, it, "External",    ctxAny.getExternalFilesDir(null)?.absolutePath ?: "—")
-            row(ctx, it, "Trace log",   sizeStr(File(ctxAny.getExternalFilesDir(null), "trace/trace.log").length()))
-            it.addView(small(ctx, "Breakdown — same buckets Android system settings shows:"))
-            row(ctx, it, "Aplicación",  sizeStr(apkBytes))
-            row(ctx, it, "Datos",       sizeStr(dataBytes))
-            row(ctx, it, "Caché",       sizeStr(cacheBytes))
-            row(ctx, it, "Total",       sizeStr(totalBytes))
-        }
+            StorageFacts(
+                filesDir = ctxAny.filesDir.absolutePath,
+                cacheDir = cacheDir.absolutePath,
+                dataRoot = dataDir.absolutePath,
+                external = ctxAny.getExternalFilesDir(null)?.absolutePath ?: "—",
+                traceLog = sizeStr(File(ctxAny.getExternalFilesDir(null), "trace/trace.log").length()),
+                apk      = sizeStr(apkBytes),
+                data     = sizeStr(dataBytes),
+                cache    = sizeStr(cacheBytes),
+                total    = sizeStr(totalBytes),
+            )
+            },
+            render = { g, f ->
+                // Paths first.
+                row(ctx, g, "Files dir",   f.filesDir)
+                row(ctx, g, "Cache dir",   f.cacheDir)
+                row(ctx, g, "Data root",   f.dataRoot)
+                row(ctx, g, "External",    f.external)
+                row(ctx, g, "Trace log",   f.traceLog)
+                g.addView(small(ctx, "Breakdown — same buckets Android system settings shows:"))
+                row(ctx, g, "Aplicación",  f.apk)
+                row(ctx, g, "Datos",       f.data)
+                row(ctx, g, "Caché",       f.cache)
+                row(ctx, g, "Total",       f.total)
+            })
 
         // Permissions section moved to PermissionsFragment (config/perms tab).
 
@@ -1051,10 +1094,34 @@ class DevControlFragment : Fragment() {
 
             // Per-app foreground / background screen time — needs
             // PACKAGE_USAGE_STATS (Settings.ACTION_USAGE_ACCESS_SETTINGS).
-            val (fgMs, bgMs) = readUsageStats(ctxAny)
-            row(ctx, it, "Screen-on",   if (fgMs < 0) "Needs Usage Access" else fmtDuration(fgMs))
-            row(ctx, it, "Background",  if (bgMs < 0) "Needs Usage Access" else fmtDuration(bgMs))
-            row(ctx, it, "Total used",  if (fgMs < 0 || bgMs < 0) "—" else fmtDuration(fgMs + bgMs))
+            // queryUsageStats over a 7-day window is a binder call that walks
+            // the whole usage database — the single slowest read left in this
+            // section, so it fills its three rows asynchronously instead of
+            // holding the block (and, before #286, the entire page) behind it.
+            val usageHost = it
+            val fgRow = row(ctx, usageHost, "Screen-on",  "reading…")
+            val bgRow = row(ctx, usageHost, "Background", "reading…")
+            val totRow = row(ctx, usageHost, "Total used", "reading…")
+            viewLifecycleOwner.lifecycleScope.launch {
+                val stats = runCatching {
+                    withContext(Dispatchers.IO) { readUsageStats(appCtx) }
+                }
+                if (!isAdded) return@launch
+                val (fgMs, bgMs) = stats.getOrDefault(-1L to -1L)
+                // "Needs Usage Access" is a REAL answer (the permission is not
+                // granted); a thrown read is not, and must not be dressed up
+                // as one — this page is a diagnostics surface.
+                if (stats.isFailure) {
+                    val why = stats.exceptionOrNull()?.javaClass?.simpleName ?: "error"
+                    fgRow.text = "unavailable ($why)"
+                    bgRow.text = "unavailable ($why)"
+                    totRow.text = "—"
+                } else {
+                    fgRow.text  = if (fgMs < 0) "Needs Usage Access" else fmtDuration(fgMs)
+                    bgRow.text  = if (bgMs < 0) "Needs Usage Access" else fmtDuration(bgMs)
+                    totRow.text = if (fgMs < 0 || bgMs < 0) "—" else fmtDuration(fgMs + bgMs)
+                }
+            }
 
             // ── Since-last-charge battery analytics ───────────────
             // Read current battery level + charging status, persist
@@ -1421,14 +1488,18 @@ class DevControlFragment : Fragment() {
             }
         }
 
-        section(ctx, column, "IPC Contract") {
-            val entries = collectIpcContract(requireContext())
-            if (entries.isEmpty()) {
-                it.addView(small(ctx, "No IPC contract declared yet — no exported/consumed cross-app intents, services, or providers beyond the framework defaults."))
-            } else {
-                for ((k, v) in entries) row(ctx, it, k, v)
-            }
-        }
+        // getPackageInfo with GET_ACTIVITIES|GET_SERVICES|GET_PROVIDERS|
+        // GET_RECEIVERS is a full manifest unmarshal across a binder call —
+        // small on a fast phone, not free, and never worth a frame drop.
+        asyncSection(ctx, column, "IPC Contract",
+            probe = { collectIpcContract(appCtx) },
+            render = { g, entries ->
+                if (entries.isEmpty()) {
+                    g.addView(small(ctx, "No IPC contract declared yet — no exported/consumed cross-app intents, services, or providers beyond the framework defaults."))
+                } else {
+                    for ((k, v) in entries) row(ctx, g, k, v)
+                }
+            })
 
         section(ctx, column, "Firewall") {
             // No-root per-app firewall (local VpnService, :libs:firewall).
@@ -1622,8 +1693,18 @@ class DevControlFragment : Fragment() {
         // title / section / row helper + the inline folder-tree block,
         // so this captures whatever was actually drawn — no parallel
         // data collection to keep in sync.
+        // Since #286 each section owns its own buffer and fills it only when it
+        // loads, so the dump is assembled in DECLARED order here rather than in
+        // the order the user happened to reach the blocks. A section that has
+        // not loaded says so: silently omitting it would make a partial dump
+        // look like a complete one, which is the same lie as an empty section.
         fun copyAll() {
-            val snapshot = infoBuf.toString()
+            val sb = StringBuilder(infoBuf)
+            for (s in lazySections) {
+                sb.append(s.buf)
+                if (!s.started) sb.append("  (not loaded — scroll to this section to read it)\n")
+            }
+            val snapshot = sb.toString()
             copy(ctx, snapshot)
             Toast.makeText(ctx,
                 "Copied ${snapshot.length} chars (${snapshot.count { it == '\n' }} lines)",
@@ -1666,6 +1747,19 @@ class DevControlFragment : Fragment() {
         }
         column.addView(backToIndexLink(ctx))
 
+        // ── Arm the lazy loader (#286) ───────────────────────────────────
+        // Nothing above has run a single section body: all 30 are queued in
+        // [lazySections] with a placeholder showing. The post() fires after
+        // the first layout, when the ScrollView finally has a height to
+        // measure against, and fills only what the opening viewport shows.
+        // Everything else waits for the user to scroll — or to tap an Index
+        // card, which scrolls, which is the same event.
+        lazyScroll = scroll
+        val onScrolled = android.view.ViewTreeObserver.OnScrollChangedListener { pumpLazySections() }
+        lazyListener = onScrolled
+        scroll.viewTreeObserver.addOnScrollChangedListener(onScrolled)
+        scroll.post { pumpLazySections() }
+
         return scroll
     }
 
@@ -1693,19 +1787,220 @@ class DevControlFragment : Fragment() {
         java.net.Socket().use { it.connect(java.net.InetSocketAddress(host, port), 350); true }
     }.getOrDefault(false)
 
+    // ── Lazy sections (#286) ─────────────────────────────────────────
+    //
+    // Every section() on this page used to run its body inline in
+    // onCreateView, so opening Configs ▸ About paid for all 30 service blocks
+    // before the first frame: two recursive directory walks, a 7-day
+    // usage-stats query, sysfs and /proc reads, a logcat exec and socket
+    // connects — on the main thread, in one ~1,235-line stretch. The owner
+    // asked for "a lazy load per service ... each will only run as we go in
+    // that block".
+    //
+    // WHY THE VIEWPORT IS THE TRIGGER. The page's index (the IndexTiles grid
+    // at the top) navigates by SCROLLING to a macro header — anchors.dispatch,
+    // not a tab switch. So "the user opened that block" and "that block came
+    // on screen" are the same event, and one ScrollView listener serves both
+    // the index and a plain finger scroll. There is no second mechanism to
+    // keep in step with the first.
+    //
+    // The signature below is deliberately unchanged: all 30 call sites keep
+    // working untouched, and a section added later is lazy without its author
+    // having to know any of this.
+
+    /** Everything the Storage section paints, gathered in one off-thread pass
+     *  so the two recursive dirSize() walks never touch the main thread. */
+    private data class StorageFacts(
+        val filesDir: String,
+        val cacheDir: String,
+        val dataRoot: String,
+        val external: String,
+        val traceLog: String,
+        val apk: String,
+        val data: String,
+        val cache: String,
+        val total: String,
+    )
+
+    private class LazySection(
+        val head: String,
+        val anchor: View,
+        val group: LinearLayout,
+        val buf: StringBuilder,
+        val run: () -> Unit,
+    ) {
+        var started = false
+    }
+
+    /** Declared (page) order, so "Copy All Infos" can still assemble the page
+     *  top-to-bottom even though bodies finish in whatever order the user
+     *  reaches them. Cleared per view lifecycle — see [onDestroyView]. */
+    private val lazySections = mutableListOf<LazySection>()
+    private var lazyScroll: ScrollView? = null
+    private var lazyListener: android.view.ViewTreeObserver.OnScrollChangedListener? = null
+
+    /** The buffer [row] writes into: the section currently rendering, or null
+     *  outside any section (then [infoBuf], the page head, takes it). */
+    private var currentBuf: StringBuilder? = null
+
+    /** Y of [v] in [sv]'s scrolling coordinates. Walks the parent chain rather
+     *  than trusting v.top, so a section nested one level deeper than today's
+     *  flat column still measures correctly. */
+    private fun yInScroll(v: View, sv: ScrollView): Int {
+        var y = 0
+        var cur: View? = v
+        while (cur != null && cur !== sv) {
+            y += cur.top
+            cur = cur.parent as? View
+        }
+        return y
+    }
+
+    /** Start every declared section whose header has reached the viewport,
+     *  plus one screen of lookahead so a block is usually ready by the time it
+     *  is actually looked at. Cheap and idempotent: [LazySection.started] means
+     *  a body runs exactly once per view lifecycle, so scrolling back and forth
+     *  does not re-probe. */
+    private fun pumpLazySections() {
+        val sv = lazyScroll ?: return
+        if (!isAdded || sv.height == 0) return
+        val limit = sv.scrollY + sv.height * 2
+        var any = false
+        for (s in lazySections) {
+            if (s.started) continue
+            if (yInScroll(s.anchor, sv) <= limit) {
+                runLazySection(s)
+                any = true
+            }
+        }
+        // A section that just rendered made the page taller, which can bring
+        // the next one inside the window without any further scroll event.
+        // Re-pump once after layout; `any` keeps this from spinning.
+        if (any) sv.post { pumpLazySections() }
+    }
+
+    /** Run one section's body with its own copy buffer bound, and turn a throw
+     *  into a VISIBLE failure inside that block. #281: a status surface that
+     *  reported READY when nothing worked is why this does not swallow. An
+     *  empty section and a working-but-boring section must not look alike. */
+    private fun runLazySection(s: LazySection) {
+        if (s.started) return
+        s.started = true
+        val prev = currentBuf
+        currentBuf = s.buf
+        try {
+            s.run()
+        } catch (t: Throwable) {
+            s.group.removeAllViews()
+            context?.let { c ->
+                s.group.addView(small(c, "⚠ ${s.head} failed to load — " +
+                    "${t.javaClass.simpleName}: ${t.message ?: "no detail"}"))
+            }
+            s.buf.append("  FAILED: ").append(t.javaClass.simpleName)
+                .append(": ").append(t.message ?: "no detail").append("\n")
+        } finally {
+            currentBuf = prev
+        }
+    }
+
     private fun section(ctx: Context, host: LinearLayout, head: String, body: (LinearLayout) -> Unit) {
-        infoBuf.append("\n## ").append(head).append("\n")
-        host.addView(sectionHeader(ctx, head))
+        val header = sectionHeader(ctx, head)
+        host.addView(header)
         val grp = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, dp(8))
         }
         host.addView(grp)
-        body(grp)
+        // The heading goes into the copy buffer NOW, so an unopened section
+        // still appears in "Copy All Infos" as a heading marked not-loaded
+        // rather than vanishing from the dump entirely.
+        val buf = StringBuilder("\n## ").append(head).append("\n")
+        val placeholder = small(ctx, "▸ loads when you reach it")
+        grp.addView(placeholder)
+        lazySections += LazySection(head, header, grp, buf) {
+            grp.removeView(placeholder)
+            body(grp)
+        }
+    }
+
+    /**
+     * A section whose data costs real I/O — a socket connect, a recursive
+     * directory walk, an exec, a 7-day usage query. [section] alone only
+     * defers such a body; it would still block the main thread at the moment
+     * the user scrolled to it. This runs [probe] on [Dispatchers.IO] under a
+     * timeout and renders from the result.
+     *
+     * Three properties the brief for #286 asked for, all of them here rather
+     * than at each call site:
+     *  - one slow service cannot stall the other 29, because each probe is its
+     *    own coroutine and none of them is awaited by the page;
+     *  - a failure or a timeout is RENDERED IN THIS BLOCK. No permanent
+     *    spinner, no silently empty section;
+     *  - cancellation is structural: the scope is [viewLifecycleOwner]'s, so
+     *    every in-flight probe dies at onDestroyView. That is the #194 crash
+     *    class (a fragment painting after detach, requireContext() throwing on
+     *    the main thread) and this page would otherwise have had 30 of them.
+     */
+    private fun <T> asyncSection(
+        ctx: Context,
+        host: LinearLayout,
+        head: String,
+        timeoutMs: Long = 4_000,
+        probe: suspend () -> T,
+        render: (LinearLayout, T) -> Unit,
+    ) {
+        section(ctx, host, head) { grp ->
+            val loading = small(ctx, "reading…")
+            grp.addView(loading)
+            val buf = currentBuf
+            viewLifecycleOwner.lifecycleScope.launch {
+                val outcome = runCatching {
+                    kotlinx.coroutines.withTimeout(timeoutMs) {
+                        withContext(Dispatchers.IO) { probe() }
+                    }
+                }
+                // The scope is already cancelled by onDestroyView, so normally
+                // we do not get here after detach — but a fragment can be
+                // detached between the resume and this line, and painting then
+                // is exactly #194.
+                if (!isAdded) return@launch
+                grp.removeView(loading)
+                val prev = currentBuf
+                currentBuf = buf
+                try {
+                    outcome
+                        .onSuccess { render(grp, it) }
+                        .onFailure { e ->
+                            val why =
+                                if (e is kotlinx.coroutines.TimeoutCancellationException)
+                                    "timed out after $timeoutMs ms"
+                                else "${e.javaClass.simpleName}: ${e.message ?: "no detail"}"
+                            grp.addView(small(ctx, "⚠ $head could not be read — $why"))
+                            buf?.append("  UNAVAILABLE: ").append(why).append("\n")
+                        }
+                } finally {
+                    currentBuf = prev
+                }
+            }
+        }
+    }
+
+    override fun onDestroyView() {
+        // viewLifecycleOwner's scope cancels every asyncSection probe for us.
+        // The scroll listener does NOT go with it: left attached it holds a
+        // destroyed ScrollView and keeps pumping bodies into a dead view tree.
+        lazyListener?.let { l ->
+            lazyScroll?.viewTreeObserver?.takeIf { it.isAlive }?.removeOnScrollChangedListener(l)
+        }
+        lazyListener = null
+        lazyScroll = null
+        lazySections.clear()
+        currentBuf = null
+        super.onDestroyView()
     }
 
     private fun row(ctx: Context, host: LinearLayout, key: String, value: String): TextView {
-        infoBuf.append("  ").append(key).append(": ").append(value).append("\n")
+        (currentBuf ?: infoBuf).append("  ").append(key).append(": ").append(value).append("\n")
         val row = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, dp(4), 0, dp(4))
