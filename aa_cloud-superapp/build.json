@@ -5296,7 +5296,7 @@
       },
       {
         "id": "prod_ai",
-        "order": "410",
+        "order": "610",
         "label": "@AI",
         "match_keywords": [
           "pkg:ai.perplexity.app.android",
@@ -5317,7 +5317,7 @@
       },
       {
         "id": "prod_chat",
-        "order": "420",
+        "order": "620",
         "label": "@Chat",
         "match_keywords": [
           "pkg:chat.rocket.android",
@@ -5342,7 +5342,7 @@
       },
       {
         "id": "prod_mail",
-        "order": "430",
+        "order": "630",
         "label": "@Mail",
         "_doc_match_keywords": "This list is the CENTRAL classification: it is what puts a mail app in the \"@\" section, and therefore what makes its notifications survive the Notify ▸ Inboxes filter (PhoneTaxonomy.sectionPrefixOf → the first character of this folder's label). Any THIRD-PARTY package named as a mail client anywhere else in this file has to appear HERE too, or that other list is describing an app the taxonomy has never heard of (our own mail app is not in this list any more — it names this folder from ui.external_apps[cloud-mail].folder instead): app.sterna was added to sections[phone].phone_app_groups[Inboxes] on 2026-09-09 and not here, so upstream Sterna Mail fell to the `others` sink, came back prefix-less, and was pruned from every Notify tab except All. Keyed on package, never on label — the 2026-09-09 mail rename changed the product name and left every package id alone, which is exactly why this key survived it.",
         "match_keywords": [
@@ -5363,7 +5363,7 @@
       },
       {
         "id": "hlth_news",
-        "order": "440",
+        "order": "640",
         "label": "@News & Reading",
         "match_keywords": [
           "pkg:com.checkitt",
@@ -5380,7 +5380,7 @@
       },
       {
         "id": "prod_phone",
-        "order": "450",
+        "order": "650",
         "label": "@Phone & Contacts",
         "match_keywords": [
           "pkg:com.diegonmarcos.comms.contacts",
@@ -5398,7 +5398,7 @@
       {
         "_doc": "Every terminal on the device, gathered out of sys_dev on 2026-09-10 at the owner's request ('move all Terminals inside a folder called Terminals in the section Tools Inboxes & AI'). WHAT COUNTS AS A TERMINAL was read off what sys_dev actually held rather than off the names: the seven exact ids below plus the two startsWith families are precisely the termux-lineage entries that were in it, in both the upstream (com.termux*) and the fleet-fork (cld.termux*) namespace. Acode joins them because the owner put it here explicitly — it is an editor, not a shell, and it is here because he said so.\n\nTHE TWO pkg^ RULES HAD TO COME TOO. 'pkg^com.termux.' and 'pkg^cld.termux.' are the startsWith families that catch a termux sibling nobody has declared yet (termux-api, termux-boot, a future addon). Leaving either behind in sys_dev — order 310, which is walked before this folder's 460 — would have kept every such app in _Dev while the seven named ones moved, and the folder would have looked correct in the diff and been wrong on the device. Note that pkg^com.termux. does NOT cover the bare 'com.termux', and pkg^cld.termux. does not cover 'cld.termux', so both exact ids are listed as well.\n\nThe cld.termux* ids are OUR forks and ui._doc_phone_folders says fleet packages belong in ui.external_apps[].folder rather than in a match_keywords list. They are kept here verbatim because there is no external_apps entry for cloud-termux or cloud-nix-on-droid to derive them from, so dropping them would not relocate them — it would drop them into the `others` sink. Pre-existing condition, moved intact, flagged rather than silently changed.",
         "id": "prod_terminals",
-        "order": "460",
+        "order": "660",
         "label": "@Terminals",
         "match_keywords": [
           "pkg:cld.termux",
@@ -5415,7 +5415,7 @@
       },
       {
         "id": "prod_plan",
-        "order": "510",
+        "order": "410",
         "label": ".Calendar & Tasks",
         "match_keywords": [
           "pkg:co.mangotechnologies.clickup",
@@ -5437,7 +5437,7 @@
       {
         "_doc_match_keywords": "Keyed on package because that is the only thing that survives a rename. com.collabora.libreoffice is here for the reason prod_mail states for its own list: a third-party package named anywhere else in this file has to appear HERE too, and Cloud Office is named in ui.external_apps[cloud-office]. It cannot arrive by metadata instead — PhoneAppClassifier matches `cat:productivity` against ApplicationInfo.category and refuses CATEGORY_UNDEFINED, while upstream's manifest declares no android:appCategory at all. Without this line the largest app in the fleet landed in the `others` sink, came back prefix-less, and was pruned from every Notify tab except All, while the launcher grid filed it under Docs & Notes from ui.external_apps.folder - the two surfaces disagreeing about the same app.",
         "id": "prod_docs",
-        "order": "520",
+        "order": "420",
         "label": ".Docs & Notes",
         "match_keywords": [
           "pkg:com.adeeteya.markdown_editor",
@@ -5460,7 +5460,7 @@
       },
       {
         "id": "prod_storage",
-        "order": "530",
+        "order": "430",
         "label": ".Storage",
         "match_keywords": [
           "pkg:com.google.android.apps.docs",
@@ -5496,7 +5496,7 @@
       },
       {
         "id": "prod_maps",
-        "order": "610",
+        "order": "510",
         "label": "=Maps & Weather",
         "match_keywords": [
           "pkg:aplicacion.tiempo",
@@ -5513,7 +5513,7 @@
       },
       {
         "id": "prod_utils",
-        "order": "620",
+        "order": "520",
         "label": "=Utilities",
         "match_keywords": [
           "pkg:com.adobe.reader",
@@ -5536,7 +5536,7 @@
       },
       {
         "id": "prod_web",
-        "order": "630",
+        "order": "530",
         "label": "=Web",
         "match_keywords": [
           "pkg:com.android.chrome",
@@ -5698,16 +5698,16 @@
         "prefix": "_"
       },
       {
-        "title": "Tools · Inboxes & AI",
-        "prefix": "@"
-      },
-      {
         "title": "Tools · Data Apps",
         "prefix": "."
       },
       {
         "title": "Tools · Primary",
         "prefix": "="
+      },
+      {
+        "title": "Tools · Inboxes & AI",
+        "prefix": "@"
       },
       {
         "title": "Tools · Media",
