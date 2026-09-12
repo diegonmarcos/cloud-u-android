@@ -1,59 +1,71 @@
 {
-  "_doc": "WHY THIS FILE EXISTS. The owner's phone is set to Spanish and reads these apps in Spanish. Nothing in this repository noticed when a string landed in values/strings.xml without a translation: Android lint's MissingTranslation is the rule that would catch it, but no workflow in .github/workflows/ ever invokes a `lint` task at all (CI runs `assembleRelease` and nothing else), and the three modules that DO configure the rule have each turned it off — cloud-vault disables it in three build.gradle.kts lint blocks, cloud-matrix sets it to `ignore` in tools/lint/lint.xml, cloud-dialer downgrades it to `warning`. So the rule was reported nowhere and enforced nowhere, and cloud-mail accumulated 89 English strings inside a Spanish app while cloud-superapp, cloud-ide and libs:mail never got a translated locale at all. cloud-android-i18n-guard.py reads this file and fails the build instead.",
+  "_doc": "WHY THIS FILE EXISTS. English is the fleet's base language (FLEET RULE, task #299): every app must come up in English, on any device, whatever the system locale says. That is not what Android does by default. The owner's phone is set to Spanish, so a values-es/ anywhere in an app's resource closure WINS over values/ at runtime — and most of this fleet's apps are clones of upstream trees that ship 40 to 105 translated locale directories the moment they are vendored. An earlier version of this policy pointed the other way: it demanded COMPLETE Spanish translations in nine modules, because nothing in the repository noticed when a string landed in values/strings.xml untranslated (Android lint's MissingTranslation is the rule that would catch it, no workflow in .github/workflows/ ever invokes a `lint` task, and the three modules that DO configure the rule had each turned it off). That demand is now dead in the other direction: an app whose base language is English must not resolve to Spanish, so translation completeness is no longer a build gate and Spanish resources that already exist are simply never packaged. What the guard enforces instead is the mechanism that makes English win — a package-time locale filter in every module that builds an APK.",
+
+  "base_language": {
+    "_doc": "HOW ENGLISH IS MADE TO WIN. Not at runtime: no AppCompatDelegate.setApplicationLocales call, no per-app setting, nothing to forget on the next app. The declaration is a HARD FILTER applied by the Android Gradle Plugin at package time — a locale absent from the list is compiled and then dropped from resources.arsc, so every values-es/ in the module AND in every library and AAR it merges becomes an empty promise and the label resolves to values/. Verified against a published APK on 2026-09-11 in ac_cloud-camera: with \"en\" alone the values-es strings were absent from resources.arsc while their values/ counterparts were present. The filter belongs in the module that PACKAGES the APK and nowhere else, which is why library modules below declare `host` rather than repeating it: filtering happens at the app's merge step, so one declaration in the app covers the 103 locale directories libs/keyboard ships. THE TRADE-OFF, stated plainly: an app filtered to English can no longer be switched to another language by the user, and that includes the in-app language pickers ac_cloud-vault and ac_cloud-dialer build from generateLocaleConfig. Three spellings are accepted because the fleet spans plugin versions 4.2.2 to 9.3.1: `resConfigs` is the Groovy DSL through 8.x, `resourceConfigurations` is its Kotlin DSL name and is removed in plugin 9, and `localeFilters` exists from 8.9 and is the only option in 9.",
+    "locale": "en",
+    "declaration_patterns": [
+      "resConfigs\\s+\"en\"",
+      "resourceConfigurations\\s*\\+=\\s*listOf\\(\"en\"\\)",
+      "localeFilters\\s*\\+=\\s*listOf\\(\"en\"\\)"
+    ]
+  },
 
   "locale": {
-    "_doc": "WHY `es` AND NOT `es-rES`. The owner's device asks for Spanish (Spain) — recent work set the keyboard defaults to Espanol (Espana). Android resolves a request for es-ES by trying values-es-rES first and then falling back to the language-only values-es, so BOTH directories reach this device; values-es additionally reaches es-MX, es-AR and every other Spanish region, and values-es-rES reaches none of them. The narrower directory buys nothing here and costs every other Spanish variant. It is also what the repository already does and already says: ac_cloud-mail ships values-es and the owner reads that app in Spanish today, which is direct proof the device consults it, and the comment above status_light_on in aa_cloud-superapp/app/src/main/res/values/strings.xml instructs whoever adds the first locale to add `values-es`.",
+    "_doc": "SETTINGS FOR A REQUIRED TRANSLATION, if one is ever required again. `require` below is still honoured by the guard and still runs the full completeness and structural comparison against values/, but with English as the base language no module asks for it today. `plural_quantities` is the set of <item quantity=...> a translated <plurals> must cover; for Spanish that is one and other.",
     "qualifier": "es",
     "values_dir": "values-es",
     "plural_quantities": ["one", "other"]
   },
 
   "resource_files": {
-    "_doc": "WHICH FILES IN values/ CARRY TRANSLATIONS. The guard used to read the single filename `strings.xml`, which meant a module could put user-facing text anywhere else in values/ and never be checked — libs:keyboard did exactly that, keeping the emoji type-tab labels in superapp_media_strings.xml, and those three labels sat in English on a Spanish phone the whole time the guard reported green. It now reads every *.xml in values/ that declares a translatable resource. The exception is Android's `donottranslate` naming convention: values/ also carries per-locale BEHAVIOUR — which punctuation clusters, which layout display names — and those files exist precisely to say `this is configuration, not prose`. Demanding a Spanish donottranslate.xml would be demanding a translation of a setting.",
+    "_doc": "WHICH FILES IN values/ CARRY TRANSLATIONS. The guard used to read the single filename `strings.xml`, which meant a module could put user-facing text anywhere else in values/ and never be checked — libs:keyboard did exactly that, keeping the emoji type-tab labels in superapp_media_strings.xml. It now reads every *.xml in values/ that declares a translatable resource. The exception is Android's `donottranslate` naming convention: values/ also carries per-locale BEHAVIOUR — which punctuation clusters, which layout display names — and those files exist precisely to say `this is configuration, not prose`.",
     "skip_name_prefixes": ["donottranslate"]
   },
 
   "modules": {
-    "_doc": "Every module in the repository that owns a src/main/res/values/strings.xml must appear here, or the guard fails. That is deliberate and it is the answer to 'what happens to the NEXT app the owner builds': a new module with a new strings.xml is not silently exempt, it stops CI until somebody states in this file whether its interface has to be readable in Spanish. `require` lists locale qualifiers that must cover every translatable key. `exempt` is a sentence saying why not, and is read by a human in review.",
+    "_doc": "Every module in the repository that owns a src/main/res/values/strings.xml must appear here, or the guard fails. That is deliberate and it is the answer to 'what happens to the NEXT app the owner builds': a new module with a new strings.xml is not silently exempt, it stops CI until somebody states in this file what its base language is. `base_language: en` means this module packages an APK and its build file must declare the English locale filter — the guard reads the build file and checks. `base_language: host` means this is a library: it ships locales, it packages nothing, and the filter in whichever app merges it is what drops them. `exempt` is a sentence saying why the rule does not bite, read by a human in review. `require` lists locale qualifiers that must cover every translatable key, and is unused while English is the base language.",
 
-    "_keyboard_was_exempt": "WHY libs/keyboard IS NO LONGER EXEMPT. Its entry used to read `Vendored HeliBoard fork ... an upstream-sync task and not a translation task`, and every clause of that was checkable and wrong. The tree is not a mirror: ab_cloud-libs-shared/libs/keyboard/README.md says `This tree is owned code: edit src/main directly and commit. There is no upstream sync, no overlay patch, no regeneration step`, and there is no patches/ directory under it. More decisively, the split is measurable. At the vendoring commit 2dba4ec53 (`vendor HeliBoard as libs:keyboard`), values/strings.xml and values-es/strings.xml each held 534 translatable keys — upstream shipped Spanish COMPLETE. Every key missing from values-es today was added to values/ by a commit of ours after that import: 149 of 149, zero from upstream. So there was never an upstream-sync task to wait for, and pulling upstream would not have moved the number by one. The keys are Text Enhancements, Text Resume, AI model routing, clipboard export/import, emoji search and pinning, grammar check and translation settings — features this repository built, on the app the owner touches on every screen.",
+    "_doc_libraries": "The three libraries below carry the fleet's own translated strings rather than a vendored catalogue. They are declared `host` and not `exempt` because the distinction is load-bearing: the Spanish in them is real, complete and unreachable, and if a future app ever drops the filter it comes straight back. libs/keyboard is the extreme case at 103 locale directories, and its Spanish is genuinely ours — at the vendoring commit 2dba4ec53 values/strings.xml and values-es/strings.xml each held 534 keys, and every key added since was added by this repository.",
 
-    "aa_cloud-superapp/app":                  { "require": ["es"] },
-    "_doc_ac_cloud-notes":                    "The vendored Markor tree ships 64 values-* locale directories of its own, values-es among them, so this app arrives ALREADY readable in the locale this policy is about \u2014 that is inherited, not earned, and it is not an exemption. Declared explicitly all the same, because the rule is that a module owning a values/strings.xml must APPEAR here or CI stops: silence would read as 'nobody has decided yet', which for a brand-new app is the exact state this file exists to prevent. The one string this repository added rather than inherited is app_name_real ('Cloud Notes'), and it is translatable=false \u2014 which is what a product name should be.",
-    "ac_cloud-notes/app":                     { "require": ["es"] },
-    "ac_c3-watchtower/app":                   { "require": ["es"] },
-    "ab_cloud-libs-shared/libs/mail":         { "require": ["es"] },
-    "ab_cloud-libs-shared/libs/translate":    { "require": ["es"] },
-    "ac_cloud-mail/app":                      { "require": ["es"] },
-    "ac_cloud-writer/app":                    { "require": ["es"] },
-    "ac_cloud-ide/hub":                       { "require": ["es"] },
+    "aa_cloud-superapp/app":                  { "base_language": "en" },
+    "ac_cloud-notes/app":                     { "base_language": "en" },
+    "ac_c3-watchtower/app":                   { "base_language": "en" },
+    "ac_cloud-mail/app":                      { "base_language": "en" },
+    "ac_cloud-writer/app":                    { "base_language": "en" },
+    "ac_cloud-ide/hub":                       { "base_language": "en" },
+    "ac_cloud-keyboard/app":                  { "base_language": "en" },
+    "ac_cloud-camera/app":                    { "base_language": "en" },
+    "ac_cloud-dialer/app":                    { "base_language": "en" },
+    "ac_cloud-media-center/app":              { "base_language": "en" },
+
+    "ab_cloud-libs-shared/libs/mail":         { "base_language": "host" },
+    "ab_cloud-libs-shared/libs/translate":    { "base_language": "host" },
+    "ab_cloud-libs-shared/libs/keyboard":     { "base_language": "host" },
+    "ac_cloud-vault/ui":                      { "base_language": "host" },
 
     "ab_cloud-libs-shared/libs/core":            { "exempt": "One string, the library's own name, never drawn on screen." },
     "ab_cloud-libs-shared/libs/launcher-onehand":{ "exempt": "One string, the library's own name; every label the One-Hand launcher draws comes from the host app's resources." },
-    "ab_cloud-libs-shared/keyboard-engines/app":  { "exempt": "Harness APK that hosts the keyboard engines for bench runs; it has no interface beyond its own launcher label." },
-    "ab_cloud-libs-shared/libs/keyboard":        { "require": ["es"] },
+    "ab_cloud-libs-shared/keyboard-engines/app":  { "exempt": "Harness APK that hosts the keyboard engines for bench runs; it has no interface beyond its own launcher label, and no locale directory anywhere in its sources." },
 
-    "ac_cloud-browser/app":   { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
-    "ac_cloud-calendar/app":  { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
-    "ac_cloud-contacts/app":  { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
-    "ac_cloud-news/app":      { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
-    "ac_cloud-nav/app":       { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
-    "ac_cloud-wallet/app":    { "exempt": "Vendored fork; the module's own strings.xml holds nothing but the app label." },
-    "ac_cloud-me/app":        { "exempt": "Four strings, all of them the app label and its launcher shortcuts." },
-    "ac_cloud-keyboard/app":  { "exempt": "Three strings, all of them the app label and its launcher shortcuts; the keyboard's own interface lives in ab_cloud-libs-shared/libs/keyboard, which is required above." },
+    "_doc_english_only_clones": "The clones below need no filter because there is nothing to filter: each was measured to own zero non-English locale directories, and each draws its interface either from its own English values/ or from a catalogue outside Android resources. A filter would be a no-op declaring a rule these modules cannot break — the day one of them vendors a translated catalogue, its entry moves to `base_language: en` and the filter goes in with it.",
 
-    "ac_cloud-camera/app":       { "exempt": "Vendored GrapheneOS Camera fork. 192 English-only strings and no locale directory at all: upstream ships translations that this vendoring did not bring across. The repair is to vendor upstream's res/values-* rather than to hand-write Spanish, so it is an upstream-sync task. NEEDS THE OWNER'S DECISION — see the report on commit w232." },
-    "ac_cloud-chat/android/app": { "exempt": "Vendored Mattermost fork; React Native app whose interface strings live in the JS bundle's i18n catalogue, not in this strings.xml." },
-    "ac_cloud-dialer/app":       { "exempt": "Vendored Fossify Phone fork; 81 upstream locales, refreshed by pulling upstream." },
-    "ac_cloud-media-center/app": { "exempt": "Vendored ReFra fork; 44 upstream locales, refreshed by pulling upstream." },
-    "ac_cloud-vault/ui":         { "exempt": "Vendored Bitwarden fork; 62 upstream locales, refreshed by pulling upstream." },
+    "ac_cloud-browser/app":   { "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory." },
+    "ac_cloud-calendar/app":  { "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory." },
+    "ac_cloud-contacts/app":  { "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory." },
+    "ac_cloud-news/app":      { "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory." },
+    "ac_cloud-nav/app":       { "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory." },
+    "ac_cloud-wallet/app":    { "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory." },
+    "ac_cloud-me/app":        { "exempt": "Four strings, all of them the app label and its launcher shortcuts; no locale directory." },
+
+    "ac_cloud-chat/android/app": { "exempt": "Vendored Mattermost clone; a React Native app whose interface strings live in the JS bundle's i18n catalogue, not in Android resources, so no locale filter can reach them." },
     "ac_cloud-vault/testharness":{ "exempt": "Debug-only harness, never installed on the owner's phone." },
-    "ac_cloud-termux/app":            { "exempt": "Vendored Termux fork; upstream owns the catalogue." },
-    "ac_cloud-termux/terminal-view":  { "exempt": "Vendored Termux fork; upstream owns the catalogue." },
-    "ac_cloud-termux/termux-shared":  { "exempt": "Vendored Termux fork; upstream owns the catalogue." },
-    "ac_cloud-nix-on-droid/app":           { "exempt": "Vendored Nix-on-Droid fork; upstream owns the catalogue." },
-    "ac_cloud-nix-on-droid/terminal-view": { "exempt": "Vendored Nix-on-Droid fork; upstream owns the catalogue." },
-    "ac_cloud-nix-on-droid/termux-shared": { "exempt": "Vendored Nix-on-Droid fork; upstream owns the catalogue." },
+    "ac_cloud-termux/app":            { "exempt": "Vendored Termux clone; no locale directory in this module." },
+    "ac_cloud-termux/terminal-view":  { "exempt": "Vendored Termux clone; no locale directory in this module." },
+    "ac_cloud-termux/termux-shared":  { "exempt": "Vendored Termux clone; no locale directory in this module." },
+    "ac_cloud-nix-on-droid/app":           { "exempt": "Vendored Nix-on-Droid clone; no locale directory in this module." },
+    "ac_cloud-nix-on-droid/terminal-view": { "exempt": "Vendored Nix-on-Droid clone; no locale directory in this module." },
+    "ac_cloud-nix-on-droid/termux-shared": { "exempt": "Vendored Nix-on-Droid clone; no locale directory in this module." },
     "a_solutions/ae-tool_termux-boot/app": { "exempt": "Vendored termux-boot; one string, the app label." }
   }
 }

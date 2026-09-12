@@ -138,6 +138,9 @@ android {
     compileSdk = 36
 
     defaultConfig {
+        // FLEET RULE (#299): English is the fleet's base language. Unlisted locales are dropped
+        // from resources.arsc, so a Spanish phone resolves the English strings in values/.
+        resourceConfigurations += listOf("en")
         // Our package id, not upstream's: the constellation already has installs of
         // com.diegonmarcos.comms.mail in the field and this app replaces what is on
         // them. `namespace` above stays app.sterna — it is the R/BuildConfig package

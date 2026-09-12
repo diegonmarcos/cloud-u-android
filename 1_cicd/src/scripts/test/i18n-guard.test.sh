@@ -1,17 +1,20 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║ i18n-guard.test — prove the guard fails, not just that it runs   ║
+# ║ i18n-guard.test.sh — does the guard actually catch a lost base   ║
+# ║ language, or does it only print a green line?                    ║
 # ╚══════════════════════════════════════════════════════════════════╝
 #
-# WHY THIS EXISTS. A guard that has only ever been watched succeeding is
-# indistinguishable from a guard that returns 0 unconditionally; this
-# repository shipped an assertion last week that compared an expression to
-# itself and printed green. So every case below BREAKS the repository in one
-# specific way, demands the guard notice that exact way, and puts it back.
+# A guard that runs green on a correct tree proves nothing: a script with the
+# check deleted runs green on a correct tree too. So every case here BREAKS the
+# rule in a copy of the repository and asserts the guard exits non-zero AND says
+# why. The break is always the realistic one — a locale filter dropped while
+# somebody reformats a build file, or retargeted to another language — never a
+# syntax error the build would have caught first.
 #
-# The break happens in a throwaway copy of the tree, never in the working
-# tree — a tester that mutates checked-out files loses somebody's work the
-# first time it is interrupted.
+# The sandbox carries the resource files, the policy, the guard and the module
+# build files, and nothing else. Copying the whole repository per case would move
+# gigabytes; copying the three kinds of file the guard reads is a few hundred
+# kilobytes, and it also documents exactly what the guard's answer depends on.
 
 set -uo pipefail
 
@@ -19,75 +22,85 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 GUARD="1_cicd/src/scripts/cloud-android-i18n-guard.py"
 FAILURES=0
 
-ok()   { printf 'ok     %s\n' "$1"; }
-fail() { printf 'FAIL   %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
+ok()   { printf '  PASS  %s\n' "$1"; }
+fail() { printf '  FAIL  %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
-# One pristine copy, made once. Every case copies from it, breaks the copy and
-# throws it away, so no case can leak state into the next.
-#
-# Copied from the WORKING TREE rather than from the git index, on purpose: the
-# guard has to be provable against the edit somebody is about to commit, not
-# only against what is already committed.
+# ── one pristine copy, cloned per case ──────────────────────────────
+# The locale directories the sandbox needs are DERIVED from the policy rather
+# than listed here: the day a module asks for a required translation again, its
+# values-<locale>/ has to travel into the sandbox or the guard would report it
+# missing in every case and every assertion below would pass for the wrong
+# reason.
 PRISTINE="$WORK/pristine"
 mkdir -p "$PRISTINE"
 
-# WHICH FILES THE SANDBOX NEEDS. The guard reads every *.xml in values/ — not
-# only strings.xml, since a module may keep user-facing text in a file of its
-# own — plus the same filenames under each locale directory the policy
-# requires. It reads nothing else, and the keyboard alone ships 116 locale
-# directories, so copying values-* wholesale would move 38 MB into every
-# sandbox to let the guard look at two of them.
-#
-# The locale list is DERIVED FROM THE POLICY rather than written here. A
-# hardcoded `values-es` in this tester is a second copy of a fact that already
-# lives in i18n-policy.json, and the day somebody adds a second required locale
-# it would be the copy that silently did not move — leaving the new locale
-# untested by the one file whose job is to test it.
-KEEP="$(python3 - "$ROOT" <<'KEEPEOF'
-import json, os, sys
-policy = json.load(open(os.path.join(sys.argv[1], "1_cicd/src/i18n-policy.json")))
-dirs = {"values"}
+# One walk in python rather than find | grep | tar: this script runs on the
+# owner's phone as well as in CI, and busybox tar has no --null, so a pipeline
+# built on it fails there with a short read and every case below then reports a
+# missing file instead of a verdict.
+python3 - "$ROOT" "$PRISTINE" <<'PY' || { echo "could not build the sandbox" >&2; exit 1; }
+import json, os, shutil, sys
+
+root, dest = sys.argv[1], sys.argv[2]
+policy = json.load(open(os.path.join(root, "1_cicd/src/i18n-policy.json")))
+
+keep_dirs = {"values"}
 for rule in policy["modules"].values():
     if isinstance(rule, dict):
         for locale in rule.get("require", []):
-            dirs.add("values" if locale == "default" else "values-" + locale)
-print(r"/src/main/res/(%s)/[^/]+\.xml$|/1_cicd/src/i18n-policy\.json$|/1_cicd/src/scripts/[^/]+\.py$"
-      % "|".join(sorted(dirs)))
-KEEPEOF
-)"
+            keep_dirs.add("values" if locale == "default" else "values-" + locale)
 
-( cd "$ROOT" && find . \
-       \( -name .git -o -name build -o -name z_archive -o -name node_modules \) -prune \
-       -o \( -name '*.xml' -path '*/src/main/res/values*' \) -print0 \
-       -o -path './1_cicd/src/i18n-policy.json' -print0 \
-       -o -path './1_cicd/src/scripts/*.py' -print0 ) \
-  | grep -zE "$KEEP" \
-  | tar -C "$ROOT" --null -T - -cf - | tar -C "$PRISTINE" -xf -
+SKIP = {".git", "build", "z_archive", "node_modules", ".gradle"}
+copied = 0
+for dirpath, dirnames, filenames in os.walk(root):
+    dirnames[:] = [d for d in dirnames if d not in SKIP]
+    rel = os.path.relpath(dirpath, root)
+    parts = rel.split(os.sep)
+    in_resources = (len(parts) >= 4
+                    and parts[-4:-1] == ["src", "main", "res"]
+                    and parts[-1] in keep_dirs)
+    for name in filenames:
+        wanted = ((in_resources and name.endswith(".xml"))
+                  or name in ("build.gradle", "build.gradle.kts")
+                  or (rel == os.path.join("1_cicd", "src") and name == "i18n-policy.json")
+                  or (rel == os.path.join("1_cicd", "src", "scripts") and name.endswith(".py")))
+        if not wanted:
+            continue
+        target = os.path.join(dest, rel, name)
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        # copyfile, not copy2: copying metadata drags the extended attributes
+        # along, and setxattr is denied under Android's app-private storage.
+        # Only the bytes matter — the guard is invoked as `python3 <path>`.
+        shutil.copyfile(os.path.join(dirpath, name), target)
+        copied += 1
+print("sandbox: %d file(s) the guard can read" % copied)
+PY
 
-# run_guard <sandbox> -> prints the guard's combined output, returns its status
-run_guard() {
-    ( cd "$1" && CLOUD_ANDROID_ROOT="$1" python3 "$GUARD" 2>&1 )
-}
-
+# mktemp rather than a counter: the dir is read back through a command
+# substitution, so anything the function increments happens in a subshell and is
+# lost — every case would land in the same directory and copy on top of the one
+# before it.
 sandbox() {
-    local dir="$WORK/case$RANDOM$RANDOM"
-    cp -a "$PRISTINE" "$dir"
-    printf '%s' "$dir"
+    local dir
+    dir="$(mktemp -d "$WORK/case.XXXXXX")" || return 1
+    cp -a "$PRISTINE/." "$dir/" || return 1
+    printf '%s\n' "$dir"
 }
 
-# expect_caught <label> <regex the failure line must match> <mutator...>
-# The regex is the point of the test: a guard that fails for some OTHER reason
-# is not evidence that it caught THIS one.
+run_guard() { ( cd "$1" && CLOUD_ANDROID_ROOT="$1" python3 "$GUARD" 2>&1 ); }
+
 expect_caught() {
-    local label="$1" want="$2"; shift 2
-    local dir out status
+    local label="$1" want="$2"
+    shift 2
+    local dir
     dir="$(sandbox)"
-    "$@" "$dir"
-    out="$(run_guard "$dir")"; status=$?
-    rm -rf "$dir"
+    "$@" "$dir" || { fail "$label — the mutator itself failed"; return; }
+    local out status
+    out="$(run_guard "$dir")"
+    status=$?
     if [ "$status" -eq 0 ]; then
         fail "$label — guard exited 0; the break went through unnoticed"
         return
@@ -110,34 +123,46 @@ else
     sed 's/^/         /' <<<"$out" | head -12
 fi
 
-ES_SUPERAPP="aa_cloud-superapp/app/src/main/res/values-es/strings.xml"
-ES_MAIL="ac_cloud-mail/app/src/main/res/values-es/strings.xml"
+GROOVY_APP="aa_cloud-superapp/app/build.gradle"
+KOTLIN_RESCONFIG_APP="ac_cloud-mail/app/build.gradle.kts"
+KOTLIN_FILTER_APP="ac_cloud-camera/app/build.gradle.kts"
 
-drop_key() { python3 - "$2/$ES_SUPERAPP" "$1" <<'PY'
+# Drops the whole declaration line, the way a reformat or a merge resolution
+# does. Whichever of the three spellings the module uses, the app is left with
+# no filter and every values-es/ it merges reaches the device.
+strip_filter() { python3 - "$2/$1" <<'PY'
 import re, sys
-path, key = sys.argv[1], sys.argv[2]
+path = sys.argv[1]
 text = open(path, encoding="utf-8").read()
-out = re.sub(r'\n *<string name="%s".*?</string>' % re.escape(key), "", text, count=1, flags=re.S)
-assert out != text, "test bug: %s not found in %s" % (key, path)
+out = re.sub(
+    r'\n[^\n]*(resConfigs\s+"en"'
+    r'|resourceConfigurations\s*\+=\s*listOf\("en"\)'
+    r'|localeFilters\s*\+=\s*listOf\("en"\))[^\n]*',
+    "", text, count=1)
+assert out != text, "test bug: no English locale filter found in %s" % path
 open(path, "w", encoding="utf-8").write(out)
 PY
 }
 
-swap_specifier_indices() { python3 - "$2/$ES_MAIL" "$1" <<'PY'
+# Keeps the declaration and changes only the language. This is the case that
+# proves the guard reads the LOCALE and not merely the presence of a call: a
+# filter set to "es" is a perfectly valid build file that pins the app to
+# Spanish, which is the exact outcome the fleet rule exists to prevent.
+retarget_filter() { python3 - "$2/$1" <<'PY'
 import re, sys
-path, key = sys.argv[1], sys.argv[2]
+path = sys.argv[1]
 text = open(path, encoding="utf-8").read()
-m = re.search(r'(<string name="%s"[^>]*>)(.*?)(</string>)' % re.escape(key), text, re.S)
-assert m, "test bug: %s not found in %s" % (key, path)
-# Renumber every positional index to 1: the arguments are still all present and
-# the string still formats, it just silently prints argument one twice.
-body = re.sub(r"%(\d+)\$", "%1$", m.group(2))
-open(path, "w", encoding="utf-8").write(text[:m.start(2)] + body + text[m.end(2):])
+out, count = re.subn(
+    r'((?:resConfigs\s+|resourceConfigurations\s*\+=\s*listOf\(|localeFilters\s*\+=\s*listOf\()")en"',
+    r'\1es"', text, count=1)
+assert count, "test bug: no English locale filter found in %s" % path
+open(path, "w", encoding="utf-8").write(out)
 PY
 }
 
-delete_locale() { rm -f "$1/$ES_SUPERAPP"; }
-
+# The next app the owner builds. It owns user-facing text and says nothing about
+# its base language, which is the silent condition the registry rule exists to
+# turn into a stopped build.
 add_undeclared_module() {
     mkdir -p "$1/ac_cloud-brandnew/app/src/main/res/values"
     cat > "$1/ac_cloud-brandnew/app/src/main/res/values/strings.xml" <<'XML'
@@ -148,78 +173,77 @@ add_undeclared_module() {
 XML
 }
 
-orphan_key() {
-    python3 - "$1/$ES_SUPERAPP" <<'PY'
+# Declared `base_language: en` with no build file to declare the filter in —
+# somebody answering the registry failure above with the wrong word. `en` is a
+# promise only a packaging module can keep; a library has to say `host`.
+declare_en_without_build_file() {
+    add_undeclared_module "$1"
+    python3 - "$1/1_cicd/src/i18n-policy.json" <<'PY'
 import sys
 path = sys.argv[1]
 text = open(path, encoding="utf-8").read()
-open(path, "w", encoding="utf-8").write(
-    text.replace("</resources>", '    <string name="ghost_key">Fantasma</string>\n</resources>'))
+anchor = '    "aa_cloud-superapp/app":'
+assert anchor in text, "test bug: policy anchor moved"
+open(path, "w", encoding="utf-8").write(text.replace(
+    anchor,
+    '    "ac_cloud-brandnew/app":                   { "base_language": "en" },\n' + anchor,
+    1))
 PY
 }
 
-expect_caught "a key removed from values-es is caught" \
-    'missing key `control_title`' \
-    drop_key control_title
+# Names a module that does not exist, the residue of a rename or a deletion. A
+# stale entry is not harmless: it is a rule nobody is checking, and the guard
+# would keep reporting it as one of the modules it filters.
+declare_missing_module() {
+    python3 - "$1/1_cicd/src/i18n-policy.json" <<'PY'
+import sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+anchor = '    "aa_cloud-superapp/app":'
+assert anchor in text, "test bug: policy anchor moved"
+open(path, "w", encoding="utf-8").write(text.replace(
+    anchor,
+    '    "ac_cloud-deleted/app":                    { "base_language": "en" },\n' + anchor,
+    1))
+PY
+}
 
-expect_caught "a reordered format specifier is caught" \
-    'format specifiers changed' \
-    swap_specifier_indices settings_update_status_downloading
+expect_caught "a Groovy app that loses resConfigs is caught" \
+    "$GROOVY_APP declares no en locale filter" \
+    strip_filter "$GROOVY_APP"
 
-expect_caught "deleting the whole Spanish locale is caught" \
-    'no values-es/strings.xml' \
-    delete_locale
+expect_caught "a Kotlin app that loses resourceConfigurations is caught" \
+    "$KOTLIN_RESCONFIG_APP declares no en locale filter" \
+    strip_filter "$KOTLIN_RESCONFIG_APP"
 
-expect_caught "a NEW app with no locale cannot slip in undeclared" \
-    'ac_cloud-brandnew/app owns a values/strings.xml but is not declared' \
+expect_caught "a Kotlin app that loses localeFilters is caught" \
+    "$KOTLIN_FILTER_APP declares no en locale filter" \
+    strip_filter "$KOTLIN_FILTER_APP"
+
+expect_caught "a filter retargeted from en to es is caught" \
+    "$KOTLIN_FILTER_APP declares no en locale filter" \
+    retarget_filter "$KOTLIN_FILTER_APP"
+
+expect_caught "a Groovy filter retargeted from en to es is caught" \
+    "$GROOVY_APP declares no en locale filter" \
+    retarget_filter "$GROOVY_APP"
+
+expect_caught "a NEW app with user-facing text cannot slip in undeclared" \
+    "ac_cloud-brandnew/app owns a values/strings.xml but is not declared" \
     add_undeclared_module
 
-expect_caught "a Spanish key that translates nothing is caught" \
-    'ghost_key. translates nothing' \
-    orphan_key
+expect_caught "base_language: en on a module with no build file is caught" \
+    "ac_cloud-brandnew/app is declared .base_language: en. but owns no build" \
+    declare_en_without_build_file
 
-# ── libs:keyboard is enforced, not exempt ──────────────────────────
-#
-# WHY THESE TWO CASES EXIST. libs/keyboard carried `exempt` in the policy for
-# months on the reasoning that it was a mirror whose Spanish comes from
-# upstream. It is not a mirror (its README says so, and there is no patches/
-# directory), and the 149 keys values-es was missing had every one of them been
-# added by THIS repository after the HeliBoard vendoring — upstream shipped
-# Spanish complete. The exemption therefore suppressed a real gap on the app
-# the owner touches on every screen, and the cheapest way for it to come back
-# is somebody re-adding one line to i18n-policy.json. The first case fails the
-# moment that line returns.
-#
-# The second covers the engine change the first one needed: the guard used to
-# read the filename `strings.xml` and nothing else, so the three emoji
-# type-tab labels in superapp_media_strings.xml were never checked at all.
-ES_KEYBOARD="ab_cloud-libs-shared/libs/keyboard/src/main/res/values-es/strings.xml"
-ES_KEYBOARD_MEDIA="ab_cloud-libs-shared/libs/keyboard/src/main/res/values-es/superapp_media_strings.xml"
+expect_caught "a policy entry for a module that no longer exists is caught" \
+    "declares ac_cloud-deleted/app, which owns no" \
+    declare_missing_module
 
-drop_keyboard_key() { python3 - "$2/$ES_KEYBOARD" "$1" <<'PY'
-import re, sys
-path, key = sys.argv[1], sys.argv[2]
-text = open(path, encoding="utf-8").read()
-out = re.sub(r'\n *<string name="%s".*?</string>' % re.escape(key), "", text, count=1, flags=re.S)
-assert out != text, "test bug: %s not found in %s" % (key, path)
-open(path, "w", encoding="utf-8").write(out)
-PY
-}
-
-delete_keyboard_media_locale() { rm -f "$1/$ES_KEYBOARD_MEDIA"; }
-
-expect_caught "the keyboard is no longer exempt — a dropped Spanish key is caught" \
-    'libs/keyboard values-es/strings.xml: missing key `settings_screen_clipboard`' \
-    drop_keyboard_key settings_screen_clipboard
-
-expect_caught "a translatable file that is not strings.xml is checked too" \
-    'no values-es/superapp_media_strings.xml' \
-    delete_keyboard_media_locale
-
-
+printf '\n'
 if [ "$FAILURES" -eq 0 ]; then
-    echo "PASS — the guard fails on every way a translation can go missing."
+    printf 'i18n guard tester: all cases pass — the guard catches a lost base language.\n'
     exit 0
 fi
-echo "FAIL — see above."
+printf 'i18n guard tester: %d case(s) failed.\n' "$FAILURES"
 exit 1

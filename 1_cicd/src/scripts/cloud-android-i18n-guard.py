@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║ cloud-android-i18n-guard — fail the build on a partial locale    ║
+# ║ cloud-android-i18n-guard — fail the build when an app's base     ║
+# ║ language is not the fleet's                                      ║
 # ║                                                                  ║
-# ║ Zero policy here. Every module, every required locale and every  ║
-# ║ exemption lives in 1_cicd/src/i18n-policy.json.                  ║
+# ║ Zero policy here. Every module, the base language, the locale    ║
+# ║ filter spellings and every exemption live in                     ║
+# ║ 1_cicd/src/i18n-policy.json.                                     ║
 # ╚══════════════════════════════════════════════════════════════════╝
 #
-# WHY THIS IS NOT `gradle lint`. Android lint owns a MissingTranslation rule
-# that would catch all of this, and it is unreachable here for two independent
-# reasons. First, no workflow in .github/workflows/ ever asks for a lint task —
-# CI runs assembleRelease and stops — so the rule never executes at all. Second,
-# every module that configures it has switched it off (cloud-vault disables it,
-# cloud-matrix ignores it, cloud-dialer downgrades it to a warning), so even a
-# CI that did run lint would print those findings into a log and exit green.
-# A guard that only warns is how cloud-mail reached 89 untranslated keys inside
-# an app the owner reads in Spanish. This one exits non-zero.
+# WHAT THE RULE IS. English is the fleet's base language: every app comes up in
+# English whatever the device asks for. Android does the opposite by default —
+# the owner's phone is set to Spanish, so one values-es/ anywhere in an app's
+# resource closure wins over values/, and most apps here are clones of upstream
+# trees that arrive with 40 to 105 translated locale directories. The only place
+# that can settle it is the module that packages the APK: its locale filter is
+# applied at merge time and drops the unlisted locales from resources.arsc, its
+# own and every library's alike. So the guard reads build.gradle[.kts] and fails
+# when a packaging module has no such declaration.
+#
+# WHY THIS IS NOT `gradle lint`. Lint's MissingTranslation rule answers the
+# opposite question (is the Spanish complete?), and it is unreachable here
+# anyway for two independent reasons. First, no workflow in .github/workflows/
+# ever asks for a lint task — CI runs assembleRelease and stops — so the rule
+# never executes at all. Second, every module that configures it has switched it
+# off (cloud-vault disables it, cloud-matrix ignores it, cloud-dialer downgrades
+# it to a warning), so even a CI that did run lint would print its findings into
+# a log and exit green. A guard that only warns changes nothing. This one exits
+# non-zero.
 #
 # WHY IT DISCOVERS MODULES INSTEAD OF READING A LIST OF THEM. A list of apps to
 # check can only ever describe the apps that existed when it was written; the
@@ -138,6 +150,39 @@ def translatable_files(res, policy):
     return out
 
 
+def check_base_language(repo, module, policy, fail):
+    """English is the fleet's base language, and a module that packages an APK is
+    the only place that can enforce it.
+
+    Resource filtering happens at the app's merge-and-package step, so this one
+    declaration also drops the locales arriving from every library and AAR the
+    app merges — which is why libs/keyboard's 103 locale directories need no
+    edit of their own. Three spellings are accepted because the fleet spans
+    plugin 4.2.2 to 9.3.1; the policy carries the patterns rather than this
+    script, so a fourth spelling is a data change.
+    """
+    rule = policy["base_language"]
+    patterns = [re.compile(p) for p in rule["declaration_patterns"]]
+    for name in ("build.gradle", "build.gradle.kts"):
+        path = os.path.join(repo, module, name)
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read()
+        if any(p.search(text) for p in patterns):
+            return
+        fail(
+            "%s/%s declares no %s locale filter — every values-* this app merges, "
+            "its own and its libraries', reaches the device and wins over values/ "
+            "on a phone set to that language. Add one of: %s"
+            % (module, name, rule["locale"], ", ".join(rule["declaration_patterns"]))
+        )
+        return
+    fail("%s is declared `base_language: en` but owns no build.gradle[.kts] — "
+         "only a module that packages an APK can filter locales, so this entry "
+         "should read `base_language: host`." % module)
+
+
 def check_module(repo, module, locales, policy, fail):
     res = os.path.join(repo, module, "src", "main", "res")
     quantities = set(policy["locale"]["plural_quantities"])
@@ -227,8 +272,9 @@ def main():
     for module in sorted(discovered - set(modules)):
         fail(
             "%s owns a values/strings.xml but is not declared in 1_cicd/src/i18n-policy.json. "
-            "Add it with `require` (the locales its interface must be readable in) or `exempt` "
-            "(one sentence saying why not)." % module
+            "Add it with `base_language` (\"en\" if the module packages an APK, \"host\" if it is "
+            "a library whose locales the packaging app filters out) or `exempt` "
+            "(one sentence saying why the base-language rule does not bite)." % module
         )
 
     for module in sorted(set(modules) - discovered):
@@ -236,8 +282,12 @@ def main():
              "src/main/res/values/strings.xml — drop the entry." % module)
 
     checked = 0
+    filtered = 0
     for module in sorted(discovered & set(modules)):
         rule = modules[module]
+        if rule.get("base_language") == "en":
+            check_base_language(REPO, module, policy, fail)
+            filtered += 1
         if "require" not in rule:
             continue
         check_module(REPO, module, rule["require"], policy, fail)
@@ -248,14 +298,16 @@ def main():
         for line in failures:
             print("  FAIL  " + line, file=sys.stderr)
         print(
-            "\nThe owner reads these apps in Spanish. A key that exists only in "
-            "values/ renders in English on their phone.",
+            "\nEnglish is the fleet's base language. An app that does not filter "
+            "locales at package time resolves to whatever language the phone asks "
+            "for, from any values-* in its resource closure.",
             file=sys.stderr,
         )
         return 1
 
-    print("i18n guard: %d module(s) fully translated, %d declared exempt, %d discovered."
-          % (checked, len(modules) - checked, len(discovered)))
+    print("i18n guard: %d module(s) filter to the %s base language, %d with a "
+          "required translation, %d discovered."
+          % (filtered, policy["base_language"]["locale"], checked, len(discovered)))
     return 0
 
 

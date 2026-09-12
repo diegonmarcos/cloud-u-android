@@ -76,7 +76,7 @@ android {
         }
 
         androidResources {
-            localeFilters += locales
+            localeFilters += listOf("en")
         }
     }
 

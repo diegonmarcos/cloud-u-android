@@ -87,16 +87,17 @@ android {
     }
 
     androidResources {
-        // The owner's phone is in Spanish. This list is a HARD FILTER applied at
-        // package time: a locale missing here is compiled and then dropped from
-        // resources.arsc, so values-es/ ships as an empty promise and every label
-        // renders in English anyway — with a green build and a green i18n guard,
-        // because both of those only ever look at the source tree.
+        // FLEET RULE (#299): English is the fleet's base language. This list is a
+        // HARD FILTER applied at package time: a locale missing here is compiled
+        // and then dropped from resources.arsc, so any values-es/ this module or
+        // one of its libraries ships is an empty promise and every label renders
+        // in English — even on the owner's Spanish phone, and with a green build
+        // and a green i18n guard, because both only look at the source tree.
         //
         // Verified against the published APK on 2026-09-11: with "en" alone, the
-        // new values-es strings were absent from resources.arsc while their
-        // values/ counterparts were present.
-        localeFilters += listOf("en", "es")
+        // values-es strings were absent from resources.arsc while their values/
+        // counterparts were present.
+        localeFilters += listOf("en")
     }
 }
 

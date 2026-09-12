@@ -125,6 +125,10 @@ android {
     compileSdk 35
 
     defaultConfig {
+        // FLEET RULE (#299): English is the fleet's base language. Unlisted locales are
+        // dropped from resources.arsc, so a Spanish phone resolves the English
+        // in values/ instead of any values-es this module or a library ships.
+        resConfigs "en"
         applicationId 'com.diegonmarcos.ide'
         minSdk 26
         targetSdk 34

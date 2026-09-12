@@ -23,6 +23,10 @@ android {
     compileSdkVersion rootProject.ext.version_compileSdk
 
     defaultConfig {
+        // FLEET RULE (#299): English is the fleet's base language. Unlisted locales are
+        // dropped from resources.arsc, so a Spanish phone resolves the English
+        // in values/ instead of any values-es this module or a library ships.
+        resConfigs "en"
         resValue "string", "manifest_package_id", "com.diegonmarcos.cloudnotes"
         applicationId "com.diegonmarcos.cloudnotes"
         versionName "2.16.1"

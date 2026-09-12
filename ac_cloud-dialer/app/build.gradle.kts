@@ -123,6 +123,8 @@ android {
     }
 
     androidResources {
+        // FLEET RULE (#299): English is the fleet's base language.
+        localeFilters += listOf("en")
         @Suppress("UnstableApiUsage")
         generateLocaleConfig = true
     }

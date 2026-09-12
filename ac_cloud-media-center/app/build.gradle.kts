@@ -104,6 +104,12 @@ tasks.configureEach {
 }
 
 android {
+    androidResources {
+        // FLEET RULE (#299): English is the fleet's base language. Unlisted locales are dropped
+        // from resources.arsc, so a Spanish phone resolves the English strings in values/.
+        localeFilters += listOf("en")
+    }
+
     namespace = "com.diegonmarcos.mediacenter"
     compileSdk = 37
 
