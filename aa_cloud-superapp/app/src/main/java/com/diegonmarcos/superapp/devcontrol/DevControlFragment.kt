@@ -1976,7 +1976,7 @@ class DevControlFragment : Fragment() {
                                     "timed out after $timeoutMs ms"
                                 else "${e.javaClass.simpleName}: ${e.message ?: "no detail"}"
                             grp.addView(small(ctx, "⚠ $head could not be read — $why"))
-                            buf?.append("  UNAVAILABLE: ").append(why).append("\n")
+                            buf?.append("  UNAVAILABLE: $why\n")
                         }
                 } finally {
                     currentBuf = prev
