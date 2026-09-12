@@ -7,13 +7,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
@@ -116,34 +117,54 @@ fun TextToolPanel(runner: TextToolRunner, onApply: ((String) -> Unit)?) {
 }
 
 /**
- * The overflow entries for [surface], drawn FROM the surface's own declaration.
+ * [surface]'s tools as ONE ROW of one-tap icons, drawn FROM the surface's own declaration.
  *
- * Both screens call this instead of hand-writing a DropdownMenuItem per tool. That is the point:
- * the reader used to list Enhance and Translate itself and the composer listed its own pair, so
- * the two could disagree about which tools exist — and did, which is the bug this replaces. Now
- * "which entries does this menu hold" and "which tools will the runner accept" are the same list
- * read twice, and neither can be edited without the other following.
+ * The only shape either screen draws them in, and the only one there is. Both used to hand-write
+ * their own: the reader listed Enhance and Translate, the composer listed its own pair, and the two
+ * disagreed about which tools existed. A shared helper fixed that by generating one full-width
+ * DropdownMenuItem per tool — then #293 replaced the reader's stack with this row and left the
+ * composer on the stack, so the surfaces disagreed again, this time about SHAPE instead of
+ * membership. #308 put both on the row and deleted the stacked helper outright rather than leaving
+ * it callerless, because a composable nothing calls is exactly what the next screen reaches for.
  *
- * [TextTool.RESUME] never appears here even on [TextToolSurface.READ]: it is started from its own
- * toolbar icon and reports into the box under the sender. See [TextTool.inOverflow].
+ * This does NOT filter on [TextTool.inOverflow]. A row IS a toolbar, so a tool that draws its own
+ * toolbar icon draws it here — which is why AI Resume appears in this row while [TextToolPanel]
+ * still uses the same flag to decide that Resume's OUTCOME is drawn somewhere else.
  *
  * [enabled] is the caller's own gate — the composer closes its tools while a send is in flight —
  * and is deliberately separate from membership. Whether an action EXISTS on a surface and whether
  * it can be tapped right now are different questions, and answering them with one flag is how an
  * action ends up permanently greyed out instead of honestly absent.
+ *
+ * [skip] is the caller's per-MESSAGE veto, and it is a third thing separate from both membership
+ * and [enabled] for the same reason those two are separate: whether a tool exists on this surface,
+ * whether it can be tapped at this instant, and whether it has anything to act on in this
+ * particular message are three different questions. The reader hides Resume on a message with
+ * nothing to summarise, and an action that cannot apply here is honestly absent rather than
+ * permanently greyed out.
+ *
+ * [trailing] is for icons that are not text tools and never will be — the reader's Show Images.
+ * They belong in this Row because the owner asked for the one-tap actions on ONE line, and a
+ * second Row beside this one would put them on two.
  */
 @Composable
-fun TextToolMenuItems(
+fun TextToolIconRow(
     surface: TextToolSurface,
     enabled: Boolean = true,
+    skip: (TextTool) -> Boolean = { false },
+    trailing: @Composable () -> Unit = {},
     onPick: (TextTool) -> Unit,
 ) {
-    surface.tools.filter { it.inOverflow }.forEach { tool ->
-        DropdownMenuItem(
-            text = { Text(stringResource(tool.label)) },
-            leadingIcon = { Icon(tool.icon, contentDescription = null) },
-            onClick = { onPick(tool) },
-            enabled = enabled,
-        )
+    Row(
+        modifier = Modifier.padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        surface.tools.forEach { tool ->
+            if (skip(tool)) return@forEach
+            IconButton(enabled = enabled, onClick = { onPick(tool) }) {
+                Icon(tool.icon, contentDescription = stringResource(tool.label))
+            }
+        }
+        trailing()
     }
 }

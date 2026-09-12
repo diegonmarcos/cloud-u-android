@@ -106,18 +106,27 @@ PY
 # Each screen says which surface it IS, exactly once, and nothing else decides.
 has "$READER" 'rememberTextToolRunner(TextToolSurface.READ)' "S2 the reader declares itself the READ surface"
 has "$COMPOSER" 'rememberTextToolRunner(TextToolSurface.COMPOSE)' "S2 the composer declares itself the COMPOSE surface"
-# The reader stopped calling TextToolMenuItems at #293: its reading actions are now ONE icon row
-# inside the overflow, not one full-width entry per tool. What has to stay true is the part that
-# helper was protecting — that the row is drawn from the surface's list and not from a set of tools
-# the screen names itself — so the assertion follows the design instead of pinning the old call.
-# The negative is asserted too: re-adding the helper here would quietly restore the stacked-text
-# shape the owner asked to be merged away, and would draw every tool a second time.
-has "$READER" 'textTools.surface.tools.forEach' "S2 the reader's icon row is drawn from its surface"
-grep -q 'TextToolMenuItems(' "$READER" \
-  && bad "S2 the reader is back to one full-width entry per tool (#293 merged them into an icon row)" \
-  || ok "S2 the reader draws no per-tool overflow entries of its own"
-has "$COMPOSER" 'TextToolMenuItems(textTools.surface, enabled = !sending)' "S2 the composer's overflow is drawn from its surface"
-has "$PANEL" 'surface.tools.filter { it.inOverflow }.forEach' "S2 the menu iterates the surface's own list"
+# Both screens draw their tools as ONE icon row inside the overflow, from ONE composable. The
+# reader got that row at #293 and the composer was left on the stacked one-full-width-entry-per-tool
+# shape, so for two weeks the same three actions looked different and cost a different number of
+# taps depending on which half of the app you were in — which is the whole of #308. Both call sites
+# are pinned, because either one alone is satisfiable while the surfaces disagree.
+has "$READER" 'TextToolIconRow(' "S2 the reader draws its actions as the shared icon row"
+has "$COMPOSER" 'TextToolIconRow(textTools.surface, enabled = !sending)' \
+  "S2 the composer draws the SAME row, gated on its own send-in-flight flag"
+# The stacked helper is asserted GONE, not merely uncalled. It survived #293 with one caller left
+# and that is how the asymmetry lasted: a composable nothing calls is the one a new screen reaches
+# for, and this file exists to stop the two surfaces drifting apart a third time.
+for f in "$READER" "$COMPOSER" "$PANEL"; do
+  grep -q 'TextToolMenuItems' "$f" \
+    && bad "S2 ${f##*/} brought back the stacked one-entry-per-tool shape (#308 put both surfaces on the row)" \
+    || ok "S2 ${f##*/} carries no stacked per-tool entry list"
+done
+# The row itself reads the surface's own list. Not filtered on inOverflow, deliberately: a row IS a
+# toolbar, so a tool that draws its own toolbar icon draws it here, which is why AI Resume appears
+# in the row and in no menu. The panel still uses the same flag for the other question it answers —
+# where an OUTCOME is drawn — and that is asserted separately below.
+has "$PANEL" 'surface.tools.forEach' "S2 the icon row iterates the surface's own list"
 # No screen may hand-write a tool entry beside the generated ones: that is how one surface keeps an
 # action the declaration dropped. A tool's LABEL belongs to the enum now, so a screen naming one is
 # the tell. Scoped to the three label strings: the composer also names text_tool_stale, which is
@@ -132,7 +141,7 @@ done
 # so membership is what decides whether it is drawn. Checked separately from the has-a-body gate
 # beside it: a message with no body hides the icon, but a Resume taken off READ must remove it.
 has "$READER" 'TextTool.RESUME in textTools.surface.tools' "S2 the AI Resume ICON is gated on membership too"
-has "$READER" 'Icon(tool.icon, contentDescription = stringResource(tool.label))' \
+has "$PANEL" 'Icon(tool.icon, contentDescription = stringResource(tool.label))' \
   "S2 the row's glyph and label come from the declaration, not a second choice per tool"
 # Show Images joined that row (#293) and must not ALSO remain a menu entry — two controls for one
 # action is what the merge removed, and the entry is the copy that would survive unnoticed because

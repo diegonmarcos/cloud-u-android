@@ -66,7 +66,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import app.sterna.ui.text.rememberTextToolRunner
 import app.sterna.ui.text.TextToolScope
 import app.sterna.ui.text.TextToolPanel
-import app.sterna.ui.text.TextToolMenuItems
+import app.sterna.ui.text.TextToolIconRow
 import app.sterna.ui.text.TextToolSurface
 import app.sterna.ui.text.TextTool
 import app.sterna.core.data.text.Span
@@ -1281,8 +1281,18 @@ fun ComposeScreen(
                             // rewrite has somewhere to land. AI Resume is not here for the mirror
                             // reason — summarising a draft you are still writing answers a question
                             // nobody asked. Closed while a send is in flight, which is a separate
-                            // question from membership: see TextToolMenuItems.
-                            TextToolMenuItems(textTools.surface, enabled = !sending) { tool ->
+                            // question from membership: see TextToolIconRow.
+                            //
+                            // One ICON ROW, the same composable the reader draws (#308). It was a
+                            // stack of full-width entries here while the reader had had the row
+                            // since #293, which is the asymmetry the owner kept reporting as
+                            // missing: the arrangement was asked for on both surfaces and landed on
+                            // one. No `skip` — every COMPOSE tool applies to any draft, including an
+                            // empty one, because Enhance and Translate on a blank body report their
+                            // own reason (see TextEnhancer) rather than needing to be hidden, and
+                            // the reader's Resume veto exists because a message with no body has
+                            // nothing to summarise, which is a fact about received mail.
+                            TextToolIconRow(textTools.surface, enabled = !sending) { tool ->
                                 moreMenu = false
                                 runTextTool(tool)
                             }

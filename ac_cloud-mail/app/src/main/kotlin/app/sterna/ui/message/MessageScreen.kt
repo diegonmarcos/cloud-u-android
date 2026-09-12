@@ -99,6 +99,7 @@ import app.sterna.ui.text.rememberTextToolRunner
 import app.sterna.ui.text.LocalTextToolRunner
 import app.sterna.ui.text.TextTool
 import app.sterna.ui.text.TextToolScope
+import app.sterna.ui.text.TextToolIconRow
 import app.sterna.ui.text.TextToolPanel
 import app.sterna.ui.text.TextToolSurface
 import app.sterna.core.data.text.htmlEscape
@@ -979,10 +980,8 @@ private fun MessageActions(
             // dividers further down, so choosing between them meant looking in two places and
             // scrolling past the reply block.
             //
-            // Deliberately NOT TextToolMenuItems: that helper draws one full-width DropdownMenuItem
-            // per tool from the surface's declaration, which is exactly the stacked-text shape this
-            // replaces, and the composer still wants it. Membership is still read from the surface
-            // rather than restated — a tool taken off TextToolSurface.READ loses its icon here.
+            // Membership is read from the surface rather than restated here — a tool taken off
+            // TextToolSurface.READ loses its icon with no edit to this screen.
             //
             // Enhance is absent for the same reason it always was: it REWRITES a text into a better
             // version of itself, and this text is a record of what somebody else sent — nothing to
@@ -997,30 +996,29 @@ private fun MessageActions(
             // NEXT message from this sender, which is a different kind of decision from the three
             // one-tap actions on this message, and it needs its sentence to say so.
             val imagesOnceOffered = !imageMode && !showRemote
-            Row(
-                modifier = Modifier.padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                textTools.surface.tools.forEach { tool ->
-                    if (tool == TextTool.RESUME && !resumable) return@forEach
-                    IconButton(
-                        enabled = textTools.busy == null,
-                        onClick = {
-                            menuOpen = false
-                            textTools.run(textToolScope, tool, textToolSource())
-                        },
-                    ) {
-                        Icon(tool.icon, contentDescription = stringResource(tool.label))
+            // Drawn by TextToolIconRow rather than written out here (#308). The row itself is
+            // unchanged — same tools read from the same surface, same Resume veto, same Show Images
+            // icon at the end of the same line — but it now lives in TextToolPanel.kt, so the
+            // composer draws the identical row from the identical code instead of a second
+            // hand-written copy that looks the same the day it is written and drifts afterwards.
+            // That was the whole complaint: the arrangement landed on one surface and not the other.
+            TextToolIconRow(
+                surface = textTools.surface,
+                enabled = textTools.busy == null,
+                skip = { it == TextTool.RESUME && !resumable },
+                trailing = {
+                    if (imagesOnceOffered) {
+                        IconButton(onClick = { menuOpen = false; viewModel.showImagesOnce() }) {
+                            Icon(
+                                Icons.Filled.Image,
+                                contentDescription = stringResource(R.string.message_show_images),
+                            )
+                        }
                     }
-                }
-                if (imagesOnceOffered) {
-                    IconButton(onClick = { menuOpen = false; viewModel.showImagesOnce() }) {
-                        Icon(
-                            Icons.Filled.Image,
-                            contentDescription = stringResource(R.string.message_show_images),
-                        )
-                    }
-                }
+                },
+            ) { tool ->
+                menuOpen = false
+                textTools.run(textToolScope, tool, textToolSource())
             }
             // Reading mode (#149). The label says what the tap DOES, so it follows the mode actually
             // RENDERED — which is why the entry reads "Show HTML" on a message the setting opened as

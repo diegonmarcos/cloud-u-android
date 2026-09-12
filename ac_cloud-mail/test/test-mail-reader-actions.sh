@@ -329,10 +329,15 @@ for entry in ("R.string.message_archive", "R.string.message_delete"):
         print(f"  FAIL: A1 {entry} was dropped rather than moved to the overflow")
         sys.exit(1)
 print("  ok: A1 Archive and Delete moved to the overflow rather than being dropped")
-if "tool == TextTool.RESUME && !resumable" not in src or "textTools.surface.tools.forEach" not in src:
-    print("  FAIL: A1 Resume left the bar without arriving in the merged reading row (#293)")
+# The row itself became a shared composable at #308, when the composer was put on it too, so the
+# iteration this used to look for now lives in TextToolPanel.kt. What is still the READER's own
+# decision, and all that is checked here, is the per-message veto it passes in: Resume is hidden on
+# a message with no body to summarise. That is the gate the #293 move had to carry across, and it
+# cannot be satisfied by the row merely being drawn.
+if "TextToolIconRow(" not in src or "it == TextTool.RESUME && !resumable" not in src:
+    print("  FAIL: A1 Resume left the bar without arriving in the merged reading row (#293/#308)")
     sys.exit(1)
-print("  ok: A1 Resume moved into the overflow's icon row, still gated on there being a body")
+print("  ok: A1 Resume moved into the shared icon row, still gated on there being a body")
 PY
 [ $? -eq 0 ] && PASS=$((PASS+4)) || FAIL=$((FAIL+1))
 
