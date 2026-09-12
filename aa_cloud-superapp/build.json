@@ -2457,6 +2457,12 @@
                 "target": "page:drive/connections"
               },
               {
+                "_doc": "Divides Drive from the rest of Data Apps. Drive is about to stop being a page and become its own application (task 302/304), so it is no longer a sibling of Calendar and Contacts — it is the row's entry point. A CHARACTER and not a rule: `separator: true` makes GroupedTilesFragment draw a bare '|', not clickable, not focusable, hidden from accessibility, which is what the owner asked for — \"add this char, not a line, a char!! a seprator\". Same declaration as projects-me-sep-1, so Sections.TileGroup.destinations drops it and no surface that reads tiles as places to go ever offers it.",
+                "id": "data-apps-sep-1",
+                "label": "|",
+                "separator": true
+              },
+              {
                 "id": "calendar",
                 "label": "Calendar",
                 "icon": "ic_calendar",
