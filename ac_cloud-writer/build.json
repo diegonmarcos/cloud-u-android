@@ -64,8 +64,8 @@
         "url": "https://openrouter.ai/api/v1/chat/completions",
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
-        "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-09-10",
+        "default_model": "z-ai/glm-5.3-flash",
+        "pricing_as_of": "2026-09-12",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -106,14 +106,13 @@
               "bf16"
             ],
             "trained_for": [
-              "academia",
-              "legal",
+              "marketing",
               "roleplay",
               "translation",
               "trivia"
             ],
-            "prompt": 0.07,
-            "completion": 0.34,
+            "prompt": 0.042,
+            "completion": 0.22,
             "note": "Sparse 26B (4B active): translation, academia and legal at a small-model price."
           },
           {
@@ -138,13 +137,12 @@
             "open": true,
             "params_b": 31,
             "quant": [
-              "fp4",
-              "fp8",
               "bf16",
-              "fp16"
+              "fp4",
+              "fp8"
             ],
             "trained_for": [
-              "health",
+              "legal",
               "marketing",
               "roleplay",
               "translation",
@@ -176,8 +174,8 @@
             "quant": [
               "fp8"
             ],
-            "prompt": 0.22,
-            "completion": 0.88,
+            "prompt": 0.0875,
+            "completion": 0.35,
             "note": "Largest parameter count here; served only at fp8."
           },
           {
@@ -220,8 +218,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.065,
-            "completion": 0.18,
+            "prompt": 0.04,
+            "completion": 0.08,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
           {
@@ -242,12 +240,11 @@
               "roleplay",
               "science",
               "technology",
-              "translation",
-              "trivia"
+              "translation"
             ],
-            "prompt": 0.966,
-            "completion": 3.036,
-            "note": "Ranked in eleven categories including translation; the formal-register GLM."
+            "prompt": 0.6,
+            "completion": 2.0,
+            "note": "Ranked in ten categories including translation; the formal-register GLM."
           },
           {
             "id": "z-ai/glm-5.3-flash",
@@ -271,9 +268,9 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.15,
-            "completion": 0.5,
-            "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
+            "prompt": 0.075,
+            "completion": 0.25,
+            "note": "The provider default: ranked in all twelve categories, and the cheapest all-rounder after DeepSeek."
           },
           {
             "id": "moonshotai/kimi-k2-0905",
@@ -322,11 +319,22 @@
             ],
             "prompt": 0.3,
             "completion": 2.5,
-            "note": "The default: translation-ranked plus eight more categories, and still cheap."
+            "note": "Translation-ranked plus eight more categories, and cheap. Selectable, but no longer any tool's default — see _doc_tool_models."
           }
         ]
       }
     },
+    "_doc_tool_models": "THE MODEL EACH TOOL RUNS ON BY DEFAULT, keyed by provider id and then by WriterTool.id. Sits between the owner's own per-tool pick (WriterPrefs.KEY_TOOL_MODEL_PREFIX) and the provider's default_model in the fallback chain, so every tool starts on a model chosen FOR THAT TOOL rather than on one provider-wide model that has to suit four different jobs. Two rules decide every entry here. First: NO GOOGLE MODEL IS A DEFAULT ANYWHERE. The Google models stay in the catalogue and stay selectable, but the fleet does not route the owner's text through them unless he picks them himself. Second: the pick is read off this same table's own trained_for and price columns, not off a reputation. enhance runs on z-ai/glm-5.2 because Enhance is the tool that does everything at once (grammar, tone, size and output language in one prompt) and it is the formal-register model ranked in ten categories including translation; it is the priciest default here, and it is the only tool worth it. grammar and summary run on deepseek/deepseek-v4-flash-0731 because both are narrow, high-volume, mechanical jobs and it is ranked in all twelve categories at the second-lowest price on the page. translate runs on deepseek/deepseek-v3.2 because its trained_for list is short and translation is literally in it — a model ranked for the one job beats a cheaper all-rounder when the job is the only thing asked of it. A provider with one model needs no entry: the chain falls through to its default_model.",
+    "tool_models": {
+      "openrouter": {
+        "enhance": "z-ai/glm-5.2",
+        "grammar": "deepseek/deepseek-v4-flash-0731",
+        "summary": "deepseek/deepseek-v4-flash-0731",
+        "translate": "deepseek/deepseek-v3.2"
+      }
+    },
+    "_doc_translate_prompt": "The Translate tool's system prompt, sent to the CHAT MODEL together with the chosen output language. Translate is a chat-model tool here, on the same routing as the other three, which is why it has a model row of its own on the main screen. It is deliberately NOT the enhance prompt with a language pinned on: this one forbids every improvement the enhance prompt asks for, so Translate returns the same text in another language rather than a better text in another language. The target language is appended by WriterRegistry.translatePrompt from the Language Output pick, and there is no default target — with Language Output left on Keep the tool refuses instead of guessing.",
+    "translate_prompt": "Translate the user's text. Preserve its meaning, tone, register, formatting and line breaks exactly; do not correct, shorten, expand, explain or improve anything. Names, code, numbers and markup stay as they are. Output the translation alone.",
     "_doc_translate_fallback_langs": "Target languages the Translation page offers while the serving application has not reported its own list yet. NOT a second source of truth: the page asks ITextTools.translateLanguages() and redraws with the engine's real list the moment it answers. This exists because the first draw happens before a binder call can return, and a picker that was empty for that moment reads as a broken page. Data rather than a Kotlin literal so the fleet's language set is edited in one kind of place.",
     "translate_fallback_langs": [
       "en",

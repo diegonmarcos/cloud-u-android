@@ -215,4 +215,19 @@
     <string name="ai_pricing_baked">Prices as of %1$s (built in — %2$s not reached)</string>
     <string name="ai_pricing_none">%1$s publishes no per-token price: it is your own bridge on the mesh.</string>
 
+
+    <!-- Task 296 item 4: the option rows under the main text box, and task 296 item 1's refusal.
+         Every string here has a values-es/ twin in the same commit: cloud-android-i18n-guard.py
+         fails the build on a partial locale, and the base locale stays ENGLISH - the owner's
+         "official languah must keep english" - so this file is the source and values-es/ the
+         translation, never the reverse. -->
+    <string name="page_back">Back</string>
+    <string name="options_title">Enhance and Translate options</string>
+    <string name="options_structure">Structure (Grammar and clarity)</string>
+    <string name="options_tone">Tone</string>
+    <string name="options_size">Size</string>
+    <string name="options_language">Language Output</string>
+    <!-- Translate is the one tool with nothing sensible to guess: a target language is the whole
+         instruction. It says which row to set rather than picking a language on his behalf. -->
+    <string name="run_translate_no_target">Pick a target under Language Output first — Translate has nothing to translate into.</string>
 </resources>

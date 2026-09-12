@@ -83,6 +83,12 @@ object WriterRegistry {
      *
      * [needsToken] is carried for the API-key row, which in THIS application is read-only — the
      * key lives in the serving application. See `ai_token_writer_summary`.
+     *
+     * [toolModels] maps a [WriterTool] id to the model THAT TOOL starts on, and [defaultModel] is
+     * only what a tool with no entry there falls back to. One provider-wide default had to suit
+     * four different jobs at once, which is how a model picked for translation ended up rewriting
+     * paragraphs; the per-tool table is in build.json::writer_ai.tool_models, with the reasoning
+     * for every pick beside it.
      */
     class Provider(
         val id: String,
@@ -92,6 +98,7 @@ object WriterRegistry {
         val needsToken: Boolean = false,
         val pricingAsOf: String? = null,
         val catalogUrl: String? = null,
+        val toolModels: Map<String, String> = emptyMap(),
     )
 
     private val registry: JSONObject by lazy {
@@ -130,6 +137,9 @@ object WriterRegistry {
                 needsToken = p.optBoolean("needs_token"),
                 pricingAsOf = p.optString("pricing_as_of").ifEmpty { null },
                 catalogUrl = p.optString("catalog_url").ifEmpty { null },
+                toolModels = registry.optJSONObject("tool_models")?.optJSONObject(id)
+                    ?.let { t -> t.keys().asSequence().associateWith { k -> t.getString(k) } }
+                    .orEmpty(),
             )
         }.toList()
     }
@@ -208,6 +218,9 @@ object WriterRegistry {
     /** Prepended to every summary prompt, and deliberately NOT [rewritePreamble]. */
     val summaryPreamble: String get() = registry.optString("summary_preamble")
 
+    /** Prepended to every Translate prompt, and deliberately NOT [rewritePreamble]. */
+    val translatePreamble: String get() = registry.optString("translate_prompt")
+
     fun provider(id: String?): Provider =
         providers.firstOrNull { it.id == id } ?: providers.first { it.id == defaultProvider }
 
@@ -261,6 +274,25 @@ object WriterRegistry {
     fun grammarPrompt(): String? {
         val grammar = grammarStyle ?: return null
         return listOf(rewritePreamble, grammar.prompt).filter { it.isNotBlank() }.joinToString(" ")
+    }
+
+    /**
+     * The system prompt Translate sends: [translatePreamble] and the chosen output language ALONE,
+     * or NULL when no output language has been chosen.
+     *
+     * NOT [enhancePrompt] with a language pinned onto it. [translatePreamble] forbids every
+     * improvement [rewritePreamble] invites, and that is the whole difference between "the same
+     * text in another language" and "a better text in another language" — the second is what
+     * Enhance is for, and an owner who pressed Translate did not ask for it.
+     *
+     * Null rather than a fallback target, for the reason [grammarPrompt] is null. "Keep my
+     * language" is a real answer to the Language Output question and it is not a language to
+     * translate into; guessing English there would translate a Spanish note the owner wanted left
+     * alone. The caller refuses on the null and names the row to set.
+     */
+    fun translatePrompt(languageId: String?): String? {
+        val target = language(languageId).prompt.ifBlank { return null }
+        return listOf(translatePreamble, target).filter { it.isNotBlank() }.joinToString(" ")
     }
 
     /**

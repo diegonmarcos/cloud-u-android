@@ -78,10 +78,19 @@ BREAKS = [
       "WriterPrefs.modelFor(app, WriterTool.ENHANCE, provider)"),
      "W2 the GRAMMAR arm"),
 
-    ("Translate is handed a chat model it cannot use", SRC + "/WriterTools.kt",
-     ("WriterTool.TRANSLATE -> client.translate(text, WriterPrefs.translateTarget(app))",
-      "WriterTool.TRANSLATE -> client.translate(text, WriterPrefs.modelFor(app, WriterTool.ENHANCE, provider))"),
-     "W2 the TRANSLATE arm resolves a model"),
+    # Was "Translate is handed a chat model it cannot use", planted against
+    # `client.translate(text, translateTarget)`. Task 296 deleted that arm: Translate now
+    # has a model of its own and goes through enhanceWith, so a resolved model is correct
+    # rather than the defect. What is now the defect is Translate borrowing the ENHANCE
+    # prompt, because enhanceWith carries the whole instruction in its prompt — with
+    # enhancePrompt the reply comes back rewritten in the language it was typed in, which
+    # looks like a working feature and is not one. So the planted break swaps the prompt,
+    # not the model.
+    ("Translate silently borrows the Enhance prompt and rewrites instead of translating",
+     SRC + "/WriterTools.kt",
+     ("WriterPrefs.translatePrompt(app).orEmpty(),",
+      "WriterPrefs.enhancePrompt(app),"),
+     "W2 the TRANSLATE arm does not send translatePrompt"),
 
     ("a tap on an empty box returns without a word", SRC + "/WriterTools.kt",
      ("        if (text.isBlank()) {\n"
@@ -117,8 +126,11 @@ BREAKS = [
      "W5 run() no longer checks grammarPrompt()"),
 
     ("a provider defaults to a model it does not list", APP + "/build.json",
-     ('"default_model": "google/gemini-2.5-flash"',
-      '"default_model": "google/gemini-3.0-withdrawn"'),
+     # Anchored on the value task 296 put here, not the Google model it replaced: the
+     # owner's "you will not use fuckkng google modelss" made z-ai/glm-5.3-flash the
+     # default, and an anchor still naming the old value plants nothing.
+     ('"default_model": "z-ai/glm-5.3-flash"',
+      '"default_model": "z-ai/glm-withdrawn"'),
      "W6 openrouter: default_model"),
 
     ("the grammar style leaves the registry", APP + "/build.json",
@@ -147,7 +159,19 @@ for label, rel, (old, new), expect in BREAKS:
             dst = os.path.join(stage, item)
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             if os.path.isdir(src):
-                shutil.copytree(src, dst)
+                # A walk with shutil.copy, not shutil.copytree, and the difference is
+                # extended attributes: copytree reproduces them on files AND on
+                # directories, and on Android every source carries a security.selinux
+                # attribute that cannot be set on the destination, so copytree raises
+                # PermissionError and this control test could only ever run on the build
+                # machine — the one place it is least needed. shutil.copy copies the
+                # bytes and the mode and stops there, and the mode has to come along
+                # because the copied tester is later executed.
+                for base, _dirs, files in os.walk(src):
+                    target = os.path.join(dst, os.path.relpath(base, src))
+                    os.makedirs(target, exist_ok=True)
+                    for name in files:
+                        shutil.copy(os.path.join(base, name), os.path.join(target, name))
             else:
                 shutil.copy(src, dst)
 

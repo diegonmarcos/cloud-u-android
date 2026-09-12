@@ -216,7 +216,20 @@ def build_copy(work):
     for rel in NEEDED:
         dst = os.path.join(work, rel)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
-        shutil.copytree(os.path.join(root, rel), dst)
+        # A walk with shutil.copy, not shutil.copytree, and the difference is extended
+        # attributes: copytree reproduces them on files AND on directories, and on Android
+        # every source carries a security.selinux attribute that cannot be set on the
+        # destination, so copytree raises PermissionError and this control test could only
+        # ever run on the build machine — the one place it is least needed. shutil.copy
+        # copies the bytes and the mode and stops there. The mode is not decoration: the
+        # copied tester is later EXECUTED, and without its executable bit the run dies in
+        # subprocess instead of reporting on the planted defect.
+        origin = os.path.join(root, rel)
+        for base, _dirs, files in os.walk(origin):
+            target = os.path.join(dst, os.path.relpath(base, origin))
+            os.makedirs(target, exist_ok=True)
+            for name in files:
+                shutil.copy(os.path.join(base, name), os.path.join(target, name))
     # The tester finds the repository root by walking up to a .git; without this
     # marker it would walk out of the copy and silently assert about the REAL
     # working tree, reporting every planted defect as absent.

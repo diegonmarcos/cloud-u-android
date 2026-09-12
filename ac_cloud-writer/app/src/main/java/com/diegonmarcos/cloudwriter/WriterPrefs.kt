@@ -46,7 +46,8 @@ object WriterPrefs {
     /**
      * + tool id + "_" + provider id → THE MODEL THIS ONE TOOL USES. The owner's request, in one
      * preference key: "here we will define the AI model to do Summary, Grammar Only, Text
-     * Enhance".
+     * Enhance" — and Translate, added later, because "missing the option to select the model that
+     * would do only translation" was a gap in exactly this key.
      *
      * KEYED BY TOOL **AND** PROVIDER, not by tool alone. A model id is only meaningful inside the
      * provider that serves it, so a per-tool key without the provider would hand an OpenRouter
@@ -218,13 +219,19 @@ object WriterPrefs {
      * has never heard of fails at call time, mid-run, with the owner looking at a progress line.
      * Falling back here means the tool keeps working and the picker simply shows the fallback,
      * which is a state the owner can see and correct.
+     *
+     * THREE STEPS, IN THIS ORDER: what the owner picked for THIS tool, then the model the registry
+     * nominates for this tool under this provider, then the provider's own default. The middle
+     * step is [WriterRegistry.Provider.toolModels] and it is why a fresh install translates on a
+     * translation-ranked model and summarises on a cheap one instead of running all four tools on
+     * whichever single model the provider happens to lead with. Every step is checked against the
+     * live catalogue for the same reason the first one is.
      */
     fun modelFor(context: Context, tool: WriterTool, providerId: String = providerId(context)): String {
         val provider = WriterRegistry.provider(providerId)
-        val chosen = prefs(context)
-            .getString(KEY_TOOL_MODEL_PREFIX + tool.id + "_" + provider.id, null)
-            ?.takeIf { id -> provider.models.any { it.id == id } }
-        return chosen ?: modelId(context, provider.id)
+        fun known(id: String?): String? = id?.takeIf { candidate -> provider.models.any { it.id == candidate } }
+        val chosen = known(prefs(context).getString(KEY_TOOL_MODEL_PREFIX + tool.id + "_" + provider.id, null))
+        return chosen ?: known(provider.toolModels[tool.id]) ?: modelId(context, provider.id)
     }
 
     fun enhanceStyleId(context: Context): String =
@@ -289,6 +296,17 @@ object WriterPrefs {
 
     fun summaryPrompt(context: Context): String =
         WriterRegistry.summaryPrompt(summaryStyleId(context))
+
+    /**
+     * The Translate prompt, or NULL when Language Output is still on "keep my language".
+     *
+     * Reads the SAME [KEY_ENHANCE_LANGUAGE] the Enhance prompt reads, because the options row
+     * under the text box is one row serving both tools — the owner asked for "all the options for
+     * the enhance/translation" in one place, and two Language Output settings in two places is the
+     * split that made Translate and Enhance disagree about the target language.
+     */
+    fun translatePrompt(context: Context): String? =
+        WriterRegistry.translatePrompt(enhanceLanguageId(context))
 
     /** Whether this application's chosen summary prompt asked the model for a list. */
     fun summaryWantsBullets(context: Context): Boolean =

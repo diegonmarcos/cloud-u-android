@@ -24,9 +24,15 @@ import java.util.concurrent.Executors
  * on this screen and summarise on the wire so neither can be misread.
  *
  * [GRAMMAR] is not a fourth engine: it is the rewrite engine asked for the one `grammar` style,
- * which is what `ITextTools.enhance(text, "grammar")` describes. [usesModel] is false for
- * [TRANSLATE] alone, because a translation has no chat model to choose — offering the owner a
- * model picker for it would be a control that changes nothing.
+ * which is what `ITextTools.enhance(text, "grammar")` describes.
+ *
+ * [usesModel] IS TRUE FOR ALL FOUR. It was once false for [TRANSLATE], because Translate went to
+ * the serving application's translation library and a library takes no model — so a model picker
+ * for it would have been a control that changed nothing. Translate now runs on the chat provider
+ * like the other three, against a prompt that forbids every improvement the rewrite prompt
+ * invites (see [WriterRegistry.translatePrompt]), which is what the owner asked for: "the option
+ * to select the model that would do only translation". The flag and the route changed in the same
+ * commit, and they have to: either one alone is the defect the old comment was warning about.
  *
  * [id] is the string the per-tool model preference is keyed by, so it is written down here once
  * and is not `name.lowercase()`: renaming an enum constant must not silently re-point every
@@ -40,7 +46,7 @@ enum class WriterTool(
     ENHANCE("enhance", R.string.tool_enhance, usesModel = true),
     GRAMMAR("grammar", R.string.tool_grammar, usesModel = true),
     SUMMARY("summary", R.string.tool_summary, usesModel = true),
-    TRANSLATE("translate", R.string.tool_translate, usesModel = false),
+    TRANSLATE("translate", R.string.tool_translate, usesModel = true),
 }
 
 /** How a finished run ended. Exactly one of [text] and [error] is set, and never neither. */
@@ -155,6 +161,16 @@ class WriterToolRunner(context: Context) {
             onDone(WriterOutcome(tool, null, app.getString(R.string.run_grammar_unavailable)))
             return
         }
+        // TRANSLATE INTO WHAT? Refused rather than guessed, for the same reason as above.
+        //
+        // Language Output is one of the four options under the text box, and "Keep my language" is
+        // a real choice there — for Enhance it means "rewrite it in whatever I wrote it in". For
+        // Translate it is not a target at all, and picking one on the owner's behalf would send a
+        // Spanish note away as English because a default had to be something.
+        if (tool == WriterTool.TRANSLATE && WriterPrefs.translatePrompt(app) == null) {
+            onDone(WriterOutcome(tool, null, app.getString(R.string.run_translate_no_target)))
+            return
+        }
         // THE MODE THE OWNER SET ON THE GRAMMAR CHECK PAGE, honoured here and honoured by
         // refusing where this application cannot do what the mode promises.
         //
@@ -237,10 +253,16 @@ class WriterToolRunner(context: Context) {
                 provider,
                 WriterPrefs.modelFor(app, WriterTool.SUMMARY, provider),
             )
-            // NOT the chat provider, and it takes no model: a translation billed to the LLM
-            // account, or a rewrite sent through a translator, is a crossing the reply cannot be
-            // read back to detect.
-            WriterTool.TRANSLATE -> client.translate(text, WriterPrefs.translateTarget(app))
+            // The chat provider, on its own model row, against a prompt that forbids rewriting —
+            // so the owner can pick a translation-ranked model for translation without that model
+            // also deciding how his paragraphs read. Non-null: refused in run() above when
+            // Language Output is still "keep my language".
+            WriterTool.TRANSLATE -> client.enhanceWith(
+                text,
+                WriterPrefs.translatePrompt(app).orEmpty(),
+                provider,
+                WriterPrefs.modelFor(app, WriterTool.TRANSLATE, provider),
+            )
         }
     }
 }

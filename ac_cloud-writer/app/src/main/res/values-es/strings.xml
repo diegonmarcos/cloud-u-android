@@ -151,4 +151,14 @@
     <string name="ai_pricing_baked">Precios a fecha de %1$s (integrados: no se ha podido contactar con %2$s)</string>
     <string name="ai_pricing_none">%1$s no publica un precio por token: es tu propio puente en la malla.</string>
 
+
+    <!-- Twin of the block added to values/strings.xml for task 296. English is the base locale;
+         this is its translation. -->
+    <string name="page_back">Atrás</string>
+    <string name="options_title">Opciones de Mejorar y Traducir</string>
+    <string name="options_structure">Estructura (gramática y claridad)</string>
+    <string name="options_tone">Tono</string>
+    <string name="options_size">Tamaño</string>
+    <string name="options_language">Idioma de salida</string>
+    <string name="run_translate_no_target">Elige primero un idioma en «Idioma de salida»: Traducir no tiene a qué traducir.</string>
 </resources>

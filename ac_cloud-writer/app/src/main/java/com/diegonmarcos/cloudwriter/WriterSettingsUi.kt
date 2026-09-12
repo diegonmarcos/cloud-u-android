@@ -18,10 +18,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -99,7 +103,26 @@ abstract class WriterSettingsActivity : AppCompatActivity() {
         setContent {
             CloudWriterTheme {
                 Scaffold(
-                    topBar = { LargeTopAppBar(title = { Text(pageTitle()) }) },
+                    topBar = {
+                        LargeTopAppBar(
+                            title = { Text(pageTitle()) },
+                            // TOP RIGHT, SO `actions` AND NOT `navigationIcon`. The owner asked for
+                            // the back button where his thumb already is, and `navigationIcon` is
+                            // the top-LEFT slot — putting it there would have answered a different
+                            // request. Every configuration page in this application is built on
+                            // this bar, so the four of them get the button from this one place: a
+                            // per-page copy is four chances to forget one, which is the defect being
+                            // fixed here rather than a style to be repeated.
+                            actions = {
+                                IconButton(onClick = { finish() }) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = stringResource(R.string.page_back),
+                                    )
+                                }
+                            },
+                        )
+                    },
                 ) { insets ->
                     Column(
                         modifier = Modifier

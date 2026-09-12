@@ -468,10 +468,14 @@ class RemoteImagesTest {
      */
     @Test fun `nothing else in the reader was moved`() {
         assertTrue(
-            "the overflow entry must STAY: it is the only way to show the images when the " +
+            "a DETECTION-INDEPENDENT way to show the images must STAY. It is the only way in when " +
                 "detection returns a false negative (CSS url(), srcset, background=, …), and a " +
-                "false negative is the case where the reader has no strip to tap",
-            hasLine(screenLines(), "text = { Text(stringResource(R.string.message_show_images)) },"),
+                "false negative is exactly the case where the reader has no strip to tap. The " +
+                "control moved out of the overflow menu into the reader's icon row, so this pins " +
+                "the CONDITION rather than the widget: `!imageMode && !showRemote` names the two " +
+                "states where the images are already on and the action would be dead, and names " +
+                "no detection term — put one in and the false negative loses its last door.",
+            hasLine(screenLines(), "val imagesOnceOffered = !imageMode && !showRemote"),
         )
         val header = headerSource()
         val calls = STRIP_CALL.findAll(header).map { it.value }.toList()

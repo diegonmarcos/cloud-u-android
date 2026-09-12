@@ -250,6 +250,7 @@ class MainActivity : AppCompatActivity() {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 inputField()
+                OptionsSection()
 
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -355,6 +356,57 @@ class MainActivity : AppCompatActivity() {
      * now serves both, so the model picked here and the model picked on AI Model Routing are
      * chosen the same way.
      */
+    /**
+     * The four options that shape what Enhance and Translate actually do, on the main screen,
+     * under the text box — the owner's "under main boxe ads all the options for the
+     * enhace/translation: Structure(Grammar and clarity), Tone, Size, Language Output".
+     *
+     * They are NOT new settings. Each row reads and writes the SAME key the Text Enhance page
+     * writes (KEY_ENHANCE_STYLE / _TONE / _LENGTH / _LANGUAGE), so a choice made here is the one
+     * that page shows and the reverse, and there is exactly one answer to "what will Enhance do".
+     * A private copy for the main screen would have given the owner two places to set the tone and
+     * no way to tell which one the run used — which is the defect of task 209, restated.
+     *
+     * Why here at all, when the page already offers them: because the page is three taps away and
+     * these are per-text decisions. The language row in particular is what makes Enhance "do it
+     * all": with a target language set, the composed prompt translates as it rewrites, and the
+     * same row supplies Translate its target. That is why it is labelled Language OUTPUT.
+     */
+    @Composable
+    private fun OptionsSection() {
+        Column(Modifier.fillMaxWidth()) {
+            SectionHeader(stringResource(R.string.options_title))
+            ChoiceRow(
+                stringResource(R.string.options_structure),
+                null,
+                WriterRegistry.styles.map { it.label to it.id },
+                WriterPrefs.enhanceStyleId(this@MainActivity),
+                WriterRegistry.defaultStyle,
+            ) { WriterPrefs.put(this@MainActivity, WriterPrefs.KEY_ENHANCE_STYLE, it) }
+            ChoiceRow(
+                stringResource(R.string.options_tone),
+                null,
+                WriterRegistry.tones.map { it.label to it.id },
+                WriterPrefs.enhanceToneId(this@MainActivity),
+                WriterRegistry.defaultTone,
+            ) { WriterPrefs.put(this@MainActivity, WriterPrefs.KEY_ENHANCE_TONE, it) }
+            ChoiceRow(
+                stringResource(R.string.options_size),
+                null,
+                WriterRegistry.lengths.map { it.label to it.id },
+                WriterPrefs.enhanceLengthId(this@MainActivity),
+                WriterRegistry.defaultLength,
+            ) { WriterPrefs.put(this@MainActivity, WriterPrefs.KEY_ENHANCE_LENGTH, it) }
+            ChoiceRow(
+                stringResource(R.string.options_language),
+                null,
+                WriterRegistry.languages.map { it.label to it.id },
+                WriterPrefs.enhanceLanguageId(this@MainActivity),
+                WriterRegistry.defaultLanguage,
+            ) { WriterPrefs.put(this@MainActivity, WriterPrefs.KEY_ENHANCE_LANGUAGE, it) }
+        }
+    }
+
     @Composable
     private fun ModelSection() {
         val provider = WriterRegistry.provider(WriterPrefs.providerId(this))

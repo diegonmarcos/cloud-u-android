@@ -168,7 +168,14 @@ esac
 # ── W2 ── each tool reaches its own engine, with its own model ────────────
 ROUTE="$(body "$TOOLS" 'private fun runTool(')"
 if check_body "$ROUTE" "W2 runTool"; then
-    for pair in "ENHANCE enhanceWith" "GRAMMAR enhanceWith" "SUMMARY summariseWith" "TRANSLATE translate"; do
+    # TRANSLATE moved from client.translate to client.enhanceWith in the same commit that gave it
+    # a model of its own (task 296 item 1, "missing the ootion to select the model that would do
+    # only translation"). It had to move: client.translate reaches the serving application's
+    # translation LIBRARY, and a library takes no model, so a picker in front of it would have
+    # been a control that changes nothing — which is what the old form of this check existed to
+    # forbid. The prohibition is not dropped, it is relocated: see the prompt check below, which
+    # is now the thing standing between Translate and a rewrite.
+    for pair in "ENHANCE enhanceWith" "GRAMMAR enhanceWith" "SUMMARY summariseWith" "TRANSLATE enhanceWith"; do
         tool="${pair%% *}"; want="${pair##* }"
         arm="$(branch "$tool" <<<"$ROUTE")"
         if [ -z "$arm" ]; then
@@ -204,14 +211,17 @@ if check_body "$ROUTE" "W2 runTool"; then
         fi
     done
 
-    # TRANSLATE takes no model, and must not be handed one: there is no chat
-    # model in a translation, so a model argument here would be a value the
-    # engine cannot use and a control on screen that changes nothing.
+    # TRANSLATE shares enhanceWith with two other tools, so the ONLY thing telling the model it is
+    # translating rather than rewriting is the prompt. Handed WriterPrefs.enhancePrompt, this arm
+    # would fix grammar, change the tone and resize the text on its way past — the four option rows
+    # under the main box all feed that prompt — and the owner would get back an improved text in
+    # the same language he typed. So the arm must name translatePrompt and must NOT name
+    # enhancePrompt. This is the prohibition the old "takes no model" check used to carry.
     arm="$(branch TRANSLATE <<<"$ROUTE")"
-    if [ -n "$arm" ] && ! grep -q "modelFor(" <<<"$arm"; then
-        pass "W2 TRANSLATE is handed no model — it goes to the translation engine, which has none to choose"
+    if [ -n "$arm" ] && grep -q "translatePrompt(" <<<"$arm" && ! grep -q "enhancePrompt(" <<<"$arm"; then
+        pass "W2 TRANSLATE sends translatePrompt and not enhancePrompt — it translates instead of rewriting"
     else
-        fail "W2 the TRANSLATE arm resolves a model; a translation has no chat model and offering one is a control that changes nothing"
+        fail "W2 the TRANSLATE arm does not send translatePrompt (or sends enhancePrompt): sharing enhanceWith without its own prompt turns Translate into a rewrite in the original language"
     fi
 fi
 

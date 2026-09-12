@@ -205,7 +205,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-09-10",
+        "pricing_as_of": "2026-09-12",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -246,14 +246,13 @@
               "bf16"
             ],
             "trained_for": [
-              "academia",
-              "legal",
+              "marketing",
               "roleplay",
               "translation",
               "trivia"
             ],
-            "prompt": 0.07,
-            "completion": 0.34,
+            "prompt": 0.042,
+            "completion": 0.22,
             "note": "Sparse 26B (4B active): translation, academia and legal at a small-model price."
           },
           {
@@ -278,13 +277,12 @@
             "open": true,
             "params_b": 31,
             "quant": [
-              "fp4",
-              "fp8",
               "bf16",
-              "fp16"
+              "fp4",
+              "fp8"
             ],
             "trained_for": [
-              "health",
+              "legal",
               "marketing",
               "roleplay",
               "translation",
@@ -316,8 +314,8 @@
             "quant": [
               "fp8"
             ],
-            "prompt": 0.22,
-            "completion": 0.88,
+            "prompt": 0.0875,
+            "completion": 0.35,
             "note": "Largest parameter count here; served only at fp8."
           },
           {
@@ -360,8 +358,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.065,
-            "completion": 0.18,
+            "prompt": 0.04,
+            "completion": 0.08,
             "note": "Ranked in all twelve categories at the second-lowest price here."
           },
           {
@@ -382,12 +380,11 @@
               "roleplay",
               "science",
               "technology",
-              "translation",
-              "trivia"
+              "translation"
             ],
-            "prompt": 0.966,
-            "completion": 3.036,
-            "note": "Ranked in eleven categories including translation; the formal-register GLM."
+            "prompt": 0.6,
+            "completion": 2.0,
+            "note": "Ranked in ten categories including translation; the formal-register GLM."
           },
           {
             "id": "z-ai/glm-5.3-flash",
@@ -411,8 +408,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.15,
-            "completion": 0.5,
+            "prompt": 0.075,
+            "completion": 0.25,
             "note": "Ranked in all twelve categories; the cheapest all-rounder after DeepSeek."
           },
           {
