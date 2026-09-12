@@ -268,8 +268,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.075,
-            "completion": 0.25,
+            "prompt": 0.15,
+            "completion": 0.5,
             "note": "The provider default: ranked in all twelve categories, and the cheapest all-rounder after DeepSeek."
           },
           {

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Why this file exists: Android 9+ (API 28) sets cleartextTrafficPermitted to
+  false by default, so a WebView asked for http://localhost:8000 fails with
+  net::ERR_CLEARTEXT_NOT_PERMITTED before a single byte leaves the app. It is
+  NOT a missing INTERNET permission (declared) and NOT the inter-app mesh —
+  the very same libs/browser code reaches localhost:8000 inside the SuperApp,
+  which carries this config, and failed here only because Cloud Browser had
+  none.
+
+  The policy: keep the strict default for the public internet, and permit
+  cleartext ONLY on hosts the owner physically controls — loopback, the
+  WireGuard mesh peers, the usual home/router/hotspot gateways, and the
+  .local / .lan suffixes. <domain> does not accept CIDR, so mesh peers are
+  enumerated host by host (same list as cloud-data mesh.json's 10.0.0.x).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <!-- WG mesh — Diego's 10.0.0.x peers per cloud-data mesh.json. -->
+        <domain>10.0.0.1</domain>
+        <domain>10.0.0.2</domain>
+        <domain>10.0.0.3</domain>
+        <domain>10.0.0.4</domain>
+        <domain>10.0.0.5</domain>
+        <domain>10.0.0.6</domain>
+        <domain>10.0.0.7</domain>
+        <domain>10.0.0.8</domain>
+        <domain>10.0.0.9</domain>
+        <domain>10.0.0.10</domain>
+        <domain includeSubdomains="true">192.168.0.1</domain>
+        <domain includeSubdomains="true">192.168.1.1</domain>
+        <domain includeSubdomains="true">192.168.4.1</domain>
+        <domain includeSubdomains="true">192.168.8.1</domain>
+        <domain includeSubdomains="true">local</domain>
+        <domain includeSubdomains="true">lan</domain>
+    </domain-config>
+</network-security-config>

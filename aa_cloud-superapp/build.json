@@ -7553,6 +7553,100 @@
         "role": "console"
       }
     ],
+    "_doc_app_mesh": "Configs \u25b8 About \u25b8 Network \u25b8 IPC Contract \u2014 the inter-app mesh. The apps on this phone talk to each other over Binder, and until now that mesh existed only as constants scattered across the libraries that bind it: nothing anywhere said WHO the peers are. That made a dead peer indistinguishable from a feature that was never wired. This is the roster, one entry per CHANNEL (not per app, because one app can serve several and one channel can have several servers). A $pkg placeholder inside an action or authority means the serving package's own, which is how the two terminal apps each publish the same channel under their own name. Declared here, rendered by DevControlFragment.collectAppMesh with a live verdict per row. What is NOT in here and cannot be: whether the peer is installed, and whether it actually publishes the channel \u2014 those are questions for the device, asked at render time, exactly as ui.ai_routing_peers does. Platform bindings (input method, notification listener, call screening, credential provider, accessibility, quick-settings tiles) are deliberately absent: the peer there is Android, not another app of ours.",
+    "app_mesh": [
+      {
+        "id": "text-tools",
+        "label": "Text Tools",
+        "kind": "service",
+        "action": "com.diegonmarcos.superapp.texttools.ITextTools",
+        "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+        "serves": [
+          "com.diegonmarcos.cloudwriter",
+          "com.diegonmarcos.cloudkeyboard"
+        ],
+        "note": "Enhance, Translate, Grammar and Resume for every app. Order is PREFERENCE, not a retry chain: the first installed server wins and resolution happens once per bind. Cloud Writer is preferred and deliberately publishes no service yet, so today the keyboard serves."
+      },
+      {
+        "id": "fleet-token",
+        "label": "Fleet Token",
+        "kind": "provider",
+        "authority": "$pkg.fleet",
+        "permission": "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA",
+        "serves": [
+          "com.diegonmarcos.superapp"
+        ],
+        "note": "The SuperApp hands its GitHub fleet token to sibling apps so Constellation updates work without every app storing a credential."
+      },
+      {
+        "id": "translate-engine",
+        "label": "Translate Engine",
+        "kind": "service",
+        "action": "com.diegonmarcos.cloudkeyboardlibs.ITranslateEngine",
+        "permission": "com.diegonmarcos.cloudkeyboardlibs.BIND_ENGINE",
+        "serves": [
+          "com.diegonmarcos.cloudkeyboardlibs"
+        ],
+        "note": "Heavy translation models live in their own APK so the keyboard stays small. Its own permission, not CONSTELLATION_DATA: the engine APK predates that grant."
+      },
+      {
+        "id": "voice-engine",
+        "label": "Voice Engine",
+        "kind": "service",
+        "action": "com.diegonmarcos.cloudkeyboardlibs.IVoiceEngine",
+        "permission": "com.diegonmarcos.cloudkeyboardlibs.BIND_ENGINE",
+        "serves": [
+          "com.diegonmarcos.cloudkeyboardlibs"
+        ],
+        "note": "Same APK as the translate engine, same reason."
+      },
+      {
+        "id": "cloud-exec",
+        "label": "Cloud Exec",
+        "kind": "service",
+        "action": "$pkg.CLOUD_EXEC",
+        "permission": "$pkg.permission.CLOUD_EXEC",
+        "serves": [
+          "cld.termux"
+        ],
+        "note": "Lets the SuperApp run a shell command inside the terminal environment. This is how the watchdog and the dev-control surfaces reach the filesystem without shipping their own shell."
+      },
+      {
+        "id": "run-command",
+        "label": "Run Command",
+        "kind": "service",
+        "action": "$pkg.RUN_COMMAND",
+        "permission": "$pkg.permission.RUN_COMMAND",
+        "serves": [
+          "cld.termux",
+          "cld.termux.nix"
+        ],
+        "note": "The upstream terminal contract, kept because the boot runner uses it. Needs allow-external-apps=true in termux.properties on the serving side (see #198) \u2014 a grant this roster cannot see."
+      },
+      {
+        "id": "termux-files",
+        "label": "Terminal Files",
+        "kind": "provider",
+        "authority": "$pkg.files",
+        "permission": "$pkg.permission.RUN_COMMAND",
+        "serves": [
+          "cld.termux",
+          "cld.termux.nix"
+        ],
+        "note": "Document and file access into the terminal home, so other apps can open a file there with the system picker."
+      },
+      {
+        "id": "shizuku-bridge",
+        "label": "Shizuku Bridge",
+        "kind": "provider",
+        "authority": "$pkg.shizuku",
+        "permission": "android.permission.INTERACT_ACROSS_USERS_FULL",
+        "serves": [
+          "com.diegonmarcos.superapp"
+        ],
+        "note": "Shizuku's own discovery provider, published by this app. It is how Shizuku finds us, not how we find Shizuku."
+      }
+    ],
     "_doc_control_panel": "Configs ▸ Panel ▸ Control — the switch board, DECLARED here and implemented in configs/DeviceControls.kt. This file owns PRESENTATION ONLY: which controls appear, in which group, in what order, under what wording, and how many tiles fit across. It owns nothing about what a control can do.\n\nTHE GROUPS ANSWER 'WHAT AM I LOOKING FOR', NOT 'WHAT WOULD THIS BREAK'. They used to be Phone / Cloud / System, a blast-radius taxonomy: what does flipping this change — the handset, the fleet, or this app. That is a good way to think about consequences and a poor way to FIND something, and finding is the entire errand that brings anybody to a quick-settings grid. Under blast radius the radios were split across two groups (Wi-Fi, mobile data, Bluetooth and airplane mode under Phone; the mesh tunnel and the per-app firewall under Cloud), so 'turn the network off' meant visiting two of the three groups and knowing in advance which half lived where. Device / Network / Tools / UI groups by the thing the owner has in mind when they reach for the page. Every control still lands in exactly one of them; nothing needed an Others.\n\nBATTERY HUNGERS IS A SECOND VIEW, NOT A FIFTH HOME. A group that declares `derive` owns no `controls` array of its own — its rows are every control in the groups above carrying that flag, in declared order. So a battery-hungry control is drawn TWICE, once in its functional group and once here, and both tiles are the same control id, which is the only thing either of them holds. There is no second copy of the state to drift: DeviceControls.byId maps one id to one Control, one read and one write, and ControlFragment repaints EVERY tile bearing an id when that id's reading lands. Adding a control to Battery Hungers is `\"battery_hungry\": true` on the control and nothing else — no Kotlin, no second list of ids to fall out of step with the first. Removing the whole group is deleting one entry from `groups`. A second derived view (privacy, say) is another entry with another flag and still no Kotlin.\n\nWHAT COUNTS AS BATTERY-HUNGRY is a judgement about mechanism, and it is recorded per control so it can be argued with: a radio that must stay associated (mobile data, Bluetooth), an always-on VpnService (the mesh tunnel, the per-app firewall), a foreground service that polls (the floating menu reads the foreground package once a second), a background sync (fleet auto-update), a continuously animated surface (the shader backdrops behind All animations), the adbd the privileged plane keeps alive (wireless debugging), and the flash unit itself (torch). Auto-brightness is deliberately NOT here — it spends less than a screen pinned bright.\n\nGROUP WORDING IS A STRING RESOURCE, not the text in this file. `label_res` and `subtitle_res` name keys in res/values/strings.xml, resolved at render time, so the group headings reach the owner in Spanish like the rest of the page; `label` and `subtitle` remain as the English fallback and as the documentation of what the key is supposed to say. (The per-CONTROL labels and subtitles below are still raw English text in this file and are NOT translated — a pre-existing gap, 34 strings wide, untouched here.)\n\nNEVER RENDER A SWITCH THAT LIES. Adding an id here does NOT create a control: DeviceControls decides, per control, which of three things it is — (1) really toggleable in-process, so a tile whose state is re-read from the system after every write; (2) toggleable only through a special permission this app holds, so a tile that is DISABLED with the missing permission named on it; (3) not toggleable at all, so a tile that does not switch but opens the exact Settings panel for it and shows the live state read-only. An id declared here with no capability behind it is dropped rather than drawn, because a control that does nothing is the same lie as a switch that does nothing.",
     "control_panel": {
       "_doc_columns": "Tiles across the grid. Data because tile density is the thing the owner re-litigates, and because a column count compiled into Kotlin is a rebuild to argue with. Four is Samsung's own quick-settings width and it is what keeps a tile wide enough to hit: at four columns a 360dp-wide phone gives roughly 80dp of tile, comfortably past the 48dp minimum touch target. Raising this past five starts trading that away.",

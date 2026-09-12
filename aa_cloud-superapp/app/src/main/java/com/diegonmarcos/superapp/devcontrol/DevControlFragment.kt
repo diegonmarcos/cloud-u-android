@@ -1492,12 +1492,25 @@ class DevControlFragment : Fragment() {
         // GET_RECEIVERS is a full manifest unmarshal across a binder call —
         // small on a fast phone, not free, and never worth a frame drop.
         asyncSection(ctx, column, "IPC Contract",
-            probe = { collectIpcContract(appCtx) },
-            render = { g, entries ->
-                if (entries.isEmpty()) {
+            // Two halves, and the order matters. First the MESH — the peers this
+            // app talks to, from build.json::ui.app_mesh, each resolved live. Then
+            // what this app itself exports. Before the roster existed only the
+            // second half was here, which is why the section read "nothing
+            // declared" while eight channels were in daily use: a manifest can
+            // only ever describe its own side of a binding.
+            probe = { collectAppMesh(appCtx) to collectSelfIpcContract(appCtx) },
+            render = { g, (mesh, self) ->
+                if (mesh.isEmpty() && self.isEmpty()) {
                     g.addView(small(ctx, "No IPC contract declared yet — no exported/consumed cross-app intents, services, or providers beyond the framework defaults."))
                 } else {
-                    for ((k, v) in entries) row(ctx, g, k, v)
+                    if (mesh.isNotEmpty()) {
+                        g.addView(small(ctx, "Mesh — declared peers (ui.app_mesh), resolved on this device"))
+                        for ((k, v) in mesh) row(ctx, g, k, v)
+                    }
+                    if (self.isNotEmpty()) {
+                        g.addView(small(ctx, "Exported by this app"))
+                        for ((k, v) in self) row(ctx, g, k, v)
+                    }
                 }
             })
 
@@ -2403,11 +2416,71 @@ class DevControlFragment : Fragment() {
         "✗ ${e.message ?: "unreachable"}"
     }
 
+    /** The inter-app mesh — build.json::ui.app_mesh resolved against THIS
+     *  device, one row per declared channel.
+     *
+     *  Why this is not derived: [collectSelfIpcContract] below can only read
+     *  our own manifest, so it answers "what do I expose" and can never
+     *  answer "who are my peers". The peer list lives in the libraries that
+     *  bind each channel (TextTools.SERVICE_PACKAGES, FleetToken.AUTHORITY_PKG,
+     *  …) as deliberately hard-coded constellation ADDRESSES, and a shared
+     *  library cannot read it from build.json because it would read the
+     *  CONSUMING app's build.json. So the roster is declared once here, in the
+     *  app that owns the About screen.
+     *
+     *  The verdict per server is the part the declaration cannot hold: absent
+     *  (not installed) vs installed-but-not-publishing vs live. That third
+     *  state is the whole point — a preferred peer that ships no service looks
+     *  exactly like a broken feature otherwise (Cloud Writer today). */
+    private fun collectAppMesh(ctx: Context): List<Pair<String, String>> = runCatching {
+        val json = String(
+            android.util.Base64.decode(BuildConfig.UI_APP_MESH_B64, android.util.Base64.DEFAULT),
+            Charsets.UTF_8,
+        )
+        val arr = org.json.JSONArray(json)
+        val pm = ctx.packageManager
+        val out = ArrayList<Pair<String, String>>()
+        for (i in 0 until arr.length()) {
+            val entry = arr.getJSONObject(i)
+            val isProvider = entry.optString("kind") == "provider"
+            // A $pkg placeholder resolves per server: the two terminal apps
+            // publish the same channel under their own package names.
+            val channel = (if (isProvider) entry.optString("authority") else entry.optString("action"))
+            val servers = entry.optJSONArray("serves")
+            val verdicts = ArrayList<String>()
+            for (j in 0 until (servers?.length() ?: 0)) {
+                val pkg = servers!!.getString(j)
+                val name = channel.replace("\$pkg", pkg)
+                val short = pkg.substringAfterLast('.')
+                val installed = runCatching { pm.getPackageInfo(pkg, 0) }.isSuccess
+                val publishes = when {
+                    !installed  -> false
+                    isProvider  -> pm.resolveContentProvider(name, 0) != null
+                    else        -> pm.queryIntentServices(
+                        android.content.Intent(name).setPackage(pkg), 0,
+                    ).isNotEmpty()
+                }
+                verdicts.add(when {
+                    !installed -> "$short ✗ absent"
+                    publishes  -> "$short ✓ live"
+                    else       -> "$short — installed, channel not published"
+                })
+            }
+            val head = entry.optString("label")
+            val kind = if (isProvider) "provider" else "service"
+            out.add(
+                "$head ($kind)" to
+                    (if (verdicts.isEmpty()) "no server declared" else verdicts.joinToString(" · ")),
+            )
+        }
+        out
+    }.getOrDefault(emptyList())
+
     /** Cross-app IPC surface this app exposes/consumes — the manifest's
      *  exported activities/services/providers/receivers with intent
      *  filters (the contract other apps in the constellation can bind
      *  to). Empty list → nothing declared (the section shows a note). */
-    private fun collectIpcContract(ctx: Context): List<Pair<String, String>> = runCatching {
+    private fun collectSelfIpcContract(ctx: Context): List<Pair<String, String>> = runCatching {
         val pm = ctx.packageManager
         val flags = android.content.pm.PackageManager.GET_ACTIVITIES or
             android.content.pm.PackageManager.GET_SERVICES or
