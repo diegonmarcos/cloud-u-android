@@ -216,7 +216,18 @@ class GroupedTilesFragment : Fragment() {
             // today).
             setOnClickListener {
                 Haptics.tap(it)
-                (activity as? TileGridFragment.TileClickListener)?.onTileClicked(tile.target)
+                // A folder HOLDS destinations instead of being one, so it opens
+                // the popup and the entries inside dispatch. Falling through to
+                // `target` as well would make the first tap ambiguous, which is
+                // why a folder in build.json carries no target at all.
+                if (tile.children.isNotEmpty()) {
+                    TileFolderDialog.open(ctx, tile) { child ->
+                        (activity as? TileGridFragment.TileClickListener)
+                            ?.onTileClicked(child.target)
+                    }
+                } else {
+                    (activity as? TileGridFragment.TileClickListener)?.onTileClicked(tile.target)
+                }
             }
         }
         val iconRes = Sections.iconResFor(ctx, tile.iconName)

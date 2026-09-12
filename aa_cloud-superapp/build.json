@@ -2361,48 +2361,6 @@
         ],
         "tile_groups": [
           {
-            "title": "AGI",
-            "tiles": [
-              {
-                "_doc": "app:// resolves MAIN/LAUNCHER for the package and adds FLAG_ACTIVITY_NEW_TASK (see ShellActivity.handleTarget), which lands on .MainActivity — the app door, own taskAffinity, own Overview card. .HomeActivity (the launcher door) is a different task and is not reachable this way, which is the point.",
-                "id": "cloud-superapp",
-                "label": "Cloud SuperApp",
-                "icon": "ic_superapp_d",
-                "target": "app://com.diegonmarcos.superapp"
-              },
-              {
-                "id": "ai-tmx",
-                "label": "Cloud Terminal",
-                "icon": "ic_terminal",
-                "target": "app://com.termux.nix?fallback=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.termux.nix"
-              },
-              {
-                "id": "drive",
-                "label": "MyIDE",
-                "icon": "ic_code",
-                "target": "extapp:cloud-ide/files"
-              },
-              {
-                "id": "ai-tlg-hermes",
-                "label": "AI Hermes",
-                "icon": "ic_ai_chat",
-                "target": "intent://resolve?domain=Cloud_agent_hermes_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot;end"
-              },
-              {
-                "id": "ai-tlg-goose",
-                "label": "AI Goose",
-                "icon": "ic_ai_chat",
-                "target": "intent://resolve?domain=Cloud_agent_goose_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_goose_bot;end"
-              },
-              {
-                "id": "ai-tlg-claude",
-                "label": "AI Claude",
-                "icon": "ic_ai_chat",
-                "target": "intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end"
-              }
-            ]
-          },
-          {
             "title": "Inboxes",
             "tiles": [
               {
@@ -2567,6 +2525,177 @@
                 "label": "Camera",
                 "icon": "ic_camera",
                 "target": "extapp:cloud-camera"
+              }
+            ]
+          },
+          {
+            "title": "AGI",
+            "tiles": [
+              {
+                "_doc": "app:// resolves MAIN/LAUNCHER for the package and adds FLAG_ACTIVITY_NEW_TASK (see ShellActivity.handleTarget), which lands on .MainActivity — the app door, own taskAffinity, own Overview card. .HomeActivity (the launcher door) is a different task and is not reachable this way, which is the point.",
+                "id": "cloud-superapp",
+                "label": "Cloud SuperApp",
+                "icon": "ic_superapp_d",
+                "target": "app://com.diegonmarcos.superapp"
+              },
+              {
+                "id": "ai-tmx",
+                "label": "Cloud Terminal",
+                "icon": "ic_terminal",
+                "target": "app://com.termux.nix?fallback=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.termux.nix"
+              },
+              {
+                "id": "drive",
+                "label": "MyIDE",
+                "icon": "ic_code",
+                "target": "extapp:cloud-ide/files"
+              },
+              {
+                "_doc": "B-LLM - the three Telegram agent bots behind one folder icon instead of three tiles in the row. 'B' is for big: Hermes, Goose and Claude each answer from a full-size hosted model. A tile that carries a nested 'tiles' array IS a folder - GroupedTilesFragment opens the popup instead of dispatching 'target' - which is why this entry has no target of its own. Giving a folder a target as well would make the first tap ambiguous: open, or navigate?",
+                "id": "b-llm",
+                "label": "B-LLM",
+                "icon": "ic_p_folder",
+                "tiles": [
+                {
+                  "id": "ai-tlg-hermes",
+                  "label": "AI Hermes",
+                  "icon": "ic_ai_chat",
+                  "target": "intent://resolve?domain=Cloud_agent_hermes_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot;end"
+                },
+                {
+                  "id": "ai-tlg-goose",
+                  "label": "AI Goose",
+                  "icon": "ic_ai_chat",
+                  "target": "intent://resolve?domain=Cloud_agent_goose_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_goose_bot;end"
+                },
+                {
+                  "id": "ai-tlg-claude",
+                  "label": "AI Claude",
+                  "icon": "ic_ai_chat",
+                  "target": "intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end"
+                }
+                ]
+              },
+              {
+                "_doc": "S-LLM - the small task-specific models, laid out as a TABLE rather than a grid of icons. Sixteen rows cannot be told apart by picture: what identifies a row is its task and the model answering it, so 'children_ui': 'table' switches the popup to one line per entry showing category, task, slug and model. Every row opens the SAME Hermes chat as B-LLM's first tile with '?start=<slug>' appended, so the bot picks that row's model. The slugs are the bot's own task names; Telegram start payloads allow letters, digits, underscore and hyphen, which is why they may stay hyphenated here rather than being rewritten for the link.",
+                "id": "s-llm",
+                "label": "S-LLM",
+                "icon": "ic_ai_sparkle",
+                "children_ui": "table",
+                "tiles": [
+                  {
+                    "id": "writer-grammar",
+                    "label": "Grammar & Rewriting",
+                    "caption": "Writing & Editing",
+                    "note": "MiniCPM-3B",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=writer-grammar#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dwriter-grammar;end"
+                  },
+                  {
+                    "id": "writer-social",
+                    "label": "Personal & Social Message Drafting",
+                    "caption": "Communication",
+                    "note": "Llama-3.2-3B-Instruct",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=writer-social#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dwriter-social;end"
+                  },
+                  {
+                    "id": "writer-translate",
+                    "label": "Real-Time Translation",
+                    "caption": "Translation",
+                    "note": "Yi-1.5-6B",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=writer-translate#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dwriter-translate;end"
+                  },
+                  {
+                    "id": "writer-email",
+                    "label": "Email Drafting & Digest",
+                    "caption": "Email & Summarization",
+                    "note": "InternLM2.5-7B",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=writer-email#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dwriter-email;end"
+                  },
+                  {
+                    "id": "voice-home",
+                    "label": "Voice Commands & Smart Home",
+                    "caption": "Smart Home",
+                    "note": "Qwen2.5-7B-Instruct",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=voice-home#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dvoice-home;end"
+                  },
+                  {
+                    "id": "doc-ocr",
+                    "label": "PDF & Invoice OCR",
+                    "caption": "Vision & Extraction",
+                    "note": "Qwen2.5-VL-3B",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=doc-ocr#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Ddoc-ocr;end"
+                  },
+                  {
+                    "id": "calendar-parse",
+                    "label": "Calendar & Event Parsing",
+                    "caption": "Productivity",
+                    "note": "Llama-3.2-3B-Instruct",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=calendar-parse#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dcalendar-parse;end"
+                  },
+                  {
+                    "id": "code-complete",
+                    "label": "Code Completion",
+                    "caption": "Software Development",
+                    "note": "Qwen2.5-Coder-7B",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=code-complete#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dcode-complete;end"
+                  },
+                  {
+                    "id": "home-diy",
+                    "label": "DIY & Home Repair Troubleshooting",
+                    "caption": "Technical Support",
+                    "note": "DeepSeek-R1-Distill-Qwen-7B",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=home-diy#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dhome-diy;end"
+                  },
+                  {
+                    "id": "math-budget",
+                    "label": "Math & Household Budgeting",
+                    "caption": "Finance & Math",
+                    "note": "DeepSeek-R1-Distill-Qwen-7B",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=math-budget#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dmath-budget;end"
+                  },
+                  {
+                    "id": "study-cards",
+                    "label": "Study Guides & Flashcard Creation",
+                    "caption": "Education",
+                    "note": "Gemma-2-9B-it",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=study-cards#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dstudy-cards;end"
+                  },
+                  {
+                    "id": "meal-plan",
+                    "label": "Meal Planning & Recipes",
+                    "caption": "Food & Cooking",
+                    "note": "Qwen2.5-3B-Instruct",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=meal-plan#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dmeal-plan;end"
+                  },
+                  {
+                    "id": "travel-plan",
+                    "label": "Travel & Local Itineraries",
+                    "caption": "Travel & Planning",
+                    "note": "GLM-4-9B-Chat",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=travel-plan#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dtravel-plan;end"
+                  },
+                  {
+                    "id": "fitness-plan",
+                    "label": "Fitness & Workout Routines",
+                    "caption": "Health & Fitness",
+                    "note": "Yi-1.5-6B",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=fitness-plan#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dfitness-plan;end"
+                  },
+                  {
+                    "id": "search-summary",
+                    "label": "Web Search & Summary",
+                    "caption": "Search & Research",
+                    "note": "GLM-4-9B-Chat",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=search-summary#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dsearch-summary;end"
+                  },
+                  {
+                    "id": "shop-compare",
+                    "label": "Gift Ideas & Product Comparisons",
+                    "caption": "Shopping & Review",
+                    "note": "InternLM2.5-7B",
+                    "target": "intent://resolve?domain=Cloud_agent_hermes_bot&start=shop-compare#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_hermes_bot%3Fstart%3Dshop-compare;end"
+                  }
+                ]
               }
             ]
           },

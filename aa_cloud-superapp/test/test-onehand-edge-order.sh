@@ -63,6 +63,21 @@ import json
 d = json.load(open('$BJ'))
 h = {x['id']: x for x in d['onehand']['handles']}
 oh = d['onehand']
+# A tile carrying a nested 'tiles' array is a FOLDER: it has no target of its
+# own, and what can be opened from it is the entries one level down. Reading
+# only the top level is how this tester lost the AI Claude tile the day it moved
+# inside B-LLM — Sections.AggTile.destinations makes the same substitution on
+# the Kotlin side.
+def leaves(lst):
+    out = []
+    for t in lst or []:
+        if not isinstance(t, dict):
+            continue
+        if isinstance(t.get('tiles'), list) and t['tiles']:
+            out.extend(leaves(t['tiles']))
+        else:
+            out.append(t)
+    return out
 $1" 2>/dev/null; }
 
 echo "== T1: the LEFT handle is the owner's FIRST block, in his order =="
@@ -145,7 +160,7 @@ for _s in d['ui']['sections']:
     for _g in (_s.get('tile_groups') or []):
         if isinstance(_g.get('tiles'), list): _lists.append(_g['tiles'])
     for _L in _lists:
-        for _t in _L:
+        for _t in leaves(_L):
             if isinstance(_t, dict) and not _t.get('separator') and _t.get('target'):
                 _tiles.add(_key(_t['target']))
 
@@ -196,7 +211,7 @@ echo "== T5: AI Claude's URI was kept, not re-derived =="
 # so this compares two live strings rather than a copy of one of them.
 SAME=$(q "
 tile = [t['target'] for s in d['ui']['sections'] for g in s.get('tile_groups', [])
-        for t in g.get('tiles', []) if 'Cloud_agent_claude_bot' in t.get('target', '')]
+        for t in leaves(g.get('tiles', [])) if 'Cloud_agent_claude_bot' in t.get('target', '')]
 print('yes' if len(tile) == 1 and h['left']['gestures']['top_outer'] == 'action:' + tile[0] else 'no')")
 [ "$SAME" = "yes" ] \
   && ok "the edge gesture is 'action:' + the exact Cloud > Apps tile target, byte for byte" \

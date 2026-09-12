@@ -114,7 +114,10 @@ class SectionMenuFragment : Fragment() {
                                 group.title.uppercase())
                             headItem.setEnabled(false)
                         }
-                        for (tile in group.tiles) {
+                        // `destinations`, not `tiles`: this menu lists things
+                        // that can be opened, and a folder icon standing in
+                        // front of three bots is not one of them.
+                        for (tile in group.destinations) {
                             val tileItemId = id++
                             val tileItem = menu.add(groupId, tileItemId, Menu.NONE,
                                 "    ↳  ${tile.label}")

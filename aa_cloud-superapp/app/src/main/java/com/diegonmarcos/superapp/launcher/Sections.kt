@@ -296,7 +296,38 @@ object Sections {
          *  reclassify any tile whose target was lost in an edit as decoration
          *  instead of failing. */
         val separator: Boolean = false,
-    )
+        /** The tiles INSIDE this one, when it is a folder rather than a
+         *  destination. A non-empty list is what MAKES a tile a folder: the
+         *  renderer opens a popup listing these instead of dispatching
+         *  [target], so a folder carries no target of its own — one that also
+         *  navigated somewhere would make the first tap ambiguous. Declared as
+         *  a nested `"tiles"` array in build.json, the same shape as this one,
+         *  so a folder is a tile holding tiles rather than a new concept. */
+        val children: List<AggTile> = emptyList(),
+        /** How the folder popup lays [children] out: `""` is the icon grid
+         *  (what a handful of apps wants), `"table"` is one row per entry.
+         *  Sixteen task models cannot be told apart by picture, which is why
+         *  S-LLM asks for the table. `"children_ui"` in build.json. */
+        val childrenUi: String = "",
+        /** The small line ABOVE [label] in a table row — the category the row
+         *  belongs to. Empty everywhere else. `"caption"` in build.json. */
+        val caption: String = "",
+        /** The value at the END of a table row — for S-LLM, which model
+         *  answers that task. Empty everywhere else. `"note"` in build.json. */
+        val note: String = "",
+    ) {
+        /** What can actually be OPENED from this tile: itself when it is a
+         *  destination, and its [children] when it is a folder. A folder
+         *  carries no target of its own, so a reader that kept the folder in
+         *  its list would hold an entry resolving to nothing while the real
+         *  entries sat one level down, unseen — which is exactly how the
+         *  edge-menu resolver lost `AI Claude` the day it moved into `B-LLM`.
+         *  Recursive because a folder inside a folder is legal in the schema,
+         *  not because one exists today. */
+        val destinations: List<AggTile> get() =
+            if (children.isEmpty()) listOf(this)
+            else children.filterNot { it.separator }.flatMap { it.destinations }
+    }
 
     /** A themed sub-group of an aggregator section's tile list. */
     data class TileGroup(val title: String, val tiles: List<AggTile>) {
@@ -304,7 +335,10 @@ object Sections {
          *  Only a renderer laying this group out as a ROW wants [tiles]; every
          *  other reader is asking "what can be opened from here", and a rule
          *  drawn between two icons is not an answer to that. */
-        val destinations: List<AggTile> get() = tiles.filterNot { it.separator }
+        // A folder is no more a destination than a separator is: see
+        // [AggTile.destinations], which substitutes its children for it.
+        val destinations: List<AggTile> get() =
+            tiles.filterNot { it.separator }.flatMap { it.destinations }
     }
 
     data class Page(
@@ -662,6 +696,13 @@ object Sections {
                             iconName  = t.optString("icon", "ic_settings"),
                             target    = t.optString("target", ""),
                             separator = t.optBoolean("separator", false),
+                            // A folder's entries are the same shape as a tile,
+                            // so this reads them with itself rather than with a
+                            // second parser that would drift from this one.
+                            children   = parseTilesInline(t.optJSONArray("tiles")),
+                            childrenUi = t.optString("children_ui", ""),
+                            caption    = t.optString("caption", ""),
+                            note       = t.optString("note", ""),
                         )
                     )
                 }

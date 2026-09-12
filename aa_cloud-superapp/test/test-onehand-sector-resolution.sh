@@ -88,13 +88,29 @@ oh = d['onehand']
 def key(t):
     return 'action:' + re.sub(r'^action:', '', t or '')
 
+# A tile carrying a nested 'tiles' array is a FOLDER: it has no target of its
+# own, and what can be opened from it is the entries one level down. Reading
+# only the top level is how the left handle's AI Claude sector stopped
+# resolving the day that tile moved inside B-LLM — Sections.AggTile.destinations
+# makes the same substitution on the Kotlin side.
+def leaves(lst):
+    out = []
+    for t in lst or []:
+        if not isinstance(t, dict):
+            continue
+        if isinstance(t.get('tiles'), list) and t['tiles']:
+            out.extend(leaves(t['tiles']))
+        else:
+            out.append(t)
+    return out
+
 tiles = {}
 for s in d['ui']['sections']:
     lists = [v for k, v in s.items() if k.startswith('tiles_') and isinstance(v, list)]
     for g in (s.get('tile_groups') or []):
         if isinstance(g.get('tiles'), list): lists.append(g['tiles'])
     for L in lists:
-        for t in L:
+        for t in leaves(L):
             if not isinstance(t, dict): continue
             if t.get('separator') or not t.get('target') or not t.get('label'): continue
             tiles.setdefault(key(t['target']), (t['label'], t.get('icon') or ''))
@@ -281,7 +297,7 @@ echo "== T7: the edge target and the Cloud > Apps tile target stay byte-identica
 # works — that is T1/T2's job — but the two must not drift apart either.
 SAME2=$(q "
 tile = [t['target'] for s in d['ui']['sections'] for g in s.get('tile_groups', [])
-        for t in g.get('tiles', []) if 'Cloud_agent_claude_bot' in (t.get('target') or '')]
+        for t in leaves(g.get('tiles', [])) if 'Cloud_agent_claude_bot' in (t.get('target') or '')]
 left = next(h for h in oh['handles'] if h['id']=='left')['gestures']['top_outer']
 print('yes' if len(tile) == 1 and left == 'action:' + tile[0] else 'no')")
 [ "$SAME2" = "yes" ] \
