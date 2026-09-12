@@ -2432,9 +2432,10 @@
                 "_doc": "Opens the standalone Cloud-Dialer app (ac_cloud-dialer, com.diegonmarcos.comms.dialer, Fossify Phone) via extapp:cloud-dialer — installed → launches; absent → install via Configs ▸ Constellation. Its own constellation app now that the Cloud-Comms hub is decommissioned; same extapp mechanism as Mail / Chat / Messenger above."
               },
               {
+                "_doc": "C3-Bot is a BOT, not an AI assistant, and the icon said otherwise. It shared ic_ai_chat with the three genuine AI tiles above it (Chat GPT / Claude / Gemini), so the one tile in this group that opens a Telegram automation read as a fourth chatbot. ic_robot is the glyph the rest of the fleet already uses for automation — Morpheus and the three Dagu tiles in ui.sections[13] carry it. Resolution is Sections.iconResFor's literal getIdentifier(name, \"drawable\", pkg) hit on res/drawable/ic_robot.xml; there is no icon allow-list, and a name that resolves to nothing does NOT fail the build — it silently falls back to ic_link_tile, which is why test-tile-icons-resolve.sh checks every ui icon against the drawable set rather than this one value.",
                 "id": "c3-bot",
                 "label": "C3-Bot",
-                "icon": "ic_ai_chat",
+                "icon": "ic_robot",
                 "target": "intent://resolve?domain=Cloud_bot_C3_Infra_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_bot_C3_Infra_bot;end"
               },
               {
