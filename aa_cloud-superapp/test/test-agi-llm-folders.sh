@@ -8,8 +8,9 @@
 # introduces: a folder is not a destination. It carries no target, so every
 # reader that asks "what can be opened from here" must see its CHILDREN instead
 # of it. That is the #284 resolver defect in a new form — the day AI Claude moved
-# inside B-LLM, the left edge menu's first sector stopped resolving — so both the
-# data and the two Kotlin readers are checked here.
+# inside B-LLM, the left edge menu's first sector stopped resolving — so the data
+# and all four readers of that invariant are checked here, the bake-time one
+# included, because that one fails the build rather than a screen.
 set -u
 APP="$(cd "$(dirname "$0")/.." && pwd)"          # → aa_cloud-superapp
 PASS=0; FAIL=0
@@ -146,10 +147,24 @@ has 'tiles.filterNot { it.separator }.flatMap { it.destinations }' "$SRC/Section
   "TileGroup.destinations flattens folders out"
 # The two readers that walked group.tiles directly would otherwise list B-LLM
 # and S-LLM as menu rows that open nothing.
-has 'for (tile in group.destinations)' "$SRC/HomeDrawerFragment.kt" \
-  "the home drawer lists destinations, not folder icons"
 has 'for (tile in group.destinations)' "$SRC/SectionMenuFragment.kt" \
   "the section menu lists destinations, not folder icons"
+# The fourth reader, and the one that fails the BUILD rather than a screen: the
+# edge-menu sector validator indexes every tile by target at bake time, so a
+# tile that moved inside a folder simply stops existing for it and the whole
+# APK dies on a sector that is perfectly fine. It must descend.
+has 'ohHarvest(t.tiles as List)' \
+  "$APP/../ab_cloud-libs-shared/libs/launcher-onehand/build.gradle" \
+  "the onehand bake-time sector validator descends into folders"
+# HomeDrawerFragment is deliberately NOT in this list: it reads ui.home_groups,
+# an unrelated schema that has never nested a tile, so flattening there would
+# only be a reference to a property its type does not have.
+[ "$(python3 -c "
+import json
+d = json.load(open('$BJ'))
+print(any('tiles' in t for g in d['ui']['home_groups'] for t in g.get('tiles', [])))")" = "False" ] \
+  && ok "ui.home_groups stays flat, so the home drawer needs no flattening" \
+  || bad "ui.home_groups now nests tiles — HomeDrawerFragment must flatten too"
 
 echo "== A9: the row renderer opens the folder instead of dispatching it =="
 has 'if (tile.children.isNotEmpty())' "$SRC/GroupedTilesFragment.kt" \

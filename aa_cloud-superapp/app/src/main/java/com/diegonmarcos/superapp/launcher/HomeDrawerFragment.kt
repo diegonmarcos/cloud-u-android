@@ -167,10 +167,10 @@ class HomeDrawerFragment : Fragment() {
         for (group in Sections.homeGroups()) {
             val groupId = id++
             val sub = menu.addSubMenu(groupId, Menu.NONE, Menu.NONE, group.title)
-            // `destinations`, not `tiles`: a menu row is something you open, so
-            // the separator glyphs and the folder icons are not rows — a folder
-            // carries no target, and its entries are what the reader wants.
-            for (tile in group.destinations) {
+            // `tiles`, deliberately: this drawer reads ui.home_groups, a schema
+            // of its own that never nests — no folder has ever appeared in it,
+            // so there is nothing here to flatten.
+            for (tile in group.tiles) {
                 val tileId = id++
                 val item = sub.add(groupId, tileId, Menu.NONE, tile.label)
                 Sections.iconResFor(ctx, iconForTile(tile)).takeIf { it != 0 }
