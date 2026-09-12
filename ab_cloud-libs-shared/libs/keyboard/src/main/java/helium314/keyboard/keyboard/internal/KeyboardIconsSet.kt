@@ -160,6 +160,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.GRAMMAR -> R.drawable.ic_settings_correction  // SuperApp addition (patch 0002)
                     ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance      // SuperApp addition — Text Enhancements
                     ToolbarKey.LANGUAGE_SWITCH -> R.drawable.sym_keyboard_language_switch // cloud-keyboard: same globe drawable as NAME_LANGUAGE_SWITCH_KEY in this theme map
+                    ToolbarKey.VAULT -> R.drawable.ic_toolbar_vault // cloud-keyboard: opens Cloud Vault
                 })
             }
         } }
@@ -227,6 +228,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.GRAMMAR -> R.drawable.ic_settings_correction  // SuperApp addition (patch 0002)
                     ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance      // SuperApp addition — Text Enhancements
                     ToolbarKey.LANGUAGE_SWITCH -> R.drawable.sym_keyboard_language_switch_lxx // cloud-keyboard: same globe drawable as NAME_LANGUAGE_SWITCH_KEY in this theme map
+                    ToolbarKey.VAULT -> R.drawable.ic_toolbar_vault // cloud-keyboard: opens Cloud Vault
                 })
             }
         } }
@@ -294,6 +296,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.GRAMMAR -> R.drawable.ic_settings_correction  // SuperApp addition (patch 0002)
                     ToolbarKey.ENHANCE -> R.drawable.ic_toolbar_enhance      // SuperApp addition — Text Enhancements
                     ToolbarKey.LANGUAGE_SWITCH -> R.drawable.sym_keyboard_language_switch_lxx // cloud-keyboard: same globe drawable as NAME_LANGUAGE_SWITCH_KEY in this theme map
+                    ToolbarKey.VAULT -> R.drawable.ic_toolbar_vault // cloud-keyboard: opens Cloud Vault
                 })
             }
         } }

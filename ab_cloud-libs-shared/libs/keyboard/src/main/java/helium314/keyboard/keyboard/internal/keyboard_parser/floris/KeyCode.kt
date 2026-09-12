@@ -103,6 +103,7 @@ object KeyCode {
     const val GRAMMAR =                     -304 // SuperApp addition (patch 0002) — on-demand whole-field grammar fix toolbar key
     const val ENHANCE =                     -305 // SuperApp addition — Text Enhancements toolbar key (AI rewrite of selection/field, long-press)
     const val ENHANCE_BAR =                 -306 // SuperApp addition — open the Text Enhancements bar (tap)
+    const val VAULT =                       -307 // SuperApp addition — open Cloud Vault (com.diegonmarcos.cloudvault)
 
     const val CURRENCY_SLOT_1 =             -801
     const val CURRENCY_SLOT_2 =             -802

@@ -767,6 +767,10 @@ public final class InputLogic {
                 // nothing touches the field until Paste or Replace.
                 mLatinIME.toggleEnhanceBar();
                 break;
+            case KeyCode.VAULT:
+                // cloud-keyboard: TAP → hand over to Cloud Vault. Nothing to do to the field.
+                mLatinIME.launchCloudVault();
+                break;
             case KeyCode.TRANSLATE_BAR: {
                 // SuperApp addition (patch 0001): LONG-PRESS → quick in-place
                 // translate of the selection (or whole field) into the active

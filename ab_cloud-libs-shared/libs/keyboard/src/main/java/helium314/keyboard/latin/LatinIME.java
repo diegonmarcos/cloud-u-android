@@ -2066,6 +2066,28 @@ public class LatinIME extends InputMethodService implements
         startActivity(intent);
     }
 
+    /**
+     * cloud-keyboard: the VAULT toolbar key. Cloud Vault is a separate app, so the key can only
+     * hand over — same shape as {@link #launchSettings()}. The manifest's existing MAIN/LAUNCHER
+     * &lt;queries&gt; entry is what makes the launch intent resolvable under Android 11+ package
+     * visibility. A key that does nothing at all reads as broken, so a missing Cloud Vault says so.
+     */
+    public void launchCloudVault() {
+        final Intent intent = getPackageManager().getLaunchIntentForPackage("com.diegonmarcos.cloudvault");
+        if (intent == null) {
+            android.widget.Toast.makeText(this, R.string.vault_not_installed, android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        mInputLogic.commitTyped(mSettings.getCurrent(), LastComposedWord.NOT_A_SEPARATOR);
+        requestHideSelf(0);
+        final MainKeyboardView mainKeyboardView = mKeyboardSwitcher.getMainKeyboardView();
+        if (mainKeyboardView != null) {
+            mainKeyboardView.closing();
+        }
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+        startActivity(intent);
+    }
+
     public void launchEmojiSearch() {
         Log.d("emoji-search", "before activity launch");
         startActivity(new Intent().setClass(this, EmojiSearchActivity.class)

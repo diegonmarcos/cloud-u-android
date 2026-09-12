@@ -13,6 +13,8 @@ import android.view.ViewGroup
 import android.widget.HorizontalScrollView
 import androidx.core.view.children
 import androidx.core.view.isVisible
+import helium314.keyboard.latin.utils.ToolbarKey
+import helium314.keyboard.latin.utils.toolbarKeysOnOwnPage
 
 /**
  * The toolbar row holds more icons than fit on screen. Free scrolling let a drag stop anywhere,
@@ -96,6 +98,45 @@ class PagedToolbarScrollView @JvmOverloads constructor(
     override fun fling(velocityX: Int) {
         turnedPageOnFling = true
         turnPage(if (velocityX > 0) 1 else -1)
+    }
+
+    /**
+     * Gives every key in [toolbarKeysOnOwnPage] a left margin sized to whatever is left of the page
+     * it would otherwise land in the middle of, so it starts a page of its own. The same margin is
+     * what pushes the row past its last full page and so makes that page reachable at all — without
+     * it [maxScrollX] stops at the content width and there is nothing to scroll to.
+     *
+     * The gap comes from the measured [pageWidth], never from a key count: how many icons fit on a
+     * page depends on screen width, icon size and rotation, so filler keys could not do this.
+     *
+     * Returns true when a margin changed, which needs one more layout pass to take effect. That
+     * pass recomputes each gap from the position EXCLUDING the margin it just set, so it arrives at
+     * the same answer and stops.
+     */
+    private fun alignKeysThatWantTheirOwnPage(): Boolean {
+        val row = getChildAt(0) as? ViewGroup ?: return false
+        val page = pageWidth
+        var changed = false
+        for (child in row.children) {
+            if (!child.isVisible) continue
+            val key = child.tag as? ToolbarKey ?: continue
+            if (key !in toolbarKeysOnOwnPage) continue
+            val params = child.layoutParams as? ViewGroup.MarginLayoutParams ?: continue
+            val startWithoutGap = child.left - params.leftMargin
+            val gap = (page - startWithoutGap % page) % page
+            if (params.leftMargin != gap) {
+                params.leftMargin = gap
+                changed = true
+            }
+        }
+        return changed
+    }
+
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        super.onLayout(changed, l, t, r, b)
+        // Widths and positions are only real after layout, so the page alignment is computed here
+        // and asks the row to lay itself out once more with the margins it just got.
+        if (alignKeysThatWantTheirOwnPage()) getChildAt(0)?.requestLayout()
     }
 
     @SuppressLint("ClickableViewAccessibility") // super handles the touch; we only settle it afterwards

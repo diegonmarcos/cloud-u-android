@@ -17,8 +17,16 @@
 -->
 <merge
     xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- NO android:animateLayoutChanges here. SuggestionStripView.clear() calls
+         removeAllViews() on @id/suggestions_strip for every single keystroke, and a
+         LayoutTransition on this wrapper turns each of those into a ~300ms
+         DISAPPEARING/APPEARING animation for every word view. Typing restarts the
+         transition long before it settles, so the words stay permanently mid-animation:
+         the glyph the user sees and the view's hit rectangle drift apart, and a tap that
+         lands on an outgoing view finds a stale tag and is dropped silently by
+         SuggestionStripView.onClick — a suggestion that looks tappable but inserts
+         nothing. -->
     <LinearLayout
-        android:animateLayoutChanges="true"
         android:id="@+id/suggestions_strip_wrapper"
         android:orientation="vertical"
         android:layout_width="match_parent"

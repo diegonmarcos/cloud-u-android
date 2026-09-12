@@ -94,6 +94,7 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     GRAMMAR -> KeyCode.GRAMMAR    // SuperApp addition (patch 0002)
     ENHANCE -> KeyCode.ENHANCE_BAR // SuperApp addition — Text Enhancements: tap opens the bar
     LANGUAGE_SWITCH -> KeyCode.LANGUAGE_SWITCH // cloud-keyboard: same code the globe key emits → InputLogic → LatinIME.switchToNextSubtype
+    VAULT -> KeyCode.VAULT // cloud-keyboard: launches Cloud Vault
 }
 
 fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getCustomToolbarLongpressCode(key) ?: when (key) {
@@ -128,8 +129,17 @@ enum class ToolbarKey {
     TRANSLATE, // SuperApp addition (patch 0001) — on-device ML Kit translate to active subtype language
     GRAMMAR,   // SuperApp addition (patch 0002) — on-demand whole-field grammar fix
     ENHANCE,   // SuperApp addition — Text Enhancements: rewrite selection/field via AI Model Routing
-    LANGUAGE_SWITCH // cloud-keyboard: toolbar twin of the globe key (tap = next subtype/IME per "Language switch key behavior", long-press = picker). In the default first row.
+    LANGUAGE_SWITCH, // cloud-keyboard: toolbar twin of the globe key (tap = next subtype/IME per "Language switch key behavior", long-press = picker). In the default first row.
+    VAULT // cloud-keyboard: opens Cloud Vault. Not an editing tool, so it sits alone on its own page — see [toolbarKeysOnOwnPage].
 }
+
+/**
+ * Keys that are a destination rather than an editing tool, and read as one only when nothing else
+ * shares their page. [PagedToolbarScrollView] gives such a key a left margin sized from the page
+ * width it measured, so it always starts a page of its own at any screen width, icon size or
+ * rotation — the page count is measured, never a constant, so filler keys could not do this.
+ */
+val toolbarKeysOnOwnPage = setOf(ToolbarKey.VAULT)
 
 enum class ToolbarMode {
     EXPANDABLE, TOOLBAR_KEYS, SUGGESTION_STRIP, HIDDEN,
@@ -149,6 +159,9 @@ val defaultToolbarPref by lazy {
     val default = listOf(
         FULL_LEFT, GRAMMAR, AUTOCORRECT, ENHANCE, TRANSLATE, NUMPAD, CLIPBOARD, EMOJI, VOICE, LANGUAGE_SWITCH,
         FULL_RIGHT, SELECT_ALL, WORD_RIGHT, WORD_LEFT, REDO, UNDO, SELECT_WORD, COPY, PASTE, CUT, PAGE_START,
+        // Last, and alone on the page it starts (toolbarKeysOnOwnPage): the 21 editing keys above
+        // fill the first two pages, Cloud Vault gets the third.
+        VAULT,
     )
     val others = entries.filterNot { it in default || it == CLOSE_HISTORY }
     default.joinToString(Separators.ENTRY) { it.name + Separators.KV + true } + Separators.ENTRY +
@@ -178,7 +191,7 @@ val defaultClipboardToolbarPref by lazy {
  * the stored value does not know yet, so without this a reordered default would be visible to
  * fresh installs only — the exact trap that made earlier default changes look like no-ops.
  */
-const val TOOLBAR_LAYOUT_REVISION = 1
+const val TOOLBAR_LAYOUT_REVISION = 2
 
 /**
  * Adopt the current default first and second rows, once per [TOOLBAR_LAYOUT_REVISION]. This

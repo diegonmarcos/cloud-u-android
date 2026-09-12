@@ -312,6 +312,9 @@
     <string name="enhance" tools:keep="@string/enhance">Text enhancement</string>
     <!-- cloud-keyboard — LANGUAGE_SWITCH toolbar key label (ToolbarKey.name.lowercase → getStringResourceOrName) -->
     <string name="language_switch" tools:keep="@string/language_switch">Switch language / layout</string>
+    <!-- cloud-keyboard — VAULT toolbar key label (ToolbarKey.name.lowercase → getStringResourceOrName) -->
+    <string name="vault" tools:keep="@string/vault">Cloud Vault</string>
+    <string name="vault_not_installed">Cloud Vault is not installed</string>
     <string name="enhance_style_title">Enhancement style</string>
     <string name="enhance_style_summary">What the AI is asked to do with the selected text (or the whole field)</string>
     <string name="enhance_toolbar_title">Show in toolbar</string>
