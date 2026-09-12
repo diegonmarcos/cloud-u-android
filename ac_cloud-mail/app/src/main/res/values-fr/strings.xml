@@ -1124,4 +1124,16 @@
     <string name="settings_update_link_apk">Téléchargement de l\'APK</string>
     <string name="settings_update_link_repo">Code source</string>
     <string name="settings_update_link_ghcr">Registre de paquets</string>
+
+    <!-- Le navigateur intégré (#307) : un lien s\'ouvre ici au lieu de quitter le message. -->
+    <string name="browser_title">Navigateur</string>
+    <string name="browser_close">Fermer le navigateur</string>
+    <string name="browser_reload">Recharger la page</string>
+    <string name="browser_menu">Menu du navigateur</string>
+    <string name="browser_no_app">Cette application n\'est pas installée</string>
+    <string name="browser_open_in_cloud_browser">Ouvrir dans Cloud Browser</string>
+    <string name="browser_open_in_brave">Ouvrir dans Brave</string>
+    <string name="browser_translate_page">Traduire la page</string>
+    <string name="browser_view_desktop">Afficher en version ordinateur</string>
+    <string name="browser_view_mobile">Afficher en version mobile</string>
 </resources>

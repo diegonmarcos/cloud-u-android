@@ -14,8 +14,7 @@ BROWSER="$UI/browser"
 OPENER="$BROWSER/InAppBrowser.kt"
 WINDOW="$BROWSER/MiniBrowserActivity.kt"
 MANIFEST="$APP/app/src/main/AndroidManifest.xml"
-STR="$APP/app/src/main/res/values/strings.xml"
-STR_ES="$APP/app/src/main/res/values-es/strings.xml"
+RES="$APP/app/src/main/res"
 
 PASS=0
 FAIL=0
@@ -117,15 +116,23 @@ hasnt 'InAppBrowser.openLink' "$UI/attachment/AttachmentOpen.kt" \
 hasnt 'fun start(context: Context' "$WINDOW" "B14 the opener is not named start"
 has 'fun openMiniBrowser(context: Context' "$WINDOW" "B14 the opener is named in full"
 
-# B15 — both locales. The i18n guard runs on every push with no path filter, so a string that
-# exists in one file and not the other fails the build rather than shipping half-translated.
+# B15 — EVERY locale the app ships, not just English and Spanish. This tester originally checked
+# two files and passed while the release build failed: TranslationParityTest diffs values/ against
+# every values-*/ directory that has a strings.xml, and the app ships nine. Ten English strings in
+# two files is a red ship, not a half-translated one, so the list below is derived from disk rather
+# than written out — a tenth locale added tomorrow is covered without touching this file.
+LOCALES="$(find "$RES" -mindepth 2 -maxdepth 2 -name strings.xml -path '*/values*/*' | sort)"
 for key in browser_title browser_close browser_reload browser_menu browser_no_app \
     browser_open_in_cloud_browser browser_open_in_brave browser_translate_page \
     browser_view_desktop browser_view_mobile; do
-    if grep -qF "\"$key\"" "$STR" && grep -qF "\"$key\"" "$STR_ES"; then
-        ok "B15 $key in values/ and values-es/"
+    absent=""
+    for file in $LOCALES; do
+        grep -qF "\"$key\"" "$file" || absent="$absent $(basename "$(dirname "$file")")"
+    done
+    if [ -z "$absent" ]; then
+        ok "B15 $key in every shipped locale"
     else
-        bad "B15 $key in values/ and values-es/"
+        bad "B15 $key missing from:$absent"
     fi
 done
 

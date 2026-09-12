@@ -1135,4 +1135,16 @@
     <string name="settings_update_link_apk">Загрузка APK</string>
     <string name="settings_update_link_repo">Исходный код</string>
     <string name="settings_update_link_ghcr">Реестр пакетов</string>
+
+    <!-- Встроенный браузер (#307): ссылка открывается здесь, а не за пределами письма. -->
+    <string name="browser_title">Браузер</string>
+    <string name="browser_close">Закрыть браузер</string>
+    <string name="browser_reload">Обновить страницу</string>
+    <string name="browser_menu">Меню браузера</string>
+    <string name="browser_no_app">Это приложение не установлено</string>
+    <string name="browser_open_in_cloud_browser">Открыть в Cloud Browser</string>
+    <string name="browser_open_in_brave">Открыть в Brave</string>
+    <string name="browser_translate_page">Перевести страницу</string>
+    <string name="browser_view_desktop">Показать как на компьютере</string>
+    <string name="browser_view_mobile">Показать как на телефоне</string>
 </resources>

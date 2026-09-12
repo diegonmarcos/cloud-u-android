@@ -1132,4 +1132,16 @@
     <string name="settings_update_link_apk">Pobieranie APK</string>
     <string name="settings_update_link_repo">Kod źródłowy</string>
     <string name="settings_update_link_ghcr">Rejestr pakietów</string>
+
+    <!-- Wbudowana przeglądarka (#307): odnośnik otwiera się tutaj, a nie poza wiadomością. -->
+    <string name="browser_title">Przeglądarka</string>
+    <string name="browser_close">Zamknij przeglądarkę</string>
+    <string name="browser_reload">Odśwież stronę</string>
+    <string name="browser_menu">Menu przeglądarki</string>
+    <string name="browser_no_app">Ta aplikacja nie jest zainstalowana</string>
+    <string name="browser_open_in_cloud_browser">Otwórz w Cloud Browser</string>
+    <string name="browser_open_in_brave">Otwórz w Brave</string>
+    <string name="browser_translate_page">Przetłumacz stronę</string>
+    <string name="browser_view_desktop">Wyświetl jak na komputerze</string>
+    <string name="browser_view_mobile">Wyświetl jak na telefonie</string>
 </resources>

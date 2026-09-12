@@ -1115,4 +1115,16 @@
     <string name="settings_update_link_apk">APK-download</string>
     <string name="settings_update_link_repo">Broncode</string>
     <string name="settings_update_link_ghcr">Pakketregister</string>
+
+    <!-- De ingebouwde browser (#307): een link opent hier in plaats van het bericht te verlaten. -->
+    <string name="browser_title">Browser</string>
+    <string name="browser_close">Browser sluiten</string>
+    <string name="browser_reload">Pagina opnieuw laden</string>
+    <string name="browser_menu">Browsermenu</string>
+    <string name="browser_no_app">Die app is niet geïnstalleerd</string>
+    <string name="browser_open_in_cloud_browser">Openen in Cloud Browser</string>
+    <string name="browser_open_in_brave">Openen in Brave</string>
+    <string name="browser_translate_page">Pagina vertalen</string>
+    <string name="browser_view_desktop">Weergeven als desktop</string>
+    <string name="browser_view_mobile">Weergeven als mobiel</string>
 </resources>

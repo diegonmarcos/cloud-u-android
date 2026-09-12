@@ -1112,4 +1112,16 @@
     <string name="settings_update_link_apk">APK-Download</string>
     <string name="settings_update_link_repo">Quellcode</string>
     <string name="settings_update_link_ghcr">Paketregistry</string>
+
+    <!-- Der integrierte Browser (#307): ein Link öffnet sich hier, statt die Nachricht zu verlassen. -->
+    <string name="browser_title">Browser</string>
+    <string name="browser_close">Browser schließen</string>
+    <string name="browser_reload">Seite neu laden</string>
+    <string name="browser_menu">Browsermenü</string>
+    <string name="browser_no_app">Diese App ist nicht installiert</string>
+    <string name="browser_open_in_cloud_browser">In Cloud Browser öffnen</string>
+    <string name="browser_open_in_brave">In Brave öffnen</string>
+    <string name="browser_translate_page">Seite übersetzen</string>
+    <string name="browser_view_desktop">Als Desktop anzeigen</string>
+    <string name="browser_view_mobile">Als Mobilgerät anzeigen</string>
 </resources>
