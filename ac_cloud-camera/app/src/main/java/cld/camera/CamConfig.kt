@@ -2015,7 +2015,10 @@ class CamConfig(private val mActivity: MainActivity) {
 
         if (isQRMode) {
             mActivity.qrOverlay.visibility = View.VISIBLE
-            mActivity.thirdOption.visibility = View.INVISIBLE
+            // Idle visibility, not a hardcoded INVISIBLE: on the main camera screen the circle is
+            // already gone, and INVISIBLE would re-reserve its 96dp and open a blank gap above the
+            // Media Center buttons for as long as the scanner is up.
+            mActivity.thirdOption.visibility = mActivity.thirdOptionIdleVisibility
 
             if (scanAllCodes) {
                 mActivity.setFlipCameraIcon(
@@ -2038,7 +2041,9 @@ class CamConfig(private val mActivity: MainActivity) {
             mActivity.micOffIcon.visibility = View.GONE
         } else {
             mActivity.qrOverlay.visibility = View.INVISIBLE
-            mActivity.thirdOption.visibility = View.VISIBLE
+            // Leaving QR mode restores the normal camera UI, and on the idle screen normal no
+            // longer includes the big circle.
+            mActivity.thirdOption.visibility = mActivity.thirdOptionIdleVisibility
             mActivity.setFlipCameraIcon(R.drawable.flip_camera, R.string.flip_camera)
             mActivity.cancelButtonView.visibility = View.VISIBLE
 

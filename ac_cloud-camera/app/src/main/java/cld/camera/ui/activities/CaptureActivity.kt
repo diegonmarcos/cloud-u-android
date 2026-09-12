@@ -40,6 +40,16 @@ open class CaptureActivity : MainActivity() {
     private lateinit var flipCameraContent: ImageView
     lateinit var confirmButton: ImageButton
 
+    /**
+     * INVISIBLE, not GONE, unlike the idle camera screen.
+     *
+     * On a capture-intent screen this frame is not the gallery shortcut that was removed — it is
+     * the preview handed back to whichever app asked for a picture, so it is about to be shown.
+     * Keeping its 96dp reserved while it is hidden means the confirm and retake row under it does
+     * not jump down the moment the preview appears.
+     */
+    override val thirdOptionIdleVisibility: Int get() = View.INVISIBLE
+
     fun isOutputUriAvailable(): Boolean {
         return ::outputUri.isInitialized
     }

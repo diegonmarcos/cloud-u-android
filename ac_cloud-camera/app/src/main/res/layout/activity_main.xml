@@ -352,10 +352,23 @@
                 android:layout_gravity="bottom"
                 android:orientation="vertical">
 
+            <!-- Hidden on the idle camera screen. This frame used to be the big gallery
+                 circle in the bottom right, and the two Media Center buttons below open
+                 that same folder now, so it had become a third way to do what two buttons
+                 already do.
+
+                 It is `gone` rather than deleted because opening the gallery was never its
+                 only job: while a video is recording it IS the take-a-still shutter, and
+                 CaptureActivity / VideoCaptureActivity use this same frame as the
+                 preview-and-confirm surface they hand back to whichever app asked for a
+                 capture. Those two make it visible themselves;
+                 MainActivity.thirdOptionIdleVisibility is what every "put the normal camera
+                 UI back" site restores it to. -->
             <FrameLayout
                 android:id="@+id/third_option"
                 android:layout_width="match_parent"
                 android:layout_height="96dp"
+                android:visibility="gone"
                 android:clickable="true"
                 android:focusable="true"
                 android:layout_gravity="center_horizontal"

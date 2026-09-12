@@ -528,6 +528,61 @@ check("A11 manifest declares <queries> visibility of Constellation",
       "even when Constellation IS installed, and the action never appears; "
       "found %r" % sorted(queried))
 
+# ── A12: the old gallery circle is gone, and cannot creep back ───────
+# Two Media Center buttons now open the folder the big circle used to open, so
+# the circle is hidden. It is not deleted, because opening the gallery was only
+# one of its three jobs: while a video records it is the take-a-still shutter,
+# and the capture-intent activities use the same frame as the preview they hand
+# back to the app that asked for a picture. That is why this is a visibility
+# contract and not a removal, and why it needs guarding — half a dozen places
+# mean "put the normal camera UI back" and any one of them hardcoding VISIBLE
+# would put the circle back on the idle screen.
+check("A12 the layout hides the circle outright",
+      effective(thumb).get("visibility") == "gone",
+      "gone, not invisible: invisible keeps its 96dp and would leave a blank "
+      "gap above the Media Center buttons; found %r"
+      % effective(thumb).get("visibility"))
+
+check("A12 MainActivity owns one overridable idle visibility",
+      re.search(r"open val thirdOptionIdleVisibility[^\n]*View\.GONE", ma_src)
+      is not None,
+      "every restore-the-normal-UI site reads this instead of hardcoding a "
+      "value, which is the only reason the set of those sites can grow safely")
+
+capture_src = strip_kotlin_comments(open(os.path.join(
+    APP, "app/src/main/java/cld/camera/ui/activities/CaptureActivity.kt"),
+    encoding="utf-8").read())
+check("A12 CaptureActivity keeps the space reserved instead",
+      re.search(r"override val thirdOptionIdleVisibility[^\n]*View\.INVISIBLE",
+                capture_src) is not None,
+      "on a capture-intent screen the frame is the preview and is about to "
+      "appear; GONE there would shove the confirm row down when it does")
+
+# The actual regression guard. Only two files may force the circle visible: the
+# recorder, where it becomes the in-video shutter, and VideoCaptureActivity,
+# which shows its own preview in it.
+MAY_SHOW = {
+    "app/src/main/java/cld/camera/capturer/VideoCapturer.kt",
+    "app/src/main/java/cld/camera/ui/activities/VideoCaptureActivity.kt",
+}
+offenders = []
+for root, _dirs, names in os.walk(os.path.join(APP, "app/src/main/java")):
+    for name in names:
+        if not name.endswith(".kt"):
+            continue
+        path = os.path.join(root, name)
+        rel = os.path.relpath(path, APP)
+        body = strip_kotlin_comments(open(path, encoding="utf-8").read())
+        if re.search(r"thirdOption\.visibility\s*=\s*View\.VISIBLE", body) \
+                and rel not in MAY_SHOW:
+            offenders.append(rel)
+
+check("A12 nothing else forces the circle visible",
+      not offenders,
+      "each of these puts the removed button back on the idle camera screen; "
+      "they should assign thirdOptionIdleVisibility instead: %r"
+      % sorted(offenders))
+
 print("\n-- %d assertions, %d failed --" % (checked, len(failures)))
 for f in failures:
     print("   FAILED: %s" % f, file=sys.stderr)

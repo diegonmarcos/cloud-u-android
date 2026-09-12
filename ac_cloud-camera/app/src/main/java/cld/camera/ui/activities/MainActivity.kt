@@ -1960,6 +1960,25 @@ open class MainActivity : AppCompatActivity(),
 
     open fun shouldShowCameraModeTabs() = true
 
+    /**
+     * What [thirdOption] looks like when nothing special is happening.
+     *
+     * The big circle in the bottom right is gone from the idle camera screen: the two Media
+     * Center buttons under it open the same folder, so it had become a third way to do what
+     * two buttons already do. The frame stays in the layout because the gallery was never its
+     * only job — while a video is recording it carries the take-a-still shutter, and the
+     * capture-intent subclasses use the same frame as the preview they hand back to the app
+     * that asked for a capture.
+     *
+     * That leaves several places — the countdown finishing, a QR session ending, a recording
+     * stopping — that all mean "put the normal camera UI back", and normal is not the same
+     * thing in every activity. Each of them asks here instead of hardcoding VISIBLE, so the
+     * circle cannot come back on the idle screen through a path nobody thought about.
+     * [CaptureActivity] overrides this: the capture-intent screens keep the 96dp reserved so
+     * the preview does not shove the buttons under it when it appears.
+     */
+    open val thirdOptionIdleVisibility: Int get() = View.GONE
+
     private fun restartRecordingIfPermissionsWasUnavailable() {
         if (shouldRestartRecording) {
             shouldRestartRecording = false

@@ -103,7 +103,10 @@ class CountDownTimerUI @JvmOverloads constructor(
     private fun beforeTimeStarts() {
 
         mActivity.settingsIcon.visibility = View.INVISIBLE
-        mActivity.thirdOption.visibility = View.INVISIBLE
+        // Already hidden on the idle camera screen, and INVISIBLE here would be a downgrade:
+        // it re-reserves the circle's 96dp and pushes the Media Center buttons down for the
+        // length of the countdown.
+        mActivity.thirdOption.visibility = mActivity.thirdOptionIdleVisibility
         mActivity.flipCameraCircle.visibility = View.INVISIBLE
         mActivity.tabLayout.visibility = View.INVISIBLE
         mActivity.cancelButtonView.visibility = View.INVISIBLE
@@ -133,7 +136,9 @@ class CountDownTimerUI @JvmOverloads constructor(
         if (mActivity !is CaptureActivity) {
             mActivity.cbText.visibility = View.VISIBLE
             mActivity.tabLayout.visibility = View.VISIBLE
-            mActivity.thirdOption.visibility = View.VISIBLE
+            // Not VISIBLE: on the idle camera screen the circle is hidden now, and the
+            // countdown ending is one of the places that used to bring it back.
+            mActivity.thirdOption.visibility = mActivity.thirdOptionIdleVisibility
         } else if (isCancelled) {
             mActivity.cbText.visibility = View.VISIBLE
         }

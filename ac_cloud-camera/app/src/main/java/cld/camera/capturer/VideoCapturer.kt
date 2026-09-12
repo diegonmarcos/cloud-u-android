@@ -355,7 +355,20 @@ class VideoCapturer(private val mActivity: MainActivity) {
         mActivity.captureButton.contentDescription = mActivity.getString(R.string.stop_recording)
 
         if (mActivity.requiresVideoModeOnly) {
-            mActivity.thirdOption.visibility = View.INVISIBLE
+            // Video-only means no stills, so there is no shutter to put in the circle and it
+            // stays hidden. Idle visibility rather than a hardcoded INVISIBLE: VideoCaptureActivity
+            // wants its 96dp reserved for the preview it is about to show, VideoOnlyActivity does
+            // not and reserving it there would push the Media Center buttons down mid-recording.
+            mActivity.thirdOption.visibility = mActivity.thirdOptionIdleVisibility
+        } else {
+            // The circle is gone from the idle screen, so recording is what brings it back — this
+            // is the moment it stops being a gallery shortcut and becomes the take-a-still shutter
+            // (setThirdCircleIcon just below). The Media Center buttons step aside for it: they are
+            // 2x48dp against its 96dp so the column keeps its height and nothing jumps, and
+            // leaving the camera for another app mid-recording is not worth offering.
+            mActivity.thirdOption.visibility = View.VISIBLE
+            mActivity.openMediaCenterVideo.visibility = View.GONE
+            mActivity.openMediaCenterPhoto.visibility = View.GONE
         }
 
         mActivity.settingsDialog.waitForFocusLockSwitch.isEnabled = false
@@ -386,7 +399,12 @@ class VideoCapturer(private val mActivity: MainActivity) {
         mActivity.settingsDialog.enableEISToggle.isEnabled = true
 
         if (mActivity !is VideoCaptureActivity) {
-            mActivity.thirdOption.visibility = View.VISIBLE
+            // Back to the idle camera screen, where the circle is hidden and the two Media Center
+            // buttons it stepped aside for come back. Setting them VISIBLE is a no-op in
+            // VideoOnlyActivity, which never hid them because it never showed the circle.
+            mActivity.thirdOption.visibility = mActivity.thirdOptionIdleVisibility
+            mActivity.openMediaCenterVideo.visibility = View.VISIBLE
+            mActivity.openMediaCenterPhoto.visibility = View.VISIBLE
         }
 
         if (!mActivity.requiresVideoModeOnly) {

@@ -10,6 +10,7 @@ import cld.camera.ui.activities.MainActivity
 import cld.camera.ui.activities.VideoOnlyActivity
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -86,7 +87,12 @@ class SelfTimerRegressionTest {
             scenario.onActivity { activity ->
                 activity.cdTimer.cancelTimer()
 
-                assertEquals(View.INVISIBLE, activity.thirdOption.visibility)
+                // Not VISIBLE, rather than one exact hidden flavour: what this regression is about
+                // is the circle staying hidden, and whether hidden means INVISIBLE or GONE is a
+                // layout decision that MainActivity.thirdOptionIdleVisibility owns and that each
+                // activity overrides. Pinning the flavour here made the test fail on a change that
+                // kept the behaviour it exists to protect.
+                assertNotEquals(View.VISIBLE, activity.thirdOption.visibility)
                 assertEquals(View.INVISIBLE, activity.cancelButtonView.visibility)
                 assertEquals(View.INVISIBLE, activity.cbText.visibility)
             }
