@@ -1,7 +1,6 @@
 package com.diegonmarcos.superapp.launcher
 import com.diegonmarcos.superapp.rss.RssFeedFragment
 import com.diegonmarcos.superapp.settings.LauncherConfigFragment
-import com.diegonmarcos.superapp.cloud.DriveConnectionsFragment
 import com.diegonmarcos.superapp.cloud.C3MeshFragment
 import com.diegonmarcos.superapp.cloud.C3HealthFragment
 import com.diegonmarcos.superapp.cloud.CalendarMonthFragment
@@ -73,7 +72,6 @@ object SectionPages {
         sectionId == "c3"    && pageId == "dagu"        -> OpsPages.fragmentForDagu()
         sectionId == "wg"    && pageId == "status"      -> C3MeshFragment.newInstance()
         sectionId == "feed"  && pageId == "all"         -> RssFeedFragment.newInstance()
-        sectionId == "drive" && pageId == "connections" -> DriveConnectionsFragment.newInstance()
         sectionId == "config" && pageId == "profile"   -> ProfileFragment.newInstance()
         // Configs ▸ AI's FIVE TABS. The `ai` page id itself is not here: it declares `tabs`, so
         // the branch at the top of this `when` already answered it with the shared strip, and a

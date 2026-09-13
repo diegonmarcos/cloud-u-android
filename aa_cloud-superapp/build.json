@@ -395,9 +395,9 @@
           "target": "page:apptabs/grid"
         },
         {
-          "_doc": "Added 2026-09-10 with the edge-menu reorder, because THIS list is what the one-hand action picker offers (OneHandFragment.buildOptions reads circular_menu.actions and nothing else). The left handle's `down` sector now defaults to action:section:drive; with no entry here the picker had no option matching that string, so the spinner fell back to index 0 and displayed a working slot as 'None' — one careless tap away from persisting None over it. The side effect is that Drive also joins the Sirius star's inner ring, which is the contract this file already states: one list, offered by both menus.",
+          "_doc": "Added 2026-09-10 with the edge-menu reorder, because THIS list is what the one-hand action picker offers (OneHandFragment.buildOptions reads circular_menu.actions and nothing else). The left handle's `down` sector defaults to Drive; with no entry here the picker had no option matching that string, so the spinner fell back to index 0 and displayed a working slot as 'None' — one careless tap away from persisting None over it. The two strings must therefore stay identical: task 302/304 retargeted both from action:section:drive to app:com.diegonmarcos.clouddrive when Drive stopped being a section and became its own APK. The side effect is that Drive also joins the Sirius star's inner ring, which is the contract this file already states: one list, offered by both menus.",
           "label": "Drive",
-          "target": "action:section:drive"
+          "target": "app:com.diegonmarcos.clouddrive"
         }
       ],
       "_doc_nodes": "Outer ring of the ALL-APPS (Sirius) star: the LEAF pages, not the five parent sections. No \"section\" key on any of them, so CircularMenu leaves childKey null and a tap navigates straight to the target instead of descending a level. Configs is deliberately absent - it has its own star (Canopus/arc_menu).",
@@ -481,7 +481,7 @@
       {
         "id": "left",
         "edge": "left",
-        "_doc_order": "THE OWNER'S FIRST BLOCK, 2026-09-10: AI Claude / Mail / Instagram / Whatsapp Business / Drive / Gemini, read top to bottom, over the same six non-center sectors the right handle uses. AI Claude moved from down_outer (the last slot, where tasks #111 and #127 put it) to top_outer (the first) — that move is what identifies this block as the LEFT menu rather than the right one. Its target string did NOT change and must not: it is the working Telegram-bot URI documented below. Drive is action:section:drive, the SuperApp's OWN Drive section (ui.sections[id=drive]) — there is no cloud-drive Android application to launch, and the media centre is the right handle's business.",
+        "_doc_order": "THE OWNER'S FIRST BLOCK, 2026-09-10: AI Claude / Mail / Instagram / Whatsapp Business / Drive / Gemini, read top to bottom, over the same six non-center sectors the right handle uses. AI Claude moved from down_outer (the last slot, where tasks #111 and #127 put it) to top_outer (the first) — that move is what identifies this block as the LEFT menu rather than the right one. Its target string did NOT change and must not: it is the working Telegram-bot URI documented below. Drive is app:com.diegonmarcos.clouddrive — task 302/304 lifted the SuperApp's own Drive section out into a real Android application, so there IS one to launch now, and the sector points at the package rather than at a section that no longer exists. The media centre remains the right handle's business.",
         "position_pct": 50,
         "gestures": {
           "top_outer": "action:intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end",
@@ -489,7 +489,7 @@
           "top_middle": "app:com.instagram.android",
           "center": "back",
           "down_middle": "app:com.whatsapp.w4b",
-          "down": "action:section:drive",
+          "down": "app:com.diegonmarcos.clouddrive",
           "down_outer": "app:com.google.android.apps.bard"
         },
         "_doc_top_outer": "top_outer is AI Claude — the same Telegram-bot target the Cloud > Apps tile uses (@Cloud_agent_claude_bot). GestureAction.parse only understands app:/action:/bare-OneHandAction, so the intent:// URL has to travel as an action: payload: parse strips the action: prefix, openInHost forwards the rest verbatim in the shortcut_action extra, and ShellActivity's tile grammar recognises the intent: prefix and hands it to Intent.parseUri. Keep the two targets identical — if the bot handle changes, change it here as well. NOTE: search left this handle in the same commit that reordered it — top_outer used to be action:open_search, which is now the Polaris star at the top of the home screen (onehand.search_star)."
@@ -2408,11 +2408,11 @@
             "title": "Data Apps",
             "tiles": [
               {
-                "_doc": "Drive ▸ Apps (the page id stays `connections`; it is the tab labelled Apps since the four-tab split), relocated here from the C3 Topology index when that row became a pure in-page anchor list. The target is the SAME string the C3 tile carried — page:drive/connections, which SectionPages.factoryFor routes to DriveConnectionsFragment — and this is now its only referrer in build.json, so the page keeps exactly one entry point rather than losing it. Tile id stays `drive-conn`, not `drive`: Cloud ▸ Apps already has a `drive` tile (MyIDE files) in another group.",
+                "_doc": "Drive, the leading tile of Data Apps. It used to be a `page:drive/connections` deep link into an in-app section; task 302/304 lifted those four tabs out into the standalone Cloud Drive APK (ac_cloud-drive, com.diegonmarcos.clouddrive), whose Files tab is a full native local file manager rather than a list of remote back ends. The tile now LAUNCHES that app through the `extapp:` resolver and ui.external_apps.cloud-drive. The tile id is unchanged because the Home tile rows address it by id.",
                 "id": "drive-conn",
                 "label": "Drive",
                 "icon": "ic_p_sol_cloud",
-                "target": "page:drive/connections"
+                "target": "extapp:cloud-drive"
               },
               {
                 "_doc": "Divides Drive from the rest of Data Apps. Drive is about to stop being a page and become its own application (task 302/304), so it is no longer a sibling of Calendar and Contacts — it is the row's entry point. A CHARACTER and not a rule: `separator: true` makes GroupedTilesFragment draw a bare '|', not clickable, not focusable, hidden from accessibility, which is what the owner asked for — \"add this char, not a line, a char!! a seprator\". Same declaration as projects-me-sep-1, so Sections.TileGroup.destinations drops it and no surface that reads tiles as places to go ever offers it.",
@@ -3388,95 +3388,6 @@
             "label": "Settings",
             "icon": "ic_settings",
             "upstream": "DavX5Settings"
-          }
-        ]
-      },
-      {
-        "id": "drive",
-        "label": "Drive",
-        "icon": "ic_drive",
-        "module": null,
-        "supports_accounts": true,
-        "bottom_nav": false,
-        "tabs": true,
-        "drawer_default_children": [
-          "Files",
-          "Apps",
-          "Backups",
-          "Configs"
-        ],
-        "_doc": "Unified file storage hub — fronts filebrowser, photoprism, hedgedoc uploads, etherpad pads, borg/bup backup snapshots PLUS external cloud connections (S3 / Google Drive / Workspace / rclone remotes). Replaces RSS in the bottom-nav.",
-        "_doc_tabs": "Four tabs, in this order: Files | Apps | Backups | Configs. The tab strip is the section's own page list, so the order here IS the tab order and the four tabs are simply the four pages left visible. SectionTabsFragment.MAX_PANES is 4 — it has stable host ids for exactly four panes (values/ids.xml) — which is why this section showed no tabs while it declared nine pages: it was over the cap, not missing a flag. The other five pages (Photos, Recent, Shared, Trash, + Upload) are marked hidden rather than deleted: Sections.kt drops hidden pages from `pages` (so they are not tabs) while keeping them in `allPages` (so routing still resolves them), which is what lets every existing `page:drive/<id>` deep link keep working — `page:drive/connections` from the Cloud ▸ Apps ▸ Data Apps tile above especially. Nothing here needs Kotlin: pages with no special route fall through to PageContentFragment, and the Apps tab's icon row comes from the `apps_from_tile_group` this page already declared.",
-        "pages": [
-          {
-            "id": "files",
-            "label": "Files",
-            "icon": "ic_p_folder",
-            "upstream": "filebrowser",
-            "tabs": [
-              "recent",
-              "shared",
-              "photos",
-              "trash",
-              "upload"
-            ],
-            "_doc_tabs": "The five file views that the four-tab split pushed off the top strip live here as this page's own sub-strip — Recent | Shared | Photos | Trash | + Upload. They are all filebrowser/photoprism views, so Files is where they belong. This is the same page-owns-a-strip mechanism as Configs ▸ Launcher: SectionPages.kt routes a page with a non-empty `tabs` to SectionTabsFragment.forPage, and Sections.tabPagesOf drops the owner's own id so the strip cannot recurse into itself. It also satisfies the reachability rule in test-stack-anchors-declared.sh T8 — owning tabs counts as pointing at them, which is why these five need no dashboard tile."
-          },
-          {
-            "id": "photos",
-            "hidden": true,
-            "label": "Photos",
-            "icon": "ic_p_sol_personal",
-            "upstream": "photoprism"
-          },
-          {
-            "_doc_apps": "The Apps section this page opens with. DERIVED, never retyped: `apps_from_tile_group` names the ONE canonical list — Cloud ▸ Apps ▸ Data Apps, the same tile_groups entry the launcher row renders — so adding an app to that row adds it here, and the two can never drift into disagreeing about what a Data App is. `apps_extra_tile_ids` picks up the strays that belong on this page but live in another group, addressed as `<sectionId>/<tileId>` so the reference says where to look. It is empty today: its one entry was `cloud/pmboards`, and PM Boards was removed from Projects W, which was the only place the tile was ever defined — a reference cannot outlive its referent, and leaving it would have resolved to no tile and gone silently missing from the row. Both resolve to the tiles' own targets, so every icon dispatches through the same grammar the launcher uses and inherits its not-installed handling — see Sections.appTilesFor.",
-            "apps_from_tile_group": "cloud/Data Apps",
-            "apps_extra_tile_ids": [],
-            "id": "connections",
-            "label": "Apps",
-            "icon": "ic_p_sol_cloud",
-            "upstream": "drive-connections"
-          },
-          {
-            "id": "recent",
-            "hidden": true,
-            "label": "Recent",
-            "icon": "ic_p_logs",
-            "upstream": "filebrowser_recent"
-          },
-          {
-            "id": "shared",
-            "hidden": true,
-            "label": "Shared",
-            "icon": "ic_p_contacts",
-            "upstream": "filebrowser_shared"
-          },
-          {
-            "id": "trash",
-            "hidden": true,
-            "label": "Trash",
-            "icon": "ic_p_more",
-            "upstream": "filebrowser_trash"
-          },
-          {
-            "id": "backups",
-            "label": "Backups",
-            "icon": "ic_p_vault_db",
-            "upstream": "borg-server"
-          },
-          {
-            "id": "upload",
-            "hidden": true,
-            "label": "+ Upload",
-            "icon": "ic_p_add",
-            "upstream": "filebrowser_upload"
-          },
-          {
-            "id": "settings",
-            "label": "Configs",
-            "icon": "ic_settings",
-            "upstream": "filebrowser_settings"
           }
         ]
       },
@@ -6127,129 +6038,6 @@
       }
     },
     "_doc_data_snapshots": "C3/Health (public + private services) and C3/Mesh (wg-mesh/v1 snapshot) are NO LONGER hardcoded here — they live in aa_cloud-superapp/data/ as derived snapshots (regenerated via data/regen.sh from cloud-data's _cloud-data-consolidated.json + cloud/a_solutions/bb-net_wireguard-mesh/src/data/mesh.json). app/build.gradle reads those files at bake time and exposes them via BuildConfig.",
-    "_doc_drive_connections": "Listing rendered by Drive · Connections — each external/internal storage backend reachable from the stack. Status today is the declared baseline (planned: live overlay from the cargo-ndk Rust binary).",
-    "drive_connections": [
-      {
-        "name": "MinIO",
-        "kind": "s3",
-        "endpoint": "crawlee_minio:9000",
-        "auth": "access_key + secret",
-        "vm": "oci-apps",
-        "status": "ok",
-        "scope": "private",
-        "notes": "S3-compatible object store for crawlee runs"
-      },
-      {
-        "name": "Google Drive (me@)",
-        "kind": "google-drive",
-        "endpoint": "drive.google.com",
-        "auth": "oauth2 (google-personal-mcp)",
-        "vm": "oci-apps",
-        "status": "ok",
-        "scope": "public",
-        "notes": "Personal Google account via MCP"
-      },
-      {
-        "name": "Google Workspace",
-        "kind": "google-workspace",
-        "endpoint": "workspace.google.com",
-        "auth": "service_account + domain delegation",
-        "vm": "oci-apps",
-        "status": "ok",
-        "scope": "public",
-        "notes": "Docs/Sheets/Slides/Calendar via google-workspace-mcp"
-      },
-      {
-        "name": "rclone (photoprism)",
-        "kind": "rclone",
-        "endpoint": "photoprism_rclone container",
-        "auth": "shared volume",
-        "vm": "oci-apps",
-        "status": "ok",
-        "scope": "private",
-        "notes": "Photoprism originals sync via rclone"
-      },
-      {
-        "name": "Borg backups",
-        "kind": "borg",
-        "endpoint": "borg-server:2224",
-        "auth": "ssh-key",
-        "vm": "—",
-        "status": "ok",
-        "scope": "private",
-        "notes": "Daily encrypted snapshots"
-      },
-      {
-        "name": "Bup backups",
-        "kind": "bup",
-        "endpoint": "bup-server:2223",
-        "auth": "ssh-key",
-        "vm": "—",
-        "status": "ok",
-        "scope": "private",
-        "notes": "Dedup-backed redundant snapshots"
-      },
-      {
-        "name": "Filebrowser (HTTP)",
-        "kind": "http",
-        "endpoint": "files.diegonmarcos.com",
-        "auth": "two_factor",
-        "vm": "oci-apps",
-        "status": "ok",
-        "scope": "public",
-        "notes": "Browser-facing file manager"
-      },
-      {
-        "name": "Vaultwarden attachments",
-        "kind": "https",
-        "endpoint": "vault.diegonmarcos.com",
-        "auth": "two_factor",
-        "vm": "oci-apps",
-        "status": "ok",
-        "scope": "public",
-        "notes": "Attached files inside Bitwarden vault"
-      },
-      {
-        "name": "Photoprism originals",
-        "kind": "fs-volume",
-        "endpoint": "/opt/containers/photoprism/originals",
-        "auth": "fs-perms",
-        "vm": "oci-apps",
-        "status": "ok",
-        "scope": "private",
-        "notes": "Read-only bind mount of master library"
-      },
-      {
-        "name": "Hedgedoc uploads",
-        "kind": "https",
-        "endpoint": "doc.diegonmarcos.com",
-        "auth": "two_factor",
-        "vm": "oci-apps",
-        "status": "ok",
-        "scope": "public",
-        "notes": "Markdown attachments uploaded to docs"
-      },
-      {
-        "name": "Gitea LFS",
-        "kind": "git-lfs",
-        "endpoint": "git.diegonmarcos.com",
-        "auth": "two_factor + token",
-        "vm": "oci-apps",
-        "status": "ok",
-        "scope": "public",
-        "notes": "Large file storage attached to repos"
-      },
-      {
-        "name": "Stalwart mail blobs",
-        "kind": "imap-attachments",
-        "endpoint": "mail-stalwart.diegonmarcos.com",
-        "auth": "imap+jmap",
-        "vm": "oci-mail",
-        "status": "ok",
-        "scope": "public",
-        "notes": "MIME attachments inside JMAP store"
-      }
-    ],
     "_doc_home_groups": "Home master view is organised into themed groups (Home / Cloud / Labs / Configs). The first group 'Home' is a meta-row whose tiles deep-link to the OTHER groups' parents — call it a master index. Each tile's `id` is 'section:<X>' (switch section) or 'page:<section>/<page>' (deep-link), rendered tile_columns-per-row by HomeGroupedFragment. Cloud pulls sections[cloud].tiles_shared (5 category icons); Labs pulls sections[cloud].tiles_labs (6 Lab icons, each opening page:cloud/<lab-id>) via the section/page form tiles_from_section='cloud/labs'. Single source of truth — change this to reshape the Home page, nothing else.",
     "home_groups": [
       {
@@ -7263,6 +7051,16 @@
         "hub_package": "com.diegonmarcos.cloudwriter",
         "install_package": "com.diegonmarcos.cloudwriter",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Writer.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "Cloud Drive (ac_cloud-drive, com.diegonmarcos.clouddrive) — the phone's storage surface as its own icon. It was ui.sections[drive], four tabs deep inside this app; task 302/304 lifted it out, and its Files tab is now a full native local file manager over shared storage rather than a list of remote back ends. Nothing in the SuperApp renders Drive any more: the Data Apps tile and the left handle's `down` sector both launch this package.",
+        "id": "cloud-drive",
+        "label": "Cloud Drive",
+        "folder": "prod_storage",
+        "hub_package": "com.diegonmarcos.clouddrive",
+        "install_package": "com.diegonmarcos.clouddrive",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Drive.apk",
         "forks": {}
       }
     ],

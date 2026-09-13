@@ -100,8 +100,6 @@
     <string name="about_install_action">Instalar esta APK directamente</string>
 
     <!-- Drive · Connections -->
-    <string name="drive_connections_title">Drive · Conexiones</string>
-    <string name="drive_connections_status">%1$d backends · %2$d públicos · %3$d privados (línea base declarada)</string>
     <string name="drive_section_apps">Apps</string>
     <string name="drive_section_configs">Configuración</string>
 

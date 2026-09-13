@@ -1,49 +1,61 @@
 #!/usr/bin/env bash
-# Drive ▸ Connections is TWO sections — Apps, then Configs — and its Apps row
-# is DERIVED from the launcher's own Data Apps group rather than retyped.
+# Drive is no longer a section of this app. Task 302/304 lifted it out into its
+# own APK (ac_cloud-drive, com.diegonmarcos.clouddrive), whose Files tab is a
+# real local file manager rather than a list of remote back ends. Everything the
+# SuperApp still owns about Drive is a LAUNCH: the Data Apps tile and the left
+# handle's `down` sector both fire the package.
 #
-# The failure this exists to catch is an icon grid where some icons silently do
-# nothing. That happens two ways, and both are checkable without a device:
-# a reference that resolves to no tile (nothing renders, or worse, an icon with
-# an empty target), and a tile whose target is not a verb the shell's dispatcher
-# understands (it renders, it is tappable, and the `when` in onTileClicked
-# matches no branch — a dead tap).
+# The failures this exists to catch are the three ways an extraction goes wrong:
+# a surface that was deleted here but still referenced (a tile or a route that
+# resolves to nothing — a dead tap), data that was deleted here and not carried
+# to the app that now owns it (silent loss of the twelve storage back ends), and
+# the one-hand picker pair drifting apart, which is the documented root cause of
+# tasks 111, 127 and 284.
 #
 # What this asserts:
-#   T1  the Data Apps group leads with Drive, and it is the `drive-conn` tile
-#       (target page:drive/connections) — NOT the `drive` tile in Cloud ▸ AGI,
-#       which is MyIDE files and a different page entirely
-#   T2  page:drive/connections still routes to DriveConnectionsFragment
-#   T3  the page declares its Apps row, and every reference resolves to a real
-#       tile — the whole named group, plus each `<section>/<tileId>` extra
-#   T4  every app that lands in that row carries a target the tile dispatcher
-#       has a branch for, so no icon can be inert
+#   T1  the Data Apps group still leads with Drive, and that tile now targets
+#       `extapp:cloud-drive` — NOT the `drive` tile in Cloud ▸ AGI, which is
+#       MyIDE files and a different thing entirely
+#   T2  the extraction is COMPLETE on this side: no `drive` section, no
+#       `drive_connections` panel kind, no DriveConnectionsFragment, no
+#       DRIVE_CONNECTIONS_B64 — a leftover route with no fragment is a crash and
+#       a leftover fragment with no route is dead weight that still compiles
+#   T3  `extapp:cloud-drive` resolves — ui.external_apps carries the entry, with
+#       the real package on both hub_package and install_package, and an APK url
+#       that names its tag explicitly (`/download/<tag>/`, never
+#       `/releases/latest/download/`, which any per-app release hijacks into a
+#       flapping 404)
+#   T4  every app in the Data Apps row carries a target the tile dispatcher has
+#       a branch for, so no icon in that row can be inert
 #   T5  PM Boards stays removed — #311 deleted the tile from Projects W, which
-#       held its only definition, so it may neither return as an extra here nor
-#       be re-created as a copy inside Data Apps
-#   T6  the Configs half is intact — the page still renders every declared
-#       drive_connections backend, i.e. it was relocated, not rewritten
-#   T7  the layout puts Apps before Configs
+#       held its only definition
+#   T6  the twelve back ends were MOVED, not dropped: gone from this build.json,
+#       present in ac_cloud-drive/data/drive-connections.json, and actually
+#       carried into that APK (gradle bakes it, the bridge exposes it, the page
+#       reads it)
+#   T7  the one-hand pair is byte-identical — the left handle's `down` sector and
+#       the matching circular_menu.actions option. When they diverge the picker
+#       finds no match, falls back to index 0 and shows a working slot as 'None',
+#       one tap from persisting None over it
 #   T8  the verb list T4 checks against is READ OUT OF the dispatcher, not
-#       retyped here — a `when` that grows or loses a branch moves the
-#       assertion with it instead of leaving T4 green against a shell that no
-#       longer agrees with it
-#   T9  a tap that reaches launchUri cannot throw out of the click handler.
-#       Notes targets `obsidian://open`, which Intent.parseUri turns into a
-#       plain ACTION_VIEW, and startActivity on that raises
-#       ActivityNotFoundException on any phone without Obsidian installed. An
+#       retyped here — a `when` that grows or loses a branch moves the assertion
+#       with it instead of leaving T4 green against a shell that no longer
+#       agrees with it
+#   T9  a tap that reaches launchUri cannot throw out of the click handler. An
 #       uncaught throw there is a crash on a tap — strictly worse than the icon
 #       doing nothing — so every parse and every launch in that function has to
 #       sit inside a runCatching, and the function has to end by SAYING the tap
 #       failed rather than returning silently.
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
+REPO="$(cd "$APP/.." && pwd)"
 SHELL_KT="$APP/app/src/main/java/com/diegonmarcos/superapp/ShellActivity.kt"
+DRIVE_APP="$REPO/ac_cloud-drive"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  ok: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
-echo "== Drive ▸ Connections: Apps row is derived, and every icon can fire =="
+echo "== Drive lives in its own APK, and nothing here still points at the old one =="
 
 # The verbs the router actually branches on, read off the `when` itself.
 # It lives in routeTarget, which is onTileClicked minus the click bookkeeping
@@ -59,169 +71,189 @@ DISPATCH_PREFIXES="$(
   grep -o 'tileId\.startsWith("[^"]*")' | sed 's/.*("//;s/")//' | sort -u
 )"
 if [ -z "$DISPATCH_PREFIXES" ]; then
-  bad "T8: read no startsWith verbs out of ShellActivity.routeTarget — the
-       function was renamed or restructured, and T4 below is asserting against
-       nothing"
+  bad "T8: read no startsWith prefixes out of routeTarget — T4 would assert nothing"
 else
-  ok "T8: T4 checks against the dispatcher's own verbs: $(printf '%s' "$DISPATCH_PREFIXES" | tr '\n' ' ')"
+  ok "T8: T4 checks against $(printf '%s\n' "$DISPATCH_PREFIXES" | wc -l | tr -d ' ') prefixes read out of routeTarget"
 fi
 
-REPORT="$(python3 - "$APP" $DISPATCH_PREFIXES <<'PY'
+export DISPATCH_PREFIXES
+RESULT="$(python3 - "$APP" "$DRIVE_APP" <<'PY'
 import json, os, sys
 
-app = sys.argv[1]
+app, drive_app = sys.argv[1], sys.argv[2]
 build = json.load(open(os.path.join(app, "build.json")))
-sections = build["ui"]["sections"]
-by_id = {s.get("id"): s for s in sections}
+ui = build["ui"]
+raw = open(os.path.join(app, "build.json")).read()
 
-lines = []
-def emit(kind, msg): lines.append("%s\t%s" % (kind, msg))
+def emit(test, message):
+    print("%s\t%s" % (test, message))
 
-def tiles_of(section_id):
-    out = []
-    for g in by_id.get(section_id, {}).get("tile_groups", []) or []:
-        out += g.get("tiles", []) or []
-    return out
-
-# ── T1 — Drive leads Data Apps, and it is the right Drive ────────────────────
-cloud = by_id.get("cloud", {})
-data_apps = next((g for g in cloud.get("tile_groups", []) or []
-                  if g.get("title") == "Data Apps"), None)
+# ── T1 ────────────────────────────────────────────────────────────────────────
+# The tile row is named by its group, so the assertion is about the group, not
+# about a position in some flattened list. Groups hang off their section.
+all_groups = [(section, group)
+              for section in ui.get("sections", [])
+              for group in section.get("tile_groups", [])]
+data_apps = next((g for s, g in all_groups
+                  if s.get("id") == "cloud" and g.get("title") == "Data Apps"), None)
 if data_apps is None:
-    emit("T1", "Cloud has no 'Data Apps' tile group")
-    data_apps = {"tiles": []}
+    emit("T1", "Cloud ▸ Apps ▸ Data Apps no longer exists — every check below it is vacuous")
+    tiles = []
 else:
-    first = (data_apps.get("tiles") or [{}])[0]
-    if first.get("id") != "drive-conn":
-        emit("T1", "Data Apps leads with '%s', not the Drive tile 'drive-conn'"
-                   % first.get("id"))
-    elif first.get("target") != "page:drive/connections":
-        emit("T1", "the leading Drive tile targets '%s', not page:drive/connections"
-                   % first.get("target"))
-    # The trap: Cloud ▸ AGI has its OWN `drive` tile and it is MyIDE files.
-    agi = next((g for g in cloud.get("tile_groups", []) or []
-                if g.get("title") == "AGI"), {})
-    myide = next((t for t in agi.get("tiles", []) or [] if t.get("id") == "drive"), None)
-    if myide is None:
-        emit("T1", "Cloud ▸ AGI lost its `drive` tile — that one is MyIDE, "
-                   "and nothing in this change should have touched it")
-    elif myide.get("target") != "extapp:cloud-ide/files":
-        emit("T1", "Cloud ▸ AGI's `drive` tile now targets '%s' — MyIDE was "
-                   "changed by mistake for Drive ▸ Connections"
-                   % myide.get("target"))
-
-# ── T3/T5 — the Apps row resolves, exactly as Sections.appTilesFor resolves it
-drive = by_id.get("drive", {})
-page = next((p for p in drive.get("pages", []) or [] if p.get("id") == "connections"), None)
-row = []
-if page is None:
-    emit("T3", "the drive section declares no `connections` page")
-else:
-    ref = page.get("apps_from_tile_group", "")
-    if "/" not in ref:
-        emit("T3", "the page declares no apps_from_tile_group — the Apps "
-                   "section would render nothing")
+    tiles = data_apps.get("tiles", [])
+    if not tiles:
+        emit("T1", "Data Apps declares no tiles")
     else:
-        sec_id, _, title = ref.partition("/")
-        grp = next((g for g in by_id.get(sec_id, {}).get("tile_groups", []) or []
-                    if g.get("title") == title), None)
-        if grp is None:
-            emit("T3", "apps_from_tile_group '%s' names no tile group" % ref)
-        else:
-            row += grp.get("tiles", []) or []
-    for extra in page.get("apps_extra_tile_ids", []) or []:
-        sec_id, _, tile_id = extra.partition("/")
-        hit = next((t for t in tiles_of(sec_id) if t.get("id") == tile_id), None)
-        if hit is None:
-            emit("T3", "apps_extra_tile_ids entry '%s' resolves to no tile — "
-                       "it would be silently missing from the row" % extra)
-        else:
-            row.append(hit)
-    # distinctBy target, same as the Kotlin
-    seen, deduped = set(), []
-    for t in row:
-        if t.get("target") not in seen:
-            seen.add(t.get("target")); deduped.append(t)
-    row = deduped
+        first = tiles[0]
+        if first.get("id") != "drive-conn":
+            emit("T1", "Data Apps leads with %r, not the drive-conn tile" % first.get("id"))
+        if first.get("target") != "extapp:cloud-drive":
+            emit("T1", "the leading Drive tile targets %r — it must launch the extracted "
+                       "APK as extapp:cloud-drive" % first.get("target"))
 
-    # #311 removed PM Boards from Projects W, and Projects W held its only tile
-    # definition — so the `cloud/pmboards` extra this page used to carry is gone
-    # with it. A reference cannot outlive its referent. What stays pinned is the
-    # shape the removal has to keep: the tile must not come back here as an extra
-    # aimed at something the owner deleted, and must not be re-created as a local
-    # copy in Data Apps, which would restore the icon while losing the deletion.
-    if any(t.get("id") == "pmboards" for t in row):
-        emit("T5", "PM Boards is back in the Apps row — #311 removed it from "
-                   "Projects W, which was its only definition")
-    if any(t.get("id") == "pmboards" for t in (data_apps.get("tiles") or [])):
-        emit("T5", "PM Boards was re-created inside Data Apps — #311 deleted "
-                   "the tile, so a copy here is a resurrection, not a reference")
+# The AGI `drive` tile is a different thing (MyIDE files) and must not have been
+# swept up by the rename.
+for _section, group in all_groups:
+    for tile in group.get("tiles", []):
+        if tile.get("id") == "drive" and tile.get("target") == "extapp:cloud-drive":
+            emit("T1", "the Cloud ▸ AGI `drive` tile (MyIDE files) was retargeted at the "
+                       "Drive APK — it is a different page")
 
-# ── T4 — every target in the row is a verb onTileClicked has a branch for ────
-# The `when` in ShellActivity.onTileClicked, handed in by the caller which read
-# it out of the Kotlin. A target matching none of these renders an icon that
-# does nothing at all when tapped.
-PREFIXES = tuple(sys.argv[2:])
-for t in row:
-    if t.get("separator"):
-        # A separator is a label, not a destination. GroupedTilesFragment draws the bare '|' and
-        # never makes it clickable, so demanding a target here demands one that must NOT exist —
-        # a target on a separator would be a tap that goes somewhere off a glyph meant to divide.
-        # Task 303 put the first one in this very row, which is what made this check fail.
-        continue
-    tgt = t.get("target", "")
-    if not tgt:
-        emit("T4", "app '%s' has no target" % t.get("id"))
-    elif not (tgt.startswith(PREFIXES) or "://" in tgt):
-        emit("T4", "app '%s' targets '%s', which no onTileClicked branch matches "
-                   "— the icon would be inert" % (t.get("id"), tgt))
+# ── T2 ────────────────────────────────────────────────────────────────────────
+if any(s.get("id") == "drive" for s in ui.get("sections", [])):
+    emit("T2", "ui.sections still declares a `drive` section — it was lifted into its own APK")
+if "drive_connections" in ui:
+    emit("T2", "ui.drive_connections is still here — the data moved to the Drive app")
 
-emit("INFO", "Apps row (%d): %s" % (len(row), ", ".join(t.get("label", "?") for t in row)))
+src = os.path.join(app, "app/src/main/java/com/diegonmarcos/superapp")
+leftovers = []
+for root, _dirs, files in os.walk(src):
+    for name in files:
+        if not name.endswith(".kt"):
+            continue
+        path = os.path.join(root, name)
+        text = open(path).read()
+        for token in ("DriveConnectionsFragment", "DRIVE_CONNECTIONS_B64",
+                      '"drive_connections"', 'pageId == "connections"'):
+            if token in text:
+                leftovers.append("%s in %s" % (token, os.path.relpath(path, app)))
+for leftover in leftovers:
+    emit("T2", "the extraction left %s behind" % leftover)
 
-# ── T6 — the Configs half still has its data ─────────────────────────────────
-conns = build["ui"].get("drive_connections", [])
-if not conns:
-    emit("T6", "ui.drive_connections is empty — the Configs section lost its data")
+gradle = open(os.path.join(app, "app/build.gradle")).read()
+if "DRIVE_CONNECTIONS_B64" in gradle:
+    emit("T2", "app/build.gradle still bakes DRIVE_CONNECTIONS_B64 from data this app no longer has")
+
+# ── T3 ────────────────────────────────────────────────────────────────────────
+externals = {entry.get("id"): entry for entry in ui.get("external_apps", [])}
+drive = externals.get("cloud-drive")
+if drive is None:
+    emit("T3", "ui.external_apps has no `cloud-drive` entry — every extapp:cloud-drive "
+               "target resolves to nothing")
 else:
-    emit("INFO", "Configs section: %d declared backends" % len(conns))
+    package = "com.diegonmarcos.clouddrive"
+    for field in ("hub_package", "install_package"):
+        if drive.get(field) != package:
+            emit("T3", "cloud-drive.%s is %r, not %r" % (field, drive.get(field), package))
+    url = drive.get("install_apk_url", "")
+    if "/releases/latest/download/" in url:
+        emit("T3", "cloud-drive's APK url uses /releases/latest/download/ — any per-app "
+                   "tagged release hijacks that route into a flapping 404")
+    if "/download/" not in url:
+        emit("T3", "cloud-drive's APK url %r does not name a release asset" % url)
+    folders = {e.get("folder") for e in ui.get("external_apps", []) if e.get("id") != "cloud-drive"}
+    if drive.get("folder") not in folders:
+        emit("T3", "cloud-drive sits in folder %r, which no other external app uses — "
+                   "the launcher has nowhere to file it" % drive.get("folder"))
 
-print("\n".join(lines))
+# ── T4 / T5 ───────────────────────────────────────────────────────────────────
+prefixes = [p for p in os.environ.get("DISPATCH_PREFIXES", "").split("\n") if p]
+for tile in tiles:
+    target = tile.get("target", "")
+    if tile.get("label", "").strip() in ("|", ""):
+        continue                       # the separator character, not an app
+    if not target:
+        emit("T4", "the %r tile in Data Apps carries no target — it renders and does nothing"
+                   % tile.get("id"))
+    elif prefixes and not any(target.startswith(p) for p in prefixes) \
+            and "://" not in target:
+        # routeTarget's last branch is a scheme catch-all: anything carrying
+        # "://" that is not one of the internal verbs goes to launchUri, which
+        # parses it as a URI. That is how the `app://…?fallback=…` tiles
+        # dispatch, so a bare startsWith sweep would call them inert.
+        emit("T4", "the %r tile targets %r, which matches no branch in routeTarget — "
+                   "it renders, it is tappable, and the tap is inert"
+                   % (tile.get("id"), target))
+    if "pmboards" in (tile.get("id") or "").lower():
+        emit("T5", "PM Boards is back in Data Apps — #311 deleted its only definition")
+
+# ── T6 ────────────────────────────────────────────────────────────────────────
+moved = os.path.join(drive_app, "data/drive-connections.json")
+if not os.path.exists(moved):
+    emit("T6", "the twelve storage back ends are gone from here and absent from "
+               "ac_cloud-drive/data/drive-connections.json — the move dropped them")
+else:
+    connections = json.load(open(moved))
+    if not isinstance(connections, list) or not connections:
+        emit("T6", "ac_cloud-drive/data/drive-connections.json holds no back ends")
+    else:
+        required = {"name", "kind", "endpoint", "status"}
+        for entry in connections:
+            missing = required - set(entry)
+            if missing:
+                emit("T6", "the %r back end lost %s in the move"
+                           % (entry.get("name"), ", ".join(sorted(missing))))
+    # Present in the repo is not the same as present in the APK.
+    carriers = [
+        ("app/build.gradle", 'CONNECTIONS_B64'),
+        ("app/src/main/java/com/diegonmarcos/clouddrive/FilesBridge.kt", "fun connections()"),
+        ("app/src/main/assets/drive.html", "Bridge.raw('connections')"),
+    ]
+    for relative, token in carriers:
+        path = os.path.join(drive_app, relative)
+        if not os.path.exists(path) or token not in open(path).read():
+            emit("T6", "the Drive app's %s does not carry %s — the data sits in the repo "
+                       "and never reaches the phone" % (relative, token))
+
+# ── T7 ────────────────────────────────────────────────────────────────────────
+onehand = build.get("onehand", {})
+handles = {h.get("id"): h for h in onehand.get("handles", [])}
+left = handles.get("left", {})
+sector = left.get("gestures", {}).get("down")
+options = [a.get("target") for a in onehand.get("circular_menu", {}).get("actions", [])]
+if sector is None:
+    emit("T7", "the left handle declares no `down` sector")
+elif sector not in options:
+    emit("T7", "the left handle's `down` sector is %r and circular_menu.actions offers "
+               "%r — the picker finds no match, falls back to index 0 and shows a working "
+               "slot as 'None'" % (sector, options))
+elif "clouddrive" not in sector:
+    emit("T7", "the left handle's `down` sector is %r — it used to open Drive and must "
+               "now launch the extracted package" % sector)
 PY
-)" || { echo "  FAIL: checker crashed"; exit 1; }
+)" || { echo "  FAIL: the build.json checker crashed"; exit 1; }
 
-for t in T1 T3 T4 T5 T6; do
-  hits="$(printf '%s\n' "$REPORT" | grep -c "^$t	" || true)"
-  if [ "$hits" -eq 0 ]; then
-    ok "$t: no violations"
+for label in T1 T2 T3 T4 T5 T6 T7; do
+  lines="$(printf '%s\n' "$RESULT" | awk -F'\t' -v t="$label" '$1==t {print $2}')"
+  if [ -z "$lines" ]; then
+    case "$label" in
+      T1) ok "T1: Data Apps leads with the Drive tile, and it launches extapp:cloud-drive" ;;
+      T2) ok "T2: the Drive section, its data, its fragment and its BuildConfig field are all gone" ;;
+      T3) ok "T3: extapp:cloud-drive resolves to a real external app with a tagged APK url" ;;
+      T4) ok "T4: every Data Apps tile carries a target routeTarget has a branch for" ;;
+      T5) ok "T5: PM Boards stays removed" ;;
+      T6) ok "T6: the twelve back ends moved to the Drive app and reach its APK" ;;
+      T7) ok "T7: the left handle's down sector and its picker option are byte-identical" ;;
+    esac
   else
-    printf '%s\n' "$REPORT" | grep "^$t	" | cut -f2- | sed 's/^/    /'
-    bad "$t: $hits violation(s)"
+    printf '%s\n' "$lines" | sed 's/^/    /'
+    bad "$label"
   fi
 done
-printf '%s\n' "$REPORT" | grep '^INFO	' | cut -f2- | sed 's/^/  ..  /'
 
-echo "== the page route still lands on the fragment that renders it =="
-SP="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt"
-if grep -q 'sectionId == "drive" && pageId == "connections" -> DriveConnectionsFragment' "$SP"; then
-  ok "T2: page:drive/connections -> DriveConnectionsFragment"
-else
-  bad "T2: SectionPages.factoryFor no longer routes drive/connections"
-fi
-
-echo "== Apps is drawn above Configs =="
-LAYOUT="$APP/app/src/main/res/layout/fragment_drive_connections.xml"
-A="$(grep -n 'drive_apps_header'    "$LAYOUT" | head -1 | cut -d: -f1)"
-C="$(grep -n 'drive_configs_header' "$LAYOUT" | head -1 | cut -d: -f1)"
-R="$(grep -n 'drive_root'           "$LAYOUT" | head -1 | cut -d: -f1)"
-if [ -n "$A" ] && [ -n "$C" ] && [ -n "$R" ] && [ "$A" -lt "$C" ] && [ "$C" -lt "$R" ]; then
-  ok "T7: Apps header, then Configs header, then the backend list"
-else
-  bad "T7: layout order is Apps($A) Configs($C) list($R) — expected ascending"
-fi
-
-echo "== a tap that leaves the app grammar cannot crash it =="
-# Notes is `obsidian://open`. Intent.parseUri turns a non-`intent:` URI into a
-# plain ACTION_VIEW, and startActivity on that throws ActivityNotFoundException
+# ── T9 ────────────────────────────────────────────────────────────────────────
+# Notes targets `obsidian://open`, which Intent.parseUri turns into a plain
+# ACTION_VIEW, and startActivity on that raises ActivityNotFoundException
 # on every phone that does not have Obsidian. The same is true of the app://
 # branch's store fallback and of any intent:// whose browser_fallback_url has
 # no handler either. Guarding them is not optional: an uncaught throw on the

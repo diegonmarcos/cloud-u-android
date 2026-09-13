@@ -176,7 +176,7 @@ class SectionMenuFragment : Fragment() {
                             }
                         }
                         panel.title.isNotBlank() -> {
-                            // Non-link panel (c3_public, drive_connections,
+                            // Non-link panel (c3_public, notification_center,
                             // rss, …). Surface title; tap re-opens body.
                             val panelItemId = id++
                             val panelItem = menu.add(groupId, panelItemId, Menu.NONE, panel.title)

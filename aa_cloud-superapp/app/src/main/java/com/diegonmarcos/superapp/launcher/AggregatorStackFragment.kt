@@ -13,7 +13,6 @@ import com.diegonmarcos.superapp.cloud.TasksFragment
 import com.diegonmarcos.superapp.cloud.GitHubFeed
 import com.diegonmarcos.superapp.cloud.GiteaFeed
 import com.diegonmarcos.superapp.cloud.DaguRunsFeed
-import com.diegonmarcos.superapp.cloud.DriveConnectionsFragment
 import com.diegonmarcos.superapp.cloud.C3MeshFragment
 import com.diegonmarcos.superapp.cloud.C3HealthFragment
 
@@ -55,7 +54,6 @@ import kotlinx.coroutines.withContext
  *   wg_mesh                   → embedded [C3MeshFragment]
  *   rss                       → embedded [RssFeedFragment]
  *   notification_center       → per-app grouped notification list, inline views
- *   drive_connections         → embedded [DriveConnectionsFragment]
  *   linktree_slide            → grouped link grid sourced from data/linktree.json
  *   link_grid                 → grouped link grid declared inline in build.json
  *   tile_row                  → inline mini-tile row (deep links into sections)
@@ -683,7 +681,6 @@ class AggregatorStackFragment : Fragment(),
         "calendar_month"     -> embedChild(body, CalendarMonthFragment.newInstance())
         "calendar_agenda"    -> embedChild(body, CalendarAgendaFragment.newInstance())
         "tasks"              -> embedChild(body, TasksFragment.newInstance())
-        "drive_connections"  -> embedChild(body, DriveConnectionsFragment.newInstance())
         "linktree_slide"     -> renderLinktreeSlide(ctx, body, panel.slideId)
         "link_grid"          -> renderLinkGrid(ctx, body, panel.columns, panel.links)
         "tile_row"           -> renderTileRow(body, panel.tiles)

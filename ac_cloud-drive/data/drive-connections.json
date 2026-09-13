@@ -1,0 +1,122 @@
+[
+  {
+    "name": "MinIO",
+    "kind": "s3",
+    "endpoint": "crawlee_minio:9000",
+    "auth": "access_key + secret",
+    "vm": "oci-apps",
+    "status": "ok",
+    "scope": "private",
+    "notes": "S3-compatible object store for crawlee runs"
+  },
+  {
+    "name": "Google Drive (me@)",
+    "kind": "google-drive",
+    "endpoint": "drive.google.com",
+    "auth": "oauth2 (google-personal-mcp)",
+    "vm": "oci-apps",
+    "status": "ok",
+    "scope": "public",
+    "notes": "Personal Google account via MCP"
+  },
+  {
+    "name": "Google Workspace",
+    "kind": "google-workspace",
+    "endpoint": "workspace.google.com",
+    "auth": "service_account + domain delegation",
+    "vm": "oci-apps",
+    "status": "ok",
+    "scope": "public",
+    "notes": "Docs/Sheets/Slides/Calendar via google-workspace-mcp"
+  },
+  {
+    "name": "rclone (photoprism)",
+    "kind": "rclone",
+    "endpoint": "photoprism_rclone container",
+    "auth": "shared volume",
+    "vm": "oci-apps",
+    "status": "ok",
+    "scope": "private",
+    "notes": "Photoprism originals sync via rclone"
+  },
+  {
+    "name": "Borg backups",
+    "kind": "borg",
+    "endpoint": "borg-server:2224",
+    "auth": "ssh-key",
+    "vm": "—",
+    "status": "ok",
+    "scope": "private",
+    "notes": "Daily encrypted snapshots"
+  },
+  {
+    "name": "Bup backups",
+    "kind": "bup",
+    "endpoint": "bup-server:2223",
+    "auth": "ssh-key",
+    "vm": "—",
+    "status": "ok",
+    "scope": "private",
+    "notes": "Dedup-backed redundant snapshots"
+  },
+  {
+    "name": "Filebrowser (HTTP)",
+    "kind": "http",
+    "endpoint": "files.diegonmarcos.com",
+    "auth": "two_factor",
+    "vm": "oci-apps",
+    "status": "ok",
+    "scope": "public",
+    "notes": "Browser-facing file manager"
+  },
+  {
+    "name": "Vaultwarden attachments",
+    "kind": "https",
+    "endpoint": "vault.diegonmarcos.com",
+    "auth": "two_factor",
+    "vm": "oci-apps",
+    "status": "ok",
+    "scope": "public",
+    "notes": "Attached files inside Bitwarden vault"
+  },
+  {
+    "name": "Photoprism originals",
+    "kind": "fs-volume",
+    "endpoint": "/opt/containers/photoprism/originals",
+    "auth": "fs-perms",
+    "vm": "oci-apps",
+    "status": "ok",
+    "scope": "private",
+    "notes": "Read-only bind mount of master library"
+  },
+  {
+    "name": "Hedgedoc uploads",
+    "kind": "https",
+    "endpoint": "doc.diegonmarcos.com",
+    "auth": "two_factor",
+    "vm": "oci-apps",
+    "status": "ok",
+    "scope": "public",
+    "notes": "Markdown attachments uploaded to docs"
+  },
+  {
+    "name": "Gitea LFS",
+    "kind": "git-lfs",
+    "endpoint": "git.diegonmarcos.com",
+    "auth": "two_factor + token",
+    "vm": "oci-apps",
+    "status": "ok",
+    "scope": "public",
+    "notes": "Large file storage attached to repos"
+  },
+  {
+    "name": "Stalwart mail blobs",
+    "kind": "imap-attachments",
+    "endpoint": "mail-stalwart.diegonmarcos.com",
+    "auth": "imap+jmap",
+    "vm": "oci-mail",
+    "status": "ok",
+    "scope": "public",
+    "notes": "MIME attachments inside JMAP store"
+  }
+]

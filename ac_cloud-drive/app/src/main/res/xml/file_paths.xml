@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What FilesBridge is allowed to hand to another app through Open with / Share. The same
+     ground FilesBridge.roots browses: shared external storage plus the app's own directories.
+     Nothing here widens what the bridge can reach - it only lets an already-listed file be
+     named as a content:// URI. -->
+<paths>
+    <external-path name="shared" path="." />
+    <external-files-path name="app" path="." />
+    <cache-path name="cache" path="." />
+</paths>

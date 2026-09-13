@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Cloud Drive</title>
+    <script src="vendor/tailwind.js"></script>
+    <style>
+        :root {
+            /* MainActivity overwrites these with the measured window insets. The env() values are
+               the fallback for a desktop browser, where Chromium reports only the display cutout. */
+            --sat: env(safe-area-inset-top, 0px);
+            --sab: env(safe-area-inset-bottom, 0px);
+            --sal: env(safe-area-inset-left, 0px);
+            --sar: env(safe-area-inset-right, 0px);
+        }
+
+        html, body { margin: 0; padding: 0; background: #ffffff; height: 100%; }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            color: #111;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
+        }
+
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Full-bleed app shell: the WebView IS the screen, no device bezel. */
+        .app-container {
+            width: 100%;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            padding-left: var(--sal);
+            padding-right: var(--sar);
+        }
+
+        .app-header { padding-top: var(--sat); }
+        .tab-bar { padding-bottom: var(--sab); }
+
+        .tab-button.active { color: #2563eb; border-color: #2563eb; }
+        .tab-button { color: #6b7280; border-color: transparent; }
+
+        .row:active { background: #f3f4f6; }
+        .row.selected { background: #eff6ff; }
+
+        /* One line, ellipsised: a long file name must not push the size column off screen. */
+        .clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+
+    <header class="app-header sticky top-0 z-20 bg-white border-b border-gray-200">
+        <div class="flex items-center justify-between px-4 h-12">
+            <h1 class="text-base font-semibold">Cloud Drive</h1>
+            <div id="header-actions" class="flex items-center gap-3 text-gray-500"></div>
+        </div>
+    </header>
+
+    <main id="panel" class="flex-1 overflow-y-auto hide-scrollbar"></main>
+
+    <!-- Files | Apps | Backups | Configs. The separator between Files and the rest is a plain
+         character, matching how the SuperApp's Data Apps row marks the same boundary. -->
+    <nav class="tab-bar sticky bottom-0 z-20 bg-white border-t border-gray-200 flex">
+        <button data-tab="files"   class="tab-button active flex-1 py-3 text-sm font-medium border-t-2">Files</button>
+        <span class="self-center text-gray-300 select-none">|</span>
+        <button data-tab="apps"    class="tab-button flex-1 py-3 text-sm font-medium border-t-2">Apps</button>
+        <button data-tab="backups" class="tab-button flex-1 py-3 text-sm font-medium border-t-2">Backups</button>
+        <button data-tab="configs" class="tab-button flex-1 py-3 text-sm font-medium border-t-2">Configs</button>
+    </nav>
+</div>
+
+<script>
+/* ── bridge ──────────────────────────────────────────────────────────────────────
+   Every call into FilesBridge returns a JSON string. Missing bridge (a desktop browser
+   opening the asset directly) is answered with a failure rather than a thrown
+   TypeError, so the page still renders and says why it is empty. */
+const Bridge = {
+    available: typeof FilesBridge !== 'undefined',
+    call(name, ...args) {
+        if (!this.available) return { ok: false, error: 'the storage bridge is not attached' };
+        try {
+            return JSON.parse(FilesBridge[name](...args));
+        } catch (error) {
+            return { ok: false, error: String(error) };
+        }
+    },
+    raw(name, ...args) {
+        if (!this.available) return null;
+        try { return FilesBridge[name](...args); } catch (error) { return null; }
+    }
+};
+
+const state = {
+    tab: 'files',
+    path: '',
+    parent: '',
+    entries: [],
+    selection: new Set(),
+    clipboard: { paths: [], move: false },
+    sort: 'name',
+    descending: false,
+    showHidden: false
+};
+
+const panel = document.getElementById('panel');
+const headerActions = document.getElementById('header-actions');
+
+/* ── formatting ─────────────────────────────────────────────────────────────── */
+
+function humanSize(bytes) {
+    if (!bytes) return '—';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let value = bytes, unit = 0;
+    while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit++; }
+    return (unit === 0 ? value : value.toFixed(1)) + ' ' + units[unit];
+}
+
+function humanDate(millis) {
+    if (!millis) return '';
+    const date = new Date(millis);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+/** A folder, or a glyph standing in for the file's kind. No icon font is vendored. */
+function glyphFor(entry) {
+    if (entry.directory) return '📁';
+    const mime = entry.mime || '';
+    if (mime.startsWith('image/')) return '🖼️';
+    if (mime.startsWith('video/')) return '🎬';
+    if (mime.startsWith('audio/')) return '🎵';
+    if (mime.startsWith('text/')) return '📄';
+    if (mime.indexOf('pdf') >= 0) return '📕';
+    if (mime.indexOf('zip') >= 0 || mime.indexOf('compressed') >= 0) return '🗜️';
+    return '📄';
+}
+
+/* ── files tab ──────────────────────────────────────────────────────────────── */
+
+function openDirectory(path) {
+    const result = Bridge.call('list', path, state.sort, state.descending, state.showHidden);
+    if (!result.ok) { renderFilesError(result.error); return; }
+    state.path = result.path;
+    state.parent = result.parent;
+    state.entries = result.entries;
+    state.selection.clear();
+    renderFiles();
+}
+
+function renderFilesError(message) {
+    panel.innerHTML =
+        '<div class="p-6 text-center text-sm text-gray-500">' + escapeHtml(message) + '</div>';
+    renderHeaderActions();
+}
+
+function renderPermissionPrompt() {
+    panel.innerHTML =
+        '<div class="p-6 space-y-4 text-center">' +
+        '<div class="text-4xl">🔒</div>' +
+        '<p class="text-sm text-gray-600">Cloud Drive manages the files on this phone, so Android ' +
+        'needs you to allow management of all files. Nothing is read until you do.</p>' +
+        '<button id="grant" class="px-4 py-2 rounded bg-blue-600 text-white text-sm font-medium">' +
+        'Open the Android setting</button></div>';
+    document.getElementById('grant').onclick = () => Bridge.call('requestStorageAccess');
+    headerActions.innerHTML = '';
+}
+
+function renderPlaces() {
+    let places = [];
+    try { places = JSON.parse(Bridge.raw('places') || '[]'); } catch (error) { places = []; }
+    if (!places.length) return '';
+    return '<div class="flex gap-2 px-4 py-2 overflow-x-auto hide-scrollbar border-b border-gray-100">' +
+        places.map(place =>
+            '<button class="place shrink-0 px-3 py-1 rounded-full bg-gray-100 text-xs" ' +
+            'data-path="' + escapeHtml(place.path) + '">' + escapeHtml(place.label) + '</button>'
+        ).join('') + '</div>';
+}
+
+function renderUsage() {
+    const usage = Bridge.call('usage', state.path);
+    if (!usage.ok || !usage.total) return '';
+    const used = usage.total - usage.free;
+    const percent = Math.round(used / usage.total * 100);
+    return '<div class="px-4 py-2 border-b border-gray-100">' +
+        '<div class="h-1 rounded bg-gray-200 overflow-hidden">' +
+        '<div class="h-full bg-blue-500" style="width:' + percent + '%"></div></div>' +
+        '<div class="mt-1 text-[11px] text-gray-500">' + humanSize(used) + ' of ' +
+        humanSize(usage.total) + ' used</div></div>';
+}
+
+function renderFiles() {
+    const crumbs = state.path.split('/').filter(Boolean);
+    const rows = state.entries.map((entry, index) =>
+        '<div class="row flex items-center gap-3 px-4 py-2 border-b border-gray-50 ' +
+        (state.selection.has(entry.path) ? 'selected' : '') + '" data-index="' + index + '">' +
+        '<span class="text-xl">' + glyphFor(entry) + '</span>' +
+        '<div class="flex-1 min-w-0">' +
+        '<div class="clip text-sm">' + escapeHtml(entry.name) + '</div>' +
+        '<div class="text-[11px] text-gray-500">' +
+        (entry.directory ? 'folder' : humanSize(entry.size)) + ' · ' + humanDate(entry.modified) +
+        '</div></div>' +
+        '<button class="more px-2 text-gray-400" data-index="' + index + '">⋮</button>' +
+        '</div>'
+    ).join('');
+
+    panel.innerHTML =
+        renderPlaces() +
+        '<div class="px-4 py-2 text-[11px] text-gray-500 clip">/' + escapeHtml(crumbs.join(' / ')) + '</div>' +
+        renderUsage() +
+        (state.entries.length
+            ? rows
+            : '<div class="p-6 text-center text-sm text-gray-400">This folder is empty</div>') +
+        renderSelectionBar();
+
+    bindFileRows();
+    renderHeaderActions();
+}
+
+function renderSelectionBar() {
+    const count = state.selection.size;
+    const pending = state.clipboard.paths.length;
+    if (!count && !pending) return '';
+    return '<div class="sticky bottom-0 bg-gray-900 text-white flex items-center gap-3 px-4 py-2 text-sm">' +
+        (count ? '<span>' + count + ' selected</span>' +
+            '<button id="act-copy" class="ml-auto">Copy</button>' +
+            '<button id="act-move">Move</button>' +
+            '<button id="act-delete" class="text-red-300">Delete</button>'
+            : '<span>' + pending + ' ready to ' + (state.clipboard.move ? 'move' : 'copy') + '</span>' +
+            '<button id="act-paste" class="ml-auto">Paste here</button>' +
+            '<button id="act-cancel">Cancel</button>') +
+        '</div>';
+}
+
+function bindFileRows() {
+    panel.querySelectorAll('.place').forEach(button => {
+        button.onclick = () => openDirectory(button.dataset.path);
+    });
+    panel.querySelectorAll('.row').forEach(row => {
+        const entry = state.entries[Number(row.dataset.index)];
+        row.onclick = () => {
+            if (state.selection.size) { toggleSelection(entry); return; }
+            if (entry.directory) openDirectory(entry.path);
+            else reportFailure(Bridge.call('open', entry.path));
+        };
+        // Long-press starts a selection, the way every file manager on this phone does.
+        let timer = null;
+        row.addEventListener('touchstart', () => {
+            timer = setTimeout(() => toggleSelection(entry), 450);
+        }, { passive: true });
+        ['touchend', 'touchmove', 'touchcancel'].forEach(event =>
+            row.addEventListener(event, () => clearTimeout(timer), { passive: true }));
+    });
+    panel.querySelectorAll('.more').forEach(button => {
+        button.onclick = event => {
+            event.stopPropagation();
+            showEntryMenu(state.entries[Number(button.dataset.index)]);
+        };
+    });
+
+    const bind = (id, handler) => { const el = document.getElementById(id); if (el) el.onclick = handler; };
+    bind('act-copy', () => stageTransfer(false));
+    bind('act-move', () => stageTransfer(true));
+    bind('act-delete', deleteSelection);
+    bind('act-paste', pasteHere);
+    bind('act-cancel', () => { state.clipboard = { paths: [], move: false }; renderFiles(); });
+}
+
+function toggleSelection(entry) {
+    if (state.selection.has(entry.path)) state.selection.delete(entry.path);
+    else state.selection.add(entry.path);
+    renderFiles();
+}
+
+function stageTransfer(move) {
+    state.clipboard = { paths: [...state.selection], move: move };
+    state.selection.clear();
+    renderFiles();
+}
+
+function pasteHere() {
+    const result = Bridge.call('transfer',
+        JSON.stringify(state.clipboard.paths), state.path, state.clipboard.move);
+    state.clipboard = { paths: [], move: false };
+    reportFailure(result);
+    openDirectory(state.path);
+}
+
+function deleteSelection() {
+    const paths = [...state.selection];
+    if (!paths.length) return;
+    if (!confirm('Delete ' + paths.length + ' item' + (paths.length > 1 ? 's' : '') + '? This cannot be undone.')) return;
+    reportFailure(Bridge.call('delete', JSON.stringify(paths)));
+    openDirectory(state.path);
+}
+
+function showEntryMenu(entry) {
+    const action = prompt(
+        entry.name + '\n\n1 Open\n2 Share\n3 Rename\n4 Delete\n5 Details\n\nType a number:');
+    if (!action) return;
+    if (action === '1') reportFailure(Bridge.call('open', entry.path));
+    else if (action === '2') reportFailure(Bridge.call('share', entry.path));
+    else if (action === '3') {
+        const name = prompt('New name', entry.name);
+        if (name) { reportFailure(Bridge.call('rename', entry.path, name)); openDirectory(state.path); }
+    } else if (action === '4') {
+        if (confirm('Delete ' + entry.name + '? This cannot be undone.')) {
+            reportFailure(Bridge.call('delete', JSON.stringify([entry.path])));
+            openDirectory(state.path);
+        }
+    } else if (action === '5') {
+        const detail = Bridge.call('info', entry.path);
+        alert(detail.ok
+            ? entry.name + '\n\n' + (detail.directory
+                ? detail.children + ' items'
+                : humanSize(detail.size)) +
+                '\n' + humanDate(detail.modified) +
+                '\n' + detail.mime +
+                '\n' + (detail.writable ? 'writable' : 'read only')
+            : detail.error);
+    }
+}
+
+/** Only speaks up when something went wrong: a silent failure is what makes a bridge feel broken. */
+function reportFailure(result) {
+    if (result && result.ok === false && result.error) alert(result.error);
+}
+
+function renderHeaderActions() {
+    if (state.tab !== 'files') { headerActions.innerHTML = ''; return; }
+    headerActions.innerHTML =
+        (state.parent ? '<button id="up" title="Up">⬆️</button>' : '') +
+        '<button id="new-folder" title="New folder">➕</button>' +
+        '<button id="sort" title="Sort">↕️</button>';
+    const up = document.getElementById('up');
+    if (up) up.onclick = () => openDirectory(state.parent);
+    document.getElementById('new-folder').onclick = () => {
+        const name = prompt('Folder name');
+        if (name) { reportFailure(Bridge.call('createFolder', state.path, name)); openDirectory(state.path); }
+    };
+    document.getElementById('sort').onclick = () => {
+        const answer = prompt('Sort by\n\n1 Name\n2 Size\n3 Modified\n4 Type\n5 Reverse\n6 Show hidden files');
+        if (answer === '1') state.sort = 'name';
+        else if (answer === '2') state.sort = 'size';
+        else if (answer === '3') state.sort = 'modified';
+        else if (answer === '4') state.sort = 'type';
+        else if (answer === '5') state.descending = !state.descending;
+        else if (answer === '6') state.showHidden = !state.showHidden;
+        else return;
+        openDirectory(state.path);
+    };
+}
+
+/* ── the other three tabs ───────────────────────────────────────────────────── */
+
+function card(title, body) {
+    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-200">' +
+        '<div class="text-sm font-medium">' + escapeHtml(title) + '</div>' +
+        '<div class="mt-1 text-xs text-gray-500">' + body + '</div></div>';
+}
+
+/* The storage back ends, baked in from data/drive-connections.json. Read once: it is build-time
+   data, so it cannot change while the app is open. Borg and Bup are backup repositories rather
+   than live storage, which is exactly the Apps/Backups split — one list, one predicate, no second
+   copy of the data to keep in step. */
+const BACKUP_KINDS = ['borg', 'bup'];
+
+let connectionsCache = null;
+function connections() {
+    if (connectionsCache === null) {
+        const raw = Bridge.raw('connections');
+        try {
+            connectionsCache = raw ? JSON.parse(raw) : [];
+        } catch (error) {
+            connectionsCache = [];
+        }
+    }
+    return connectionsCache;
+}
+
+function connectionCard(entry) {
+    const light = entry.status === 'ok' ? 'bg-green-500'
+        : entry.status === 'down' ? 'bg-red-500' : 'bg-gray-400';
+    const facts = [
+        ['Kind', entry.kind],
+        ['Where', entry.endpoint],
+        ['Auth', entry.auth],
+        ['Host', entry.vm],
+        ['Scope', entry.scope]
+    ].filter(pair => pair[1]).map(pair =>
+        '<div class="flex gap-2"><span class="w-12 shrink-0 text-gray-400">' + pair[0] + '</span>' +
+        '<span class="break-all">' + escapeHtml(String(pair[1])) + '</span></div>').join('');
+    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-200">' +
+        '<div class="flex items-center gap-2">' +
+        '<span class="w-2 h-2 rounded-full ' + light + '"></span>' +
+        '<span class="text-sm font-medium">' + escapeHtml(entry.name || 'Unnamed') + '</span></div>' +
+        '<div class="mt-2 text-xs text-gray-500 space-y-0.5">' + facts + '</div>' +
+        (entry.notes
+            ? '<div class="mt-2 text-xs text-gray-400">' + escapeHtml(entry.notes) + '</div>'
+            : '') +
+        '</div>';
+}
+
+function renderConnections(wanted, emptyMessage) {
+    const rows = connections().filter(entry =>
+        wanted === BACKUP_KINDS.includes(entry.kind));
+    panel.innerHTML = rows.length
+        ? '<div class="pt-2">' + rows.map(connectionCard).join('') + '</div>'
+        : '<div class="pt-2">' + card('Nothing here', emptyMessage) + '</div>';
+    headerActions.innerHTML = '';
+}
+
+function renderApps() {
+    renderConnections(false, 'No storage back ends are declared in this build.');
+}
+
+function renderBackups() {
+    renderConnections(true, 'No backup repositories are declared in this build.');
+}
+
+function renderConfigs() {
+    const granted = Bridge.available && Bridge.raw('hasStorageAccess') === true;
+    panel.innerHTML =
+        '<div class="pt-2">' +
+        card('All-files access', granted
+            ? 'Granted — the Files tab can manage this phone\'s storage.'
+            : 'Not granted. <button id="cfg-grant" class="underline text-blue-600">Open the Android setting</button>') +
+        card('Default sort', escapeHtml(state.sort) + (state.descending ? ', descending' : ', ascending')) +
+        card('Hidden files', state.showHidden ? 'Shown' : 'Hidden') +
+        '</div>';
+    const grant = document.getElementById('cfg-grant');
+    if (grant) grant.onclick = () => Bridge.call('requestStorageAccess');
+    headerActions.innerHTML = '';
+}
+
+/* ── shell ──────────────────────────────────────────────────────────────────── */
+
+function showTab(tab) {
+    state.tab = tab;
+    document.querySelectorAll('.tab-button').forEach(button =>
+        button.classList.toggle('active', button.dataset.tab === tab));
+    if (tab === 'files') {
+        if (Bridge.available && Bridge.raw('hasStorageAccess') !== true) renderPermissionPrompt();
+        else if (state.path) renderFiles();
+        else startAtFirstPlace();
+    } else if (tab === 'apps') renderApps();
+    else if (tab === 'backups') renderBackups();
+    else renderConfigs();
+}
+
+function startAtFirstPlace() {
+    let places = [];
+    try { places = JSON.parse(Bridge.raw('places') || '[]'); } catch (error) { places = []; }
+    if (!places.length) { renderFilesError('No storage is readable on this phone.'); return; }
+    openDirectory(places[0].path);
+}
+
+document.querySelectorAll('.tab-button').forEach(button => {
+    button.onclick = () => showTab(button.dataset.tab);
+});
+
+// The hardware back button: step up a directory before leaving the app.
+window.addEventListener('popstate', () => {
+    if (state.tab === 'files' && state.parent) { openDirectory(state.parent); history.pushState(null, ''); }
+});
+history.pushState(null, '');
+
+showTab('files');
+</script>
+</body>
+</html>
