@@ -94,19 +94,27 @@ CLOUD_TILE_TARGET="extapp:cloud-camera"
 SAMSUNG_PKG="com.sec.android.app.camera"
 OPUS_PKG="pl.mobimax.cameraopus"
 
-echo "== T1: Camera is the LAST tile of Cloud ▸ Apps ▸ Tools Primary =="
-# Read the last element, not a membership test. Appending anything after the
-# Camera tile is the failure; so is a future `sort_by` in GroupedTilesFragment,
-# which T2 is here to notice.
-LAST="$(jq -r '
+echo "== T1: Camera sits at the owner's declared place in Cloud ▸ Apps ▸ Tools Primary =="
+# Read the whole row in array order, not a membership test: array position IS
+# render position, so the order in build.json is the order on the screen, and a
+# future `sort_by` in GroupedTilesFragment would show up here as well as in T2.
+# This pinned Camera as the LAST element until the owner named the full order on
+# 2026-09-13 — Me, Wallet, Keyboard, Writer, Browser, Navigation, Camera, C3 —
+# which moves Camera to seventh of eight and puts C3 behind it. The requirement
+# never was "Camera is last"; it was "Camera is where he put it", and the
+# stronger check is to pin every neighbour rather than only the tail.
+WANT_ROW="Me,Wallet,Keyboard,Writer,Browser,Navigation,Camera,C3"
+GOT_ROW="$(jq -r '
   .ui.sections[] | select(.id == "cloud")
   | .tile_groups[] | select(.title == "Tools Primary")
-  | .tiles[-1] | [ (.label // ""), (.target // "") ] | @tsv' "$BJ")"
-LAST_LABEL="$(printf '%s' "$LAST" | cut -f1)"
-LAST_TARGET="$(printf '%s' "$LAST" | cut -f2)"
-[ "$LAST_LABEL" = "Camera" ] && [ "$LAST_TARGET" = "$CLOUD_TILE_TARGET" ] \
-  && ok "last tile of the row is '$LAST_LABEL' → $LAST_TARGET" \
-  || bad "last tile of Cloud Tools Primary is '$LAST_LABEL' → '$LAST_TARGET', not Camera → $CLOUD_TILE_TARGET ('as last' is array position; nothing may be appended after it)"
+  | [ .tiles[].label ] | join(",")' "$BJ")"
+CAM_TARGET="$(jq -r '
+  .ui.sections[] | select(.id == "cloud")
+  | .tile_groups[] | select(.title == "Tools Primary")
+  | .tiles[] | select(.label == "Camera") | .target // ""' "$BJ")"
+[ "$GOT_ROW" = "$WANT_ROW" ] && [ "$CAM_TARGET" = "$CLOUD_TILE_TARGET" ] \
+  && ok "the row reads $GOT_ROW, with Camera → $CAM_TARGET" \
+  || bad "Cloud Tools Primary reads '$GOT_ROW' with Camera → '$CAM_TARGET', expected '$WANT_ROW' with Camera → $CLOUD_TILE_TARGET (array position is render position)"
 
 echo "== T2: the row is rendered in DECLARED order, with no sort =="
 # The assertion T1 depends on. If the renderer ever sorts, "last in the array"

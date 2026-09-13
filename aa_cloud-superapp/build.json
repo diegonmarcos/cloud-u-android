@@ -2473,11 +2473,9 @@
             "title": "Tools Primary",
             "tiles": [
               {
-                "_doc": "Cloud-Browser — the dedicated WebView browser app (ac_cloud-browser). libs:browser (BrowserHostFragment + BrowserTabPrefs) was MOVED out of the SuperApp into Cloud-Browser, so this tile no longer routes to an in-app section. target=extapp:cloud-browser → MainActivity.launchExternalApp opens com.diegonmarcos.cloudbrowser if installed, else downloads + installs ui.external_apps[id=cloud-browser].install_apk_url. Browser also handles http/https VIEW intents so other apps can open links in it. icon ic_world (globe) stays — visually distinct from the App Tabs tile (ic_mode_apps).",
-                "id": "browser",
-                "label": "Browser",
-                "icon": "ic_world",
-                "target": "extapp:cloud-browser"
+                "label": "Me",
+                "icon": "ic_vcard",
+                "target": "extapp:cloud-me"
               },
               {
                 "_doc": "Cloud-Wallet — the dedicated cards/passes/tickets app (ac_cloud-wallet). libs:wallet (Compose deck) was MOVED out of the SuperApp into Cloud-Wallet, so this tile no longer routes to an in-app section. target=extapp:cloud-wallet → MainActivity.launchExternalApp opens com.diegonmarcos.cloudwallet if installed, else downloads + installs ui.external_apps[id=cloud-wallet].install_apk_url. For the system Google Wallet launcher use action:app://com.google.android.apps.walletnfcrel from anywhere else.",
@@ -2487,30 +2485,11 @@
                 "target": "extapp:cloud-wallet"
               },
               {
-                "label": "Me",
-                "icon": "ic_vcard",
-                "target": "extapp:cloud-me"
-              },
-              {
-                "_doc": "Navigation — hands off to the dedicated Cloud-Nav app (ac_cloud-nav). libs:maps (MapLibre tracker + timeline + MyTrips) was MOVED out of the SuperApp into Cloud-Nav, so this tile no longer routes to an in-app section. target=extapp:cloud-nav → MainActivity.launchExternalApp opens com.diegonmarcos.cloudnav if installed, else downloads + installs ui.external_apps[id=cloud-nav].install_apk_url (Cloud-Nav.apk). icon ic_nav (ic_maps left with libs:maps). For the system Google Maps launcher use action:app://com.google.android.apps.maps from anywhere else.",
-                "id": "maps",
-                "label": "Navigation",
-                "icon": "ic_nav",
-                "target": "extapp:cloud-nav"
-              },
-              {
                 "_doc": "Keyboard — hands off to the standalone Cloud-Keyboard app (ac_cloud-keyboard, com.diegonmarcos.cloudkeyboard). Same target as the Configs ▸ Keyboard entry: extapp:cloud-keyboard → MainActivity.launchExternalApp opens Cloud-Keyboard's SettingsActivity if installed, else downloads + installs ui.external_apps[id=cloud-keyboard].install_apk_url. The keyboard is a first-class Cloud app like Browser/Wallet/Vault, so it belongs in Tools Primary and not only behind Configs.",
                 "id": "keyboard",
                 "label": "Keyboard",
                 "icon": "ic_keyboard",
                 "target": "extapp:cloud-keyboard"
-              },
-              {
-                "_doc": "C3 — routes to the in-app topology page because there is NO standalone C3 APK yet. page:, not extapp:, deliberately: an extapp: target for an app that was never published would offer an install of a release that does not exist, which is worse than a dead tile because it fails after the user commits to it. When a C3 app ships, flip this to extapp:c3 and move the page target into that app. The C3-Watchdog APK this replaced is still reachable — it is the Watchdog tab inside Cloud/C3, which launches com.diegonmarcos.watchdog via extapp:c3-watchdog.",
-                "id": "c3",
-                "label": "C3",
-                "icon": "ic_p_watchdog",
-                "target": "page:c3/topology"
               },
               {
                 "_doc": "Writer \u2014 hands off to the standalone Cloud Writer app (ac_cloud-writer, com.diegonmarcos.cloudwriter, read from ITS android.application_id and app/build.gradle namespace, not guessed from the slug). Same shape as the Keyboard tile beside it: target=extapp:cloud-writer \u2192 ShellActivity.launchExternalApp opens the package if installed, else downloads + installs ui.external_apps[id=cloud-writer].install_apk_url \u2014 no ACTION_VIEW, so there is no seventh ad-hoc startActivity site and no ActivityNotFoundException path. POSITION IS DELIBERATE AND IT IS NOT LAST: GroupedTilesFragment walks group.tiles in declared order with no sort, and the Camera tile below records the owner asking for the camera 'as last' in this row on 2026-09-10, so Writer goes in front of it rather than displacing a placement he named. icon ic_writer is Cloud Writer's own launcher foreground copied into this app's drawables \u2014 Sections.iconResFor falls back to ic_link_tile in silence when a name resolves to nothing, so the file's existence is pinned by test-writer-tile.sh rather than trusted.",
@@ -2520,11 +2499,32 @@
                 "target": "extapp:cloud-writer"
               },
               {
+                "_doc": "Cloud-Browser — the dedicated WebView browser app (ac_cloud-browser). libs:browser (BrowserHostFragment + BrowserTabPrefs) was MOVED out of the SuperApp into Cloud-Browser, so this tile no longer routes to an in-app section. target=extapp:cloud-browser → MainActivity.launchExternalApp opens com.diegonmarcos.cloudbrowser if installed, else downloads + installs ui.external_apps[id=cloud-browser].install_apk_url. Browser also handles http/https VIEW intents so other apps can open links in it. icon ic_world (globe) stays — visually distinct from the App Tabs tile (ic_mode_apps).",
+                "id": "browser",
+                "label": "Browser",
+                "icon": "ic_world",
+                "target": "extapp:cloud-browser"
+              },
+              {
+                "_doc": "Navigation — hands off to the dedicated Cloud-Nav app (ac_cloud-nav). libs:maps (MapLibre tracker + timeline + MyTrips) was MOVED out of the SuperApp into Cloud-Nav, so this tile no longer routes to an in-app section. target=extapp:cloud-nav → MainActivity.launchExternalApp opens com.diegonmarcos.cloudnav if installed, else downloads + installs ui.external_apps[id=cloud-nav].install_apk_url (Cloud-Nav.apk). icon ic_nav (ic_maps left with libs:maps). For the system Google Maps launcher use action:app://com.google.android.apps.maps from anywhere else.",
+                "id": "maps",
+                "label": "Navigation",
+                "icon": "ic_nav",
+                "target": "extapp:cloud-nav"
+              },
+              {
                 "_doc": "Camera — the fleet's OWN camera (ac_cloud-camera, applicationId cld.camera, our signed build of GrapheneOS Camera), not a third-party one. The owner asked for it 'as last' in this row on 2026-09-10, and LAST HERE IS ARRAY POSITION: GroupedTilesFragment walks group.tiles in declared order and applies no sort of any kind, so appending is what makes it last and reordering this array is the only way to move it. There is no `order` field to set and none is wanted — a second way to express position is a second thing to disagree with the first. target=extapp:cloud-camera → MainActivity.launchExternalApp opens cld.camera if installed, else downloads + installs ui.external_apps[id=cloud-camera].install_apk_url. icon ic_camera is its own drawable rather than ic_photos, which the Media Center tile already carries; Sections.iconResFor falls back to ic_link_tile without complaining when a name resolves to nothing, so a shared or misspelt icon is a silent defect and test-camera-tiles.sh pins the file's existence.",
                 "id": "camera",
                 "label": "Camera",
                 "icon": "ic_camera",
                 "target": "extapp:cloud-camera"
+              },
+              {
+                "_doc": "C3 — routes to the in-app topology page because there is NO standalone C3 APK yet. page:, not extapp:, deliberately: an extapp: target for an app that was never published would offer an install of a release that does not exist, which is worse than a dead tile because it fails after the user commits to it. When a C3 app ships, flip this to extapp:c3 and move the page target into that app. The C3-Watchdog APK this replaced is still reachable — it is the Watchdog tab inside Cloud/C3, which launches com.diegonmarcos.watchdog via extapp:c3-watchdog.",
+                "id": "c3",
+                "label": "C3",
+                "icon": "ic_p_watchdog",
+                "target": "page:c3/topology"
               }
             ]
           },
@@ -2551,10 +2551,10 @@
                 "target": "extapp:cloud-ide/files"
               },
               {
-                "_doc": "B-LLM - the three Telegram agent bots behind one folder icon instead of three tiles in the row. 'B' is for big: Hermes, Goose and Claude each answer from a full-size hosted model. A tile that carries a nested 'tiles' array IS a folder - GroupedTilesFragment opens the popup instead of dispatching 'target' - which is why this entry has no target of its own. Giving a folder a target as well would make the first tap ambiguous: open, or navigate?",
+                "_doc": "B-LLM - the three Telegram agent bots behind one icon instead of three tiles in the row. The icon is ic_ai_sparkle, the same one S-LLM carries: the two folders are siblings on the same row and the owner reads them as one pair, so a generic folder glyph on one and an AI glyph on the other told the eye they were different kinds of thing. 'B' is for big: Hermes, Goose and Claude each answer from a full-size hosted model. A tile that carries a nested 'tiles' array IS a folder - GroupedTilesFragment opens the popup instead of dispatching 'target' - which is why this entry has no target of its own. Giving a folder a target as well would make the first tap ambiguous: open, or navigate?",
                 "id": "b-llm",
                 "label": "B-LLM",
-                "icon": "ic_p_folder",
+                "icon": "ic_ai_sparkle",
                 "tiles": [
                 {
                   "id": "ai-tlg-hermes",
