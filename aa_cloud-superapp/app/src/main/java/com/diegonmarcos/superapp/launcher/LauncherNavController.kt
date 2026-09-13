@@ -7,6 +7,9 @@ import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.mail.MailPages
 import com.diegonmarcos.superapp.settings.LauncherTheme
 import com.diegonmarcos.superapp.settings.LauncherThemePrefs
+import com.diegonmarcos.superapp.launcher.themes.cloud.Home3DFragment
+import com.diegonmarcos.superapp.launcher.themes.minimalist.MinimalistBlackFragment
+import com.diegonmarcos.superapp.launcher.themes.powersaving.PowerSavingFragment
 
 /**
  * Owns launcher navigation POLICY + state, separated from the Activity's view

@@ -7,6 +7,7 @@ import android.content.Context
 import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
+import com.diegonmarcos.superapp.launcher.themes.cloud.Home3DFragment
 
 /**
  * Configs → Launcher → Screensaver + Others. Single source of truth for the

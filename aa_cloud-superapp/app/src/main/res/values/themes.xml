@@ -73,7 +73,7 @@
         <item name="android:textSize">12sp</item>
         <item name="android:lineHeight">14sp</item>
         <item name="lineHeight">14sp</item>
-        <item name="android:textColor">#FFE9D8FD</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
     </style>
 
     <!-- Heading over one section of a page that has several (Drive's Apps
@@ -84,8 +84,89 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">12dp</item>
         <item name="android:paddingBottom">4dp</item>
-        <item name="android:textColor">#FFE9D8FD</item>
+        <item name="android:textColor">?android:attr/textColorPrimary</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textAppearance">?attr/textAppearanceTitleSmall</item>
     </style>
+
+    <!--
+      ── One Material3 style PER MODE ───────────────────────────────────────
+      The owner, on the Power Saving mode: "it does draw the black screen but
+      is not full screen; and submenus still same style as default".
+
+      Both halves of that are this file's fault, not the fragment's.
+      LauncherPalette themes only the views this app DRAWS in Kotlin. The 24
+      XML layouts resolve 82 `?attr/` references through whatever Material3
+      style the Activity was created with — and there was exactly one, with
+      the purple gradient hard-wired as android:windowBackground. So a mode
+      could repaint its own home screen and still hand every submenu, dialog
+      and spinner back to the default look, and the window UNDER the black
+      fragment stayed purple, which is the "not full screen" the owner saw at
+      every inset and over-scroll edge.
+
+      A mode now names its own style in build.json (`ui.launcher_themes[*]
+      .style`), ShellActivity applies it in onCreate before setContentView,
+      and a mode switch recreates the Activity so the new style takes. That
+      makes the mode's look reach every XML surface in the app, for free,
+      without touching any of the 24 layouts.
+    -->
+
+    <!-- Cloud Power Saving. Pure black ground: an OLED pixel at #000000 is an
+         OFF pixel, so every surface here is black and separation is carried
+         by outline hairlines instead of by lifted fills. Monochrome
+         throughout — there is no hue anywhere in this mode, deliberately.
+         Ink is #C8C8C8 rather than white (11.6:1 on black, ~78% of white's
+         luminance). Keep these in step with PowerSavingDesign.kt, which is
+         the same palette for the Kotlin-drawn half of the mode. -->
+    <style name="Theme.Superapp.PowerSaving" parent="Theme.Superapp">
+        <item name="android:windowBackground">@color/theme_powersave_window</item>
+        <item name="android:colorBackground">@color/theme_powersave_window</item>
+        <item name="colorPrimary">@color/theme_powersave_text_primary</item>
+        <item name="colorOnPrimary">@color/theme_powersave_window</item>
+        <item name="colorPrimaryContainer">@color/theme_powersave_window</item>
+        <item name="colorOnPrimaryContainer">@color/theme_powersave_text_primary</item>
+        <item name="colorSecondary">@color/theme_powersave_text_secondary</item>
+        <item name="colorOnSecondary">@color/theme_powersave_window</item>
+        <item name="colorSecondaryContainer">@color/theme_powersave_window</item>
+        <item name="colorOnSecondaryContainer">@color/theme_powersave_text_primary</item>
+        <item name="colorSurface">@color/theme_powersave_window</item>
+        <item name="colorOnSurface">@color/theme_powersave_text_primary</item>
+        <item name="colorSurfaceVariant">@color/theme_powersave_window</item>
+        <item name="colorOnSurfaceVariant">@color/theme_powersave_text_secondary</item>
+        <item name="colorOutline">@color/theme_powersave_hairline</item>
+        <item name="colorOutlineVariant">@color/theme_powersave_hairline</item>
+        <item name="android:textColorPrimary">@color/theme_powersave_text_primary</item>
+        <item name="android:textColorSecondary">@color/theme_powersave_text_secondary</item>
+        <item name="android:textColorTertiary">@color/theme_powersave_text_tertiary</item>
+        <item name="android:textColorHint">@color/theme_powersave_text_tertiary</item>
+        <item name="android:colorEdgeEffect">@color/theme_powersave_hairline</item>
+    </style>
+
+    <!-- Cloud Minimalist Black. Shares Power Saving's black ground and
+         nothing else: this one keeps the terminal-green ink it has always
+         had, so the two black modes stay visibly different modes. -->
+    <style name="Theme.Superapp.MinimalistBlack" parent="Theme.Superapp">
+        <item name="android:windowBackground">@color/theme_terminal_window</item>
+        <item name="android:colorBackground">@color/theme_terminal_window</item>
+        <item name="colorPrimary">@color/theme_terminal_accent</item>
+        <item name="colorOnPrimary">@color/theme_terminal_window</item>
+        <item name="colorPrimaryContainer">@color/theme_terminal_window</item>
+        <item name="colorOnPrimaryContainer">@color/theme_terminal_text_primary</item>
+        <item name="colorSecondary">@color/theme_terminal_text_secondary</item>
+        <item name="colorOnSecondary">@color/theme_terminal_window</item>
+        <item name="colorSecondaryContainer">@color/theme_terminal_window</item>
+        <item name="colorOnSecondaryContainer">@color/theme_terminal_text_primary</item>
+        <item name="colorSurface">@color/theme_terminal_window</item>
+        <item name="colorOnSurface">@color/theme_terminal_text_primary</item>
+        <item name="colorSurfaceVariant">@color/theme_terminal_window</item>
+        <item name="colorOnSurfaceVariant">@color/theme_terminal_text_secondary</item>
+        <item name="colorOutline">@color/theme_terminal_hairline</item>
+        <item name="colorOutlineVariant">@color/theme_terminal_hairline</item>
+        <item name="android:textColorPrimary">@color/theme_terminal_text_primary</item>
+        <item name="android:textColorSecondary">@color/theme_terminal_text_secondary</item>
+        <item name="android:textColorTertiary">@color/theme_terminal_text_secondary</item>
+        <item name="android:textColorHint">@color/theme_terminal_text_secondary</item>
+        <item name="android:colorEdgeEffect">@color/theme_terminal_accent</item>
+    </style>
+
 </resources>

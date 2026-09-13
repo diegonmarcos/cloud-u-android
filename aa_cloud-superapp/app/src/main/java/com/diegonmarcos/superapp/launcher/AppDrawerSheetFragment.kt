@@ -16,6 +16,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import com.diegonmarcos.superapp.launcher.themes.cloud.Home3DFragment
 // libs:browser moved to ac_cloud-browser — no browser imports here.
 
 /**

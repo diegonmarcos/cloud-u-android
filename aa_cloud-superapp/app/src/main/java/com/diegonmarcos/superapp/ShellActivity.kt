@@ -18,7 +18,7 @@ import com.diegonmarcos.superapp.launcher.SectionTabsFragment
 import com.diegonmarcos.superapp.launcher.PlaceholderDrawerFragment
 import com.diegonmarcos.superapp.launcher.LauncherStatusStripView
 import com.diegonmarcos.superapp.launcher.HomeDrawerFragment
-import com.diegonmarcos.superapp.launcher.Home3DFragment
+import com.diegonmarcos.superapp.launcher.themes.cloud.Home3DFragment
 import com.diegonmarcos.superapp.launcher.DetailPlaceholderFragment
 import com.diegonmarcos.superapp.launcher.AppDrawerSheetFragment
 import com.diegonmarcos.superapp.devtools.DevControlBridge
@@ -466,6 +466,12 @@ open class ShellActivity : AppCompatActivity(),
 
     override fun onCreate(savedInstanceState: Bundle?) {
         Trace.i(TAG, "onCreate enter")
+        // BEFORE super.onCreate: this is the only moment Android lets a theme
+        // be chosen. Every XML layout in the app resolves its `?attr/` colours
+        // against whatever style is installed here, so this one line is what
+        // carries the active mode into all 24 layouts and the window backdrop.
+        // Called later it would compile, run, and change nothing on screen.
+        com.diegonmarcos.superapp.ui.LauncherStyle.apply(this)
         super.onCreate(savedInstanceState)
         try {
             // Edge-to-edge: content draws beneath the status / nav bars,
@@ -1041,22 +1047,41 @@ open class ShellActivity : AppCompatActivity(),
             // app; gating their chrome on owning the home button meant that on a
             // phone where One UI Home owns it the mode kept the full toolbar and
             // bottom-nav islands, so the "mode" was a repaint. See LauncherNavController.
-            theme == LauncherTheme.CloudMinimalistBlack -> {
+            theme == LauncherTheme.CloudMinimalistBlack ||
+                theme == LauncherTheme.CloudPowerSaving -> {
+                // The two dark modes — Samsung / Apple / Pixel-style.
+                // No top strip and no bottom-nav island anywhere, and
+                // the window background is pure black for OLED
+                // self-emission savings (the oled_black feature flag
+                // drives this). Background services are paused via
+                // BackgroundOrchestrator below; WireGuard stays up.
                 strip?.visibility = View.GONE
-                toolbarIsland?.visibility = View.GONE
                 bottomNavIsland?.visibility = View.GONE
-            }
-            theme == LauncherTheme.CloudPowerSaving -> {
-                // Power Saving — Samsung / Apple / Pixel-style. No
-                // chrome at all: no top strip, no toolbar island, no
-                // bottom-nav island. Window background flipped to
-                // pure black for OLED self-emission savings (the
-                // oled_black feature flag drives this). Background
-                // services paused via BackgroundOrchestrator below;
-                // WireGuard stays up.
-                strip?.visibility = View.GONE
-                toolbarIsland?.visibility = View.GONE
-                bottomNavIsland?.visibility = View.GONE
+
+                // ...but the toolbar island is NOT decoration: it is
+                // where action_back lives. Hiding it on every screen
+                // turned both modes into a trap with no way out of any
+                // submenu — the owner reported exactly that ("as you
+                // remove the top buttons nothing now has a back
+                // button"). So it goes away only on the mode's OWN home
+                // screen, which draws its own header, and comes back on
+                // every other section. It no longer drags the default
+                // look in with it: since LauncherStyle installs this
+                // mode's Material3 style on the Activity, the island
+                // resolves its `?attr/` colours against this mode.
+                val atHomeRoot = currentSection == "home" &&
+                    supportFragmentManager.backStackEntryCount == 0
+                toolbarIsland?.visibility = if (atHomeRoot) View.GONE else View.VISIBLE
+                if (!atHomeRoot) {
+                    // In launcher mode the system status bar is hidden, so
+                    // sys.top is dispatched as 0 and nothing reserves that
+                    // strip of screen — the island would sit under the
+                    // camera cutout. Reserve it ourselves.
+                    val barH = if (topSystemInset > 0) topSystemInset else statusBarHeightPx()
+                    setToolbarIslandTopMargin(
+                        toolbarIsland, (if (isLauncher) barH else 0) + dp(6),
+                    )
+                }
             }
             else -> {
                 strip?.visibility = View.GONE
@@ -1150,13 +1175,21 @@ open class ShellActivity : AppCompatActivity(),
      *  and, if the user is currently on Home, rebuilds the home pane
      *  so a Minimalist Black ↔ Cloud swap takes effect immediately. */
     fun notifyLauncherThemeChanged() {
-        // Before anything reads a colour. The palette is memoised per theme id,
-        // so without this the whole re-render below would repaint itself in the
-        // colours of the theme the user just left.
+        // A mode is more than a palette: it also names a Material3 style, and
+        // Android resolves a style ONCE per Activity, at inflate time. Every
+        // XML layout in the app has already resolved its `?attr/` colours by
+        // the time we get here, so re-running the chrome would recolour the
+        // code-drawn views and leave all 24 XML surfaces in the old mode —
+        // which is exactly the "submenus still same style as default" report.
+        // Recreating is not a workaround for that, it IS the mechanism.
+        //
+        // The palette cache is process-scoped, and recreate() does not end the
+        // process — so it is dropped here, before the new Activity can read it.
+        // It keys on the theme id and would notice the switch on its own, but
+        // relying on that makes correctness depend on a detail of the cache
+        // rather than on the switch itself.
         LauncherPalette.invalidate()
-        applyLauncherChrome()
-        applyLauncherSettings()
-        if (currentSection == "home") goHome()
+        com.diegonmarcos.superapp.ui.LauncherStyle.restartForModeChange(this)
     }
 
     /** Configs → Launcher → Others — re-applies settings whose views live in the

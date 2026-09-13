@@ -28,7 +28,13 @@ check() { if [ "$1" = "OK" ]; then ok "$2"; else bad "$2 — $1"; fi; }
 THEMES="$APP/app/src/main/java/com/diegonmarcos/superapp/settings/LauncherConfigFragment.kt"
 PREFS="$APP/app/src/main/java/com/diegonmarcos/superapp/settings/LauncherSettingsPrefs.kt"
 NAV="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherNavController.kt"
-PANE="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/PowerSavingFragment.kt"
+# Each mode now owns a folder under launcher/themes/, holding its screen AND
+# the design vocabulary that screen is built from. That is the owner's rule —
+# "all themes have their own folders, all different, nothing can be equal" —
+# and it is why PANE and DESIGN are two files rather than one.
+THEMEDIR="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/themes"
+PANE="$THEMEDIR/powersaving/PowerSavingFragment.kt"
+DESIGN="$THEMEDIR/powersaving/PowerSavingDesign.kt"
 ORCH="$APP/app/src/main/java/com/diegonmarcos/superapp/system/BackgroundOrchestrator.kt"
 GRADLE="$APP/app/build.gradle"
 
@@ -91,7 +97,7 @@ ids = [s["id"] for s in slots]
 problems = []
 if len(slots) != 12: problems.append("%d slots, want 12" % len(slots))
 if ps["features"].get("grid") != "6x2":
-    problems.append("features.grid = %r, want '6x2' (the pane renders 6 per row)" % ps["features"].get("grid"))
+    problems.append("features.grid = %r, want '6x2' (twelve configured slots)" % ps["features"].get("grid"))
 dupes = {i for i in ids if ids.count(i) > 1}
 if dupes: problems.append("duplicate slot ids: %s" % sorted(dupes))
 print("; ".join(problems) or "OK")
@@ -235,14 +241,24 @@ grep -q 'LauncherTheme.CloudPowerSaving *-> *PowerSavingFragment.newInstance()' 
 [ -f "$PANE" ] && ok "PowerSavingFragment exists" || bad "PowerSavingFragment is missing"
 # Both of these used to be greps for a literal in the pane — `Color.BLACK` and
 # a `private const val COLUMNS = 6`. Neither is there any more, and their
-# absence is the fix rather than a regression: a colour written at the view
-# cannot follow a theme, and a column count written in the pane is a second
-# constant that has to agree with the editor's. The pane now reads both from
-# the theme record, so these assert the VALUES that record carries — which is
-# what "black" and "six per row" actually meant all along.
-grep -q 'setBackgroundResource(palette.windowRes)' "$PANE" \
-  && ok "the pane paints the theme's declared window" \
-  || bad "the pane does not take its background from the palette"
+# The pane used to be asserted against the SHARED palette — it had to call
+# setBackgroundResource(palette.windowRes) and gridColumnsFor(). Both of those
+# are now the wrong contract. The owner's rule for modes is "all different,
+# nothing can be equal", and a screen that reads its colours and its grid from
+# a palette every other mode also reads can only ever be a recolouring of
+# them. So the pane owns PowerSavingDesign outright, and what is worth
+# asserting flipped: not "does it use the shared thing" but "is it still
+# incapable of reaching for it". That is a guarantee scope can enforce, which
+# beats one a reviewer has to remember.
+grep -q 'PowerSavingDesign' "$PANE" \
+  && ok "the pane draws from its own mode's design vocabulary" \
+  || bad "the pane does not use PowerSavingDesign"
+grep -qE '^import com\.diegonmarcos\.superapp\.ui\.' "$PANE" \
+  && bad "the pane imports from ui/ — it can reach the shared look again" \
+  || ok "the pane imports nothing from ui/ — the shared palette is out of scope"
+[ -f "$DESIGN" ] \
+  && ok "the mode owns a design file in its own folder" \
+  || bad "PowerSavingDesign.kt missing — the mode has no design of its own"
 check "$(python3 - "$BJ" "$APP/app/src/main/res/values/colors.xml" <<'PYB'
 import json, re, sys
 ui = json.load(open(sys.argv[1]))["ui"]
@@ -259,9 +275,14 @@ else:
     print("OK")
 PYB
 )" "the pane's declared window is TRUE black"
-grep -q 'gridColumnsFor' "$PANE" \
-  && ok "the pane lays out the theme's declared grid width, not its own constant" \
-  || bad "the pane hardcodes its column count instead of reading features.grid"
+# The old check here demanded gridColumnsFor(): the home screen was an icon
+# grid whose width came from features.grid. This mode no longer HAS a grid.
+# Twelve launcher icons are twelve full-colour bitmaps lighting every subpixel
+# at once, which is the single most expensive thing an OLED power-saving
+# screen could put on itself, so the apps are drawn as text rows instead.
+grep -q 'PowerSavingDesign.row(' "$PANE" \
+  && ok "apps are listed as text rows, not as a full-colour icon grid" \
+  || bad "the pane no longer lists its apps as text rows"
 
 echo "== T8: the baked constants stay clear of javac's 65,535-byte cap =="
 # ui.sections is the one that has actually broken a build (BuildConfig.java:

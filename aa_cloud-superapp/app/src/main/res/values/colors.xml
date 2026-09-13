@@ -159,11 +159,12 @@
          screen is what breaks that. It stays a declared role so a surface
          cannot quietly reach for the violet one instead. -->
     <color name="theme_powersave_window">#FF000000</color>
-    <color name="theme_powersave_surface">#FF141414</color>
-    <color name="theme_powersave_surface_selected">#FF2A2A2A</color>
-    <color name="theme_powersave_text_primary">#FFFFFFFF</color>
-    <color name="theme_powersave_text_secondary">#FFBDBDBD</color>
-    <color name="theme_powersave_accent">#FFFFFFFF</color>
-    <color name="theme_powersave_hairline">#33FFFFFF</color>
+    <color name="theme_powersave_surface">#FF000000</color>
+    <color name="theme_powersave_surface_selected">#FFEDEDED</color>
+    <color name="theme_powersave_text_primary">#FFC8C8C8</color>
+    <color name="theme_powersave_text_secondary">#FF8C8C8C</color>
+    <color name="theme_powersave_text_tertiary">#FF5E5E5E</color>
+    <color name="theme_powersave_accent">#FFC8C8C8</color>
+    <color name="theme_powersave_hairline">#FF2E2E2E</color>
     <color name="theme_powersave_tile_ink">#FF000000</color>
 </resources>

@@ -356,6 +356,12 @@
          from BatteryManager's own average-current reading, so when the platform
          declines to answer the line says that rather than inventing a number. -->
     <string name="power_saving_on">Power Saving on</string>
+    <!-- Cloud Power Saving mode: its own section headings. Deliberately one
+         word each - they are drawn as tracked capitals and a sentence-long
+         heading would be the brightest thing on an otherwise black screen. -->
+    <string name="power_saving_section_saving">Saving</string>
+    <string name="power_saving_section_apps">Apps</string>
+    <string name="power_saving_apps_empty">No apps configured</string>
     <string name="power_saving_off">Power Saving off</string>
     <string name="power_saving_charging">Charging</string>
     <string name="power_saving_estimate_unknown">Remaining time not available</string>

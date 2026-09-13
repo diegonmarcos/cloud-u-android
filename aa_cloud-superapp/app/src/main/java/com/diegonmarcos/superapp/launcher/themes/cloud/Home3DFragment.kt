@@ -1,4 +1,9 @@
-package com.diegonmarcos.superapp.launcher
+package com.diegonmarcos.superapp.launcher.themes.cloud
+
+// Siblings this mode still talks to (the shell dispatcher, the tile
+// contracts). Owning a folder means owning the DESIGN, not seceding
+// from the app.
+import com.diegonmarcos.superapp.launcher.*
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.system.ScreenLocker
 

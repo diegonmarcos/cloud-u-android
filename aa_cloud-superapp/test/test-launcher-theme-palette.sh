@@ -177,7 +177,11 @@ ps_fail=""
 grep -q 'LauncherTheme.CloudPowerSaving *-> *PowerSavingFragment.newInstance()' \
      "$SRC/launcher/LauncherNavController.kt" \
   || ps_fail="$ps_fail no-home-pane-of-its-own"
-[ -f "$SRC/launcher/PowerSavingFragment.kt" ] || ps_fail="$ps_fail pane-file-missing"
+# Each mode now owns a folder under launcher/themes/ holding its screen and the
+# design vocabulary that screen is built from — "all themes have their own
+# folders, all different, nothing can be equal".
+[ -f "$SRC/launcher/themes/powersaving/PowerSavingFragment.kt" ] \
+  || ps_fail="$ps_fail pane-file-missing"
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 ui = json.load(open(sys.argv[1]))["ui"]
@@ -302,7 +306,7 @@ echo "== T9: the twelve-slot editor draws the grid it edits, with real icons =="
 # from a constant in each file: two constants that have to agree, with nothing
 # making them, is how the pane and its editor drift apart.
 CFG="$SRC/settings/LauncherConfigFragment.kt"
-PANE="$SRC/launcher/PowerSavingFragment.kt"
+PANE="$SRC/launcher/themes/powersaving/PowerSavingFragment.kt"
 TILE="$SRC/launcher/AppIconTile.kt"
 ed_fail=""
 grep -q 'AppIconTile.grid(' "$CFG"  || ed_fail="$ed_fail editor-does-not-draw-the-grid"
@@ -315,17 +319,24 @@ grep -q 'AppIconTile.grid(' "$CFG"  || ed_fail="$ed_fail editor-does-not-draw-th
 # the history, so this matches a member ACCESS, not the name.
 grep -q 'AppIconTile\.' "$PANE"     && ed_fail="$ed_fail pane-reuses-the-default-launchers-tile-builder"
 grep -q 'Spinner' "$PANE"           && ed_fail="$ed_fail pane-still-has-a-spinner"
-# Painting its own cells does not license the pane to invent its own layout
-# numbers: the width still comes from the theme record and the twelve slots still
-# come from the owner's overrides.
-grep -q 'gridColumnsFor' "$PANE"    || ed_fail="$ed_fail pane-hardcodes-its-column-count"
+# Painting its own cells does not license the pane to invent its own app LIST:
+# the twelve slots still come from the owner's overrides, so the editor and the
+# mode are always showing the same twelve apps in the same order.
 grep -q 'PowerSavingAppsPrefs(ctx).resolved()' "$PANE" \
   || ed_fail="$ed_fail pane-ignores-the-owners-slot-overrides"
-# The very bottom row is left EMPTY on purpose: Android caps the dock strip at 5
-# icons, so rather than lose one of the six the strip is surrendered and both
-# full rows sit above it (owner's decision, 2026-09-13).
-grep -q 'RESERVED_DOCK_ROW_HEIGHT_DP' "$PANE" \
-  || ed_fail="$ed_fail pane-does-not-reserve-the-blank-dock-row"
+# The COLUMN count is no longer a shared number, and that is deliberate. This
+# used to require the pane to read gridColumnsFor() so its width could not drift
+# from the editor's — which assumed both surfaces draw a grid. The mode does not
+# have a grid any more: twelve launcher icons are twelve full-colour bitmaps
+# lighting every subpixel at once, the single most expensive thing an OLED
+# power-saving screen could put on itself, so the pane lists its apps as text
+# rows. A column count it has no columns for would be a constant no screen reads.
+# What IS still asserted is that the mode owns its own layout vocabulary rather
+# than borrowing the shared one.
+grep -q 'PowerSavingDesign\.' "$PANE" \
+  || ed_fail="$ed_fail pane-does-not-draw-from-its-own-modes-design"
+grep -qE '^import com\.diegonmarcos\.superapp\.ui\.' "$PANE" \
+  && ed_fail="$ed_fail pane-imports-the-shared-look-from-ui"
 # Scoped to the CALL SITE, not to the file. A bare `grep gridColumnsFor` over
 # LauncherConfigFragment.kt passes on the function's own DEFINITION, which lives
 # in that same file — so it stayed green with the editor's columns replaced by a
