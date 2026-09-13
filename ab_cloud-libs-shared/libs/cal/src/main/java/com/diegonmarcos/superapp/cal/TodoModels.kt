@@ -237,7 +237,7 @@ object TodoIcs {
         val lines = mutableListOf<String>()
         lines += "BEGIN:VCALENDAR"
         lines += "VERSION:2.0"
-        lines += "PRODID:-//diegonmarcos//CloudCalendar//EN"
+        lines += "PRODID:-//diegonmarcos//CloudAgenda//EN"
         lines += "BEGIN:VTODO"
         lines += "UID:${escapeText(todo.uid)}"
         lines += "DTSTAMP:${formatDateTime(now)}"

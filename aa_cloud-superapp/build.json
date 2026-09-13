@@ -2424,7 +2424,7 @@
                 "id": "calendar",
                 "label": "Calendar",
                 "icon": "ic_calendar",
-                "target": "extapp:cloud-calendar"
+                "target": "extapp:cloud-agenda"
               },
               {
                 "_doc": "Opens the standalone Cloud-Contacts app (ac_cloud-contacts, com.diegonmarcos.cloudcontacts, native multi-channel people hub) via extapp:cloud-contacts — installed → launches; absent → install via Configs ▸ Constellation. Replaces the old Google Contacts launcher.",
@@ -2704,11 +2704,11 @@
             "title": "Projects Me",
             "tiles": [
               {
-                "_doc": "My-PM — the personal counterpart of Projects W's 'PM Boards': the owner's own project-management board, which is why it LEADS this row and why the rule below it now divides My-PM from MySocials rather than opening the row. No personal board exists in paca yet, so this addresses the paca project INDEX rather than a uuid — the same choice, for the same reason, as the three boardless tiles in Projects W: an invented uuid answers 404 inside the embedded browser and reads as a broken app, while the index lets the board be picked by hand and leaves the gap visible. Task 182 owns creating the board and swapping this target for its uuid.",
-                "id": "my-pm",
-                "label": "My-PM",
-                "icon": "ic_pm_boards",
-                "target": "https://paca.diegonmarcos.com/projects"
+                "_doc": "Agenda — the owner's own agenda, which is why it LEADS this row and why the rule below it divides it from MySocials rather than opening the row. It was 'My-PM' pointing at the paca project INDEX until 2026-09-13: paca still has no personal board (task 182 owns creating one), and rather than keep a placeholder standing in for a board that does not exist, the owner pointed the tile at the agenda he actually reads. target is a DEEP LINK into Cloud-Me, section agenda, page agenda — the CalEngine 30-day event list, whose sibling tab is the CalDAV VTODO Todo list — so it resolves through the same extapp:cloud-me#page:<section>/<page> route as MyBuro, MyHealth, MyStudy and MyTrips instead of opening a browser. icon is ic_p_cal_agenda, the agenda glyph, in place of the board glyph the paca target had earned.",
+                "id": "agenda",
+                "label": "Agenda",
+                "icon": "ic_p_cal_agenda",
+                "target": "extapp:cloud-me#page:agenda/agenda"
               },
               {
                 "_doc": "The new leading rule — divides My-PM from MySocials. NOT a tile: it declares no target and GroupedTilesFragment draws it as a bare '|' that is not clickable, the same separator CHARACTER pattern task 303 established for Data Apps. It is numbered 0 rather than renumbering the two rules below it, because those two ids are pinned by name in test-dashboard-cross-app-deeplink.sh and renumbering them would rewrite assertions that are about the rules further down the row, not about this one.",
@@ -4753,7 +4753,7 @@
             "_doc": "Our own calendar app. Same install-path reasoning as Mail.",
             "id": "ps_calendar",
             "label": "Calendar",
-            "target": "extapp:cloud-calendar"
+            "target": "extapp:cloud-agenda"
           },
           {
             "_doc": "'Traductor' is the translator. Google Translate, declared in ui.phone_folders =Utilities and already the target of the right-edge top_middle one-hand gesture, so this is the package the owner already reaches for.",
@@ -7116,12 +7116,12 @@
         "forks": {}
       },
       {
-        "id": "cloud-calendar",
-        "label": "Cloud-Calendar",
+        "id": "cloud-agenda",
+        "label": "Cloud-Agenda",
         "folder": "prod_plan",
-        "hub_package": "com.diegonmarcos.cloudcalendar",
-        "install_package": "com.diegonmarcos.cloudcalendar",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Calendar.apk",
+        "hub_package": "com.diegonmarcos.cloudagenda",
+        "install_package": "com.diegonmarcos.cloudagenda",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Agenda.apk",
         "forks": {}
       },
       {

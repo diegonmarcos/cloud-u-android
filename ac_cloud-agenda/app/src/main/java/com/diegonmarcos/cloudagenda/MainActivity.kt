@@ -1,4 +1,4 @@
-package com.diegonmarcos.cloudcalendar
+package com.diegonmarcos.cloudagenda
 
 import android.os.Bundle
 import android.webkit.WebSettings
@@ -19,7 +19,7 @@ class MainActivity : AppCompatActivity() {
             cacheMode = WebSettings.LOAD_DEFAULT
         }
         webView.addJavascriptInterface(CalBridge(this), "CalBridge")
-        webView.loadUrl("file:///android_asset/calendar.html")
+        webView.loadUrl("file:///android_asset/agenda.html")
         Updater.start(this)
     }
 }

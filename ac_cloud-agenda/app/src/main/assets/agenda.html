@@ -263,7 +263,7 @@
             <!-- ============ TODO TAB ============ -->
             <section id="tab-todo" class="tab-panel hidden">
                 <header class="panel-header flex justify-between items-center">
-                    <h1 class="text-xl font-medium">ToDo</h1>
+                    <h1 class="text-xl font-medium">Tasks</h1>
                     <button id="todo-add-btn" class="w-8 h-8 rounded-full bg-[#1C1C1C] text-white flex items-center justify-center" style="font-size:18px;line-height:1;border:none;">+</button>
                 </header>
                 <div id="todo-error-mount" class="px-6"></div>
@@ -401,7 +401,7 @@
         <nav class="bottom-nav" id="bottom-nav">
             <button class="nav-item" data-tab="todo">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M7.5 12l3 3 6-6.5"/></svg>
-                <span>ToDo</span>
+                <span>Tasks</span>
             </button>
             <button class="nav-item" data-tab="events">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5a2 2 0 012-2h12a2 2 0 012 2v1.2a1.8 1.8 0 000 4.6V15a2 2 0 01-2 2H6a2 2 0 01-2-2v-1.2a1.8 1.8 0 000-4.6V8.5z"/><path d="M9.5 6.5v11" stroke-dasharray="2.2 2.2"/></svg>
@@ -596,7 +596,7 @@ function callBridge(method, args) {
 var MOCK_CALDAV_CONFIGURED = true; // flip to false to exercise the "not configured" empty state
 
 var MOCK = (function () {
-    // ---- calendars: mirrors ac_cloud-calendar/data/calendars.json 1:1 (20
+    // ---- calendars: mirrors ac_cloud-agenda/data/calendars.json 1:1 (20
     // entries as of 2026-08-09: 13 holiday feeds, moon phases, c-base
     // events, 3 sports feeds, UN international days, Berlin school
     // holidays), plus three synthetic feeds (tickets/bookings/invites) so
@@ -815,7 +815,7 @@ var MOCK = (function () {
             mk('proj-calendar-app', 'Persist calendar visibility toggles', C, -8, 6, '', -7),
             mk('proj-calendar-app', 'Design empty states for Events tab', N, 6, 4),
             mk('proj-calendar-app', "Ship offline mock dataset for browser dev — covering every tab, filter, and edge case so the whole UI can be exercised without a device or bridge attached", C, -1, 8, '', -1),
-            mk('proj-calendar-app', 'Add pull-to-refresh on ToDo tab', N, 4, 4),
+            mk('proj-calendar-app', 'Add pull-to-refresh on Tasks tab', N, 4, 4),
             // Home (open 3 / total 6)
             mk('proj-home', 'Pay rent', N, 0, 1),
             mk('proj-home', 'Fix leaking kitchen faucet', N, -1, 2),
@@ -1432,7 +1432,7 @@ function renderClockLabels() {
 }
 
 /* =====================================================================
-   ToDo tab
+   Tasks tab
    ===================================================================== */
 function loadTodoTab() {
     var pErr = document.getElementById('todo-error-mount');

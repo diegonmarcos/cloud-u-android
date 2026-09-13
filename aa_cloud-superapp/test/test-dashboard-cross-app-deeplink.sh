@@ -144,9 +144,10 @@ groups = {g["title"]: g for g in cloud["tile_groups"]}
 # why it is written out here. Projects Me is the personal half, Projects W the
 # work half; the split is what tells the next editor which row a new tile joins.
 ROWS = {
-    # My-PM leads the row and a rule divides it from MySocials — task 309. The rule is numbered 0
-    # rather than renumbering sep-1 and sep-2, whose ids are asserted by name below.
-    "Projects Me": ["my-pm", "projects-me-sep-0", "mysocials",
+    # Agenda leads the row and a rule divides it from MySocials — task 309. The rule is numbered 0
+    # rather than renumbering sep-1 and sep-2, whose ids are asserted by name below. The leading tile
+    # was "my-pm" until task 316 renamed it to Agenda and repointed it at Cloud-Me's agenda page.
+    "Projects Me": ["agenda", "projects-me-sep-0", "mysocials",
                     "projects-me-sep-1", "myburo",
                     "projects-me-sep-2", "myhealth", "mystudy", "mytrips"],
     # Four named boards and no rule — task 311 removed PM Boards, PM C3 and the
@@ -163,11 +164,12 @@ ROWS = {
 # those ids resolve against Cloud-Me's flattened page tree rather than against
 # a filename that happens to look similar.
 TARGETS = {
-    # My-PM has no personal paca board yet, so it addresses the project INDEX — pinned here for the
-    # same reason as the three boardless Projects W tiles below: the day task 182 creates the board
-    # and wires its uuid, this line fails and says so, instead of the placeholder quietly outliving
-    # the board it was standing in for.
-    "my-pm":     "https://paca.diegonmarcos.com/projects",
+    # Agenda is a deep link into Cloud-Me, not a paca URL: task 316 replaced the project-INDEX
+    # placeholder that stood in for the personal board task 182 has yet to create. It is pinned in
+    # the same table as the browser targets because T3 below resolves it against ac_cloud-me's page
+    # tree — agenda/agenda is a real section/page pair there, and this line is what fails if it stops
+    # being one.
+    "agenda":    "extapp:cloud-me#page:agenda/agenda",
     "mysocials": "https://diegonmarcos.github.io/mySocials/",
     # A board uuid, baked in at build time because paca's projects table has no
     # slug column and its router only declares /projects/$projectId — there is

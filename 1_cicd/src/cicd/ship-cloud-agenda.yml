@@ -1,4 +1,4 @@
-name: "Ship → Cloud Calendar APK (build + push to GHCR via ORAS + attach to GH Release)"
+name: "Ship → Cloud Agenda APK (build + push to GHCR via ORAS + attach to GH Release)"
 
 on:
   workflow_dispatch:
@@ -22,32 +22,32 @@ on:
   push:
     branches: [main]
     tags:
-      - "ac_cloud-calendar-v*"
+      - "ac_cloud-agenda-v*"
     paths:
       # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir
-      # ac_cloud-calendar/build.json::modules declares is added automatically, dead
+      # ac_cloud-agenda/build.json::modules declares is added automatically, dead
       # entries are dropped, and cloud-android-source-identity.sh hashes
       # exactly this list — so nothing can trigger a build the publish
       # gate does not weigh. Extra entries no module map can express
       # (settings.gradle.kts references, scan roots) are kept: add them
       # here and they stay.
-      - "1_cicd/src/cicd/ship-cloud-calendar.yml"
+      - "1_cicd/src/cicd/ship-cloud-agenda.yml"
       - "ab_cloud-libs-shared/libs/analytics/**"
       - "ab_cloud-libs-shared/libs/cal/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/updater/**"
-      - "ac_cloud-calendar/**"
+      - "ac_cloud-agenda/**"
 permissions:
   contents: write
   packages: write
 
 concurrency:
-  group: ship-cloud-calendar-${{ github.ref }}
+  group: ship-cloud-agenda-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  WORK_DIR: ac_cloud-calendar
+  WORK_DIR: ac_cloud-agenda
 
 jobs:
   build_and_publish:
@@ -172,7 +172,7 @@ jobs:
         if: steps.gate.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: Cloud-Calendar-${{ matrix.abi }}-${{ steps.variant.outputs.variant }}-${{ github.sha }}
+          name: Cloud-Agenda-${{ matrix.abi }}-${{ steps.variant.outputs.variant }}-${{ github.sha }}
           path: ${{ env.WORK_DIR }}/dist/*.apk
           if-no-files-found: error
           retention-days: 30
@@ -201,7 +201,7 @@ jobs:
       - name: Is the GHCR package publicly pullable
         if: ${{ always() && steps.gate.outputs.skip != 'true' }}
         continue-on-error: true
-        run: sh 1_cicd/dist/scripts/cloud-android-ghcr-visibility.sh diegonmarcos cloud-calendar
+        run: sh 1_cicd/dist/scripts/cloud-android-ghcr-visibility.sh diegonmarcos cloud-agenda
 
       - name: Publish to GitHub Releases
         id: publish
@@ -226,7 +226,7 @@ jobs:
       # Edit 1_cicd/src/scripts/cloud-android-publish-guard.sh, never this block.
       - name: A run that published nothing must not be green
         if: ${{ !cancelled() }}
-        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ac_cloud-calendar" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}" "${{ github.event_name }}"
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ac_cloud-agenda" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.create_release) }}" "${{ github.event_name }}"
       # ── end MANAGED-PUBLISH-GUARD ──
 
 

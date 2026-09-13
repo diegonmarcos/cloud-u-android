@@ -210,7 +210,7 @@ data class NewsApiConfig(
  * access to that BuildConfig field directly — callers (NewsBridge)
  * decode the Base64 themselves and hand the raw JSON string to
  * [parseTopics]/[parseApi]. Mirrors `Calendars` in
- * ac_cloud-calendar/libs/cal/CalModels.kt. Parsed results are cached
+ * ac_cloud-agenda/libs/cal/CalModels.kt. Parsed results are cached
  * per-process since the underlying data never changes without a
  * rebuild.
  */

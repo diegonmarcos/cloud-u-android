@@ -133,7 +133,7 @@ _classify() {
     # ONE still-pinned copy vouched for every copy audited after it — the audit
     # reported green with a genuinely unpinned engine in the set. Watched
     # failing: un-pinning ac_cloud-browser alone was not detected until this
-    # line existed, because ac_cloud-calendar had been read first.
+    # line existed, because ac_cloud-agenda had been read first.
     FNR == 1 { delete arr; cmd = "" }
 
     { raw = $0; bare = strip(raw) }

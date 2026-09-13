@@ -23,7 +23,7 @@
         <package android:name="com.diegonmarcos.cloudwallet" />
         <package android:name="com.diegonmarcos.cloudvault" />
         <package android:name="com.diegonmarcos.cloudide" />
-        <package android:name="com.diegonmarcos.cloudcalendar" />
+        <package android:name="com.diegonmarcos.cloudagenda" />
         <package android:name="com.diegonmarcos.cloudmediacenter" />
         <package android:name="com.diegonmarcos.cloudnav" />
         <package android:name="com.diegonmarcos.superapp" />

@@ -51,7 +51,7 @@
     "_doc_english_only_clones": "The clones below need no filter because there is nothing to filter: each was measured to own zero non-English locale directories, and each draws its interface either from its own English values/ or from a catalogue outside Android resources. A filter would be a no-op declaring a rule these modules cannot break — the day one of them vendors a translated catalogue, its entry moves to `base_language: en` and the filter goes in with it.",
 
     "ac_cloud-browser/app":   { "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory." },
-    "ac_cloud-calendar/app":  { "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory." },
+    "ac_cloud-agenda/app":  { "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory." },
     "ac_cloud-contacts/app":  { "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory." },
     "ac_cloud-news/app":      { "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory." },
     "ac_cloud-nav/app":       { "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory." },

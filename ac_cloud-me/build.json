@@ -257,9 +257,9 @@
         "package": "com.diegonmarcos.cloudide"
       },
       {
-        "id": "cloud-calendar",
-        "label": "Cloud Calendar",
-        "package": "com.diegonmarcos.cloudcalendar"
+        "id": "cloud-agenda",
+        "label": "Cloud Agenda",
+        "package": "com.diegonmarcos.cloudagenda"
       },
       {
         "id": "cloud-media-center",

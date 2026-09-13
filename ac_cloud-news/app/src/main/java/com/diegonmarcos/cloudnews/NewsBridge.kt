@@ -22,7 +22,7 @@ import java.util.concurrent.Executors
  * JavascriptInterface bridge to a WebView that can navigate to
  * remote/attacker-controlled content: any page loaded there would gain
  * the same Java-callable surface as our own UI. (Same note as CalBridge
- * in ac_cloud-calendar.)
+ * in ac_cloud-agenda.)
  *
  * Every method returns a JSON STRING (never a raw object) and every
  * epoch-millis value crosses the bridge as a STRING, same convention
@@ -266,7 +266,7 @@ class NewsBridge(private val ctx: Context) {
     }
 
     /** enabled is "true"/"false" (bridge string convention, see
-     *  [com.diegonmarcos.cloudcalendar.CalBridge.events] for precedent
+     *  [com.diegonmarcos.cloudagenda.CalBridge.events] for precedent
      *  in the sibling app). */
     @JavascriptInterface
     fun setTopicEnabled(topic: String, enabled: String): String {
@@ -308,7 +308,7 @@ class NewsBridge(private val ctx: Context) {
      *  - EVENTS: every ENABLED calendar is offered to [EventsSync], but
      *    it only actually fetches a calendar whose own `refresh_hours`
      *    window (data/events.json) has elapsed since its last sync —
-     *    same throttle ac_cloud-calendar's CalSync already uses. In
+     *    same throttle ac_cloud-agenda's CalSync already uses. In
      *    steady state (refresh() called every `refreshSeconds`, default
      *    60s) that means zero-to-a-few of the ~20 calendars are actually
      *    fetched per call, not 20 — the only call that touches all of

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════╗
-# ║ Cloud Calendar — Universal Build Dispatcher                            ║
+# ║ Cloud Agenda — Universal Build Dispatcher                            ║
 # ║                                                                  ║
 # ║ Standalone WebView calendar app. Single-screen HTML/Tailwind UI.      ║
 # ║ Single APK, gradle multi-module. All toolchain (AGP, gradle,      ║
@@ -94,7 +94,7 @@ _ghcr_source() {
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DIST_DIR="$SCRIPT_DIR/dist"
 CMD="${1:-help}"
-APP_MAIN="com.diegonmarcos.cloudcalendar.MainActivity"
+APP_MAIN="com.diegonmarcos.cloudagenda.MainActivity"
 
 log()    { printf "[%s] %s\n" "$(date '+%H:%M:%S')" "$1"; }
 errlog() { printf "\033[0;31m[%s] ERROR: %s\033[0m\n" "$(date '+%H:%M:%S')" "$1" >&2; }
@@ -480,7 +480,7 @@ step_oras_pull() {
     "https://$registry/v2/$repo/manifests/$tag")"
   digest="$(jq -r '.layers[0].digest' <<<"$manifest")"
   size="$(jq -r '.layers[0].size' <<<"$manifest")"
-  asset_title="$(jq -r '.layers[0].annotations["org.opencontainers.image.title"] // "cloud-calendar.apk"' <<<"$manifest")"
+  asset_title="$(jq -r '.layers[0].annotations["org.opencontainers.image.title"] // "cloud-agenda.apk"' <<<"$manifest")"
   [ -n "$digest" ] && [ "$digest" != "null" ] || { errlog "manifest has no layers"; exit 1; }
 
   local out="$DIST_DIR/$asset_title"

@@ -134,10 +134,10 @@ build.log
 ## (libs:core, libs:maps, libs:updater). Same pattern as aa_cloud-superapp/libs/.
 !ac_cloud-nav/libs/
 !ac_cloud-nav/libs/**
-## EXCEPTION: ac_cloud-calendar/libs/ is the gradle multi-module source tree
+## EXCEPTION: ac_cloud-agenda/libs/ is the gradle multi-module source tree
 ## (libs:core, libs:updater, libs:cal). Same pattern as aa_cloud-superapp/libs/.
-!ac_cloud-calendar/libs/
-!ac_cloud-calendar/libs/**
+!ac_cloud-agenda/libs/
+!ac_cloud-agenda/libs/**
 ## EXCEPTION: ac_cloud-news/libs/ is the gradle multi-module source tree
 !ac_cloud-news/libs/
 !ac_cloud-news/libs/**
@@ -215,13 +215,13 @@ ac_cloud-nav/**/build/
 ac_cloud-media-center/.gradle/
 ac_cloud-media-center/build/
 ac_cloud-media-center/**/build/
-## ac_cloud-calendar was added after this list and never got its entries, so a
+## ac_cloud-agenda was added after this list and never got its entries, so a
 ## ~3M-line aa_cloud-superapp cache commit (264c09f2). Added 2026-08-09.
-ac_cloud-calendar/.gradle/
-ac_cloud-calendar/build/
-ac_cloud-calendar/**/build/
-ac_cloud-calendar/.cache/
-ac_cloud-calendar/.kotlin/
+ac_cloud-agenda/.gradle/
+ac_cloud-agenda/build/
+ac_cloud-agenda/**/build/
+ac_cloud-agenda/.cache/
+ac_cloud-agenda/.kotlin/
 ## Same for ac_cloud-news. These MUST sort after the !ac_cloud-news/libs/**
 ac_cloud-news/.gradle/
 ac_cloud-news/build/
@@ -265,7 +265,7 @@ ab_cloud-libs-shared/libs/repos/*
 !ab_cloud-libs-shared/libs/repos/repos.json
 !ab_cloud-libs-shared/libs/repos/sync.sh
 !ab_cloud-libs-shared/libs/repos/README.md
-## ac_cloud-calendar's first local ./gradlew run surfaced it, but the gap
+## ac_cloud-agenda's first local ./gradlew run surfaced it, but the gap
 ## Re-ignore Gradle/Kotlin daemon caches inside the whitelisted aa_cloud-superapp/
 aa_cloud-superapp/.cache/
 aa_cloud-superapp/.kotlin/
@@ -286,8 +286,8 @@ ac_cloud-vault/dist/
 ac_cloud-vault/**/*.apk
 ac_cloud-media-center/dist/
 ac_cloud-media-center/**/*.apk
-ac_cloud-calendar/dist/
-ac_cloud-calendar/**/*.apk
+ac_cloud-agenda/dist/
+ac_cloud-agenda/**/*.apk
 ## ae-tool_termux-boot + c_devices/garmin-watchface arrived from cloud-infra-desktop
 ## (2026-08-27). Termux Boot is Gradle like the ac_cloud-* apps, so it needs the
 ## same build-output rules; *.jks/*.keystore are already global above.
