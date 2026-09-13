@@ -405,8 +405,8 @@ class ConstellationFragment : Fragment() {
         //                 is brought current without switching tabs first. There
         //                 is deliberately no tab-scoped update: it only ever made
         //                 the user visit both tabs to reach the same place.
-        // Exactly two rows of controls: the actions and the auto-update switch on
-        // the first, the configs and the remaining switches on the second. Both
+        // Exactly two rows of controls: the batch actions and the auto-update switch
+        // on the first, the configs and the remaining switches on the second. Both
         // containers are added here and filled at the end of this method, so every
         // control is still built right next to the state it reads.
         val actionRow = buttonRow(ctx)
@@ -421,18 +421,32 @@ class ConstellationFragment : Fragment() {
         var playProtectButton: View? = null
         var wirelessDebugButton: View? = null
         var openButton: View? = null
-        updateAllButton = btn(ctx, "⬆  Update all", 0xFF2B6CB0.toInt())
-        installAllButton = btn(ctx, "⬇  Install all", 0xFF2B6CB0.toInt())
+        updateAllButton = btn(ctx, "⬆  Update all", 0xFF2B6CB0.toInt()) {
+            updateAll(ctx, "apps + libs", apps + libs)
+        }
+        installAllButton = btn(ctx, "⬇  Install all", 0xFF2B6CB0.toInt()) { installMissing(ctx) }
         // Row 2 — refresh statuses (full width).
-        checkAllButton = btn(ctx, "↻  Check all", 0xFF2B6CB0.toInt())
+        checkAllButton = btn(ctx, "↻  Check all", 0xFF2B6CB0.toInt()) { checkAll(ctx) }
         val autoOn = AutoUpdatePrefs.enabled(ctx)
         autoUpdateButton = btn(ctx, "Auto update: " + (if (autoOn) "ON" else "OFF"),
-            if (autoOn) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt())
+            if (autoOn) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt()) {
+            AutoUpdatePrefs.setEnabled(ctx, !autoOn)
+            // Reconcile the periodic workers immediately: start() schedules
+            // when enabled, cancels when disabled (both re-check the pref).
+            com.diegonmarcos.superapp.updater.Updater.start(ctx)
+            ConstellationWorker.start(ctx)
+            Toast.makeText(ctx, "Auto-update " + (if (!autoOn) "ON" else "OFF"), Toast.LENGTH_SHORT).show()
+            renderHeader(ctx)
+        }
         // Only gates the UNATTENDED passes: the buttons above are the user
         // asking, so they download on any network regardless of this.
         val wifiOnly = AutoUpdatePrefs.requireUnmetered(ctx)
         wifiOnlyButton = btn(ctx, "Up Wifi Only: " + (if (wifiOnly) "ON" else "OFF"),
-            if (wifiOnly) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt())
+            if (wifiOnly) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt()) {
+            AutoUpdatePrefs.setRequireUnmetered(ctx, !wifiOnly)
+            Toast.makeText(ctx, "Update over Wi-Fi only " + (if (!wifiOnly) "ON" else "OFF"), Toast.LENGTH_SHORT).show()
+            renderHeader(ctx)
+        }
         headerControls.addView(caption(ctx,
             if (AutoUpdatePrefs.canInstallSilently(ctx)) "Silent installs enabled."
             else "Grant 'Install unknown apps' for no-tap updates."))
@@ -445,7 +459,30 @@ class ConstellationFragment : Fragment() {
         // label is always the device's real state even with no channel present.
         val scan = PackageVerifier.state(ctx)
         playProtectButton = btn(ctx, "Play Protect: " + (if (scan.on) "ON" else "OFF"),
-            if (scan.on) 0xFF4A4A55.toInt() else 0xFF2F855A.toInt())
+            if (scan.on) 0xFF4A4A55.toInt() else 0xFF2F855A.toInt()) {
+            Toast.makeText(ctx, "Asking the shell channel...", Toast.LENGTH_SHORT).show()
+            // setScanning binds Shizuku, which blocks - never on the main thread.
+            thread(name = "play-protect-toggle") {
+                val want = !scan.on
+                fun apply(): PackageVerifier.Result = PackageVerifier.setScanning(ctx, want)
+                fun report(r: PackageVerifier.Result) = headerControls.post {
+                    Toast.makeText(ctx,
+                        if (r.ok) r.state.describe() + " - via " + r.channel else r.output,
+                        Toast.LENGTH_LONG).show()
+                    renderHeader(ctx)
+                }
+                val first = apply()
+                if (first.channel != "none") { report(first); return@thread }
+                // No channel yet: START the flow that grants one instead of
+                // telling the user to go find it. If the grant lands without
+                // another screen (the Shizuku prompt), finish the toggle
+                // ourselves - the tap that got us here already said what to do.
+                val msg = ShellAccess.ensure(ctx) {
+                    thread(name = "play-protect-retry") { report(apply()) }
+                }
+                headerControls.post { Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show() }
+            }
+        }
         headerControls.addView(caption(ctx,
             if (!scan.on) "No install-scan prompt - fleet installs go straight through."
             else "Play Protect prompts on every install. Turning it off needs the " +
@@ -463,8 +500,27 @@ class ConstellationFragment : Fragment() {
         // to Developer options, where it lives.
         val wd = WirelessDebugging.isOn(ctx)
         wirelessDebugButton = btn(ctx, "Wireless Debug: " + (if (wd) "ON" else "OFF"),
-            if (wd) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt())
-        openButton = btn(ctx, "Open ↗", 0xFF7C3AED.toInt())
+            if (wd) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt()) {
+            Toast.makeText(ctx, "Asking the shell channel...", Toast.LENGTH_SHORT).show()
+            thread(name = "wireless-debug-toggle") {
+                // busy = an install batch holds the lease; cutting the
+                // channel underneath one strands a half-finished install.
+                val st = com.diegonmarcos.superapp.updater.UpdateProgress.state
+                val busy = com.diegonmarcos.superapp.updater.UpdateProgress.batchLabel != null ||
+                    st is com.diegonmarcos.superapp.updater.UpdateProgress.State.Downloading ||
+                    st is com.diegonmarcos.superapp.updater.UpdateProgress.State.Installing
+                val r = WirelessDebugging.set(ctx, !wd, busy = busy)
+                headerControls.post {
+                    Toast.makeText(ctx,
+                        (if (r.ok) "Wireless debugging " + (if (r.on) "ON" else "OFF") + " via " + r.channel
+                         else "NOT changed (" + r.channel + ") - still " + (if (r.on) "ON" else "OFF")) +
+                            "\n" + r.detail,
+                        Toast.LENGTH_LONG).show()
+                    renderHeader(ctx)
+                }
+            }
+        }
+        openButton = btn(ctx, "Open ↗", 0xFF7C3AED.toInt()) { openDeveloperOptions(ctx) }
         headerControls.addView(caption(ctx,
             if (wd) "adbd is listening - the embedded channel can install without a tap."
             else "Off: no embedded adb channel. 'Direct' on any row still installs, " +
@@ -987,14 +1043,6 @@ class ConstellationFragment : Fragment() {
         startActivity(Intent(Settings.ACTION_SETTINGS))
     }
 
-    private fun openUnknownAppSources(ctx: Context) {
-        val self = Uri.fromParts("package", ctx.packageName, null)
-        val scoped = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, self)
-        if (scoped.resolveActivity(ctx.packageManager) != null) { startActivity(scoped); return }
-        val list = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-        if (list.resolveActivity(ctx.packageManager) != null) { startActivity(list); return }
-        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, self))
-    }
 
     // ── view helpers ─────────────────────────────────────────────────────────
     private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
