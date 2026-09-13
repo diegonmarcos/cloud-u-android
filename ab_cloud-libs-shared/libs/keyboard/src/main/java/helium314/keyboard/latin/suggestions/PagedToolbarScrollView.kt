@@ -38,8 +38,10 @@ class PagedToolbarScrollView @JvmOverloads constructor(
     private val viewportWidth get() = width - paddingLeft - paddingRight
 
     /**
-     * All toolbar keys share one [android.widget.LinearLayout.LayoutParams], so the first laid-out
-     * one speaks for the rest. Gone keys are skipped: they take up no width in the row either.
+     * Every toolbar key is built to the same width, so the first laid-out one speaks for the rest.
+     * Width only - each key carries its OWN layout params, because [alignKeysThatWantTheirOwnPage]
+     * writes a margin into the params of one key and a shared object would spread it to all of them.
+     * Gone keys are skipped: they take up no width in the row either.
      */
     private val iconWidth
         get() = (getChildAt(0) as? ViewGroup)?.children?.firstOrNull { it.isVisible && it.width > 0 }?.width ?: 0

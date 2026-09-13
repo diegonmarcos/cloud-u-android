@@ -130,10 +130,19 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     private val enabledToolKeyBackground = GradientDrawable()
     private var direction = 1 // 1 if LTR, -1 if RTL
 
-    private val toolbarKeyLayoutParams = LinearLayout.LayoutParams(
-        resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
-        LinearLayout.LayoutParams.MATCH_PARENT
-    )
+    /**
+     * A FRESH instance per key, never one instance shared by the row. Layout params are per-child
+     * mutable state: [PagedToolbarScrollView] writes a left margin into the params of the one key
+     * that has to start a page of its own, and while every key held the same object that margin
+     * was handed to all of them at once. Each key then occupied its own width plus that gap, so a
+     * page sized for eleven icons had room for four - and the gap was recomputed from positions
+     * it had itself moved, which is why the row also refused to settle.
+     */
+    private val toolbarKeyLayoutParams
+        get() = LinearLayout.LayoutParams(
+            resources.getDimensionPixelSize(R.dimen.config_suggestions_strip_edge_key_width),
+            LinearLayout.LayoutParams.MATCH_PARENT
+        )
 
     init {
         val colors = Settings.getValues().mColors
@@ -576,7 +585,9 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
         copy.scaleY = original.scaleY
         copy.contentDescription = original.contentDescription
         copy.setImageDrawable(original.drawable)
-        copy.layoutParams = original.layoutParams
+        // Its own params, not the original's object: every toolbar key is built with these, and
+        // sharing them would put the paged row's page-start margin on this copy as well.
+        copy.layoutParams = toolbarKeyLayoutParams
         copy.isActivated = original.isActivated
         setupKey(copy, Settings.getValues().mColors)
         secondRowKeys.addView(copy)
