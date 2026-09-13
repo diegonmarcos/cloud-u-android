@@ -120,6 +120,18 @@
 
         /* ---- shared building blocks ---- */
         .seg { display: inline-flex; background: #F3F4F6; border-radius: 999px; padding: 3px; gap: 2px; }
+        /* Five view labels never fit a phone width, so this variant scrolls. */
+        .seg-scroll { display: flex; max-width: 100%; overflow-x: auto; }
+        .seg-scroll button { flex-shrink: 0; }
+
+        /* Year view: twelve tappable mini months. */
+        .year-month { display: block; width: 100%; text-align: left; background: none; border: none; padding: 0; font-family: inherit; color: inherit; }
+        .year-month-name { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+        .year-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+        .year-dow { font-size: 7px; color: #C4C4C4; text-align: center; }
+        .year-cell { position: relative; font-size: 8px; line-height: 11px; text-align: center; color: #6B6B6B; }
+        .year-cell-today { font-weight: 700; color: #111; }
+        .year-dot { position: absolute; left: 50%; bottom: -2px; width: 3px; height: 3px; margin-left: -1.5px; border-radius: 999px; }
         .seg button {
             border: none; background: none; font-family: inherit; font-size: 12.5px; font-weight: 600;
             padding: 6px 14px; border-radius: 999px; color: #8A8A8A; white-space: nowrap;
@@ -199,11 +211,20 @@
                         <span id="cal-header-date">Today</span>
                         <svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1.5L6 6.5L11 1.5" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </button>
-                    <div class="seg" id="cal-view-toggle">
+                </header>
+
+                <!-- Five views on one scrollable segmented row: the labels do not
+                     fit a phone width side by side with the date, so the toggle
+                     gets its own line and scrolls sideways. -->
+                <div class="px-6">
+                    <div class="seg seg-scroll hide-scrollbar" id="cal-view-toggle">
+                        <button data-view="year">Year</button>
+                        <button data-view="graph">Today Graph</button>
+                        <button data-view="week">Week</button>
                         <button data-view="month" class="active">Month</button>
                         <button data-view="list">List</button>
                     </div>
-                </header>
+                </div>
 
                 <div id="cal-error-mount" class="px-6"></div>
 
@@ -220,8 +241,15 @@
                     <div id="sub-row-mount"></div>
                 </div>
 
+                <!-- Year overview: twelve mini month grids, a dot per day that
+                     has at least one event on a visible calendar. -->
+                <div id="calendar-year-view" class="px-6 mt-6 hidden panel-scroll-pad"></div>
+
+                <!-- Week view: the seven days around the selected date. -->
+                <div id="calendar-week-view" class="px-6 mt-6 hidden panel-scroll-pad"></div>
+
                 <!-- Month grid view -->
-                <div id="calendar-month-view" class="px-6 mt-6">
+                <div id="calendar-month-view" class="px-6 mt-6 panel-scroll-pad">
                     <div class="grid grid-cols-7 text-center text-[#B0B0B0] text-[10px] mb-4 font-medium tracking-widest">
                         <div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div>
                     </div>
@@ -231,12 +259,15 @@
                 <!-- List (agenda) view -->
                 <div id="calendar-list-view" class="px-6 mt-6 hidden"></div>
 
-                <!-- Clock -->
-                <div class="mt-14 relative flex justify-center items-center panel-scroll-pad">
+                <!-- Today Graph: the analog clock, with today's events drawn as
+                     arcs — one concentric ring per calendar. -->
+                <div id="calendar-graph-view" class="hidden">
+                <div class="mt-14 relative flex justify-center items-center">
                     <div class="relative w-[240px] h-[240px]">
                         <svg class="absolute inset-0 w-full h-full" viewBox="0 0 240 240">
                             <circle cx="120" cy="120" r="115" fill="none" stroke="#E5E5E5" stroke-width="2" stroke-dasharray="2 10" />
                         </svg>
+                        <svg class="absolute inset-0 w-full h-full" viewBox="0 0 240 240" id="clock-arcs"></svg>
                         <div class="clock-number" style="transform: rotate(0deg) translateY(-85px) rotate(0deg);">12</div>
                         <div class="clock-number" style="transform: rotate(30deg) translateY(-85px) rotate(-30deg);">1</div>
                         <div class="clock-number" style="transform: rotate(60deg) translateY(-85px) rotate(-60deg);">2</div>
@@ -257,6 +288,9 @@
                              style="transform: translateX(-50%) rotate(30deg); margin-bottom: -1.5px;"></div>
                     </div>
                     <div class="absolute top-1/2 left-1/2 w-0 h-0 z-0" id="clock-labels"></div>
+                </div>
+                <!-- Which ring belongs to which calendar, outermost first. -->
+                <div class="px-6 mt-10 panel-scroll-pad" id="clock-legend"></div>
                 </div>
             </section>
 
@@ -304,19 +338,16 @@
                 <div class="px-6 mt-3 panel-scroll-pad" id="todo-list"></div>
             </section>
 
-            <!-- ============ PROJECTS TAB ============ -->
-            <section id="tab-projects" class="tab-panel hidden">
+            <!-- ============ INVITES TAB ============ -->
+            <!-- Mail invitations used to live behind an "Invites Mail" chip inside
+                 the Events tab. They are a queue that wants answering rather than a
+                 flavour of event, so they get their own tab in the bottom nav. -->
+            <section id="tab-invites" class="tab-panel hidden">
                 <header class="panel-header flex justify-between items-center">
-                    <h1 class="text-xl font-medium">Projects</h1>
+                    <h1 class="text-xl font-medium">Invites</h1>
                 </header>
-                <div class="px-6" id="projects-error-mount"></div>
-                <div class="px-6">
-                    <div class="seg" id="projects-mode-toggle">
-                        <button data-mode="all" class="active">All tasks</button>
-                        <button data-mode="byproject">By project</button>
-                    </div>
-                </div>
-                <div class="px-6 mt-4 panel-scroll-pad" id="projects-body"></div>
+                <div class="px-6" id="invites-error-mount"></div>
+                <div class="px-6 mt-2 panel-scroll-pad" id="invites-body"></div>
             </section>
 
             <!-- ============ EVENTS TAB ============ -->
@@ -330,7 +361,6 @@
                         <button data-cat="all" class="active">All</button>
                         <button data-cat="tickets">Tickets</button>
                         <button data-cat="bookings">Bookings</button>
-                        <button data-cat="invites">Invites Mail</button>
                     </div>
                 </div>
                 <div class="px-6 mt-4 panel-scroll-pad" id="events-body"></div>
@@ -411,9 +441,9 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="16" rx="3"/><path d="M3.5 9.5h17M8 2.5v4M16 2.5v4"/></svg>
                 <span>Calendar</span>
             </button>
-            <button class="nav-item" data-tab="projects">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.2a1.7 1.7 0 011.7-1.7h3.6l1.8 1.8h8a1.7 1.7 0 011.7 1.7v9.3a1.7 1.7 0 01-1.7 1.7H5.2a1.7 1.7 0 01-1.7-1.7V6.2z"/></svg>
-                <span>Projects</span>
+            <button class="nav-item" data-tab="invites">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3.6 7l8.4 6 8.4-6"/></svg>
+                <span>Invites</span>
             </button>
             <button class="nav-item" data-tab="configs">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.4 4.4l2.1 2.1M17.5 17.5l2.1 2.1M2.5 12h3M18.5 12h3M4.4 19.6l2.1-2.1M17.5 6.5l2.1-2.1"/></svg>
@@ -628,7 +658,7 @@ var MOCK = (function () {
         { id: 'bookings-demo',            name: 'Reservations',                 category: 'bookings',    color: '#16A34A', enabled: true },
         // Third synthetic feed: mail invites (iMIP) have no real backend yet
         // (no CalBridge method exists for them — see the Events tab comment
-        // below). Mock-only, so Events > Invites Mail has something to show;
+        // below). Mock-only, so the Invites tab has something to show;
         // the real (non-demo) path renders a neutral "not wired up" empty
         // state instead of ever faking this category.
         { id: 'invites',                  name: 'Invites (Mail)',               category: 'invites',     color: '#EC407A', enabled: true }
@@ -746,6 +776,25 @@ var MOCK = (function () {
         addAllDay(20, 'bookings-demo', 'Co-working desk — day pass', 1);
         addTimed(27, 15, 0, 60, 'bookings-demo', 'Hotel check-in — Lisbon', 'Hotel Avenida');
         addTimed(31, 10, 0, 30, 'bookings-demo', 'Car rental pickup', 'Europcar Tegel');
+
+        // Today, hour by hour. The Today Graph draws each of these as an arc on
+        // a 12-hour dial, one ring per calendar, so this block deliberately
+        // spreads several calendars across all twelve dial positions -- without
+        // it the graph shows a single lonely arc and looks broken.
+        addTimed(0, 6, 30, 40, 'moon-phases', 'Venus at greatest elongation', 'Eastern sky');
+        addTimed(0, 7, 15, 45, 'bookings-demo', 'Physio — shoulder session', 'Physio Mitte');
+        addTimed(0, 8, 0, 50, 'berlin-events', 'Morning maker breakfast', 'Betahaus, Berlin');
+        addTimed(0, 9, 30, 75, 'tickets-demo', 'Museum slot — Pergamon', 'Museumsinsel');
+        addTimed(0, 11, 0, 55, 'berlin-events', 'Open data meetup', 'Wikimedia, Berlin');
+        addTimed(0, 12, 15, 45, 'bookings-demo', 'Lunch reservation', 'Restaurant Nobelhart');
+        addTimed(0, 13, 0, 90, 'berlin-events', 'Rust Berlin study group', 'c-base, Berlin');
+        addTimed(0, 14, 30, 120, 'f1', 'Free practice 2', 'Circuit');
+        addTimed(0, 16, 0, 105, 'hertha-bsc', 'Hertha BSC training open day', 'Olympiastadion');
+        addTimed(0, 17, 45, 60, 'moon-phases', 'ISS visible pass', 'Overhead');
+        addTimed(0, 19, 0, 110, 'union-berlin', 'Union Berlin home match', 'Stadion An der Alten Forsterei');
+        addTimed(0, 20, 30, 100, 'tickets-demo', 'Concert — Berlin Philharmonic', 'Philharmonie');
+        addTimed(0, 22, 0, 75, 'berlin-events', 'Late night gallery walk', 'Auguststrasse');
+        addTimed(0, 23, 15, 40, 'moon-phases', 'Geminid meteor peak', 'Dark sky spot');
 
         // Invites (mail/iMIP) — synthetic demo calendar so Events > Invites
         // Mail is never empty. Spread over the next few weeks; mix of
@@ -1042,7 +1091,6 @@ var State = {
     calCategoryModel: [],
     cal: { year: 0, month: 0, view: 'month', events: [], expandedCat: null },
     todo: { projects: [], selectedProject: '', items: [] },
-    projects: { mode: 'all', projects: [], todos: [] },
     events: { filter: 'all', items: [] }
 };
 
@@ -1113,7 +1161,7 @@ function rerenderAll() {
     renderClockLabels();
 
     if (loadedTabs.todo) loadTodoTab();
-    if (loadedTabs.projects) loadProjectsTab();
+    if (loadedTabs.invites) loadInvitesTab();
     if (loadedTabs.events) loadEventsTab();
     renderConfigCalendars();
     renderDemoModeConfig();
@@ -1181,6 +1229,7 @@ function onVisibilityChanged() {
     renderCategoryPanel();
     renderMonthGrid();
     renderListView();
+    refreshActiveCalView();
     renderConfigCalendars();
 }
 
@@ -1367,13 +1416,195 @@ function setCalMonth(month, year) {
     fetchMonthEvents(year, month);
     renderMonthGrid();
     renderListView();
+    refreshActiveCalView();
 }
 
+/* The five calendar views, keyed by their toggle button's data-view. */
+var CAL_VIEW_PANES = {
+    year: 'calendar-year-view',
+    graph: 'calendar-graph-view',
+    week: 'calendar-week-view',
+    month: 'calendar-month-view',
+    list: 'calendar-list-view'
+};
+
 function setCalView(view) {
+    if (!CAL_VIEW_PANES[view]) view = 'month';
     State.cal.view = view;
     document.querySelectorAll('#cal-view-toggle button').forEach(function (b) { b.classList.toggle('active', b.dataset.view === view); });
-    document.getElementById('calendar-month-view').classList.toggle('hidden', view !== 'month');
-    document.getElementById('calendar-list-view').classList.toggle('hidden', view !== 'list');
+    Object.keys(CAL_VIEW_PANES).forEach(function (k) {
+        document.getElementById(CAL_VIEW_PANES[k]).classList.toggle('hidden', k !== view);
+    });
+    refreshActiveCalView();
+}
+
+/* The year, week and graph views are built on demand -- the year one costs a
+   whole extra year of events, and the graph one only means anything for today
+   -- so every change of month or of calendar visibility has to repaint the
+   view that happens to be showing. */
+function refreshActiveCalView() {
+    if (State.cal.view === 'year') renderYearView();
+    else if (State.cal.view === 'week') renderWeekView();
+    else if (State.cal.view === 'graph') { renderClockLabels(); renderClockArcs(); }
+}
+
+/* ---- year view: twelve mini month grids, a dot per busy day ---- */
+function renderYearView() {
+    var mount = document.getElementById('calendar-year-view');
+    var year = State.cal.year;
+    // The month views only ever fetch their own six-week window, so the year
+    // needs its own fetch. Cached per year so flipping views is free.
+    if (State.cal.yearOf !== year) {
+        var res = Api.events(new Date(year, 0, 1).getTime(), new Date(year + 1, 0, 1).getTime());
+        if (res && res.error) { mount.innerHTML = errorBanner(res.error); return; }
+        State.cal.yearEvents = res || [];
+        State.cal.yearOf = year;
+    }
+    var colorByDay = {};
+    State.cal.yearEvents.forEach(function (e) {
+        var cal = State.calendarsById[e.calendarId];
+        if (!cal || !State.visibleCalendars.has(cal.id)) return;
+        var s = toMillis(e.start), en = toMillis(e.end);
+        if (s === null) return;
+        var end = startOfDay(new Date(en !== null ? en - 1 : s));
+        for (var d = startOfDay(new Date(s)); d <= end; d.setDate(d.getDate() + 1)) {
+            var k = dateKey(d);
+            if (!colorByDay[k]) colorByDay[k] = cal.color;
+        }
+    });
+    var today = new Date();
+    mount.innerHTML = '<div class="grid grid-cols-3 gap-x-3 gap-y-5">' + MONTH_NAMES.map(function (name, m) {
+        var cells = gridDays(year, m).map(function (day) {
+            if (!day.inMonth) return '<span class="year-cell"></span>';
+            var k = dateKey(day.date);
+            var dot = colorByDay[k] ? '<i class="year-dot" style="background:' + colorByDay[k] + '"></i>' : '';
+            var cls = 'year-cell' + (sameDay(day.date, today) ? ' year-cell-today' : '');
+            return '<span class="' + cls + '">' + day.date.getDate() + dot + '</span>';
+        }).join('');
+        return '<button class="year-month" data-year-month="' + m + '">' +
+            '<span class="year-month-name">' + name + '</span>' +
+            '<span class="year-grid">' + DOW.map(function (w) { return '<span class="year-dow">' + w + '</span>'; }).join('') + cells + '</span>' +
+            '</button>';
+    }).join('') + '</div>';
+    mount.querySelectorAll('[data-year-month]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            setCalMonth(parseInt(btn.dataset.yearMonth, 10), year);
+            setCalView('month');
+        });
+    });
+}
+
+/* ---- week view: the seven days around today (or the 1st of the shown month) ---- */
+function renderWeekView() {
+    var mount = document.getElementById('calendar-week-view');
+    var today = new Date();
+    var anchor = (today.getFullYear() === State.cal.year && today.getMonth() === State.cal.month)
+        ? startOfDay(today)
+        : startOfDay(new Date(State.cal.year, State.cal.month, 1));
+    var weekStart = startOfDay(anchor);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+
+    var visible = State.cal.events.filter(function (e) {
+        var cal = State.calendarsById[e.calendarId];
+        return cal && State.visibleCalendars.has(cal.id) && toMillis(e.start) !== null;
+    });
+
+    var html = '';
+    for (var i = 0; i < 7; i++) {
+        var d = new Date(weekStart);
+        d.setDate(d.getDate() + i);
+        var dayStart = startOfDay(d).getTime();
+        var dayEnd = dayStart + 86400000;
+        var items = visible.filter(function (e) {
+            var s = toMillis(e.start), en = toMillis(e.end);
+            return s < dayEnd && (en === null ? s >= dayStart : en > dayStart);
+        }).sort(function (a, b) { return toMillis(a.start) - toMillis(b.start); });
+        var rows = items.length
+            ? items.map(function (e) {
+                var cal = State.calendarsById[e.calendarId];
+                var timeLabel = e.allDay ? 'All day' : fmtTime(toMillis(e.start));
+                return '<div class="flex items-center gap-2.5 py-1.5">' +
+                    '<span class="w-2 h-2 rounded-full flex-shrink-0" style="background:' + cal.color + '"></span>' +
+                    '<span class="text-[11.5px] text-gray-400 w-14 flex-shrink-0">' + esc(timeLabel) + '</span>' +
+                    '<span class="text-[13px] truncate">' + esc(e.title) + '</span></div>';
+            }).join('')
+            : '<div class="text-[12px] text-gray-300 py-1.5">Nothing scheduled.</div>';
+        var isToday = sameDay(d, today);
+        html += '<div class="mb-3 pb-2 border-b border-gray-100">' +
+            '<div class="text-[11px] font-semibold uppercase tracking-widest mb-0.5 ' + (isToday ? 'text-black' : 'text-gray-400') + '">' +
+            esc(fmtDayHeader(d)) + (isToday ? ' \u00b7 today' : '') + '</div>' + rows + '</div>';
+    }
+    mount.innerHTML = html;
+}
+
+/* ---- today graph: today's timed events as arcs on the 12-hour dial ----
+   One concentric ring per calendar so overlapping events never hide each
+   other. The dial spans 12 hours, so a minute is half a degree; an event
+   that runs past the 12-hour mark simply keeps sweeping round. */
+var CLOCK_RING_OUTER = 108;
+var CLOCK_RING_STEP = 9;
+
+function clockPoint(radius, degrees) {
+    var rad = (degrees - 90) * Math.PI / 180;
+    return [(120 + radius * Math.cos(rad)).toFixed(2), (120 + radius * Math.sin(rad)).toFixed(2)];
+}
+
+function clockArcPath(radius, startDegrees, sweepDegrees) {
+    if (sweepDegrees >= 359.9) sweepDegrees = 359.9;   // a full ring has no drawable endpoint
+    var a = clockPoint(radius, startDegrees);
+    var b = clockPoint(radius, startDegrees + sweepDegrees);
+    return 'M' + a[0] + ' ' + a[1] + ' A' + radius + ' ' + radius + ' 0 ' +
+        (sweepDegrees > 180 ? 1 : 0) + ' 1 ' + b[0] + ' ' + b[1];
+}
+
+function renderClockArcs() {
+    var svg = document.getElementById('clock-arcs');
+    var legend = document.getElementById('clock-legend');
+    var today = startOfDay(new Date());
+    var tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+
+    var timed = State.cal.events.filter(function (e) {
+        var cal = State.calendarsById[e.calendarId];
+        if (!cal || !State.visibleCalendars.has(cal.id)) return false;
+        if (e.allDay) return false;
+        var s = toMillis(e.start);
+        return s !== null && s >= today.getTime() && s < tomorrow.getTime();
+    }).sort(function (a, b) { return toMillis(a.start) - toMillis(b.start); });
+
+    if (!timed.length) {
+        svg.innerHTML = '';
+        legend.innerHTML = '<div class="text-[12px] text-gray-300">No timed events today.</div>';
+        return;
+    }
+
+    // Ring order follows first appearance, so the day's earliest calendar
+    // takes the outermost ring.
+    var ringOf = {}, rings = [];
+    timed.forEach(function (e) {
+        if (ringOf[e.calendarId] == null) { ringOf[e.calendarId] = rings.length; rings.push(e.calendarId); }
+    });
+
+    svg.innerHTML = timed.map(function (e) {
+        var cal = State.calendarsById[e.calendarId];
+        var start = new Date(toMillis(e.start));
+        var end = toMillis(e.end);
+        var minutes = end !== null ? Math.max(1, (end - toMillis(e.start)) / 60000) : 30;
+        var startDegrees = (start.getHours() % 12) * 30 + start.getMinutes() * 0.5;
+        var sweep = Math.max(6, minutes * 0.5);        // a 12-minute meeting still has to be visible
+        var radius = CLOCK_RING_OUTER - ringOf[e.calendarId] * CLOCK_RING_STEP;
+        if (radius < 24) return '';                    // past ~10 calendars the rings would collide
+        return '<path d="' + clockArcPath(radius, startDegrees, sweep) + '" fill="none" stroke="' +
+            cal.color + '" stroke-width="6" stroke-linecap="round" opacity="0.85"/>';
+    }).join('');
+
+    legend.innerHTML = rings.map(function (calId) {
+        var cal = State.calendarsById[calId];
+        var count = timed.filter(function (e) { return e.calendarId === calId; }).length;
+        return '<div class="flex items-center gap-2 py-1">' +
+            '<span class="w-3 h-1.5 rounded-full flex-shrink-0" style="background:' + cal.color + '"></span>' +
+            '<span class="text-[12px] flex-1 truncate">' + esc(cal.name) + '</span>' +
+            '<span class="text-[11px] text-gray-400">' + count + '</span></div>';
+    }).join('');
 }
 
 function initCalendarTab() {
@@ -1506,7 +1737,6 @@ function onToggleTodo(id, makeDone) {
     var res = Api.setTodoStatus(id, makeDone);
     if (!res || res.ok === false) { alert('Could not update task' + (res && res.error ? ': ' + res.error : '')); return; }
     loadTodoList();
-    if (State.tab === 'projects') loadProjectsTab();
 }
 
 function populateTodoFormProjects() {
@@ -1541,97 +1771,76 @@ function initTodoTab() {
 }
 
 /* =====================================================================
-   Projects tab
+   Invites tab
    ===================================================================== */
-function loadProjectsTab() {
-    var errMount = document.getElementById('projects-error-mount');
-    var projects = Api.projects();
-    if (projects && projects.error) { errMount.innerHTML = errorBanner(projects.error); return; }
-    var allTodos = Api.todos('');
-    if (allTodos && allTodos.error) { errMount.innerHTML = errorBanner(allTodos.error); return; }
-    errMount.innerHTML = '';
-    State.projects.projects = projects;
-    State.projects.todos = allTodos || [];
-    renderProjectsBody();
+function loadInvitesTab() {
+    // Invites ride in on the same feed as the Events tab, so reuse that loader
+    // and only report its failures into this tab's own banner.
+    if (!State.events.items.length && !loadEventsTab('invites-error-mount')) return;
+    document.getElementById('invites-error-mount').innerHTML = '';
+    renderInvitesBody();
 }
 
-function projectName(id) {
-    var p = State.projects.projects.find(function (p) { return p.id === id; });
-    return p ? p.name : '—';
-}
-
-function renderProjectsBody() {
-    var mount = document.getElementById('projects-body');
-    if (State.projects.mode === 'all') {
-        if (!State.projects.todos.length) { mount.innerHTML = '<div class="empty-state">No tasks yet.</div>'; return; }
-        var sorted = State.projects.todos.slice().sort(function (a, b) {
-            if ((a.status === 'COMPLETED') !== (b.status === 'COMPLETED')) return a.status === 'COMPLETED' ? 1 : -1;
-            return 0;
-        });
-        mount.innerHTML = sorted.map(function (t) {
-            return '<div class="mb-1">' +
-                '<div class="text-[10.5px] font-semibold text-gray-400 uppercase tracking-wide mt-2">' + esc(projectName(t.projectId)) + '</div>' +
-                renderTodoRowHtml(t) + '</div>';
-        }).join('');
-    } else {
-        mount.innerHTML = State.projects.projects.map(function (p) {
-            var items = State.projects.todos.filter(function (t) { return t.projectId === p.id; });
-            var body = items.length
-                ? items.map(renderTodoRowHtml).join('')
-                : '<div class="empty-state" style="padding:16px 0;">No tasks in this project.</div>';
-            return '<details class="proj-group border-b border-gray-100 py-2">' +
-                '<summary class="flex items-center justify-between py-1.5">' +
-                    '<span class="flex items-center gap-2">' +
-                        '<svg class="chev" width="8" height="12" viewBox="0 0 8 12" fill="none"><path d="M1 1L6 6L1 11" stroke="#B0B0B0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
-                        '<span class="w-2.5 h-2.5 rounded-full" style="background:' + p.color + '"></span>' +
-                        '<span class="text-[14px] font-medium">' + esc(p.name) + '</span>' +
-                    '</span>' +
-                    '<span class="text-[12px] text-gray-400">' + p.openCount + ' / ' + p.totalCount + '</span>' +
-                '</summary><div class="pl-2">' + body + '</div></details>';
-        }).join('');
+function renderInvitesBody() {
+    var mount = document.getElementById('invites-body');
+    var items = State.events.items.filter(function (e) {
+        var cal = State.events.calendarsById[e.calendarId];
+        return cal && cal.category === 'invites';
+    });
+    if (!items.length) {
+        mount.innerHTML = '<div class="empty-state">' + eventsEmptyStateHtml('invites') + '</div>';
+        return;
     }
-    mount.querySelectorAll('[data-check-id]').forEach(function (el) {
-        el.addEventListener('click', function () { onToggleTodoInProjects(el.dataset.checkId, el.classList.contains('done') === false); });
+    // Needs-action first (those are the ones demanding a response), then by
+    // start time -- a flat list rather than day-grouped, since "what needs my
+    // attention" matters more here than chronology.
+    var sorted = items.slice().sort(function (a, b) {
+        var ra = INVITE_STATUS_RANK[a.responseStatus] != null ? INVITE_STATUS_RANK[a.responseStatus] : 0;
+        var rb = INVITE_STATUS_RANK[b.responseStatus] != null ? INVITE_STATUS_RANK[b.responseStatus] : 0;
+        if (ra !== rb) return ra - rb;
+        return toMillis(a.start) - toMillis(b.start);
     });
-}
-
-function onToggleTodoInProjects(id, makeDone) {
-    var res = Api.setTodoStatus(id, makeDone);
-    if (!res || res.ok === false) { alert('Could not update task' + (res && res.error ? ': ' + res.error : '')); return; }
-    loadProjectsTab();
-    if (State.tab === 'todo') loadTodoList();
-}
-
-function initProjectsTab() {
-    document.getElementById('projects-mode-toggle').addEventListener('click', function (ev) {
-        var btn = ev.target.closest('button[data-mode]');
-        if (!btn) return;
-        State.projects.mode = btn.dataset.mode;
-        document.querySelectorAll('#projects-mode-toggle button').forEach(function (b) { b.classList.toggle('active', b === btn); });
-        renderProjectsBody();
-    });
+    mount.innerHTML = sorted.map(function (e) {
+        var cal = State.events.calendarsById[e.calendarId];
+        var whenLabel = (e.allDay ? 'All day' : fmtTime(toMillis(e.start))) + ' \u00b7 ' + fmtShortDate(toMillis(e.start));
+        return '<div class="flex items-start gap-3 py-2.5 border-b border-gray-50">' +
+            '<span class="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5" style="background:' + cal.color + '"></span>' +
+            '<span class="flex-1 min-w-0">' +
+                '<div class="flex items-center justify-between gap-2">' +
+                    '<div class="text-[13.5px] font-medium truncate">' + esc(e.title) + '</div>' +
+                    inviteStatusChipHtml(e.responseStatus) +
+                '</div>' +
+                '<div class="text-[11.5px] text-gray-400 truncate mt-0.5">' + esc(whenLabel) +
+                    (e.organizer ? ' \u00b7 ' + esc(e.organizer) : '') + (e.location ? ' \u00b7 ' + esc(e.location) : '') +
+                '</div>' +
+            '</span></div>';
+    }).join('');
 }
 
 /* =====================================================================
    Events tab
    ===================================================================== */
-function loadEventsTab() {
-    var errMount = document.getElementById('events-error-mount');
+/* Loads the shared upcoming-event feed. The Invites tab calls this too, so
+   the banner mount is a parameter and the return value says whether the feed
+   actually arrived. */
+function loadEventsTab(errMountId) {
+    var errMount = document.getElementById(errMountId || 'events-error-mount');
     var cals = Api.calendars();
-    if (cals && cals.error) { errMount.innerHTML = errorBanner(cals.error); return; }
+    if (cals && cals.error) { errMount.innerHTML = errorBanner(cals.error); return false; }
     var byId = {};
     cals.forEach(function (c) { byId[c.id] = c; });
     var now = Date.now();
     var horizon = now + 90 * 86400000;
     var events = Api.events(String(now - 86400000), String(horizon));
-    if (events && events.error) { errMount.innerHTML = errorBanner(events.error); return; }
+    if (events && events.error) { errMount.innerHTML = errorBanner(events.error); return false; }
     errMount.innerHTML = '';
     State.events.calendarsById = byId;
     State.events.items = (events || []).filter(function (e) {
         var en = toMillis(e.end);
         return en === null || en >= now;
     }).sort(function (a, b) { return toMillis(a.start) - toMillis(b.start); });
-    renderEventsBody();
+    if (State.tab === 'events') renderEventsBody();
+    return true;
 }
 
 /* Invites (mail/iMIP) status chip. Only ever populated by MOCK — real
@@ -1679,39 +1888,14 @@ function renderEventsBody() {
     var items = State.events.items.filter(function (e) {
         var cal = State.events.calendarsById[e.calendarId];
         if (!cal) return false;
+        // Invites moved out to their own tab, so they are no longer part
+        // of this tab's "All" either -- the page moved, it was not copied.
+        if (cal.category === 'invites') return false;
         if (filter === 'all') return true;
         return cal.category === filter;
     });
     if (!items.length) {
         mount.innerHTML = '<div class="empty-state">' + eventsEmptyStateHtml(filter) + '</div>';
-        return;
-    }
-
-    if (filter === 'invites') {
-        // Needs-action first (those are the ones demanding a response),
-        // then by start time — a flat list rather than day-grouped, since
-        // "what needs my attention" matters more here than chronology.
-        var sorted = items.slice().sort(function (a, b) {
-            var ra = INVITE_STATUS_RANK[a.responseStatus] != null ? INVITE_STATUS_RANK[a.responseStatus] : 0;
-            var rb = INVITE_STATUS_RANK[b.responseStatus] != null ? INVITE_STATUS_RANK[b.responseStatus] : 0;
-            if (ra !== rb) return ra - rb;
-            return toMillis(a.start) - toMillis(b.start);
-        });
-        mount.innerHTML = sorted.map(function (e) {
-            var cal = State.events.calendarsById[e.calendarId];
-            var whenLabel = (e.allDay ? 'All day' : fmtTime(toMillis(e.start))) + ' · ' + fmtShortDate(toMillis(e.start));
-            return '<div class="flex items-start gap-3 py-2.5 border-b border-gray-50">' +
-                '<span class="w-2.5 h-2.5 rounded-full flex-shrink-0 mt-1.5" style="background:' + cal.color + '"></span>' +
-                '<span class="flex-1 min-w-0">' +
-                    '<div class="flex items-center justify-between gap-2">' +
-                        '<div class="text-[13.5px] font-medium truncate">' + esc(e.title) + '</div>' +
-                        inviteStatusChipHtml(e.responseStatus) +
-                    '</div>' +
-                    '<div class="text-[11.5px] text-gray-400 truncate mt-0.5">' + esc(whenLabel) +
-                        (e.organizer ? ' · ' + esc(e.organizer) : '') + (e.location ? ' · ' + esc(e.location) : '') +
-                    '</div>' +
-                '</span></div>';
-        }).join('');
         return;
     }
 
@@ -1895,12 +2079,12 @@ function switchTab(tab) {
     if (!loadedTabs[tab]) {
         loadedTabs[tab] = true;
         if (tab === 'todo') loadTodoTab();
-        else if (tab === 'projects') loadProjectsTab();
+        else if (tab === 'invites') loadInvitesTab();
         else if (tab === 'events') loadEventsTab();
         else if (tab === 'configs') { /* initConfigsTab already loaded config data on init */ }
     } else {
         if (tab === 'todo') loadTodoList();
-        else if (tab === 'projects') renderProjectsBody();
+        else if (tab === 'invites') renderInvitesBody();
         else if (tab === 'events') renderEventsBody();
         else if (tab === 'configs') renderSyncStatus();
     }
@@ -1917,7 +2101,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     initCalendarTab();
     initTodoTab();
-    initProjectsTab();
     initEventsTab();
     initConfigsTab();
     renderDemoBanner();
