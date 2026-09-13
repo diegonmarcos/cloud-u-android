@@ -395,60 +395,44 @@ class ConstellationFragment : Fragment() {
         row.visibility = View.VISIBLE
     }
 
-    // ── header: Update-all / Check-all + auto-update toggle + grant ──────────
+    // ── header: batch actions + configs, two rows ────────────────────────────
     private fun renderHeader(ctx: Context) {
         headerControls.removeAllViews()
-        // Row 1 — the batch actions, kept apart so they read as distinct:
-        //   Update all → this TAB's entries that are installed and outdated
-        //                (Apps tab -> apps, Libs tab -> libs).
-        //   Update ALL → apps AND libs in one pass, so the whole constellation
-        //                can be brought current without switching tabs first.
-        //                The tab-scoped button cannot express that, and doing
-        //                it by hand means remembering to visit both.
+        // The batch actions, in the order they are meant to be used:
+        //   Check all   → refresh what is on offer, changing nothing.
         //   Install all → only entries not yet on the device (tab-scoped).
-        headerControls.addView(buttonRow(ctx,
-            btn(ctx, "⬆  Update all", 0xFF7C3AED.toInt()) {
-                updateAll(ctx, if (tab == 1) "libs" else "apps", current())
-            },
-            btn(ctx, "⬆  ALL", 0xFF6B21A8.toInt()) {
-                updateAll(ctx, "apps + libs", apps + libs)
-            },
-        ))
-        headerControls.addView(buttonRow(ctx,
-            btn(ctx, "⬇  Install all", 0xFF2B6CB0.toInt()) { installMissing(ctx) },
-        ))
+        //   Update all  → apps AND libs in one pass, so the whole constellation
+        //                 is brought current without switching tabs first. There
+        //                 is deliberately no tab-scoped update: it only ever made
+        //                 the user visit both tabs to reach the same place.
+        // Exactly two rows of controls: the actions and the auto-update switch on
+        // the first, the configs and the remaining switches on the second. Both
+        // containers are added here and filled at the end of this method, so every
+        // control is still built right next to the state it reads.
+        val actionRow = buttonRow(ctx)
+        val configRow = buttonRow(ctx)
+        headerControls.addView(actionRow)
+        headerControls.addView(configRow)
+        var checkAllButton: View? = null
+        var installAllButton: View? = null
+        var updateAllButton: View? = null
+        var autoUpdateButton: View? = null
+        var wifiOnlyButton: View? = null
+        var playProtectButton: View? = null
+        var wirelessDebugButton: View? = null
+        var openButton: View? = null
+        updateAllButton = btn(ctx, "⬆  Update all", 0xFF2B6CB0.toInt())
+        installAllButton = btn(ctx, "⬇  Install all", 0xFF2B6CB0.toInt())
         // Row 2 — refresh statuses (full width).
-        headerControls.addView(buttonRow(ctx,
-            btn(ctx, "↻  Check all", 0xFF2A2A33.toInt()) { checkAll(ctx) },
-        ))
+        checkAllButton = btn(ctx, "↻  Check all", 0xFF2B6CB0.toInt())
         val autoOn = AutoUpdatePrefs.enabled(ctx)
-        headerControls.addView(buttonRow(ctx,
-            btn(ctx, "Auto-update: " + (if (autoOn) "ON" else "OFF"),
-                if (autoOn) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt()) {
-                AutoUpdatePrefs.setEnabled(ctx, !autoOn)
-                // Reconcile the periodic workers immediately: start() schedules
-                // when enabled, cancels when disabled (both re-check the pref).
-                com.diegonmarcos.superapp.updater.Updater.start(ctx)
-                ConstellationWorker.start(ctx)
-                Toast.makeText(ctx, "Auto-update " + (if (!autoOn) "ON" else "OFF"), Toast.LENGTH_SHORT).show()
-                renderHeader(ctx)
-            },
-            btn(ctx, if (AutoUpdatePrefs.canInstallSilently(ctx)) "✓ Install perm" else "Grant install",
-                if (AutoUpdatePrefs.canInstallSilently(ctx)) 0xFF2A2A33.toInt() else 0xFF7C3AED.toInt()) {
-                openUnknownAppSources(ctx)
-            },
-        ))
+        autoUpdateButton = btn(ctx, "Auto update: " + (if (autoOn) "ON" else "OFF"),
+            if (autoOn) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt())
         // Only gates the UNATTENDED passes: the buttons above are the user
         // asking, so they download on any network regardless of this.
         val wifiOnly = AutoUpdatePrefs.requireUnmetered(ctx)
-        headerControls.addView(buttonRow(ctx,
-            btn(ctx, "Update over Wi-Fi only: " + (if (wifiOnly) "ON" else "OFF"),
-                if (wifiOnly) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt()) {
-                AutoUpdatePrefs.setRequireUnmetered(ctx, !wifiOnly)
-                Toast.makeText(ctx, "Update over Wi-Fi only " + (if (!wifiOnly) "ON" else "OFF"), Toast.LENGTH_SHORT).show()
-                renderHeader(ctx)
-            },
-        ))
+        wifiOnlyButton = btn(ctx, "Up Wifi Only: " + (if (wifiOnly) "ON" else "OFF"),
+            if (wifiOnly) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt())
         headerControls.addView(caption(ctx,
             if (AutoUpdatePrefs.canInstallSilently(ctx)) "Silent installs enabled."
             else "Grant 'Install unknown apps' for no-tap updates."))
@@ -460,33 +444,8 @@ class ConstellationFragment : Fragment() {
         // shell channel (Shizuku / embedded adb). Reading is unprivileged, so the
         // label is always the device's real state even with no channel present.
         val scan = PackageVerifier.state(ctx)
-        headerControls.addView(buttonRow(ctx,
-            btn(ctx, "Play Protect scan: " + (if (scan.on) "ON" else "OFF"),
-                if (scan.on) 0xFF4A4A55.toInt() else 0xFF2F855A.toInt()) {
-                Toast.makeText(ctx, "Asking the shell channel...", Toast.LENGTH_SHORT).show()
-                // setScanning binds Shizuku, which blocks - never on the main thread.
-                thread(name = "play-protect-toggle") {
-                    val want = !scan.on
-                    fun apply(): PackageVerifier.Result = PackageVerifier.setScanning(ctx, want)
-                    fun report(r: PackageVerifier.Result) = headerControls.post {
-                        Toast.makeText(ctx,
-                            if (r.ok) r.state.describe() + " - via " + r.channel else r.output,
-                            Toast.LENGTH_LONG).show()
-                        renderHeader(ctx)
-                    }
-                    val first = apply()
-                    if (first.channel != "none") { report(first); return@thread }
-                    // No channel yet: START the flow that grants one instead of
-                    // telling the user to go find it. If the grant lands without
-                    // another screen (the Shizuku prompt), finish the toggle
-                    // ourselves - the tap that got us here already said what to do.
-                    val msg = ShellAccess.ensure(ctx) {
-                        thread(name = "play-protect-retry") { report(apply()) }
-                    }
-                    headerControls.post { Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show() }
-                }
-            },
-        ))
+        playProtectButton = btn(ctx, "Play Protect: " + (if (scan.on) "ON" else "OFF"),
+            if (scan.on) 0xFF4A4A55.toInt() else 0xFF2F855A.toInt())
         headerControls.addView(caption(ctx,
             if (!scan.on) "No install-scan prompt - fleet installs go straight through."
             else "Play Protect prompts on every install. Turning it off needs the " +
@@ -503,34 +462,17 @@ class ConstellationFragment : Fragment() {
         // no action for the Wireless-Debugging sub-screen, so "Open" deep-links
         // to Developer options, where it lives.
         val wd = WirelessDebugging.isOn(ctx)
-        headerControls.addView(buttonRow(ctx,
-            btn(ctx, "Wireless debugging: " + (if (wd) "ON" else "OFF"),
-                if (wd) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt()) {
-                Toast.makeText(ctx, "Asking the shell channel...", Toast.LENGTH_SHORT).show()
-                thread(name = "wireless-debug-toggle") {
-                    // busy = an install batch holds the lease; cutting the
-                    // channel underneath one strands a half-finished install.
-                    val st = com.diegonmarcos.superapp.updater.UpdateProgress.state
-                    val busy = com.diegonmarcos.superapp.updater.UpdateProgress.batchLabel != null ||
-                        st is com.diegonmarcos.superapp.updater.UpdateProgress.State.Downloading ||
-                        st is com.diegonmarcos.superapp.updater.UpdateProgress.State.Installing
-                    val r = WirelessDebugging.set(ctx, !wd, busy = busy)
-                    headerControls.post {
-                        Toast.makeText(ctx,
-                            (if (r.ok) "Wireless debugging " + (if (r.on) "ON" else "OFF") + " via " + r.channel
-                             else "NOT changed (" + r.channel + ") - still " + (if (r.on) "ON" else "OFF")) +
-                                "\n" + r.detail,
-                            Toast.LENGTH_LONG).show()
-                        renderHeader(ctx)
-                    }
-                }
-            },
-            btn(ctx, "Open ↗", 0xFF2A2A33.toInt()) { openDeveloperOptions(ctx) },
-        ))
+        wirelessDebugButton = btn(ctx, "Wireless Debug: " + (if (wd) "ON" else "OFF"),
+            if (wd) 0xFF2F855A.toInt() else 0xFF4A4A55.toInt())
+        openButton = btn(ctx, "Open ↗", 0xFF7C3AED.toInt())
         headerControls.addView(caption(ctx,
             if (wd) "adbd is listening - the embedded channel can install without a tap."
             else "Off: no embedded adb channel. 'Direct' on any row still installs, " +
                  "through the system confirmation sheet."))
+        listOfNotNull(checkAllButton, installAllButton, updateAllButton, autoUpdateButton)
+            .forEach(actionRow::addView)
+        listOfNotNull(wifiOnlyButton, playProtectButton, wirelessDebugButton, openButton)
+            .forEach(configRow::addView)
     }
 
     // ── one COLLAPSED row per app; the full card is one tap away ─────────────
