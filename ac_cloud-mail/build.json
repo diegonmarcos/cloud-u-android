@@ -205,7 +205,7 @@
         "catalog_url": "https://openrouter.ai/api/v1/models",
         "needs_token": true,
         "default_model": "google/gemini-2.5-flash",
-        "pricing_as_of": "2026-09-12",
+        "pricing_as_of": "2026-09-13",
         "models": [
           {
             "id": "meta-llama/llama-3.1-8b-instruct",
@@ -251,8 +251,8 @@
               "translation",
               "trivia"
             ],
-            "prompt": 0.042,
-            "completion": 0.22,
+            "prompt": 0.09,
+            "completion": 0.3,
             "note": "Sparse 26B (4B active): translation, academia and legal at a small-model price."
           },
           {
@@ -327,13 +327,12 @@
               "fp8"
             ],
             "trained_for": [
-              "marketing/seo",
               "roleplay",
               "translation"
             ],
             "prompt": 0.269,
             "completion": 0.4,
-            "note": "Translation and marketing/SEO ranked; mid-price open weights."
+            "note": "Translation and roleplay ranked; mid-price open weights."
           },
           {
             "id": "deepseek/deepseek-v4-flash-0731",
@@ -373,14 +372,12 @@
             "trained_for": [
               "academia",
               "finance",
-              "health",
               "legal",
               "marketing",
               "programming",
               "roleplay",
               "science",
-              "technology",
-              "translation"
+              "technology"
             ],
             "prompt": 0.6,
             "completion": 2.0,
@@ -447,7 +444,6 @@
             "id": "google/gemini-2.5-flash",
             "name": "Gemini 2.5 Flash",
             "trained_for": [
-              "academia",
               "finance",
               "health",
               "legal",
