@@ -306,13 +306,31 @@ PANE="$SRC/launcher/PowerSavingFragment.kt"
 TILE="$SRC/launcher/AppIconTile.kt"
 ed_fail=""
 grep -q 'AppIconTile.grid(' "$CFG"  || ed_fail="$ed_fail editor-does-not-draw-the-grid"
-grep -q 'AppIconTile.grid(' "$PANE" || ed_fail="$ed_fail pane-does-not-draw-the-grid"
+# INVERTED 2026-09-13. This line used to REQUIRE the pane to call
+# AppIconTile.grid — and that requirement was the bug. Painting Power Saving's
+# twelve slots with the default launcher's own tile builder is exactly why the
+# mode read as "the normal home screen in black" twice in a row, which is what
+# the owner rejected. The pane now draws its own cells; reusing the shared
+# builder again is the regression. The KDoc mentions [AppIconTile] to explain
+# the history, so this matches a member ACCESS, not the name.
+grep -q 'AppIconTile\.' "$PANE"     && ed_fail="$ed_fail pane-reuses-the-default-launchers-tile-builder"
 grep -q 'Spinner' "$PANE"           && ed_fail="$ed_fail pane-still-has-a-spinner"
+# Painting its own cells does not license the pane to invent its own layout
+# numbers: the width still comes from the theme record and the twelve slots still
+# come from the owner's overrides.
+grep -q 'gridColumnsFor' "$PANE"    || ed_fail="$ed_fail pane-hardcodes-its-column-count"
+grep -q 'PowerSavingAppsPrefs(ctx).resolved()' "$PANE" \
+  || ed_fail="$ed_fail pane-ignores-the-owners-slot-overrides"
+# The very bottom row is left EMPTY on purpose: Android caps the dock strip at 5
+# icons, so rather than lose one of the six the strip is surrendered and both
+# full rows sit above it (owner's decision, 2026-09-13).
+grep -q 'RESERVED_DOCK_ROW_HEIGHT_DP' "$PANE" \
+  || ed_fail="$ed_fail pane-does-not-reserve-the-blank-dock-row"
 # Scoped to the CALL SITE, not to the file. A bare `grep gridColumnsFor` over
 # LauncherConfigFragment.kt passes on the function's own DEFINITION, which lives
 # in that same file — so it stayed green with the editor's columns replaced by a
 # literal 4. An assertion that cannot fail is not an assertion.
-col_verdict="$(python3 - "$CFG" "$PANE" <<'PYC'
+col_verdict="$(python3 - "$CFG" <<'PYC'
 import re, sys
 
 def call_args(body):
@@ -335,7 +353,9 @@ def call_args(body):
     return body[start:k - 1]
 
 problems = []
-for path, marker in ((sys.argv[1], 'the editor'), (sys.argv[2], 'the pane')):
+# The editor only. The pane no longer calls AppIconTile at all — its own column
+# count is asserted by the gridColumnsFor grep above.
+for path, marker in ((sys.argv[1], 'the editor'),):
     args = call_args(open(path, encoding='utf-8').read())
     if args is None:
         problems.append('%s does not call AppIconTile.grid' % marker); continue
@@ -349,8 +369,8 @@ print('; '.join(problems))
 PYC
 )"
 [ -n "$col_verdict" ] && ed_fail="$ed_fail $col_verdict"
-[ -z "$ed_fail" ] && ok "pane and editor draw the same grid at the theme's declared width" \
-                  || bad "the editor does not mirror the pane:$ed_fail"
+[ -z "$ed_fail" ] && ok "the pane paints its own grid at the theme's declared width, and the editor mirrors it" \
+                  || bad "the pane/editor grid contract is broken:$ed_fail"
 # Icons come from the CENTRAL classification, not a third enumeration.
 grep -q 'PhoneAppsFragment.snapshot' "$TILE" \
   && ok "icons come from the same app list the Phone tab and the search index read" \

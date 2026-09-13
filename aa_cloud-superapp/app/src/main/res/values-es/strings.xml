@@ -321,6 +321,11 @@
     <string name="power_saving_estimate_unknown">Tiempo restante no disponible</string>
     <string name="power_saving_estimate_days">Quedan unos %1$d d %2$d h</string>
     <string name="power_saving_estimate_hours">Quedan unas %1$d h</string>
+    <string name="power_saving_header">AHORRO DE ENERGÍA</string>
+    <string name="power_saving_estimate_label">TIEMPO DE USO RESTANTE ESTIMADO</string>
+    <string name="power_saving_chip_hz">%1$s Hz</string>
+    <string name="power_saving_chip_brightness">Brillo %1$d%%</string>
+    <string name="power_saving_chip_dark">Pantalla negra</string>
 
     <!-- One-Hand stars. Sirius, Canopus and Centauri are the stars' own names
          and stay; "Recent Tabs" is not a star name but a description of what

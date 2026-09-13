@@ -4628,7 +4628,7 @@
       {
         "id": "cloud_power_saving",
         "label": "Cloud Power Saving",
-        "subtitle": "Looks like an ordinary phone — black, no accent, no chrome. Time top-left, settings top-right, twelve apps on the bottom two rows. Background work paused EXCEPT WireGuard (connectivity stays on).",
+        "subtitle": "A screen of its own, not the home screen in black — clock, a battery panel with the estimate, chips naming what the mode is doing, and twelve outlined apps in two rows of six. Settings top-right. The very bottom strip stays empty: Android caps that dock row at 5 icons, so both rows of six sit above it. Background work paused EXCEPT WireGuard (connectivity stays on).",
         "palette": {
           "window": "theme_powersave_window",
           "surface": "theme_powersave_surface",

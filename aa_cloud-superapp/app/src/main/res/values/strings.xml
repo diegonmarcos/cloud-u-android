@@ -361,6 +361,11 @@
     <string name="power_saving_estimate_unknown">Remaining time not available</string>
     <string name="power_saving_estimate_days">About %1$d d %2$d h left</string>
     <string name="power_saving_estimate_hours">About %1$d h left</string>
+    <string name="power_saving_header">POWER SAVING</string>
+    <string name="power_saving_estimate_label">ESTIMATED USAGE TIME REMAINING</string>
+    <string name="power_saving_chip_hz">%1$s Hz</string>
+    <string name="power_saving_chip_brightness">Brightness %1$d%%</string>
+    <string name="power_saving_chip_dark">Black screen</string>
     <!-- Home stars. The Recent Tabs star lists the pages opened inside this
          app; Centauri, to its left on the same row, lists Android apps opened
          on the phone. The two descriptions have to say which is which, because
