@@ -1037,12 +1037,16 @@ open class ShellActivity : AppCompatActivity(),
                 toolbarIsland?.visibility = View.VISIBLE
                 bottomNavIsland?.visibility = View.VISIBLE
             }
-            isLauncher && theme == LauncherTheme.CloudMinimalistBlack -> {
+            // No isLauncher here, deliberately. These two themes are modes of this
+            // app; gating their chrome on owning the home button meant that on a
+            // phone where One UI Home owns it the mode kept the full toolbar and
+            // bottom-nav islands, so the "mode" was a repaint. See LauncherNavController.
+            theme == LauncherTheme.CloudMinimalistBlack -> {
                 strip?.visibility = View.GONE
                 toolbarIsland?.visibility = View.GONE
                 bottomNavIsland?.visibility = View.GONE
             }
-            isLauncher && theme == LauncherTheme.CloudPowerSaving -> {
+            theme == LauncherTheme.CloudPowerSaving -> {
                 // Power Saving — Samsung / Apple / Pixel-style. No
                 // chrome at all: no top strip, no toolbar island, no
                 // bottom-nav island. Window background flipped to
@@ -1556,10 +1560,17 @@ open class ShellActivity : AppCompatActivity(),
         //   screen (not ACTION_VIEW which most apps don't filter for).
         //   Falls back to the URL via ACTION_VIEW if the app isn't
         //   installed.
-        if (uri.startsWith("app://")) {
+        //   Both spellings arrive here: `app://com.x?fallback=…` carries an
+        //   authority Uri.parse can read, and `app:com.x` is the bare opaque form
+        //   the launcher themes' home_apps use. For the opaque one host and
+        //   authority are both null, so the package is its scheme-specific part.
+        if (uri.startsWith("app:")) {
             val u = android.net.Uri.parse(uri)
-            val pkg = u.host ?: u.authority
-            val fallback = u.getQueryParameter("fallback")
+            val pkg = u.host ?: u.authority ?: u.schemeSpecificPart?.trimStart('/')
+            // Opaque ("app:com.x") has no query to read, and asking anyway throws
+            // UnsupportedOperationException — which would turn a missing app into
+            // a crash instead of a fallback.
+            val fallback = if (u.isOpaque) null else u.getQueryParameter("fallback")
             val launch = pkg?.let { packageManager.getLaunchIntentForPackage(it) }
             if (launch != null) {
                 launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -1827,8 +1838,14 @@ open class ShellActivity : AppCompatActivity(),
             // has no authority, so every system-settings tile fell through
             // this `when` and did nothing at all. Intent.parseUri in
             // launchUri has always understood the form.
+            //
+            // `app:` is listed for exactly the same reason. `app://com.x` reached
+            // launchUri through the ://-contains test, but the authority-less
+            // `app:com.x` — which is the spelling the Power Saving theme's
+            // home_apps are written in — matched no branch, so ten of its twelve
+            // tiles rendered, took the tap, and did nothing.
             tileId.startsWith("http://") || tileId.startsWith("https://") ||
-                tileId.startsWith("intent:") ||
+                tileId.startsWith("intent:") || tileId.startsWith("app:") ||
                 (tileId.contains("://") && !tileId.startsWith("section:") &&
                  !tileId.startsWith("page:") && !tileId.startsWith("action:") &&
                  !tileId.startsWith("stub:")) -> launchUri(tileId)
@@ -1906,6 +1923,26 @@ open class ShellActivity : AppCompatActivity(),
                 applyLauncherSettings()          // re-applies the live views (stars/waves/pets)
                 findViewById<View>(R.id.fragment_container)
                     ?.snack("Animations ${if (on) "on" else "off"}")
+            }
+            // A toggle, not a one-way switch: Samsung's own control goes in AND
+            // out, and a user who cannot leave a black screen from the same button
+            // that entered it has to go hunting through Configs to undo a tap. The
+            // theme it came from is remembered so leaving restores it rather than
+            // guessing Cloud.
+            actionType == "power_saving" -> {
+                val prefs = com.diegonmarcos.superapp.settings.LauncherThemePrefs(this)
+                val on = prefs.theme != LauncherTheme.CloudPowerSaving
+                prefs.theme = if (on) {
+                    prefs.themeBeforePowerSaving = prefs.theme
+                    LauncherTheme.CloudPowerSaving
+                } else {
+                    prefs.themeBeforePowerSaving
+                }
+                applyLauncherChrome()
+                goHome()
+                findViewById<View>(R.id.fragment_container)
+                    ?.snack(getString(
+                        if (on) R.string.power_saving_on else R.string.power_saving_off))
             }
             actionType == "open_home_apps" -> {
                 if (currentSection != "home") goHome()

@@ -29,7 +29,13 @@ has 'openEmbeddedBrowser(uri)'        "$SHELL_KT" "launchUri's http(s) branch ca
 has 'WebPageFragment.newInstance(url)' "$SHELL_KT" "openEmbeddedBrowser renders WebPageFragment (the linktree engine)"
 
 echo "== T2: app deep-links still launch externally =="
-has 'uri.startsWith("app://")'                 "$SHELL_KT" "app:// still resolves a package via PackageManager"
+# The prefix was widened from "app://" to "app:" when the Power Saving theme's
+# home_apps started writing the bare opaque spelling `app:com.x` — Uri.parse
+# gives that form a null host AND a null authority, so the hierarchical-only
+# check let it fall through to Intent.parseUri and open nothing. "app:" is the
+# superset: it still matches every `app://` link this test was written for.
+has 'uri.startsWith("app:")'                   "$SHELL_KT" "app: (both the // and the opaque spelling) resolves a package via PackageManager"
+has 'u.schemeSpecificPart'                     "$SHELL_KT" "the opaque spelling's package is read from the scheme-specific part"
 has 'Intent.parseUri'                          "$SHELL_KT" "intent:// and custom schemes still go through Intent.parseUri"
 has 'tileId.startsWith("extapp:")'             "$SHELL_KT" "extapp: still routes to launchExternalApp"
 

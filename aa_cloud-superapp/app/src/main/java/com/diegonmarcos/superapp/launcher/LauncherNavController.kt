@@ -66,13 +66,19 @@ class LauncherNavController(private val host: NavHost) {
         // which is why the mode meant to look like an ordinary phone rendered in
         // the full colourful design.
         val themePrefs = LauncherThemePrefs(ctx)
-        val homePane: Fragment =
-            if (!host.isDefaultLauncher()) Home3DFragment.newInstance()
-            else when (themePrefs.theme) {
-                LauncherTheme.CloudMinimalistBlack -> MinimalistBlackFragment.newInstance()
-                LauncherTheme.CloudPowerSaving     -> PowerSavingFragment.newInstance()
-                else                               -> Home3DFragment.newInstance()
-            }
+        // The default-launcher question used to be asked FIRST, and it answered for
+        // every theme. On a phone whose home button belongs to One UI Home — which
+        // is this phone — that meant picking Power Saving repainted the palette and
+        // then handed back the 3D cube anyway. That is the whole of the "it is only
+        // a colour change from the default one" defect: the mode was never once
+        // rendered. Power Saving and Minimalist Black are modes of THIS app, not
+        // launcher replacements, so the theme decides; being the default launcher
+        // only ever mattered to the plain Cloud theme.
+        val homePane: Fragment = when (themePrefs.theme) {
+            LauncherTheme.CloudMinimalistBlack -> MinimalistBlackFragment.newInstance()
+            LauncherTheme.CloudPowerSaving     -> PowerSavingFragment.newInstance()
+            else                               -> Home3DFragment.newInstance()
+        }
         host.swapContent(homePane, clearBackStack = true)
         host.syncBottomNav("home")
         host.syncDrawerTab(0)

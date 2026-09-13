@@ -171,26 +171,29 @@ CLAUDE_ICON="${CLAUDE##*|}"
   && ok "left top_outer resolves to an icon ($CLAUDE_ICON)" \
   || bad "left top_outer resolves to no icon"
 
-# Drive's icon must be the DRIVE SECTION's own, not merely "some icon" and not
-# the ic_link_tile fallback: there is no cloud-drive application to take one
-# from, so the section definition is the only honest source.
-DRIVE=$(q "
-r = resolve(next(h for h in oh['handles'] if h['id']=='left')['gestures']['down'])
-sec = sections['drive']
-print('%s|%s|%s' % (r[0] if r else 'NONE', r[1] if r else 'NONE', sec[1]))")
-D_LABEL="$(echo "$DRIVE" | cut -d'|' -f1)"
-D_ICON="$(echo "$DRIVE" | cut -d'|' -f2)"
-D_SEC="$(echo "$DRIVE" | cut -d'|' -f3)"
-[ "$D_LABEL" = "Drive" ] \
-  && ok "left down resolves to the label 'Drive'" \
-  || bad "left down resolves to '$D_LABEL', not 'Drive'"
-if [ -n "$D_ICON" ] && [ "$D_ICON" = "$D_SEC" ] && [ "$D_ICON" != "NONE" ]; then
-  ok "left down's icon IS the Drive section's own icon ($D_ICON), not a generic fallback"
-else
-  bad "left down's icon is '$D_ICON' but the drive section declares '$D_SEC' — the reported symptom"
-fi
-# An icon NAME that names no drawable is an icon that does not draw.
-for n in "$CLAUDE_ICON" "$D_ICON"; do
+# Drive changed KIND, not place. It was ui.sections['drive'] and took its label
+# and icon from that record; #302/#304 lifted it out into its own APK, so the
+# sector is now an `app:` target and the drawn icon is the installed package's
+# own launcher icon — there is no drawable in this repo to compare against any
+# more, and demanding one would be demanding the old bug back.
+#
+# What still has to hold is the half of #284 that was never about drawables: a
+# sector must resolve to a NAME. OpenApp takes its label from onehand.apps, so
+# a package missing from that list draws as a raw target string, which is the
+# exact symptom the section spelling produced when its section stopped existing.
+DRIVE_TARGET=$(q "print(next(h for h in oh['handles'] if h['id']=='left')['gestures']['down'])")
+[ "$DRIVE_TARGET" = "app:com.diegonmarcos.clouddrive" ] \
+  && ok "left down launches the cloud-drive package" \
+  || bad "left down is '$DRIVE_TARGET', not the cloud-drive package"
+D_LABEL=$(q "
+pkg = next(h for h in oh['handles'] if h['id']=='left')['gestures']['down'][len('app:'):]
+print(next((a['label'] for a in oh['apps'] if a['package'] == pkg), ''))")
+[ -n "$D_LABEL" ] \
+  && ok "left down resolves to the label '$D_LABEL' from onehand.apps" \
+  || bad "left down's package is not in onehand.apps, so the sector would draw its raw target"
+# An icon NAME that names no drawable is an icon that does not draw. Only the
+# in-app sectors have one; Drive's comes from the package manager at runtime.
+for n in "$CLAUDE_ICON"; do
   if ls "$DRAWABLE/$n".* >/dev/null 2>&1; then
     ok "drawable $n exists in res/drawable"
   else
@@ -199,12 +202,17 @@ for n in "$CLAUDE_ICON" "$D_ICON"; do
 done
 
 echo "== T3: the prefix cannot make one destination into two =="
-# `action:section:drive` and `section:drive` are the same place. This is the
-# half of #111/#127 that was a string problem rather than a missing entry.
-SAME=$(q "print('yes' if resolve('action:section:drive') == resolve('section:drive')
-                 and resolve('section:drive') is not None else 'no')")
+# `action:section:X` and `section:X` are the same place. This is the half of
+# #111/#127 that was a string problem rather than a missing entry. The probe
+# used to be section:drive; that section left with #302/#304, and a probe
+# pointing at a section that no longer exists proves nothing — both spellings
+# resolve to None and compare equal. It is read from the live section list so
+# it cannot rot into a no-op a second time.
+PROBE=$(q "print(next(s['id'] for s in d['ui']['sections'] if s.get('id') and s.get('label')))")
+SAME=$(q "print('yes' if resolve('action:section:$PROBE') == resolve('section:$PROBE')
+                 and resolve('section:$PROBE') is not None else 'no')")
 [ "$SAME" = "yes" ] \
-  && ok "action:section:drive and section:drive resolve identically" \
+  && ok "action:section:$PROBE and section:$PROBE resolve identically" \
   || bad "the action: prefix still changes what a target resolves to"
 
 echo "== T4: NEGATIVE — an unknown target must resolve to nothing, not to something =="

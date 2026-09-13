@@ -103,7 +103,10 @@ echo "== T1: Camera sits at the owner's declared place in Cloud ▸ Apps ▸ Too
 # which moves Camera to seventh of eight and puts C3 behind it. The requirement
 # never was "Camera is last"; it was "Camera is where he put it", and the
 # stronger check is to pin every neighbour rather than only the tail.
-WANT_ROW="Me,Wallet,Keyboard,Writer,Browser,Navigation,Camera,C3"
+# #324 then lifted C3 out of this row into the new "Configs" group, so Camera is
+# the tail again — by subtraction this time, not by decree. Pinning the whole row
+# is what caught that move, which is the point of pinning the whole row.
+WANT_ROW="Me,Wallet,Keyboard,Writer,Browser,Navigation,Camera"
 GOT_ROW="$(jq -r '
   .ui.sections[] | select(.id == "cloud")
   | .tile_groups[] | select(.title == "Tools Primary")

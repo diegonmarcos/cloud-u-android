@@ -85,7 +85,7 @@ echo "== T1: the LEFT handle is the owner's FIRST block, in his order =="
 # handles and is not one of the twelve, which is why six names fill seven slots.
 LEFT_ORDER=$(q "print('|'.join(h['left']['gestures'][k] for k in
   ('top_outer','top','top_middle','down_middle','down','down_outer')))")
-LEFT_WANT='action:intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end|app:com.diegonmarcos.comms.mail|app:com.instagram.android|app:com.whatsapp.w4b|action:section:drive|app:com.google.android.apps.bard'
+LEFT_WANT='action:intent://resolve?domain=Cloud_agent_claude_bot#Intent;scheme=tg;package=org.telegram.messenger;S.browser_fallback_url=https%3A%2F%2Ft.me%2FCloud_agent_claude_bot;end|app:com.diegonmarcos.comms.mail|app:com.instagram.android|app:com.whatsapp.w4b|app:com.diegonmarcos.clouddrive|app:com.google.android.apps.bard'
 if [ "$LEFT_ORDER" = "$LEFT_WANT" ]; then
   ok "left = AI Claude · Mail · Instagram · Whatsapp Business · Drive · Gemini, by position"
 else
@@ -118,9 +118,11 @@ DRIVE=$(q "print(h['left']['gestures']['down'])")
 case "$DRIVE" in
   *mediacenter*|*media-center*|*media_center*)
      bad "Drive points at the media centre — this is the exact mistake the owner corrected" ;;
+  app:com.diegonmarcos.clouddrive)
+     ok "Drive launches the cloud-drive application" ;;
   action:section:drive)
-     ok "Drive is action:section:drive, the SuperApp's own Drive section" ;;
-  *) bad "Drive is '$DRIVE', neither the Drive section nor anything recognised" ;;
+     bad "Drive still points at action:section:drive — that section left the SuperApp with #302/#304 and no longer exists, so the gesture resolves to nothing" ;;
+  *) bad "Drive is '$DRIVE', neither the cloud-drive application nor anything recognised" ;;
 esac
 MC_COUNT=$(q "
 n = sum(1 for x in oh['handles'] for v in x['gestures'].values() if 'mediacenter' in v)
@@ -133,11 +135,14 @@ print(next(x['id'] for x in oh['handles'] for v in x['gestures'].values() if 'me
 [ "$MC_SIDE" = "right" ] \
   && ok "and it is on the right handle, the block it was named in" \
   || bad "the media centre is on the '$MC_SIDE' handle — the owner put it in the second block"
-# There is no cloud-drive Android application, which is why Drive is a section
-# and not an app: target. If one is ever added this assertion is what says so.
-q "print(any(e['id'] == 'cloud-drive' for e in d['ui']['external_apps']))" | grep -q False \
-  && ok "no cloud-drive application exists, so the section target is the only real Drive" \
-  || bad "a cloud-drive application now exists in ui.external_apps — Drive should probably launch it"
+# Drive used to be a SuperApp section; #302/#304 moved it out into its own APK,
+# so the gesture now names a package. The package has to be a REAL fleet entry —
+# an app: target that resolves to nothing looks identical to a working one until
+# it is tapped, which is precisely how the section target survived its own
+# deletion for a whole release.
+q "print(any(e['id'] == 'cloud-drive' for e in d['ui']['external_apps']))" | grep -q True \
+  && ok "the cloud-drive application the gesture launches is a declared fleet app" \
+  || bad "no cloud-drive entry in ui.external_apps — the Drive gesture names a package nothing owns"
 
 echo "== T4: no dead slots — every one of the twelve resolves to declared data =="
 # app:<pkg> must be in onehand.apps (what the picker offers). A fleet package

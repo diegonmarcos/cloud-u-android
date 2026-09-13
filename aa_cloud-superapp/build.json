@@ -567,6 +567,11 @@
       {
         "label": "Cloud Camera",
         "package": "cld.camera"
+      },
+      {
+        "_doc": "Added when the Drive surface left the SuperApp and became its own APK (#302/#304). The left handle's down gesture used to be `action:section:drive`; there is no drive section any more, so the gesture now launches the application — and a gesture may only name a package this picker offers, which is why the entry has to exist here and not only in the handle.",
+        "label": "Cloud Drive",
+        "package": "com.diegonmarcos.clouddrive"
       }
     ],
     "_doc_radial": "Two-finger radial menu (libs:launcher-onehand, OBSERVE-ONLY via the accessibility service's onMotionEvent — needs Android 14+). Hold TWO fingers anywhere ~still for two_finger_hold_ms → a ring of icons opens at that point; release to one finger and move it to the icon (arrow follows), lift to fire. Because it only observes touches, the app underneath also sees the fingers (may pinch) — that's the cost of not intercepting. items[] are actions: `app:<pkg>` or a global action id (back|home|recents|notifications|quick_settings|...). radius_dp = ring radius; slop_dp = how far the 2-finger centroid may drift before the hold cancels.",
@@ -2518,13 +2523,6 @@
                 "label": "Camera",
                 "icon": "ic_camera",
                 "target": "extapp:cloud-camera"
-              },
-              {
-                "_doc": "C3 — routes to the in-app topology page because there is NO standalone C3 APK yet. page:, not extapp:, deliberately: an extapp: target for an app that was never published would offer an install of a release that does not exist, which is worse than a dead tile because it fails after the user commits to it. When a C3 app ships, flip this to extapp:c3 and move the page target into that app. The C3-Watchdog APK this replaced is still reachable — it is the Watchdog tab inside Cloud/C3, which launches com.diegonmarcos.watchdog via extapp:c3-watchdog.",
-                "id": "c3",
-                "label": "C3",
-                "icon": "ic_p_watchdog",
-                "target": "page:c3/topology"
               }
             ]
           },
@@ -2798,7 +2796,32 @@
                 "target": "https://paca.diegonmarcos.com/projects"
               }
             ]
-          }
+          },
+        {
+          "_doc": "Configs (#324) — the three surfaces that configure the fleet rather than being part of it, pulled out of Tools Primary so a config errand is one recognisable row instead of a hunt through the tool tiles. It sits LAST among the declared groups on purpose: GroupedTilesFragment appends a synthetic 'Actions' header after every data group it renders (see LauncherNavController.GROUP_ACTIONS), so 'after Projects W and before Actions' is exactly this position and there is no Actions group in this array to sit before.",
+          "title": "Configs",
+          "tiles": [
+            {
+              "_doc": "Same action: the tile the Configs grid draws for its own constellation page. It opens the AppStore in-app rather than the config page ABOUT it, which is what the owner means by configs/Constellation.",
+              "label": "Constellation",
+              "icon": "ic_refresh",
+              "target": "action:constellation"
+            },
+            {
+              "_doc": "The Configs section itself. section: and action:section: resolve identically (see test-onehand-sector-resolution.sh), so the shorter spelling is used here for the same reason the floating nav uses it.",
+              "label": "Configs",
+              "icon": "ic_settings",
+              "target": "section:config"
+            },
+              {
+                "_doc": "C3 — routes to the in-app topology page because there is NO standalone C3 APK yet. page:, not extapp:, deliberately: an extapp: target for an app that was never published would offer an install of a release that does not exist, which is worse than a dead tile because it fails after the user commits to it. When a C3 app ships, flip this to extapp:c3 and move the page target into that app. The C3-Watchdog APK this replaced is still reachable — it is the Watchdog tab inside Cloud/C3, which launches com.diegonmarcos.watchdog via extapp:c3-watchdog.",
+                "id": "c3",
+                "label": "C3",
+                "icon": "ic_p_watchdog",
+                "target": "page:c3/topology"
+              }
+          ]
+        }
         ],
         "_doc_tiles_labs": "Master Lab index — 6 icon tiles, one per subject Lab. Read by home_groups[title=Labs] via tiles_from_section='cloud/labs'. The key keeps the name `labs` on purpose: it is the SUBJECT labs, which is not what the Linktree tab became. No page `labs` exists, so this list is the Home face only — each icon opens page:cloud/<lab-id>.",
         "_doc_pages": "Cloud: Apps (the cloud apps) | Linktree (the site, embedded) | C3 (Cloud Control Center) | Configs.",
@@ -4447,6 +4470,14 @@
             "label": "Animations",
             "icon": "ic_mode_apps",
             "action": "action:toggle_animations",
+            "is_action": true
+          },
+          {
+            "_doc": "Power Saving — switches the launcher into the Cloud Power Saving theme, and back out to whatever theme was in use before. It is a toggle for the same reason Samsung's own control is one: the mode blacks out the screen, and the button that entered it has to be the button that leaves it. Declared here as is_action, which is the single list behind BOTH the Configs actions page and the one-hand star's inner ring — one entry, both surfaces, no second copy to drift.",
+            "id": "power_saving",
+            "label": "Power Saving",
+            "icon": "ic_nav_powersave",
+            "action": "action:power_saving",
             "is_action": true
           },
           {

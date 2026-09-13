@@ -352,6 +352,15 @@
          that currently is. %1$s = the shipped app's label. -->
     <string name="power_saving_slot_default">Default (%1$s)</string>
     <string name="power_saving_settings">Settings</string>
+    <!-- The line under the charge on the Power Saving screen. The estimate comes
+         from BatteryManager's own average-current reading, so when the platform
+         declines to answer the line says that rather than inventing a number. -->
+    <string name="power_saving_on">Power Saving on</string>
+    <string name="power_saving_off">Power Saving off</string>
+    <string name="power_saving_charging">Charging</string>
+    <string name="power_saving_estimate_unknown">Remaining time not available</string>
+    <string name="power_saving_estimate_days">About %1$d d %2$d h left</string>
+    <string name="power_saving_estimate_hours">About %1$d h left</string>
     <!-- Home stars. The Recent Tabs star lists the pages opened inside this
          app; Centauri, to its left on the same row, lists Android apps opened
          on the phone. The two descriptions have to say which is which, because

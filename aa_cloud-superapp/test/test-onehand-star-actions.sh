@@ -53,8 +53,14 @@ case "$STAR_ACTIONS" in
   *)             check OK "'Copy Info' is absent from the star actions list" ;;
 esac
 
-# Nothing else moved. The ask was one entry out, order untouched.
-EXPECTED="Update All · KDE Connect · Animations"
+# Nothing else moved. The original ask was one entry out, order untouched.
+# Power Saving was appended later (#323) — the theme switch has to be reachable
+# from the star, not only from a Configs page, because the mode it enters blacks
+# the screen and the star is the one control that is always on top of whatever
+# is drawn. It is pinned here in LAST position for the same reason the other
+# three are pinned: the star's order is data, and a silent reshuffle of it is a
+# UI regression no other assertion in this file would catch.
+EXPECTED="Update All · KDE Connect · Animations · Power Saving"
 [ "$STAR_ACTIONS" = "$EXPECTED" ] \
   && check OK "the remaining actions are exactly [$EXPECTED], in order" \
   || check "got [$STAR_ACTIONS]" "the remaining actions are exactly [$EXPECTED], in order"

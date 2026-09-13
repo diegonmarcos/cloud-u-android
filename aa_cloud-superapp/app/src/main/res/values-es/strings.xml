@@ -315,6 +315,12 @@
     <string name="power_saving_slot_chooser">Fila %1$d · hueco %2$d</string>
     <string name="power_saving_slot_default">Predeterminada (%1$s)</string>
     <string name="power_saving_settings">Ajustes</string>
+    <string name="power_saving_on">Ahorro de energía activado</string>
+    <string name="power_saving_off">Ahorro de energía desactivado</string>
+    <string name="power_saving_charging">Cargando</string>
+    <string name="power_saving_estimate_unknown">Tiempo restante no disponible</string>
+    <string name="power_saving_estimate_days">Quedan unos %1$d d %2$d h</string>
+    <string name="power_saving_estimate_hours">Quedan unas %1$d h</string>
 
     <!-- One-Hand stars. Sirius, Canopus and Centauri are the stars' own names
          and stay; "Recent Tabs" is not a star name but a description of what
