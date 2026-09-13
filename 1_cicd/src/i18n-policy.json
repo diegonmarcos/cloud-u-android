@@ -38,6 +38,7 @@
     "ac_cloud-camera/app":                    { "base_language": "en" },
     "ac_cloud-dialer/app":                    { "base_language": "en" },
     "ac_cloud-media-center/app":              { "base_language": "en" },
+    "ac_cloud-drive/app":                     { "base_language": "en" },
 
     "ab_cloud-libs-shared/libs/mail":         { "base_language": "host" },
     "ab_cloud-libs-shared/libs/translate":    { "base_language": "host" },

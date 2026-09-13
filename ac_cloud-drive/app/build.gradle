@@ -148,6 +148,10 @@ android {
         applicationId 'com.diegonmarcos.clouddrive'
         minSdk 26
         targetSdk 35
+        // English is the fleet's base language, and the packaging step is the only
+        // place that can enforce it: this also drops the locales arriving from the
+        // libraries this app merges (:libs:analytics, :libs:core, :libs:updater).
+        resConfigs "en"
         versionCode codeFinal
         versionName "${buildJson.android.version_name} (sha-${shortSha})"
         ndk {
