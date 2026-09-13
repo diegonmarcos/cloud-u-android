@@ -110,6 +110,7 @@ dependencies {
     implementation 'androidx.work:work-runtime-ktx:2.9.1'
     implementation project(':libs:keyboard')
     implementation project(':libs:analytics')
+    implementation project(':libs:core')
     implementation project(':libs:media')
     implementation project(':libs:translate')
     implementation project(':libs:voice')
