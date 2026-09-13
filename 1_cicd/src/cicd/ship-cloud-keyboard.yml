@@ -41,6 +41,8 @@ on:
       # here and they stay.
       - "1_cicd/src/cicd/ship-cloud-keyboard.yml"
       - "ab_cloud-libs-shared/libs/analytics/**"
+      - "ab_cloud-libs-shared/libs/core/**"
+      - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/keyboard/**"
       - "ab_cloud-libs-shared/libs/media/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
