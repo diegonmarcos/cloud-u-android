@@ -4675,7 +4675,7 @@
     "launcher_themes": [
       {
         "id": "cloud",
-        "label": "Cloud Mode",
+        "label": "Cloud Purple",
         "subtitle": "The default rich SuperApp UI — bottom nav, dynamic island, 3D home. Top status strip trimmed to Time · Battery only.",
         "default": true,
         "_doc_palette": "EVERY colour the launcher paints, named by ROLE and mapped to a res/values/colors.xml token (or, for `window`, a res/drawable). This is what a theme MEANS: before it existed a theme declared only behaviour flags, so picking one could reach the system bars, the chrome islands and the edge menu and could not reach a single pixel of content — the content painted 0xFF-literals chosen for the default gradient. A role missing from ANY theme fails test-launcher-theme-palette.sh, which is what stops the next theme shipping half-wired. Add a role here and it must be added to every theme; the hexes stay in colors.xml so the contrast checks and the Android resource qualifiers still see them.",
@@ -4725,7 +4725,7 @@
       },
       {
         "id": "cloud_minimalist_black",
-        "label": "Cloud Minimalist Black",
+        "label": "Cloud Minimalistic",
         "subtitle": "Terminal aesthetic — pure black background, monospace green app list, no chrome. One-screen scroll.",
         "palette": {
           "window": "theme_terminal_window",
@@ -7471,8 +7471,26 @@
           "group": "others",
           "user_owned": true,
           "store": "onehand"
+        },
+        {
+          "_doc": "Samsung exposes light/dark as a system-wide setting, not an app one, so this is NOT AppCompatDelegate.setDefaultNightMode — that would repaint this app alone and leave the phone half light. Backed by store `nightmode`, which runs `cmd uimode night yes|no` over the shell channel, i.e. it needs the same SHELL authority the Battery Hunger levers need. Dark is the default: every mode this launcher ships is a dark design.",
+          "id": "dark_mode",
+          "label": "Dark mode",
+          "subtitle": "System-wide light/dark — needs the shell channel.",
+          "default": true,
+          "group": "others",
+          "user_owned": true,
+          "store": "nightmode"
         }
       ],
+      "_doc_scale": "One knob for the two levers Samsung splits in two: Screen zoom (`wm density`) and Font size (`settings put system font_scale`). Both take the SAME factor, 0.70 + 0.05 x scale, so 6 is exactly 1.00 and changes nothing — that is why 6 is the default and not 1. Scale 1 is the minimum on both, which is what Cloud Power Saving pins itself to. Density multiplies the panel's physical number; font_scale is absolute. Anything that writes these must remember the override it clobbers — see PowerLevers' display_downscale for what happens when it does not.",
+      "scale": {
+        "label": "Scale",
+        "subtitle": "Whole UI, icons and text together. 6 = the phone's own size.",
+        "min": 1,
+        "max": 10,
+        "default": 6
+      },
       "brightness": {
         "label": "Screen brightness",
         "subtitle": "Device-wide — needs Modify system settings.",

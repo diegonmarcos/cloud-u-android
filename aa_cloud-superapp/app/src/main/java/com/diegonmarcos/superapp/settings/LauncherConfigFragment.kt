@@ -4,6 +4,7 @@ import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.launcher.AppIconTile
 import com.diegonmarcos.superapp.system.BackgroundOrchestrator
 import com.diegonmarcos.superapp.system.PowerLevers
+import com.diegonmarcos.superapp.system.SystemDisplay
 import com.diegonmarcos.superapp.ui.Haptics
 import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.ShellActivity
@@ -23,6 +24,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.widget.SwitchCompat
 import androidx.fragment.app.Fragment
 import org.json.JSONArray
@@ -192,6 +194,17 @@ class LauncherConfigFragment : Fragment() {
 
             for (t in rows) {
                 root.addView(toggleRow(ctx, t.label, t.subtitle, settingsPrefs.toggle(t)) { on ->
+                    // Dark mode is a device-wide setting written over the shell
+                    // channel, so it is the one switch that must not be flipped
+                    // on this thread — and the one that has to say so when
+                    // there is no channel, instead of sliding and doing nothing.
+                    if (t.store == LauncherSettingsPrefs.Config.STORE_NIGHTMODE) {
+                        if (!SystemDisplay.hasChannel(ctx)) Toast.makeText(
+                            ctx, "Dark mode needs the shell channel — turn on wireless debugging first.",
+                            Toast.LENGTH_LONG).show()
+                        else Thread({ settingsPrefs.setToggle(t, on) }, "night-mode").start()
+                        return@toggleRow
+                    }
                     settingsPrefs.setToggle(t, on)
                     // Eye protection = the ANDROID SYSTEM night-light (blue-light
                     // filter), NOT a custom overlay — open its settings to enable.
@@ -203,6 +216,22 @@ class LauncherConfigFragment : Fragment() {
                     // Re-render because a hand-flip can move the theme tile into
                     // its "modified" state, and that label is derived, not stored.
                     rerender()
+                })
+                root.addView(spacer(ctx, dp(ctx, 8)))
+            }
+
+            // Scale lives in the Others box because it is the same kind of
+            // whole-UI preference as the switches above it — Samsung draws
+            // Screen zoom and Font size on this screen too, as two separate
+            // knobs that drift apart. SystemDisplay drives both from this one.
+            if (group.id == "others") {
+                val sc = LauncherSettingsPrefs.Config.scale
+                root.addView(sliderRow(ctx, sc.label, sc.subtitle, sc.min, sc.max, settingsPrefs.scale) { v ->
+                    settingsPrefs.scale = v
+                    if (!SystemDisplay.hasChannel(ctx)) Toast.makeText(
+                        ctx, "Scale needs the shell channel — turn on wireless debugging first.",
+                        Toast.LENGTH_LONG).show()
+                    else Thread({ SystemDisplay.applyScale(ctx, v) }, "ui-scale").start()
                 })
                 root.addView(spacer(ctx, dp(ctx, 8)))
             }

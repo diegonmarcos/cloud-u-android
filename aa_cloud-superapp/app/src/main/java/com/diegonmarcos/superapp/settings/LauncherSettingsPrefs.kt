@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.settings
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.onehand.OneHandController
 import com.diegonmarcos.superapp.onehand.OneHandPrefs
+import com.diegonmarcos.superapp.system.SystemDisplay
 import android.content.Context
 import android.util.Base64
 import org.json.JSONArray
@@ -43,7 +44,10 @@ class LauncherSettingsPrefs(context: Context) {
      * store, never a duplicate of it.
      */
     fun toggle(item: Item): Boolean = when (item.store) {
-        Config.STORE_ONEHAND -> OneHandPrefs.isEnabled(appCtx)
+        Config.STORE_ONEHAND  -> OneHandPrefs.isEnabled(appCtx)
+        // The phone's real uiMode, never a boolean of our own: dark mode is
+        // device-wide and anything else on the phone can change it.
+        Config.STORE_NIGHTMODE -> SystemDisplay.isNight(appCtx)
         else          -> toggle(item.id)
     }
 
@@ -52,6 +56,8 @@ class LauncherSettingsPrefs(context: Context) {
         // the overlay up (and check the permissions it needs), which is exactly
         // what the One-Hand tab's own switch calls.
         Config.STORE_ONEHAND -> { if (v) OneHandController.enable(appCtx) else OneHandController.disable(appCtx) }
+        // Shell round-trip. Call this off the main thread.
+        Config.STORE_NIGHTMODE -> { SystemDisplay.setNight(appCtx, v); Unit }
         else          -> setToggle(item.id, v)
     }
 
@@ -61,6 +67,12 @@ class LauncherSettingsPrefs(context: Context) {
      *  omit it for surfaces that have no per-feature toggle of their own. */
     fun anim(id: String? = null): Boolean =
         toggle("all_anim") && (id == null || toggle(id))
+
+    /** Whole-UI size, 1..10. Stored here; written to the device by
+     *  SystemDisplay.applyScale, which owns both halves of it. */
+    var scale: Int
+        get() = sp.getInt("scale", Config.scale.default)
+        set(v) { sp.edit().putInt("scale", v).apply() }
 
     var brightness: Int
         get() = sp.getInt("brightness", Config.brightness.default)
@@ -118,6 +130,10 @@ class LauncherSettingsPrefs(context: Context) {
     object Config {
         /** `store` value routing a switch at the launcher-onehand library. */
         const val STORE_ONEHAND = "onehand"
+
+        /** `store` value routing a switch at the phone's system-wide uiMode,
+         *  which only the privileged shell channel can write. */
+        const val STORE_NIGHTMODE = "nightmode"
 
         private val settings: JSONObject by lazy {
             runCatching {
@@ -182,6 +198,7 @@ class LauncherSettingsPrefs(context: Context) {
             return Slider(o.optString("label", key), o.optString("subtitle", ""),
                 o.optInt("min", 0), o.optInt("max", 100), o.optInt("default", fallbackDefault))
         }
+        val scale: Slider by lazy { slider("scale", 6) }
         val brightness: Slider by lazy { slider("brightness", -1) }
         val eyeIntensity: Slider by lazy { slider("eye_intensity", 35) }
         val screensaverTimeout: Slider by lazy { slider("screensaver_timeout", 10) }
