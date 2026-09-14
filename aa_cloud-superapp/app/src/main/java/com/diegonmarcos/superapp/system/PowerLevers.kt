@@ -140,19 +140,40 @@ object PowerLevers {
             read = { _, exec ->
                 if (exec("wm size")?.contains("Override size") == true) "override" else "physical"
             },
-            pull = { _, exec ->
-                val (w, h) = physicalSize(exec) ?: (null to null)
-                val density = physicalDensity(exec)
+            pull = { ctx, exec ->
+                // Scale from what the screen is ACTUALLY at, not from the panel's
+                // physical numbers. A phone whose owner pulled Screen zoom or
+                // display size below physical already sits under those numbers, so
+                // 85% of physical can be an ENLARGEMENT rather than a saving.
+                val priorSize = wmSize(exec, "Override size")
+                val priorDensity = wmDensity(exec, "Override density")
+                // Remember the override we are about to clobber, so restore can put
+                // the user's own choice back instead of guessing.
+                ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+                    .putString("prior.display_downscale.size", priorSize?.let { (pw, ph) -> "${pw}x${ph}" } ?: "")
+                    .putString("prior.display_downscale.density", priorDensity?.toString() ?: "")
+                    .apply()
+                val (w, h) = priorSize ?: wmSize(exec, "Physical size") ?: (null to null)
+                val density = priorDensity ?: wmDensity(exec, "Physical density")
                 if (w != null && h != null) exec("wm size ${w * 3 / 4}x${h * 3 / 4}")
                 if (density != null) exec("wm density ${density * 85 / 100}")
                 "size=${w}x${h} density=$density"
             },
-            restore = { _, exec, _ ->
-                // Reset, not "write back what we read": the physical value IS
-                // the stored one, and `reset` is the only way to clear an
-                // override without knowing whether there was one before.
-                exec("wm size reset")
-                exec("wm density reset")
+            restore = { ctx, exec, _ ->
+                // NOT a plain reset. `wm density reset` clears the override and
+                // lands on the PHYSICAL density — which is the wrong target for
+                // anyone who had deliberately set Screen zoom or display size below
+                // physical: one power-saving on/off cycle threw that setting away
+                // and left the phone permanently bigger than they had it. Density
+                // scales dp and sp alike, which is why it presented as "every icon
+                // and every font grew" rather than as a font-size change.
+                //
+                // Reset only when there genuinely was no override to begin with.
+                val priors = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                val size = priors.getString("prior.display_downscale.size", "").orEmpty()
+                val density = priors.getString("prior.display_downscale.density", "").orEmpty()
+                if (size.isNotEmpty()) exec("wm size $size") else exec("wm size reset")
+                if (density.isNotEmpty()) exec("wm density $density") else exec("wm density reset")
             },
         ),
 
@@ -324,17 +345,24 @@ object PowerLevers {
     private fun value(raw: String?): String? =
         raw?.trim()?.takeIf { it.isNotEmpty() && it != "null" }
 
-    private fun physicalSize(exec: Exec): Pair<Int, Int>? {
+    /**
+ * `wm size` / `wm density` always print the panel's "Physical" line and print an
+ * "Override" line only when something has changed it. Samsung's Screen zoom and
+ * Android's own display-size setting are both overrides, so "Physical" is NOT
+ * what the screen is rendering at on any phone whose owner has touched either.
+ * Pass the label you actually mean.
+ */
+private fun wmSize(exec: Exec, label: String): Pair<Int, Int>? {
         val line = exec("wm size")?.lineSequence()
-            ?.firstOrNull { it.contains("Physical size") } ?: return null
+            ?.firstOrNull { it.contains(label) } ?: return null
         val parts = line.substringAfter(':').trim().split('x')
         val width = parts.getOrNull(0)?.trim()?.toIntOrNull() ?: return null
         val height = parts.getOrNull(1)?.trim()?.toIntOrNull() ?: return null
         return width to height
     }
 
-    private fun physicalDensity(exec: Exec): Int? = exec("wm density")?.lineSequence()
-        ?.firstOrNull { it.contains("Physical density") }
+    private fun wmDensity(exec: Exec, label: String): Int? = exec("wm density")?.lineSequence()
+        ?.firstOrNull { it.contains(label) }
         ?.substringAfter(':')?.trim()?.toIntOrNull()
 
     /** Installed packages that did not ship with the system. */
