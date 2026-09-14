@@ -207,7 +207,10 @@ class LauncherConfigFragment : Fragment() {
                 root.addView(spacer(ctx, dp(ctx, 8)))
             }
         }
-        root.addView(batteryHungerSection(ctx, current.label))
+        // The label lives in the data-driven rows, not on the stored theme, which
+        // carries only the id — fall back to the id so the header is never blank.
+        root.addView(batteryHungerSection(
+            ctx, themes.firstOrNull { it.id == current.id }?.label ?: current.id))
         // Screen brightness (device-wide → needs WRITE_SETTINGS)
         val b = LauncherSettingsPrefs.Config.brightness
         root.addView(sliderRow(ctx, b.label, b.subtitle, b.min, b.max,
