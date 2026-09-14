@@ -191,7 +191,7 @@ class PermissionsFragment : Fragment() {
             permButton(ctx, "① Wireless debugging: " + (if (wdOn) "ON" else "OFF"), wdOn) {
                 toggleWirelessDebugging(!wdOn)
             },
-            permButton(ctx, "Open Wireless Debugging", null) { openWirelessDebuggingSettings() },
+            permButton(ctx, "Open W-less Debuging", null) { openWirelessDebuggingSettings() },
         ))
         col.addView(permButtonRow(ctx,
             permButton(ctx, "② Pair", plane != null) {

@@ -894,6 +894,11 @@ dependencies {
     implementation project(':libs:updater')
     implementation project(':libs:appstore')
     implementation project(':libs:devtools')
+    // The static HTTP engine behind Configs ▸ About ▸ WEBSERVER. Dependency-free
+    // by design, so linking it costs this app one socket implementation and
+    // nothing else — and the planned standalone Cloud WebServer APK can take
+    // the same module without dragging the SuperApp's world along.
+    implementation project(':libs:webserver')
     // The ITextTools binder — the ONLY channel from this app to another app's AI
     // Routing settings, and all that Configs ▸ AI ▸ Tokens Fleet needs to reach the
     // keyboard's registry, model choice and provider key. Deliberately NOT

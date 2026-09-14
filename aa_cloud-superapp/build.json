@@ -348,6 +348,12 @@
     },
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
+    },
+    "libs:webserver": {
+      "dir": "../ab_cloud-libs-shared/libs/webserver",
+      "type": "library",
+      "depends_on": [],
+      "comment": "Static HTTP serving ENGINE — WebServer (one accept thread + a worker pool over java.net.ServerSocket), WebServerPrefs (port, document root, loopback-vs-LAN bind, directory listing) and the CloudWebServer process-wide singleton. Deliberately dependency-free (not even libs:core) so the planned standalone Cloud WebServer APK can take this module alone. Serves a document root with MIME typing, index.html, directory listings, a path-traversal containment check against the canonical root, and a built-in /__status JSON endpoint; a bind failure is recorded as lastError instead of thrown, because a listener that failed to bind and one that is merely idle must never look alike on a status screen. Driven by app/devcontrol's Configs > About > WEBSERVER section, which owns every label and button — the screen belongs to the app, the socket belongs here."
     }
   },
   "onehand": {
@@ -4481,7 +4487,7 @@
         "icon": "ic_settings",
         "module": null,
         "bottom_nav": false,
-        "_doc_pages_order": "Order here is the single source of truth — drives both the Configs section page-grid AND (via home_groups tiles_from_section: 'config') the Home Apps Configs row. WireGuard appears in the row via an explicit `tiles` entry on the home_groups row with insert_after_id, since WG lives in its own section.",
+        "_doc_pages_order": "Order here is the single source of truth — drives both the Configs section page-grid AND (via home_groups tiles_from_section: 'config') the Home Apps Configs row. WireGuard appears in the row via an explicit `tiles` entry on the home_groups row with insert_after_id, since WG lives in its own section. `row_break: true` on a page starts a fresh grid row at that tile, which is how the grid keeps the shape Profile/WireGuard/KDE/AI/Permissions — Launcher — Constellation/Panel/About instead of reflowing at ui.tile_columns.",
         "pages": [
           {
             "_doc": "Tab 1 of Panel — the switch board, and the tab the page opens on (see _doc_tabs_order above). Which controls exist, how they are grouped and what they are called is declared in ui.control_panel below; the CAPABILITY behind each id (what reads its state, what writes it, what blocks it) lives in configs/DeviceControls.kt, next to the read-back that verifies it. hidden = it is reached through the Panel strip, not as its own Configs tile.",
@@ -4533,6 +4539,11 @@
             ]
           },
           {
+            "id": "perms",
+            "label": "Permissions",
+            "icon": "ic_settings"
+          },
+          {
             "_doc": "Tab 1 of AI — the websearch agent's settings, once cloud-superapp has a websearch agent. It does not have one, so this renders AiNotBuiltFragment and says so. hidden = reached through the AI strip, not as its own Configs tile.",
             "id": "websearch",
             "label": "WebSearch",
@@ -4575,7 +4586,8 @@
             "tabs": [
               "theme",
               "onehand"
-            ]
+            ],
+            "row_break": true
           },
           {
             "_doc": "Tab 1 of Launcher — everything the standalone Launcher page used to show (profiles, theme picker, screensaver + toggles, set-as-default-launcher). Its OWN id had to be new, because `launcher` is now the strip that CONTAINS it and a page cannot be a tab of itself. Nothing persisted moves with it: LauncherThemePrefs/LauncherProfilePrefs/LauncherSettingsPrefs key off fixed store names ('launcher_theme'/'launcher_profile'/'launcher_settings'), never off the page id. hidden = it is reached through the strip, not as its own Configs tile.",
@@ -4628,19 +4640,8 @@
             "id": "constellation",
             "label": "Constellation",
             "icon": "ic_refresh",
-            "action": "action:constellation"
-          },
-          {
-            "_doc": "Keyboard — hands off to the standalone Cloud-Keyboard app (ac_cloud-keyboard, com.diegonmarcos.cloudkeyboard). The vendored HeliBoard was extracted from the SuperApp into that standalone APK, so this entry no longer opens an in-APK SettingsActivity. target=extapp:cloud-keyboard → MainActivity.launchExternalApp opens Cloud-Keyboard's SettingsActivity if installed, else downloads + installs ui.external_apps[id=cloud-keyboard].install_apk_url. Sits directly after Constellation: both leave this APK for another one, so the two hand-offs are next to each other.",
-            "id": "keyboard",
-            "label": "Keyboard",
-            "icon": "ic_keyboard",
-            "action": "extapp:cloud-keyboard"
-          },
-          {
-            "id": "perms",
-            "label": "Permissions",
-            "icon": "ic_settings"
+            "action": "action:constellation",
+            "row_break": true
           },
           {
             "_doc": "Panel is the page you open to FLIP something, not to configure it — the two things the owner touches many times a day, sitting behind one strip: the device/fleet switches and the ntfy notification centre. It sits immediately before About at the owner's request, so the page touched many times a day is the one nearest the thumb on the Canopus arc; every other entry here is opened to change a setting once. `tabs` lists page ids of this same section in strip order, so it wears the SectionTabsFragment strip Launcher established in 07964787e — no second tab widget in this app.",

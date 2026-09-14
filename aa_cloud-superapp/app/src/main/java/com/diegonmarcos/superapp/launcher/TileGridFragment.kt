@@ -38,8 +38,20 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
     }
 
     /** [group] = optional heading this tile sits under ("Pages", "Actions").
-     *  Blank means ungrouped, which is how every section but Configs builds. */
-    data class Tile(val id: String, val label: String, @DrawableRes val iconRes: Int, val group: String = "")
+     *  Blank means ungrouped, which is how every section but Configs builds.
+     *
+     *  [rowBreak] = start a fresh row AT this tile. A group boundary already
+     *  breaks a row, but it also prints a heading; this is the break without
+     *  the heading, for a section that wants a particular row shape out of one
+     *  unlabelled list. Declared per page in build.json (`row_break`), never
+     *  computed from the index — the shape has to survive inserting a tile. */
+    data class Tile(
+        val id: String,
+        val label: String,
+        @DrawableRes val iconRes: Int,
+        val group: String = "",
+        val rowBreak: Boolean = false,
+    )
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -49,6 +61,7 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         val labels = args.getStringArray(ARG_TILE_LABELS) ?: emptyArray()
         val icons  = args.getIntArray(ARG_TILE_ICONS)     ?: IntArray(0)
         val groups = args.getStringArray(ARG_TILE_GROUPS) ?: emptyArray()
+        val breaks = args.getBooleanArray(ARG_TILE_BREAKS) ?: BooleanArray(0)
 
         view.findViewById<TextView>(R.id.tile_grid_title).text = title
 
@@ -74,8 +87,12 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
             // A row never straddles a group boundary: count how many of the next
             // `cols` tiles still belong to this group, and start the next group
             // on a fresh row.
+            // A declared row_break stops the run too — `span == 0 ||` so the
+            // tile carrying the break still starts a row instead of a row of
+            // zero tiles that would loop forever.
             var span = 0
-            while (span < cols && i + span < ids.size && groups.getOrNull(i + span).orEmpty() == g) span++
+            while (span < cols && i + span < ids.size && groups.getOrNull(i + span).orEmpty() == g &&
+                (span == 0 || !breaks.getOrElse(i + span) { false })) span++
             // wrap_content row → tile keeps its item_tile.xml fixed height,
             // ScrollView handles overflow. Auto-fit blew up single-row
             // sections into giant tiles.
@@ -186,6 +203,7 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         private const val ARG_TILE_LABELS = "tile_labels"
         private const val ARG_TILE_ICONS  = "tile_icons"
         private const val ARG_TILE_GROUPS = "tile_groups"
+        private const val ARG_TILE_BREAKS = "tile_breaks"
 
         fun newInstance(title: String, tiles: List<Tile>) = TileGridFragment().apply {
             arguments = bundleOf(
@@ -194,6 +212,7 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
                 ARG_TILE_LABELS to tiles.map { it.label }.toTypedArray(),
                 ARG_TILE_ICONS  to tiles.map { it.iconRes }.toIntArray(),
                 ARG_TILE_GROUPS to tiles.map { it.group }.toTypedArray(),
+                ARG_TILE_BREAKS to tiles.map { it.rowBreak }.toBooleanArray(),
             )
         }
     }

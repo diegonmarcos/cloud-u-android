@@ -48,8 +48,11 @@ class ConstellationFragment : Fragment() {
     private val fleet by lazy { Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64) }
     // Tabs are a VIEW over the one fleet list — kind comes from each app's
     // build.json::release.kind via data/regen.sh, never a hardcoded list here.
-    private val apps by lazy { fleet.filter { it.kind != "lib" } }
-    private val libs by lazy { fleet.filter { it.kind == "lib" } }
+    // Sorted by display name at this single point rather than at each call
+    // site: the rows, the detail pane, "Update All" and the copy dump all read
+    // these two lists, so ordering them here orders the whole page at once.
+    private val apps by lazy { fleet.filter { it.kind != "lib" }.sortedBy { it.label.lowercase() } }
+    private val libs by lazy { fleet.filter { it.kind == "lib" }.sortedBy { it.label.lowercase() } }
 
     private val statusViews = HashMap<String, TextView>()
     // The collapsed row shows a one-line summary; the full status line lives in

@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// libs:webserver — the HTTP serving ENGINE, and nothing else.
+//
+// Deliberately free of every fleet dependency (no libs:core, no updater, no
+// analytics) so the future standalone Cloud WebServer APK can take this
+// module on its own without dragging the SuperApp's world in with it. The
+// only thing it knows how to do is bind a socket and serve a directory.
+//
+// The UI that drives it lives in the consumer: today that is the SuperApp's
+// Configs > About > WEBSERVER section, which owns every label, button and
+// live counter. A screen belongs to the app; the socket belongs here.
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.webserver'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+}

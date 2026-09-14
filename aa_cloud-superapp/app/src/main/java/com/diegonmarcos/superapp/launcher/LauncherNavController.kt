@@ -387,7 +387,8 @@ class LauncherNavController(private val host: NavHost) {
                 id = if (p.action.isNotBlank()) p.action else "page:${section.id}/${p.id}",
                 label = p.label,
                 iconRes = p.iconName?.let { Sections.iconResFor(ctx, it) } ?: 0,
-                group = if (p.isAction) GROUP_ACTIONS else GROUP_PAGES)
+                group = if (p.isAction) GROUP_ACTIONS else GROUP_PAGES,
+                rowBreak = p.rowBreak)
         }
         val actions = own.filter { it.group == GROUP_ACTIONS } + starActionsOf(section)
         return TileGridFragment.newInstance(

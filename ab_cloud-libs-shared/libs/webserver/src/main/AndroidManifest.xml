@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Binding a listening socket to the wildcard address is a network
+      operation, so the permission is declared by the engine rather than left
+      for each consumer to remember. Loopback-only mode does not need it; the
+      declaration costs nothing and removes a whole class of "works on my
+      build" from any app that takes this library.
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+</manifest>

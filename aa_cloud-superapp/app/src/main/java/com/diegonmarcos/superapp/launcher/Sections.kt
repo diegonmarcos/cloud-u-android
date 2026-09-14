@@ -431,6 +431,12 @@ object Sections {
          *  outer/inner arcs. */
         val isAction: Boolean = false,
 
+        /** true = this page's tile starts a new row in its section's grid.
+         *  The row shape of a grid is a layout decision, so it is declared
+         *  beside the order it applies to rather than inferred from a tile
+         *  count that changes the moment a page is added. */
+        val rowBreak: Boolean = false,
+
         /** `<sectionId>/<tile group title>` whose tiles this page opens with,
          *  as an app row. A REFERENCE to the canonical list, never a copy:
          *  Drive ▸ Connections names Cloud ▸ Apps ▸ Data Apps, so the row the
@@ -668,6 +674,7 @@ object Sections {
                             (0 until ta.length()).map { ta.getString(it) }
                         }.orEmpty(),
                         isAction = po.optBoolean("is_action", false),
+                        rowBreak = po.optBoolean("row_break", false),
                         appsFromTileGroup = po.optString("apps_from_tile_group", ""),
                         appsExtraTileIds = po.optJSONArray("apps_extra_tile_ids")?.let { ea ->
                             (0 until ea.length()).map { ea.getString(it) }

@@ -40,6 +40,8 @@ import com.diegonmarcos.superapp.adbdebug.WirelessDebugging
 import com.diegonmarcos.superapp.updater.BuildConfig as UpdBuildConfig
 import com.diegonmarcos.superapp.updater.BuildAge
 import com.diegonmarcos.superapp.updater.Fleet
+import com.diegonmarcos.superapp.webserver.CloudWebServer
+import com.diegonmarcos.superapp.webserver.WebServerPrefs
 import com.wireguard.android.backend.Tunnel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -488,48 +490,9 @@ class DevControlFragment : Fragment() {
         }
         macroAnchors.clear()
         macroGlyphs.clear()
+        currentMacro = ""
         anchors.reset(scroll)
         column.addView(indexBox)
-
-        addLogcatSection(ctx, column)
-
-        // ══ CLOUD macro section — who/what this device is in the cloud mesh: the
-        //    owner profile + repos + consolidated config, and live WireGuard/mesh reachability.
-        column.addView(macroHeader(ctx, "☁  CLOUD IDENTITY"))
-
-        section(ctx, column, "Profile") {
-            val prof = ProfilePrefs(ctxAny())
-            row(ctx, it, "Name",     prof.name.ifBlank { BuildConfig.UI_PROFILE_NAME })
-            row(ctx, it, "Email",    prof.email.ifBlank { BuildConfig.UI_PROFILE_EMAIL })
-            row(ctx, it, "Company",  prof.company.ifBlank { BuildConfig.UI_PROFILE_COMPANY })
-            row(ctx, it, "Location", prof.location.ifBlank { BuildConfig.UI_PROFILE_LOCATION })
-            val site = prof.website.ifBlank { BuildConfig.UI_PROFILE_WEBSITE }
-            if (site.isNotBlank()) row(ctx, it, "Website", site)
-            // Repos — data-driven from build.json::ui.profile_default.repos.
-            it.addView(small(ctx, "Repos:"))
-            for ((label, url) in parseProfileRepos()) row(ctx, it, label, url)
-            // Install — the repo links above tell you where the SOURCE lives,
-            // which is no help to someone holding a broken build: reading the
-            // code is not installing it. The artifact those repos produce gets
-            // its own address here, next to them, plus the button that uses it.
-            it.addView(small(ctx, getString(R.string.about_install_header)))
-            renderDirectInstall(ctx, it)
-            // Wireless Debugging, next to the install button rather than only in
-            // "Dev Control API" twenty sections below. Same audience, same
-            // moment: the channel that makes an install silent is the switch
-            // someone reaching for the recovery install most often needs, and a
-            // control that far down the page is one the user reports as absent.
-            // Status is read here (unprivileged); the OS toggle has no API, so
-            // the button is the Developer-options deep link, as everywhere else.
-            row(ctx, it, "Wireless debugging",
-                if (WirelessDebugging.isOn(ctxAny())) "ON" else "OFF")
-            it.addView(actionButton(ctx, "Open Wireless Debugging", GRAY) { openWirelessDebuggingSettings() })
-            // The consolidated cloud-data config that feeds the mesh.
-            it.addView(small(ctx, "Config source:"))
-            row(ctx, it, "Consolidated", BuildConfig.UI_CONSOLIDATED_CONFIG.ifBlank { "—" })
-        }
-
-        section(ctx, column, "VPN / WireGuard / Mesh") { renderVpnMesh(ctx, it) }
 
         // ══ APP & BUILD macro section — this APK's identity: package/version,
         //    release channel, signing, provenance, declared sections, and the full stack scan.
@@ -548,95 +511,6 @@ class DevControlFragment : Fragment() {
             row(ctx, it, "Built (UTC)",  BuildConfig.BUILD_TIMESTAMP)
             row(ctx, it, "Build type",   BuildConfig.BUILD_TYPE)
             row(ctx, it, "Debuggable",   BuildConfig.DEBUG.toString())
-        }
-
-        section(ctx, column, "Release / GHCR") {
-            row(ctx, it, "Registry",  UpdBuildConfig.GHCR_REGISTRY)
-            row(ctx, it, "Namespace", UpdBuildConfig.GHCR_NAMESPACE)
-            row(ctx, it, "Image",     UpdBuildConfig.GHCR_IMAGE)
-            row(ctx, it, "Tag",       UpdBuildConfig.AUTO_UPDATE_TAG)
-            row(ctx, it, "Full URL",
-                "${UpdBuildConfig.GHCR_REGISTRY}/${UpdBuildConfig.GHCR_NAMESPACE}/${UpdBuildConfig.GHCR_IMAGE}:${UpdBuildConfig.AUTO_UPDATE_TAG}")
-            row(ctx, it, "Check interval", "${UpdBuildConfig.AUTO_UPDATE_INTERVAL_HOURS}h")
-        }
-
-        section(ctx, column, "APK") {
-            val pm = requireContext().packageManager
-            @Suppress("DEPRECATION")
-            val info = pm.getPackageInfo(requireContext().packageName, 0)
-            // PackageInfo.applicationInfo is @Nullable as of API 35.
-            // Fall back to "—" so the dev-control row still renders.
-            val path = info.applicationInfo?.sourceDir ?: "—"
-            val size = runCatching { File(path).length() }.getOrDefault(0L)
-            row(ctx, it, "Path",       path)
-            row(ctx, it, "Size",       sizeStr(size))
-            row(ctx, it, "Installed",  fmtMillis(info.firstInstallTime))
-            row(ctx, it, "Updated",    fmtMillis(info.lastUpdateTime))
-        }
-
-        section(ctx, column, "Signing") {
-            val pm = requireContext().packageManager
-            val sigFlags = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P)
-                PackageManager.GET_SIGNING_CERTIFICATES
-            else @Suppress("DEPRECATION") PackageManager.GET_SIGNATURES
-            val sigPkg = runCatching { pm.getPackageInfo(requireContext().packageName, sigFlags) }.getOrNull()
-            val sigBytes = runCatching {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P)
-                    sigPkg?.signingInfo?.apkContentsSigners?.firstOrNull()?.toByteArray()
-                else @Suppress("DEPRECATION") sigPkg?.signatures?.firstOrNull()?.toByteArray()
-            }.getOrNull()
-            if (sigBytes != null) {
-                val cert = CertificateFactory.getInstance("X.509")
-                    .generateCertificate(sigBytes.inputStream()) as X509Certificate
-                val sha256 = MessageDigest.getInstance("SHA-256").digest(cert.encoded)
-                    .joinToString(":") { "%02X".format(it) }
-                row(ctx, it, "Subject",     cert.subjectDN.name)
-                row(ctx, it, "SHA-256",     sha256)
-                row(ctx, it, "Valid until", fmtMillis(cert.notAfter.time))
-            } else {
-                row(ctx, it, "Cert", "—")
-            }
-        }
-
-        section(ctx, column, "APK provenance") {
-            val pm = ctxAny().packageManager
-            val pkg = ctxAny().packageName
-            if (android.os.Build.VERSION.SDK_INT >= 30) {
-                val src = runCatching { pm.getInstallSourceInfo(pkg) }.getOrNull()
-                row(ctx, it, "Installed by", src?.installingPackageName ?: "—")
-                row(ctx, it, "Initiated by", src?.initiatingPackageName ?: "—")
-                if (android.os.Build.VERSION.SDK_INT >= 34)
-                    row(ctx, it, "Update owner", src?.updateOwnerPackageName ?: "—")
-            } else {
-                @Suppress("DEPRECATION")
-                val installer = runCatching { pm.getInstallerPackageName(pkg) }.getOrNull()
-                row(ctx, it, "Installed by", installer ?: "—")
-            }
-            // Signing cert SHA-256 — proves "this APK was signed by my keystore"
-            val sigInfo = runCatching {
-                if (android.os.Build.VERSION.SDK_INT >= 28) {
-                    pm.getPackageInfo(pkg, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES).signingInfo
-                } else null
-            }.getOrNull()
-            val sigs = sigInfo?.signingCertificateHistory ?: sigInfo?.apkContentsSigners
-            if (sigs.isNullOrEmpty()) {
-                row(ctx, it, "Cert SHA-256", "—")
-            } else {
-                val md = java.security.MessageDigest.getInstance("SHA-256")
-                val hex = md.digest(sigs[0].toByteArray()).joinToString(":") { "%02X".format(it) }
-                row(ctx, it, "Cert SHA-256", hex)
-            }
-            // Split APKs (base + per-density + per-ABI).
-            // PackageInfo.applicationInfo is @Nullable as of API 35;
-            // safe-call every access and degrade to "—" / 0 if the
-            // platform decides not to hand us an ApplicationInfo.
-            @Suppress("DEPRECATION")
-            val appInfo = pm.getPackageInfo(pkg, 0).applicationInfo
-            val splits = appInfo?.splitSourceDirs?.size ?: 0
-            row(ctx, it, "Splits",      "$splits split APK(s)")
-            row(ctx, it, "Native lib dir", appInfo?.nativeLibraryDir ?: "—")
-            val nativeLibs = runCatching { File(appInfo?.nativeLibraryDir ?: "").listFiles()?.map { it.name } }.getOrNull()
-            row(ctx, it, "Native libs", nativeLibs?.joinToString(", ") ?: "—")
         }
 
         section(ctx, column, "Sections (from build.json)") {
@@ -841,6 +715,135 @@ class DevControlFragment : Fragment() {
             scrollers.forEach { box.addView(it) }
         }
 
+        // ══ REPO & RELEASES macro section — where this build CAME FROM: the
+        //    owner profile and its repos, the published release, the artifact
+        //    itself, the key that signed it and the provenance that ties the
+        //    three together. Renamed from "Cloud Identity", and the release,
+        //    APK, signing and provenance sections moved in from App & Build so
+        //    the heading is not a lie: identity alone never explained a build.
+        column.addView(macroHeader(ctx, "☁  REPO & RELEASES"))
+
+        section(ctx, column, "Profile") {
+            val prof = ProfilePrefs(ctxAny())
+            row(ctx, it, "Name",     prof.name.ifBlank { BuildConfig.UI_PROFILE_NAME })
+            row(ctx, it, "Email",    prof.email.ifBlank { BuildConfig.UI_PROFILE_EMAIL })
+            row(ctx, it, "Company",  prof.company.ifBlank { BuildConfig.UI_PROFILE_COMPANY })
+            row(ctx, it, "Location", prof.location.ifBlank { BuildConfig.UI_PROFILE_LOCATION })
+            val site = prof.website.ifBlank { BuildConfig.UI_PROFILE_WEBSITE }
+            if (site.isNotBlank()) row(ctx, it, "Website", site)
+            // Repos — data-driven from build.json::ui.profile_default.repos.
+            it.addView(small(ctx, "Repos:"))
+            for ((label, url) in parseProfileRepos()) row(ctx, it, label, url)
+            // Install — the repo links above tell you where the SOURCE lives,
+            // which is no help to someone holding a broken build: reading the
+            // code is not installing it. The artifact those repos produce gets
+            // its own address here, next to them, plus the button that uses it.
+            it.addView(small(ctx, getString(R.string.about_install_header)))
+            renderDirectInstall(ctx, it)
+            // Wireless Debugging, next to the install button rather than only in
+            // "Dev Tools" twenty sections below. Same audience, same
+            // moment: the channel that makes an install silent is the switch
+            // someone reaching for the recovery install most often needs, and a
+            // control that far down the page is one the user reports as absent.
+            // Status is read here (unprivileged); the OS toggle has no API, so
+            // the button is the Developer-options deep link, as everywhere else.
+            row(ctx, it, "Wireless debugging",
+                if (WirelessDebugging.isOn(ctxAny())) "ON" else "OFF")
+            it.addView(actionButton(ctx, "Open W-less Debuging", GRAY) { openWirelessDebuggingSettings() })
+            // The consolidated cloud-data config that feeds the mesh.
+            it.addView(small(ctx, "Config source:"))
+            row(ctx, it, "Consolidated", BuildConfig.UI_CONSOLIDATED_CONFIG.ifBlank { "—" })
+        }
+
+        section(ctx, column, "Release / GHCR") {
+            row(ctx, it, "Registry",  UpdBuildConfig.GHCR_REGISTRY)
+            row(ctx, it, "Namespace", UpdBuildConfig.GHCR_NAMESPACE)
+            row(ctx, it, "Image",     UpdBuildConfig.GHCR_IMAGE)
+            row(ctx, it, "Tag",       UpdBuildConfig.AUTO_UPDATE_TAG)
+            row(ctx, it, "Full URL",
+                "${UpdBuildConfig.GHCR_REGISTRY}/${UpdBuildConfig.GHCR_NAMESPACE}/${UpdBuildConfig.GHCR_IMAGE}:${UpdBuildConfig.AUTO_UPDATE_TAG}")
+            row(ctx, it, "Check interval", "${UpdBuildConfig.AUTO_UPDATE_INTERVAL_HOURS}h")
+        }
+
+        section(ctx, column, "APK") {
+            val pm = requireContext().packageManager
+            @Suppress("DEPRECATION")
+            val info = pm.getPackageInfo(requireContext().packageName, 0)
+            // PackageInfo.applicationInfo is @Nullable as of API 35.
+            // Fall back to "—" so the dev-control row still renders.
+            val path = info.applicationInfo?.sourceDir ?: "—"
+            val size = runCatching { File(path).length() }.getOrDefault(0L)
+            row(ctx, it, "Path",       path)
+            row(ctx, it, "Size",       sizeStr(size))
+            row(ctx, it, "Installed",  fmtMillis(info.firstInstallTime))
+            row(ctx, it, "Updated",    fmtMillis(info.lastUpdateTime))
+        }
+
+        section(ctx, column, "Signing") {
+            val pm = requireContext().packageManager
+            val sigFlags = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P)
+                PackageManager.GET_SIGNING_CERTIFICATES
+            else @Suppress("DEPRECATION") PackageManager.GET_SIGNATURES
+            val sigPkg = runCatching { pm.getPackageInfo(requireContext().packageName, sigFlags) }.getOrNull()
+            val sigBytes = runCatching {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P)
+                    sigPkg?.signingInfo?.apkContentsSigners?.firstOrNull()?.toByteArray()
+                else @Suppress("DEPRECATION") sigPkg?.signatures?.firstOrNull()?.toByteArray()
+            }.getOrNull()
+            if (sigBytes != null) {
+                val cert = CertificateFactory.getInstance("X.509")
+                    .generateCertificate(sigBytes.inputStream()) as X509Certificate
+                val sha256 = MessageDigest.getInstance("SHA-256").digest(cert.encoded)
+                    .joinToString(":") { "%02X".format(it) }
+                row(ctx, it, "Subject",     cert.subjectDN.name)
+                row(ctx, it, "SHA-256",     sha256)
+                row(ctx, it, "Valid until", fmtMillis(cert.notAfter.time))
+            } else {
+                row(ctx, it, "Cert", "—")
+            }
+        }
+
+        section(ctx, column, "APK provenance") {
+            val pm = ctxAny().packageManager
+            val pkg = ctxAny().packageName
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                val src = runCatching { pm.getInstallSourceInfo(pkg) }.getOrNull()
+                row(ctx, it, "Installed by", src?.installingPackageName ?: "—")
+                row(ctx, it, "Initiated by", src?.initiatingPackageName ?: "—")
+                if (android.os.Build.VERSION.SDK_INT >= 34)
+                    row(ctx, it, "Update owner", src?.updateOwnerPackageName ?: "—")
+            } else {
+                @Suppress("DEPRECATION")
+                val installer = runCatching { pm.getInstallerPackageName(pkg) }.getOrNull()
+                row(ctx, it, "Installed by", installer ?: "—")
+            }
+            // Signing cert SHA-256 — proves "this APK was signed by my keystore"
+            val sigInfo = runCatching {
+                if (android.os.Build.VERSION.SDK_INT >= 28) {
+                    pm.getPackageInfo(pkg, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES).signingInfo
+                } else null
+            }.getOrNull()
+            val sigs = sigInfo?.signingCertificateHistory ?: sigInfo?.apkContentsSigners
+            if (sigs.isNullOrEmpty()) {
+                row(ctx, it, "Cert SHA-256", "—")
+            } else {
+                val md = java.security.MessageDigest.getInstance("SHA-256")
+                val hex = md.digest(sigs[0].toByteArray()).joinToString(":") { "%02X".format(it) }
+                row(ctx, it, "Cert SHA-256", hex)
+            }
+            // Split APKs (base + per-density + per-ABI).
+            // PackageInfo.applicationInfo is @Nullable as of API 35;
+            // safe-call every access and degrade to "—" / 0 if the
+            // platform decides not to hand us an ApplicationInfo.
+            @Suppress("DEPRECATION")
+            val appInfo = pm.getPackageInfo(pkg, 0).applicationInfo
+            val splits = appInfo?.splitSourceDirs?.size ?: 0
+            row(ctx, it, "Splits",      "$splits split APK(s)")
+            row(ctx, it, "Native lib dir", appInfo?.nativeLibraryDir ?: "—")
+            val nativeLibs = runCatching { File(appInfo?.nativeLibraryDir ?: "").listFiles()?.map { it.name } }.getOrNull()
+            row(ctx, it, "Native libs", nativeLibs?.joinToString(", ") ?: "—")
+        }
+
         // ══ DEVICE macro section — the physical/OS device this build is running on.
         column.addView(macroHeader(ctx, "🖥️  DEVICE"))
 
@@ -994,6 +997,47 @@ class DevControlFragment : Fragment() {
             val bootWall = System.currentTimeMillis() - android.os.SystemClock.elapsedRealtime()
             row(ctx, it, "Booted",   fmtMillis(bootWall))
             row(ctx, it, "System uptime", fmtDuration(android.os.SystemClock.elapsedRealtime()))
+        }
+
+        // ══ SECURITY macro section — device lock state, ADB/dev-options exposure, biometrics.
+        column.addView(macroHeader(ctx, "🔐  SECURITY"))
+
+        section(ctx, column, "Security posture") {
+            val cr = ctxAny().contentResolver
+            val devMode = runCatching {
+                android.provider.Settings.Global.getInt(cr,
+                    android.provider.Settings.Global.DEVELOPMENT_SETTINGS_ENABLED) == 1
+            }.getOrDefault(false)
+            val adbEnabled = runCatching {
+                android.provider.Settings.Global.getInt(cr,
+                    android.provider.Settings.Global.ADB_ENABLED) == 1
+            }.getOrDefault(false)
+            row(ctx, it, "Dev options", devMode.toString())
+            row(ctx, it, "USB ADB",     adbEnabled.toString())
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                val adbWifi = runCatching {
+                    android.provider.Settings.Global.getInt(cr, "adb_wifi_enabled") == 1
+                }.getOrDefault(false)
+                row(ctx, it, "Wireless ADB", adbWifi.toString())
+            }
+            val km = ctxAny().getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
+            row(ctx, it, "Device secure",  (km?.isDeviceSecure ?: false).toString())
+            row(ctx, it, "Keyguard locked", (km?.isKeyguardLocked ?: false).toString())
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                val bm = ctxAny().getSystemService(Context.BIOMETRIC_SERVICE)
+                    as? android.hardware.biometrics.BiometricManager
+                val biometric = runCatching {
+                    @Suppress("DEPRECATION")
+                    bm?.canAuthenticate() ?: -1
+                }.getOrDefault(-1)
+                row(ctx, it, "Biometric ready", when (biometric) {
+                    android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS              -> "Yes"
+                    android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED  -> "No (not enrolled)"
+                    android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE    -> "No (no hardware)"
+                    android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> "Hardware unavailable"
+                    else -> "Unknown"
+                })
+            }
         }
 
         // ══ RESOURCES macro section — storage, battery, memory and raw kernel telemetry.
@@ -1537,51 +1581,14 @@ class DevControlFragment : Fragment() {
             })
         }
 
-        // ══ SECURITY macro section — device lock state, ADB/dev-options exposure, biometrics.
-        column.addView(macroHeader(ctx, "🔐  SECURITY"))
+        // ══ API macro section — the on-device HTTP control surface (Dev
+        //    Control) and the curl shortcuts that drive it. The SSH servers and
+        //    the adb/Shizuku channels that used to share this section live in
+        //    DEV TOOLS now: one heading, one question — "is the control plane
+        //    up and what is its bearer".
+        column.addView(macroHeader(ctx, "🔌  API"))
 
-        section(ctx, column, "Security posture") {
-            val cr = ctxAny().contentResolver
-            val devMode = runCatching {
-                android.provider.Settings.Global.getInt(cr,
-                    android.provider.Settings.Global.DEVELOPMENT_SETTINGS_ENABLED) == 1
-            }.getOrDefault(false)
-            val adbEnabled = runCatching {
-                android.provider.Settings.Global.getInt(cr,
-                    android.provider.Settings.Global.ADB_ENABLED) == 1
-            }.getOrDefault(false)
-            row(ctx, it, "Dev options", devMode.toString())
-            row(ctx, it, "USB ADB",     adbEnabled.toString())
-            if (android.os.Build.VERSION.SDK_INT >= 30) {
-                val adbWifi = runCatching {
-                    android.provider.Settings.Global.getInt(cr, "adb_wifi_enabled") == 1
-                }.getOrDefault(false)
-                row(ctx, it, "Wireless ADB", adbWifi.toString())
-            }
-            val km = ctxAny().getSystemService(Context.KEYGUARD_SERVICE) as? android.app.KeyguardManager
-            row(ctx, it, "Device secure",  (km?.isDeviceSecure ?: false).toString())
-            row(ctx, it, "Keyguard locked", (km?.isKeyguardLocked ?: false).toString())
-            if (android.os.Build.VERSION.SDK_INT >= 29) {
-                val bm = ctxAny().getSystemService(Context.BIOMETRIC_SERVICE)
-                    as? android.hardware.biometrics.BiometricManager
-                val biometric = runCatching {
-                    @Suppress("DEPRECATION")
-                    bm?.canAuthenticate() ?: -1
-                }.getOrDefault(-1)
-                row(ctx, it, "Biometric ready", when (biometric) {
-                    android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS              -> "Yes"
-                    android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED  -> "No (not enrolled)"
-                    android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE    -> "No (no hardware)"
-                    android.hardware.biometrics.BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> "Hardware unavailable"
-                    else -> "Unknown"
-                })
-            }
-        }
-
-        // ══ DEV TOOLS macro section — on-device HTTP/SSH control surface + curl shortcuts.
-        column.addView(macroHeader(ctx, "🛠️  DEV TOOLS"))
-
-        section(ctx, column, "Dev Control - Http (API) & SSH (Termux)") {
+        section(ctx, column, "Dev Control HTTP API") {
             val prefs = DevControlPrefs(requireContext())
             val running = DevControlServer.isRunning()
             val bound   = DevControlServer.boundHost()
@@ -1596,28 +1603,6 @@ class DevControlFragment : Fragment() {
             })
             row(ctx, it, "Token",    prefs.token)
             it.addView(small(ctx, "Bearer token — long-press to copy. DECLARATIVE: baked from the vault sops secret (BuildConfig.FLEET_TOKEN), the same value cloud-superapp-mcp is configured with, so it is stable across installs and there is nothing to regenerate. Endpoints follow /api/{group}/{op}. Full catalog: GET /api/docs."))
-
-            // ── SSH (Termux & co.) — detect installed terminal emulators and
-            //    whether each is running an sshd we can reach on localhost.
-            //    Installed-check is synchronous (PackageManager); the port
-            //    probe is async (no network on the main thread).
-            it.addView(small(ctx, "SSH servers on this device — terminal apps + whether their sshd is listening on localhost (probes 127.0.0.1 across common ports)."))
-            for (term in SSH_TERMINALS) {
-                val installed = isPackageInstalled(ctx, term.pkg)
-                val portList = term.ports.joinToString(",")
-                val valueView = row(ctx, it, term.label,
-                    if (!installed) "not installed" else "installed · probing :$portList…")
-                if (installed) viewLifecycleOwner.lifecycleScope.launch {
-                    val open = withContext(Dispatchers.IO) { term.ports.filter { p -> portOpen("127.0.0.1", p) } }
-                    if (open.isNotEmpty()) {
-                        valueView.text = "installed · sshd ✓ up :${open.joinToString(",")}"
-                        valueView.setTextColor(0xFF8BE9A0.toInt())
-                    } else {
-                        valueView.text = "installed · sshd ✗ down (tried :$portList)"
-                        valueView.setTextColor(0xFFFFB199.toInt())
-                    }
-                }
-            }
 
             // Toggle Switch: persists pref + start/stop the server live.
             it.addView(android.widget.Switch(ctx).apply {
@@ -1641,13 +1626,79 @@ class DevControlFragment : Fragment() {
             // from the vault sops secret, seeded in App.onCreate). Rotating it on one
             // device would only split the fleet from the value the MCP and every other
             // member hold; rotation, if ever needed, is a vault secret change + rebuild.
-            // Self-contained ADB (libs:shizuku-adb-debug-tools): jump to
-            // Developer options to flip Wireless Debugging ON, then read the
-            // pairing/connect ports for /api/adb/pair + /api/adb/connect. The
-            // OS toggle can't be flipped by an app (no API) — this is a
-            // deep-link. Lives here next to the HTTP API it feeds.
+        }
+
+        section(ctx, column, "Curl shortcuts") {
+            val port = DevControlPrefs(requireContext()).port
+            val tok  = DevControlPrefs(requireContext()).token
+            // Endpoint catalog moved to /api/{group}/{op} layout in
+            // commit fb2bc62; the flat aliases still resolve but the
+            // documented form is the grouped one. Source of truth for
+            // the full list is GET /api/docs (machine-readable JSON,
+            // generated from the same Spec list the routing uses so it
+            // can't drift). These shortcuts cover the most-used probes.
+            row(ctx, it, "Docs",     "curl http://127.0.0.1:$port/api/docs")
+            row(ctx, it, "Logcat",   "curl http://127.0.0.1:$port/api/diagnostics/logcat?n=500")
+            row(ctx, it, "Trace",    "curl http://127.0.0.1:$port/api/diagnostics/trace")
+            row(ctx, it, "Crashes",  "curl http://127.0.0.1:$port/api/diagnostics/crashes")
+            row(ctx, it, "Bundle",   "curl http://127.0.0.1:$port/api/diagnostics/bundle")
+            row(ctx, it, "Download logs", "curl http://127.0.0.1:$port/api/diagnostics/download")
+            row(ctx, it, "Send logs → cloud", "curl http://127.0.0.1:$port/api/diagnostics/push")
+            row(ctx, it, "Info",     "curl http://127.0.0.1:$port/api/system/info")
+            row(ctx, it, "State",    "curl -H 'Authorization: Bearer $tok' http://127.0.0.1:$port/api/state")
+            row(ctx, it, "Haptic",   "curl -XPOST -H 'Authorization: Bearer $tok' 'http://127.0.0.1:$port/api/haptic?preset=gemini_stream'")
+            row(ctx, it, "Update",   "curl -XPOST -H 'Authorization: Bearer $tok' http://127.0.0.1:$port/api/system/update")
+            row(ctx, it, "Restart",  "curl -XPOST -H 'Authorization: Bearer $tok' http://127.0.0.1:$port/api/system/restart")
+            row(ctx, it, "Tracker",  "curl http://127.0.0.1:$port/api/tracker/counts")
+        }
+
+        // ══ MESH macro section — this device's place in the WireGuard mesh:
+        //    tunnel state, peers, and whether the fleet is reachable right now.
+        //    Split out of the identity block because "who owns this phone" and
+        //    "can it reach the fleet" are different questions, and in an outage
+        //    only the second one is ever asked.
+        column.addView(macroHeader(ctx, "🕸️  MESH"))
+
+        section(ctx, column, "VPN / WireGuard / Mesh") { renderVpnMesh(ctx, it) }
+
+        // ══ DEV TOOLS macro section — the debugging channels that are NOT
+        //    the HTTP API: the terminal apps' sshd, Wireless Debugging, the
+        //    embedded adb pairing walkthrough and Shizuku. Split out of the old
+        //    combined section so API above answers "is the control plane up"
+        //    and this one answers "how do I get a shell on this phone".
+        column.addView(macroHeader(ctx, "🛠️  DEV TOOLS"))
+
+        section(ctx, column, "SSH servers (Termux & co.)") {
+            // ── SSH (Termux & co.) — detect installed terminal emulators and
+            //    whether each is running an sshd we can reach on localhost.
+            //    Installed-check is synchronous (PackageManager); the port
+            //    probe is async (no network on the main thread).
+            it.addView(small(ctx, "SSH servers on this device — terminal apps + whether their sshd is listening on localhost (probes 127.0.0.1 across common ports)."))
+            for (term in SSH_TERMINALS) {
+                val installed = isPackageInstalled(ctx, term.pkg)
+                val portList = term.ports.joinToString(",")
+                val valueView = row(ctx, it, term.label,
+                    if (!installed) "not installed" else "installed · probing :$portList…")
+                if (installed) viewLifecycleOwner.lifecycleScope.launch {
+                    val open = withContext(Dispatchers.IO) { term.ports.filter { p -> portOpen("127.0.0.1", p) } }
+                    if (open.isNotEmpty()) {
+                        valueView.text = "installed · sshd ✓ up :${open.joinToString(",")}"
+                        valueView.setTextColor(0xFF8BE9A0.toInt())
+                    } else {
+                        valueView.text = "installed · sshd ✗ down (tried :$portList)"
+                        valueView.setTextColor(0xFFFFB199.toInt())
+                    }
+                }
+            }
+        }
+
+        section(ctx, column, "Self-contained ADB, W-less Debuging & Shizuku") {
+            // The token is read here too: the pairing walkthrough below prints
+            // the exact curl the user has to run, and a walkthrough with the
+            // bearer left as a placeholder is a walkthrough nobody can follow.
+            val prefs = DevControlPrefs(requireContext())
             it.addView(small(ctx, "Self-contained ADB — enable Wireless Debugging, then pair via /api/adb/pair + /api/adb/connect:"))
-            it.addView(actionButton(ctx, "Open Wireless Debugging", GRAY) { openWirelessDebuggingSettings() })
+            it.addView(actionButton(ctx, "Open W-less Debuging", GRAY) { openWirelessDebuggingSettings() })
             // Shizuku shortcut -- the Tier-2 privileged-read path (ShizukuEnergy
             // binds through it for exact per-app mAh). Shizuku must be STARTED
             // from its own app after every reboot, so a direct launcher here
@@ -1677,28 +1728,94 @@ class DevControlFragment : Fragment() {
             it.addView(small(ctx, "Pairing/connect bind the socket to the Wi-Fi Network so it bypasses wg0. Pairing is once per boot (Android law; only root removes it). Pair port lives only while the pairing dialog is open — keep it open until step 1 returns ok."))
         }
 
-        section(ctx, column, "Curl shortcuts") {
-            val port = DevControlPrefs(requireContext()).port
-            val tok  = DevControlPrefs(requireContext()).token
-            // Endpoint catalog moved to /api/{group}/{op} layout in
-            // commit fb2bc62; the flat aliases still resolve but the
-            // documented form is the grouped one. Source of truth for
-            // the full list is GET /api/docs (machine-readable JSON,
-            // generated from the same Spec list the routing uses so it
-            // can't drift). These shortcuts cover the most-used probes.
-            row(ctx, it, "Docs",     "curl http://127.0.0.1:$port/api/docs")
-            row(ctx, it, "Logcat",   "curl http://127.0.0.1:$port/api/diagnostics/logcat?n=500")
-            row(ctx, it, "Trace",    "curl http://127.0.0.1:$port/api/diagnostics/trace")
-            row(ctx, it, "Crashes",  "curl http://127.0.0.1:$port/api/diagnostics/crashes")
-            row(ctx, it, "Bundle",   "curl http://127.0.0.1:$port/api/diagnostics/bundle")
-            row(ctx, it, "Download logs", "curl http://127.0.0.1:$port/api/diagnostics/download")
-            row(ctx, it, "Send logs → cloud", "curl http://127.0.0.1:$port/api/diagnostics/push")
-            row(ctx, it, "Info",     "curl http://127.0.0.1:$port/api/system/info")
-            row(ctx, it, "State",    "curl -H 'Authorization: Bearer $tok' http://127.0.0.1:$port/api/state")
-            row(ctx, it, "Haptic",   "curl -XPOST -H 'Authorization: Bearer $tok' 'http://127.0.0.1:$port/api/haptic?preset=gemini_stream'")
-            row(ctx, it, "Update",   "curl -XPOST -H 'Authorization: Bearer $tok' http://127.0.0.1:$port/api/system/update")
-            row(ctx, it, "Restart",  "curl -XPOST -H 'Authorization: Bearer $tok' http://127.0.0.1:$port/api/system/restart")
-            row(ctx, it, "Tracker",  "curl http://127.0.0.1:$port/api/tracker/counts")
+        addLogcatSection(ctx, column)
+
+        // ══ WEBSERVER macro section — a full static HTTP server living INSIDE
+        //    this app. The ENGINE is libs:webserver (CloudWebServer / WebServer /
+        //    WebServerPrefs); everything below is only the surface that drives
+        //    it. That split is what lets a standalone Cloud WebServer APK take
+        //    the same socket implementation later without carrying this screen,
+        //    and it is why nothing in this file parses HTTP itself.
+        column.addView(macroHeader(ctx, "🌐  WEBSERVER"))
+
+        section(ctx, column, "Web server") {
+            val webPrefs = WebServerPrefs(appCtx)
+            val web = CloudWebServer.stats(appCtx)
+            row(ctx, it, "Status",        if (web.running) "Running" else "Stopped")
+            row(ctx, it, "URL",           CloudWebServer.reachableUrl(appCtx))
+            row(ctx, it, "Bound to",      web.boundHost ?: "—")
+            row(ctx, it, "Bind scope", when {
+                !web.running     -> "—"
+                web.loopbackOnly -> "✓ Loopback only (127.0.0.1) — unreachable from LAN"
+                else             -> "✗ Reachable from the Wi-Fi LAN and the mesh — bound to every interface"
+            })
+            row(ctx, it, "Port",          webPrefs.port.toString())
+            row(ctx, it, "Document root", web.docRoot)
+            row(ctx, it, "Files in root", web.filesInRoot.toString())
+            row(ctx, it, "Directory listing", if (webPrefs.directoryListing) "on" else "off")
+            row(ctx, it, "Uptime",        if (web.running) fmtDuration(web.uptimeMillis) else "—")
+            row(ctx, it, "Requests",      web.requests.toString())
+            row(ctx, it, "Bytes served",  sizeStr(web.bytesServed))
+            // #281's rule applied to this surface: a server that FAILED TO BIND
+            // must never read the same as one that is merely switched off. The
+            // engine records the bind error rather than throwing, and this row
+            // is where that error becomes visible.
+            row(ctx, it, "Last error",    web.lastError ?: "none")
+            it.addView(small(ctx, "Self-contained static HTTP server — engine libs:webserver. " +
+                "Serves the document root above with MIME typing, index.html, optional directory " +
+                "listings and a path-traversal containment check against the canonical root. " +
+                "GET /__status returns these same counters as JSON."))
+
+            // Master switch. Default OFF: opening a listening socket is never
+            // something the app should decide on the user's behalf.
+            it.addView(android.widget.Switch(ctx).apply {
+                text = "Web server enabled"
+                isChecked = webPrefs.enabled
+                val pad = dp(6); setPadding(pad, pad, pad, pad)
+                setOnCheckedChangeListener { _, checked ->
+                    webPrefs.enabled = checked
+                    if (checked) CloudWebServer.start(appCtx) else CloudWebServer.stop(appCtx)
+                    rebuildFragment()
+                }
+            })
+            it.addView(android.widget.Switch(ctx).apply {
+                text = "Reachable from LAN and mesh (off = loopback only)"
+                isChecked = !webPrefs.loopbackOnly
+                val pad = dp(6); setPadding(pad, pad, pad, pad)
+                setOnCheckedChangeListener { _, checked ->
+                    webPrefs.loopbackOnly = !checked
+                    CloudWebServer.refresh(appCtx)
+                    rebuildFragment()
+                }
+            })
+            it.addView(android.widget.Switch(ctx).apply {
+                text = "Directory listing for folders with no index.html"
+                isChecked = webPrefs.directoryListing
+                val pad = dp(6); setPadding(pad, pad, pad, pad)
+                setOnCheckedChangeListener { _, checked ->
+                    webPrefs.directoryListing = checked
+                    CloudWebServer.refresh(appCtx)
+                }
+            })
+
+            it.addView(actionButton(ctx, "Open in browser") {
+                openInAppUrl(CloudWebServer.reachableUrl(appCtx))
+            })
+            it.addView(actionButton(ctx, "Open /__status", GRAY) {
+                openInAppUrl(CloudWebServer.reachableUrl(appCtx) + "__status")
+            })
+            it.addView(actionButton(ctx, "Copy URL", GRAY) {
+                copy(ctx, CloudWebServer.reachableUrl(appCtx))
+            })
+            it.addView(actionButton(ctx, "Change port", GRAY) { editWebServerPort(ctx) })
+            it.addView(actionButton(ctx, "Change document root", GRAY) { editWebServerDocRoot(ctx) })
+            it.addView(actionButton(ctx, "Refresh", GRAY) { rebuildFragment() })
+
+            // The request log is the difference between "the switch says
+            // Running" and "something actually talked to it".
+            it.addView(small(ctx, "Recent requests (newest first):"))
+            if (web.recent.isEmpty()) row(ctx, it, "—", "no requests served yet")
+            else web.recent.forEachIndexed { index, entry -> row(ctx, it, (index + 1).toString(), entry) }
         }
 
         // Tail-anchor: snapshot the entire About page to the clipboard.
@@ -1740,14 +1857,37 @@ class DevControlFragment : Fragment() {
         // Same card grid C3 ▸ Topology's Index draws, from the same builder —
         // three across, because these labels are words rather than the short
         // nouns a six-wide stack row carries.
-        indexBox.addView(IndexTiles.grid(ctx, 3, macroAnchors.map { (label, anchor) ->
+        // The row SHAPE is a layout decision; the CONTENT is still derived
+        // from macroAnchors in page order, so a new macroHeader still appears
+        // here by itself and a removed one still cannot leave a dead link.
+        val indexCells = macroAnchors.map { (label, anchor) ->
             anchors.register(label, anchor)
             IndexTiles.Cell(
                 label   = label,
                 glyph   = macroGlyphs[label].orEmpty(),
-                onClick = { anchors.dispatch(StackAnchors.PREFIX + label) },
+                onClick = {
+                    // Render before the jump, not because of it: dispatch()
+                    // lands on the header immediately, and a section that only
+                    // starts rendering once the scroll settles would show a
+                    // placeholder at the exact moment it was asked for.
+                    loadSectionsUnder(label)
+                    anchors.dispatch(StackAnchors.PREFIX + label)
+                },
             )
-        }))
+        }
+        var cellAt = 0
+        for (perRow in INDEX_ROW_SHAPE) {
+            if (cellAt >= indexCells.size) break
+            val end = minOf(cellAt + perRow, indexCells.size)
+            indexBox.addView(IndexTiles.grid(ctx, perRow, indexCells.subList(cellAt, end)))
+            cellAt = end
+        }
+        // Whatever the shape does not name still gets a row instead of
+        // vanishing: an index that silently drops a section is worse than an
+        // uneven grid.
+        if (cellAt < indexCells.size) {
+            indexBox.addView(IndexTiles.grid(ctx, 3, indexCells.subList(cellAt, indexCells.size)))
+        }
 
         // "Go Back Up to Index" closing every macro section. Inserted from the
         // anchors themselves rather than at eight call sites, so a new
@@ -1765,13 +1905,19 @@ class DevControlFragment : Fragment() {
         // [lazySections] with a placeholder showing. The post() fires after
         // the first layout, when the ScrollView finally has a height to
         // measure against, and fills only what the opening viewport shows.
-        // Everything else waits for the user to scroll — or to tap an Index
-        // card, which scrolls, which is the same event.
+        // From there three things can start a body: a scroll, an Index card
+        // tap, and — since #333 — [warmRemainingSections], which finishes the
+        // page during idle so scrolling rarely meets a placeholder at all.
         lazyScroll = scroll
         val onScrolled = android.view.ViewTreeObserver.OnScrollChangedListener { pumpLazySections() }
         lazyListener = onScrolled
         scroll.viewTreeObserver.addOnScrollChangedListener(onScrolled)
-        scroll.post { pumpLazySections() }
+        scroll.post {
+            pumpLazySections()
+            // ...and then keep going without waiting for a finger. See
+            // [warmRemainingSections].
+            warmRemainingSections()
+        }
 
         return scroll
     }
@@ -1790,6 +1936,82 @@ class DevControlFragment : Fragment() {
     )
 
     /** Installed? Needs a <queries> entry in the manifest on API 30+ (added). */
+    /**
+     * Open a URL on the app's OWN browser surface instead of handing it to an
+     * external one. #156: an action on an About row must not eject the user
+     * out of the app. The launcher Activity implements the tile-click
+     * contract and resolves a bare http(s) target to the embedded browser; a
+     * host that does not is the only case that falls through to the system.
+     */
+    private fun openInAppUrl(url: String) {
+        val host = activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener
+        if (host != null) {
+            host.onTileClicked(url)
+            return
+        }
+        runCatching {
+            startActivity(
+                android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse(url),
+                )
+            )
+        }
+    }
+
+    /** Port editor for the WEBSERVER section. Rebinds on save — a port row
+     *  that changed without the socket moving would be a lie. */
+    private fun editWebServerPort(ctx: Context) {
+        val prefs = WebServerPrefs(ctx.applicationContext)
+        val field = android.widget.EditText(ctx).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText(prefs.port.toString())
+        }
+        androidx.appcompat.app.AlertDialog.Builder(ctx)
+            .setTitle("Web server port")
+            .setMessage("1024-65535. The server rebinds immediately.")
+            .setView(field)
+            .setPositiveButton("Save") { _, _ ->
+                val value = field.text.toString().trim().toIntOrNull()
+                if (value == null || value !in 1024..65535) {
+                    Toast.makeText(ctx, "Port must be 1024-65535", Toast.LENGTH_SHORT).show()
+                } else {
+                    prefs.port = value
+                    CloudWebServer.refresh(ctx.applicationContext)
+                    rebuildFragment()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    /** Document-root editor for the WEBSERVER section. */
+    private fun editWebServerDocRoot(ctx: Context) {
+        val prefs = WebServerPrefs(ctx.applicationContext)
+        val field = android.widget.EditText(ctx).apply { setText(prefs.docRootPath) }
+        androidx.appcompat.app.AlertDialog.Builder(ctx)
+            .setTitle("Document root")
+            .setMessage("Absolute path of the directory served as /. Created if missing.")
+            .setView(field)
+            .setNeutralButton("Default") { _, _ ->
+                prefs.docRootPath = prefs.defaultDocRoot().absolutePath
+                CloudWebServer.refresh(ctx.applicationContext)
+                rebuildFragment()
+            }
+            .setPositiveButton("Save") { _, _ ->
+                val value = field.text.toString().trim()
+                if (value.isBlank()) {
+                    Toast.makeText(ctx, "Path is empty", Toast.LENGTH_SHORT).show()
+                } else {
+                    prefs.docRootPath = value
+                    CloudWebServer.refresh(ctx.applicationContext)
+                    rebuildFragment()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun isPackageInstalled(ctx: Context, pkg: String): Boolean = runCatching {
         ctx.packageManager.getPackageInfo(pkg, 0); true
     }.getOrDefault(false)
@@ -1836,6 +2058,7 @@ class DevControlFragment : Fragment() {
     )
 
     private class LazySection(
+        val macro: String,
         val head: String,
         val anchor: View,
         val group: LinearLayout,
@@ -1849,6 +2072,15 @@ class DevControlFragment : Fragment() {
      *  top-to-bottom even though bodies finish in whatever order the user
      *  reaches them. Cleared per view lifecycle — see [onDestroyView]. */
     private val lazySections = mutableListOf<LazySection>()
+
+    /** The macro section [section] is currently filling, so every lazy body
+     *  knows which index card owns it. Set by [macroHeader]; page-head
+     *  sections declared before any header keep the empty string. */
+    private var currentMacro: String = ""
+
+    /** How many index cards sit on each row, top to bottom. The ORDER comes
+     *  from the page itself — only the shape is decided here. */
+    private val INDEX_ROW_SHAPE = listOf(2, 3, 3, 3)
     private var lazyScroll: ScrollView? = null
     private var lazyListener: android.view.ViewTreeObserver.OnScrollChangedListener? = null
 
@@ -1869,6 +2101,42 @@ class DevControlFragment : Fragment() {
         return y
     }
 
+    /** Render every section under one macro heading now. Called from an index
+     *  card, where the user has just said exactly which part of the page they
+     *  want — waiting for the scroll to settle before starting would show them
+     *  a placeholder as the reward for asking. */
+    private fun loadSectionsUnder(macro: String) {
+        for (s in lazySections.toList()) if (s.macro == macro) runLazySection(s)
+    }
+
+    /**
+     * Fill the rest of the page ONE SECTION PER FRAME once the opening
+     * viewport is painted.
+     *
+     * #286 made the page open instantly by deferring every body to a scroll
+     * event; the cost was that scrolling then met a placeholder and had to
+     * wait for it. This keeps the fast open — nothing below the fold blocks
+     * the first paint — and spends the idle main loop afterwards, so by the
+     * time a thumb arrives the content is already there. One section per post
+     * keeps each unit of work short enough that the scroll never janks.
+     *
+     * When the last one is done the scroll listener has nothing left to decide
+     * and is detached, rather than running a no-op over ~30 sections on every
+     * frame for the rest of the fragment's life.
+     */
+    private fun warmRemainingSections() {
+        if (!isAdded) return
+        val host = view ?: return
+        val next = lazySections.firstOrNull { !it.started }
+        if (next == null) {
+            lazyListener?.let { lazyScroll?.viewTreeObserver?.removeOnScrollChangedListener(it) }
+            lazyListener = null
+            return
+        }
+        runLazySection(next)
+        host.post { warmRemainingSections() }
+    }
+
     /** Start every declared section whose header has reached the viewport,
      *  plus one screen of lookahead so a block is usually ready by the time it
      *  is actually looked at. Cheap and idempotent: [LazySection.started] means
@@ -1876,7 +2144,7 @@ class DevControlFragment : Fragment() {
      *  does not re-probe. */
     private fun pumpLazySections() {
         val sv = lazyScroll ?: return
-        if (!isAdded || sv.height == 0) return
+        if (!isAdded || view == null || sv.height == 0) return
         val limit = sv.scrollY + sv.height * 2
         var any = false
         for (s in lazySections) {
@@ -1897,6 +2165,9 @@ class DevControlFragment : Fragment() {
      *  reported READY when nothing worked is why this does not swallow. An
      *  empty section and a working-but-boring section must not look alike. */
     private fun runLazySection(s: LazySection) {
+        // Detached hosts render nothing: every helper below reaches for
+        // requireContext() through resources/dp(), which is the #194 throw.
+        if (!isAdded || view == null) return
         if (s.started) return
         s.started = true
         val prev = currentBuf
@@ -1904,10 +2175,17 @@ class DevControlFragment : Fragment() {
         try {
             s.run()
         } catch (t: Throwable) {
-            s.group.removeAllViews()
-            context?.let { c ->
-                s.group.addView(small(c, "⚠ ${s.head} failed to load — " +
-                    "${t.javaClass.simpleName}: ${t.message ?: "no detail"}"))
+            // #331: this runs from a scroll callback on the MAIN THREAD, so
+            // anything that escapes here reaches the framework with no catch
+            // above it and takes the process down. Rendering the failure
+            // touches the view tree and the fragment's resources, both of
+            // which throw once detached — so the report itself is guarded.
+            runCatching {
+                s.group.removeAllViews()
+                context?.let { c ->
+                    s.group.addView(small(c, "⚠ ${s.head} failed to load — " +
+                        "${t.javaClass.simpleName}: ${t.message ?: "no detail"}"))
+                }
             }
             s.buf.append("  FAILED: ").append(t.javaClass.simpleName)
                 .append(": ").append(t.message ?: "no detail").append("\n")
@@ -1930,7 +2208,7 @@ class DevControlFragment : Fragment() {
         val buf = StringBuilder("\n## ").append(head).append("\n")
         val placeholder = small(ctx, "▸ loads when you reach it")
         grp.addView(placeholder)
-        lazySections += LazySection(head, header, grp, buf) {
+        lazySections += LazySection(currentMacro, head, header, grp, buf) {
             grp.removeView(placeholder)
             body(grp)
         }
@@ -2239,6 +2517,7 @@ class DevControlFragment : Fragment() {
         val label = text.dropWhile { !it.isLetter() }.trim()
         macroAnchors[label] = this
         macroGlyphs[label] = text.takeWhile { !it.isLetter() }.trim()
+        currentMacro = label
         setTextColor(0xFFE9D8FD.toInt())
         textSize = 17f
         setTypeface(typeface, android.graphics.Typeface.BOLD)
