@@ -28,13 +28,18 @@ plugins {
 // turned that into an EMPTY fleet with no error, so the Constellation page
 // shipped with no apps and no libs at all. Hence the warning: a store with an
 // empty catalogue must not be something you discover on the device.
-def constellationFleetFile = file("${rootDir}/data/constellation-fleet.json")
-if (!constellationFleetFile.exists()) {
-    logger.warn("libs:appstore: no ${constellationFleetFile} — Constellation will ship an EMPTY fleet")
-}
-def constellationFleetJson = constellationFleetFile.exists()
-        ? constellationFleetFile.text : '{"version":1,"apps":[]}'
-def constellationFleetB64  = constellationFleetJson.bytes.encodeBase64().toString()
+//
+// The warning was not enough. ab_cloud-libs-shared/lib-apks builds this module
+// as its own library APK and its rootDir has no data/, so every one of those
+// builds took the empty branch, logged one line into a Gradle log nobody reads
+// and shipped a store with no catalogue. Fall back to the superapp sibling in
+// the same repository, and fail outright when neither exists.
+def constellationFleetFile = [
+    file("${rootDir}/data/constellation-fleet.json"),
+    file("${projectDir}/../../../aa_cloud-superapp/data/constellation-fleet.json"),
+].find { it.exists() }
+if (constellationFleetFile == null) throw new GradleException("libs:appstore: no constellation-fleet.json under ${rootDir}/data or aa_cloud-superapp/data — refusing to bake an empty fleet")
+def constellationFleetB64  = constellationFleetFile.text.bytes.encodeBase64().toString()
 
 android {
     namespace 'com.diegonmarcos.superapp.appstore'

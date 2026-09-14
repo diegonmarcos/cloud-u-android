@@ -4,13 +4,25 @@ plugins {
 }
 
 // CalEngine ships inside Cloud-Lib-Cal.apk and cannot see the app's
-// BuildConfig, so the subscription list is baked into THIS module. The path is
-// relative to this module's own directory, so it stays
-// ac_cloud-agenda/data/calendars.json whether the module is built by the app
-// or shared by reference into ab_cloud-libs-shared/lib-apks.
-def calendarsFile = file("${rootDir}/data/calendars.json")
-def calendarsB64  = (calendarsFile.exists() ? calendarsFile.text : '{}')
-                        .bytes.encodeBase64().toString()
+// BuildConfig, so the subscription list is baked into THIS module.
+//
+// ${rootDir} is the CONSUMING build, not one fixed app. That is fine for
+// ac_cloud-me and ac_cloud-agenda, which both link this module and both keep
+// their own data/calendars.json — but ab_cloud-libs-shared/lib-apks, which
+// builds Cloud-Lib-Cal.apk, has no data/ at all and never had one. The old
+// ternary turned that miss into '{}' with no message whatsoever, so the
+// standalone calendar library shipped with zero subscriptions and nothing
+// anywhere said so. Same defect as libs:news had (see that module's comment).
+//
+// Fall back to this module's sibling in the same repository, and FAIL rather
+// than warn: an empty calendar engine must not be something you discover on
+// the device.
+def calendarsFile = [
+    file("${rootDir}/data/calendars.json"),
+    file("${projectDir}/../../../ac_cloud-agenda/data/calendars.json"),
+].find { it.exists() }
+if (calendarsFile == null) throw new GradleException("libs:cal: no calendars.json under ${rootDir}/data or ac_cloud-agenda/data — refusing to bake an empty calendar engine")
+def calendarsB64  = calendarsFile.text.bytes.encodeBase64().toString()
 
 android {
     namespace 'com.diegonmarcos.superapp.cal'
