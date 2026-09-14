@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.launcher
 import com.diegonmarcos.superapp.rss.RssFeedFragment
 import com.diegonmarcos.superapp.settings.LauncherConfigFragment
+import com.diegonmarcos.superapp.settings.LauncherProfilesFragment
 import com.diegonmarcos.superapp.cloud.C3MeshFragment
 import com.diegonmarcos.superapp.cloud.C3HealthFragment
 import com.diegonmarcos.superapp.cloud.CalendarMonthFragment
@@ -89,10 +90,16 @@ object SectionPages {
             R.string.ai_library_title, R.string.ai_library_detail)
         sectionId == "config" && pageId == "textenhance" -> AiTextEnhanceFragment.newInstance()
         sectionId == "config" && pageId == "tokens"      -> AiTokensFleetFragment.newInstance()
-        // Launcher's THEME tab. The `launcher` id names the two-tab strip now
-        // (build.json::ui.sections[config].pages[launcher].tabs), so the theme
-        // screen needed an id of its own — nothing it stores moved with it,
-        // LauncherThemePrefs and friends key off fixed store names.
+        // Launcher's three tabs. The `launcher` id names the strip
+        // (build.json::ui.sections[config].pages[launcher].tabs), so each screen
+        // needed an id of its own — nothing any of them stores moved with the
+        // split, LauncherProfilePrefs / LauncherThemePrefs and friends key off
+        // fixed store names, never off a page id.
+        //
+        // `profiles`, not `profile`: `profile` is already this section's own
+        // top-level page (the owner's identity — name, email, WireGuard export)
+        // and one section cannot hold two pages under one id.
+        sectionId == "config" && pageId == "profiles" -> LauncherProfilesFragment.newInstance()
         sectionId == "config" && pageId == "theme" -> LauncherConfigFragment.newInstance()
         sectionId == "config" && pageId == "kde"            -> com.diegonmarcos.superapp.kdeconnect.KdeConnectFragment.newInstance()
         sectionId == "config" && pageId == "constellation"  -> com.diegonmarcos.superapp.appstore.ConstellationFragment()

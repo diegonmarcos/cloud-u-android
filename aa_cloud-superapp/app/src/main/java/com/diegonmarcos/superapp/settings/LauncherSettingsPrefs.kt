@@ -114,6 +114,10 @@ class LauncherSettingsPrefs(context: Context) {
         val group: String = "",
         val userOwned: Boolean = false,
         val store: String = "",
+        /** Declared drawable name, resolved through Sections.iconResFor. Empty
+         *  degrades to the generic tile icon rather than failing the build — a
+         *  switch whose icon has not been named yet must still be flippable. */
+        val icon: String = "",
     )
     /** One box of switches on the Theme tab. [master] adds an all-on/all-off
      *  switch above the group's own rows. */
@@ -165,6 +169,7 @@ class LauncherSettingsPrefs(context: Context) {
                     group     = o.optString("group", ""),
                     userOwned = o.optBoolean("user_owned", false),
                     store     = o.optString("store", ""),
+                    icon      = o.optString("icon", ""),
                 )
             }
         }

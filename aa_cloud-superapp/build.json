@@ -4579,20 +4579,28 @@
             "hidden": true
           },
           {
-            "_doc": "Launcher is ONE page wearing TWO tabs now, not two sibling Configs entries. Launcher and One-Hand were always the same question asked twice — how this launcher behaves under your thumb — and splitting it across two grid tiles made the user leave one page to reach the other half of the same decision (pick a theme, then go somewhere else to say how you reach it one-handed). `tabs` lists PAGE IDS of this same section, in strip order: SectionPages hands a page that declares them to the SAME SectionTabsFragment a tabbed section wears, so there is one tab mechanism in this app, not two. Both tab ids stay real declared pages (hidden below), which is what keeps `page:config/onehand` alive as a target — see LauncherNavController.openSectionPage, which resolves a tab id to its owner page and lands on that tab.",
+            "_doc": "Launcher is ONE page wearing THREE tabs: Profiles, Modes and One-Hand. It wore two until the Mode tab had grown into one endless scroll holding three unrelated decisions — which profile you are in, which mode paints the launcher, and how you reach it one-handed. Profiles came out first because it is the only one of the three that changes what the OTHER two mean. `tabs` lists PAGE IDS of this same section, in strip order: SectionPages hands a page that declares them to the SAME SectionTabsFragment a tabbed section wears, so there is one tab mechanism in this app, not two. All three tab ids stay real declared pages (hidden below), which is what keeps `page:config/onehand` alive as a target — see LauncherNavController.openSectionPage, which resolves a tab id to its owner page and lands on that tab.",
             "id": "launcher",
             "label": "Launcher",
             "icon": "ic_home",
             "tabs": [
+              "profiles",
               "theme",
               "onehand"
             ],
             "row_break": true
           },
           {
+            "_doc": "Tab 1 of Launcher — the launcher PROFILES, split out of the Mode tab. Its id is `profiles`, not `profile`, because `profile` is already this section's own top-level page (the owner's identity: name, email, WireGuard export) and a section cannot hold two pages under one id. Nothing persisted moves with the split: LauncherProfilePrefs keys off the fixed store name 'launcher_profile', never off the page id. hidden = it is reached through the strip, not as its own Configs tile.",
+            "id": "profiles",
+            "label": "Profiles",
+            "icon": "ic_p_sol_personal",
+            "hidden": true
+          },
+          {
             "_doc": "Tab 1 of Launcher — everything the standalone Launcher page used to show (profiles, theme picker, screensaver + toggles, set-as-default-launcher). Its OWN id had to be new, because `launcher` is now the strip that CONTAINS it and a page cannot be a tab of itself. Nothing persisted moves with it: LauncherThemePrefs/LauncherProfilePrefs/LauncherSettingsPrefs key off fixed store names ('launcher_theme'/'launcher_profile'/'launcher_settings'), never off the page id. hidden = it is reached through the strip, not as its own Configs tile.",
             "id": "theme",
-            "label": "Mode",
+            "label": "Modes",
             "icon": "ic_home",
             "hidden": true
           },
@@ -7301,56 +7309,64 @@
           "label": "All animations",
           "subtitle": "Master switch - off stops every animation.",
           "default": true,
-          "group": "battery"
+          "group": "battery",
+          "icon": "ic_sparkles"
         },
         {
           "id": "pets_anim",
           "label": "Animal animations",
           "subtitle": "Animate the status-bar pets.",
           "default": true,
-          "group": "battery"
+          "group": "battery",
+          "icon": "ic_heart"
         },
         {
           "id": "cube_anim",
           "label": "Cube animation",
           "subtitle": "3D home cube motion.",
           "default": true,
-          "group": "battery"
+          "group": "battery",
+          "icon": "ic_mode_apps"
         },
         {
           "id": "cube_interactive",
           "label": "Cube drag-to-spin",
           "subtitle": "Touch and drag the home cube to spin it across its 3D faces.",
           "default": false,
-          "group": "others"
+          "group": "others",
+          "icon": "ic_device_gamepad"
         },
         {
           "id": "island_anim",
           "label": "Island animation",
           "subtitle": "Home-screen island wave motion.",
           "default": true,
-          "group": "battery"
+          "group": "battery",
+          "icon": "ic_nav"
         },
         {
           "id": "stars_anim",
           "label": "Stars animation",
           "subtitle": "Galaxy backdrop stars + comets.",
           "default": true,
-          "group": "battery"
+          "group": "battery",
+          "icon": "ic_ai_sparkle"
         },
         {
           "id": "status_live",
           "label": "Live system stats",
           "subtitle": "Refresh RAM/CPU/storage every 10s (off = frozen numbers, leaner).",
           "default": true,
-          "group": "battery"
+          "group": "battery",
+          "icon": "ic_p_c3_stack"
         },
         {
           "id": "star_twinkle",
           "label": "Star twinkle",
           "subtitle": "Pulse the home Sirius star (off = static).",
           "default": true,
-          "group": "battery"
+          "group": "battery",
+          "icon": "ic_ai_sparkle"
         },
         {
           "id": "fleet_check",
@@ -7358,21 +7374,24 @@
           "subtitle": "Periodic GHCR check for sibling-app updates (off = manual only, saves network).",
           "default": true,
           "group": "connectivity",
-          "_doc": "WorkManager tag superapp-updater-check. This toggle already existed and already LIED: background_pause cancelled the job while the switch still read ON. Moving it into Connectivity and mapping it from the theme is what makes the switch agree with the device."
+          "_doc": "WorkManager tag superapp-updater-check. This toggle already existed and already LIED: background_pause cancelled the job while the switch still read ON. Moving it into Connectivity and mapping it from the theme is what makes the switch agree with the device.",
+          "icon": "ic_refresh"
         },
         {
           "id": "haptics",
           "label": "Vibration on tap",
           "subtitle": "Haptic feedback on every tap.",
           "default": true,
-          "group": "others"
+          "group": "others",
+          "icon": "ic_ctl_vibration"
         },
         {
           "id": "eye_protection",
           "label": "Eye protection",
           "subtitle": "Warm amber overlay to cut blue light.",
           "default": false,
-          "group": "others"
+          "group": "others",
+          "icon": "ic_ctl_brightness"
         },
         {
           "_doc": "features.home_3d. The theme has always flipped this and there was no switch for it, so a user in Power Saving could not get the cube back without abandoning the whole theme.",
@@ -7380,7 +7399,8 @@
           "label": "3D home pane",
           "subtitle": "The rotating cube home screen (off = the flat app grid).",
           "default": true,
-          "group": "battery"
+          "group": "battery",
+          "icon": "ic_home"
         },
         {
           "_doc": "features.dynamic_island. Same defect as home_3d: theme-flipped, never exposed.",
@@ -7388,7 +7408,8 @@
           "label": "Dynamic island",
           "subtitle": "The floating pill above the toolbar.",
           "default": true,
-          "group": "battery"
+          "group": "battery",
+          "icon": "ic_nav"
         },
         {
           "_doc": "features.oled_black. ShellActivity paints the decor view black for this; the user had no way to keep the black background while leaving the theme.",
@@ -7396,7 +7417,8 @@
           "label": "OLED black background",
           "subtitle": "Pure black window background — an OLED panel spends no power on black pixels.",
           "default": false,
-          "group": "battery"
+          "group": "battery",
+          "icon": "ic_nav_powersave"
         },
         {
           "_doc": "features.background_pause — the single most invisible thing a theme did. BackgroundOrchestrator.applyForTheme cancels the WorkManager tags and stops the Maps tracker, and NOTHING on screen said so. The three jobs it cancels each have their own switch below, so this is the master and they are the detail.",
@@ -7404,7 +7426,8 @@
           "label": "Pause background work",
           "subtitle": "Tear down the location tracker, the update poll and the message poll.",
           "default": false,
-          "group": "battery"
+          "group": "battery",
+          "icon": "ic_nav_dnd"
         },
         {
           "_doc": "PhoneAppsFragment.warmUp is skipped under background_pause. The cost of it being off is a slow Phone tab, which reads as a bug rather than a setting.",
@@ -7412,7 +7435,8 @@
           "label": "Warm up the app list",
           "subtitle": "Pre-index installed apps at launch so the Phone tab opens instantly.",
           "default": true,
-          "group": "battery"
+          "group": "battery",
+          "icon": "ic_home_apps"
         },
         {
           "_doc": "BackgroundOrchestrator.stopMapsTracker. A location service the user cannot see stopping is the one they most need told about.",
@@ -7420,7 +7444,8 @@
           "label": "Location tracking",
           "subtitle": "Keep the Maps location service running in the background.",
           "default": true,
-          "group": "connectivity"
+          "group": "connectivity",
+          "icon": "ic_map_pin"
         },
         {
           "_doc": "features.wireguard_required. This is the one thing Power Saving turns ON rather than off, and it deserves a switch precisely because it is surprising: a power-saving mode that keeps a VPN up is a deliberate choice, not a leak.",
@@ -7428,7 +7453,8 @@
           "label": "Keep WireGuard up",
           "subtitle": "Pin the tunnel ON — connectivity survives power saving.",
           "default": false,
-          "group": "connectivity"
+          "group": "connectivity",
+          "icon": "ic_wg"
         },
         {
           "_doc": "WorkManager tag superapp-ntfy-poll. Cancelled by background_pause, which means Power Saving silently stopped delivering notifications. This is the toggle the Notifications group exists for.",
@@ -7436,7 +7462,8 @@
           "label": "Message polling",
           "subtitle": "Poll the ntfy server for new messages and notifications.",
           "default": true,
-          "group": "notifications"
+          "group": "notifications",
+          "icon": "ic_stat_notify"
         },
         {
           "_doc": "WorkManager tag superapp-analytics-batch, the third job background_pause cancels.",
@@ -7444,7 +7471,8 @@
           "label": "Usage batch upload",
           "subtitle": "Send batched usage events when the network is idle.",
           "default": true,
-          "group": "connectivity"
+          "group": "connectivity",
+          "icon": "ic_database"
         },
         {
           "_doc": "features.bottom_nav. Chrome rather than battery, but still theme-flipped with no switch.",
@@ -7452,7 +7480,8 @@
           "label": "Bottom navigation bar",
           "subtitle": "The section bar along the bottom of the screen.",
           "default": true,
-          "group": "others"
+          "group": "others",
+          "icon": "ic_nav"
         },
         {
           "_doc": "features.drawer.",
@@ -7460,7 +7489,8 @@
           "label": "Side drawer",
           "subtitle": "The slide-in section drawer.",
           "default": true,
-          "group": "others"
+          "group": "others",
+          "icon": "ic_hamburger_asymmetric"
         },
         {
           "_doc": "PART FOUR, and the one toggle a THEME MAY NOT TOUCH. `user_owned: true` is not documentation — LauncherThemes.parseToggles DROPS this id out of every theme's mapping at parse time, so a theme cannot force edge menus off even if someone adds `\"edge_menus\": false` to its record by mistake. The owner asked to keep edge menus while in power saving; a theme that could stomp it would take the feature away exactly when one-handed use matters most. Backed by OneHandPrefs (store `onehand_prefs`), NOT by launcher_settings — the One-Hand tab writes the same key, so the two surfaces agree.",
@@ -7470,7 +7500,8 @@
           "default": false,
           "group": "others",
           "user_owned": true,
-          "store": "onehand"
+          "store": "onehand",
+          "icon": "ic_onehand"
         },
         {
           "_doc": "Samsung exposes light/dark as a system-wide setting, not an app one, so this is NOT AppCompatDelegate.setDefaultNightMode — that would repaint this app alone and leave the phone half light. Backed by store `nightmode`, which runs `cmd uimode night yes|no` over the shell channel, i.e. it needs the same SHELL authority the Battery Hunger levers need. Dark is the default: every mode this launcher ships is a dark design.",
@@ -7480,7 +7511,8 @@
           "default": true,
           "group": "others",
           "user_owned": true,
-          "store": "nightmode"
+          "store": "nightmode",
+          "icon": "ic_nav_screensaver"
         }
       ],
       "_doc_scale": "One knob for the two levers Samsung splits in two: Screen zoom (`wm density`) and Font size (`settings put system font_scale`). Both take the SAME factor, 0.70 + 0.05 x scale, so 6 is exactly 1.00 and changes nothing — that is why 6 is the default and not 1. Scale 1 is the minimum on both, which is what Cloud Power Saving pins itself to. Density multiplies the panel's physical number; font_scale is absolute. Anything that writes these must remember the override it clobbers — see PowerLevers' display_downscale for what happens when it does not.",

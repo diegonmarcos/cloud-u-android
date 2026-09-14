@@ -5,12 +5,17 @@ import com.diegonmarcos.superapp.launcher.AppIconTile
 import com.diegonmarcos.superapp.system.BackgroundOrchestrator
 import com.diegonmarcos.superapp.system.PowerLevers
 import com.diegonmarcos.superapp.system.SystemDisplay
+import com.diegonmarcos.superapp.configs.DeviceControls
+import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.ui.Haptics
 import com.diegonmarcos.superapp.ui.LauncherPalette
+import com.diegonmarcos.superapp.ui.StatusLight
 import com.diegonmarcos.superapp.ShellActivity
 import com.diegonmarcos.superapp.apps.PhoneAppsFragment
 
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -20,6 +25,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.content.pm.LauncherApps
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
@@ -30,9 +37,16 @@ import androidx.fragment.app.Fragment
 import org.json.JSONArray
 
 /**
- * Configs → Launcher → Theme (tab 1 of that page; One-Hand is tab 2) — theme
- * picker for the SuperApp's Home / Launcher
- * mode. The themes list is data-driven from
+ * Configs → Launcher → Modes (tab 2 of three: Profiles · Modes · One-Hand) —
+ * mode picker for the SuperApp's Home / Launcher.
+ *
+ * It used to be tab 1 and it used to open on the profile picker, which made it
+ * one endless scroll holding two unrelated decisions. Profiles is now
+ * [LauncherProfilesFragment] on its own tab, and it leads, because the picked
+ * profile is the foundation the mode sits on rather than a header halfway down
+ * the mode's page.
+ *
+ * The themes list is data-driven from
  * build.json::ui.launcher_themes (baked into BuildConfig as a base64
  * JSON blob). Tapping a theme persists it via [LauncherThemePrefs] and
  * MainActivity re-reads on next render to apply the new theme's
@@ -48,7 +62,6 @@ class LauncherConfigFragment : Fragment() {
         val ctx = inflater.context
         val palette = LauncherPalette.of(ctx)
         val themePrefs = LauncherThemePrefs(ctx)
-        val profilePrefs = LauncherProfilePrefs(ctx)
 
         val scroll = ScrollView(ctx).apply {
             isFillViewport = true
@@ -63,38 +76,11 @@ class LauncherConfigFragment : Fragment() {
         }
         scroll.addView(root)
 
-        // ── Profiles section ───────────────────────────────────────
-        root.addView(TextView(ctx).apply {
-            text = "Profile"
-            setTextColor(palette.textPrimary)
-            setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-            setPadding(0, 0, 0, dp(ctx, 8))
-        })
-        root.addView(TextView(ctx).apply {
-            text = "Personal / Work / Guest. The picked profile is the " +
-                "foundation for filtering which apps + folders the Phone " +
-                "tab will surface (wired in a follow-up patch)."
-            setTextColor(palette.textSecondary)
-            setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-            setPadding(0, 0, 0, dp(ctx, 16))
-        })
-        val profiles = LauncherProfiles.loadFromBuildConfig()
-        val currentProfile = profilePrefs.profile
-        for (profileRow in profiles) {
-            root.addView(genericTile(
-                ctx,
-                label    = profileRow.label,
-                subtitle = profileRow.subtitle,
-                isSelected = profileRow.id == currentProfile.id,
-            ) {
-                profilePrefs.profile = LauncherProfile.fromId(profileRow.id)
-                rerender()
-            })
-            root.addView(spacer(ctx, dp(ctx, 8)))
-        }
+        // Profiles used to open this page. They are their own tab now
+        // (LauncherProfilesFragment) — see the `launcher` page in build.json,
+        // whose `tabs` array is the whole of that move.
 
         // ── Theme section ──────────────────────────────────────────
-        root.addView(spacer(ctx, dp(ctx, 24)))
         root.addView(TextView(ctx).apply {
             text = "Launcher theme"
             setTextColor(palette.textPrimary)
@@ -142,7 +128,7 @@ class LauncherConfigFragment : Fragment() {
                 LauncherThemes.apply(ctx, LauncherTheme.fromId(themeRow.id))
                 (activity as? ShellActivity)?.notifyLauncherThemeChanged()
                 com.diegonmarcos.superapp.appstore.ConstellationWorker.start(requireContext())
-                rerender()
+                rerenderPage()
             })
             root.addView(spacer(ctx, dp(ctx, 8)))
         }
@@ -156,7 +142,7 @@ class LauncherConfigFragment : Fragment() {
         for (saver in LauncherSettingsPrefs.Config.screensavers) {
             root.addView(genericTile(ctx, saver.label, saver.subtitle, saver.id == currentSaver) {
                 settingsPrefs.screensaver = saver.id
-                rerender()
+                rerenderPage()
             })
             root.addView(spacer(ctx, dp(ctx, 8)))
         }
@@ -187,38 +173,42 @@ class LauncherConfigFragment : Fragment() {
                     // edge menus are not the master's to turn off.
                     rows.filterNot { it.userOwned }.forEach { settingsPrefs.setToggle(it, on) }
                     onToggleChanged()
-                    rerender() // reflect the child switches
+                    rerenderPage() // reflect the child switches
                 })
                 root.addView(spacer(ctx, dp(ctx, 8)))
             }
 
-            for (t in rows) {
-                root.addView(toggleRow(ctx, t.label, t.subtitle, settingsPrefs.toggle(t)) { on ->
-                    // Dark mode is a device-wide setting written over the shell
-                    // channel, so it is the one switch that must not be flipped
-                    // on this thread — and the one that has to say so when
-                    // there is no channel, instead of sliding and doing nothing.
-                    if (t.store == LauncherSettingsPrefs.Config.STORE_NIGHTMODE) {
-                        if (!SystemDisplay.hasChannel(ctx)) Toast.makeText(
-                            ctx, "Dark mode needs the shell channel — turn on wireless debugging first.",
-                            Toast.LENGTH_LONG).show()
-                        else Thread({ settingsPrefs.setToggle(t, on) }, "night-mode").start()
-                        return@toggleRow
-                    }
-                    settingsPrefs.setToggle(t, on)
-                    // Eye protection = the ANDROID SYSTEM night-light (blue-light
-                    // filter), NOT a custom overlay — open its settings to enable.
-                    if (t.id == "eye_protection" && on) {
-                        runCatching { startActivity(Intent("android.settings.NIGHT_DISPLAY_SETTINGS")) }
-                            .onFailure { runCatching { startActivity(Intent(Settings.ACTION_DISPLAY_SETTINGS)) } }
-                    }
-                    onToggleChanged()
-                    // Re-render because a hand-flip can move the theme tile into
-                    // its "modified" state, and that label is derived, not stored.
-                    rerender()
-                })
-                root.addView(spacer(ctx, dp(ctx, 8)))
-            }
+            root.addView(toggleGrid(ctx, rows, settingsPrefs) { t, on ->
+                // Dark mode is a device-wide setting written over the shell
+                // channel, so it is the one switch that must not be flipped
+                // on this thread — and the one that has to say so when
+                // there is no channel, instead of lighting up and doing nothing.
+                if (t.store == LauncherSettingsPrefs.Config.STORE_NIGHTMODE) {
+                    if (!SystemDisplay.hasChannel(ctx)) Toast.makeText(
+                        ctx, "Dark mode needs the shell channel — turn on wireless debugging first.",
+                        Toast.LENGTH_LONG).show()
+                    // A switch thumb moved under the finger; a tile does not. So
+                    // the repaint has to be asked for, and only AFTER the write
+                    // lands — repaint eagerly and the grid draws the old value.
+                    else Thread({
+                        settingsPrefs.setToggle(t, on)
+                        root.post { rerenderPage() }
+                    }, "night-mode").start()
+                    return@toggleGrid
+                }
+                settingsPrefs.setToggle(t, on)
+                // Eye protection = the ANDROID SYSTEM night-light (blue-light
+                // filter), NOT a custom overlay — open its settings to enable.
+                if (t.id == "eye_protection" && on) {
+                    runCatching { startActivity(Intent("android.settings.NIGHT_DISPLAY_SETTINGS")) }
+                        .onFailure { runCatching { startActivity(Intent(Settings.ACTION_DISPLAY_SETTINGS)) } }
+                }
+                onToggleChanged()
+                // Re-render because a hand-flip can move the theme tile into
+                // its "modified" state, and that label is derived, not stored.
+                rerenderPage()
+            })
+            root.addView(spacer(ctx, dp(ctx, 8)))
 
             // Scale lives in the Others box because it is the same kind of
             // whole-UI preference as the switches above it — Samsung draws
@@ -375,7 +365,7 @@ class LauncherConfigFragment : Fragment() {
             .setSingleChoiceItems(options.map { it.label }.toTypedArray(), selected) { dialog, which ->
                 prefs.setTarget(slotId, options[which].target)
                 dialog.dismiss()
-                rerender()
+                rerenderPage()
             }
             .show()
     }
@@ -394,43 +384,6 @@ class LauncherConfigFragment : Fragment() {
             .distinctBy { it.pkg }
             .sortedBy { it.label.lowercase() }
     }.getOrDefault(emptyList())
-
-    /** Shared "selectable card" row used by both the Profiles and the
-     *  Themes pickers — label up top, optional subtitle beneath,
-     *  selected-state filled in brand purple, unselected on 13% white. */
-    private fun genericTile(
-        ctx: android.content.Context,
-        label: String,
-        subtitle: String,
-        isSelected: Boolean,
-        onClick: () -> Unit,
-    ): View {
-        val palette = LauncherPalette.of(ctx)
-        val tile = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = dp(ctx, 14); setPadding(pad, pad, pad, pad)
-            setBackgroundColor(if (isSelected) palette.surfaceSelected else palette.surface)
-            isClickable = true; isFocusable = true
-            setOnClickListener {
-                Haptics.tap(it)
-                onClick()
-            }
-        }
-        tile.addView(TextView(ctx).apply {
-            text = (if (isSelected) "● " else "○ ") + label
-            setTextColor(palette.textPrimary)
-            setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
-        })
-        if (subtitle.isNotBlank()) {
-            tile.addView(TextView(ctx).apply {
-                text = subtitle
-                setTextColor(palette.textSecondary)
-                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
-                setPadding(0, dp(ctx, 4), 0, 0)
-            })
-        }
-        return tile
-    }
 
     /**
      * "Battery Hunger" — every SYSTEM lever the active mode pulls, with the
@@ -540,30 +493,6 @@ class LauncherConfigFragment : Fragment() {
         return column
     }
 
-    private fun spacer(ctx: android.content.Context, h: Int): View = View(ctx).apply {
-        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, h)
-    }
-
-    /** Section title + caption block — matches the hand-rolled headers above. */
-    private fun sectionHeader(ctx: android.content.Context, title: String, subtitle: String): View {
-        val palette = LauncherPalette.of(ctx)
-        return LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(TextView(ctx).apply {
-                text = title
-                setTextColor(palette.textPrimary)
-                setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-                setPadding(0, 0, 0, dp(ctx, 8))
-            })
-            addView(TextView(ctx).apply {
-                text = subtitle
-                setTextColor(palette.textSecondary)
-                setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-                setPadding(0, 0, 0, dp(ctx, 16))
-            })
-        }
-    }
-
     /** A label/subtitle + right-aligned switch row, persisted on toggle. */
     private fun toggleRow(
         ctx: android.content.Context,
@@ -597,6 +526,124 @@ class LauncherConfigFragment : Fragment() {
             // itself silently no-ops when flipped ON.
             setOnCheckedChangeListener { v, isOn -> onChange(isOn); Haptics.tap(v) }
         })
+        }
+    }
+
+    /**
+     * One box of switches drawn the way Configs ▸ Panel ▸ Control draws its
+     * controls: a grid of round icon badges with a status light under each.
+     *
+     * WHY IT IS NOT A COLUMN OF SWITCH ROWS ANY MORE. It was, and the whole
+     * Modes tab had become twenty-four stacked sentences each ending in a
+     * switch, read one row at a time top to bottom. What the owner actually
+     * does here is SCAN — find the one that is on, or the one to turn off —
+     * and an icon grid is scanned in one look. Same argument, same shape and
+     * the same two theme colours swapped as #246 applied to Control, which is
+     * the screen this now matches by design and not by coincidence.
+     *
+     * The column count is [DeviceControls.columns], the SAME number Control's
+     * grid uses, rather than a constant written here. Two grids that are
+     * supposed to look like one another must not be able to disagree about how
+     * wide they are, and one of two constants is always the one that gets
+     * missed.
+     *
+     * There is no in-place repaint: every flip already rebuilds the page (a
+     * hand-flip can move the mode tile into its "modified" state, which is
+     * derived rather than stored), so a tile is painted once from the store and
+     * never has to track its own state.
+     */
+    private fun toggleGrid(
+        ctx: android.content.Context,
+        items: List<LauncherSettingsPrefs.Item>,
+        prefs: LauncherSettingsPrefs,
+        onFlip: (LauncherSettingsPrefs.Item, Boolean) -> Unit,
+    ): View {
+        val columns = DeviceControls.columns
+        val grid = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(LauncherPalette.of(ctx).surface)
+            val pad = dp(ctx, 8); setPadding(pad, pad, pad, pad)
+        }
+        var strip: LinearLayout? = null
+        items.forEachIndexed { index, item ->
+            if (index % columns == 0) {
+                strip = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+                grid.addView(strip)
+            }
+            strip?.addView(toggleTile(ctx, item, prefs.toggle(item), onFlip))
+        }
+        // Pad the last strip so four tiles over three columns leaves the fourth
+        // under the first, not stretched to a third of the screen.
+        val remainder = items.size % columns
+        if (remainder != 0) repeat(columns - remainder) {
+            strip?.addView(View(ctx).apply {
+                layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
+            })
+        }
+        return grid
+    }
+
+    /** One cell of [toggleGrid]: filled badge + icon + label + status light.
+     *  Badge fill and icon ink are the same two palette colours swapped, so a
+     *  tile reads as on or off before any word on it is read. */
+    private fun toggleTile(
+        ctx: android.content.Context,
+        item: LauncherSettingsPrefs.Item,
+        on: Boolean,
+        onFlip: (LauncherSettingsPrefs.Item, Boolean) -> Unit,
+    ): View {
+        val palette = LauncherPalette.of(ctx)
+        val state = if (on) StatusLight.State.ON else StatusLight.State.OFF
+
+        val icon = ImageView(ctx).apply {
+            setImageResource(Sections.iconResFor(ctx, item.icon))
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            imageTintList = ColorStateList.valueOf(
+                if (on) palette.surface else palette.textSecondary)
+            layoutParams = FrameLayout.LayoutParams(dp(ctx, TILE_ICON_DP), dp(ctx, TILE_ICON_DP),
+                Gravity.CENTER)
+        }
+        val badge = FrameLayout(ctx).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(if (on) palette.accent else palette.surfaceSelected)
+            }
+            layoutParams = LinearLayout.LayoutParams(dp(ctx, TILE_BADGE_DP), dp(ctx, TILE_BADGE_DP))
+                .apply { gravity = Gravity.CENTER_HORIZONTAL }
+            addView(icon)
+        }
+
+        return LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER_HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            val pad = dp(ctx, 6); setPadding(pad, pad, pad, pad)
+            isClickable = true; isFocusable = true
+            // The grid replaced labelled rows with icons, which took the text a
+            // screen reader was reading off the screen — so the whole tile
+            // carries the sentence and its children are skipped.
+            contentDescription = StatusLight.description(ctx, item.label, state)
+            addView(badge)
+            addView(TextView(ctx).apply {
+                text = item.label
+                setTextColor(palette.textPrimary)
+                textSize = 11f
+                gravity = Gravity.CENTER
+                setPadding(0, dp(ctx, 6), 0, 0)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            })
+            addView(TextView(ctx).apply {
+                text = StatusLight.text(ctx, state)
+                setTextColor(StatusLight.colour(ctx, state))
+                textSize = 9f
+                gravity = Gravity.CENTER
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            })
+            icon.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            setOnClickListener {
+                Haptics.tap(it)
+                onFlip(item, !on)
+            }
         }
     }
 
@@ -657,21 +704,6 @@ class LauncherConfigFragment : Fragment() {
         }
     }
 
-    private fun dp(ctx: android.content.Context, v: Int): Int =
-        (v * ctx.resources.displayMetrics.density).toInt()
-
-    /** Force the fragment to rebuild so picker selections refresh. detach+attach
-     *  in ONE transaction is collapsed to a no-op by the FragmentManager (the
-     *  net state is unchanged) — splitting into two commitNow() calls guarantees
-     *  onCreateView re-runs and the "● / ○" selection state updates. */
-    private fun rerender() {
-        runCatching {
-            val fm = parentFragmentManager
-            fm.beginTransaction().detach(this).commitNow()
-            fm.beginTransaction().attach(this).commitNow()
-        }
-    }
-
     /** What every switch has to do after it is written, whichever group it is
      *  in: re-apply the launcher chrome so stars / cube / pets pick the change
      *  up, and re-arm the constellation worker so `fleet_check` takes effect
@@ -695,7 +727,15 @@ class LauncherConfigFragment : Fragment() {
         return resolved?.activityInfo?.packageName == ctx.packageName
     }
 
-    companion object { fun newInstance() = LauncherConfigFragment() }
+    companion object {
+        fun newInstance() = LauncherConfigFragment()
+
+        // The same two numbers Configs ▸ Panel ▸ Control uses for its badges, so
+        // the two grids read as one screen. #338 is why they are stated once:
+        // that regression was a size bumped in one place and not the other.
+        private const val TILE_BADGE_DP = 56
+        private const val TILE_ICON_DP = 26
+    }
 }
 
 /** Parses build.json::ui.launcher_themes from the baked BuildConfig
