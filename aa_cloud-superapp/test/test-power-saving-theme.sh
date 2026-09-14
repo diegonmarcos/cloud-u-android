@@ -335,6 +335,60 @@ for c in launcher_themes launcher_settings; do
     || bad "ui.$c is baked with its _doc prose — dead weight against the 65,535-byte cap"
 done
 
+echo "T11: system levers — the mode's real power saving, not a palette"
+# Power Saving promises the same savings Samsung's mode gives, and that promise
+# is kept by writing device settings over the privileged shell. Three things
+# make that safe rather than a one-way door, and each is pinned below.
+LEVERS="$APP/app/src/main/java/com/diegonmarcos/superapp/system/PowerLevers.kt"
+ORCH="$APP/app/src/main/java/com/diegonmarcos/superapp/system/BackgroundOrchestrator.kt"
+
+[ -f "$LEVERS" ] \
+  && ok "PowerLevers.kt exists" \
+  || bad "PowerLevers.kt is missing — Power Saving would pull no system levers at all"
+
+if [ -f "$LEVERS" ]; then
+  LEVER_COUNT=$(( $(grep -c 'id = "' "$LEVERS") + $(grep -c '        setting("' "$LEVERS") ))
+  [ "$LEVER_COUNT" -ge 20 ] \
+    && ok "lever table has $LEVER_COUNT entries" \
+    || bad "lever table has only $LEVER_COUNT entries — levers were deleted, savings shrink silently"
+
+  # Without restoreAll the mode is a trap: the user keeps a 15%-brightness
+  # 60Hz phone with no way back to the values the levers overwrote.
+  grep -q 'fun restoreAll' "$LEVERS" \
+    && ok "restoreAll exists — leaving the mode puts the device back" \
+    || bad "no restoreAll — Power Saving is a ONE-WAY DOOR"
+
+  # applyAll must save the prior value BEFORE writing the saving value, and
+  # must be idempotent, or a second onResume overwrites the restore point
+  # with the saving value and the prior is gone forever.
+  grep -q 'KEY_APPLIED' "$LEVERS" \
+    && ok "applyAll is guarded — a second sweep cannot clobber the restore point" \
+    || bad "applyAll is unguarded — re-entry overwrites the saved priors"
+
+  # The screen must show what the DEVICE says, never what we intended: the
+  # privileged channel is absent after every reboot until wireless debugging
+  # is re-paired, so a lever that silently failed is the normal case.
+  grep -q 'fun liveState' "$LEVERS" \
+    && ok "liveState reads the device back per lever" \
+    || bad "no liveState — the UI would report intent as fact"
+fi
+
+# Both sweeps must be wired to the mode's own lifecycle, or the table is dead code.
+grep -q 'PowerLevers.applyAll' "$ORCH" \
+  && ok "pauseAll applies the levers" \
+  || bad "BackgroundOrchestrator never applies the levers — the table is dead code"
+grep -q 'PowerLevers.restoreAll' "$ORCH" \
+  && ok "resumeAll restores the levers" \
+  || bad "BackgroundOrchestrator never restores the levers — leaving the mode strands the device"
+
+# The levers have to be VISIBLE, under the name the user was promised.
+grep -q 'batteryHungerSection' "$THEMES" \
+  && ok "Battery Hunger section is rendered on the Mode page" \
+  || bad "no Battery Hunger section — the levers are invisible to the user"
+grep -q 'sectionHeader(ctx, "Mode"' "$THEMES" \
+  && ok 'the tiles are headed "Mode", not "Theme"' \
+  || bad 'the tiles still read as a theme — a mode rewrites design, toggles AND system settings'
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

@@ -3,6 +3,7 @@ import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.launcher.AppIconTile
 import com.diegonmarcos.superapp.system.BackgroundOrchestrator
+import com.diegonmarcos.superapp.system.PowerLevers
 import com.diegonmarcos.superapp.ui.Haptics
 import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.ShellActivity
@@ -106,7 +107,18 @@ class LauncherConfigFragment : Fragment() {
             setPadding(0, 0, 0, dp(ctx, 16))
         })
 
-        // Theme tiles — data-driven from BuildConfig.
+        // A theme IS a mode, and the screen has to say so before the tiles.
+        // Calling these "themes" taught the wrong thing: a theme is a colour
+        // scheme you can try on, and picking one here instead rewrites the
+        // launcher's whole design, flips the service toggles below, and — for
+        // Power Saving — writes system settings on the device itself. The word
+        // and the subtitle are the only warning the user gets before tapping.
+        root.addView(sectionHeader(ctx, "Mode",
+            "A mode is not a colour scheme. It owns this launcher's design, the " +
+                "service toggles below, and the system settings under Battery " +
+                "Hunger. Switching mode changes all of them together."))
+
+        // Mode tiles — data-driven from BuildConfig.
         val themes = LauncherThemes.loadFromBuildConfig()
         val current = themePrefs.theme
         // "· modified" on the selected tile when the device no longer matches
@@ -195,6 +207,7 @@ class LauncherConfigFragment : Fragment() {
                 root.addView(spacer(ctx, dp(ctx, 8)))
             }
         }
+        root.addView(batteryHungerSection(ctx, current.label))
         // Screen brightness (device-wide → needs WRITE_SETTINGS)
         val b = LauncherSettingsPrefs.Config.brightness
         root.addView(sliderRow(ctx, b.label, b.subtitle, b.min, b.max,
@@ -385,6 +398,114 @@ class LauncherConfigFragment : Fragment() {
             })
         }
         return tile
+    }
+
+    /**
+     * "Battery Hunger" — every SYSTEM lever the active mode pulls, with the
+     * live value read off the device.
+     *
+     * A mode is not a palette. Switching to Cloud Power Saving writes the
+     * phone's brightness, refresh rate, animation scales, radio scanning,
+     * standby buckets and background-data policy, and until this section existed
+     * the only way to learn that was to read the source. So the whole lever
+     * table is rendered here, one row each, in the same order it is applied.
+     *
+     * The state on each row is READ BACK FROM THE DEVICE, never derived from
+     * our own "applied" flag. That is the whole point: a lever the privileged
+     * channel failed to write must read as off. A row that reported our
+     * intention would turn this screen into exactly the reassuring lie it
+     * exists to prevent — and a lever silently failing is the normal case, since
+     * the channel goes away with every reboot until wireless debugging is back.
+     */
+    private fun batteryHungerSection(ctx: android.content.Context, modeLabel: String): View {
+        val palette = LauncherPalette.of(ctx)
+        val column = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        column.addView(spacer(ctx, dp(ctx, 8)))
+        column.addView(sectionHeader(ctx, "Battery Hunger",
+            "System levers the \"$modeLabel\" mode switches — live device state"))
+
+        val channelLine = TextView(ctx).apply {
+            textSize = 11f
+            setTextColor(palette.textSecondary)
+            setPadding(dp(ctx, 12), 0, dp(ctx, 12), dp(ctx, 6))
+            text = "Reading device state…"
+        }
+        column.addView(channelLine)
+
+        val cells = LinkedHashMap<String, TextView>()
+        for (lever in PowerLevers.ALL) {
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(ctx, 12), dp(ctx, 6), dp(ctx, 12), dp(ctx, 6))
+            }
+            val labels = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            labels.addView(TextView(ctx).apply {
+                text = lever.label
+                textSize = 14f
+                setTextColor(palette.textPrimary)
+            })
+            labels.addView(TextView(ctx).apply {
+                text = lever.detail
+                textSize = 11f
+                setTextColor(palette.textSecondary)
+            })
+            row.addView(labels)
+            val cell = TextView(ctx).apply {
+                text = "…"
+                textSize = 11f
+                gravity = Gravity.END
+                setTextColor(palette.textSecondary)
+            }
+            row.addView(cell)
+            cells[lever.id] = cell
+            column.addView(row)
+        }
+
+        // Off the main thread: every lever is a shell round-trip, and there are
+        // twenty of them. Posting back through the column keeps the update on
+        // the view's own handler, so a user who leaves the page mid-read simply
+        // never sees it land.
+        Thread({
+            val channel = runCatching { PowerLevers.channelName(ctx) }.getOrNull()
+            val live = runCatching { PowerLevers.liveState(ctx) }.getOrDefault(emptyMap())
+            column.post {
+                channelLine.text = if (channel == null)
+                    "No privileged channel — pair wireless debugging to switch these"
+                else "Privileged channel: $channel"
+                for (lever in PowerLevers.ALL) {
+                    val cell = cells[lever.id] ?: continue
+                    val value = live[lever.id]
+                    when {
+                        lever.need == PowerLevers.Need.ROOT -> {
+                            cell.text = "needs root"
+                            cell.setTextColor(palette.textSecondary)
+                        }
+                        value == null -> {
+                            // A lever with no readable value is an ACTION, not a
+                            // state — it says whether the sweep has run, which is
+                            // the only honest thing there is to say about it.
+                            cell.text = if (PowerLevers.isApplied(ctx)) "applied" else "not applied"
+                            cell.setTextColor(palette.textSecondary)
+                        }
+                        value == lever.saving -> {
+                            cell.text = "saving"
+                            cell.setTextColor(palette.accent)
+                        }
+                        else -> {
+                            cell.text = value
+                            cell.setTextColor(palette.textSecondary)
+                        }
+                    }
+                }
+            }
+        }, "battery-hunger-read").start()
+
+        return column
     }
 
     private fun spacer(ctx: android.content.Context, h: Int): View = View(ctx).apply {

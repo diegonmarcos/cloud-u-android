@@ -42,6 +42,7 @@ object BackgroundOrchestrator {
     private fun pauseAll(context: Context) {
         stopMapsTracker(context)
         cancelPeriodicWork(context)
+        systemLevers(context) { PowerLevers.applyAll(it) }
         // Phone-tab warm-up is a one-shot thread fired from
         // MainActivity.onCreate — nothing to stop after it completes,
         // but we DON'T fire it again on Power Saving themes (the
@@ -49,7 +50,23 @@ object BackgroundOrchestrator {
         // before kicking off and bails on power-save).
     }
 
+    /**
+     * Run a lever sweep off the main thread.
+     *
+     * [applyForTheme] is called from onResume, and every lever is a shell
+     * round-trip on the privileged channel — twenty of them on the UI thread is
+     * a visible freeze on the very screen the mode is trying to make cheap.
+     */
+    private fun systemLevers(context: Context, sweep: (Context) -> Int) {
+        val app = context.applicationContext
+        Thread({ runCatching { sweep(app) } }, "power-levers").start()
+    }
+
     private fun resumeAll(context: Context) {
+        // Leaving the mode is the ONLY moment the remembered values are still
+        // around to be put back, so this is not symmetry for its own sake: skip
+        // it and the user keeps a 15%-brightness 60Hz phone with no way back.
+        systemLevers(context) { PowerLevers.restoreAll(it) }
         // Subsystems re-arm on their own normal lifecycle hooks; we
         // don't have to explicitly start anything here. Keeping the
         // hook so future producers (e.g. an analytics ping batcher)

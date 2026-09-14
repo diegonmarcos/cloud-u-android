@@ -4580,7 +4580,7 @@
           {
             "_doc": "Tab 1 of Launcher — everything the standalone Launcher page used to show (profiles, theme picker, screensaver + toggles, set-as-default-launcher). Its OWN id had to be new, because `launcher` is now the strip that CONTAINS it and a page cannot be a tab of itself. Nothing persisted moves with it: LauncherThemePrefs/LauncherProfilePrefs/LauncherSettingsPrefs key off fixed store names ('launcher_theme'/'launcher_profile'/'launcher_settings'), never off the page id. hidden = it is reached through the strip, not as its own Configs tile.",
             "id": "theme",
-            "label": "Theme",
+            "label": "Mode",
             "icon": "ic_home",
             "hidden": true
           },
@@ -4674,7 +4674,7 @@
     "launcher_themes": [
       {
         "id": "cloud",
-        "label": "Cloud Theme",
+        "label": "Cloud Mode",
         "subtitle": "The default rich SuperApp UI — bottom nav, dynamic island, 3D home. Top status strip trimmed to Time · Battery only.",
         "default": true,
         "_doc_palette": "EVERY colour the launcher paints, named by ROLE and mapped to a res/values/colors.xml token (or, for `window`, a res/drawable). This is what a theme MEANS: before it existed a theme declared only behaviour flags, so picking one could reach the system bars, the chrome islands and the edge menu and could not reach a single pixel of content — the content painted 0xFF-literals chosen for the default gradient. A role missing from ANY theme fails test-launcher-theme-palette.sh, which is what stops the next theme shipping half-wired. Add a role here and it must be added to every theme; the hexes stay in colors.xml so the contrast checks and the Android resource qualifiers still see them.",
