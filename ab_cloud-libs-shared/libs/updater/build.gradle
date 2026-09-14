@@ -14,14 +14,34 @@ plugins {
 def buildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
 
 // The constellation fleet, so the periodic worker can update the OTHER apps
-// and not just this one. Read from the consuming app's data/ dir the same way
-// build.json is read from its root: an app that ships the file gets fleet
-// auto-update, one that does not gets an empty list and self-update only.
-// It was baked ONLY into the superapp before, which is precisely why the
-// unattended pass could never reach the fleet - Fleet.installAll had exactly
-// one caller, the manual Update-All button.
-def fleetFile = file("${rootDir}/data/constellation-fleet.json")
-def fleetB64 = fleetFile.exists() ? fleetFile.text.bytes.encodeBase64().toString() : ""
+// and not just this one.
+//
+// This resolves the OPPOSITE way to build.json above, and the difference is the
+// whole point. build.json is PER-APP, so it must come from the consuming app's
+// rootDir. The fleet manifest is FLEET-WIDE - one list of every published app,
+// identical for every consumer - so resolving it from rootDir was wrong: only
+// aa_cloud-superapp carries a data/ dir, so `${rootDir}/data/...` existed for
+// exactly one of the eleven consumers and every other app baked the EMPTY
+// STRING. That has no symptom. An empty manifest draws an empty page that looks
+// exactly like a working one, and an app that cannot see the fleet reports
+// "nothing to update" in the same words as an app that is genuinely current.
+//
+// So: the canonical copy is named once, module-relative (projectDir, not
+// rootDir, because this module is shared by reference into every app and must
+// reach the same file whichever app is building). An app MAY still override it
+// by shipping its own data/constellation-fleet.json - that path is kept so a
+// future app can pin a narrower fleet - but absence is no longer silent.
+def fleetOverride = file("${rootDir}/data/constellation-fleet.json")
+def fleetCanonical = new File(projectDir, '../../../aa_cloud-superapp/data/constellation-fleet.json').canonicalFile
+def fleetFile = fleetOverride.exists() ? fleetOverride : fleetCanonical
+if (!fleetFile.exists()) {
+    throw new GradleException("constellation-fleet.json not found at ${fleetCanonical.path} " +
+        "(nor overridden at ${fleetOverride.path}). :libs:updater bakes it into " +
+        "CONSTELLATION_FLEET_B64 so the unattended pass can reach the rest of the fleet. " +
+        "An empty manifest is not a broken build, it is a silently fleet-blind one - which " +
+        "is why this throws instead of defaulting to \"\".")
+}
+def fleetB64 = fleetFile.text.bytes.encodeBase64().toString()
 def ghcr = buildJson.release.ghcr
 def au   = buildJson.release.auto_update
 // WHICH GHCR IMAGE THIS APP UPDATES ITSELF FROM, named exactly once.

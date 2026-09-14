@@ -1,0 +1,37 @@
+# Fleet manifest guard (task #276).
+#
+# `:libs:updater` bakes constellation-fleet.json into CONSTELLATION_FLEET_B64 so
+# the unattended update pass can reach the OTHER applications and not only the
+# one it is running inside. It used to read that file from the consuming
+# application's own rootDir, and only aa_cloud-superapp has a data/ directory —
+# so ten of the eleven consumers baked the empty string.
+#
+# The reason this needs a guard rather than a fix-and-forget is that the defect
+# is invisible. An empty manifest draws an empty page that looks exactly like a
+# working one, there is no crash and no log line, and "nothing to update" reads
+# identically whether the application is current or simply cannot see the fleet.
+# Nothing about a green build or a working phone would tell anyone it came back.
+#
+# Two steps on purpose: the first asserts the property on this tree, the second
+# reintroduces the original defect in a throwaway tree and requires the guard to
+# go red — a guard only ever observed passing proves nothing.
+name: "fleet manifest guard — no application may ship an empty constellation fleet"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fleet-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every :libs:updater consumer resolves a populated fleet manifest
+        run: python3 1_cicd/src/scripts/cloud-android-fleet-manifest-guard.py
+      - name: The guard still fails when the empty-fleet defect is put back
+        run: bash 1_cicd/src/scripts/test/fleet-manifest-guard.test.sh
