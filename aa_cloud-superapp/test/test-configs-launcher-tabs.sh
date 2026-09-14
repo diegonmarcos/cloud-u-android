@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Tester: Configs ▸ Launcher is ONE page with two tabs (Theme | One-Hand), and
-# merging the old One-Hand page into it broke neither its stored settings nor
-# the targets that still name it.
+# Tester: Configs ▸ Launcher is ONE page with three tabs (Profiles | Modes |
+# One-Hand), and neither merging the old One-Hand page into it nor splitting
+# Profiles back out of Modes broke its stored settings or the targets that
+# still name it.
 #
 # WHY THIS EXISTS: the merge touches the two things a page move silently
 # destroys.
@@ -30,19 +31,19 @@ PAGES="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt
 STRIP="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
 NAV="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherNavController.kt"
 
-echo "== T1: Configs ▸ Launcher declares its two tabs as page ids, in order =="
+echo "== T1: Configs ▸ Launcher declares its three tabs as page ids, in order =="
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
 launcher = next((p for p in pages if p['id'] == 'launcher'), None)
 if launcher is None:                       print('no `launcher` page in config')
-elif launcher.get('tabs') != ['theme', 'onehand']:
+elif launcher.get('tabs') != ['profiles', 'theme', 'onehand']:
                                            print('tabs = %r' % (launcher.get('tabs'),))
 elif launcher.get('hidden'):               print('the strip itself must stay listed')
 else:                                      print('OK')
 PY
-)" "launcher: tabs = [theme, onehand], still a visible Configs entry"
+)" "launcher: tabs = [profiles, theme, onehand], still a visible Configs entry"
 
 echo "== T2: every tab is a REAL declared page, hidden, and not the owner itself =="
 check "$(python3 - "$BJ" <<'PY'
@@ -61,7 +62,7 @@ for owner in pages:
             problems.append('tab %r is still a standalone Configs entry' % tab)
 print('; '.join(problems) or 'OK')
 PY
-)" "theme + onehand are declared, hidden pages of the same section"
+)" "profiles + theme + onehand are declared, hidden pages of the same section"
 
 echo "== T3: the One-Hand id SURVIVES (page:config/onehand must still resolve) =="
 check "$(python3 - "$BJ" <<'PY'
@@ -146,6 +147,36 @@ done
 [ -z "$sp_fail" ] \
   && ok "launcher + one-hand stores are named literally, so no key moved with the page" \
   || bad "preference store name built from a variable:$sp_fail"
+
+echo "== T10: the Profiles tab is 'profiles', never 'profile' (#339) =="
+# `profile` is the Configs section's OWN top-level page — the owner's identity:
+# name, email, WireGuard export. One section cannot hold two pages under one
+# id, so the Launcher tab had to take a second name. Naming them apart is the
+# whole reason the split works, which is why it is asserted rather than trusted.
+check "$(python3 - "$BJ" <<'PY'
+import json, sys
+section = next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['id'] == 'config')
+pages   = {p['id']: p for p in section['pages']}
+if 'profile' not in pages:
+    print("the owner's identity page 'profile' is GONE — Configs lost its own tile")
+elif 'profiles' not in pages:
+    print("no 'profiles' page — the Launcher tab has nothing to render")
+elif pages['profile'].get('hidden'):
+    print("'profile' went hidden — the owner's identity tile vanished from Configs")
+elif not pages['profiles'].get('hidden'):
+    print("'profiles' is visible — the tab would also stand as its own Configs tile")
+else:
+    print('OK')
+PY
+)" "profile (identity, visible) and profiles (Launcher tab, hidden) are two pages"
+
+grep -qF 'pageId == "profiles" -> LauncherProfilesFragment.newInstance()' "$PAGES" \
+  && ok "the profiles tab routes to its own fragment" \
+  || bad "profiles has no route — the tab would fall through to the generic page"
+
+grep -qF 'pageId == "profile"   -> ProfileFragment.newInstance()' "$PAGES" \
+  && ok "the identity page still routes to ProfileFragment" \
+  || bad "profile lost its route — the split stole the owner's identity page"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
