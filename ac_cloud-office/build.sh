@@ -211,8 +211,24 @@ step_build() {
     [ -x "$sdkmanager" ] || die "sdkmanager not found (PATH, or \$ANDROID_HOME/cmdline-tools/latest/bin)"
     mapfile -t packages < <(jq -r '.build.sdk_packages[]' "$BUILD_JSON")
     [ "${#packages[@]}" -gt 0 ] || die "build.json::build.sdk_packages is empty"
+    # The licence acceptances are a FIXED feed, one "y" per package, and never
+    # `yes`. An endless producer is still writing when sdkmanager exits, takes
+    # EPIPE, and under `set -o pipefail` its exit 1 becomes the pipeline's: run
+    # 35034695984 failed here with "yes: standard output: Broken pipe" although
+    # every package was already installed on the image. A feed this small never
+    # fills the pipe buffer, so it always completes and the status is
+    # sdkmanager's own. sdkmanager asks at most once per licence and there are
+    # never more licences than packages; if it somehow asks again it reads end
+    # of file, declines, and fails loudly below rather than hanging.
+    # sdkmanager's output is KEPT, because "Failed to find package" goes to its
+    # stdout — sending that to /dev/null made a real failure and this spurious
+    # one look identical.
+    local sdk_log="$WORK_DIR/sdkmanager.log"
     log "build: sdkmanager ${packages[*]}"
-    yes | "$sdkmanager" "${packages[@]}" >/dev/null
+    if ! printf 'y\n%.0s' "${packages[@]}" | "$sdkmanager" "${packages[@]}" >"$sdk_log" 2>&1; then
+        cat "$sdk_log" >&2
+        die "sdkmanager could not install ${packages[*]} — see its output above"
+    fi
 
     log "build: gradle $task"
     ( cd "$ONLINE_DIR/android" && ./gradlew --no-daemon --stacktrace "$task" ) || die "gradle $task failed"

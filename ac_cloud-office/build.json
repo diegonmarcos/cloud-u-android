@@ -86,42 +86,53 @@
         "file": "android/lib/build.gradle",
         "line_hint": 32,
         "anchor": "externalNativeBuild {",
-        "why": "One of TWO externalNativeBuild declarations. Taking libandroidapp.so prebuilt does not stop Gradle asking CMake to build it; this is #240 walking back in through the side door."
+        "why": "One of TWO externalNativeBuild declarations. Taking libandroidapp.so prebuilt does not stop Gradle asking CMake to build it; this is #240 walking back in through the side door.",
+        "action": "neutralise",
+        "neutralised_by": "if (!liboPrebuiltEngine) {"
       },
       {
         "id": "ndk-android-block",
         "file": "android/lib/build.gradle",
         "line_hint": 74,
         "anchor": "path \"src/main/cpp/CMakeLists.txt\"",
-        "why": "The second declaration, in the android block rather than defaultConfig. Removing only the first leaves the native build fully wired."
+        "why": "The second declaration, in the android block rather than defaultConfig. Removing only the first leaves the native build fully wired.",
+        "action": "neutralise",
+        "neutralised_by": "if (liboPrebuiltEngine) {"
       },
       {
         "id": "assets-copyUnpackAssets",
         "file": "android/lib/build.gradle",
         "line_hint": 100,
         "anchor": "tasks.register('copyUnpackAssets', Copy)",
-        "why": "Reads ${liboInstdir}, an engine build tree we never build. A Gradle Copy whose `from` is absent SUCCEEDS and copies nothing, so the APK ships the engine's .so files with its data half missing after a wholly green build. Must be disabled EXPLICITLY — relying on a missing directory to no-op is the defect, not the fix. NOTE its fonts.conf branch is a GENERATOR, not a copy; see assets.rebrand."
+        "why": "Reads ${liboInstdir}, an engine build tree we never build. A Gradle Copy whose `from` is absent SUCCEEDS and copies nothing, so the APK ships the engine's .so files with its data half missing after a wholly green build. Must be disabled EXPLICITLY — relying on a missing directory to no-op is the defect, not the fix. NOTE its fonts.conf branch is a GENERATOR, not a copy; see assets.rebrand.",
+        "action": "neutralise",
+        "neutralised_by": "copyUnpackAssets.enabled = false"
       },
       {
         "id": "assets-copyAssets",
         "file": "android/lib/build.gradle",
         "line_hint": 172,
         "anchor": "tasks.register('copyAssets', Copy)",
-        "why": "Same silent-empty-copy failure, for services.rdb, registry, filter, gallery and palette."
+        "why": "Same silent-empty-copy failure, for services.rdb, registry, filter, gallery and palette.",
+        "action": "neutralise",
+        "neutralised_by": "copyAssets.enabled = false"
       },
       {
         "id": "assets-createFullConfig",
         "file": "android/lib/build.gradle",
         "line_hint": 194,
         "anchor": "tasks.register('createFullConfig', Copy)",
-        "why": "Same again for share/config, AND it is on preBuild.dependsOn, so it runs on every build of every variant."
+        "why": "Same again for share/config, AND it is on preBuild.dependsOn, so it runs on every build of every variant.",
+        "action": "neutralise",
+        "neutralised_by": "createFullConfig.enabled = false"
       },
       {
         "id": "cool-bundle-release",
         "file": "android/lib/build.gradle",
         "line_hint": 335,
         "anchor": "tasks.register('generateCoolReleaseAssets')",
-        "why": "KEPT, NOT NEUTRALISED. `afterEvaluate { generateReleaseAssets.dependsOn ... generateCoolReleaseAssets }` puts the npm/webpack `make -C ../../browser` on the RELEASE build graph, and that is the Node build this app needs: patches/0001 changes browser/, so the COOL bundle in the released APK is not ours. Recorded here so the anchor is still checked against upstream."
+        "why": "KEPT, NOT NEUTRALISED. `afterEvaluate { generateReleaseAssets.dependsOn ... generateCoolReleaseAssets }` puts the npm/webpack `make -C ../../browser` on the RELEASE build graph, and that is the Node build this app needs: patches/0001 changes browser/, so the COOL bundle in the released APK is not ours. Recorded here so the anchor is still checked against upstream.",
+        "action": "keep"
       }
     ],
     "vendor_the_shell": {
@@ -144,7 +155,8 @@
         "android/lib/libSettings.gradle": "from android/lib/libSettings.gradle.in; @LOBUILDDIR@ becomes the extracted payload root instead of an engine build tree",
         "android/lib/src/main/cpp/CMakeLists.txt": "from CMakeLists.txt.in — NOT generated at all in prebuilt mode, because the externalNativeBuild wiring that consumes it is removed"
       }
-    }
+    },
+    "_doc_action": "action/neutralised_by are what tests/test-prebuilt-mode-patch-covers-spec.sh reads: `neutralise` entries must be addressed by an ADDED line in patches/0002 carrying neutralised_by, and `keep` entries must not be. A specification nobody compares against the patch rots into fiction — the anchors tester already proves the anchors are real upstream; this proves the patch answers each one."
   },
   "supply_chain": {
     "_doc": "WHAT REPLACES THE sha256 PIN, AND WHAT IS GENUINELY WEAKER. Stated here rather than in a README because the next person to touch this will read build.json.",
@@ -204,11 +216,13 @@
     "_doc": "WITHOUT THIS BLOCK NONE OF THIS APP'S TESTERS HAD EVER RUN, and nothing said so. cloud-android-test-engine.sh resolves .tests.shell.dir and DEFAULTS TO \"test\"; this app's directory is \"tests\", so the engine looked at ac_cloud-sheets/test, found nothing, printed one COVERAGE-GAP line and exited 0. The second half of the same defect is the glob: the engine runs only \"$dir\"/test-*.sh, and both testers here were named without that prefix, so even with the directory right they would have been skipped. Two files that call themselves 'the assertion the whole clone structure rests on' and the evidence behind the #241 verdict were decoration. Fixed by declaring the directory and by renaming the artefact tester to test-engine-artefacts-in-apk.sh.",
     "shell": {
       "dir": "tests",
-      "_doc_requires": "Checked BEFORE any tester runs, because a tester that shells out to a missing tool does not fail — it answers from the tool's absence. test-engine-artefacts-in-apk.sh parses a ZIP central directory in python3 and range-fetches it with curl; test-configure-flags-exist.sh reads Gerrit's REST API with curl and decodes base64. Absent any of these, both would report a verdict they never computed.",
+      "_doc_requires": "Checked BEFORE any tester runs, because a tester that shells out to a missing tool does not fail — it answers from the tool's absence. test-engine-artefacts-in-apk.sh parses a ZIP central directory in python3 and range-fetches it with curl; test-configure-flags-exist.sh reads Gerrit's REST API with curl and decodes base64. test-sdkmanager-status-is-its-own.sh reads build.sdk_packages with jq and runs the engine's own sdkmanager pipeline under timeout, because the regression it guards against has a shape that HANGS rather than fails, and a suite that hangs is a suite that gets turned off. Absent any of these, those testers would report a verdict they never computed.",
       "requires": [
         "curl",
         "python3",
-        "base64"
+        "base64",
+        "jq",
+        "timeout"
       ],
       "_doc_not_a_tester": "patches-apply.sh IS DELIBERATELY NOT NAMED test-*.sh, and that is a decision rather than the accident above. It is the strongest assertion this app has — it fetches the pin and applies the series for real — but Gerrit refuses both blob filtering and sha fetches, so it measured 471 MB and about ten minutes from this container. That is the wrong shape for a per-push tester on a workflow that triggers on every commit under ac_cloud-office/**, and a ten-minute network step on every doc edit is how a suite starts getting ignored. It belongs to the source-build workflow as a release gate, run once against the pin, and to agents by hand. When build.host is set and that workflow exists, it gets an explicit step there — not this prefix."
     }
