@@ -223,27 +223,33 @@ class MailFleetEntryTest {
         }
 
         /** The `mail` entry's own JSON object, as text. */
-        val mailBlock: String by lazy { objectContaining("\"package\": \"com.diegonmarcos.comms.mail\"") }
+        val mailBlock: String by lazy { objectContaining("package", "com.diegonmarcos.comms.mail") }
 
         /** The `keyboard` entry, the reference shape for completeness. */
-        val keyboardBlock: String by lazy { objectContaining("\"package\": \"com.diegonmarcos.cloudkeyboard\"") }
+        val keyboardBlock: String by lazy { objectContaining("package", "com.diegonmarcos.cloudkeyboard") }
 
         val mail: Map<String, String> by lazy {
             keys(mailBlock).associateWith { k -> stringValue(mailBlock, k) ?: "" }
         }
 
         /**
-         * The smallest `{ … }` in the manifest that contains [needle].
+         * The smallest `{ … }` in the manifest whose [key] holds [value].
          *
          * Brace-matched from the opening brace and skipping over string literals,
          * rather than split on a separator — a separator-based slice silently
          * returns the wrong entry the day the file is reformatted, and returns it
          * with a passing status. Fails closed: no needle, or no matching brace, is
          * an error and not an empty string.
+         *
+         * The needle tolerates any whitespace around the colon. regen.sh writes one
+         * compact entry per line since #343 (`"package":"…"`), and a needle spelled
+         * with the old pretty-printed `": "` found nothing, which failed every
+         * test in this file for a layout change rather than a wrong address.
          */
-        fun objectContaining(needle: String): String {
-            val at = fleetText.indexOf(needle)
-            if (at < 0) error("$FLEET_PATH contains no $needle — the entry this test is about is gone")
+        fun objectContaining(key: String, value: String): String {
+            val needle = Regex("\"${Regex.escape(key)}\"\\s*:\\s*\"${Regex.escape(value)}\"")
+            val at = needle.find(fleetText)?.range?.first
+                ?: error("$FLEET_PATH contains no \"$key\": \"$value\" — the entry this test is about is gone")
             val open = fleetText.lastIndexOf('{', at)
             if (open < 0) error("no opening brace before $needle in $FLEET_PATH")
             var depth = 0
@@ -268,10 +274,40 @@ class MailFleetEntryTest {
             error("unbalanced braces after $needle in $FLEET_PATH")
         }
 
-        /** Top-level key names of a JSON object given as text. */
-        fun keys(block: String): Set<String> =
-            Regex("""^\s{0,6}"([^"]+)"\s*:""", RegexOption.MULTILINE)
-                .findAll(block).map { it.groupValues[1] }.toSet()
+        /**
+         * Top-level key names of a JSON object given as text, whatever its layout.
+         *
+         * Depth-counted rather than anchored to indentation: the old
+         * `^\s{0,6}"key":` pattern only ever matched the pretty-printed manifest,
+         * and on the compact one-entry-per-line form it returned no keys at all.
+         */
+        fun keys(block: String): Set<String> {
+            val found = mutableSetOf<String>()
+            var depth = 0
+            var i = 0
+            while (i < block.length) {
+                when (block[i]) {
+                    '"' -> {
+                        val start = i + 1
+                        var end = start
+                        while (end < block.length && block[end] != '"') {
+                            if (block[end] == '\\') end++
+                            end++
+                        }
+                        var next = end + 1
+                        while (next < block.length && block[next].isWhitespace()) next++
+                        if (depth == 1 && next < block.length && block[next] == ':') {
+                            found += block.substring(start, end)
+                        }
+                        i = end
+                    }
+                    '{', '[' -> depth++
+                    '}', ']' -> depth--
+                }
+                i++
+            }
+            return found
+        }
 
         /** A string-valued field of a JSON object given as text, or null. */
         fun stringValue(block: String, key: String): String? =
