@@ -40,6 +40,7 @@ on:
       - "ab_cloud-libs-shared/libs/health/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-me/**"
+      - "!ac_cloud-me/test/**"
 permissions:
   contents: write
   packages: write

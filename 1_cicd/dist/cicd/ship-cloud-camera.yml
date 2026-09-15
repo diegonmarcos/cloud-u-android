@@ -45,6 +45,7 @@ on:
       # here and they stay.
       - "1_cicd/src/cicd/ship-cloud-camera.yml"
       - "ac_cloud-camera/**"
+      - "!ac_cloud-camera/test/**"
 permissions:
   contents: write
   packages: write

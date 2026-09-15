@@ -45,6 +45,7 @@ on:
       # here and they stay.
       - "1_cicd/src/cicd/ship-cloud-office.yml"
       - "ac_cloud-office/**"
+      - "!ac_cloud-office/tests/**"
 permissions:
   contents: write   # for gh release create/upload
   packages: write   # for ghcr push (oras)

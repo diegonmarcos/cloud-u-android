@@ -96,6 +96,7 @@ on:
       - "1_cicd/src/cicd/ship-cloud-writer.yml"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ac_cloud-writer/**"
+      - "!ac_cloud-writer/test/**"
 permissions:
   contents: write   # for gh release create + tag push reads
   packages: write   # for ghcr push (oras)

@@ -38,6 +38,7 @@ on:
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-browser/**"
+      - "!ac_cloud-browser/test/**"
 permissions:
   contents: write
   packages: write

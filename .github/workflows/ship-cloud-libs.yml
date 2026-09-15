@@ -68,6 +68,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Which library APKs' source moved, decided BEFORE any toolchain is set
+      # up. build.sh gates each asset on its own module (plus the modules that
+      # module compiles against), writes the moved set to dist/.gate, and every
+      # later step builds and publishes exactly that set. skip=true when none
+      # moved: the rest of the job is if:'d out. Run 34837714907 assembled all
+      # 36 APKs for a push that changed none of them, then published zero.
+      # Needs the full history the checkout above fetches: the identity is the
+      # git tree sha of each input path.
+      - name: Publish gate (which library APKs' source moved)
+        id: gate
+        working-directory: ${{ env.WORK_DIR }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash build.sh plan
+
       # Every application's testers, and — for the 24 that have none — the
       # COVERAGE-GAP line naming exactly what this run did NOT check. Until this
       # step existed, an application with zero testers and one with fifty
@@ -86,18 +101,21 @@ jobs:
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
 
       - name: Set up JDK 17
+        if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Android SDK
+        if: steps.gate.outputs.skip != 'true'
         uses: android-actions/setup-android@v3
         with:
           # Same toolchain as superapp (these ARE superapp's modules).
           packages: "platforms;android-36 platforms;android-35 platforms;android-34 platforms;android-26 build-tools;36.0.0 build-tools;35.0.0 build-tools;34.0.0 platform-tools ndk;28.0.13004108 ndk;26.1.10909125"
 
       - name: Set up Gradle 8.14 (cached)
+        if: steps.gate.outputs.skip != 'true'
         # v6, not v3: v3 bundles the old @actions/cache client, which talks to the
         # cache service GitHub retired. Every save AND restore 400s ("Our services
         # aren't available right now"), so the Gradle distribution, the dependency
@@ -117,6 +135,7 @@ jobs:
       # still reaches out. lib-apks builds the SAME aar from the SAME engine, so
       # leaving this workflow uncached would keep the failure alive here alone.
       - name: Cache firestack Go modules + checksum-db tiles
+        if: steps.gate.outputs.skip != 'true'
         uses: actions/cache@v4
         with:
           path: ab_cloud-libs-shared/.cache/gomodcache
@@ -124,6 +143,7 @@ jobs:
           restore-keys: firestack-gomodcache-${{ runner.os }}-
 
       - name: Checkout vault (shared Android signing key)
+        if: steps.gate.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
           repository: diegonmarcos/cloud-vault
@@ -131,6 +151,7 @@ jobs:
           path: .vault
 
       - name: Install ORAS + sops + jq
+        if: steps.gate.outputs.skip != 'true'
         run: |
           sudo apt-get update -y && sudo apt-get install -y jq
           curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz \
@@ -139,6 +160,7 @@ jobs:
             | sudo tee /usr/local/bin/sops >/dev/null && sudo chmod +x /usr/local/bin/sops
 
       - name: Determine variant
+        if: steps.gate.outputs.skip != 'true'
         id: variant
         run: |
           if   [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -150,6 +172,7 @@ jobs:
           fi
 
       - name: Build APKs
+        if: steps.gate.outputs.skip != 'true'
         working-directory: ${{ env.WORK_DIR }}
         env:
           BYPASS_NIX: "1"
@@ -167,6 +190,7 @@ jobs:
           ls -la dist/
 
       - name: Upload APKs as workflow artifact
+        if: steps.gate.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: Cloud-Libs-${{ steps.variant.outputs.variant }}-${{ github.sha }}
@@ -175,13 +199,13 @@ jobs:
           retention-days: 30
 
       - name: Login to GHCR
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.push_oras }}
+        if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_oras) }}
         run: |
           echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" \
             | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Push APKs to GHCR via ORAS
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.push_oras }}
+        if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_oras) }}
         working-directory: ${{ env.WORK_DIR }}
         env:
           GITHUB_SHA: ${{ github.sha }}
@@ -196,24 +220,15 @@ jobs:
       # GH release, which is public by construction, so a private mirror
       # degrades the install route without breaking it.
       - name: Is the GHCR package publicly pullable
-        # No `steps.gate` condition here. This job has no gate STEP: it
-        # publishes 24 assets and the gate is per asset, so build.sh consults
-        # it inside the oras-push and gh-release loops instead. This condition
-        # used to read `steps.gate.outputs.skip != 'true'` against a step id
-        # that does not exist in this workflow — which evaluates to the empty
-        # string, is therefore always true, and made the workflow LOOK gated
-        # while nothing weighed a single asset.
-        if: ${{ always() }}
+        if: ${{ always() && steps.gate.outputs.skip != 'true' }}
         continue-on-error: true
         run: sh 1_cicd/dist/scripts/cloud-android-ghcr-visibility.sh diegonmarcos cloud-libs
 
-      # build.sh gates each of the 24 assets on its own module (plus the
-      # modules that module compiles against) and republishes only the ones
-      # whose source moved, then stamps <asset>.source for those it published.
-      # Needs the full history the checkout above fetches: the identity is the
-      # git tree sha of each input path.
+      # Publishes exactly the assets the gate step planned, then stamps
+      # <asset>.source for those it published.
       - name: Publish to GitHub Releases
         id: publish
+        if: steps.gate.outputs.skip != 'true'
         working-directory: ${{ env.WORK_DIR }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -230,6 +245,6 @@ jobs:
       # Edit 1_cicd/src/scripts/cloud-android-publish-guard.sh, never this block.
       - name: A run that published nothing must not be green
         if: ${{ !cancelled() }}
-        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ab_cloud-libs-shared/lib-apks" "${{ steps.publish.outcome }}" "false" "${{ true }}" "${{ github.event_name }}"
+        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ab_cloud-libs-shared/lib-apks" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' }}" "${{ github.event_name }}"
       # ── end MANAGED-PUBLISH-GUARD ──
 

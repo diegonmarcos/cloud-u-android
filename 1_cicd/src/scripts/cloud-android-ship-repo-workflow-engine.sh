@@ -181,7 +181,8 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
         continue
 
     derived = [f"{app}/**"]
-    modules = json.load(open(os.path.join(root, app, "build.json"))).get("modules", {})
+    config = json.load(open(os.path.join(root, app, "build.json")))
+    modules = config.get("modules", {})
     if isinstance(modules, dict):
         for mod in modules.values():
             if not isinstance(mod, dict) or not mod.get("dir"):
@@ -192,16 +193,33 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
             derived.append(shared + "/**")
     derived.append(f"1_cicd/src/cicd/{name}")
 
+    # The declared shell-tester directory cannot change the APK, so it must not
+    # start a build. Run 34850225588 republished the SuperApp for a commit that
+    # touched only aa_cloud-superapp/test/: {app}/** watched it, and because
+    # cloud-android-source-identity.sh hashes exactly this list, the same file
+    # also moved the publish gate. The exclusion is written HERE and honoured
+    # THERE, so trigger and identity stay one list; excluding it from only one
+    # of them reopens the bug from the other side. Only a DECLARED tests.shell.dir
+    # is excluded: an undeclared test/ (ac_cloud-chat's is upstream's) is not
+    # this repository's claim to make.
+    excluded = []
+    tests_dir = ((config.get("tests") or {}).get("shell") or {}).get("dir")
+    if tests_dir and os.path.isdir(os.path.join(root, app, tests_dir)):
+        excluded.append(f"!{app}/{tests_dir.strip('/')}/**")
+
     # Hand-written entries survive unless they are dead (a path a filter can
-    # never match) or the workflow's own generated copy.
+    # never match) or the workflow's own generated copy. Exclusions are derived
+    # in full above, never kept.
     kept = [e for e in entries
-            if not e.startswith(".github/workflows/")
+            if not e.startswith((".github/workflows/", "!"))
             and os.path.exists(os.path.join(root, e.split("*")[0].rstrip("/") or "."))]
     for e in entries:
-        if e not in kept:
+        if e not in kept and e not in excluded:
             print(f"  dropped {name}: {e}")
 
-    final = sorted(set(derived) | set(kept))
+    # Exclusions LAST: GitHub applies paths in order, and a `!` entry only
+    # removes what a positive entry BEFORE it matched.
+    final = sorted(set(derived) | set(kept)) + excluded
     header = ["      # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir",
               f"      # {app}/build.json::modules declares is added automatically, dead",
               "      # entries are dropped, and cloud-android-source-identity.sh hashes",
@@ -363,9 +381,8 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/ship-*.yml"))):
         if cond is None:
             continue
 
-        # The gate's answer, but ONLY where a gate exists. Two ship workflows
-        # (ship-cloud-libs, which gates per-asset inside its own build.sh, and
-        # ship-garmin-watchface, which has no gate at all) define no step with
+        # The gate's answer, but ONLY where a gate exists. A ship workflow with
+        # no gate at all (ship-garmin-watchface) defines no step with
         # `id: gate`, and a reference to a step that is not there renders as an
         # empty string that reads like an answer. publish-gate-blast-radius
         # already forbids exactly that, fleet-wide, and caught this. Where there

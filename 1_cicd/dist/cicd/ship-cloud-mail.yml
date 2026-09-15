@@ -24,6 +24,7 @@ on:
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-mail/**"
+      - "!ac_cloud-mail/test/**"
 permissions:
   contents: write   # gh release create (RSS feed entries)
   packages: write   # ghcr push (oras)

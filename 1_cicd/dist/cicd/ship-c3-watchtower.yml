@@ -88,6 +88,7 @@ on:
       # does not match what the source produces.
       - "1_cicd/src/cicd/ship-c3-watchtower.yml"
       - "ac_c3-watchtower/**"
+      - "!ac_c3-watchtower/test/**"
 permissions:
   contents: write   # for gh release create + tag push reads
   packages: write   # for ghcr push (oras)

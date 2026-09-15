@@ -141,8 +141,6 @@ _paths() {
         return 0
     fi
 
-    printf '%s\n' "$APP"
-
     # Fail loud rather than hash a short list. An identity that quietly omits
     # the shared libs would let the gate skip a real update — strictly worse
     # than the phantom updates it exists to stop.
@@ -151,22 +149,61 @@ _paths() {
         echo "$APP: no ship workflow found ($wf) — refusing to compute a partial identity" >&2
         exit 3
     }
-    printf '%s\n' "$wf"
 
     # The workflow's `on: push: paths` list, minus the glob tail. A dir entry
     # hashes as its git tree, a file entry as its blob — so `ac_cloud-nav/**`
     # and `ac_cloud-nav` are the same object either way.
-    awk '
+    entries="$(awk '
         /^    paths:$/            { inblock = 1; next }
         inblock && /^      - "/   { gsub(/^      - "|"$/, ""); print; next }
         inblock && /^      /      { next }
         inblock && NF             { exit }
-    ' "$ROOT/$wf" |
+    ' "$ROOT/$wf")"
+
+    # A `!` entry is an EXCLUSION, and it is honoured here exactly as GitHub
+    # honours it in the trigger, or the two stop being the same list. The
+    # generator writes `!<app>/<tests.shell.dir>/**` for every app that declares
+    # a tester directory: run 34850225588 republished the SuperApp for a commit
+    # that touched only aa_cloud-superapp/test/, because the app tree sha — test/
+    # included — was the identity. A tester cannot change the APK, so it must
+    # neither start a build nor move the gate.
+    excluded="$(printf '%s\n' "$entries" | sed -n 's/^!//p' | _strip_glob)"
+    list="$(printf '%s\n%s\n' "$APP" "$wf"; printf '%s\n' "$entries" | grep -v '^!' | _strip_glob)"
+    while IFS= read -r x; do
+        [ -n "$x" ] || continue
+        list="$(printf '%s\n' "$list" | while IFS= read -r p; do
+                    [ -n "$p" ] && _without "$p" "$x"
+                done)"
+    done <<EOF
+$excluded
+EOF
+    printf '%s\n' "$list"
+
+    return 0
+}
+
+_strip_glob() {
     while IFS= read -r e; do
         e="${e%/\*\*}"; e="${e%/\*}"; e="${e%\*\*}"; e="${e%/}"
         [ -n "$e" ] && printf '%s\n' "$e"
     done
+    return 0
+}
 
+# _without <path> <excluded>: <path>, minus the <excluded> subtree. A path that
+# CONTAINS the exclusion cannot be hashed as one tree any more, so it is replaced
+# by its children as git records them at HEAD, recursing only down the branch
+# that leads to the exclusion. Every other child still hashes as its own tree
+# sha, and a child added or removed still moves the identity.
+_without() {
+    case "$1" in "$2"|"$2"/*) return 0 ;; esac
+    case "$2" in
+        "$1"/*)
+            git -C "$ROOT" ls-tree --name-only HEAD -- "$1/" | while IFS= read -r child; do
+                _without "$child" "$2"
+            done ;;
+        *)  printf '%s\n' "$1" ;;
+    esac
     return 0
 }
 

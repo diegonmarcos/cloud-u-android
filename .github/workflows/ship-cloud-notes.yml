@@ -56,6 +56,7 @@ on:
       # (settings.gradle references, scan roots) are kept: add them
       - "1_cicd/src/cicd/ship-cloud-notes.yml"
       - "ac_cloud-notes/**"
+      - "!ac_cloud-notes/test/**"
 permissions:
   contents: write
   packages: write

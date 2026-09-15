@@ -49,6 +49,7 @@ on:
       - "ab_cloud-libs-shared/libs/translate/**"
       - "ab_cloud-libs-shared/libs/voice/**"
       - "ac_cloud-keyboard/**"
+      - "!ac_cloud-keyboard/test/**"
 permissions:
   contents: write
   packages: write

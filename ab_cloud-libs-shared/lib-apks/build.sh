@@ -228,6 +228,49 @@ _gate_skip() {
   printf '%s\n' "$verdict" | grep -qx '\[publish-gate\] skip=true'
 }
 
+# ── the plan: which library APKs moved, decided BEFORE Gradle ──────
+# The gate used to run only inside oras-push and gh-release, AFTER `build` had
+# already assembled every flavor. Run 34837714907 is the cost: a push touching
+# only libs/keyboard (which ships no APK here) assembled all 36 library APKs,
+# Mattermost's chat module among them, and then printed "unchanged since the
+# release" for every one of the 36 and published none. So the per-asset verdict
+# is now taken once, up front, and written down: `build`/`release` assemble only
+# the modules listed as moved, the publish steps publish exactly that list, and
+# the workflow skips JDK/SDK/Gradle entirely when the list is empty. One verdict
+# for all three, so what was built and what is published cannot disagree.
+PLAN_DIR="$DIST_DIR/.gate"
+
+_plan() {
+  local n flavor asset image moved=0 total=0
+  rm -rf "$PLAN_DIR"; mkdir -p "$PLAN_DIR"
+  _trigger_paths > "$PLAN_DIR/.triggers"
+  : > "$PLAN_DIR/.moved"
+  while IFS='|' read -r n flavor asset image; do
+    total=$((total + 1))
+    if _gate_skip "$n" "$asset" "$PLAN_DIR"; then
+      log "gate: $asset unchanged since the release — not building"
+    else
+      moved=$((moved + 1))
+      log "gate: $asset source moved — building"
+      printf '%s|%s|%s|%s\n' "$n" "$flavor" "$asset" "$image" >> "$PLAN_DIR/.moved"
+    fi
+  done < <(_libs)
+  # Written last: a plan interrupted halfway has no .head and is recomputed.
+  git -C "$ROOT" rev-parse HEAD > "$PLAN_DIR/.head"
+  log "gate: $moved of $total library APKs moved"
+  if [ -n "${GITHUB_OUTPUT:-}" ]; then
+    if [ "$moved" -eq 0 ]; then echo "skip=true"; else echo "skip=false"; fi >> "$GITHUB_OUTPUT"
+  fi
+}
+
+# The plan for THIS commit, computed now if the workflow did not already. A plan
+# from another HEAD (a local dist/ left behind) describes other source.
+_ensure_plan() {
+  [ -f "$PLAN_DIR/.head" ] \
+    && [ "$(cat "$PLAN_DIR/.head")" = "$(git -C "$ROOT" rev-parse HEAD)" ] \
+    || GITHUB_OUTPUT= _plan
+}
+
 # The one scan, shared by settings.gradle / app/build.gradle / regen.sh.
 # Emits: "<module>|<flavorName>|<Asset-Name.apk>|<ghcr-image>" per line.
 _libs() {
@@ -314,17 +357,23 @@ _enforce_signature() {
   log "sign-enforce: OK $(basename "$apk")"
 }
 
-# $1 = debug|release. Assembles every flavor in ONE gradle invocation (the
-# configuration phase dominates here, so 24 separate invocations would cost
-# minutes for nothing) and collects each flavor's APK under its asset name.
+# $1 = debug|release. Assembles every MOVED flavor (see _plan) in ONE gradle
+# invocation (the configuration phase dominates here, so separate invocations
+# would cost minutes for nothing) and collects each flavor's APK under its
+# asset name.
 _assemble() {
   local variant="$1" tasks=() n flavor asset image cap
   mkdir -p "$DIST_DIR"
+  _ensure_plan
   while IFS='|' read -r n flavor asset image; do
     cap="$(printf '%s' "${flavor:0:1}" | tr '[:lower:]' '[:upper:]')${flavor:1}"
     tasks+=(":app:assemble${cap}$( [ "$variant" = release ] && echo Release || echo Debug )")
-  done < <(_libs)
-  log "Assembling ${#tasks[@]} library APKs ($variant)…"
+  done < "$PLAN_DIR/.moved"
+  if [ "${#tasks[@]}" -eq 0 ]; then
+    log "gate: no library APK's source moved — nothing to assemble"
+    return 0
+  fi
+  log "Assembling ${#tasks[@]} library APKs ($variant): ${tasks[*]}"
   _gradle "${tasks[@]}"
 
   local out count=0
@@ -334,11 +383,16 @@ _assemble() {
     cp -f "$out" "$DIST_DIR/$asset"
     _enforce_signature "$DIST_DIR/$asset"
     count=$((count + 1))
-  done < <(_libs)
+  done < "$PLAN_DIR/.moved"
   log "$count library APKs → $DIST_DIR/"
 }
 
 case "$CMD" in
+  plan)
+    # Needs gh, jq, git and python3 only — no JDK, no SDK, no gradle — so the
+    # workflow runs it before installing any of those.
+    _plan
+    ;;
   build)
     log "Building Cloud Libs APKs (debug)…"
     _resolve_signing
@@ -360,18 +414,12 @@ case "$CMD" in
     SHORT="${SHA:0:8}"
     reg="$(_bj "['release']['ghcr']['registry']")/$(_bj "['release']['ghcr']['namespace']")"
     mt="$(_bj "['release']['ghcr']['media_type']")"
-    PATHS_DIR="$(mktemp -d)"
-    trap 'rm -rf "$PATHS_DIR"' EXIT
-    _trigger_paths > "$PATHS_DIR/.triggers"
+    # The SAME plan the build and the release publish use, so GHCR and the
+    # release cannot drift into disagreeing about which build a tag names. The
+    # store pulls from GHCR, so an ungated push here would put the update
+    # prompt back on the phone even with the release gated.
+    _ensure_plan
     while IFS='|' read -r n flavor asset image; do
-      # The SAME verdict the release publish uses, against the same sidecar, so
-      # GHCR and the release cannot drift into disagreeing about which build a
-      # tag names. The store pulls from GHCR, so an ungated push here would put
-      # the update prompt back on the phone even with the release gated.
-      if _gate_skip "$n" "$asset" "$PATHS_DIR"; then
-        log "gate: $image unchanged since the release — not repushing"
-        continue
-      fi
       # CREATE WITH GITHUB_TOKEN, UPDATE WITH THE PAT — each token for the one
       # thing it can do.
       #
@@ -401,7 +449,7 @@ case "$CMD" in
     --annotation "org.opencontainers.image.source=$(_ghcr_source)" )
       _ghcr_publish "$image"
       log "pushed ${image}:latest + :sha-${SHORT}"
-    done < <(_libs)
+    done < "$PLAN_DIR/.moved"
     if [ -n "${GHCR_PRIVATE:-}" ]; then
       errlog "these packages are private and will 401 for unauthenticated pulls:"
       for p in $GHCR_PRIVATE; do errlog "  $p"; done
@@ -411,20 +459,13 @@ case "$CMD" in
     ;;
   gh-release)
     log "Publishing library APKs to GitHub Releases (rolling latest)…"
-    PATHS_DIR="$(mktemp -d)"
-    trap 'rm -rf "$PATHS_DIR"' EXIT
-    _trigger_paths > "$PATHS_DIR/.triggers"
+    _ensure_plan
     # One upload call with every asset that MOVED: `gh release upload` takes N
     # files, and a per-file loop would re-resolve the release 24 times.
-    files=(); gated_modules=(); gated_assets=(); held=0
+    files=(); gated_modules=(); gated_assets=()
     while IFS='|' read -r n flavor asset image; do
-      if _gate_skip "$n" "$asset" "$PATHS_DIR"; then
-        held=$((held + 1))
-        continue
-      fi
       gated_modules+=("$n"); gated_assets+=("$asset"); files+=("$DIST_DIR/$asset")
-    done < <(_libs)
-    [ "$held" -eq 0 ] || log "gate: $held library APKs unchanged since the release — not republished"
+    done < "$PLAN_DIR/.moved"
     if [ "${#files[@]}" -eq 0 ]; then
       log "gate: no library APK's source moved — nothing to publish"
       exit 0
@@ -462,7 +503,7 @@ case "$CMD" in
     while [ "$i" -lt "${#gated_assets[@]}" ]; do
       sh "$GATE" stamp "$GATE_APP" \
          --asset "${gated_assets[$i]}" \
-         --paths-from "$PATHS_DIR/${gated_modules[$i]}"
+         --paths-from "$PLAN_DIR/${gated_modules[$i]}"
       i=$((i + 1))
     done
     log "published ${#files[@]} assets + sidecars"
@@ -492,6 +533,6 @@ case "$CMD" in
     _module_paths "$MODULE" "$PATHS_DIR/.triggers"
     ;;
   help|*)
-    echo "Usage: build.sh <build|release|clean|oras-push|gh-release|list|module-paths>"
+    echo "Usage: build.sh <plan|build|release|clean|oras-push|gh-release|list|module-paths>"
     ;;
 esac

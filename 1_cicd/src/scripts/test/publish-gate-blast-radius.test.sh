@@ -387,6 +387,53 @@ else
     fail "gate with no readable release did not publish: '$out'"
 fi
 
+# ══════════════════════════════════════════════════════════════════
+# 6. A TESTER IS NOT AN INPUT — trigger and identity exclude it together
+# ══════════════════════════════════════════════════════════════════
+# Run 34850225588 republished the SuperApp for a commit touching only
+# aa_cloud-superapp/test/. The exclusion must hold in BOTH the trigger list and
+# the identity: dropped from one alone, the bug comes back from the other side.
+TFIX="$WORK/tester-fixture"
+mkdir -p "$TFIX/1_cicd/src/cicd" "$TFIX/app/src" "$TFIX/app/test"
+cat > "$TFIX/1_cicd/src/cicd/ship-app.yml" <<'YAML'
+on:
+  push:
+    paths:
+      - "app/**"
+      - "!app/test/**"
+env:
+  WORK_DIR: app
+YAML
+echo one > "$TFIX/app/src/main.kt"
+echo one > "$TFIX/app/test/test-main.sh"
+tcommit() { git -C "$TFIX" add -A >/dev/null 2>&1; git -C "$TFIX" -c user.email=t@t -c user.name=t commit -qm "$1" >/dev/null 2>&1; }
+tidentity() { CLOUD_ANDROID_ROOT="$TFIX" sh "$IDENTITY" compute app; }
+git -C "$TFIX" init -q; tcommit base
+before="$(tidentity)"
+echo two > "$TFIX/app/test/test-main.sh"; tcommit tester
+after_tester="$(tidentity)"
+echo two > "$TFIX/app/src/main.kt"; tcommit source
+after_source="$(tidentity)"
+[ -n "$before" ] && [ "$before" = "$after_tester" ] \
+    && ok "a tester-only commit leaves the identity where it was" \
+    || fail "a tester-only commit moved the identity ($before → $after_tester)"
+[ "$after_tester" != "$after_source" ] \
+    && ok "a source commit beside the excluded tester directory still moves the identity" \
+    || fail "excluding test/ also hid a real source change"
+
+for workflow in "$ROOT"/1_cicd/src/cicd/ship-*.yml; do
+    name="$(basename "$workflow")"
+    work_dir="$(awk '/^  WORK_DIR:/ { print $2; exit }' "$workflow")"
+    tests_dir="$(jq -r '.tests.shell.dir // empty' "$ROOT/$work_dir/build.json" 2>/dev/null)"
+    [ -n "$tests_dir" ] && [ -d "$ROOT/$work_dir/$tests_dir" ] || continue
+    last="$(awk '/^    paths:$/ { p = 1; next } p && /^      - "/ { e = $0 } p && NF && !/^      / { exit } END { print e }' "$workflow")"
+    [ "$last" = "      - \"!$work_dir/$tests_dir/**\"" ] \
+        || fail "$name: last trigger entry is '$last', not the exclusion of $work_dir/$tests_dir"
+    sh "$IDENTITY" paths "$work_dir" 2>/dev/null | grep -qx "$work_dir/$tests_dir\(/.*\)\{0,1\}\|$work_dir" \
+        && fail "$name: the identity still hashes $work_dir/$tests_dir (or the whole $work_dir tree)"
+done
+[ "$FAILURES" -eq 0 ] && ok "every declared tester directory is excluded from its trigger list AND its identity"
+
 printf '\n'
 if [ "$FAILURES" -eq 0 ]; then
     printf 'PASS — the gate weighs each library APK on its own source\n'
