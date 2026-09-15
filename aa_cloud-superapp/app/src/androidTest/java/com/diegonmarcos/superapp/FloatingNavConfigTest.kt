@@ -36,9 +36,9 @@ class FloatingNavConfigTest {
 
     @Test fun line1IsTheThreeHubs() {
         val byLabel = cfg.parents.associateBy { it.label }
-        assertEquals("self", byLabel["Cloud SuperApp"]?.target)
-        assertEquals("app:com.diegonmarcos.ide", byLabel["Cloud IDE"]?.target)
-        assertEquals("cloud-ide", byLabel["Cloud IDE"]?.installApp)
+        assertEquals("self", byLabel["cloud-superapp"]?.target)
+        assertEquals("app:com.diegonmarcos.ide", byLabel["cloud-ide"]?.target)
+        assertEquals("cloud-ide", byLabel["cloud-ide"]?.installApp)
         assertEquals("app:com.diegonmarcos.comms", byLabel["Cloud Comms"]?.target)
         assertEquals("cloud-comms", byLabel["Cloud Comms"]?.installApp)
     }

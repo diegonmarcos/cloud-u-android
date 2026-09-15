@@ -250,7 +250,13 @@ regen_constellation() {
                     | .[0].value ) as $f
                 | ('"$variant_assets"') as $assets
                 | $acc + [ ( { id: $id,
-                             label: ($f.label // $id),
+                             # .name, the SAME field the top-level branch reads
+                             # (#351). Fork-apps used to declare their name as
+                             # .forks.<key>.label, a second field for one fact, and
+                             # it is where "Cloud Chat (Mattermost)" and
+                             # "Messenger (Element)" lived while every top-level
+                             # app already said cloud-<x>.
+                             label: (.name // $id),
                              package: $f.app_id,
                              alt_id: ($f.alt_id // null),
                              registry: $cg.registry,

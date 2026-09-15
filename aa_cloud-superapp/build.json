@@ -615,24 +615,24 @@
       },
       {
         "_doc_fleet": "The four fleet apps the reordered handles now default to, added 2026-09-10 so the picker shows them under their real names at the top of the list instead of leaving the owner to find them among every installed app. Packages are quoted from ui.external_apps, which is where this repository keeps app identity — cloud-mail is com.diegonmarcos.comms.mail (the applicationId did NOT move when it became a Sterna clone), and cloud-camera is cld.camera, our renamed GrapheneOS Camera build. Obsidian and Bitwarden stay in this list although they are no longer defaults: a favourite is what you can pick, not what you get.",
-        "label": "Cloud Mail",
+        "label": "cloud-mail",
         "package": "com.diegonmarcos.comms.mail"
       },
       {
-        "label": "Cloud Me",
+        "label": "cloud-me",
         "package": "com.diegonmarcos.cloudme"
       },
       {
-        "label": "Cloud Media Center",
+        "label": "cloud-media-center",
         "package": "com.diegonmarcos.mediacenter"
       },
       {
-        "label": "Cloud Camera",
+        "label": "cloud-camera",
         "package": "cld.camera"
       },
       {
         "_doc": "Added when the Drive surface left the SuperApp and became its own APK (#302/#304). The left handle's down gesture used to be `action:section:drive`; there is no drive section any more, so the gesture now launches the application — and a gesture may only name a package this picker offers, which is why the entry has to exist here and not only in the handle.",
-        "label": "Cloud Drive",
+        "label": "cloud-drive",
         "package": "com.diegonmarcos.clouddrive"
       }
     ],
@@ -2444,7 +2444,7 @@
               },
               {
                 "id": "element",
-                "label": "Messenger Matrix",
+                "label": "cloud-matrix",
                 "icon": "ic_p_chat_matrix",
                 "target": "extapp:cloud-matrix",
                 "_doc": "Opens the standalone Cloud-Matrix app (ac_cloud-matrix, com.diegonmarcos.comms.matrix) via extapp:cloud-matrix — installed → launches; absent → install via Configs ▸ Constellation. The Cloud-Comms hub is decommissioned; the matrix fork is now its own constellation app. Replaces the old app://im.vector.app launcher."
@@ -2510,7 +2510,7 @@
               {
                 "_doc": "Cloud Office (ac_cloud-office). This tile label and ui.external_apps[cloud-office].label are the two names the fleet owns. Android's own launcher and the app's title bar will keep saying \"Collabora Office\" until the source build in ac_cloud-office first publishes, because the APK on the phone today is still the mirrored upstream one and its manifest name is not ours to change. The rebrand reaches the name upstream generates from --with-app-name only once that build runs, which needs build.json::build.host and it is null.",
                 "id": "sheets",
-                "label": "Cloud Office",
+                "label": "cloud-office",
                 "icon": "ic_sheets",
                 "target": "extapp:cloud-office"
               },
@@ -2594,13 +2594,13 @@
               {
                 "_doc": "app:// resolves MAIN/LAUNCHER for the package and adds FLAG_ACTIVITY_NEW_TASK (see ShellActivity.handleTarget), which lands on .MainActivity — the app door, own taskAffinity, own Overview card. .HomeActivity (the launcher door) is a different task and is not reachable this way, which is the point.",
                 "id": "cloud-superapp",
-                "label": "Cloud SuperApp",
+                "label": "cloud-superapp",
                 "icon": "ic_superapp_d",
                 "target": "app://com.diegonmarcos.superapp"
               },
               {
                 "id": "ai-tmx",
-                "label": "Cloud Terminal",
+                "label": "cloud-terminal-nix",
                 "icon": "ic_terminal",
                 "target": "app://com.termux.nix?fallback=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.termux.nix"
               },
@@ -7099,7 +7099,6 @@
     "external_apps": [
       {
         "id": "cloud-dialer",
-        "label": "Cloud Dialer (Fossify)",
         "folder": "prod_phone",
         "hub_package": "com.diegonmarcos.comms.dialer",
         "install_package": "com.diegonmarcos.comms.dialer",
@@ -7109,7 +7108,6 @@
       {
         "_doc": "Cloud Contacts — standalone NATIVE multi-channel people hub (ac_cloud-contacts, WebView/Tailwind, cloud-news pattern — NOT a Fossify fork). Merges device (local + Gmail) contacts with LinkedIn/Instagram imports; the person screen is a channel switchboard (WhatsApp/Telegram/Matrix/Cloud Chat/Cloud Mail/SMS/Cloud Dialer/LinkedIn/Instagram) driven by build.json::channels — no default call action. install_apk_url mirrors ac_cloud-contacts/build.json::release.gh_release (asset Cloud-Contacts.apk, published by ship-cloud-contacts.yml). Signs with the shared constellation key.",
         "id": "cloud-contacts",
-        "label": "Cloud Contacts",
         "folder": "prod_phone",
         "hub_package": "com.diegonmarcos.cloudcontacts",
         "install_package": "com.diegonmarcos.cloudcontacts",
@@ -7118,7 +7116,6 @@
       },
       {
         "id": "cloud-chat",
-        "label": "Cloud Chat (Mattermost)",
         "folder": "prod_chat",
         "hub_package": "com.diegonmarcos.comms.chat",
         "install_package": "com.diegonmarcos.comms.chat",
@@ -7128,7 +7125,6 @@
       {
         "_doc": "Cloud Mail — since 2026-09-09 a CLONE of Sterna Mail (ac_cloud-mail, commits 8b7ca107d/e7274372f), no longer the FairEmail fork the label used to name. The package ids below did NOT move: applicationId stays com.diegonmarcos.comms.mail so the replacement installs over what is in the field, and app.sterna is only the clone's R/BuildConfig namespace, never a package on any device. That is the whole reason every lookup in this file keys on package and not on this label.",
         "id": "cloud-mail",
-        "label": "Cloud Mail (Sterna)",
         "folder": "prod_mail",
         "hub_package": "com.diegonmarcos.comms.mail",
         "install_package": "com.diegonmarcos.comms.mail",
@@ -7137,7 +7133,6 @@
       },
       {
         "id": "cloud-matrix",
-        "label": "Messenger (Element)",
         "folder": "prod_chat",
         "hub_package": "com.diegonmarcos.comms.matrix",
         "_doc_alt_package": "The store ships a resigned STOCK Element X, so the installed applicationId is io.element.android.x, not hub_package (same fact the fleet records as alt_id). Without this the Suite/Comms tile can't see the installed app and offers a fresh install of something already on the phone. Remove once the matrix fork is repackaged to hub_package.",
@@ -7148,7 +7143,6 @@
       },
       {
         "id": "cloud-ide",
-        "label": "Cloud-IDE",
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.ide",
         "install_package": "com.diegonmarcos.ide",
@@ -7162,7 +7156,6 @@
       {
         "_doc": "Cloud-Nav — the dedicated maps/navigation/tracker app (ac_cloud-nav). libs:maps was MOVED out of the SuperApp into this standalone app, so the Cloud 'Navigation' tile (target extapp:cloud-nav) opens it if installed, else downloads + installs install_apk_url. Single app (no forks), so the forkless extapp:cloud-nav resolves straight to hub_package. install_apk_url mirrors ac_cloud-nav/build.json::release.gh_release (asset Cloud-Nav.apk, published by ship-cloud-nav.yml).",
         "id": "cloud-nav",
-        "label": "Cloud-Nav",
         "folder": "prod_maps",
         "hub_package": "com.diegonmarcos.cloudnav",
         "install_package": "com.diegonmarcos.cloudnav",
@@ -7171,7 +7164,6 @@
       },
       {
         "id": "cloud-agenda",
-        "label": "Cloud-Agenda",
         "folder": "prod_plan",
         "hub_package": "com.diegonmarcos.cloudagenda",
         "install_package": "com.diegonmarcos.cloudagenda",
@@ -7180,7 +7172,6 @@
       },
       {
         "id": "cloud-news",
-        "label": "Cloud-News",
         "folder": "hlth_news",
         "hub_package": "com.diegonmarcos.cloudnews",
         "install_package": "com.diegonmarcos.cloudnews",
@@ -7190,7 +7181,6 @@
       {
         "_doc": "Cloud-Keyboard — the standalone IME app (ac_cloud-keyboard). The vendored HeliBoard (libs:keyboard) was extracted into this standalone APK, so Configs → Keyboard (action extapp:cloud-keyboard) opens its SettingsActivity if installed, else downloads + installs install_apk_url. Its SettingsActivity carries MAIN/LAUNCHER (libs/keyboard manifest), so getLaunchIntentForPackage resolves the forkless extapp:cloud-keyboard straight to hub_package. install_apk_url mirrors ac_cloud-keyboard/build.json::release.gh_release (asset Cloud-Keyboard.apk, published by ship-cloud-keyboard.yml). Signs with the shared constellation key.",
         "id": "cloud-keyboard",
-        "label": "Cloud-Keyboard",
         "folder": "sys_keyboards",
         "hub_package": "com.diegonmarcos.cloudkeyboard",
         "install_package": "com.diegonmarcos.cloudkeyboard",
@@ -7200,7 +7190,6 @@
       {
         "_doc": "Cloud-Wallet — standalone cards/passes/tickets app (ac_cloud-wallet). libs:wallet (Compose card-stack deck) was MOVED out of the SuperApp into this standalone APK; the Cloud 'Wallet' tile (target extapp:cloud-wallet) opens it if installed, else downloads + installs install_apk_url. Single app (no forks), so the forkless extapp:cloud-wallet resolves straight to hub_package. install_apk_url mirrors ac_cloud-wallet/build.json::release.gh_release (asset Cloud-Wallet.apk, published by ship-cloud-wallet.yml). Signs with the shared constellation key (vault A0_keys/providers/android/release.jks).",
         "id": "cloud-wallet",
-        "label": "Cloud-Wallet",
         "folder": "sys_security",
         "hub_package": "com.diegonmarcos.cloudwallet",
         "install_package": "com.diegonmarcos.cloudwallet",
@@ -7210,7 +7199,6 @@
       {
         "_doc": "Cloud-Me — the personal-administration app (ac_cloud-me): Buro / Agenda / Profile / Projects / Wallet, with Fin under Buro and Health under Projects. It owns what MyFin and MyHealth used to be here, which is why several tiles point at it: Tools 'Me' opens it plain, and every Projects Me tile carries a destination (page:buro/summary, page:projects/health, page:projects/studying, page:projects/trips). page:buro/fin is no longer among them — the owner dropped the MyFin tile, and Buro > Fin is now reached from inside Cloud-Me. Like cloud-wallet it is a standalone constellation APK with no forks, so extapp:cloud-me resolves straight to hub_package; the Cloud tile opens it when installed and otherwise downloads install_apk_url. install_apk_url mirrors ac_cloud-me/build.json::release.gh_release (asset Cloud-Me.apk, published by ship-cloud-me.yml). Shares the constellation signing key.",
         "id": "cloud-me",
-        "label": "Cloud-Me",
         "folder": "sys_settings",
         "hub_package": "com.diegonmarcos.cloudme",
         "install_package": "com.diegonmarcos.cloudme",
@@ -7220,7 +7208,6 @@
       {
         "_doc": "Cloud-Browser — standalone WebView browser app (ac_cloud-browser). libs:browser (BrowserHostFragment + multi-tab BrowserTabPrefs) was MOVED out of the SuperApp into this standalone APK; the Tools 'Browser' tile (target extapp:cloud-browser) opens it if installed, else downloads + installs install_apk_url. Also handles http/https VIEW intents (declared in its manifest) so any app can open links in it. install_apk_url mirrors ac_cloud-browser/build.json::release.gh_release (asset Cloud-Browser.apk, published by ship-cloud-browser.yml). Signs with the shared constellation key.",
         "id": "cloud-browser",
-        "label": "Cloud-Browser",
         "folder": "prod_web",
         "hub_package": "com.diegonmarcos.cloudbrowser",
         "install_package": "com.diegonmarcos.cloudbrowser",
@@ -7230,7 +7217,6 @@
       {
         "_doc": "Cloud-Vault — standalone Vaultwarden client app (ac_cloud-vault). Hosts vault.diegonmarcos.com (self-hosted Vaultwarden) in a dedicated BrowserHostFragment APK; the Cloud 'Vault' tile (target extapp:cloud-vault) opens it if installed, else downloads + installs install_apk_url. install_apk_url mirrors ac_cloud-vault/build.json::release.gh_release (asset Cloud-Vault.apk, published by ship-cloud-vault.yml). Signs with the shared constellation key.",
         "id": "cloud-vault",
-        "label": "Cloud-Vault",
         "folder": "sys_security",
         "hub_package": "com.diegonmarcos.cloudvault",
         "install_package": "com.diegonmarcos.cloudvault",
@@ -7240,7 +7226,6 @@
       {
         "_doc": "C3-Watchdog — standalone watchdog app (ac_c3-watchdog). Added so the Cloud Tools Primary tile can use extapp:c3-watchdog like every other tile in that group; with no entry here launchExternalApp has no package to open and no APK to offer.",
         "id": "c3-watchdog",
-        "label": "C3-Watchdog",
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.watchdog",
         "install_package": "com.diegonmarcos.watchdog",
@@ -7250,7 +7235,6 @@
       {
         "_doc": "C3-Morpheus — standalone morpheus app (ac_c3-morpheus). Added so the C3 tab strip can use extapp:c3-morpheus; with no entry here launchExternalApp has no package to open and no APK to offer. The applicationId stays com.diegonmarcos.morpheus (the directory and GHCR image carry the c3- prefix, the package id does not). install_apk_url mirrors ac_c3-morpheus/build.json::release.gh_release.asset_name (C3-Morpheus.apk, the arm64 rolling-latest asset — the x86_64 build publishes separately as C3-Morpheus-x86_64.apk, which no phone needs).",
         "id": "c3-morpheus",
-        "label": "C3-Morpheus",
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.morpheus",
         "install_package": "com.diegonmarcos.morpheus",
@@ -7261,7 +7245,6 @@
         "_doc": "C3-WatchTower — standalone analytics app (ac_c3-watchtower). Added so the C3 tab strip's third launch tab can use extapp:c3-watchtower; Sections.externalApp() reads ONLY this array, so without an entry here the tab snacks 'Unknown app: c3-watchtower' AFTER the tap rather than offering the APK. The applicationId is com.diegonmarcos.watchtower: the directory and the GHCR image carry the c3- prefix, the package id does not — the same split ac_c3-watchdog (com.diegonmarcos.watchdog) and ac_c3-morpheus (com.diegonmarcos.morpheus) already record. install_apk_url mirrors ac_c3-watchtower/build.json::release.gh_release.asset_name (C3-WatchTower.apk, the arm64 rolling-latest asset; the x86_64 build publishes separately as C3-WatchTower-x86_64.apk, and ShellActivity re-resolves this flat URL through the fleet's per-ABI assets map via AbiUpdateTag before installing, so the name here is the fallback rather than the decision). BRAND NEW APP: until the first ship run publishes, the not-installed path is the ONLY path.",
         "_doc_identity_copies": "#170 — an app's identity still lives in TWO hand-maintained places: this entry and ac_c3-watchtower/build.json. NOTHING WAS ADDED HERE TO MAKE THAT THREE. data/constellation-fleet.json looks like a third copy and is not: it is generated by data/regen.sh, which scans sibling build.json files for .android.application_id + .release.ghcr, so it was produced by running the script and never typed. No ui.phone_folders keyword restates the package either — PhoneFolders derives the pkg: keyword from `folder`, and a literal keyword there would be a second owner of the same fact.",
         "id": "c3-watchtower",
-        "label": "C3-WatchTower",
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.watchtower",
         "install_package": "com.diegonmarcos.watchtower",
@@ -7271,7 +7254,6 @@
       {
         "_doc": "Cloud Media Center — standalone gallery app (ac_cloud-media-center), a Google-Photos/Samsung-Gallery replacement: on-device MediaStore gallery + PhotoPrism cloud library (WebDAV) + camera-roll auto-backup, plus YouTube (NewPipeExtractor) and mirrored-Instagram profiles. Single-app fork (forkless), so extapp:cloud-media-center resolves straight to hub_package. NOT YET SHIPPED: ac_cloud-media-center has no build engine/CI wired yet (ship-cloud-media-center.yml EXISTS at 1_cicd/src/cicd/ but is not yet regenerated into .github/workflows/, and no build.sh engine exists for the app yet, so nothing builds; no release published), so install_apk_url below is the intended rolling-latest location mirrored from release.gh_release.asset_name but currently 404s until CI produces an artifact. Do not treat this URL as live.",
         "id": "cloud-media-center",
-        "label": "Cloud Media Center",
         "folder": "media_video",
         "hub_package": "com.diegonmarcos.mediacenter",
         "install_package": "com.diegonmarcos.mediacenter",
@@ -7281,7 +7263,6 @@
       {
         "_doc": "Cloud Office (ac_cloud-office) — MID-MIGRATION, and these three fields deliberately still describe the OLD app. Commit 05b0c6c15 ended the mirror: ac_cloud-office (then named ac_cloud-sheets) no longer republishes the official Collabora APK, it is a source build from two pinned Collabora Gerrit revisions, and its build.json declares com.diegonmarcos.cloudoffice + Cloud-Office.apk. NONE OF THAT HAS EVER BEEN BUILT — build.json::build.host is null, and ship-cloud-office.yml exits 1 rather than mirror an app it no longer describes. So the only office artifact that exists is still Cloud-Sheets.apk on the rolling `latest` release, installing com.collabora.libreoffice, and that is what these fields have to name: hub_package is how the launcher decides whether the app is on the phone, and install_apk_url is what the tile downloads. Repointing them at the new identity would make the launcher report a permanently-missing app and hand the owner a 404. `label` is the one field the rebrand CAN reach today, and it has been moved. The Constellation AppStore entry is generated separately by data/regen.sh from ac_cloud-office/build.json, so it already carries the NEW identity and is marked blocked until a build host exists — the two surfaces disagree on purpose, each naming the app it can actually act on. WHEN THE SOURCE BUILD FIRST PUBLISHES: hub_package/install_package/install_apk_url move here in one edit, and the owner's phone keeps the old Collabora Office until they uninstall it by hand, because a different package id is a different app to Android.",
         "id": "cloud-office",
-        "label": "Cloud Office",
         "folder": "prod_docs",
         "hub_package": "com.collabora.libreoffice",
         "install_package": "com.collabora.libreoffice",
@@ -7291,7 +7272,6 @@
       {
         "_doc": "Cloud Camera — our own signed build of GrapheneOS Camera, renamed onto cld.camera so it can coexist with an officially-signed GrapheneOS build (ac_cloud-camera/build.json::android.application_id and app/build.gradle.kts both say cld.camera). Added so the Cloud ▸ Apps ▸ Tools Primary tile can use extapp:cloud-camera like every other tile in that row; with no entry here launchExternalApp has no package to open and no APK to offer, exactly the gap the c3-watchdog entry above was written to close. install_apk_url mirrors ac_cloud-camera/build.json::release.gh_release (asset Cloud-Camera.apk on the rolling `latest` release, published by ship-cloud-camera.yml) and was confirmed to answer 200 on 2026-09-10, so this tile offers a real install rather than a dead one. folder=prod_storage is NOT a new placement: cld.camera was already classified into .Storage by a literal `pkg:` keyword there, and that keyword was deleted in this same commit — for our own apps identity and taxonomy are ONE record (see _doc_external_apps, and test-app-identity-resolves.sh T8b, which fails on any keyword that restates a package this list owns).",
         "id": "cloud-camera",
-        "label": "Cloud Camera",
         "folder": "prod_storage",
         "hub_package": "cld.camera",
         "install_package": "cld.camera",
@@ -7301,7 +7281,6 @@
       {
         "_doc": "Cloud Notes — the standalone notes app (ac_cloud-notes, published by ship-cloud-notes.yml). Required by test-app-identity-resolves.sh T1: the Cloud ▸ Data Apps 'Notes' tile targets extapp:cloud-notes, and with no entry here Sections.externalApp returns null and the tile snacks 'Unknown app: cloud-notes' — a tile that fails AFTER the tap. package read from ac_cloud-notes/build.json::android.application_id and app/build.gradle::namespace, which agree (ac_cloud-notes/test/test-cloud-notes-identity.sh N1 is what keeps them agreeing). install_apk_url mirrors ac_cloud-notes/build.json::release.gh_release. NO per-ABI variant exists and none is missing: Markor is pure Java, so this app publishes ONE universal Cloud-Notes.apk and data/regen.sh emits no `assets` map for it — unlike cloud-writer below, whose _doc_abi note does apply. folder=prod_docs ('.Docs & Notes') is the taxonomy half of the same record — PhoneFolders derives the pkg: keyword from it, so NO literal keyword for com.diegonmarcos.cloudnotes may be added to ui.phone_folders (T8b fails on exactly that).",
         "id": "cloud-notes",
-        "label": "Cloud Notes",
         "folder": "prod_docs",
         "hub_package": "com.diegonmarcos.cloudnotes",
         "install_package": "com.diegonmarcos.cloudnotes",
@@ -7312,7 +7291,6 @@
         "_doc": "Cloud Writer — the standalone writing app (ac_cloud-writer, published by ship-cloud-writer.yml since #259). Added because the Cloud ▸ Tools Primary tile targets extapp:cloud-writer, and test-app-identity-resolves.sh T1 makes that an invariant rather than a convention: with no entry here Sections.externalApp returns null and the tile snacks 'Unknown app: cloud-writer' — a tile that fails AFTER the tap, which is the failure mode the C3 tile's _doc calls worse than no tile at all. package read from ac_cloud-writer/build.json::android.application_id and app/build.gradle::namespace, which agree. install_apk_url mirrors ac_cloud-writer/build.json::release.gh_release and answered 200 / 3,276,890 bytes on 2026-09-11. folder=prod_docs ('.Docs & Notes') is the taxonomy half of the same record — PhoneFolders derives the pkg: keyword from it, so NO literal keyword for com.diegonmarcos.cloudwriter may be added to ui.phone_folders (T8b fails on exactly that).",
         "_doc_abi": "install_apk_url names the arm64 asset, which is the ONLY shape this schema has — all 19 entries carry one flat URL. Cloud Writer is the first companion published in two ABI variants (Cloud-Writer.apk / Cloud-Writer-x86_64.apk, both in the generated data/constellation-fleet.json under `assets`), so on an x86_64 device a flat arm64 URL is #43 again: INSTALL_FAILED_NO_MATCHING_ABIS. The per-ABI names are NOT restated here. ShellActivity.launchExternalApp resolves this URL through the fleet manifest's assets map before installing, via the one ABI rule the updater already owns (AbiUpdateTag.resolveFrom, the same rule Fleet.App.abiReleaseUrl uses) — so this field stays the arm64 default and the device picks.",
         "id": "cloud-writer",
-        "label": "Cloud Writer",
         "folder": "prod_docs",
         "hub_package": "com.diegonmarcos.cloudwriter",
         "install_package": "com.diegonmarcos.cloudwriter",
@@ -7322,7 +7300,6 @@
       {
         "_doc": "Cloud Drive (ac_cloud-drive, com.diegonmarcos.clouddrive) — the phone's storage surface as its own icon. It was ui.sections[drive], four tabs deep inside this app; task 302/304 lifted it out, and its Files tab is now a full native local file manager over shared storage rather than a list of remote back ends. Nothing in the SuperApp renders Drive any more: the Data Apps tile and the left handle's `down` sector both launch this package.",
         "id": "cloud-drive",
-        "label": "Cloud Drive",
         "folder": "prod_storage",
         "hub_package": "com.diegonmarcos.clouddrive",
         "install_package": "com.diegonmarcos.clouddrive",
@@ -7649,26 +7626,26 @@
       {
         "_doc": "The one key-holder. libs:keyboard owns AiRouter, the keyboard_ai registry and the PREF_AI_TOKEN_PREFIX slot, and serves TextToolsService under the signature-level CONSTELLATION_DATA permission. Every model, price and key Tokens Fleet shows is read from THIS app over that binder.",
         "package": "com.diegonmarcos.cloudkeyboard",
-        "label": "Cloud Keyboard",
+        "label": "cloud-keyboard",
         "role": "serves"
       },
       {
         "_doc": "Routes through the keyboard and holds its own copy of the Enhance/Resume settings and its own model choice (build.json::mail_ai, MailTextToolsPrefs) — but NO key: it calls enhanceWith/summariseWith and the keyboard spends the credential. Its row says so rather than showing an empty key field that would read as a key it had lost.",
         "package": "com.diegonmarcos.comms.mail",
-        "label": "Cloud Mail",
+        "label": "cloud-mail",
         "role": "routes"
       },
       {
         "_doc": "Cloud Writer — the application the owner asked for, and the only peer with a MODEL PER TOOL: Text Enhance, Grammar Check and Summary each resolve their own, which is what \"here we will define the AI model to do Summary, Grammar Only, Text Enhance\" asked for. It routes exactly as Cloud Mail does — its own registry (ac_cloud-writer/build.json::writer_ai), its own composed prompts, its own provider, and NO key: it calls enhanceWith/summariseWith and the serving app spends the credential.",
         "_doc_not_serves_yet": "cloud-writer is FIRST in TextTools.SERVICE_PACKAGES, so it becomes the server the day its manifest publishes the ITextTools action — not the day this row is edited. This row reads `routes` because that APK does not publish it, for a reason no manifest can fix: the owner's provider key lives in cloud-keyboard's SharedPreferences under cloud-keyboard's uid and no install moves it, so a serving cloud-writer would take Enhance, Summary, Translate and Grammar from every consumer on its first bind and answer 'No API key' to all four. When it does serve, this row becomes `serves` and Cloud Keyboard's drops to `routes` IN THE SAME COMMIT — AiFleetRoster documents that exactly one app serves, and two `serves` rows with one real server makes this console report a peer that cannot answer.",
         "package": "com.diegonmarcos.cloudwriter",
-        "label": "Cloud Writer",
+        "label": "cloud-writer",
         "role": "routes"
       },
       {
         "_doc": "This app. It holds no provider key and no route of its own — it links libs:text-tools only to ASK the keyboard about its routing state. Listed because the owner asked for the fleet view to include this app; 'holds no key, routes nothing, this is the console' is the true answer for it.",
         "package": "com.diegonmarcos.superapp",
-        "label": "Cloud SuperApp",
+        "label": "cloud-superapp",
         "role": "console"
       }
     ],
@@ -7972,12 +7949,12 @@
       "top_offset_dp": 150,
       "width_pct": 90,
       "root": {
-        "label": "Cloud SuperApp",
+        "label": "cloud-superapp",
         "target": "self"
       },
       "parents": [
         {
-          "label": "Cloud IDE",
+          "label": "cloud-ide",
           "target": "app:com.diegonmarcos.ide",
           "install_app": "cloud-ide"
         },
@@ -7987,7 +7964,7 @@
           "_doc": "The Cloud-Comms hub is decommissioned; its 4 ex-forks are standalone apps. This parent now opens SuperApp's Communications section (Mail/Chat/Messenger/Dialer tiles → extapp:cloud-{mail,chat,matrix,dialer}) instead of launching/installing a dead hub. The `comms` context below still bolds this parent + lists the 4 apps (app:com.diegonmarcos.comms.*) when any is foreground."
         },
         {
-          "label": "Cloud Nav",
+          "label": "cloud-nav",
           "target": "app:com.diegonmarcos.cloudnav",
           "install_app": "cloud-nav"
         }

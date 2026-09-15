@@ -243,37 +243,30 @@
     "external_apps": [
       {
         "id": "cloud-wallet",
-        "label": "Cloud Wallet",
         "package": "com.diegonmarcos.cloudwallet"
       },
       {
         "id": "cloud-vault",
-        "label": "Cloud Vault",
         "package": "com.diegonmarcos.cloudvault"
       },
       {
         "id": "cloud-ide",
-        "label": "Cloud IDE",
         "package": "com.diegonmarcos.cloudide"
       },
       {
         "id": "cloud-agenda",
-        "label": "Cloud Agenda",
         "package": "com.diegonmarcos.cloudagenda"
       },
       {
         "id": "cloud-media-center",
-        "label": "Cloud Media Center",
         "package": "com.diegonmarcos.cloudmediacenter"
       },
       {
         "id": "cloud-nav",
-        "label": "Cloud Nav",
         "package": "com.diegonmarcos.cloudnav"
       },
       {
         "id": "cloud-superapp",
-        "label": "Cloud SuperApp",
         "package": "com.diegonmarcos.superapp"
       }
     ],

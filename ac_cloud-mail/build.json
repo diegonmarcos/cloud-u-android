@@ -1,4 +1,5 @@
 {
+  "name": "cloud-mail",
   "vendored_engine": "cloud-mail-engine.sh",
   "_doc_vendored_engine": "CI does NOT run the engine source in 1_cicd/src/scripts — it runs the VENDORED COPY at ./build.sh, from this directory. This key DECLARES that copy relationship so the workflow generator can enforce byte-identity (cloud-android-ship-repo-workflow-engine.sh, step 'verify engine ↔ vendored build.sh parity') and go red on drift. Editing the engine alone used to change nothing at ship time, silently — which is how the ABI gate and the GHCR auto-delete gate came to exist only in the file nobody executes. Re-sync with: cp 1_cicd/src/scripts/<engine> ./build.sh",
   "upstream": {
@@ -88,7 +89,6 @@
     "mail": {
       "app_id": "com.diegonmarcos.comms.mail",
       "_doc_app_id": "SINGLE SOURCE OF TRUTH for the package id. app/build.gradle.kts reads this key at configure time rather than repeating the string, and the engine's identity-assert step compares the built APK against it. Kept identical to what the FairEmail-derived app shipped so the replacement installs as an update rather than as a second Cloud Mail.",
-      "label": "Cloud Mail",
       "image": "cloud-comms-mail",
       "tracker_dir": "ac_cloud-mail",
       "tracker_dir_note": "THIS IS OUR TREE. The gradle project is ac_cloud-mail/ itself (app/, core/, libs/, build.gradle, settings.gradle at its root). materialize-fork clones nothing, it just verifies the tree is there. GPL provenance (Sterna Mail, GPL-3.0) lives in LICENSE, README.md and the upstream block above, which is where a licence obligation belongs — not in a build input.",

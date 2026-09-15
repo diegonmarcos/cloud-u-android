@@ -1,4 +1,5 @@
 {
+  "name": "cloud-matrix",
   "vendored_engine": "cloud-matrix-fork-engine.sh",
   "_doc_vendored_engine": "CI does NOT run the engine source in 1_cicd/src/scripts — it runs the VENDORED COPY at ./build.sh, from this directory. This key DECLARES that copy relationship so the workflow generator can enforce byte-identity (cloud-android-ship-repo-workflow-engine.sh, step 'verify engine ↔ vendored build.sh parity') and go red on drift. Editing the engine alone used to change nothing at ship time, silently — which is how the ABI gate and the GHCR auto-delete gate came to exist only in the file nobody executes. Re-sync with: cp 1_cicd/src/scripts/<engine> ./build.sh",
   "forks": {
@@ -6,7 +7,6 @@
       "app_id": "com.diegonmarcos.comms.matrix",
       "_alt_id_doc": "Real installed package of the resigned STOCK Element X APK (io.element.android.x, extracted from the fdroid release manifest). Detection + install use this, never app_id.",
       "alt_id": "io.element.android.x",
-      "label": "Messenger (Element)",
       "image": "cloud-comms-matrix",
       "upstream_repo": "https://github.com/element-hq/element-x-android.git",
       "tracker_dir": "ac_cloud-matrix",

@@ -202,7 +202,9 @@ echo "== T5: every name the fleet OWNS agrees =="
 # spelled out, so the NEXT rename needs no edit here.
 SUP="$APP/build.json"
 TILE=$(jq -r --arg t "extapp:cloud-$OFFICE_ID" '[.. | objects | select(.target? == $t) | .label] | first // ""' "$SUP")
-ROSTER=$(jq -r --arg i "cloud-$OFFICE_ID" '.ui.external_apps[] | select(.id == $i) | .label' "$SUP")
+# .label // .id: ui.external_apps entries no longer restate the name (#351);
+# Sections.externalApps() shows the id, which IS the name.
+ROSTER=$(jq -r --arg i "cloud-$OFFICE_ID" '.ui.external_apps[] | select(.id == $i) | .label // .id' "$SUP")
 [ -n "$OURS" ] && [ "$OURS" != "null" ] \
   && ok "$OFFICE_DIR/build.json::name is set ($OURS)" \
   || bad "$OFFICE_DIR/build.json::name is missing — the AppStore row would fall back to the id"

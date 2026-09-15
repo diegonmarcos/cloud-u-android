@@ -95,7 +95,7 @@
       },
       {
         "id": "matrix",
-        "label": "Matrix",
+        "label": "cloud-matrix",
         "kind": "handle:matrix",
         "color": "#0DBD8B",
         "glyph": "[m]",
@@ -111,7 +111,7 @@
       },
       {
         "id": "mattermost",
-        "label": "Cloud Chat",
+        "label": "cloud-chat",
         "kind": "handle:mattermost",
         "color": "#1E6FEB",
         "glyph": "MM",
@@ -127,7 +127,7 @@
       },
       {
         "id": "email",
-        "label": "Cloud Mail",
+        "label": "cloud-mail",
         "kind": "email",
         "color": "#60A5FA",
         "glyph": "@",
@@ -158,7 +158,7 @@
       },
       {
         "id": "phone",
-        "label": "Cloud Dialer",
+        "label": "cloud-dialer",
         "kind": "phone",
         "color": "#4ADE80",
         "glyph": "TEL",
