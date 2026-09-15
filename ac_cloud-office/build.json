@@ -173,6 +173,7 @@
     "_doc_host": "SET 2026-09-15, together with patches/0002 and the generated source-build workflow — the three things this key said had to exist first. The toolchain half was already measured: com.android.tools.build:gradle:9.3.0, platforms;android-37.0 and build-tools;37.0.0 are all on stable channels a hosted runner can install; ndkVersion is declared upstream but never fetched, because no externalNativeBuild is wired and packaging keeps the released symbols instead of stripping them.",
     "sdk_packages": [
       "platforms;android-37.0",
+      "platforms;android-36",
       "build-tools;37.0.0"
     ],
     "host_packages": [
@@ -190,7 +191,8 @@
         "dir": "../ab_cloud-libs-shared/libs/text-tools",
         "materialize_to": "android/text-tools"
       }
-    }
+    },
+    "_doc_sdk_packages": "android-37.0 and build-tools 37.0.0 are what upstream's app and lib modules ask for (AGP 9's compileSdk { version = release(37) } resolves to the MINOR package platforms;android-37.0, not platforms;android-37). android-36 is for the shared text-tools module, which declares compileSdk 36 and is built by the AGP 8 apps that share it."
   },
   "text_enhance": {
     "_doc": "Cloud Office is a CALLER of the fleet enhancer, never a second copy of it. Routing, the model registry, the prompt chunking for oversized input, the timeout and the provider API KEY all stay in the Cloud Keyboard behind ITextTools; this app calls enhanceWith(), which exists precisely so a caller can hold its own settings and hand over its whole decision. cloud-mail was split from the keyboard the same way and for the same reason.",

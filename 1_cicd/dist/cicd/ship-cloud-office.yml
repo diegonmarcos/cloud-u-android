@@ -99,7 +99,7 @@ jobs:
         if: steps.gate.outputs.skip != 'true'
         run: |
           set -euo pipefail
-          sh "$WORK_DIR/build.sh" host-deps
+          bash "$WORK_DIR/build.sh" host-deps
           curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz \
             | sudo tar -xz -C /usr/local/bin oras
           curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \

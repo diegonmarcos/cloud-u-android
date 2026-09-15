@@ -201,10 +201,19 @@ step_build() {
     app_id="$(_json '.android.application_id')"
     [ -n "$task" ] && [ -n "$asset" ] && [ -n "$app_id" ] || die "build.json::build.gradle_task, release.gh_release.asset_name or android.application_id is empty"
 
-    if command -v sdkmanager >/dev/null 2>&1; then
-        mapfile -t packages < <(jq -r '.build.sdk_packages[]' "$BUILD_JSON")
-        [ "${#packages[@]}" -eq 0 ] || yes | sdkmanager "${packages[@]}" >/dev/null
-    fi
+    # The SDK packages are INSTALLED, not left to AGP to fetch on demand: an
+    # auto-download depends on accepted licences and on the platform being the
+    # one AGP guesses, and when it does not happen the failure is a compileSdk
+    # error hours into the run. sdkmanager is not on PATH on every image, so it
+    # is resolved from the SDK this build will use.
+    local sdkmanager packages
+    sdkmanager="$(command -v sdkmanager || true)"
+    [ -n "$sdkmanager" ] || sdkmanager="${ANDROID_HOME:-}/cmdline-tools/latest/bin/sdkmanager"
+    [ -x "$sdkmanager" ] || die "sdkmanager not found (PATH, or \$ANDROID_HOME/cmdline-tools/latest/bin)"
+    mapfile -t packages < <(jq -r '.build.sdk_packages[]' "$BUILD_JSON")
+    [ "${#packages[@]}" -gt 0 ] || die "build.json::build.sdk_packages is empty"
+    log "build: sdkmanager ${packages[*]}"
+    yes | "$sdkmanager" "${packages[@]}" >/dev/null
 
     log "build: gradle $task"
     ( cd "$ONLINE_DIR/android" && ./gradlew --no-daemon --stacktrace "$task" ) || die "gradle $task failed"
