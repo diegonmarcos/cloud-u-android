@@ -1,0 +1,45 @@
+# App names guard (#351).
+#
+# Every application in the constellation has ONE name, cloud-<x> (or c3-<x>),
+# declared in its own build.json::name and inherited by every surface. The owner
+# had to ask for this three times, because each earlier fix renamed the copy on
+# screen and left the others.
+#
+# aa_cloud-superapp/test/test-app-names-pattern.sh already runs inside
+# ship-cloud-superapp, but there it CANNOT fail: it reads every application's
+# build.json, and cloud-android-test-engine.sh downgrades any tester that reaches
+# outside its own application to a non-fatal warning. A naming check whose
+# failure is a warning is how the names drifted in the first place, so the same
+# tester runs here, fleet-wide and fatal.
+#
+# Two steps on purpose: the first asserts the property on this tree, the second
+# puts one old name back in a throwaway copy of the tree and requires the tester
+# to go red — a guard only ever observed passing proves nothing.
+name: "app names guard — every application is named cloud-<x>, declared once"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  app-names:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Every application's name follows the pattern on every surface
+        run: bash aa_cloud-superapp/test/test-app-names-pattern.sh
+      - name: The tester still fails when an old name is put back
+        run: |
+          set -eu
+          jq '.name = "Cloud Chat (Mattermost)"' ac_cloud-chat/build.json > /tmp/chat-build.json
+          mv /tmp/chat-build.json ac_cloud-chat/build.json
+          if bash aa_cloud-superapp/test/test-app-names-pattern.sh; then
+            echo "::error::test-app-names-pattern.sh passed with ac_cloud-chat named 'Cloud Chat (Mattermost)' — the guard is vacuous"
+            exit 1
+          fi
+          echo "the tester went red on the reintroduced name, as it must"
