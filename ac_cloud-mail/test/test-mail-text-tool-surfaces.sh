@@ -106,7 +106,8 @@ PY
 # Each screen says which surface it IS, exactly once, and nothing else decides.
 has "$READER" 'rememberTextToolRunner(TextToolSurface.READ)' "S2 the reader declares itself the READ surface"
 has "$COMPOSER" 'rememberTextToolRunner(TextToolSurface.COMPOSE)' "S2 the composer declares itself the COMPOSE surface"
-# Both screens draw their tools as ONE icon row inside the overflow, from ONE composable. The
+# Both screens draw their tools as ONE icon row, from ONE composable -- the reader's under the tags
+# since #293's second pass, never inside its overflow, which lists names. The
 # reader got that row at #293 and the composer was left on the stacked one-full-width-entry-per-tool
 # shape, so for two weeks the same three actions looked different and cost a different number of
 # taps depending on which half of the app you were in — which is the whole of #308. Both call sites
@@ -143,15 +144,14 @@ done
 has "$READER" 'TextTool.RESUME in textTools.surface.tools' "S2 the AI Resume ICON is gated on membership too"
 has "$PANEL" 'Icon(tool.icon, contentDescription = stringResource(tool.label))' \
   "S2 the row's glyph and label come from the declaration, not a second choice per tool"
-# Show Images joined that row (#293) and must not ALSO remain a menu entry — two controls for one
-# action is what the merge removed, and the entry is the copy that would survive unnoticed because
-# it still works. The icon form is asserted present so "gone from the menu" cannot pass by the
-# action having been dropped altogether.
+# Show Images is BOTH (#293, second pass): an icon in the reading row under the tags, and a NAMED
+# entry in the overflow, which the owner asked to list every function as text. The first pass
+# forbade the entry and put the icon inside the menu -- the exact shape that was reported. Both forms
+# are asserted, so neither can be dropped for the other.
 has "$READER" 'contentDescription = stringResource(R.string.message_show_images)' \
-  "S2 Show Images is an icon in the merged row"
-grep -q 'Text(stringResource(R.string.message_show_images))' "$READER" \
-  && bad "S2 Show Images is still a separate menu entry as well as an icon" \
-  || ok "S2 Show Images is not duplicated as a menu entry"
+  "S2 Show Images is an icon in the reading row"
+has "$READER" 'text = { Text(stringResource(R.string.message_show_images)) }' \
+  "S2 Show Images is also a named overflow entry"
 # ...and the panel decides where an outcome is drawn from the same enum rather than naming a tool.
 # Code only: the KDoc above EXPLAINS that RESUME draws itself, and matching the explanation would
 # have failed on the very comment that makes the rule readable.

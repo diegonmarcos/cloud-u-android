@@ -11,7 +11,9 @@
 #   P1  every AI feature's prompt comes from the registry; no prompt string is hardcoded in Kotlin
 #   B1  the AI Resume box never writes back to the stored body
 #   R1  the default reply action resolves to reply-all, and single reply is still reachable
-#   A1  the action row holds what it says it holds, and the count is stated
+#   A1  the TOP ROW is exactly Star, Move to folder, Reply-all, Mark unread (+ overflow)  (#293)
+#   A2  the READING ICON ROW (AI tools, Show images, plain text) is drawn UNDER the tags  (#293)
+#   A3  the OVERFLOW lists every function as a NAMED entry -- no icon row, no icon-only item
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$APP/.."
@@ -101,12 +103,12 @@ has "$META" 'fun removalNeedsConfirming' "T1 the two removals are not equally de
 has "$UI/message/LabelSheet.kt" 'if (removalNeedsConfirming(tag)) confirming = tag' \
   "T1 the sheet confirms a mailbox removal and only that"
 
-# ── U1 the unsubscribe icon is absent when there is nothing to unsubscribe from ──
-# The icon, the banner and the overflow entry share ONE decision, so they cannot disagree about
-# whether the message offers a way out.
-n=$(grep -c 'offeredUnsubscribeAction(unsubscribe, unsubscribeState)' "$SCREEN")
-[ "$n" -ge 2 ] && ok "U1 icon and overflow entry share the offer decision ($n sites)" \
-  || bad "U1 only $n site gates on offeredUnsubscribeAction -- the icon can outlive the offer"
+# ── U1 the unsubscribe entry is absent when there is nothing to unsubscribe from ──
+# The overflow entry is gated on ONE decision, the same one the ViewModel makes for the banner. The
+# bar icon it used to share this with left the bar for Mark unread at #293; the entry and the strip
+# under the sender stayed.
+has "$SCREEN" 'offeredUnsubscribeAction(unsubscribe, unsubscribeState)?.let { action ->' \
+  "U1 the overflow entry is gated on the offer decision"
 has "$VM" 'options?.preferredAction()' "U1 no options means no action means no icon"
 has "$VM" 'UnsubscribeState.Sending, UnsubscribeState.Sent, UnsubscribeState.Queued -> null' \
   "U1 an already-taken way out offers nothing"
@@ -131,7 +133,8 @@ fi
 has "$VM" 'R.array.unsubscribe_body_words' "U2 the words come from a localised resource"
 has "$STR" 'name="unsubscribe_body_words"' "U2 that resource exists"
 # and nothing is contacted before the user has seen what will be contacted
-has "$SCREEN" 'onClick = { viewModel.askUnsubscribe() }' "U2 the icon ASKS, it does not send"
+has "$SCREEN" 'onClick = { menuOpen = false; viewModel.askUnsubscribe() }' "U2 the overflow entry ASKS, it does not send"
+has "$SCREEN" 'onUnsubscribe = viewModel::askUnsubscribe' "U2 the strip under the sender ASKS too"
 has "$VM" '_unsubscribeConfirm.value = PendingUnsubscribe(action, options)' "U2 asking puts up the confirmation"
 
 # ── P1 every prompt is registry data; none is a Kotlin literal ──
@@ -208,16 +211,17 @@ done
 has "$SCREEN" 'TextToolPanel(textTools, onApply = null)' "B1 the shared panel still has nowhere to apply"
 # What is SENT is the quote-free flattened copy, not the stored body.
 has "$SCREEN" 'TextToolScope.receivedScope' "B1 the summary is made from a quote-free COPY"
-# ...and EVERY tool the reader runs reuses that same source rather than building a second one. This
-# used to pin the one literal `TextTool.RESUME` call; since #293 the merged icon row runs whichever
-# tool was tapped through a single site, so the assertion is now the stronger one it was always
-# reaching for: there is exactly ONE run site on this screen and its text argument is the scoped
-# copy. A second site built from the stored body is what B1 exists to catch, and it would now be
-# caught whichever tool it belonged to.
+# ...and EVERY tool the reader runs sends that same source rather than building a second one. Since
+# #293 there are TWO run sites -- the overflow's named entries and the icon row under the tags -- so
+# the assertion is that every run site on this screen sends receivedTextToolSource(...), and that
+# the one function is the quote-free flattened copy. A site built from the stored body is what B1
+# exists to catch, whichever tool it belongs to.
 n=$(grep -c 'textTools\.run(' "$SCREEN")
-m=$(grep -c 'textTools\.run(textToolScope, tool, textToolSource())' "$SCREEN")
-[ "$n" = 1 ] && [ "$m" = 1 ] && ok "B1 the reader's only run site sends the same scoped text" \
-  || bad "B1 $n run sites on the reader, $m sending textToolSource() -- a second, unscoped source"
+m=$(grep -c 'textTools\.run(textToolScope, tool, receivedTextToolSource(' "$SCREEN")
+[ "$n" -ge 1 ] && [ "$n" = "$m" ] && ok "B1 all $n reader run sites send the same scoped text" \
+  || bad "B1 $n run sites on the reader, $m sending receivedTextToolSource() -- a second, unscoped source"
+has "$SCREEN" 'return TextToolScope.receivedScope(if (isHtml) htmlToText(raw) else raw)' \
+  "B1 that one source is the quote-free flattened copy"
 
 # ── the AI plumbing is REUSED, not copied ──
 RUN="$UI/text/TextToolRun.kt"
@@ -290,56 +294,146 @@ has "$UI/compose/ComposeViewModel.kt" 'showAllRecipients = true,' "R1 a reply-al
 has "$UI/compose/ComposeScreen.kt" 'neverCollapse = showAllRecipients,' "R1 the To field honours it"
 has "$UI/compose/ComposeScreen.kt" 'chips.size > 2 && !neverCollapse' "R1 ...so the chips are not folded into a +N"
 
-# ── A1 the action row is what it claims to be, and the count is stated ──
-python3 - "$SCREEN" <<'PY'
+# ── A1/A2/A3 THE READER'S LAYOUT CONTRACT (#293, #308) ──
+# The owner's words: "as top is actions: starred, move folders, reply all, mark as unread (add this
+# icon)", "reading view with the ai icons below the tags + show images + show as plain text ICONS",
+# "right menu should show all functions as LISTS", "LIST NAMES NOT ICONS".
+#
+# This asserts WHERE each control is drawn, not merely that it exists. #293 shipped working code in
+# the wrong place -- the reading icons inside the overflow menu -- the whole suite was green, and the
+# owner had to report it twice. Every check below would have failed on that shape.
+out=$(python3 - "$SCREEN" "$VM" <<'PY'
 import re, sys
 src = open(sys.argv[1], encoding='utf-8').read()
-start = src.index("val resumable = messages.firstOrNull()?.body != null")
-end = src.index("var menuOpen by remember", start)
-row = src[start:end]
-# Two spellings are still matched even though only one is expected to appear. Resume left the bar
-# at #293 -- it is now an icon in the merged reading row inside the overflow -- so a TextTool glyph
-# turning up on the BAR again is the regression this looks for, and it can only be reported if it
-# is still matched. Everything else is a literal Icons.Filled.X.
-icons = re.findall(r'Icons\.(?:AutoMirrored\.)?Filled\.(\w+)|TextTool\.(\w+)\.icon', row)
-# star/unstar is one action drawn two ways; likewise delete-forever, which is no longer on the row.
-seen, order = set(), []
-for literal, tool in icons:
-    i = literal or tool.capitalize()
-    key = {"StarBorder": "Star"}.get(i, i)
-    if key not in seen:
-        seen.add(key)
-        order.append(key)
-want = ["Star", "Label", "Unsubscribe", "ReplyAll"]
-if order != want:
-    print(f"  FAIL: A1 the action row is {order}, expected {want}")
-    sys.exit(1)
-print(f"  ok: A1 the row is {' '.join(order)} + overflow = {len(order) + 1} at most")
-if len(order) + 1 > 6:
-    print(f"  FAIL: A1 {len(order) + 1} actions do not fit a 360dp bar (6 slots)")
-    sys.exit(1)
-print("  ok: A1 it fits the six slots a 360dp bar has")
-# Archive and Delete must still EXIST, in the overflow -- moved, never dropped. Resume is the same
-# story since #293: off the bar, into the merged reading icon row inside the overflow. The vacated
-# slot was deliberately NOT backfilled, so the count above is one lower than it used to be; what
-# this checks is that the action survived the move, because a removal and a relocation look
-# identical on the bar and only one of them is what was asked for.
-for entry in ("R.string.message_archive", "R.string.message_delete"):
-    if f"Text(stringResource({entry}))" not in src and entry not in src:
-        print(f"  FAIL: A1 {entry} was dropped rather than moved to the overflow")
-        sys.exit(1)
-print("  ok: A1 Archive and Delete moved to the overflow rather than being dropped")
-# The row itself became a shared composable at #308, when the composer was put on it too, so the
-# iteration this used to look for now lives in TextToolPanel.kt. What is still the READER's own
-# decision, and all that is checked here, is the per-message veto it passes in: Resume is hidden on
-# a message with no body to summarise. That is the gate the #293 move had to carry across, and it
-# cannot be satisfied by the row merely being drawn.
-if "TextToolIconRow(" not in src or "it == TextTool.RESUME && !resumable" not in src:
-    print("  FAIL: A1 Resume left the bar without arriving in the merged reading row (#293/#308)")
-    sys.exit(1)
-print("  ok: A1 Resume moved into the shared icon row, still gated on there being a body")
+vm = open(sys.argv[2], encoding='utf-8').read()
+fails = 0
+def ok(m): print(f"  ok: {m}")
+def bad(m):
+    global fails
+    fails += 1
+    print(f"  FAIL: {m}")
+def code(block):
+    return "\n".join(l for l in block.splitlines() if not l.strip().startswith(("//", "*", "/*")))
+def body(signature):
+    # A top-level function: from its signature to the first brace closing at column 0.
+    start = src.index(signature)
+    return code(src[start:src.index("\n}\n", start)])
+
+# ── A1 the top row ──
+actions = body("private fun MessageActions(")
+bar, menu = actions[:actions.index("DropdownMenu(")], actions[actions.index("DropdownMenu("):]
+menu = menu[:menu.index("if (labelSheet)")] if "if (labelSheet)" in menu else menu
+buttons = bar.split("IconButton(")[1:]
+glyphs = []
+for b in buttons:
+    m = re.search(r'Icons\.(?:AutoMirrored\.)?Filled\.(\w+)', b)
+    glyphs.append(m.group(1) if m else "?")
+want = ["Star", "DriveFileMove", "ReplyAll", "MarkEmailUnread", "MoreVert"]
+if glyphs == want:
+    ok("A1 the bar is Star, Move to folder, Reply-all, Mark unread, then the overflow")
+else:
+    bad(f"A1 the bar is {glyphs}, expected {want}")
+if len(glyphs) <= 6:
+    ok(f"A1 {len(glyphs)} actions fit the six 48dp slots of a 360dp bar")
+else:
+    bad(f"A1 {len(glyphs)} actions clip off a 360dp bar (6 slots)")
+# Each glyph is wired to the action it names -- a Mark-unread icon that stars the message would pass
+# the glyph check above.
+wiring = {"Star": "viewModel.toggleFlag()", "DriveFileMove": "movePicker = true",
+          "ReplyAll": 'onReply("replyAll", replyTargetId, accountId)',
+          "MarkEmailUnread": "viewModel.markUnread(onBack)", "MoreVert": "menuOpen = true"}
+for glyph, chunk in zip(glyphs, buttons):
+    call = wiring.get(glyph)
+    head = chunk.split("\n")[0]
+    if call and call in head:
+        ok(f"A1 the {glyph} icon calls {call}")
+    elif call:
+        bad(f"A1 the {glyph} icon does not call {call}: {head.strip()}")
+# Mark unread is the REAL action, not a stub: the ViewModel's own function, which the list uses too.
+if re.search(r'\bfun markUnread\(', vm):
+    ok("A1 Mark unread reaches MessageViewModel.markUnread")
+else:
+    bad("A1 MessageViewModel has no markUnread -- the icon is wired to nothing")
+if "TextToolIconRow(" in bar or "TextToolIconRow(" in menu:
+    bad("A1 the reading icon row is on the bar or in the overflow -- it belongs under the tags")
+else:
+    ok("A1 no reading icon row on the bar or in the overflow")
+
+# ── A2 the reading icon row, under the tags ──
+header = body("private fun MessageHeader(")
+try:
+    tags_at, row_at, resume_at = (header.index("MessageTagRow(tags)"), header.index("readingActions()"),
+                                  header.index("ResumeBox("))
+    if tags_at < row_at < resume_at:
+        ok("A2 the reading row is drawn after the tags and before the Resume box")
+    else:
+        bad(f"A2 order is tags@{tags_at} row@{row_at} resume@{resume_at} -- the row is not under the tags")
+except ValueError as missing:
+    bad(f"A2 MessageHeader does not draw the tags, the reading row and the Resume box: {missing}")
+# UNCONDITIONAL: the header's measured height keys the body document, so a row that comes and goes
+# reloads the message under the reader.
+if re.search(r'^        readingActions\(\)$', header, re.M):
+    ok("A2 the row is drawn unconditionally, at the Column's own level")
+else:
+    bad("A2 readingActions() is nested under a condition -- the header height would change mid-read")
+if header.count("readingActions()") == 1:
+    ok("A2 the header draws the row exactly once")
+else:
+    bad(f"A2 the header draws the row {header.count('readingActions()')} times")
+content = body("private fun MessageContent(")
+if "val readingActions: @Composable () -> Unit = {" in content:
+    row = content[content.index("val readingActions: @Composable () -> Unit = {"):]
+    row = row[:row.index("\n    val ", 1)] if "\n    val " in row[1:] else row
+    for needle, why in (
+        ("TextToolIconRow(", "the AI tools are the shared icon row"),
+        ("surface = textTools.surface", "drawn from the READ surface's own declaration"),
+        ("contentDescription = stringResource(R.string.message_show_images)", "Show images is an ICON in it"),
+        ("viewModel::showImagesOnce", "...wired to the one-time show"),
+        ("R.string.message_show_plain_text", "Show as plain text is an ICON in it"),
+        ("viewModel.setPlainText(!plainText)", "...wired to the reading-mode toggle"),
+    ):
+        ok(f"A2 {why}") if needle in row else bad(f"A2 {why} -- missing {needle!r}")
+else:
+    bad("A2 MessageContent does not build the reading row slot")
+n = src.count("readingActions = readingActions,")
+if n == 2:
+    ok("A2 the row reaches the header through ConversationBody, by name, at both hops")
+else:
+    bad(f"A2 'readingActions = readingActions,' appears {n} times, expected 2")
+
+# ── A3 the overflow lists NAMES ──
+if "IconButton(" in menu:
+    bad("A3 the overflow holds an IconButton -- an icon-only control where the owner asked for names")
+else:
+    ok("A3 the overflow holds no IconButton")
+items = menu.split("DropdownMenuItem(")[1:]
+unnamed = [i.strip().split("\n")[0] for i in items if not i.lstrip().startswith("text = {")]
+if items and not unnamed:
+    ok(f"A3 all {len(items)} overflow entries open with a text label")
+else:
+    bad(f"A3 overflow entries without a text label first: {unnamed or 'no entries at all'}")
+for label in ("message_reply", "message_reply_all", "message_forward", "message_flag", "inbox_move_to_folder",
+              "message_mark_unread", "message_labels", "message_show_images", "message_show_plain_text",
+              "message_archive", "message_delete", "message_unsubscribe", "message_view_headers",
+              "message_export_eml", "message_print"):
+    if re.search(r'R\.string\.' + label + r'\b', menu):
+        ok(f"A3 the overflow names {label}")
+    else:
+        bad(f"A3 the overflow does not name {label}")
+if "textTools.surface.tools.forEach" in menu and "text = { Text(stringResource(tool.label)) }" in menu:
+    ok("A3 the AI tools are named entries too, generated from the surface")
+else:
+    bad("A3 the AI tools are not named overflow entries")
+sys.exit(1 if fails else 0)
 PY
-[ $? -eq 0 ] && PASS=$((PASS+4)) || FAIL=$((FAIL+1))
+)
+rc=$?
+echo "$out"
+PASS=$((PASS + $(printf '%s\n' "$out" | grep -c '^  ok:')))
+nfail=$(printf '%s\n' "$out" | grep -c '^  FAIL:')
+FAIL=$((FAIL + nfail))
+# A crash (a signature renamed, an index() that found nothing) prints no FAIL line; count it anyway.
+[ "$rc" -ne 0 ] && [ "$nfail" -eq 0 ] && bad "A1-A3 the layout checker crashed (exit $rc)"
 
 # ── the sender surface shows what exists and omits what does not ──
 has "$META" 'fun messageMetadata' "S1 the metadata rows are one decision"

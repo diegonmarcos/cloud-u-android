@@ -39,11 +39,11 @@ import kotlinx.coroutines.withContext
  * reports into the box under the sender instead. That was already an early return inside the panel
  * — it is stated here instead, once.
  *
- * The flag does NOT mean "absent from the overflow". Since #293 the reader draws Translate, Resume
- * and Show Images as one ICON ROW inside its overflow menu and asks only [TextToolSurface.tools],
- * so Resume is in that menu while `inOverflow = false`. Both readings were true when Resume sat on
- * the toolbar and only one is now; what survives is the one the panel acts on — where the OUTCOME
- * is drawn. Flipping [RESUME] to true would send its summary into the dialog and empty the box.
+ * The flag does NOT mean "absent from the overflow". Since #293 the reader draws its tools as an
+ * ICON ROW under the tags AND as named entries in its overflow, both asking only
+ * [TextToolSurface.tools], so Resume is in that menu while `inOverflow = false`. What the flag still
+ * decides is the one thing the panel acts on — where the OUTCOME is drawn. Flipping [RESUME] to true
+ * would send its summary into the dialog and empty the box.
  */
 enum class TextTool(
     @StringRes val label: Int,
@@ -163,39 +163,45 @@ class TextToolRunner internal constructor(
         }
         busy = tool
         scope.launch {
-            val result = withContext(Dispatchers.IO) {
-                // Bring the owner's existing configuration across the first time, before the
-                // first run reads it. Idempotent, and a no-op once seeded.
-                MailTextToolsPrefs.seedFromKeyboard(context, client)
-                val provider = MailTextToolsPrefs.providerId(context)
-                val model = MailTextToolsPrefs.modelId(context, provider)
-                // THE routing decision, and the only one. Enhance goes to the OpenRouter
-                // provider; Translate goes to the translation library. They are different
-                // engines with different costs, and a reply does not say which one answered.
-                //
-                // Every call carries THIS APP'S settings — its composed prompt, its provider, its
-                // model, its translation target — rather than an empty argument meaning "use
-                // yours". That empty argument was the coupling: it made the keyboard's store the
-                // only store, and cloud-mail's Text pages a view of settings it could not change.
-                when (tool) {
-                    TextTool.ENHANCE -> client.enhanceWith(
-                        text,
-                        MailTextToolsPrefs.enhancePrompt(context),
-                        provider,
-                        model,
-                    )
-                    TextTool.TRANSLATE -> client.translate(text, MailTextToolsPrefs.translateTarget(context))
-                    TextTool.RESUME -> client.summariseWith(
-                        text,
-                        MailTextToolsPrefs.summaryPrompt(context),
-                        MailTextToolsPrefs.summaryWantsBullets(context),
-                        provider,
-                        model,
-                    )
+            // `finally`, because the reader starts a run from inside a pager page (#293) and a page
+            // swiped far enough away leaves composition and cancels its scope mid-call. Without it
+            // `busy` stays set and every tool on the reader stays disabled for good.
+            try {
+                val result = withContext(Dispatchers.IO) {
+                    // Bring the owner's existing configuration across the first time, before the
+                    // first run reads it. Idempotent, and a no-op once seeded.
+                    MailTextToolsPrefs.seedFromKeyboard(context, client)
+                    val provider = MailTextToolsPrefs.providerId(context)
+                    val model = MailTextToolsPrefs.modelId(context, provider)
+                    // THE routing decision, and the only one. Enhance goes to the OpenRouter
+                    // provider; Translate goes to the translation library. They are different
+                    // engines with different costs, and a reply does not say which one answered.
+                    //
+                    // Every call carries THIS APP'S settings — its composed prompt, its provider, its
+                    // model, its translation target — rather than an empty argument meaning "use
+                    // yours". That empty argument was the coupling: it made the keyboard's store the
+                    // only store, and cloud-mail's Text pages a view of settings it could not change.
+                    when (tool) {
+                        TextTool.ENHANCE -> client.enhanceWith(
+                            text,
+                            MailTextToolsPrefs.enhancePrompt(context),
+                            provider,
+                            model,
+                        )
+                        TextTool.TRANSLATE -> client.translate(text, MailTextToolsPrefs.translateTarget(context))
+                        TextTool.RESUME -> client.summariseWith(
+                            text,
+                            MailTextToolsPrefs.summaryPrompt(context),
+                            MailTextToolsPrefs.summaryWantsBullets(context),
+                            provider,
+                            model,
+                        )
+                    }
                 }
+                outcome = TextToolOutcome(tool, result.text, result.error)
+            } finally {
+                busy = null
             }
-            outcome = TextToolOutcome(tool, result.text, result.error)
-            busy = null
         }
     }
 }

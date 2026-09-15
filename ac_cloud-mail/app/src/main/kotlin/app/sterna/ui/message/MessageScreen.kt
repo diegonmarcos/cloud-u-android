@@ -720,7 +720,19 @@ private fun MessageTopBar(
 }
 
 /**
- * The toolbar actions (star / archive / delete / reply / overflow) for the settled message. All
+ * The text a reading action SENDS for [email]. Flattened here, where the reader's own HTML-vs-text
+ * notion already lives, and only ever to be sent: the message keeps its markup, and nothing flattened
+ * is ever written back. The quoted thread is cut — a translation of the whole history is not what was
+ * asked for, and it is what the user pays for by the token. ONE function, because the overflow's
+ * named entries and the icon row under the tags both run tools and must send the same text.
+ */
+private fun receivedTextToolSource(email: Email): String {
+    val (raw, isHtml) = bodySource(email)
+    return TextToolScope.receivedScope(if (isHtml) htmlToText(raw) else raw)
+}
+
+/**
+ * The toolbar actions (star / move / reply-all / mark unread / overflow) for the settled message. All
  * state comes from that page's own [MessageViewModel], so everything updates when the pager settles
  * on a new page.
  */
@@ -795,14 +807,6 @@ private fun MessageActions(
     val textTools = LocalTextToolRunner.current
     val textToolScope = rememberCoroutineScope()
     TextToolPanel(textTools, onApply = null)
-    // Flattened HERE, where the reader's own HTML-vs-text notion already lives, and only ever
-    // to be SENT: the message keeps its markup, and nothing flattened is ever written back.
-    // The quoted thread is cut — a translation of the whole history is not what was asked for,
-    // and it is what the user pays for by the token.
-    fun textToolSource(): String {
-        val (raw, isHtml) = bodySource(loaded.email)
-        return TextToolScope.receivedScope(if (isHtml) htmlToText(raw) else raw)
-    }
     val inTrash by viewModel.inTrash.collectAsStateWithLifecycle()
     val resolvedMailbox by viewModel.mailboxId.collectAsStateWithLifecycle()
     // The tag/label surface (part five) and its state: the mailboxes this message is in, and the
@@ -811,40 +815,29 @@ private fun MessageActions(
     var labelSheet by remember(active.emailId) { mutableStateOf(false) }
     val messageMailboxIds by viewModel.mailboxIds.collectAsStateWithLifecycle()
 
-    // ── THE ACTION ROW, AND WHY IT HOLDS WHAT IT HOLDS ────────────────────────────────────────
+    // ── THE ACTION ROW, AND WHY IT HOLDS WHAT IT HOLDS (#293) ──────────────────────────────────
     //
-    // COUNT FIRST, because this is the thing that breaks quietly. A TopAppBar on a 360 dp phone
-    // spends 48 dp on the navigation icon and leaves ~312 dp, i.e. SIX 48 dp actions. The row had
-    // five (star, archive, delete, reply, overflow). The owner asked for three more — AI Resume
-    // before the star, tag/move after it, and Unsubscribe — which is eight. Eight does not fit,
-    // and a row that does not fit does not warn: it clips the last icons off the edge, and the
-    // ones it eats are the ones added last.
+    // The owner's words: "as top is actions: starred, move folders, reply all, mark as unread". So
+    // the row is, left to right, exactly:
     //
-    // So this is stated rather than discovered. The row is, left to right:
+    //     [Star] [Move to folder] [Reply-all] [Mark unread] [⋮]
     //
-    //     [AI Resume] [Star] [Tag] [Unsubscribe?] [Reply-all] [⋮]
+    // Five slots of the SIX a 360 dp bar has after the navigation icon (48 dp each of ~312 dp), so
+    // nothing clips. What left the bar for it — the Tag icon and the Unsubscribe icon — did not
+    // disappear: both are NAMED entries in the overflow, which lists every function as text, and
+    // Unsubscribe also keeps its strip under the sender.
     //
-    // six at most, five whenever the message offers no way out of a list — which is most messages.
-    // The owner's three positions relative to the star are honoured exactly. What moved OUT to the
-    // overflow is Archive and Delete, and that is the trade being made openly: they are the two
-    // actions on this screen that already have a faster route (a swipe on the list, which is how
-    // triage is actually done), while the three arriving have no route at all if they are not here.
-    // Nothing was dropped and nothing was truncated.
-
-    // AI Resume used to sit here, before the star. It has MOVED into the overflow menu, where it
-    // now shares one icon row with Translate and Show Images (#293) — the owner asked for the
-    // three reading actions together rather than one on the bar and two buried as text entries
-    // further down the same menu. The row that the count above negotiates is one slot shorter for
-    // it, and nothing was promoted into the gap: Archive and Delete stay in the overflow with the
-    // swipe route the comment describes.
+    // The reading actions (AI Resume, Translate, Show images, plain text) are NOT here and NOT in
+    // the overflow as icons: they are an icon row under the tags, drawn by MessageContent.
     //
-    // The condition stays here because it is about the MESSAGE, not the menu: absent while there
-    // is no body to summarise, since an AI icon on a header-only row would spend a network call to
-    // summarise nothing, and absent unless this surface offers Resume at all — it asks the same
-    // list the runner asks, so a tool taken off TextToolSurface.READ loses its button in the same
-    // edit rather than leaving a live control behind a rule that no longer holds.
+    // Resume's condition is about the MESSAGE: absent while there is no body to summarise, and
+    // absent unless this surface offers Resume at all — it asks the same list the runner asks.
     val resumable = messages.firstOrNull()?.body != null &&
         TextTool.RESUME in textTools.surface.tools
+    // Keyed on the settled message so an open menu never carries over across a page settle.
+    var menuOpen by remember(active.emailId) { mutableStateOf(false) }
+    var snoozeSubmenu by remember(active.emailId) { mutableStateOf(false) }
+    var movePicker by remember(active.emailId) { mutableStateOf(false) }
     // Follow (flag) toggle, promoted from the overflow menu to the bar now that
     // the subject no longer takes the title space (Codeberg #44).
     val flagged = loaded.email.isFlagged
@@ -857,35 +850,13 @@ private fun MessageActions(
             tint = if (flagged) MaterialTheme.colorScheme.tertiary else LocalContentColor.current,
         )
     }
-    // Tags — AFTER the star, as asked. It opens the label surface, which offers ADD and REMOVE
-    // over mailboxes and user keywords; it is deliberately NOT called "Move", because on JMAP a
-    // message belongs to several mailboxes at once and "move" is not a thing that can be done to
-    // one. Offered only when the account HAS a mailbox set to edit: on IMAP a message lives in
-    // exactly one folder, and the honest control there is the overflow's "Move to folder".
-    if (folders.isNotEmpty() && messageMailboxIds.isNotEmpty()) {
-        IconButton(onClick = { labelSheet = true }) {
+    // Move to folder (#73) — AFTER the star, as asked. The same picker the overflow entry opens, and
+    // absent under the same condition: no other folder to move to means no picker worth opening.
+    if (folders.isNotEmpty()) {
+        IconButton(onClick = { movePicker = true }) {
             Icon(
-                Icons.AutoMirrored.Filled.Label,
-                contentDescription = stringResource(R.string.message_labels),
-            )
-        }
-    }
-    // Unsubscribe — present ONLY when this message actually offers a way out, which is the same
-    // decision the banner and the overflow entry make (offeredUnsubscribeAction), so the three can
-    // never disagree about whether there is one. An icon on every message that fails on most is
-    // worse than an icon on half of them that always works. It never fires on tap: see
-    // askUnsubscribe, which puts up the confirmation naming what is about to be contacted.
-    offeredUnsubscribeAction(unsubscribe, unsubscribeState)?.let { action ->
-        IconButton(onClick = { viewModel.askUnsubscribe() }) {
-            Icon(
-                Icons.Filled.Unsubscribe,
-                contentDescription = stringResource(
-                    if (action == UnsubscribeAction.OPEN_PAGE) {
-                        R.string.message_unsubscribe_open_page
-                    } else {
-                        R.string.message_unsubscribe
-                    },
-                ),
+                Icons.AutoMirrored.Filled.DriveFileMove,
+                contentDescription = stringResource(R.string.inbox_move_to_folder),
             )
         }
     }
@@ -903,10 +874,15 @@ private fun MessageActions(
             contentDescription = stringResource(R.string.message_reply_all),
         )
     }
-    // Keyed on the settled message so an open menu never carries over across a page settle.
-    var menuOpen by remember(active.emailId) { mutableStateOf(false) }
-    var snoozeSubmenu by remember(active.emailId) { mutableStateOf(false) }
-    var movePicker by remember(active.emailId) { mutableStateOf(false) }
+    // Mark unread — last before the overflow, as asked (#293). The same ViewModel call as the
+    // overflow entry: it clears $seen on the server and leaves the message, so the list shows it
+    // bold again.
+    IconButton(onClick = { viewModel.markUnread(onBack) }) {
+        Icon(
+            Icons.Filled.MarkEmailUnread,
+            contentDescription = stringResource(R.string.message_mark_unread),
+        )
+    }
     // "Save as .eml": the system picker, then the message's exact server bytes into the document it
     // returns. Declared HERE, outside the DropdownMenu: registered inside it, the launcher is
     // disposed when the menu closes on the very tap that opened the picker, and the result has
@@ -963,6 +939,11 @@ private fun MessageActions(
                 onClick = { menuOpen = false; onReply("reply", replyTargetId, accountId) },
             )
             DropdownMenuItem(
+                text = { Text(stringResource(R.string.message_reply_all)) },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.ReplyAll, contentDescription = null) },
+                onClick = { menuOpen = false; onReply("replyAll", replyTargetId, accountId) },
+            )
+            DropdownMenuItem(
                 text = { Text(stringResource(R.string.message_forward)) },
                 leadingIcon = { Icon(Icons.AutoMirrored.Filled.Forward, contentDescription = null) },
                 onClick = { menuOpen = false; onReply("forward", replyTargetId, accountId) },
@@ -974,52 +955,39 @@ private fun MessageActions(
                 leadingIcon = { Icon(Icons.Filled.AttachFile, contentDescription = null) },
                 onClick = { menuOpen = false; onReply("forwardAttachment", replyTargetId, accountId) },
             )
-            // The three reading actions, merged into ONE icon row (#293): Translate, then Resume
-            // under it as asked — which in a row reading left to right is Translate then Resume —
-            // then Show Images. They were scattered before: Resume was an icon on the toolbar,
-            // Translate was a text entry here, and Show Images was another text entry two
-            // dividers further down, so choosing between them meant looking in two places and
-            // scrolling past the reply block.
+            // EVERY function is a NAMED entry in this menu (#293) — the owner's "right menu should
+            // show all functions as LISTS", "LIST NAMES NOT ICONS". The reading actions are ALSO the
+            // icon row under the tags; here they are text, one per row, like everything else. An
+            // icon row inside this menu is exactly what #293 had shipped, and what was reported.
             //
-            // Membership is read from the surface rather than restated here — a tool taken off
-            // TextToolSurface.READ loses its icon with no edit to this screen.
-            //
-            // Enhance is absent for the same reason it always was: it REWRITES a text into a better
-            // version of itself, and this text is a record of what somebody else sent — nothing to
-            // improve and nowhere to save an improvement to. Resume makes a separate shorter text
-            // ABOUT the message instead of touching it, which is why it belongs on a read surface.
-            //
-            // Show Images carries the guard it had as an entry, unchanged: offered only while
-            // images are actually blocked (`!showRemote`) and only outside plain-text mode, and
-            // guarded on `imageMode` rather than `plainText` because the two differ only while
-            // DataStore has not answered, and there a `plainText` guard makes the row contradict
-            // itself. The per-sender allowlist toggle stays a text entry below — it changes the
-            // NEXT message from this sender, which is a different kind of decision from the three
-            // one-tap actions on this message, and it needs its sentence to say so.
+            // The text tools are generated from the surface's own declaration, so a tool taken off
+            // TextToolSurface.READ loses its entry with no edit to this screen. Enhance is absent for
+            // the reason it always was: it rewrites a text, and this one is a record of what somebody
+            // else sent.
+            HorizontalDivider()
+            textTools.surface.tools.forEach { tool ->
+                if (tool == TextTool.RESUME && !resumable) return@forEach
+                DropdownMenuItem(
+                    text = { Text(stringResource(tool.label)) },
+                    leadingIcon = { Icon(tool.icon, contentDescription = null) },
+                    enabled = textTools.busy == null,
+                    onClick = {
+                        menuOpen = false
+                        textTools.run(textToolScope, tool, receivedTextToolSource(loaded.email))
+                    },
+                )
+            }
+            // Show images, once, for this message: offered only while images are actually blocked
+            // (`!showRemote`) and only outside plain-text mode, guarded on `imageMode` rather than
+            // `plainText` because the two differ only while DataStore has not answered, and there a
+            // `plainText` guard makes the menu contradict itself.
             val imagesOnceOffered = !imageMode && !showRemote
-            // Drawn by TextToolIconRow rather than written out here (#308). The row itself is
-            // unchanged — same tools read from the same surface, same Resume veto, same Show Images
-            // icon at the end of the same line — but it now lives in TextToolPanel.kt, so the
-            // composer draws the identical row from the identical code instead of a second
-            // hand-written copy that looks the same the day it is written and drifts afterwards.
-            // That was the whole complaint: the arrangement landed on one surface and not the other.
-            TextToolIconRow(
-                surface = textTools.surface,
-                enabled = textTools.busy == null,
-                skip = { it == TextTool.RESUME && !resumable },
-                trailing = {
-                    if (imagesOnceOffered) {
-                        IconButton(onClick = { menuOpen = false; viewModel.showImagesOnce() }) {
-                            Icon(
-                                Icons.Filled.Image,
-                                contentDescription = stringResource(R.string.message_show_images),
-                            )
-                        }
-                    }
-                },
-            ) { tool ->
-                menuOpen = false
-                textTools.run(textToolScope, tool, textToolSource())
+            if (imagesOnceOffered) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.message_show_images)) },
+                    leadingIcon = { Icon(Icons.Filled.Image, contentDescription = null) },
+                    onClick = { menuOpen = false; viewModel.showImagesOnce() },
+                )
             }
             // Reading mode (#149). The label says what the tap DOES, so it follows the mode actually
             // RENDERED — which is why the entry reads "Show HTML" on a message the setting opened as
@@ -1047,11 +1015,9 @@ private fun MessageActions(
                     onClick = { menuOpen = false; viewModel.setPlainText(!plainText) },
                 )
             }
-            // The per-sender image allowlist. The one-time "Show images" that used to lead this
-            // block now sits in the merged icon row above (#293), which is why only the toggle is
-            // left here: it changes what the NEXT message from this sender does, so it keeps its
-            // full sentence rather than becoming a fourth anonymous icon whose meaning — this
-            // sender, every message, from now on — no tooltip can carry.
+            // The per-sender image allowlist. It changes what the NEXT message from this sender does,
+            // which is why it is not also an icon in the reading row under the tags: its meaning —
+            // this sender, every message, from now on — no tooltip can carry.
             //
             // Stands down in plain-text mode: there is no image to allow, and the toggle would
             // silently change the next message anyway. Guarded on `imageMode`, NOT on `plainText`,
@@ -1081,11 +1047,6 @@ private fun MessageActions(
             // went to the actions the owner named, and these two are the only ones on this screen
             // with a faster route already — a swipe on the message list, which is where triage
             // actually happens. Nothing was dropped; see the count note above the row.
-            //
-            // Resume vacating the bar for the icon row (#293) did NOT bring them back. The row is
-            // still one slot short of holding everything on a 360 dp phone, and filling a freed
-            // slot with an action that already has a swipe would spend it on the cheapest thing
-            // available rather than leave the row with headroom it can be asked for later.
             HorizontalDivider()
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.message_archive)) },
@@ -1128,13 +1089,27 @@ private fun MessageActions(
                 },
             )
             DropdownMenuItem(
+                text = { Text(stringResource(if (flagged) R.string.message_unflag else R.string.message_flag)) },
+                leadingIcon = { Icon(if (flagged) Icons.Filled.Star else Icons.Filled.StarBorder, contentDescription = null) },
+                onClick = { menuOpen = false; viewModel.toggleFlag() },
+            )
+            // Tags and mailboxes (part five): the label sheet, under the condition its bar icon had —
+            // only when the account HAS a mailbox set to edit.
+            if (folders.isNotEmpty() && messageMailboxIds.isNotEmpty()) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.message_labels)) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null) },
+                    onClick = { menuOpen = false; labelSheet = true },
+                )
+            }
+            DropdownMenuItem(
                 text = { Text(stringResource(R.string.message_mark_unread)) },
                 leadingIcon = { Icon(Icons.Filled.MarkEmailUnread, contentDescription = null) },
                 onClick = { menuOpen = false; viewModel.markUnread(onBack) },
             )
             // Move to folder (#73): the same action the list's selection bar carries, so a message
-            // can be filed without going back to the list — the way OUT of Trash or Spam. In the
-            // menu, not a sixth toolbar icon: the bar is already at five on a narrow screen.
+            // can be filed without going back to the list — the way OUT of Trash or Spam. It is also
+            // the bar's second icon (#293); named here too, because this menu lists every function.
             if (folders.isNotEmpty()) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.inbox_move_to_folder)) },
@@ -1814,6 +1789,47 @@ private fun MessageContent(
             )
         }
     }
+    // THE READING ROW (#293), the owner's "reading view with the ai icons below the tags + show
+    // images + show as plain text ICONS". Built HERE, where this page's ViewModel and the reading
+    // decisions already live, and handed down as ONE slot drawn under the tags. Always drawn —
+    // Translate is always on READ — so the header's measured height does not change when an icon
+    // comes or goes: that height keys the body document, and a row that appeared would reload the
+    // message under the reader.
+    //
+    // The reading-mode verdict is this page's own: the same function the overflow asks, over the
+    // same localised lines the page renders (resolved above for the printer).
+    val textTools = LocalTextToolRunner.current
+    val textToolScope = rememberCoroutineScope()
+    val readingEmail = (state as? MessageState.Loaded)?.email
+    val readingModeOffered = remember(readingEmail, printDerivedNotice, printNoContent) {
+        readingEmail != null && readingModesDiffer(readingEmail, printDerivedNotice, printNoContent)
+    }
+    val readingActions: @Composable () -> Unit = {
+        TextToolIconRow(
+            surface = textTools.surface,
+            enabled = textTools.busy == null,
+            skip = { it == TextTool.RESUME && messages.firstOrNull()?.body == null },
+            trailing = {
+                if (!imageMode && !showRemote) {
+                    IconButton(onClick = viewModel::showImagesOnce) {
+                        Icon(Icons.Filled.Image, contentDescription = stringResource(R.string.message_show_images))
+                    }
+                }
+                if (readingModeOffered) {
+                    IconButton(onClick = { viewModel.setPlainText(!plainText) }) {
+                        Icon(
+                            if (plainText) Icons.Filled.Code else Icons.Filled.Description,
+                            contentDescription = stringResource(
+                                if (plainText) R.string.message_show_html else R.string.message_show_plain_text,
+                            ),
+                        )
+                    }
+                }
+            },
+        ) { tool ->
+            readingEmail?.let { textTools.run(textToolScope, tool, receivedTextToolSource(it)) }
+        }
+    }
     val senderRule = SenderRuleOffer(
         entryFor = { isSender, address ->
             senderRuleEntry(
@@ -1897,6 +1913,7 @@ private fun MessageContent(
                 tags = tags,
                 metadata = metadata,
                 onSenderPanelOpened = viewModel::loadMetadataHeaders,
+                readingActions = readingActions,
             )
         }
     }
@@ -1960,6 +1977,8 @@ private fun ConversationBody(
     metadata: List<MetadataRow> = emptyList(),
     /** Pull the routing headers, once, when the sender panel is opened — never when a message is. */
     onSenderPanelOpened: () -> Unit = {},
+    /** The reading icon row, drawn by [MessageHeader] under the tags (#293). Built by MessageContent. */
+    readingActions: @Composable () -> Unit = {},
 ) {
     val msg = messages.firstOrNull() ?: return
     val full = msg.body
@@ -2161,6 +2180,7 @@ private fun ConversationBody(
                 tags = tags,
                 metadata = metadata,
                 onSenderPanelOpened = onSenderPanelOpened,
+                readingActions = readingActions,
             )
         }
         // Spinner until the body has laid out (cached/prefetched mail beats the 500ms, so none flashes).
@@ -2262,6 +2282,8 @@ private fun MessageHeader(
     metadata: List<MetadataRow> = emptyList(),
     /** Pull the routing headers, once, when the sender panel is opened — never when a message is. */
     onSenderPanelOpened: () -> Unit = {},
+    /** The reading icon row (#293), drawn under the tags. Declared LAST and passed by name. */
+    readingActions: @Composable () -> Unit = {},
 ) {
     val sender = msg.header.from.firstOrNull()
     // The user's own message (Sent/Drafts, or sent under one of the account's identities): the sender
@@ -2401,9 +2423,9 @@ private fun MessageHeader(
             }
         }
         // The message's tags, under the sender (part three). Read-only here: a chip says where this
-        // message is and what it is marked with, and the toolbar's tag icon is where those are
-        // edited. Two kinds are drawn and they are told apart, because they are not the same thing —
-        // a mailbox is somewhere the message IS, a keyword is something it is MARKED with, and
+        // message is and what it is marked with, and the overflow's "Tags and mailboxes" entry is
+        // where those are edited. Two kinds are drawn and they are told apart, because they are not
+        // the same thing — a mailbox is somewhere the message IS, a keyword is something it is MARKED with, and
         // removing one of each does very different amounts of damage. See MessageTags.
         //
         // Absent entirely when the message has none, which on a single-folder account is every
@@ -2411,6 +2433,9 @@ private fun MessageHeader(
         if (tags.isNotEmpty()) {
             MessageTagRow(tags)
         }
+        // The reading icon row (#293) — AI Resume, Translate, Show images, plain text — UNDER the
+        // tags as asked, and above the Resume box its Resume icon fills.
+        readingActions()
         // AI Resume — the summary, in a box under the sender, exactly where the owner asked for it.
         // It draws the SHARED runner's state (the same progress and the same verbatim error Enhance
         // and Translate show) and writes nothing back to the message. See ResumeBox.

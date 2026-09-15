@@ -165,7 +165,7 @@ case "$snap" in *TOKEN*|*token*) bad "K1 the settings snapshot carries a token" 
 # ── B1 a received message's stored body is never written ──
 has "$UI/message/MessageScreen.kt" 'TextToolPanel(textTools, onApply = null)' \
   "B1 the reader passes NO apply callback - there is nothing to write the result into"
-recv=$(awk '/fun textToolSource\(\)/,/^    }$/' "$UI/message/MessageScreen.kt")
+recv=$(awk '/fun receivedTextToolSource\(/,/^}$/' "$UI/message/MessageScreen.kt")
 case "$recv" in *TextToolScope.receivedScope*) ok "B1 the reader sends a quote-free COPY" ;;
   *) bad "B1 the reader does not cut the quoted history" ;; esac
 # nothing in the reader's tool path may call a body writer
