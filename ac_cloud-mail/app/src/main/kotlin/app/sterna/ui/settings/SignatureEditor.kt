@@ -15,11 +15,14 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.fromHtml
 import androidx.compose.ui.unit.dp
 import app.sterna.R
 import app.sterna.core.data.account.StoredSignature
@@ -153,22 +156,25 @@ internal fun SignatureListEditor(
  * For a PLAIN one that is [signaturePreview]'s text, unchanged from before #206 — the delimiter line
  * and the signature, exactly as the composer will insert them.
  *
- * For an HTML one it is the SANITISED markup, which is the literal string that goes on the wire. Two
- * things follow that a rendered preview would not give: the owner sees that their `<script>` or
- * `onclick` was dropped rather than silently shipping a signature that means something different from
- * what they wrote, and the preview cannot itself become a place hostile markup executes.
+ * For an HTML one it is the SANITISED markup — the literal string that goes on the wire — RENDERED
+ * (#193). Showing it as source was the defect: the field directly above already shows the source, so
+ * the preview repeated it and an HTML signature never rendered as HTML anywhere in the application.
+ * Rendering the sanitised string rather than the typed one keeps both properties the source preview
+ * had: a dropped `<script>` or `onclick` is visibly absent from the result, and the preview cannot
+ * become a place hostile markup executes — [fromHtml] builds styled text, it runs nothing.
  *
- * ponytail: source, not a rendered WYSIWYG preview. Upgrade path is the reader's own WebView, which
- * already renders this exact sanitised-fragment shape behind JavaScript-off and a default-deny
- * request filter; it is a screen's worth of work and needs a device to judge, so it is not guessed at
- * here.
+ * ponytail: [fromHtml] draws bold, italic, underline, colour, line breaks and links, but not tables or
+ * images. Upgrade path is the reader's own WebView, which already renders this exact sanitised-fragment
+ * shape behind JavaScript-off and a default-deny request filter, if a signature layout needs it.
  */
 @Composable
 private fun SignatureSourcePreview(signature: StoredSignature, delimiter: Boolean) {
+    val html = if (signature.isHtml) signature.renderableHtml() else ""
+    val rendered = remember(html) { if (html.isBlank()) null else AnnotatedString.fromHtml(html) }
     val preview = if (signature.isHtml) {
-        signature.renderableHtml().takeIf { it.isNotBlank() }
+        rendered
     } else {
-        signaturePreview(signature.text, delimiter)
+        signaturePreview(signature.text, delimiter)?.let { AnnotatedString(it) }
     } ?: return
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Text(
@@ -179,10 +185,10 @@ private fun SignatureSourcePreview(signature: StoredSignature, delimiter: Boolea
         Text(
             preview,
             style = MaterialTheme.typography.bodySmall,
-            // Monospace: for the plain shape the delimiter is two hyphens and a trailing space, which
-            // a proportional face makes hard to tell from a decorative dash rule; for the HTML shape
-            // this is source, and source is read in a monospace face.
-            fontFamily = FontFamily.Monospace,
+            // Monospace for the plain shape only: its delimiter is two hyphens and a trailing space,
+            // which a proportional face makes hard to tell from a decorative dash rule. The HTML shape
+            // is rendered text, and keeps the face a recipient's client would give it.
+            fontFamily = if (signature.isHtml) null else FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 2.dp),
         )

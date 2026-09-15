@@ -200,6 +200,12 @@ has "$SIGNATURE" 'fun renderableHtml(): String = if (isHtml) sanitiseReceivedHtm
   "N5 a signature's renderable markup is sanitised at the accessor"
 has "$EDITOR" 'signature.renderableHtml()' \
   "N5 the editor's preview shows the SANITISED markup, so a drop is visible to the owner"
+# #193: an HTML signature must RENDER as HTML. The preview used to print the sanitised markup as
+# monospace source, so no surface in the application ever drew an HTML signature as HTML.
+has "$EDITOR" 'AnnotatedString.fromHtml(html)' \
+  "N5 the editor's preview RENDERS the sanitised HTML signature (#193)"
+has "$EDITOR" 'fontFamily = if (signature.isHtml) null else FontFamily.Monospace' \
+  "N5 only the plain-text preview is drawn as monospace source (#193)"
 # A plain-text signature must not be put through any of it.
 has "$SIGNATURE" 'if (isHtml) sanitiseReceivedHtml(html) else ""' \
   "N5 a plain-text signature is never handed to the HTML pass"
