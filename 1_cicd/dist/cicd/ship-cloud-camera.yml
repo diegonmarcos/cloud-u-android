@@ -111,6 +111,10 @@ jobs:
       - name: Set up Android SDK
         if: steps.gate.outputs.skip != 'true'
         uses: android-actions/setup-android@v3
+        with:
+          # The action's default is "tools platform-tools"; cmdline-tools 16.0 on
+          # the runner no longer has a "tools" package and sdkmanager exits 1.
+          packages: "platform-tools"
 
       - name: Install Android SDK packages
         if: steps.gate.outputs.skip != 'true'
