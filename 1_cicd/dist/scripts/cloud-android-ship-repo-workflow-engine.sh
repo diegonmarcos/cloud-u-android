@@ -113,6 +113,68 @@ unset _bj _app _eng _src
 [ "$_parity_bad" = "0" ] || exit 1
 unset _parity_bad
 
+# ── cicd: render the ship workflows a build mode selects ────────────
+#
+# An app whose build.json declares build.mode does not own a hand-written ship
+# workflow: 1_cicd/src/cicd/ship-<name>.yml is RENDERED from
+# 1_cicd/src/templates/ship-<mode>.yml.in, with the app's directory, name, host,
+# engine and shared module directories substituted from that build.json. It is
+# rendered BEFORE the trigger sync and the published-nothing guard below, so
+# both apply to it exactly as they apply to every other ship workflow.
+#
+# REFUSES to render a mode with no template, a template placeholder with no
+# value, or a mode declared without the host that decides where it runs — a
+# workflow with `runs-on:` left empty is not a workflow GitHub will run.
+log_step "render ship workflows selected by build.json::build.mode"
+python3 - "$CLOUD_ANDROID_ROOT" <<'PYRENDER' || exit 1
+import glob, json, os, re, sys
+
+root = sys.argv[1]
+bad = []
+
+for build_json in sorted(glob.glob(os.path.join(root, "*", "build.json"))):
+    config = json.load(open(build_json))
+    build = config.get("build") if isinstance(config.get("build"), dict) else {}
+    mode = build.get("mode")
+    if not mode:
+        continue
+    app = os.path.basename(os.path.dirname(build_json))
+    template = os.path.join(root, "1_cicd/src/templates", "ship-%s.yml.in" % mode)
+    if not os.path.isfile(template):
+        bad.append("%s/build.json: build.mode %r has no 1_cicd/src/templates/ship-%s.yml.in" % (app, mode, mode))
+        continue
+    missing = [k for k in ("name", "vendored_engine") if not config.get(k)] + ([] if build.get("host") else ["build.host"])
+    if missing:
+        bad.append("%s/build.json: build.mode %r needs %s" % (app, mode, ", ".join(missing)))
+        continue
+
+    modules = build.get("modules") if isinstance(build.get("modules"), dict) else {}
+    module_dirs = sorted(os.path.normpath(os.path.join(app, m["dir"]))
+                         for m in modules.values() if isinstance(m, dict) and m.get("dir"))
+    values = {
+        "APP_DIR": app,
+        "APP_NAME": config["name"],
+        "BUILD_HOST": build["host"],
+        "ENGINE": config["vendored_engine"],
+        "MODULE_TRIGGER_PATHS": "\n".join('      - "%s/**"' % d for d in module_dirs),
+    }
+    text = open(template).read()
+    for key, value in values.items():
+        text = text.replace("@%s@" % key, value)
+    leftover = sorted(set(re.findall(r"@[A-Z_]+@", text)))
+    if leftover:
+        bad.append("%s: template placeholders with no value: %s" % (os.path.basename(template), " ".join(leftover)))
+        continue
+
+    out = os.path.join(root, "1_cicd/src/cicd", "ship-%s.yml" % config["name"])
+    if not os.path.exists(out) or open(out).read() != text:
+        open(out, "w").write(text)
+
+for b in bad:
+    print("  " + b, file=sys.stderr)
+sys.exit(1 if bad else 0)
+PYRENDER
+
 # ── cicd: derive trigger paths from the data that declares them ─────
 #
 # on:push:paths was hand-maintained beside build.json, so it drifted silently

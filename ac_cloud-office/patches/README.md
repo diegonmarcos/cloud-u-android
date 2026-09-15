@@ -100,6 +100,8 @@ a loud failure into a quiet one.
 | # | what | why |
 |---|---|---|
 | 0001 | Text Enhance over the canvas selection (Writer); Settings into the Edit menu | Enhance was a menu item that silently did nothing, because Android text input is a hidden `contenteditable` that never holds the document text |
+| 0002 | `--with-prebuilt-engine`: configure, Gradle and the asset tasks take the engine from the unpacked released APK | upstream only builds the Android app against an engine BUILD tree, i.e. an NDK megabuild whose output is identical to the libraries already in the released APK |
+| 0003 | `android.builtInKotlin=false`, `android.newDsl=false` | the shared `text-tools` module applies `org.jetbrains.kotlin.android`, which AGP 9.3.0 refuses under built-in Kotlin |
 
 0001 touches Writer's Edit menu only. Calc's is deliberately left alone: a
 spreadsheet selection can span cells, and one plain-text rewrite pasted back over

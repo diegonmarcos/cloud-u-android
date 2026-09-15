@@ -1,0 +1,222 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cloud Office <me@diegonmarcos.com>
+Date: Tue, 15 Sep 2026 23:02:01 +0000
+Subject: [PATCH 1/2] cloud-office: build the Android app against a prebuilt
+ engine
+
+Cloud Office changes browser/ and the Java of android/ and nothing native,
+yet the only way upstream offers to build the Android app is against a
+CollaboraOffice core BUILD tree: configure refuses --enable-androidapp
+without --with-lo-builddir and then probes it for setuprc, liblibpng.a,
+Poco and zstd; Gradle asks CMake to compile and link libandroidapp.so
+from both externalNativeBuild declarations; and copyUnpackAssets,
+copyAssets and createFullConfig read the engine's instdir. Satisfying
+all of that means an NDK megabuild of LibreOffice core, which costs
+hours on a large host and changes nothing this app ships, because both
+native libraries come out of it identical to the ones already inside
+the released APK.
+
+--with-prebuilt-engine=<path> declares the other source for the engine:
+the lib/<abi>/ and assets/ directories of the released APK, unpacked.
+With it, configure keeps the ABI selection, skips only the build-tree
+probes, and reads the core hash from the versionrc the APK carries.
+Gradle packages the released native libraries byte for byte from that
+directory, without stripping (which would need the NDK), wires no CMake
+build at all, and takes the engine data half from the APK with the
+three instdir copies DISABLED rather than left to copy nothing, which a
+Gradle Copy with a missing source does silently and successfully.
+
+fonts.conf is the exception inside that data half: copyUnpackAssets
+generates it with the application id substituted, so the released copy
+names the released application's private cache directory. It is still
+generated here, for this application id.
+
+The COOL bundle is still built from browser/ by generateCoolReleaseAssets,
+because that is where the Text Enhance menu lives.
+---
+ android/lib/build.gradle          | 65 +++++++++++++++++++++++++++----
+ android/lib/libSettings.gradle.in |  1 +
+ configure.ac                      | 39 ++++++++++++++++++-
+ 3 files changed, 96 insertions(+), 9 deletions(-)
+
+diff --git a/android/lib/build.gradle b/android/lib/build.gradle
+index 8751ab6..bfd88f7 100644
+--- a/android/lib/build.gradle
++++ b/android/lib/build.gradle
+@@ -29,9 +29,13 @@ android {
+         buildConfigField "String", "GIT_COMMIT", "\"${liboOVersionHash}\""
+         buildConfigField "boolean", "GOOGLE_PLAY_ENABLED", "${liboGooglePlay}"
+ 
+-        externalNativeBuild {
+-            cmake {
+-                arguments "-DANDROID_ARM_NEON=TRUE", "-DANDROID_STL=c++_shared"
++        // A prebuilt engine already carries libandroidapp.so, so nothing here
++        // may ask CMake to compile and link it again.
++        if (!liboPrebuiltEngine) {
++            externalNativeBuild {
++                cmake {
++                    arguments "-DANDROID_ARM_NEON=TRUE", "-DANDROID_STL=c++_shared"
++                }
+             }
+         }
+     }
+@@ -67,14 +71,24 @@ android {
+     sourceSets {
+         main {
+             // let gradle pack the shared library into apk
+-            jniLibs.srcDirs = ['src/main/cpp/lib']
++            jniLibs.srcDirs = liboPrebuiltEngine ? ["${liboPrebuiltEngine}/lib"] : ['src/main/cpp/lib']
+         }
+     }
+ 
+-    externalNativeBuild {
+-        cmake {
+-            path "src/main/cpp/CMakeLists.txt"
+-            buildStagingDirectory "${rootProject.layout.buildDirectory.get()}/cmake"
++    if (liboPrebuiltEngine) {
++        // Package the released native libraries byte for byte: stripping
++        // them would need the NDK and would change what was released.
++        packaging {
++            jniLibs {
++                keepDebugSymbols.add('**/*.so')
++            }
++        }
++    } else {
++        externalNativeBuild {
++            cmake {
++                path "src/main/cpp/CMakeLists.txt"
++                buildStagingDirectory "${rootProject.layout.buildDirectory.get()}/cmake"
++            }
+         }
+     }
+ }
+@@ -205,6 +219,32 @@ tasks.register('createFullConfig', Copy) {
+     }
+ }
+ 
++// With a prebuilt engine there is no instdir to read. The engine's data half
++// (type libraries, registry, fonts, configuration) is taken from the released
++// APK instead, and the three tasks above are disabled below, explicitly: a Copy
++// whose source does not exist succeeds and copies nothing. assets/dist is left
++// out because browser/ is built from this tree, and fonts.conf is left out
++// because the released one names the released application id.
++tasks.register('copyPrebuiltEngineAssets', Copy) {
++    description "copies the engine data half out of the unpacked released APK"
++    into 'src/main/assets'
++    from("${liboPrebuiltEngine}/assets") {
++        exclude 'dist/**', 'unpack/etc/fonts/fonts.conf'
++    }
++}
++
++tasks.register('generatePrebuiltFontsConf', Copy) {
++    description "generates fonts.conf for this application id, as copyUnpackAssets does"
++    into 'src/main/assets/unpack/etc/fonts'
++    from 'fonts.conf'
++    filter {
++        String line ->
++            line.replaceAll(
++                    '@@APPLICATION_ID@@', new String("${liboApplicationId}")
++            )
++    }
++}
++
+ tasks.register('copyBrandTheme', Copy) {
+     from "${liboBrandingDir}/online-theme"
+     into "src/main/assets/share/theme_definitions/online"
+@@ -353,6 +393,15 @@ afterEvaluate {
+ 	if (!file("${liboBrandingDir}").exists()) {
+ 		copyBrandTheme.enabled = false
+ 	}
++	if (liboPrebuiltEngine) {
++		copyUnpackAssets.enabled = false
++		copyAssets.enabled = false
++		createFullConfig.enabled = false
++		createRCfiles.dependsOn copyPrebuiltEngineAssets, generatePrebuiltFontsConf
++	} else {
++		copyPrebuiltEngineAssets.enabled = false
++		generatePrebuiltFontsConf.enabled = false
++	}
+ 	generateDebugAssets.dependsOn copyDocTemplates, copyKitConfig, generateCoolDebugAssets
+ 	generateReleaseAssets.dependsOn copyDocTemplates, copyKitConfig, generateCoolReleaseAssets
+ 
+diff --git a/android/lib/libSettings.gradle.in b/android/lib/libSettings.gradle.in
+index 99072bf..33b55c8 100644
+--- a/android/lib/libSettings.gradle.in
++++ b/android/lib/libSettings.gradle.in
+@@ -11,4 +11,5 @@ ext {
+     liboBrandingDir     = '@APP_BRANDING_DIR@'
+     liboGooglePlay      = '@APP_GOOGLE_PLAY@'
+     liboAbiSplit        = [@ANDROID_ABI_SPLIT@]
++    liboPrebuiltEngine  = '@PREBUILT_ENGINE@'
+ }
+diff --git a/configure.ac b/configure.ac
+index fa034a2..c92f9c5 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -344,6 +344,14 @@ AC_ARG_WITH([lo-sourcedir],
+                            [Mandatory, and relevant, only for a Wasm build.
+                             Path to a CollaboraOffice core source tree.]))
+ 
++AC_ARG_WITH([prebuilt-engine],
++            AS_HELP_STRING([--with-prebuilt-engine=<path>],
++                           [Android only, and instead of --with-lo-builddir. Path to the engine half of a
++                            released Android APK, unpacked: its lib/<abi>/ and assets/ directories. Both
++                            native libraries (liblo-native-code.so and libandroidapp.so) are then packaged
++                            exactly as released and nothing native is compiled or linked, so only changes
++                            to browser/ and to the Java and resources of android/ can be built this way.]))
++
+ AC_ARG_WITH([lo-builddir],
+             AS_HELP_STRING([--with-lo-builddir=<path>],
+                            [Path to the CollaboraOffice (engine) build tree.
+@@ -857,6 +865,32 @@ ZSTDLIB_X86=
+ ZSTDLIB_X86_64=
+ 
+ CORE_VERSION_HASH=""
++
++# A prebuilt engine replaces the engine build tree for the Android app. It
++# carries no static archives and no headers, so every probe of a build tree
++# below is skipped for it; the core hash is read from the versionrc the released
++# APK already contains.
++PREBUILT_ENGINE=
++if test -n "$with_prebuilt_engine" -a "$with_prebuilt_engine" != "no"; then
++   if test "$enable_androidapp" != "yes"; then
++      AC_MSG_ERROR([--with-prebuilt-engine is only supported together with --enable-androidapp])
++   fi
++   if test -n "$with_lo_builddir"; then
++      AC_MSG_ERROR([--with-prebuilt-engine and --with-lo-builddir are mutually exclusive])
++   fi
++   AC_MSG_CHECKING([for the prebuilt engine to package])
++   PREBUILT_ENGINE=`readlink -f "$with_prebuilt_engine"`
++   if test ! -f "$PREBUILT_ENGINE/assets/program/versionrc"; then
++      AC_MSG_ERROR([This is not an unpacked Android engine payload, assets/program/versionrc is missing: $PREBUILT_ENGINE])
++   fi
++   if ! ls "$PREBUILT_ENGINE"/lib/*/liblo-native-code.so >/dev/null 2>&1; then
++      AC_MSG_ERROR([This is not an unpacked Android engine payload, no lib/<abi>/liblo-native-code.so: $PREBUILT_ENGINE])
++   fi
++   AC_MSG_RESULT([$PREBUILT_ENGINE])
++   CORE_VERSION_HASH=`sed -n 's/^buildid=//p' "$PREBUILT_ENGINE/assets/program/versionrc"`
++fi
++AC_SUBST(PREBUILT_ENGINE)
++
+ if test \( "$enable_iosapp" = "yes" -a `uname -s` = "Darwin" \) -o \( "$enable_windowsapp" = "yes" \) -o \( "$enable_androidapp" = "yes" \) -o "$host_os" = "emscripten" ; then
+    if test "$enable_androidapp" = "yes" ; then
+       AC_MSG_CHECKING([for Android ABI to build for])
+@@ -870,6 +904,9 @@ if test \( "$enable_iosapp" = "yes" -a `uname -s` = "Darwin" \) -o \( "$enable_w
+       ANDROID_ABI_SPLIT=`echo $ANDROID_ABI | sed "s/^/'/g;s/ /','/g;s/$/'/g"`
+       AC_MSG_RESULT([$ANDROID_ABI])
+    fi
++fi
++
++if test \( "$enable_iosapp" = "yes" -a `uname -s` = "Darwin" \) -o \( "$enable_windowsapp" = "yes" \) -o \( "$enable_androidapp" = "yes" -a -z "$PREBUILT_ENGINE" \) -o "$host_os" = "emscripten" ; then
+ 
+    if test "$host_os" = emscripten; then
+       AC_MSG_CHECKING([for CollaboraOffice source tree to build against])
+@@ -979,7 +1016,7 @@ if test \( "$enable_iosapp" = "yes" -a `uname -s` = "Darwin" \) -o \( "$enable_w
+    fi
+ fi
+ 
+-if test \( "$enable_iosapp" = "yes" -a `uname -s` = "Darwin" \) -o \( "$enable_macosapp" = "yes" \) -o \( "$enable_windowsapp" = "yes" \) -o \( "$enable_androidapp" = "yes" \) -o "$host_os" = "emscripten" ; then
++if test \( "$enable_iosapp" = "yes" -a `uname -s` = "Darwin" \) -o \( "$enable_macosapp" = "yes" \) -o \( "$enable_windowsapp" = "yes" \) -o \( "$enable_androidapp" = "yes" -a -z "$PREBUILT_ENGINE" \) -o "$host_os" = "emscripten" ; then
+    # POCO, zstd and libpng are built as third-party libraries in the engine and
+    # picked up from its workdir; engine_builddir is that engine build tree.
+    # For iOS, Android, Windows and WASM the engine is a separate, out-of-tree

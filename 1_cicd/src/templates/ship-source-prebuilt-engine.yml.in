@@ -1,7 +1,7 @@
-name: "Ship → cloud-office APK (source build against the prebuilt engine + GHCR via ORAS + GH Release)"
+name: "Ship → @APP_NAME@ APK (source build against the prebuilt engine + GHCR via ORAS + GH Release)"
 
 # GENERATED from 1_cicd/src/templates/ship-source-prebuilt-engine.yml.in, because
-# ac_cloud-office/build.json declares build.mode "source-prebuilt-engine".
+# @APP_DIR@/build.json declares build.mode "source-prebuilt-engine".
 # Edit the template or the build.json, never this file: the next
 # `./build.sh workflow` overwrites it, and `generated files are up to date` fails
 # a push that did not.
@@ -11,41 +11,33 @@ name: "Ship → cloud-office APK (source build against the prebuilt engine + GHC
 # are packaged byte for byte from the sha256-pinned released APK. No NDK and no
 # engine compile — what runs is a Node build of browser/ and a Gradle build of
 # android/. Every value is read from build.json by the vendored engine,
-# ac_cloud-office/build.sh.
+# @APP_DIR@/build.sh.
 
 on:
   workflow_dispatch: {}
   push:
     branches: [main]
     paths:
-      # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir
-      # ac_cloud-office/build.json::modules declares is added automatically, dead
-      # entries are dropped, and cloud-android-source-identity.sh hashes
-      # exactly this list — so nothing can trigger a build the publish
-      # gate does not weigh. Extra entries no module map can express
-      # (settings.gradle.kts references, scan roots) are kept: add them
-      # here and they stay.
-      - "1_cicd/src/cicd/ship-cloud-office.yml"
-      - "1_cicd/src/scripts/cloud-office-source-engine.sh"
+      - "1_cicd/src/cicd/ship-@APP_NAME@.yml"
+      - "1_cicd/src/scripts/@ENGINE@"
       - "1_cicd/src/templates/ship-source-prebuilt-engine.yml.in"
-      - "ab_cloud-libs-shared/libs/text-tools/**"
-      - "ac_cloud-office/**"
-      - "!ac_cloud-office/tests/**"
+      - "@APP_DIR@/**"
+@MODULE_TRIGGER_PATHS@
 permissions:
   contents: write   # gh release upload
   packages: write   # ghcr push (oras)
 
 concurrency:
-  group: ship-cloud-office-${{ github.ref }}
+  group: ship-@APP_NAME@-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  WORK_DIR: ac_cloud-office
+  WORK_DIR: @APP_DIR@
 
 jobs:
   build_and_publish:
-    name: "Build from source + Publish (cloud-office)"
-    runs-on: ubuntu-latest
+    name: "Build from source + Publish (@APP_NAME@)"
+    runs-on: @BUILD_HOST@
     timeout-minutes: 240
 
     steps:
@@ -129,7 +121,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ${{ runner.temp }}/cloud-office/online/.git
-          key: cloud-office-online-${{ steps.pin.outputs.revision }}
+          key: @APP_NAME@-online-${{ steps.pin.outputs.revision }}
 
       - name: Materialize (pinned upstream + patches/)
         if: steps.gate.outputs.skip != 'true'
@@ -140,7 +132,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: ${{ runner.temp }}/cloud-office/online/.git
-          key: cloud-office-online-${{ steps.pin.outputs.revision }}
+          key: @APP_NAME@-online-${{ steps.pin.outputs.revision }}
 
       - name: Engine payload (sha256-pinned released APK)
         if: steps.gate.outputs.skip != 'true'
@@ -180,21 +172,6 @@ jobs:
           echo "$names" | grep -qxF "$(basename "$ASSET")" && echo "$names" | grep -qxF "$(basename "$ASSET").sha256" \
             && [ -n "$remote_size" ] && [ "$remote_size" = "$local_size" ] \
             || { echo "::error::gh-release: $(basename "$ASSET") or its .sha256 sidecar missing/size-mismatched on $TAG after upload (remote=$remote_size local=$local_size)"; exit 1; }
-
-      # ── MANAGED-PUBLISH-GUARD: injected by cloud-android-ship-repo-workflow-engine.sh ──
-      # Runs on everything but a cancellation, and is HANDED the two facts it
-      # judges: the publish gate's own answer to "did this source move?", and the
-      # `id: publish` step's own `if:` rendered to true/false. Putting that `if:`
-      # on this step instead — the obvious generalisation — would stop the guard
-      # running in exactly the case it exists for, a publish skipped by its own
-      # condition. Copied verbatim from that step, so there is one copy in the
-      # file and the two cannot drift.
-      # Edit 1_cicd/src/scripts/cloud-android-publish-guard.sh, never this block.
-      - name: A run that published nothing must not be green
-        if: ${{ !cancelled() }}
-        run: sh 1_cicd/dist/scripts/cloud-android-publish-guard.sh "ac_cloud-office" "${{ steps.publish.outcome }}" "${{ steps.gate.outputs.skip }}" "${{ steps.gate.outputs.skip != 'true' }}" "${{ github.event_name }}"
-      # ── end MANAGED-PUBLISH-GUARD ──
-
 
       - name: Push to GHCR via ORAS
         if: steps.gate.outputs.skip != 'true'

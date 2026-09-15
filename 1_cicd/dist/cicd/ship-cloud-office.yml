@@ -1,40 +1,22 @@
-name: "Ship → Cloud Office APK (mirror official Collabora Office + push to GHCR via ORAS + attach to GH Release)"
+name: "Ship → cloud-office APK (source build against the prebuilt engine + GHCR via ORAS + GH Release)"
 
-# NO BUILD. No engine script, no gradle, no SDK, no signing — on purpose.
+# GENERATED from 1_cicd/src/templates/ship-source-prebuilt-engine.yml.in, because
+# ac_cloud-office/build.json declares build.mode "source-prebuilt-engine".
+# Edit the template or the build.json, never this file: the next
+# `./build.sh workflow` overwrites it, and `generated files are up to date` fails
+# a push that did not.
 #
-# Collabora Office's engine is LibreOffice core. Building it means Collabora's
-# own Gerrit plus an NDK megabuild over the whole external/ tree, and the result
-# still could not be signed as com.collabora.libreoffice by us. So this workflow
-# MIRRORS: it downloads the official APK from Collabora's F-Droid repo, verifies
-# it byte-for-byte against the sha256 pinned in ac_cloud-office/build.json, and
-# republishes those exact bytes through the same two channels every other app
-# here uses, so the Constellation AppStore installs and auto-updates it like any
-# fleet member:
-#
-#   1. ORAS push as OCI artifact → ghcr.io/diegonmarcos/cloud-office:latest
-#   2. GH Release attachment     → the asset named by release.gh_release.asset_name
-#
-# The pin is the entire security story. An unpinned mirror is a supply-chain
-# hole: whatever upstream happens to serve would get our name on it. So a sha
-# mismatch FAILS the job hard and publishes nothing — it means either upstream
-# rotated the artifact (bump build.json::upstream.* in one commit) or the
-# download was tampered with, and neither is something to paper over.
-#
-# Single job, no ABI matrix: the pinned index entry declares abis
-# ["arm64-v8a"] and Collabora ships no x86_64 artifact to mirror.
+# Built from source: upstream.online fetched at its pinned revision with patches/
+# applied, configured with --with-prebuilt-engine so that BOTH native libraries
+# are packaged byte for byte from the sha256-pinned released APK. No NDK and no
+# engine compile — what runs is a Node build of browser/ and a Gradle build of
+# android/. Every value is read from build.json by the vendored engine,
+# ac_cloud-office/build.sh.
 
 on:
-  workflow_dispatch:
-    inputs:
-      push_oras:
-        description: "Push APK to GHCR via ORAS"
-        required: false
-        type: boolean
-        default: true
+  workflow_dispatch: {}
   push:
     branches: [main]
-    tags:
-      - "ac_cloud-office-v*"
     paths:
       # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir
       # ac_cloud-office/build.json::modules declares is added automatically, dead
@@ -44,11 +26,14 @@ on:
       # (settings.gradle.kts references, scan roots) are kept: add them
       # here and they stay.
       - "1_cicd/src/cicd/ship-cloud-office.yml"
+      - "1_cicd/src/scripts/cloud-office-source-engine.sh"
+      - "1_cicd/src/templates/ship-source-prebuilt-engine.yml.in"
+      - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ac_cloud-office/**"
       - "!ac_cloud-office/tests/**"
 permissions:
-  contents: write   # for gh release create/upload
-  packages: write   # for ghcr push (oras)
+  contents: write   # gh release upload
+  packages: write   # ghcr push (oras)
 
 concurrency:
   group: ship-cloud-office-${{ github.ref }}
@@ -58,154 +43,119 @@ env:
   WORK_DIR: ac_cloud-office
 
 jobs:
-  mirror_and_publish:
-    name: "Mirror official APK + Publish (arm64-v8a)"
+  build_and_publish:
+    name: "Build from source + Publish (cloud-office)"
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 240
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ORDER: TESTERS FIRST, REFUSAL SECOND. It was the other way round until
-      # 2026-09-11, and that meant this app's three shell testers had NEVER RUN
-      # IN CI ONCE — the refusal below exits 1 and every later step is skipped,
-      # so the only workflow that touches ac_cloud-office ran no test of it at
-      # all. The refusal is about PUBLISHING, not about testing, for exactly the
-      # reason the note below gives about the publish gate: editing a tester
-      # does not move the APK, and gating a tester on a publish decision lets a
-      # new assertion land without ever executing. Tests run, then we refuse.
-      # Every application's testers, and — for the 24 that have none — the
-      # COVERAGE-GAP line naming exactly what this run did NOT check. Until this
-      # step existed, an application with zero testers and one with fifty
-      # passing testers produced indistinguishable green ticks, and the ship
-      # workflow's only question was "did Gradle exit 0". Needs no JDK, no SDK
-      # and no gradle, so it costs seconds and fails before anything is built.
-      #
-      # DELIBERATELY NOT gated on the publish gate: the gate answers "would
-      # these bytes differ?", which is the right question for publishing and the
-      # wrong one for testing — editing a tester does not move the APK, and
-      # gating here would let a new assertion land without ever running once.
+      # Tests first, deliberately NOT gated on the publish gate: editing a
+      # tester does not move the APK, and gating it would let a new assertion
+      # land without ever executing.
       - name: "Test → this application's testers, and what is not covered"
         run: |
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
 
-      # THIS APP IS NO LONGER A MIRROR, AND THIS WORKFLOW STILL IS.
-      #
-      # ac_cloud-office/build.json used to carry upstream.url + upstream.sha256:
-      # one official APK, downloaded, hash-checked and republished. It now carries
-      # upstream.online + upstream.engine — a pinned git revision, a sha256-pinned
-      # prebuilt engine, and a patch series — because Text Enhance could not be
-      # fixed in bytes we did not build.
-      # Every step below reads keys that no longer exist.
-      #
-      # Without this guard the job dies at "Download official Collabora Office APK"
-      # with an unexplained curl failure, which reads as a broken network rather
-      # than as a migration in progress. It cannot be allowed to SUCCEED either:
-      # succeeding would mean republishing 267 MB of Collabora's build under a name
-      # that now promises our own.
-      #
-      # So it fails FIRST, and says which thing is missing. The unblock is a build
-      # host — build.json::build.host is null until one exists — and then a source
-      # -build workflow to replace this file. Deleting this file before that exists
-      # would leave the app with no publish path at all and nothing saying so.
-      - name: Refuse to mirror an app that is now built from source
+      # THE GUARD THAT REFUSED TO MIRROR, KEPT. It existed because this app's
+      # build.json pins upstream.online while its workflow republished a
+      # prebuilt APK. This workflow is only generated for the source build, so
+      # on its own the branch below is unreachable; it stays so that a
+      # build.json which loses its build mode or its host fails here, loudly,
+      # instead of dying hours later on a runner that cannot carry the build.
+      - name: Refuse to publish a source build this workflow was not generated for
         run: |
           set -euo pipefail
           bj="${WORK_DIR}/build.json"
-          if [ -n "$(jq -r '.upstream.online // empty' "$bj")" ]; then
-            echo "::error title=Cloud Office is mid-migration::ac_cloud-office is a SOURCE BUILD now (upstream.online is pinned), but this workflow still mirrors a prebuilt APK. It will not publish."
-            echo "Pinned online revision : $(jq -r '.upstream.online.revision'        "$bj")"
-            echo "Engine (prebuilt) sha256: $(jq -r '.upstream.engine.source.sha256'   "$bj")"
-            echo "Build host              : $(jq -r '.build.host // "NOT SET"'         "$bj")"
-            echo
-            echo "Unblock, in order — AND NOTE THIS NO LONGER STARTS WITH A MEGABUILD."
-            echo "Until 2026-09-11 this message said the first step was a host that could carry an NDK"
-            echo "megabuild of LibreOffice core. That was wrong and it cost the owner days of waiting on"
-            echo "a ~\$35 approval. patches/0001 touches nine files and not one is C++, so BOTH native"
-            echo "libraries are taken prebuilt from the sha256-pinned APK and neither is ever relinked;"
-            echo "ac_cloud-office/tests/test-no-engine-build-required.sh proves that against upstream on"
-            echo "every run. What is left is a Node build of browser/ and a Gradle build of android/."
-            echo "  1. write patches/0002: a declared --with-prebuilt-engine mode, because configure.ac:884"
-            echo "     still refuses --enable-androidapp without an engine BUILD tree. See"
-            echo "     build.json::upstream.engine._doc_BLOCKER_configure_gate."
-            echo "  2. set build.json::build.host (ubuntu-latest is expected to be enough: SDK + Node, no NDK)"
-            echo "  3. replace this workflow with that build (fetch the online pin, git am patches/,"
-            echo "     unzip the pinned APK into jniLibs + assets, configure, assemble, sign)"
-            echo
-            echo "Until then the release asset already on GHCR/GH Releases is left exactly as it is."
+          if [ -n "$(jq -r '.upstream.online // empty' "$bj")" ] \
+             && { [ "$(jq -r '.build.mode // empty' "$bj")" != "source-prebuilt-engine" ] \
+                  || [ -z "$(jq -r '.build.host // empty' "$bj")" ]; }; then
+            echo "::error title=Not a source build::${WORK_DIR} is a SOURCE BUILD (upstream.online is pinned), but build.json::build.mode is not source-prebuilt-engine or build.json::build.host is not set. It will not publish."
+            echo "Pinned online revision : $(jq -r '.upstream.online.revision'      "$bj")"
+            echo "Engine (prebuilt) sha256: $(jq -r '.upstream.engine.source.sha256' "$bj")"
+            echo "Build mode              : $(jq -r '.build.mode // "NOT SET"'       "$bj")"
+            echo "Build host              : $(jq -r '.build.host // "NOT SET"'       "$bj")"
             exit 1
           fi
 
-      # Publish-if-changed gate. Android builds are not byte-reproducible, so a
-      # rebuild of unchanged source published different bytes, a different
-      # sha256 sidecar and a different OCI digest — and the Constellation store
-      # compares exactly those, so every cascade rebuild showed up on every
-      # phone as an update with nothing in it. The gate hashes this app's build
-      # INPUTS (git tree shas of the app dir, the shared lib dirs its build.json
-      # module map declares, and this workflow) and compares that identity to
-      # the <asset>.source sidecar already on the release. Equal → the whole
-      # rest of this job is skipped and the release asset is left untouched.
       - name: Publish gate (skip when source unchanged)
         id: gate
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-publish-gate.sh check "$WORK_DIR" ""
 
-      - name: Install ORAS
+      - name: Set up JDK 21
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install build host packages + ORAS + sops
         if: steps.gate.outputs.skip != 'true'
         run: |
           set -euo pipefail
+          sh "$WORK_DIR/build.sh" host-deps
           curl -fsSL https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz \
             | sudo tar -xz -C /usr/local/bin oras
-          oras version
+          curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \
+            | sudo tee /usr/local/bin/sops >/dev/null
+          sudo chmod +x /usr/local/bin/sops
+          oras version && sops --version
 
-      - name: Read pin from build.json
+      - name: Checkout vault (shared Android signing key)
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: diegonmarcos/cloud-vault
+          token: ${{ secrets.ANDROID_SIGNING_VAULT_TOKEN }}
+          path: .vault
+
+      # Gerrit serves neither sha fetches nor blob filters, so the pinned clone
+      # is a ten-minute, 480 MB fetch. Cached by revision; saved right after
+      # materialize so a later failure does not throw the fetch away.
+      - name: Read pinned revision
         if: steps.gate.outputs.skip != 'true'
         id: pin
-        run: |
-          set -euo pipefail
-          BJ="$WORK_DIR/build.json"
-          {
-            echo "url=$(jq -r '.upstream.url'          "$BJ")"
-            echo "sha256=$(jq -r '.upstream.sha256'    "$BJ")"
-            echo "size=$(jq -r '.upstream.size'        "$BJ")"
-            echo "version=$(jq -r '.upstream.version_name' "$BJ")"
-            echo "asset=$(jq -r '.release.gh_release.asset_name' "$BJ")"
-            echo "rolling_tag=$(jq -r '.release.gh_release.rolling_tag' "$BJ")"
-            echo "media_type=$(jq -r '.release.ghcr.media_type' "$BJ")"
-            echo "ref=$(jq -r '.release.ghcr.registry + "/" + .release.ghcr.namespace + "/" + .release.ghcr.image' "$BJ")"
-          } >> "$GITHUB_OUTPUT"
+        run: echo "revision=$(jq -r '.upstream.online.revision' "$WORK_DIR/build.json")" >> "$GITHUB_OUTPUT"
 
-      - name: Download official Collabora Office APK
+      - name: Restore upstream clone
         if: steps.gate.outputs.skip != 'true'
-        run: |
-          set -euo pipefail
-          curl -fSL --retry 3 --retry-delay 5 \
-            -o "${{ steps.pin.outputs.asset }}" "${{ steps.pin.outputs.url }}"
-          ls -l "${{ steps.pin.outputs.asset }}"
+        id: clone_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/cloud-office/online/.git
+          key: cloud-office-online-${{ steps.pin.outputs.revision }}
 
-      - name: Verify pinned sha256 (HARD FAIL on mismatch)
+      - name: Materialize (pinned upstream + patches/)
         if: steps.gate.outputs.skip != 'true'
-        run: |
-          set -euo pipefail
-          ASSET="${{ steps.pin.outputs.asset }}"
-          EXPECT="${{ steps.pin.outputs.sha256 }}"
-          EXPECT_SIZE="${{ steps.pin.outputs.size }}"
-          ACTUAL="$(sha256sum "$ASSET" | awk '{print $1}')"
-          ACTUAL_SIZE="$(stat -c %s "$ASSET")"
-          echo "expected sha256 $EXPECT ($EXPECT_SIZE bytes)"
-          echo "actual   sha256 $ACTUAL ($ACTUAL_SIZE bytes)"
-          if [ "$ACTUAL" != "$EXPECT" ] || [ "$ACTUAL_SIZE" != "$EXPECT_SIZE" ]; then
-            echo "::error::PIN MISMATCH — refusing to publish. Upstream rotated the" \
-                 "artifact or the download was tampered with. Verify the new APK by" \
-                 "hand against index-v1.json, then bump ac_cloud-office/build.json" \
-                 "::upstream.{version_name,version_code,apk_name,url,sha256,size}."
-            exit 1
-          fi
-          echo "pin verified — publishing upstream bytes unmodified"
+        run: bash "$WORK_DIR/build.sh" materialize
+
+      - name: Save upstream clone
+        if: ${{ steps.gate.outputs.skip != 'true' && steps.clone_cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/cloud-office/online/.git
+          key: cloud-office-online-${{ steps.pin.outputs.revision }}
+
+      - name: Engine payload (sha256-pinned released APK)
+        if: steps.gate.outputs.skip != 'true'
+        run: bash "$WORK_DIR/build.sh" payload
+
+      - name: Configure (--with-prebuilt-engine)
+        if: steps.gate.outputs.skip != 'true'
+        run: bash "$WORK_DIR/build.sh" configure
+
+      - name: Build + sign with the shared constellation key
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: bash "$WORK_DIR/build.sh" build
 
       - name: Attach to rolling GH Release
         id: publish
@@ -214,21 +164,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${{ steps.pin.outputs.rolling_tag }}"
-          ASSET="${{ steps.pin.outputs.asset }}"
-          # Sidecar sha256 — the pin verify step above already proved this is
-          # the pinned upstream digest, so re-use it rather than re-hash. A
-          # same-size collision on 2026-08-30 made two distinct APK builds
-          # compare "equal" under the old size-only update check, silently
-          # hiding a real update; the in-app updater now compares this
-          # digest instead, so every publish path must emit + verify it.
-          echo "${{ steps.pin.outputs.sha256 }}" > "$ASSET.sha256"
+          TAG="$(jq -r '.release.gh_release.rolling_tag' "$WORK_DIR/build.json")"
+          ASSET="$(bash "$WORK_DIR/build.sh" asset-path)"
+          # The in-app updater compares this digest, never the size: two distinct
+          # builds of equal size once hid a real update.
+          sha256sum "$ASSET" | cut -d' ' -f1 > "$ASSET.sha256"
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" --title "$TAG" --target "$GITHUB_SHA" \
               --notes "Rolling release — overwritten on every main push." --latest
           fi
           gh release upload "$TAG" "$ASSET" "$ASSET.sha256" --clobber
-          gh release edit "$TAG" --latest >/dev/null 2>&1 || true
           local_size="$(wc -c <"$ASSET")"
           remote_size="$(gh release view "$TAG" --json assets --jq ".assets[] | select(.name==\"$(basename "$ASSET")\") | .size")"
           names="$(gh release view "$TAG" --json assets --jq '.assets[].name')"
@@ -252,7 +197,7 @@ jobs:
 
 
       - name: Push to GHCR via ORAS
-        if: ${{ steps.gate.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.push_oras) }}
+        if: steps.gate.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_CREATE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -260,33 +205,25 @@ jobs:
           set -euo pipefail
           echo "${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}" \
             | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
-          REF="${{ steps.pin.outputs.ref }}"
-          MT="${{ steps.pin.outputs.media_type }}"
-          # CREATE WITH GITHUB_TOKEN, UPDATE WITH THE AMBIENT PAT LOGIN. A GHCR
-          # package's visibility is fixed at CREATION and there is no API to
-          # change it later. A package created by the user-scoped PAT is
-          # unlinked and PRIVATE forever; one created by this repo's
-          # GITHUB_TOKEN inherits the public repo. But GITHUB_TOKEN cannot
-          # UPDATE a package that is not linked to this repo, so the token is
-          # chosen per PACKAGE: override the ambient login only when the
-          # package does not exist yet.
+          BJ="$WORK_DIR/build.json"
+          REF="$(jq -r '.release.ghcr.registry + "/" + .release.ghcr.namespace + "/" + .release.ghcr.image' "$BJ")"
+          MT="$(jq -r '.release.ghcr.media_type' "$BJ")"
+          ASSET="$(bash "$WORK_DIR/build.sh" asset-path)"
+          # A GHCR package's visibility is fixed by the token that CREATES it:
+          # create with GITHUB_TOKEN so it inherits this public repository,
+          # update with the ambient login.
           CREDS=()
           PKG="${REF##*/}"
-          if [ -n "${GHCR_CREATE_TOKEN:-}" ] && command -v gh >/dev/null 2>&1 \
-             && ! gh api "/user/packages/container/${PKG}" >/dev/null 2>&1; then
-            echo "ghcr: ${PKG} does not exist - creating it with GITHUB_TOKEN so it inherits the repo"
+          if ! gh api "/user/packages/container/${PKG}" >/dev/null 2>&1; then
             CREDS=(--username "${GITHUB_ACTOR:-diegonmarcos}" --password "${GHCR_CREATE_TOKEN}")
           fi
-          # Layer title annotation comes from the filename in the file spec, so
-          # the AppStore's downloader finds the asset by title exactly as
-          # it does for every built app.
-          oras push "${CREDS[@]}" "$REF:latest" \
-            "${{ steps.pin.outputs.asset }}:$MT" \
+          cd "$(dirname "$ASSET")"
+          oras push "${CREDS[@]}" "$REF:latest" "$(basename "$ASSET"):$MT" \
             --artifact-type "$MT" \
             --annotation "org.opencontainers.image.revision=$GITHUB_SHA" \
             --annotation "org.opencontainers.image.source=https://github.com/${{ github.repository }}" \
-            --annotation "org.opencontainers.image.version=${{ steps.pin.outputs.version }}" \
-            --annotation "org.opencontainers.image.title=${{ steps.pin.outputs.asset }}"
+            --annotation "org.opencontainers.image.version=$(jq -r '.upstream.online.revision[0:12]' "$GITHUB_WORKSPACE/$BJ")" \
+            --annotation "org.opencontainers.image.title=$(basename "$ASSET")"
           oras manifest fetch "$REF:latest" --descriptor
 
       - name: Stamp source identity on the published assets

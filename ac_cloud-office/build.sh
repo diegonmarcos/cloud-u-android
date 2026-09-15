@@ -1,0 +1,264 @@
+#!/usr/bin/env bash
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║ cloud-office-source-engine — Cloud Office from source, against  ║
+# ║ the engine taken prebuilt out of the pinned released APK         ║
+# ╚══════════════════════════════════════════════════════════════════╝
+#
+# Vendored as ac_cloud-office/build.sh (build.json::vendored_engine), and CI
+# runs that copy. Every value comes from ac_cloud-office/build.json:
+#
+#   ./build.sh materialize   fetch upstream.online at its revision, apply patches/,
+#                            place the shared modules build.modules names
+#   ./build.sh payload       download upstream.engine.source, verify its sha256,
+#                            unpack its native libraries and assets
+#   ./build.sh configure     configure --enable-androidapp --with-prebuilt-engine
+#   ./build.sh build         gradle, then sign with the ONE constellation key and
+#                            assert what was built: package id, and native
+#                            libraries byte-identical to the released ones
+#   ./build.sh all           the four above, in order
+#   ./build.sh host-deps     install build.host_packages on the build host
+#   ./build.sh asset-path    print where `build` leaves the signed APK
+#
+# NOTHING NATIVE IS COMPILED. patches/0002 declares the prebuilt-engine mode;
+# tests/test-no-engine-build-required.sh proves against upstream that no native
+# file is touched, and `build` proves on the output that the packaged libraries
+# are the released bytes.
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BUILD_JSON="$SCRIPT_DIR/build.json"
+# OUTSIDE the repository, deliberately. The materialized upstream is 1.9 GB of
+# working tree plus 480 MB of .git, and this checkout is shared by several
+# agents: inside it, one build would bury everybody's `git status`.
+WORK_DIR="${CLOUD_OFFICE_WORK_DIR:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/cloud-office}"
+DIST_DIR="$WORK_DIR/dist"
+ONLINE_DIR="$WORK_DIR/online"
+PAYLOAD_DIR="$WORK_DIR/engine"
+ENGINE_APK="$WORK_DIR/engine.apk"
+
+log()    { printf '[%s] %s\n' "$(date '+%H:%M:%S')" "$1"; }
+die()    { printf '\033[0;31m[%s] ERROR: %s\033[0m\n' "$(date '+%H:%M:%S')" "$1" >&2; exit 1; }
+_json()  { jq -r "$1 // empty" "$BUILD_JSON"; }
+
+command -v jq >/dev/null 2>&1 || die "jq is not on PATH"
+[ -f "$BUILD_JSON" ] || die "no build.json at $BUILD_JSON"
+
+ABI="$(_json '.upstream.engine.source.abi')"
+[ -n "$ABI" ] || die "build.json::upstream.engine.source.abi is empty"
+
+# ── materialize ───────────────────────────────────────────────────────
+# Gerrit serves neither a sha fetch nor a blob filter, so the ref is fetched
+# shallow and deepened until the revision is in it. The revision is the
+# assertion; the ref is only how the objects arrive. An existing clone that
+# already holds the revision (the CI cache) is reused without touching Gerrit.
+step_materialize() {
+    local url ref rev depth
+    url="$(_json '.upstream.online.url')"
+    ref="$(_json '.upstream.online.ref')"
+    rev="$(_json '.upstream.online.revision')"
+    [ -n "$url" ] && [ -n "$ref" ] || die "build.json::upstream.online.url/ref is empty"
+    [ "${#rev}" -eq 40 ] || die "build.json::upstream.online.revision must be a full 40-character sha, got '$rev'"
+    [ "$(_json '.upstream.online.patch_mode')" = "apply" ] \
+        || die "build.json::upstream.online.patch_mode is not 'apply' — this engine only applies a patch series"
+
+    mkdir -p "$WORK_DIR"
+    if [ ! -d "$ONLINE_DIR/.git" ]; then
+        git init -q "$ONLINE_DIR"
+        git -C "$ONLINE_DIR" remote add origin "$url"
+    fi
+    if ! git -C "$ONLINE_DIR" cat-file -e "$rev^{commit}" 2>/dev/null; then
+        log "materialize: fetching $ref from $url (shallow)"
+        git -C "$ONLINE_DIR" fetch -q --depth 1 origin "$ref" || die "cannot fetch $ref from $url"
+        for depth in 50 200; do
+            git -C "$ONLINE_DIR" cat-file -e "$rev^{commit}" 2>/dev/null && break
+            log "materialize: $rev is not at the tip of $ref, deepening to $depth"
+            git -C "$ONLINE_DIR" fetch -q --depth "$depth" origin "$ref" || die "cannot deepen $ref"
+        done
+        git -C "$ONLINE_DIR" cat-file -e "$rev^{commit}" 2>/dev/null \
+            || die "$rev is not within 200 commits of $ref — re-pin upstream.online.revision and re-verify the series"
+    else
+        log "materialize: $rev already present, Gerrit not contacted"
+    fi
+
+    git -C "$ONLINE_DIR" -c advice.detachedHead=false checkout -q -f "$rev"
+    git -C "$ONLINE_DIR" clean -q -ffdx
+
+    # In numeric order, stopping at the first failure. Never --skip, never -3:
+    # both turn "upstream moved under an edit we own" into a quiet omission.
+    local patch
+    for patch in "$SCRIPT_DIR"/patches/[0-9][0-9][0-9][0-9]-*.patch; do
+        [ -f "$patch" ] || die "no numbered patches in $SCRIPT_DIR/patches"
+        log "materialize: applying $(basename "$patch")"
+        git -C "$ONLINE_DIR" -c user.name="Cloud Office" -c user.email=noreply@diegonmarcos.com \
+            am -q --keep-non-patch "$patch" \
+            || { git -C "$ONLINE_DIR" am --abort >/dev/null 2>&1 || true
+                 die "$(basename "$patch") does not apply to $rev — rebase the patch or re-pin"; }
+    done
+
+    # Shared modules are LINKED, never copied: a copy of the ITextTools AIDL is a
+    # second wire contract. The link lives in the scratch tree only.
+    local name dir target
+    while IFS=$'\t' read -r name dir target; do
+        [ -n "$name" ] || continue
+        [ -d "$SCRIPT_DIR/$dir" ] || die "build.json::build.modules.$name.dir $dir does not exist"
+        mkdir -p "$(dirname "$ONLINE_DIR/$target")"
+        ln -sfn "$(cd "$SCRIPT_DIR/$dir" && pwd)" "$ONLINE_DIR/$target"
+        log "materialize: linked $name → $target"
+    done < <(jq -r '.build.modules | to_entries[] | select(.value|type=="object") | [.key, .value.dir, .value.materialize_to] | @tsv' "$BUILD_JSON")
+}
+
+# ── payload ───────────────────────────────────────────────────────────
+# The released APK is the engine. Its sha256 is the whole supply-chain claim, so
+# a mismatch stops the build, and so does a native library count other than the
+# declared one: an app that dlopens something absent is not shippable.
+step_payload() {
+    local url sha size actual
+    url="$(_json '.upstream.engine.source.url')"
+    sha="$(_json '.upstream.engine.source.sha256')"
+    size="$(_json '.upstream.engine.source.size')"
+    [ -n "$url" ] && [ -n "$sha" ] && [ -n "$size" ] || die "build.json::upstream.engine.source url/sha256/size is incomplete"
+
+    mkdir -p "$WORK_DIR"
+    if [ ! -f "$ENGINE_APK" ] || [ "$(sha256sum "$ENGINE_APK" | cut -d' ' -f1)" != "$sha" ]; then
+        log "payload: downloading $url"
+        curl -fSL --retry 3 --retry-delay 5 -o "$ENGINE_APK" "$url" || die "cannot download $url"
+    fi
+    actual="$(sha256sum "$ENGINE_APK" | cut -d' ' -f1)"
+    [ "$actual" = "$sha" ] && [ "$(stat -c %s "$ENGINE_APK")" = "$size" ] \
+        || die "engine APK does not match the pin: sha256 $actual, $(stat -c %s "$ENGINE_APK") bytes; expected $sha, $size bytes"
+    log "payload: sha256 verified ($sha)"
+
+    rm -rf "$PAYLOAD_DIR"
+    python3 - "$ENGINE_APK" "$PAYLOAD_DIR" "$BUILD_JSON" <<'PY'
+import json, os, sys, zipfile
+apk, out, bj = sys.argv[1], sys.argv[2], sys.argv[3]
+engine = json.load(open(bj))["upstream"]["engine"]
+libs = engine["native_libs"]["from_apk_dir"].rstrip("/") + "/"
+assets = engine["assets"]["from_apk_dir"].rstrip("/") + "/"
+exclude = tuple(e.rstrip("/") + "/" for e in engine["assets"]["exclude"])
+count = 0
+with zipfile.ZipFile(apk) as z:
+    for info in z.infolist():
+        name = info.filename
+        if info.is_dir():
+            continue
+        if name.startswith(libs) and name.endswith(".so"):
+            count += 1
+        elif not name.startswith(assets) or name.startswith(exclude):
+            continue
+        dest = os.path.join(out, name)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        with z.open(info) as src, open(dest, "wb") as dst:
+            dst.write(src.read())
+expected = engine["native_libs"]["expect_count"]
+if count != expected:
+    sys.exit(f"payload: {count} native libraries under {libs}, build.json expects {expected}")
+print(f"payload: {count} native libraries and the assets outside {list(exclude)} unpacked")
+PY
+}
+
+# ── configure ─────────────────────────────────────────────────────────
+step_configure() {
+    [ -d "$ONLINE_DIR/.git" ] || die "run materialize first"
+    [ -d "$PAYLOAD_DIR/lib/$ABI" ] || die "run payload first"
+    local flags=()
+    while IFS= read -r flag; do flags+=("$flag"); done \
+        < <(jq -r '.upstream.online.configure | to_entries[] | select(.key|startswith("--")) | "\(.key)=\(.value)"' "$BUILD_JSON")
+    [ "${#flags[@]}" -gt 0 ] || die "build.json::upstream.online.configure declares no flags"
+    log "configure: --enable-androidapp --with-android-abi=$ABI --with-prebuilt-engine ${flags[*]}"
+    ( cd "$ONLINE_DIR" && ./autogen.sh && ./configure --enable-androidapp --with-android-abi="$ABI" \
+        --with-prebuilt-engine="$PAYLOAD_DIR" "${flags[@]}" ) || die "configure failed"
+}
+
+# ── signing: the ONE shared constellation key, or no build ────────────
+_resolve_signing() {
+    if [ -n "${GITHUB_ACTIONS:-}" ] && [ -n "${ANDROID_KEYSTORE_FILE:-}" ] \
+       && [ -f "${ANDROID_KEYSTORE_FILE}" ] && [ -n "${ANDROID_KEY_ALIAS:-}" ]; then
+        return 0
+    fi
+    local vault keystore secrets
+    vault="${VAULT_DIR:-$HOME/git/cloud-vault}"
+    keystore="$vault/$(_json '.signing.vault_keystore')"
+    secrets="$vault/$(_json '.signing.vault_secrets')"
+    [ -f "$keystore" ] || die "signing: the shared constellation keystore is missing at $keystore — no other key is allowed"
+    command -v sops >/dev/null 2>&1 || die "signing: sops is not on PATH"
+    ANDROID_KEYSTORE_FILE="$keystore"
+    ANDROID_KEYSTORE_PASSWORD="$(sops --config /dev/null -d --extract '["keystore_password"]' "$secrets" 2>/dev/null || true)"
+    ANDROID_KEY_PASSWORD="$(sops --config /dev/null -d --extract '["key_password"]' "$secrets" 2>/dev/null || true)"
+    ANDROID_KEY_ALIAS="$(sops --config /dev/null -d --extract '["key_alias"]' "$secrets" 2>/dev/null || true)"
+    [ -n "$ANDROID_KEYSTORE_PASSWORD" ] && [ -n "$ANDROID_KEY_ALIAS" ] \
+        || die "signing: cannot decrypt $secrets (SOPS_AGE_KEY missing?)"
+    export ANDROID_KEYSTORE_FILE ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_PASSWORD ANDROID_KEY_ALIAS
+}
+
+# ── build ─────────────────────────────────────────────────────────────
+step_build() {
+    [ -f "$ONLINE_DIR/android/app/appSettings.gradle" ] || die "run configure first"
+    local task asset build_tools apk out app_id
+    task="$(_json '.build.gradle_task')"
+    asset="$(_json '.release.gh_release.asset_name')"
+    app_id="$(_json '.android.application_id')"
+    [ -n "$task" ] && [ -n "$asset" ] && [ -n "$app_id" ] || die "build.json::build.gradle_task, release.gh_release.asset_name or android.application_id is empty"
+
+    if command -v sdkmanager >/dev/null 2>&1; then
+        mapfile -t packages < <(jq -r '.build.sdk_packages[]' "$BUILD_JSON")
+        [ "${#packages[@]}" -eq 0 ] || yes | sdkmanager "${packages[@]}" >/dev/null
+    fi
+
+    log "build: gradle $task"
+    ( cd "$ONLINE_DIR/android" && ./gradlew --no-daemon --stacktrace "$task" ) || die "gradle $task failed"
+
+    apk="$(find "$ONLINE_DIR/android/build/app/outputs/apk/release" -name "*$ABI*.apk" | head -1)"
+    [ -f "$apk" ] || die "no $ABI release APK under android/build/app/outputs/apk/release"
+    mkdir -p "$DIST_DIR"
+    out="$DIST_DIR/$asset"
+    cp "$apk" "$out"
+
+    build_tools="$(ls -d "${ANDROID_HOME:?ANDROID_HOME is not set}"/build-tools/* | sort -V | tail -1)"
+    _resolve_signing
+    "$build_tools/zipalign" -f -p 4 "$out" "$out.aligned" && mv -f "$out.aligned" "$out"
+    "$build_tools/apksigner" sign --ks "$ANDROID_KEYSTORE_FILE" --ks-pass "pass:$ANDROID_KEYSTORE_PASSWORD" \
+        --ks-key-alias "$ANDROID_KEY_ALIAS" --key-pass "pass:${ANDROID_KEY_PASSWORD:-$ANDROID_KEYSTORE_PASSWORD}" "$out" \
+        || die "signing with the shared constellation key failed"
+    rm -f "$out.idsig"
+    "$build_tools/apksigner" verify "$out" >/dev/null || die "$asset is not validly signed"
+
+    # What was built, asserted on the output rather than inferred from the
+    # inputs: our package id, and native libraries that are the released bytes.
+    "$build_tools/aapt2" dump badging "$out" | grep -q "^package: name='$app_id'" \
+        || die "$asset does not carry package $app_id"
+    python3 - "$ENGINE_APK" "$out" "$(_json '.upstream.engine.native_libs.from_apk_dir')" <<'PY' || die "native libraries differ from the released ones"
+import hashlib, sys, zipfile
+released, built, libs = sys.argv[1], sys.argv[2], sys.argv[3].rstrip("/") + "/"
+def digests(path):
+    with zipfile.ZipFile(path) as z:
+        return {i.filename: hashlib.sha256(z.read(i)).hexdigest()
+                for i in z.infolist() if i.filename.startswith(libs) and i.filename.endswith(".so")}
+a, b = digests(released), digests(built)
+if not a or a != b:
+    changed = sorted(set(a) ^ set(b)) + sorted(k for k in set(a) & set(b) if a[k] != b[k])
+    sys.exit(f"build: native libraries differ from the released APK: {changed}")
+print(f"build: all {len(a)} native libraries are byte-identical to the released APK")
+PY
+    log "build: $out ($(stat -c %s "$out") bytes)"
+}
+
+# ── host-deps / asset-path: what the workflow needs from this engine ──
+step_host_deps() {
+    mapfile -t packages < <(jq -r '.build.host_packages[]' "$BUILD_JSON")
+    [ "${#packages[@]}" -gt 0 ] || die "build.json::build.host_packages is empty"
+    sudo apt-get update -y >/dev/null && sudo apt-get install -y "${packages[@]}"
+}
+
+step_asset_path() { printf '%s/%s\n' "$DIST_DIR" "$(_json '.release.gh_release.asset_name')"; }
+
+case "${1:-help}" in
+    host-deps)   step_host_deps ;;
+    asset-path)  step_asset_path ;;
+    materialize) step_materialize ;;
+    payload)     step_payload ;;
+    configure)   step_configure ;;
+    build)       step_build ;;
+    all)         step_materialize; step_payload; step_configure; step_build ;;
+    *)           sed -n '2,/^set -euo/p' "$0" | sed 's/^# \{0,1\}//; /^set -euo/d' ;;
+esac

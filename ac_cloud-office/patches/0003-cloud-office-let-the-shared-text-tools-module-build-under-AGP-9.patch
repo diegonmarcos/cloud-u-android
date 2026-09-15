@@ -1,0 +1,45 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cloud Office <me@diegonmarcos.com>
+Date: Tue, 15 Sep 2026 23:05:11 +0000
+Subject: [PATCH 2/2] cloud-office: let the shared text-tools module build
+ under AGP 9
+
+patches/0001 includes ab_cloud-libs-shared/libs/text-tools, the one copy
+of the ITextTools binder contract that the Cloud Keyboard, cloud-mail and
+the SuperApp already build. That module applies
+org.jetbrains.kotlin.android and sets kotlinOptions, which is right for
+the AGP 8 builds that share it, but this tree pins AGP 9.3.0, and AGP 9
+fails any project that applies that plugin while its built-in Kotlin
+support is on: "The 'org.jetbrains.kotlin.android' plugin is no longer
+required for Kotlin support since AGP 9.0". Nothing else would fail
+first, so without this the build dies at configuration time, before a
+single file is compiled.
+
+The module must not be copied and rewritten here: its AIDL method order
+is a wire format, and a second copy is a second contract to drift. So
+the build opts out instead, with the two properties AGP itself names:
+android.builtInKotlin=false hands Kotlin back to the Kotlin Gradle
+plugin (AGP 9.3.0 already brings version 2.2.10 of it onto the
+classpath), and android.newDsl=false restores the android extension
+that plugin configures. Upstream's own app and lib modules are Java,
+and the legacy extension still carries the compileSdk { version =
+release(37) } block they use.
+---
+ android/gradle.properties | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/android/gradle.properties b/android/gradle.properties
+index 1b32c5c..8a22b39 100644
+--- a/android/gradle.properties
++++ b/android/gradle.properties
+@@ -19,3 +19,10 @@ org.gradle.jvmargs=-Xmx4g
+ # This option should only be used with decoupled projects. More details, visit
+ # http://www.gradle.org/docs/current/userguide/multi_project_builds.html#sec:decoupled_projects
+ # org.gradle.parallel=true
++
++# Kotlin through the Kotlin Gradle plugin, not AGP's built-in Kotlin: the shared
++# :text-tools module applies org.jetbrains.kotlin.android and configures
++# kotlinOptions, which AGP 9 refuses under built-in Kotlin. The plugin still
++# needs the legacy android extension it was written against.
++android.builtInKotlin=false
++android.newDsl=false
