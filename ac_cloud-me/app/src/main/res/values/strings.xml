@@ -4,7 +4,6 @@
      drawer and every tab strip are built at runtime from one list. Only the
      handful of strings the framework itself needs live in resources. -->
 <resources>
-    <string name="app_name">Cloud Me</string>
     <string name="drawer_open">Open navigation</string>
     <string name="drawer_close">Close navigation</string>
     <string name="action_configs">Configs</string>

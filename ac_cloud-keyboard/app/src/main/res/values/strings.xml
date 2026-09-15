@@ -5,7 +5,9 @@
   These app-res strings win the resource merge over libs:keyboard. The superapp
   app (aa_cloud-superapp/app) carries the identical overrides.
 
-  - app_name: launcher label AND the label WelcomeWizard reads via
+  - app_name: NOT declared here. app/build.gradle generates it from
+    build.json::name with resValue (#351), which is still a string resource.
+    It is the launcher label AND the label WelcomeWizard reads via
     applicationInfo.labelRes. Must be a string RESOURCE — a manifest literal
     gives labelRes==0 → stringResource(0) throws Resources$NotFoundException
     ("String resource ID #0x0") and Settings crashes on open (WelcomeWizard.kt:86).
@@ -17,7 +19,6 @@
     the lowercased ToolbarKey name up against the app package.
 -->
 <resources>
-    <string name="app_name">Cloud Keyboard</string>
     <string name="english_ime_name" translatable="false">Cloud Keyboard</string>
     <string name="translate">Translate</string>
 </resources>

@@ -5,9 +5,6 @@
   values-es-rES.
 -->
 <resources>
-
-    <string name="app_name">Cloud Writer</string>
-
     <string name="tool_enhance">Mejorar texto</string>
     <string name="tool_grammar">Revisar gramática</string>
     <string name="tool_summary">Resumen</string>

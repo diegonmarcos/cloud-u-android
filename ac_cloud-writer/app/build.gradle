@@ -59,6 +59,10 @@ android {
     compileSdk a.compile_sdk
 
     defaultConfig {
+        // Launcher label = build.json::name, the application's one name (#351).
+        // Never a strings.xml literal: that copy said "Cloud Browser" while
+        // the fleet, the store and every roster said cloud-browser.
+        resValue "string", "app_name", buildJson.name
         // FLEET RULE (#299): English is the fleet's base language. Unlisted locales are
         // dropped from resources.arsc, so a Spanish phone resolves the English
         // in values/ instead of any values-es this module or a library ships.

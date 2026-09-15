@@ -12,9 +12,6 @@
   gone wrong.
 -->
 <resources>
-
-    <string name="app_name">Cloud Writer</string>
-
     <!-- The owner's four tools. "Summary" is called Resume elsewhere in this
          fleet; both mean SUMMARISE, and neither means a curriculum vitae. -->
     <string name="tool_enhance">Text Enhance</string>

@@ -26,7 +26,6 @@
     cloud-data, versionCode, the `samples` key) are literal and are not touched.
 -->
 <resources>
-    <string name="app_name">Cloud SuperApp</string>
     <string name="translate">Traducir</string>
     <string name="welcome">El shell de Cloud SuperApp está en marcha.</string>
     <string name="welcome_template">Cloud SuperApp — %1$s\nversionCode %2$d</string>

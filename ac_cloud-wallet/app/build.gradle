@@ -136,6 +136,10 @@ android {
     compileSdk 36
 
     defaultConfig {
+        // Launcher label = build.json::name, the application's one name (#351).
+        // Never a strings.xml literal: that copy said "Cloud Browser" while
+        // the fleet, the store and every roster said cloud-browser.
+        resValue "string", "app_name", buildJson.name
         applicationId 'com.diegonmarcos.cloudwallet'
         minSdk 26
         targetSdk 35

@@ -135,6 +135,35 @@ for directory, data in sorted(build_files.items()):
                 check(False, "%s/build.json%s.%s = %r spells an application name outside the pattern"
                       % (directory, path, key, value))
 
+print("== T6: an app whose gradle reads its build.json takes its launcher label from .name ==")
+# The home-screen label is the one surface every other check above cannot see:
+# it lived in res/values/strings.xml and said "Cloud Browser". Where
+# app/build.gradle already parses the app's own build.json, the label can be
+# inherited, so a strings.xml copy is a defect. Fork-apps whose label sits inside
+# vendored upstream source (Mattermost, Element, Fossify, Termux) have no such
+# reader and are not covered here.
+reads_build_json = re.compile(r"JsonSlurper\(\)\s*\.parse\(\s*file\(")
+derives_label = re.compile(r"resValue\s*\(?\s*[\"']string[\"']\s*,\s*[\"']app_name[\"']\s*,\s*buildJson\.name\b")
+covered = 0
+for directory in sorted(build_files):
+    gradle = os.path.join(root, directory, "app", "build.gradle")
+    if not os.path.isfile(gradle) or not build_files[directory].get("name", "").startswith("cloud-"):
+        continue
+    source = open(gradle).read()
+    if not reads_build_json.search(source):
+        continue
+    covered += 1
+    check(derives_label.search(source) is not None,
+          "%s/app/build.gradle reads build.json but does not set app_name from buildJson.name" % directory)
+    resources = os.path.join(root, directory, "app", "src")
+    for base, _, files in os.walk(resources):
+        if "strings.xml" in files and os.path.basename(base).startswith("values"):
+            path = os.path.join(base, "strings.xml")
+            if re.search(r'<string\s+name="app_name"', open(path).read()):
+                check(False, "%s restates app_name — the launcher label comes from build.json::name"
+                      % os.path.relpath(path, root))
+check(covered > 0, "T6 found no application whose gradle reads its build.json — the detection matched nothing")
+
 print()
 print("── test-app-names-pattern: %d passed, %d failed ──" % (passed, failed))
 sys.exit(1 if failed else 0)
