@@ -983,9 +983,24 @@ public class LatinIME extends InputMethodService implements
         mStatsUtilsManager.onFinishInputView();
         mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
         BackgroundGatheringCache.saveOrClear(this);
-        hideTranslateBar(); // SuperApp addition (patch 0001)
+        // The microphone is a shared resource and the one thing here that keeps costing
+        // something while the keyboard is away, so the voice bar always goes.
         hideVoiceBar(); // SuperApp (patch 0005) — stop + release mic when input ends
-        hideEnhanceBar(); // SuperApp — its target range belongs to the field we are leaving
+        // #355: A SCREEN LOCK HIDES THE INPUT VIEW WITHOUT ENDING THE INPUT SESSION, and
+        // finishingInput is the platform saying which of the two happened. Both used to tear
+        // these panels down, so locking the screen mid-edit discarded a rewrite the owner was
+        // working on: hiding a panel means onShown() runs on the way back, and that resets the
+        // box. They now survive anything short of the field itself going away.
+        if (finishingInput) {
+            hideTranslateBar(); // SuperApp addition (patch 0001)
+            hideEnhanceBar(); // SuperApp — its target range belongs to the field we are leaving
+        } else if (mTranslateBar != null) {
+            // Still visible, and its typed buffer with it — but it must not leave a composing
+            // region behind in the app's field with nothing watching it, or that text sits
+            // there provisional and underlined for as long as the screen is off. This releases
+            // exactly that, keeping what it already wrote, and nothing else.
+            mTranslateBar.onHidden();
+        }
     }
 
     @Override

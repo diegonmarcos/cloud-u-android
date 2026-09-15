@@ -46,6 +46,7 @@ import helium314.keyboard.settings.SettingsActivity
 import helium314.keyboard.settings.initPreview
 import helium314.keyboard.settings.preferences.ListPreference
 import helium314.keyboard.settings.preferences.Preference
+import helium314.keyboard.settings.preferences.SwitchPreference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,6 +64,12 @@ fun createTextEnhanceSettings(context: Context): List<Setting> = listOf(
             context.getString(R.string.enhance_scope_field) to "field",
         )
         ListPreference(setting, items, Defaults.PREF_ENHANCE_SCOPE)
+    },
+    // #355: whether a finished rewrite is pasted for you. The bar's Paste chip does not go
+    // away when this is on — it is what puts a rewrite back after an Undo, and the only way
+    // to apply one the user has edited in the box.
+    Setting(context, Settings.PREF_ENHANCE_AUTO_PASTE, R.string.enhance_auto_paste_title, R.string.enhance_auto_paste_summary) {
+        SwitchPreference(it, Defaults.PREF_ENHANCE_AUTO_PASTE)
     },
     Setting(context, Settings.PREF_ENHANCE_STYLE, R.string.enhance_style_title, R.string.enhance_style_summary) { setting ->
         ListPreference(setting, AiRouter.styles.map { it.label to it.id }, AiRouter.defaultStyle)
@@ -187,6 +194,7 @@ private fun EnhanceTestBox(setting: Setting) {
 fun TextEnhanceScreen(onClickBack: () -> Unit) {
     val items = listOf(
         Settings.PREF_ENHANCE_SCOPE,
+        Settings.PREF_ENHANCE_AUTO_PASTE,
         Settings.PREF_ENHANCE_STYLE,
         Settings.PREF_ENHANCE_TONE,
         Settings.PREF_ENHANCE_LENGTH,

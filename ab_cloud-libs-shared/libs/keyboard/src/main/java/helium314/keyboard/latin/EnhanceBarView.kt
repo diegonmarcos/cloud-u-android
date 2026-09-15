@@ -28,6 +28,7 @@ import com.diegonmarcos.superapp.translate.ImeTextBox
 import com.diegonmarcos.superapp.translate.TextBoxEditor
 import com.diegonmarcos.superapp.translate.TranslateEdit
 import com.diegonmarcos.superapp.translate.TranslateInputView
+import helium314.keyboard.latin.settings.Defaults
 import helium314.keyboard.latin.settings.Settings
 import helium314.keyboard.latin.utils.Log
 import helium314.keyboard.latin.utils.prefs
@@ -396,7 +397,9 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
                     // touched up in the box is what Undo in the box menu gives back.
                     editor.replaceAll(out)
                     renderOutput(); showStatus("")
-                    if (applyWhenReady) applyOutput()
+                    // The Replace chip arms this for one run; auto-paste (#355) is the standing
+                    // answer to the same question, so a plain Generate reaches the field too.
+                    if (applyWhenReady || autoPaste()) applyOutput()
                 }.onFailure { e ->
                     Log.e(TAG, "generate failed", e)
                     showStatus(when (e) {
@@ -461,6 +464,14 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
             }
         }
     }
+
+    /**
+     * #355: whether a finished rewrite is written into the field without a second tap. Read at
+     * use time rather than cached on open, so the Settings switch takes effect on the next
+     * Generate instead of the next time the bar is opened.
+     */
+    private fun autoPaste() =
+        context.prefs().getBoolean(Settings.PREF_ENHANCE_AUTO_PASTE, Defaults.PREF_ENHANCE_AUTO_PASTE)
 
     /** Write the box into the field over the text it was made from. */
     private fun applyOutput() {

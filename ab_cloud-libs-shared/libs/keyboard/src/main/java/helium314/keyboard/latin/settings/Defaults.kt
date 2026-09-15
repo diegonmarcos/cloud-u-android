@@ -204,6 +204,11 @@ object Defaults {
     // "auto" = rewrite the selection when there is one, the whole field otherwise. The other
     // two values force one of the halves, for people who never want to be guessed at.
     const val PREF_ENHANCE_SCOPE = "auto" // "auto"|"selection"|"field"
+    // ON (#355). Generate is asked for in order to get the rewrite into the field, so leaving it
+    // in the bar made Paste a second tap on every single rewrite. Off restores "nothing reaches
+    // the field until you ask for it", which is what a cautious editor wants — and the apply path
+    // still refuses a summary and still checks the field has not moved, so ON is not unchecked.
+    const val PREF_ENHANCE_AUTO_PASTE = true
     const val PREF_SHOW_DEBUG_SETTINGS = false
     val PREF_DEBUG_MODE = BuildConfig.DEBUG
     const val PREF_SHOW_SUGGESTION_INFOS = false
