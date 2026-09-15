@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
+import android.util.Base64
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -28,6 +29,7 @@ import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
 import kotlin.concurrent.thread
+import org.json.JSONObject
 
 /**
  * Constellation AppStore — Configs → Constellation. superapp is the fleet
@@ -46,13 +48,49 @@ class ConstellationFragment : Fragment() {
     private val CONSTELLATION_PERM = "com.diegonmarcos.cloud.permission.CONSTELLATION_DATA"
 
     private val fleet by lazy { Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64) }
-    // Tabs are a VIEW over the one fleet list — kind comes from each app's
-    // build.json::release.kind via data/regen.sh, never a hardcoded list here.
-    // Sorted by display name at this single point rather than at each call
-    // site: the rows, the detail pane, "Update All" and the copy dump all read
-    // these two lists, so ordering them here orders the whole page at once.
-    private val apps by lazy { fleet.filter { it.kind != "lib" }.sortedBy { it.label.lowercase() } }
-    private val libs by lazy { fleet.filter { it.kind == "lib" }.sortedBy { it.label.lowercase() } }
+
+    /** One tab: a group the fleet data declares, and every row drawn in it. */
+    private class Tab(val label: String, val blurb: String, val rows: List<Fleet.App>)
+
+    // The same baked JSON Fleet.parse reads, for the three things that are this
+    // page's business and not the updater's: the declared groups, the members
+    // of each, and the reference catalogue. Read here rather than added to
+    // Fleet.App, so no updater, worker or grant path ever sees a reference row.
+    private val fleetJson by lazy {
+        runCatching { JSONObject(String(Base64.decode(BuildConfig.CONSTELLATION_FLEET_B64, Base64.DEFAULT))) }
+            .getOrElse { JSONObject() }
+    }
+    private fun fleetObjects(key: String): List<JSONObject> =
+        fleetJson.optJSONArray(key)?.let { array -> (0 until array.length()).map { array.getJSONObject(it) } }.orEmpty()
+
+    private val catalogue by lazy { fleetObjects("catalogue").associateBy { it.getString("id") } }
+    // Third-party reference rows: no APK, package or asset. Built BLOCKED unless
+    // the data says installable, so every row, chip and batch path treats them the
+    // way it already treats an unpublished app - and Fleet.installAllLocked drops
+    // a blocked entry before it checks status, so no batch ever fetches one.
+    private val references by lazy {
+        catalogue.values.map { entry ->
+            Fleet.App(id = entry.getString("id"), label = entry.optString("label", entry.getString("id")),
+                pkg = "", altId = null, registry = "", namespace = "", image = "", tag = "",
+                asset = "", assets = emptyMap(), releaseUrl = "", repoUrl = "", ghcrPage = "",
+                blocked = !entry.optBoolean("installable", false), kind = "")
+        }
+    }
+    // Tabs are a VIEW over the fleet: one per group data/regen.sh declares, in
+    // its declared order, holding the members it lists and skipping a group with
+    // no rows - never a hardcoded list here. Sorted by display name at this
+    // single point rather than at each call site: the rows, the detail pane and
+    // the copy dump all read these lists, so ordering here orders the whole page.
+    private val tabs by lazy {
+        val everyRow = (fleet + references).associateBy { it.id }
+        fleetObjects("groups").map { group ->
+            val members = group.optJSONArray("members")
+            val rows = (0 until (members?.length() ?: 0))
+                .mapNotNull { index -> members?.optString(index)?.let(everyRow::get) }
+            Tab(group.optString("label", group.getString("id")), group.optString("blurb"),
+                rows.sortedBy { it.label.lowercase() })
+        }.filter { it.rows.isNotEmpty() }
+    }
 
     private val statusViews = HashMap<String, TextView>()
     // The collapsed row shows a one-line summary; the full status line lives in
@@ -114,7 +152,8 @@ class ConstellationFragment : Fragment() {
         scroll.addView(col)
 
         col.addView(title(ctx, "Constellation AppStore"))
-        col.addView(caption(ctx, "${apps.size} apps · ${libs.size} libs · superapp is the fleet manager"))
+        col.addView(caption(ctx,
+            (tabs.map { "${it.rows.size} ${it.label}" } + "superapp is the fleet manager").joinToString(" · ")))
 
         col.addView(tabBar(ctx))
         body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
@@ -130,7 +169,7 @@ class ConstellationFragment : Fragment() {
         super.onDestroyView()
     }
 
-    // ── tabs: Apps | Libs | Perms ────────────────────────────────────────────
+    // ── tabs: one per declared group, then Perms ─────────────────────────────
     private fun tabBar(ctx: Context): View {
         val bar = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -138,11 +177,13 @@ class ConstellationFragment : Fragment() {
             lp.setMargins(0, 0, 0, dp(ctx, 8)); layoutParams = lp
         }
         tabBtns.clear()
-        listOf("Apps", "Libs", "Perms").forEachIndexed { i, label ->
+        // The group count is data, so five or more tabs share one row: one line
+        // each, with tighter sides, keeps the bar a single height.
+        (tabs.map { it.label } + "Perms").forEachIndexed { i, label ->
             val t = TextView(ctx).apply {
                 text = label; gravity = Gravity.CENTER; textSize = 13f
-                typeface = Typeface.DEFAULT_BOLD
-                setPadding(dp(ctx, 8), dp(ctx, 9), dp(ctx, 8), dp(ctx, 9))
+                typeface = Typeface.DEFAULT_BOLD; maxLines = 1
+                setPadding(dp(ctx, 4), dp(ctx, 9), dp(ctx, 4), dp(ctx, 9))
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 isClickable = true
                 setOnClickListener { if (tab != i) { tab = i; filter = 0; paintTabs(); renderTab(ctx) } }
@@ -162,22 +203,10 @@ class ConstellationFragment : Fragment() {
         body.removeAllViews()
         statusViews.clear(); actionRows.clear(); installBtns.clear()
         fullStatusViews.clear(); dots.clear(); quickBtns.clear(); filterChips.clear()
-        when (tab) {
-            0 -> renderFleet(ctx, apps, "Full constellation apps — install, update, open, remove.")
-            1 -> renderFleet(ctx, libs,
-                // Say what is actually true. Most of these are still compiled
-                // INTO the apps that use them, so installing one here does not
-                // shrink anything or change behaviour - it makes the module
-                // installable and inspectable on its own. Only the engines
-                // listed below are genuinely bound across a process boundary,
-                // and only those degrade when absent.
-                "One APK per library module — installable and inspectable on its own. " +
-                "Most are also compiled into the apps that use them, so installing one here " +
-                "does not change how those apps behave. The exceptions are true out-of-process " +
-                "engines their app binds over AIDL and needs installed: net-wg (WireGuard), " +
-                "voice-vosk and translate-mlkit (the keyboard's engines).")
-            else -> renderPerms(ctx)
-        }
+        // Past the last group is Perms. Each blurb is data beside its group, so
+        // the caption naming the out-of-process engines moves with the engines.
+        val shown = tabs.getOrNull(tab)
+        if (shown != null) renderFleet(ctx, shown.rows, shown.blurb) else renderPerms(ctx)
     }
 
     private fun renderFleet(ctx: Context, list: List<Fleet.App>, blurb: String) {
@@ -404,7 +433,7 @@ class ConstellationFragment : Fragment() {
         // The batch actions, in the order they are meant to be used:
         //   Check all   → refresh what is on offer, changing nothing.
         //   Install all → only entries not yet on the device (tab-scoped).
-        //   Update all  → apps AND libs in one pass, so the whole constellation
+        //   Update all  → every group in one pass, so the whole constellation
         //                 is brought current without switching tabs first. There
         //                 is deliberately no tab-scoped update: it only ever made
         //                 the user visit both tabs to reach the same place.
@@ -425,7 +454,9 @@ class ConstellationFragment : Fragment() {
         var wirelessDebugButton: View? = null
         var openButton: View? = null
         updateAllButton = btn(ctx, "⬆  Update all", 0xFF2B6CB0.toInt()) {
-            updateAll(ctx, "apps + libs", apps + libs)
+            // `fleet`, which Fleet.parse built from `apps` alone: reference rows
+            // are not in it, so this pass cannot fetch or fail on one.
+            updateAll(ctx, "the whole fleet", fleet)
         }
         installAllButton = btn(ctx, "⬇  Install all", 0xFF2B6CB0.toInt()) { installMissing(ctx) }
         // Row 2 — refresh statuses (full width).
@@ -615,7 +646,11 @@ class ConstellationFragment : Fragment() {
         if (app.ghcrPage.isNotEmpty())   links.addView(linkChip("PKG↗", app.ghcrPage))
         if (links.childCount > 0) into.addView(links)
 
-        into.addView(mono(ctx, app.pkg + "  ·  " + app.image))
+        // A reference row has no package or image to show. What it has is what
+        // the library is for, and nothing on it can be opened or removed.
+        val reference = catalogue[app.id]
+        if (reference != null) into.addView(caption(ctx, reference.optString("description")))
+        else into.addView(mono(ctx, app.pkg + "  ·  " + app.image))
 
         val status = TextView(ctx).apply {
             textSize = 12f; setTextColor(cDim); text = "checking…"
@@ -623,6 +658,7 @@ class ConstellationFragment : Fragment() {
         }
         fullStatusViews[app.id] = status
         into.addView(status)
+        if (reference != null) return
 
         val actions = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
         actionRows[app.id] = actions
@@ -646,8 +682,8 @@ class ConstellationFragment : Fragment() {
         })
         into.addView(actions)
     }
-    /** The fleet slice the visible tab operates on (Perms falls back to apps). */
-    private fun current(): List<Fleet.App> = if (tab == 1) libs else apps
+    /** The rows of the visible tab. Perms draws no batch actions, so it has none. */
+    private fun current(): List<Fleet.App> = tabs.getOrNull(tab)?.rows.orEmpty()
 
     // ── concurrent status — one thread per app, independent + non-blocking ───
     private fun checkAll(ctx: Context, list: List<Fleet.App> = current()) {
@@ -685,7 +721,7 @@ class ConstellationFragment : Fragment() {
                 is Fleet.State.Installed       -> "v${s.versionName}"
                 is Fleet.State.UpdateAvailable -> "v${s.versionName ?: "—"} → new"
                 is Fleet.State.Missing         -> "not installed"
-                is Fleet.State.Blocked         -> "not published"
+                is Fleet.State.Blocked         -> if (appId in catalogue) "reference · not installable" else "not published"
                 is Fleet.State.Error           -> s.message
             }, size).filter { it.isNotEmpty() }.joinToString("  ·  ")
         }
@@ -697,7 +733,7 @@ class ConstellationFragment : Fragment() {
                 is Fleet.State.Installed       -> "✓ up to date  ·  v${s.versionName} (${s.versionCode})  ·  sha ${s.sha12}$sz"
                 is Fleet.State.UpdateAvailable -> "⬆ update available  ·  installed v${s.versionName ?: "—"} → ${s.remoteDigest12}$sz"
                 is Fleet.State.Missing         -> "◯ not installed  ·  tap Install$sz"
-                is Fleet.State.Blocked         -> "⛔ not published yet"
+                is Fleet.State.Blocked         -> if (appId in catalogue) "⛔ reference row — a third-party library with nothing to install" else "⛔ not published yet"
                 is Fleet.State.Error           -> "⚠ ${s.message}"
             }
         }

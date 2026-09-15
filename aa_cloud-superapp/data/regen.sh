@@ -311,8 +311,66 @@ regen_constellation() {
         $apps | reduce .[] as $e ([];
             if any(.[]; .asset == $e.asset) then . else . + [$e] end)')"
 
-    jq -n --argjson apps "$apps" '{ version: 1, apps: $apps }' \
-        > "$HERE/constellation-fleet.json"
+    # ── Groups: which Constellation tab each entry is drawn in (#343) ────────
+    # DECLARED, never inferred from a name. build.json::constellation.groups
+    # lists the tabs in render order; an entry takes group_members[<id>] when
+    # declared, otherwise the group whose default_for_kind is its kind (so a
+    # lib module defaults to "libs"). ConstellationFragment renders exactly
+    # these groups and names none of them, so a missing or unknown group is a
+    # row in no tab at all - every way the data can disagree with itself
+    # therefore fails the regen instead of shipping.
+    apps="$(jq --argjson apps "$apps" '
+        (.constellation.group_members // {}) as $members
+        | ((.constellation.groups // []) | map(select(.default_for_kind != null)
+              | { key: .default_for_kind, value: .id }) | from_entries) as $defaults
+        | $apps | map(. + { group: ($members[.id] // $defaults[.kind]) })' "$selfbj")"
+    local group_problems
+    group_problems="$(jq -r --argjson apps "$apps" '
+        ((.constellation.groups // []) | map(.id)) as $declared
+        | (.constellation.catalogue // []) as $catalogue
+        | ( $apps[] | select(.group == null or (.group | IN($declared[]) | not))
+              | "fleet entry \(.id) (kind \(.kind)) is in no declared group: \(.group)" ),
+          ( (.constellation.group_members // {}) | keys[]
+              | select(. as $member | $apps | any(.id == $member) | not)
+              | "group_members names \(.), which is not a fleet entry" ),
+          ( $catalogue[] | select(.group | IN($declared[]) | not)
+              | "catalogue row \(.id) names undeclared group \(.group)" ),
+          ( ($apps | map(.id)) + ($catalogue | map(.id)) | group_by(.)[]
+              | select(length > 1)
+              | "id \(.[0]) is used more than once across apps and catalogue" )' "$selfbj")"
+    if [ -n "$group_problems" ]; then
+        printf 'ERROR: constellation groups disagree with the fleet:\n%s\n' "$group_problems" >&2
+        return 1
+    fi
+
+    # Reference rows go OUT of `apps` on purpose: Fleet.parse reads only `apps`,
+    # so the updater, both auto-update workers, PrivilegedGrants and the recovery
+    # screens can never be handed an entry with no package. installable:false is
+    # stamped here rather than trusted from the data, so no catalogue row can
+    # ever claim to be installable.
+    #
+    # ONE COMPACT ENTRY PER LINE, NOT PRETTY-PRINTED. libs:updater and
+    # libs:appstore bake this file's RAW bytes into a BuildConfig String, and
+    # javac refuses any constant past 65,535 bytes. Pretty-printed, the 63-entry
+    # fleet already baked to 61,368 base64 bytes before the groups existed, so
+    # the indentation alone was about to break every build that links the
+    # updater. One entry per line keeps a diff readable per entry at compact size.
+    jq -r --argjson apps "$apps" '
+        [ (.constellation.catalogue // [])[]
+          | { id, label: (.label // .id), group,
+              description: (.description // ""), installable: false } ] as $catalogue
+        # members is the same group stamp read from the tab side, so the page
+        # builds its tabs without reading any entry field Fleet.parse owns.
+        | [ (.constellation.groups // [])[] | .id as $id
+            | { id, label: (.label // .id), blurb: (.blurb // ""),
+                members: [ ($apps[], $catalogue[]) | select(.group == $id) | .id ] } ] as $groups
+        | "{\"version\":1,",
+          "\"groups\":[", ($groups | map(tojson) | join(",\n")), "],",
+          "\"apps\":[", ($apps | map(tojson) | join(",\n")), "],",
+          "\"catalogue\":[", ($catalogue | map(tojson) | join(",\n")), "]}"
+        ' "$selfbj" > "$HERE/constellation-fleet.json"
+    jq -e '.apps | length > 0' "$HERE/constellation-fleet.json" >/dev/null \
+        || { echo "ERROR: constellation-fleet.json is not valid JSON with apps" >&2; return 1; }
     echo "constellation apps: $(jq '.apps | length' "$HERE/constellation-fleet.json")"
 }
 regen_constellation
