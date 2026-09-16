@@ -138,7 +138,7 @@
       "workflow": "ship-cloud-ide.yml"
     },
     "ac_cloud-keyboard": {
-      "first_test": "Has 3 shell testers, executed.",
+      "first_test": "Has 3 shell testers plus one COMPILED-AND-RUN Kotlin tester, all executed. The Kotlin one is 1_cicd/src/scripts/test/translate-key-handoff.test.kt, run by translate-key-handoff-guard.yml: it compiles against the shipped libs/translate KeyHandoff.kt by path and executes it, because what #355 part 2 decided is a behaviour \u2014 tapping into the host application's own text field releases the keys back to it, while typing in the translate panel does not. Both halves are asserted and the runner proves each can fail, mutating a sandbox copy twice: delete the release and case 2 goes red, disable the self-caused guard so every selection change releases and cases 3, 4 and 7 go red. Two mutations because the halves fail in opposite directions and one could only ever prove half the test was alive. STILL NOT COVERED, and this is the larger part: nothing here executes TranslateBarView, TranslateInputView or LatinIME. The engine's decision is proved; the WIRING to it is argued in code only \u2014 that onUpdateSelection with a composing span below zero is the right raise site, that every non-composing InputConnection write in the bar announces itself first, and that a touch on the panel's box reaches onClaim. Those need an emulator or a device, and the phone install is #280.",
       "shell_testers": 4,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
