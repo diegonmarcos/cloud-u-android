@@ -1,0 +1,44 @@
+# Fork-engine guard (#368).
+#
+# Six applications ship through a `cloud-*-fork-engine.sh` — chat, dialer,
+# matrix, media-center, nix-on-droid, termux. Two testers for those engines
+# have existed under 1_cicd/src/scripts/test/ since the engines did, and no
+# workflow named either of them, so neither had ever been executed by CI. In
+# this repository a tester is registered by a workflow naming its filename;
+# writing the tester and not the workflow produces no error anywhere.
+#
+# What they cover is not cosmetic. test-fork-key-hyphen.sh is the regression
+# guard for GHA run 30528694044, where a fork key containing a hyphen was
+# shell-interpolated straight into a jq path — `.forks.media-center.build` is
+# arithmetic on two undefined functions, not a lookup, so the prepare steps
+# silently resolved to empty and the fork built without them. That is the
+# fail-green shape again: jq exits 0, the engine gets an empty list, the build
+# goes through.
+#
+# Both testers run against the engine sources only — no gradle, no device, no
+# network — so this is seconds of runner time for six applications' worth of
+# build-engine behaviour.
+#
+# Deliberately NOT a step inside the ship workflows: both of those carry
+# `!ac_*/test/**` in their path filters, so a change to a tester does not
+# trigger them and a guard living there would go unrun exactly when it matters.
+name: "fork engine guard — the shared fork engines stay data-driven"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fork-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hub-vs-hub-less branching resolves from build.json, never from the app name
+        run: bash 1_cicd/src/scripts/test/test-fork-engine-helpers.sh
+      - name: A fork key with a hyphen still resolves in every engine's jq lookups
+        run: bash 1_cicd/src/scripts/test/test-fork-key-hyphen.sh
