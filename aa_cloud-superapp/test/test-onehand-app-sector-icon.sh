@@ -49,6 +49,7 @@ ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
 BJ="$APP/build.json"
+FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/OneHandFragment.kt"
 OH_GRADLE="$LIBS/launcher-onehand/build.gradle"
 OH_SVC="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/OneHandAccessibilityService.kt"
 DRAWABLE="$APP/app/src/main/res/drawable"
@@ -60,7 +61,7 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo "== RESULT: 0 passed, 1 failed =="
   exit 1
 fi
-for f in "$BJ" "$OH_GRADLE" "$OH_SVC"; do
+for f in "$BJ" "$OH_GRADLE" "$OH_SVC" "$FRAG"; do
   if [ ! -f "$f" ]; then
     echo "  FAIL: missing file $f — the tree is not what this tester was written against"
     echo "== RESULT: 0 passed, 1 failed =="
@@ -138,12 +139,25 @@ fi
 q() { python3 -c "$RESOLVER
 $1" "$BJ" "$ENGINE_CANON"; }
 
-# Block comments FIRST. With the line-comment expressions first, sed deletes the
-# closing `*/` line before the range ever sees it, the range never terminates,
-# and everything to EOF disappears — a stripper that returns an empty file makes
-# every grep below fail closed, which is survivable, but it would just as easily
-# hide a real regression behind a confusing failure.
-strip_kt() { sed -e '/\/\*/,/\*\//d' -e 's://.*::' "$1"; }
+# Comments are stripped with a real parser, NOT a sed line-range.
+#
+# `sed -e '/\/\*/,/\*\//d'` looks right and silently eats code: in a sed range
+# addr1,addr2 the end pattern is only tested on LATER lines, so a single-line
+# `/** … */` kdoc opens a range that cannot close on its own line and keeps
+# deleting until the NEXT `*/` — in OneHandFragment.kt that is line 459 through
+# the next kdoc ~90 lines down, taking the very call this tester asserts with it.
+# The grep then fails and blames the source. Both of this tester's Kotlin targets
+# are full of one-line kdocs, so this is not hypothetical; it cost a false FAIL
+# while writing it. python3 is already a hard dependency checked above.
+strip_kt() {
+  python3 - "$1" <<'PYEOF'
+import re, sys
+src = open(sys.argv[1]).read()
+src = re.sub(r'/\*.*?\*/', '', src, flags=re.S)   # block + kdoc, non-greedy
+src = re.sub(r'//[^\n]*', '', src)                # line comments
+sys.stdout.write(src)
+PYEOF
+}
 
 echo "== T1: the destination the owner reported, resolved as the engine resolves it =="
 
@@ -201,7 +215,7 @@ print(','.join(bad) if bad else 'none')")
 
 echo "== T3: the RUNTIME falls back, so an uninstalled app still draws =="
 
-SVC=$(strip_kt "$OH_SVC")
+SVC=$(strip_kt "$OH_SVC" | tr "\n" " " | tr -s " ")
 
 # The defect precisely: OpenApp had exactly one icon source and it was
 # install-dependent. The fallback must exist AND must come second — an installed
@@ -222,7 +236,35 @@ echo "$SVC" | grep -A4 'fun declaredIcon' | grep -q '"action:" + target.removePr
   && ok "and it matches on the normalised key, so one destination stays one destination" \
   || bad "declaredIcon() compares raw strings — the same mistake that hid this three times"
 
-echo "== T4: the ENGINE does this, not just this tester =="
+echo "== T4: the CONFIGS PICKER falls back too — it is the page he was looking at =="
+
+# Configs > Launcher > One-Hand builds its own option rows and had its own copy
+# of the same one-source lookup: `pm.getApplicationIcon(it.pkg)` for the ★
+# favourites, which is where cloud-drive lives. Fixing only the overlay would
+# leave the surface the report actually names still drawing Drive blank.
+# Whitespace-collapsed, because the fallback sits on its own continuation line:
+# a per-line grep for "does this end at getOrNull()" calls the FIXED code broken.
+FRAGC=$(strip_kt "$FRAG" | tr '\n' ' ' | tr -s ' ')
+
+echo "$FRAGC" | grep -qF 'runCatching { pm.getApplicationIcon(it.pkg) }.getOrNull() ?: declaredAppIcon(ctx, cfg, "app:${it.pkg}")' \
+  && ok "the picker's favourite rows fall back from PackageManager to the declared drawable" \
+  || bad "the picker's favourite rows still take PackageManager as their only icon source"
+
+# The order is the assertion, not an accident: PackageManager first means an
+# INSTALLED app keeps showing its own launcher icon rather than a tile stand-in.
+echo "$FRAGC" | grep -qF 'declaredAppIcon(ctx, cfg, "app:${it.pkg}") ?: runCatching' \
+  && bad "the picker consults the tile BEFORE PackageManager — an installed app loses its own icon" \
+  || ok "and PackageManager is consulted first, so an installed app keeps its own icon"
+
+echo "$FRAGC" | grep -q 'fun declaredAppIcon' \
+  && ok "declaredAppIcon() exists on the Configs page" \
+  || bad "declaredAppIcon() is missing from the Configs page"
+
+echo "$FRAGC" | grep -A3 'fun declaredAppIcon' | grep -q '"action:" + target.removePrefix("action:")' \
+  && ok "and it matches on the normalised key, like every other lookup" \
+  || bad "declaredAppIcon() compares raw strings"
+
+echo "== T5: the ENGINE does this, not just this tester =="
 
 GRADLE=$(sed -e 's://.*::' "$OH_GRADLE")
 

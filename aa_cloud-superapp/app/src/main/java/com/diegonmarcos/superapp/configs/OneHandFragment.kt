@@ -520,7 +520,16 @@ class OneHandFragment : Fragment() {
         // Curated favourites first (from build.json), with their nice labels.
         cfg.apps.forEach {
             if (seen.add(it.pkg)) {
+                // PackageManager FIRST — an installed app shows its own launcher
+                // icon — then the drawable the tile declares. The fallback is not
+                // decoration: these favourites include OUR fleet apps, and one
+                // extracted into its own APK (#302/#304 did this to Drive) is
+                // legitimately not installed, so getApplicationIcon throws and the
+                // row drew a label with no glyph. Same order, same catalogue and
+                // same normalised key the overlay uses, so the picker and the menu
+                // cannot show a sector differently.
                 val icon = runCatching { pm.getApplicationIcon(it.pkg) }.getOrNull()
+                    ?: declaredAppIcon(ctx, cfg, "app:${it.pkg}")
                 add(Option("★ ${it.label}", GestureAction.OpenApp(it.pkg), icon))
             }
         }
@@ -537,6 +546,16 @@ class OneHandFragment : Fragment() {
                 add(Option(label, GestureAction.OpenApp(pkg), ri.loadIcon(pm)))
             }
     }
+
+    /** The drawable the DERIVED action_catalogue declares for a raw target
+     *  ("app:<pkg>"), matched on the same normalised key
+     *  [OneHandConfig.AppAction.key] uses — never on the raw string, which is
+     *  what let one destination be two spellings. */
+    private fun declaredAppIcon(ctx: Context, cfg: OneHandConfig, target: String) =
+        cfg.appActions.firstOrNull { it.key == "action:" + target.removePrefix("action:") }
+            ?.icon?.takeIf { n -> n.isNotBlank() }
+            ?.let { n -> Sections.iconResFor(ctx, n).takeIf { r -> r != 0 } }
+            ?.let { r -> ctx.getDrawable(r) }
 
     private fun optionAdapter(ctx: Context, options: List<Option>) =
         object : ArrayAdapter<Option>(ctx, 0, options) {
