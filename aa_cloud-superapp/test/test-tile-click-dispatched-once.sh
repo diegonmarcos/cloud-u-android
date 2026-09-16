@@ -59,6 +59,11 @@
 #   T5  DATA-DRIVEN: build.json still declares at least one target that takes
 #       the trip, so T3 is guarding something real
 #   T6  no time-based click suppression anywhere in the dispatch path
+#   T7  the tile RENDERERS leave the per-tap bookkeeping to onTileClicked. T1-T6
+#       all read ShellActivity.kt, which is where the duplicate was — and that
+#       is exactly how the Cloud > Apps > Data Apps row went on firing its own
+#       Haptics.tap before calling in, two Vibrator pulses per tap on every tile
+#       in that row, with this file green over it (#167)
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0; FAIL=0
@@ -203,6 +208,64 @@ if printf '%s\n%s\n' "$CLICK" "$ROUTE" \
   bad "T6: a time-based guard is in the dispatch path — that hides a double dispatch instead of removing it, and breaks a real fast double tap"
 else
   ok "T6: no debounce — the duplicate is gone because the second delivery is gone"
+fi
+
+echo "== and the surfaces that CALL it do not bill the tap themselves =="
+# T1–T6 all read ShellActivity.kt. That is where the duplicate WAS, and it is
+# why the tile RENDERERS could go on doing their own half of the bookkeeping
+# with this file green over them — #167 found the Cloud ▸ Apps ▸ Data Apps row
+# firing Haptics.tap in the cell's own listener AND again inside onTileClicked,
+# two direct Vibrator pulses for one finger on every tile in that row, Drive
+# included.
+#
+# onTileClicked IS the bookkeeping. A surface that has one to hand calls it and
+# adds nothing. The one exception is a cell that opens a POPUP instead of
+# dispatching — a folder reaches no dispatcher, so it has to buzz for itself,
+# and it is required to say so on the line above.
+RENDERERS="$(grep -rl 'onTileClicked(' "$APP/app/src/main/java/com/diegonmarcos/superapp/launcher" \
+             2>/dev/null | sort)"
+if [ -z "$RENDERERS" ]; then
+  bad "T7: found no tile renderer calling onTileClicked — this check is asserting nothing"
+else
+  # The rule, stated exactly: inside one click listener, a haptic that fires
+  # UNCONDITIONALLY (before the listener's first branch) alongside a dispatch is
+  # the double — that tap is going to be billed again inside onTileClicked. A
+  # haptic that sits inside a branch is the popup case and is fine, which is
+  # also why the test cannot just ask "does this file mention Haptics".
+  DOUBLE="$(python3 - $RENDERERS <<'PY'
+import re, sys
+
+def blocks(src, opener="setOnClickListener {"):
+    out, i = [], src.find(opener)
+    while i != -1:
+        depth, j = 0, i + len(opener) - 1
+        while j < len(src):
+            if src[j] == "{": depth += 1
+            elif src[j] == "}":
+                depth -= 1
+                if depth == 0: break
+            j += 1
+        out.append(src[i:j + 1])
+        i = src.find(opener, j)
+    return out
+
+for path in sys.argv[1:]:
+    src = open(path).read()
+    for b in blocks(src):
+        if "onTileClicked(" not in b:
+            continue
+        branch = re.search(r"\b(if|when)\s*\(", b)
+        prelude = b[:branch.start()] if branch else b
+        if re.search(r"Haptics\.\w+\(", prelude):
+            print(path.rsplit("/", 1)[-1])
+            break
+PY
+)"
+  if [ -n "$DOUBLE" ]; then
+    bad "T7: fires its own haptic unconditionally and then calls onTileClicked — one tap, two Vibrator pulses: $(printf '%s' "$DOUBLE" | tr '\n' ' ')"
+  else
+    ok "T7: $(printf '%s\n' "$RENDERERS" | wc -l | tr -d ' ') tile renderer(s) leave the per-tap bookkeeping to onTileClicked"
+  fi
 fi
 
 echo

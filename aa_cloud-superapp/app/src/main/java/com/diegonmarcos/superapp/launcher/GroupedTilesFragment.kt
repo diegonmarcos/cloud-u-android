@@ -215,12 +215,24 @@ class GroupedTilesFragment : Fragment() {
             // showed up only on Suite (the sole GroupedTilesFragment user
             // today).
             setOnClickListener {
-                Haptics.tap(it)
                 // A folder HOLDS destinations instead of being one, so it opens
                 // the popup and the entries inside dispatch. Falling through to
                 // `target` as well would make the first tap ambiguous, which is
                 // why a folder in build.json carries no target at all.
+                //
+                // A folder opens a POPUP, which is not a tile click and reaches
+                // no dispatcher, so it buzzes for itself. A destination does
+                // not: onTileClicked IS the per-tap bookkeeping — log, haptic,
+                // drawer close, Recently-Used and App-Tabs — and #195 put it
+                // all in one place precisely so one tap could not pay for it
+                // twice. This row was the place that still did. Every Data Apps
+                // tap, Drive's included, fired Haptics.tap here and again at
+                // ShellActivity.onTileClicked: two real Vibrator pulses (they
+                // are direct `fire()` calls, not view feedback that could
+                // coalesce) for one finger. test-tile-click-dispatched-once.sh
+                // read only ShellActivity.kt, so it stayed green over it.
                 if (tile.children.isNotEmpty()) {
+                    Haptics.tap(it)
                     TileFolderDialog.open(ctx, tile) { child ->
                         (activity as? TileGridFragment.TileClickListener)
                             ?.onTileClicked(child.target)
