@@ -1,6 +1,6 @@
 // libs:voice — light VOICE-INPUT module: VoiceBarView UI + AudioRecord capture +
 // VoiceEngineClient/VoiceEngines interface + VoiceModelManager (model download).
-// NO Vosk / libvosk.so dependency here — the heavy engine lives in libs:voice-vosk
+// NO Vosk / libvosk.so dependency here — the heavy engine lives in libs:ml-l-voice-vosk
 // (companion APK only). cloud-keyboard includes ONLY this module, keeping libvosk.so
 // out of the keyboard APK (~33 MB saved across the 4 ABI slices in the AAR).
 //
@@ -60,5 +60,5 @@ dependencies {
     // from libs:translate — same as before the split.
     implementation project(':libs:translate')
 
-    // NO Vosk here. libvosk.so lives ONLY in libs:voice-vosk (companion APK).
+    // NO Vosk here. libvosk.so lives ONLY in libs:ml-l-voice-vosk (companion APK).
 }

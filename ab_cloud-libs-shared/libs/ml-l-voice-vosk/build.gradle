@@ -1,4 +1,4 @@
-// libs:voice-vosk — Vosk native-engine implementation of libs:voice's
+// libs:ml-l-voice-vosk — Vosk native-engine implementation of libs:voice's
 // VoiceEngineClient interface. Contains libvosk.so (via the AAR) and
 // VoiceModelManager (model download/cache). Included ONLY in cloud-keyboard-libs
 // (the companion APK). cloud-keyboard omits this module so libvosk.so never

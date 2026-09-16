@@ -4,7 +4,7 @@ package com.diegonmarcos.superapp.translate
  * Swappable translate-engine interface.
  *
  * Implementations:
- *  - LocalTranslateEngineClient (libs:translate-mlkit) — in-process ML Kit.
+ *  - LocalTranslateEngineClient (libs:ml-l-text-mlkit) — in-process ML Kit.
  *    Registered by the superapp and cloud-keyboard-libs.
  *  - AidlTranslateEngineClient (cloud-keyboard app) — binds the companion
  *    cloud-keyboard-libs service. Registered by the standalone keyboard APK

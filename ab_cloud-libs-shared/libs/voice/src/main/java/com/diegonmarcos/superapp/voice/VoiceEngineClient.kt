@@ -3,7 +3,7 @@ package com.diegonmarcos.superapp.voice
 /**
  * Streaming voice-recognition engine interface. Audio capture stays in the
  * foreground IME process (cloud-keyboard holds RECORD_AUDIO); only the
- * recognition work is delegated — in-process via [libs:voice-vosk] or
+ * recognition work is delegated — in-process via [libs:ml-l-voice-vosk] or
  * cross-process via AIDL to cloud-keyboard-libs.
  *
  * All callbacks are delivered on the calling thread unless the implementation

@@ -157,7 +157,7 @@ regen_constellation() {
             ); do
                 lmod="${lpair%%|*}"; lrel="${lpair##*|}"
                 case " $lexcl " in *" $lmod "*) continue ;; esac
-                # Cloud-Lib-Translate-Mlkit.apk — each '-' segment capitalised,
+                # Cloud-Lib-Ml-L-Voice-Vosk.apk — each '-' segment capitalised,
                 # matching build.sh's asset naming exactly.
                 lasset="$laprefix$(echo "$lmod" | awk -F- '{for(i=1;i<=NF;i++){$i=toupper(substr($i,1,1)) substr($i,2)}}1' OFS=-).apk"
                 apps="$(jq --argjson acc "$apps" --arg id "lib-$lmod" --arg dir "$dir" \
@@ -317,30 +317,50 @@ regen_constellation() {
         $apps | reduce .[] as $e ([];
             if any(.[]; .asset == $e.asset) then . else . + [$e] end)')"
 
-    # ── Groups: which Constellation tab each entry is drawn in (#343) ────────
-    # DECLARED, never inferred from a name. build.json::constellation.groups
-    # lists the tabs in render order; an entry takes group_members[<id>] when
-    # declared, otherwise the group whose default_for_kind is its kind (so a
-    # lib module defaults to "libs"). ConstellationFragment renders exactly
-    # these groups and names none of them, so a missing or unknown group is a
-    # row in no tab at all - every way the data can disagree with itself
-    # therefore fails the regen instead of shipping.
-    apps="$(jq --argjson apps "$apps" '
-        (.constellation.group_members // {}) as $members
-        | ((.constellation.groups // []) | map(select(.default_for_kind != null)
+    # ── Groups: which Constellation tab each entry is drawn in (#343, #405) ──
+    # build.json::constellation.groups lists the tabs in render order.
+    #
+    # An ML entry NAMES ITS OWN TAB (#405): the scheme is
+    # ml-{t|l}-{domain}-{name}, so the weight-class segment of an id matching
+    # ^lib-ml-([tl])- IS the tab. Everything else takes the group whose
+    # default_for_kind is its kind (a lib module defaults to "libs").
+    #
+    # This replaced a hand-written group_members map of {fleet id -> tab}. That
+    # map was a SECOND statement of a fact the name already made: rename or
+    # reclassify a module and the two silently disagreed, and nothing could tell
+    # which one was right. keyboard-engines was pinned into Lite-ML there purely
+    # because the APK bundles the two engines - the owner asked for it back in
+    # Libs (#405), and it gets there by saying nothing at all.
+    #
+    # ONE rule, applied to BOTH apps and catalogue rows, defined once here so the
+    # two can never drift. `capture` emits nothing when the id is not an ML name,
+    # so `// null` is what turns "not ML" into a value the validator below can
+    # see - without it the whole row would silently vanish from the output.
+    # ConstellationFragment renders exactly these groups and names none of them,
+    # so a missing or unknown group is a row in no tab at all - every way the
+    # data can disagree with itself therefore fails the regen instead of
+    # shipping.
+    local ml_group='def ml_group($id): ($id | capture("^lib-ml-(?<weight>[tl])-") | "libs-\(.weight)-ml");'
+    apps="$(jq --argjson apps "$apps" "$ml_group"'
+        ((.constellation.groups // []) | map(select(.default_for_kind != null)
               | { key: .default_for_kind, value: .id }) | from_entries) as $defaults
-        | $apps | map(. + { group: ($members[.id] // $defaults[.kind]) })' "$selfbj")"
+        | $apps | map(. + { group: (ml_group(.id) // $defaults[.kind]) })' "$selfbj")"
+    # Reference rows are resolved here too, by the SAME ml_group, so the
+    # catalogue's tab and the catalogue's name are one fact as well. installable
+    # is stamped rather than trusted from the data, so no catalogue row can ever
+    # claim to be installable.
+    local catalogue
+    catalogue="$(jq "$ml_group"'
+        [ (.constellation.catalogue // [])[]
+          | { id, label: (.label // .id), group: (ml_group(.id) // null),
+              description: (.description // ""), installable: false } ]' "$selfbj")"
     local group_problems
-    group_problems="$(jq -r --argjson apps "$apps" '
+    group_problems="$(jq -r --argjson apps "$apps" --argjson catalogue "$catalogue" '
         ((.constellation.groups // []) | map(.id)) as $declared
-        | (.constellation.catalogue // []) as $catalogue
         | ( $apps[] | select(.group == null or (.group | IN($declared[]) | not))
               | "fleet entry \(.id) (kind \(.kind)) is in no declared group: \(.group)" ),
-          ( (.constellation.group_members // {}) | keys[]
-              | select(. as $member | $apps | any(.id == $member) | not)
-              | "group_members names \(.), which is not a fleet entry" ),
-          ( $catalogue[] | select(.group | IN($declared[]) | not)
-              | "catalogue row \(.id) names undeclared group \(.group)" ),
+          ( $catalogue[] | select(.group == null or (.group | IN($declared[]) | not))
+              | "catalogue row \(.id) is in no declared group: \(.group) - every catalogue row is an ML reference and must be named ml-{t|l}-{domain}-{name} behind the lib- prefix" ),
           ( ($apps | map(.id)) + ($catalogue | map(.id)) | group_by(.)[]
               | select(length > 1)
               | "id \(.[0]) is used more than once across apps and catalogue" )' "$selfbj")"
@@ -361,13 +381,10 @@ regen_constellation() {
     # fleet already baked to 61,368 base64 bytes before the groups existed, so
     # the indentation alone was about to break every build that links the
     # updater. One entry per line keeps a diff readable per entry at compact size.
-    jq -r --argjson apps "$apps" '
-        [ (.constellation.catalogue // [])[]
-          | { id, label: (.label // .id), group,
-              description: (.description // ""), installable: false } ] as $catalogue
+    jq -r --argjson apps "$apps" --argjson catalogue "$catalogue" '
         # members is the same group stamp read from the tab side, so the page
         # builds its tabs without reading any entry field Fleet.parse owns.
-        | [ (.constellation.groups // [])[] | .id as $id
+        [ (.constellation.groups // [])[] | .id as $id
             | { id, label: (.label // .id), blurb: (.blurb // ""),
                 members: [ ($apps[], $catalogue[]) | select(.group == $id) | .id ] } ] as $groups
         | "{\"version\":1,",

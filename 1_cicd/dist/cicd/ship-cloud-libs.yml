@@ -65,8 +65,8 @@ jobs:
   build_and_publish:
     name: "Build Cloud Libs APKs"
     runs-on: ubuntu-latest
-    # 24 APKs from one configuration pass; the NDK-carrying modules (voice-vosk,
-    # translate-mlkit) dominate. Higher than the single-APK ship workflows.
+    # 24 APKs from one configuration pass; the NDK-carrying modules (ml-l-voice-vosk,
+    # ml-l-text-mlkit) dominate. Higher than the single-APK ship workflows.
     timeout-minutes: 120
 
     steps:

@@ -1,5 +1,5 @@
 // libs:translate — translate engine interface + Translator orchestrator.
-// ML-Kit-free; the actual ML Kit implementation lives in libs:translate-mlkit
+// ML-Kit-free; the actual ML Kit implementation lives in libs:ml-l-text-mlkit
 // so cloud-keyboard (standalone IME) can depend on libs:translate without
 // bundling ML Kit (it binds the companion cloud-keyboard-libs service instead).
 //

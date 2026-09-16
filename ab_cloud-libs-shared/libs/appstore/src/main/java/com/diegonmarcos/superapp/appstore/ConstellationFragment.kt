@@ -76,11 +76,23 @@ class ConstellationFragment : Fragment() {
                 blocked = !entry.optBoolean("installable", false), kind = "")
         }
     }
+    // #405: an ML lib states its application in its own id -
+    // lib-ml-{t|l}-{domain}-{name}, where domain is voice, text, image, sensor
+    // or tabular. The ML tabs group by that, so the heading a row is drawn under
+    // is READ OFF THE ROW and there is no second list of applications to keep in
+    // step with the names. A row that is not an ML lib has no application; every
+    // such row sits in one unnamed run, which is every tab but the two ML ones.
+    private val mlApplication = Regex("^lib-ml-[tl]-([a-z0-9]+)-")
+    private fun applicationOf(id: String): String? =
+        mlApplication.find(id)?.groupValues?.get(1)
+
     // Tabs are a VIEW over the fleet: one per group data/regen.sh declares, in
     // its declared order, holding the members it lists and skipping a group with
-    // no rows - never a hardcoded list here. Sorted by display name at this
-    // single point rather than at each call site: the rows, the detail pane and
-    // the copy dump all read these lists, so ordering here orders the whole page.
+    // no rows - never a hardcoded list here. Sorted at this single point rather
+    // than at each call site: the rows, the detail pane and the copy dump all
+    // read these lists, so ordering here orders the whole page. Application
+    // first, then display name, so each application is one contiguous run and
+    // renderList can head it with a single pass and no regrouping.
     private val tabs by lazy {
         val everyRow = (fleet + references).associateBy { it.id }
         fleetObjects("groups").map { group ->
@@ -88,7 +100,7 @@ class ConstellationFragment : Fragment() {
             val rows = (0 until (members?.length() ?: 0))
                 .mapNotNull { index -> members?.optString(index)?.let(everyRow::get) }
             Tab(group.optString("label", group.getString("id")), group.optString("blurb"),
-                rows.sortedBy { it.label.lowercase() })
+                rows.sortedWith(compareBy({ applicationOf(it.id) ?: "" }, { it.label.lowercase() })))
         }.filter { it.rows.isNotEmpty() }
     }
 
@@ -272,7 +284,16 @@ class ConstellationFragment : Fragment() {
         fullStatusViews.clear(); dots.clear(); quickBtns.clear()
         val shown = list.filter { inFilter(it) }
         if (shown.isEmpty()) { listHost.addView(caption(ctx, "Nothing in this filter.")); return }
-        for (app in shown) listHost.addView(fleetRow(ctx, app))
+        // One heading per run of rows sharing an application. The list is
+        // already sorted by application, so a change of application is the only
+        // place a heading can belong.
+        var application: String? = null
+        for (app in shown) {
+            val here = applicationOf(app.id)
+            if (here != null && here != application) listHost.addView(applicationHeading(ctx, here))
+            application = here
+            listHost.addView(fleetRow(ctx, app))
+        }
         // Repaint from cache so a filtered rebuild shows real state immediately
         // instead of 24 rows saying "checking..." for a list already checked.
         for (app in shown) states[app.id]?.let { paint(app.id, it) }
@@ -1090,6 +1111,15 @@ class ConstellationFragment : Fragment() {
     }
     private fun caption(ctx: Context, t: String) = TextView(ctx).apply {
         text = t; textSize = 12f; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, 8))
+    }
+
+    /** The application an ML row serves - Voice, Text, Image, ... - drawn as a
+     *  heading over its run. The word is the row id's own domain segment, so an
+     *  ML lib in a new application gets its heading with no edit here. */
+    private fun applicationHeading(ctx: Context, application: String) = TextView(ctx).apply {
+        text = application.replaceFirstChar { it.uppercase() }
+        textSize = 12f; setTextColor(cUpd)
+        setPadding(0, dp(ctx, 10), 0, dp(ctx, 4))
     }
     private fun mono(ctx: Context, t: String) = TextView(ctx).apply {
         text = t; textSize = 11f; setTextColor(cDim); typeface = Typeface.MONOSPACE

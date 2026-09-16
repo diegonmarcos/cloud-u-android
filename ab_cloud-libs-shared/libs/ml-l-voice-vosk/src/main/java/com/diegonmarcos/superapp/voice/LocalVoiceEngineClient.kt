@@ -9,7 +9,7 @@ import org.vosk.Recognizer
 
 /**
  * In-process [VoiceEngineClient] backed by Vosk. Used by cloud-keyboard-libs
- * (the companion APK) which includes libs:voice-vosk and therefore libvosk.so.
+ * (the companion APK) which includes libs:ml-l-voice-vosk and therefore libvosk.so.
  *
  * Audio capture is NOT performed here — PCM frames arrive via [feed] from the
  * IME process (cloud-keyboard), which holds the RECORD_AUDIO foreground session.

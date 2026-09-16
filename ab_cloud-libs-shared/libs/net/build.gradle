@@ -8,7 +8,7 @@
 // moved to libs:net-wg, which ships as Cloud-Lib-Net-Wg.apk. That single
 // split is what takes ~8.5MB off every app that only needs to drive a
 // tunnel rather than implement one - the same shape as
-// libs:voice / libs:voice-vosk and libs:translate / libs:translate-mlkit.
+// libs:voice / libs:ml-l-voice-vosk and libs:translate / libs:ml-l-text-mlkit.
 //
 // So: NO CMake, NO NDK, no native output. Pure Java/Kotlin. If a native
 // dependency ever appears here again the split has been undone.

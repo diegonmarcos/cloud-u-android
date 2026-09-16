@@ -22,7 +22,7 @@
   },
   "android": {
     "application_id": "com.diegonmarcos.cloudlib",
-    "_doc_abi_filters": "Mirrors ab_cloud-libs-shared/keyboard-engines. Only voice-vosk/translate-mlkit carry .so payloads; the rest are unaffected by this filter. Add 'x86_64' for Waydroid/emulator and rebuild - no gradle edits needed.",
+    "_doc_abi_filters": "Mirrors ab_cloud-libs-shared/keyboard-engines. Only ml-l-voice-vosk/ml-l-text-mlkit carry .so payloads; the rest are unaffected by this filter. Add 'x86_64' for Waydroid/emulator and rebuild - no gradle edits needed.",
     "abi_filters": [
       "arm64-v8a",
       "x86_64"

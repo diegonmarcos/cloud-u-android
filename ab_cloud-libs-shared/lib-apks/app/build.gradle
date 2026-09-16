@@ -14,7 +14,7 @@ def buildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"
 def libCfg    = buildJson.lib_apks
 def shipped   = gradle.ext.shippedLibs
 
-// module dir name -> gradle-legal flavor name:  translate-mlkit -> translateMlkit
+// module dir name -> gradle-legal flavor name:  ml-l-text-mlkit -> mlLTextMlkit
 static String flavorOf(String name) {
     def parts = name.split('-')
     parts[0] + parts.drop(1).collect { it.capitalize() }.join('')
@@ -91,7 +91,7 @@ android {
             register(flavorOf(name)) {
                 dimension 'lib'
                 // '-' is illegal in an applicationId segment, so it is stripped
-                // rather than replaced: translate-mlkit -> ...cloudlib.translatemlkit.
+                // rather than replaced: ml-l-text-mlkit -> ...cloudlib.mlltextmlkit.
                 applicationId "${libCfg.application_id_prefix}.${name.replace('-', '')}"
             }
         }

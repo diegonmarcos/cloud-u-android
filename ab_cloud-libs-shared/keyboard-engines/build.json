@@ -1,6 +1,6 @@
 {
   "name": "cloud-keyboard-libs",
-  "description": "Cloud Keyboard — Feature Pack APK. Bundles libs:media (stickers/GIF), libs:translate (ML Kit), and libs:voice (Vosk) as a companion APK updatable independently of the keyboard.",
+  "description": "Cloud Keyboard — Feature Pack APK. Bundles libs:media (stickers/GIF) and the two ML engines libs:ml-l-text-mlkit (ML Kit) and libs:ml-l-voice-vosk (Vosk), behind the libs:translate / libs:voice contracts as a companion APK updatable independently of the keyboard.",
   "category": "keyboard",
   "android": {
     "application_id": "com.diegonmarcos.cloudkeyboardlibs",
@@ -34,20 +34,20 @@
       "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/ - settings.gradle points projectDir here instead of at a local copy. These paths used to be hardcoded as include/projectDir pairs in settings.gradle, which meant the module graph lived in two places and neither knew about the other. build.json is now the only place a module is declared.",
       "dir": "../libs/translate"
     },
-    "libs:translate-mlkit": {
+    "libs:ml-l-text-mlkit": {
       "type": "library",
       "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/ - settings.gradle points projectDir here instead of at a local copy. These paths used to be hardcoded as include/projectDir pairs in settings.gradle, which meant the module graph lived in two places and neither knew about the other. build.json is now the only place a module is declared.",
-      "dir": "../libs/translate-mlkit"
+      "dir": "../libs/ml-l-text-mlkit"
     },
     "libs:voice": {
       "type": "library",
       "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/ - settings.gradle points projectDir here instead of at a local copy. These paths used to be hardcoded as include/projectDir pairs in settings.gradle, which meant the module graph lived in two places and neither knew about the other. build.json is now the only place a module is declared.",
       "dir": "../libs/voice"
     },
-    "libs:voice-vosk": {
+    "libs:ml-l-voice-vosk": {
       "type": "library",
       "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/ - settings.gradle points projectDir here instead of at a local copy. These paths used to be hardcoded as include/projectDir pairs in settings.gradle, which meant the module graph lived in two places and neither knew about the other. build.json is now the only place a module is declared.",
-      "dir": "../libs/voice-vosk"
+      "dir": "../libs/ml-l-voice-vosk"
     },
     "_doc": "Feature libs are shared from ../aa_cloud-superapp/libs/ via relative project references in settings.gradle.",
     "libs:analytics": {

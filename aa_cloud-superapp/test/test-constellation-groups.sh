@@ -7,6 +7,9 @@
 #   T4  the updater cannot reach a reference row
 #   T5  ConstellationFragment names no group: no id or label literal, no kind
 #       partition, no hardcoded tab list
+#   T6  #383 Lite-ML is declared before Tiny-ML, and the keys are untouched
+#   T7  #405 an ML lib names its own section (ml-{t|l}-{domain}-{name}) and
+#       nothing else sits in one - asserted in BOTH directions
 set -u
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$APP/.." && pwd)"
@@ -46,7 +49,7 @@ done
 echo "== T2: real ML modules moved out of plain libs =="
 # Derived from the modules themselves: a library whose build.gradle pulls in an
 # on-device ML runtime is an ML module, whatever group data says. The floor of 2
-# (translate-mlkit, voice-vosk today) stops this passing on an empty match.
+# (ml-l-text-mlkit, ml-l-voice-vosk today) stops this passing on an empty match.
 ML_MODULES="$(grep -lE "^[[:space:]]*implementation[[:space:]]+['\"](com\.google\.mlkit|com\.alphacephei|org\.tensorflow|com\.microsoft\.onnxruntime|com\.google\.mediapipe|com\.google\.ai\.edge)" "$LIBS"/*/build.gradle | xargs -n1 dirname | xargs -n1 basename)"
 ML_COUNT="$(printf '%s\n' "$ML_MODULES" | grep -c .)"
 [ "$ML_COUNT" -ge 2 ] \
@@ -57,7 +60,7 @@ for mod in $ML_MODULES; do
     && ok "lib-$mod is in an ML group" \
     || bad "lib-$mod carries an ML runtime but is not in libs-t-ml or libs-l-ml"
 done
-jq -e 'all(.apps[] | select(.id == "lib-translate-mlkit" or .id == "lib-voice-vosk"); .package != "" and .asset != "") and ([.apps[] | select(.id == "lib-translate-mlkit" or .id == "lib-voice-vosk")] | length == 2)' "$FLEET" >/dev/null \
+jq -e 'all(.apps[] | select(.id == "lib-ml-l-text-mlkit" or .id == "lib-ml-l-voice-vosk"); .package != "" and .asset != "") and ([.apps[] | select(.id == "lib-ml-l-text-mlkit" or .id == "lib-ml-l-voice-vosk")] | length == 2)' "$FLEET" >/dev/null \
   && ok "moved modules keep their real installable entries" \
   || bad "a moved ML module lost its package or asset"
 
@@ -140,6 +143,77 @@ jq -e 'all(.groups[]; (.blurb | test("Lightweight"; "i")) | not)' "$FLEET" >/dev
   && ok "no tab caption still says the dead name Lightweight" \
   || bad "a tab caption still says Lightweight while its tab says Lite-ML"
 
+echo "== T7: #405 an ML lib names its own section, and nothing else sits in one =="
+# The scheme is ml-{t|l}-{domain}-{name}, worn behind the store's lib- row
+# prefix. THAT NAME IS THE WHOLE CLASSIFICATION: regen.sh derives the tab from
+# its weight-class segment and ConstellationFragment derives the application
+# heading from its domain segment, so there is no second list to disagree with
+# it - and a name that does not parse is a row in no tab and under no heading.
+#
+# Asserted in BOTH directions on purpose. "every ML lib is in an ML tab" alone
+# is satisfied by naming nothing ML; "every row in an ML tab is on-scheme" alone
+# is satisfied by an empty tab. Neither is worth anything without the other, and
+# (f) closes the last hole: a lib that wears the ML name without carrying an ML
+# runtime.
+SCHEME='^lib-ml-[tl]-[a-z0-9]+-[a-z0-9-]+$'
+
+# (a) A module that CARRIES an ML runtime must be NAMED for it. $ML_MODULES is
+#     derived from build.gradle above, so renaming a module without renaming
+#     what it is fails right here.
+for mod in $ML_MODULES; do
+  printf '%s\n' "lib-$mod" | command grep -qE "$SCHEME" \
+    && ok "module $mod carries an ML runtime and is named on-scheme" \
+    || bad "module $mod carries an ML runtime but is not named ml-{t|l}-{domain}-{name}"
+done
+
+# (b) An ML tab may hold nothing off-scheme.
+off_scheme="$(jq -r --arg re "$SCHEME" '[.apps[], .catalogue[]] | .[]
+      | select(.group == "libs-t-ml" or .group == "libs-l-ml")
+      | select(.id | test($re) | not) | .id' "$FLEET")"
+[ -z "$off_scheme" ] \
+  && ok "every row in an ML tab is named on-scheme" \
+  || bad "off-scheme row(s) sitting in an ML tab: $(printf '%s' "$off_scheme" | tr '\n' ' ')"
+
+# (c) An on-scheme row must sit in the tab its OWN NAME declares. This is the
+#     direction that catches an ML lib parked outside its ML section, including
+#     by a reintroduced hand-written override.
+misfiled="$(jq -r --arg re "$SCHEME" '[.apps[], .catalogue[]] | .[]
+      | select(.id | test($re))
+      | . as $row
+      | ($row.id | capture("^lib-ml-(?<weight>[tl])-") | "libs-\(.weight)-ml") as $named
+      | select($row.group != $named)
+      | "\($row.id) is drawn in \($row.group) but its name says \($named)"' "$FLEET")"
+[ -z "$misfiled" ] \
+  && ok "every ML-named row is in the tab its own name declares" \
+  || bad "misfiled ML row(s): $(printf '%s' "$misfiled" | tr '\n' '; ')"
+
+# (d) The hand-written {fleet id -> tab} map must not come back. Two statements
+#     of one fact is the defect this replaced, not a safety net for it.
+jq -e '.constellation | has("group_members")' "$BUILD" >/dev/null 2>&1 \
+  && bad "constellation.group_members is back - the tab is derived from the name now, and a map that can disagree with it is the bug" \
+  || ok "no group_members map: an ML row's name is the only statement of its tab"
+
+# (e) The page must derive the application heading from the row, not list the
+#     applications. A hardcoded "voice"/"text"/"image" here is the second list
+#     wearing a different hat.
+command grep -qF 'applicationOf(app.id)' "$PAGE" \
+  && ok "the page reads each row's application off its own id" \
+  || bad "ConstellationFragment no longer derives the application from the row id"
+for application in $(jq -r '[.apps[], .catalogue[]] | .[].id
+        | capture("^lib-ml-[tl]-(?<domain>[a-z0-9]+)-") | .domain' "$FLEET" | sort -u); do
+  command grep -nF "\"$application\"" "$PAGE" \
+    && bad "ConstellationFragment hardcodes the application literal \"$application\"" \
+    || ok "no \"$application\" literal on the page"
+done
+
+# (f) ... and a lib may not wear the ML name without carrying an ML runtime.
+for claimed in $(jq -r --arg re "$SCHEME" '.apps[]
+        | select(.kind == "lib" and (.id | test($re))) | .id | sub("^lib-"; "")' "$FLEET"); do
+  printf '%s\n' "$ML_MODULES" | command grep -qx "$claimed" \
+    && ok "$claimed wears the ML name and its build.gradle backs it" \
+    || bad "$claimed wears the ML name but its build.gradle declares no ML runtime"
+done
+
 echo
-echo "== RESULT: $PASS passed, $FAIL failed =="
+echo "== RESULT(#405 groups+ml-naming): $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

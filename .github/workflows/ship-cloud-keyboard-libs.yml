@@ -52,9 +52,9 @@ on:
       - "ab_cloud-libs-shared/keyboard-engines/**"
       - "ab_cloud-libs-shared/libs/analytics/**"
       - "ab_cloud-libs-shared/libs/media/**"
-      - "ab_cloud-libs-shared/libs/translate-mlkit/**"
+      - "ab_cloud-libs-shared/libs/ml-l-text-mlkit/**"
+      - "ab_cloud-libs-shared/libs/ml-l-voice-vosk/**"
       - "ab_cloud-libs-shared/libs/translate/**"
-      - "ab_cloud-libs-shared/libs/voice-vosk/**"
       - "ab_cloud-libs-shared/libs/voice/**"
 permissions:
   contents: write
