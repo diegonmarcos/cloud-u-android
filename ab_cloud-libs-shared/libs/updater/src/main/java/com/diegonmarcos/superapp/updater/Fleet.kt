@@ -170,7 +170,30 @@ object Fleet {
         //
         // The release asset has no visibility of its own: it IS the repo. If
         // it answers, it is the truth about whether this app can be installed.
-        releaseStatus(app, installed)?.let { return it }
+        //
+        // EXCEPT FOR OUR OWN PACKAGE, AND THE GUARD BELOW IS WHY.
+        //
+        // The code-identity short-circuit further down exists because our
+        // builds are not byte-reproducible: a rebuild of the SAME COMMIT
+        // produces a different APK sha, so a byte comparison reports an update
+        // that installing can never satisfy — the next pass compares against
+        // yet another sha and asks again, forever. That guard compares the
+        // remote manifest's git revision instead, which is the only identity
+        // a rebuild preserves.
+        //
+        // It was unreachable for the one entry it was written for. This app
+        // publishes a release asset, so releaseStatus answered first and
+        // returned, and the guard below it never ran. The result was a fleet
+        // row for THIS package stuck on UpdateAvailable while
+        // UpdateChecker.available() — the self-updater, which applies the
+        // revision rule — reported the same package up to date. One package,
+        // two identity keys, two verdicts: the phantom "second cloud-sa"
+        // demanding updates that were already installed.
+        //
+        // Self is answered by code identity, so self skips the byte path. The
+        // rule now matches UpdateChecker's by construction rather than by
+        // two copies of it staying in step.
+        if (app.pkg != ctx.packageName) releaseStatus(app, installed)?.let { return it }
         return try {
             val client = GhcrClient(app.registry, app.namespace, app.image)
             val layer = remoteLayer(app, client, client.token())
@@ -830,6 +853,32 @@ object Fleet {
         val channel = established?.name()
         val todo = apps.filter { app ->
             if (app.blocked) return@filter false
+            // THE HOST IS NOT A BATCH ENTRY, AND BOTH CALLERS ALREADY SAY SO.
+            //
+            // UpdateWorker.doWork and ConstellationFragment.updateAll each
+            // carry the same comment: the self-update goes LAST, because
+            // installing our own APK replaces it and Android kills this
+            // process — taking whatever is left of the batch with it. Neither
+            // could honour that, because the fleet list CONTAINS this package
+            // (constellation-fleet.json id=aa_cloud-superapp) and it is the
+            // FIRST member of the `apps` group, so a batch that walks the list
+            // in order reached it before anything else. The ordering was
+            // written in both callers and made unenforceable by the data.
+            //
+            // That is #99/#274 ("Update all fails for every app and lib",
+            // "auto-update ON and yet no app has updated"): the pass was not
+            // failing, it was being killed at entry one.
+            //
+            // Self stays in the fleet for DISPLAY — the Constellation page
+            // must still show this app's own row — and is excluded only from
+            // the ACT. Display and identity are separate questions; keying the
+            // batch on our own package name is the identity answer, and it is
+            // the manifest's applicationId, not a second list to maintain.
+            if (app.pkg == ctx.packageName) {
+                Log.i(TAG, "$mode skips ${app.id} (${app.pkg}): this is the host — the " +
+                           "self-update path owns it and runs after this batch")
+                return@filter false
+            }
             val state = status(ctx, app)
             val take = when (state) {
                 is State.UpdateAvailable -> mode != Mode.MISSING
