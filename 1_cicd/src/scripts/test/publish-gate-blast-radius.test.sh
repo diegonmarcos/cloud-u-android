@@ -391,8 +391,15 @@ fi
 # 6. A TESTER IS NOT AN INPUT — trigger and identity exclude it together
 # ══════════════════════════════════════════════════════════════════
 # Run 34850225588 republished the SuperApp for a commit touching only
-# aa_cloud-superapp/test/. The exclusion must hold in BOTH the trigger list and
-# the identity: dropped from one alone, the bug comes back from the other side.
+# aa_cloud-superapp/test/. A tester must not move the identity.
+#
+# The fixture carries NO `!app/test/**` any more, and that absence is the
+# point (#370). The exclusion used to be a marker in this list, which also
+# stopped a tester edit TRIGGERING the only run that executes it. The identity
+# now reads the tester directory out of build.json::tests.shell.dir instead, so
+# the trigger can watch what the gate declines to weigh — and this fixture is
+# shaped like what the generator actually emits, rather than like a spelling
+# nothing produces any more.
 TFIX="$WORK/tester-fixture"
 mkdir -p "$TFIX/1_cicd/src/cicd" "$TFIX/app/src" "$TFIX/app/test"
 cat > "$TFIX/1_cicd/src/cicd/ship-app.yml" <<'YAML'
@@ -400,10 +407,10 @@ on:
   push:
     paths:
       - "app/**"
-      - "!app/test/**"
 env:
   WORK_DIR: app
 YAML
+printf '{"tests":{"shell":{"dir":"test"}}}\n' > "$TFIX/app/build.json"
 echo one > "$TFIX/app/src/main.kt"
 echo one > "$TFIX/app/test/test-main.sh"
 tcommit() { git -C "$TFIX" add -A >/dev/null 2>&1; git -C "$TFIX" -c user.email=t@t -c user.name=t commit -qm "$1" >/dev/null 2>&1; }
@@ -421,18 +428,18 @@ after_source="$(tidentity)"
     && ok "a source commit beside the excluded tester directory still moves the identity" \
     || fail "excluding test/ also hid a real source change"
 
-for workflow in "$ROOT"/1_cicd/src/cicd/ship-*.yml; do
-    name="$(basename "$workflow")"
-    work_dir="$(awk '/^  WORK_DIR:/ { print $2; exit }' "$workflow")"
-    tests_dir="$(jq -r '.tests.shell.dir // empty' "$ROOT/$work_dir/build.json" 2>/dev/null)"
-    [ -n "$tests_dir" ] && [ -d "$ROOT/$work_dir/$tests_dir" ] || continue
-    last="$(awk '/^    paths:$/ { p = 1; next } p && /^      - "/ { e = $0 } p && NF && !/^      / { exit } END { print e }' "$workflow")"
-    [ "$last" = "      - \"!$work_dir/$tests_dir/**\"" ] \
-        || fail "$name: last trigger entry is '$last', not the exclusion of $work_dir/$tests_dir"
-    sh "$IDENTITY" paths "$work_dir" 2>/dev/null | grep -qx "$work_dir/$tests_dir\(/.*\)\{0,1\}\|$work_dir" \
-        && fail "$name: the identity still hashes $work_dir/$tests_dir (or the whole $work_dir tree)"
-done
-[ "$FAILURES" -eq 0 ] && ok "every declared tester directory is excluded from its trigger list AND its identity"
+# THE FLEET-WIDE SWEEP THAT USED TO BE HERE NOW LIVES IN
+# 1_cicd/src/scripts/test/tester-trigger.test.sh, and it moved because its
+# subject changed rather than because it was inconvenient. It asserted that the
+# LAST trigger entry of every ship workflow was `!<app>/<tests.shell.dir>/**`
+# — an assertion for the bug, not against it: that entry is exactly what stopped
+# a tester edit starting the run that executes the tester (#370).
+#
+# The replacement is strictly stronger and runs in the same workflow, one step
+# later: per app and derived from disk, the tester directory must be watched by
+# a POSITIVE trigger, must carry no exclusion, and must still be absent from
+# `cloud-android-source-identity.sh paths`. Restating any of it here would be
+# two copies of one idea, which is how #228 and #209 happened.
 
 printf '\n'
 if [ "$FAILURES" -eq 0 ]; then
