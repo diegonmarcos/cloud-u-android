@@ -350,13 +350,28 @@ class OneHandAccessibilityService : AccessibilityService() {
     /** The glyph for a sector. An `app:` target borrows the launcher icon; an
      *  `action:` target names no package, so it takes the drawable its tile
      *  declares — resolved by NAME against the host app's resources, which is
-     *  where the SuperApp keeps `ic_drive`, `ic_ai_chat` and the rest. */
+     *  where the SuperApp keeps `ic_drive`, `ic_ai_chat` and the rest.
+     *
+     *  The `app:` branch FALLS BACK to that same declared drawable, because
+     *  PackageManager is an install-dependent source and it was the only one it
+     *  had: `getApplicationIcon` throws for a package that is not installed, so
+     *  the sector drew a label with no glyph. That is not hypothetical — Drive
+     *  was extracted into its own APK (#302/#304), so the phone now has a sector
+     *  pointing at a package that may legitimately be absent, and "no icon on
+     *  Drive" has been reported three times. PackageManager still goes FIRST: an
+     *  installed app should show its own launcher icon, not a stand-in. */
     private fun iconForAction(action: GestureAction): android.graphics.Bitmap? = when (action) {
-        is GestureAction.OpenApp -> appIcon(action.pkg)
+        is GestureAction.OpenApp -> appIcon(action.pkg) ?: declaredIcon(action.serialize())
         is GestureAction.AppTarget -> catalogueFor(action)?.icon
             ?.takeIf { it.isNotBlank() }?.let { drawableIcon(it) }
         else -> null
     }
+
+    /** The drawable the tile catalogue declares for a raw target ("app:<pkg>"),
+     *  matched on the same normalised key every other lookup here uses. */
+    private fun declaredIcon(target: String): android.graphics.Bitmap? =
+        cfg?.appActions?.firstOrNull { it.key == "action:" + target.removePrefix("action:") }
+            ?.icon?.takeIf { it.isNotBlank() }?.let { drawableIcon(it) }
 
     private fun drawableIcon(name: String): android.graphics.Bitmap? = runCatching {
         val id = resources.getIdentifier(name, "drawable", packageName)

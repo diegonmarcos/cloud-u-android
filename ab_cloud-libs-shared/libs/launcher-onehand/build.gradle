@@ -38,7 +38,30 @@ def ohCfg       = ohBuildJson.onehand ?: [:]
 // `action:` is decoration, not identity: GestureAction.serialize() re-adds it,
 // so it is stripped on both sides before comparing and `action:section:drive`
 // and `section:drive` can never again be two different destinations.
-def ohKey = { t -> 'action:' + (t ?: '').toString().replaceFirst(/^action:/, '') }
+//
+// `extapp:<id>` and `app:<pkg>` are the OTHER pair of spellings for one
+// destination, and stripping `action:` alone does not join them. Extracting an
+// in-app section into its own APK (#302/#304 did this to Drive) renames the
+// destination from one to the other while the TILE keeps the old spelling, so
+// a tile declaring `extapp:cloud-drive` and a sector declaring
+// `app:com.diegonmarcos.clouddrive` stopped meeting — the icon lookup missed
+// and Drive shipped with `icon: ''`. ui.external_apps already declares which
+// package an id installs as, so canonicalise on it rather than on a guess:
+// every `extapp:` collapses to the `app:<pkg>` it actually launches.
+def ohExtPkg = [:]
+ohBuildJson.ui?.external_apps?.each { e ->
+    if (!e?.id) return
+    def pkg = e.hub_package ?: e.install_package
+    if (pkg) ohExtPkg[e.id.toString()] = pkg.toString()
+}
+def ohKey = { t ->
+    def bare = (t ?: '').toString().replaceFirst(/^action:/, '')
+    if (bare.startsWith('extapp:')) {
+        def id = bare.substring('extapp:'.length()).split('[#/]')[0]
+        if (ohExtPkg[id]) bare = 'app:' + ohExtPkg[id]
+    }
+    'action:' + bare
+}
 
 // target -> [label, icon] for every tile the app declares. `tiles_*` covers the
 // per-page tile arrays; tile_groups is the themed variant the Cloud section
@@ -97,6 +120,18 @@ def ohSeen = [] as Set
 ohCfg.handles?.each { h ->
     h.gestures?.each { slot, v ->
         def t = (v ?: '').toString()
+        // An `app:` sector names an INSTALLED package, so PackageManager is its
+        // proper icon source and most of them (Brave, Instagram) have no tile at
+        // all — those must not fail the build. But one of OUR fleet apps does
+        // have a tile, and once it is extracted into its own APK that tile is the
+        // only icon that survives the app being uninstalled. Emit the declared
+        // glyph when a tile claims the package; stay silent when none does.
+        if (t.startsWith('app:')) {
+            if (!ohSeen.add(ohKey(t))) return
+            def hit = ohTiles[ohKey(t)]
+            if (hit?.icon) ohCatalogue << [label: hit.label, target: t, icon: hit.icon]
+            return
+        }
         if (!t.startsWith('action:')) return
         if (!ohSeen.add(ohKey(t))) return
         def r = ohResolve(t)
