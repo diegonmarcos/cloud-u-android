@@ -74,6 +74,26 @@ class SectionTabsFragment : Fragment(), Collapsible {
      *  never left sitting on a tab with no pane behind it. */
     private var lastContentTab = 0
 
+    /**
+     * The page id this strip is showing, saved into THIS FRAGMENT'S OWN state
+     * so it survives an Activity recreate.
+     *
+     * [LauncherNavController.activeTabFor] cannot answer across one.
+     * `activeTabBySection` is a plain field of the controller, and the
+     * controller is `ShellActivity.nav` — a field of the Activity. `recreate()`
+     * takes both with it, [startIndex] then reads "", falls through to the
+     * first content page, and the strip comes back on tab 0. The
+     * FragmentManager, by contrast, saves and restores THIS fragment across the
+     * recreate, so its saved state is the one channel that travels with it.
+     *
+     * #349 is what made that visible: the Modes page asked for a recreate on
+     * every toggle, so every flip inside Configs ▸ Launcher ▸ Modes landed back
+     * on Configs ▸ Launcher ▸ Profiles. The recreate is gone, but a mode change
+     * still legitimately recreates — so this is the half that has to hold on
+     * the next honest reload.
+     */
+    private var selectedPageId = ""
+
     /** The "|" between the tab groups, if this strip has both kinds of tab.
      *  Held so the width arithmetic can pay for it — it sits inside the strip
      *  but is not a tab, so its width is not the tabs' to divide. */
@@ -167,7 +187,7 @@ class SectionTabsFragment : Fragment(), Collapsible {
         root.addView(tabs)
         root.addView(panes)
 
-        val start = startIndex(pages)
+        val start = startIndex(pages, s)
         activePane = start
         lastContentTab = start
         if (paneCount > 1) {
@@ -183,6 +203,7 @@ class SectionTabsFragment : Fragment(), Collapsible {
         // attached AFTER this, and selecting tab 0 is a no-op anyway, so
         // neither would fire onTabSelected for the page we start on.
         pages.getOrNull(start)?.let {
+            selectedPageId = it.id
             (activity as? ShellActivity)?.nav?.syncModeForPage(it.id)
             (activity as? ShellActivity)?.nav?.recordActiveTab(tabKey, it.id)
         }
@@ -205,6 +226,7 @@ class SectionTabsFragment : Fragment(), Collapsible {
                     return
                 }
                 lastContentTab = tab.position
+                selectedPageId = page.id
                 activePane = if (paneCount > 1) tab.position.coerceAtMost(paneCount - 1) else 0
                 // An Apps/Admin tab also SETS the global mode, so the Home
                 // grid, drawer and bottom-nav icon variants follow it. Fired
@@ -267,24 +289,39 @@ class SectionTabsFragment : Fragment(), Collapsible {
         groupDivider = bar
     }
 
-    /** Which tab starts selected: the page a deep link or walk stop asked
-     *  for, else the persisted Apps/Admin mode when this section has a page
-     *  named for it, else the first page. Never a launch tab — landing on one
-     *  would fire its external app on arrival, so those are skipped here and
-     *  only reachable by an explicit tap.
+    /** Which tab starts selected: where THIS strip was when the Activity was
+     *  torn down under it, else the page a deep link or walk stop asked for,
+     *  else the persisted Apps/Admin mode when this section has a page named
+     *  for it, else the first page. Never a launch tab — landing on one would
+     *  fire its external app on arrival, so those are skipped here and only
+     *  reachable by an explicit tap.
+     *
+     *  [selectedPageId] leads, and it has to lead over `initial_page`
+     *  specifically: `arguments` are restored across a recreate too, so a strip
+     *  that was opened by a deep link would otherwise ANSWER THAT DEEP LINK
+     *  AGAIN on every recreate and undo every tab the user picked after it.
+     *  Restored state is the only source here that knows where the user was, as
+     *  against where they arrived.
      *
      *  A PAGE strip is not built by goSection and so is never handed an
      *  initial page; it asks the controller which tab it was left on instead.
      *  That is also the channel a deep link to a tab arrives on — see
      *  [LauncherNavController.openSectionPage] — and the Apps/Admin mode is
      *  not a fallback it can use, since a page's tabs are not modes. */
-    private fun startIndex(pages: List<Sections.Page>): Int {
+    private fun startIndex(pages: List<Sections.Page>, saved: Bundle?): Int {
         val remembered = if (ownerPageId.isBlank()) ModePrefs(requireContext()).mode
                          else (activity as? ShellActivity)?.nav?.activeTabFor(tabKey).orEmpty()
-        val wanted = arguments?.getString(ARG_INITIAL_PAGE).orEmpty().ifBlank { remembered }
+        val wanted = saved?.getString(STATE_SELECTED_PAGE).orEmpty()
+            .ifBlank { arguments?.getString(ARG_INITIAL_PAGE).orEmpty() }
+            .ifBlank { remembered }
         return pages.indexOfFirst { it.id == wanted && it.action.isBlank() }
             .takeIf { it >= 0 }
             ?: pages.indexOfFirst { it.action.isBlank() }.coerceAtLeast(0)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_SELECTED_PAGE, selectedPageId)
     }
 
     /** Commit page [pageId] into pane [index], reusing the nav controller's
@@ -308,6 +345,11 @@ class SectionTabsFragment : Fragment(), Collapsible {
         private const val ARG_SECTION_ID = "section_id"
         private const val ARG_INITIAL_PAGE = "initial_page"
         private const val ARG_OWNER_PAGE = "owner_page"
+
+        /** Saved-instance-state key for [selectedPageId]. Not an ARG_: the
+         *  arguments say how this strip was OPENED and never change, and this
+         *  says where the user moved it to since. */
+        private const val STATE_SELECTED_PAGE = "selected_page"
 
         /** Where a PAGE strip's active tab is remembered on the controller.
          *  Shared with [LauncherNavController.openSectionPage], which writes

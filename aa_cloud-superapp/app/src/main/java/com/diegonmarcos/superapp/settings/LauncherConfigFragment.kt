@@ -58,8 +58,30 @@ import org.json.JSONArray
  */
 class LauncherConfigFragment : Fragment() {
 
+    /**
+     * Rows on this page that can repaint THEMSELVES from the store.
+     *
+     * #349: every control here used to answer a flip with [rerenderPage] — a
+     * detach+attach of the whole fragment — to change one badge and one derived
+     * label. That rebuilt twenty-four tiles, two pickers, the Battery Hunger
+     * table (twenty shell round-trips) and the twelve-slot app editor, and threw
+     * the scroll position away on every tap.
+     *
+     * A row registers a lambda that RE-READS the store and repaints, so nothing
+     * cached in a captured `val` can go stale: the registry is the only state,
+     * and it is refilled from scratch by [onCreateView].
+     */
+    private val repaints = mutableListOf<() -> Unit>()
+
+    /** Every registered row re-reads the store and repaints. The whole of what
+     *  a flip now costs. */
+    private fun repaintFromStore() = repaints.forEach { it() }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = inflater.context
+        // This view is being built from nothing, so every lambda in here points
+        // at views that are about to be thrown away.
+        repaints.clear()
         val palette = LauncherPalette.of(ctx)
         val themePrefs = LauncherThemePrefs(ctx)
 
@@ -109,43 +131,69 @@ class LauncherConfigFragment : Fragment() {
         // Mode tiles — data-driven from BuildConfig.
         val themes = LauncherThemes.loadFromBuildConfig()
         val current = themePrefs.theme
-        // "· modified" on the selected tile when the device no longer matches
-        // what the theme declares — see LauncherThemes.isModified for why the
-        // honest label beats the flattering one.
-        val modified = LauncherThemes.isModified(ctx, current)
-        for (themeRow in themes) {
-            val isCurrent = themeRow.id == current.id
-            root.addView(genericTile(
-                ctx,
-                label    = themeRow.label + if (isCurrent && modified) "  ·  modified" else "",
-                subtitle = if (isCurrent && modified)
-                    "You changed a switch by hand, so this is no longer exactly " +
-                        "${themeRow.label}. Tap to re-apply it."
-                else themeRow.subtitle,
-                isSelected = isCurrent,
-            ) {
-                // ONE action, both effects: chrome + every toggle the theme declares.
-                LauncherThemes.apply(ctx, LauncherTheme.fromId(themeRow.id))
-                (activity as? ShellActivity)?.notifyLauncherThemeChanged()
-                com.diegonmarcos.superapp.appstore.ConstellationWorker.start(requireContext())
-                rerenderPage()
-            })
-            root.addView(spacer(ctx, dp(ctx, 8)))
+        // The tiles live in their own box because their label is DERIVED: a
+        // hand-flip below can move the selected mode into "· modified", so this
+        // box is refilled when a toggle changes. Twelve tiles rebuilt inside an
+        // existing page, not a page torn down and rebuilt around them — the
+        // scroll position, and everything else on the screen, stays put.
+        val modesBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(modesBox)
+        fun fillModes() {
+            modesBox.removeAllViews()
+            // Re-read, never captured: "· modified" is the whole reason this
+            // function exists, and a captured value is exactly the stale one.
+            // See LauncherThemes.isModified for why the honest label beats the
+            // flattering one.
+            val modified = LauncherThemes.isModified(ctx, current)
+            for (themeRow in themes) {
+                val isCurrent = themeRow.id == current.id
+                modesBox.addView(genericTile(
+                    ctx,
+                    label    = themeRow.label + if (isCurrent && modified) "  ·  modified" else "",
+                    subtitle = if (isCurrent && modified)
+                        "You changed a switch by hand, so this is no longer exactly " +
+                            "${themeRow.label}. Tap to re-apply it."
+                    else themeRow.subtitle,
+                    isSelected = isCurrent,
+                ) {
+                    // ONE action, both effects: chrome + every toggle the theme declares.
+                    LauncherThemes.apply(ctx, LauncherTheme.fromId(themeRow.id))
+                    // A MODE is the one change on this page that legitimately
+                    // recreates the Activity — Android resolves a Material3
+                    // style once, at inflate time. SectionTabsFragment now
+                    // brings the strip back on this tab afterwards.
+                    (activity as? ShellActivity)?.notifyLauncherThemeChanged()
+                    com.diegonmarcos.superapp.appstore.ConstellationWorker.start(requireContext())
+                })
+                modesBox.addView(spacer(ctx, dp(ctx, 8)))
+            }
         }
+        fillModes()
+        repaints += { fillModes() }
 
         // ── Screensaver section ────────────────────────────────────
         val settingsPrefs = LauncherSettingsPrefs(ctx)
         root.addView(spacer(ctx, dp(ctx, 24)))
         root.addView(sectionHeader(ctx, "Screensaver",
             "Which screensaver the floating-nav ‘Screensaver’ action shows, and the idle auto-start timer."))
-        val currentSaver = settingsPrefs.screensaver
-        for (saver in LauncherSettingsPrefs.Config.screensavers) {
-            root.addView(genericTile(ctx, saver.label, saver.subtitle, saver.id == currentSaver) {
-                settingsPrefs.screensaver = saver.id
-                rerenderPage()
-            })
-            root.addView(spacer(ctx, dp(ctx, 8)))
+        // Same shape as the mode tiles above: the ● / ○ is derived from the
+        // store, so the box is refilled rather than the page rebuilt.
+        val saversBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(saversBox)
+        fun fillSavers() {
+            saversBox.removeAllViews()
+            val currentSaver = settingsPrefs.screensaver
+            for (saver in LauncherSettingsPrefs.Config.screensavers) {
+                saversBox.addView(
+                    genericTile(ctx, saver.label, saver.subtitle, saver.id == currentSaver) {
+                        settingsPrefs.screensaver = saver.id
+                        repaintFromStore()
+                    })
+                saversBox.addView(spacer(ctx, dp(ctx, 8)))
+            }
         }
+        fillSavers()
+        repaints += { fillSavers() }
         // Idle auto-start timer (seconds; 0 = never).
         val st = LauncherSettingsPrefs.Config.screensaverTimeout
         root.addView(sliderRow(ctx, st.label, st.subtitle, st.min, st.max,
@@ -167,13 +215,17 @@ class LauncherConfigFragment : Fragment() {
             root.addView(sectionHeader(ctx, group.label, group.subtitle))
 
             if (group.master) {
-                val allOn = rows.all { settingsPrefs.toggle(it) }
-                root.addView(toggleRow(ctx, group.masterLabel, group.masterSubtitle, allOn) { on ->
+                // The master's own position is DERIVED from its children, so it
+                // is passed as a question, not an answer: flipping one child
+                // below has to move this switch, and it re-asks instead of
+                // being told.
+                root.addView(toggleRow(ctx, group.masterLabel, group.masterSubtitle,
+                    { rows.all { settingsPrefs.toggle(it) } }) { on ->
                     // A master must not stomp a user-owned switch either: the
                     // edge menus are not the master's to turn off.
                     rows.filterNot { it.userOwned }.forEach { settingsPrefs.setToggle(it, on) }
                     onToggleChanged()
-                    rerenderPage() // reflect the child switches
+                    repaintFromStore() // reflect the child switches
                 })
                 root.addView(spacer(ctx, dp(ctx, 8)))
             }
@@ -192,7 +244,7 @@ class LauncherConfigFragment : Fragment() {
                     // lands — repaint eagerly and the grid draws the old value.
                     else Thread({
                         settingsPrefs.setToggle(t, on)
-                        root.post { rerenderPage() }
+                        root.post { repaintFromStore() }
                     }, "night-mode").start()
                     return@toggleGrid
                 }
@@ -204,9 +256,12 @@ class LauncherConfigFragment : Fragment() {
                         .onFailure { runCatching { startActivity(Intent(Settings.ACTION_DISPLAY_SETTINGS)) } }
                 }
                 onToggleChanged()
-                // Re-render because a hand-flip can move the theme tile into
-                // its "modified" state, and that label is derived, not stored.
-                rerenderPage()
+                // The tile that was tapped repaints itself, and the mode tiles
+                // refill — a hand-flip can move the selected mode into its
+                // "modified" state, and that label is derived, not stored. What
+                // this used to do was detach and re-attach the whole fragment
+                // for those two facts: #349's "the page reloads".
+                repaintFromStore()
             })
             root.addView(spacer(ctx, dp(ctx, 8)))
 
@@ -493,10 +548,14 @@ class LauncherConfigFragment : Fragment() {
         return column
     }
 
-    /** A label/subtitle + right-aligned switch row, persisted on toggle. */
+    /** A label/subtitle + right-aligned switch row, persisted on toggle.
+     *
+     *  [checked] is a QUESTION, not a value: this row is the group master and
+     *  its position is derived from the children below it, which the user can
+     *  flip one at a time. It is re-asked on every [repaintFromStore]. */
     private fun toggleRow(
         ctx: android.content.Context,
-        label: String, subtitle: String, checked: Boolean,
+        label: String, subtitle: String, checked: () -> Boolean,
         onChange: (Boolean) -> Unit,
     ): View {
         val palette = LauncherPalette.of(ctx)
@@ -519,13 +578,30 @@ class LauncherConfigFragment : Fragment() {
                 setTextAppearance(android.R.style.TextAppearance_Material_Caption)
             })
         })
-        addView(SwitchCompat(ctx).apply {
-            isChecked = checked
-            // Persist FIRST, then buzz — otherwise Haptics.tap reads the
-            // stale (pre-toggle) value and the "Vibration on tap" switch
-            // itself silently no-ops when flipped ON.
-            setOnCheckedChangeListener { v, isOn -> onChange(isOn); Haptics.tap(v) }
-        })
+        // Persist FIRST, then buzz — otherwise Haptics.tap reads the
+        // stale (pre-toggle) value and the "Vibration on tap" switch
+        // itself silently no-ops when flipped ON.
+        val listener = android.widget.CompoundButton.OnCheckedChangeListener { v, isOn ->
+            onChange(isOn); Haptics.tap(v)
+        }
+        val sw = SwitchCompat(ctx).apply {
+            isChecked = checked()
+            setOnCheckedChangeListener(listener)
+        }
+        // Follow the children without being rebuilt. The listener is DETACHED
+        // for the write: setChecked fires it, and a sync that re-entered
+        // onChange would write the master's new position straight back over
+        // every child — turning "you turned one thing off" into "everything
+        // off".
+        repaints += {
+            val want = checked()
+            if (sw.isChecked != want) {
+                sw.setOnCheckedChangeListener(null)
+                sw.isChecked = want
+                sw.setOnCheckedChangeListener(listener)
+            }
+        }
+        addView(sw)
         }
     }
 
@@ -547,10 +623,14 @@ class LauncherConfigFragment : Fragment() {
      * wide they are, and one of two constants is always the one that gets
      * missed.
      *
-     * There is no in-place repaint: every flip already rebuilds the page (a
-     * hand-flip can move the mode tile into its "modified" state, which is
-     * derived rather than stored), so a tile is painted once from the store and
-     * never has to track its own state.
+     * A tile REPAINTS ITSELF. It used to be painted once and rely on the page
+     * being rebuilt under it, on the grounds that a flip rebuilt the page
+     * anyway — and that assumption is #349: one badge changing colour was
+     * paying for a detach+attach of a page holding twenty-four tiles, two
+     * pickers, twenty shell round-trips and a twelve-slot app editor, and it
+     * took the scroll position with it. The tile still tracks no state of its
+     * own: it re-reads [prefs] each time it paints, which is why [prefs] is
+     * passed down here instead of a boolean.
      */
     private fun toggleGrid(
         ctx: android.content.Context,
@@ -570,7 +650,7 @@ class LauncherConfigFragment : Fragment() {
                 strip = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
                 grid.addView(strip)
             }
-            strip?.addView(toggleTile(ctx, item, prefs.toggle(item), onFlip))
+            strip?.addView(toggleTile(ctx, item, prefs, onFlip))
         }
         // Pad the last strip so four tiles over three columns leaves the fourth
         // under the first, not stretched to a third of the screen.
@@ -589,40 +669,37 @@ class LauncherConfigFragment : Fragment() {
     private fun toggleTile(
         ctx: android.content.Context,
         item: LauncherSettingsPrefs.Item,
-        on: Boolean,
+        prefs: LauncherSettingsPrefs,
         onFlip: (LauncherSettingsPrefs.Item, Boolean) -> Unit,
     ): View {
         val palette = LauncherPalette.of(ctx)
-        val state = if (on) StatusLight.State.ON else StatusLight.State.OFF
 
+        val badgeFill = GradientDrawable().apply { shape = GradientDrawable.OVAL }
         val icon = ImageView(ctx).apply {
             setImageResource(Sections.iconResFor(ctx, item.icon))
             scaleType = ImageView.ScaleType.FIT_CENTER
-            imageTintList = ColorStateList.valueOf(
-                if (on) palette.surface else palette.textSecondary)
             layoutParams = FrameLayout.LayoutParams(dp(ctx, TILE_ICON_DP), dp(ctx, TILE_ICON_DP),
                 Gravity.CENTER)
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
         val badge = FrameLayout(ctx).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(if (on) palette.accent else palette.surfaceSelected)
-            }
+            background = badgeFill
             layoutParams = LinearLayout.LayoutParams(dp(ctx, TILE_BADGE_DP), dp(ctx, TILE_BADGE_DP))
                 .apply { gravity = Gravity.CENTER_HORIZONTAL }
             addView(icon)
         }
+        val status = TextView(ctx).apply {
+            textSize = 9f
+            gravity = Gravity.CENTER
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
 
-        return LinearLayout(ctx).apply {
+        val cell = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             val pad = dp(ctx, 6); setPadding(pad, pad, pad, pad)
             isClickable = true; isFocusable = true
-            // The grid replaced labelled rows with icons, which took the text a
-            // screen reader was reading off the screen — so the whole tile
-            // carries the sentence and its children are skipped.
-            contentDescription = StatusLight.description(ctx, item.label, state)
             addView(badge)
             addView(TextView(ctx).apply {
                 text = item.label
@@ -632,19 +709,39 @@ class LauncherConfigFragment : Fragment() {
                 setPadding(0, dp(ctx, 6), 0, 0)
                 importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             })
-            addView(TextView(ctx).apply {
-                text = StatusLight.text(ctx, state)
-                setTextColor(StatusLight.colour(ctx, state))
-                textSize = 9f
-                gravity = Gravity.CENTER
-                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            })
-            icon.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-            setOnClickListener {
-                Haptics.tap(it)
-                onFlip(item, !on)
-            }
+            addView(status)
         }
+
+        // Badge fill and icon ink are the same two palette colours swapped, plus
+        // the status word under them — the three things that say on or off, and
+        // the only three a flip changes. Read from the store every time: a
+        // store-backed switch (dark mode) is a VIEW OF the owning store and can
+        // change without this page being touched at all.
+        fun paint() {
+            val on = prefs.toggle(item)
+            val state = if (on) StatusLight.State.ON else StatusLight.State.OFF
+            badgeFill.setColor(if (on) palette.accent else palette.surfaceSelected)
+            icon.imageTintList = ColorStateList.valueOf(
+                if (on) palette.surface else palette.textSecondary)
+            status.text = StatusLight.text(ctx, state)
+            status.setTextColor(StatusLight.colour(ctx, state))
+            // The grid replaced labelled rows with icons, which took the text a
+            // screen reader was reading off the screen — so the whole tile
+            // carries the sentence and its children are skipped. It carries the
+            // STATE too, so it has to be re-spoken when the state moves.
+            cell.contentDescription = StatusLight.description(ctx, item.label, state)
+        }
+        paint()
+        repaints += { paint() }
+
+        cell.setOnClickListener {
+            Haptics.tap(it)
+            // Asked of the store, not of a value captured when this tile was
+            // built. The tile now outlives its own flips, so a captured `on`
+            // would be right once and wrong every time after.
+            onFlip(item, !prefs.toggle(item))
+        }
+        return cell
     }
 
     /** A label + SeekBar row. [value] pre-positions the thumb; onChange fires
@@ -708,9 +805,27 @@ class LauncherConfigFragment : Fragment() {
      *  in: re-apply the launcher chrome so stars / cube / pets pick the change
      *  up, and re-arm the constellation worker so `fleet_check` takes effect
      *  now rather than at the next cold start. One place, so a new group cannot
-     *  be added without it. */
+     *  be added without it.
+     *
+     *  IT DOES NOT CALL notifyLauncherThemeChanged, and the sentence above is
+     *  why: that is the MODE-change hook, and since 7600f71a9 its body is
+     *  `LauncherStyle.restartForModeChange(this)` — an `Activity.recreate()`.
+     *  A mode HAS to recreate (Android resolves a Material3 style once per
+     *  Activity, at inflate time, so a mode applied any other way leaves every
+     *  XML surface in the old one). A TOGGLE names no style, and this line
+     *  bought a whole-Activity rebuild for each of twenty-four switches: the
+     *  page flashed, the scroll position went, and the tab strip around it came
+     *  back on Profiles because the controller that remembers the tab died with
+     *  the Activity. That is #349, both halves, from one call.
+     *
+     *  [ShellActivity.applyLauncherChrome] is what "re-apply the launcher
+     *  chrome" always meant — public, on the NavHost interface, documented
+     *  idempotent — and [applyShellLiveToggles] pushes the three prefs whose
+     *  views live in the shell and so cannot re-read themselves. Between them
+     *  they are what the recreate was actually being used for. */
     private fun onToggleChanged() {
-        (activity as? ShellActivity)?.notifyLauncherThemeChanged()
+        (activity as? ShellActivity)?.applyLauncherChrome()
+        applyShellLiveToggles(activity)
         runCatching {
             com.diegonmarcos.superapp.appstore.ConstellationWorker.start(requireContext())
         }
