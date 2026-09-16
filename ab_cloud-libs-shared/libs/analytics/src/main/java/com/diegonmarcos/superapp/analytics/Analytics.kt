@@ -8,8 +8,8 @@ import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
-import java.util.ArrayDeque
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
 
 /**
@@ -32,16 +32,32 @@ object Analytics {
     private const val KEY_CONSENT = "consent"
     private const val KEY_VISITOR = "visitor_id"
 
-    // Bounded on purpose. Offline events are worth keeping across a short
-    // outage; they are not worth growing without limit in a phone's memory, so
-    // the OLDEST are dropped once full — recent activity is the useful part.
-    private const val MAX_QUEUE = 200
+    // Bounded on purpose, and bounded PER SINK. Offline events are worth
+    // keeping across a short outage; they are not worth growing without limit
+    // in a phone's memory, so the OLDEST are dropped once full — recent
+    // activity is the useful part. Two sinks therefore hold at most 400 events
+    // between them, which at the size these payloads run to is tens of
+    // kilobytes: survivable on the oldest phone in the fleet, and far cheaper
+    // than the unbounded growth an offline day would otherwise produce.
+    internal const val MAX_QUEUE_PER_SINK = 200
 
     private val io = Executors.newSingleThreadExecutor { r ->
         Thread(r, "cloud-analytics").apply { isDaemon = true; priority = Thread.MIN_PRIORITY }
     }
 
-    private val queue = ArrayDeque<Pair<String, Map<String, String>>>()
+    // One queue per backend, NOT one shared queue. Umami being reachable must
+    // never decide whether Matomo's copy of an event survives; see SinkQueue
+    // for the full account of the defect this replaces.
+    private val umamiQueue = SinkQueue("umami", MAX_QUEUE_PER_SINK)
+    private val matomoQueue = SinkQueue("matomo", MAX_QUEUE_PER_SINK)
+
+    // At most ONE drain task in flight. Without this, a burst of events at a
+    // backend that is down queues one executor task per event, each paying the
+    // 8 second connect timeout, and the phone spends minutes of radio and
+    // battery re-learning the same outage. The caller is never blocked and no
+    // event ever gets a thread of its own: there is exactly one daemon thread
+    // above, and this keeps its backlog to one task.
+    private val flushScheduled = AtomicBoolean(false)
 
     @Volatile private var prefs: SharedPreferences? = null
     @Volatile private var consent = false
@@ -77,7 +93,7 @@ object Analytics {
     fun setConsent(granted: Boolean) {
         consent = granted
         prefs?.edit()?.putBoolean(KEY_CONSENT, granted)?.apply()
-        if (granted) flush() else synchronized(queue) { queue.clear() }
+        if (granted) flush() else { umamiQueue.clear(); matomoQueue.clear() }
     }
 
     @JvmStatic
@@ -92,28 +108,28 @@ object Analytics {
     @JvmOverloads
     fun event(name: String, props: Map<String, String> = emptyMap()) {
         if (!BuildConfig.AN_ENABLED) return
-        synchronized(queue) {
-            if (queue.size >= MAX_QUEUE) queue.pollFirst()
-            queue.addLast(name to props)
-        }
+        val event = name to props
+        umamiQueue.offer(event)
+        matomoQueue.offer(event)
         if (consent) flush()
     }
 
     private fun flush() {
         if (!consent || !BuildConfig.AN_ENABLED) return
+        if (!flushScheduled.compareAndSet(false, true)) return
         io.execute {
-            while (true) {
-                val item = synchronized(queue) { queue.pollFirst() } ?: return@execute
-                val (name, props) = item
-                // Requeue on failure so a flaky network doesn't silently lose the
-                // event, but only once at the FRONT and only if there is room —
-                // otherwise a persistently unreachable backend would spin forever.
-                val ok = sendUmami(name, props) or sendMatomo(name, props)
-                if (!ok) {
-                    synchronized(queue) { if (queue.size < MAX_QUEUE) queue.addFirst(item) }
-                    return@execute
-                }
-            }
+            // Cleared FIRST, so an event arriving while this drain runs still
+            // schedules a follow-up rather than being left to sit until the
+            // next one happens along.
+            flushScheduled.set(false)
+            // Each sink drains on ITS OWN result. One backend being down holds
+            // that backend's events and nothing else; the other still
+            // delivers. This is what replaces `sendUmami(..) or sendMatomo(..)`
+            // — that expression did call both, but it reduced their two
+            // outcomes to one boolean, so a success on either one discarded the
+            // other's failed copy with no queue left holding it and no retry.
+            umamiQueue.drain { (name, props) -> sendUmami(name, props) }
+            matomoQueue.drain { (name, props) -> sendMatomo(name, props) }
         }
     }
 
