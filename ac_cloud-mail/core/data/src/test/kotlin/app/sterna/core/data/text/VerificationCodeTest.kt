@@ -157,7 +157,17 @@ class VerificationCodeTest {
             ),
         )
         cases.forEach { c ->
-            assertEquals(c.name, c.expected, run(c.subject, c.body, c.html))
+            val got = run(c.subject, c.body, c.html)
+            // The compact CI console prints no failure message, only the assert's line — so a
+            // failing row names itself, on stderr, before the assertion rethrows.
+            try {
+                assertEquals(c.name, c.expected, got)
+            } catch (failure: Throwable) {
+                System.err.println(
+                    "VerificationCodeCase [${c.name}] expected <${c.expected ?: "null"}> but was <${got ?: "null"}>",
+                )
+                throw failure
+            }
         }
     }
 
@@ -256,7 +266,15 @@ class VerificationCodeTest {
             ),
         )
         cases.forEach { c ->
-            assertNull(c.name, run(c.subject, c.body, c.html))
+            val got = run(c.subject, c.body, c.html)
+            try {
+                assertNull(c.name, got)
+            } catch (failure: Throwable) {
+                System.err.println(
+                    "VerificationCodeCase [${c.name}] expected <null> but was <${got ?: "null"}>",
+                )
+                throw failure
+            }
         }
     }
 

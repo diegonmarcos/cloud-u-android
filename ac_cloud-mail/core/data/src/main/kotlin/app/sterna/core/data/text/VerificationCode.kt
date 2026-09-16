@@ -46,9 +46,17 @@ fun extractVerificationCode(subject: String?, bodyText: String, html: String? = 
 /** One candidate and the confidence it earned. Private: the caller only sees the winner. */
 private data class VerificationCodeCandidate(val code: String, val score: Int) {
     companion object {
-        /** Highest score first; a tie goes to the longer code (more information to hand over). */
-        val byConfidence = compareByDescending<VerificationCodeCandidate> { it.score }
-            .thenByDescending { it.code.length }
+        /**
+         * Highest score first; a tie goes to the longer code (more information to hand over).
+         *
+         * Deliberately ASCENDING comparators: [Iterable.maxWithOrNull] treats the comparator as a
+         * standard less-than order and keeps the element for which every compare is positive —
+         * which is the comparator's GREATEST element. A `compareByDescending` comparator inverts
+         * less-than, so its greatest element is the LOWEST score, and the winner would be the
+         * weakest candidate in the message.
+         */
+        val byConfidence = compareBy<VerificationCodeCandidate> { it.score }
+            .thenBy { it.code.length }
     }
 }
 
@@ -117,6 +125,16 @@ private val SPLIT_ALPHA = Regex(
 
 /** Letters only: accepted only when a strong introduction stands immediately before the token. */
 private val LETTERS_ONLY = Regex("""(?i)\b[a-z]{4,8}\b""")
+
+/**
+ * Common continuations of "your code …" that are grammar, not codes: "expires", "valid",
+ * "worked". An all-letter candidate alphabetically shaped like "ABCDEF" still passes; these do not.
+ */
+private val NON_CODE_WORDS = setOf(
+    "expires", "expired", "expiry", "valid", "invalid", "active", "inactive", "failed",
+    "works", "worked", "wrong", "correct", "matches", "matched", "matching", "confirms",
+    "confirmed", "still", "used", "below", "above", "soon", "now", "entered", "required",
+)
 
 /** A `<td>`/`<div>`/… whose inline style names a font-size at least 18px. */
 private val BIG_FONT_ELEMENT = Regex(
@@ -215,11 +233,12 @@ private fun collectTextCandidates(
     }
 
     // Letters-only codes ("ABCDEF") are indistinguishable from words without evidence, so only a
-    // strong introduction immediately before the token promotes one — "your code is ABCDEF".
+    // strong introduction immediately before the token promotes one — "your code is ABCDEF" — and
+    // a common continuation word ("expires", "valid", …) never passes regardless of the phrase.
     for (m in LETTERS_ONLY.findAll(text)) {
         if (consumed.any { m.range.first in it }) continue
-        val window = preceding(text, m.range.first, 24)
-        if (!containsAny(window, STRONG_PHRASES)) continue
+        if (m.value.lowercase() in NON_CODE_WORDS) continue
+        if (!strongPhraseDirectlyBefore(text, m.range.first)) continue
         out += VerificationCodeCandidate(m.value, baseScore(m.value) + STRONG_PHRASE)
     }
 }
@@ -321,6 +340,29 @@ private fun containsAny(window: String, words: List<String>): Boolean =
     words.any { word ->
         Regex("(?i)\\b" + Regex.escape(word) + "\\b").containsMatchIn(window)
     }
+
+/**
+ * Whether a strong introduction ends right before [start], with no digit run in between: "the
+ * code is 123456 expires" introduced the NUMBER, not the word — the digit between the phrase and
+ * the candidate means the phrase pointed somewhere else.
+ */
+private fun strongPhraseDirectlyBefore(text: String, start: Int): Boolean {
+    val windowStart = (start - 24).coerceAtLeast(0)
+    val window = text.substring(windowStart, start)
+    if (window.any { it.isDigit() }) return false
+    var lastEnd = -1
+    for (phrase in STRONG_PHRASES) {
+        val pattern = Regex("(?i)\\b" + Regex.escape(phrase) + "\\b")
+        var from = 0
+        while (true) {
+            val m = pattern.find(window, from) ?: break
+            lastEnd = maxOf(lastEnd, m.range.last + 1)
+            from = m.range.last + 1
+        }
+    }
+    // The phrase may trail a small separator: "code is ABCDEF" ends one char before the token.
+    return lastEnd >= 0 && start - (windowStart + lastEnd) <= 4
+}
 
 private fun preceding(text: String, start: Int, count: Int): String =
     text.substring((start - count).coerceAtLeast(0), start)
