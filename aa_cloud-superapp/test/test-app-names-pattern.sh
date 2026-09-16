@@ -178,14 +178,11 @@ print("== T7: a launcher tile shows a caption, never an application's identity =
 # So the one check that would go red if a caption silently reverted to its
 # identity string is this one.
 #
-# PRE-EXISTING AND NOT EXEMPTED ON MERIT: two AGI tiles still caption themselves
-# with an identity. They are the same defect as #380/#381, were not in those
-# tickets, and what they should say instead is the owner's call and not a
-# tester's — so they are named here, visibly, instead of being invisible.
-# THIS SET MAY ONLY SHRINK. Give one of them a caption and delete its id.
-# NEVER ADD TO IT: a new tile captioned with an application name is the exact
-# regression this test exists to catch.
-pending_identity_captions = {"cloud-superapp", "ai-tmx"}
+# #390: the two AGI tiles #380/#381 left behind have captions again, so this
+# set is empty. It is the regression's ledger, not a parked list: NEVER ADD TO
+# IT — a tile captioned with an application name is the exact regression this
+# test exists to catch, and a stale exemption re-opens the hole it closes.
+pending_identity_captions = set()
 
 tiles = [node for _, node in walk(superapp["ui"]["sections"])
          if isinstance(node.get("label"), str) and isinstance(node.get("target"), str)]
