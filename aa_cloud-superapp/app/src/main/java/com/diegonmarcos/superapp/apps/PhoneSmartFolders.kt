@@ -3,6 +3,7 @@ import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.battery.EnergyWatchdog
 import com.diegonmarcos.superapp.datamanager.AppNetworkProvider
 import com.diegonmarcos.superapp.datamanager.AppUsageProvider
+import com.diegonmarcos.superapp.updater.Fleet
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
@@ -22,6 +23,14 @@ import org.json.JSONArray
  * Rule types:
  *   • pkg_prefix          — any pkg startsWith one of values
  *   • pkg_eq              — any pkg equals one of values
+ *   • fleet_kind          — any pkg that is a constellation-fleet member
+ *                           whose kind — 'app' or 'lib', taken from the
+ *                           CENTRAL classification data/regen.sh →
+ *                           constellation-fleet.json →
+ *                           BuildConfig.CONSTELLATION_FLEET_B64 — is one of
+ *                           values. Splits OUR OWN APKs from the companion
+ *                           engine/binding libraries off the registry, never
+ *                           a hand-maintained package list held here.
  *   • recent_used         — RANKING. Packages by most-recent use
  *                           (UsageStatsManager.lastTimeUsed), capped at
  *                           `limit`. Needs usage-access.
@@ -68,6 +77,16 @@ object PhoneSmartFolders {
         fun matches(ctx: Context, app: PhoneApp): Boolean = when (type) {
             "pkg_prefix" -> values.any { app.packageName.startsWith(it) }
             "pkg_eq"     -> values.any { app.packageName == it }
+            "fleet_kind" -> {
+                // Split our own fleet APKs off the existing central
+                // classification: kind=app (real apps) vs kind=lib (companion
+                // engine/binding APKs). Driven from constellation-fleet.json
+                // (baked from each APK's own build.json::release.kind), never
+                // a hand-maintained package list here — a newly-declared app
+                // or lib lands in the right folder without this file moving.
+                val kind = fleetKindOf(app.packageName)
+                kind != null && values.contains(kind)
+            }
             "install_source_in" -> {
                 // Show ONLY apps whose install-source-of-record (installing
                 // OR initiating package) is one of `values` — bucket apps by
@@ -111,6 +130,21 @@ object PhoneSmartFolders {
                 setOfNotNull(ctx.packageManager.getInstallerPackageName(pkg))
             }
         }.getOrDefault(emptySet())
+
+        /** Package → constellation fleet kind, decoded once from the central
+         *  classification baked by data/regen.sh (each APK's own
+         *  build.json::release.kind, default "app") → constellation-fleet.json
+         *  → BuildConfig.CONSTELLATION_FLEET_B64. Empty when the classification
+         *  is absent or unparseable — every fleet_kind folder then matches
+         *  nothing (degrades to empty, like the usage-ranked rules without the
+         *  usage-access grant) rather than inventing a split. */
+        private val fleetKindByPackage: Map<String, String> by lazy {
+            Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64).associate { it.pkg to it.kind }
+        }
+
+        /** The fleet kind of [pkg] per the central classification, or null when
+         *  it is not a constellation member. */
+        private fun fleetKindOf(pkg: String): String? = fleetKindByPackage[pkg]
     }
 
     data class SmartFolder(val id: String, val title: String, val rule: Rule, val group: String? = null) {

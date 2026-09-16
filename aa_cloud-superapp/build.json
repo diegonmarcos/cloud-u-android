@@ -5911,20 +5911,8 @@
         "prefix": "*"
       }
     ],
-    "_doc_phone_smart_folders": "Smart Folders rendered at the BOTTOM of the Home Apps/Phone tab — dynamic filters over the same LauncherApps.getActivityList enumeration the page uses. Apps still belong to their topical folder above; Smart Folders are an orthogonal cross-cut view by manufacturer / install-source. Rule types: pkg_prefix (any pkg starts-with one of values); pkg_eq (any pkg equals one of values); install_source_in (the app's install-source-of-record — installingPackageName OR initiatingPackageName from PackageManager.getInstallSourceInfo — IS one of values; use this to bucket apps by the store/installer that owns their updates); install_source_not (install source NOT in values — legacy catch-all for 'anything outside the official stores'); recently_installed (ranking rule: newest firstInstallTime first, capped at `limit`); recent_used (ranking: most-recently-used first via UsageStatsManager.lastTimeUsed, capped at `limit`); active_since (ranking: apps used within the last `window_h` hours, most-recent first, optional `limit`); most_opened (ranking: launch count via MOVE_TO_FOREGROUND events over 7d, capped at `limit`); top_network (ranking: total bytes rx+tx via NetworkStatsManager over 7d, capped at `limit`); top_battery (ranking: estimated mAh via libs:battery EnergyWatchdog.perAppEstimate, capped at `limit`). The five usage/network/battery ranking rules read through libs:datamanager (usage+network) / libs:battery (energy) and ALL need the PACKAGE_USAGE_STATS usage-access grant — without it each degrades to an empty (hidden) folder. The install-source values are real installer package names — verified on-device via /api/phone/classify (which dumps installing/initiating/system per app): com.android.vending=Google Play, com.sec.android.app.samsungapps=Galaxy Store, com.uptodown=Uptodown, org.fdroid.fdroid=F-Droid, com.google.android.packageinstaller=manual sideload (raw APK, no store), com.epicgames.portal=Epic, com.facebook.system=Meta's own installer.",
+    "_doc_phone_smart_folders": "Smart Folders rendered at the BOTTOM of the Home Apps/Phone tab — dynamic filters over the same LauncherApps.getActivityList enumeration the page uses. Apps still belong to their topical folder above; Smart Folders are an orthogonal cross-cut view by manufacturer / install-source. Rule types: pkg_prefix (any pkg starts-with one of values); pkg_eq (any pkg equals one of values); fleet_kind (any pkg that is a constellation-fleet member whose kind — 'app' or 'lib', taken from the CENTRAL classification data/regen.sh → constellation-fleet.json → BuildConfig.CONSTELLATION_FLEET_B64 — is one of values; splits OUR OWN APKs from the companion libraries off the registry, never a hand-maintained package list); install_source_in (the app's install-source-of-record — installingPackageName OR initiatingPackageName from PackageManager.getInstallSourceInfo — IS one of values; use this to bucket apps by the store/installer that owns their updates); install_source_not (install source NOT in values — legacy catch-all for 'anything outside the official stores'); recently_installed (ranking rule: newest firstInstallTime first, capped at `limit`); recent_used (ranking: most-recently-used first via UsageStatsManager.lastTimeUsed, capped at `limit`); active_since (ranking: apps used within the last `window_h` hours, most-recent first, optional `limit`); most_opened (ranking: launch count via MOVE_TO_FOREGROUND events over 7d, capped at `limit`); top_network (ranking: total bytes rx+tx via NetworkStatsManager over 7d, capped at `limit`); top_battery (ranking: estimated mAh via libs:battery EnergyWatchdog.perAppEstimate, capped at `limit`). The five usage/network/battery ranking rules read through libs:datamanager (usage+network) / libs:battery (energy) and ALL need the PACKAGE_USAGE_STATS usage-access grant — without it each degrades to an empty (hidden) folder. The install-source values are real installer package names — verified on-device via /api/phone/classify (which dumps installing/initiating/system per app): com.android.vending=Google Play, com.sec.android.app.samsungapps=Galaxy Store, com.uptodown=Uptodown, org.fdroid.fdroid=F-Droid, com.google.android.packageinstaller=manual sideload (raw APK, no store), com.epicgames.portal=Epic, com.facebook.system=Meta's own installer.",
     "phone_smart_folders": [
-      {
-        "id": "cloud",
-        "title": "Cloud",
-        "group": "Dev",
-        "_doc": "Our own constellation APKs. Every Cloud app is namespaced com.diegonmarcos.* (superapp, cloudbrowser/keyboard/nav/vault/wallet, comms.matrix/dialer) — a single pkg_prefix matches the whole fleet and nothing else.",
-        "rule": {
-          "type": "pkg_prefix",
-          "values": [
-            "com.diegonmarcos."
-          ]
-        }
-      },
       {
         "id": "samsung",
         "title": "Samsung",
@@ -5946,6 +5934,30 @@
           "values": [
             "com.google.",
             "com.android.vending"
+          ]
+        }
+      },
+      {
+        "id": "cloud_apps",
+        "title": "Cloud Apps",
+        "group": "Dev",
+        "_doc": "The constellation fleet's REAL apps (superapp, browser, vault, wallet, nav, ide, office, media-center, drive, comms.*, cld.* …) — each declared kind=app in its own build.json::release.kind. Driven from the CENTRAL classification (data/regen.sh → constellation-fleet.json → BuildConfig.CONSTELLATION_FLEET_B64) by the fleet_kind rule, NOT a hand-maintained package list: a new app that declares kind=app lands here and in nothing else, and a library reclassified lib leaves automatically.",
+        "rule": {
+          "type": "fleet_kind",
+          "values": [
+            "app"
+          ]
+        }
+      },
+      {
+        "id": "cloud_libs",
+        "title": "Cloud Libs",
+        "group": "Dev",
+        "_doc": "The constellation fleet's companion APKs that are really libraries — lib-* modules (com.diegonmarcos.cloudlib.*) shipping AIDL-bound engines, keyboard-engines (com.diegonmarcos.cloudkeyboardlibs), termux-boot (cld.termux.nix.boot) — each declared kind=lib in its own build.json::release.kind. Same central classification as Cloud Apps: the fleet_kind rule keeps only installed packages whose kind is lib, so a new lib module registers itself and no hand-maintained list here can drift.",
+        "rule": {
+          "type": "fleet_kind",
+          "values": [
+            "lib"
           ]
         }
       },
