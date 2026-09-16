@@ -201,8 +201,8 @@
       "workflow": "ship-cloud-news.yml"
     },
     "ac_cloud-nix-on-droid": {
-      "first_test": "21 JVM unit test classes have never executed. Declare tests.unit.task.",
-      "shell_testers": 0,
+      "first_test": "Now has 1 shell tester (test-bootstrap-baked.sh, #348): the proot+glibc runtime is baked in, pinned by sha256, and rewritten for THIS app id \u2014 the three ways this APK could install, launch and still have no shell. 21 JVM unit test classes still have never executed; declare tests.unit.task.",
+      "shell_testers": 1,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
@@ -282,6 +282,6 @@
       "workflow": "ship-firestack-aar.yml"
     }
   },
-  "with_executed_tests": 10,
-  "with_no_tests_at_all": 21
+  "with_executed_tests": 11,
+  "with_no_tests_at_all": 20
 }

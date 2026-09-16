@@ -24,6 +24,7 @@ on:
       - "1_cicd/src/cicd/ship-cloud-nix-on-droid.yml"
       - "1_cicd/src/scripts/cloud-nix-on-droid-fork-engine.sh"
       - "ac_cloud-nix-on-droid/**"
+      - "!ac_cloud-nix-on-droid/test/**"
 permissions:
   contents: write   # gh release upload
 
