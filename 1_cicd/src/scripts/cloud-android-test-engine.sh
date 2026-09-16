@@ -110,7 +110,28 @@ shell)
     [ -n "$dir" ] || dir="test"
     tdir="$APP_DIR/$dir"
 
+    # ── A DECLARED SUITE THAT EXECUTES NOTHING IS A FAILURE, NOT A GAP (#370) ──
+    #
+    # An application with no `tests.shell` block at all is a known, counted,
+    # LOUD gap — nineteen of the thirty-one are in that state and closing them
+    # is a different job. This is the other case, and it is not a gap: the
+    # application DECLARED a shell suite, so something is supposed to run here,
+    # and if nothing did, the green tick is a statement about a suite that was
+    # never executed.
+    #
+    # It matters more now than it did. Editing a tester triggers this workflow
+    # (that is the whole of #370), so this step is what an agent improving a
+    # tester gets back as their answer. If it can return success having run
+    # zero testers, the ticket's own fix reproduces the ticket's own bug one
+    # layer in: a green that verified nothing, arriving at exactly the moment
+    # someone tried to do the right thing.
+    declared="$(_json '.tests.shell')"
+
     if [ ! -d "$tdir" ]; then
+        if [ -n "$declared" ]; then
+            err "[$APP_NAME] build.json::tests.shell declares a shell suite but $dir/ does not exist — zero testers ran, so this run proves nothing about $APP_NAME. A check that cannot reach its subject must fail, never go quiet."
+            exit 1
+        fi
         _uncovered "no $dir/ directory — zero shell testers ran"
         exit 0
     fi
@@ -456,6 +477,19 @@ shell)
     # what the gate declines to check has to stay as visible as what it checks,
     # or "we never enforced this" decays into "this passed".
     _uncovered "assertions against a live third-party service were NOT enforced here (CLOUD_RELEASE_GATE) — the scheduled 'Test → AI model registry' workflow is what enforces them; a red run there means a baked price is wrong even though this one is green"
+    # The second door into the same room, and it has to be spelled out
+    # separately because the check above cannot see it: the directory EXISTS,
+    # so nothing refused, and then `for t in "$tdir"/test-*.sh` matched no
+    # file. A tester renamed out of the `test-*.sh` shape, a tests.shell.dir
+    # pointing one directory off, a suite moved in a commit that has not landed
+    # yet — total stays 0, failed stays 0, and the line below is TRUE. Green,
+    # having executed nothing, with a summary line reading "0 ran" that no one
+    # reads because the tick is already green.
+    if [ -n "$declared" ] && [ "$total" -eq 0 ]; then
+        err "[$APP_NAME] build.json::tests.shell declares a shell suite and $dir/ exists, but it contains no test-*.sh — zero testers ran. Refusing to report success for a suite that executed nothing."
+        exit 1
+    fi
+
     [ "$failed" -eq 0 ] && [ "$revived" -eq 0 ]
     ;;
 

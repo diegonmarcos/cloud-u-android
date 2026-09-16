@@ -12,10 +12,17 @@ on:
       # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir
       # ac_cloud-mail/build.json::modules declares is added automatically, dead
       # entries are dropped, and cloud-android-source-identity.sh hashes
-      # exactly this list — so nothing can trigger a build the publish
-      # gate does not weigh. Extra entries no module map can express
+      # this list — so nothing can trigger a build the publish gate does
+      # not weigh. Extra entries no module map can express
       # (settings.gradle.kts references, scan roots) are kept: add them
       # here and they stay.
+      # ONE path is watched here and deliberately NOT hashed: the
+      # tester directory build.json::tests.shell.dir declares. A tester
+      # edit must START a run (it is the only pipeline that executes
+      # that tester) and must NOT publish an APK (it changed no bytes).
+      # The gate skips it, so the run costs the test step alone.
+      # exactly this list — so nothing can trigger a build the publish
+      # gate does not weigh. Extra entries no module map can express
       - "1_cicd/src/cicd/ship-cloud-mail.yml"
       - "1_cicd/src/scripts/cloud-mail-engine.sh"
       - "ab_cloud-libs-shared/libs/analytics/**"
@@ -24,7 +31,6 @@ on:
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-mail/**"
-      - "!ac_cloud-mail/test/**"
 permissions:
   contents: write   # gh release create (RSS feed entries)
   packages: write   # ghcr push (oras)

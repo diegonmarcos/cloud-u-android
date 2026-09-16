@@ -39,13 +39,19 @@ on:
       # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir
       # ac_cloud-camera/build.json::modules declares is added automatically, dead
       # entries are dropped, and cloud-android-source-identity.sh hashes
-      # exactly this list — so nothing can trigger a build the publish
-      # gate does not weigh. Extra entries no module map can express
+      # this list — so nothing can trigger a build the publish gate does
+      # not weigh. Extra entries no module map can express
       # (settings.gradle.kts references, scan roots) are kept: add them
       # here and they stay.
+      # ONE path is watched here and deliberately NOT hashed: the
+      # tester directory build.json::tests.shell.dir declares. A tester
+      # edit must START a run (it is the only pipeline that executes
+      # that tester) and must NOT publish an APK (it changed no bytes).
+      # The gate skips it, so the run costs the test step alone.
+      # exactly this list — so nothing can trigger a build the publish
+      # gate does not weigh. Extra entries no module map can express
       - "1_cicd/src/cicd/ship-cloud-camera.yml"
       - "ac_cloud-camera/**"
-      - "!ac_cloud-camera/test/**"
 permissions:
   contents: write
   packages: write

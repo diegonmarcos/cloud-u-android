@@ -256,19 +256,34 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
             derived.append(shared + "/**")
     derived.append(f"1_cicd/src/cicd/{name}")
 
-    # The declared shell-tester directory cannot change the APK, so it must not
-    # start a build. Run 34850225588 republished the SuperApp for a commit that
-    # touched only aa_cloud-superapp/test/: {app}/** watched it, and because
-    # cloud-android-source-identity.sh hashes exactly this list, the same file
-    # also moved the publish gate. The exclusion is written HERE and honoured
-    # THERE, so trigger and identity stay one list; excluding it from only one
-    # of them reopens the bug from the other side. Only a DECLARED tests.shell.dir
-    # is excluded: an undeclared test/ (ac_cloud-chat's is upstream's) is not
-    # this repository's claim to make.
+    # ── THE TESTER DIRECTORY IS WATCHED, AND DELIBERATELY NOT HASHED (#370) ──
+    #
+    # These are two different questions and they had one answer, which is why
+    # this list used to carry `!{app}/{tests.shell.dir}/**`:
+    #
+    #   "should this start a run?"      YES. A tester edit must run that tester.
+    #   "should this publish an APK?"   NO. A tester cannot change the bytes.
+    #
+    # The `!` answered both with NO, so editing a tester ran NOTHING: the one
+    # pipeline that executes it was the one the edit could not reach, and an
+    # agent who improved a tester got a green board for it. Twelve of the
+    # thirty-one ship workflows were in that state.
+    #
+    # The `!` is gone and `{app}/**` — already derived above — carries the
+    # trigger. The publish half is unchanged and now lives where its data
+    # lives: cloud-android-source-identity.sh reads the SAME
+    # build.json::tests.shell.dir field this loop reads and drops it from the
+    # identity, so run 34850225588 (the SuperApp republished for a commit that
+    # touched only aa_cloud-superapp/test/) stays fixed. Both sides still
+    # derive from one declaration, so they cannot drift; what changed is that
+    # the declaration, not the `!` marker, is the thing they share.
+    #
+    # The run a tester edit now starts is CHEAP, not a full ship: the testers
+    # run in the workflow's FIRST step, before any JDK/SDK/gradle, and the
+    # publish gate then sees an unmoved identity and skips every build and
+    # publish step after it. That is the separate lightweight test-only
+    # pipeline, obtained without a second workflow to keep in sync.
     excluded = []
-    tests_dir = ((config.get("tests") or {}).get("shell") or {}).get("dir")
-    if tests_dir and os.path.isdir(os.path.join(root, app, tests_dir)):
-        excluded.append(f"!{app}/{tests_dir.strip('/')}/**")
 
     # Hand-written entries survive unless they are dead (a path a filter can
     # never match) or the workflow's own generated copy. Exclusions are derived
@@ -286,10 +301,15 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
     header = ["      # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir",
               f"      # {app}/build.json::modules declares is added automatically, dead",
               "      # entries are dropped, and cloud-android-source-identity.sh hashes",
-              "      # exactly this list — so nothing can trigger a build the publish",
-              "      # gate does not weigh. Extra entries no module map can express",
+              "      # this list — so nothing can trigger a build the publish gate does",
+              "      # not weigh. Extra entries no module map can express",
               "      # (settings.gradle.kts references, scan roots) are kept: add them",
-              "      # here and they stay."]
+              "      # here and they stay.",
+              "      # ONE path is watched here and deliberately NOT hashed: the",
+              "      # tester directory build.json::tests.shell.dir declares. A tester",
+              "      # edit must START a run (it is the only pipeline that executes",
+              "      # that tester) and must NOT publish an APK (it changed no bytes).",
+              "      # The gate skips it, so the run costs the test step alone."]
 
     # A comment inside paths: is an author explaining why a trigger is, or is
     # deliberately not, there -- and this block is the only place that reasoning

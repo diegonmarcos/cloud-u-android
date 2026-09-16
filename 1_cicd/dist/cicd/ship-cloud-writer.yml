@@ -74,10 +74,17 @@ on:
       # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir
       # ac_cloud-writer/build.json::modules declares is added automatically, dead
       # entries are dropped, and cloud-android-source-identity.sh hashes
-      # exactly this list — so nothing can trigger a build the publish
-      # gate does not weigh. Extra entries no module map can express
+      # this list — so nothing can trigger a build the publish gate does
+      # not weigh. Extra entries no module map can express
       # (settings.gradle.kts references, scan roots) are kept: add them
       # here and they stay.
+      # ONE path is watched here and deliberately NOT hashed: the
+      # tester directory build.json::tests.shell.dir declares. A tester
+      # edit must START a run (it is the only pipeline that executes
+      # that tester) and must NOT publish an APK (it changed no bytes).
+      # The gate skips it, so the run costs the test step alone.
+      # exactly this list — so nothing can trigger a build the publish
+      # gate does not weigh. Extra entries no module map can express
       # THE SHARED LIB ENTRY IS ab_cloud-libs-shared/libs/text-tools, derived
       # from build.json::modules and not hand-written. It is the ITextTools
       # boundary this application calls across, so a change to the AIDL or to
@@ -96,7 +103,6 @@ on:
       - "1_cicd/src/cicd/ship-cloud-writer.yml"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ac_cloud-writer/**"
-      - "!ac_cloud-writer/test/**"
 permissions:
   contents: write   # for gh release create + tag push reads
   packages: write   # for ghcr push (oras)

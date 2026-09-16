@@ -55,10 +55,17 @@ on:
       # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir
       # ac_c3-morpheus/build.json::modules declares is added automatically, dead
       # entries are dropped, and cloud-android-source-identity.sh hashes
-      # exactly this list — so nothing can trigger a build the publish
-      # gate does not weigh. Extra entries no module map can express
+      # this list — so nothing can trigger a build the publish gate does
+      # not weigh. Extra entries no module map can express
       # (settings.gradle.kts references, scan roots) are kept: add them
       # here and they stay.
+      # ONE path is watched here and deliberately NOT hashed: the
+      # tester directory build.json::tests.shell.dir declares. A tester
+      # edit must START a run (it is the only pipeline that executes
+      # that tester) and must NOT publish an APK (it changed no bytes).
+      # The gate skips it, so the run costs the test step alone.
+      # exactly this list — so nothing can trigger a build the publish
+      # gate does not weigh. Extra entries no module map can express
       # NO shared lib entry: build.json::modules declares exactly one module,
       # :app, so there is no ab_cloud-libs-shared directory this APK consumes
       # and watching one would rebuild it for changes it cannot contain. This

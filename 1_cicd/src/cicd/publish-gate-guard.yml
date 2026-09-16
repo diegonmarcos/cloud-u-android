@@ -59,3 +59,16 @@ jobs:
       # filter for exactly the reason that one would need too.
       - name: A guard on 1 of 28 workflows is a guard on none
         run: bash 1_cicd/src/scripts/test/publish-guard.test.sh
+
+      # The third face of the same coin. The two above ask what a publish gate
+      # may CONCLUDE; this asks what may REACH it. Twelve ship workflows
+      # excluded their own tester directory from `on: push: paths`, so a push
+      # that touched only a tester ran nothing at all — the one pipeline that
+      # executes that tester was the one its own edit could not start (#370).
+      #
+      # It belongs beside them because the trigger list and the publish
+      # identity are the same list read twice, and this is the single place
+      # where they are now deliberately allowed to differ: watched, not hashed.
+      # A check on that has to see both halves at once.
+      - name: A tester edit must trigger the run that executes it
+        run: bash 1_cicd/src/scripts/test/tester-trigger.test.sh

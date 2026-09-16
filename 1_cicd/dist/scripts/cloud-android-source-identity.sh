@@ -97,6 +97,20 @@ done
     echo "$APP: --paths-from names no such file: $PATHS_FROM" >&2; exit 3; }
 [ -d "$ROOT/$APP" ] || { echo "no such app dir: $APP (root=$ROOT)" >&2; exit 2; }
 
+# Checked HERE, in the main shell, for exactly the reason the line above is:
+# the tester-directory exclusion (_tests_dir, below) is read from build.json
+# with jq, and `compute` runs `_explain | sha256sum`, so every `exit` inside
+# that pipeline kills only a subshell and leaves sha256sum to hash a short
+# list into a confident 64-hex identity. With no jq the exclusion would vanish
+# silently, the tester directory would re-enter the identity, and every tester
+# edit would republish a byte-identical APK to every phone in the fleet — run
+# 34850225588, which this exclusion exists to prevent. A dependency that
+# degrades quietly costs more than one that fails loudly.
+if [ -f "$ROOT/$APP/build.json" ] && ! command -v jq >/dev/null 2>&1; then
+    echo "$APP: jq is not installed, so build.json::tests.shell.dir cannot be read — refusing to compute an identity that would silently hash the tester directory" >&2
+    exit 3
+fi
+
 # ── _paths MUST NOT SIT ON THE LEFT OF A PIPE ──────────────────────────────
 # It refuses with `exit 3` when it cannot see the app's ship workflow, and that
 # refusal is the guard against a partial input set. On the left of a pipe the
@@ -161,14 +175,28 @@ _paths() {
         inblock && NF             { exit }
     ' "$ROOT/$wf")"
 
-    # A `!` entry is an EXCLUSION, and it is honoured here exactly as GitHub
-    # honours it in the trigger, or the two stop being the same list. The
-    # generator writes `!<app>/<tests.shell.dir>/**` for every app that declares
-    # a tester directory: run 34850225588 republished the SuperApp for a commit
-    # that touched only aa_cloud-superapp/test/, because the app tree sha — test/
-    # included — was the identity. A tester cannot change the APK, so it must
-    # neither start a build nor move the gate.
-    excluded="$(printf '%s\n' "$entries" | sed -n 's/^!//p' | _strip_glob)"
+    # A `!` entry in the trigger list is an EXCLUSION and is still honoured
+    # here exactly as GitHub honours it, so an author who writes one gets the
+    # same answer from both.
+    #
+    # ── AND THE TESTER DIRECTORY, WHICH IS NOT A `!` ENTRY ANY MORE (#370) ──
+    # It used to be, and that single marker was answering two questions at
+    # once: "may this start a run?" and "may this publish an APK?". Run
+    # 34850225588 republished the SuperApp for a commit that touched only
+    # aa_cloud-superapp/test/ — the app tree sha, test/ included, was the
+    # identity — and the `!` fixed that by removing the directory from BOTH.
+    # Removing it from the trigger was never the goal and was the more
+    # expensive bug: editing a tester then started nothing, so the one pipeline
+    # that executes that tester was the one its own edit could not reach.
+    #
+    # So the trigger watches it and the identity does not, and the two halves
+    # still come from ONE declaration — build.json::tests.shell.dir — read here
+    # and in cloud-android-ship-repo-workflow-engine.sh. Sharing the
+    # declaration rather than the marker is what keeps them from drifting now
+    # that their answers legitimately differ.
+    _excl_marked="$(printf '%s\n' "$entries" | sed -n 's/^!//p')"
+    excluded="$(printf '%s\n%s\n' "$_excl_marked" "$(_tests_dir)" \
+                | grep -v '^[[:space:]]*$' | _strip_glob)"
     list="$(printf '%s\n%s\n' "$APP" "$wf"; printf '%s\n' "$entries" | grep -v '^!' | _strip_glob)"
     while IFS= read -r x; do
         [ -n "$x" ] || continue
@@ -180,6 +208,23 @@ $excluded
 EOF
     printf '%s\n' "$list"
 
+    return 0
+}
+
+# ── the app's DECLARED shell-tester directory, or nothing ──────────
+# Same field, same existence test, as the workflow generator's own reading of
+# it. Only a DECLARED tests.shell.dir counts: an undeclared test/ (ac_cloud-chat
+# carries upstream's) is not this repository's claim to make, and a declared
+# directory that is not on disk is not one either. jq's presence is guaranteed
+# by the main-shell guard above, so nothing in here can fail.
+_tests_dir() {
+    _bj="$ROOT/$APP/build.json"
+    [ -f "$_bj" ] || return 0
+    _td="$(jq -r '.tests.shell.dir // empty' "$_bj" 2>/dev/null)"
+    _td="${_td#/}"; _td="${_td%/}"
+    [ -n "$_td" ] || return 0
+    [ -d "$ROOT/$APP/$_td" ] || return 0
+    printf '%s\n' "$APP/$_td"
     return 0
 }
 
