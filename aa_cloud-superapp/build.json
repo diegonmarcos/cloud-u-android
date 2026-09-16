@@ -215,7 +215,6 @@
       ],
       "_doc_quarantine": "Filename → the REASON it may fail. Enumerated and visible, NOT a blanket tolerance: a quarantined tester that starts PASSING fails the build, so an entry cannot outlive its reason. Anything not named here is fatal.",
       "quarantine": {
-        "test-app-identity-resolves.sh": "Reports ui.phone_folders 'prod_docs' restating pkg:com.collabora.libreoffice, which ui.external_apps 'cloud-office' already owns. Reads as a GENUINE duplicate-ownership finding in the identity data, and the tester even names the fix (drop the keyword; the entry's `folder` classifies it). Left to the owner: aa_cloud-superapp is under concurrent edit and the fix is a data change in this same file.",
         "test-arc-menu-section-nav.sh": "T1 'CanopusStar no longer emits page: targets (routing changed?)' — the tester's own parenthesis concedes it cannot tell a routing refactor from a regression. Needs an owner decision on which it is before it can be either fixed or rewritten.",
         "test-constellation-appstore.sh": "Three failures (fleet entry superapp incomplete, foreign-pkg install via UpdateInstaller, MainActivity constellation route). Unverified whether the Constellation AppStore work landed partially or the assertions ran ahead of it — these have never executed in CI, so there is no last-known-good run to diff against.",
         "test-constellation-v2.sh": "T2 'manifest missing release_url/asset' — same origin as the appstore tester above and probably the same root cause in the generated fleet manifest.",
