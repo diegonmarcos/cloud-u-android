@@ -51,6 +51,18 @@ diagnostics screens, so a logged selection is a selection that leaves the phone.
 
 Settings also moves into the document's own Edit menu; it was previously reachable
 only by closing the document you were editing, which is why nobody found it.
+
+That Settings entry reaches the Android shell through window.COOLMessageHandler,
+which LOActivity registers as addJavascriptInterface(this, "COOLMessageHandler")
+and whose postMobileMessage(String) is @JavascriptInterface — so the call is
+right, and it still would not build. Nothing upstream DECLARES that object to
+TypeScript: browser/ had only ever reached it from plain JavaScript, which the
+build does not type-check (tsc runs --checkJs false), so ours is its first
+TypeScript caller and tsc stopped the release bundle with
+"TS2339: Property 'COOLMessageHandler' does not exist on type 'Window'".
+Control.Menubar.ts is a global script, not a module, so the declaration merges
+into lib.dom's Window by being written there; it is optional because the object
+exists only inside the Android WebView, which is also why the call site guards.
 ---
  android/app/src/main/AndroidManifest.xml      |  17 +-
  android/lib/build.gradle                      |   6 +
@@ -58,10 +70,10 @@ only by closing the document you were editing, which is why nobody found it.
  .../androidlib/CloudTextEnhance.java          | 255 ++++++++++++++++++
  .../libreoffice/androidlib/LOActivity.java    |  45 +++-
  android/settings.gradle                       |  12 +-
- browser/src/control/Control.Menubar.ts        |  31 ++-
+ browser/src/control/Control.Menubar.ts        |  47 +++-
  browser/src/layer/tile/CanvasTileLayer.js     |  17 ++
  browser/src/map/Clipboard.js                  |  14 +
- 9 files changed, 405 insertions(+), 5 deletions(-)
+ 9 files changed, 421 insertions(+), 5 deletions(-)
  create mode 100644 android/lib/src/main/assets/cloud_text_enhance.json
  create mode 100644 android/lib/src/main/java/org/libreoffice/androidlib/CloudTextEnhance.java
 
@@ -132,7 +144,7 @@ index 000000000..ccc4e1109
 +}
 diff --git a/android/lib/src/main/java/org/libreoffice/androidlib/CloudTextEnhance.java b/android/lib/src/main/java/org/libreoffice/androidlib/CloudTextEnhance.java
 new file mode 100644
-index 000000000..7a9f0492e
+index 000000000..676cf9a91
 --- /dev/null
 +++ b/android/lib/src/main/java/org/libreoffice/androidlib/CloudTextEnhance.java
 @@ -0,0 +1,255 @@
@@ -481,10 +493,33 @@ index 3cbe24935..ac15c6e6d 100644
 +// it there, not because of where this tree happens to sit on disk.
 +project(':text-tools').projectDir = new File(settingsDir, 'text-tools')
 diff --git a/browser/src/control/Control.Menubar.ts b/browser/src/control/Control.Menubar.ts
-index 6176ca087..56220ede8 100644
+index 6176ca087..be5a63377 100644
 --- a/browser/src/control/Control.Menubar.ts
 +++ b/browser/src/control/Control.Menubar.ts
-@@ -142,6 +142,21 @@ class Menubar extends window.L.Control {
+@@ -10,6 +10,22 @@
+  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
+  */
+ 
++// Cloud Office. The Android shell's WebView bridge, registered in LOActivity as
++// addJavascriptInterface(this, "COOLMessageHandler") and exposing the
++// @JavascriptInterface method postMobileMessage(String). It is declared here
++// because NOTHING UPSTREAM DECLARES IT: browser/ only ever reached this object
++// from plain JavaScript, which the build does not type-check (tsc runs with
++// --checkJs false), so the first TypeScript caller of it is ours — and tsc
++// stopped the build with TS2339 rather than let it through. OPTIONAL on
++// purpose: the object exists only inside the Android WebView, so on every other
++// build the property is genuinely absent and the guard at the call site is what
++// makes that safe.
++interface Window {
++	COOLMessageHandler?: {
++		postMobileMessage(message: string): void;
++	};
++}
++
+ interface MenuItem {
+ 	id?: string;
+ 	name?: string;
+@@ -142,6 +158,21 @@ class Menubar extends window.L.Control {
  				{name: _UNO('.uno:PasteSpecial', 'text'), uno: '.uno:PasteSpecial'},
  				{name: _UNO('.uno:SelectAll', 'text'), uno: '.uno:SelectAll'},
  				{type: 'separator'},
@@ -506,7 +541,7 @@ index 6176ca087..56220ede8 100644
  				{uno: '.uno:SearchDialog', id: 'searchreplace'},
  				{name: _('Find'), id: 'find', type: 'action', shortcut: 'home-search'},
  				{type: 'separator'},
-@@ -2506,7 +2521,21 @@ class Menubar extends window.L.Control {
+@@ -2506,7 +2537,21 @@ class Menubar extends window.L.Control {
  			command = $(itNode).data('uno');
  		}
  
