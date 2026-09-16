@@ -14,12 +14,20 @@
 # what the pipeline reported, so a genuine "Failed to find package" could have
 # been masked by any producer that happened to exit 0.
 #
+# FEEDING A FIXED NUMBER OF LINES DOES NOT FIX THIS, AND THAT IS NOT A GUESS.
+# The first fix here was `printf 'y\n%.0s' "${packages[@]}" | sdkmanager`, on the
+# reasoning that six bytes always fit the pipe buffer. They do — but only if the
+# reader has not already closed the read end, and a stub that exits at once often
+# has. That version passed, then FAILED on its second run under the test engine.
+# The shape is the bug: any second process in a pipeline can hand `pipefail` a
+# status that is not sdkmanager's. So the acceptances go to a FILE and sdkmanager
+# is not in a pipeline at all. T2 below is what holds that line.
+#
 # So this tester does not read the engine and agree with it. It LIFTS THE REAL
-# PIPELINE OUT OF THE VENDORED ENGINE — the exact copy CI runs — and runs it
-# under `set -o pipefail` against stub sdkmanagers whose exit status is known,
-# with the real package list out of build.json. If somebody puts an endless
-# producer back, or drops the redirection that keeps sdkmanager's output, the
-# lifted line changes and these assertions go red.
+# INVOCATION OUT OF THE VENDORED ENGINE — the exact copy CI runs — and runs it
+# against stub sdkmanagers whose exit status is known, with the real package list
+# out of build.json. If somebody puts a producer back, or drops the redirection
+# that keeps sdkmanager's output, the lifted lines change and these go red.
 #
 # T0 IS A CONTROL AND IT IS NOT OPTIONAL. It reproduces the original defect in
 # this shell. If `yes | <stub that exits 0>` does NOT fail here, this machine
@@ -65,65 +73,100 @@ mapfile -t packages < <(jq -r '.build.sdk_packages[]' "$BJ")
     || die "build.json::build.sdk_packages is empty — there is no pipeline to test"
 
 echo "== T0 (control): the original defect is reproducible in this shell =="
-( set -o pipefail; yes | "$TMP/exits-0-unread" >/dev/null 2>&1 )
+# `yes`'s own stderr is discarded: it prints the very "Broken pipe" line this
+# tester exists to abolish, and a green run that still logs it sends the next
+# reader hunting the bug that was already fixed.
+( set -o pipefail; yes 2>/dev/null | "$TMP/exits-0-unread" >/dev/null 2>&1 )
 if [ "$?" -eq 0 ]; then
     die "\`yes | (exit 0)\` returned 0 under pipefail — this shell cannot observe the failure of run 35034695984, so no assertion below would mean anything"
 fi
 ok "\`yes | (exit 0)\` fails under pipefail, as it did on the runner"
 
 echo "== T1: the engine no longer feeds sdkmanager from an endless producer =="
-if grep -nE '(^|[^[:alnum:]_])yes[[:space:]]*\|' "$ENGINE" | grep -v '^[[:space:]]*#' >/dev/null; then
+# The comment filter runs on `grep -n` output, so it has to allow for the line
+# number `grep -n` prefixes — matching '^[[:space:]]*#' against "216:    # ..."
+# never fires, and the engine's own comment ABOUT the old `yes | sdkmanager`
+# reddened this on its first run.
+YES_HITS="$(grep -nE '(^|[^[:alnum:]_])yes[[:space:]]*\|' "$ENGINE" | grep -vE '^[0-9]+:[[:space:]]*#')"
+if [ -n "$YES_HITS" ]; then
     bad "$ENGINE still pipes \`yes\` into something:"
-    grep -nE '(^|[^[:alnum:]_])yes[[:space:]]*\|' "$ENGINE" >&2
+    printf '%s\n' "$YES_HITS" >&2
 else
-    ok "no \`yes |\` pipeline anywhere in the vendored engine"
+    ok "no \`yes |\` pipeline in the vendored engine outside its comments"
 fi
 
-echo "== T2: the sdkmanager pipeline can be lifted out of the engine =="
-# Everything between `if ! ` and `; then`. Fails closed: a reshaped line yields
-# an empty match and the tester refuses to guess what shipped.
-PIPE="$(sed -n 's/^[[:space:]]*if ! \(printf .*|.*sdkmanager.*\); then$/\1/p' "$ENGINE")"
-[ -n "$PIPE" ] \
-    || die "cannot find the sdkmanager pipeline in $ENGINE — it was reshaped and this tester no longer asserts what runs"
-[ "$(printf '%s\n' "$PIPE" | wc -l)" -eq 1 ] \
-    || die "more than one sdkmanager pipeline in $ENGINE — ambiguous, refusing a verdict"
-ok "lifted: $PIPE"
+echo "== T2: sdkmanager is not in a pipeline, and its invocation can be lifted =="
+# THE ROOT-CAUSE ASSERTION. Not "which producer" — whether there is one at all.
+# Any second process in the pipeline can hand `pipefail` a status that is not
+# sdkmanager's, whether it writes forever or once.
+# Lifted BROADLY — anything between `if ! ` and `; then` that names sdkmanager —
+# so that a pipeline reshape is reported as the failure it is, instead of as
+# "cannot find the invocation", which reads like a broken tester rather than a
+# reintroduced bug.
+INVOKE="$(sed -n 's/^[[:space:]]*if ! \(.*sdkmanager.*\); then$/\1/p' "$ENGINE")"
+[ -n "$INVOKE" ] \
+    || die "cannot find the sdkmanager invocation in $ENGINE — the step was reshaped and this tester no longer asserts what runs"
+[ "$(printf '%s\n' "$INVOKE" | wc -l)" -eq 1 ] \
+    || die "more than one sdkmanager invocation in $ENGINE — ambiguous, refusing a verdict"
+case "$INVOKE" in
+    *'|'*)
+        bad "sdkmanager is back in a pipeline, so the step's status is still not its own: $INVOKE"
+        echo
+        echo "passed: $PASS   failed: $FAIL"
+        # Everything below reads the acceptances FILE, which a pipeline does not
+        # write. Reporting those as failures too would bury the one that matters.
+        exit 1 ;;
+esac
+ACCEPTS="$(sed -n "s/^[[:space:]]*\(printf 'y.*> \"\$sdk_accepts\"\)$/\\1/p" "$ENGINE")"
+[ -n "$ACCEPTS" ] \
+    || die "sdkmanager is not in a pipeline, but the acceptances file is not written either — refusing to guess how licences are answered"
+ok "no pipeline: $INVOKE"
 
 echo "== T3: sdkmanager's output is kept, not sent to /dev/null =="
 # "Failed to find package" goes to sdkmanager's STDOUT. Discarding it is what
 # made a real failure and a spurious one look identical in the job log.
-case "$PIPE" in
+case "$INVOKE" in
     *'>/dev/null'*|*'> /dev/null'*)
-        bad "the pipeline discards sdkmanager's output — a real failure would say nothing" ;;
+        bad "the invocation discards sdkmanager's output — a real failure would say nothing" ;;
     *'>"$sdk_log"'*)
         ok "sdkmanager's stdout and stderr are captured to \$sdk_log" ;;
-    *)  bad "the pipeline does not redirect to \$sdk_log: $PIPE" ;;
+    *)  bad "the invocation does not redirect to \$sdk_log: $INVOKE" ;;
 esac
 
-# The lifted line, wrapped in the smallest script that gives it the three names
-# it reads — $sdkmanager, $sdk_log and $packages — under the engine's own
-# pipefail. Under `timeout`, because the defect this tester guards against has a
-# shape that HANGS rather than fails: an unbounded feed into a reader that
+# Both lifted lines, wrapped in the smallest script that gives them the names
+# they read, under the engine's own pipefail. Under `timeout`, because a bad
+# shape here can HANG rather than fail — an unbounded feed into a reader that
 # drains it never ends, and a suite that hangs is a suite that gets turned off.
 # A timeout surfaces as exit 124, which is red, which is the point.
 printf '%s\n' \
     '#!/usr/bin/env bash' \
     'set -uo pipefail' \
-    'sdkmanager="$1"; sdk_log="$2"; BJ="$3"' \
+    'sdkmanager="$1"; sdk_log="$2"; BJ="$3"; sdk_accepts="$4"' \
     'mapfile -t packages < <(jq -r ".build.sdk_packages[]" "$BJ")' \
-    "$PIPE" > "$TMP/run-lifted.sh"
-bash -n "$TMP/run-lifted.sh" || die "the lifted pipeline is not valid bash: $PIPE"
+    "$ACCEPTS" \
+    "$INVOKE" > "$TMP/run-lifted.sh"
+bash -n "$TMP/run-lifted.sh" \
+    || die "the lifted lines are not valid bash: $ACCEPTS / $INVOKE"
 
-run_lifted() {  # run_lifted <stub> → the pipeline's exit status
-    timeout 30 bash "$TMP/run-lifted.sh" "$1" "$TMP/sdkmanager.log" "$BJ"
+run_lifted() {  # run_lifted <stub> → the invocation's exit status
+    timeout 30 bash "$TMP/run-lifted.sh" \
+        "$1" "$TMP/sdkmanager.log" "$BJ" "$TMP/sdkmanager.accepts"
 }
 
 echo "== T4: a successful sdkmanager that never reads stdin gives status 0 =="
-run_lifted "$TMP/exits-0-unread"; s=$?
-if [ "$s" -eq 0 ]; then
-    ok "status 0 — the case that failed run 35034695984 now passes"
+# RUN MANY TIMES, because the defect this replaced was a RACE and a single green
+# run is what let it through: the fixed-feed version passed here once and failed
+# on the next run. A shape that cannot race passes every time; one that can will
+# lose at least once in this many.
+RUNS=200
+losses=0
+for _ in $(seq "$RUNS"); do
+    run_lifted "$TMP/exits-0-unread" || losses=$((losses + 1))
+done
+if [ "$losses" -eq 0 ]; then
+    ok "status 0 in all $RUNS runs — the case that failed run 35034695984 cannot race"
 else
-    bad "status $s — the producer is still outliving sdkmanager and stealing the status"
+    bad "$losses of $RUNS runs did not return 0 — something other than sdkmanager can still set the status"
 fi
 
 echo "== T5: a failing sdkmanager is NOT masked =="

@@ -297,15 +297,15 @@ index 000000000..7a9f0492e
 +        // from the first and be wrong in a way nothing on screen would show.
 +        final TextTools.Result result = client.enhanceWith(text, prompt, providerId, modelId);
 +
-+        if (!result.ok) {
++        if (!result.getOk()) {
 +            // A network error, a missing key, a provider error and a dead binder all arrive here
 +            // carrying a readable reason, because the binder contract refuses to squash a failure
 +            // into an empty result. Show it. Never swallow it.
-+            say("Text Enhance failed: " + result.error);
++            say("Text Enhance failed: " + result.getError());
 +            return;
 +        }
 +
-+        final String enhanced = result.text;
++        final String enhanced = result.getText();
 +        if (enhanced == null || enhanced.trim().isEmpty()) {
 +            // Pasting this would wipe the owner's text with the model's silence.
 +            say("Text Enhance returned nothing — the document was not changed");
