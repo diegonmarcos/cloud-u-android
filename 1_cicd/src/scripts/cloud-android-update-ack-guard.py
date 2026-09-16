@@ -11,6 +11,11 @@ of each listed route by its `when` branch key, isolates that branch's body, and
 checks it against the rules the manifest states. Exits non-zero with one line
 per violation naming the file, the line and the rule.
 
+Branch keys are only read INSIDE a route dispatch table — a `when` whose subject
+the manifest names in route_dispatch_subjects. See dispatch_regions for why that
+scope is the difference between a manifest that covers the routes and a manifest
+that covers the routes whose names happen to be unusual.
+
 Run:  python3 1_cicd/src/scripts/cloud-android-update-ack-guard.py [--root DIR]
 """
 
@@ -139,7 +144,43 @@ def branch_body(code_lines, start):
     return out
 
 
-def check_route(root, spec, exclude_prefixes):
+def dispatch_regions(code_lines, subjects):
+    """Indices of every line inside a `when (<subject>)` route dispatch table.
+
+    THIS SCOPE IS THE POINT OF THE FUNCTION. Without it the guard matched the
+    bare text `"<route>" ->` in every .kt file in the repository, so a route
+    could only be listed in the manifest if its name happened to be unusual
+    enough not to collide with an ordinary Kotlin `when` branch. GET /api/state
+    was the casualty: listing it failed a contacts backend's `when (method)`, a
+    keyboard combiner's `when (head.lowercase(...))` and a mail test's
+    `when (name)` — unrelated `when`s over unrelated types. So the manifest
+    silently covered the routes it could spell and nothing recorded which ones
+    it had to leave out, which is coverage that looks like coverage.
+
+    Scoping narrows what the guard matches, and narrowing a check is normally
+    how a check is made to pass. It is not that here, and the thing that keeps
+    it honest is min_implementations: every route still has to be found the
+    declared number of times inside a dispatch table, so "the matcher is now
+    scoped" and "the matcher now matches nothing" cannot print the same green.
+
+    Subjects come from the manifest rather than from a constant here, because a
+    fourth app that spells its dispatch variable differently is a data change,
+    not an engine change. Whitespace is normalised so `when(op)` and `when (op)`
+    are the same table; a subject that stops matching shows up as a route found
+    zero times, which min_implementations already reports as a broken guard.
+    """
+    keys = tuple("when(%s)" % s.replace(" ", "") for s in subjects)
+    covered = set()
+    for idx, (_, code) in enumerate(code_lines):
+        flat = code.replace(" ", "")
+        if not any(k in flat for k in keys):
+            continue
+        for offset in range(len(branch_body(code_lines, idx))):
+            covered.add(idx + offset)
+    return covered
+
+
+def check_route(root, spec, exclude_prefixes, subjects):
     key = '"%s" ->' % spec["route"]
     label = spec.get("label", spec["route"])
     problems = []
@@ -149,8 +190,9 @@ def check_route(root, spec, exclude_prefixes):
         with open(os.path.join(root, rel), encoding="utf-8", errors="replace") as fh:
             raw = list(enumerate(fh.read().splitlines(), start=1))
         code_lines = strip_comments(raw)
+        regions = dispatch_regions(code_lines, subjects)
         for idx, (lineno, code) in enumerate(code_lines):
-            if key not in code:
+            if key not in code or idx not in regions:
                 continue
             found += 1
             body = branch_body(code_lines, idx)
@@ -188,10 +230,11 @@ def check_route(root, spec, exclude_prefixes):
     if found < minimum:
         problems.append(
             "found %d implementation(s) of %s, expected at least %d — this guard is "
-            "checking nothing. Either the branch key was renamed (update the manifest) "
-            "or the route was deleted (say so there too). A guard that matches nothing "
-            "prints the same green as a guard over correct code."
-            % (found, label, minimum)
+            "checking nothing. Either the branch key was renamed (update the manifest), "
+            "or the route was deleted (say so there too), or the dispatch table is a "
+            "`when` over a subject route_dispatch_subjects does not list (add it there). "
+            "A guard that matches nothing prints the same green as a guard over correct "
+            "code." % (found, label, minimum)
         )
     return found, problems
 
@@ -208,9 +251,23 @@ def main():
         manifest = json.load(fh)
     exclude = tuple(manifest.get("exclude_path_prefixes", []))
 
+    # No silent default. An empty subject list would scope the matcher to
+    # nothing and print a clean sweep over zero files, which is the failure
+    # mode this guard exists to make impossible; an unscoped fallback would
+    # quietly restore the whole-tree text match that made GET /api/state
+    # unlistable. Both are green that means nothing, so neither is offered.
+    subjects = manifest.get("route_dispatch_subjects", [])
+    if not subjects:
+        print(
+            "FAIL   the manifest names no route_dispatch_subjects, so there is no "
+            "route handler to scope the match to. Add the `when` subject that the "
+            "debug servers dispatch on (e.g. \"op\")."
+        )
+        return 2
+
     failures = 0
     for spec in manifest["routes"]:
-        found, problems = check_route(root, spec, exclude)
+        found, problems = check_route(root, spec, exclude, subjects)
         label = spec.get("label", spec["route"])
         if problems:
             for p in problems:

@@ -49,6 +49,13 @@ FAILURES=0
 ok()   { printf 'ok     %s\n' "$1"; }
 fail() { printf 'FAIL   %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
 
+# A case that does not apply to this route, SAID OUT LOUD. A case that is
+# silently not run is indistinguishable in the output from a case that ran and
+# passed, which is the same "coverage that looks like coverage" this whole
+# suite exists to refuse. If a rule is untested because the manifest states no
+# such rule, the reader should be told which rule and why.
+skip() { printf 'skip   %s\n' "$1"; }
+
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
@@ -83,6 +90,30 @@ fi
 #   want=comment   forbidden things as COMMENTS, required calls for real
 # Nothing here is compiled: the guard is a text lint over a `when` branch, so a
 # body that is the right SHAPE exercises exactly the rules under test.
+# How many entries a route declares for one manifest rule.
+#
+# Cases A and B each prove a rule the manifest STATES. A route that states no
+# such rule has nothing to prove there, and running the case anyway asserts a
+# rule nobody wrote — so the case must be skipped, and the question "does this
+# route declare that rule" must be put to the manifest DIRECTLY.
+#
+# It used to be inferred from the shape of a generated body instead, and the
+# inference was wrong in the direction that fails honest data: case B ran
+# whenever the `literal` body was non-empty, but that body also carries the
+# route's required_calls, so a route declaring required_calls and NO
+# forbidden_reply_literals produced a non-empty body containing no literal at
+# all. GET /api/state is exactly that route (#373), and the tester failed it
+# for the absence of a rule rather than for any defect in the guard.
+rule_count() {
+    python3 - "$ROOT/$MANIFEST" "$1" "$2" <<'PY'
+import json, sys
+manifest, route, field = sys.argv[1], sys.argv[2], sys.argv[3]
+spec = next(r for r in json.load(open(manifest, encoding="utf-8"))["routes"]
+            if r["route"] == route)
+print(len(spec.get(field, [])))
+PY
+}
+
 emit_body() {
     python3 - "$ROOT/$MANIFEST" "$1" "$2" <<'PY'
 import json, sys
@@ -196,13 +227,11 @@ for ROUTE in $ROUTES; do
 
     sandbox() { CASE=$((CASE + 1)); rm -rf "$WORK/c$CASE"; cp -r "$PRISTINE" "$WORK/c$CASE"; printf '%s' "$WORK/c$CASE"; }
 
-    HAS_CALLS="$(emit_body "$ROUTE" defect | grep -c 'runOnMain')"
-
     # ── A. The original defect, restored. ─────────────────────────────────────
     #    Mutating ONE copy has to be enough: a guard needing every copy broken
     #    would have stayed green through the hours the superapp lied while
     #    cloud-nav sat correct.
-    if [ "$HAS_CALLS" -gt 0 ]; then
+    if [ "$(rule_count "$ROUTE" forbidden_calls)" -gt 0 ]; then
         d="$(sandbox)"; emit_body "$ROUTE" defect > "$WORK/body"
         replace_body "$d" "$FIRST" "$ROUTE" "$WORK/body"
         out="$(run_guard "$d")"
@@ -211,11 +240,13 @@ for ROUTE in $ROUTES; do
         else
             fail "$ROUTE: guard ACCEPTED the branch reaching host():"; printf '%s\n' "$out" | sed 's/^/       /'
         fi
+    else
+        skip "$ROUTE: declares no forbidden_calls — no such rule to prove"
     fi
 
     # ── B. A reply that asserts an outcome the handler never observed. ────────
-    d="$(sandbox)"; emit_body "$ROUTE" literal > "$WORK/body"
-    if [ -s "$WORK/body" ]; then
+    if [ "$(rule_count "$ROUTE" forbidden_reply_literals)" -gt 0 ]; then
+        d="$(sandbox)"; emit_body "$ROUTE" literal > "$WORK/body"
         replace_body "$d" "$FIRST" "$ROUTE" "$WORK/body"
         out="$(run_guard "$d")"
         if [ $? -ne 0 ] && printf '%s' "$out" | grep -q 'an outcome it has not'; then
@@ -223,6 +254,8 @@ for ROUTE in $ROUTES; do
         else
             fail "$ROUTE: guard ACCEPTED an unobserved success literal:"; printf '%s\n' "$out" | sed 's/^/       /'
         fi
+    else
+        skip "$ROUTE: declares no forbidden_reply_literals — no such rule to prove"
     fi
 
     # ── C. A handler that neither lies nor works. ─────────────────────────────

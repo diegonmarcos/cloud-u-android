@@ -6,6 +6,10 @@
   "exclude_path_prefixes": [
     "z_archive/"
   ],
+  "_doc_route_dispatch_subjects": "The `when` subject a debug server dispatches its routes on. A branch key below is read ONLY inside a `when` over one of these, which is what makes a route name safe to list. WHY THIS FIELD EXISTS: until #373 the guard matched the bare text \"<route>\" -> in every .kt file in the repository, with no notion of whether the branch belonged to a route handler at all. The consequence was not a false green on a route — it was that routes whose names collide with an ordinary Kotlin `when` branch COULD NOT BE LISTED, because listing them failed unrelated code. GET /api/state was the casualty (contacts' `when (method)`, the keyboard combiner's `when (head.lowercase(...))`, a mail test's `when (name)` — 5 violations against code that serves no HTTP route), and nothing anywhere said so: the manifest reported on the routes it could express and stayed silent about the ones it could not, so its coverage was a function of how unusual a route's name happened to be. This is NOT an exclusion list of files or paths — one of those has to be kept in agreement with a directory layout, and disagreements between an exclusion list and a glob are this fleet's most repeated bug. It is a statement about which `when` IS the route table. Adding a subject widens what the guard can see; it never silences a violation. A fourth app that spells the variable differently is then a one-line data change here, and until it is made, min_implementations reports the route as found too few times rather than passing quietly.",
+  "route_dispatch_subjects": [
+    "op"
+  ],
   "routes": [
     {
       "route": "system/update",
@@ -93,7 +97,23 @@
       ],
       "_doc_min_implementations": "Both apps serve this route from their own DevControlServer.kt.",
       "min_implementations": 2
+    },
+    {
+      "route": "state",
+      "label": "GET /api/state",
+      "_doc": "Listed as of #373. It could not be listed before, and the reason was a defect in the guard rather than a doubt about the route: the matcher searched every .kt file in the repository for the bare text \"state\" ->, so listing it failed three unrelated `when`s over unrelated types. The matcher is now scoped to the route dispatch table (see route_dispatch_subjects), so a route name that collides with a common Kotlin branch key is guardable like any other.",
+      "_doc_forbidden_calls": "Same rule as the nav routes: reading DevControlBridge.host() straight from the branch is the branch deciding for itself what a null Activity means, and the old line decided it meant an empty state map. host()?.stateSnapshot() ?: emptyMap() answered 200 {} whether the Activity was gone or merely had nothing to say, so a caller could not tell 'no data' from 'nobody home'. The read must go through dispatchToHost, which also moves it onto the main thread where Activity state may legally be read.",
+      "forbidden_calls": [
+        "DevControlBridge.host()"
+      ],
+      "_doc_forbidden_reply_literals": "None. This route's dishonesty was never a literal — it was a silent fallback that rendered a missing Activity as valid empty data. The fallback text itself cannot be forbidden, because the honest handler legitimately spells `dispatch.value ?: emptyMap()` once the dispatch has already reported delivered. Forbidding it would be a rule that fires on the fix, and a rule that cannot tell the fix from the defect teaches people to delete the rule.",
+      "_doc_required_calls": "dispatchToHost reports delivered | no_live_host | host_timeout | host_threw, which the branch turns into 200 / 503 / 503 / 500 — the same vocabulary system/update established in #280 and the nav routes adopted in #367. Requiring the call is what stops the fix being reverted into a handler that neither lies nor works.",
+      "required_calls": [
+        "dispatchToHost("
+      ],
+      "_doc_min_implementations": "Both apps serve this route from their own DevControlServer.kt.",
+      "min_implementations": 2
     }
   ],
-  "_doc_not_guarded_here": "GET /api/state carries this same defect and IS FIXED in both DevControlServer.kt copies — it now goes through dispatchToHost and answers 503 when no Activity is live, instead of rendering a missing Activity as an empty {}. It is deliberately NOT listed above, and the reason is a limit of this guard rather than a doubt about the route. Routes are matched by their `when` branch key across every .kt file in the repository, unscoped, which is what lets a fourth app be covered on the day it lands. The key \"state\" -> is too generic for that: it also occurs in libs/contacts/ContactsBackendService.kt and libs/keyboard/BnKhiproCombiner.kt, which are unrelated `when`s over unrelated types. Listing it was measured, not guessed — it produces 2 violations against that unrelated code and exits 1. Making it guardable needs a per-route path scope in 1_cicd/src/scripts/cloud-android-update-ack-guard.py, an engine #367 does not own."
+  "_doc_not_guarded_here": "Nothing. Every route that the two DevControlServer.kt copies serve through DevControlBridge is listed above, GET /api/state included as of #373. This field is kept, and kept explicit, because the previous entry in it recorded a route the guard could not express — and a note buried in a manifest was the only thing anywhere that said so. If a route is ever left out again, the reason belongs here and the same sentence belongs in whatever report leaves it out: a guard whose gaps are undocumented reports on a subset and reads as if it reported on the whole."
 }
