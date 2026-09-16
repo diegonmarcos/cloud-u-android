@@ -106,10 +106,18 @@ class TranslateInputView(context: Context) : TextView(context) {
             private val longPress = Runnable { editor.selectWordAt(anchor); onChange(); onMenu() }
 
             override fun onTouch(v: View, e: MotionEvent): Boolean {
+                // Claiming is asked BEFORE the empty check, because "this box wants the
+                // keys" and "put the caret here" are different questions and only the
+                // second one needs text to exist. A box that can be re-entered after it
+                // gave the keys up (the translate bar, #355 part 2) has to be able to hear
+                // the touch that re-enters it while it is still empty — otherwise applying
+                // a translation, which clears the box, and then tapping the app leaves the
+                // bar visible and permanently unusable. A caller that must NOT claim an
+                // empty box says so in its own lambda rather than being told here.
+                if (e.actionMasked == MotionEvent.ACTION_DOWN) onClaim()
                 if (editor.isEmpty) return false
                 when (e.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
-                        onClaim()
                         anchor = offsetAt(e.x, e.y); downX = e.x; downY = e.y; dragging = false
                         // A second tap in the same place, soon enough, is the platform's
                         // select-the-word gesture; the timeout and the offset both have

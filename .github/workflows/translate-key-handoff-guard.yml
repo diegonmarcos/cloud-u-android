@@ -1,0 +1,62 @@
+name: "translate key handoff guard — the host field takes the keys, typing in the panel does not"
+
+# WHY THIS WORKFLOW EXISTS.
+# While the translate bar is open it HOLDS THE KEYS: LatinIME routes keystrokes
+# into the bar's own box instead of into the application's text field. That is
+# #87 and it is correct. #355 part 2 decided the way back out — tapping into the
+# host application's own text field releases the keys to it, because that is what
+# every IME panel on the platform does and it needs no new gesture to learn.
+#
+# The hard part is not the release, it is telling the two cases apart. The only
+# signal an IME gets for "the user moved the caret themselves" is
+# onUpdateSelection, and it does not say who caused it: the bar's OWN writes into
+# the field raise it too. Release on every selection change and the panel hands
+# the keys back the instant the user types into it — the feature, gone, and gone
+# in a way that looks like it shipped.
+#
+# So both halves are executed, not asserted about in source text. The test
+# compiles against the shipped KeyHandoff.kt by path and runs it, and then puts
+# EACH half of the defect back in a sandbox copy and demands the test go red.
+# One mutation could only ever have proved half the test was alive, and the half
+# it would have missed is the careless fix.
+#
+# THIS IS THE MOST REGRESSION-PRONE SURFACE IN THE KEYBOARD. Three separate
+# tickets are about caret and text synchronisation in this one box — #87 created
+# the capture, #204 replaced a re-paste with a real re-sync engine, #238 reworked
+# the editor over emoji desync and a dead spacebar cursor slide. A fourth change
+# to it ships with a guard.
+#
+# WHY NO PATH FILTER. Same call as analytics-retry-guard: the test costs one
+# compile and no network, and what it protects is a behaviour that is wrong
+# without ever looking wrong — the panel silently stops taking keystrokes, or
+# silently keeps them. A filter could only buy back seconds and lose a miss.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  key-handoff:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      # The runner has no Kotlin compiler. Nix supplies it the same way every
+      # other tool in this repo is supplied, rather than an apt-get that drifts
+      # from what anyone else runs. `nix shell` is ephemeral — nothing is
+      # installed into a profile.
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Tapping the host field releases the keys, typing in the panel does not
+        run: bash 1_cicd/src/scripts/test/translate-key-handoff.test.sh

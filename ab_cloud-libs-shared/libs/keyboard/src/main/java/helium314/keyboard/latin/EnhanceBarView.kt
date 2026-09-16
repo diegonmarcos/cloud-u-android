@@ -601,7 +601,11 @@ class EnhanceBarView(context: Context) : LinearLayout(context), ImeTextBox {
 
     /** Touching the box is what claims the keys; until then they belong to the app's field. */
     private fun attachOutputTouch() =
-        outputView.attachEditing(editor, onClaim = { editingOutput = true },
+        // The empty check is HERE now rather than inside attachEditing, and it keeps this
+        // bar's behaviour exactly as it was: an empty output box has no text of ours to
+        // edit, so tapping it must leave the keys with the app's field — which is the
+        // whole point of this bar reading the field instead of stealing the keys.
+        outputView.attachEditing(editor, onClaim = { if (!editor.isEmpty) editingOutput = true },
             onChange = ::renderOutput, onMenu = ::showEditMenu)
 
     private fun showEditMenu() {

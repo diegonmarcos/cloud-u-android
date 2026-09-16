@@ -160,6 +160,10 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     // answered in there, so a fix made for this bar is a fix the other bar already has.
     private val editor = TextBoxEditor()
     private var output = Output.NONE     // live-commit mode: who owns the text in the app field
+    // Who owns the KEYS — a separate question from who owns the text, and it has to stay
+    // separate: Output.LOST is terminal for the session, while the keys can come back to
+    // the box the moment the user taps it again. See [KeyHandoff].
+    private val keys = KeyHandoff()
     private var liveCommit = TranslatePrefs.DEFAULT_LIVE_COMMIT
     private var applyMode = TranslatePrefs.DEFAULT_APPLY_MODE
 
@@ -240,7 +244,7 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
 
     /** Called by LatinIME each time the bar is shown — fresh session, settings re-read. */
     fun onShown() {
-        editor.reset(); output = Output.NONE; translated = null; detectedTag = null
+        editor.reset(); output = Output.NONE; keys.reset(); translated = null; detectedTag = null
         liveCommit = TranslatePrefs.liveCommit(context)
         applyMode = TranslatePrefs.applyMode(context)
         val langs = toLangs()
@@ -274,8 +278,13 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     }
 
     // ── key routing entry points (called from LatinIME.onEvent) ──────────────
-    /** The bar's box owns the keys for as long as the bar is open — it IS the bar. */
-    override fun consumesKeys() = visibility == View.VISIBLE
+    /**
+     * The bar's box owns the keys while the bar is open AND the user has not tapped into
+     * the host application's own field. That second clause is #355 part 2: the panel keeps
+     * the keys while the user is working in the panel, and gives them up the moment they
+     * touch the field underneath. [KeyHandoff] is the whole of that decision.
+     */
+    override fun consumesKeys() = visibility == View.VISIBLE && keys.heldByBox
 
     override fun appendCodePoint(cp: Int) {
         if (cp == '\n'.code) { apply(applyMode); return }   // Enter = primary action
@@ -354,7 +363,10 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
     }
 
     private fun attachInputTouch() =
-        inputView.attachEditing(editor, onClaim = {}, onChange = ::renderInput, onMenu = ::showEditMenu)
+        // onClaim was empty for as long as the bar never gave the keys up. Now that a tap
+        // in the host field releases them, the same touch that the enhance bar has always
+        // used to TAKE the keys is the way back — symmetric, and no gesture to learn.
+        inputView.attachEditing(editor, onClaim = keys::reclaim, onChange = ::renderInput, onMenu = ::showEditMenu)
 
     private fun showEditMenu() {
         val labels = ArrayList<String>()
@@ -426,8 +438,10 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
             releaseOutput(ic, keep = true)
         } else if (mode == TranslatePrefs.APPLY_REPLACE) {
             val hadSelection = !ic.getSelectedText(0).isNullOrEmpty()
+            keys.onSelfWrite()      // commitText into the field reports -1, same as a host tap
             Translator.replaceInField(ic, hadSelection, out)
         } else {
+            keys.onSelfWrite()
             ic.commitText(out, 1)
         }
         TranslatePrefs.pushRecentPair(context, if (fromTag == AUTO) (detectedTag ?: AUTO) else fromTag, toTag)
@@ -488,6 +502,12 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
         // takeover sends; releasing while still OWNED would have the bar read its own
         // hand-over as the app stealing the text and go LOST for no reason.
         output = Output.NONE
+        // finishComposingText reports a composing span of -1, which is character for
+        // character what a host tap reports. Announced so the echo is spent against this
+        // write instead of reading as the user tapping into the app — otherwise emptying
+        // the box (backspace to blank -> pushOutput("") -> here) would hand the keys back
+        // mid-edit, which is the one failure that makes the feature unusable.
+        keys.onSelfWrite()
         ic.beginBatchEdit()
         if (!keep) ic.setComposingText("", 1)
         ic.finishComposingText()
@@ -510,7 +530,26 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
      * session, and after it nothing writes to the field at all.
      */
     fun onHostOutputDropped() {
+        // Is this the host, or the bar's own write coming back? Asked FIRST and asked in
+        // one place, because both answers below depend on it. The old code asked it as a
+        // side effect of `output != Output.OWNED`, which is only a valid proxy inside
+        // live-commit mode — see [KeyHandoff] for why that could not simply be reused.
+        //
+        // #355 part 2 rides on the true branch: the user tapped into the application's own
+        // field, so onSelectionChange has ALREADY handed the keys back. It does that
+        // whatever `output` says — with live commit off the bar owns nothing in the field
+        // and the tap still has to release — and tapping the bar's box takes them again
+        // (onClaim, below). Everything past this point is the older, narrower concern of
+        // who owns the TEXT, and is unchanged.
+        val wasHeld = keys.heldByBox
+        if (!keys.onSelectionChange()) return
+        // Only on the TRANSITION. Once the keys are with the app, every word the user
+        // commits there lands here again (a committed word is a composing span of -1), and
+        // re-laying out the box on each of them would be a redraw per keystroke for a
+        // caret that is already gone.
+        if (wasHeld) renderInput()
         if (output != Output.OWNED) return
+
         output = Output.LOST
         // There still has to be a way to get the translation out, and live commit
         // is no longer one of them.
@@ -551,7 +590,10 @@ class TranslateBarView(context: Context) : LinearLayout(context), ImeTextBox {
             inputView.caret = -1          // a range and an insertion point are mutually exclusive
         } else {
             inputView.text = editor.text
-            inputView.caret = editor.selStart
+            // No caret while the host field holds the keys. A blinking caret in a box that
+            // the next keystroke will not reach is the box lying about where typing goes —
+            // the enhance bar's output box has drawn it conditionally for the same reason.
+            inputView.caret = if (keys.heldByBox) editor.selStart else -1
         }
         // Posted: the layout still describes the text set BEFORE this call, and
         // scrolling against a stale layout lands on the wrong line.
