@@ -28,6 +28,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Phone tab of the Home Apps swipe-up sheet — Android-launcher-style
@@ -316,8 +321,14 @@ class PhoneAppsFragment : Fragment() {
          *   true  — folders were rendered into [body]
          *   false — the rules matched nothing on this device
          *   null  — the computation itself threw
+         *
+         * [owner] MUST be the caller's viewLifecycleOwner, not the fragment.
+         * It is the whole cancellation story: a fragment outlives its view, so
+         * scoping to the fragment would leave the probe painting into a view
+         * tree that onDestroyView already took down.
          */
         fun renderSmartFoldersAsync(
+            owner: LifecycleOwner,
             ctx: Context,
             body: LinearLayout,
             exclude: Set<String> = emptySet(),
@@ -326,43 +337,59 @@ class PhoneAppsFragment : Fragment() {
             // Already computed once in this process: render on the spot and
             // answer synchronously. THIS is what stops a rotation or a
             // re-entry paying the thousand IPCs again — the second visit never
-            // starts a thread at all.
+            // starts a probe at all.
             sCachedSmart[exclude]?.let { cached ->
                 renderSmartFolderBody(ctx, body, cached)
                 onDone(cached.isNotEmpty())
                 return
             }
-            // applicationContext for the background half. The thread routinely
-            // outlives the fragment that started it, and holding that
-            // fragment's Activity for the duration is a leak worth not having.
+            // applicationContext for the background half. The probe can outlive
+            // the fragment that started it (see the cancellation note below),
+            // and holding that fragment's Activity for the duration is a leak
+            // worth not having.
             val appContext = ctx.applicationContext
-            // Captured BEFORE the thread starts, checked before it publishes —
+            // Captured BEFORE the probe starts, checked before it publishes —
             // see [sCacheGeneration].
             val generation = sCacheGeneration
-            Thread {
-                val computed = runCatching { computeSmartFolders(appContext, exclude) }.getOrNull()
-                if (computed != null && generation == sCacheGeneration) {
-                    sCachedSmart = sCachedSmart + (exclude to computed)
+            // STRUCTURAL CANCELLATION, THE SAME SHAPE AS Configs ▸ About.
+            //
+            // This used to be a bare `Thread { … }` whose result came back
+            // through body.post, with the comment "this app does not depend on
+            // kotlinx-coroutines". That was not true: DevControlFragment — the
+            // About page whose per-section lazy loader is #286/#333 — already
+            // runs every one of its probes on viewLifecycleOwner.lifecycleScope
+            // with Dispatchers.IO, in this same module. So the Thread was a
+            // SECOND private lazy-load mechanism sitting beside the first, which
+            // is the #228 defect, and it bought a weaker guarantee: a raw Thread
+            // is never cancelled, so leaving the page left ~1000 package-manager
+            // IPCs still running with nobody to receive them.
+            //
+            // The scope here is the CALLER'S VIEW lifecycle, so onDestroyView
+            // cancels this coroutine and nothing downstream of the probe runs.
+            // That is the #194 crash class — a fragment painting after detach —
+            // removed rather than merely caught.
+            owner.lifecycleScope.launch {
+                val computed = withContext(Dispatchers.IO) {
+                    val result = runCatching { computeSmartFolders(appContext, exclude) }.getOrNull()
+                    // Published from INSIDE the IO block on purpose. Cancellation
+                    // stops the resumption, not the block already running, so
+                    // writing the cache here keeps a page the user walked away
+                    // from mid-fetch warming the cache for the next visit —
+                    // which the old Thread did and a naive port would lose.
+                    if (result != null && generation == sCacheGeneration) {
+                        sCachedSmart = sCachedSmart + (exclude to result)
+                    }
+                    result
                 }
-                body.post {
-                    // The user may well have navigated away while the package
-                    // manager was answering. A detached body belongs to a
-                    // torn-down view hierarchy and must not be written to —
-                    // this is the standard crash for exactly this pattern.
-                    if (!body.isAttachedToWindow) return@post
-                    // body.context, not the captured one: by here the only
-                    // Context proven still alive is the view's own.
-                    if (computed != null) renderSmartFolderBody(body.context, body, computed)
-                    onDone(computed?.isNotEmpty())
-                }
-            }.apply {
-                // Same plain-Thread idiom as [warmUp] directly below. This app
-                // does not depend on kotlinx-coroutines and one lazy section is
-                // not the reason to start.
-                name = "PhoneAppsFragment.smartFolders"
-                isDaemon = true
-                priority = Thread.MIN_PRIORITY
-                start()
+                // Cancellation has normally already returned for us. It has not
+                // when the view was torn down between the probe finishing and
+                // this line resuming, and writing into a detached hierarchy
+                // then is the crash this check exists for.
+                if (!body.isAttachedToWindow) return@launch
+                // body.context, not the captured one: by here the only Context
+                // proven still alive is the view's own.
+                if (computed != null) renderSmartFolderBody(body.context, body, computed)
+                onDone(computed?.isNotEmpty())
             }
         }
 

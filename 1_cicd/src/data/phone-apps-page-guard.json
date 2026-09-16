@@ -63,6 +63,7 @@
       "must_call": [
         "section.visibility = View.GONE",
         "renderSmartFoldersAsync(",
+        "viewLifecycleOwner",
         "isAdded"
       ],
       "must_not_call": [
@@ -72,16 +73,19 @@
     },
     {
       "label": "Smart Folders — the fetch stays off the main thread (#261)",
-      "_doc": "What was actually slow was never the views. Four install_source rules in build.json answer by calling PackageManager.getInstallSourceInfo ONCE PER APP — on the order of a thousand synchronous binder round trips before a single View exists — and five more rules each walk a multi-day usage, network or battery history. `Thread {` is what moved it off the main thread; `isAttachedToWindow` is what stops the answer being written into a torn-down view hierarchy, which is the standard crash for this pattern.",
+      "_doc": "What was actually slow was never the views. Four install_source rules in build.json answer by calling PackageManager.getInstallSourceInfo ONCE PER APP — on the order of a thousand synchronous binder round trips before a single View exists — and five more rules each walk a multi-day usage, network or battery history. `withContext(Dispatchers.IO)` is what moves it off the main thread; `owner.lifecycleScope.launch` is what makes leaving the page CANCEL it rather than merely ignore it; `isAttachedToWindow` is what stops a result that raced the teardown being written into a torn-down view hierarchy, which is the standard crash for this pattern (#194).",
+      "_doc_not_a_thread": "`Thread {` is forbidden here, and it is forbidden because it is what this region used to require. The original #261 fix hand-rolled a raw Thread and justified it in-code with 'this app does not depend on kotlinx-coroutines' — untrue: DevControlFragment, the Configs ▸ About page in this same module, already runs every #286/#333 lazy probe on viewLifecycleOwner.lifecycleScope with Dispatchers.IO. So the page carried a SECOND private lazy-load engine (the #228 defect) that also could not be cancelled: walking away left ~1000 package-manager IPCs running for a receiver that no longer existed. Reverting to a Thread would restore both problems at once and read as a perfectly ordinary edit, so the rule names it.",
       "source": "aa_cloud-superapp/app/src/main/java/com/diegonmarcos/superapp/apps/PhoneAppsFragment.kt",
       "entry": "fun renderSmartFoldersAsync(",
       "must_call": [
-        "Thread {",
-        "body.post {",
+        "owner.lifecycleScope.launch {",
+        "withContext(Dispatchers.IO)",
         "isAttachedToWindow",
         "sCacheGeneration"
       ],
-      "must_not_call": []
+      "must_not_call": [
+        "Thread {"
+      ]
     }
   ]
 }

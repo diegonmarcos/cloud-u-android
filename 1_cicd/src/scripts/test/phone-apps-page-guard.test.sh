@@ -162,9 +162,19 @@ elif kind == "smart_folders_sync":
     # #261 undone: the synchronous call back on the main thread. Also the case
     # that proves the manifest's `renderSmartFolders(` rule can tell the two
     # names apart — the clean tree calls ...Async and passes.
-    old = "PhoneAppsFragment.renderSmartFoldersAsync(ctx, body, exclude) { outcome ->"
+    old = "PhoneAppsFragment.renderSmartFoldersAsync(viewLifecycleOwner, ctx, body, exclude) { outcome ->"
     assert old in text, "test bug: cannot find the async smart-folders call"
     text = text.replace(old, "PhoneAppsFragment.renderSmartFolders(ctx, body, exclude) { outcome ->", 1)
+
+elif kind == "probe_outlives_the_view":
+    # The scope handed to the probe stops being the VIEW's. `this` is a
+    # perfectly ordinary thing to pass and it compiles, but a Fragment's own
+    # lifecycle outlives its view — so the probe would no longer be cancelled
+    # at onDestroyView and the cancellation half of #194 would be gone while
+    # every other rule stayed green.
+    old = "renderSmartFoldersAsync(viewLifecycleOwner, ctx, body, exclude)"
+    assert old in text, "test bug: cannot find the view-lifecycle argument"
+    text = text.replace(old, "renderSmartFoldersAsync(this, ctx, body, exclude)", 1)
 
 elif kind == "section_starts_expanded":
     # Collapsed-at-birth removed. This is the edit somebody makes while asking
@@ -230,18 +240,26 @@ text = open(path, encoding="utf-8").read()
 
 if kind == "fetch_on_main_thread":
     # The thousand package-manager binder round trips moved back onto the main
-    # thread. Anchored on the line above so it cannot hit warmUp's `Thread {`,
-    # which is the same nine characters further down the same file.
-    old = "            val generation = sCacheGeneration\n            Thread {"
-    assert old in text, "test bug: cannot find the smart-folders thread"
-    text = text.replace(old, "            val generation = sCacheGeneration\n            run {", 1)
+    # thread: the coroutine still launches, but on the launcher's own
+    # Dispatchers.Main.immediate, which is the UI thread.
+    old = "withContext(Dispatchers.IO) {"
+    assert old in text, "test bug: cannot find the IO hop"
+    text = text.replace(old, "run {", 1)
+
+elif kind == "fetch_back_on_a_raw_thread":
+    # The #228 regression, not a slowness one: a second hand-rolled lazy-load
+    # engine beside the #286/#333 one, which also silently drops cancellation
+    # because a raw Thread has none. Reads as an ordinary refactor in a diff.
+    old = "            owner.lifecycleScope.launch {"
+    assert old in text, "test bug: cannot find the lifecycle-scoped probe"
+    text = text.replace(old, "            Thread {", 1)
 
 elif kind == "drop_detached_check":
     # The standard crash for this pattern: a background answer written into a
     # view hierarchy the user already navigated away from.
-    old = "if (!body.isAttachedToWindow) return@post"
+    old = "if (!body.isAttachedToWindow) return@launch"
     assert old in text, "test bug: cannot find the attachment check"
-    text = text.replace(old, "if (false) return@post", 1)
+    text = text.replace(old, "if (false) return@launch", 1)
 
 else:
     raise SystemExit("test bug: unknown phone mutation %s" % kind)
@@ -305,8 +323,16 @@ expect_caught "the Smart Folders section starting expanded is caught" \
     edit_suite section_starts_expanded
 
 expect_caught "the Smart Folders fetch returning to the main thread is caught" \
-    "off the main thread .*no longer contains 'Thread \{'" \
+    "off the main thread .*no longer contains 'withContext\(Dispatchers.IO\)'" \
     edit_phone fetch_on_main_thread
+
+expect_caught "a second hand-rolled Thread engine coming back is caught" \
+    "off the main thread .*calls 'Thread \{'" \
+    edit_phone fetch_back_on_a_raw_thread
+
+expect_caught "the probe outliving the view it paints into is caught" \
+    "starts collapsed .*no longer contains 'viewLifecycleOwner'" \
+    edit_suite probe_outlives_the_view
 
 expect_caught "dropping the detached-view check is caught" \
     "off the main thread .*no longer contains 'isAttachedToWindow'" \

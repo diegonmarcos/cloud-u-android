@@ -496,7 +496,10 @@ class SuitePhoneAppsFragment : Fragment() {
         root.addView(header)
         root.addView(section)
 
-        PhoneAppsFragment.renderSmartFoldersAsync(ctx, body, exclude) { outcome ->
+        // viewLifecycleOwner, not `this`: the probe must die when this page's
+        // VIEW goes away, which is what onDestroyView means and what a
+        // retained-fragment lifecycle would not give us.
+        PhoneAppsFragment.renderSmartFoldersAsync(viewLifecycleOwner, ctx, body, exclude) { outcome ->
             // renderSmartFoldersAsync already refuses to touch a detached view.
             // This refuses to touch a detached fragment's own state on top of
             // it — the callback closes over `expanded`/`note`, which belong to
