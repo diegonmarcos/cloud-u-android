@@ -102,6 +102,7 @@ import app.sterna.ui.text.TextToolScope
 import app.sterna.ui.text.TextToolIconRow
 import app.sterna.ui.text.TextToolPanel
 import app.sterna.ui.text.TextToolSurface
+import app.sterna.core.data.text.extractVerificationCode
 import app.sterna.core.data.text.htmlEscape
 import app.sterna.core.data.text.htmlToText
 import app.sterna.core.data.text.markDeceptiveLinks
@@ -154,6 +155,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import android.widget.Toast
+import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -732,6 +734,51 @@ private fun receivedTextToolSource(email: Email): String {
 }
 
 /**
+ * The ONE "Copy Code" gesture (#438), shared by the reading row's icon and the overflow's named
+ * entry so the two cannot drift apart: the extractor's confident candidate goes to the clipboard
+ * with a word, and a message that offers nothing confident gets a word that says so — never a
+ * low-confidence guess copied under the user's thumb.
+ */
+private fun copyVerificationCodeOrSayNone(clipboard: ClipboardManager, context: Context, email: Email?) {
+    val code = email?.let { verificationCodeFromMessage(it) }
+    if (code != null) {
+        clipboard.setText(AnnotatedString(code))
+        Toast.makeText(context, R.string.message_code_copied, Toast.LENGTH_SHORT).show()
+    } else {
+        Toast.makeText(context, R.string.message_code_not_found, Toast.LENGTH_SHORT).show()
+    }
+}
+
+/**
+ * The message a "Copy Code" tap hands the extractor: subject AND body, in both forms the extractor
+ * reads — the flattened text, for line isolation and phrases, and the raw markup, for the
+ * large-font-cell signal. Nothing is cached, flattened or sent anywhere.
+ */
+private fun verificationCodeFromMessage(email: Email): String? {
+    val (raw, isHtml) = bodySource(email)
+    return extractVerificationCode(
+        subject = email.subject,
+        bodyText = if (isHtml) htmlToText(raw) else raw,
+        html = if (isHtml) raw else null,
+    )
+}
+
+/**
+ * The literal `|` that separates the reading row's icon groups (#438). A character, not a
+ * `HorizontalDivider`: the ask was for a group marker between icons on one row, and a divider is
+ * a full-width bar that would read as a third group of its own.
+ */
+@Composable
+private fun ReadingGroupSeparator() {
+    Text(
+        text = "|",
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.outline,
+        modifier = Modifier.padding(horizontal = 2.dp),
+    )
+}
+
+/**
  * The toolbar actions (star / move / reply-all / mark unread / overflow) for the settled message. All
  * state comes from that page's own [MessageViewModel], so everything updates when the pager settles
  * on a new page.
@@ -751,6 +798,7 @@ private fun MessageActions(
     // opened message (the conversation itself lives in the list's inline unfold).
     val replyTargetId = active.emailId
     val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val inJunk by viewModel.inJunk.collectAsStateWithLifecycle()
     val folderRole by viewModel.mailboxRole.collectAsStateWithLifecycle()
@@ -1015,6 +1063,18 @@ private fun MessageActions(
                     onClick = { menuOpen = false; viewModel.setPlainText(!plainText) },
                 )
             }
+            // Copy Code (#438). The reading row's icon and this named entry run the SAME gesture —
+            // extract a two-factor code, copy it, or say none was found — and this menu lists every
+            // function as text, so the code grabber is a text entry here, like everything else.
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.message_copy_code)) },
+                leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+                onClick = {
+                    menuOpen = false
+                    copyVerificationCodeOrSayNone(clipboard, context, loaded.email)
+                },
+            )
             // The per-sender image allowlist. It changes what the NEXT message from this sender does,
             // which is why it is not also an icon in the reading row under the tags: its meaning —
             // this sender, every message, from now on — no tooltip can carry.
@@ -1804,12 +1864,20 @@ private fun MessageContent(
     val readingModeOffered = remember(readingEmail, printDerivedNotice, printNoContent) {
         readingEmail != null && readingModesDiffer(readingEmail, printDerivedNotice, printNoContent)
     }
+    val clipboard = LocalClipboardManager.current
     val readingActions: @Composable () -> Unit = {
         TextToolIconRow(
             surface = textTools.surface,
             enabled = textTools.busy == null,
             skip = { it == TextTool.RESUME && messages.firstOrNull()?.body == null },
             trailing = {
+                // The row reads "Translate Resume | Show images Show Plain Text | Copy Code"
+                // (#438): the literal `|` separates the AI group from the display group and the
+                // display group from Copy Code. The display group exists only when at least one
+                // of its icons is honest to draw; Copy Code is always its own group.
+                if ((!imageMode && !showRemote) || readingModeOffered) {
+                    ReadingGroupSeparator()
+                }
                 if (!imageMode && !showRemote) {
                     IconButton(onClick = viewModel::showImagesOnce) {
                         Icon(Icons.Filled.Image, contentDescription = stringResource(R.string.message_show_images))
@@ -1824,6 +1892,13 @@ private fun MessageContent(
                             ),
                         )
                     }
+                }
+                ReadingGroupSeparator()
+                IconButton(onClick = { copyVerificationCodeOrSayNone(clipboard, context, readingEmail) }) {
+                    Icon(
+                        Icons.Filled.ContentCopy,
+                        contentDescription = stringResource(R.string.message_copy_code),
+                    )
                 }
             },
         ) { tool ->

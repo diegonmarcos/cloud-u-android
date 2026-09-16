@@ -308,6 +308,9 @@
     <string name="message_show_html">Show HTML</string>
     <string name="message_plain_text_derived">Text derived from the HTML version.</string>
     <string name="message_show_images">Show images</string>
+    <string name="message_copy_code">Copy Code</string>
+    <string name="message_code_copied">Code copied</string>
+    <string name="message_code_not_found">No code found in this message</string>
     <string name="message_images_shown">Images shown</string>
     <string name="message_images_always_sender">Always show images from this sender</string>
     <string name="message_images_stop_sender">Don\'t auto-show images from this sender</string>

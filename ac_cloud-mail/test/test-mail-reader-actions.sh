@@ -391,8 +391,16 @@ if "val readingActions: @Composable () -> Unit = {" in content:
         ("viewModel::showImagesOnce", "...wired to the one-time show"),
         ("R.string.message_show_plain_text", "Show as plain text is an ICON in it"),
         ("viewModel.setPlainText(!plainText)", "...wired to the reading-mode toggle"),
+        ("contentDescription = stringResource(R.string.message_copy_code)", "Copy Code is an ICON in it (#438)"),
     ):
         ok(f"A2 {why}") if needle in row else bad(f"A2 {why} -- missing {needle!r}")
+    # The owner's row is "Translate Resume | Show images Show Plain Text | Copy Code" (#438): the
+    # literal `|` is a group separator, drawn between the AI group and the display group and
+    # between the display group and Copy Code -- exactly two, never a divider.
+    if row.count("ReadingGroupSeparator()") == 2:
+        ok("A2 the reading row draws exactly two `|` group separators")
+    else:
+        bad(f"A2 the reading row draws {row.count('ReadingGroupSeparator()')} group separators, expected 2")
 else:
     bad("A2 MessageContent does not build the reading row slot")
 n = src.count("readingActions = readingActions,")
@@ -414,6 +422,7 @@ else:
     bad(f"A3 overflow entries without a text label first: {unnamed or 'no entries at all'}")
 for label in ("message_reply", "message_reply_all", "message_forward", "message_flag", "inbox_move_to_folder",
               "message_mark_unread", "message_labels", "message_show_images", "message_show_plain_text",
+              "message_copy_code",
               "message_archive", "message_delete", "message_unsubscribe", "message_view_headers",
               "message_export_eml", "message_print"):
     if re.search(r'R\.string\.' + label + r'\b', menu):

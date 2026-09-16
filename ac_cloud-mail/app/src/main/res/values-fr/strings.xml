@@ -167,6 +167,9 @@
     <string name="message_show_html">Afficher le HTML</string>
     <string name="message_plain_text_derived">Texte dérivé de la version HTML.</string>
     <string name="message_show_images">Afficher les images</string>
+    <string name="message_copy_code">Copier le code</string>
+    <string name="message_code_copied">Code copié</string>
+    <string name="message_code_not_found">Aucun code trouvé dans ce message</string>
     <string name="message_images_shown">Images affichées</string>
     <string name="message_images_always_sender">Toujours afficher les images de cet expéditeur</string>
     <string name="message_images_stop_sender">Ne plus afficher automatiquement les images de cet expéditeur</string>

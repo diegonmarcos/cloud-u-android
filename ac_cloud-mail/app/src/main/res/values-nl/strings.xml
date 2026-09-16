@@ -167,6 +167,9 @@
     <string name="message_show_html">HTML tonen</string>
     <string name="message_plain_text_derived">Tekst afgeleid van de HTML-versie.</string>
     <string name="message_show_images">Afbeeldingen tonen</string>
+    <string name="message_copy_code">Code kopiëren</string>
+    <string name="message_code_copied">Code gekopieerd</string>
+    <string name="message_code_not_found">Geen code gevonden in dit bericht</string>
     <string name="message_images_shown">Afbeeldingen weergegeven</string>
     <string name="message_images_always_sender">Afbeeldingen van deze afzender altijd tonen</string>
     <string name="message_images_stop_sender">Afbeeldingen van deze afzender niet automatisch tonen</string>
