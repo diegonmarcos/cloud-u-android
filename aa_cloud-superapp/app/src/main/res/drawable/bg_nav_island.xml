@@ -5,20 +5,27 @@
      the top of the bar still look see-through after the base went opaque —
      a 25%-white gradient over the fill is still a glassy band. It is gone.
      bg_liquid_glass itself is untouched: the top island, the search sheet,
-     the app drawer and the notification centre are all meant to stay glass. -->
+     the app drawer and the notification centre are all meant to stay glass.
+
+     Full pill (semicircular ends), not a rounded box: 999dp > half the bar
+     height on any build, so the radius clamps to height/2 and each end is a
+     perfect semicircle — the same convention bg_dynamic_island and
+     bg_liquid_glass_pill use. The bar's content (BottomNavigationView) is
+     inset by the island margins plus the navigation's own internal padding,
+     so the deeper corner round never clips an item. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Opaque fill. Darker than the #2D1B69 the window gradient ends on, so
          the bar reads as a solid box sitting on the page. -->
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="24dp" />
+            <corners android:radius="999dp" />
             <solid android:color="#FF140B26" />
         </shape>
     </item>
     <!-- Hairline edge so the box still has a defined boundary. -->
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="24dp" />
+            <corners android:radius="999dp" />
             <solid android:color="@android:color/transparent" />
             <stroke
                 android:width="1dp"
