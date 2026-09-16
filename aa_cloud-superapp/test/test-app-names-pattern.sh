@@ -164,6 +164,48 @@ for directory in sorted(build_files):
                       % os.path.relpath(path, root))
 check(covered > 0, "T6 found no application whose gradle reads its build.json — the detection matched nothing")
 
+print("== T7: a launcher tile shows a caption, never an application's identity ==")
+# THE FAILURE THIS EXISTS FOR (#380, #381). Cloud ▸ Apps drew a Data Apps tile
+# captioned "cloud-office" and an Inboxes tile captioned "cloud-matrix": the
+# tiles printed the applications' IDENTITY because an identity string had been
+# left sitting in the display field. On a tile, `label` is a CAPTION; identity
+# travels in `target`, in ui.external_apps[].id and in the app's own
+# build.json::name, and none of those changed when the captions were fixed.
+#
+# Nothing above caught it, and that is structural rather than bad luck: T5
+# leaves function-captions ("Notes", "Mail") alone ON PURPOSE, and T4 only
+# inspects objects carrying a `package`/`pkg` key, which a tile does not have.
+# So the one check that would go red if a caption silently reverted to its
+# identity string is this one.
+#
+# PRE-EXISTING AND NOT EXEMPTED ON MERIT: two AGI tiles still caption themselves
+# with an identity. They are the same defect as #380/#381, were not in those
+# tickets, and what they should say instead is the owner's call and not a
+# tester's — so they are named here, visibly, instead of being invisible.
+# THIS SET MAY ONLY SHRINK. Give one of them a caption and delete its id.
+# NEVER ADD TO IT: a new tile captioned with an application name is the exact
+# regression this test exists to catch.
+pending_identity_captions = {"cloud-superapp", "ai-tmx"}
+
+tiles = [node for _, node in walk(superapp["ui"]["sections"])
+         if isinstance(node.get("label"), str) and isinstance(node.get("target"), str)]
+check(len(tiles) > 0, "T7 found no tiles under ui.sections — the detection matched nothing")
+seen_pending = set()
+for path, node in walk(superapp["ui"]["sections"], ".ui.sections"):
+    label, target = node.get("label"), node.get("target")
+    if not isinstance(label, str) or not isinstance(target, str) or label not in names:
+        continue
+    if node.get("id") in pending_identity_captions:
+        seen_pending.add(node["id"])
+        continue
+    check(False, "aa_cloud-superapp/build.json%s.label = %r captions a tile with an "
+                 "application's identity — labels are captions, identity belongs in target/id"
+          % (path, label))
+# A stale exemption is a check that quietly stopped guarding something.
+check(seen_pending == pending_identity_captions,
+      "T7 exempts tile ids %s that no longer caption themselves with an identity — delete them "
+      "from pending_identity_captions" % sorted(pending_identity_captions - seen_pending))
+
 print()
 print("── test-app-names-pattern: %d passed, %d failed ──" % (passed, failed))
 sys.exit(1 if failed else 0)

@@ -2443,7 +2443,7 @@
               },
               {
                 "id": "element",
-                "label": "cloud-matrix",
+                "label": "Messenger",
                 "icon": "ic_p_chat_matrix",
                 "target": "extapp:cloud-matrix",
                 "_doc": "Opens the standalone Cloud-Matrix app (ac_cloud-matrix, com.diegonmarcos.comms.matrix) via extapp:cloud-matrix — installed → launches; absent → install via Configs ▸ Constellation. The Cloud-Comms hub is decommissioned; the matrix fork is now its own constellation app. Replaces the old app://im.vector.app launcher."
@@ -2507,9 +2507,9 @@
                 "target": "extapp:cloud-notes"
               },
               {
-                "_doc": "Cloud Office (ac_cloud-office). This tile label and ui.external_apps[cloud-office].label are the two names the fleet owns. Android's own launcher and the app's title bar will keep saying \"Collabora Office\" until the source build in ac_cloud-office first publishes, because the APK on the phone today is still the mirrored upstream one and its manifest name is not ours to change. The rebrand reaches the name upstream generates from --with-app-name only once that build runs, which needs build.json::build.host and it is null.",
+                "_doc": "#380. This tile is the Data Apps entry for the application whose IDENTITY is cloud-office (ac_cloud-office, com.diegonmarcos.cloudoffice) and its label is \"Office\" — a caption for the tap target, not a name for the app. It printed the identity string \"cloud-office\" until #380; identity now lives only in `target`/ui.external_apps[cloud-office].id and the app's own build.json::name, and nothing about the package, the Cloud-Office.apk asset or the folder changed with this label. THE PREVIOUS _doc HERE WAS WRONG TWICE AND IS CORRECTED RATHER THAN KEPT. It said \"this tile label and ui.external_apps[cloud-office].label are the two names the fleet owns\": ui.external_apps carries NO label key on any of its 23 entries, and test-app-names-pattern.sh T3 forbids one outright (\"ui.external_apps shows the id and restates no name\") — so that sentence pointed a future editor at a second copy that does not exist and would have reddened the guard the moment they created it. It also said the rebrand waits on build.json::build.host \"and it is null\"; ac_cloud-office/build.json::build.host is ubuntu-latest and the source build has published Cloud-Office.apk. Android's own home screen is a SEPARATE surface from this tile and takes its label from the APK manifest, via --with-app-name = that app's build.json::name, which test-app-name-reaches-the-user.sh pins to the cloud-<x> pattern — deliberately NOT to this caption.",
                 "id": "sheets",
-                "label": "cloud-office",
+                "label": "Office",
                 "icon": "ic_sheets",
                 "target": "extapp:cloud-office"
               },
