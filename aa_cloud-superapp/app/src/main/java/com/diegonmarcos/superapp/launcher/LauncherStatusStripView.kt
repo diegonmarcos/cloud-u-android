@@ -32,6 +32,8 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.util.Base64
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -99,6 +101,17 @@ class LauncherStatusStripView @JvmOverloads constructor(
     private val toolCfg = HashMap<String, ToolPet>()
     private val petViews = HashMap<String, PetStrengthView>()
 
+    /** Line 1's own top padding, and the only dp in the clock's vertical
+     *  offset — [centreTopReservePx] subtracts it so the reserve below is
+     *  measured from the strip's top edge rather than from Line 1's. */
+    private val innerRowTopPadPx = (3 * resources.displayMetrics.density).toInt()
+    /** The camera punch-hole's height in RAW PIXELS, from
+     *  WindowInsetsCompat.Type.displayCutout(). 0 until the first inset
+     *  dispatch, and on any phone whose screen has no cutout at all. */
+    private var cutoutTopPx = 0
+    /** Reserves [centreTopReservePx] above the clock inside the centre column. */
+    private val cutoutSpacer: View = View(context)
+
     private var hasWifi = false
     private var hasCellular = false
     private var hasVpn = false
@@ -141,9 +154,8 @@ class LauncherStatusStripView @JvmOverloads constructor(
         // VERTICAL strip now stacks Line 0 (fixed) + Line 1 (content) + the
         // hairline instead of one weighted row filling a fixed barH. A small
         // vertical pad gives the icons breathing room.
-        val vpad = (3 * resources.displayMetrics.density).toInt()
         val innerRow = FrameLayout(context).apply {
-            setPadding(hpad, vpad, hpad, vpad)
+            setPadding(hpad, innerRowTopPadPx, hpad, innerRowTopPadPx)
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
         }
 
@@ -220,9 +232,28 @@ class LauncherStatusStripView @JvmOverloads constructor(
                 Gravity.CENTER,
             )
         }
-        if (petsEnabled) centerCol.addView(View(context).apply {
-            layoutParams = LinearLayout.LayoutParams(1, petPx)
-        })
+        // #407 — THE CLOCK MUST CLEAR THE CAMERA AT EVERY SCALE STEP.
+        // This strip deliberately draws INSIDE the display cutout: ShellActivity
+        // sets LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES so the strip's top band
+        // OWNS the camera row instead of being letterboxed below it, and that
+        // stays true — the strip still starts at window y=0 and the galaxy still
+        // fills the camera band. What changes is that the ONE child sitting on
+        // the screen's centre line, where a Samsung punch-hole is, now keeps its
+        // distance from the hole by the hole's OWN measurement.
+        //
+        // It cannot be a dp. SystemDisplay.applyScale writes `wm density`, so
+        // every dp in this file converts to FEWER pixels at a reduced Scale step
+        // while the camera stays the same physical pixels — a clearance tuned at
+        // one step rides up under the lens at a smaller one, which is exactly
+        // what the owner saw ("the home screen watch time date below the samsung
+        // camera got hidden behind the camera"). displayCutout() is reported in
+        // raw pixels off the real cutout, so it is the same number at all
+        // eleven steps; and unlike systemBars() it is still dispatched while the
+        // status bar is hidden, which in launcher mode it always is.
+        //
+        // Unconditional, not `if (petsEnabled)`: the pet row was only ever
+        // incidental clearance, and a phone with pets off had none at all.
+        centerCol.addView(cutoutSpacer, LinearLayout.LayoutParams(1, centreTopReservePx()))
         dateTimeView.layoutParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT,
         )
@@ -284,6 +315,35 @@ class LauncherStatusStripView @JvmOverloads constructor(
                 maxOf(1, (resources.displayMetrics.density * 0.75f).toInt()),
             )
         })
+
+        // Returns the insets UNCHANGED. This view reads the cutout, it does not
+        // consume it: the siblings dispatched after it (the toolbar island) and
+        // ShellActivity's own shell_linear listener must still see the same
+        // window insets they saw before #407.
+        ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets ->
+            val top = insets.getInsets(WindowInsetsCompat.Type.displayCutout()).top
+            if (top != cutoutTopPx) {
+                cutoutTopPx = top
+                applyCutoutReserve()
+            }
+            insets
+        }
+    }
+
+    /** How far below the strip's top edge the clock has to start: whichever is
+     *  taller, the Line-0 pet row it has always been aligned to, or the display
+     *  cutout. Measured from the strip's top edge — in launcher mode the system
+     *  bars are hidden, systemBars().top is dispatched as 0, shell_linear's
+     *  paddingTop is 0 and this strip therefore sits at window y=0, which is the
+     *  same origin displayCutout() measures from. */
+    private fun centreTopReservePx(): Int =
+        maxOf(if (petsEnabled) petPx else 0, cutoutTopPx - innerRowTopPadPx)
+
+    private fun applyCutoutReserve() {
+        cutoutSpacer.layoutParams = cutoutSpacer.layoutParams.apply {
+            height = centreTopReservePx()
+        }
+        cutoutSpacer.requestLayout()
     }
 
     /** Decode BuildConfig.STATUS_PETS_B64 (build.json::status_pets) → per-tool

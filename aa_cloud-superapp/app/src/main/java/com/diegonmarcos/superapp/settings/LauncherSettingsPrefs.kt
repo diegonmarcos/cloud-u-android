@@ -69,7 +69,9 @@ class LauncherSettingsPrefs(context: Context) {
         toggle("all_anim") && (id == null || toggle(id))
 
     /** Whole-UI size over the DECLARED range (build.json::ui.launcher_settings
-     *  .scale, 0..10 since #384). Stored here; written to the device by
+     *  .scale, 0..10 since #384). A phone that has never touched the row reads
+     *  the SHIPPED preset — 3 since #408, factor 0.85 — and that number lives
+     *  only in build.json. Stored here; written to the device by
      *  SystemDisplay.applyScale, which owns both halves of it. */
     var scale: Int
         get() = sp.getInt("scale", Config.scale.default)
@@ -130,12 +132,24 @@ class LauncherSettingsPrefs(context: Context) {
         val masterLabel: String = "",
         val masterSubtitle: String = "",
     )
+    /** A named step the user can jump the slider to in one tap (#408). The
+     *  one flagged [shipped] is ALSO the value a fresh install starts at —
+     *  [Slider.default] is derived from it rather than declared beside it, so
+     *  the button called "Default" and the size the app installs with are the
+     *  same number by construction. Two declarations of that number is the
+     *  #384 defect: retune one and they part company in silence. */
+    data class Preset(val label: String, val value: Int, val shipped: Boolean = false)
+
     /** [ticks] asks the row to draw one mark per step under the line, which only
      *  reads as a scale when the steps are few — so it is DECLARED per slider in
      *  build.json rather than guessed from the range here. Screen brightness is
-     *  0..255 and would draw 256 marks into a smear. */
+     *  0..255 and would draw 256 marks into a smear.
+     *
+     *  [presets] is empty for a slider that offers no one-tap sizes; a slider
+     *  that declares them takes its [default] from the shipped one. */
     data class Slider(val label: String, val subtitle: String, val min: Int, val max: Int,
-                      val default: Int, val ticks: Boolean = false)
+                      val default: Int, val ticks: Boolean = false,
+                      val presets: List<Preset> = emptyList())
 
     object Config {
         /** `store` value routing a switch at the launcher-onehand library. */
@@ -204,15 +218,31 @@ class LauncherSettingsPrefs(context: Context) {
             toggles.filter { it.userOwned }.map { it.id }.toSet()
         }
 
-        private fun slider(key: String, fallbackDefault: Int): Slider {
+        /** [fallbackDefault] is for a slider whose value build.json does NOT
+         *  declare — eye_intensity is the only one, and 35 is therefore its
+         *  single declaration rather than a copy of one. Every other row omits
+         *  it: repeating a number build.json already carries is how the two
+         *  copies come to disagree (#170, #384). */
+        private fun slider(key: String, fallbackDefault: Int? = null): Slider {
             val o = settings.optJSONObject(key) ?: JSONObject()
+            val declared = o.optJSONArray("presets") ?: JSONArray()
+            val presets = (0 until declared.length()).map {
+                val p = declared.getJSONObject(it)
+                Preset(p.optString("label"), p.optInt("value"), p.optBoolean("shipped", false))
+            }
+            // Same shape as defaultScreensaverId: the shipped record is FOUND,
+            // never named a second time. A presets list with nothing flagged
+            // falls through to `default`, so adding one-tap sizes to a row is
+            // not obliged to move that row's first-run value in the same edit.
+            val shipped = presets.firstOrNull { it.shipped }?.value
+                ?: o.optInt("default", fallbackDefault ?: o.optInt("min", 0))
             return Slider(o.optString("label", key), o.optString("subtitle", ""),
-                o.optInt("min", 0), o.optInt("max", 100), o.optInt("default", fallbackDefault),
-                o.optBoolean("ticks", false))
+                o.optInt("min", 0), o.optInt("max", 100), shipped,
+                o.optBoolean("ticks", false), presets)
         }
-        val scale: Slider by lazy { slider("scale", 6) }
-        val brightness: Slider by lazy { slider("brightness", -1) }
+        val scale: Slider by lazy { slider("scale") }
+        val brightness: Slider by lazy { slider("brightness") }
         val eyeIntensity: Slider by lazy { slider("eye_intensity", 35) }
-        val screensaverTimeout: Slider by lazy { slider("screensaver_timeout", 10) }
+        val screensaverTimeout: Slider by lazy { slider("screensaver_timeout") }
     }
 }

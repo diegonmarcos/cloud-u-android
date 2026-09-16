@@ -7337,7 +7337,7 @@
         "subtitle": "Animated neon grid glowing behind the clock."
       }
     ],
-    "_doc_launcher_settings": "Configs → Launcher → Others. Data-driven toggles + sliders persisted via LauncherSettingsPrefs, read by each subsystem at runtime. toggles[].id maps to a pref key; default = first-run value. Sliders carry min/max/default. brightness.default -1 = leave system brightness untouched. Adding a toggle = one entry here + one subsystem read.",
+    "_doc_launcher_settings": "Configs → Launcher → Others. Data-driven toggles + sliders persisted via LauncherSettingsPrefs, read by each subsystem at runtime. toggles[].id maps to a pref key; default = first-run value. Sliders carry min/max and either a `default` or, where the row offers one-tap sizes, a `presets` list whose `shipped` entry IS the default (scale, #408 — never both, or the two copies drift). brightness.default -1 = leave system brightness untouched. Adding a toggle = one entry here + one subsystem read.",
     "launcher_settings": {
       "toggles": [
         {
@@ -7551,15 +7551,19 @@
           "icon": "ic_nav_screensaver"
         }
       ],
-      "_doc_scale": "One knob for the two levers Samsung splits in two: Screen zoom (`wm density`) and Font size (`settings put system font_scale`). Both take the SAME factor, 0.70 + 0.05 x scale, so 6 is exactly 1.00 and changes nothing — that is why 6 is the default and not 1. Scale 1 is the minimum on both, which is what Cloud Power Saving pins itself to. Density multiplies the panel's physical number; font_scale is absolute. Anything that writes these must remember the override it clobbers — see PowerLevers' display_downscale for what happens when it does not.",
+      "_doc_scale": "One knob for the two levers Samsung splits in two: Screen zoom (`wm density`) and Font size (`settings put system font_scale`). Both take the SAME factor, 0.70 + 0.05 x scale, so 6 is exactly 1.00 and changes nothing — which is why 6 is the step the owner named 'Normal'. It is no longer the SHIPPED step: #408 moved that to 3 (factor 0.85), declared as the `shipped` preset below. Scale 1 is the minimum on both, which is what Cloud Power Saving pins itself to. Density multiplies the panel's physical number; font_scale is absolute. Anything that writes these must remember the override it clobbers — see PowerLevers' display_downscale for what happens when it does not.",
       "scale": {
-        "_doc": "#384: the owner asked for 0-10, not #337's 1-10, and for a slider that can only sit ON a step. `ticks` draws one mark per step under the line (SeekBar.setTickMark, API 24+) and makes the current level readable; the Restore button on this row reads `default` from HERE, so the shipped size is declared once. RANGE CONSEQUENCE, stated rather than clamped away: SystemDisplay.factor is 0.70 + 0.05 * scale, so step 0 is factor 0.70 — a real, distinct, smallest step (30% smaller than the panel's own size), NOT a no-op and NOT an invisible UI. It is smaller than Android's own Screen-zoom floor, so it will look extreme; 6 is still exactly 1.00, the phone's own size, and Restore returns there in one tap. Before #384 step 0 would have been silently coerced to 1 and been pixel-identical to it, which is the one outcome a tick bar must never have.",
+        "_doc": "#384: the owner asked for 0-10, not #337's 1-10, and for a slider that can only sit ON a step. `ticks` draws one mark per step under the line (SeekBar.setTickMark, API 24+) and makes the current level readable; the buttons on this row read `presets` from HERE, so the shipped size is declared once. RANGE CONSEQUENCE, stated rather than clamped away: SystemDisplay.factor is 0.70 + 0.05 * scale, so step 0 is factor 0.70 — a real, distinct, smallest step (30% smaller than the panel's own size), NOT a no-op and NOT an invisible UI. It is smaller than Android's own Screen-zoom floor, so it will look extreme; 6 is still exactly 1.00, the phone's own size, and Restore returns there in one tap. Before #384 step 0 would have been silently coerced to 1 and been pixel-identical to it, which is the one outcome a tick bar must never have.",
         "label": "Scale",
-        "subtitle": "Whole UI, icons and text together. 6 = the phone's own size.",
+        "subtitle": "Whole UI, icons and text together. Default 3 = 0.85, Normal 6 = the phone's own size.",
+        "_doc_presets": "#408. THE SHIPPED SIZE AND THE BUTTONS ARE ONE DECLARATION, and this key is why there is no `default` beside it any more. The owner asked for two one-tap sizes — 'Default' = 3 and 'Normal' = 6 — AND for a fresh install to land on 3. Written as a `default: 3` here plus a `3` in a button list, that is the same number in two places: widen or retune one and the install default and the button it is named after silently disagree, which is #384's defect exactly (its range was declared twice and folding one copy ate a whole step). So the preset flagged `shipped: true` IS the first-run value — LauncherSettingsPrefs.Config.slider() derives Slider.default from it, sp.getInt(\"scale\", ...) falls back to it, and the button labels and their numbers are read off the same records. Moving the shipped size is editing one `shipped` flag. THE FACTORS, stated because the owner is choosing by eye and SystemDisplay.factor is 0.70 + 0.05 x scale: step 3 is 0.85 (15% smaller than the panel's own size) and step 6 is 1.00 (the phone's own size, where applyScale RESETS both levers instead of pinning them). Both are real, distinct, reachable steps of the declared 0..10 ladder. NOTE ON THE LABELS: 'Default' is the owner's word for 3 and 'Normal' is his word for 6, quoted verbatim from the ticket; they are not derived from which one is shipped, and renaming them is a data edit here.",
         "min": 0,
         "max": 10,
-        "default": 6,
-        "ticks": true
+        "ticks": true,
+        "presets": [
+          { "label": "Default", "value": 3, "shipped": true },
+          { "label": "Normal", "value": 6 }
+        ]
       },
       "brightness": {
         "label": "Screen brightness",

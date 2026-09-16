@@ -271,12 +271,14 @@ class LauncherConfigFragment : Fragment() {
             // knobs that drift apart. SystemDisplay drives both from this one.
             if (group.id == "others") {
                 val sc = LauncherSettingsPrefs.Config.scale
-                // ticks + the shipped default both come off the SAME declared
-                // record the range does (#384). Nothing about this control is
-                // written twice, so no edit to build.json can leave the button
-                // restoring a number the slider never had.
+                // ticks, the one-tap sizes AND the shipped default all come off
+                // the SAME declared record the range does (#384, #408). Nothing
+                // about this control is written twice, so no edit to build.json
+                // can leave a button setting a number the slider never had, or
+                // a button called "Default" that is not what the app installs
+                // with — Slider.default IS the shipped preset's value.
                 root.addView(sliderRow(ctx, sc.label, sc.subtitle, sc.min, sc.max, settingsPrefs.scale,
-                    ticks = sc.ticks, restoreDefault = sc.default) { v ->
+                    ticks = sc.ticks, presets = sc.presets) { v ->
                     settingsPrefs.scale = v
                     if (!SystemDisplay.hasChannel(ctx)) Toast.makeText(
                         ctx, "Scale needs the shell channel — turn on wireless debugging first.",
@@ -760,10 +762,12 @@ class LauncherConfigFragment : Fragment() {
      *  readout, not a new snapping rule. It is declared per slider because
      *  Screen brightness is 0..255 and 256 marks are a grey smear.
      *
-     *  [restoreDefault] (#384), when non-null, adds a "Restore default" action
-     *  that moves the handle back to the SHIPPED value — passed in from the
-     *  declaration, never a literal, so the button and the first install can
-     *  never disagree about what "default" is.
+     *  [presets] (#384, widened by #408) adds one one-tap action per declared
+     *  size — "Default" and "Normal" on the Scale row, the owner's own words —
+     *  each moving the handle to a value that came out of the declaration and
+     *  never out of a literal here. The row does not know which of them is the
+     *  shipped one and must not: that is Slider.default's job, derived from the
+     *  same records, so the button and the first install cannot disagree.
      *
      *  NEITHER reloads the page. The restore path writes the store, sets
      *  `progress` on THIS SeekBar and calls the same onChange a drag would, so
@@ -774,7 +778,7 @@ class LauncherConfigFragment : Fragment() {
         ctx: android.content.Context,
         label: String, subtitle: String, min: Int, max: Int, value: Int,
         ticks: Boolean = false,
-        restoreDefault: Int? = null,
+        presets: List<LauncherSettingsPrefs.Preset> = emptyList(),
         onChange: (Int) -> Unit,
     ): View {
         val palette = LauncherPalette.of(ctx)
@@ -843,21 +847,32 @@ class LauncherConfigFragment : Fragment() {
                 setTextAppearance(android.R.style.TextAppearance_Material_Caption)
             })
         })
-        if (restoreDefault != null) addView(TextView(ctx).apply {
-            text = "Restore default ($restoreDefault)"
-            setTextColor(palette.accent)
-            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+        if (presets.isNotEmpty()) addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
             setPadding(0, dp(ctx, 8), 0, 0)
-            isClickable = true; isFocusable = true
-            setOnClickListener {
-                Haptics.tap(it)
-                // Setting progress moves the handle and re-fires
-                // onProgressChanged (so the readout follows) but NOT
-                // onStopTrackingTouch, which is a touch-only callback — so the
-                // write is asked for explicitly here and happens exactly once.
-                bar.progress = restoreDefault.coerceIn(min, max)
-                onChange(bar.progress)
-            }
+            // One button per DECLARED preset, in declared order. A loop and not
+            // two blocks: a third size is then a build.json entry, the way a
+            // fourth toggle group was (#384's "a third box was a code change").
+            for (preset in presets) addView(TextView(ctx).apply {
+                // The number is shown, and it is the declared one — a label
+                // reading "Default" over a handle that landed somewhere else is
+                // the disagreement this whole row is shaped to prevent.
+                text = "${preset.label} (${preset.value})"
+                setTextColor(palette.accent)
+                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+                setPadding(0, 0, dp(ctx, 18), 0)
+                isClickable = true; isFocusable = true
+                setOnClickListener {
+                    Haptics.tap(it)
+                    // Setting progress moves the handle and re-fires
+                    // onProgressChanged (so the readout follows) but NOT
+                    // onStopTrackingTouch, which is a touch-only callback — so
+                    // the write is asked for explicitly here and happens
+                    // exactly once.
+                    bar.progress = preset.value.coerceIn(min, max)
+                    onChange(bar.progress)
+                }
+            })
         })
         }
     }
