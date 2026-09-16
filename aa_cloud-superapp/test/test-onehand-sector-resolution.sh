@@ -271,16 +271,40 @@ case "$S" in
   *) bad "the overlay no longer uses the normalised lookup — raw-string matching is back" ;;
 esac
 # The silent index-0 fallback: the single line that turned a miss into "None"
-# over a working slot. Scoped to the SECTOR lookup by the expression it matches
-# on — a bare search for coerceAtLeast also hits addHomeSwipePicker, which
-# picks over a closed in-code vocabulary and is not this bug.
+# over a working slot. Scoped to the sector editor BY FUNCTION — addHandleEditor
+# — and NOT by a character window measured from the lookup.
+#
+# It used to be that window, `(.{0,40})` after the indexOfFirst expression, and
+# THAT SHAPE PASSED THE EXACT REGRESSION IT NAMES. A window is measured from a
+# position, so anything inserted between the lookup and the selection pushes the
+# regression out of view and the assertion prints OK because it never looked.
+# With today's `val rowOptions = ...` standing between them, `coerceAtLeast`
+# begins at offset 40 of a 0..40 window — one character past the edge. Restoring
+# the bug by mutation left this tester green at 18/18 while the silent index-0
+# fallback was back in the file. Mutation is the only thing that finds that
+# class of hole; a green nobody has watched go red proves nothing.
+#
+# The FUNCTION is still the correct scope, and is why a bare file-wide search is
+# wrong: addHomeSwipePicker coerces legitimately, picking over a closed in-code
+# vocabulary where index 0 is a real answer rather than a miss. The extraction
+# below is verified against that neighbour — it must not reach it.
 SECTOR_COERCE=$(printf '%s' "$F" | python3 -c "
 import re, sys
-s = re.sub(r'\\s+', ' ', sys.stdin.read())
-m = re.search(r'indexOfFirst \\{ it\\.action\\?\\.serialize\\(\\) == current\\?\\.serialize\\(\\) \\}(.{0,40})', s)
-if m is None: print('MISSING')
-elif 'coerceAtLeast' in m.group(1): print('COERCED')
-else: print('OK')")
+s = sys.stdin.read()
+m = re.search(r'(?m)^([ \\t]*)private fun addHandleEditor\\(', s)
+if m is None:
+    print('MISSING'); raise SystemExit
+start, indent = m.end(), len(m.group(1))
+# The body ends at the next member declared at the SAME indentation. Match the
+# indent with [ \\t], never \\s: \\s eats the preceding newline, counts one
+# character too many, and the body then runs on into addHomeSwipePicker — whose
+# legitimate coerce makes this report COERCED against correct code.
+nxt = re.search(r'(?m)^[ \\t]{%d}(private|internal|public|fun|override|companion)\\b' % indent,
+                s[start:])
+body = s[start:start + nxt.start()] if nxt else s[start:]
+if 'indexOfFirst' not in body: print('MISSING')
+elif 'coerceAtLeast' in body:  print('COERCED')
+else:                          print('OK')")
 case "$SECTOR_COERCE" in
   OK)      ok "the sector selection no longer coerces an unmatched target to index 0" ;;
   COERCED) bad "the sector selection still coerces to index 0 — a miss silently reads as None" ;;
