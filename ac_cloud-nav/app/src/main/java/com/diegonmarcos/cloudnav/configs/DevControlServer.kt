@@ -15,7 +15,10 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLDecoder
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Loopback HTTP/1.1 control surface for the app — same role Termux:API
@@ -26,13 +29,20 @@ import java.util.concurrent.atomic.AtomicBoolean
  *
  *   GET  /ping                    → pong                       [NO-AUTH]
  *   GET  /info                    → {version, vc, port}        [NO-AUTH]
- *   GET  /state                   → {section, mode, …}
+ *   GET  /state                   → {section, mode, …}; 503 if no live host
  *   POST /haptic?preset=X         → fire haptic preset
  *                                    (gemini_stream, tick, start, end)
  *   POST /goto?target=URI         → onTileClicked(target)
  *                                    section: / page: / action: / http(s):
  *                                    / intent: / app: / stub:
  *   POST /action?type=X           → dispatchHomeAction(X)
+ *
+ *   /state, /haptic, /goto and /action all need the foreground Activity,
+ *   so all four answer {"ok":bool,"reason":str,"message":str} — the same
+ *   vocabulary /update already uses. reason is one of delivered |
+ *   no_live_host | host_timeout | host_threw; 200 only for delivered, 503
+ *   when nothing was listening, 500 when the Activity threw. They used to
+ *   answer "ok" whether or not an Activity existed (#367).
  *   POST /update                  → enqueue an update check (libs:updater)
  *                                  → {"ok":bool,"message":"…"}; 503 if not started
  *   POST /restart                 → kill+relaunch the app process
@@ -40,7 +50,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  * The server runs on a single accept-loop thread; each connection is
  * handled inline (response is short — no need for a thread pool).
  * Workload that touches UI is posted onto the main Looper via
- * [DevControlBridge].
+ * [DevControlBridge] and WAITED ON — see [dispatchToHost]. Posting without
+ * waiting is what let these routes answer "ok" for work a backgrounded app
+ * never ran.
  */
 object DevControlServer {
 
@@ -185,28 +197,37 @@ object DevControlServer {
             // Authenticated endpoints
             when (op) {
                 "state" -> {
-                    val snap = DevControlBridge.host()?.stateSnapshot() ?: emptyMap()
-                    val body = snap.entries.joinToString(",", "{", "}") {
-                        "\"${jsonEscape(it.key)}\":\"${jsonEscape(it.value)}\""
+                    // Read on the main thread and report whether it was read at
+                    // all. The old line was host()?.stateSnapshot() ?: emptyMap()
+                    // answered 200, so "the activity is gone" and "the activity
+                    // has an empty state map" arrived as the same {} (#367).
+                    val dispatch = dispatchToHost(op) { it.stateSnapshot() }
+                    if (dispatch.delivered) {
+                        val body = (dispatch.value ?: emptyMap()).entries
+                            .joinToString(",", "{", "}") {
+                                "\"${jsonEscape(it.key)}\":\"${jsonEscape(it.value)}\""
+                            }
+                        reply(writer, "200 OK", body, "application/json")
+                    } else {
+                        reply(writer, dispatch.status, ackJson(dispatch), "application/json")
                     }
-                    reply(writer, "200 OK", body, "application/json")
                 }
                 "haptic" -> {
                     val preset = query["preset"] ?: "tick"
-                    DevControlBridge.runOnMain {
-                        DevControlBridge.host()?.firePresetHaptic(preset)
+                    val dispatch = dispatchToHost("$op preset=$preset") {
+                        it.firePresetHaptic(preset)
                     }
-                    reply(writer, "200 OK", """{"ok":true,"preset":"${jsonEscape(preset)}"}""", "application/json")
+                    reply(writer, dispatch.status, ackJson(dispatch, "preset", preset), "application/json")
                 }
                 "nav/goto" -> {
                     val target = query["target"]
                     if (target.isNullOrBlank()) {
                         reply(writer, "400 Bad Request", "missing target\n")
                     } else {
-                        DevControlBridge.runOnMain {
-                            DevControlBridge.host()?.onTileFromServer(target)
+                        val dispatch = dispatchToHost("$op target=$target") {
+                            it.onTileFromServer(target)
                         }
-                        reply(writer, "200 OK", "ok\n")
+                        reply(writer, dispatch.status, ackJson(dispatch, "target", target), "application/json")
                     }
                 }
                 "nav/action" -> {
@@ -214,10 +235,10 @@ object DevControlServer {
                     if (type.isNullOrBlank()) {
                         reply(writer, "400 Bad Request", "missing type\n")
                     } else {
-                        DevControlBridge.runOnMain {
-                            DevControlBridge.host()?.onActionFromServer(type)
+                        val dispatch = dispatchToHost("$op type=$type") {
+                            it.onActionFromServer(type)
                         }
-                        reply(writer, "200 OK", "ok\n")
+                        reply(writer, dispatch.status, ackJson(dispatch, "type", type), "application/json")
                     }
                 }
                 "system/update" -> {
@@ -237,9 +258,36 @@ object DevControlServer {
                     )
                 }
                 "system/restart" -> {
-                    reply(writer, "200 OK", "restarting…\n")
-                    writer.flush()
-                    DevControlBridge.runOnMain { DevControlBridge.restartApp(ctx) }
+                    // A reply cannot follow the restart — by then the process is
+                    // gone. So the one honest thing to report is the precondition
+                    // that decides whether the restart can happen at all:
+                    // DevControlBridge.restartApp needs a launcher intent for this
+                    // package and RETURNS SILENTLY without one. The old
+                    // unconditional "restarting…" reported that silent return as a
+                    // restart, which is this ticket's defect in its third form
+                    // (#367). The deeper fix — restartApp handing back whether it
+                    // scheduled anything — belongs in DevControlBridge, which this
+                    // ticket does not own; see the report for #367.
+                    val relaunch = ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
+                    if (relaunch == null) {
+                        reply(
+                            writer, "503 Service Unavailable",
+                            "{\"ok\":false,\"reason\":\"no_launch_intent\",\"message\":\"" +
+                                "this package resolves no launcher intent, so restartApp " +
+                                "would kill the process with nothing scheduled to bring " +
+                                "it back\"}",
+                            "application/json",
+                        )
+                    } else {
+                        reply(
+                            writer, "200 OK",
+                            "{\"ok\":true,\"reason\":\"restart_scheduled\",\"message\":\"" +
+                                "relaunch intent resolved; killing the process now\"}",
+                            "application/json",
+                        )
+                        writer.flush()
+                        DevControlBridge.runOnMain { DevControlBridge.restartApp(ctx) }
+                    }
                 }
                 "tracker/prefs"  -> { reply(writer, "200 OK", trackerPrefsJson(ctx), "application/json") }
                 "tracker/points" -> {
@@ -302,17 +350,17 @@ object DevControlServer {
             Spec("system/ping",         "GET",  false, "Health probe — returns 'pong'", ""),
             Spec("system/info",         "GET",  false, "App build info: version, vc, sha, port", ""),
             Spec("system/update",       "POST", true,  "Enqueue an update check via libs:updater — replies {ok,message}; 503 when it could not be started", ""),
-            Spec("system/restart",      "POST", true,  "Restart the Cloud Nav process", ""),
+            Spec("system/restart",      "POST", true,  "Restart the Cloud Nav process; {ok,reason,message}, 503 if no launcher intent resolves", ""),
             Spec("diagnostics/logcat",  "GET",  false, "Recent logcat lines, threadtime format", "n=lines (default 300)"),
             Spec("diagnostics/trace",   "GET",  false, "Tail of Trace.kt's trace.log", "n=lines (default 300)"),
             Spec("diagnostics/crashes", "GET",  false, "All crash files concatenated, newest first", ""),
             Spec("diagnostics/bundle",  "GET",  false, "Full debug bundle (logcat+trace+crashes+device) as one OpenObserve JSON record", ""),
             Spec("diagnostics/download","GET",  false, "Write the debug bundle to public Downloads; returns the filename", ""),
             Spec("diagnostics/push",    "GET",  false, "POST the debug bundle to the cloud log sink (OpenObserve via build.json::diagnostics.log_sink_url)", ""),
-            Spec("state",               "GET",  true,  "Snapshot of MainActivity's live state map (section, label, mode, …)", ""),
-            Spec("haptic",              "POST", true,  "Fire a named haptic preset on the device", "preset=name (default 'tick')"),
-            Spec("nav/goto",            "POST", true,  "Navigate to a tile target (section:X / page:X/Y / action:X / url)", "target=string"),
-            Spec("nav/action",          "POST", true,  "Fire one of MainActivity.onActionFromServer's verbs", "type=string"),
+            Spec("state",               "GET",  true,  "Snapshot of MainActivity's live state map (section, label, mode, …); 503 if no live foreground activity", ""),
+            Spec("haptic",              "POST", true,  "Fire a named haptic preset on the device; {ok,reason,message}, 503 if no live foreground activity", "preset=name (default 'tick')"),
+            Spec("nav/goto",            "POST", true,  "Navigate to a tile target (section:X / page:X/Y / action:X / url); {ok,reason,message}, 503 if no live foreground activity", "target=string"),
+            Spec("nav/action",          "POST", true,  "Fire one of MainActivity.onActionFromServer's verbs; {ok,reason,message}, 503 if no live foreground activity", "type=string"),
             Spec("tracker/prefs",       "GET",  true,  "Tracker calibration prefs + enabled flag + last fix coords", ""),
             Spec("tracker/counts",      "GET",  true,  "DB row counts: points + stops + last-fix timestamp", ""),
             Spec("tracker/points",      "GET",  true,  "Recent GPS points reverse-chrono with accuracy + speed", "n=count (default 20)"),
@@ -652,6 +700,133 @@ object DevControlServer {
         sb.append(""""blocked":""").append(total - ok).append('}')
         sb.append('}')
         return sb.toString()
+    }
+
+    /**
+     * How long [dispatchToHost] waits for the main thread to run the work it
+     * posted before it calls the request undelivered.
+     *
+     * Not a budget for the work itself — a navigation hop or a haptic pulse is
+     * microseconds once the Looper picks it up. It is the bound on a main thread
+     * that is wedged or being torn down, and therefore the bound on how long one
+     * debug-server connection can hold the accept loop.
+     */
+    private const val HOST_DISPATCH_TIMEOUT_SECONDS = 5L
+
+    /**
+     * What actually became of a request that needed the foreground Activity,
+     * and the sentence that says so.
+     *
+     * Deliberately the same shape as Updater.Ack (#280): the {"ok","message"}
+     * pair already on the wire for POST /api/system/update, so a caller that
+     * understands that route needs no new vocabulary for these.
+     *
+     * [reason] is the machine-readable half, and it exists because `ok` alone
+     * cannot separate "the app was not listening" from "the app refused". Those
+     * two want opposite things from whoever is driving the fleet — the first is
+     * "wake the screen and retry", the second is "stop retrying and read the
+     * stack" — and a caller that cannot tell them apart will do the wrong one.
+     *
+     * Values: delivered | no_live_host | host_timeout | host_threw.
+     */
+    private class HostDispatch<T>(
+        val reason: String,
+        val message: String,
+        val value: T?,
+    ) {
+        val delivered: Boolean get() = reason == "delivered"
+
+        /** 200 only for work observed to have run; 503 for "ask again later". */
+        val status: String get() = when (reason) {
+            "delivered"  -> "200 OK"
+            "host_threw" -> "500 Internal Server Error"
+            else         -> "503 Service Unavailable"
+        }
+    }
+
+    /** The wire body for a [HostDispatch], plus one optional echoed parameter. */
+    private fun ackJson(d: HostDispatch<*>, field: String = "", value: String = ""): String {
+        val echo = if (field.isEmpty()) "" else ",\"$field\":\"${jsonEscape(value)}\""
+        return "{\"ok\":${d.delivered},\"reason\":\"${d.reason}\"," +
+            "\"message\":\"${jsonEscape(d.message)}\"$echo}"
+    }
+
+    /**
+     * Run [work] against the registered foreground Activity and report whether a
+     * live Activity actually ran it.
+     *
+     * THE ROUTES THAT NEEDED THIS WERE ANSWERING "ok" TO NOTHING AT ALL.
+     *
+     * DevControlBridge.runOnMain is a bare Handler.post, and DevControlBridge
+     * .host() is a WeakReference the Activity registers in onResume and clears
+     * in onPause. The handlers for nav/goto, nav/action, haptic and state each
+     * posted their work and replied on the very next line — on the server
+     * thread, before the posted block had run. With the app backgrounded, host()
+     * was null, the safe-call discarded the request, and the caller was told
+     * "ok\n". Every automated check standing on those routes was passing on a
+     * reply that asserted nothing, which is a test that asserts nothing wearing
+     * a transport layer (#367).
+     *
+     * WHY THERE IS NO QUEUE HERE, UNLIKE system/update. An update can be
+     * enqueued now and acknowledged later, so #280 routed it around the Activity
+     * through WorkManager and made the enqueue the outcome. Navigation has no
+     * such escape: it needs the live Activity, so there is nothing to queue and
+     * no honest way to defer. A navigation request that arrives with no live
+     * host is legitimately a FAILURE, and the only correct thing this can do is
+     * say so rather than paper over it.
+     *
+     * WHY THIS BLOCKS, for the reason Updater.requestCheck states verbatim: the
+     * debug server handles each connection inline on its own accept-loop thread,
+     * never on the main Looper. Waiting costs this one request and nothing else,
+     * and a reply sent before the work resolved is the same unverified optimism
+     * this function exists to delete.
+     */
+    private fun <T> dispatchToHost(
+        what: String,
+        work: (DevControlBridge.ActivityHost) -> T,
+    ): HostDispatch<T> {
+        val hadHost = AtomicBoolean(false)
+        val value = AtomicReference<T?>(null)
+        val thrown = AtomicReference<Throwable?>(null)
+        val done = CountDownLatch(1)
+
+        DevControlBridge.runOnMain {
+            try {
+                DevControlBridge.host()?.let { host ->
+                    hadHost.set(true)
+                    value.set(work(host))
+                }
+            } catch (t: Throwable) {
+                thrown.set(t)
+            } finally {
+                done.countDown()
+            }
+        }
+
+        if (!done.await(HOST_DISPATCH_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+            val msg = "$what was posted to the main thread and had still not run " +
+                "${HOST_DISPATCH_TIMEOUT_SECONDS}s later — the UI thread is blocked or " +
+                "the process is being torn down. NOT delivered."
+            Log.e(TAG, msg)
+            return HostDispatch("host_timeout", msg, null)
+        }
+        thrown.get()?.let { t ->
+            val msg = "$what reached the foreground activity and it refused: " +
+                "${t.javaClass.simpleName}: ${t.message ?: "no detail"}"
+            Log.e(TAG, msg, t)
+            return HostDispatch("host_threw", msg, null)
+        }
+        if (!hadHost.get()) {
+            val msg = "$what was NOT delivered: no foreground activity is registered " +
+                "with DevControlBridge, so there is no live screen to act on. The " +
+                "activity registers in onResume and unregisters in onPause — wake the " +
+                "device, bring the app to the foreground, and send this again."
+            Log.w(TAG, msg)
+            return HostDispatch("no_live_host", msg, null)
+        }
+        val msg = "$what was delivered to the foreground activity"
+        Log.i(TAG, msg)
+        return HostDispatch("delivered", msg, value.get())
     }
 
     private fun reply(

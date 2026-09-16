@@ -41,3 +41,13 @@ jobs:
         run: python3 1_cicd/src/scripts/cloud-android-update-ack-guard.py
       - name: The guard still fails when the acknowledgement goes back to being a guess
         run: bash 1_cicd/src/scripts/test/update-ack-guard.test.sh
+
+      # The step above proves the guard can fail — but only ever against
+      # routes[0]. While that was the whole proof, a route could be added to
+      # update-ack-guard.json whose rules matched nothing at all and this job
+      # would go on printing green, which is the same defect one level up: a
+      # check that asserts nothing. This step re-derives every case from the
+      # manifest, so a route added there is exercised on the commit that adds
+      # it. #367 added four (nav/goto, nav/action, haptic, system/restart).
+      - name: Every route the manifest claims to cover can still fail
+        run: bash 1_cicd/src/scripts/test/nav-ack-guard.test.sh

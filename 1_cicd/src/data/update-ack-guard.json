@@ -1,25 +1,99 @@
 {
   "_doc": "Debug-server routes that are not allowed to acknowledge work they did not start. WHY THIS FILE EXISTS: on 2026-09-16 a phone sat four published releases behind while POST /api/system/update answered the literal string 'update queued' to every request. It had queued nothing. The handler posted onto the main Looper and called DevControlBridge.host()?.onActionFromServer(\"check_updates\"), and host() is a WeakReference the launcher Activity registers in onResume and clears in onPause — so a fleet-driven update, which by definition arrives with the screen off, hit a null and was discarded by the safe-call. 1200 lines of the device's own logcat held zero matches for updat|install|download|apk. Three Android tickets were closed on 'published' and reopened, because 'published' had quietly stopped implying 'installed' (#280, blocking #260/#261/#267/#70). The rule this file encodes is therefore not 'do not break the updater' but the narrower, checkable one: a route that reports success must report the success of something it actually observed.",
-
   "_doc_fields": "route: the canonical op name, exactly as the server's `when` branch spells it — the guard finds implementations by searching every Kotlin file in the repo for that branch key, so a fourth app that grows a copy of this route is covered on the day it lands and not on the day somebody remembers to list it here. label: what a failure line calls the route, so the reader sees an endpoint and not a file path. forbidden_calls: substrings that must not appear anywhere in the branch body — the exact defect, spelled out. forbidden_reply_literals: response text that asserts an outcome; a literal here is a claim the handler is making without having checked, which is the bug in its purest form. required_calls: substrings that must appear, so deleting the real work is as loud as adding the fake acknowledgement back. min_implementations: how many copies the guard must find before it is willing to report a clean sweep. A guard that has quietly stopped matching anything prints exactly the same green as a guard over correct code, and that has happened in this repository before.",
-
   "version": 1,
-
   "_doc_exclude": "z_archive holds frozen copies kept for reference. Guarding them would demand edits to code nobody runs, and the whole point of archiving was to stop maintaining it.",
-  "exclude_path_prefixes": ["z_archive/"],
-
+  "exclude_path_prefixes": [
+    "z_archive/"
+  ],
   "routes": [
     {
       "route": "system/update",
       "label": "POST /api/system/update",
       "_doc_forbidden_calls": "DevControlBridge.host() is the defect itself. The bridge is documented as 'if no activity is registered, calls become no-ops and the server's reply still completes' — which is a defensible contract for a haptic preset and a catastrophic one for the only channel by which a fix reaches the phone. WorkManager needs no Activity, so this route has no reason to ask for one.",
-      "forbidden_calls": ["DevControlBridge.host()"],
+      "forbidden_calls": [
+        "DevControlBridge.host()"
+      ],
       "_doc_forbidden_reply_literals": "The sentence that cost the four releases. It was true of nothing that had happened.",
-      "forbidden_reply_literals": ["update queued"],
+      "forbidden_reply_literals": [
+        "update queued"
+      ],
       "_doc_required_calls": "Updater.requestCheck waits on the WorkManager Operation, logs at ERROR and publishes UpdateProgress.State.Failed when the enqueue does not land — State.Failed being the one state UpdateProgress.suppressed is documented never to hide. Requiring the call is what stops the fix from being reverted into a handler that neither lies nor works.",
-      "required_calls": ["Updater", ".requestCheck("],
+      "required_calls": [
+        "Updater",
+        ".requestCheck("
+      ],
       "_doc_min_implementations": "aa_cloud-superapp and ac_cloud-nav both serve this route from their own DevControlServer.kt. Two copies of one defect is how it was found; the number is here so that losing one to a rename reads as a broken guard rather than as progress.",
       "min_implementations": 2
+    },
+    {
+      "route": "nav/goto",
+      "label": "POST /api/nav/goto",
+      "_doc_forbidden_calls": "Unlike system/update, these routes GENUINELY NEED the foreground Activity — a navigation hop has nothing to queue and cannot be deferred. So the rule is not 'never touch the bridge', it is 'never touch the WeakReference straight from the branch'. Reaching host() here means the branch is deciding for itself what a null means, and every branch that did so decided it meant success. The branch must go through DevControlServer.dispatchToHost, which posts the work, WAITS for the main thread to run it, and returns whether a live Activity was actually there.",
+      "forbidden_calls": [
+        "DevControlBridge.host()"
+      ],
+      "_doc_forbidden_reply_literals": "The reply that made a backgrounded phone indistinguishable from a working one. It was true of nothing that had happened.",
+      "forbidden_reply_literals": [
+        "ok\\n"
+      ],
+      "_doc_required_calls": "dispatchToHost is the only path that observes the outcome instead of assuming it: it reports delivered | no_live_host | host_timeout | host_threw, which the branch turns into 200 / 503 / 503 / 500. Requiring the call is what stops the fix being reverted into a handler that neither lies nor works.",
+      "required_calls": [
+        "dispatchToHost("
+      ],
+      "_doc_min_implementations": "aa_cloud-superapp and ac_cloud-nav each serve this route from their own DevControlServer.kt. Two copies of one defect is how it was found; the number is here so that losing one to a rename reads as a broken guard, not as progress.",
+      "min_implementations": 2
+    },
+    {
+      "route": "nav/action",
+      "label": "POST /api/nav/action",
+      "_doc_forbidden_calls": "Unlike system/update, these routes GENUINELY NEED the foreground Activity — a navigation hop has nothing to queue and cannot be deferred. So the rule is not 'never touch the bridge', it is 'never touch the WeakReference straight from the branch'. Reaching host() here means the branch is deciding for itself what a null means, and every branch that did so decided it meant success. The branch must go through DevControlServer.dispatchToHost, which posts the work, WAITS for the main thread to run it, and returns whether a live Activity was actually there.",
+      "forbidden_calls": [
+        "DevControlBridge.host()"
+      ],
+      "_doc_forbidden_reply_literals": "The reply that made a backgrounded phone indistinguishable from a working one. It was true of nothing that had happened.",
+      "forbidden_reply_literals": [
+        "ok\\n"
+      ],
+      "_doc_required_calls": "dispatchToHost is the only path that observes the outcome instead of assuming it: it reports delivered | no_live_host | host_timeout | host_threw, which the branch turns into 200 / 503 / 503 / 500. Requiring the call is what stops the fix being reverted into a handler that neither lies nor works.",
+      "required_calls": [
+        "dispatchToHost("
+      ],
+      "_doc_min_implementations": "aa_cloud-superapp and ac_cloud-nav each serve this route from their own DevControlServer.kt. Two copies of one defect is how it was found; the number is here so that losing one to a rename reads as a broken guard, not as progress.",
+      "min_implementations": 2
+    },
+    {
+      "route": "haptic",
+      "label": "POST /api/haptic",
+      "_doc_forbidden_calls": "Unlike system/update, these routes GENUINELY NEED the foreground Activity — a navigation hop has nothing to queue and cannot be deferred. So the rule is not 'never touch the bridge', it is 'never touch the WeakReference straight from the branch'. Reaching host() here means the branch is deciding for itself what a null means, and every branch that did so decided it meant success. The branch must go through DevControlServer.dispatchToHost, which posts the work, WAITS for the main thread to run it, and returns whether a live Activity was actually there.",
+      "forbidden_calls": [
+        "DevControlBridge.host()"
+      ],
+      "_doc_forbidden_reply_literals": "A hardcoded true. The handler wrote the verdict before doing the work, which is the same defect as \"update queued\" with a smaller blast radius — and a smaller blast radius is not a different bug.",
+      "forbidden_reply_literals": [
+        "\"ok\":true"
+      ],
+      "_doc_required_calls": "dispatchToHost is the only path that observes the outcome instead of assuming it: it reports delivered | no_live_host | host_timeout | host_threw, which the branch turns into 200 / 503 / 503 / 500. Requiring the call is what stops the fix being reverted into a handler that neither lies nor works.",
+      "required_calls": [
+        "dispatchToHost("
+      ],
+      "_doc_min_implementations": "aa_cloud-superapp and ac_cloud-nav each serve this route from their own DevControlServer.kt. Two copies of one defect is how it was found; the number is here so that losing one to a rename reads as a broken guard, not as progress.",
+      "min_implementations": 2
+    },
+    {
+      "route": "system/restart",
+      "label": "POST /api/system/restart",
+      "_doc_forbidden_reply_literals": "A reply cannot follow a restart — the process is gone before it could be written — so this route can never observe its own success, and the temptation is to assert it anyway. It did: it answered the literal \"restarting…\" unconditionally, while DevControlBridge.restartApp RETURNS SILENTLY when the package resolves no launcher intent. The one thing here that CAN be observed is that precondition, so that is what the route is required to check and what it is forbidden to skip.",
+      "forbidden_reply_literals": [
+        "restarting"
+      ],
+      "_doc_required_calls": "getLaunchIntentForPackage is the precondition restartApp itself tests and then discards. Checking it in the branch is what makes the 200 mean something. The cleaner fix is for restartApp to hand back whether it scheduled anything; that lives in ab_cloud-libs-shared/libs/devtools/DevControlBridge.kt, which ticket #367 does not own — see the report for #367.",
+      "required_calls": [
+        "getLaunchIntentForPackage"
+      ],
+      "_doc_min_implementations": "Both apps serve this route from their own DevControlServer.kt.",
+      "min_implementations": 2
     }
-  ]
+  ],
+  "_doc_not_guarded_here": "GET /api/state carries this same defect and IS FIXED in both DevControlServer.kt copies — it now goes through dispatchToHost and answers 503 when no Activity is live, instead of rendering a missing Activity as an empty {}. It is deliberately NOT listed above, and the reason is a limit of this guard rather than a doubt about the route. Routes are matched by their `when` branch key across every .kt file in the repository, unscoped, which is what lets a fourth app be covered on the day it lands. The key \"state\" -> is too generic for that: it also occurs in libs/contacts/ContactsBackendService.kt and libs/keyboard/BnKhiproCombiner.kt, which are unrelated `when`s over unrelated types. Listing it was measured, not guessed — it produces 2 violations against that unrelated code and exits 1. Making it guardable needs a per-route path scope in 1_cicd/src/scripts/cloud-android-update-ack-guard.py, an engine #367 does not own."
 }
