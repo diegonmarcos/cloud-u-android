@@ -299,6 +299,41 @@ else
     for pkg in $OURS; do echo "        $pkg"; done
 fi
 
+echo "== T10: no curated entry names a package that can NEVER be installed =="
+# #249: "a placeholder that installs nothing forever is worse than no tile."
+# A curated entry has exactly two outcomes -- launch the app, or offer to
+# install it. A package that is PREINSTALLED (so the placeholder never shows)
+# and exposes NO launch intent (so the tile is a dead tap) has neither, and
+# "Google Password" is the name that asked for one: Google Password Manager is
+# a surface inside Play services, not an app. The ban is DATA, not a list
+# restated here -- build.json::sections[id=phone].quickmark_never_installable
+# carries the package, the reason and the honest deep link, so re-adding it is
+# a red test with the explanation already attached rather than an argument.
+NEVER="$(q '.ui.sections[] | select(.id=="phone")
+  | (.quickmark_never_installable // [])[] | .pkg' | grep -v '^$' || true)"
+if [ -z "$NEVER" ]; then
+    # An empty ban list would make this test sweep nothing and still print a
+    # tick -- the "ran zero assertions and passed" shape this suite exists to
+    # end. The declaration is required to be present and non-empty.
+    bad "quickmark_never_installable is missing or empty -- T10 would assert nothing"
+else
+    BANNED=""
+    for pkg in $NEVER; do
+        printf '%s\n' "$ENTRIES" | grep -qxF "$pkg" && BANNED="$BANNED $pkg"
+    done
+    if [ -z "$BANNED" ]; then
+        ok "none of the $(printf '%s\n' "$NEVER" | grep -c .) never-installable package(s) is curated"
+    else
+        bad "curated entry names a package that can never be installed:"
+        for pkg in $BANNED; do
+            WHY="$(jq -r --arg p "$pkg" '.ui.sections[] | select(.id=="phone")
+              | (.quickmark_never_installable // [])[] | select(.pkg == $p) | .reason' \
+              "$BUILD_JSON")" || { echo "FATAL: jq failed reading the ban reason"; exit 2; }
+            echo "        $pkg -- $WHY"
+        done
+    fi
+fi
+
 echo
 echo "-- test-phone-quickmark-placeholders: $PASS passed, $FAIL failed --"
 [ "$FAIL" -eq 0 ]
