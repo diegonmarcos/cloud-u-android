@@ -72,7 +72,7 @@
         "kind": "lib"
       }
     ],
-    "_doc_groups": "Constellation tabs, in the order they render (#343). ConstellationFragment draws one tab per group below that has at least one row, then appends Perms; it names no group itself. regen.sh stamps every fleet entry with a group: group_members[<fleet id>] when declared, otherwise the group whose default_for_kind matches the entry's kind. An entry whose kind has no default, a member naming an undeclared group, a member id that is not in the fleet, or an id used twice fails the regen instead of silently landing a row in the wrong tab. Tiny-ML = extreme edge and microcontroller models under about 2MB; Lightweight ML = mobile and desktop CPU models, roughly 5MB-50MB.",
+    "_doc_groups": "Constellation tabs, in the order they render (#343). ConstellationFragment draws one tab per group below that has at least one row, then appends Perms; it names no group itself. regen.sh stamps every fleet entry with a group: group_members[<fleet id>] when declared, otherwise the group whose default_for_kind matches the entry's kind. An entry whose kind has no default, a member naming an undeclared group, a member id that is not in the fleet, or an id used twice fails the regen instead of silently landing a row in the wrong tab. Tiny-ML = extreme edge and microcontroller models under about 2MB; Lite-ML = mobile and desktop CPU models, roughly 5MB-50MB. ORDER (#383): the owner asked for Lite-ML before Tiny-ML, so Lite-ML is declared first — the tab row IS this array's order. The two ids are IDENTITY: #343 created them and nothing may rename one to follow a label or a position, so the swap moves objects and touches no key.",
     "groups": [
       {
         "id": "apps",
@@ -87,14 +87,14 @@
         "blurb": "One APK per library module, installable and inspectable on its own. Most are also compiled into the apps that use them; the exception is net-wg (WireGuard), an out-of-process engine its app needs installed."
       },
       {
+        "id": "libs-l-ml",
+        "label": "Lite-ML",
+        "blurb": "Lite-ML: mobile and desktop CPU models, roughly 5MB-50MB. Real modules install like any lib and are engines the keyboard needs installed. Reference rows have nothing to install; Update all never fetches them."
+      },
+      {
         "id": "libs-t-ml",
         "label": "Tiny-ML",
         "blurb": "Tiny-ML: extreme edge and microcontroller models, under about 2MB. Reference rows are third-party libraries with nothing to install; Update all never fetches them."
-      },
-      {
-        "id": "libs-l-ml",
-        "label": "Lite-ML",
-        "blurb": "Lightweight ML: mobile and desktop CPU models, roughly 5MB-50MB. Real modules install like any lib and are engines the keyboard needs installed. Reference rows have nothing to install; Update all never fetches them."
       }
     ],
     "_doc_group_members": "Fleet entries that belong to a group other than their kind's default, keyed by fleet id. These are the constellation's real on-device ML modules, classified by the same size rule as the catalogue. lib-translate-mlkit runs Google ML Kit on-device translation and language identification (com.google.mlkit:translate + language-id; translation models download per language pair). lib-voice-vosk runs Vosk offline speech recognition (libs:voice's model registry says the small models are ~40-50MB; keyboard-engines/build.json says Vosk + JNA ship ~25MB of .so per ABI). keyboard-engines is Cloud-Keyboard-Libs.apk (~55MB arm64), the companion APK bundling exactly those two engines. None fits Tiny-ML. libs:voice and libs:translate stay in libs: they are the engine INTERFACES and their build.gradle files say they carry no ML runtime. libs:keyboard is not a fleet entry.",
@@ -7558,11 +7558,13 @@
       ],
       "_doc_scale": "One knob for the two levers Samsung splits in two: Screen zoom (`wm density`) and Font size (`settings put system font_scale`). Both take the SAME factor, 0.70 + 0.05 x scale, so 6 is exactly 1.00 and changes nothing — that is why 6 is the default and not 1. Scale 1 is the minimum on both, which is what Cloud Power Saving pins itself to. Density multiplies the panel's physical number; font_scale is absolute. Anything that writes these must remember the override it clobbers — see PowerLevers' display_downscale for what happens when it does not.",
       "scale": {
+        "_doc": "#384: the owner asked for 0-10, not #337's 1-10, and for a slider that can only sit ON a step. `ticks` draws one mark per step under the line (SeekBar.setTickMark, API 24+) and makes the current level readable; the Restore button on this row reads `default` from HERE, so the shipped size is declared once. RANGE CONSEQUENCE, stated rather than clamped away: SystemDisplay.factor is 0.70 + 0.05 * scale, so step 0 is factor 0.70 — a real, distinct, smallest step (30% smaller than the panel's own size), NOT a no-op and NOT an invisible UI. It is smaller than Android's own Screen-zoom floor, so it will look extreme; 6 is still exactly 1.00, the phone's own size, and Restore returns there in one tap. Before #384 step 0 would have been silently coerced to 1 and been pixel-identical to it, which is the one outcome a tick bar must never have.",
         "label": "Scale",
         "subtitle": "Whole UI, icons and text together. 6 = the phone's own size.",
-        "min": 1,
+        "min": 0,
         "max": 10,
-        "default": 6
+        "default": 6,
+        "ticks": true
       },
       "brightness": {
         "label": "Screen brightness",

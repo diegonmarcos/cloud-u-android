@@ -271,7 +271,12 @@ class LauncherConfigFragment : Fragment() {
             // knobs that drift apart. SystemDisplay drives both from this one.
             if (group.id == "others") {
                 val sc = LauncherSettingsPrefs.Config.scale
-                root.addView(sliderRow(ctx, sc.label, sc.subtitle, sc.min, sc.max, settingsPrefs.scale) { v ->
+                // ticks + the shipped default both come off the SAME declared
+                // record the range does (#384). Nothing about this control is
+                // written twice, so no edit to build.json can leave the button
+                // restoring a number the slider never had.
+                root.addView(sliderRow(ctx, sc.label, sc.subtitle, sc.min, sc.max, settingsPrefs.scale,
+                    ticks = sc.ticks, restoreDefault = sc.default) { v ->
                     settingsPrefs.scale = v
                     if (!SystemDisplay.hasChannel(ctx)) Toast.makeText(
                         ctx, "Scale needs the shell channel — turn on wireless debugging first.",
@@ -745,10 +750,31 @@ class LauncherConfigFragment : Fragment() {
     }
 
     /** A label + SeekBar row. [value] pre-positions the thumb; onChange fires
-     *  on release so we don't spam writes while dragging. */
+     *  on release so we don't spam writes while dragging.
+     *
+     *  [ticks] (#384) draws one mark per step under the line and puts the
+     *  current step beside the label. A SeekBar's progress was ALREADY an
+     *  integer, so the handle always landed on a step — what was missing was
+     *  any way to SEE that, which is the whole of the owner's "then it don't
+     *  have middle range numbers and we can see in which level is". Marks +
+     *  readout, not a new snapping rule. It is declared per slider because
+     *  Screen brightness is 0..255 and 256 marks are a grey smear.
+     *
+     *  [restoreDefault] (#384), when non-null, adds a "Restore default" action
+     *  that moves the handle back to the SHIPPED value — passed in from the
+     *  declaration, never a literal, so the button and the first install can
+     *  never disagree about what "default" is.
+     *
+     *  NEITHER reloads the page. The restore path writes the store, sets
+     *  `progress` on THIS SeekBar and calls the same onChange a drag would, so
+     *  it costs one view update — not the detach+attach (#349a) or the
+     *  Activity.recreate (#349b) that made a tap on this page lose the scroll
+     *  position and come back on the Profiles tab. */
     private fun sliderRow(
         ctx: android.content.Context,
         label: String, subtitle: String, min: Int, max: Int, value: Int,
+        ticks: Boolean = false,
+        restoreDefault: Int? = null,
         onChange: (Int) -> Unit,
     ): View {
         val palette = LauncherPalette.of(ctx)
@@ -756,10 +782,22 @@ class LauncherConfigFragment : Fragment() {
         orientation = LinearLayout.VERTICAL
         val pad = dp(ctx, 14); setPadding(pad, pad, pad, pad)
         setBackgroundColor(palette.surface)
-        addView(TextView(ctx).apply {
-            text = label
-            setTextColor(palette.textPrimary)
+        // The live step readout. Built before the header so the header can hold
+        // it, and updated from onProgressChanged so it follows the FINGER, not
+        // the release — a number that only catches up when you let go is the
+        // same "which level am I on" question with an extra second of delay.
+        val readout = TextView(ctx).apply {
+            setTextColor(palette.accent)
             setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
+        }
+        addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(TextView(ctx).apply {
+                text = label
+                setTextColor(palette.textPrimary)
+                setTextAppearance(android.R.style.TextAppearance_Material_Subhead)
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            if (ticks) addView(readout)
         })
         if (subtitle.isNotBlank()) addView(TextView(ctx).apply {
             text = subtitle
@@ -767,15 +805,59 @@ class LauncherConfigFragment : Fragment() {
             setTextAppearance(android.R.style.TextAppearance_Material_Caption)
             setPadding(0, 0, 0, dp(ctx, 4))
         })
-        addView(SeekBar(ctx).apply {
+        val bar = SeekBar(ctx).apply {
             this.min = min
             this.max = max
+            // The platform's own discrete-slider mark: AbsSeekBar draws this
+            // drawable once per step across the track, so the marks and the
+            // stops are the SAME fact and cannot drift. A hand-drawn tick bar
+            // under the line would be a second copy of the range (#170).
+            if (ticks) tickMark = android.graphics.drawable.ShapeDrawable(
+                android.graphics.drawable.shapes.OvalShape()).apply {
+                intrinsicWidth = dp(ctx, 4); intrinsicHeight = dp(ctx, 4)
+                paint.color = palette.textSecondary
+            }
             progress = value.coerceIn(min, max)
+            readout.text = progress.toString()
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {}
+                override fun onProgressChanged(sb: SeekBar, p: Int, fromUser: Boolean) {
+                    readout.text = p.toString()
+                }
                 override fun onStartTrackingTouch(sb: SeekBar) {}
                 override fun onStopTrackingTouch(sb: SeekBar) { onChange(sb.progress) }
             })
+        }
+        addView(bar)
+        if (ticks) addView(LinearLayout(ctx).apply {
+            // The two ends named, so the row reads as a scale even before the
+            // handle is touched. Derived from the declared bounds.
+            orientation = LinearLayout.HORIZONTAL
+            addView(TextView(ctx).apply {
+                text = min.toString()
+                setTextColor(palette.textSecondary)
+                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            addView(TextView(ctx).apply {
+                text = max.toString()
+                setTextColor(palette.textSecondary)
+                setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+            })
+        })
+        if (restoreDefault != null) addView(TextView(ctx).apply {
+            text = "Restore default ($restoreDefault)"
+            setTextColor(palette.accent)
+            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+            setPadding(0, dp(ctx, 8), 0, 0)
+            isClickable = true; isFocusable = true
+            setOnClickListener {
+                Haptics.tap(it)
+                // Setting progress moves the handle and re-fires
+                // onProgressChanged (so the readout follows) but NOT
+                // onStopTrackingTouch, which is a touch-only callback — so the
+                // write is asked for explicitly here and happens exactly once.
+                bar.progress = restoreDefault.coerceIn(min, max)
+                onChange(bar.progress)
+            }
         })
         }
     }

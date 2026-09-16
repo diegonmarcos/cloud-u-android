@@ -68,7 +68,8 @@ class LauncherSettingsPrefs(context: Context) {
     fun anim(id: String? = null): Boolean =
         toggle("all_anim") && (id == null || toggle(id))
 
-    /** Whole-UI size, 1..10. Stored here; written to the device by
+    /** Whole-UI size over the DECLARED range (build.json::ui.launcher_settings
+     *  .scale, 0..10 since #384). Stored here; written to the device by
      *  SystemDisplay.applyScale, which owns both halves of it. */
     var scale: Int
         get() = sp.getInt("scale", Config.scale.default)
@@ -129,7 +130,12 @@ class LauncherSettingsPrefs(context: Context) {
         val masterLabel: String = "",
         val masterSubtitle: String = "",
     )
-    data class Slider(val label: String, val subtitle: String, val min: Int, val max: Int, val default: Int)
+    /** [ticks] asks the row to draw one mark per step under the line, which only
+     *  reads as a scale when the steps are few — so it is DECLARED per slider in
+     *  build.json rather than guessed from the range here. Screen brightness is
+     *  0..255 and would draw 256 marks into a smear. */
+    data class Slider(val label: String, val subtitle: String, val min: Int, val max: Int,
+                      val default: Int, val ticks: Boolean = false)
 
     object Config {
         /** `store` value routing a switch at the launcher-onehand library. */
@@ -201,7 +207,8 @@ class LauncherSettingsPrefs(context: Context) {
         private fun slider(key: String, fallbackDefault: Int): Slider {
             val o = settings.optJSONObject(key) ?: JSONObject()
             return Slider(o.optString("label", key), o.optString("subtitle", ""),
-                o.optInt("min", 0), o.optInt("max", 100), o.optInt("default", fallbackDefault))
+                o.optInt("min", 0), o.optInt("max", 100), o.optInt("default", fallbackDefault),
+                o.optBoolean("ticks", false))
         }
         val scale: Slider by lazy { slider("scale", 6) }
         val brightness: Slider by lazy { slider("brightness", -1) }

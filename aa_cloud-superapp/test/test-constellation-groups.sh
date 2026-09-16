@@ -105,6 +105,41 @@ grep -qF 'fleetObjects("groups")' "$PAGE" \
   && ok "tabs are built from the fleet's declared groups" \
   || bad "tabs are not built from the declared groups"
 
+echo "== T6: #383 the tab row the owner asked for =="
+# T1 only proves the two files AGREE. Reverting the swap in build.json and
+# re-running regen.sh leaves them agreeing perfectly on the wrong order, so T1
+# stays green through exactly the regression #383 fixed. This pins the fact
+# itself.
+#
+# RELATIVE, not a full expected list: "Lite-ML sits before Tiny-ML" is what the
+# owner asked for, and it stays true when a sixth group is added next to them.
+# A pinned `apps libs libs-l-ml libs-t-ml` would fail on that unrelated addition
+# and teach the next agent to edit the expectation instead of reading it.
+lite_before_tiny() { # lite_before_tiny <file> <jq path to the groups array>
+  jq -e "$2"' | map(.id)
+     | (index("libs-l-ml")) as $lite | (index("libs-t-ml")) as $tiny
+     | $lite != null and $tiny != null and $lite < $tiny' "$1" >/dev/null
+}
+lite_before_tiny "$BUILD" '.constellation.groups' \
+  && ok "build.json declares Lite-ML before Tiny-ML" \
+  || bad "build.json has Tiny-ML in front of Lite-ML again (#383 reverted at the declaration)"
+lite_before_tiny "$FLEET" '.groups' \
+  && ok "the generated fleet renders Lite-ML before Tiny-ML" \
+  || bad "the fleet has Tiny-ML in front of Lite-ML again (#383 reverted, or regen.sh not re-run)"
+# The ids are IDENTITY (#343) and the labels are the only thing #383 moved.
+# If a later edit ever "tidies" libs-l-ml into libs-lite-ml, every stamped
+# entry, every members list and both auto-update workers follow a renamed key
+# for a cosmetic reason — so the keys are asserted by name, here, on purpose.
+jq -e 'any(.groups[]; .id == "libs-t-ml" and .label == "Tiny-ML")
+   and any(.groups[]; .id == "libs-l-ml" and .label == "Lite-ML")' "$FLEET" >/dev/null \
+  && ok "the ML group keys are untouched and carry the Tiny-ML / Lite-ML labels" \
+  || bad "an ML group key or label changed — keys are identity, only labels may move"
+# A tab named Lite-ML whose own caption opens "Lightweight ML" is the #343
+# rename half-done: the blurb IS the heading drawn inside the tab.
+jq -e 'all(.groups[]; (.blurb | test("Lightweight"; "i")) | not)' "$FLEET" >/dev/null \
+  && ok "no tab caption still says the dead name Lightweight" \
+  || bad "a tab caption still says Lightweight while its tab says Lite-ML"
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
