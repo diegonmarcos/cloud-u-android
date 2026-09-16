@@ -58,6 +58,10 @@ codetree() { find "$1" -name '*.kt' -o -name '*.kts' 2>/dev/null \
 # grep drains its input.
 has_code()   { code "$1" | grep -F -- "$2" >/dev/null && ok "$3" || bad "$3 ($1)"; }
 hasnt_code() { code "$1" | grep -F -- "$2" >/dev/null && bad "$3 ($1)" || ok "$3"; }
+# Same as has_code, for the assertions whose subject is a function's ARGUMENT
+# rather than its whole spelling. See the M2 block for why that distinction had
+# to be made and what it cost to learn.
+hasre_code() { code "$1" | grep -E -- "$2" >/dev/null && ok "$3" || bad "$3 ($1)"; }
 
 echo "== cloud-mail self-update: wiring, metered rule, observed install, downgrade refusal =="
 
@@ -157,10 +161,32 @@ has_code "$PREFS" "requireUnmetered(ctx) && isMetered(ctx)" "M1 the deferral is 
 # THE ASSERTION THAT WOULD HAVE CAUGHT THE OLD SHAPE. checkNow and downloadNow
 # used to be the same call, so the manual button downloaded whatever it found
 # over mobile data in silence. They must differ, and they must differ in CONSENT.
-has_code "$UPDATER" "fun checkNow(context: Context) = enqueueUserInitiated(context, consented = false)" \
+# THE SUBJECT OF THESE TWO IS THE ARGUMENT, NOT THE SIGNATURE. They were fixed
+# strings naming the whole declaration down to the `=` of an expression body,
+# and 06c7bfac3 had to brace both bodies so their inferred return type stayed
+# Unit instead of leaking androidx.work.Operation onto consumers' compile
+# classpaths (it broke cloud-wallet and cloud-me, runs 35043275088 /
+# 35043275146). `consented = false` and `consented = true` were never touched,
+# yet both assertions went red — a green-to-red on a commit that changed no
+# behaviour, which is the shape that gets a real assertion deleted for being
+# noisy. The regex binds the function to its consent value and says nothing
+# about how the body is written, because how the body is written is a compiler
+# concern and consent is a spending one.
+hasre_code "$UPDATER" '^[[:space:]]*fun checkNow\(context: Context\).*enqueueUserInitiated\(context, consented = false\)' \
   "M2 a manual check carries no spending consent"
-has_code "$UPDATER" "fun downloadNow(context: Context) = enqueueUserInitiated(context, consented = true)" \
+hasre_code "$UPDATER" '^[[:space:]]*fun downloadNow\(context: Context\).*enqueueUserInitiated\(context, consented = true\)' \
   "M2 only the answered prompt carries consent"
+# AND NOTHING ELSE IN THE MODULE'S PUBLIC API GRANTS IT. The two above are
+# satisfiable by adding a third entry point that consents — which is exactly
+# what #280 nearly did: requestCheck() is a NEW path, reachable from the
+# on-device debug server's POST /api/system/update with no human present at
+# all, and a remote caller has by definition not seen a size and not said yes.
+# It passes consented = false today and nothing but this counted it.
+n_consent=$(code "$UPDATER" | grep -c "consented = true")
+[ "$n_consent" -eq 1 ] && ok "M2 exactly one entry point in Updater grants spending consent" \
+  || bad "M2 consent is granted in $n_consent places - a path spends data without asking"
+has_code "$UPDATER" "enqueueUserInitiated(app, consented = false)" \
+  "M2 the unattended remote check (requestCheck) carries no consent either"
 has_code "$WORKER" "val deferred = if (consented) null else AutoUpdatePrefs.deferredReason(applicationContext)" \
   "M2 the metered gate is keyed on CONSENT"
 hasnt_code "$WORKER" "if (force) null else AutoUpdatePrefs.deferredReason" \

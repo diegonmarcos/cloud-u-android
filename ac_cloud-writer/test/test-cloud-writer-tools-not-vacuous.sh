@@ -35,7 +35,7 @@ TESTER="$ROOT/ac_cloud-writer/test/test-cloud-writer-tools.sh"
 [ -f "$TESTER" ] || { echo "FAIL   $TESTER is missing — there is nothing to prove"; exit 1; }
 
 python3 - "$ROOT" <<'PYEOF'
-import os, shutil, subprocess, sys, tempfile
+import json, os, shutil, subprocess, sys, tempfile
 
 root = sys.argv[1]
 
@@ -49,6 +49,37 @@ NEEDED = [
 
 APP = "ac_cloud-writer"
 SRC = APP + "/app/src/main/java/com/diegonmarcos/cloudwriter"
+WRITER_PKG = "com.diegonmarcos.cloudwriter"
+FLEET = "aa_cloud-superapp/data/constellation-fleet.json"
+
+
+def unregister_writer(text):
+    """Re-point cloud-writer's Constellation entry at a package nobody publishes.
+
+    A FUNCTION, NOT A LITERAL, AND THAT IS THE WHOLE POINT OF #363. This break
+    used to be anchored on the string '"package": "com.diegonmarcos.cloudwriter"'
+    — with a space after the colon, because that is how the file was formatted
+    when the anchor was written. constellation-fleet.json is GENERATED, by
+    `jq ... | map(tojson) | join(",\\n")` in aa_cloud-superapp/data/regen.sh, and
+    #343 (8c5c001ee) moved to that compact one-entry-per-line emission to get the
+    64-entry fleet under javac's 65,535-byte constant limit. tojson emits
+    '"package":"..."' with no space. From that commit on the anchor matched zero
+    times, planted nothing, and the harness reported a caught defect it had never
+    planted — the exact vacuity it exists to detect, in the detector itself.
+
+    Reading the file as JSON removes every way a generator is allowed to rewrite
+    it from the blast radius: spacing, indentation, key order, line breaks,
+    trailing newline. None of those are things cloud-writer controls or should
+    ever be red about. What remains is the one condition that SHOULD break this
+    break — no entry for this package — and that is not silence: StopIteration
+    below is reported as a failure, and on an untouched tree it is also exactly
+    what W8 in the sibling tester is already red about. The anchor and the
+    assertion now fail together or not at all.
+    """
+    fleet = json.loads(text)
+    entry = next(a for a in fleet["apps"] if a.get("package") == WRITER_PKG)
+    entry["package"] = WRITER_PKG + ".absent"
+    return json.dumps(fleet)
 
 # (what a later change would plausibly do, which file, the edit, the assertion
 #  that must name it). Every one of these is a real regression shape, not a
@@ -142,15 +173,13 @@ BREAKS = [
       '"application_id": "com.diegonmarcos.writer"'),
      "W7 application_id is"),
 
-    ("the Constellation registry is never regenerated",
-     "aa_cloud-superapp/data/constellation-fleet.json",
-     ('"package": "com.diegonmarcos.cloudwriter"',
-      '"package": "com.diegonmarcos.cloudwriter.absent"'),
+    ("the Constellation registry is never regenerated", FLEET,
+     unregister_writer,
      "W8 constellation-fleet.json carries no entry"),
 ]
 
 failures = []
-for label, rel, (old, new), expect in BREAKS:
+for label, rel, edit, expect in BREAKS:
     stage = tempfile.mkdtemp(prefix="cloud-writer-vacuity-")
     try:
         os.mkdir(os.path.join(stage, ".git"))   # the marker the tester walks up to
@@ -177,12 +206,38 @@ for label, rel, (old, new), expect in BREAKS:
 
         target = os.path.join(stage, rel)
         text = open(target).read()
-        if text.count(old) != 1:
-            failures.append("%s: the planted edit matched %d times, not once — the anchor has moved "
-                            "and this harness is no longer breaking what it names"
-                            % (label, text.count(old)))
+        # A break is either a (find, replace) pair against source a human edits,
+        # where a literal IS the right anchor, or a function against a GENERATED
+        # file, where a literal is at the mercy of the generator's serialiser.
+        if callable(edit):
+            try:
+                planted = edit(text)
+            except (StopIteration, KeyError, ValueError) as exc:
+                failures.append("%s: the planted edit could not be applied (%s: %s) — the anchor has moved "
+                                "and this harness is no longer breaking what it names"
+                                % (label, type(exc).__name__, exc))
+                continue
+        else:
+            old, new = edit
+            if text.count(old) != 1:
+                failures.append("%s: the planted edit matched %d times, not once — the anchor has moved "
+                                "and this harness is no longer breaking what it names"
+                                % (label, text.count(old)))
+                continue
+            planted = text.replace(old, new, 1)
+        # A find/replace whose two halves are equal plants nothing and leaves a
+        # pristine copy the tester then passes. BYTES, so this catches that shape
+        # for the literal pairs only: a callable that round-trips JSON rewrites
+        # the whole file even when it changed no value, so `planted != text`
+        # there proves nothing about the edit. The backstop for a callable is the
+        # returncode check below — verified by deliberately neutering
+        # unregister_writer, which this did NOT catch and "the tester still
+        # passed" did. Left at bytes rather than grown into a per-format
+        # semantic diff: the check that actually decides is already downstream.
+        if planted == text:
+            failures.append("%s: the planted edit changed nothing — this harness proved nothing" % label)
             continue
-        open(target, "w").write(text.replace(old, new, 1))
+        open(target, "w").write(planted)
 
         out = subprocess.run(["bash", os.path.join(stage, "ac_cloud-writer/test/test-cloud-writer-tools.sh")],
                              capture_output=True, text=True)
