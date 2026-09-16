@@ -1,0 +1,43 @@
+name: "update-ack guard — a route that reports success must have observed one"
+
+# WHY THIS RUNS ON EVERY PUSH AND EVERY PULL REQUEST, WITH NO PATH FILTER.
+#
+# The failure it catches is not "somebody edited the updater". It is "somebody
+# wired a control surface to the UI and answered 200 anyway", and that shape can
+# arrive in any app that grows a debug route — the guard walks the tree for the
+# branch key precisely so a third copy is covered on the day it lands.
+#
+# What it cost the last time. On 2026-09-16 Diego's phone was four published
+# releases behind: Cloud-SuperApp, Cloud-Me, Cloud-Lib-News and Cloud-Lib-Cal
+# had all shipped and none had installed. POST /api/system/update answered
+# "update queued" every time. It had queued nothing — the handler called
+# DevControlBridge.host(), a WeakReference the launcher Activity clears in
+# onPause, so a fleet update arriving with the screen off hit a null and was
+# discarded by the safe-call. 1200 lines of the device's own logcat held zero
+# matches for updat|install|download|apk. Three Android tickets were closed on
+# "published" and had to be reopened, and #260/#261/#267/#70 could not land at
+# all, because every Android fix is dead until the APK reaches the phone (#280).
+#
+# BOTH STEPS MATTER. The first proves the tree is clean; the second proves the
+# guard would have said so if it were not. A guard only ever watched succeeding
+# is indistinguishable from one that returns 0 unconditionally — which is,
+# exactly, the thing the endpoint itself had been doing.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update-ack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No debug route acknowledges work it did not start
+        run: python3 1_cicd/src/scripts/cloud-android-update-ack-guard.py
+      - name: The guard still fails when the acknowledgement goes back to being a guess
+        run: bash 1_cicd/src/scripts/test/update-ack-guard.test.sh

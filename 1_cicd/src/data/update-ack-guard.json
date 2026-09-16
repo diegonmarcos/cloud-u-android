@@ -1,0 +1,25 @@
+{
+  "_doc": "Debug-server routes that are not allowed to acknowledge work they did not start. WHY THIS FILE EXISTS: on 2026-09-16 a phone sat four published releases behind while POST /api/system/update answered the literal string 'update queued' to every request. It had queued nothing. The handler posted onto the main Looper and called DevControlBridge.host()?.onActionFromServer(\"check_updates\"), and host() is a WeakReference the launcher Activity registers in onResume and clears in onPause — so a fleet-driven update, which by definition arrives with the screen off, hit a null and was discarded by the safe-call. 1200 lines of the device's own logcat held zero matches for updat|install|download|apk. Three Android tickets were closed on 'published' and reopened, because 'published' had quietly stopped implying 'installed' (#280, blocking #260/#261/#267/#70). The rule this file encodes is therefore not 'do not break the updater' but the narrower, checkable one: a route that reports success must report the success of something it actually observed.",
+
+  "_doc_fields": "route: the canonical op name, exactly as the server's `when` branch spells it — the guard finds implementations by searching every Kotlin file in the repo for that branch key, so a fourth app that grows a copy of this route is covered on the day it lands and not on the day somebody remembers to list it here. label: what a failure line calls the route, so the reader sees an endpoint and not a file path. forbidden_calls: substrings that must not appear anywhere in the branch body — the exact defect, spelled out. forbidden_reply_literals: response text that asserts an outcome; a literal here is a claim the handler is making without having checked, which is the bug in its purest form. required_calls: substrings that must appear, so deleting the real work is as loud as adding the fake acknowledgement back. min_implementations: how many copies the guard must find before it is willing to report a clean sweep. A guard that has quietly stopped matching anything prints exactly the same green as a guard over correct code, and that has happened in this repository before.",
+
+  "version": 1,
+
+  "_doc_exclude": "z_archive holds frozen copies kept for reference. Guarding them would demand edits to code nobody runs, and the whole point of archiving was to stop maintaining it.",
+  "exclude_path_prefixes": ["z_archive/"],
+
+  "routes": [
+    {
+      "route": "system/update",
+      "label": "POST /api/system/update",
+      "_doc_forbidden_calls": "DevControlBridge.host() is the defect itself. The bridge is documented as 'if no activity is registered, calls become no-ops and the server's reply still completes' — which is a defensible contract for a haptic preset and a catastrophic one for the only channel by which a fix reaches the phone. WorkManager needs no Activity, so this route has no reason to ask for one.",
+      "forbidden_calls": ["DevControlBridge.host()"],
+      "_doc_forbidden_reply_literals": "The sentence that cost the four releases. It was true of nothing that had happened.",
+      "forbidden_reply_literals": ["update queued"],
+      "_doc_required_calls": "Updater.requestCheck waits on the WorkManager Operation, logs at ERROR and publishes UpdateProgress.State.Failed when the enqueue does not land — State.Failed being the one state UpdateProgress.suppressed is documented never to hide. Requiring the call is what stops the fix from being reverted into a handler that neither lies nor works.",
+      "required_calls": ["Updater", ".requestCheck("],
+      "_doc_min_implementations": "aa_cloud-superapp and ac_cloud-nav both serve this route from their own DevControlServer.kt. Two copies of one defect is how it was found; the number is here so that losing one to a rename reads as a broken guard rather than as progress.",
+      "min_implementations": 2
+    }
+  ]
+}

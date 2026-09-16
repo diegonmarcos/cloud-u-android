@@ -48,7 +48,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  *                                    section: / page: / action: / http(s):
  *                                    / intent: / app: / stub:
  *   POST /action?type=X           → dispatchHomeAction(X)
- *   POST /update                  → equivalent to action=check_updates
+ *   POST /update                  → enqueue an update check (libs:updater)
+ *                                  → {"ok":bool,"message":"…"}; 503 if not started
  *   POST /restart                 → kill+relaunch the app process
  *
  * The server runs on a single accept-loop thread; each connection is
@@ -243,10 +244,20 @@ object DevControlServer {
                     }
                 }
                 "system/update" -> {
-                    DevControlBridge.runOnMain {
-                        DevControlBridge.host()?.onActionFromServer("check_updates")
-                    }
-                    reply(writer, "200 OK", "update queued\n")
+                    // DELIBERATELY NOT VIA DevControlBridge.host(). That is a
+                    // WeakReference live only between the Activity's onResume
+                    // and onPause, so every screen-off fleet update was dropped
+                    // by the safe-call while this line still answered
+                    // "update queued" — see Updater.requestCheck (#280).
+                    // The ack is now the outcome, and a failure is a 503.
+                    val ack = com.diegonmarcos.superapp.updater.Updater
+                        .requestCheck(ctx, "devcontrol:$op")
+                    reply(
+                        writer,
+                        if (ack.ok) "200 OK" else "503 Service Unavailable",
+                        """{"ok":${ack.ok},"message":"${jsonEscape(ack.message)}"}""",
+                        "application/json",
+                    )
                 }
                 "system/restart" -> {
                     reply(writer, "200 OK", "restarting…\n")
@@ -406,7 +417,7 @@ object DevControlServer {
             Spec("system/ping",         "GET",  false, "Health probe — returns 'pong'", ""),
             Spec("system/info",         "GET",  false, "App build info: version, vc, sha, port", ""),
             Spec("system/about",        "GET",  false, "Full About-page data as JSON: app build, device, stack (languages/frameworks/build times), and the folder/sitemap/AST trees", ""),
-            Spec("system/update",       "POST", true,  "Trigger an in-app update check (libs:updater)", ""),
+            Spec("system/update",       "POST", true,  "Enqueue an update check via libs:updater — replies {ok,message}; 503 when it could not be started", ""),
             Spec("system/restart",      "POST", true,  "Restart the SuperApp process", ""),
             Spec("diagnostics/logcat",  "GET",  false, "Recent logcat lines, threadtime format", "n=lines (default 300)"),
             Spec("diagnostics/trace",   "GET",  false, "Tail of Trace.kt's trace.log", "n=lines (default 300)"),

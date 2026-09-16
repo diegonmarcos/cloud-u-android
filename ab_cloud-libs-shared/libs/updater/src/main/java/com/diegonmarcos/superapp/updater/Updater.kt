@@ -1,12 +1,14 @@
 package com.diegonmarcos.superapp.updater
 
 import android.content.Context
+import android.util.Log
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.Operation
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
@@ -17,6 +19,11 @@ import java.util.concurrent.TimeUnit
  * build.json::release.auto_update — no caller-side config.
  */
 object Updater {
+    private const val TAG = "Updater"
+    /** Cap on the wait for WorkManager to accept the request. The enqueue is a
+     *  local DB write, so a wait this long means something is wrong, and a
+     *  caller holding an HTTP connection open must get an answer either way. */
+    private const val ENQUEUE_TIMEOUT_SECONDS = 15L
     private const val WORK_NAME = "superapp-auto-update"
     private const val ONE_SHOT_NAME = "superapp-update-now"
     private const val KICK_NAME = "superapp-update-kick"
@@ -122,7 +129,78 @@ object Updater {
      */
     fun downloadNow(context: Context) = enqueueUserInitiated(context, consented = true)
 
-    private fun enqueueUserInitiated(context: Context, consented: Boolean) {
+    /**
+     * The outcome of [requestCheck] — whether an update check is now really
+     * scheduled, and the sentence that says so.
+     *
+     * A boolean alone would let a caller keep inventing its own success text;
+     * carrying the message with the verdict means the log line, the on-screen
+     * error and the HTTP body are all the same sentence, and there is no
+     * wording in which "it failed" can be rendered as "queued".
+     */
+    data class Ack(val ok: Boolean, val message: String)
+
+    /**
+     * Start a one-shot update check on behalf of a caller that is NOT the
+     * foreground UI — the on-device debug server's POST /api/system/update,
+     * named by [origin] so the log says who asked.
+     *
+     * THE ACK USED TO BE A LIE, AND IT COST FOUR PUBLISHED APKs.
+     *
+     * The server's handler for that route was, in full:
+     *
+     *     DevControlBridge.runOnMain {
+     *         DevControlBridge.host()?.onActionFromServer("check_updates")
+     *     }
+     *     reply(writer, "200 OK", "update queued\n")
+     *
+     * and `DevControlBridge.host()` is a WeakReference that the launcher
+     * Activity registers in onResume and clears in onPause. A fleet-driven
+     * update arrives with the screen off and the app backgrounded — which is
+     * the entire point of driving it remotely — so host() was null, the
+     * safe-call discarded the whole request, and the server answered
+     * "update queued" for work that had never been queued, never been looked
+     * at, and never been logged. On 2026-09-16 that phone sat four releases
+     * behind while 1200 lines of its own logcat held zero matches for
+     * updat|install|download|apk: nothing had run, because nothing had been
+     * asked to. Three Android tickets were closed on "published" and reopened
+     * because "published" had stopped implying "installed" (#280, blocking
+     * #260/#261/#267/#70).
+     *
+     * So the UI is out of the path. WorkManager is reachable from any thread
+     * that has an application Context and does not care whether an Activity
+     * exists, which is exactly the property the old path lacked. And the
+     * answer is the outcome: [enqueueUserInitiated] hands back an [Operation],
+     * this waits on it, and an enqueue that fails returns ok=false, logs at
+     * ERROR and publishes [UpdateProgress.State.Failed] — a state
+     * [UpdateProgress.suppressed] is documented never to hide, so it reaches
+     * the screen even during an unattended pass. An updater that cannot update
+     * now says why, on the device, in the log and on the display.
+     *
+     * Blocking is correct here and not an oversight: the debug server handles
+     * each connection inline on its own accept-loop thread, never on the main
+     * Looper, and a reply sent before the enqueue resolved would be the same
+     * unverified optimism this method exists to delete.
+     */
+    fun requestCheck(context: Context, origin: String): Ack {
+        val app = context.applicationContext
+        return try {
+            enqueueUserInitiated(app, consented = false)
+                .result.get(ENQUEUE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            val msg = "update check enqueued as \"$ONE_SHOT_NAME\" by $origin — " +
+                "progress follows on logcat tags Updater/Check and Updater/Worker"
+            Log.i(TAG, msg)
+            Ack(true, msg)
+        } catch (t: Throwable) {
+            val msg = "update check could NOT be started ($origin): " +
+                "${t.javaClass.simpleName}: ${t.message ?: "no detail"}"
+            Log.e(TAG, msg, t)
+            UpdateProgress.update(UpdateProgress.State.Failed(msg))
+            Ack(false, msg)
+        }
+    }
+
+    private fun enqueueUserInitiated(context: Context, consented: Boolean): Operation {
         val request = OneTimeWorkRequestBuilder<UpdateWorker>()
             .setInputData(
                 Data.Builder()
@@ -135,7 +213,7 @@ object Updater {
                     .setRequiredNetworkType(NetworkType.CONNECTED)
                     .build()
             ).build()
-        WorkManager.getInstance(context).enqueueUniqueWork(
+        return WorkManager.getInstance(context).enqueueUniqueWork(
             ONE_SHOT_NAME, ExistingWorkPolicy.REPLACE, request,
         )
     }
