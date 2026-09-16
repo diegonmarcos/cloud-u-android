@@ -119,7 +119,15 @@ object Updater {
      * answering it calls [downloadNow]. On Wi-Fi nothing is withheld and there
      * is nothing to ask, so the tap downloads as before.
      */
-    fun checkNow(context: Context) = enqueueUserInitiated(context, consented = false)
+    // RETURNS UNIT, DELIBERATELY, AND THE BRACES ARE LOAD-BEARING. An expression
+    // body here infers Operation, which is androidx.work — a dependency this
+    // module declares `implementation`, so it is not on any consumer's compile
+    // classpath. Leaking it into a public signature broke cloud-wallet and
+    // cloud-me with "Cannot access class 'androidx.work.Operation'" at the call
+    // site (runs 35043275088 / 35043275146). Only [requestCheck] needs the
+    // Operation, and it keeps it inside this module and hands back an [Ack] of
+    // Boolean and String instead.
+    fun checkNow(context: Context) { enqueueUserInitiated(context, consented = false) }
 
     /**
      * The "Update now" button on the metered prompt (UpdateProgress.State
@@ -127,7 +135,8 @@ object Updater {
      * thing that button adds: the user has now seen the size and said yes, so
      * this run downloads over the metered network.
      */
-    fun downloadNow(context: Context) = enqueueUserInitiated(context, consented = true)
+    // Unit, braced, for the same classpath reason as [checkNow] above.
+    fun downloadNow(context: Context) { enqueueUserInitiated(context, consented = true) }
 
     /**
      * The outcome of [requestCheck] — whether an update check is now really
