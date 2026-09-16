@@ -111,6 +111,14 @@
           "values-es": "ab_cloud-libs-shared/libs/translate/src/main/res/values-es/strings.xml"
         }
       }
+    },
+
+    {
+      "_doc": "One-Hand edge sector \u2014 launch an app. The left and right edge handles dispatch a sector by package, and GestureAction.launch answered a package with no launch intent by returning: the menu animated, the finger lifted, and nothing happened at all. That is the Enhance key's defect wearing the launcher's costume, and it covered EVERY app: sector on both handles, not one control. It stopped being hypothetical when tasks 302/304 moved Drive into its own APK \u2014 the phone now carries a sector aimed at a package that may legitimately be absent, and the in-app page it used to open was deleted, so there is nothing to fall back to and silence was the only answer left. REPORTER IS A PLAIN TOAST, NOT A STRING RESOURCE, ON PURPOSE: libs/launcher-onehand is declared `exempt` in 1_cicd/src/i18n-policy.json on the stated ground that every label it draws comes from the host app's resources, so giving it a catalogue of its own would make that sentence false while the i18n guard skips the module and says nothing about it. `messages` is therefore absent, which is the plain-literal path this guard already supports and prints a note for.",
+      "label": "One-Hand edge sector \u2014 launch an app",
+      "source": "ab_cloud-libs-shared/libs/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/GestureAction.kt",
+      "entry": "private fun launch(ctx: Context, pkg: String, label: String?)",
+      "reporters": ["say("]
     }
   ],
 

@@ -93,14 +93,18 @@ sealed class GestureAction {
          * install path belongs to the host app behind `extapp:` targets, and an
          * accessibility service starting a download from a swipe would be a
          * second mechanism for something the SuperApp already owns.
+         *
+         * THE SENTENCE SITS ON THE EXIT ITSELF, not on the line above it. That
+         * is the shape 1_cicd/src/scripts/cloud-android-silence-guard.py reads,
+         * and this function is now a listed entry point in
+         * 1_cicd/src/data/silence-guard.json: a `return` here that names no
+         * reporter fails the build. An explanation on a neighbouring line is one
+         * careless edit away from being deleted on its own.
          */
         private fun launch(ctx: Context, pkg: String, label: String?) {
             val name = label?.takeIf { it.isNotBlank() } ?: pkg
             val intent = ctx.packageManager.getLaunchIntentForPackage(pkg)
-            if (intent == null) {
-                say(ctx, "$name is not installed")
-                return
-            }
+                ?: run { say(ctx, "$name is not installed"); return }
             intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
             runCatching { ctx.startActivity(intent) }
                 .onFailure { say(ctx, "$name could not be opened") }
