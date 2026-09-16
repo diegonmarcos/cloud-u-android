@@ -215,6 +215,38 @@ shell)
         err "[$APP_NAME] cannot derive this application's own source paths (cloud-android-source-identity.sh paths '$APP_DIR' produced nothing). With an empty set EVERY path reads as foreign and every failing tester would be downgraded to a warning — a suite that cannot go red. Refusing to run."
         exit 1
     fi
+
+    # AN APPLICATION'S OWN DIRECTORY IS ITS OWN SOURCE, and the list above does
+    # not say so. It is the ship workflow's `on: push: paths` set, which answers
+    # a DIFFERENT question — "which bytes mean a new APK" — so it names the
+    # things that BUILD (`<app>/app`, `<app>/build.json`, …) and deliberately
+    # omits two kinds of path: `<app>/test/**`, which the generator negates
+    # because editing a tester must not republish an APK whose code did not
+    # change, and `<app>` itself, which no trigger list ever needs to name.
+    #
+    # Reusing that answer for ATTRIBUTION made a tester foreign to its own
+    # application. _foreign_reach below matches a path only when it EQUALS an
+    # own entry or sits UNDER one, so the application's own directory — a
+    # PARENT of every entry — matched nothing and was reported as "source
+    # outside this application". Every tester in this repository finds the
+    # repository root with the house walk-up idiom, whose `[ -e "$PWD/.git" ]`
+    # and `cd ..` name exactly `<app>/.git` and `<app>` in the bash -x trace.
+    # Six of the eleven applications that have testers were in that state,
+    # cloud-mail's twelve and cloud-writer's six among them: their suites were
+    # downgraded to advisory and could not fail a release, which is the whole
+    # reason a suite exists. It was visible only as one COVERAGE-GAP line under
+    # a green tick — the "gate that never fires" this file warns about.
+    #
+    # One entry fixes both: `<app>` covers `<app>/test` and `<app>/.git` by the
+    # same prefix rule. Added HERE, at the one place that asks the attribution
+    # question, and NOT in cloud-android-source-identity.sh — the publish gate's
+    # answer is correct and must keep excluding test/. Two questions, two
+    # answers, one list each. This widens attribution to the application's own
+    # tree and nothing beyond it, so a genuinely foreign path still downgrades.
+    app_relative="$(cd "$APP_DIR" && pwd)"
+    app_relative="${app_relative#"$ROOT"/}"
+    printf '%s\n' "$app_relative" >>"$OWN_PATHS"
+
     can_trace=yes
     command -v bash >/dev/null 2>&1 || {
         can_trace=no
