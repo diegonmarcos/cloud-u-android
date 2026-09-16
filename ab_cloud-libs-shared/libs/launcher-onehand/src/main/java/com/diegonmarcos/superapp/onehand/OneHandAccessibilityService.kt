@@ -84,7 +84,7 @@ class OneHandAccessibilityService : AccessibilityService() {
     private fun fireRadial(c: OneHandConfig) {
         val idx = radialActive
         Log.i(TAG, "radial FIRE idx=$idx")
-        c.radial.items.getOrNull(idx)?.perform(this)
+        c.radial.items.getOrNull(idx)?.let { it.perform(this, labelForAction(it)) }
         closeRadial()
     }
 
@@ -243,7 +243,7 @@ class OneHandAccessibilityService : AccessibilityService() {
             MotionEvent.ACTION_UP -> {
                 if (activated) {
                     val key = SwipeClassifier.classify(h.edge, e.rawX - downX, e.rawY - downY, dp(c.swipeThresholdDp))
-                    key?.let { h.gestures[it]?.perform(this) }
+                    key?.let { slot -> h.gestures[slot]?.let { it.perform(this, labelForAction(it)) } }
                     endPreview()
                 } else if (hypot(e.rawX - downX, e.rawY - downY) < dp(12)) {
                     // Plain tap on the handle: Android never re-dispatches a consumed

@@ -33,10 +33,15 @@ sealed class GestureAction {
         is AppTarget -> "action:$target"
     }
 
-    fun perform(svc: AccessibilityService) {
+    /**
+     * [label] is the name the menu drew on the sector the finger just left. It
+     * is used for one thing only: SAYING which app is missing when the launch
+     * cannot happen. The package id is a correct answer and an unreadable one.
+     */
+    fun perform(svc: AccessibilityService, label: String? = null) {
         when (this) {
             is Global -> if (action.supported) svc.performGlobalAction(action.globalAction)
-            is OpenApp -> launch(svc, pkg)
+            is OpenApp -> launch(svc, pkg, label)
             is AppTarget -> openInHost(svc, target)
         }
     }
@@ -61,10 +66,44 @@ sealed class GestureAction {
             runCatching { ctx.startActivity(intent) }
         }
 
-        private fun launch(ctx: Context, pkg: String) {
-            val intent = ctx.packageManager.getLaunchIntentForPackage(pkg) ?: return
+        /** Say it out loud instead of doing nothing. Wrapped, because a throw
+         *  out of the gesture handler is worse than the silence it replaces. */
+        private fun say(ctx: Context, message: String) {
+            runCatching {
+                android.widget.Toast
+                    .makeText(ctx, message, android.widget.Toast.LENGTH_LONG)
+                    .show()
+            }
+        }
+
+        /**
+         * An `app:` sector whose package is not installed used to `return` here:
+         * the menu animated, the finger lifted, and nothing at all happened —
+         * indistinguishable from a missed swipe, and the single most common way
+         * a shortcut on this fleet fails without anyone noticing.
+         *
+         * That state is not hypothetical and it is not rare. Drive was lifted
+         * out of this app into its own APK (tasks 302 and 304), so the phone now
+         * carries an edge sector pointing at a package that may legitimately be
+         * absent, and the in-app page it used to open no longer exists to fall
+         * back to. The deliberate answer is therefore to make the failure
+         * VISIBLE rather than to substitute some other destination.
+         *
+         * Installing it is not offered from here on purpose: the download and
+         * install path belongs to the host app behind `extapp:` targets, and an
+         * accessibility service starting a download from a swipe would be a
+         * second mechanism for something the SuperApp already owns.
+         */
+        private fun launch(ctx: Context, pkg: String, label: String?) {
+            val name = label?.takeIf { it.isNotBlank() } ?: pkg
+            val intent = ctx.packageManager.getLaunchIntentForPackage(pkg)
+            if (intent == null) {
+                say(ctx, "$name is not installed")
+                return
+            }
             intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
             runCatching { ctx.startActivity(intent) }
+                .onFailure { say(ctx, "$name could not be opened") }
         }
     }
 }

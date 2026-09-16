@@ -15,7 +15,8 @@
 # path and into the branch that still had none. Two separate holes opened:
 #
 #   1. BUILD TIME. The catalogue is keyed on the raw target. The Drive TILE is
-#      declared `extapp:cloud-drive` (icon ic_p_sol_cloud); the sector is spelled
+#      declared `extapp:cloud-drive` (icon ic_p_sol_cloud at the time; #404 replaced
+#      it with ic_drive, see T6); the sector is spelled
 #      `app:com.diegonmarcos.clouddrive`. `action:`-stripping alone does not join
 #      those, so the lookup missed and the published catalogue really does carry
 #
@@ -52,6 +53,7 @@ BJ="$APP/build.json"
 FRAG="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/OneHandFragment.kt"
 OH_GRADLE="$LIBS/launcher-onehand/build.gradle"
 OH_SVC="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/OneHandAccessibilityService.kt"
+OH_ACT="$LIBS/launcher-onehand/src/main/java/com/diegonmarcos/superapp/onehand/GestureAction.kt"
 DRAWABLE="$APP/app/src/main/res/drawable"
 
 # FAIL CLOSED. Four testers in this repository once passed only because the tool
@@ -61,7 +63,7 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo "== RESULT: 0 passed, 1 failed =="
   exit 1
 fi
-for f in "$BJ" "$OH_GRADLE" "$OH_SVC" "$FRAG"; do
+for f in "$BJ" "$OH_GRADLE" "$OH_SVC" "$OH_ACT" "$FRAG"; do
   if [ ! -f "$f" ]; then
     echo "  FAIL: missing file $f — the tree is not what this tester was written against"
     echo "== RESULT: 0 passed, 1 failed =="
@@ -290,6 +292,118 @@ echo "$GRADLE" | grep -q "com.diegonmarcos.clouddrive" \
 echo "$GRADLE" | grep -q "t.startsWith('app:')" \
   && ok "the handle loop no longer skips every app: sector" \
   || bad "the handle loop still returns early on app: sectors — they are never given an icon"
+
+echo "== T6: the sector wears CLOUD DRIVE OWN icon, and still points at the app =="
+
+# #404. #284 fixed the PLUMBING — the sector resolves to whatever glyph the tile
+# declares — and the tile declared ic_p_sol_cloud, the generic palette cloud the
+# in-app Drive PAGE wore and that four other build.json entries also use. Right
+# machinery, wrong picture, and "Drive shows the page icon" is the half of the
+# owner report that survived #284. Three assertions, none of which a rename or a
+# revert can slip past:
+#
+#   6a  the sector still LAUNCHES THE APP. A revert to the in-app page would
+#       spell the target `action:section:drive` or `page:drive/...`; the whole
+#       point of 302/304 is that no such destination exists any more.
+#   6b  the glyph is Drive's ALONE. A name shared with another entry is how the
+#       page icon got here in the first place, and it is invisible in review.
+#   6c  the glyph is genuinely the Drive APK's, not something redrawn to look
+#       like it: every path in the SuperApp's copy must appear verbatim in
+#       ac_cloud-drive's own launcher foreground.
+DRIVE_APP="$APP/../ac_cloud-drive"
+FG="$DRIVE_APP/app/src/main/res/drawable/ic_launcher_foreground.xml"
+
+SECTOR=$(q "
+left = next(h for h in oh['handles'] if h['id']=='left')['gestures']
+print(left.get('down') or '')")
+
+case "$SECTOR" in
+  app:*clouddrive*)
+    ok "6a: the left down sector launches the Drive package (got: $SECTOR)" ;;
+  *section:*|*page:*)
+    bad "6a: the left down sector reverted to an in-app page target ($SECTOR) — that page was deleted by 302/304" ;;
+  *)
+    bad "6a: the left down sector is $SECTOR — it must launch the extracted Drive package" ;;
+esac
+
+ICON=$(q "
+left = next(h for h in oh['handles'] if h['id']=='left')['gestures']
+hit = tiles.get(key(left.get('down') or ''))
+print((hit or {}).get('icon') or '')")
+
+if [ -z "$ICON" ]; then
+  bad "6b: the Drive sector resolves to no icon at all"
+else
+  SHARED=$(q "
+import json
+name = '$ICON'
+seen = []
+def walk(node, path):
+    if isinstance(node, dict):
+        if node.get('icon') == name:
+            seen.append(node.get('id') or node.get('label') or path)
+        for k, v in node.items():
+            walk(v, path + '/' + str(k))
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            walk(v, path + '/%d' % i)
+walk(d, '')
+print(len(seen))
+print(','.join(str(x) for x in seen))")
+  COUNT=$(printf '%s\n' "$SHARED" | sed -n 1p)
+  WHO=$(printf '%s\n' "$SHARED" | sed -n 2p)
+  [ "$COUNT" = "1" ] \
+    && ok "6b: $ICON is declared by exactly one entry — it is Drive's own glyph, not a shared palette mark" \
+    || bad "6b: $ICON is declared by $COUNT entries ($WHO) — a shared glyph, which is how the in-app page icon reached this sector"
+
+  if [ ! -f "$FG" ]; then
+    bad "6c: $FG is missing — cannot prove the glyph came from the Drive APK"
+  else
+    PROV=$(python3 - "$DRAWABLE/$ICON.xml" "$FG" <<'PYEOF2'
+import re, sys
+def paths(f):
+    return [p for p in re.findall(r'android:pathData="([^"]+)"', open(f).read())]
+mine, theirs = paths(sys.argv[1]), set(paths(sys.argv[2]))
+if not mine:
+    print("NONE"); raise SystemExit
+missing = [p for p in mine if p not in theirs]
+print("OK" if not missing else "MISSING:%d/%d" % (len(missing), len(mine)))
+PYEOF2
+)
+    case "$PROV" in
+      OK)   ok "6c: every path in $ICON is copied verbatim from ac_cloud-drive's launcher foreground" ;;
+      NONE) bad "6c: $ICON declares no paths — it draws nothing" ;;
+      *)    bad "6c: $ICON does not match the Drive APK's launcher foreground ($PROV paths differ) — it is not that app's icon" ;;
+    esac
+  fi
+fi
+
+echo "== T7: a sector whose app is NOT installed must SAY so, never go quiet =="
+
+# Drive is the one sector on this handle that can legitimately point at an
+# absent package — it lives in its own APK now, and there is no in-app page left
+# to fall back to. GestureAction.launch used to answer that with a bare `return`:
+# menu animates, finger lifts, nothing happens, indistinguishable from a missed
+# swipe. Silence is the defect; which visible answer is chosen is not asserted
+# here, only that one exists and that it names the destination.
+ACT=$(strip_kt "$OH_ACT" | tr '\n' ' ' | tr -s ' ')
+
+echo "$ACT" | grep -q 'getLaunchIntentForPackage(pkg) ?: return' \
+  && bad "launch() still returns silently when the package is absent — the swipe does nothing and says nothing" \
+  || ok "launch() no longer swallows an absent package with a bare return"
+
+echo "$ACT" | grep -q 'is not installed' \
+  && ok "and it tells the user the app is not installed" \
+  || bad "nothing in GestureAction says an app is not installed — the failure is still invisible"
+
+echo "$ACT" | grep -q 'fun perform(svc: AccessibilityService, label: String? = null)' \
+  && ok "perform() carries the sector's own label, so the message can name Drive rather than a package id" \
+  || bad "perform() takes no label — a not-installed message could only print the raw package id"
+
+echo "$SVC" | grep -q 'perform(this, labelForAction(it))' \
+  && ok "and the service passes the label it just drew on that sector" \
+  || bad "the service calls perform() without the label it already resolved"
+
 
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

@@ -2474,10 +2474,10 @@
             "title": "Data Apps",
             "tiles": [
               {
-                "_doc": "Drive, the leading tile of Data Apps. It used to be a `page:drive/connections` deep link into an in-app section; task 302/304 lifted those four tabs out into the standalone Cloud Drive APK (ac_cloud-drive, com.diegonmarcos.clouddrive), whose Files tab is a full native local file manager rather than a list of remote back ends. The tile now LAUNCHES that app through the `extapp:` resolver and ui.external_apps.cloud-drive. The tile id is unchanged because the Home tile rows address it by id.",
+                "_doc": "Drive, the leading tile of Data Apps. It used to be a `page:drive/connections` deep link into an in-app section; task 302/304 lifted those four tabs out into the standalone Cloud Drive APK (ac_cloud-drive, com.diegonmarcos.clouddrive), whose Files tab is a full native local file manager rather than a list of remote back ends. The tile now LAUNCHES that app through the `extapp:` resolver and ui.external_apps.cloud-drive. The tile id is unchanged because the Home tile rows address it by id. ICON \u2014 THIS TILE IS THE ONE PLACE THE DRIVE GLYPH IS DECLARED. The one-hand left-edge `down` sector carries no icon field of its own: libs/launcher-onehand/build.gradle derives action_catalogue from these tiles, canonicalising `extapp:cloud-drive` and `app:com.diegonmarcos.clouddrive` onto one key through ui.external_apps, and OneHandAccessibilityService.declaredIcon draws whatever this field names when the APK is not installed. Changing it here therefore changes the tile AND the edge sector, and there is deliberately no second field anywhere to disagree with it. It was ic_p_sol_cloud, a shared palette glyph four other entries also use and the mark the in-app Drive PAGE wore; task 404 made it ic_drive, which now holds Cloud Drive OWN launcher foreground copied verbatim from ac_cloud-drive/app/src/main/res/drawable/ic_launcher_foreground.xml \u2014 the same thing Writer, Camera and Nav already do for their extracted apps. Sections.iconResFor falls back to ic_link_tile in silence when a name resolves to nothing, so both the existence of that drawable and its provenance are pinned by test-onehand-app-sector-icon.sh rather than trusted.",
                 "id": "drive-conn",
                 "label": "Drive",
-                "icon": "ic_p_sol_cloud",
+                "icon": "ic_drive",
                 "target": "extapp:cloud-drive"
               },
               {

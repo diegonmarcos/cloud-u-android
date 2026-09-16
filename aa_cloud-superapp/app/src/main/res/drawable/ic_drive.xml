@@ -1,9 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Drive icon — Google-Drive-style triangle composed of three faces. -->
+<!--
+  Cloud Drive's OWN launcher glyph.
+
+  SOURCE: ac_cloud-drive/app/src/main/res/drawable/ic_launcher_foreground.xml —
+  the adaptive-icon foreground that app ships as its launcher icon. Both paths
+  are copied verbatim; nothing was redrawn. Copied rather than depended on
+  because aa_cloud-superapp does not compile ac_cloud-drive and there is no
+  shared icon module — the same reason ic_writer is a copy of Cloud Writer's and
+  ic_camera a copy of Cloud Camera's.
+
+  WHAT THIS FILE HELD BEFORE, AND WHY IT IS GONE: the in-app Drive PAGE's glyph,
+  a three-faced triangle borrowed from another vendor's storage product. Task
+  302/304 deleted that page — Drive is a separate application now — so the
+  triangle named a destination that no longer exists and had no consumer left in
+  the tree. The name is right, the artwork was not.
+
+  VIEWPORT CROPPED 108 -> 58. The source is an adaptive-icon foreground, so its
+  art sits inside the mandated safe zone with wide margins on every side. In a
+  24dp tile that margin is not padding, it is a glyph drawn at roughly half the
+  size of every neighbour in the row. The group translate re-origins the SAME
+  coordinates onto the art's own bounding box (x 34.83..83.48, y 23.08..77.17),
+  centred, so Drive fills its tile exactly as ic_writer does.
+
+  NO android:tint, and the white fills are kept. Two surfaces draw this file and
+  they want opposite things: GroupedTilesFragment overwrites the ImageView's
+  imageTintList with the flat palette colour on every bind, so only the SHAPE
+  survives there; the one-hand edge menu draws it through
+  OneHandAccessibilityService.drawableIcon, which applies no tint at all and
+  paints it over GesturePreviewView's dark scrim beside white labels. White is
+  correct for the second and irrelevant to the first.
+
+  When the app IS installed the edge menu does not use this at all —
+  iconForAction asks PackageManager for the live launcher icon first. This is
+  the not-installed face of the sector, which is the state it ships in.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp" android:height="24dp"
-    android:viewportWidth="24" android:viewportHeight="24"
-    android:tint="?attr/colorOnSurface">
-    <path android:fillColor="@android:color/white"
-        android:pathData="M7.71,3.5 L1.15,15 L4.58,21 L11.13,9.5 L7.71,3.5 z M9.27,15 L5.85,21 L18.42,21 L21.85,15 L9.27,15 z M22.85,13.5 L16.29,2 L9.42,2 L15.99,13.5 L22.85,13.5 z" />
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="58"
+    android:viewportHeight="58">
+
+    <group android:translateX="-30.16" android:translateY="-21.13">
+
+        <!-- App glyph (24dp Material, centred in the source's safe area) -->
+        <group android:scaleX="1.917" android:scaleY="1.917" android:translateX="31" android:translateY="35">
+            <path android:fillColor="#FFFFFFFF" android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM11,19.93c-3.95,-0.49 -7,-3.85 -7,-7.93 0,-0.62 0.08,-1.21 0.21,-1.79L9,15v1c0,1.1 0.9,2 2,2v1.93zM17.9,17.39c-0.26,-0.81 -1,-1.39 -1.9,-1.39h-1v-3c0,-0.55 -0.45,-1 -1,-1H8v-2h2c0.55,0 1,-0.45 1,-1V7h2c1.1,0 2,-0.9 2,-2v-0.41c2.93,1.19 5,4.06 5,7.41 0,2.08 -0.8,3.97 -2.1,5.39z" />
+        </group>
+
+        <!-- Shared cloud tick (the icon family's mark), top-right, translucent -->
+        <group android:scaleX="0.62" android:scaleY="0.62" android:translateX="68.6" android:translateY="20.6">
+            <path android:fillColor="#F2FFFFFF" android:pathData="M19.35,10.04C18.67,6.59 15.64,4 12,4 9.11,4 6.6,5.64 5.35,8.04 2.34,8.36 0,10.91 0,14c0,3.31 2.69,6 6,6h13c2.76,0 5,-2.24 5,-5 0,-2.64 -2.05,-4.78 -4.65,-4.96z" />
+        </group>
+
+    </group>
 </vector>
