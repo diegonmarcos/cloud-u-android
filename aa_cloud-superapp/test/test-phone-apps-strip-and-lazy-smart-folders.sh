@@ -89,6 +89,122 @@ body = re.sub(r"(?m)//.*$", "", body)
 print(body)
 PY
 
+# WHICH THREAD IS A GIVEN CALL ON. Reads a comment-stripped function body on
+# stdin, takes the text of a call, and answers with the kind of the INNERMOST
+# dispatch region enclosing that call site -- "off-main", "main" or "none".
+#
+# WHY THIS ANCHOR AND NOT A TOKEN. T7 shipped red in run 35053915837 asserting
+# the literal strings `Thread {` and `body.post {`. Those were never the
+# property; they were ONE mechanism's spelling of it. #261 replaced the bare
+# Thread with `lifecycleScope.launch { withContext(Dispatchers.IO) { ... } }`,
+# which keeps both properties AND adds the cancellation a raw Thread can never
+# have -- and the token assertions went red on an improvement. A tester that
+# fails when the code gets better is not protecting anything, and the next
+# agent's cheapest way out of it is to delete the assertion.
+#
+# So the question asked here is the question the RUNTIME asks: what is the
+# innermost construct that changed threads before this line runs? Nesting
+# resolves the way Kotlin resolves it, innermost wins, which is why the old
+# `Thread { body.post { render } }` and the new `launch { withContext(IO) {} }`
+# BOTH answer correctly without either being named in an assertion. Drifting
+# off this anchor requires moving a call across a dispatch boundary -- that is,
+# actually breaking the property -- instead of merely renaming, reformatting or
+# re-spelling the mechanism, which is all it took last time.
+#
+# ADDING A MECHANISM IS THE ONE EDIT THIS INVITES: a new way to leave the main
+# thread goes in OFF_MAIN, a new way to return to it goes in MAIN. An unknown
+# construct answers "none" and so FAILS CLOSED -- it never answers "main" by
+# default, so a mechanism nobody taught this scanner cannot pass by silence.
+DISPATCH="$(mktemp)" || exit 2
+cat > "$DISPATCH" <<'PY'
+import re, sys
+
+# Constructs that MOVE WORK OFF the main thread.
+OFF_MAIN = [
+    r"withContext\s*\(\s*Dispatchers\.(?:IO|Default)\b[^)]*\)\s*\{",
+    r"\blaunch\s*\(\s*Dispatchers\.(?:IO|Default)\b[^)]*\)\s*\{",
+    r"\basync\s*\(\s*Dispatchers\.(?:IO|Default)\b[^)]*\)\s*\{",
+    r"\bThread\s*\(?\s*\{",
+    r"\bthread\s*\([^)]*\)\s*\{",
+    r"\b\w*[Ee]xecutor\w*\s*\.\s*(?:submit|execute)\s*\(?\s*\{",
+]
+# Constructs that bring work BACK ON the main thread. lifecycleScope.launch
+# with no dispatcher argument belongs here: lifecycleScope is contractually
+# Dispatchers.Main.immediate, and that is precisely what makes the resumption
+# after a withContext(IO) block a main-thread resumption.
+MAIN = [
+    r"\.\s*post(?:Delayed)?\s*\(?\s*\{",
+    r"\brunOnUiThread\s*\(?\s*\{",
+    r"withContext\s*\(\s*Dispatchers\.Main\b[^)]*\)\s*\{",
+    r"\blifecycleScope\s*\.\s*launch\s*\{",
+    r"\blaunch\s*\(\s*Dispatchers\.Main\b[^)]*\)\s*\{",
+]
+
+body, call = sys.stdin.read(), sys.argv[1]
+
+
+def close_of(source, open_brace):
+    """Index of the brace matching source[open_brace], skipping string literals."""
+    depth, index, size = 0, open_brace, len(source)
+    while index < size:
+        char = source[index]
+        if char == '"':
+            index += 1
+            while index < size and source[index] != '"':
+                index += 2 if source[index] == "\\" else 1
+        elif char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return index
+        index += 1
+    return -1
+
+
+regions = []
+for kind, patterns in (("off-main", OFF_MAIN), ("main", MAIN)):
+    for pattern in patterns:
+        for match in re.finditer(pattern, body):
+            opening = match.end() - 1          # every pattern ends on its own {
+            closing = close_of(body, opening)
+            if closing > 0:
+                regions.append((opening, closing, kind, " ".join(match.group(0).split())))
+
+site = re.search(re.escape(call), body)
+if not site:
+    print("__CALL_NOT_FOUND__")
+    sys.exit(0)
+
+enclosing = [r for r in regions if r[0] < site.start() < r[1]]
+if not enclosing:
+    print("none\tno dispatch region at all -- it runs on the caller's thread")
+else:
+    innermost = max(enclosing, key=lambda region: region[0])
+    print(innermost[2] + "\t" + innermost[3])
+PY
+
+# RESOLVED THE SAME WAY THE BODIES ARE, AND FOR THE SAME REASON: at top level,
+# into a file, never inside $( ). `exit` inside a command substitution ends the
+# subshell and nothing else -- see the note above load(). Writes
+# "<kind><TAB><the construct>" and fails closed, loudly, when the call is not
+# there at all: a tester that cannot find the thing it is judging must never
+# report a verdict on it.
+dispatch() {  # dispatch <slot> <body-key> <call-text>
+    if ! body "$2" | python3 "$DISPATCH" "$3" > "$BODIES/@$1"; then
+        echo "FATAL: the dispatch scanner failed on $3 -- refusing to report a verdict"; exit 2
+    fi
+    if grep -qxF '__CALL_NOT_FOUND__' "$BODIES/@$1"; then
+        echo "FATAL: $3 is not called in the $2 body -- this tester cannot judge which thread"
+        echo "       a call it cannot find runs on. If the call was renamed, rename it here"
+        echo "       too; if it was deleted, the behaviour it implemented went with it."
+        exit 2
+    fi
+}
+
+where() { cut -d"$(printf '\t')" -f2 "$BODIES/@$1"; }   # the construct
+kind()  { cut -d"$(printf '\t')" -f1 "$BODIES/@$1"; }   # off-main | main | none
+
 # EVERY BODY IS RESOLVED UP FRONT, AT TOP LEVEL, AND NEVER INSIDE $( ).
 #
 # The first draft of this file had `body()` print the body and `exit 2` when the
@@ -100,7 +216,7 @@ PY
 # verdict's clothes -- so the fatal path runs where `exit` means exit, and the
 # assertions below only ever read a file that is already known to be good.
 BODIES="$(mktemp -d)" || exit 2
-trap 'rm -rf "$SCANNER" "$BODIES"' EXIT
+trap 'rm -rf "$SCANNER" "$DISPATCH" "$BODIES"' EXIT
 
 load() {  # load <key> <file> <indent> <name>
     if ! python3 "$SCANNER" "$2" "$3" "$4" > "$BODIES/$1"; then
@@ -126,6 +242,10 @@ load section    "$SUITE" 4 addSmartFoldersSection
 load async      "$PHONE" 8 renderSmartFoldersAsync
 load compute    "$PHONE" 8 computeSmartFolders
 load invalidate "$PHONE" 8 invalidateCache
+
+# The two thread-placement facts T7 judges, resolved here with the bodies.
+dispatch ipc    async 'computeSmartFolders(appContext'
+dispatch render async 'renderSmartFolderBody(body.context'
 
 echo "== T1: each Quickmarks line is a HorizontalScrollView strip =="
 STRIP="$(body strip)"
@@ -233,26 +353,39 @@ else
     bad "buildPage does not install the lazy section -- Smart Folders reach the page some other way"
 fi
 
-echo "== T7: the expensive selection runs off the main thread =="
+echo "== T7: the expensive selection runs off the main thread, the render back on it =="
 ASYNC="$(body async)"
-if printf '%s\n' "$ASYNC" | grep -qF 'Thread {'; then
-    ok "renderSmartFoldersAsync does its work on a background Thread"
+# THESE TWO ASSERTIONS USED TO NAME A MECHANISM AND THAT IS WHY THEY DRIFTED.
+# They read `Thread {` and `body.post {`; #261 replaced both with a cancellable
+# coroutine and they went red on an improvement (#364, run 35053915837). They
+# now ask which thread the two calls that matter actually run on, via the
+# dispatch scanner above -- see its header for why that cannot drift the same
+# way. Both remain FATAL assertions; neither was loosened, and the mutation
+# proof for both is in the commit message.
+#
+# PROPERTY 1 -- THE PACKAGE-MANAGER IPCs ARE NOT ON THE MAIN THREAD. Four
+# install_source rules call getInstallSourceInfo once per installed app and
+# five ranking rules each walk a multi-day history; on a phone with a few
+# hundred apps that is ~1000 synchronous binder round trips. On the main
+# thread it is not a slow page, it is an ANR.
+if [ "$(kind ipc)" = "off-main" ]; then
+    ok "the package-manager selection runs off the main thread -- innermost dispatch is \`$(where ipc)\`"
 else
-    bad "renderSmartFoldersAsync starts no Thread -- the package-manager IPCs are back on the main thread"
+    bad "computeSmartFolders runs on the MAIN thread ($(kind ipc): $(where ipc)) -- ~1000 package-manager IPCs before a frame is the ANR this page was fixed for"
 fi
 if printf '%s\n' "$ASYNC" | grep -qF 'computeSmartFolders(appContext'; then
     ok "the selection runs against the application Context, not the fragment's Activity"
 else
-    bad "the background work captures the fragment's Context -- that is a leak for the run of the thread"
+    bad "the background work captures the fragment's Context -- that is a leak for the run of the probe"
 fi
-# Off the main thread is only half of it: the RESULT has to come back to it.
-# Views may only be touched from the thread that made them, so a render left on
-# the worker is not a slow page, it is a CalledFromWrongThreadException. Caught
-# by mutating body.post{} to run{} and finding this block still green.
-if printf '%s\n' "$ASYNC" | grep -qF 'body.post {'; then
-    ok "the result is posted back to the main thread before any View is touched"
+# PROPERTY 2 -- THE RENDER IS BACK ON THE MAIN THREAD BEFORE IT TOUCHES A VIEW.
+# Off the main thread is only half of it. Views may only be touched from the
+# thread that made them, so a render left on the worker is not a slow page, it
+# is a CalledFromWrongThreadException.
+if [ "$(kind render)" = "main" ]; then
+    ok "the View render is handed back to the main thread -- innermost dispatch is \`$(where render)\`"
 else
-    bad "the render is not posted back -- Views would be built on the worker thread and crash"
+    bad "renderSmartFolderBody runs on a non-main thread ($(kind render): $(where render)) -- Views built there crash with CalledFromWrongThreadException"
 fi
 # And the selection itself must build no Views, or moving it off the main thread
 # would trade a slow page for a crash.
