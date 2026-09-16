@@ -1,42 +1,55 @@
 #!/usr/bin/env bash
-# THE NAME THIS APP SHOWS THE OWNER MUST BE THE PRODUCT NAME, AND IT MUST STILL GET THERE.
+# THE NAME THIS APP SHOWS THE OWNER IS THE FLEET NAME, AND IT MUST STILL GET THERE.
 #
-# The rebrand was never a missing substitution. Every link works. What shipped
-# wrong was the VALUE: upstream.online.configure --with-app-name carried
-# "cloud-office", the directory slug, and configure.ac:1179 defines that flag as
-# "the user-visible name of the app you build" — its own default is
-# "Collabora Online Development Edition", spaces and all.
+# THE HOLE THIS FILLS. aa_cloud-superapp/test/test-app-names-pattern.sh is the
+# fleet-wide rule: T1 every application is named cloud-<x>, T2 that name is the
+# app's own build.json::.name, T6 an app whose app/build.gradle reads its own
+# build.json takes its LAUNCHER LABEL from that name rather than copying it into
+# strings.xml. T6 says in its own comment that it covers only apps with such a
+# reader. Cloud Office has none: its label comes from configure substituting
+# @APP_NAME@ into android/app/appSettings.gradle, two build systems away. So the
+# one app whose name travels the longest road is the one app the fleet rule
+# cannot see, and this is the rule that sees it.
 #
-# READ OUT OF Cloud-Office.apk AS PUBLISHED (266,888,676 bytes, run 35043058309),
-# not inferred from source:
-#   resources.arsc   string/app_name = 'cloud-office'
-#                    -> <application android:label> : THE LAUNCHER LABEL
-#                    -> AboutDialogFragment.java:89 : the About dialog TITLE
-#                    -> AboutDialogFragment.java:77 : the $APP_NAME substituted
-#                       into string/app_description, so the About text read
-#                       "cloud-office is a modern, easy-to-use ... suite"
-#   assets/dist/cool.html   <title>cloud-office</title>
-#                           data-mobile-app-name='cloud-office'
-#                    -> global.js sets window.brandProductName from it, which is
-#                       what brands the document title, the loading spinner, the
-#                       web About dialog and the titles core sends for its own
-#                       dialogs.
-# The same read found ZERO "Collabora" brand strings in resources.arsc and one
-# in classes2.dex — a github.com/CollaboraOnline attribution URL in the About
-# box, which is correct and stays.
+# WHY THE VALUE IS A SLUG AND NOT "Cloud Office". configure.ac:1179 calls
+# --with-app-name "the user-visible name of the app you build" and defaults it to
+# "Collabora Online Development Edition", so upstream expects a display name with
+# spaces. This fleet answers differently and on purpose: ac_cloud-browser,
+# ac_cloud-writer and ac_cloud-drive all do
+# resValue "string", "app_name", buildJson.name, so their home screens read
+# cloud-browser, cloud-writer, cloud-drive. A capitalised "Cloud Office" was tried
+# at a43bc99c6 and test-app-names-pattern failed it (run 35048141723, 125 passed
+# 1 failed) — correctly: it would have spelled one app unlike all the others on
+# the same home screen, and that tester's header records the owner asking for the
+# pattern twice.
+#
+# WHAT #224's "rebrand fully" ACTUALLY MEANS IS THE ABSENCE OF "COLLABORA", and
+# that is true of the published bytes. resources.arsc in Cloud-Office.apk was
+# parsed in full: 18,290 string resource entries, ZERO containing 'Collabora'.
+# classes2.dex contains it once, in
+# <a href="https://github.com/CollaboraOnline/online/commits/ — the About box's
+# attribution link to the upstream project, which is correct and stays.
 #
 # TWO THINGS ARE CHECKED, AND THEY FAIL FOR DIFFERENT REASONS.
 #
-#   T1/T2 — THE VALUE, cross-checked against a DIFFERENT field so the rule is not
-#   circular. This fleet names its release asset after its product, so
-#   release.gh_release.asset_name with '.apk' dropped and '-' turned into ' ' IS
-#   the product name: Cloud-Office.apk -> "Cloud Office". The old value fails it.
+#   T1/T2 — THE VALUE. It must equal this app's build.json::.name, the single
+#   field the whole fleet is keyed on, and it must match the cloud-<x> pattern
+#   the fleet rule enforces. Keyed on .name rather than on a rendering of the
+#   asset name so a rename has ONE place to happen and no second field that can
+#   disagree with it.
 #
 #   T3 — THE CHAIN, against upstream at the pin. Nothing in this repository
 #   compiles browser/ or android/, so if upstream renames a placeholder or stops
-#   assigning brandProductName, the value fix silently stops reaching the screen
-#   and every other tester still passes. Each link is a file and the literals
-#   that must still be in it, from build.json::app_identity.substitution_chain.
+#   assigning brandProductName, the name silently stops reaching the screen and
+#   every other tester still passes. Each link is a file and the literals that
+#   must still be in it, from build.json::app_identity.substitution_chain.
+#   Measured on the published APK, these are the surfaces at the far end:
+#   resources.arsc string/app_name (the launcher label via
+#   <application android:label>, the About title and the $APP_NAME substituted
+#   into the About text by AboutDialogFragment.java:77,89), and
+#   assets/dist/cool.html's <title> and data-mobile-app-name, from which global.js
+#   sets window.brandProductName — which brands the document title, the loading
+#   spinner, the web About dialog and the titles core sends for its own dialogs.
 #
 # Usage: ./test-app-name-reaches-the-user.sh              (needs network: Gerrit REST)
 #        ./test-app-name-reaches-the-user.sh --self-test  (also prove the failure path fails)
@@ -69,29 +82,24 @@ NLINKS="$(jq -r '.app_identity.substitution_chain | length' "$BJ" 2>/dev/null ||
     || die "build.json::app_identity.substitution_chain is empty — a chain of no links proves nothing"
 
 NAME="$(jq -r --arg f "$FLAG" '.upstream.online.configure[$f] // empty' "$BJ")"
-ASSET="$(jq -r ".$DERIVED_FROM // empty" "$BJ")"
-[ -n "$NAME" ]  || die "upstream.online.configure['$FLAG'] is unset — the app would take upstream's default name"
-[ -n "$ASSET" ] || die "$DERIVED_FROM is unset — nothing to cross-check the name against"
-
-# The derivation, spelled once. 'Cloud-Office.apk' -> 'Cloud Office'.
-EXPECTED="$(printf '%s' "${ASSET%.apk}" | tr '-' ' ')"
-
-echo "== T1: the product name agrees with the asset this fleet publishes =="
+EXPECTED="$(jq -r ".$DERIVED_FROM // empty" "$BJ")"
+[ -n "$NAME" ]     || die "upstream.online.configure['$FLAG'] is unset — the app would take upstream's default name, \"Collabora Online Development Edition\""
+[ -n "$EXPECTED" ] || die "build.json::.$DERIVED_FROM is unset — nothing to cross-check the name against"
+echo "== T1: the launcher label is the app's ONE fleet name =="
 if [ "$NAME" = "$EXPECTED" ]; then
-    ok "$FLAG is '$NAME', which is $DERIVED_FROM ('$ASSET') read as a product name"
+    ok "$FLAG is '$NAME', the same string as build.json::.$DERIVED_FROM"
 else
-    bad "$FLAG is '$NAME' but $DERIVED_FROM ('$ASSET') says the product is '$EXPECTED' — the store, the release and the launcher would name three different things"
+    bad "$FLAG is '$NAME' but build.json::.$DERIVED_FROM is '$EXPECTED' — the home screen would spell this app differently from the fleet roster, the store row and every sibling app"
 fi
 
-echo "== T2: the product name is a name, not a build-system slug =="
-# An INDEPENDENT shape check, so changing both fields to slugs still fails. This
-# is the exact shape that shipped: lowercase, hyphenated, no space.
-if printf '%s' "$NAME" | grep -q -- '-'; then
-    bad "$FLAG is '$NAME' — a hyphen is a slug separator, and this value is what the launcher, the About box and the WebView <title> print verbatim"
-elif [ "$NAME" = "$(printf '%s' "$NAME" | tr '[:upper:]' '[:lower:]')" ]; then
-    bad "$FLAG is '$NAME' — an all-lowercase value is a directory id, not a product name shown to a person"
+echo "== T2: that name follows the fleet pattern =="
+# An INDEPENDENT shape check, so setting BOTH fields to a display name still
+# fails here. Same pattern as test-app-names-pattern.sh T1, restated on this side
+# because the value being checked is the one that reaches the home screen.
+if printf '%s' "$NAME" | grep -qE '^(cloud|c3)-[a-z0-9]+(-[a-z0-9]+)*$'; then
+    ok "'$NAME' matches the fleet's cloud-<x> / c3-<x> pattern"
 else
-    ok "'$NAME' reads as a product name (no slug hyphen, not all-lowercase)"
+    bad "$FLAG is '$NAME', which is not cloud-<x> or c3-<x> — this value is what the launcher, the About box and the WebView <title> print verbatim, and aa_cloud-superapp/test/test-app-names-pattern.sh fails the whole fleet on it"
 fi
 
 echo "== T3: upstream still carries that one value to every surface =="
@@ -140,15 +148,16 @@ done < <(jq -c '.app_identity.substitution_chain[]' "$BJ")
 [ "$checked" -ge 1 ] || bad "not one link of the substitution chain was verified — this run proved nothing"
 
 if [ "$SELFTEST" -eq 1 ]; then
-    echo "== T4: SELF-TEST — the old slug must fail T1 and T2 =="
-    OLD="cloud-office"
+    echo "== T4: SELF-TEST — a display name must fail T1 and T2 =="
+    # The exact value a43bc99c6 shipped and run 35048141723 rejected.
+    WRONG="Cloud Office"
     t1=0; t2=0
-    [ "$OLD" = "$EXPECTED" ] || t1=1
-    printf '%s' "$OLD" | grep -q -- '-' && t2=1
+    [ "$WRONG" = "$EXPECTED" ] || t1=1
+    printf '%s' "$WRONG" | grep -qE '^(cloud|c3)-[a-z0-9]+(-[a-z0-9]+)*$' || t2=1
     if [ "$t1" -eq 1 ] && [ "$t2" -eq 1 ]; then
-        ok "'$OLD', the value that actually shipped, fails T1 and T2 as it must"
+        ok "'$WRONG', the value the fleet guard rejected, fails T1 and T2 as it must"
     else
-        bad "'$OLD' passes this rule — the tester cannot detect the defect it exists for"
+        bad "'$WRONG' passes this rule — the tester cannot detect the defect it exists for"
     fi
 
     echo "== T5: SELF-TEST — a broken chain link must fail T3 =="
