@@ -49,8 +49,41 @@ silence WAS the defect.
 The selection is never written to logcat. This fleet uploads logcat from its
 diagnostics screens, so a logged selection is a selection that leaves the phone.
 
-Settings also moves into the document's own Edit menu; it was previously reachable
+Settings also moves into the document's own menu; it was previously reachable
 only by closing the document you were editing, which is why nobody found it.
+
+BOTH ROWS ARE ADDED TWICE, AND THAT IS NOT A DUPLICATE. Control.Menubar carries
+two unrelated sets of menu definitions. `options.text` (and its presentation /
+drawing / spreadsheet siblings) is what _onRefresh() hands to _initializeMenu()
+for the DESKTOP menubar. `options.mobiletext` (and its siblings) is what
+generateFullMenuStructure() reads, as this.options['mobile' + getDocType()], to
+build the wizard the TOP-RIGHT HAMBURGER opens — which on a phone is the only
+menu there is. The first version of this patch only ever touched `options.text`,
+so Text Enhance and Settings compiled, minified, packaged, published, and could
+not be reached on any phone in the fleet.
+
+That is measured on the shipped artefact, not argued: Cloud-Office.apk as
+published (266,888,676 bytes, 2026-09-16T01:16:19Z) contains the string
+`cloudtextenhance` exactly ONCE in assets/dist/bundle.js, in the menu block that
+also holds `.uno:PasteSpecial` — i.e. options.text. `options.mobiletext`'s Edit
+menu has no PasteSpecial, and the hamburger builds from that one.
+
+So Text Enhance goes into `mobiletext` at TOP LEVEL — the ticket asks for an
+entry in the viewer's overflow menu and a row two submenus deep is not one — and
+Settings goes into all four mobile menus beside About, because a spreadsheet
+owner has settings too. The desktop copies stay: an Android tablet where
+window.mode.isSmallScreenDevice() is false gets the desktop menubar and nothing
+else, so deleting them would hide the feature on half the fleet's devices.
+
+_executeAction already handles both ids on this path without a change:
+JSDialogBuilder calls it as _executeAction(undefined, data) for every mobile
+wizard row whose executionType is 'action', and the undefined-itNode branch
+takes its id straight from that data.
+
+'cloudsettings' joins allowedViewModeActions. _beforeShow disables every
+type:'action' not named there once isReadOnlyMode() is true, and the app's own
+settings must not go dead because a PDF opened read-only. 'cloudtextenhance' is
+deliberately NOT on that list: it pastes, and a viewer may not write.
 
 That Settings entry reaches the Android shell through window.COOLMessageHandler,
 which LOActivity registers as addJavascriptInterface(this, "COOLMessageHandler")
@@ -70,10 +103,10 @@ exists only inside the Android WebView, which is also why the call site guards.
  .../androidlib/CloudTextEnhance.java          | 255 ++++++++++++++++++
  .../libreoffice/androidlib/LOActivity.java    |  45 +++-
  android/settings.gradle                       |  12 +-
- browser/src/control/Control.Menubar.ts        |  47 +++-
+ browser/src/control/Control.Menubar.ts        | 106 +++++++-
  browser/src/layer/tile/CanvasTileLayer.js     |  17 ++
  browser/src/map/Clipboard.js                  |  14 +
- 9 files changed, 421 insertions(+), 5 deletions(-)
+ 9 files changed, 479 insertions(+), 6 deletions(-)
  create mode 100644 android/lib/src/main/assets/cloud_text_enhance.json
  create mode 100644 android/lib/src/main/java/org/libreoffice/androidlib/CloudTextEnhance.java
 
@@ -493,7 +526,7 @@ index 3cbe24935..ac15c6e6d 100644
 +// it there, not because of where this tree happens to sit on disk.
 +project(':text-tools').projectDir = new File(settingsDir, 'text-tools')
 diff --git a/browser/src/control/Control.Menubar.ts b/browser/src/control/Control.Menubar.ts
-index 6176ca087..be5a63377 100644
+index 6176ca087..1d12400e4 100644
 --- a/browser/src/control/Control.Menubar.ts
 +++ b/browser/src/control/Control.Menubar.ts
 @@ -10,6 +10,22 @@
@@ -519,17 +552,25 @@ index 6176ca087..be5a63377 100644
  interface MenuItem {
  	id?: string;
  	name?: string;
-@@ -142,6 +158,21 @@ class Menubar extends window.L.Control {
+@@ -142,6 +158,29 @@ class Menubar extends window.L.Control {
  				{name: _UNO('.uno:PasteSpecial', 'text'), uno: '.uno:PasteSpecial'},
  				{name: _UNO('.uno:SelectAll', 'text'), uno: '.uno:SelectAll'},
  				{type: 'separator'},
-+				// Cloud Office. Next to Copy deliberately: it takes the same selection
-+				// Copy takes, by the same route, so putting it anywhere else would
-+				// suggest it works on something else.
++				// Cloud Office. THIS COPY IS FOR THE DESKTOP MENUBAR ONLY — the one
++				// _onRefresh() builds from options.text when the device is NOT a small
++				// screen, i.e. an Android tablet. The rows a phone actually sees live in
++				// options.mobiletext far below, because the hamburger is built from
++				// options['mobile' + docType] and reads nothing here. Both are needed
++				// and neither is redundant; deleting either one hides the feature on
++				// half the devices in the fleet.
 +				//
-+				// WRITER ONLY, FOR NOW. The spreadsheet Edit menu below is deliberately
-+				// untouched: a Calc selection can span cells, and pasting one plain-text
-+				// rewrite back over it would scatter the result across them. That is the
++				// Next to Copy deliberately: it takes the same selection Copy takes, by
++				// the same route, so putting it anywhere else would suggest it works on
++				// something else.
++				//
++				// WRITER ONLY. The spreadsheet Edit menu below is deliberately untouched:
++				// a Calc selection can span cells, and pasting one plain-text rewrite
++				// back over it would scatter the result across them. That is the
 +				// "mangles the document" outcome, which is worse than the feature being
 +				// absent there.
 +				{name: _('Text Enhance'), id: 'cloudtextenhance', type: 'action'},
@@ -541,7 +582,100 @@ index 6176ca087..be5a63377 100644
  				{uno: '.uno:SearchDialog', id: 'searchreplace'},
  				{name: _('Find'), id: 'find', type: 'action', shortcut: 'home-search'},
  				{type: 'separator'},
-@@ -2506,7 +2537,21 @@ class Menubar extends window.L.Control {
+@@ -1185,6 +1224,24 @@ class Menubar extends window.L.Control {
+ 				{uno: '.uno:Paste'},
+ 				{uno: '.uno:SelectAll'}
+ 			]},
++			// Cloud Office, #224. THE TOP-RIGHT MENU IS BUILT FROM THIS ARRAY AND NOT
++			// FROM options.text. generateFullMenuStructure() reads
++			// this.options['mobile' + this._map.getDocType()], so an entry that exists
++			// only in the desktop `text` menu compiles, minifies, ships — and is
++			// unreachable on a phone. That is not a hypothesis: Cloud-Office.apk as
++			// published carries `cloudtextenhance` exactly once, inside the Edit menu
++			// that also has PasteSpecial, which is options.text; the hamburger never
++			// builds that one.
++			//
++			// TOP LEVEL, one tap from the hamburger, because the ticket asks for an
++			// entry in the viewer's overflow menu and a row two submenus down is not
++			// one.
++			//
++			// WRITER ONLY. mobilespreadsheet is deliberately left without it: a Calc
++			// selection can span cells, and pasting one plain-text rewrite back over
++			// it scatters the result across them. Mangling the document is worse than
++			// the feature being absent there.
++			{name: _('Text Enhance'), id: 'cloudtextenhance', type: 'action'},
+ 			{name: _UNO('.uno:ChangesMenu', 'text'), id: 'changesmenu', type: 'menu', menu: [
+ 				{uno: '.uno:TrackChanges'},
+ 				{uno: '.uno:ShowTrackedChanges'},
+@@ -1215,6 +1272,12 @@ class Menubar extends window.L.Control {
+ 			{name: _UNO('.uno:RunMacro'), id: 'runmacro', uno: '.uno:RunMacro'},
+ 			{name: _('Latest Updates'), id: 'latestupdates', type: 'action', iosapp: false},
+ 			{name: _('Send Feedback'), id: 'feedback', type: 'action', mobileapp: false},
++			// Cloud Office, #224 — the app's config, IN the main menu. It was
++			// reachable only from the document-browser screen, which means only by
++			// closing the document you were editing, which is why nobody found it.
++			// Beside About because that is where a phone owner looks for it, and in
++			// EVERY mobile menu because a spreadsheet owner has settings too.
++			{name: _('Settings'), id: 'cloudsettings', type: 'action', mobileapp: true},
+ 			{name: _('About'), id: 'about', type: 'action'},
+ 		],
+ 
+@@ -1280,6 +1343,12 @@ class Menubar extends window.L.Control {
+ 			{name: _('Fullscreen presentation'), id: 'fullscreen-presentation', type: 'action'},
+ 			{name: _('Latest Updates'), id: 'latestupdates', type: 'action', iosapp: false},
+ 			{name: _('Send Feedback'), id: 'feedback', type: 'action', mobileapp: false},
++			// Cloud Office, #224 — the app's config, IN the main menu. It was
++			// reachable only from the document-browser screen, which means only by
++			// closing the document you were editing, which is why nobody found it.
++			// Beside About because that is where a phone owner looks for it, and in
++			// EVERY mobile menu because a spreadsheet owner has settings too.
++			{name: _('Settings'), id: 'cloudsettings', type: 'action', mobileapp: true},
+ 			{name: _('About'), id: 'about', type: 'action'},
+ 		],
+ 
+@@ -1335,6 +1404,12 @@ class Menubar extends window.L.Control {
+ 			{name: _UNO('.uno:RunMacro'), id: 'runmacro', uno: '.uno:RunMacro'},
+ 			{name: _('Latest Updates'), id: 'latestupdates', type: 'action', iosapp: false},
+ 			{name: _('Send Feedback'), id: 'feedback', type: 'action', mobileapp: false},
++			// Cloud Office, #224 — the app's config, IN the main menu. It was
++			// reachable only from the document-browser screen, which means only by
++			// closing the document you were editing, which is why nobody found it.
++			// Beside About because that is where a phone owner looks for it, and in
++			// EVERY mobile menu because a spreadsheet owner has settings too.
++			{name: _('Settings'), id: 'cloudsettings', type: 'action', mobileapp: true},
+ 			{name: _('About'), id: 'about', type: 'action'},
+ 		],
+ 
+@@ -1410,6 +1485,12 @@ class Menubar extends window.L.Control {
+ 			{name: _UNO('.uno:RunMacro'), id: 'runmacro', uno: '.uno:RunMacro'},
+ 			{name: _('Latest Updates'), id: 'latestupdates', type: 'action', iosapp: false},
+ 			{name: _('Send Feedback'), id: 'feedback', type: 'action', mobileapp: false},
++			// Cloud Office, #224 — the app's config, IN the main menu. It was
++			// reachable only from the document-browser screen, which means only by
++			// closing the document you were editing, which is why nobody found it.
++			// Beside About because that is where a phone owner looks for it, and in
++			// EVERY mobile menu because a spreadsheet owner has settings too.
++			{name: _('Settings'), id: 'cloudsettings', type: 'action', mobileapp: true},
+ 			{name: _('About'), id: 'about', type: 'action'},
+ 		],
+ 
+@@ -1561,7 +1642,14 @@ class Menubar extends window.L.Control {
+ 			'insert-signatureline', // insert menu
+ 			'about', 'keyboard-shortcuts', 'latestupdates', 'feedback', 'serveraudit', 'online-help', 'report-an-issue', // help menu
+ 			'insertcomment',
+-			'find' // edit menu
++			'find', // edit menu
++			// Cloud Office. The app's own settings are readable whatever the document
++			// permits; _beforeShow greys out every type:'action' that is not named
++			// here as soon as isReadOnlyMode() is true, and a Settings row that goes
++			// dead because a PDF opened read-only is the same defect this menu entry
++			// was added to end. 'cloudtextenhance' is deliberately NOT here — it
++			// pastes, and a viewer may not write.
++			'cloudsettings'
+ 		],
+ 
+ 		// Only these UNO commands will be enabled in redline management mode
+@@ -2506,7 +2594,21 @@ class Menubar extends window.L.Control {
  			command = $(itNode).data('uno');
  		}
  

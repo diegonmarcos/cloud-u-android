@@ -21,7 +21,8 @@
       "configure": {
         "_doc": "THE REBRAND IS THESE FLAGS, NOT A PATCH. android/app/appSettings.gradle is generated from android/app/appSettings.gradle.in, whose @APP_NAME@ / @APP_PACKAGE_NAME@ / @VENDOR@ / @INFO_URL@ placeholders configure.ac substitutes (AC_CONFIG_FILES, configure.ac:2923), so upstream already exposes every branding value as a knob. Patching the generated file would hardcode into the tree what a flag sets, and the patch would then conflict on every upstream touch of that file.",
         "_doc_flag_names": "EVERY NAME HERE IS VERIFIED AGAINST configure.ac AT THE PIN, BECAUSE AUTOCONF DOES NOT CHECK THEM FOR US. This block said \"--with-android-package-name\" from 05b0c6c15 until 2026-09-11. No such option exists at this revision — upstream's is --with-app-package-name (AC_ARG_WITH at configure.ac:292), and there is no @ANDROID_PACKAGE_NAME@ placeholder anywhere; the applicationId comes from @APP_PACKAGE_NAME@. An unknown --with-* does NOT fail configure: autoconf prints 'unrecognized options' to stderr and continues, so $with_app_package_name would have stayed empty and APP_PACKAGE_NAME would have taken its default. VERIFIED BY READING configure.ac:1155-1169: the default is org.collabora.app for an Android build, and com.collabora.office.Mobile only when enable_iosapp=yes. So the megabuild would have spent its money producing an APK whose applicationId is UPSTREAM'S, while android.application_id, the fleet manifest, the GHCR image and the launcher's installed-app probe all name com.diegonmarcos.cloudoffice — an app that would not exist. tests/test-configure-flags-exist.sh now derives the required flag from upstream on every run (placeholder -> configure.ac variable -> flag) and fails closed, so this cannot regress silently and a future upstream rename reports its new name instead of passing.",
-        "--with-app-name": "cloud-office",
+        "_doc_app_name": "THE PRODUCT NAME, NOT THE PROJECT SLUG, AND THE DIFFERENCE WAS SHIPPING. configure.ac:1179 calls this \"the user-visible name of the app you build\" and its own default is \"Collabora Online Development Edition\" — spaces and all — so a display name with a space is what this flag is for. It carried \"cloud-office\", the directory slug, and EVERY user-visible surface took it verbatim. Read out of Cloud-Office.apk as published (266,888,676 bytes, 2026-09-16T01:16:19Z), not inferred: resources.arsc string/app_name = 'cloud-office', which android/app/src/main/AndroidManifest.xml uses as the <application android:label> (the LAUNCHER LABEL) and AboutDialogFragment.java:77,89 uses both as the About title and as the $APP_NAME it substitutes into string/app_description; assets/dist/cool.html ships <title>cloud-office</title> and data-mobile-app-name='cloud-office'. The whole substitution chain WORKS — @APP_NAME@ -> liboAppName -> resValue \"string\",\"app_name\"; $(APP_NAME) -> -DMOBILEAPPNAME -> the m4 title and data attribute; global.js then sets window.brandProductName = window.MobileAppName, which is what brands the document title, the loading spinner and core's own dialog titles. Only the VALUE was wrong, so this is a one-word fix and not a patch. Asserted by tests/test-app-name-reaches-the-user.sh.",
+        "--with-app-name": "Cloud Office",
         "--with-app-package-name": "com.diegonmarcos.cloudoffice",
         "--with-vendor": "diegonmarcos.com",
         "--with-info-url": "https://linktree.diegonmarcos.com"
@@ -332,5 +333,87 @@
     "_doc_do_not_rename": "DO NOT RENAME OR DELETE THIS ASSET AS A TIDY-UP. aa_cloud-superapp/build.json's phone-apps entry points install_apk_url at this exact filename, and it is the only office app the owner can install today. Renaming it hands him a 404; deleting it takes his office suite away to fix a labelling problem. The honest fix is to publish Cloud-Office.apk beside it, which needs a build host, not a rename.",
     "_doc_why_not_repackaged": "AND IT MUST NOT BE REPACKAGED. Injecting our dex into these bytes to make the Text Enhance menu item appear would break Collabora's signature, require re-signing with the fleet key, and put a modified binary of unclear provenance on the owner's phone while looking like a successful build. #241 answered the reuse question NO on the engine's own terms: 0 of 6,375 entries are .a or .h, and upstream needs eight static archives to link libandroidapp.so."
   },
-  "_doc_source_identity": "source_identity.mode=\"pin\" IS DELIBERATELY GONE. It existed because a mirror's output was a pure function of `upstream`, so hashing the directory republished 250 MB whenever an unrelated repo-wide commit moved the tree sha — which happened on 2026-09-01. That reasoning DIES with the mirror: our output is now a function of the pins AND the patch series AND the configure flags, all of which live in this directory. Falling back to the default path hash is therefore correct, and leaving mode=pin would have been an active bug — every patch added here would have produced a byte-different APK that the gate believed was unchanged, and the phones would never have seen it."
+  "_doc_source_identity": "source_identity.mode=\"pin\" IS DELIBERATELY GONE. It existed because a mirror's output was a pure function of `upstream`, so hashing the directory republished 250 MB whenever an unrelated repo-wide commit moved the tree sha — which happened on 2026-09-01. That reasoning DIES with the mirror: our output is now a function of the pins AND the patch series AND the configure flags, all of which live in this directory. Falling back to the default path hash is therefore correct, and leaving mode=pin would have been an active bug — every patch added here would have produced a byte-different APK that the gate believed was unchanged, and the phones would never have seen it.",
+  "document_menu": {
+    "_doc": "WHICH MENU AN ENTRY IS ADDED TO DECIDES WHETHER A PHONE CAN SEE IT, AND THE FIRST VERSION OF patches/0001 GOT IT WRONG. browser/src/control/Control.Menubar.ts holds TWO unrelated sets of menu definitions on the same options object. `text` / `presentation` / `drawing` / `spreadsheet` are what _onRefresh() passes to _initializeMenu() to draw the DESKTOP menubar. `mobiletext` / `mobilepresentation` / `mobiledrawing` / `mobilespreadsheet` are what generateFullMenuStructure() reads — literally this.options['mobile' + this._map.getDocType()] — to build the wizard that the TOP-RIGHT HAMBURGER opens, which on a phone is the only menu that exists. An entry added only to the desktop set compiles, passes eslint, minifies, packages, signs and publishes, and is unreachable.",
+    "_doc_measured": "NOT A HYPOTHESIS. Cloud-Office.apk as published by run 35043058309 (266,888,676 bytes, 2026-09-16T01:16:19Z) was range-read and assets/dist/bundle.js extracted: the string `cloudtextenhance` occurs EXACTLY ONCE, inside the menu block that also carries '.uno:PasteSpecial' — which is options.text, because options.mobiletext's Edit menu has no PasteSpecial. So the feature #236 calls 'unverified end to end' could not have been verified: there was no way to tap it.",
+    "file": "browser/src/control/Control.Menubar.ts",
+    "mobile_menu_selector": "'mobile' + this._map.getDocType()",
+    "mobile_builder": "generateFullMenuStructure",
+    "mobile_array_prefix": "mobile",
+    "entries": [
+      {
+        "id": "cloudtextenhance",
+        "label": "Text Enhance",
+        "must_appear_in": [
+          "text",
+          "mobiletext"
+        ],
+        "why": "Writer only. A Calc selection can span cells and one plain-text rewrite pasted back over it scatters across them, which mangles the document — worse than the feature being absent there. TOP LEVEL of mobiletext, not inside its Edit submenu, because #224 asks for an entry in the viewer's overflow menu and a row two submenus deep is not one."
+      },
+      {
+        "id": "cloudsettings",
+        "label": "Settings",
+        "must_appear_in": [
+          "text",
+          "mobiletext",
+          "mobilepresentation",
+          "mobiledrawing",
+          "mobilespreadsheet"
+        ],
+        "must_be_view_mode_action": true,
+        "why": "#224 asks for the config to move INTO the main menu; it was reachable only from the document-browser screen, i.e. only by closing the document being edited. Every mobile menu, because a spreadsheet owner has settings too. On allowedViewModeActions because _beforeShow greys out every type:'action' not named there once isReadOnlyMode() is true, and settings must not die because a PDF opened read-only."
+      }
+    ],
+    "view_mode_actions_array": "allowedViewModeActions",
+    "asserted_by": "tests/test-menu-entries-reach-the-mobile-app.sh"
+  },
+  "app_identity": {
+    "_doc": "ONE NAME REACHES EVERY USER-VISIBLE SURFACE, AND IT IS upstream.online.configure's --with-app-name. The rebrand was never a missing substitution — every link of the chain works — it was the VALUE, which carried the directory slug 'cloud-office'. See upstream.online.configure._doc_app_name for what that put on screen, read out of the published APK.",
+    "product_name_flag": "--with-app-name",
+    "_doc_derivation": "THE CROSS-CHECK IS DELIBERATELY AGAINST A DIFFERENT FIELD, so the rule is not circular: the release asset this fleet publishes is named after the product, so asset_name with '.apk' dropped and '-' turned into ' ' IS the product name. 'Cloud-Office.apk' -> 'Cloud Office'. The old value 'cloud-office' fails it, which is the whole point.",
+    "derived_from": "release.gh_release.asset_name",
+    "_doc_substitution_chain": "THE LINKS THAT CARRY THAT ONE VALUE TO THE SCREEN. Nothing in this repository compiles them, so if upstream renames any of these the value fix stops reaching the UI and no other tester notices. Each entry is a file at upstream.online.revision and the literals that must still be in it.",
+    "substitution_chain": [
+      {
+        "file": "android/app/appSettings.gradle.in",
+        "must_contain": [
+          "liboAppName",
+          "@APP_NAME@"
+        ],
+        "carries": "configure's APP_NAME into gradle as liboAppName"
+      },
+      {
+        "file": "android/app/build.gradle",
+        "must_contain": [
+          "resValue \"string\", \"app_name\", \"${liboAppName}\""
+        ],
+        "carries": "liboAppName into resources as string/app_name, which AndroidManifest uses as the launcher label and AboutDialogFragment as the About title"
+      },
+      {
+        "file": "browser/Makefile.am",
+        "must_contain": [
+          "-DMOBILEAPPNAME=\"$(APP_NAME)\""
+        ],
+        "carries": "APP_NAME into the m4 pass over the web UI"
+      },
+      {
+        "file": "browser/html/cool.html.m4",
+        "must_contain": [
+          "<title>MOBILEAPPNAME</title>",
+          "data-mobile-app-name='MOBILEAPPNAME'"
+        ],
+        "carries": "the WebView title and the data attribute global.js reads"
+      },
+      {
+        "file": "browser/js/global.js",
+        "must_contain": [
+          "window.MobileAppName = window.brandProductName || element.dataset.mobileAppName;",
+          "window.brandProductName = window.MobileAppName;"
+        ],
+        "carries": "the app name into brandProductName, which is what brands the document title, the loading spinner, the web About dialog and the titles core sends for its own dialogs"
+      }
+    ],
+    "asserted_by": "tests/test-app-name-reaches-the-user.sh"
+  }
 }
