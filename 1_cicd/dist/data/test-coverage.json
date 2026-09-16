@@ -120,8 +120,8 @@
       "workflow": "ship-cloud-dialer.yml"
     },
     "ac_cloud-drive": {
-      "first_test": "Four-tab shell (Files, Apps, Backups, Configs). NOT COVERED HERE: the SuperApp side of the same move is, in aa_cloud-superapp/test/test-drive-page-sections.sh \u2014 it asserts the twelve storage back ends left the SuperApp and landed in ac_cloud-drive/data/drive-connections.json with all three carriers that reach this APK (build.gradle CONNECTIONS_B64, FilesBridge.connections(), the page's Bridge.raw call). What this app still owes a tester: the Files tab's own local file-manager path \u2014 listing, navigating and acting on a directory the user has no read permission for is the failure that a data-shape assertion cannot see.",
-      "shell_testers": 0,
+      "first_test": "Has 1 shell tester, executed: test/test-drive-bridge-contract.sh. It pins the thing Gradle structurally cannot see \u2014 the whole application is an HTML page calling a Kotlin class by STRING NAME across a WebView JavascriptInterface, so a renamed bridge method still compiles, still builds and still renders, and the call simply returns undefined; drive.html turns that into { ok: false } or null, which every caller displays as an empty list. A broken build was indistinguishable from an empty phone. The tester asserts every Bridge.call/Bridge.raw name is declared @JavascriptInterface, that the #330 editor is wired at both ends (readText in, writeText out, Save bound), that the mirror (rsync) jobs travel all three carriers (data/drive-mirror-jobs.json -> build.gradle MIRROR_JOBS_B64 -> FilesBridge.mirrorJobs -> the page), and that no declared job writes into its own source or uses an absolute path. STILL NOT COVERED: the Files tab's behaviour against the PERMISSION state \u2014 listing, navigating and acting on a directory the user has not granted all-files access to needs a device or an emulator, and no static assertion reaches it. Nor does anything here execute FilesBridge.mirror or writeText: their correctness is argued in code, not proved.",
+      "shell_testers": 1,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
@@ -282,6 +282,6 @@
       "workflow": "ship-firestack-aar.yml"
     }
   },
-  "with_executed_tests": 11,
-  "with_no_tests_at_all": 20
+  "with_executed_tests": 12,
+  "with_no_tests_at_all": 19
 }

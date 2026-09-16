@@ -16,11 +16,11 @@ import org.json.JSONObject
 import java.io.File
 
 /**
- * The Files tab, in full. Everything the page can do to the phone's storage goes through here:
- * browse, sort, make a folder, rename, copy, move, delete, share and open-with. The UI is HTML
- * and holds no state of its own — it asks for a directory and gets the whole listing back, so a
- * change made here (or by any other app) shows up on the next [list] rather than being tracked in
- * two places that can disagree.
+ * Everything the page can do to the phone's storage goes through here: browse, sort, make a
+ * folder, rename, copy, move, delete, share, open-with, read a text file into the editor, write
+ * it back, and mirror one folder onto another. The UI is HTML and holds no state of its own — it
+ * asks for a directory and gets the whole listing back, so a change made here (or by any other
+ * app) shows up on the next [list] rather than being tracked in two places that can disagree.
  *
  * Every path that crosses the bridge is resolved through [resolve], which refuses anything that
  * escapes the storage roots. The page is local HTML we ship, but a WebView JavascriptInterface is
@@ -285,6 +285,204 @@ class FilesBridge(private val ctx: Context) {
         }
     }
 
+    // ── the editor ───────────────────────────────────────────────────────────────
+
+    /**
+     * Hands the page a text file's whole content so it can be edited. The ceiling and the
+     * binary check are the two ways an editor destroys a file rather than editing it:
+     *
+     *  - a WebView holds the text as one JavaScript string, so opening a multi-gigabyte log
+     *    is an out-of-memory kill rather than a slow editor, and the file is untouched only
+     *    because the process died before a save.
+     *  - a file that is not text survives a round trip through a String only by accident.
+     *    Bytes that are not valid UTF-8 come back as U+FFFD and are written back as U+FFFD,
+     *    so "open, change nothing, save" silently corrupts a photo. Refusing to open it is
+     *    the only honest answer.
+     */
+    @JavascriptInterface
+    fun readText(path: String): String {
+        val file = resolve(path) ?: return failure("that path is outside the storage roots")
+        if (!file.isFile) return failure("not a file: " + file.name)
+        if (file.length() > EDITABLE_BYTE_CEILING)
+            return failure(file.name + " is too large to edit here (over " +
+                (EDITABLE_BYTE_CEILING / 1024 / 1024) + " MB)")
+        return try {
+            val bytes = file.readBytes()
+            // One NUL byte is the oldest and most reliable "this is not text" signal there
+            // is, and it is what file(1) and git both use.
+            if (bytes.any { it == 0.toByte() })
+                return failure(file.name + " is not a text file")
+
+            // THE EDITOR WILL NOT OPEN WHAT IT CANNOT WRITE BACK. Decoding is lossy in one
+            // direction only: bytes that are not valid UTF-8 become U+FFFD and re-encode as
+            // U+FFFD, so a Latin-1 file full of accented characters survives the NUL check,
+            // opens looking almost right, and is rewritten damaged by a save that changed
+            // nothing. Re-encoding and comparing is the exact question worth asking, and it
+            // is the only one that catches it.
+            val text = String(bytes, Charsets.UTF_8)
+            if (!text.toByteArray(Charsets.UTF_8).contentEquals(bytes))
+                return failure(file.name + " is not UTF-8 text, and saving it here would damage it")
+
+            JSONObject()
+                .put("ok", true)
+                .put("path", file.absolutePath)
+                .put("name", file.name)
+                .put("text", text)
+                .toString()
+        } catch (error: Exception) {
+            failure(error.message ?: "cannot read " + file.name)
+        }
+    }
+
+    /**
+     * Writes the editor's text back, as UTF-8. THIS IS THE SAVE PATH.
+     *
+     * The bytes go to a sibling scratch file first and only then take the target's name, so
+     * a process death half way through a write leaves the original whole instead of
+     * truncated. A scratch file in the same directory rather than in a cache directory
+     * because the rename has to stay on one filesystem to be cheap, and the sibling is the
+     * only placement guaranteed to be.
+     */
+    @JavascriptInterface
+    fun writeText(path: String, text: String): String {
+        val file = resolve(path) ?: return failure("that path is outside the storage roots")
+        if (file.exists() && !file.isFile) return failure("not a file: " + file.name)
+        val parent = file.parentFile ?: return failure("no folder to write into")
+        val payload = text.toByteArray(Charsets.UTF_8)
+        val scratch = File(parent, "." + file.name + ".clouddrive-save")
+        return try {
+            scratch.writeBytes(payload)
+            // A short scratch file means the volume filled up mid-write. Stopping here is
+            // what keeps the original intact.
+            if (scratch.length() != payload.size.toLong()) {
+                scratch.delete()
+                return failure("the save did not finish — " + file.name + " is unchanged")
+            }
+            if (!scratch.renameTo(file)) {
+                // Shared storage on a modern phone is a FUSE mount, and renaming onto a
+                // name that already exists is one of the things it declines. A copy is
+                // slower and is not atomic, which is exactly why it is the fallback.
+                scratch.copyTo(file, overwrite = true)
+                scratch.delete()
+            }
+            pathResult(file)
+        } catch (error: Exception) {
+            scratch.delete()
+            failure(error.message ?: "could not save " + file.name)
+        }
+    }
+
+    // ── mirroring, which is what Rsync means on a phone ──────────────────────────
+
+    /**
+     * The mirror jobs the Backups tab offers, as the raw JSON array baked in at build time
+     * from data/drive-mirror-jobs.json. Same carrier and same contract as [connections].
+     */
+    @JavascriptInterface
+    fun mirrorJobs(): String =
+        if (BuildConfig.MIRROR_JOBS_B64.isEmpty()) "[]"
+        else try {
+            String(android.util.Base64.decode(BuildConfig.MIRROR_JOBS_B64, android.util.Base64.DEFAULT))
+        } catch (error: Exception) {
+            "[]"
+        }
+
+    /**
+     * Copies everything under [sourcePath] into [destinationPath], skipping what is already
+     * there and unchanged — rsync's quick check, which is size plus modification time, and
+     * not a checksum. [deleteExtra] is rsync's --delete: entries in the destination that the
+     * source no longer has are removed. It is declared per job rather than offered as a
+     * toggle, because it is the one option here that loses data.
+     *
+     * Reports COUNTS, never names. The page shows what a pass did without putting the
+     * owner's file names on a screen that anything else could read.
+     */
+    @JavascriptInterface
+    fun mirror(sourcePath: String, destinationPath: String, deleteExtra: Boolean): String {
+        val source = resolveDeclared(sourcePath)
+            ?: return failure("that source is outside the storage roots")
+        if (!source.isDirectory) return failure("not a folder: " + source.name)
+        val destination = resolveDeclared(destinationPath)
+            ?: return failure("that destination is outside the storage roots")
+
+        // A destination inside its own source grows without end: every pass copies the
+        // previous pass's copy. Refusing is the whole guard, and it has to happen before a
+        // single byte moves.
+        if (destination.path == source.path || destination.path.startsWith(source.path + File.separator))
+            return failure("the destination sits inside the source, so each pass would copy the last one")
+
+        val tally = MirrorTally()
+        mirrorInto(source, destination, deleteExtra, tally, MIRROR_DEPTH_CEILING)
+        return JSONObject()
+            .put("ok", tally.failed == 0)
+            .put("copied", tally.copied)
+            .put("skipped", tally.skipped)
+            .put("deleted", tally.deleted)
+            .put("failed", tally.failed)
+            .toString()
+    }
+
+    private class MirrorTally {
+        var copied = 0
+        var skipped = 0
+        var deleted = 0
+        var failed = 0
+    }
+
+    private fun mirrorInto(
+        source: File,
+        destination: File,
+        deleteExtra: Boolean,
+        tally: MirrorTally,
+        depthLeft: Int
+    ) {
+        // ponytail: a plain depth ceiling rather than inode bookkeeping. Shared storage has
+        // no symlinks worth speaking of, but one loop would otherwise recurse until the
+        // stack ends, and a cheap ceiling is the difference between a wrong count and a
+        // crash. Track visited canonical paths if real symlink farms ever appear here.
+        if (depthLeft <= 0) { tally.failed++; return }
+        if (!destination.isDirectory && !destination.mkdirs()) { tally.failed++; return }
+        val children = source.listFiles() ?: run { tally.failed++; return }
+
+        children.forEach { child ->
+            val target = File(destination, child.name)
+            if (child.isDirectory) {
+                mirrorInto(child, target, deleteExtra, tally, depthLeft - 1)
+            } else if (alreadyMirrored(child, target)) {
+                tally.skipped++
+            } else {
+                try {
+                    child.copyTo(target, overwrite = true)
+                    // Without this the next pass sees a different timestamp and copies the
+                    // same file again, for ever. ponytail: a filesystem that refuses to set
+                    // it (some SD-card mounts) turns every pass into a full copy rather
+                    // than failing — correct, just not cheap.
+                    target.setLastModified(child.lastModified())
+                    tally.copied++
+                } catch (error: Exception) {
+                    tally.failed++
+                }
+            }
+        }
+
+        if (!deleteExtra) return
+        val kept = children.map { it.name }.toSet()
+        destination.listFiles()?.filterNot { kept.contains(it.name) }?.forEach { extra ->
+            if (extra.deleteRecursively()) tally.deleted++ else tally.failed++
+        }
+    }
+
+    /**
+     * rsync's quick check: same size and same modification time means "do not send it".
+     * Compared at whole seconds because that is the coarsest resolution any of the
+     * filesystems involved keeps, and comparing milliseconds against a volume that stores
+     * seconds marks every file changed.
+     */
+    private fun alreadyMirrored(source: File, target: File): Boolean =
+        target.isFile &&
+            target.length() == source.length() &&
+            target.lastModified() / 1000L == source.lastModified() / 1000L
+
     // ── helpers ──────────────────────────────────────────────────────────────────
 
     /**
@@ -303,6 +501,21 @@ class FilesBridge(private val ctx: Context) {
             candidate == root || candidate.path.startsWith(root.path + File.separator)
         }
         return if (allowed) candidate else null
+    }
+
+    /**
+     * The same as [resolve], except that a relative path is read against shared storage.
+     * data/drive-mirror-jobs.json declares "DCIM/Camera" rather than
+     * "/storage/emulated/0/DCIM/Camera" because the absolute form is a fact about one
+     * device — the user id in it changes on a second profile — and a declarative list must
+     * not carry it.
+     */
+    private fun resolveDeclared(path: String): File? {
+        if (path.isBlank()) return null
+        val absolute =
+            if (path.startsWith(File.separator)) path
+            else File(Environment.getExternalStorageDirectory(), path).path
+        return resolve(absolute)
     }
 
     /** The parent, unless that would step above a root — where "up" has to stop. */
@@ -372,4 +585,17 @@ class FilesBridge(private val ctx: Context) {
 
     private fun okErr(ok: Boolean, error: String): String =
         JSONObject().put("ok", ok).put("error", error).toString()
+
+    private companion object {
+        /**
+         * The largest file the editor will open. The page holds the whole text as one
+         * JavaScript string, so this is a memory ceiling rather than a taste judgement:
+         * every plain-text file a phone actually holds is far below it, and everything
+         * above it is a log or a database that an editor has no business loading whole.
+         */
+        const val EDITABLE_BYTE_CEILING = 2L * 1024 * 1024
+
+        /** How deep [mirror] will walk. See the ponytail note in mirrorInto. */
+        const val MIRROR_DEPTH_CEILING = 32
+    }
 }

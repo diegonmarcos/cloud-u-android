@@ -104,7 +104,38 @@ const state = {
     clipboard: { paths: [], move: false },
     sort: 'name',
     descending: false,
-    showHidden: false
+    showHidden: false,
+    /* { path, name, original } while a file is open in the editor, null otherwise. The
+       editor is a mode of the Files tab rather than a fifth tab, because what it edits is
+       whatever the Files tab is looking at. */
+    editor: null
+};
+
+/* The handful of choices that are settings rather than session state. domStorageEnabled is
+   on in MainActivity, so localStorage is the whole store — no bridge call, no file, nothing
+   to keep in step. A sort order that resets on every launch is not a setting, and the
+   Configs tab was describing three values that did exactly that. */
+const Settings = {
+    key: 'cloud-drive-settings',
+    load() {
+        try {
+            const stored = JSON.parse(localStorage.getItem(this.key) || '{}');
+            if (stored.sort) state.sort = stored.sort;
+            if (typeof stored.descending === 'boolean') state.descending = stored.descending;
+            if (typeof stored.showHidden === 'boolean') state.showHidden = stored.showHidden;
+        } catch (error) {
+            // A corrupt entry is not worth a broken app. The defaults already stand.
+        }
+    },
+    save() {
+        try {
+            localStorage.setItem(this.key, JSON.stringify({
+                sort: state.sort, descending: state.descending, showHidden: state.showHidden
+            }));
+        } catch (error) {
+            // Storage refused. The session still works, it just will not remember.
+        }
+    }
 };
 
 const panel = document.getElementById('panel');
@@ -304,19 +335,20 @@ function deleteSelection() {
 
 function showEntryMenu(entry) {
     const action = prompt(
-        entry.name + '\n\n1 Open\n2 Share\n3 Rename\n4 Delete\n5 Details\n\nType a number:');
+        entry.name + '\n\n1 Open\n2 Edit as text\n3 Share\n4 Rename\n5 Delete\n6 Details\n\nType a number:');
     if (!action) return;
     if (action === '1') reportFailure(Bridge.call('open', entry.path));
-    else if (action === '2') reportFailure(Bridge.call('share', entry.path));
-    else if (action === '3') {
+    else if (action === '2') openEditor(entry);
+    else if (action === '3') reportFailure(Bridge.call('share', entry.path));
+    else if (action === '4') {
         const name = prompt('New name', entry.name);
         if (name) { reportFailure(Bridge.call('rename', entry.path, name)); openDirectory(state.path); }
-    } else if (action === '4') {
+    } else if (action === '5') {
         if (confirm('Delete ' + entry.name + '? This cannot be undone.')) {
             reportFailure(Bridge.call('delete', JSON.stringify([entry.path])));
             openDirectory(state.path);
         }
-    } else if (action === '5') {
+    } else if (action === '6') {
         const detail = Bridge.call('info', entry.path);
         alert(detail.ok
             ? entry.name + '\n\n' + (detail.directory
@@ -329,6 +361,58 @@ function showEntryMenu(entry) {
     }
 }
 
+/* ── the editor ─────────────────────────────────────────────────────────────────
+   A textarea, deliberately. It is the platform's text editor: caret, selection,
+   undo, autocorrect, the magnifier and the system clipboard all arrive for free and
+   all behave the way they do in every other app on the phone. A syntax-highlighting
+   editor component would be a vendored dependency re-implementing every one of them,
+   and #228 exists because of exactly that kind of second private copy. */
+
+function openEditor(entry) {
+    const result = Bridge.call('readText', entry.path);
+    // The bridge refuses a file that is too large or is not text, and says which.
+    // Both refusals protect the file: an editor that opens what it cannot represent
+    // writes back damage on the first save.
+    if (!result.ok) { alert(result.error); return; }
+    state.editor = { path: result.path, name: result.name, original: result.text };
+    renderEditor();
+}
+
+function renderEditor() {
+    panel.innerHTML =
+        '<div class="px-4 py-2 text-[11px] text-gray-500 clip border-b border-gray-100">' +
+        escapeHtml(state.editor.name) + '</div>' +
+        '<textarea id="editor-text" spellcheck="false" autocapitalize="off" ' +
+        'autocorrect="off" class="block w-full min-h-[70vh] p-4 font-mono text-xs ' +
+        'leading-5 outline-none resize-none">' + escapeHtml(state.editor.original) +
+        '</textarea>';
+    renderHeaderActions();
+}
+
+/** True when the textarea holds something other than what was last read or written. */
+function editorIsDirty() {
+    const box = document.getElementById('editor-text');
+    return !!box && box.value !== state.editor.original;
+}
+
+function saveEditor() {
+    const box = document.getElementById('editor-text');
+    if (!box) return;
+    const text = box.value;
+    const result = Bridge.call('writeText', state.editor.path, text);
+    if (!result.ok) { alert(result.error); return; }
+    // What is on disk is now the baseline, so closing no longer warns and a second
+    // save of untouched text is still correct rather than being suppressed.
+    state.editor.original = text;
+    renderHeaderActions();
+}
+
+function closeEditor() {
+    if (editorIsDirty() && !confirm('Close without saving? The changes are lost.')) return;
+    state.editor = null;
+    openDirectory(state.path);
+}
+
 /** Only speaks up when something went wrong: a silent failure is what makes a bridge feel broken. */
 function reportFailure(result) {
     if (result && result.ok === false && result.error) alert(result.error);
@@ -336,6 +420,14 @@ function reportFailure(result) {
 
 function renderHeaderActions() {
     if (state.tab !== 'files') { headerActions.innerHTML = ''; return; }
+    if (state.editor) {
+        headerActions.innerHTML =
+            '<button id="editor-save" class="text-sm font-medium text-blue-600">Save</button>' +
+            '<button id="editor-close" class="text-sm">Close</button>';
+        document.getElementById('editor-save').onclick = saveEditor;
+        document.getElementById('editor-close').onclick = closeEditor;
+        return;
+    }
     headerActions.innerHTML =
         (state.parent ? '<button id="up" title="Up">⬆️</button>' : '') +
         '<button id="new-folder" title="New folder">➕</button>' +
@@ -355,6 +447,7 @@ function renderHeaderActions() {
         else if (answer === '5') state.descending = !state.descending;
         else if (answer === '6') state.showHidden = !state.showHidden;
         else return;
+        Settings.save();
         openDirectory(state.path);
     };
 }
@@ -409,35 +502,155 @@ function connectionCard(entry) {
         '</div>';
 }
 
-function renderConnections(wanted, emptyMessage) {
-    const rows = connections().filter(entry =>
-        wanted === BACKUP_KINDS.includes(entry.kind));
-    panel.innerHTML = rows.length
-        ? '<div class="pt-2">' + rows.map(connectionCard).join('') + '</div>'
-        : '<div class="pt-2">' + card('Nothing here', emptyMessage) + '</div>';
+function renderApps() {
+    const rows = connections().filter(entry => !BACKUP_KINDS.includes(entry.kind));
+    panel.innerHTML = '<div class="pt-2">' + (rows.length
+        ? rows.map(connectionCard).join('')
+        : card('Nothing here', 'No storage back ends are declared in this build.')) + '</div>';
     headerActions.innerHTML = '';
 }
 
-function renderApps() {
-    renderConnections(false, 'No storage back ends are declared in this build.');
+/* ── the Backups tab ─────────────────────────────────────────────────────────────
+   build.json says this tab covers ON-DEVICE backup sets, and until now it showed the
+   fleet's borg and bup repositories — remote repositories under a heading that
+   promised local ones. Both belong here, so both are shown and each is labelled for
+   what it is: the mirror jobs this app can actually run, and the repositories that
+   are somebody else's process.
+
+   The mirror jobs are #330's Rsync. It lives in this tab rather than in a fifth one
+   because a scheduled one-way folder copy IS an on-device backup set — the surface
+   the tab was already named for. */
+
+const MIRROR_JOBS = (() => {
+    let cache = null;
+    return () => {
+        if (cache === null) {
+            try { cache = JSON.parse(Bridge.raw('mirrorJobs') || '[]'); } catch (error) { cache = []; }
+        }
+        return cache;
+    };
+})();
+
+function mirrorJobCard(job, index) {
+    const fact = (label, value) =>
+        '<div class="flex gap-2"><span class="w-10 shrink-0 text-gray-400">' + label +
+        '</span><span class="break-all">' + escapeHtml(String(value)) + '</span></div>';
+    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-200">' +
+        '<div class="flex items-center gap-2">' +
+        '<span class="flex-1 text-sm font-medium">' + escapeHtml(job.name || 'Unnamed') + '</span>' +
+        '<button class="run-mirror px-3 py-1 rounded bg-blue-600 text-white text-xs" ' +
+        'data-index="' + index + '">Run</button></div>' +
+        '<div class="mt-2 text-xs text-gray-500 space-y-0.5">' +
+        fact('From', job.source) + fact('To', job.destination) + '</div>' +
+        (job.delete
+            ? '<div class="mt-2 text-xs text-amber-600">Removes whatever the source no longer has.</div>'
+            : '') +
+        (job.notes ? '<div class="mt-2 text-xs text-gray-400">' + escapeHtml(job.notes) + '</div>' : '') +
+        '<div class="mirror-result mt-2 text-xs text-gray-400" data-index="' + index + '"></div>' +
+        '</div>';
+}
+
+function heading(text) {
+    return '<div class="px-4 pt-4 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">' +
+        escapeHtml(text) + '</div>';
 }
 
 function renderBackups() {
-    renderConnections(true, 'No backup repositories are declared in this build.');
+    const jobs = MIRROR_JOBS();
+    const repositories = connections().filter(entry => BACKUP_KINDS.includes(entry.kind));
+    panel.innerHTML =
+        heading('On-device mirrors') +
+        (jobs.length
+            ? jobs.map(mirrorJobCard).join('')
+            : card('Nothing here', 'No mirror jobs are declared in this build.')) +
+        heading('Fleet repositories') +
+        (repositories.length
+            ? repositories.map(connectionCard).join('')
+            : card('Nothing here', 'No backup repositories are declared in this build.')) +
+        '<div class="h-4"></div>';
+    bindMirrorButtons(jobs);
+    headerActions.innerHTML = '';
 }
 
+function bindMirrorButtons(jobs) {
+    panel.querySelectorAll('.run-mirror').forEach(button => {
+        button.onclick = () => {
+            const index = Number(button.dataset.index);
+            const job = jobs[index];
+            if (job.delete && !confirm(job.name + '\n\nThis job deletes anything in the ' +
+                'destination that the source no longer has. Run it?')) return;
+
+            const line = panel.querySelector('.mirror-result[data-index="' + index + '"]');
+            line.className = 'mirror-result mt-2 text-xs text-gray-400';
+            line.textContent = 'Running…';
+            button.disabled = true;
+
+            // The bridge call is synchronous and a full pass over a camera roll is not
+            // instant, so hand the browser one frame to paint "Running…" before blocking
+            // on it. ponytail: a frame, not a worker — move the walk onto a background
+            // thread with a progress callback if a pass ever grows past a few seconds.
+            setTimeout(() => {
+                const result = Bridge.call('mirror', job.source, job.destination, !!job.delete);
+                if (result.copied === undefined) {
+                    line.className = 'mirror-result mt-2 text-xs text-red-600';
+                    line.textContent = result.error || 'the mirror failed';
+                } else {
+                    line.className = 'mirror-result mt-2 text-xs ' +
+                        (result.failed ? 'text-amber-600' : 'text-gray-500');
+                    line.textContent =
+                        result.copied + ' copied · ' + result.skipped + ' already there · ' +
+                        result.deleted + ' removed · ' + result.failed + ' failed';
+                }
+                button.disabled = false;
+            }, 0);
+        };
+    });
+}
+
+/* Settings, not a read-out. The three values here were shown as text and could only be
+   changed from the Files tab's sort prompt, which made this tab a description of state
+   rather than the place that holds it — and none of it survived a restart. */
 function renderConfigs() {
     const granted = Bridge.available && Bridge.raw('hasStorageAccess') === true;
+    const chip = (attribute, value, label, active) =>
+        '<button class="cfg-choice px-2 py-1 rounded text-xs ' +
+        (active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600') + '" ' +
+        'data-' + attribute + '="' + value + '">' + escapeHtml(label) + '</button>';
+
     panel.innerHTML =
         '<div class="pt-2">' +
         card('All-files access', granted
             ? 'Granted — the Files tab can manage this phone\'s storage.'
             : 'Not granted. <button id="cfg-grant" class="underline text-blue-600">Open the Android setting</button>') +
-        card('Default sort', escapeHtml(state.sort) + (state.descending ? ', descending' : ', ascending')) +
-        card('Hidden files', state.showHidden ? 'Shown' : 'Hidden') +
+        card('Default sort',
+            '<div class="flex flex-wrap gap-2 mt-2">' +
+            chip('sort', 'name', 'Name', state.sort === 'name') +
+            chip('sort', 'size', 'Size', state.sort === 'size') +
+            chip('sort', 'modified', 'Modified', state.sort === 'modified') +
+            chip('sort', 'type', 'Type', state.sort === 'type') +
+            '</div><div class="flex flex-wrap gap-2 mt-2">' +
+            chip('descending', 'false', 'Ascending', !state.descending) +
+            chip('descending', 'true', 'Descending', state.descending) +
+            '</div>') +
+        card('Hidden files',
+            '<div class="flex flex-wrap gap-2 mt-2">' +
+            chip('hidden', 'false', 'Hidden', !state.showHidden) +
+            chip('hidden', 'true', 'Shown', state.showHidden) +
+            '</div>') +
         '</div>';
+
     const grant = document.getElementById('cfg-grant');
     if (grant) grant.onclick = () => Bridge.call('requestStorageAccess');
+    panel.querySelectorAll('.cfg-choice').forEach(button => {
+        button.onclick = () => {
+            if (button.dataset.sort) state.sort = button.dataset.sort;
+            else if (button.dataset.descending) state.descending = button.dataset.descending === 'true';
+            else state.showHidden = button.dataset.hidden === 'true';
+            Settings.save();
+            // The Files tab re-lists on its next visit, so nothing to refresh but this one.
+            renderConfigs();
+        };
+    });
     headerActions.innerHTML = '';
 }
 
@@ -449,6 +662,9 @@ function showTab(tab) {
         button.classList.toggle('active', button.dataset.tab === tab));
     if (tab === 'files') {
         if (Bridge.available && Bridge.raw('hasStorageAccess') !== true) renderPermissionPrompt();
+        // An open file outlives a look at another tab. Losing unsaved edits to a stray tap
+        // on "Configs" is the kind of thing an editor is judged on.
+        else if (state.editor) renderEditor();
         else if (state.path) renderFiles();
         else startAtFirstPlace();
     } else if (tab === 'apps') renderApps();
@@ -467,12 +683,16 @@ document.querySelectorAll('.tab-button').forEach(button => {
     button.onclick = () => showTab(button.dataset.tab);
 });
 
-// The hardware back button: step up a directory before leaving the app.
+// The hardware back button: close the editor, then step up a directory, and only then
+// leave the app. Back out of an editor with unsaved changes and closeEditor asks first.
 window.addEventListener('popstate', () => {
-    if (state.tab === 'files' && state.parent) { openDirectory(state.parent); history.pushState(null, ''); }
+    if (state.tab !== 'files') return;
+    if (state.editor) { closeEditor(); history.pushState(null, ''); }
+    else if (state.parent) { openDirectory(state.parent); history.pushState(null, ''); }
 });
 history.pushState(null, '');
 
+Settings.load();
 showTab('files');
 </script>
 </body>

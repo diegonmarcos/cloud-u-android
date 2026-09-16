@@ -59,6 +59,12 @@ def b64 = { obj -> groovy.json.JsonOutput.toJson(obj).bytes.encodeBase64().toStr
 def connectionsFile = file('../data/drive-connections.json')
 def connectionsB64  = b64(connectionsFile.exists()
     ? new groovy.json.JsonSlurper().parse(connectionsFile) : [])
+// The mirror (rsync) jobs the Backups tab runs, on the same carrier. Only the `jobs`
+// array crosses into the APK: the file's _doc_* keys are there for whoever edits it and
+// would otherwise be shipped to a phone that cannot read them.
+def mirrorJobsFile = file('../data/drive-mirror-jobs.json')
+def mirrorJobsB64  = b64(mirrorJobsFile.exists()
+    ? (new groovy.json.JsonSlurper().parse(mirrorJobsFile).jobs ?: []) : [])
 def uiPermissionsRuntimeB64 = b64(buildJson.ui?.permissions?.runtime ?: [])
 def uiPermissionsRolesB64   = b64(buildJson.ui?.permissions?.roles   ?: [])
 def profileDefault   = buildJson.ui?.profile_default ?: [:]
@@ -170,6 +176,7 @@ android {
         buildConfigField "String", "LOG_SINK_URL",    "\"${logSinkUrl}\""
         buildConfigField "String", "LOG_SINK_STREAM", "\"${logSinkStream}\""
         buildConfigField "String", "CONNECTIONS_B64", "\"${connectionsB64}\""
+        buildConfigField "String", "MIRROR_JOBS_B64", "\"${mirrorJobsB64}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64",   "\"${uiPermissionsRolesB64}\""
         buildConfigField "String", "UI_PROFILE_NAME",      "\"${profileName}\""

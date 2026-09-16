@@ -37,6 +37,7 @@ on:
       - "ab_cloud-libs-shared/libs/devtools/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-drive/**"
+      - "!ac_cloud-drive/test/**"
 permissions:
   contents: write
   packages: write

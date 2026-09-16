@@ -1,0 +1,36 @@
+{
+  "_doc": "The mirror (rsync) jobs the Backups tab offers. Baked into BuildConfig.MIRROR_JOBS_B64 by app/build.gradle and read through FilesBridge.mirrorJobs(), exactly like drive-connections.json — a declarative list in the repo, no network needed to render the tab and nothing hardcoded in the page.",
+  "_doc_paths": "source and destination are RELATIVE TO SHARED STORAGE and are resolved by FilesBridge.resolveDeclared(). The absolute form (/storage/emulated/0/...) is a fact about one device — the user id in it changes under a second profile — so it must not be written down here.",
+  "_doc_delete": "delete is rsync's --delete: entries the source no longer has are removed from the destination. It is the only option in this file that loses data, which is why it is DECLARED per job rather than offered as a switch in the app. Default false, which is also rsync's own default.",
+  "_doc_fleet_destination": "EVERY DESTINATION HERE IS ON-DEVICE, and that is a deliberate limit, not an oversight. A job whose destination were a fleet host would have to authenticate to it, and the only credential shapes available (an SSH private key, a Filebrowser session) would have to live inside an APK that any rooted phone can unpack — so no fleet destination is declared until a credential path exists that sops can own. When one does, it addresses the host over the WireGuard mesh (10.0.0.x) and never a public name.",
+  "jobs": [
+    {
+      "name": "Camera roll",
+      "source": "DCIM/Camera",
+      "destination": "CloudDrive/mirror/camera",
+      "delete": false,
+      "notes": "Photos and videos as the camera wrote them."
+    },
+    {
+      "name": "Pictures",
+      "source": "Pictures",
+      "destination": "CloudDrive/mirror/pictures",
+      "delete": false,
+      "notes": "Screenshots and whatever other applications file here."
+    },
+    {
+      "name": "Documents",
+      "source": "Documents",
+      "destination": "CloudDrive/mirror/documents",
+      "delete": false,
+      "notes": "The folder Android hands applications for user documents."
+    },
+    {
+      "name": "Downloads",
+      "source": "Download",
+      "destination": "CloudDrive/mirror/downloads",
+      "delete": false,
+      "notes": "Android names this folder Download, singular, on every release."
+    }
+  ]
+}
