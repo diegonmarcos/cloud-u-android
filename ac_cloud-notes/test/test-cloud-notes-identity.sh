@@ -242,3 +242,4 @@ fi
 echo
 [ "$FAILED" = "0" ] && { echo "test-cloud-notes-identity: ALL PASS"; exit 0; }
 echo "test-cloud-notes-identity: FAILURES PRESENT"; exit 1
+
