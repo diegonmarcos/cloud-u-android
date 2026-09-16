@@ -273,6 +273,143 @@ clean {
     }
 }
 
+// ---------------------------------------------------------------------------
+// #348 — bake the proot + glibc root filesystem into the APK.
+//
+// This is the RUNTIME, not packaging convenience. The zip carries
+// bin/proot-static (built aarch64-unknown-linux-android, so bionic runs it
+// natively) and under it glibc-2.37-45 with lib/ld-linux-aarch64.so.1 and
+// lib/libc.so.6. #288 proved with ELF evidence that a glibc binary has no
+// loader on Android; proot supplies one. Nothing else in this APK makes a
+// glibc CLI runnable.
+//
+// Before this task, TermuxInstaller downloaded the zip on FIRST LAUNCH from a
+// url typed into an editable dialog box, with no integrity check whatsoever.
+// That is three failures at once: no network means no terminal ever, a host
+// nobody here controls sits in the boot path, and unverified bytes get marked
+// executable. Fetching once in CI against a pinned sha256 removes all three.
+//
+// EVERY value below is read from build.json. Nothing about which bootstrap,
+// from where, for which ABI, or under which package name is written here --
+// extending this to a new ABI or a new release is a JSON edit.
+//
+// Nothing enters git: *.zip is gitignored and the output lives in
+// app/build/generated/bootstrap/.
+// ---------------------------------------------------------------------------
+
+def bootstrapSpec() {
+    def declaration = new File(projectDir.parentFile, "build.json")
+    if (!declaration.exists())
+        throw new GradleException("missing " + declaration + " -- the bootstrap pin is declared there, not here")
+    def spec = new groovy.json.JsonSlurper().parseText(declaration.getText("UTF-8"))
+            ?.forks?.nixdroid?.bootstrap
+    if (spec == null)
+        throw new GradleException(declaration.toString() + " has no forks.nixdroid.bootstrap block; refusing to "
+                + "ship an APK whose terminal would fall back to a first-run download")
+    return spec
+}
+
+// The ABI this APK is for, from the release.variants[] entry the engine
+// selected. Same CLOUDNAV_ABIS hook every other per-ABI app here uses. One
+// rootfs per APK: baking all of them would multiply ~38MB by four for three
+// root filesystems this APK can never execute.
+def bootstrapAbi() {
+    def selected = System.getenv("CLOUDNAV_ABIS")
+    def abi = (selected?.trim()) ? selected.split(",")[0].trim() : "arm64-v8a"
+    def known = bootstrapSpec().archs
+    if (!known.containsKey(abi))
+        throw new GradleException("CLOUDNAV_ABIS names ABI '" + abi + "', which build.json's "
+                + "forks.nixdroid.bootstrap.archs does not declare (known: " + known.keySet().join(", ") + ")")
+    return abi
+}
+
+def bootstrapAssetsDir = new File(buildDir, "generated/bootstrap/assets")
+
+task bakeBootstrap() {
+    outputs.dir bootstrapAssetsDir
+    doLast {
+        def spec = bootstrapSpec()
+        def abi = bootstrapAbi()
+        def pin = spec.archs[abi]
+
+        def staging = new File(buildDir, "generated/bootstrap/download")
+        staging.mkdirs()
+        bootstrapAssetsDir.mkdirs()
+
+        def downloaded = new File(staging, "bootstrap-" + pin.arch + ".zip")
+        def remoteUrl = spec.url_base + "/" + spec.release + "/bootstrap-" + pin.arch + ".zip"
+
+        // Re-use a cached download only when it already hashes to the pin.
+        if (!downloaded.exists() || sha256Of(downloaded) != pin.sha256) {
+            logger.quiet("bakeBootstrap: downloading " + remoteUrl + " ...")
+            downloaded.delete()
+            def connection = new URL(remoteUrl).openConnection()
+            connection.setInstanceFollowRedirects(true)
+            def out = new BufferedOutputStream(new FileOutputStream(downloaded))
+            out << connection.inputStream
+            out.close()
+        }
+
+        def actual = sha256Of(downloaded)
+        if (actual != pin.sha256) {
+            downloaded.delete()
+            throw new GradleException("bakeBootstrap: wrong sha256 for " + remoteUrl
+                    + "\n  expected " + pin.sha256 + " (build.json::forks.nixdroid.bootstrap.archs['" + abi + "'])"
+                    + "\n  actual   " + actual
+                    + "\nThe pin is the only thing standing between this APK and whatever that third-party host "
+                    + "served today. Verify the new bytes by hand before touching the pin.")
+        }
+
+        // The published bootstrap hardcodes the UPSTREAM package id in
+        // bin/login and usr/lib/login-inner -- generated shell scripts, not
+        // ELF, whose absolute paths no runtime call rewrites. Unpatched, the
+        // terminal execs a proot-static under a package directory that is not
+        // installed and dies ENOENT naming another app's path. Both ids are
+        // the same byte length, which is what the 2026-08-30 rename bought us.
+        def rewrite = spec.package_name_rewrite
+        def patcher = new File(projectDir, "src/main/cpp/patch_bootstrap_ids.py")
+        if (!patcher.exists())
+            throw new GradleException("missing " + patcher + " (the app-id rewrite gate)")
+        def baked = new File(bootstrapAssetsDir, spec.asset_name)
+        def result = exec {
+            commandLine "python3", patcher.absolutePath, downloaded.absolutePath, baked.absolutePath,
+                    rewrite.from + "=" + rewrite.to
+            ignoreExitValue = true
+        }
+        if (result.exitValue != 0)
+            throw new GradleException("patch_bootstrap_ids.py failed for " + downloaded
+                    + " (exit " + result.exitValue + "); see log above")
+
+        logger.quiet("bakeBootstrap: " + abi + " -> assets/" + spec.asset_name
+                + " (" + baked.length() + " B, from " + downloaded.length() + " B)")
+    }
+}
+
+def sha256Of(File file) {
+    def digest = java.security.MessageDigest.getInstance("SHA-256")
+    def buffer = new byte[8192]
+    def input = new FileInputStream(file)
+    try {
+        while (true) {
+            def read = input.read(buffer)
+            if (read < 0) break
+            digest.update(buffer, 0, read)
+        }
+    } finally {
+        input.close()
+    }
+    def checksum = new BigInteger(1, digest.digest()).toString(16)
+    while (checksum.length() < 64) checksum = "0" + checksum
+    return checksum
+}
+
+android.sourceSets.main.assets.srcDir bootstrapAssetsDir
+
+// Assets are merged long before javaCompile, so depending on javaCompile (the
+// hook the sibling termux bootstrap uses for its cpp inputs) would bake
+// nothing and still go green.
+tasks.matching { it.name ==~ /merge.*Assets/ }.configureEach { dependsOn bakeBootstrap }
+
 /* NIX-ON-DROID: Unused
 task downloadBootstraps() {
     doLast {

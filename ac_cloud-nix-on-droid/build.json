@@ -1,7 +1,7 @@
 {
   "name": "cloud-terminal-nix",
   "vendored_engine": "cloud-nix-on-droid-fork-engine.sh",
-  "_doc_vendored_engine": "CI does NOT run the engine source in 1_cicd/src/scripts \u2014 it runs the VENDORED COPY at ./build.sh, from this directory. This key DECLARES that copy relationship so the workflow generator can enforce byte-identity (cloud-android-ship-repo-workflow-engine.sh, step 'verify engine \u2194 vendored build.sh parity') and go red on drift. Editing the engine alone used to change nothing at ship time, silently \u2014 which is how the ABI gate and the GHCR auto-delete gate came to exist only in the file nobody executes. Re-sync with: cp 1_cicd/src/scripts/<engine> ./build.sh",
+  "_doc_vendored_engine": "CI does NOT run the engine source in 1_cicd/src/scripts — it runs the VENDORED COPY at ./build.sh, from this directory. This key DECLARES that copy relationship so the workflow generator can enforce byte-identity (cloud-android-ship-repo-workflow-engine.sh, step 'verify engine ↔ vendored build.sh parity') and go red on drift. Editing the engine alone used to change nothing at ship time, silently — which is how the ABI gate and the GHCR auto-delete gate came to exist only in the file nobody executes. Re-sync with: cp 1_cicd/src/scripts/<engine> ./build.sh",
   "forks": {
     "nixdroid": {
       "app_id": "cld.termux.nix",
@@ -15,22 +15,49 @@
       "runtime": "native",
       "priority": 2,
       "blocked_on": null,
-      "app_id_note": "RENAMED 2026-08-30, overriding the prior 'keep upstream id' decision: com.termux.nix -> cld.termux.nix, so this fork installs ALONGSIDE the official Nix-on-Droid app instead of colliding with it (same id + different signature previously forced the upstream app to be uninstalled first). The new id is EXACTLY the same byte length (14 chars) as the old one \u2014 mandatory, not cosmetic: this is termux-app-derived and, like Termux itself, would compile the applicationId into every bootstrap ELF binary as a fixed-length string were its native bootstrap module enabled (it is currently disabled \u2014 'NIX-ON-DROID: Unused' \u2014 so no bootstrap-zip patching was needed here; its Nix store instead comes from proot bind-mounts and Context.getFilesDir() at runtime, both of which follow applicationId automatically). Equal length keeps the option open without relinking anything if that module is ever re-enabled, and matches the sibling cld.termux rename in ac_cloud-termux/build.json for the same reason. See TermuxConstants.TERMUX_PACKAGE_NAME / app/build.gradle applicationId+manifestPlaceholders for the source-side rename.",
+      "app_id_note": "RENAMED 2026-08-30, overriding the prior 'keep upstream id' decision: com.termux.nix -> cld.termux.nix, so this fork installs ALONGSIDE the official Nix-on-Droid app instead of colliding with it (same id + different signature previously forced the upstream app to be uninstalled first). The new id is EXACTLY the same byte length (14 chars) as the old one — mandatory, not cosmetic: this is termux-app-derived and, like Termux itself, would compile the applicationId into every bootstrap ELF binary as a fixed-length string were its native bootstrap module enabled (its native bootstrap module is disabled — 'NIX-ON-DROID: Unused'). CORRECTED 2026-09-16: this note used to conclude from that disabled module that 'no bootstrap-zip patching was needed here; its Nix store instead comes from proot bind-mounts and Context.getFilesDir() at runtime, both of which follow applicationId automatically'. That is FALSE and it is a load-bearing falsehood. The bind mounts are string literals in bin/login, a script the upstream bootstrap GENERATES with /data/data/com.termux.nix/files/... written in 22 times (plus 8 in usr/lib/login-inner); nothing in this app reads getFilesDir() to build them. An unpatched bootstrap therefore execs a proot-static under a package directory that is not installed. Equal byte length is what makes the fix a pure find+replace — see bootstrap.package_name_rewrite below, which now performs it. Equal length keeps the option open without relinking anything if that module is ever re-enabled, and matches the sibling cld.termux rename in ac_cloud-termux/build.json for the same reason. See TermuxConstants.TERMUX_PACKAGE_NAME / app/build.gradle applicationId+manifestPlaceholders for the source-side rename.",
       "build": {
-        "_doc": "Stock termux-app gradle: assembleRelease, signed with the ONE shared constellation keystore. signing=vault_jks_env, NOT 'keystore' \u2014 that is not a mode the engine has, and an unrecognised value matches no branch and signs with the debug key instead, silently. A debug-signed build never receives the signature-level CLOUD_EXEC permission, so the bind fails the same way it does when the app is not installed at all.",
+        "_doc": "Stock termux-app gradle: assembleRelease, signed with the ONE shared constellation keystore. signing=vault_jks_env, NOT 'keystore' — that is not a mode the engine has, and an unrecognised value matches no branch and signs with the debug key instead, silently. A debug-signed build never receives the signature-level CLOUD_EXEC permission, so the bind fails the same way it does when the app is not installed at all.",
         "gradle_task": "assembleRelease",
         "apk_glob": "app/build/outputs/apk/release/*.apk",
         "signing": "vault_jks_env",
         "keystore_dest": "app/release.jks",
         "signing_env": {
-          "_doc": "Consumed by _resolve_signing in the fork engine and read back by the release signingConfig added to app/build.gradle. The tokens are the engine's vocabulary \u2014 keystore_path|store_password|key_password|key_alias \u2014 and it fails loud on anything else.",
+          "_doc": "Consumed by _resolve_signing in the fork engine and read back by the release signingConfig added to app/build.gradle. The tokens are the engine's vocabulary — keystore_path|store_password|key_password|key_alias — and it fails loud on anything else.",
           "TERMUX_KEYSTORE_PATH": "keystore_path",
           "TERMUX_KEYSTORE_PASSWORD": "store_password",
           "TERMUX_KEY_PASSWORD": "key_password",
           "TERMUX_KEY_ALIAS": "key_alias"
         }
       },
-      "comment": "Cloud Nix-on-Droid fork."
+      "comment": "Cloud Nix-on-Droid fork.",
+      "bootstrap": {
+        "_doc": "The proot + glibc root filesystem, BAKED IN at build time instead of downloaded on first run. Until this block existed, TermuxInstaller.java popped an editable text box on first launch pre-filled with this url_base and streamed bootstrap-<arch>.zip straight into a ZipInputStream: no network meant no terminal ever, a host nobody here controls sat in the boot path, and NOTHING verified the bytes before marking them executable. The download now happens once, in CI, against the sha256 pinned below, exactly the way ac_cloud-termux/app/build.gradle::downloadBootstraps has always fetched the Termux bootstrap. Nothing enters git: *.zip is gitignored and the artefact lands in app/build/, so the committed diff is this JSON.",
+        "_doc_why_it_is_the_runtime": "This zip is not packaging convenience, it is the runtime. It carries bin/proot-static (built aarch64-unknown-linux-android, so bionic Android runs it natively) and, underneath it, glibc-2.37-45 including lib/ld-linux-aarch64.so.1 and lib/libc.so.6. A glibc CLI has no loader on Android otherwise -- #288 proved that with ELF evidence. proot supplies the glibc root; the terminal is what makes those binaries runnable at all.",
+        "url_base": "https://nix-on-droid.unboiled.info",
+        "release": "bootstrap-release-24.05",
+        "_doc_url_residual": "url_base is a THIRD-PARTY host and it is still in the BUILD path, though no longer in the boot path. The sha256 pins below mean a compromised or vanished host fails the build loudly rather than shipping different bytes. Mirroring these two zips to our own GH release and repointing url_base is the follow-up; it changes this value and nothing else.",
+        "asset_name": "bootstrap.zip",
+        "_doc_asset_name": "Name inside the APK's assets/. One per APK, not one per architecture: each release.variants[] entry builds its own APK, so baking all four would multiply the size for three rootfses that APK can never run.",
+        "package_name_rewrite": {
+          "from": "com.termux.nix",
+          "to": "cld.termux.nix"
+        },
+        "_doc_package_name_rewrite": "MANDATORY, and the reason this app's app_id_note used to claim otherwise is a bug that was corrected 2026-09-16. The note said the Nix store 'comes from proot bind-mounts and Context.getFilesDir() at runtime, both of which follow applicationId automatically'. It does not: bin/login inside the zip is a GENERATED shell script whose every path is a literal, and it hardcodes /data/data/com.termux.nix/files/... 22 times, with 8 more in usr/lib/login-inner (30 occurrences across exactly 2 text entries of 4056; no ELF binary and no SYMLINKS.txt entry contains it). Unpatched, $PREFIX/bin/login execs a proot-static under a package directory that is not installed and the terminal dies ENOENT naming a path that belongs to a different app. Both ids are 14 bytes -- which is exactly why the 2026-08-30 rename was length-preserving -- so patch_bootstrap_ids.py does a pure find+replace and hard-fails if any 'from' survives or if the entry count moves.",
+        "archs": {
+          "arm64-v8a": {
+            "arch": "aarch64",
+            "sha256": "64afc02d670d9471d17c3da0747c10ef2cbc59e7e7578cc3e299a4a1532b237c",
+            "size": 37671948
+          },
+          "x86_64": {
+            "arch": "x86_64",
+            "sha256": "e091c4fc8b50de919f9df8753281b7ab247cd9c402274bb72845deb3caf8cb92",
+            "size": 39291055
+          }
+        },
+        "_doc_archs": "Keyed by the Android ABI in release.variants[].abis, valued with the arch token upstream names the zip after and the pin for it. size is the unpatched download; the patched copy is slightly larger because re-deflating is not byte-identical (aarch64 37,671,948 -> 37,841,339; x86_64 39,291,055 -> 39,515,852), which is why only sha256 is enforced and size is documentation."
+      }
     }
   },
   "signing": {
@@ -39,7 +66,7 @@
   },
   "release": {
     "ghcr": {
-      "_doc": "DISABLED, and disabled is the TRUTH rather than a preference: ship-cloud-nix-on-droid.yml has no GHCR step at all \u2014 no docker/login, no oras push \u2014 so nothing has ever created the cloud-nixdroid package. Verified 2026-09-10 by enumerating all 431 container packages under the diegonmarcos account: cloud-nixdroid is not among them, and /user/packages/container/cloud-nixdroid answers 404 to a token that reads cloud-terminal fine. This key said `true` while that was so, which is not a harmless overstatement: regen.sh emitted the image name into the fleet manifest, the updater probed it whenever the release channel hiccuped, and GHCR answers an anonymous caller 403 DENIED \u2014 not 404 \u2014 for a package that does not exist, because confirming absence would leak private package names. That 403 is what the owner saw on the phone. gh_release below is genuinely the only channel for this app, exactly as its own _doc says. To give it a registry channel, add the push step to the workflow and flip this back \u2014 in that order, so the declaration never leads the pipeline again.",
+      "_doc": "DISABLED, and disabled is the TRUTH rather than a preference: ship-cloud-nix-on-droid.yml has no GHCR step at all — no docker/login, no oras push — so nothing has ever created the cloud-nixdroid package. Verified 2026-09-10 by enumerating all 431 container packages under the diegonmarcos account: cloud-nixdroid is not among them, and /user/packages/container/cloud-nixdroid answers 404 to a token that reads cloud-terminal fine. This key said `true` while that was so, which is not a harmless overstatement: regen.sh emitted the image name into the fleet manifest, the updater probed it whenever the release channel hiccuped, and GHCR answers an anonymous caller 403 DENIED — not 404 — for a package that does not exist, because confirming absence would leak private package names. That 403 is what the owner saw on the phone. gh_release below is genuinely the only channel for this app, exactly as its own _doc says. To give it a registry channel, add the push step to the workflow and flip this back — in that order, so the declaration never leads the pipeline again.",
       "enabled": false,
       "registry": "ghcr.io",
       "namespace": "diegonmarcos",
@@ -47,7 +74,7 @@
       "media_type": "application/vnd.android.package-archive"
     },
     "gh_release": {
-      "_doc": "Rolling 'latest' release: the ONLY channel for this app, since GHCR would publish it private. asset_name was inherited as cloud-comms-dialer.apk when this block was copied from the dialer \u2014 an install URL pointing at a different app entirely. regen.sh's fork branch derives the store asset as image + '.apk' and so was never wrong, which is exactly why the bad value could have sat here unnoticed.",
+      "_doc": "Rolling 'latest' release: the ONLY channel for this app, since GHCR would publish it private. asset_name was inherited as cloud-comms-dialer.apk when this block was copied from the dialer — an install URL pointing at a different app entirely. regen.sh's fork branch derives the store asset as image + '.apk' and so was never wrong, which is exactly why the bad value could have sat here unnoticed.",
       "enabled": true,
       "rolling_tag": "latest",
       "asset_name": "cloud-nixdroid.apk",
@@ -87,5 +114,16 @@
         "update_tag": "latest-x86_64"
       }
     ]
+  },
+  "tests": {
+    "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. This app had NO tests block at all, so every ship run asserted only that it compiled -- which is how an APK that downloads its entire runtime from a stranger's domain on first launch, with no integrity check, shipped green for months.",
+    "shell": {
+      "dir": "test",
+      "_doc_requires": "Tools the testers shell out to, checked BEFORE any of them runs, so a missing tool is a loud red instead of an assertion quietly answering from its absence. test-bootstrap-baked.sh reads build.json with python3.",
+      "requires": [
+        "python3"
+      ]
+    },
+    "_doc_unit": "tests.unit.task is deliberately UNSET: this fork has no JVM test source set, and the engine reports that as a named coverage gap on every run. Declaring a task that runs nothing would convert an honest gap into a false green."
   }
 }

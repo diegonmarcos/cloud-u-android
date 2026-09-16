@@ -4,13 +4,11 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.os.Build;
 import android.os.Environment;
 import android.system.Os;
 import android.util.Pair;
 import android.view.WindowManager;
-import android.widget.EditText;
 
 import com.termux.R;
 import com.termux.shared.file.FileUtils;
@@ -29,8 +27,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -64,7 +60,27 @@ import static com.termux.shared.termux.TermuxConstants.TERMUX_STAGING_PREFIX_DIR
 final class TermuxInstaller {
 
     private static final String LOG_TAG = "TermuxInstaller";
-    static String defaultBootstrapURL = "https://nix-on-droid.unboiled.info/bootstrap-release-24.05";
+    /**
+     * The proot + glibc root filesystem, BAKED INTO THIS APK at build time by
+     * app/build.gradle::bakeBootstrap from the pin in
+     * build.json::forks.nixdroid.bootstrap. #348.
+     * <p/>
+     * This used to be a url -- "https://nix-on-droid.unboiled.info/bootstrap-release-24.05" --
+     * pre-filled into an editable dialog box on first launch and streamed
+     * straight into the ZipInputStream below. Three things were wrong with
+     * that, and all three are why the bootstrap is now an asset:
+     * <p/>
+     * (a) No network, no terminal. Ever. There was no cached copy to fall
+     *     back to, so a phone that is offline at first launch has no shell.
+     * (b) A host nobody here controls sat in the boot path of the runtime.
+     * (c) NOTHING verified the bytes. Unlike the gradle-side download, which
+     *     checks sha256 and fails the build on mismatch, whatever came back
+     *     from that url was extracted and marked executable unread.
+     * <p/>
+     * The bytes are now fixed at build time, verified against the pinned
+     * sha256, and patched for this fork's package id before they are baked.
+     */
+    static final String BOOTSTRAP_ASSET_NAME = "bootstrap.zip";
 
     /** Performs bootstrap setup if necessary. */
     static void setupBootstrapIfNeeded(final Activity activity, final Runnable whenDone) {
@@ -119,28 +135,12 @@ final class TermuxInstaller {
             Logger.logInfo(LOG_TAG, "The termux prefix directory \"" + TERMUX_PREFIX_DIR_PATH + "\" does not exist but another file exists at its destination.");
         }
 
-        final EditText taskEditText = new EditText(activity);
-        String archName = determineTermuxArchName();
-        taskEditText.setHint(defaultBootstrapURL);
-        taskEditText.setText(defaultBootstrapURL);
-
-        AlertDialog dialog = new AlertDialog.Builder(activity)
-            .setTitle("Bootstrap zipball location")
-            .setMessage("Enter the URL of a directory containing bootstrap-" + archName + ".zip")
-            .setView(taskEditText)
-            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    String bootstrapURL = String.valueOf(taskEditText.getText());
-                    restOfSetupIfNeeded(activity, whenDone, bootstrapURL);
-                }
-            })
-            .create();
-
-        dialog.show();
+        // The bootstrap ships inside the APK, so there is nothing to ask the
+        // user and nothing to fetch: install it.
+        restOfSetupIfNeeded(activity, whenDone);
     }
 
-    static void restOfSetupIfNeeded(final Activity activity, final Runnable whenDone, String bootstrapURL) {
+    static void restOfSetupIfNeeded(final Activity activity, final Runnable whenDone) {
 
         final ProgressDialog progress = ProgressDialog.show(activity, null, activity.getString(R.string.bootstrap_installer_body), true, false);
         new Thread() {
@@ -185,8 +185,8 @@ final class TermuxInstaller {
                     final List<Pair<String, String>> symlinks = new ArrayList<>(50);
                     final List<String> executables = new ArrayList<>(128);
 
-                    final URL zipUrl = determineZipUrl(bootstrapURL);
-                    try (ZipInputStream zipInput = new ZipInputStream(zipUrl.openStream())) {
+                    try (ZipInputStream zipInput = new ZipInputStream(
+                             activity.getAssets().open(BOOTSTRAP_ASSET_NAME))) {
                         ZipEntry zipEntry;
                         while ((zipEntry = zipInput.getNextEntry()) != null) {
                             if (zipEntry.getName().equals("SYMLINKS.txt")) {
@@ -421,12 +421,6 @@ final class TermuxInstaller {
 
     private static Error ensureDirectoryExists(File directory) {
         return FileUtils.createDirectoryFile(directory.getAbsolutePath());
-    }
-
-    /** Get bootstrap zip url for this systems cpu architecture. */
-    private static URL determineZipUrl(String bootstrapURL) throws MalformedURLException {
-        String archName = determineTermuxArchName();
-        return new URL(bootstrapURL + "/bootstrap-" + archName + ".zip");
     }
 
     private static String determineTermuxArchName() {
