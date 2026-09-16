@@ -135,6 +135,29 @@
         "action": "keep"
       }
     ],
+    "cool_bundle_diagnostics": {
+      "_doc": "THE KEPT ANCHOR ABOVE IS THE ONE THAT COULD FAIL WITHOUT SAYING WHY, AND ON 2026-09-16 IT DID. generateCoolReleaseAssets drives the COOL web-UI build by shelling out to `make -C ../../browser`, through Gradle's providers.exec. providers.exec CAPTURES the subprocess's stdout and stderr into the ExecOutput it returns and forwards neither to Gradle's logger, and upstream's two call sites ask only for `.result.get()` — so a non-zero exit arrives and the reason for it is discarded. Run 35038703895 is the measurement: 78 of 78 Android tasks executed, :lib:generateCoolReleaseAssets failed 37 seconds in, and all 1,270 lines of the job log held a Gradle stack trace, the string \"Process 'command 'make'' finished with non-zero exit value 2\", and NOT ONE LINE of make's own output. --info, which Gradle's own \"Try:\" block suggests, does not help: these streams never reach the logger at any verbosity. Every run of this workflow fetches a ~2 GB Gerrit tree, so a step that can only be diagnosed by guessing costs a fetch per guess. patches/0004 routes both generateCool*Assets tasks through one helper that sets ignoreExitValue, reads the two streams, prints them, and only then fails — and must NOT change what is built, which is what must_preserve pins.",
+      "file": "android/lib/build.gradle",
+      "patch": "0004",
+      "upstream_discards_output": "}.result.get()",
+      "_doc_upstream_discards_output": "The upstream form, asserted to STILL EXIST at upstream.online.revision. It is the defect: the ExecOutput is constructed, its result is demanded, and its standardOutput/standardError are never read. If upstream ever fixes this itself the tester reds and patches/0004 can be dropped rather than silently duplicating an upstream fix.",
+      "must_add": [
+        "ignoreExitValue",
+        "standardOutput",
+        "standardError",
+        "logger.error"
+      ],
+      "_doc_must_add": "ignoreExitValue is what stops .result.get() throwing before the streams can be read; standardOutput and standardError are the streams; logger.error is what puts them in the job log. All four, because three of four is a task that captures the output and still does not print it.",
+      "must_preserve": [
+        "'clean'",
+        "BUNDLE=DEBUG",
+        "BUNDLE=RELEASE",
+        "src/debug/assets/dist",
+        "src/release/assets/dist"
+      ],
+      "_doc_must_preserve": "A DIAGNOSTICS PATCH THAT CHANGES WHAT IS BUILT IS NOT A DIAGNOSTICS PATCH. These are the make arguments and output directories of both variants; they must survive the rewrite verbatim, so the only difference patches/0004 makes is that a failure is legible.",
+      "asserted_by": "tests/test-cool-make-failure-is-legible.sh"
+    },
     "vendor_the_shell": {
       "_doc": "MEASURED, AND IT ANSWERS THE QUESTION IN THE PREFERRED DIRECTION. The fear behind _doc_no_source_in_git is LibreOffice core with external/, which is multi-gigabyte. It does not apply to the Android shell. A depth-1 clone of upstream.online at the pin was taken on 2026-09-11: .git is 480 MB (confirming the 471 MB figure in _doc_fetch_cost) and browser/ alone is 314 MB — but android/ is 2.5 MB across 259 files, and no file in it is remotely near the 100 MB blob cap that #162 exists to respect. Vendoring android/ therefore deletes a 480 MB, multi-minute Gerrit fetch from EVERY run and collapses patch_mode `apply` into an owned tree, which is the fleet's own 'dont fork, clone' pattern and what the other four fork apps already do. NOTE ON COST: that clone did NOT reproduce the ~10 minute figure from this container today — it sat in Gerrit's counting phase for over thirty minutes with no output before completing. Another reason not to put it on the critical path of every build.",
       "android_tree_bytes": 2621440,

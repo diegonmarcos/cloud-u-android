@@ -1,0 +1,100 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Cloud Office <me@diegonmarcos.com>
+Date: Wed, 16 Sep 2026 00:45:00 +0000
+Subject: [PATCH] cloud-office: a failing make must say why in the build log
+
+generateCoolReleaseAssets is the COOL web-UI build, and it is the one
+task this app cannot skip: patches/0001 edits browser/, so assets/dist
+has to come from this tree rather than from the pinned APK. It is also
+the only task in the Android build that can fail without saying anything.
+
+providers.exec CAPTURES the subprocess's stdout and stderr into the
+ExecOutput it returns and forwards neither to Gradle's logger. The two
+calls here then threw the captured streams away by asking only for
+.result.get(), so make's exit status arrived and make's reason did not.
+Run 35038703895 is what that costs: 78 of 78 Android tasks executed,
+:lib:generateCoolReleaseAssets failed 37 seconds in, and the whole
+1,270-line job log carried a Gradle stack trace, the string "Process
+'command 'make'' finished with non-zero exit value 2", and not one line
+of make's own output. Re-running with --info, which the "Try:" block
+suggests, would not have helped either: these streams never reach the
+logger at any level, so there is no verbosity that prints them.
+
+An engine step that hides the diagnostics of the tool it drives cannot
+be debugged except by guessing, and every guess here costs a run that
+fetches a 2 GB Gerrit tree. So both tasks now go through one helper that
+sets ignoreExitValue, reads the two streams, prints them when the exit
+status is non-zero, and only then fails the build with the command and
+the code in the message. The debug variant gets it too — a task that is
+only legible in one of its two forms is the same bug half-fixed.
+
+Nothing about WHAT is built changes: same make, same -C, same
+DIST_FOLDER and BUNDLE arguments, same clean-then-build order.
+---
+ android/lib/build.gradle | 46 +++++++++++++++++++++++++++++-----------
+ 1 file changed, 34 insertions(+), 12 deletions(-)
+
+diff --git a/android/lib/build.gradle b/android/lib/build.gradle
+index bfd88f7..2784fe4 100644
+--- a/android/lib/build.gradle
++++ b/android/lib/build.gradle
+@@ -367,25 +367,47 @@ preBuild.dependsOn 'createRCfiles',
+         'createFullConfig',
+         'copyBrandTheme'
+ 
++// WHEN make FAILS, ITS OWN ERROR HAS TO BE IN THE BUILD LOG.
++//
++// providers.exec CAPTURES the subprocess's stdout and stderr into the returned
++// ExecOutput and forwards neither of them to Gradle's logger, so a plain
++// `.result.get()` throws with "Process 'command 'make'' finished with non-zero
++// exit value 2" and DISCARDS the npm, tsc or eslint diagnostic that says what
++// is actually wrong. Run 35038703895 died exactly there: 78 of 78 Android
++// tasks ran, this one failed 37 seconds in, and the entire job log held a
++// Gradle stack trace and not one line of make's output. Running Gradle with
++// --info does not help, because those streams never reach the logger at any
++// level. ignoreExitValue is what lets them be read, and printed, before the
++// build is failed.
++def coolMake = { List<String> args ->
++    String browser = "${rootProject.layout.buildDirectory.get()}/../../browser".toString()
++    logger.lifecycle("cool: make -C {} {}", browser, args.join(' '))
++    def run = providers.exec {
++        commandLine(['make', '-C', browser] + args)
++        ignoreExitValue = true
++    }
++    String out = run.standardOutput.asText.get()
++    String err = run.standardError.asText.get()
++    int code = run.result.get().exitValue
++    if (code != 0) {
++        logger.error("cool: make -C ${browser} ${args.join(' ')} exited ${code}; its output follows")
++        if (out) { logger.error(out) }
++        if (err) { logger.error(err) }
++        throw new GradleException("make -C ${browser} ${args.join(' ')} failed with exit ${code}")
++    }
++}
++
+ tasks.register('generateCoolDebugAssets') {
+     doLast {
+-        providers.exec {
+-            commandLine 'make', '-C', "${rootProject.layout.buildDirectory.get()}/../../browser", 'clean'
+-        }.result.get()
+-        providers.exec {
+-            commandLine 'make', '-C', "${rootProject.layout.buildDirectory.get()}/../../browser", "DIST_FOLDER=${project.layout.projectDirectory}/src/debug/assets/dist", 'BUNDLE=DEBUG'
+-        }.result.get()
++        coolMake(['clean'])
++        coolMake(["DIST_FOLDER=${project.layout.projectDirectory}/src/debug/assets/dist".toString(), 'BUNDLE=DEBUG'])
+     }
+ }
+ 
+ tasks.register('generateCoolReleaseAssets') {
+     doLast {
+-        providers.exec {
+-            commandLine 'make', '-C', "${rootProject.layout.buildDirectory.get()}/../../browser", 'clean'
+-        }.result.get()
+-        providers.exec {
+-            commandLine 'make', '-C', "${rootProject.layout.buildDirectory.get()}/../../browser", "DIST_FOLDER=${project.layout.projectDirectory}/src/release/assets/dist", 'BUNDLE=RELEASE'
+-        }.result.get()
++        coolMake(['clean'])
++        coolMake(["DIST_FOLDER=${project.layout.projectDirectory}/src/release/assets/dist".toString(), 'BUNDLE=RELEASE'])
+     }
+ }
+ 
