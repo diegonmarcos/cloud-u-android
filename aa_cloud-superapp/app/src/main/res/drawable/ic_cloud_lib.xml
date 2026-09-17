@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The single shared fallback home-screen glyph for a constellation LIBRARY APK
+  that ships no application icon of its own (kind=="lib" in the fleet manifest).
+  Declared exactly once, here; referenced exactly once, by
+  PhoneSmartFolders.installedLibSlots -- the ONLY place a lib tile without its
+  own icon finds a glyph. A filled rounded square with a tidy "stacked blocks"
+  motif reads as a bundled/multi-part payload, which is what a lib engine APK
+  is, without pretending to be a particular app.
+
+  Self-coloured (the accent purple on a transparent tile) because these icons
+  are handed to setImageDrawable as a real app icon -- unlike the theme-tinted
+  toolbar glyphs, nothing re-tints them, so a currentColor-style black shape
+  would paint invisible on the dark launcher surface.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="52dp"
+    android:height="52dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+
+    <!-- Solid rounded square, accent purple: an installed store entry. -->
+    <path
+        android:pathData="M12,5 L36,5 A7,7 0 0,1 43,12 L43,36 A7,7 0 0,1 36,43 L12,43 A7,7 0 0,1 5,36 L5,12 A7,7 0 0,1 12,5 Z"
+        android:fillColor="#7C3AED" />
+
+    <!-- Three stacked blocks, offset like bundled modules. -->
+    <path
+        android:pathData="M15,14 L23,14 L23,21 L15,21 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.95" />
+    <path
+        android:pathData="M25,14 L33,14 L33,21 L25,21 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.7" />
+    <path
+        android:pathData="M20,24 L28,24 L28,31 L20,31 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.6" />
+    <path
+        android:pathData="M15,34 L23,34 L23,40 L15,40 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.45" />
+    <path
+        android:pathData="M25,33 L32,33 L32,40 L25,40 Z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.35" />
+</vector>

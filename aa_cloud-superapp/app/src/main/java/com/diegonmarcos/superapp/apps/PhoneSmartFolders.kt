@@ -8,7 +8,10 @@ import com.diegonmarcos.superapp.updater.Fleet
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Build
+import android.os.Process
 import android.util.Base64
+import androidx.core.content.ContextCompat
+import com.diegonmarcos.superapp.R
 import org.json.JSONArray
 
 /**
@@ -162,6 +165,17 @@ object PhoneSmartFolders {
          *  filtered exactly as before. */
         val includeConstellation: Boolean = false,
     ) {
+        /** True when this folder's rule selects the constellation's LIBRARY
+         *  packages (`fleet_kind` with value "lib"). Such a folder's subject
+         *  is the INSTALLED lib set from [installedLibSlots], not the
+         *  launchable enumeration — a lib APK ships no launcher activity, so
+         *  it can never appear in [PhoneAppClassifier]'s universe, and a
+         *  folder that filtered that universe would always come up empty
+         *  (#474). Declared here off the rule data, never a second field to
+         *  drift. */
+        val selectsInstalledLibs: Boolean
+            get() = rule.type == "fleet_kind" && rule.values.contains("lib")
+
         /** The apps this smart folder shows, from the master [apps] list.
          *  Predicate rules filter; the ranking rules (recently_installed +
          *  the usage/network/battery ones) order a provider's ranked
@@ -240,4 +254,52 @@ object PhoneSmartFolders {
         }
         out
     }.getOrDefault(emptyList())
+
+    /**
+     * The installed constellation LIBRARY packages as [PhoneApp] tiles.
+     *
+     * A lib APK (kind=="lib" in the fleet manifest) ships NO launcher
+     * activity, so it never appears in the launchable enumeration the other
+     * smart folders filter over — which is exactly why the Cloud Libs folder
+     * used to render empty even after #468 (#474). Its membership is built
+     * HERE instead: the central fleet manifest (data/regen.sh →
+     * constellation-fleet.json → BuildConfig.CONSTELLATION_FLEET_B64)
+     * intersected with the packages actually on the device.
+     *
+     * THE INSTALLED CHECK IS THE HONEST FILTER. A lib declared in the
+     * manifest but NOT installed must not be invented as present, so a
+     * package that PackageManager cannot find contributes nothing to the
+     * folder. The Cloud Libs folder therefore renders the INSTALLED SUBSET,
+     * and that fewer-entries result is correct behaviour, not a bug to paper
+     * over.
+     *
+     * Icons: the package's own application icon when it has one, otherwise
+     * the ONE shared fallback [R.drawable.ic_cloud_lib] — built exactly once
+     * here, never re-declared per view.
+     *
+     * Labels are the manifest's canonical `cloud-lib-{name}` (landed at the
+     * single declaration in data/regen.sh), so the tile and the store cannot
+     * disagree. [activityComponent] is null, which the renderer reads as
+     * "cannot be launched — tap opens this lib's Constellation entry".
+     */
+    fun installedLibSlots(ctx: Context): List<PhoneApp> {
+        val me = Process.myUserHandle()
+        val pm = ctx.packageManager
+        return Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
+            .filter { it.kind == "lib" && !it.blocked }
+            .mapNotNull { app ->
+                val info = runCatching { pm.getPackageInfo(app.pkg, 0) }.getOrNull()
+                    ?: return@mapNotNull null // declared but NOT installed → not invented (#280)
+                val icon = runCatching { pm.getApplicationIcon(app.pkg) }.getOrNull()
+                    ?: ContextCompat.getDrawable(ctx, R.drawable.ic_cloud_lib)
+                PhoneApp(
+                    packageName       = app.pkg,
+                    activityComponent = null, // a lib has no launcher activity — not launchable
+                    label             = app.label, // canonical cloud-lib-{name} from the manifest
+                    icon              = icon,
+                    user              = me,
+                    firstInstallTime  = runCatching { info.firstInstallTime }.getOrDefault(0L),
+                )
+            }
+    }
 }

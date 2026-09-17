@@ -5,6 +5,7 @@ import com.diegonmarcos.superapp.launcher.AppLongPressMenu
 import com.diegonmarcos.superapp.App
 import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.ShellActivity
 import com.diegonmarcos.superapp.settings.LauncherProfile
 import com.diegonmarcos.superapp.settings.LauncherProfiles
 import com.diegonmarcos.superapp.settings.LauncherProfilePrefs
@@ -412,8 +413,23 @@ class PhoneAppsFragment : Fragment() {
             // contract changes; it is only the per-folder decision that moved
             // inside this computation.
             val excluded = if (exclude.isEmpty()) all else all.filter { it.packageName !in exclude }
+            // Installed constellation LIBRARY packages. A lib APK ships no
+            // launcher activity, so it is absent from `all`/`excluded` (both
+            // derive from the launchable enumeration) — a folder whose rule
+            // selects libs must therefore source from this set, not the
+            // launchable list, or it always comes up empty (#474).
+            val libSlots by lazy { PhoneSmartFolders.installedLibSlots(ctx) }
             return PhoneSmartFolders.loadFromBuildConfig().mapNotNull { sf ->
-                val source = if (sf.includeConstellation) all else excluded
+                val source = when {
+                    // A fleet_kind=lib folder IS the installed libs — its
+                    // membership comes from the fleet manifest ∩ installed
+                    // packages, never from the launchable enumeration.
+                    sf.selectsInstalledLibs -> libSlots
+                    // The opt-in folder (Cloud Apps) selects over the FULL
+                    // enumeration; every other folder keeps the excluded one.
+                    sf.includeConstellation -> all
+                    else -> excluded
+                }
                 val matches = sf.select(ctx, source)
                 if (matches.isEmpty()) null else SmartRendered(sf, matches)
             }
@@ -655,8 +671,19 @@ class PhoneAppsFragment : Fragment() {
                 isClickable = true; isFocusable = true
                 setOnClickListener {
                     Haptics.tap(it)
-                    runCatching {
-                        launcherApps.startMainActivity(app.activityComponent, app.user, null, null)
+                    // A launchable app fires normally. A LIBRARY has no
+                    // launcher component (activityComponent == null) and so
+                    // cannot be launched — firing the intent would no-op at
+                    // best and leave the app's safety model broken (#156).
+                    // Its tap opens that lib's entry in the in-app
+                    // Constellation AppStore instead (#474).
+                    val comp = app.activityComponent
+                    if (comp != null) {
+                        runCatching {
+                            launcherApps.startMainActivity(comp, app.user, null, null)
+                        }
+                    } else {
+                        openConstellation(ctx)
                     }
                     dialog.dismiss()
                 }
@@ -691,6 +718,21 @@ class PhoneAppsFragment : Fragment() {
                 ).apply { topMargin = mt }
             })
             return tile
+        }
+
+        /** In-app open of the Constellation AppStore — where every lib's
+         *  entry lives. Carefully NOT a launch and NOT an external intent:
+         *  a library has no launcher activity to fire, and #156 forbids
+         *  showing it as "opening" while actually leaving the app or doing
+         *  nothing. The Constellation page is an in-app section page whose
+         *  `action:constellation` target openSectionPage dispatches back
+         *  into the shell, exactly as if the user tapped its config tile.
+         *  The Phone tab lives inside the launcher ([ShellActivity]), so its
+         *  nav controller is the single in-app route to the store. */
+        private fun openConstellation(ctx: Context) {
+            (ctx as? android.app.Activity)?.let { act ->
+                (act as? ShellActivity)?.nav?.openSectionPage("config", "constellation", null)
+            }
         }
 
         private fun dp(ctx: Context, v: Int): Int = (v * ctx.resources.displayMetrics.density).toInt()

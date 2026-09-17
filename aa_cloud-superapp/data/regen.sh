@@ -176,8 +176,18 @@ regen_constellation() {
                     # or three times and a plain regen turned 56 entries into
                     # 114. One module is one lib APK is one fleet entry.
                     | if ($acc | any(.id == $id)) then $acc else $acc + [
-                               { id: $id,
-                                 label: ("Lib: " + $mod),
+                              { id: $id,
+                                # ONE canonical display name for every lib: the
+                                # same cloud-{name} rule #351 applies to apps,
+                                # spelled cloud-lib-{name} with consistent dashes
+                                # — NOT the old ad-hoc "Lib: {name}" with no
+                                # cloud prefix (the #474 naming mess). $mod is
+                                # the module dir name (already correctly dashed,
+                                # e.g. kde-connect, net-wg, text-tools), so the
+                                # canonical label falls out of that ONE
+                                # declaration here; a second display-name field
+                                # (the #380 mistake) is not the fix, this line is.
+                                label: ("cloud-lib-" + $mod),
                                  package: $pkgid,
                                  alt_id: null,
                                  registry: .release.ghcr.registry,

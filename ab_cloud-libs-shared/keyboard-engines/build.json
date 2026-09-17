@@ -1,5 +1,5 @@
 {
-  "name": "cloud-keyboard-libs",
+  "name": "cloud-lib-keyboard-engines",
   "description": "Cloud Keyboard — Feature Pack APK. Bundles libs:media (stickers/GIF) and the two ML engines libs:ml-l-text-mlkit (ML Kit) and libs:ml-l-voice-vosk (Vosk), behind the libs:translate / libs:voice contracts as a companion APK updatable independently of the keyboard.",
   "category": "keyboard",
   "android": {

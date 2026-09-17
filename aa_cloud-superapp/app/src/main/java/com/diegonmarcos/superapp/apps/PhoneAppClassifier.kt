@@ -275,10 +275,17 @@ data class AppMetadata(
 }
 
 /** Lightweight DTO for an installed launchable Android app — populated
- *  by [PhoneAppsFragment] from `LauncherApps.getActivityList(...)`. */
+ *  by [PhoneAppsFragment] from `LauncherApps.getActivityList(...)`.
+ *
+ *  [activityComponent] is NULL for a constellation LIBRARY package
+ *  (kind=="lib" in the fleet manifest) that is installed but ships no
+ *  launcher activity — see [PhoneSmartFolders.installedLibSlots], which
+ *  builds exactly such entries. A null component is the honest signal that
+ *  the tile cannot be launched; its tap goes to the library's entry in the
+ *  Constellation AppStore instead (#474). */
 data class PhoneApp(
     val packageName: String,
-    val activityComponent: android.content.ComponentName,
+    val activityComponent: android.content.ComponentName?,
     val label: String,
     val icon: android.graphics.drawable.Drawable?,
     val user: android.os.UserHandle,

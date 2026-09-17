@@ -528,12 +528,12 @@ else
     bad "computeSmartFolders does not consult sf.includeConstellation -- the exception is not wired in"
 fi
 # The opt-in must route the folder to the FULL list, and the fall-through must
-# keep the excluded list. Asserting the ternary forces the two branches into one
-# statement, so a folder cannot silently drift between them.
-if printf '%s' "$COMPUTE_BYPASS" | grep -qF 'if (sf.includeConstellation) all else excluded'; then
+# keep the excluded list. Asserting the `when` branches forces the two into one
+# decision, so a folder cannot silently drift between them.
+if printf '%s' "$COMPUTE_BYPASS" | grep -qF 'sf.includeConstellation -> all'; then
     ok "an opting folder selects from the full list, every other folder from the excluded one"
 else
-    bad "the per-folder decision is not the opt-in ternary -- opting in does not change the list"
+    bad "the per-folder decision is not wired -- opting in does not change the list"
 fi
 # The declaration lives in build.json next to the folders it applies to; these
 # two must carry it, and it alone.
@@ -562,7 +562,7 @@ fi
 # ... and a folder that did NOT opt in must be handed that excluded list (not the
 # full one). The `else excluded` branch is what keeps the filter live for every
 # folder that leaves the flag off.
-if printf '%s' "$COMPUTE_BYPASS" | grep -qF 'else excluded'; then
+if printf '%s' "$COMPUTE_BYPASS" | grep -qF 'else -> excluded'; then
     ok "a folder that does not opt in still selects over the excluded list"
 else
     bad "no non-opting branch hands folders the excluded list -- the master filter is dead for everyone"
@@ -575,6 +575,134 @@ if [ "$NONCLOUD_OPTS" -eq 0 ]; then
     ok "no folder outside the two cloud ones declares the bypass"
 else
     bad "$NONCLOUD_OPTS non-cloud folder(s) also set include_constellation -- the exception escaped its two intended folders"
+fi
+
+echo "== T17: Cloud Libs membership comes from the INSTALLED fleet libs, not the launchable enumeration (#474) =="
+# A library APK ships no launcher activity, so it never appears in the
+# launchable universe every other smart folder filters over. The Cloud Libs
+# folder's subject is therefore the FLEET MANIFEST (constellation-fleet.json,
+# kind=="lib") intersected with what PackageManager says is installed -- not
+# the launchable list. (And #468 could never fix this: that bypass only stops
+# the master exclusion from REMOVING the constellation's own packages; a lib
+# was never IN the list to be removed.)
+SMART="$APP/app/src/main/java/com/diegonmarcos/superapp/apps/PhoneSmartFolders.kt"
+load libSlots "$SMART" 4 installedLibSlots
+LIBS_BODY="$(body libSlots)"
+if printf '%s\n' "$LIBS_BODY" | grep -qF 'Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)'; then
+    ok "the lib set is built from the central fleet manifest"
+else
+    bad "installedLibSlots does not read the fleet manifest -- where does the lib list come from?"
+fi
+if printf '%s\n' "$LIBS_BODY" | grep -qF 'it.kind == "lib"'; then
+    ok "the lib set filters the fleet to kind==lib (never mixes in apps)"
+else
+    bad "installedLibSlots does not filter to kind==lib -- the folder would list apps too"
+fi
+if printf '%s\n' "$LIBS_BODY" | grep -qF 'getPackageInfo'; then
+    ok "each lib is confirmed INSTALLED via the package manager"
+else
+    bad "installedLibSlots does not check the install state -- it could invent a declared-but-missing lib"
+fi
+if printf '%s\n' "$LIBS_BODY" | grep -qF 'return@mapNotNull null'; then
+    ok "a declared-but-not-installed lib contributes nothing to the folder (not invented)"
+else
+    bad "no skip for an absent package -- the folder would list libs that are not on the device"
+fi
+if printf '%s\n' "$LIBS_BODY" | grep -qF 'activityComponent = null'; then
+    ok "a lib is recorded as NOT launchable (null component)"
+else
+    bad "a lib is given a launcher component it does not have -- the tap would wrongly offer to launch it"
+fi
+if printf '%s\n' "$LIBS_BODY" | grep -qF 'R.drawable.ic_cloud_lib'; then
+    ok "a lib without its own icon uses the ONE shared fallback (ic_cloud_lib)"
+else
+    bad "no single shared fallback icon is referenced -- the rule demands ONE, declared once"
+fi
+
+echo "== T18: a fleet_kind=lib folder sources from the installed-lib set, never the launchable list (#474) =="
+# The part of the fix that would be hollow-green if the licensing above were
+# dead: computeSmartFolders must ACTUALLY hand the lib folder the installed
+# set. Deleting this branch is exactly the pre-#474 bug -- the folder would
+# select over the launchable universe, match nothing, and drop to null (empty).
+COMPUTE_LIBS="$(body compute)"
+if printf '%s\n' "$COMPUTE_LIBS" | grep -qF 'sf.selectsInstalledLibs -> libSlots'; then
+    ok "the lib folder is routed to the installed-lib set"
+else
+    bad "the lib folder falls back to the launchable enumeration -- it renders empty, the exact #474 bug"
+fi
+if printf '%s\n' "$COMPUTE_LIBS" | grep -qF 'installedLibSlots(ctx)'; then
+    ok "computeSmartFolders reaches the installed-lib enumerator"
+else
+    bad "computeSmartFolders never calls the installed-lib enumerator -- the branch is licensing only"
+fi
+if printf '%s\n' "$COMPUTE_LIBS" | grep -qF 'sf.includeConstellation -> all'; then
+    ok "an opting-in folder (Cloud Apps) still selects the full launchable list"
+else
+    bad "the opt-in folder no longer selects the full list -- Cloud Apps would be filtered wrong"
+fi
+
+echo "== T19: a lib tile taps to the in-app Constellation AppStore -- never a no-op, never leaving the app (#474/#156) =="
+# A lib cannot be launched (no component). Its tap must OPEN SOMETHING useful
+# in-app; a silent nil-receiver on startMainActivity or an external ACTION_VIEW
+# would each be the exact regression #156 exists to stop.
+load expTile "$PHONE" 8 makeExpandedAppTile
+load constellationHop "$PHONE" 8 openConstellation
+TILE="$(body expTile)"
+if printf '%s\n' "$TILE" | grep -qF 'app.activityComponent'; then
+    ok "the expanded tile reads the (now nullable) launch component"
+else
+    bad "the tile does not consult activityComponent -- it cannot tell a lib from a launchable app"
+fi
+if printf '%s\n' "$TILE" | grep -qF 'comp != null'; then
+    ok "the tile branches on whether the app is launchable"
+else
+    bad "the tile does not branch on launchability -- it would launch a lib's null component"
+fi
+if printf '%s\n' "$TILE" | grep -qF 'openConstellation(ctx)'; then
+    ok "a non-launchable tile opens the store instead of silently no-opping"
+else
+    bad "no non-launchable tap path exists -- a lib tap either crashes or does nothing"
+fi
+if printf '%s\n' "$TILE" | grep -qF 'ACTION_VIEW'; then
+    bad "the lib path fires an external ACTION_VIEW -- that leaves the app, which #156 forbids"
+else
+    ok "no external leave-the-app intent in the lib path"
+fi
+HOP="$(body constellationHop)"
+if printf '%s\n' "$HOP" | grep -qF 'openSectionPage("config", "constellation"'; then
+    ok "opening the lib's store is the in-app Configs ▸ Constellation section page"
+else
+    bad "the store hop is not the in-app constellation page -- it is not opening the lib's entry"
+fi
+
+echo "== T20: every lib carries the canonical cloud-lib-{name}, from its ONE declaration (#474/#351) =="
+# The lib names used to be three incompatible shapes ('Lib: {name}' with no
+# cloud prefix, 'cloud-keyboard-libs', 'termux-boot'). #351 set one cloud-{name}
+# rule for APPS; it never reached the libs. The lib rule is cloud-lib-{name}
+# with consistent dashes, landed at the single declaration in data/regen.sh
+# (never a 38-entry hand list, never a second display-name field -- the #380
+# mistake). termux-boot (cld.termux.nix.boot) is genuinely NOT a cloudlib, so it
+# is the one deliberate exception to the pattern, asserted not licensed away.
+FLEET_JSON="$APP/data/constellation-fleet.json"
+LIBS_BAD="$(jq -r '.apps[] | select(.kind=="lib") | select((.label | startswith("cloud-lib-") | not) and .package != "cld.termux.nix.boot") | "\(.id)=\(.label)"' "$FLEET_JSON")" || {
+    echo "FATAL: jq failed reading lib labels"; exit 2; }
+if [ -z "$LIBS_BAD" ]; then
+    ok "every lib except the non-cloudlib termux-boot is named cloud-lib-{name}"
+else
+    bad "lib names drift off the canonical cloud-lib-{name} pattern: $LIBS_BAD" | head -1
+fi
+KB="$(jq -r '.apps[] | select(.package=="com.diegonmarcos.cloudkeyboardlibs") | .label' "$FLEET_JSON")" || {
+    echo "FATAL: jq failed reading the keyboard-engines label"; exit 2; }
+if [ "$KB" = "cloud-lib-keyboard-engines" ]; then
+    ok "the keyboard-engines lib is named cloud-lib-keyboard-engines, one shape with the rest"
+else
+    bad "keyboard-engines reads '$KB' -- it must be cloud-lib-keyboard-engines (#474)"
+fi
+REGEN="$APP/data/regen.sh"
+if grep -qF 'cloud-lib-' "$REGEN" && ! grep -qF '"Lib: "' "$REGEN"; then
+    ok "regen.sh declares cloud-lib-{name} at the ONE lib declaration and emits no ad-hoc 'Lib: ' prefix"
+else
+    bad "regen.sh still emits the old lib-prefix shape -- the canonical name is not coming from the single declaration"
 fi
 
 echo

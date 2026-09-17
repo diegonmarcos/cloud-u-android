@@ -68,9 +68,15 @@ object SuperappSearchIndex {
      *  whitelist) applies here exactly as it does on the Phone tab — the
      *  reason this scope is NOT in the library. */
     private fun phoneApps(scopeId: String, ctx: Context): List<SearchHit> =
-        PhoneAppsFragment.snapshot(ctx).map { app ->
-            SearchHit(app.label, "Phone app · ${app.packageName}", scopeId,
-                phoneApp = PhoneAppRef(app.activityComponent, app.user))
+        PhoneAppsFragment.snapshot(ctx).mapNotNull { app ->
+            // snapshot() is the launchable set, so the component is always
+            // present; mapNotNull (not let) so a non-launchable tile that
+            // ever enters the snapshot cannot hand the search index a null
+            // component to launch.
+            app.activityComponent?.let { comp ->
+                SearchHit(app.label, "Phone app · ${app.packageName}", scopeId,
+                    phoneApp = PhoneAppRef(comp, app.user))
+            }
         }
 
     /** Cloud-Configs: every section sub-page PLUS cached consolidated.json
