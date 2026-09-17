@@ -95,7 +95,7 @@ internal fun defaultRssHttpClient(): OkHttpClient = OkHttpClient.Builder()
     .build()
 
 /** Validate a subscription address before it is stored or fetched: it must be an http(s) URL. */
-internal fun isFeedAddress(raw: String): Boolean {
+fun isFeedAddress(raw: String): Boolean {
     val trimmed = raw.trim()
     val parsed = trimmed.toHttpUrlOrNull()
     return trimmed.isNotEmpty() && parsed?.scheme in setOf("http", "https")

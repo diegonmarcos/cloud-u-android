@@ -8,8 +8,10 @@ import app.sterna.core.data.rss.RssFetchFailure
 import app.sterna.core.data.rss.RssFeed
 import app.sterna.core.data.rss.RssFetcher
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** What the News screen can show for one subscribed feed. */
@@ -36,8 +38,11 @@ class RssViewModel(application: Application) : AndroidViewModel(application) {
     private val fetcher = RssFetcher()
 
     /** The subscribed feed addresses, live from the settings store. */
-    val subscriptions: StateFlow<Set<String>> = settings.rssFeeds
-        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptySet())
+    val subscriptions: StateFlow<Set<String>> = settings.rssFeeds.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = emptySet(),
+    )
 
     private val _feeds = MutableStateFlow<List<RssFeedUi>>(emptyList())
 
@@ -78,9 +83,9 @@ class RssViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /** Fetch one subscribed feed for display, off the main thread. */
-    private suspend fun fetch(url: String): RssFeedUi = when (fetcher.fetch(url)) {
-        is app.sterna.core.data.rss.RssFetchResult.Loaded -> RssFeedUi.Fetched(url, it.feed)
-        is app.sterna.core.data.rss.RssFetchResult.Failed -> feedUiFor(it.reason, url)
+    private suspend fun fetch(url: String): RssFeedUi = when (val result = fetcher.fetch(url)) {
+        is app.sterna.core.data.rss.RssFetchResult.Loaded -> RssFeedUi.Fetched(url, result.feed)
+        is app.sterna.core.data.rss.RssFetchResult.Failed -> feedUiFor(result.reason, url)
     }
 
     /** A transport that died means the host was unreachable — its own sentence, telling the reader

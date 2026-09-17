@@ -22,7 +22,7 @@ import app.sterna.core.data.settings.ThemeMode
  * The bottom-navigation island (#465): a floating rounded shape with fully semicircular ends,
  * declared once and referenced wherever the bar is drawn so no call site restates the radius.
  */
-val bottomNavIslandShape: RoundedCornerShape = RoundedCornerShape(percent = 50)
+val bottomNavIslandShape: RoundedCornerShape = RoundedCornerShape(32.dp)
 
 /** How far the floating navigation island sits above the screen's bottom edge (#465). */
 val bottomNavIslandInset: Dp = 12.dp

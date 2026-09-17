@@ -353,14 +353,14 @@ private fun MainNavHost(
     val motionEnabled = rememberMotionEnabled()
     // Instant transitions by default: the cross-fade sticks on the bare window background during
     // rapid back/forth navigation. The message route opts back into a soft fade.
-    Box(Modifier.fillMaxSize()) {
-        NavHost(
+    NavHost(
         navController = nav,
         startDestination = "inbox",
         enterTransition = { EnterTransition.None },
         exitTransition = { ExitTransition.None },
     ) {
         composable("inbox") { entry ->
+            Box(Modifier.fillMaxSize()) {
             // The "inbox" entry's own ViewModel, shared with the reader and the composer.
             val inboxViewModel: InboxViewModel = viewModel(entry)
             // What the reading pane shows (null anchor = the invitation line).
@@ -444,6 +444,8 @@ private fun MainNavHost(
                     }
                 },
             )
+            BottomNavBar(nav = nav, currentRoute = "inbox")
+        }
         }
         composable(
             route = "message/{emailId}?accountId={accountId}&index={index}&src={src}&thread={thread}",
@@ -664,7 +666,10 @@ private fun MainNavHost(
         // The mail statistics of every configured account. A destination like "snoozed" and not a
         // start destination: the app still opens on the inbox, which is what the reader came for.
         composable("home") { entry ->
-            HomeScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
+            Box(Modifier.fillMaxSize()) {
+                HomeScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
+                BottomNavBar(nav = nav, currentRoute = "home")
+            }
         }
         composable("scheduled") { entry ->
             ScheduledSendsScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
@@ -688,13 +693,11 @@ private fun MainNavHost(
             )
         }
         composable("rss") { entry ->
-            RssScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
+            Box(Modifier.fillMaxSize()) {
+                RssScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
+                BottomNavBar(nav = nav, currentRoute = "rss")
+            }
         }
-        }
-        // The floating island (#465): five icon-only items, shown only on the destinations it
-        // owns — the inbox, Home and News — and kept off the full-screen message, composer and
-        // settings routes, which get the whole window to themselves.
-        BottomNavBar(nav = nav)
     }
 }
 

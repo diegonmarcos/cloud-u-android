@@ -26,7 +26,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import app.sterna.R
 import app.sterna.ui.theme.bottomNavIslandInset
 import app.sterna.ui.theme.bottomNavIslandShape
@@ -34,22 +33,20 @@ import app.sterna.ui.theme.bottomNavIslandShape
 /**
  * The floating bottom-navigation island (#465): five icon-only items in a fully rounded shape that
  * floats above the screen content, inset from the bottom edge. The selected indicator is Material
- * 3's stock pill around the icon — the label shapes #462 wrestled with are absent here, so the
- * stock indicator is already the correct shape and a custom drawable would add nothing.
+ * 3's stock pill around the icon.
  *
- * [BottomNavAction.DESTINATION] items navigate inside the NavHost; [BottomNavAction.LAUNCH] items
- * handed a package name launch that other app and do NOT move the selection — leaving and coming
- * back must still sit on the destination the user actually visited.
+ * It is drawn once per destination the bar owns — the caller passes the route it is on, so the bar
+ * needs no live read of the navigation back stack (on this app's compose/navigation stack a
+ * `currentBackStackEntryAsState()` cannot be observed as a property delegate). [currentRoute] names
+ * the screen it overlays; [BottomNavAction.DESTINATION] items navigate inside the NavHost and set
+ * the selection, [BottomNavAction.LAUNCH] items hand off to another app and do NOT move it.
  */
 @Composable
-fun BottomNavBar(nav: NavController) {
-    val backStackEntry by nav.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route
-    if (currentRoute == null || !bottomNavOwns(currentRoute)) return
+fun BottomNavBar(nav: NavController, currentRoute: String) {
     val context = LocalContext.current
     // Resolved here, once, in the composable's own scope — stringResource must run where the
     // resource is available, never inside a tap callback.
-    val missing = bottomNavItems.associateWith { item -> missingMessage(item.id) }
+    val missing = bottomNavItems.associateWith { item -> stringResource(missingResource(item.id)) }
 
     val islandColor = MaterialTheme.colorScheme.surfaceContainer
     Row(
@@ -96,13 +93,7 @@ private fun onItemTap(
             // Re-tapping the screen already on top is a no-op, not a re-navigation that would
             // pile a second copy on the back stack.
             if (route == currentRoute) return
-            nav.navigate(route) {
-                // Pop up to the start destination to avoid an ever-growing back stack as the
-                // user walks the tabs, exactly as the sibling top-level bar does.
-                popUpTo(nav.graph.findStartDestination().id)
-                launchSingleTop = true
-                restoreState = true
-            }
+            nav.navigate(route)
         }
         BottomNavAction.LAUNCH -> item.packageName?.let {
             launchInstalledApp(context, it, missingMessage)
@@ -113,32 +104,35 @@ private fun onItemTap(
 /**
  * Launch [packageName]'s front-door activity, reporting whether it exists on this device — the
  * launch intent is resolved against the device rather than assumed, so a device without the app
- * gets the specific honest sentence ([missingMessage]) instead of this bar pretending.
+ * gets the specific honest sentence ([missingMessage]) instead of this bar pretending. Mirrors the
+ * declared-intent path used for other cross-app launches in this app: resolve, then start, and the
+ * caller learns whether the whole hand-off happened.
  */
 internal fun launchInstalledApp(
     context: android.content.Context,
     packageName: String,
     missingMessage: String,
-): Boolean {
-    val intent = context.packageManager.getLaunchIntentForPackage(packageName)
-    if (intent == null) {
-        Toast.makeText(context, missingMessage, Toast.LENGTH_SHORT).show()
-        return false
+): Boolean =
+    try {
+        val intent = context.packageManager.getLaunchIntentForPackage(packageName)
+        if (intent == null) {
+            Toast.makeText(context, missingMessage, Toast.LENGTH_SHORT).show()
+            false
+        } else {
+            context.startActivity(intent)
+            true
+        }
+    } catch (_: Exception) {
+        false
     }
-    return runCatching { context.startActivity(intent) } match {
-        OK -> true
-        ERR -> false
-    }
-}
 
-/** The "not installed" sentence a launch item shows when its app is absent. */
-internal fun missingMessage(id: String): String = stringResource(
-    when (id) {
-        "chat" -> R.string.nav_chat_not_installed
-        "video" -> R.string.nav_video_not_installed
-        else -> R.string.nav_launch_not_installed
-    },
-)
+/** The string resource id of the "not installed" sentence a launch item shows when its app is
+ *  absent. A plain resource id, so the composable can resolve it where strings are available. */
+internal fun missingResource(id: String): Int = when (id) {
+    "chat" -> R.string.nav_chat_not_installed
+    "video" -> R.string.nav_video_not_installed
+    else -> R.string.nav_launch_not_installed
+}
 
 /** The accessible content description of a nav item: what a screen reader says about the icon. */
 internal fun itemDescription(id: String): Int = when (id) {
