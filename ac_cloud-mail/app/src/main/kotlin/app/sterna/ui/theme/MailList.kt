@@ -95,5 +95,5 @@ internal data class MailListTextInk(
  * is BOLD, read is NOT — one predicate, never a second 'if (unread)' beside this one.
  */
 internal fun mailListTextInk(unread: Boolean, palette: MailListPalette): MailListTextInk =
-    if (unread) MailListTextInk(palette.unreadText, FontWeight.Bold)
-    else MailListTextInk(palette.readText, FontWeight.Normal)
+    if (unread) MailListTextInk(palette.unreadText, FontWeight.Normal)
+    else MailListTextInk(palette.readText, FontWeight.Bold)
