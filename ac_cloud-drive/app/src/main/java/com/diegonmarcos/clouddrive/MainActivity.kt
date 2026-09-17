@@ -114,9 +114,10 @@ class MainActivity : AppCompatActivity() {
 
     /** Parks a PDF hand-off URI on the bridge, whichever route delivered it. */
     private fun handlePdfIntent(intent: Intent?) {
-        if (intent?.action == Intent.ACTION_VIEW && intent.data != null) {
-            filesBridge.setIncomingPdf(intent.data)
-        }
+        // Local val, not intent.data inlined: `data` is a Java getter, so Kotlin
+        // cannot smart-cast it, and setIncomingPdf takes a non-null Uri.
+        val uri = intent?.takeIf { it.action == Intent.ACTION_VIEW }?.data
+        if (uri != null) filesBridge.setIncomingPdf(uri)
     }
 
     /** Android insets arrive in device pixels; CSS wants density-independent ones. */
