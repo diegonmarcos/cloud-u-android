@@ -239,7 +239,17 @@ step_dev() {
   in_nix adb shell am start -n "$(_release_var '.android.application_id')/$APP_MAIN"
 }
 
-step_test()       { log "Test: JVM unit tests"; in_nix gradle test; }
+# _resolve_signing before `gradle test` is NOT an accident of copy-paste from
+# step_build. app/build.gradle's signingConfigs.debug reads ANDROID_KEYSTORE_FILE
+# and throws "ONE shared constellation key required" during Gradle's
+# CONFIGURATION phase, which every invocation goes through — including a test
+# task that signs nothing. So the one shared key has to be resolvable before the
+# suite can even be enumerated. The guard is correct and is deliberately left
+# intact; what was missing is that `./build.sh test` never held up its own end of
+# the bargain the guard's own message names ("run via build.sh"). Without this
+# line the suite cannot fail on an assertion — it dies before the first test is
+# discovered, which reads in CI as a test failure and is not one.
+step_test()       { log "Test: JVM unit tests"; _resolve_signing; in_nix gradle test; }
 step_instrument() { log "Test: instrumented (needs device)"; in_nix gradle connectedAndroidTest; }
 step_lint()       { log "Lint"; in_nix gradle lint; }
 step_clean()      { log "Clean"; in_nix gradle clean; rm -rf "$DIST_DIR"; }
