@@ -108,7 +108,7 @@ object InstallIdentity {
         // The user id this process runs its own copy under. A work profile, a
         // parallel-app clone and a Secure Folder copy all run as a non-zero
         // user; only the primary install is user 0.
-        val user = Process.myUserHandle().identifier
+        val user = Process.myUid()
         if (user == 0) return InstallKind.MAIN
         val um = runCatching {
             context.getSystemService(UserManager::class.java)
