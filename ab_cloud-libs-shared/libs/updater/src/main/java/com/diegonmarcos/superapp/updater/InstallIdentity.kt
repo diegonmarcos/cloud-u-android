@@ -2,7 +2,6 @@ package com.diegonmarcos.superapp.updater
 
 import android.content.Context
 import android.os.Process
-import android.os.UserHandle
 import android.os.UserManager
 import android.util.Log
 
@@ -94,6 +93,15 @@ object InstallIdentity {
      *  This set is the entire answer; every caller reads it here. */
     val MANAGED: Set<InstallKind> = setOf(InstallKind.MAIN)
 
+    /** The primary (owner) Android user id. A normal app on the primary user
+     *  runs as a uid in [10000, 19999] whose user part is 0, not as uid 0. */
+    private const val PRIMARY_USER_ID = 0
+
+    /** Android's per-user range: uid = userId * PER_USER_RANGE + appId.
+     *  The hidden UserHandle.getUserId is exactly this division; reproducing
+     *  it keeps the reader on public, minSdk-safe arithmetic. */
+    private const val PER_USER_RANGE = 100000
+
     /**
      * The pure decision: given the ANDROID USER this install runs under and
      * whether that user is a Device-Policy managed profile, which kind is it.
@@ -107,7 +115,7 @@ object InstallIdentity {
      * user 0. That is the whole distinction.
      */
     fun classify(userId: Int, isManagedProfile: Boolean): InstallKind {
-        if (userId == UserHandle.USER_SYSTEM) return InstallKind.MAIN
+        if (userId == PRIMARY_USER_ID) return InstallKind.MAIN
         if (isManagedProfile) return InstallKind.WORK_PROFILE
         return InstallKind.CLONE
     }
@@ -124,15 +132,16 @@ object InstallIdentity {
      * need them separated — both are unmanaged.
      */
     fun current(context: Context): InstallKind {
-        // Extract the ANDROID USER id from the uid first: the uid encodes the
-        // user through userId = uid / 100000 (user = userId * 100000 + appId),
-        // so Process.myUid() itself is
-        // NEVER 0 for this app — the primary-user install runs as a 10000+ uid,
-        // not 0. Comparing the raw uid to 0 would classify EVERY install
-        // (including the real primary one) as a clone and the updater would go
-        // silent even on the one install it must act on. UserHandle.getUserId
-        // strips the user id out of the uid.
-        val userId = UserHandle.getUserId(Process.myUid())
+        // Android encodes the user a process runs as in the high part of its
+        // uid: uid = (userId * PER_USER_RANGE) + appId, so Process.myUid()
+        // itself is NEVER 0 — the primary-user install runs as a 10000+ uid.
+        // Comparing the raw uid to 0 would classify EVERY install (including
+        // the real primary one) as a clone and go silent even on the one
+        // install this model owns. Divide the per-user range off to recover
+        // the user id (the same arithmetic the hidden UserHandle.getUserId
+        // performs); user 0 is the primary install, any other user is a
+        // profile/clone/Secure-Folder copy.
+        val userId = Process.myUid() / PER_USER_RANGE
         val um = runCatching {
             context.getSystemService(UserManager::class.java)
         }.getOrNull()

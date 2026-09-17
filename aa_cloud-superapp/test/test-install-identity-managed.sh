@@ -138,32 +138,34 @@ else
 fi
 
 echo
+echo
 echo "== The reader: the MAIN verdict keys on the ANDROID USER id, never on the raw uid =="
 
-# T9 — current() must classify from the ANDROID USER id, not from the raw
+# T9 — current() must classify from the ANDROID USER id, never from the raw
 # process uid. Process.myUid() returns uid = (userId * 100000) + appId, so it
 # is a 10000+ value for a normal primary-user install and is NEVER 0. A reader
 # that compared the raw uid to 0 ('val user = Process.myUid(); if (user == 0)')
 # would classify the REAL primary install as CLONE — the updater would then go
 # silent even on the one install it is declared to act on. The user id must be
-# extracted (and only then compared to the primary user) first.
-if grep -Eq 'UserHandle\.getUserId\(Process\.myUid\(\)\)|UserHandle\.myUserId\(\)' "$IDENTITY_KT"; then
-    ok "T9 reader extracts the ANDROID USER id (UserHandle.getUserId / UserHandle.myUserId) instead of treating the raw uid as the user"
+# recovered from the uid first; the division below is exactly Android's
+# (hidden) UserHandle.getUserId — public, minSdk-safe arithmetic.
+if grep -Fq 'Process.myUid() / PER_USER_RANGE' "$IDENTITY_KT" && \
+   grep -Fq 'PER_USER_RANGE = 100000' "$IDENTITY_KT"; then
+    ok "T9 reader recovers the ANDROID USER id by dividing Process.myUid() by PER_USER_RANGE (100000) instead of treating the raw uid as the user"
 else
-    bad "T9 reader does NOT extract the Android user id — it must read the USER id, e.g. 'UserHandle.getUserId(Process.myUid())' or 'UserHandle.myUserId()', not compare Process.myUid() to 0 (which is never true for an installed app)"
+    bad "T9 reader does NOT recover the user id from the uid (no 'Process.myUid() / PER_USER_RANGE' with PER_USER_RANGE = 100000) — it must divide the per-user range off the uid, not compare Process.myUid() to 0 (which is never true for an installed app)"
 fi
 
-# T10 — the MAIN verdict keys on USER_SYSTEM (the primary user id, 0) and the
-# mapping is one pure classify() function with no Android call in it, so the
-# decision is locked by this tester without invoking the platform.
-if grep -Eq 'fun classify\(userId: Int' "$IDENTITY_KT" && \
-   grep -Eq 'UserHandle\.USER_SYSTEM' "$IDENTITY_KT" && \
-   grep -Eq 'return classify\(' "$IDENTITY_KT"; then
-    ok "T10 the decision is a pure classify() mapping keyed on USER_SYSTEM (primary user id 0), and current() delegates to it"
+# T10 — the MAIN verdict keys on the primary user id (0) and the mapping is
+# one pure classify() function with no Android call in it, so the decision is
+# locked by this tester without invoking the platform.
+if grep -Fq 'fun classify(userId: Int' "$IDENTITY_KT" && \
+   grep -Fq 'PRIMARY_USER_ID' "$IDENTITY_KT" && \
+   grep -Fq 'return classify(' "$IDENTITY_KT"; then
+    ok "T10 the decision is a pure classify() mapping keyed on PRIMARY_USER_ID (the primary user, id 0), and current() delegates to it"
 else
-    bad "T10 reader lacks the classify() mapping (USER_SYSTEM ⇒ MAIN) or current() does not delegate to it — the MAIN verdict must be keyed on the primary USER id, not a raw-uid comparison"
+    bad "T10 reader lacks the classify() mapping (PRIMARY_USER_ID => MAIN) or current() does not delegate to it — the MAIN verdict must be keyed on the primary USER id, not a raw-uid comparison"
 fi
 
-echo
 echo "install-identity-managed: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ]
