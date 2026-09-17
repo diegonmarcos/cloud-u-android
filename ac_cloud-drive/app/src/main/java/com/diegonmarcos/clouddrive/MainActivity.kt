@@ -20,6 +20,26 @@ class MainActivity : AppCompatActivity() {
      */
     private var insetScript = ""
 
+    /**
+     * The bridge the page talks to. Kept as a field rather than constructed inline
+     * because the SAF tree-grant result arrives on the Activity's result channel,
+     * outside the WebView, and has to reach the SAME instance the page holds.
+     */
+    private lateinit var filesBridge: FilesBridge
+
+    /**
+     * The SAF "open a document tree" launcher. The system picker returns a content://
+     * tree URI when the user grants a whole volume; persisting that grant (and the
+     * permission Android ties to it) is what makes an SD card reachable enough to be a
+     * place on the next launch. The result contract needs an Activity, so it lives here
+     * and the callback hands the URI to the bridge instance above.
+     */
+    private val openTreeLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+    ) { uri: android.net.Uri? ->
+        filesBridge.persistTreeGrant(uri)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -38,6 +58,8 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightStatusBars = false
             isAppearanceLightNavigationBars = false
         }
+
+        filesBridge = FilesBridge(this) { openTreeLauncher.launch(null) }
 
         val webView = WebView(this)
         setContentView(webView)
@@ -60,7 +82,7 @@ class MainActivity : AppCompatActivity() {
             publishInsets(view as WebView)
             windowInsets
         }
-        webView.addJavascriptInterface(FilesBridge(this), "FilesBridge")
+        webView.addJavascriptInterface(filesBridge, "FilesBridge")
         webView.loadUrl("file:///android_asset/drive.html")
         Updater.start(this)
     }

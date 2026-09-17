@@ -3,17 +3,34 @@ package com.diegonmarcos.clouddrive
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
+import android.provider.DocumentsContract
 import android.provider.Settings
 import android.webkit.JavascriptInterface
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.security.MessageDigest
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 /**
  * Everything the page can do to the phone's storage goes through here: browse, sort, make a
@@ -27,7 +44,19 @@ import java.io.File
  * escapes the storage roots. The page is local HTML we ship, but a WebView JavascriptInterface is
  * still a boundary: a bug in the page must not be able to hand this class "../../../data/data".
  */
-class FilesBridge(private val ctx: Context) {
+class FilesBridge(
+    private val ctx: Context,
+    /** The Activity-owned launcher behind the SAF tree grant, injected so the bridge can fire
+     *  ACTION_OPEN_DOCUMENT_TREE without owning an Activity. The Activity's result callback
+     *  hands the chosen tree URI back through [persistTreeGrant]. */
+    private val launchTreeGrant: () -> Unit = { }
+) {
+    /** Where the persisted SAF tree grant lives. SharedPreferences rather than a file because
+     *  the system stores the persistable permission itself; this is only the remembered URI and
+     *  the display name that came with it, so the app can say "SD card (granted)" after a restart
+     *  without forcing the user through the picker again. */
+    private val grantStore: SharedPreferences =
+        ctx.getSharedPreferences("cloud-drive-storage-grants", Context.MODE_PRIVATE)
 
     /**
      * Where browsing may go. Shared external storage plus the app's own directories, which stay
@@ -169,7 +198,118 @@ class FilesBridge(private val ctx: Context) {
         named.filter { it.second.isDirectory }.forEach { (label, dir) ->
             array.put(JSONObject().put("label", label).put("path", dir.absolutePath))
         }
+
+        // Removable volumes. Two answers, because Android itself has two answers:
+        //  - the app's own directory on every mounted volume is reachable WITHOUT the
+        //    all-files special access — getExternalFilesDirs() grants it by construction — so
+        //    those are always offered when a volume is mounted.
+        //  - the volume ROOT needs MANAGE_EXTERNAL_STORAGE beyond the app's slice; when that
+        //    grant is live, the root is offered as the whole drive. When it is not live, a SAF
+        //    tree grant is the only lawful route the OS gives a file manager, and the persisted
+        //    grant (grantStore) is offered as a place that reopens the system picker at the
+        //    granted tree rather than pretending the drive is path-addressable.
+        val appDirs = ctx.getExternalFilesDirs(null).filterNotNull()
+        appDirs.drop(1).forEach { dir ->
+            if (!dir.isDirectory) return@forEach
+            array.put(JSONObject()
+                .put("label", volumeLabelOf(dir) + " — app files")
+                .put("path", dir.absolutePath)
+                .put("kind", "path"))
+        }
+        if (hasStorageAccess()) {
+            File("/storage").listFiles()?.filter { it.isDirectory && it.name != "emulated" }
+                ?.forEach { volume ->
+                    array.put(JSONObject()
+                        .put("label", volumeLabelOf(volume))
+                        .put("path", volume.absolutePath)
+                        .put("kind", "path"))
+                }
+        }
+        readTreeGrant()?.let { (uri, name) ->
+            array.put(JSONObject()
+                .put("label", name)
+                .put("uri", uri.toString())
+                .put("kind", "tree"))
+        }
+        // The connect affordance is offered whenever a removable volume might exist but no
+        // path to one is visible: the user who just plugged a card into a slot sees a chip
+        // instead of silence.
+        val hasRemovablePath = array.length() > named.size || appDirs.size > 1
+        if (!hasRemovablePath) {
+            array.put(JSONObject()
+                .put("label", "Connect a storage drive…")
+                .put("kind", "connect"))
+        }
         return array.toString()
+    }
+
+    /** A readable name for the volume an entry sits on. The path between "/storage/" and the
+     *  next slash is the volume id — "emulated" for the internal card, an id or friendly name
+     *  for a removable one — while the entry itself may be deep below it (an app-dir path ends
+     *  in .../files, which would name the folder, not the card it sits on). */
+    private fun volumeLabelOf(dir: File): String {
+        val volume = dir.absolutePath
+            .substringAfter("/storage/", "")
+            .substringBefore("/", "")
+        return when {
+            volume.isEmpty() || volume == "emulated" -> "Removable storage"
+            volume.lowercase() == "usb" -> "USB drive"
+            volume.contains("-") -> "SD card"
+            else -> volume
+        }
+    }
+
+    /** Asks the user to grant a whole volume through the system picker, then keeps the grant. */
+    @JavascriptInterface
+    fun requestTreeGrant(): String {
+        return try {
+            launchTreeGrant()
+            okErr(true, "")
+        } catch (error: Exception) {
+            failure(error.message ?: "cannot open the system folder picker")
+        }
+    }
+
+    /** The persisted tree grant, as { granted, uri, name } so the page can show and forget it. */
+    @JavascriptInterface
+    fun treeGrantInfo(): String =
+        readTreeGrant()?.let { (uri, name) ->
+            JSONObject().put("ok", true).put("granted", true)
+                .put("uri", uri.toString()).put("name", name).toString()
+        } ?: JSONObject().put("ok", true).put("granted", false).toString()
+
+    /** Drops the remembered grant. The OS permission itself is released by the system. */
+    @JavascriptInterface
+    fun forgetTreeGrant(): String {
+        grantStore.edit().clear().apply()
+        return okErr(true, "")
+    }
+
+    /** Called by MainActivity when the SAF picker returns. Persists the OS-level grant and the
+     *  URI, exactly the two things a future session needs to know the volume was chosen. */
+    fun persistTreeGrant(uri: Uri?) {
+        if (uri == null) return
+        try {
+            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            ctx.contentResolver.takePersistableUriPermission(uri, flags)
+        } catch (error: Exception) {
+            // A grant that cannot be persisted is still usable today; it just will not outlive
+            // the process. Not worth failing the picker over.
+        }
+        val name = try {
+            DocumentsContract.getTreeDocumentId(uri)
+                .substringBeforeLast(':')
+        } catch (error: Exception) {
+            uri.lastPathSegment ?: "Storage drive"
+        }
+        grantStore.edit().putString(KEY_TREE_GRANT_URI, uri.toString())
+            .putString(KEY_TREE_GRANT_NAME, name).apply()
+    }
+
+    private fun readTreeGrant(): Pair<Uri, String>? {
+        val uri = grantStore.getString(KEY_TREE_GRANT_URI, null) ?: return null
+        val name = grantStore.getString(KEY_TREE_GRANT_NAME, null) ?: "Storage drive"
+        return runCatching { Uri.parse(uri) }.getOrNull()?.let { it to name }
     }
 
     /**
@@ -245,6 +385,20 @@ class FilesBridge(private val ctx: Context) {
     }
 
     @JavascriptInterface
+    fun createFile(parentPath: String, name: String): String {
+        val parent = resolve(parentPath) ?: return failure("that path is outside the storage roots")
+        val safe = sanitize(name) ?: return failure("a file name cannot contain a path separator")
+        val target = File(parent, safe)
+        if (target.exists()) return failure(safe + " already exists")
+        return try {
+            if (target.createNewFile()) pathResult(target)
+            else failure("could not create " + safe)
+        } catch (error: Exception) {
+            failure(error.message ?: "could not create " + safe)
+        }
+    }
+
+    @JavascriptInterface
     fun rename(path: String, name: String): String {
         val file = resolve(path) ?: return failure("that path is outside the storage roots")
         val safe = sanitize(name) ?: return failure("a name cannot contain a path separator")
@@ -265,6 +419,22 @@ class FilesBridge(private val ctx: Context) {
         val destination = resolve(destinationPath)
             ?: return failure("that destination is outside the storage roots")
         if (!destination.isDirectory) return failure("not a directory: " + destination.name)
+
+        // A paste that cannot fit is refused BEFORE a single byte moves, with the actual
+        // numbers. Shared-storage FUSE mounts can fail a copy half way at exactly the moment
+        // the free space runs out, leaving a partial file that looks like a finished one; a
+        // refusal up front cannot do that.
+        val needed = measureTotalSize(pathsJson) ?: 0L
+        val free = try {
+            StatFs(destination.absolutePath).availableBytes
+        } catch (error: Exception) {
+            0L
+        }
+        if (needed > free) {
+            return failure("not enough space: this " + (if (move) "move" else "copy") +
+                " needs " + humanBytes(needed) + " but only " + humanBytes(free) + " is free " +
+                "on " + destination.name)
+        }
 
         val results = JSONArray()
         var failed = 0
@@ -436,6 +606,481 @@ class FilesBridge(private val ctx: Context) {
         }
     }
 
+    // ── the file manager's own tools ─────────────────────────────────────────
+
+    /* Search, create-file, zip, properties, bulk-rename and duplicate-finding all share a
+     * job runner: each heavy one starts on a background thread, returns a token immediately,
+     * and reports progress through a status call the page polls. The page stays touchable
+     * while a camera roll is hashed, and a Cancel button actually cancels — which a
+     * synchronous bridge call could not say. */
+    private val jobSessions = ConcurrentHashMap<String, BackgroundJob>()
+
+    private val jobIds = AtomicInteger(0)
+
+    private fun startJob(work: (BackgroundJob, AtomicBoolean) -> Unit): String {
+        val id = "job-" + jobIds.incrementAndGet()
+        val job = BackgroundJob()
+        jobSessions[id] = job
+        JOB_EXECUTOR.execute { job.run { work(this, cancelRequested) } }
+        return JSONObject().put("ok", true).put("token", id).toString()
+    }
+
+    private fun statusOf(token: String, features: JSONObject): String {
+        val job = jobSessions[token] ?: return failure("no such job: " + token)
+        job.snapshot?.let { return it.toString() }
+        features.put("ok", true)
+            .put("done", job.done)
+            .put("cancelled", job.cancelled.get() || job.cancelRequested.get())
+            .put("scanned", job.scanned)
+            .put("bytesProgress", job.bytesProgress)
+        return features.toString()
+    }
+
+    @JavascriptInterface
+    fun cancelJob(token: String): String {
+        jobSessions[token]?.cancelRequested?.set(true)
+        return okErr(true, "")
+    }
+
+    /**
+     * Name search, and — when [contentToo] — text-content search under [root]. Name matching
+     * is always on and matches anywhere in the name; content matching reads text files up to
+     * [SEARCH_TEXT_BYTE_CEILING] and stops at [SEARCH_RESULT_CEILING] results, because a
+     * "found 40 000 matches" inbox is a denial-of-service for the very page that asked.
+     * Runs on the job runner so the page can cancel a walk over a whole card.
+     */
+    @JavascriptInterface
+    fun search(root: String, query: String, contentToo: Boolean): String {
+        val dir = resolve(root) ?: return failure("that path is outside the storage roots")
+        if (!dir.isDirectory) return failure("not a folder: " + dir.name)
+        val needle = query.trim()
+        if (needle.isEmpty()) return failure("a search needs a query")
+        val lowercaseNeedle = needle.lowercase()
+
+        return startJob { job, cancelled ->
+            val found = JSONArray()
+            val truncated = walkSearch(dir, lowercaseNeedle, contentToo, job, cancelled, found)
+            job.finish(JSONObject()
+                .put("truncated", truncated)
+                .put("entries", found))
+        }
+    }
+
+    @JavascriptInterface
+    fun searchStatus(token: String): String = statusOf(token, JSONObject())
+
+    private fun walkSearch(
+        dir: File,
+        needle: String,
+        contentToo: Boolean,
+        job: BackgroundJob,
+        cancelled: AtomicBoolean,
+        found: JSONArray
+    ): Boolean {
+        if (cancelled.get()) return false
+        val children = dir.listFiles() ?: return false
+        for (child in children) {
+            if (cancelled.get()) return false
+            job.scanned++
+            val nameMatch = child.name.lowercase().contains(needle)
+            if (nameMatch || (contentToo && matchesText(child, needle))) {
+                found.put(describe(child).put("matchedBy", if (nameMatch) "name" else "content"))
+                if (found.length() >= SEARCH_RESULT_CEILING) return true
+            }
+            if (child.isDirectory && walkSearch(child, needle, contentToo, job, cancelled, found)) return true
+        }
+        return false
+    }
+
+    /** True when [file]'s text bytes contain [needle], and only asked for files small enough
+     *  that reading them whole is not an out-of-memory kill (the editor's own ceiling). */
+    private fun matchesText(file: File, needle: String): Boolean {
+        if (!file.isFile) return false
+        if (file.length() > SEARCH_TEXT_BYTE_CEILING) return false
+        if (!mimeOf(file).startsWith("text/")) return false
+        return runCatching {
+            val text = String(file.readBytes(), Charsets.UTF_8)
+            // A binary file with no NUL byte and a text/ MIME (a JAR, a class file) is still
+            // searchable safely: finding a byte sequence in binary string is harmless.
+            text.lowercase().contains(needle)
+        }.getOrDefault(false)
+    }
+
+    /**
+     * Zips the selection into a new archive at [destinationZipPath]: folders become paths
+     * inside the archive, entry names stay inside their own folder name, and a failed pass
+     * deletes the partial archive so a half-written zip is never left behind to be opened.
+     */
+    @JavascriptInterface
+    fun archive(pathsJson: String, destinationZipPath: String): String {
+        val destination = resolve(destinationZipPath)
+            ?: return failure("that archive path is outside the storage roots")
+        if (destination.exists()) return failure(destination.name + " already exists")
+        val sources = mutableListOf<File>()
+        eachPath(pathsJson) { sources.add(it) }
+        if (sources.isEmpty()) return failure("nothing to archive")
+
+        return try {
+            ZipOutputStream(BufferedOutputStream(FileOutputStream(destination))).use { zip ->
+                val usedNames = mutableSetOf<String>()
+                sources.forEach { source ->
+                    if (source.isDirectory) {
+                        val base = uniqueZipName(usedNames, source.name, true)
+                        zipFolderInto(source, base, zip, ARCHIVE_DEPTH_CEILING)
+                    } else {
+                        val base = uniqueZipName(usedNames, source.name, false)
+                        zip.putNextEntry(ZipEntry(base))
+                        FileInputStream(source).use { it.copyTo(zip) }
+                        zip.closeEntry()
+                    }
+                }
+            }
+            JSONObject().put("ok", true).put("path", destination.absolutePath)
+                .put("entries", sources.size).toString()
+        } catch (error: Exception) {
+            destination.delete()
+            failure(error.message ?: "the archive did not finish")
+        }
+    }
+
+    private fun zipFolderInto(
+        source: File,
+        prefix: String,
+        zip: ZipOutputStream,
+        depthLeft: Int
+    ) {
+        if (depthLeft <= 0) return
+        val children = source.listFiles() ?: return
+        children.forEach { child ->
+            if (child.isDirectory) {
+                zipFolderInto(child, prefix + child.name + "/", zip, depthLeft - 1)
+            } else {
+                zip.putNextEntry(ZipEntry(prefix + child.name))
+                FileInputStream(child).use { it.copyTo(zip) }
+                zip.closeEntry()
+            }
+        }
+    }
+
+    private fun uniqueZipName(used: MutableSet<String>, name: String, isFolder: Boolean): String {
+        val stem = if (isFolder) name else name.substringBeforeLast('.', name)
+        val tail = if (isFolder) "" else "." + name.substringAfterLast('.', "")
+        val slash = if (isFolder) "/" else ""
+        var candidate = name + slash
+        var counter = 2
+        while (candidate in used) {
+            candidate = stem + " (" + counter + ")" + tail + slash
+            counter++
+        }
+        used.add(candidate)
+        return candidate
+    }
+
+    /**
+     * Unzips [zipPath] into [destinationDir]. The Zip Slip guard ([zipEntryTarget]) runs over
+     * EVERY entry name BEFORE the first byte is written: an archive containing a path that
+     * would escape the destination is refused wholesale, so a hostile archive cannot plant a
+     * file in the folder next door by naming an entry "../../Downloads/shell.sh".
+     */
+    @JavascriptInterface
+    fun extract(zipPath: String, destinationDir: String): String {
+        val zipFile = resolve(zipPath) ?: return failure("that zip is outside the storage roots")
+        if (!zipFile.isFile) return failure("not a zip: " + zipFile.name)
+        val destination = resolve(destinationDir)
+            ?: return failure("that destination is outside the storage roots")
+        if (!destination.isDirectory) return failure("not a folder: " + destination.name)
+
+        try {
+            ZipInputStream(BufferedInputStream(FileInputStream(zipFile))).use { input ->
+                while (true) {
+                    val entry = input.nextEntry ?: break
+                    if (zipEntryTarget(destination, entry.name) == null)
+                        return failure("the archive tries to write outside the destination: " + entry.name)
+                    input.closeEntry()
+                }
+            }
+        } catch (error: Exception) {
+            return failure(error.message ?: "cannot read " + zipFile.name)
+        }
+
+        // Second pass: every pre-validated file entry lands. A failure deletes what was
+        // written by this pass, so a crash leaves the destination as it was, not half-filled.
+        val written = mutableListOf<File>()
+        return try {
+            ZipInputStream(BufferedInputStream(FileInputStream(zipFile))).use { input ->
+                while (true) {
+                    val entry = input.nextEntry ?: break
+                    if (entry.isDirectory) continue
+                    val target = zipEntryTarget(destination, entry.name) ?: continue
+                    target.parentFile?.mkdirs()
+                    FileOutputStream(target).use { out -> input.copyTo(out) }
+                    written.add(target)
+                    input.closeEntry()
+                }
+            }
+            JSONObject().put("ok", true).put("count", written.size).toString()
+        } catch (error: Exception) {
+            written.reversed().forEach { it.delete() }
+            failure(error.message ?: "the extraction did not finish")
+        }
+    }
+
+    /**
+     * Size on disk, recursive file and folder counts, readable/writable/executable bits, and
+     * MD5 + SHA-256 for a single file. Hashing (and the recursive walk for a folder) runs on
+     * the job runner with byte progress, because a multi-gigabyte video is the whole point of
+     * this call and the page must be cancellable while it churns.
+     */
+    @JavascriptInterface
+    fun properties(path: String): String {
+        val file = resolve(path) ?: return failure("that path is outside the storage roots")
+        if (!file.exists()) return failure("no longer there: " + file.name)
+        return startJob { job, cancelled ->
+            var bytes = 0L
+            var files = 0
+            var folders = 0
+            if (file.isDirectory) {
+                walkProperties(file, job, cancelled) { entryBytes, entryIsFolder, entryIsFile ->
+                    bytes += entryBytes
+                    if (entryIsFolder) folders++ else if (entryIsFile) files++
+                }
+            } else {
+                bytes = file.length()
+                files = 1
+            }
+            val perms = JSONObject()
+                .put("readable", file.canRead())
+                .put("writable", file.canWrite())
+                .put("executable", file.canExecute())
+            var md5: String? = null
+            var sha256: String? = null
+            if (file.isFile && !cancelled.get()) {
+                val digests = digestFile(file, job, cancelled)
+                md5 = digests["md5"]
+                sha256 = digests["sha256"]
+            }
+            job.finish(JSONObject()
+                .put("size", bytes)
+                .put("files", files)
+                .put("folders", folders)
+                .put("directory", file.isDirectory)
+                .put("permissions", perms)
+                .put("md5", md5 ?: JSONObject.NULL)
+                .put("sha256", sha256 ?: JSONObject.NULL)
+                .put("cancelled", cancelled.get()))
+        }
+    }
+
+    @JavascriptInterface
+    fun propertiesStatus(token: String): String = statusOf(token, JSONObject())
+
+    private fun walkProperties(
+        dir: File,
+        job: BackgroundJob,
+        cancelled: AtomicBoolean,
+        tally: (Long, Boolean, Boolean) -> Unit
+    ) {
+        if (cancelled.get()) return
+        val children = dir.listFiles() ?: return
+        children.forEach { child ->
+            if (cancelled.get()) return@forEach
+            job.scanned++
+            if (child.isDirectory) {
+                tally(0L, true, false)
+                walkProperties(child, job, cancelled, tally)
+            } else {
+                tally(child.length(), false, true)
+            }
+        }
+    }
+
+    private fun digestFile(file: File, job: BackgroundJob, cancelled: AtomicBoolean): Map<String, String> {
+        val md5 = MessageDigest.getInstance("MD5")
+        val sha256 = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(DIGEST_BUFFER_SIZE)
+        FileInputStream(file).use { input ->
+            while (true) {
+                val read = input.read(buffer)
+                if (read == -1) break
+                if (cancelled.get()) return emptyMap()
+                md5.update(buffer, 0, read)
+                sha256.update(buffer, 0, read)
+                job.addProgress(read.toLong())
+            }
+        }
+        return mapOf(
+            "md5" to toHex(md5.digest()),
+            "sha256" to toHex(sha256.digest())
+        )
+    }
+
+    private fun toHex(digest: ByteArray): String =
+        digest.map { byte -> String.format("%02x", byte.toInt() and 0xFF) }.joinToString("")
+
+    /**
+     * Previews a bulk rename without renaming anything: every selected path is expanded
+     * against [pattern] and every target name is validated up front. The page shows the
+     * plan first; [bulkRename] then applies the exact same validated plan, and rolls the
+     * renames back if one fails — so a pattern that collides with itself is never half-applied.
+     */
+    @JavascriptInterface
+    fun bulkRenamePreview(pathsJson: String, pattern: String): String {
+        val plan = buildRenamePlan(pathsJson, pattern) ?: return failure("no names to rename")
+        val out = JSONArray()
+        plan.forEach { (path, oldName, newName, reason) ->
+            out.put(JSONObject()
+                .put("path", path)
+                .put("oldName", oldName)
+                .put("newName", newName)
+                .put("reason", reason ?: JSONObject.NULL))
+        }
+        return JSONObject().put("ok", true).put("plan", out).toString()
+    }
+
+    /**
+     * Applies a validated bulk rename. No half-apply: the targets came from
+     * [bulkRenamePreview]'s validation, and a failed rename rolls every earlier one back.
+     */
+    @JavascriptInterface
+    fun bulkRename(pathsJson: String, pattern: String): String {
+        val plan = buildRenamePlan(pathsJson, pattern) ?: return failure("no names to rename")
+        val blocked = plan.any { it.reason != null && it.oldName != it.newName }
+        if (blocked) {
+            return failure("cannot rename: the preview found name conflicts")
+        }
+
+        val applied = mutableListOf<Pair<File, String>>() // file to its ORIGINAL name
+        for (step in plan) {
+            // A name that does not change is a no-op, not an error; the preview says so.
+            if (step.oldName == step.newName) continue
+            val old = File(step.path)
+            val target = File(old.parentFile, step.newName)
+            if (!old.renameTo(target)) {
+                // Roll back what was already done so the selection is not left half renamed.
+                applied.reversed().forEach { (renamed, original) ->
+                    renamed.renameTo(File(renamed.parentFile, original))
+                }
+                return failure("could not rename " + old.name + " — every change has been rolled back")
+            }
+            applied.add(old to step.oldName)
+        }
+        return JSONObject().put("ok", true).put("renamed", applied.size).toString()
+    }
+
+    /** Expands every path against [pattern] and validates every target name; null when the
+     *  selection is empty. The returned records carry the ORIGINAL path for the apply pass. */
+    private fun buildRenamePlan(pathsJson: String, pattern: String):
+        MutableList<RenamePlan>? {
+        val files = mutableListOf<File>()
+        eachPath(pathsJson) { files.add(it) }
+        if (files.isEmpty()) return null
+
+        val usedTargets = mutableSetOf<String>()
+        val plan = mutableListOf<RenamePlan>()
+        for (index in files.indices) {
+            val file = files[index]
+            val number = index + 1
+            val name = file.nameWithoutExtension
+            val extension = file.extension
+            val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(file.lastModified()))
+            val newName = pattern
+                .replace("{name}", name)
+                .replace("{n}", number.toString())
+                .replace("{ext}", extension)
+                .replace("{date}", date)
+
+            val reason = sanitize(newName)?.let { candidate ->
+                val target = File(file.parentFile, candidate)
+                when {
+                    candidate == file.name -> "the name does not change"
+                    target.exists() -> "that name already exists on disk"
+                    candidate in usedTargets -> "two files would get the same name"
+                    else -> null
+                }
+            } ?: "the pattern produced an empty name"
+
+            // A rename onto its own name is not a conflict; it is a no-op that is simply skipped.
+            if (newName == file.name) {
+                plan.add(RenamePlan(file.absolutePath, file.name, newName, "the name does not change"))
+            } else {
+                usedTargets.add(newName)
+                plan.add(RenamePlan(file.absolutePath, file.name, newName, reason))
+            }
+        }
+        return plan
+    }
+
+    private data class RenamePlan(val path: String, val oldName: String, val newName: String, val reason: String?)
+
+    /**
+     * Finds duplicate files under [root] by hashing only inside size buckets of two or more —
+     * the cheap check first, so a camera roll with a few thousand unique pictures never hashes
+     * every one of them. Reports groups of paths whose bytes are identical.
+     */
+    @JavascriptInterface
+    fun duplicates(root: String): String {
+        val dir = resolve(root) ?: return failure("that path is outside the storage roots")
+        if (!dir.isDirectory) return failure("not a folder: " + dir.name)
+        return startJob { job, cancelled ->
+            // Bucket by size. Only the 2+ buckets are hashed.
+            val bySize = HashMap<Long, MutableList<File>>()
+            walkDuplicates(dir, job, cancelled) { file ->
+                bySize.getOrPut(file.length()) { mutableListOf() }.add(file)
+            }
+            val groups = JSONArray()
+            bySize.values
+                .filter { it.size > 1 }
+                .forEach { bucket ->
+                    if (cancelled.get()) return@forEach
+                    val byHash = HashMap<String, MutableList<String>>()
+                    bucket.forEach { file ->
+                        if (cancelled.get()) return@forEach
+                        val digest = sha256Of(file)
+                        byHash.getOrPut(digest) { mutableListOf() }.add(file.absolutePath)
+                        job.scanned++
+                    }
+                    byHash.values
+                        .filter { it.size > 1 }
+                        .forEach { paths ->
+                            val pathArray = JSONArray()
+                            paths.forEach { pathArray.put(it) }
+                            groups.put(JSONObject()
+                                .put("size", bucket.first().length())
+                                .put("count", paths.size)
+                                .put("paths", pathArray))
+                        }
+                }
+            job.finish(JSONObject().put("groups", groups).put("cancelled", cancelled.get()))
+        }
+    }
+
+    @JavascriptInterface
+    fun duplicatesStatus(token: String): String = statusOf(token, JSONObject())
+
+    private fun walkDuplicates(dir: File, job: BackgroundJob, cancelled: AtomicBoolean, take: (File) -> Unit) {
+        if (cancelled.get()) return
+        val children = dir.listFiles() ?: return
+        children.forEach { child ->
+            if (cancelled.get()) return@forEach
+            job.scanned++
+            if (child.isDirectory) walkDuplicates(child, job, cancelled, take)
+            else take(child)
+        }
+    }
+
+    private fun sha256Of(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val buffer = ByteArray(DIGEST_BUFFER_SIZE)
+        FileInputStream(file).use { input ->
+            while (true) {
+                val read = input.read(buffer)
+                if (read == -1) break
+                digest.update(buffer, 0, read)
+            }
+        }
+        return toHex(digest.digest())
+    }
+
     // ── mirroring, which is what Rsync means on a phone ──────────────────────────
 
     /**
@@ -484,6 +1129,34 @@ class FilesBridge(private val ctx: Context) {
             .put("deleted", tally.deleted)
             .put("failed", tally.failed)
             .toString()
+    }
+
+    private class BackgroundJob {
+        val cancelRequested = AtomicBoolean(false)
+        val cancelled = AtomicBoolean(false)
+        @Volatile var done = false
+        @Volatile var scanned = 0L
+        @Volatile var bytesProgress = 0L
+
+        /** Adds progress and reports whether the caller should stop. */
+        fun shouldStop(): Boolean {
+            if (!cancelRequested.get()) return false
+            cancelled.set(true)
+            return true
+        }
+
+        fun addProgress(bytes: Long) { bytesProgress += bytes }
+
+        fun finish(result: JSONObject) {
+            snapshot = JSONObject(result.toString())
+                .put("ok", true)
+                .put("done", true)
+                .put("cancelled", cancelRequested.get() || cancelled.get())
+                .put("scanned", scanned)
+            done = true
+        }
+
+        @Volatile var snapshot: JSONObject? = null
     }
 
     private class MirrorTally {
@@ -642,6 +1315,35 @@ class FilesBridge(private val ctx: Context) {
         }
     }
 
+    /** The total bytes the selection would occupy at [destination] — every file, whole tree. */
+    private fun measureTotalSize(pathsJson: String): Long? {
+        var total = 0L
+        eachPath(pathsJson) { source ->
+            if (source.isFile) total += source.length()
+            else if (source.isDirectory) total += folderSize(source, SIZE_WALK_DEPTH_CEILING)
+        }
+        return total
+    }
+
+    private fun folderSize(dir: File, depthLeft: Int): Long {
+        if (depthLeft <= 0) return 0L
+        var total = 0L
+        dir.listFiles()?.forEach { child ->
+            if (child.isDirectory) total += folderSize(child, depthLeft - 1)
+            else total += child.length()
+        }
+        return total
+    }
+
+    private fun humanBytes(bytes: Long): String {
+        if (bytes < 1024) return bytes.toString() + " B"
+        val units = listOf("KB", "MB", "GB", "TB")
+        var value = bytes.toDouble()
+        var unit = -1
+        while (value >= 1024.0 && unit < units.size - 1) { value /= 1024.0; unit++ }
+        return "%.1f".format(value) + " " + units[unit]
+    }
+
     private fun pathResult(file: File): String =
         JSONObject().put("ok", true).put("path", file.absolutePath).put("name", file.name).toString()
 
@@ -651,6 +1353,13 @@ class FilesBridge(private val ctx: Context) {
         JSONObject().put("ok", ok).put("error", error).toString()
 
     private companion object {
+        /** The single pool every background job (search, properties, duplicates) runs on. One
+         *  thread is deliberately enough: these jobs all read, and serialising them keeps the
+         *  phone from thrashing a camera roll with three competing walks. */
+        val JOB_EXECUTOR = Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable).apply { isDaemon = true }
+        }
+
         /**
          * The largest file the editor will open. The page holds the whole text as one
          * JavaScript string, so this is a memory ceiling rather than a taste judgement:
@@ -661,5 +1370,46 @@ class FilesBridge(private val ctx: Context) {
 
         /** How deep [mirror] will walk. See the ponytail note in mirrorInto. */
         const val MIRROR_DEPTH_CEILING = 32
+
+        /** Search reads a text file up to this ceiling; the page must not OOM opening it. */
+        const val SEARCH_TEXT_BYTE_CEILING = 1L * 1024 * 1024
+
+        /** Search stops here, and says it truncated. See the search doc comment. */
+        const val SEARCH_RESULT_CEILING = 300
+
+        /** How deep a zip walk goes before giving up; mirror's ceiling shape, same ponytail. */
+        const val ARCHIVE_DEPTH_CEILING = 32
+
+        /** How deep transfer's free-space estimate walks a source tree. */
+        const val SIZE_WALK_DEPTH_CEILING = 32
+
+        /** Chunk for hashing and zipping; 1 MB keeps one read cheap without stalling progress. */
+        const val DIGEST_BUFFER_SIZE = 1 * 1024 * 1024
+
+        val KEY_TREE_GRANT_URI = "saf_tree_grant_uri"
+        val KEY_TREE_GRANT_NAME = "saf_tree_grant_name"
     }
+}
+
+/**
+ * The Zip Slip guard, as a pure function so the shell tester and any future JVM unit test can
+ * hold it to account. Returns the file an entry may be written to, or null when the entry name
+ * would escape [destination] — anything absolute, anything containing a ".." segment, or a
+ * canonical path outside the destination's canonical root. The page cannot hand this function
+ * a crafted name that climbs out: every segment is checked, backslashes are read as separators
+ * (a zip created on Windows may use them), and the final canonical path is compared against the
+ * destination's own canonical path plus the separator, exactly like [FilesBridge.resolve].
+ */
+internal fun zipEntryTarget(destination: File, entryName: String): File? {
+    val cleaned = entryName.replace('\\', '/')
+    if (cleaned.startsWith("/")) return null
+    val segments = cleaned.split("/").filter { it.isNotEmpty() && it != "." }
+    if (segments.any { it == ".." }) return null
+    if (segments.isEmpty()) return null
+    val target = File(destination, segments.joinToString("/"))
+    val destCanonical = try { destination.canonicalFile } catch (error: Exception) { return null }
+    val targetCanonical = try { target.canonicalFile } catch (error: Exception) { return null }
+    val allowed = destCanonical == targetCanonical ||
+        targetCanonical.path.startsWith(destCanonical.path + File.separator)
+    return if (allowed) targetCanonical else null
 }

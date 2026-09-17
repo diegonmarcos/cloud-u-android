@@ -31,6 +31,17 @@
 #       inside its own source (each pass would copy the last one, for ever), and
 #       no path is absolute (the /storage/emulated/0 form names one device's
 #       user id and is wrong under a second profile).
+#   A9  the numbered prompt() menus are gone and every menu routes through ONE
+#       bottom sheet (entry / new-item / sort / tools).
+#   A10 the file-manager additions exist at BOTH ends: search, createFile,
+#       archive/extract, properties, bulk rename (preview + apply), duplicates,
+#       the cancellable job trio, and the SAF tree grant methods.
+#   A11 the Zip Slip guard is a real function extract() consults, it rejects the
+#       three classic escape shapes, and a hostile archive is refused wholesale
+#       before one byte lands. Mutation-run proven locally.
+#   A12 a paste that does not fit is refused with the actual numbers, and
+#       places() lists removable volumes (getExternalFilesDirs) plus a persisted
+#       SAF tree grant and a connect affordance for what path access cannot reach.
 #
 # NO RIPGREP, DELIBERATELY — testers in this repository have passed on its
 # absence rather than on their assertions. python3 and grep only, both in
@@ -236,6 +247,145 @@ if grep -q "background: #111827" "$PAGE" && ! grep -q "bg-white" "$PAGE"; then
     pass "the page base is dark and no light surface class remains"
 else
     fail "the page still carries a light background or a bg-white surface"
+fi
+
+echo "── A9 the numbered menus are dead; every menu is ONE bottom sheet ──"
+for needle in "sheetRoot" "openSheet" "sheetMenu" "sheetPrompt" "sheetConfirm"; do
+    if grep -q "function $needle\|const $needle" "$PAGE"; then
+        pass "the bottom sheet exposes $needle"
+    else
+        fail "the bottom sheet has no $needle — menus have nowhere to render"
+    fi
+done
+for menu in "newItemMenu" "sortMenu" "toolsMenu"; do
+    if grep -q "function $menu" "$PAGE"; then
+        pass "$menu exists"
+    else
+        fail "$menu is missing — its header button would dead-end"
+    fi
+done
+python3 - "$PAGE" <<'PYTHON'
+import re, sys
+page = open(sys.argv[1], encoding="utf-8").read()
+# Every numbered menu used to be a prompt(\n"1 Open\n2 ...") call. The sheet
+# replacement keeps the menu STEP but must never resurrect the dialog shape.
+if re.search(r"prompt\(\s*[`'\"]", page):
+    print("  FAIL  a prompt( callable with text remains — the sheet was supposed to replace it")
+    sys.exit(1)
+# The entry menu must reach the sheet, not window.prompt.
+body = page[page.find("function showEntryMenu"):]
+if "sheetMenu(" not in body:
+    print("  FAIL  showEntryMenu no longer routes through sheetMenu")
+    sys.exit(1)
+print("  PASS  showEntryMenu routes through the sheet")
+sys.exit(0)
+PYTHON
+[ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
+
+echo "── A10 every new file-manager bridge method is declared AND reached ──"
+python3 - "$PAGE" "$BRIDGE" <<'PYTHON'
+import re, sys
+page = open(sys.argv[1], encoding="utf-8").read()
+bridge = open(sys.argv[2], encoding="utf-8").read()
+declared = set(re.findall(r"@JavascriptInterface\s+fun\s+(\w+)", bridge))
+
+# page-callable names from the new tool set; the status trio is polled behind a
+# variable, so its declaration is pinned HERE rather than through the call site.
+required = {
+    "search": "name AND text search, cancellable",
+    "searchStatus": "search progress for the poller",
+    "properties": "size + counts + perms + hashes, cancellable",
+    "propertiesStatus": "properties progress",
+    "duplicates": "size-bucketed duplicate scan",
+    "duplicatesStatus": "duplicates progress",
+    "cancelJob": "the Cancel button on every long job",
+    "createFile": "the create-file sibling createFolder never got",
+    "archive": "zip a selection",
+    "extract": "unzip with a Zip Slip guard",
+    "bulkRenamePreview": "rename pattern preview (no writes)",
+    "bulkRename": "rename apply with rollback",
+    "requestTreeGrant": "SAF tree grant for SD / USB",
+    "treeGrantInfo": "persisted grant state",
+    "forgetTreeGrant": "drop the persisted grant"
+}
+failed = False
+for name, purpose in required.items():
+    if name in declared:
+        print("  PASS  %s is declared — %s" % (name, purpose))
+    else:
+        print("  FAIL  %s is NOT declared — %s" % (name, purpose)); failed = True
+if not re.search(r"Bridge\.call\('search'", page):
+    print("  FAIL  the page never calls search"); failed = True
+if not re.search(r"Bridge\.call\('archive'", page):
+    print("  FAIL  the page never calls archive"); failed = True
+if not re.search(r"Bridge\.call\('extract'", page):
+    print("  FAIL  the page never calls extract"); failed = True
+if not re.search(r"Bridge\.call\('bulkRenamePreview'", page):
+    print("  FAIL  the page never calls bulkRenamePreview"); failed = True
+if not re.search(r"Bridge\.call\('createFile'", page):
+    print("  FAIL  the page never calls createFile"); failed = True
+if not re.search(r"Bridge\.call\('properties'", page):
+    print("  FAIL  the page never calls properties"); failed = True
+if not re.search(r"Bridge\.call\('duplicates'", page):
+    print("  FAIL  the page never calls duplicates"); failed = True
+sys.exit(1 if failed else 0)
+PYTHON
+[ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
+
+echo "── A11 the Zip Slip guard exists and extract() goes through it ──"
+python3 - "$BRIDGE" <<'PYTHON'
+import re, sys
+source = open(sys.argv[1], encoding="utf-8").read()
+
+guard = re.search(r"internal fun zipEntryTarget\(destination: File, entryName: String\): File\?", source)
+if not guard:
+    print("  FAIL  no zipEntryTarget() — extract() has no place to refuse hostile names")
+    sys.exit(1)
+# The function must actually be the guard: a name that participates nowhere is
+# decoration. A mutation that renames it away must fail THIS assertion set.
+if "startsWith(destCanonical.path + File.separator)" not in source[guard.start():]:
+    print("  FAIL  the guard never compares the canonical target against the destination root")
+    sys.exit(1)
+extract = source[source.find("fun extract("):]
+if "zipEntryTarget(" not in extract:
+    print("  FAIL  extract() never consults zipEntryTarget — a hostile entry would be written")
+    sys.exit(1)
+# Reject the three classic escape shapes in the guard's own source.
+body = source[guard.start():source.find("\n}\n", guard.start())]
+for shape, marker in [("dotdot", '".."'), ("absolute", 'startsWith("/")'), ("canonical", "canonicalFile")]:
+    if marker not in body:
+        print("  FAIL  the guard lacks the %s rejection (%s)" % (shape, marker))
+        sys.exit(1)
+print("  PASS  zipEntryTarget() rejects '..', absolute entries and non-canonical parents")
+# extract() refuses the WHOLE archive on the first hostile name, before writing.
+if "the archive tries to write outside the destination" not in extract:
+    print("  FAIL  extract() does not refuse the archive wholesale on a hostile entry")
+    sys.exit(1)
+print("  PASS  extract() refuses the whole archive on the first hostile entry name")
+sys.exit(0)
+PYTHON
+[ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
+
+echo "── A12 the paste guard and the removable-volume places ──"
+if grep -q "not enough space" "$BRIDGE" && grep -q "fun measureTotalSize" "$BRIDGE"; then
+    pass "transfer() refuses a paste that cannot fit, with the actual numbers"
+else
+    fail "transfer() has no free-space guard (measureTotalSize or 'not enough space')"
+fi
+if grep -q "getExternalFilesDirs" "$BRIDGE" && grep -q "fun places" "$BRIDGE"; then
+    pass "places() reads the app's dirs on every mounted volume"
+else
+    fail "places() never lists getExternalFilesDirs volumes — SD/USB are invisible"
+fi
+if grep -q "registerForActivityResult" "$MAIN" && grep -q "persistTreeGrant" "$MAIN" "$BRIDGE" && grep -q "takePersistableUriPermission" "$BRIDGE"; then
+    pass "the SAF tree grant persists (Activity launcher + takePersistableUriPermission)"
+else
+    fail "the SAF tree grant is neither launched nor persisted"
+fi
+if grep -q "kind === 'tree'" "$PAGE" && grep -q "requestTreeGrant" "$PAGE"; then
+    pass "the page renders granted tree places and the connect affordance"
+else
+    fail "the page has no place for a granted tree or a connect action"
 fi
 
 echo "── A8 the GitSync lib is vendored, licensed and cannot block the release ──"
