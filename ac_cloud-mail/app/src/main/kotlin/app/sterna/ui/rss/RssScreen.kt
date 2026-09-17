@@ -44,6 +44,7 @@ import app.sterna.ui.browser.MiniBrowserActivity
 import app.sterna.ui.components.EmptyArt
 import app.sterna.ui.components.EmptyState
 import app.sterna.ui.settings.DetailScaffold
+import app.sterna.ui.rememberLeaveOnce
 import java.net.URI
 
 /**
@@ -64,6 +65,9 @@ fun RssScreen(
     // callback, so the subscribe outcome sentences are read once per draw and handed to the toast.
     val invalidUrlMessage = stringResource(R.string.rss_invalid_url)
     val subscribedMessage = stringResource(R.string.rss_subscribed)
+    // The sanctioned hand-off guard for opening an article in the min-browser — a hand-off out of
+    // the app must not double-fire (NavGuard). Resolved here, driven from the article tap.
+    val leaveOnce = rememberLeaveOnce()
 
     // Load the current subscriptions on entry, and again if the set changes on disk.
     LaunchedEffect(subscriptions) { viewModel.refresh() }
@@ -120,7 +124,7 @@ fun RssScreen(
                             feed = ui.feed,
                             url = ui.url,
                             onOpen = { articleUrl ->
-                                openInMiniBrowser(context, resolveArticleUrl(ui.url, articleUrl))
+                                openInMiniBrowser(context, resolveArticleUrl(ui.url, articleUrl), leaveOnce)
                             },
                             onRemove = { viewModel.unsubscribe(ui.url) },
                         )
@@ -248,10 +252,17 @@ private fun FeedUnavailableRow(url: String, message: String, onRemove: () -> Uni
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 }
 
-/** Open [uri] in the app's own browser; if MiniBrowserActivity says it could not, say so. */
-private fun openInMiniBrowser(context: android.content.Context, uri: String?) {
+/** Open [uri] in the app's own browser; if MiniBrowserActivity says it could not, say so. Handing
+ *  off to another app goes through the room-re-entry guard (leaveOnce), exactly like every other
+ *  hand-off in the app — a double tap must not push two browsers. */
+private fun openInMiniBrowser(
+    context: android.content.Context,
+    uri: String?,
+    leaveOnce: (() -> Boolean) -> Unit,
+) {
     if (uri.isNullOrBlank()) return
-    val opened = MiniBrowserActivity.openMiniBrowser(context, Uri.parse(uri))
+    var opened = false
+    leaveOnce { MiniBrowserActivity.openMiniBrowser(context, Uri.parse(uri)).also { opened = it } }
     if (!opened) {
         android.widget.Toast.makeText(context, R.string.rss_open_failed, android.widget.Toast.LENGTH_SHORT).show()
     }
