@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Cloud Drive</title>
     <script src="vendor/tailwind.js"></script>
+    <!-- The PDF reader's one engine (#458). Classic scripts, same as tailwind.js:
+         pdf.worker.min.js sets globalThis.pdfjsWorker, which pdf.min.js consumes
+         as the MAIN-THREAD message handler — no Worker object, no fetch(), both
+         blocked on file:// origins. Pinned version + hashes: vendor/VENDORED.md. -->
+    <script src="vendor/pdf.min.js"></script>
+    <script src="vendor/pdf.worker.min.js"></script>
     <style>
         :root {
             /* MainActivity overwrites these with the measured window insets. The env() values are
@@ -49,6 +55,30 @@
 
         /* One line, ellipsised: a long file name must not push the size column off screen. */
         .clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* ── the PDF reader (#458) ──────────────────────────────────────────────── */
+
+        /* The zoomed page. transform-origin 0 0 keeps every scale round the page's
+           own top-left corner, so the pinch/double-tap maths in the reader only has
+           to track one point. The canvas and the text layer live inside and move
+           together; the canvas bitmap is NEVER re-drawn by a zoom gesture. */
+        #reader-stage { touch-action: none; }
+        #reader-surface { touch-action: none; }
+
+        /* Night mode is a CSS filter on the rendered page, exactly as #458 demands:
+           the canvas is not re-rendered, the bitmap is untouched. hue-rotate(180deg)
+           rides along so colours come back roughly right after inversion instead of
+           turning cyan-and-magenta. The text layer (transparent text divs) inverts
+           with the same filter so it stays readable and highlights stay visible. */
+        .reader-night { filter: invert(1) hue-rotate(180deg); }
+
+        /* The find-in-document highlight, drawn over the pdf.js text layer. */
+        .pdf-mark { background: #fbbf24; color: #000; border-radius: 1px; }
+
+        /* A disabled conversion target (docx/xlsx/odt) is visible but inert, with
+           its one-line reason shown next to it — never a fake button that looks
+           like it works. */
+        .convert-target[disabled] { opacity: 0.4; }
     </style>
 </head>
 <body>
@@ -114,7 +144,14 @@ const state = {
     editor: null,
     /* Which Sync subpage is showing: 'rclone' or 'git'. Session state, not a setting —
        a subpage is not a choice a user expects to survive a restart. */
-    syncSub: 'rclone'
+    syncSub: 'rclone',
+    /* { path, name, base64, doc, page, ... } while a PDF is open in the reader, null
+       otherwise. path is null when the PDF arrived through an "Open with" hand-off
+       rather than from the Files tab. */
+    reader: null,
+    /* Night/invert mode of the reader. A setting: a reader that forgets it inverts to
+       a white flash every time a document closes. */
+    readerNight: false
 };
 
 /* The handful of choices that are settings rather than session state. domStorageEnabled is
@@ -129,6 +166,7 @@ const Settings = {
             if (stored.sort) state.sort = stored.sort;
             if (typeof stored.descending === 'boolean') state.descending = stored.descending;
             if (typeof stored.showHidden === 'boolean') state.showHidden = stored.showHidden;
+            if (typeof stored.readerNight === 'boolean') state.readerNight = stored.readerNight;
         } catch (error) {
             // A corrupt entry is not worth a broken app. The defaults already stand.
         }
@@ -136,7 +174,8 @@ const Settings = {
     save() {
         try {
             localStorage.setItem(this.key, JSON.stringify({
-                sort: state.sort, descending: state.descending, showHidden: state.showHidden
+                sort: state.sort, descending: state.descending, showHidden: state.showHidden,
+                readerNight: state.readerNight
             }));
         } catch (error) {
             // Storage refused. The session still works, it just will not remember.
@@ -296,6 +335,9 @@ function bindFileRows() {
         row.onclick = () => {
             if (state.selection.size) { toggleSelection(entry); return; }
             if (entry.directory) openDirectory(entry.path);
+            // #458: cloud-drive reads PDFs itself instead of handing them to another
+            // app — that is the point of being "a real PDF reader".
+            else if (isPdfEntry(entry)) openReader(entry);
             else reportFailure(Bridge.call('open', entry.path));
         };
         // Long-press starts a selection, the way every file manager on this phone does.
@@ -474,8 +516,11 @@ function sheetText(title, lines) {
 }
 
 function showEntryMenu(entry) {
-    sheetMenu(entry.name, [
-        { icon: '📂', label: 'Open', onPick: () => reportFailure(Bridge.call('open', entry.path)) },
+    const isPdf = !entry.directory && isPdfEntry(entry);
+    const items = [
+        // For a PDF, "Open" means the internal reader — the whole point of #458.
+        { icon: isPdf ? '📕' : '📂', label: isPdf ? 'Read in Cloud Drive' : 'Open',
+          onPick: () => { if (isPdf) openReader(entry); else reportFailure(Bridge.call('open', entry.path)); } },
         { icon: '✏️', label: 'Edit as text', onPick: () => openEditor(entry) },
         { icon: '📄', label: 'Properties', onPick: () => openPropertiesPanel(entry) },
         { icon: '🗜️', label: 'Archive to this folder',
@@ -497,6 +542,25 @@ function showEntryMenu(entry) {
                   reportFailure(Bridge.call('delete', JSON.stringify([entry.path])));
                   openDirectory(state.path);
               } }) }
+    ];
+    // The four honest conversion targets sit under their own sheet; the three
+    // that would be lies are listed there too, disabled, so a user reads WHY.
+    if (isPdf) items.splice(1, 0,
+        { icon: '⇄', label: 'Convert…', onPick: () => showConvertMenu(entry) });
+    sheetMenu(entry.name, items);
+}
+
+/** The conversion chooser: the four honest targets first; docx/xlsx/odt shown
+ *  disabled with the one-line reason (fleet converter, a separate service). */
+function showConvertMenu(entry) {
+    sheetMenu('Convert ' + entry.name, [
+        { icon: '📄', label: 'txt', onPick: () => convertPdfFromEntry(entry, 'txt') },
+        { icon: '📄', label: 'markdown', onPick: () => convertPdfFromEntry(entry, 'md') },
+        { icon: '🌐', label: 'html', onPick: () => convertPdfFromEntry(entry, 'html') },
+        { icon: '🧮', label: 'csv', onPick: () => convertPdfFromEntry(entry, 'csv') },
+        { icon: '📘', label: 'docx — needs the fleet converter (a separate service), not in this app', disabled: true, onPick: () => {} },
+        { icon: '📗', label: 'xlsx — needs the fleet converter (a separate service), not in this app', disabled: true, onPick: () => {} },
+        { icon: '📙', label: 'odt — needs the fleet converter (a separate service), not in this app', disabled: true, onPick: () => {} }
     ]);
 }
 
@@ -839,6 +903,13 @@ function reportFailure(result) {
 
 function renderHeaderActions() {
     if (state.tab !== 'files') { headerActions.innerHTML = ''; return; }
+    if (state.reader) {
+        // The reader bar has its own ← Close; the persistent header keeps one too
+        // so the top-right corner never goes dead while a document is open.
+        headerActions.innerHTML = '<button id="reader-close-top" class="text-sm">Close</button>';
+        document.getElementById('reader-close-top').onclick = closeReader;
+        return;
+    }
     if (state.editor) {
         headerActions.innerHTML =
             '<button id="editor-save" class="text-sm font-medium text-blue-400">Save</button>' +
@@ -1139,6 +1210,776 @@ function renderConfigs() {
     headerActions.innerHTML = '';
 }
 
+/* ── the PDF reader ─────────────────────────────────────────────────────────────
+   #458: cloud-drive reads PDFs itself, with pdf.js vendored at assets/vendor/
+   (pinned version + hashes in VENDORED.md). One mechanism only — Android's
+   PdfRenderer is never used, and pdf.js never receives a URL: FilesBridge.readPdf
+   carries base64 over the bridge and the page hands getDocument({ data }) bytes,
+   because Chromium blocks fetch() on file:// origins.
+
+   The canvas is rendered once per page; every zoom gesture (pinch, double-tap) is
+   a CSS transform on #reader-stage, so zoom never re-renders the page. Re-render
+   happens on page change, and on zoom-settle only when the zoom has moved far
+   enough to matter (keeps pages crisp instead of blurry at 2x+). Night mode is a
+   CSS filter on that same stage — invert(1) hue-rotate(180deg) — the bitmap is
+   untouched, as the task requires. */
+
+const NO_TEXT_LAYER_MESSAGE =
+    'This PDF has no text layer, so a scan cannot be converted on the phone — ' +
+    'nothing was written.';
+
+function isPdfEntry(entry) {
+    const mime = (entry.mime || '').toLowerCase();
+    const name = entry.name || '';
+    return mime === 'application/pdf' || /\.pdf$/i.test(name);
+}
+
+function base64ToBytes(base64) {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+    return bytes;
+}
+
+/** One shape for a reader session, whichever route opened it (row, boot, hand-off). */
+function makeReaderState(base64, name, path, returnPath) {
+    return {
+        path: path, returnPath: returnPath, name: name, base64: base64,
+        doc: null, loadingTask: null, page: 1, pageCount: 0,
+        fitScale: 1, baseWidth: 0, baseHeight: 0, renderZoom: 1,
+        t: { x: 0, y: 0, s: 1 },
+        renderTask: null, findQuery: '', findResults: []
+    };
+}
+
+function openReader(entry) {
+    // The whole document arrives as one base64 string — the same carrier that made
+    // the file:// fetch question disappear. readPdf enforces a size ceiling on the
+    // native side so this cannot become an out-of-memory kill.
+    const result = Bridge.call('readPdf', entry.path);
+    if (!result.ok) { alert(result.error); return; }
+    state.reader = makeReaderState(result.base64, result.name, result.path, state.path);
+    renderReader();
+}
+
+function closeReader() {
+    if (!state.reader) return;
+    // A loading or open document owns a worker-side document; destroy it so the
+    // next document does not ride on stale state.
+    try { if (state.reader.loadingTask) state.reader.loadingTask.destroy(); } catch (error) { /* best effort */ }
+    const returnPath = state.reader.returnPath;
+    state.reader = null;
+    if (returnPath) openDirectory(returnPath);
+    else startAtFirstPlace();
+}
+
+function readerStatus(text, isError) {
+    const status = document.getElementById('reader-status');
+    if (!status) return;
+    status.textContent = text || '';
+    status.classList.toggle('text-red-400', !!isError);
+    status.classList.toggle('text-gray-400', !isError);
+}
+
+function renderReader() {
+    const reader = state.reader;
+    panel.innerHTML =
+        '<div class="flex flex-col h-full">' +
+        '<div class="flex items-center gap-2 px-3 py-2 border-b border-gray-700 bg-gray-900">' +
+        '<button id="reader-back" class="px-1 text-lg leading-none">‹</button>' +
+        '<div class="flex-1 min-w-0 clip text-sm font-medium">' + escapeHtml(reader.name) + '</div>' +
+        '<button id="reader-find" title="Find in document" class="text-sm">🔍</button>' +
+        '<button id="reader-outline" title="Document outline" class="text-sm">☰</button>' +
+        '<button id="reader-night" title="Night / invert" class="text-sm">🌙</button>' +
+        '<button id="reader-convert" title="Convert" class="text-sm">⇄</button>' +
+        '</div>' +
+        '<div id="reader-tools" class="border-b border-gray-800 bg-gray-900"></div>' +
+        '<div id="reader-surface" class="relative flex-1 overflow-hidden bg-gray-950">' +
+        '<div id="reader-stage" class="absolute" style="transform-origin:0 0">' +
+        '<canvas id="reader-canvas" style="position:absolute;left:0;top:0"></canvas>' +
+        '<div id="reader-text-layer" style="position:absolute;left:0;top:0;overflow:hidden"></div>' +
+        '</div></div>' +
+        '<div class="flex items-center gap-2 px-3 py-1.5 border-t border-gray-700 bg-gray-900 text-xs">' +
+        '<button id="reader-prev" class="px-1">‹</button>' +
+        '<input id="reader-page-input" class="w-10 text-center bg-gray-800 rounded text-gray-200" ' +
+        'inputmode="numeric" value="' + reader.page + '">' +
+        '<span id="reader-page-count" class="text-gray-500">/ ' + (reader.pageCount || '?') + '</span>' +
+        '<button id="reader-next" class="px-1">›</button>' +
+        '<span class="flex-1"></span>' +
+        '<button id="reader-zoom-out" class="px-1">−</button>' +
+        '<span id="reader-zoom-label" class="text-gray-500 w-10 text-center">100%</span>' +
+        '<button id="reader-zoom-in" class="px-1">+</button>' +
+        '</div>' +
+        '<div id="reader-status" class="px-3 py-1 text-[11px] text-gray-400 bg-gray-900"></div>' +
+        '</div>';
+
+    bindReaderControls();
+    if (state.readerNight) {
+        // The filter is a persistent preference; re-apply it to the rebuilt stage.
+        document.getElementById('reader-stage').classList.add('reader-night');
+    }
+    readerOpenDocument();
+    renderHeaderActions();
+}
+
+function bindReaderControls() {
+    const surface = document.getElementById('reader-surface');
+    const reader = state.reader;
+
+    document.getElementById('reader-back').onclick = closeReader;
+    document.getElementById('reader-find').onclick = readerToggleFind;
+    document.getElementById('reader-outline').onclick = readerToggleOutline;
+    document.getElementById('reader-night').onclick = readerToggleNight;
+    document.getElementById('reader-convert').onclick = readerToggleConvert;
+    document.getElementById('reader-prev').onclick = () => readerGoToPage(reader.page - 1);
+    document.getElementById('reader-next').onclick = () => readerGoToPage(reader.page + 1);
+    document.getElementById('reader-zoom-in').onclick = () => readerAnchoredZoom(surface.clientWidth / 2, surface.clientHeight / 2, 1.5);
+    document.getElementById('reader-zoom-out').onclick = () => readerAnchoredZoom(surface.clientWidth / 2, surface.clientHeight / 2, 0.6667);
+    document.getElementById('reader-page-input').addEventListener('keydown', event => {
+        if (event.key !== 'Enter') return;
+        const value = Number(event.target.value);
+        if (value >= 1) readerGoToPage(Math.round(value));
+        else event.target.value = String(reader.page);
+    });
+
+    // ── gestures ────────────────────────────────────────────────────
+    // touch-action: none on the surface keeps Chromium's own pinch and double-tap
+    // zoom from fighting the reader's (the page's preventDefault alone is not
+    // enough when the browser decides the gesture first). Every handler is
+    // passive:false so preventDefault is legal.
+    let pinch = null;
+    let pan = null;
+    let lastTap = { at: 0, x: 0, y: 0 };
+
+    const distance = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    const midpoint = (a, b) => ({ x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 });
+
+    surface.addEventListener('touchstart', event => {
+        if (event.touches.length === 2) {
+            // A pinch anchors the stage point that was under the initial midpoint to
+            // the moving midpoint, which is the gesture users expect: the page stays
+            // under the fingers while it grows.
+            const [a, b] = [event.touches[0], event.touches[1]];
+            pinch = { startDistance: distance(a, b), startScale: reader.t.s, startMid: midpoint(a, b), startT: { x: reader.t.x, y: reader.t.y } };
+            event.preventDefault();
+        } else if (event.touches.length === 1) {
+            pan = { startX: event.touches[0].clientX, startY: event.touches[0].clientY, startT: { x: reader.t.x, y: reader.t.y } };
+            event.preventDefault();
+        }
+    }, { passive: false });
+
+    surface.addEventListener('touchmove', event => {
+        if (pinch && event.touches.length === 2) {
+            event.preventDefault();
+            const [a, b] = [event.touches[0], event.touches[1]];
+            const next = midpoint(a, b);
+            const scale = clamp(pinch.startScale * distance(a, b) / pinch.startDistance, 0.5, 8);
+            // Anchor math: the stage coordinate that sat under the starting midpoint
+            // (startMid - startT) / startScale must sit under the current midpoint.
+            const stageX = (pinch.startMid.x - pinch.startT.x) / pinch.startScale;
+            const stageY = (pinch.startMid.y - pinch.startT.y) / pinch.startScale;
+            reader.t.s = scale;
+            reader.t.x = next.x - stageX * scale;
+            reader.t.y = next.y - stageY * scale;
+            readerApplyTransform();
+        } else if (pan && event.touches.length === 1) {
+            event.preventDefault();
+            reader.t.x = pan.startT.x + (event.touches[0].clientX - pan.startX);
+            reader.t.y = pan.startT.y + (event.touches[0].clientY - pan.startY);
+            readerApplyTransform();
+        }
+    }, { passive: false });
+
+    surface.addEventListener('touchend', event => {
+        if (event.touches.length === 0) {
+            if (pinch) {
+                readerSettleZoom(surface.clientWidth / 2, surface.clientHeight / 2);
+                pinch = null;
+            }
+            // Double-tap toggles between fit and 2.5x around the tap point. Two
+            // quick taps are NOT two pans, so this is recognised before pan resets.
+            if (pan && event.changedTouches.length) {
+                const touch = event.changedTouches[0];
+                const now = Date.now();
+                if (now - lastTap.at < 320 && Math.hypot(touch.clientX - lastTap.x, touch.clientY - lastTap.y) < 40) {
+                    const zoomTarget = (reader.t.s * reader.renderZoom) >= 2 ? 1 : 2.5;
+                    readerZoomAt(touch.clientX, touch.clientY, zoomTarget);
+                    readerSettleZoom(touch.clientX, touch.clientY);
+                    lastTap.at = 0;
+                } else {
+                    lastTap = { at: now, x: touch.clientX, y: touch.clientY };
+                }
+            }
+            pan = null;
+        }
+    }, { passive: true });
+
+    surface.addEventListener('touchcancel', () => {
+        pinch = null;
+        pan = null;
+    }, { passive: true });
+}
+
+function clamp(value, minimum, maximum) {
+    return Math.min(maximum, Math.max(minimum, value));
+}
+
+function readerApplyTransform() {
+    const reader = state.reader;
+    const stage = document.getElementById('reader-stage');
+    if (!stage || !reader) return;
+    readerClamp();
+    stage.style.transform = 'translate(' + reader.t.x + 'px, ' + reader.t.y + 'px) scale(' + reader.t.s + ')';
+    const label = document.getElementById('reader-zoom-label');
+    if (label) label.textContent = Math.round(reader.t.s * reader.renderZoom * 100) + '%';
+}
+
+function readerClamp() {
+    const reader = state.reader;
+    const surface = document.getElementById('reader-surface');
+    if (!surface || !reader || !reader.baseWidth) return;
+    const canvasCssX = reader.baseWidth * reader.fitScale * reader.renderZoom;
+    const canvasCssY = reader.baseHeight * reader.fitScale * reader.renderZoom;
+    // The page may never be flung fully off screen: keep at least part of it
+    // under the surface on every axis.
+    reader.t.x = clamp(reader.t.x, surface.clientWidth - canvasCssX - 8, 8);
+    reader.t.y = clamp(reader.t.y, surface.clientHeight - canvasCssY - 8, 8);
+}
+
+/** Zoom so the stage point under (anchorX, anchorY) stays under that point. */
+function readerZoomAt(anchorX, anchorY, targetTotal) {
+    const reader = state.reader;
+    if (!reader.baseWidth) return;
+    const stageX = (anchorX - reader.t.x) / reader.t.s;
+    const stageY = (anchorY - reader.t.y) / reader.t.s;
+    const total = clamp(targetTotal, 0.5, 8);
+    reader.t.s = total / reader.renderZoom;
+    reader.t.x = anchorX - stageX * reader.t.s;
+    reader.t.y = anchorY - stageY * reader.t.s;
+    readerApplyTransform();
+}
+
+/** Button zoom: same anchor maths, fixed factor, from the surface centre. */
+function readerAnchoredZoom(anchorX, anchorY, factor) {
+    const reader = state.reader;
+    readerZoomAt(anchorX, anchorY, (reader.t.s * reader.renderZoom) * factor);
+    readerSettleZoom(anchorX, anchorY);
+}
+
+/**
+ * When a zoom gesture settles, a CSS-transformed bitmap gets blurry quickly. If the
+ * total zoom has moved meaningfully since the last render (more than ~11% in either
+ * direction), re-render at the new zoom — capped at 4x because a canvas for an A4
+ * page at 8x on a 3x-density screen is past the hardware texture limit. The
+ * document point that was under the surface centre stays under it.
+ */
+async function readerSettleZoom(anchorX, anchorY) {
+    const reader = state.reader;
+    if (!reader.baseWidth || !reader.doc) return;
+    const total = reader.t.s * reader.renderZoom;
+    const nextRender = clamp(total, 0.5, 4);
+    if (nextRender === reader.renderZoom) return;
+    const stageX = (anchorX - reader.t.x) / reader.t.s;
+    const stageY = (anchorY - reader.t.y) / reader.t.s;
+    const docX = stageX / (reader.fitScale * reader.renderZoom);
+    const docY = stageY / (reader.fitScale * reader.renderZoom);
+    reader.renderZoom = nextRender;
+    reader.t.s = total / nextRender;
+    reader.t.x = anchorX - docX * reader.fitScale * nextRender;
+    reader.t.y = anchorY - docY * reader.fitScale * nextRender;
+    readerApplyTransform();
+    await readerRenderPage(reader.page);
+}
+
+/** Ask pdf.js for the text-layer content of one page, as plain text. */
+async function pagePlainText(page) {
+    const textContent = await page.getTextContent();
+    let text = '';
+    for (const item of textContent.items) {
+        if (typeof item.str !== 'string') continue; // marked-content nodes carry no string
+        text += item.str;
+        // hasEOL is set by pdf.js when the text item ends a line; without it the
+        // next item continues the same visual line, so a space is the honest join.
+        text += item.hasEOL ? '\n' : ' ';
+    }
+    return text;
+}
+
+async function readerOpenDocument() {
+    const reader = state.reader;
+    if (typeof pdfjsLib === 'undefined') {
+        readerStatus('the PDF engine is missing from this build', true);
+        return;
+    }
+    // A tab round trip rebuilt the DOM but the document stayed alive on state
+    // (it is only destroyed by closeReader), so repaint instead of re-decoding
+    // the base64 and re-parsing the PDF.
+    if (reader.doc) {
+        const countLabel = document.getElementById('reader-page-count');
+        if (countLabel) countLabel.textContent = '/ ' + reader.pageCount;
+        const input = document.getElementById('reader-page-input');
+        if (input) input.value = String(reader.page);
+        await readerRenderPage(reader.page);
+        readerApplyTransform();
+        return;
+    }
+    try {
+        // The worker is already loaded as a classic script (vendor/pdf.worker.min.js
+        // sets globalThis.pdfjsWorker), so pdf.js uses its main-thread message
+        // handler and never constructs a Worker or fetches anything. Declaring
+        // workerSrc is documentation only, to keep the fallback path honest.
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+        const loadingTask = pdfjsLib.getDocument({ data: base64ToBytes(reader.base64) });
+        reader.loadingTask = loadingTask;
+        const documentProxy = await loadingTask.promise;
+        reader.doc = documentProxy;
+        reader.pageCount = documentProxy.numPages;
+        document.getElementById('reader-page-count').textContent = '/ ' + reader.pageCount;
+        document.getElementById('reader-page-input').value = String(reader.page);
+        await readerRenderPage(1);
+        readerApplyTransform();
+        readerStatus(reader.pageCount + (reader.pageCount === 1 ? ' page' : ' pages'));
+    } catch (error) {
+        // A render cancelled by a page turn is not a failure; everything else is.
+        readerStatus('cannot open this PDF: ' + error.message, true);
+    }
+}
+
+async function readerGoToPage(pageNumber) {
+    const reader = state.reader;
+    if (!reader.doc) return;
+    const target = clamp(Math.round(pageNumber), 1, reader.pageCount || 1);
+    reader.page = target;
+    const input = document.getElementById('reader-page-input');
+    if (input) input.value = String(target);
+    await readerRenderPage(target);
+}
+
+async function readerRenderPage(pageNumber) {
+    const reader = state.reader;
+    if (!reader.doc || pageNumber < 1) return;
+    const surface = document.getElementById('reader-surface');
+    const stage = document.getElementById('reader-stage');
+    const canvas = document.getElementById('reader-canvas');
+    const textLayer = document.getElementById('reader-text-layer');
+    if (!surface || !stage || !canvas || !textLayer) return;
+
+    // A previous page's render must not paint over this one: cancel it, losing a
+    // settled frame is better than a torn one.
+    if (reader.renderTask) {
+        try { reader.renderTask.cancel(); } catch (error) { /* cancelled is fine */ }
+        reader.renderTask = null;
+    }
+
+    const page = await reader.doc.getPage(pageNumber);
+    const viewport1 = page.getViewport({ scale: 1 });
+    reader.baseWidth = viewport1.width;
+    reader.baseHeight = viewport1.height;
+    // Fit-to-width is the reader's "100%": a page as wide as the surface. It is
+    // recomputed per page so a page that is wider or narrower than the first one
+    // still fits, but only while the user has not zoomed or panned — once they
+    // have, the zoom they chose keeps applying page to page.
+    const baseFit = surface.clientWidth > 0 ? surface.clientWidth / viewport1.width : 1;
+    if (reader.renderZoom === 1 &&
+        reader.t.s === 1 && reader.t.x === 0 && reader.t.y === 0) {
+        reader.fitScale = baseFit;
+    }
+    const cssScale = reader.fitScale * reader.renderZoom;
+    const deviceScale = (window.devicePixelRatio || 1);
+    // Backing store at the device's pixel density so a 1:1 CSS page is sharp.
+    const renderViewport = page.getViewport({ scale: cssScale * deviceScale });
+
+    canvas.width = Math.max(1, Math.round(renderViewport.width));
+    canvas.height = Math.max(1, Math.round(renderViewport.height));
+    canvas.style.width = Math.round(viewport1.width * cssScale) + 'px';
+    canvas.style.height = Math.round(viewport1.height * cssScale) + 'px';
+    stage.style.width = canvas.style.width;
+    stage.style.height = canvas.style.height;
+    textLayer.style.width = canvas.style.width;
+    textLayer.style.height = canvas.style.height;
+
+    const context = canvas.getContext('2d');
+    const task = page.render({ canvasContext: context, viewport: renderViewport });
+    reader.renderTask = task;
+    try {
+        await task.promise;
+    } catch (error) {
+        // A cancelled render is not a failure: a page turn, zoom-settle or close
+        // superseded this frame, and the caller already started the next one.
+        return;
+    } finally {
+        if (reader.renderTask === task) reader.renderTask = null;
+    }
+
+    await readerRenderTextLayer(page, cssScale, textLayer);
+}
+
+/** Renders pdf.js's transparent text divs over the canvas — the layer find reads. */
+async function readerRenderTextLayer(page, cssScale, container) {
+    const reader = state.reader;
+    if (!reader.doc) return;
+    container.innerHTML = '';
+    const textDivs = [];
+    const textContent = await page.getTextContent();
+    // A text layer is what makes find-in-document visible and text selectable;
+    // a scan has nothing to draw, which is fine — the search surface says so.
+    pdfjsLib.renderTextLayer({
+        textContent: textContent,
+        container: container,
+        viewport: page.getViewport({ scale: cssScale }),
+        textDivs: textDivs
+    });
+    if (reader.findQuery) readerHighlightMatches(container, reader.findQuery);
+}
+
+function readerToggleNight() {
+    state.readerNight = !state.readerNight;
+    const stage = document.getElementById('reader-stage');
+    if (stage) stage.classList.toggle('reader-night', state.readerNight);
+    Settings.save();
+}
+
+/* ── find in document over the text layer ─────────────────────────────────── */
+
+function readerToggleFind() {
+    const tools = document.getElementById('reader-tools');
+    if (!tools) return;
+    if (tools.dataset.mode === 'find') { tools.dataset.mode = ''; tools.innerHTML = ''; return; }
+    tools.dataset.mode = 'find';
+    tools.innerHTML =
+        '<input id="find-input" class="m-2 mb-1 w-[calc(100%-1rem)] bg-gray-800 rounded px-2 py-1 text-sm text-gray-200" ' +
+        'placeholder="Find in document">' +
+        '<div id="find-results" class="max-h-36 overflow-y-auto border-t border-gray-800"></div>';
+    document.getElementById('find-input').oninput = event => {
+        const query = event.target.value.trim();
+        if (!query) { state.reader.findQuery = ''; clearFindHighlights(); return; }
+        readFindDebounce(query);
+    };
+}
+
+let findDebounceTimer = null;
+function readFindDebounce(query) {
+    clearTimeout(findDebounceTimer);
+    findDebounceTimer = setTimeout(() => readerRunFind(query), 250);
+}
+
+async function readerRunFind(query) {
+    const reader = state.reader;
+    if (!reader.doc) return;
+    reader.findQuery = query;
+    const results = document.getElementById('find-results');
+    if (!results) return;
+    results.innerHTML = '<div class="px-3 py-2 text-xs text-gray-500">Searching…</div>';
+    const matches = [];
+    const needle = query.toLowerCase();
+    for (let pageNumber = 1; pageNumber <= reader.pageCount; pageNumber++) {
+        const page = await reader.doc.getPage(pageNumber);
+        const text = await pagePlainText(page);
+        const lower = text.toLowerCase();
+        let at = lower.indexOf(needle);
+        while (at !== -1 && matches.length < 500) {
+            const start = Math.max(0, at - 30);
+            const end = Math.min(text.length, at + query.length + 30);
+            const snippet = text.slice(start, end).replace(/\s+/g, ' ').trim();
+            matches.push({ page: pageNumber, snippet: snippet, at: at });
+            at = lower.indexOf(needle, at + query.length);
+        }
+        // Yield between pages so a long scan does not freeze the UI thread.
+        if (pageNumber % 5 === 0) await new Promise(resolve => setTimeout(resolve, 0));
+    }
+    reader.findResults = matches;
+    renderFindResults(matches);
+    // Highlight the matches that are on the page being viewed, right away.
+    readerRenderPage(reader.page);
+}
+
+function renderFindResults(matches) {
+    const results = document.getElementById('find-results');
+    if (!results) return;
+    if (!matches.length) {
+        results.innerHTML = '<div class="px-3 py-2 text-xs text-gray-500">No matches</div>';
+        return;
+    }
+    results.innerHTML = '<div class="px-3 py-1 text-[11px] text-gray-500">' + matches.length +
+        (matches.length === 1 ? ' match' : ' matches') + '</div>' +
+        matches.map((match, index) =>
+            '<button class="find-hit block w-full text-left px-3 py-1.5 border-b border-gray-800 text-xs ' +
+            '" data-index="' + index + '">' +
+            '<span class="text-blue-400">p.' + match.page + '</span> ' +
+            escapeHtml(match.snippet) + '</button>'
+        ).join('');
+    results.querySelectorAll('.find-hit').forEach(button => {
+        button.onclick = () => {
+            const match = matches[Number(button.dataset.index)];
+            readerGoToPage(match.page);
+        };
+    });
+}
+
+function readerHighlightMatches(container, query) {
+    const needle = query.toLowerCase();
+    Array.from(container.querySelectorAll('div')).forEach(div => {
+        const text = div.textContent || '';
+        const lower = text.toLowerCase();
+        if (!lower.includes(needle)) return;
+        const mark = document.createElement('mark');
+        mark.className = 'pdf-mark';
+        const pieces = [];
+        let cursor = 0;
+        let at = lower.indexOf(needle);
+        while (at !== -1) {
+            if (at > cursor) pieces.push(document.createTextNode(text.slice(cursor, at)));
+            const span = mark.cloneNode();
+            span.textContent = text.slice(at, at + query.length);
+            pieces.push(span);
+            cursor = at + query.length;
+            at = lower.indexOf(needle, cursor);
+        }
+        if (cursor < text.length) pieces.push(document.createTextNode(text.slice(cursor)));
+        div.textContent = '';
+        pieces.forEach(piece => div.appendChild(piece));
+    });
+}
+
+async function clearFindHighlights() {
+    const reader = state.reader;
+    const layer = document.getElementById('reader-text-layer');
+    if (!layer || !reader.doc) return;
+    // Re-running the text layer render is the honest reset: it rebuilds the divs
+    // without the marks, and the divs are the layer — nothing else keeps a copy.
+    const page = await reader.doc.getPage(reader.page);
+    await readerRenderTextLayer(page, reader.fitScale * reader.renderZoom, layer);
+}
+
+/* ── document outline ──────────────────────────────────────────────────────── */
+
+function readerToggleOutline() {
+    const tools = document.getElementById('reader-tools');
+    if (!tools) return;
+    if (tools.dataset.mode === 'outline') { tools.dataset.mode = ''; tools.innerHTML = ''; return; }
+    tools.dataset.mode = 'outline';
+    tools.innerHTML = '<div id="outline-list" class="max-h-48 overflow-y-auto"><div class="px-3 py-2 text-xs text-gray-500">Loading…</div></div>';
+    readerRenderOutline();
+}
+
+async function readerRenderOutline() {
+    const reader = state.reader;
+    const list = document.getElementById('outline-list');
+    if (!reader.doc) return;
+    let outline = null;
+    try { outline = await reader.doc.getOutline(); } catch (error) { /* falls through */ }
+    if (!outline || !outline.length) {
+        if (list) list.innerHTML = '<div class="px-3 py-2 text-xs text-gray-500">This document has no outline.</div>';
+        return;
+    }
+    // Outline items cannot travel through HTML attributes (their dest can be a
+    // nested array), so the render flattens them into a parallel array and the
+    // buttons only carry an index into it.
+    reader.outlineFlat = [];
+    flattenOutline(outline, reader.outlineFlat, 0);
+    if (list) list.innerHTML = outlineItems(reader.outlineFlat);
+    list.querySelectorAll('.outline-hit').forEach(button => {
+        button.onclick = () => {
+            const item = reader.outlineFlat[Number(button.dataset.index)];
+            if (item) readerGoToDest(item.dest, item.title);
+        };
+    });
+}
+
+function flattenOutline(items, flat, depth) {
+    items.forEach(item => {
+        flat.push({ dest: item.dest, title: item.title, depth: depth });
+        if (item.children && item.children.length) flattenOutline(item.children, flat, depth + 1);
+    });
+}
+
+function outlineItems(flat) {
+    return flat.map((item, index) =>
+        '<button class="outline-hit block w-full text-left px-3 py-1 border-b border-gray-800 text-xs ' +
+        (item.depth ? 'text-gray-400' : 'text-gray-200') + '" data-index="' + index + '">' +
+        '<span class="clip" style="padding-left:' + (item.depth * 10) + 'px">' +
+        escapeHtml(item.title) + '</span></button>'
+    ).join('');
+}
+
+/**
+ * Resolves an outline node to a page and jumps to it. The dest is either a named
+ * destination (a string, resolved through the document's named-destination map)
+ * or the PDF spec's array form whose first element is a page reference object
+ * (answered by getPageIndex) or a 0-based page number.
+ */
+async function readerGoToDest(dest, title) {
+    const reader = state.reader;
+    if (!reader.doc) return;
+    let resolved = dest;
+    if (typeof resolved === 'string') {
+        try { resolved = await reader.doc.getDestination(resolved); } catch (error) { resolved = null; }
+    }
+    if (!Array.isArray(resolved) || !resolved.length) {
+        readerStatus('this outline entry has no page (' + (title || 'untitled') + ')', true);
+        return;
+    }
+    const first = resolved[0];
+    let pageNumber = null;
+    if (typeof first === 'object' && first !== null) {
+        try { pageNumber = (await reader.doc.getPageIndex(first)) + 1; } catch (error) { /* not a page ref */ }
+    } else if (Number.isInteger(first)) {
+        pageNumber = first + 1; // PDF destination page numbers are 0-based
+    }
+    if (pageNumber) await readerGoToPage(pageNumber);
+    else readerStatus('this outline entry has no page (' + (title || 'untitled') + ')', true);
+}
+
+/* ── conversion on device ──────────────────────────────────────────────────────
+   A PDF's text layer is not a document model: extracting it to txt, markdown,
+   html or csv is honest — those formats ARE text. docx/xlsx/odt are layout
+   reconstruction, which is a different feature and is NOT shipped here: the
+   targets appear, disabled, with the one-line reason, until the fleet converter
+   exists as a separate service. A scan (no text layer) gets a loud refusal,
+   never an empty file. */
+
+function readerToggleConvert() {
+    const tools = document.getElementById('reader-tools');
+    if (!tools) return;
+    if (tools.dataset.mode === 'convert') { tools.dataset.mode = ''; tools.innerHTML = ''; return; }
+    tools.dataset.mode = 'convert';
+    tools.innerHTML = convertPanelMarkup();
+    tools.querySelectorAll('.convert-target').forEach(button => {
+        button.onclick = () => readerConvertTo(button.dataset.target);
+    });
+}
+
+function convertPanelMarkup() {
+    const targets = [
+        { id: 'txt', label: 'txt' },
+        { id: 'md', label: 'markdown' },
+        { id: 'html', label: 'html' },
+        { id: 'csv', label: 'csv' }
+    ];
+    return '<div class="px-3 py-2">' +
+        '<div class="flex items-center gap-2">' +
+        targets.map(target =>
+            '<button class="convert-target px-2 py-1 rounded bg-gray-800 text-xs" data-target="' +
+            target.id + '">' + target.label + '</button>').join('') +
+        '</div>' +
+        '<div class="mt-1 text-[11px] text-gray-500">docx, xlsx and odt need the fleet converter (a ' +
+        'separate service) — not built into this app.</div>' +
+        '<div id="convert-status" class="mt-1 text-[11px] text-gray-400"></div>' +
+        '</div>';
+}
+
+async function readerConvertTo(target) {
+    const reader = state.reader;
+    const status = document.getElementById('convert-status');
+    if (status) status.textContent = 'Converting…';
+    const outcome = await convertPdfBytes(reader.base64, reader.name, reader.path, target);
+    if (status) status.textContent = outcome.ok
+        ? 'Saved as ' + outcome.name + ' next to the original.'
+        : outcome.error;
+}
+
+async function convertPdfFromEntry(entry, target) {
+    const result = Bridge.call('readPdf', entry.path);
+    if (!result.ok) { alert(result.error); return; }
+    const outcome = await convertPdfBytes(result.base64, result.name, result.path, target);
+    if (!outcome.ok) { alert(outcome.error); return; }
+    // The conversion is written as a sibling of the PDF, so the Files tab itself
+    // is the success surface: re-list the directory and the new file is there.
+    openDirectory(state.path);
+    alert('Converted: ' + outcome.name);
+}
+
+/** Shared conversion: open the bytes, extract per-page text, build the target, write. */
+async function convertPdfBytes(base64, sourceName, sourcePath, target) {
+    try {
+        const loadingTask = pdfjsLib.getDocument({ data: base64ToBytes(base64) });
+        const documentProxy = await loadingTask.promise;
+        try {
+            const pages = await pdfPagesPlainText(documentProxy);
+            const plain = pages.map(page => page.text).join('\n\n').trim();
+            // The no-text-layer guard MUST come before the builders: a scan would
+            // otherwise produce four empty files that look like success.
+            if (!plain) return { ok: false, error: NO_TEXT_LAYER_MESSAGE };
+            const content = buildConvertedText(pages, target, sourceName);
+            return await saveConvertedFile(sourcePath, sourceName, target, content);
+        } finally {
+            loadingTask.destroy();
+        }
+    } catch (error) {
+        return { ok: false, error: 'cannot convert this PDF: ' + error.message };
+    }
+}
+
+async function pdfPagesPlainText(documentProxy) {
+    const pages = [];
+    for (let number = 1; number <= documentProxy.numPages; number++) {
+        const page = await documentProxy.getPage(number);
+        // strip trailing spaces per line; pdf.js sometimes pads the glyph advance
+        pages.push({ page: number, text: (await pagePlainText(page)).replace(/[ \t]+$/gm, '') });
+    }
+    return pages;
+}
+
+function buildConvertedText(pages, target, sourceName) {
+    if (target === 'md') {
+        return pages.map(page => '## Page ' + page.page + '\n\n' + page.text).join('\n\n') + '\n';
+    }
+    if (target === 'html') {
+        const body = pages.map(page =>
+            '<h2 id="page-' + page.page + '">Page ' + page.page + '</h2>\n' +
+            page.text.split('\n').map(line => '<p>' + escapeHtml(line) + '</p>').join('\n')
+        ).join('\n');
+        return '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n<title>' +
+            escapeHtml(sourceName || 'PDF export') + '</title>\n</head>\n<body>\n' + body + '\n</body>\n</html>\n';
+    }
+    if (target === 'csv') {
+        // One row per page: the honest CSV shape for extracted text. RFC 4180 —
+        // fields containing a comma, quote, CR or LF are quoted, quotes doubled.
+        return 'page,text\n' + pages.map(page =>
+            page.page + ',' + csvEscape(page.text)).join('\n') + '\n';
+    }
+    return pages.map(page => page.text).join('\n\n') + (pages.length ? '\n' : '');
+}
+
+function csvEscape(value) {
+    if (/[",\r\n]/.test(value)) return '"' + value.replace(/"/g, '""') + '"';
+    return value;
+}
+
+function pathJoin(directory, name) {
+    return directory.endsWith('/') ? directory + name : directory + '/' + name;
+}
+
+/** The first name in [preferred, preferred (2), preferred (3), …] the folder lacks. */
+function freeNameIn(entries, preferred) {
+    const taken = new Set((entries || []).map(entry => entry.name));
+    if (!taken.has(preferred)) return preferred;
+    const dot = preferred.lastIndexOf('.');
+    const base = dot > 0 ? preferred.slice(0, dot) : preferred;
+    const extension = dot > 0 ? preferred.slice(dot) : '';
+    for (let counter = 2; ; counter++) {
+        const candidate = base + ' (' + counter + ')' + extension;
+        if (!taken.has(candidate)) return candidate;
+    }
+}
+
+async function saveConvertedFile(sourcePath, sourceName, target, content) {
+    if (!sourcePath) {
+        return { ok: false, error: 'a handed-in document has no folder to save next to — copy it into Files first' };
+    }
+    const directory = sourcePath.slice(0, sourcePath.lastIndexOf('/')) || '/';
+    // Writing through the editor's proven save path (atomic scratch + rename) is
+    // deliberate: conversion output must not have a second, looser writer.
+    const listing = Bridge.call('list', directory, 'name', false, false);
+    if (!listing.ok) return { ok: false, error: 'cannot see ' + directory + ' to place the converted file' };
+    const preferred = sourceName.replace(/\.pdf$/i, '') + '.' + target;
+    const name = freeNameIn(listing.entries, preferred);
+    const path = pathJoin(directory, name);
+    const write = Bridge.call('writeText', path, content);
+    if (!write.ok) return { ok: false, error: write.error };
+    return { ok: true, path: path, name: name };
+}
+
 /* ── shell ──────────────────────────────────────────────────────────────────── */
 
 function showTab(tab) {
@@ -1146,7 +1987,12 @@ function showTab(tab) {
     document.querySelectorAll('.tab-button').forEach(button =>
         button.classList.toggle('active', button.dataset.tab === tab));
     if (tab === 'files') {
-        if (Bridge.available && Bridge.raw('hasStorageAccess') !== true) renderPermissionPrompt();
+        // The reader outlives a look at another tab, like the editor does — and it
+        // must come before the storage prompt: a PDF delivered by an "Open with"
+        // hand-off is readable through the intent's URI grant even when the user
+        // has not granted all-files access yet.
+        if (state.reader) renderReader();
+        else if (Bridge.available && Bridge.raw('hasStorageAccess') !== true) renderPermissionPrompt();
         // An open file outlives a look at another tab. Losing unsaved edits to a stray tap
         // on "Configs" is the kind of thing an editor is judged on.
         else if (state.editor) renderEditor();
@@ -1169,16 +2015,40 @@ document.querySelectorAll('.tab-button').forEach(button => {
     button.onclick = () => showTab(button.dataset.tab);
 });
 
-// The hardware back button: close the editor, then step up a directory, and only then
-// leave the app. Back out of an editor with unsaved changes and closeEditor asks first.
+// The hardware back button: close the reader, then the editor, then step up a
+// directory, and only then leave the app. An open document is a mode like the
+// editor, so back must close it before touching the folder it came from.
 window.addEventListener('popstate', () => {
     if (state.tab !== 'files') return;
-    if (state.editor) { closeEditor(); history.pushState(null, ''); }
+    if (state.reader) { closeReader(); history.pushState(null, ''); }
+    else if (state.editor) { closeEditor(); history.pushState(null, ''); }
     else if (state.parent) { openDirectory(state.parent); history.pushState(null, ''); }
 });
 history.pushState(null, '');
 
 Settings.load();
+// #458: an "Open with Cloud Drive" hand-off from another app may have arrived
+// before the page existed (cold start, or a singleTask re-launch while the page
+// was still loading). takeIncomingPdf drains the URI the activity parked on the
+// bridge; a handed-in PDF opens even without storage access, because the intent
+// carried its own read grant.
+const handoff = Bridge.call('takeIncomingPdf');
+if (handoff.ok && handoff.base64) {
+    state.reader = makeReaderState(handoff.base64, handoff.name, null, null);
+}
+
+// A warm singleTask re-launch finds the page already loaded, so MainActivity
+// evaluates this after parking the new URI on the bridge. Draining here (and
+// replacing an open document) is the same path the cold start used.
+window.handlePdfHandoff = function handlePdfHandoff() {
+    const handoff = Bridge.call('takeIncomingPdf');
+    if (!handoff.ok || !handoff.base64) return;
+    try { if (state.reader && state.reader.loadingTask) state.reader.loadingTask.destroy(); } catch (error) { /* best effort */ }
+    state.reader = makeReaderState(handoff.base64, handoff.name, null, null);
+    // showTab (not renderReader) so the tab bar highlight follows the document.
+    showTab('files');
+};
+
 showTab('files');
 </script>
 </body>

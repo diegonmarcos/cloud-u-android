@@ -46,10 +46,21 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.CloudDrive">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- #458: cloud-drive IS a PDF reader, so "Open with" from any other app
+                 can hand a PDF here. MAIN/LAUNCHER above is untouched. singleTask
+                 makes a second hand-off land in the existing activity (onNewIntent)
+                 instead of stacking a second copy of the app. -->
+            <intent-filter android:label="@string/open_in_cloud_drive">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="application/pdf" />
+                <data android:scheme="file"    android:mimeType="application/pdf" />
             </intent-filter>
         </activity>
 

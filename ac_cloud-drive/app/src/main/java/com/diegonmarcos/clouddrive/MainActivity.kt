@@ -22,8 +22,10 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * The bridge the page talks to. Kept as a field rather than constructed inline
-     * because the SAF tree-grant result arrives on the Activity's result channel,
-     * outside the WebView, and has to reach the SAME instance the page holds.
+     * because two delivery channels arrive OUTSIDE the WebView and have to reach
+     * the SAME instance the page holds: the SAF tree-grant result on the Activity's
+     * result channel (#457a), and the PDF-handler intent on onCreate/onNewIntent
+     * (#458).
      */
     private lateinit var filesBridge: FilesBridge
 
@@ -39,6 +41,9 @@ class MainActivity : AppCompatActivity() {
     ) { uri: android.net.Uri? ->
         filesBridge.persistTreeGrant(uri)
     }
+
+    /** The WebView, kept for [onNewIntent]'s nudge to an already-loaded page. */
+    private lateinit var webView: WebView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,7 +66,7 @@ class MainActivity : AppCompatActivity() {
 
         filesBridge = FilesBridge(this) { openTreeLauncher.launch(null) }
 
-        val webView = WebView(this)
+        webView = WebView(this)
         setContentView(webView)
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView, url: String) {
@@ -84,7 +89,33 @@ class MainActivity : AppCompatActivity() {
         }
         webView.addJavascriptInterface(filesBridge, "FilesBridge")
         webView.loadUrl("file:///android_asset/drive.html")
+        // A cold start that arrived as an "Open with Cloud Drive" hand-off carries
+        // the URI in this initial intent; the page drains it once it exists.
+        handlePdfIntent(intent)
         Updater.start(this)
+    }
+
+    /**
+     * A second "Open with Cloud Drive" tap must NOT stack a second copy of the
+     * activity: singleTask in the manifest routes it here instead. The incoming
+     * URI (content:// from a modern app, file:// from a legacy one) is handed
+     * to the bridge, which is the component that may read it — the activity
+     * never mints a path from it.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handlePdfIntent(intent)
+        // The page drained its bootstrap hand-off long ago (or will, if this
+        // relaunch raced the first load); wake it so the new URI is picked up
+        // without waiting for another launch.
+        webView.evaluateJavascript("window.handlePdfHandoff && window.handlePdfHandoff()", null)
+    }
+
+    /** Parks a PDF hand-off URI on the bridge, whichever route delivered it. */
+    private fun handlePdfIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW && intent.data != null) {
+            filesBridge.setIncomingPdf(intent.data)
+        }
     }
 
     /** Android insets arrive in device pixels; CSS wants density-independent ones. */

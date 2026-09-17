@@ -1,3 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Label of the PDF-handler intent filter (#458): shown by the system "Open
+         with" chooser when another app hands cloud-drive an application/pdf.
+         The launcher label itself comes from build.gradle (resValue app_name),
+         so this file holds only what build.gradle does not generate. -->
+    <string name="open_in_cloud_drive">Open in Cloud Drive</string>
 </resources>

@@ -1315,6 +1315,15 @@ class FilesBridge(
         }
     }
 
+/** The five bytes every PDF starts with: "%PDF-". */
+    private fun hasPdfMagic(bytes: ByteArray): Boolean =
+        bytes.size >= 5 &&
+            bytes[0] == 0x25.toByte() &&
+            bytes[1] == 0x50.toByte() &&
+            bytes[2] == 0x44.toByte() &&
+            bytes[3] == 0x46.toByte() &&
+            bytes[4] == 0x2D.toByte()
+
     /** The total bytes the selection would occupy at [destination] — every file, whole tree. */
     private fun measureTotalSize(pathsJson: String): Long? {
         var total = 0L
@@ -1352,6 +1361,100 @@ class FilesBridge(
     private fun okErr(ok: Boolean, error: String): String =
         JSONObject().put("ok", ok).put("error", error).toString()
 
+    // ── the PDF reader ────────────────────────────────────────────────────────
+
+    /**
+     * Hands the page a PDF's bytes as base64, the one carrier that works here.
+     * pdf.js must never be given a file:// URL: Chromium blocks fetch() on
+     * file:// origins by CORS policy (the fleet hit this in ac_cloud-nav and
+     * documented it), so the document travels as data and pdf.js opens it from
+     * a Uint8Array — no network layer is ever exercised.
+     *
+     * The ceiling exists for the same reason the editor has one: the string
+     * the bridge returns is held whole by the WebView's JavaScript engine, so
+     * a multi-hundred-megabyte scan would be an out-of-memory kill rather than
+     * a slow reader. 24 MB covers every document on a phone and stays far
+     * below the JS heap cliff.
+     */
+    @JavascriptInterface
+    fun readPdf(path: String): String {
+        val file = resolve(path) ?: return failure("that path is outside the storage roots")
+        if (!file.isFile) return failure("not a file: " + file.name)
+        if (file.length() > PDF_READER_BYTE_CEILING)
+            return failure(file.name + " is too large to read here (over " +
+                (PDF_READER_BYTE_CEILING / 1024 / 1024) + " MB)")
+        return try {
+            val bytes = file.readBytes()
+            // A file that does not start with the PDF magic is either an HTML
+            // error page saved with a .pdf name or a truncated download; pdf.js
+            // would produce its least useful failure (a blank canvas) for it.
+            if (!hasPdfMagic(bytes))
+                return failure(file.name + " does not look like a PDF")
+            JSONObject()
+                .put("ok", true)
+                .put("path", file.absolutePath)
+                .put("name", file.name)
+                .put("size", bytes.size)
+                .put("base64", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP))
+                .toString()
+        } catch (error: Exception) {
+            failure(error.message ?: "cannot read " + file.name)
+        }
+    }
+
+    /** A PDF another app handed over through the open-with intent, null until set. */
+    private var incomingPdf: Uri? = null
+
+    /**
+     * Receives the content:// (or legacy file://) URI from MainActivity's
+     * onNewIntent. The bridge holds it so the activity does not need to mint a
+     * path from it — a content:// URI can only ever be read through the
+     * ContentResolver, and turning it into a path is exactly the bug this
+     * method exists to keep out of the codebase.
+     */
+    fun setIncomingPdf(uri: Uri) {
+        incomingPdf = uri
+    }
+
+    /**
+     * The page drains the hand-off URI once, when it first loads or when a
+     * singleTask second launch lands on an already-running activity. Reading
+     * happens on demand so a tap that arrives before the page exists is not
+     * lost — the URI is stored, the page asks later.
+     */
+    @JavascriptInterface
+    fun takeIncomingPdf(): String {
+        val uri = incomingPdf ?: return failure("no incoming document")
+        incomingPdf = null
+        return try {
+            val bytes = if (uri.scheme == "content") {
+                // The system grants the receiving app a read lease on the URI
+                // for the lifetime of the intent; ContentResolver is the only
+                // sanctioned way to exercise it.
+                ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    ?: return failure("the shared PDF cannot be opened")
+            } else {
+                // A legacy file:// hand-off has no resolver entry — read the
+                // path the URI names (it is a content-less scheme by design).
+                java.io.File(uri.path ?: "").takeIf { it.isFile }?.readBytes()
+                    ?: return failure("the shared PDF cannot be opened")
+            }
+            if (bytes.size.toLong() > PDF_READER_BYTE_CEILING)
+                return failure("the shared PDF is too large to read here (over " +
+                    (PDF_READER_BYTE_CEILING / 1024 / 1024) + " MB)")
+            if (!hasPdfMagic(bytes))
+                return failure("the shared file does not look like a PDF")
+            JSONObject()
+                .put("ok", true)
+                .put("name", uri.lastPathSegment ?: "document.pdf")
+                .put("size", bytes.size)
+                .put("base64", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP))
+                .toString()
+        } catch (error: Exception) {
+            failure(error.message ?: "cannot read the shared PDF")
+        }
+    }
+
     private companion object {
         /** The single pool every background job (search, properties, duplicates) runs on. One
          *  thread is deliberately enough: these jobs all read, and serialising them keeps the
@@ -1367,6 +1470,13 @@ class FilesBridge(
          * above it is a log or a database that an editor has no business loading whole.
          */
         const val EDITABLE_BYTE_CEILING = 2L * 1024 * 1024
+
+        /**
+         * The largest PDF the reader will open. The page holds the document as
+         * one base64 string and one Uint8Array, so — exactly like the editor's
+         * ceiling — this is a JavaScript-heap ceiling, not a taste judgement.
+         */
+        const val PDF_READER_BYTE_CEILING = 24L * 1024 * 1024
 
         /** How deep [mirror] will walk. See the ponytail note in mirrorInto. */
         const val MIRROR_DEPTH_CEILING = 32
