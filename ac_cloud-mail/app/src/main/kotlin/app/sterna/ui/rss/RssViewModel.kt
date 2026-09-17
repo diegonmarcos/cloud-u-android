@@ -14,8 +14,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** What the News screen can show for one subscribed feed. */
+/** What the News screen can show for one subscribed feed. [url] is declared on the interface so
+ *  list-keying and identity never depend on which variant is underneath. */
 sealed interface RssFeedUi {
+    val url: String
+
     data class Fetched(val url: String, val feed: RssFeed) : RssFeedUi
 
     /** The fetch did not produce articles. Each reason maps to its own honest sentence. */
