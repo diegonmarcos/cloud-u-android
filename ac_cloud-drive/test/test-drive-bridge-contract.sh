@@ -781,6 +781,98 @@ else
     fail "build.json does not require node — its absence would fake a green tick"
 fi
 
+echo "── A14 (#459) the image viewer: rows open it, scans are typed, and a new image clears the sheet ──"
+python3 - "$PAGE" "$BRIDGE" <<'PYTHON'
+import re, sys
+
+page = open(sys.argv[1], encoding="utf-8").read()
+bridge = open(sys.argv[2], encoding="utf-8").read()
+failures = 0
+
+def between(page, start_fn, end_fn):
+    start = page.index(start_fn)
+    end = page.index(end_fn, start)
+    return page[start:end]
+
+def check(ok, message):
+    global failures
+    if ok:
+        print("  PASS  " + message)
+    else:
+        print("  FAIL  " + message)
+        failures += 1
+
+# Every executable-statement check below is LINE-ANCHORED, so a mutation that
+# comments a line out fails it as surely as one that deletes the line: a bare
+# `in` match would "PASS" over a comment containing the same words, and a check
+# that survives being commented out cannot be trusted in the first place.
+def anchored(pattern, text):
+    return re.search(r"^\s*" + pattern, text, re.M) is not None
+
+# For a literal that legitimately sits mid-line (a Kotlin string argument, a
+# fragment of an HTML template line), column-anchoring is the wrong tool — but
+# comment-blindness is still the poison: accept a match ONLY on a line whose
+# first non-space character is not a comment opener.
+def lineHas(text, needle):
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        if needle in stripped and not stripped.startswith(("//", "#", "*")):
+            return True
+    return False
+
+# A14a — an image row in the Files tab opens the viewer, not the generic opener.
+rows = between(page, "function bindFileRows(", "function showEntryMenu(")
+check(anchored(r"else if \(isImage\(entry\)\) openViewer\(entry\);", rows),
+      "image rows open the viewer (isImage branch inside bindFileRows)")
+
+# A14b — every top-bar control is bound; an unbound button is a hollow green.
+for button in ("viewer-close", "viewer-rotate", "viewer-scan", "viewer-ocr",
+               "viewer-info", "viewer-share", "viewer-delete"):
+    check(anchored(r"viewerEl\('" + button + r"'\)\.onclick", page),
+          "the viewer top bar wires " + button)
+
+# A14c — the scan sheet renders TYPED actions for every payload kind the shared
+# engine can return, and a copy fallback for anything unrecognised.
+scan = between(page, "function renderScanSheet(", "function copyToClipboard(")
+for ptype in ("url", "wifi", "contact", "calendar", "phone", "email", "geo"):
+    # url is the FIRST branch (plain `if`), every later kind is `} else if` —
+    # one pattern must accept both spellings.
+    check(anchored(r"(?:if|\}\s*else if) \(p\.type === '" + ptype + r"'\)", scan),
+          "the scan sheet has a typed action branch for " + ptype)
+check(anchored(r"actions\.push\(actionButton\('Copy the text'", scan),
+      "the scan sheet falls back to copy for an untyped payload")
+
+# A14d — a decode that finds nothing is said out loud on BOTH sides; silence on
+# either looks exactly like a hang.
+check(lineHas(bridge, '"no barcode found in this image"'),
+      "the bridge names the no-barcode outcome")
+check(lineHas(scan, "result.error || 'no barcode found'"),
+      "the page renders the no-barcode outcome, not a blank sheet")
+
+# A14e — MUTATION TARGET: loading an image is a new context. The scan/OCR/info
+# sheet and the double-tap bookkeeping describe the image they were opened for;
+# viewerLoad must clear both whenever it loads an image. Deleting OR commenting
+# either line makes this check fail while the APK still builds and the viewer
+# still looks fine — the exact silent regression this tester exists for.
+load = between(page, "function viewerLoad(", "function fitImage(")
+hide = re.search(r"^\s*viewerHideSheet\(\);", load, re.M)
+src = re.search(r"^\s*img\.src", load, re.M)
+# The call must EXIST in viewerLoad (not only in openViewer, which the
+# swipe/rotate/delete callers never run) and the function must still be the
+# load function (a body-extraction drift would empty img.src out of it). The
+# call's row position is deliberately NOT compared to img.src's: hide is
+# synchronous and the load is async, so any row in the function clears the
+# sheet before the new pixels render — an order check could only fail on a
+# harmless reordering, and a check that fails on innocent code is noise.
+check(hide is not None and src is not None,
+      "viewerLoad clears the sheet whenever it loads an image")
+check(anchored(r"viewer\.lastTap = 0;", load) and anchored(r"viewer\.tapPoint = null;", load),
+      "viewerLoad resets the double-tap bookkeeping per image")
+
+sys.exit(1 if failures else 0)
+PYTHON
+[ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
     echo "test-drive-bridge-contract: OK"

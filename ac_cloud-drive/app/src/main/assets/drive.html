@@ -2272,6 +2272,17 @@ function closeViewer() {
 function viewerLoad() {
     const current = viewerCurrent();
     if (!current) return;
+    // A new image is a NEW context. The sheet (scan result, OCR text, EXIF
+    // facts) describes whatever image it was opened for — leaving it open
+    // across a swipe/rotate/delete would show one image's result and actions
+    // over another's pixels, and the fake action would act on the wrong file.
+    // The double-tap bookkeeping is likewise per-tap and per-image, so a fast
+    // double tap right after a swipe must start a fresh pair, not inherit the
+    // previous image's tap. Long-press delete relies on this too: after a
+    // delete the next image loads and must open with an empty sheet.
+    viewerHideSheet();
+    viewer.lastTap = 0;
+    viewer.tapPoint = null;
     const img = viewerEl('viewer-img');
     img.onload = () => {
         // A fresh open starts at fit; swiping between images keeps the zoom so
