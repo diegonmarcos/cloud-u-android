@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.updater
 
 import android.content.Context
 import android.os.Process
+import android.os.UserHandle
 import android.os.UserManager
 import android.util.Log
 
@@ -94,6 +95,24 @@ object InstallIdentity {
     val MANAGED: Set<InstallKind> = setOf(InstallKind.MAIN)
 
     /**
+     * The pure decision: given the ANDROID USER this install runs under and
+     * whether that user is a Device-Policy managed profile, which kind is it.
+     * Kept separate from [current] so the mapping is one testable function
+     * with no Android API call in it — the shell tester locks it without
+     * invoking the platform.
+     *
+     * `userId` is the ANDROID USER id (0 = the primary/owner user), NOT the
+     * process's full uid. A work profile, a parallel-app clone and a Secure
+     * Folder copy all run as a non-zero user; only the primary install is
+     * user 0. That is the whole distinction.
+     */
+    fun classify(userId: Int, isManagedProfile: Boolean): InstallKind {
+        if (userId == UserHandle.USER_SYSTEM) return InstallKind.MAIN
+        if (isManagedProfile) return InstallKind.WORK_PROFILE
+        return InstallKind.CLONE
+    }
+
+    /**
      * Which install kind THIS process is running as. Reads the current
      * Android user id — the one signal this phone gives us that is true for
      * every hosting mechanism at once.
@@ -105,16 +124,19 @@ object InstallIdentity {
      * need them separated — both are unmanaged.
      */
     fun current(context: Context): InstallKind {
-        // The user id this process runs its own copy under. A work profile, a
-        // parallel-app clone and a Secure Folder copy all run as a non-zero
-        // user; only the primary install is user 0.
-        val user = Process.myUid()
-        if (user == 0) return InstallKind.MAIN
+        // Extract the ANDROID USER id from the uid first: the uid encodes the
+        // user through userId = uid / 100000 (user = userId * 100000 + appId),
+        // so Process.myUid() itself is
+        // NEVER 0 for this app — the primary-user install runs as a 10000+ uid,
+        // not 0. Comparing the raw uid to 0 would classify EVERY install
+        // (including the real primary one) as a clone and the updater would go
+        // silent even on the one install it must act on. UserHandle.getUserId
+        // strips the user id out of the uid.
+        val userId = UserHandle.getUserId(Process.myUid())
         val um = runCatching {
             context.getSystemService(UserManager::class.java)
         }.getOrNull()
-        if (um != null && um.isManagedProfile) return InstallKind.WORK_PROFILE
-        return InstallKind.CLONE
+        return classify(userId, um?.isManagedProfile ?: false)
     }
 
     /** Whether the updater may act on the install this process is running as.
