@@ -3,7 +3,9 @@ package app.sterna.ui.navigation
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -45,36 +47,43 @@ import app.sterna.ui.theme.bottomNavIslandShape
 fun BottomNavBar(nav: NavController, currentRoute: String) {
     val context = LocalContext.current
     // Resolved here, once, in the composable's own scope — stringResource must run where the
-    // resource is available, never inside a tap callback.
-    val missing = bottomNavItems.associateWith { item -> stringResource(missingResource(item.id)) }
+    // resource is available, never inside a tap callback, so the launch item's "not installed"
+    // sentence is read through the context (a plain method, safe in this map lambda) and handed
+    // to the toast pre-resolved.
+    val missing = bottomNavItems.associateWith { item -> context.getString(missingResource(item.id)) }
 
     val islandColor = MaterialTheme.colorScheme.surfaceContainer
-    Row(
-        modifier = Modifier
-            .align(Alignment.BottomCenter)
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, bottom = bottomNavIslandInset)
-            .height(64.dp)
-            .clip(bottomNavIslandShape)
-            .background(color = islandColor, shape = bottomNavIslandShape),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        bottomNavItems.forEach { item ->
-            val selected = item.action == BottomNavAction.DESTINATION && item.route == currentRoute
-            NavigationBarItem(
-                selected = selected,
-                onClick = { onItemTap(context, nav, item, currentRoute, missing[item] ?: "") },
-                icon = {
-                    Icon(
-                        iconFor(item.id),
-                        contentDescription = stringResource(itemDescription(item.id)),
-                    )
-                },
-                label = null,
-                alwaysShowLabel = false,
-                modifier = Modifier.weight(1f),
-                interactionSource = remember(item) { MutableInteractionSource() },
-            )
+    // A full-size Box of the bar's own so the island's Row can `.align(BottomCenter)` against it —
+    // `align` is a BoxScope method in this compose, and BottomNavBar is its own function with no
+    // enclosing layout scope to inherit one from.
+    Box(Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, bottom = bottomNavIslandInset)
+                .height(64.dp)
+                .clip(bottomNavIslandShape)
+                .background(color = islandColor, shape = bottomNavIslandShape),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            bottomNavItems.forEach { item ->
+                val selected = item.action == BottomNavAction.DESTINATION && item.route == currentRoute
+                NavigationBarItem(
+                    selected = selected,
+                    onClick = { onItemTap(context, nav, item, currentRoute, missing[item] ?: "") },
+                    icon = {
+                        Icon(
+                            iconFor(item.id),
+                            contentDescription = stringResource(itemDescription(item.id)),
+                        )
+                    },
+                    label = null,
+                    alwaysShowLabel = false,
+                    modifier = Modifier.weight(1f),
+                    interactionSource = remember(item) { MutableInteractionSource() },
+                )
+            }
         }
     }
 }
