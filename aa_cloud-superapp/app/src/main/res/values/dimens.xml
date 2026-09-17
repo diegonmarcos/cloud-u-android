@@ -1,16 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Single declaration of the pill corner radius used by BOTH the bottom-nav
-     island (the container) and the selected-item capsule drawn behind a whole
-     nav item. Both drawables reference this token so the two pills can never
-     drift apart: changing one line here updates the container and the item in
-     step, which is what "the shape and the radius are declared once and
-     referenced" means.
+<!-- Bottom-nav pill geometry. TWO tickets own this file and it must hold both:
+     #462 contributed bottom_nav_pill_corner_radius (the ONE radius the pill
+     island and the selected-item capsule both reference, so the two pills can
+     never drift apart); #473 added bottom_nav_end_inset and
+     bottom_nav_icon_label_gap (the bar's spacing geometry). One declaration
+     each, never a literal copied into a layout or style, because a per-view
+     literal is two numbers that can drift apart (the rule #380/#381/#384/#408/#424
+     closed). -->
 
-     999dp is the repository's established "full pill" convention (bg_dynamic
-     _island and bg_liquid_glass_pill use it too). The framework clamps any
-     corner radius larger than half the drawable's smaller side, so 999dp
-     always renders a true capsule with fully semicircular ends at whatever
-     height the bar actually measures to — a semicircle, not a rounded box. -->
 <resources>
+    <!-- #462. The corner radius used by BOTH the bottom-nav island (the
+         container) and the selected-item capsule drawn behind a whole nav item.
+         Both drawables reference this token so the two pills can never drift
+         apart. 999dp is the repository's established "full pill" convention
+         (bg_dynamic_island and bg_liquid_glass_pill use it too): the framework
+         clamps any corner radius larger than half the drawable's smaller side,
+         so 999dp always renders a true capsule with fully semicircular ends at
+         whatever height the bar actually measures to — a semicircle, not a
+         rounded box. -->
     <dimen name="bottom_nav_pill_corner_radius">999dp</dimen>
+
+    <!-- #473. The horizontal inset pushed into BOTH ends of the bar. It is the
+         paddingStart AND paddingEnd of the navigation view (one dimen, read
+         twice — so the left margin is the right margin by declaration). The
+         Material3 BottomNavigationView divides its width into equal item slots
+         and centres each icon in its slot, so two effects fall out of this
+         single inset: the FIRST and LAST buttons move inward off the bar's
+         semicircular ends (so when one of them is selected its pill is
+         concentrically ringed by the curved end instead of being flush against
+         or clipped by it), and because the two insets eat into the total
+         width, every inter-icon slot — hence every gap — reduces by the same
+         amount, keeping the spacing perfectly symmetrical and regular.
+         Deliberately modest: on a 360dp phone the slot stays above the 64dp
+         active-indicator width, so #417 ("nothing may overflow") holds. -->
+    <dimen name="bottom_nav_end_inset">16dp</dimen>
+
+    <!-- #473. The vertical distance between each item's icon and its label
+         (Material's activeIndicatorLabelPadding, default 4dp). Bumped up a
+         little so the caption breathes beneath the glyph. -->
+    <dimen name="bottom_nav_icon_label_gap">8dp</dimen>
 </resources>

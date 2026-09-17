@@ -371,6 +371,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:background="@android:color/transparent"
+                android:paddingStart="@dimen/bottom_nav_end_inset"
+                android:paddingEnd="@dimen/bottom_nav_end_inset"
+                app:activeIndicatorLabelPadding="@dimen/bottom_nav_icon_label_gap"
                 app:labelVisibilityMode="labeled"
                 app:menu="@menu/bottom_nav" />
 

@@ -28,6 +28,8 @@ DRAWABLES="$APP/app/src/main/res/drawable"
 SRC="$APP/app/src/main/java/com/diegonmarcos/superapp"
 PALETTE="$SRC/ui/LauncherPalette.kt"
 SHELL_ACT="$SRC/ShellActivity.kt"
+RES_LAYOUT="$APP/app/src/main/res/layout/activity_main.xml"
+RES_DIMENS="$APP/app/src/main/res/values/dimens.xml"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
@@ -414,6 +416,86 @@ for k in app_tile_selected app_tile_unselected app_tile_not_installed \
 done
 [ -z "$str_fail" ] && ok "the eight new user-visible strings are resources" \
                    || bad "a new string is compiled into Kotlin:$str_fail"
+
+echo
+echo "== T11: the bottom-nav bar is a full pill, and its selection geometry is declared NOT flush =="
+# #473. Diego's request: the home bottom bar has semicircular (pill) ends and each
+# extreme button must sit further INSIDE so that when one of them is selected its
+# selection shadow is concentrically ringed by the bar's curved end — never
+# clipped, never flush against the edge — while the gaps between all icons stay
+# equal (hard constraint: left margin == right margin, every inter-item gap
+# identical), and the icon↔label distance grows a little.
+#
+# WHY THIS EXISTS: a Material3 BottomNavigationView divides its available width
+# into equal item slots, so once the available width is fixed the gaps between
+# icons are EQUAL BY CONSTRUCTION and shrink together whenever the width shrinks.
+# That is exactly the two-effect lever #473 wants: a single horizontal inset
+# declared on BOTH ends (paddingStart AND paddingEnd = the SAME dimen) moves the
+# end buttons inward off the pill's semicircular ends AND, because it eats the
+# same amount out of both sides of the total width, reduces every inter-icon gap
+# by the same amount. So the whole geometry is TWO numbers, both from ONE
+# declaration each, and the two regressions that hollow out this change are:
+#   1. the inset reverted to flush (0dp / removed)  → end pill sits against the
+#      curved end, clipped.
+#   2. the two ends differently inset (an unequal gap sneaks in) → left and
+#      right margins no longer match.
+check "$(python3 - "$RES_LAYOUT" "$RES_DIMENS" <<'PY'
+import os, re, sys
+layout, dims = open(sys.argv[1], encoding='utf-8').read(), open(sys.argv[2], encoding='utf-8').read()
+problems = []
+
+# The dims must exist and be real (not 0dp) — a 0dp/removed entry is the flush
+# regression #473 ships to remove.
+dimval = {}
+for name, v in re.findall(r'<dimen name="([^"]+)">([^<]+)</dimen>', dims):
+    m = re.match(r'^([0-9.]+)dp$', v.strip())
+    dimval[name] = float(m.group(1)) if m else None
+for needed in ('bottom_nav_end_inset', 'bottom_nav_icon_label_gap'):
+    if needed not in dimval:
+        problems.append('%s is not declared in dimens.xml' % needed)
+        continue
+    if dimval[needed] is None:
+        problems.append('%s is not a literal dp value a static reader can check' % needed)
+    elif dimval[needed] <= 0:
+        problems.append('%s is %sdp — flush/zero is exactly the regression this asserts away' % (needed, dimval[needed]))
+
+# The nav view must apply the SAME inset dimen to BOTH ends. Reading the same
+# @dimen/… ref twice is what makes left margin == right margin by construction;
+# two different refs or a literal on either side is the unequal-gap regression.
+nav = re.search(r'<com\.google\.android\.material\.bottomnavigation\.BottomNavigationView\b[^>]*/?>', layout)
+if not nav:
+    problems.append('the layout no longer contains a BottomNavigationView')
+else:
+    tag = nav.group(0)
+    def attr(name):
+        m = re.search(name + r'\s*=\s*"([^"]+)"', tag)
+        return m.group(1) if m else None
+    ps, pe = attr(r'android:paddingStart'), attr(r'android:paddingEnd')
+    if ps is None or pe is None:
+        problems.append('the nav has no explicit start/end padding — the end buttons sit flush')
+    elif ps != pe:
+        problems.append('paddingStart=%s but paddingEnd=%s — left/right margins differ' % (ps, pe))
+    elif ps != '@dimen/bottom_nav_end_inset':
+        problems.append('start/end inset = %s, not @dimen/bottom_nav_end_inset' % ps)
+    else:
+        inset = dimval.get('bottom_nav_end_inset')
+        if inset is not None and inset <= 0:
+            problems.append('end inset resolves to %sdp — the pill would be flush' % inset)
+    # icon↔label distance must come from the ONE declared dimen, and be larger
+    # than the Material default (4dp) — "increase a little".
+    gap = attr(r'app:activeIndicatorLabelPadding')
+    if gap is None:
+        problems.append('no activeIndicatorLabelPadding set — icon/label gap not increased')
+    elif gap != '@dimen/bottom_nav_icon_label_gap':
+        problems.append('icon/label gap = %s, not @dimen/bottom_nav_icon_label_gap' % gap)
+    else:
+        gv = dimval.get('bottom_nav_icon_label_gap')
+        if gv is not None and gv <= 4:
+            problems.append('icon/label gap is %sdp — the request was to INCREASE it above the 4dp default' % gv)
+
+print('; '.join(problems) or 'OK')
+PY
+)" "both end buttons inset off the pill's semicircular ends by one dimen, gaps stay equal, icon↔label gap enlarged"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
