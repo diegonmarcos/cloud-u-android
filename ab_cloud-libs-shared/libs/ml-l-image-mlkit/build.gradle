@@ -1,0 +1,48 @@
+// libs:ml-l-image-mlkit — the ONE shared image-scan engine (task #459/#460).
+// ZXing decodes the barcodes, ML Kit text-recognition reads the pixels, and the
+// typed-payload parser turns a raw decode into an ACTION the UI can present
+// (open URL, join WiFi, add contact, add calendar event) instead of a string
+// dump. cloud-drive and cloud-media-center BOTH consume this module; a second
+// private copy in either app is the duplicate-engine defect this fleet has
+// fixed before (#170, #261), so the code lives here and nowhere else.
+//
+// ZXing was already a dependency of libs/wallet + the wallet + superapp APKs,
+// so no new ML runtime enters the fleet for barcode decoding. ML Kit already
+// ships in libs:ml-l-text-mlkit (translate + language-id) with its ProGuard
+// rules and model-download path proven; text-recognition is the same family.
+// ML Kit's OWN barcode-scanning API is deliberately NOT used: ZXing is already
+// carried, and a second decoder for the same job is exactly the duplication
+// this module exists to prevent.
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.image.mlkit'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+}
+
+dependencies {
+    // ZXing core — pure-Java QR/barcode decoder. RGBLuminanceSource +
+    // MultiFormatReader decode a Bitmap with no camera pipeline and no native
+    // code. Same pin as libs:wallet / superapp / wallet APKs.
+    implementation 'com.google.zxing:core:3.5.3'
+
+    // ML Kit text-recognition — on-device OCR. The DEFAULT options use the
+    // unbundled Latin model (ES/EN/PT/DE in one artifact), downloaded lazily on
+    // first OCR call exactly like mlkit-translate's models, so the model's tens
+    // of MB never sit in the APK.
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+}

@@ -54,6 +54,11 @@
     },
     "libs:analytics": {
       "dir": "../ab_cloud-libs-shared/libs/analytics"
+    },
+    "libs:ml-l-image-mlkit": {
+      "_doc_dir": "THE shared scan engine (task #459/#460): ZXing barcode decode + ML Kit text-recognition + typed-payload parsing, shared BY REFERENCE the same way libs:core and libs:updater are. cloud-media-center consumes the SAME directory — one engine, two apps, no private copy to drift.",
+      "dir": "../ab_cloud-libs-shared/libs/ml-l-image-mlkit",
+      "type": "library"
     }
   },
   "tests": {

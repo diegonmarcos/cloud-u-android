@@ -78,6 +78,13 @@ class MainActivity : AppCompatActivity() {
             javaScriptEnabled = true
             domStorageEnabled = true
             cacheMode = WebSettings.LOAD_DEFAULT
+            // The image viewer renders <img src="file:///storage/..."> inside a
+            // page that itself came from file:///android_asset. Chromium forbids
+            // that cross-file read by default; the page is our own shipped HTML
+            // and every path it renders was resolved by FilesBridge, so the
+            // setting is safe and the viewer is impossible without it.
+            allowFileAccessFromFileURLs = true
+            allowFileAccess = true
         }
         ViewCompat.setOnApplyWindowInsetsListener(webView) { view, windowInsets ->
             insetScript = insetScriptFor(

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:ml-l-image-mlkit — shared scan engine (ZXing barcode decode + ML Kit
+     OCR), consumed by cloud-drive and cloud-media-center by reference; the lib
+     APK factory also ships it as cloudlib.mllimagemlkit. No components: no
+     <activity>, <service> or <provider> — everything is called in-process. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

@@ -37,6 +37,13 @@ project(":libs:panoramaviewer").projectDir = file("../ab_cloud-libs-shared/libs/
 include(":libs:scrollbar")
 project(":libs:scrollbar").projectDir = file("../ab_cloud-libs-shared/libs/scrollbar")
 
+// Shared scan engine (task #459/#460): ZXing barcode decode + ML Kit OCR +
+// typed-payload parsing. The SAME module cloud-drive compiles in — one engine,
+// two apps, no private copy to drift. projectDir mandatory for the same reason
+// as analytics above.
+include(":libs:ml-l-image-mlkit")
+project(":libs:ml-l-image-mlkit").projectDir = file("../ab_cloud-libs-shared/libs/ml-l-image-mlkit")
+
 // Crash telemetry. libs:core carries CoreInitProvider, which installs the
 // uncaught-exception handler that POSTs the stack trace plus the tail of this
 // process's logcat to c3-infra-api — so a crash here reports itself instead of

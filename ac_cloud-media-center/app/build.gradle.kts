@@ -390,6 +390,7 @@ kotlin {
 
 dependencies {
     implementation(project(":libs:analytics"))
+    implementation(project(":libs:ml-l-image-mlkit"))
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.lifecycle.process)
     runtimeOnly(libs.androidx.profileinstaller)

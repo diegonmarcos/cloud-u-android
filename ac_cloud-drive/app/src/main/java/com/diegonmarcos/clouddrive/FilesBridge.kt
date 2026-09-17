@@ -13,6 +13,8 @@ import android.provider.Settings
 import android.webkit.JavascriptInterface
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
+import com.diegonmarcos.superapp.image.mlkit.BarcodePayload
+import com.diegonmarcos.superapp.image.mlkit.ImageScanEngine
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedInputStream
@@ -57,6 +59,9 @@ class FilesBridge(
      *  without forcing the user through the picker again. */
     private val grantStore: SharedPreferences =
         ctx.getSharedPreferences("cloud-drive-storage-grants", Context.MODE_PRIVATE)
+
+    /** The ONE shared scan engine; see libs:ml-l-image-mlkit (task #459/#460). */
+    private val scanEngine = ImageScanEngine(ctx)
 
     /**
      * Where browsing may go. Shared external storage plus the app's own directories, which stay
@@ -1220,6 +1225,212 @@ class FilesBridge(
             target.length() == source.length() &&
             target.lastModified() / 1000L == source.lastModified() / 1000L
 
+    // ── the typed scan actions (task #459/#460) ─────────────────────────────
+
+    /** The browser for a decoded URL. Refuses anything that is not http(s). */
+    @JavascriptInterface
+    fun openUrl(url: String): String {
+        val parsed = try {
+            Uri.parse(url.trim())
+        } catch (error: Exception) {
+            return failure("that payload is not a usable address")
+        }
+        if (parsed.scheme != "http" && parsed.scheme != "https") {
+            return failure("only web addresses open here")
+        }
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW, parsed)
+            if (ctx !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ctx.startActivity(intent)
+            okErr(true, "")
+        } catch (error: Exception) {
+            failure("no browser opened: " + (error.message ?: ""))
+        }
+    }
+
+    /**
+     * Joins a WiFi network from a WIFI: payload. Android 10+ refuses to let an
+     * app add a network silently, so this adds a SUGGESTION and the user
+     * approves it in the system panel Android presents — the same interaction
+     * every other scanner app has. Below Android 10 the legacy addNetwork path
+     * still works and joins directly.
+     */
+    @JavascriptInterface
+    fun joinWifi(ssid: String, password: String): String {
+        if (ssid.isBlank()) return failure("the WiFi payload carries no network name")
+        return try {
+            val manager = ctx.getSystemService(Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val builder = android.net.wifi.WifiNetworkSuggestion.Builder().setSsid(ssid)
+                if (password.isNotEmpty()) builder.setWpa2Passphrase(password)
+                val status = manager.addNetworkSuggestions(listOf(builder.build()))
+                when (status) {
+                    android.net.wifi.WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS ->
+                        okErr(true, "Android is asking you to approve the network")
+                    android.net.wifi.WifiManager.STATUS_NETWORK_SUGGESTIONS_ERROR_ADD_DUPLICATE ->
+                        okErr(true, "the network is already suggested to Android")
+                    else -> okErr(false, "Android declined the WiFi suggestion")
+                }
+            } else {
+                val configuration = android.net.wifi.WifiConfiguration().apply {
+                    SSID = "\"$ssid\""
+                    if (password.isEmpty()) {
+                        allowedKeyManagement.set(android.net.wifi.WifiConfiguration.KeyMgmt.NONE)
+                    } else {
+                        allowedKeyManagement.set(android.net.wifi.WifiConfiguration.KeyMgmt.WPA_PSK)
+                        preSharedKey = "\"$password\""
+                    }
+                }
+                val networkId = manager.addNetwork(configuration)
+                if (networkId == -1) {
+                    okErr(false, "Android could not add the network")
+                } else {
+                    manager.enableNetwork(networkId, true)
+                    okErr(true, "Connected to " + ssid)
+                }
+            }
+        } catch (error: Exception) {
+            failure("cannot join the network: " + (error.message ?: error.javaClass.simpleName))
+        }
+    }
+
+    /** Opens the system contact-insert screen with the vCard's name (and number when it has one). */
+    @JavascriptInterface
+    fun addContact(vcard: String, name: String): String {
+        val insert = android.provider.ContactsContract.Intents.Insert
+        val intent = Intent(insert.ACTION)
+        if (name.isNotBlank()) intent.putExtra(insert.NAME, name)
+        val telephone = vcard.lineSequence()
+            .firstOrNull { it.trim().startsWith("TEL", ignoreCase = true) }
+            ?.substringAfter(':')?.trim()
+        if (!telephone.isNullOrEmpty()) intent.putExtra(insert.PHONE, telephone)
+        return try {
+            if (ctx !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ctx.startActivity(intent)
+            okErr(true, "")
+        } catch (error: Exception) {
+            failure("no contacts app opened: " + (error.message ?: ""))
+        }
+    }
+
+    /** Opens the system calendar's new-event screen pre-filled from a VEVENT payload. */
+    @JavascriptInterface
+    fun addCalendarEvent(summary: String, location: String, start: Long, end: Long): String {
+        val intent = Intent(Intent.ACTION_INSERT)
+            .setData(android.provider.CalendarContract.Events.CONTENT_URI)
+        if (summary.isNotBlank()) {
+            intent.putExtra(android.provider.CalendarContract.Events.TITLE, summary)
+        }
+        if (location.isNotBlank()) {
+            intent.putExtra(android.provider.CalendarContract.Events.EVENT_LOCATION, location)
+        }
+        if (start > 0) {
+            intent.putExtra(android.provider.CalendarContract.EXTRA_EVENT_BEGIN_TIME, start)
+            if (end > start) {
+                intent.putExtra(android.provider.CalendarContract.EXTRA_EVENT_END_TIME, end)
+            }
+        }
+        return try {
+            if (ctx !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ctx.startActivity(intent)
+            okErr(true, "")
+        } catch (error: Exception) {
+            failure("no calendar app opened: " + (error.message ?: ""))
+        }
+    }
+
+    /** The dialer, pre-filled with a tel: payload. */
+    @JavascriptInterface
+    fun dial(number: String): String {
+        return try {
+            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number)))
+            if (ctx !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ctx.startActivity(intent)
+            okErr(true, "")
+        } catch (error: Exception) {
+            failure("no dialer opened: " + (error.message ?: ""))
+        }
+    }
+
+    /** The mail app, pre-filled from a mailto: payload. */
+    @JavascriptInterface
+    fun sendEmail(address: String, subject: String, body: String): String {
+        return try {
+            val intent = Intent(
+                Intent.ACTION_SENDTO,
+                Uri.parse("mailto:" + Uri.encode(address))
+            )
+            if (subject.isNotBlank()) intent.putExtra(Intent.EXTRA_SUBJECT, subject)
+            if (body.isNotBlank()) intent.putExtra(Intent.EXTRA_TEXT, body)
+            if (ctx !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ctx.startActivity(intent)
+            okErr(true, "")
+        } catch (error: Exception) {
+            failure("no mail app opened: " + (error.message ?: ""))
+        }
+    }
+
+    /** The map app, centred on a geo: payload's coordinates. */
+    @JavascriptInterface
+    fun openGeo(latitude: Double, longitude: Double): String {
+        return try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:$latitude,$longitude"))
+            if (ctx !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ctx.startActivity(intent)
+            okErr(true, "")
+        } catch (error: Exception) {
+            failure("no map app opened: " + (error.message ?: ""))
+        }
+    }
+
+    /** Copies text into the system clipboard. Native, so it works from every WebView context. */
+    @JavascriptInterface
+    fun copyText(text: String): String {
+        val clipboard = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("cloud-drive", text))
+        return okErr(true, "")
+    }
+
+    /** Shares plain text (an OCR result) through the system sheet. */
+    @JavascriptInterface
+    fun shareText(title: String, text: String): String {
+        return try {
+            val intent = Intent.createChooser(
+                Intent(Intent.ACTION_SEND)
+                    .setType("text/plain")
+                    .putExtra(Intent.EXTRA_SUBJECT, title)
+                    .putExtra(Intent.EXTRA_TEXT, text),
+                null
+            )
+            if (ctx !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ctx.startActivity(intent)
+            okErr(true, "")
+        } catch (error: Exception) {
+            failure("nothing to share into: " + (error.message ?: ""))
+        }
+    }
+
+    /**
+     * Saves an OCR result as .txt or .md NEXT TO the image it came from. The
+     * name is the image's base name plus the extension; a clash becomes
+     * "name (2).md" rather than overwriting what is there.
+     */
+    @JavascriptInterface
+    fun saveTextBeside(imagePath: String, text: String, extension: String): String {
+        val image = resolve(imagePath) ?: return failure("that path is outside the storage roots")
+        if (!image.isFile) return failure("not a file: " + image.name)
+        val safeExtension = if (extension == "md") "md" else "txt"
+        val base = image.name.substringBeforeLast('.', image.name)
+        val parent = image.parentFile ?: return failure("no folder to write into")
+        val target = uniqueIn(parent, base + "." + safeExtension)
+        return try {
+            target.writeText(text, Charsets.UTF_8)
+            pathResult(target)
+        } catch (error: Exception) {
+            failure("could not save " + target.name + ": " + (error.message ?: ""))
+        }
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────────
 
     /**
@@ -1301,6 +1512,217 @@ class FilesBridge(
             counter++
         }
         return candidate
+    }
+
+    // ── the image viewer and the shared scan engine (task #459/#460) ────────────
+
+    /**
+     * A small JPEG thumbnail as a data: URL for an image row in the Files tab.
+     * The page renders the row first and fills the <img> lazily, so a slow disk
+     * must never stall the list. Returns null for anything that is not an image
+     * the platform can decode; the page then shows the kind glyph as before.
+     */
+    @JavascriptInterface
+    fun imageThumb(path: String, maxDimension: Int): String? {
+        val file = resolve(path) ?: return null
+        val max = maxDimension.coerceIn(64, 1024)
+        val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        android.graphics.BitmapFactory.decodeFile(file.absolutePath, bounds)
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+        var sample = 1
+        var longest = maxOf(bounds.outWidth, bounds.outHeight)
+        while (longest / (sample * 2) >= max) sample *= 2
+        val options = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+        val decoded = android.graphics.BitmapFactory.decodeFile(file.absolutePath, options) ?: return null
+        try {
+            val scale = max.toFloat() / maxOf(decoded.width, decoded.height)
+            if (scale < 1f) {
+                val scaled = android.graphics.Bitmap.createScaledBitmap(
+                    decoded,
+                    maxOf(1, (decoded.width * scale).toInt()),
+                    maxOf(1, (decoded.height * scale).toInt()),
+                    true
+                )
+                if (scaled !== decoded) decoded.recycle()
+                return jpegDataUrl(scaled)
+            }
+            return jpegDataUrl(decoded)
+        } finally {
+            if (!decoded.isRecycled) decoded.recycle()
+        }
+    }
+
+    /**
+     * The EXIF panel's facts for one image: dimensions, capture date, camera
+     * make/model and GPS when the file carries them. Read from the platform
+     * ExifInterface, so no extra dependency rides the APK for a viewer.
+     */
+    @JavascriptInterface
+    fun imageInfo(path: String): String {
+        val file = resolve(path) ?: return failure("the image is outside the storage roots")
+        val json = JSONObject().put("ok", true)
+        val exif = try {
+            android.media.ExifInterface(file.absolutePath)
+        } catch (error: Exception) {
+            return json.put("error", "no readable EXIF in this file").toString()
+        }
+        val bounds = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        android.graphics.BitmapFactory.decodeFile(file.absolutePath, bounds)
+        if (bounds.outWidth > 0) {
+            json.put("width", bounds.outWidth).put("height", bounds.outHeight)
+        }
+        exif.getAttribute(android.media.ExifInterface.TAG_DATETIME)?.takeIf { it.isNotBlank() }?.let { json.put("date", it) }
+        exif.getAttribute(android.media.ExifInterface.TAG_MAKE)?.takeIf { it.isNotBlank() }?.let { json.put("make", it) }
+        exif.getAttribute(android.media.ExifInterface.TAG_MODEL)?.takeIf { it.isNotBlank() }?.let { json.put("model", it) }
+        val latitude = exifLatitude(exif)
+        val longitude = exifLongitude(exif)
+        if (latitude != null && longitude != null) {
+            json.put("latitude", latitude).put("longitude", longitude)
+        }
+        json.put("size", file.length())
+        json.put("mime", android.webkit.MimeTypeMap.getSingleton()
+            .getMimeTypeFromExtension(file.extension.lowercase()) ?: "image/*")
+        return json.toString()
+    }
+
+    /**
+     * Rotates the image 90 degrees clockwise by rewriting its EXIF orientation
+     * tag. The pixels are left untouched — re-encoding a photo loses quality
+     * and strips metadata, while every Android decoder already applies the tag.
+     */
+    @JavascriptInterface
+    fun rotateImage(path: String): String {
+        val file = resolve(path) ?: return failure("the image is outside the storage roots")
+        return try {
+            val exif = android.media.ExifInterface(file.absolutePath)
+            val orientation = exif.getAttributeInt(
+                android.media.ExifInterface.TAG_ORIENTATION,
+                android.media.ExifInterface.ORIENTATION_NORMAL
+            )
+            val next = when (orientation) {
+                android.media.ExifInterface.ORIENTATION_NORMAL -> android.media.ExifInterface.ORIENTATION_ROTATE_90
+                android.media.ExifInterface.ORIENTATION_ROTATE_90 -> android.media.ExifInterface.ORIENTATION_ROTATE_180
+                android.media.ExifInterface.ORIENTATION_ROTATE_180 -> android.media.ExifInterface.ORIENTATION_ROTATE_270
+                android.media.ExifInterface.ORIENTATION_ROTATE_270 -> android.media.ExifInterface.ORIENTATION_NORMAL
+                else -> android.media.ExifInterface.ORIENTATION_NORMAL
+            }
+            exif.setAttribute(android.media.ExifInterface.TAG_ORIENTATION, next.toString())
+            exif.saveAttributes()
+            okErr(true, "")
+        } catch (error: Exception) {
+            failure("cannot rotate: " + (error.message ?: error.javaClass.simpleName))
+        }
+    }
+
+    /**
+     * Decodes the first QR/barcode in an image and returns it as a TYPED
+     * payload ({type, raw, ...fields}) so the page can render actions
+     * (open URL, join WiFi, add contact, add calendar event) instead of a raw
+     * string dump. Both consumer apps call the SAME shared engine
+     * (libs:ml-l-image-mlkit); this method is cloud-drive's surface over it.
+     */
+    @JavascriptInterface
+    fun decodeBarcode(path: String): String {
+        val file = resolve(path) ?: return failure("the image is outside the storage roots")
+        val scan = scanEngine.decodeBarcode(file)
+            ?: return okErr(false, "no barcode found in this image")
+        val json = JSONObject()
+            .put("ok", true)
+            .put("format", scan.format)
+            .put("raw", scan.rawValue)
+        putPayload(json, scan.payload)
+        return json.toString()
+    }
+
+    /**
+     * OCRs an image through the shared engine and returns {text, segments[..]}.
+     * The page offers select/copy/share and save-as-.txt/.md beside the image;
+     * this bridge returns the text, the page composes the file name.
+     */
+    @JavascriptInterface
+    fun recognizeText(path: String): String {
+        val file = resolve(path) ?: return failure("the image is outside the storage roots")
+        val result = scanEngine.recognizeText(file)
+        if (result.error != null) return okErr(false, result.error)
+        val segments = JSONArray()
+        result.segments.forEach { segment ->
+            val item = JSONObject().put("text", segment.text)
+            segment.confidence?.let { item.put("confidence", it.toDouble()) }
+            segments.put(item)
+        }
+        return JSONObject()
+            .put("ok", true)
+            .put("text", result.text)
+            .put("segments", segments)
+            .toString()
+    }
+
+    /** Puts the typed payload's fields on [json] under one `payload` object. */
+    private fun putPayload(json: JSONObject, payload: BarcodePayload) {
+        val payloadJson = JSONObject()
+        when (payload) {
+            is BarcodePayload.Url -> payloadJson.put("type", "url").put("url", payload.url)
+            is BarcodePayload.Wifi -> payloadJson
+                .put("type", "wifi")
+                .put("ssid", payload.ssid)
+                .put("password", payload.password)
+                .put("security", payload.security)
+                .put("hidden", payload.hidden)
+            is BarcodePayload.Contact -> payloadJson
+                .put("type", "contact")
+                .put("name", payload.name ?: "")
+                .put("vcard", payload.vcard)
+            is BarcodePayload.Calendar -> payloadJson
+                .put("type", "calendar")
+                .put("summary", payload.summary ?: "")
+                .put("location", payload.location ?: "")
+                .put("start", payload.startTimeEpochMillis ?: JSONObject.NULL)
+                .put("end", payload.endTimeEpochMillis ?: JSONObject.NULL)
+                .put("vevent", payload.vevent)
+            is BarcodePayload.Phone -> payloadJson.put("type", "phone").put("number", payload.number)
+            is BarcodePayload.Email -> payloadJson
+                .put("type", "email")
+                .put("address", payload.address)
+                .put("subject", payload.subject ?: "")
+                .put("body", payload.body ?: "")
+            is BarcodePayload.Geo -> payloadJson
+                .put("type", "geo")
+                .put("latitude", payload.latitude)
+                .put("longitude", payload.longitude)
+            is BarcodePayload.Plain -> payloadJson.put("type", "text").put("text", payload.text)
+        }
+        json.put("payload", payloadJson)
+    }
+
+    private fun jpegDataUrl(bitmap: android.graphics.Bitmap): String {
+        val output = java.io.ByteArrayOutputStream()
+        bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, output)
+        return "data:image/jpeg;base64," +
+            android.util.Base64.encodeToString(output.toByteArray(), android.util.Base64.NO_WRAP)
+    }
+
+    private fun exifLatitude(exif: android.media.ExifInterface): Double? {
+        val value = exif.getAttribute(android.media.ExifInterface.TAG_GPS_LATITUDE) ?: return null
+        val reference = exif.getAttribute(android.media.ExifInterface.TAG_GPS_LATITUDE_REF) ?: return null
+        return dmsToDecimal(value)?.let { if (reference == "S") -it else it }
+    }
+
+    private fun exifLongitude(exif: android.media.ExifInterface): Double? {
+        val value = exif.getAttribute(android.media.ExifInterface.TAG_GPS_LONGITUDE) ?: return null
+        val reference = exif.getAttribute(android.media.ExifInterface.TAG_GPS_LONGITUDE_REF) ?: return null
+        return dmsToDecimal(value)?.let { if (reference == "W") -it else it }
+    }
+
+    /** "37/1 25/1 123/100" (DMS rationals) -> decimal degrees, or null. */
+    private fun dmsToDecimal(dms: String): Double? {
+        val parts = dms.split(',').mapNotNull { part ->
+            val slash = part.trim().split('/')
+            val numerator = slash[0].trim().toDoubleOrNull() ?: return@mapNotNull null
+            val denominator = if (slash.size > 1) slash[1].trim().toDoubleOrNull() ?: 1.0 else 1.0
+            if (denominator == 0.0) null else numerator / denominator
+        }
+        if (parts.size < 3) return null
+        return parts[0] + parts[1] / 60.0 + parts[2] / 3600.0
     }
 
     /** Runs [action] over every resolvable path in a JSON array, skipping the ones out of bounds. */

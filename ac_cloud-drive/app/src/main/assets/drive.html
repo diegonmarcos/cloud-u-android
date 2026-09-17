@@ -79,6 +79,42 @@
            its one-line reason shown next to it — never a fake button that looks
            like it works. */
         .convert-target[disabled] { opacity: 0.4; }
+
+        /* ── the image viewer overlay (task #459/#460) ──
+           A sibling of the app shell, painting above the tab bar, so the image
+           actually owns the screen while it is open. The sheet below it is a
+           bottom panel for scan results / OCR / EXIF; the sheet, not a new
+           page, keeps the viewer and its folder context on screen. */
+        .viewer { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column;
+                  background: #030712; padding-top: var(--sat); padding-bottom: var(--sab); }
+        .viewer.hidden { display: none; }
+        .viewer-top-bar { display: flex; align-items: center; gap: 0.4rem; height: 3rem;
+                          padding: 0 0.5rem; background: #0f172a; border-bottom: 1px solid #1f2937;
+                          color: #9ca3af; }
+        .viewer-top-bar .viewer-name { flex: 1; min-width: 0; font-size: 0.75rem; color: #e5e7eb; }
+        .viewer-top-bar button { padding: 0.25rem 0.5rem; font-size: 1rem; background: none; border: none;
+                                 color: #9ca3af; }
+        .viewer-top-bar button:active { color: #60a5fa; }
+        .viewer-stage { flex: 1; position: relative; overflow: hidden; touch-action: none;
+                        background: #030712; }
+        .viewer-stage img { position: absolute; left: 50%; top: 50%; max-width: none; max-height: none;
+                            transform-origin: center center; user-select: none; -webkit-user-drag: none;
+                            will-change: transform; }
+        .viewer-sheet { max-height: 62%; overflow-y: auto; background: #111827;
+                        border-top: 1px solid #1f2937; }
+        .viewer-sheet.hidden { display: none; }
+        .viewer-sheet .sheet-pad { padding: 0.75rem 1rem; }
+        .scan-action { display: block; width: 100%; text-align: left; padding: 0.6rem 0.75rem;
+                       margin-top: 0.4rem; border-radius: 0.5rem; background: #1f2937;
+                       color: #e5e7eb; font-size: 0.8rem; }
+        .scan-action:active { background: #374151; }
+        .viewer-sheet textarea { width: 100%; min-height: 8rem; box-sizing: border-box;
+                                 background: #0f172a; color: #e5e7eb; border: 1px solid #374151;
+                                 border-radius: 0.5rem; padding: 0.5rem; font-size: 0.8rem; }
+        .viewer-sheet .sheet-button { padding: 0.4rem 0.75rem; border-radius: 0.5rem;
+                                      background: #2563eb; color: white; font-size: 0.75rem; }
+        .image-thumb { width: 2rem; height: 2rem; border-radius: 0.375rem; object-fit: cover;
+                       background: #1f2937; flex-shrink: 0; }
     </style>
 </head>
 <body>
@@ -105,6 +141,26 @@
         <button data-tab="backups" class="tab-button flex-1 py-3 text-sm font-medium border-t-2">Backups</button>
         <button data-tab="configs" class="tab-button flex-1 py-3 text-sm font-medium border-t-2">Configs</button>
     </nav>
+</div>
+
+<!-- The image viewer overlay (task #459/#460). Created once, filled per image;
+     it is a sibling of the app shell so the image paints over the tab bar. -->
+<div id="viewer-root" class="viewer hidden">
+    <div class="viewer-top-bar">
+        <button id="viewer-close" title="Close">✕</button>
+        <div class="viewer-name clip" id="viewer-name"></div>
+        <span id="viewer-counter" class="text-xs text-gray-600"></span>
+        <button id="viewer-rotate" title="Rotate 90°">↻</button>
+        <button id="viewer-scan" title="Scan barcode">⌗</button>
+        <button id="viewer-ocr" title="Read text">T</button>
+        <button id="viewer-info" title="Details">ⓘ</button>
+        <button id="viewer-share" title="Share">⇪</button>
+        <button id="viewer-delete" title="Delete">🗑</button>
+    </div>
+    <div id="viewer-stage" class="viewer-stage">
+        <img id="viewer-img" alt="" draggable="false" />
+    </div>
+    <div id="viewer-sheet" class="viewer-sheet hidden"></div>
 </div>
 
 <script>
@@ -220,6 +276,11 @@ function glyphFor(entry) {
     return '📄';
 }
 
+/** The image kinds the viewer opens. The platform MIME map is the one truth. */
+function isImage(entry) {
+    return !entry.directory && (entry.mime || '').startsWith('image/');
+}
+
 /* ── files tab ──────────────────────────────────────────────────────────────── */
 
 function openDirectory(path) {
@@ -283,7 +344,9 @@ function renderFiles() {
     const rows = state.entries.map((entry, index) =>
         '<div class="row flex items-center gap-3 px-4 py-2 border-b border-gray-800 ' +
         (state.selection.has(entry.path) ? 'selected' : '') + '" data-index="' + index + '">' +
-        '<span class="text-xl">' + glyphFor(entry) + '</span>' +
+        (isImage(entry)
+            ? '<img class="image-thumb" data-path="' + escapeHtml(entry.path) + '" alt="" />'
+            : '<span class="text-xl">' + glyphFor(entry) + '</span>') +
         '<div class="flex-1 min-w-0">' +
         '<div class="clip text-sm">' + escapeHtml(entry.name) + '</div>' +
         '<div class="text-[11px] text-gray-500">' +
@@ -338,6 +401,11 @@ function bindFileRows() {
             // #458: cloud-drive reads PDFs itself instead of handing them to another
             // app — that is the point of being "a real PDF reader".
             else if (isPdfEntry(entry)) openReader(entry);
+
+            // An image opens in the viewer (zoom, swipe, rotate, scan, OCR) — a
+            // system gallery would be the app handing its one job to somebody
+            // else, and the scan actions need this page's own bridge anyway.
+            else if (isImage(entry)) openViewer(entry);
             else reportFailure(Bridge.call('open', entry.path));
         };
         // Long-press starts a selection, the way every file manager on this phone does.
@@ -347,6 +415,13 @@ function bindFileRows() {
         }, { passive: true });
         ['touchend', 'touchmove', 'touchcancel'].forEach(event =>
             row.addEventListener(event, () => clearTimeout(timer), { passive: true }));
+    });
+    // Thumbnails load lazily so a slow disk never stalls the list itself: the
+    // row is on screen before the decode starts, and each one asks independently.
+    panel.querySelectorAll('img.image-thumb').forEach(img => {
+        const path = img.dataset.path;
+        const thumb = Bridge.raw('imageThumb', path, 96);
+        if (thumb) img.src = thumb;
     });
     panel.querySelectorAll('.more').forEach(button => {
         button.onclick = event => {
@@ -1979,6 +2054,415 @@ async function saveConvertedFile(sourcePath, sourceName, target, content) {
     if (!write.ok) return { ok: false, error: write.error };
     return { ok: true, path: path, name: name };
 }
+
+/* ── the image viewer and the scan sheet (task #459/#460) ──────────────────
+   An overlay above the app shell, fed by the same FilesBridge the rest of the
+   page uses. Pinch and double-tap zoom, swipe between the folder's images,
+   EXIF rotate, an EXIF panel, share/delete, and the two scan surfaces built
+   on the ONE shared engine (libs:ml-l-image-mlkit): barcode decode rendered
+   as typed actions (copy, open URL, join WiFi, add contact, add calendar
+   event, dial, mail, map) and OCR with select/copy/share and save as .txt or
+   .md beside the image. */
+
+function viewerEl(id) { return document.getElementById(id); }
+
+/* The viewer's whole session state, in one object so a gesture started on one
+   image never writes into the state of another: images is the folder's image
+   list, index points at the one on screen, and scale/offset/base are what the
+   zoom and pan gestures mutate. reset is set by closeViewer so the next open
+   starts at fit instead of carrying someone's zoom across sessions. */
+const viewer = {
+    images: [],
+    index: 0,
+    scale: 1,
+    offset: { x: 0, y: 0 },
+    base: null,
+    lastTap: 0,
+    tapPoint: null,
+    sheet: null,
+    reset: true
+};
+
+function viewerCurrent() {
+    return viewer.images[viewer.index] || null;
+}
+
+function openViewer(entry) {
+    viewer.images = state.entries.filter(isImage).map(image => ({ path: image.path, name: image.name }));
+    const found = viewer.images.findIndex(image => image.path === entry.path);
+    viewer.index = found >= 0 ? found : 0;
+    if (!viewer.images.length) { alert('No images in this folder.'); return; }
+    viewerHideSheet();
+    viewerEl('viewer-root').classList.remove('hidden');
+    viewerLoad();
+    history.pushState(null, '');
+}
+
+function closeViewer() {
+    viewerEl('viewer-root').classList.add('hidden');
+    viewerHideSheet();
+    viewer.reset = true; // the next image starts at fit, not at someone's zoom
+}
+
+function viewerLoad() {
+    const current = viewerCurrent();
+    if (!current) return;
+    const img = viewerEl('viewer-img');
+    img.onload = () => {
+        // A fresh open starts at fit; swiping between images keeps the zoom so
+        // comparing two details does not re-fit on every step. reset is set by
+        // closeViewer and consumed once here.
+        if (viewer.reset) {
+            viewer.scale = 1;
+            viewer.offset = { x: 0, y: 0 };
+            viewer.reset = false;
+        }
+        fitImage();
+    };
+    // The query string busts WebView's cache after an EXIF rotate, where the
+    // pixels on disk are unchanged but the decoded orientation is not.
+    img.src = 'file://' + encodeURI(current.path) + '?v=' + Date.now();
+    viewerEl('viewer-name').textContent = current.name;
+    viewerEl('viewer-name').title = current.path;
+    const counter = viewerEl('viewer-counter');
+    if (counter) counter.textContent = (viewer.index + 1) + ' / ' + viewer.images.length;
+}
+
+function viewerStep(delta) {
+    const next = viewer.index + delta;
+    if (next < 0 || next >= viewer.images.length) return;
+    viewer.index = next;
+    viewerLoad();
+}
+
+function fitImage() {
+    const stage = viewerEl('viewer-stage');
+    const img = viewerEl('viewer-img');
+    const stageW = stage.clientWidth;
+    const stageH = stage.clientHeight;
+    const naturalW = img.naturalWidth || 1;
+    const naturalH = img.naturalHeight || 1;
+    const fit = Math.min(stageW / naturalW, stageH / naturalH);
+    viewer.base = { w: naturalW * fit, h: naturalH * fit };
+    applyTransform();
+}
+
+function applyTransform() {
+    const img = viewerEl('viewer-img');
+    if (!viewer.base) return;
+    img.style.width = viewer.base.w + 'px';
+    img.style.height = viewer.base.h + 'px';
+    const centeredX = -viewer.base.w / 2 + viewer.offset.x;
+    const centeredY = -viewer.base.h / 2 + viewer.offset.y;
+    img.style.transform = 'translate(' + centeredX + 'px,' + centeredY + 'px) scale(' + viewer.scale + ')';
+}
+
+function clampOffset() {
+    const stage = viewerEl('viewer-stage');
+    const maxX = Math.max(0, (viewer.base.w * viewer.scale - stage.clientWidth) / 2);
+    const maxY = Math.max(0, (viewer.base.h * viewer.scale - stage.clientHeight) / 2);
+    viewer.offset.x = Math.max(-maxX, Math.min(maxX, viewer.offset.x));
+    viewer.offset.y = Math.max(-maxY, Math.min(maxY, viewer.offset.y));
+}
+
+/* Gestures: one finger pans when zoomed and swipes images when not; two fingers
+   pinch-zoom; a double tap toggles between fit and 2.25x. All state is in the
+   closure object so a rotate/close/load mid-gesture cannot leave stale fingers
+   stuck to the stage. */
+let gesture = null;
+function gestureBegin() {
+    gesture = null;
+}
+viewerEl('viewer-stage').addEventListener('touchstart', event => {
+    event.preventDefault();
+    gesture = {
+        startX: 0, startY: 0, lastX: 0, lastY: 0,
+        mode: 'none',
+        pinchStart: 1, scaleStart: 1,
+        moved: false,
+        tapAt: 0
+    };
+    if (event.touches.length === 1) {
+        const touch = event.touches[0];
+        gesture.mode = viewer.scale > 1 ? 'pan' : 'swipe';
+        gesture.startX = gesture.lastX = touch.clientX;
+        gesture.startY = gesture.lastY = touch.clientY;
+        gesture.tapAt = Date.now();
+    } else if (event.touches.length === 2) {
+        gesture.mode = 'pinch';
+        gesture.pinchStart = distance(event.touches[0], event.touches[1]);
+        gesture.scaleStart = viewer.scale;
+    }
+}, { passive: false });
+
+viewerEl('viewer-stage').addEventListener('touchmove', event => {
+    event.preventDefault();
+    if (!gesture) return;
+    if (event.touches.length === 2 && gesture.mode === 'pinch') {
+        const current = distance(event.touches[0], event.touches[1]);
+        if (gesture.pinchStart > 0) {
+            viewer.scale = Math.max(1, Math.min(6, gesture.scaleStart * current / gesture.pinchStart));
+            applyTransform();
+        }
+        return;
+    }
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    const dx = touch.clientX - gesture.lastX;
+    const dy = touch.clientY - gesture.lastY;
+    if (!gesture.moved) {
+        const fromStart = Math.hypot(touch.clientX - gesture.startX, touch.clientY - gesture.startY);
+        if (fromStart > 10) gesture.moved = true;
+    }
+    if (gesture.mode === 'pan') {
+        viewer.offset.x += dx;
+        viewer.offset.y += dy;
+        clampOffset();
+        applyTransform();
+    }
+    gesture.lastX = touch.clientX;
+    gesture.lastY = touch.clientY;
+}, { passive: false });
+
+viewerEl('viewer-stage').addEventListener('touchend', event => {
+    if (!gesture) return;
+    const wasSwipe = gesture.mode === 'swipe' && !gesture.moved;
+    const swipeDx = gesture.lastX - gesture.startX;
+    const swipeDy = gesture.lastY - gesture.startY;
+    const quick = Date.now() - gesture.tapAt < 250 && Math.hypot(swipeDx, swipeDy) < 10;
+    const ended = gesture;
+    gesture = null;
+    if (wasSwipe && Math.abs(swipeDx) > 60 && Math.abs(swipeDx) > Math.abs(swipeDy)) {
+        viewerStep(swipeDx < 0 ? 1 : -1);
+        return;
+    }
+    if (quick) {
+        // A double tap toggles zoom between fit and 2.25x; a second quick tap on
+        // the same spot after zoom is what lets the user zoom back out.
+        const now = Date.now();
+        if (viewer.lastTap && now - viewer.lastTap < 300 && viewer.tapPoint &&
+            Math.hypot(swipeDx - viewer.tapPoint.x, swipeDy - viewer.tapPoint.y) < 30) {
+            viewer.scale = viewer.scale > 1 ? 1 : 2.25;
+            viewer.offset = { x: 0, y: 0 };
+            applyTransform();
+            viewer.lastTap = 0;
+        } else {
+            viewer.lastTap = now;
+            viewer.tapPoint = { x: swipeDx, y: swipeDy };
+        }
+    }
+}, { passive: false });
+
+viewerEl('viewer-stage').addEventListener('touchcancel', () => {
+    gesture = null;
+}, { passive: false });
+
+function distance(a, b) {
+    return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+}
+
+/* ── the sheet: scan, OCR and EXIF panels ────────────────────────────────── */
+
+function viewerHideSheet() {
+    viewer.sheet = null;
+    viewerEl('viewer-sheet').classList.add('hidden');
+    viewerEl('viewer-sheet').innerHTML = '';
+}
+
+function viewerShowSheet(kind, html) {
+    viewer.sheet = kind;
+    const sheet = viewerEl('viewer-sheet');
+    sheet.innerHTML = html;
+    sheet.classList.remove('hidden');
+}
+
+function sheetLine(label, value) {
+    return '<div class="flex gap-2"><span class="w-16 shrink-0 text-gray-500">' + label +
+        '</span><span class="break-all">' + escapeHtml(value == null ? '' : String(value)) + '</span></div>';
+}
+
+function actionButton(label, callback) {
+    // Buttons are collected as {label, callback} pairs and bound AFTER the
+    // sheet's HTML is injected, because innerHTML cannot carry closures: a
+    // button rendered with an inline onclick would be eval'd strings, and an
+    // unbound button is a hollow green — it LOOKS actionable and does nothing.
+    return { label: escapeHtml(label), callback };
+}
+
+function renderScanSheet() {
+    const current = viewerCurrent();
+    if (!current) return;
+    viewerShowSheet('scan',
+        '<div class="sheet-pad"><div class="text-sm font-medium">Scan</div>' +
+        '<div class="mt-1 text-xs text-gray-500">Looking for a barcode in ' +
+        escapeHtml(current.name) + '…</div></div>');
+    // Hand the browser a frame so "Looking…" paints before the decode blocks.
+    setTimeout(() => {
+        const result = Bridge.call('decodeBarcode', current.path);
+        if (!result.ok) {
+            viewerEl('viewer-sheet').innerHTML =
+                '<div class="sheet-pad text-sm text-gray-400">' + escapeHtml(result.error || 'no barcode found') + '</div>';
+            return;
+        }
+        const p = result.payload;
+        const actions = [];
+        if (p.type === 'url') {
+            actions.push(actionButton('Open the web address', () => Bridge.call('openUrl', p.url)));
+            actions.push(actionButton('Copy the address', () => copyToClipboard(result.raw)));
+        } else if (p.type === 'wifi') {
+            actions.push(actionButton('Join ' + p.ssid, () => Bridge.call('joinWifi', p.ssid, p.password)));
+            actions.push(actionButton('Copy the password', () => copyToClipboard(p.password)));
+        } else if (p.type === 'contact') {
+            actions.push(actionButton('Add contact' + (p.name ? ': ' + p.name : ''), () => Bridge.call('addContact', p.vcard, p.name)));
+            actions.push(actionButton('Copy the card', () => copyToClipboard(result.raw)));
+        } else if (p.type === 'calendar') {
+            actions.push(actionButton('Add calendar event' + (p.summary ? ': ' + p.summary : ''), () => Bridge.call('addCalendarEvent', p.summary, p.location, Number(p.start) || 0, Number(p.end) || 0)));
+            actions.push(actionButton('Copy the event', () => copyToClipboard(result.raw)));
+        } else if (p.type === 'phone') {
+            actions.push(actionButton('Call ' + p.number, () => Bridge.call('dial', p.number)));
+            actions.push(actionButton('Copy the number', () => copyToClipboard(p.number)));
+        } else if (p.type === 'email') {
+            actions.push(actionButton('E-mail ' + p.address, () => Bridge.call('sendEmail', p.address, p.subject, p.body)));
+            actions.push(actionButton('Copy the address', () => copyToClipboard(p.address)));
+        } else if (p.type === 'geo') {
+            actions.push(actionButton('Open the map', () => Bridge.call('openGeo', p.latitude, p.longitude)));
+            actions.push(actionButton('Copy the coordinates', () => copyToClipboard(p.latitude + ',' + p.longitude)));
+        } else {
+            actions.push(actionButton('Copy the text', () => copyToClipboard(p.text)));
+        }
+        viewerEl('viewer-sheet').innerHTML =
+            '<div class="sheet-pad">' +
+            '<div class="text-sm font-medium">' + escapeHtml(result.format) + ' barcode</div>' +
+            '<div class="mt-2 text-xs text-gray-500 break-all">' + escapeHtml(result.raw) + '</div>' +
+            '<div class="mt-2 space-y-1">' + actions.map((action, index) =>
+                '<button class="scan-action" data-action="' + index + '">' + action.label + '</button>'
+            ).join('') + '</div>' +
+            '</div>';
+        // The action objects were stashed in the closure because innerHTML
+        // cannot carry them; each rendered button resolves its own by index.
+        viewerEl('viewer-sheet').querySelectorAll('.scan-action').forEach(button => {
+            const action = actions[Number(button.dataset.action)];
+            if (action) button.onclick = action.callback;
+        });
+    }, 0);
+}
+
+function copyToClipboard(text) {
+    const result = Bridge.call('copyText', text);
+    alert(result.ok ? 'Copied.' : (result.error || 'Could not copy.'));
+}
+
+function renderOcrSheet() {
+    const current = viewerCurrent();
+    if (!current) return;
+    viewerShowSheet('ocr',
+        '<div class="sheet-pad"><div class="text-sm font-medium">Read text</div>' +
+        '<div class="mt-1 text-xs text-gray-500">Reading ' + escapeHtml(current.name) + '…</div></div>');
+    setTimeout(() => {
+        const result = Bridge.call('recognizeText', current.path);
+        if (!result.ok) {
+            viewerEl('viewer-sheet').innerHTML =
+                '<div class="sheet-pad text-sm text-gray-400">' + escapeHtml(result.error || 'could not read this image') + '</div>';
+            return;
+        }
+        if (!result.text) {
+            viewerEl('viewer-sheet').innerHTML =
+                '<div class="sheet-pad text-sm text-gray-400">No text found in this image.</div>';
+            return;
+        }
+        viewerEl('viewer-sheet').innerHTML =
+            '<div class="sheet-pad">' +
+            '<div class="text-sm font-medium">Text in ' + escapeHtml(current.name) + '</div>' +
+            '<textarea id="ocr-text" readonly spellcheck="false">' + escapeHtml(result.text) + '</textarea>' +
+            '<div class="mt-2 flex flex-wrap gap-2">' +
+            '<button class="sheet-button" id="ocr-select">Select all</button>' +
+            '<button class="sheet-button" id="ocr-copy">Copy</button>' +
+            '<button class="sheet-button" id="ocr-share">Share</button>' +
+            '<button class="sheet-button" id="ocr-save-txt">Save .txt</button>' +
+            '<button class="sheet-button" id="ocr-save-md">Save .md</button>' +
+            '</div>' +
+            '<div class="mt-2 text-xs text-gray-500" id="ocr-status"></div>' +
+            '</div>';
+        const textBox = viewerEl('ocr-text');
+        viewerEl('ocr-select').onclick = () => { textBox.select(); };
+        viewerEl('ocr-copy').onclick = () => copyToClipboard(textBox.value);
+        viewerEl('ocr-share').onclick = () => Bridge.call('shareText', current.name + ' — recognized text', textBox.value);
+        viewerEl('ocr-save-txt').onclick = () => saveOcr(textBox.value, 'txt');
+        viewerEl('ocr-save-md').onclick = () => saveOcr(textBox.value, 'md');
+    }, 0);
+}
+
+function saveOcr(text, extension) {
+    const current = viewerCurrent();
+    if (!current) return;
+    const result = Bridge.call('saveTextBeside', current.path, text, extension);
+    const status = viewerEl('ocr-status');
+    if (!status) return;
+    if (result.ok) {
+        status.textContent = 'Saved as ' + result.name + ' next to the image.';
+        status.className = 'mt-2 text-xs text-gray-500';
+    } else {
+        status.textContent = result.error || 'Could not save.';
+        status.className = 'mt-2 text-xs text-red-400';
+    }
+}
+
+function renderInfoSheet() {
+    const current = viewerCurrent();
+    if (!current) return;
+    viewerShowSheet('info',
+        '<div class="sheet-pad"><div class="text-sm font-medium">Details</div>' +
+        '<div class="mt-1 text-xs text-gray-500">Reading ' + escapeHtml(current.name) + '…</div></div>');
+    setTimeout(() => {
+        const detail = Bridge.call('imageInfo', current.path);
+        if (!detail.ok) {
+            viewerEl('viewer-sheet').innerHTML =
+                '<div class="sheet-pad text-sm text-gray-400">' + escapeHtml(detail.error || 'no details') + '</div>';
+            return;
+        }
+        const facts = [
+            ['File', current.name],
+            ['Size', detail.size != null ? humanSize(detail.size) : ''],
+            ['Type', detail.mime],
+            ['Width', detail.width],
+            ['Height', detail.height],
+            ['Taken', detail.date],
+            ['Camera', [detail.make, detail.model].filter(Boolean).join(' ')],
+            ['GPS', detail.latitude != null ? detail.latitude.toFixed(5) + ', ' + detail.longitude.toFixed(5) : '']
+        ];
+        viewerEl('viewer-sheet').innerHTML =
+            '<div class="sheet-pad"><div class="text-sm font-medium">' + escapeHtml(current.name) + '</div>' +
+            '<div class="mt-2 text-xs text-gray-500 space-y-0.5">' +
+            facts.filter(pair => pair[1]).map(pair => sheetLine(pair[0], pair[1])).join('') +
+            '</div></div>';
+    }, 0);
+}
+
+viewerEl('viewer-close').onclick = () => closeViewer();
+viewerEl('viewer-rotate').onclick = () => {
+    const current = viewerCurrent();
+    if (!current) return;
+    const result = Bridge.call('rotateImage', current.path);
+    if (!result.ok) { alert(result.error || 'Could not rotate.'); return; }
+    viewerLoad();
+};
+viewerEl('viewer-scan').onclick = () => renderScanSheet();
+viewerEl('viewer-ocr').onclick = () => renderOcrSheet();
+viewerEl('viewer-info').onclick = () => renderInfoSheet();
+viewerEl('viewer-share').onclick = () => {
+    const current = viewerCurrent();
+    if (current) reportFailure(Bridge.call('share', current.path));
+};
+viewerEl('viewer-delete').onclick = () => {
+    const current = viewerCurrent();
+    if (!current) return;
+    if (!confirm('Delete ' + current.name + '? This cannot be undone.')) return;
+    reportFailure(Bridge.call('delete', JSON.stringify([current.path])));
+    viewer.images.splice(viewer.index, 1);
+    if (!viewer.images.length) { closeViewer(); openDirectory(state.path); return; }
+    if (viewer.index >= viewer.images.length) viewer.index = viewer.images.length - 1;
+    viewerLoad();
+};
 
 /* ── shell ──────────────────────────────────────────────────────────────────── */
 

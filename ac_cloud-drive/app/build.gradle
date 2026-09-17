@@ -267,6 +267,9 @@ dependencies {
     implementation project(':libs:analytics')
     implementation project(':libs:core')
     implementation project(':libs:updater')
+    // The shared scan engine: ZXing barcode decode + ML Kit OCR for the image
+    // viewer. Same module cloud-media-center compiles in (task #459/#460).
+    implementation project(':libs:ml-l-image-mlkit')
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.google.android.material:material:1.12.0'

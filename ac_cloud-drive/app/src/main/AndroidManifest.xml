@@ -62,6 +62,14 @@
                 <data android:scheme="content" android:mimeType="application/pdf" />
                 <data android:scheme="file"    android:mimeType="application/pdf" />
             </intent-filter>
+            <!-- Open an image from another app with the viewer (task #459/#460).
+                 Slot 458 adds application/pdf to the same activity; each filter
+                 stays separate so the two files merge without a rewrite. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
         </activity>
 
         <!-- Open-with and Share hand a file to another app, and a file:// URI has been illegal
