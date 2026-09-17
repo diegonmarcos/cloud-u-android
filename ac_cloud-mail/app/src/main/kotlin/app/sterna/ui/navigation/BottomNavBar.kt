@@ -99,7 +99,7 @@ private fun onItemTap(
             nav.navigate(route) {
                 // Pop up to the start destination to avoid an ever-growing back stack as the
                 // user walks the tabs, exactly as the sibling top-level bar does.
-                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                popUpTo(nav.graph.findStartDestination().id)
                 launchSingleTop = true
                 restoreState = true
             }
