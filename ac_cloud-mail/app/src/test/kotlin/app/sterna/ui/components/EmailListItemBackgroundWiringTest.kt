@@ -5,7 +5,9 @@ import org.junit.Test
 import java.io.File
 
 /**
- * SOURCE LINT, NOT A BEHAVIOUR TEST — said first, because what it guards is the one part of #141
+ * SOURCE LINT, NOT A BEHAVIOUR TEST — said first, because what it guards is the one part of task
+ * #464 that no pure-function test can: that the composable really hands its row the new text-carried
+ * read state and the tint-free background, and does so on exactly the lines this test reads.
  */
 class EmailListItemBackgroundWiringTest {
 
@@ -17,14 +19,9 @@ class EmailListItemBackgroundWiringTest {
         "scheme = MaterialTheme.colorScheme,",
         "selected = selected,",
         "current = current,",
-        "unread = unread,",
-        "unreadTint = unreadTint,",
         "flash = highlight.value,",
         ")",
     )
-
-    /** The setting reaches the row through this line and no other. Mutations 6 and 7 below. */
-    private val expectedTintRead = "val unreadTint = LocalUnreadTint.current"
 
     /** Mutation 4: the result reaches the screen through this line and nowhere else. */
     private val expectedBackground = ".background(rowColor)"
@@ -32,10 +29,15 @@ class EmailListItemBackgroundWiringTest {
     /** Mutation 5: what an unread row IS, for every caller that does not say. */
     private val expectedUnreadDefault = "unread: Boolean = !email.isSeen,"
 
+    /** The read/unread text treatment of the three text lines, whole. Task #464 moved the unread
+     *  signal off the row's background and onto its ink: an unread row is bright (onSurface) and
+     *  bold, a read one dimmed (onSurfaceVariant) and regular. */
+    private val expectedWeight = "fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,"
+
     /**
      * Mutations 1, 2 and 3 at once: the arguments the composable actually hands the decision.
      */
-    @Test fun `the composable hands rowBackground its own selected, unread and flash`() {
+    @Test fun `the composable hands rowBackground its own selected, current and flash`() {
         val lines = codeLines()
         val at = lines.indexOfFirst { it == expectedCall.first() }
         assertEquals(
@@ -54,12 +56,12 @@ class EmailListItemBackgroundWiringTest {
         }
         assertEquals(
             "each argument of the rowBackground call is pinned WHOLE and in order. " +
-                "'unread = false' brings #141 back with the pure function still perfect; " +
                 "'selected = unread, unread = selected' paints unread rows as selected and " +
                 "selected rows as unread, on the only signal that says which rows the destructive " +
-                "actions will hit; 'flash = 0f' removes the return emphasis everywhere. Nothing " +
-                "else in this repo executes these six lines. Mismatches:\n" +
-                mismatches.joinToString("\n"),
+                "actions will hit; 'flash = 0f' removes the return emphasis everywhere. There is " +
+                "no unread argument at all: since task #464 the row no longer signs read state by " +
+                "its background, so an 'unread = …' argument here is a leftover that must go. " +
+                "Mismatches:\n" + mismatches.joinToString("\n"),
             emptyList<String>(),
             mismatches,
         )
@@ -86,7 +88,7 @@ class EmailListItemBackgroundWiringTest {
         assertEquals(
             "the row's modifier chain must carry exactly one background modifier, and it must be " +
                 "'$expectedBackground' — the whole line, not a prefix of it. Dropped, the row has " +
-                "no background at all: not unread, not selected, not the flash. Made translucent " +
+                "no background at all: not selected, not the flash. Made translucent " +
                 "(a `.copy(alpha = …)`, which any substring check accepts), the swipe reveal drawn " +
                 "UNDER the row shows through it for the whole gesture. A second one paints over " +
                 "the first. The chain was:\n" + chain.joinToString("\n"),
@@ -101,7 +103,7 @@ class EmailListItemBackgroundWiringTest {
     @Test fun `unread defaults to the message's own seen flag`() {
         assertEquals(
             "EmailListItem's 'unread' parameter must default to '$expectedUnreadDefault'. It is " +
-                "read three times for the bold weight and once for the background, and the only " +
+                "read for the bold weight and the ink colour of three text lines, and the only " +
                 "caller that omits it is the search results list — pinned at 'false' that list " +
                 "shows no unread state at all, with every other rule in this repo green.",
             1,
@@ -110,47 +112,65 @@ class EmailListItemBackgroundWiringTest {
     }
 
     /**
-     * Mutation 6: the row asks the CompositionLocal for the setting once, at the top, and by
+     * Mutation 6: the unread-tint setting is gone. Until task #464 the row read LocalUnreadTint for
+     * the background; the setting no longer has a job (the row's ink signs read state), so no file
+     * may refer to it any more — a resurrected toggle would be a dead switch over a text cue.
      */
-    @Test fun `the row reads the setting once, from the CompositionLocal`() {
+    @Test fun `the dead unread-tint setting is gone with its readers`() {
         assertEquals(
-            "EmailListItem.kt must read the setting on exactly one line, and it must be " +
-                "'$expectedTintRead' — whole, not a prefix. Wrapped in a remember {} the row " +
-                "freezes on its first value and the list ends up half tinted; read twice, the two " +
-                "decisions can disagree on one row. Lines mentioning it:\n" +
+            "EmailListItem.kt must not mention LocalUnreadTint anywhere — the full-row unread tint " +
+                "was removed in task #464 and left no job for a toggle, so any reference here is a " +
+                "resurrected setting that does nothing. Lines mentioning it:\n" +
                 codeLines().filter { "LocalUnreadTint" in it }.joinToString("\n"),
-            listOf(expectedTintRead),
+            emptyList<String>(),
             codeLines().filter { "LocalUnreadTint" in it },
         )
     }
 
     /**
-     * Mutation 7: `val unread = unread && unreadTint` at the top of the composable.
+     * Mutation 7: `val unread = unread && …` at the top of the composable.
      */
     @Test fun `the unread flag itself is never rewritten inside the composable`() {
         val rebound = codeLines().filter { Regex("""^val\s+unread\s*[:=]""").containsMatchIn(it) }
         assertEquals(
-            "nothing in EmailListItem.kt may re-bind 'unread': it also drives the bold weight in " +
-                "three places, and the setting is about the BACKGROUND. Narrowing it here turns " +
-                "one switch into two effects, with the whole suite green. Found:\n" +
-                rebound.joinToString("\n"),
+            "nothing in EmailListItem.kt may re-bind 'unread': it drives the bold weight and the " +
+                "ink colour in three places, and narrowing it here would empty the list of its " +
+                "unread cue. Found:\n" + rebound.joinToString("\n"),
             emptyList<String>(),
             rebound,
         )
     }
 
-    /**
-     * Mutation 8, and the reason the rule above is not enough: leave `unread` alone and narrow
-     */
+    /** The bold weight is decided by unread alone, on three lines and no others. */
     @Test fun `the bold weight is decided by unread alone, on three lines and no others`() {
-        val weights = codeLines().filter { it.startsWith("fontWeight = if (") }
+        val weights = codeLines().filter { it == expectedWeight }
         assertEquals(
-            "the bold weight of a list row must read 'unread' and nothing else — the switch " +
-                "governs the BACKGROUND. Any other condition here (unreadTint, a derived flag) " +
-                "makes one box do two things and empties the list of every unread cue at once, " +
-                "with the whole suite green. Found:\n" + weights.joinToString("\n"),
-            List(3) { "fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal," },
-            weights,
+            "the bold weight of a list row must read 'unread' and nothing else, on exactly the " +
+                "three text lines (sender, subject, time). Any other condition here makes one " +
+                "condition do two things and empties the list of its unread cue. Found:\n" +
+                weights.joinToString("\n"),
+            3,
+            weights.size,
+        )
+    }
+
+    /**
+     * The new text treatment: an unread row is bright, a read one dimmed. The colour rule must open
+     * the identical switch on the same three text lines that carry the bold weight — sender, subject
+     * and time — or a row would mix a bright sender with a dimmed subject and read unread as a
+     * gradient. (The closing `else … onSurfaceVariant` also appears on the favourite star, so only
+     * the distinctive opening line is counted here.)
+     */
+    @Test fun `the ink colour dims a read row, on exactly the same three text lines`() {
+        val opening = "color = if (unread) MaterialTheme.colorScheme.onSurface"
+        val colourRules = codeLines().filter { it == opening }
+        assertEquals(
+            "each of the three text lines must open the colour with the bright/dim switch " +
+                "'$opening' (task #464): read state is carried by the ink, and a row that drops " +
+                "it shows no read state beyond bold. Count of the opening line:\n" +
+                colourRules.joinToString("\n"),
+            3,
+            colourRules.size,
         )
     }
 

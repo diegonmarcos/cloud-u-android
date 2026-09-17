@@ -336,8 +336,6 @@
     <string name="settings_message_list_section">Liste des messages</string>
     <string name="settings_density_title">Densité</string>
     <string name="settings_preview_title">Aperçu</string>
-    <string name="settings_unread_tint_title">Fond des messages non lus</string>
-    <string name="settings_unread_tint_subtitle">Donner aux messages non lus un fond distinct, en plus du texte en gras.</string>
     <string name="settings_list_monogram_title">Afficher les initiales de l\'expéditeur</string>
     <string name="settings_list_monogram_subtitle">Le rond coloré au début de chaque ligne de la liste des messages.</string>
     <string name="settings_theme_auto">Auto</string>

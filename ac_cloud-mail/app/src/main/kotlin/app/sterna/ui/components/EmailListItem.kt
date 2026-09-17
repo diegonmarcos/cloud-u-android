@@ -66,31 +66,29 @@ import app.sterna.util.MailDates
 import kotlinx.coroutines.delay
 
 /**
- * The background a message row is painted with — one place, three states, in this order.
+ * The background a message row is painted with — three states, in this order.
  *
  * Selection comes first and beats everything: the row's own colour is the ONLY sign that a row is
  * selected, and selection is what arms the destructive actions. Then [current], the row the reading
- * pane is showing (#103), ahead of the unread tint since the open message is marked read a moment
- * later anyway. Then an unread row's [ColorScheme.surfaceContainerHighest] — bold text alone was
- * too faint in the dark scheme (#141) — against a read row's plain surface.
+ * pane is showing (#103). Anything else — read or unread alike — is plain [ColorScheme.surface],
+ * the darker black that sits on the list's lighter [ColorScheme.surfaceContainerLow] (task #464).
+ * Read state is carried by the TEXT, not the row: an unread row is brighter and bold, a read one
+ * dimmer and regular, so a filled background stays reserved for real selection, which must remain
+ * visually distinct from unread. This is deliberately not the #141 experiment, which tinted the
+ * whole row and made bold text the only difference within one row.
  *
- * [unreadTint] is the reader's answer to that last state; off, this gives back exactly what it gave
- * before #141. It governs the BACKGROUND only, so a reader who finds it loud still sees which mail
- * is unread. [flash] tints whichever base was retained rather than branching, so it cannot erase
- * the selected or unread state while it plays.
+ * [flash] tints whichever base was retained rather than branching, so it cannot erase the selected
+ * or current state while it plays.
  */
 internal fun rowBackground(
     scheme: ColorScheme,
     selected: Boolean,
     current: Boolean,
-    unread: Boolean,
-    unreadTint: Boolean,
     flash: Float,
 ): Color {
     val base = when {
         selected -> scheme.secondaryContainer
         current -> scheme.primaryContainer
-        unread && unreadTint -> scheme.surfaceContainerHighest
         else -> scheme.surface
     }
     return if (flash > 0f) lerp(base, scheme.primary, 0.14f * flash) else base
@@ -100,29 +98,13 @@ internal fun rowBackground(
  * The fill behind the small rounded chips a row carries. Decided once per row, because the chips
  * are painted ON the row and have to know what they sit on.
  *
- * Until [rowBackground] grew a state (#141) every chip was surfaceVariant over plain surface. An
- * unread row now carries surfaceContainerHighest, and in the light scheme those two roles are one
- * step out of 255 per channel apart: the chips did not fade, they disappeared and left their labels
- * floating. surfaceContainerLowest is what an unread row's chips take instead — opaque, in every
- * Material You scheme, clear of the unread background in both themes, and carrying the chips' own
- * onSurfaceVariant ink at 6.5:1 in light.
- *
- * The rule is "a chip steps away from its row", not "a chip is darker": tying it to a fixed
- * direction is what made the light theme swallow them. [unreadTint] has to be the same answer
- * [rowBackground] got, or a pale chip lands on a pale row.
- *
- * Two rows this does NOT rescue, both as surface left them before #141 and both filed rather than
- * fixed: a SELECTED row, where a surfaceVariant chip reads by hue and vanishes under a monochrome
- * palette; and the RETURN FLASH, which passes within ~5/255 of surfaceVariant at its peak. [flash]
- * is deliberately not a parameter — a chip changing colour mid-animation is a bigger change than
- * the defect.
+ * Chips step away from their row, not toward any one direction: [ColorScheme.surfaceVariant] reads
+ * clearly against a plain [ColorScheme.surface] row in both themes, and against the selection or
+ * current fill it is told apart by hue. There is no longer a third case to answer — an unread row
+ * wears no background of its own (see [rowBackground]), so the chip answer no longer branches on
+ * read state.
  */
-internal fun chipFill(
-    scheme: ColorScheme,
-    selected: Boolean,
-    unread: Boolean,
-    unreadTint: Boolean,
-): Color = if (unread && unreadTint && !selected) scheme.surfaceContainerLowest else scheme.surfaceVariant
+internal fun chipFill(scheme: ColorScheme): Color = scheme.surfaceVariant
 
 /**
  * One row in a message list: monogram, sender, subject, preview, time + state.
@@ -186,10 +168,6 @@ fun EmailListItem(
         senderName
     }
     val density = LocalListDensity.current
-    // Read once, here, and passed to both decisions below, so a row cannot answer "is this row
-    // tinted?" twice and differently. Not a remember {}, which would freeze the row on its first
-    // value and leave the list half-tinted after a change.
-    val unreadTint = LocalUnreadTint.current
     val rowPadding = when (density) {
         ListDensity.COMPACT -> 6.dp
         ListDensity.NORMAL -> 10.dp
@@ -236,18 +214,11 @@ fun EmailListItem(
     val attachmentParts = remember(email.id, email.attachments) {
         if (onOpenAttachment == null) emptyList() else email.fileAttachmentParts()
     }
-    val chipBackground = chipFill(
-        scheme = MaterialTheme.colorScheme,
-        selected = selected,
-        unread = unread,
-        unreadTint = unreadTint,
-    )
+    val chipBackground = chipFill(MaterialTheme.colorScheme)
     val rowColor = rowBackground(
         scheme = MaterialTheme.colorScheme,
         selected = selected,
         current = current,
-        unread = unread,
-        unreadTint = unreadTint,
         flash = highlight.value,
     )
     Row(
@@ -258,13 +229,16 @@ fun EmailListItem(
             .padding(start = 16.dp, end = 4.dp, top = rowPadding, bottom = rowPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // The initials are the reader's to remove (#144). The Spacer is INSIDE the guard: left
-        // outside, its 12 dp would add to the Row's own start padding and leave a dead band at the
-        // start of every row. Read here rather than passed in, so all three call sites follow it.
+        // The sender's avatar is on the reader's switch (#144): off, no avatar and no spacing. The
+        // Spacer is INSIDE the guard: left outside, its 12 dp would add to the Row's own start
+        // padding and leave a dead band at the start of every row. What the guard draws is the full
+        // avatar chain — device photo, then the sender domain's logo, then a monogram (task #464) —
+        // read here rather than passed in, so all three call sites follow it.
         if (LocalListMonogram.current) {
-            Monogram(
-                seed = (recipient ?: email.from.firstOrNull())?.email ?: senderName,
-                label = recipient?.display() ?: senderName,
+            ContactAvatar(
+                email = (recipient ?: email.from.firstOrNull())?.email ?: senderName,
+                name = recipient?.display() ?: senderName,
+                photoUri = null,
             )
             Spacer(Modifier.width(12.dp))
         }
@@ -273,7 +247,11 @@ fun EmailListItem(
                 Text(
                     text = nameLine,
                     style = MaterialTheme.typography.titleMedium,
-                    // Unread is shown by weight (bold) rather than a status dot.
+                    // Unread is told by the TEXT, as Gmail does: bright (onSurface) AND bold against
+                    // a read row's dimmed (onSurfaceVariant) regular ink. The row behind both is the
+                    // same surface, so it is the dimmer read text that makes unread stand out.
+                    color = if (unread) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -297,7 +275,10 @@ fun EmailListItem(
                     text = receivedLabel,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    // Same read/unread text treatment as the sender and subject: the stamp is
+                    // bright on an unread row and dimmed on a read one.
+                    color = if (unread) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -305,7 +286,10 @@ fun EmailListItem(
                     text = email.subject?.takeIf { it.isNotBlank() } ?: stringResource(R.string.message_no_subject),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    // Unread subject stays bright and bold; a read one dims to onSurfaceVariant and
+                    // relaxes — the same text treatment as the sender line above.
+                    color = if (unread) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),

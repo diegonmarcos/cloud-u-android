@@ -361,6 +361,10 @@ dependencies {
     // ART AOT-compiles the hot startup/scroll paths. Needed because sideloaded/F-Droid installs
     // don't run install-time dexopt from the embedded profile on all ROMs (verified on the S7).
     implementation(libs.androidx.profileinstaller)
+    // The app's own HTTP stack is OkHttp (ARCHITECTURE.md); the mail protocol module pulls it in
+    // transitively but only as `implementation`, so a new fetch path in app code (sender-avatar
+    // logos, task #464) must declare it here to compile against it.
+    implementation(libs.okhttp)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit)

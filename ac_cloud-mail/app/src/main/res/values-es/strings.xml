@@ -336,8 +336,6 @@
     <string name="settings_message_list_section">Lista de mensajes</string>
     <string name="settings_density_title">Densidad</string>
     <string name="settings_preview_title">Vista previa</string>
-    <string name="settings_unread_tint_title">Fondo de los mensajes no leídos</string>
-    <string name="settings_unread_tint_subtitle">Dar a los mensajes no leídos un fondo propio, además del texto en negrita.</string>
     <string name="settings_list_monogram_title">Mostrar las iniciales del remitente</string>
     <string name="settings_list_monogram_subtitle">El círculo de color al principio de cada fila de la lista de mensajes.</string>
     <string name="settings_theme_auto">Automático</string>

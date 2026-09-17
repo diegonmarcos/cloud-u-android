@@ -336,8 +336,6 @@
     <string name="settings_message_list_section">Berichtenlijst</string>
     <string name="settings_density_title">Dichtheid</string>
     <string name="settings_preview_title">Voorvertoning</string>
-    <string name="settings_unread_tint_title">Achtergrond van ongelezen berichten</string>
-    <string name="settings_unread_tint_subtitle">Geef ongelezen berichten een eigen achtergrond, naast de vetgedrukte tekst.</string>
     <string name="settings_list_monogram_title">Initialen van de afzender tonen</string>
     <string name="settings_list_monogram_subtitle">De gekleurde cirkel aan het begin van elke rij in de berichtenlijst.</string>
     <string name="settings_theme_auto">Automatisch</string>

@@ -346,7 +346,7 @@ fun SearchScreen(
                                             originLabel = owner?.label(),
                                             originColor = accountColorOf(owner?.color),
                                         )
-                                        HorizontalDivider()
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                     }
                                 }
                             }

@@ -88,15 +88,6 @@ class SettingsRepository(context: Context) {
         dataStore.edit { it[KEY_PREVIEW_LINES] = value.name }
     }
 
-    /** Whether an unread row carries a background of its own on top of its bold text (#141). ON by
-     *  default. Off, an unread row is painted like a read one and the bold text is the only
-     *  difference again. */
-    val unreadTint: Flow<Boolean> = dataStore.data.map(::unreadTintFrom)
-
-    suspend fun setUnreadTint(enabled: Boolean) {
-        dataStore.edit { it[KEY_UNREAD_TINT] = enabled }
-    }
-
     /** Whether the dark theme sits on a black background, for OLED panels (#117). OFF by default,
      *  and it only ever touches the DARK scheme. Elevated surfaces are compressed toward black
      *  rather than flattened onto it — see `pulledToBlack`. */
@@ -358,7 +349,6 @@ class SettingsRepository(context: Context) {
         replyBar = replyBar.first(),
         plainText = plainText.first(),
         quotedDatesUtc = quotedDatesUtc.first(),
-        unreadTint = unreadTint.first(),
         pureBlack = pureBlack.first(),
         listMonogram = listMonogram.first(),
         deliveryMode = deliveryMode.first().name,
@@ -394,7 +384,6 @@ class SettingsRepository(context: Context) {
         backup.replyBar?.let { setReplyBar(it) }
         backup.plainText?.let { setPlainText(it) }
         backup.quotedDatesUtc?.let { setQuotedDatesUtc(it) }
-        backup.unreadTint?.let { setUnreadTint(it) }
         backup.pureBlack?.let { setPureBlack(it) }
         backup.listMonogram?.let { setListMonogram(it) }
         backup.deliveryMode?.let { v -> runCatching { DeliveryMode.valueOf(v) }.getOrNull()?.let { setDeliveryMode(it) } }
@@ -509,17 +498,6 @@ const val REPLY_BAR_DEFAULT = true
  * Whether the reader shows its bottom Reply/Forward bar, read from the stored preferences.
  */
 internal fun replyBarFrom(prefs: Preferences): Boolean = prefs[KEY_REPLY_BAR] ?: REPLY_BAR_DEFAULT
-
-/** The key the unread-background switch is stored under. */
-internal val KEY_UNREAD_TINT = booleanPreferencesKey("unread_tint")
-
-/**
- * What the message list does when nobody has touched the switch: tint unread rows (#141). One
- */
-const val UNREAD_TINT_DEFAULT = true
-
-/** Whether unread rows carry a background of their own, read from the stored preferences. */
-internal fun unreadTintFrom(prefs: Preferences): Boolean = prefs[KEY_UNREAD_TINT] ?: UNREAD_TINT_DEFAULT
 
 /** The key the pure-black switch is stored under. */
 internal val KEY_PURE_BLACK = booleanPreferencesKey("pure_black")

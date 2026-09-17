@@ -864,6 +864,9 @@ fun InboxScreen(
         ListDetailPanes(panes, detail) {
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            // The list's ground is the lighter black ([ColorScheme.surfaceContainerLow]); each row
+            // is the darker [ColorScheme.surface] on top of it (task #464).
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             // imePadding: deleting from search happens with the keyboard open, which would
             // otherwise cover the Undo snackbar for its whole window (zero inset when closed).
             snackbarHost = { SnackbarHost(snackbarHostState, Modifier.imePadding()) },
@@ -1463,7 +1466,9 @@ fun InboxScreen(
                         drawerCanOpen = !permanentDrawer,
                     )
                 }
-                HorizontalDivider()
+                // The hairline between rows: outlineVariant weight, a light rule — never a heavy
+                // band — so rows read as separate cards on the list's lighter ground (task #464).
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
 
             val refreshState = rememberPullToRefreshState()
@@ -2947,7 +2952,8 @@ private fun ThreadChildren(
                             modifier = Modifier.weight(1f),
                         )
                     }
-                    HorizontalDivider()
+                    // Hairline between expanded-conversation members, matching the list rows (task #464).
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }

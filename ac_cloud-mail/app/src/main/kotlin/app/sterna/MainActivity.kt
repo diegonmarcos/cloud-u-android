@@ -16,14 +16,12 @@ import app.sterna.core.data.settings.ListDensity
 import app.sterna.core.data.settings.PreviewLines
 import app.sterna.core.data.settings.PURE_BLACK_DEFAULT
 import app.sterna.core.data.settings.ThemeMode
-import app.sterna.core.data.settings.UNREAD_TINT_DEFAULT
 import app.sterna.ui.SternaApp
 import app.sterna.ui.compose.ComposerResumeSlot
 import app.sterna.ui.message.NavFadeGuard
 import app.sterna.ui.components.LocalListDensity
 import app.sterna.ui.components.LocalListMonogram
 import app.sterna.ui.components.LocalPreviewLines
-import app.sterna.ui.components.LocalUnreadTint
 import app.sterna.ui.theme.SternaTheme
 
 class MainActivity : AppCompatActivity() {
@@ -60,9 +58,6 @@ class MainActivity : AppCompatActivity() {
             val dynamicColor by settings.dynamicColor.collectAsState(initial = false)
             val density by settings.listDensity.collectAsState(initial = ListDensity.NORMAL)
             val previewLines by settings.previewLines.collectAsState(initial = PreviewLines.ONE)
-            // UNREAD_TINT_DEFAULT, not a literal: this is the first frame's copy of a default that
-            // exists in three places, and a literal that drifts flashes the wrong list on launch.
-            val unreadTint by settings.unreadTint.collectAsState(initial = UNREAD_TINT_DEFAULT)
             // LIST_MONOGRAM_DEFAULT, not a literal, for the same reason.
             val listMonogram by settings.listMonogram.collectAsState(initial = LIST_MONOGRAM_DEFAULT)
             // PURE_BLACK_DEFAULT, not a literal, for the same reason: one that drifts repaints the
@@ -72,7 +67,6 @@ class MainActivity : AppCompatActivity() {
                 CompositionLocalProvider(
                     LocalListDensity provides density,
                     LocalPreviewLines provides previewLines,
-                    LocalUnreadTint provides unreadTint,
                     LocalListMonogram provides listMonogram,
                 ) {
                     SternaApp(

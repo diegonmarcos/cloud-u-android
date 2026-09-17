@@ -14,7 +14,6 @@ import app.sterna.core.data.settings.QUOTED_DATES_UTC_DEFAULT
 import app.sterna.core.data.settings.PreviewLines
 import app.sterna.core.data.settings.PURE_BLACK_DEFAULT
 import app.sterna.core.data.settings.REPLY_BAR_DEFAULT
-import app.sterna.core.data.settings.UNREAD_TINT_DEFAULT
 import app.sterna.core.data.settings.SettingsBackup
 import app.sterna.core.data.settings.SettingsBackupCodec
 import app.sterna.core.data.settings.SwipeAction
@@ -74,19 +73,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         initialValue = PreviewLines.ONE,
     )
 
-    // UNREAD_TINT_DEFAULT, not a literal: a second copy would disagree with the repository for as
+    // PURE_BLACK_DEFAULT, not a literal: a second copy would disagree with the repository for as
     // long as DataStore takes to answer.
-    val unreadTint = settings.unreadTint.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = UNREAD_TINT_DEFAULT,
-    )
-
-    fun setUnreadTint(enabled: Boolean) {
-        viewModelScope.launch { settings.setUnreadTint(enabled) }
-    }
-
-    // PURE_BLACK_DEFAULT, not a literal, for the reason given at unreadTint above.
     val pureBlack = settings.pureBlack.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -105,7 +93,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // LIST_MONOGRAM_DEFAULT, not a literal, for the reason given at unreadTint above.
+    // LIST_MONOGRAM_DEFAULT, not a literal, for the reason given at listDensity above.
     val listMonogram = settings.listMonogram.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),

@@ -46,4 +46,30 @@ object AndroidContacts {
         }
         return results
     }
+
+    /**
+     * The device-contact thumbnail URI for an exactly-matching address, or null when none is known
+     * (no permission, no match, or the matched contact has no photo). Used by the avatar fallback
+     * chain (task #464) to keep the address book's own photo as the first choice.
+     */
+    fun photoUriFor(context: Context, email: String): String? {
+        if (!hasPermission(context) || email.isBlank()) return null
+        val projection = arrayOf(Email.ADDRESS, Email.PHOTO_THUMBNAIL_URI)
+        return runCatching {
+            context.contentResolver.query(
+                Email.CONTENT_URI, projection, "${Email.ADDRESS} = ?", arrayOf(email.trim()), null,
+            )?.use { cursor ->
+                val addrIdx = cursor.getColumnIndexOrThrow(Email.ADDRESS)
+                val photoIdx = cursor.getColumnIndex(Email.PHOTO_THUMBNAIL_URI)
+                val wanted = email.trim()
+                while (cursor.moveToNext()) {
+                    val addr = cursor.getString(addrIdx)?.trim()
+                    if (photoIdx >= 0 && addr != null && addr.equals(wanted, ignoreCase = true)) {
+                        return cursor.getString(photoIdx)?.trim()?.ifBlank { null }
+                    }
+                }
+                null
+            }
+        }.getOrNull()
+    }
 }

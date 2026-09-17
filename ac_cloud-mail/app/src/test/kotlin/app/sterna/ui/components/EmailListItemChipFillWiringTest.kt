@@ -13,9 +13,6 @@ class EmailListItemChipFillWiringTest {
     private val expectedCall = listOf(
         "val chipBackground = chipFill(",
         "scheme = MaterialTheme.colorScheme,",
-        "selected = selected,",
-        "unread = unread,",
-        "unreadTint = unreadTint,",
         ")",
     )
 
@@ -61,7 +58,7 @@ class EmailListItemChipFillWiringTest {
     /**
      * Mutations 2 and 3: the arguments the composable actually hands the decision.
      */
-    @Test fun `the composable hands chipFill its own selected and unread`() {
+    @Test fun `the composable hands chipFill only the scheme`() {
         val lines = codeLines()
         assertEquals(
             "EmailListItem.kt must still open the call with '${expectedCall.first()}' — this lint " +
@@ -82,7 +79,10 @@ class EmailListItemChipFillWiringTest {
             "EmailListItem.kt must mention chipFill on exactly two lines: its declaration and its " +
                 "single call site. A third would be a chip taking the decision again on its own; " +
                 "a missing one is the wiring gone.",
-            listOf("internal fun chipFill(", "val chipBackground = chipFill("),
+            listOf(
+                "internal fun chipFill(scheme: ColorScheme): Color = scheme.surfaceVariant",
+                "val chipBackground = chipFill(",
+            ),
             codeLines().filter { "chipFill(" in it },
         )
     }

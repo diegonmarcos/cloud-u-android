@@ -336,8 +336,6 @@
     <string name="settings_message_list_section">Nachrichtenliste</string>
     <string name="settings_density_title">Dichte</string>
     <string name="settings_preview_title">Vorschau</string>
-    <string name="settings_unread_tint_title">Hintergrund ungelesener Nachrichten</string>
-    <string name="settings_unread_tint_subtitle">Ungelesene Nachrichten erhalten zusätzlich zum fetten Text einen eigenen Hintergrund.</string>
     <string name="settings_list_monogram_title">Initialen des Absenders anzeigen</string>
     <string name="settings_list_monogram_subtitle">Der farbige Kreis am Anfang jeder Zeile der Nachrichtenliste.</string>
     <string name="settings_theme_auto">Automatisch</string>

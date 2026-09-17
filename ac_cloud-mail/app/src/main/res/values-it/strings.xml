@@ -336,8 +336,6 @@
     <string name="settings_message_list_section">Elenco messaggi</string>
     <string name="settings_density_title">Densità</string>
     <string name="settings_preview_title">Anteprima</string>
-    <string name="settings_unread_tint_title">Sfondo dei messaggi non letti</string>
-    <string name="settings_unread_tint_subtitle">Dare ai messaggi non letti uno sfondo distinto, oltre al testo in grassetto.</string>
     <string name="settings_list_monogram_title">Mostrare le iniziali del mittente</string>
     <string name="settings_list_monogram_subtitle">Il cerchio colorato all\'inizio di ogni riga dell\'elenco dei messaggi.</string>
     <string name="settings_theme_auto">Auto</string>

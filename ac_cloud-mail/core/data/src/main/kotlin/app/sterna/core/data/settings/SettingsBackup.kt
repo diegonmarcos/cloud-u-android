@@ -49,8 +49,6 @@ data class SettingsBackup(
     val plainText: Boolean? = null,
     /** Whether a reply's quote line and a forward's Date header are written in UTC (#120). */
     val quotedDatesUtc: Boolean? = null,
-    /** Whether unread rows in the message list carry a background of their own (#141). */
-    val unreadTint: Boolean? = null,
     /** Whether the dark theme sits on a black background, for OLED panels (#117). */
     val pureBlack: Boolean? = null,
     /** Whether each message-list row starts with the sender's coloured initials (#144). */

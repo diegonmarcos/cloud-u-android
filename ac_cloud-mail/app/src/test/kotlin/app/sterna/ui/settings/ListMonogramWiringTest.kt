@@ -374,12 +374,13 @@ class ListMonogramWiringTest {
         const val EXPECTED_LOCAL =
             "val LocalListMonogram = compositionLocalOf { LIST_MONOGRAM_DEFAULT }"
 
-        /** The guard, the monogram, the spacer, the closing brace — in this order, or not at all. */
+        /** The guard, the avatar, the spacer, the closing brace — in this order, or not at all. */
         val EXPECTED_ROW_BLOCK = listOf(
             "if (LocalListMonogram.current) {",
-            "Monogram(",
-            "seed = (recipient ?: email.from.firstOrNull())?.email ?: senderName,",
+            "ContactAvatar(",
+            "email = (recipient ?: email.from.firstOrNull())?.email ?: senderName,",
             "label = recipient?.display() ?: senderName,",
+            "photoUri = null,",
             ")",
             "Spacer(Modifier.width(12.dp))",
             "}",
