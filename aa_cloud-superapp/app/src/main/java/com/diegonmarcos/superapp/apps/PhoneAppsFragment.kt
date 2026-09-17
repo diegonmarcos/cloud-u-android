@@ -401,9 +401,20 @@ class PhoneAppsFragment : Fragment() {
             exclude: Set<String>,
         ): List<SmartRendered> {
             val all  = sCachedApps ?: collectLaunchableAppsStatic(ctx).also { sCachedApps = it }
-            val apps = if (exclude.isEmpty()) all else all.filter { it.packageName !in exclude }
+            // The master exclusion is applied PER FOLDER, not to the shared
+            // master list up front. Computing it once here is not the same
+            // as pre-filtering `all`: the filtered list below is the DEFAULT
+            // every folder filters over, but a folder that opts out of the
+            // exclusion (include_constellation) selects from the FULL list
+            // instead, because its entire content IS the constellation's own
+            // packages — Cloud Apps and Cloud Libs. `exclude` still keys the
+            // cache (see [smartFoldersCached]), so nothing about the cache
+            // contract changes; it is only the per-folder decision that moved
+            // inside this computation.
+            val excluded = if (exclude.isEmpty()) all else all.filter { it.packageName !in exclude }
             return PhoneSmartFolders.loadFromBuildConfig().mapNotNull { sf ->
-                val matches = sf.select(ctx, apps)
+                val source = if (sf.includeConstellation) all else excluded
+                val matches = sf.select(ctx, source)
                 if (matches.isEmpty()) null else SmartRendered(sf, matches)
             }
         }

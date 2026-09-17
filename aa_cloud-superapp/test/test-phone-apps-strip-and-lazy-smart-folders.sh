@@ -511,6 +511,72 @@ else
     bad "the fetch publishes unconditionally -- a stale result can land after the clear"
 fi
 
+echo "== T15: Cloud Apps and Cloud Libs bypass the page's master exclusion (#468) =="
+# The merged Suite→Phone page hands every smart folder an `apps` list that has
+# already had the constellation's own packages stripped (exclude=ourApps). Two
+# folders are the ENTIRE constellation — Cloud Apps (fleet_kind app) and Cloud
+# Libs (fleet_kind lib) — so the exclusion removed their whole subject before
+# select() ever ran. The fix declares the exception next to the folder in
+# build.json (include_constellation: true) and stops pre-filtering the master
+# list: a folder that opts in selects over the FULL enumeration, every other
+# folder keeps the excluded list exactly as before. THE FIRST ASSERTION OF THE
+# TWO-PART OBLIGATION: these two folders must be declared to see everything.
+COMPUTE_BYPASS="$(body compute)"
+if printf '%s' "$COMPUTE_BYPASS" | grep -qF 'sf.includeConstellation'; then
+    ok "computeSmartFolders decides the source list per folder from the opt-in flag"
+else
+    bad "computeSmartFolders does not consult sf.includeConstellation -- the exception is not wired in"
+fi
+# The opt-in must route the folder to the FULL list, and the fall-through must
+# keep the excluded list. Asserting the ternary forces the two branches into one
+# statement, so a folder cannot silently drift between them.
+if printf '%s' "$COMPUTE_BYPASS" | grep -qF 'if (sf.includeConstellation) all else excluded'; then
+    ok "an opting folder selects from the full list, every other folder from the excluded one"
+else
+    bad "the per-folder decision is not the opt-in ternary -- opting in does not change the list"
+fi
+# The declaration lives in build.json next to the folders it applies to; these
+# two must carry it, and it alone.
+CLOUD_OPTS="$(jq -r '[.ui.phone_smart_folders[] | select(.id=="cloud_apps" or .id=="cloud_libs")] | map(select(.include_constellation == true)) | length' "$BUILD_JSON")" || {
+    echo "FATAL: jq failed reading include_constellation for the cloud folders"; exit 2; }
+if [ "$CLOUD_OPTS" -eq 2 ]; then
+    ok "both cloud folders are declared include_constellation: true in build.json"
+else
+    bad "expected 2 cloud folders (cloud_apps, cloud_libs) with include_constellation:true, saw $CLOUD_OPTS -- the bypass is missing its declaration"
+fi
+
+echo "== T16: every OTHER smart folder still excludes the constellation (#468) =="
+# THE SECOND ASSERTION OF THE TWO-PART OBLIGATION, the half that stops this being
+# "fixed" by deleting the filter. The master exclusion exists for a reason: it
+# keeps the fleet's own APKs out of every ordinary folder. Deleting it would make
+# Cloud Apps and Cloud Libs work AND silently corrupt Samsung, Google, Stores and
+# the usage/rank folders on the SAME page with the SAME exclude set. Asserting
+# the filter still exists, still runs per folder, and still applies to folders
+# that did not opt in.
+# The exclusion must still be computed from the caller's exclude set ...
+if printf '%s' "$COMPUTE_BYPASS" | grep -qF 'it.packageName !in exclude'; then
+    ok "the excluded list is still derived by stripping the caller's exclude set"
+else
+    bad "the master exclusion is no longer computed -- deleting it would leak the fleet into every folder"
+fi
+# ... and a folder that did NOT opt in must be handed that excluded list (not the
+# full one). The `else excluded` branch is what keeps the filter live for every
+# folder that leaves the flag off.
+if printf '%s' "$COMPUTE_BYPASS" | grep -qF 'else excluded'; then
+    ok "a folder that does not opt in still selects over the excluded list"
+else
+    bad "no non-opting branch hands folders the excluded list -- the master filter is dead for everyone"
+fi
+# No folder outside the two cloud ones may declare the bypass. Every ordinary
+# folder on the same page, with the same exclude set, must keep excluding.
+NONCLOUD_OPTS="$(jq -r '[.ui.phone_smart_folders[] | select(.id!="cloud_apps" and .id!="cloud_libs") | select(.include_constellation == true)] | length' "$BUILD_JSON")" || {
+    echo "FATAL: jq failed reading include_constellation for non-cloud folders"; exit 2; }
+if [ "$NONCLOUD_OPTS" -eq 0 ]; then
+    ok "no folder outside the two cloud ones declares the bypass"
+else
+    bad "$NONCLOUD_OPTS non-cloud folder(s) also set include_constellation -- the exception escaped its two intended folders"
+fi
+
 echo
 echo "-- test-phone-apps-strip-and-lazy-smart-folders: $PASS passed, $FAIL failed --"
 [ "$FAIL" -eq 0 ]

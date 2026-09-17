@@ -5941,7 +5941,8 @@
         "id": "cloud_apps",
         "title": "Cloud Apps",
         "group": "Dev",
-        "_doc": "The constellation fleet's REAL apps (superapp, browser, vault, wallet, nav, ide, office, media-center, drive, comms.*, cld.* …) — each declared kind=app in its own build.json::release.kind. Driven from the CENTRAL classification (data/regen.sh → constellation-fleet.json → BuildConfig.CONSTELLATION_FLEET_B64) by the fleet_kind rule, NOT a hand-maintained package list: a new app that declares kind=app lands here and in nothing else, and a library reclassified lib leaves automatically.",
+        "include_constellation": true,
+        "_doc": "The constellation fleet's REAL apps (superapp, browser, vault, wallet, nav, ide, office, media-center, drive, comms.*, cld.* …) — each declared kind=app in its own build.json::release.kind. Driven from the CENTRAL classification (data/regen.sh → constellation-fleet.json → BuildConfig.CONSTELLATION_FLEET_B64) by the fleet_kind rule, NOT a hand-maintained package list: a new app that declares kind=app lands here and in nothing else, and a library reclassified lib leaves automatically. THIS FOLDER'S ENTIRE CONTENT IS THE FLEET'S OWN APKS, so on the merged Suite→Phone page it declares include_constellation: true — it is the EXCEPTION to that page's master exclusion that drops constellation packages, and the flag lets it see the full list while every other smart folder still filters them out. Declared here next to the folder, never hardcoded by id in Kotlin.",
         "rule": {
           "type": "fleet_kind",
           "values": [
@@ -5953,7 +5954,8 @@
         "id": "cloud_libs",
         "title": "Cloud Libs",
         "group": "Dev",
-        "_doc": "The constellation fleet's companion APKs that are really libraries — lib-* modules (com.diegonmarcos.cloudlib.*) shipping AIDL-bound engines, keyboard-engines (com.diegonmarcos.cloudkeyboardlibs), termux-boot (cld.termux.nix.boot) — each declared kind=lib in its own build.json::release.kind. Same central classification as Cloud Apps: the fleet_kind rule keeps only installed packages whose kind is lib, so a new lib module registers itself and no hand-maintained list here can drift.",
+        "include_constellation": true,
+        "_doc": "The constellation fleet's companion APKs that are really libraries — lib-* modules (com.diegonmarcos.cloudlib.*) shipping AIDL-bound engines, keyboard-engines (com.diegonmarcos.cloudkeyboardlibs), termux-boot (cld.termux.nix.boot) — each declared kind=lib in its own build.json::release.kind. Same central classification as Cloud Apps: the fleet_kind rule keeps only installed packages whose kind is lib, so a new lib module registers itself and no hand-maintained list here can drift. Same include_constellation: true exception as Cloud Apps, for the same reason — this folder IS the fleet's libs, so the merged page's master exclusion would strip away everything it exists to show.",
         "rule": {
           "type": "fleet_kind",
           "values": [

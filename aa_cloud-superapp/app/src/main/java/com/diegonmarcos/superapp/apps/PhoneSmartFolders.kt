@@ -147,7 +147,21 @@ object PhoneSmartFolders {
         private fun fleetKindOf(pkg: String): String? = fleetKindByPackage[pkg]
     }
 
-    data class SmartFolder(val id: String, val title: String, val rule: Rule, val group: String? = null) {
+    data class SmartFolder(
+        val id: String,
+        val title: String,
+        val rule: Rule,
+        val group: String? = null,
+        /** Opts this folder OUT of the merged page's master exclusion, so
+         *  its [select] filters over the FULL launchable enumeration rather
+         *  than the list that already had the constellation's own packages
+         *  stripped. Declared in build.json::ui.phone_smart_folders as
+         *  `include_constellation: true`, next to the folder it applies to —
+         *  Cloud Apps and Cloud Libs are the two whose entire content IS
+         *  the fleet's own APKs. Every other folder leaves it false and is
+         *  filtered exactly as before. */
+        val includeConstellation: Boolean = false,
+    ) {
         /** The apps this smart folder shows, from the master [apps] list.
          *  Predicate rules filter; the ranking rules (recently_installed +
          *  the usage/network/battery ones) order a provider's ranked
@@ -217,7 +231,12 @@ object PhoneSmartFolders {
             }
             if (!valid) continue
             val group = o.optString("group").takeIf { it.isNotBlank() }
-            out.add(SmartFolder(id, title, Rule(type, values, limit, windowH), group))
+            val includeConstellation = o.optBoolean("include_constellation", false)
+            out.add(
+                SmartFolder(
+                    id, title, Rule(type, values, limit, windowH), group, includeConstellation,
+                ),
+            )
         }
         out
     }.getOrDefault(emptyList())
