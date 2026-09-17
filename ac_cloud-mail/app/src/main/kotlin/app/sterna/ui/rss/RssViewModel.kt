@@ -19,10 +19,10 @@ import kotlinx.coroutines.launch
 sealed interface RssFeedUi {
     val url: String
 
-    data class Fetched(val url: String, val feed: RssFeed) : RssFeedUi
+    data class Fetched(override val url: String, val feed: RssFeed) : RssFeedUi
 
     /** The fetch did not produce articles. Each reason maps to its own honest sentence. */
-    data class Unavailable(val url: String, val messageKey: RssMessage) : RssFeedUi
+    data class Unavailable(override val url: String, val messageKey: RssMessage) : RssFeedUi
 }
 
 /** The user-facing reason a feed could not be shown; each maps to one string on screen. */
