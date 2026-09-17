@@ -131,8 +131,10 @@
 
     <!-- Files | Apps | Sync | Backups | Configs. The separator between Files and the rest is a plain
          character, matching how the SuperApp's Data Apps row marks the same boundary. Sync is the
-         new home of the transfer surfaces: Rclone (the storage back ends that used to fill the Apps
-         tab) and Git (the vendored GitSync lib's screen, once its Flutter UI is embedded). -->
+         home of the transfer surfaces: Rclone (the rclone remotes and the fleet's declared rclone
+         operations), Mounted (the WireGuard mesh mounts) and Git (the declared repositories over the
+         vendored GitSync lib, whose Flutter UI is embedded once the engine's add-to-app integration
+         lands — see ab_cloud-libs-shared/libs/gitsync/VENDORED.md). -->
     <nav class="tab-bar sticky bottom-0 z-20 bg-gray-900 border-t border-gray-700 flex">
         <button data-tab="files"   class="tab-button active flex-1 py-3 text-sm font-medium border-t-2">Files</button>
         <span class="self-center text-gray-600 select-none">|</span>
@@ -198,8 +200,8 @@ const state = {
        editor is a mode of the Files tab rather than a fifth tab, because what it edits is
        whatever the Files tab is looking at. */
     editor: null,
-    /* Which Sync subpage is showing: 'rclone' or 'git'. Session state, not a setting —
-       a subpage is not a choice a user expects to survive a restart. */
+/* Which Sync subpage is showing: 'rclone', 'mounted' or 'git'. Session state,
+       not a setting — a subpage is not a choice a user expects to survive a restart. */
     syncSub: 'rclone',
     /* { path, name, base64, doc, page, ... } while a PDF is open in the reader, null
        otherwise. path is null when the PDF arrived through an "Open with" hand-off
@@ -1089,13 +1091,18 @@ function renderApps() {
 }
 
 /* ── Sync ───────────────────────────────────────────────────────────────────────────
-   #437: Sync owns the transfer surfaces. Two subpages, switched by the chips at the
-   top, exactly like the Configs choices: Rclone — the storage back ends that used to
-   fill the Apps tab, rendered with the same connectionCard() as the Backups tab so
-   there is no second copy of that renderer — and Git, which hosts the vendored
-   GitSync lib's screen. Until the Flutter engine is embedded (see
-   ab_cloud-libs-shared/libs/gitsync/VENDORED.md) the Git subpage states the honest
-   state of the lib instead of a fake-populated screen. */
+   #437: Sync owns the transfer surfaces. Three subpages, switched by the chips at
+   the top, exactly like the Configs choices — task #457c widened the original pair
+   to a trio: Rclone — the rclone remotes and the fleet's declared rclone
+   operations, read from data/drive-remotes.json and data/drive-rclone-jobs.json
+   through the bridge, never hardcoded here; Mounted — the fleet mesh mounts, the
+   WireGuard-reachable storages from data/drive-mounts.json (mesh addresses and
+   host aliases only, no public IPs); and Git — the fleet's repositories as data
+   from data/drive-git-repos.json, with the honest state of the vendored GitSync
+   lib stated instead of a fake-populated screen. Every section SAYS when it
+   cannot run: a declared-but-unreachable entry renders its reason, an empty sent
+   list renders its own message — an empty box over a declared list is the fleet's
+   dominant defect shape (#292). */
 
 function syncChoice(value, label) {
     const active = state.syncSub === value;
@@ -1107,12 +1114,15 @@ function syncChoice(value, label) {
 function syncSubHeader() {
     return '<div class="flex gap-2 px-4 pt-3 pb-1">' +
         syncChoice('rclone', 'Rclone') +
+        syncChoice('mounted', 'Mounted') +
         syncChoice('git', 'Git') +
         '</div>';
 }
 
 function renderSync() {
-    const sub = state.syncSub === 'git' ? renderGitSubpage() : renderRcloneSubpage();
+    const sub = state.syncSub === 'git' ? renderGitSubpage()
+        : state.syncSub === 'mounted' ? renderMountedSubpage()
+        : renderRcloneSubpage();
     panel.innerHTML = syncSubHeader() + sub;
     panel.querySelectorAll('.sync-choice').forEach(button => {
         button.onclick = () => {
@@ -1123,22 +1133,201 @@ function renderSync() {
     headerActions.innerHTML = '';
 }
 
+/* The declarative Sync lists, read once through the bridge like connections()
+   and MIRROR_JOBS(). Each is build-time data (data/*.json baked in at build
+   time), so it cannot change while the app is open — one read, one cached
+   parse. A list that is missing from the build decodes to its empty shape and
+   the section renders the empty-sent message, never a crash. */
+const RCLONE_REMOTES = (() => {
+    let cache = null;
+    return () => {
+        if (cache === null) {
+            try { cache = JSON.parse(Bridge.raw('rcloneRemotes') || '[]'); } catch (error) { cache = []; }
+        }
+        return cache;
+    };
+})();
+const RCLONE_JOBS = (() => {
+    let cache = null;
+    return () => {
+        if (cache === null) {
+            try { cache = JSON.parse(Bridge.raw('rcloneJobs') || '[]'); } catch (error) { cache = []; }
+        }
+        return cache;
+    };
+})();
+const DRIVE_MOUNTS = (() => {
+    let cache = null;
+    return () => {
+        if (cache === null) {
+            try { cache = JSON.parse(Bridge.raw('driveMounts') || '[]'); } catch (error) { cache = []; }
+        }
+        return cache;
+    };
+})();
+const GIT_REPOS = (() => {
+    let cache = null;
+    return () => {
+        if (cache === null) {
+            try { cache = JSON.parse(Bridge.raw('gitRepos') || '{}'); } catch (error) { cache = {}; }
+        }
+        return cache;
+    };
+})();
+
+function entryFact(label, value) {
+    return '<div class="flex gap-2"><span class="w-16 shrink-0 text-gray-500">' + label +
+        '</span><span class="break-all">' + escapeHtml(String(value)) + '</span></div>';
+}
+
+/* The status dot every Sync card shares: ok is green, anything else is red and
+   MUST be accompanied by the entry's declared reason. */
+function statusLight(ok) {
+    return '<span class="w-2 h-2 rounded-full ' + (ok ? 'bg-green-500' : 'bg-red-500') + '"></span>';
+}
+
 function renderRcloneSubpage() {
-    const rows = connections().filter(entry => !BACKUP_KINDS.includes(entry.kind));
-    return '<div class="pt-2">' + (rows.length
-        ? rows.map(connectionCard).join('')
-        : card('Nothing here', 'No storage back ends are declared in this build.')) + '</div>';
+    const remotes = RCLONE_REMOTES();
+    const jobs = RCLONE_JOBS();
+    return '<div class="pt-2">' +
+        heading('Remotes') +
+        (remotes.length
+            ? remotes.map(remoteCard).join('')
+            : card('Nothing here', 'No rclone remotes are declared in this build.')) +
+        heading('Jobs') +
+        (jobs.length
+            ? jobs.map(rcloneJobCard).join('')
+            : card('Nothing here', 'No rclone jobs are declared in this build.')) +
+        card('Fleet-side only',
+            'This APK has no rclone binary: the remotes and jobs above are the fleet\'s ' +
+            'declared state, read from data files baked in at build time. Running them ' +
+            'from the phone needs a native rclone library, which is a build-system ' +
+            'change in the GitHub Actions workflow — not something this app can download.') +
+        '<div class="h-4"></div>';
+}
+
+function remoteCard(remote) {
+    const ok = remote.status === 'ok';
+    const facts = [
+        ['Type', remote.type],
+        ['Purpose', remote.purpose],
+        ['Endpoint', remote.endpoint],
+        ['Region', remote.region],
+        ['Buckets', remote.buckets && remote.buckets.join(', ')],
+        ['Host', remote.host],
+        ['Auth', remote.auth]
+    ].filter(pair => pair[1]).map(pair => entryFact(pair[0], pair[1])).join('');
+    const message = ok ? '' :
+        '<div class="mt-2 text-xs text-amber-400">Cannot be reached — ' +
+        escapeHtml(remote.reason || 'no reason is declared for this remote.') + '</div>';
+    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-700">' +
+        '<div class="flex items-center gap-2">' +
+        statusLight(ok) +
+        '<span class="text-sm font-medium">' + escapeHtml(remote.name || 'Unnamed') + '</span>' +
+        (ok ? '' : '<span class="text-xs text-red-400">unreachable</span>') + '</div>' +
+        '<div class="mt-2 text-xs text-gray-500 space-y-0.5">' + facts + '</div>' + message +
+        (remote.notes ? '<div class="mt-2 text-xs text-gray-500">' + escapeHtml(remote.notes) + '</div>' : '') +
+        '</div>';
+}
+
+function rcloneJobCard(job) {
+    const facts = [
+        ['Kind', job.kind],
+        ['Source', job.source],
+        ['Destination', job.destination],
+        ['Schedule', job.schedule]
+    ].filter(pair => pair[1]).map(pair => entryFact(pair[0], pair[1])).join('');
+    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-700">' +
+        '<div class="flex items-center gap-2">' +
+        '<span class="flex-1 text-sm font-medium">' + escapeHtml(job.name || 'Unnamed') + '</span>' +
+        '<span class="text-xs text-gray-500">' + escapeHtml(job.kind) + '</span></div>' +
+        '<div class="mt-2 text-xs text-gray-500 space-y-0.5">' + facts + '</div>' +
+        (job.notes ? '<div class="mt-2 text-xs text-gray-500">' + escapeHtml(job.notes) + '</div>' : '') +
+        '</div>';
+}
+
+function renderMountedSubpage() {
+    const mounts = DRIVE_MOUNTS();
+    return '<div class="pt-2">' +
+        heading('Fleet mesh mounts') +
+        (mounts.length
+            ? mounts.map(mountCard).join('')
+            : card('Nothing here', 'No fleet mesh mounts are declared in this build.')) +
+        '<div class="px-4 py-2 text-xs text-gray-500">' +
+        (Bridge.available
+            ? 'These surfaces exist on the WireGuard mesh only (10.0.0.x, host aliases). ' +
+              'If WireGuard is down none of them answer — the list above does not shrink, ' +
+              'it stays and the section says why.'
+            : 'The bridge is not attached, so the mount list cannot load.') + '</div>' +
+        '<div class="h-4"></div>';
+}
+
+function mountCard(mount) {
+    const ok = mount.status === 'ok';
+    const facts = [
+        ['Host', mount.host],
+        ['Mesh', mount.address],
+        ['Protocol', mount.protocol],
+        ['Reach', mount.reach],
+        ['Auth', mount.auth]
+    ].filter(pair => pair[1]).map(pair => entryFact(pair[0], pair[1])).join('');
+    const message = ok ? '' :
+        '<div class="mt-2 text-xs text-amber-400">Cannot be reached — ' +
+        escapeHtml(mount.reason || 'no reason is declared for this mount.') + '</div>';
+    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-700">' +
+        '<div class="flex items-center gap-2">' +
+        statusLight(ok) +
+        '<span class="text-sm font-medium">' + escapeHtml(mount.label || 'Unnamed') + '</span>' +
+        (ok ? '' : '<span class="text-xs text-red-400">unreachable</span>') + '</div>' +
+        '<div class="mt-2 text-xs text-gray-500 space-y-0.5">' + facts + '</div>' + message +
+        (mount.notes ? '<div class="mt-2 text-xs text-gray-500">' + escapeHtml(mount.notes) + '</div>' : '') +
+        '</div>';
 }
 
 function renderGitSubpage() {
+    const document = GIT_REPOS();
+    const repos = document.repos || [];
+    const instances = document.instances || [];
+    const instanceLines = instances.map(instance =>
+        '<div class="px-4 py-2"><div class="flex gap-2">' +
+        '<span class="w-16 shrink-0 text-gray-500">' + escapeHtml(instance.kind) + '</span>' +
+        '<span class="break-all">' + escapeHtml(
+            instance.org + ' · ' + instance.host + (instance.port ? ':' + instance.port : '')) +
+        '</span></div>' +
+        (instance.reach
+            ? '<div class="mt-1 text-xs text-gray-500">' + escapeHtml(instance.reach) + '</div>'
+            : '') +
+        (instance.auth
+            ? '<div class="mt-1 text-xs text-gray-500">Auth: ' + escapeHtml(instance.auth) + '</div>'
+            : '') +
+        '</div>').join('');
+    const repoLines = repos.map(repo =>
+        '<div class="px-4 py-2 border-b border-gray-800 last:border-b-0">' +
+        '<div class="flex items-center justify-between gap-2">' +
+        '<span class="text-sm">' + escapeHtml(repo.name) + '</span>' +
+        '<span class="text-xs text-gray-500">' +
+        escapeHtml(repo.github_owner + '/' + repo.name + ' → ' + repo.gitea_owner + '/' + repo.name) +
+        '</span></div>' +
+        (repo.notes ? '<div class="mt-0.5 text-xs text-gray-500">' + escapeHtml(repo.notes) + '</div>' : '') +
+        '</div>').join('');
     return '<div class="pt-2">' +
-        card('Git sync',
-            'The GitSync sync engine is vendored as a library in this repository at ' +
+        heading('Instances') +
+        (instances.length ? '<div class="mx-4 my-2 rounded-lg border border-gray-700">' + instanceLines + '</div>'
+            : card('Nothing here', 'No git instances are declared in this build.')) +
+        heading('Repositories') +
+        (repos.length ? '<div class="mx-4 my-2 rounded-lg border border-gray-700">' + repoLines + '</div>'
+            : card('Nothing here', 'No git repositories are declared in this build.')) +
+        card('Cannot list live yet',
+            'The GitSync sync engine is vendored as a library at ' +
             'ab_cloud-libs-shared/libs/gitsync (GPL-3.0, pinned upstream revision ' +
-            '0f4902fc). Its Flutter user interface is not embedded in this tab yet; the ' +
-            'embedding work is tracked in VENDORED.md at that path. Until it lands, this ' +
-            'subpage deliberately shows nothing that pretends to be a repository list.') +
-        '</div>';
+            '0f4902fc, see VENDORED.md), but its Flutter interface is not embedded in ' +
+            'this tab, so it cannot clone, list or push. The repositories above are the ' +
+            'declared family (data/drive-git-repos.json) — the same curated 8 the ' +
+            'SuperApp\'s GH Repos / Gitea Repos cards reuse, so the two remotes read as ' +
+            'one set. Live feeds come from the mesh-only Gitea API at 10.0.0.6:3002; ' +
+            'off WireGuard that API answers nothing. Private repositories need a GitHub ' +
+            'token this app does not store.') +
+        '<div class="h-4"></div>';
 }
 
 /* ── the Backups tab ─────────────────────────────────────────────────────────────

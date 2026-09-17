@@ -417,6 +417,97 @@ else
     fail "cloud-drive's build references the vendored lib — it has veto power over the release (#254)"
 fi
 
+echo "── A9 the Sync tab's declarative lists travel every carrier ──"
+# Same three-carrier rule as A3 for the four lists the Sync tab renders (task
+# #457c): the data file exists and is named in build.gradle with its BuildConfig
+# field; the bridge method decodes that field; the page asks the bridge for the
+# list. Drop any one and the tab renders an empty box over a file that is right
+# there in the repository.
+python3 - "$PAGE" "$BRIDGE" "$GRADLE" "$APP" <<'PYTHON'
+import json, os, re, sys
+
+page    = open(sys.argv[1], encoding="utf-8").read()
+bridge  = open(sys.argv[2], encoding="utf-8").read()
+gradle  = open(sys.argv[3], encoding="utf-8").read()
+app_dir = sys.argv[4]
+
+lists = [
+    ("remotes", "drive-remotes.json",     "RCLONE_REMOTES_B64", "rcloneRemotes"),
+    ("jobs",    "drive-rclone-jobs.json", "RCLONE_JOBS_B64",    "rcloneJobs"),
+    ("mounts",  "drive-mounts.json",      "DRIVE_MOUNTS_B64",   "driveMounts"),
+    ("git",     "drive-git-repos.json",   "GIT_REPOS_B64",      "gitRepos"),
+]
+failed = False
+for key, data_file, build_field, bridge_name in lists:
+    data_path = os.path.join(app_dir, "data", data_file)
+    if not os.path.isfile(data_path):
+        print("  FAIL  missing data/%s — the %s list has no declaration" % (data_file, key))
+        failed = True
+        continue
+    if data_file in gradle and build_field in gradle:
+        print("  PASS  build.gradle bakes data/%s into %s" % (data_file, build_field))
+    else:
+        print("  FAIL  build.gradle does not bake data/%s into %s" % (data_file, build_field))
+        failed = True
+    if "BuildConfig.%s" % build_field in bridge:
+        print("  PASS  FilesBridge reads BuildConfig.%s" % build_field)
+    else:
+        print("  FAIL  FilesBridge never reads %s — the baked %s list arrives nowhere" % (build_field, key))
+        failed = True
+    if "Bridge.raw('%s')" % bridge_name in page:
+        print("  PASS  the Sync tab asks the bridge for the %s list" % key)
+    else:
+        print("  FAIL  the page never calls Bridge.raw('%s') — the %s section would render empty" % (bridge_name, key))
+        failed = True
+
+# Every list must be non-empty as data, and a declared-but-unreachable entry
+# must carry the specific reason the renderer is required to show. An empty
+# box over a declared list is this fleet's dominant defect shape (#292).
+for key, data_file, _field, _bridge in lists:
+    data_path = os.path.join(app_dir, "data", data_file)
+    try:
+        document = json.load(open(data_path, encoding="utf-8"))
+    except Exception as error:
+        print("  FAIL  data/%s does not parse: %s" % (data_file, error))
+        failed = True
+        continue
+    key_entries = "repos" if key == "git" else key
+    entries = document.get(key_entries, [])
+    if not entries:
+        print("  FAIL  data/%s declares no %s — the section would render an empty box (#292)" % (data_file, key_entries))
+        failed = True
+    else:
+        print("  PASS  data/%s declares %d %s" % (data_file, len(entries), key_entries))
+    if key in ("remotes", "mounts"):
+        unreachable = [e for e in entries if e.get("status") != "ok"]
+        if not unreachable:
+            print("  FAIL  data/%s has no declared-but-unreachable entry — the specific-message path has no data" % data_file)
+            failed = True
+        for entry in unreachable:
+            if not entry.get("reason"):
+                print("  FAIL  %s in data/%s is not ok but declares no reason — the renderer would guess" %
+                      (entry.get("name") or entry.get("label") or "<unnamed>", data_file))
+                failed = True
+        print("  PASS  data/%s declares %d unreachable entr%s with reasons" %
+              (data_file, len(unreachable), "y" if len(unreachable) == 1 else "ies"))
+
+# The renderer must SAY the reason, not leave the box blank: the page has to
+# branch on status and emit the entry's reason text.
+if "Cannot be reached" in page and ".reason" in page:
+    print("  PASS  the page renders a specific 'Cannot be reached' message from the declared reason")
+else:
+    print("  FAIL  the page has no status-branching renderer — a declared-but-unreachable entry would render as an empty box")
+    failed = True
+if re.search(r"Bridge\.raw\('(rcloneRemotes|rcloneJobs|driveMounts|gitRepos)'\)", page):
+    print("  PASS  at least one Sync section reads its list through the bridge")
+else:
+    print("  FAIL  no Sync section reads a declarative list — the tab is not data-driven yet")
+    failed = True
+
+sys.exit(1 if failed else 0)
+PYTHON
+[ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
+
 echo
 python3 - "$JOBS" <<'PYTHON'
 import json, posixpath, sys
