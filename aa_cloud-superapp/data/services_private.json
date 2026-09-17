@@ -270,6 +270,16 @@
     "db_engine": null
   },
   {
+    "name": "agents-tmp-reaper",
+    "service": "agents-tmp-reaper",
+    "vm": "oci-A1-f_0",
+    "private_dns": "agents-tmp-reaper",
+    "port": null,
+    "protocol": "none",
+    "category": "tools",
+    "db_engine": null
+  },
+  {
     "name": "authelia-redis",
     "service": "authelia",
     "vm": "gcp-E2-f_0",
