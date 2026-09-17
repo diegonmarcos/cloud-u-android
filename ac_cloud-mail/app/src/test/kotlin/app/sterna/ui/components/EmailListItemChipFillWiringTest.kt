@@ -9,11 +9,9 @@ import java.io.File
  */
 class EmailListItemChipFillWiringTest {
 
-    /** The call, whole, from its opening line to its closing parenthesis. Mutations 2 and 3. */
+    /** The call, whole — one line now, since chipFill takes only the scheme (task #464). */
     private val expectedCall = listOf(
-        "val chipBackground = chipFill(",
-        "scheme = MaterialTheme.colorScheme,",
-        ")",
+        "val chipBackground = chipFill(MaterialTheme.colorScheme)",
     )
 
     /** Site 1 of 3: the origin chip — the account in the unified inbox, the folder in the unread
@@ -81,7 +79,7 @@ class EmailListItemChipFillWiringTest {
                 "a missing one is the wiring gone.",
             listOf(
                 "internal fun chipFill(scheme: ColorScheme): Color = scheme.surfaceVariant",
-                "val chipBackground = chipFill(",
+                "val chipBackground = chipFill(MaterialTheme.colorScheme)",
             ),
             codeLines().filter { "chipFill(" in it },
         )

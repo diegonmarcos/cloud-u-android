@@ -379,7 +379,7 @@ class ListMonogramWiringTest {
             "if (LocalListMonogram.current) {",
             "ContactAvatar(",
             "email = (recipient ?: email.from.firstOrNull())?.email ?: senderName,",
-            "label = recipient?.display() ?: senderName,",
+            "name = recipient?.display() ?: senderName,",
             "photoUri = null,",
             ")",
             "Spacer(Modifier.width(12.dp))",
