@@ -1221,4 +1221,35 @@
          itself: a single toggling label never says which way round it currently is. -->
     <string name="browser_view_desktop">View as desktop</string>
     <string name="browser_view_mobile">View as mobile</string>
+
+    <!-- Bottom navigation island (#465): five icon-only items. Each icon carries a content
+         description because an unlabelled icon row is unusable with a screen reader otherwise. -->
+    <string name="nav_bar_mail">Mail</string>
+    <string name="nav_bar_chat">Chat</string>
+    <string name="nav_bar_home">Home</string>
+    <string name="nav_bar_rss">News</string>
+    <string name="nav_bar_video">Video</string>
+    <!-- The launch items are interim links to other apps (Diego: "for now"). The sentence is what
+         the bar says when the target app is not on the device -- honest and specific, never a
+         silent no-op and never a claim that it is missing when it is present. -->
+    <string name="nav_chat_not_installed">Telegram is not installed</string>
+    <string name="nav_video_not_installed">WhatsApp Business is not installed</string>
+    <string name="nav_launch_not_installed">That app is not installed</string>
+
+    <!-- RSS reader (#465): the News item's destination. Every state the reader can be in has a
+         specific sentence so a feed that will not load is never a silent empty box. -->
+    <string name="rss_title">News</string>
+    <string name="rss_add">Add feed</string>
+    <string name="rss_add_hint">Paste a feed address</string>
+    <string name="rss_subscribed">Subscribed</string>
+    <string name="rss_unsubscribe">Remove feed</string>
+    <string name="rss_no_subscriptions_title">No feeds yet</string>
+    <string name="rss_no_subscriptions_body">Add an RSS or Atom feed address and its latest
+        articles will appear here.</string>
+    <string name="rss_fetch_failed">Could not load this feed</string>
+    <string name="rss_host_unreachable">Could not reach this feed</string>
+    <string name="rss_not_a_feed">This address is not an RSS or Atom feed</string>
+    <string name="rss_empty">This feed has no articles yet</string>
+    <string name="rss_open_failed">Could not open this article</string>
+    <string name="rss_invalid_url">That does not look like a web address</string>
 </resources>

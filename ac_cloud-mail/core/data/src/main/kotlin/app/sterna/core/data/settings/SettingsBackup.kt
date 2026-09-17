@@ -26,6 +26,8 @@ data class SettingsBackup(
      */
     val askReadReceipt: Boolean? = null,
     val imageAllowlist: List<String>? = null,
+    /** RSS / Atom feed subscriptions (#465), as the stored URL set. */
+    val rssFeeds: List<String>? = null,
     val quietHoursEnabled: Boolean? = null,
     val quietHoursStart: Int? = null,
     val quietHoursEnd: Int? = null,

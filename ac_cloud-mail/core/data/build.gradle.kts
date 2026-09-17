@@ -47,6 +47,10 @@ dependencies {
     // A local HTTP server, to prove what the unsubscribe POST puts on the wire — and what it
     // refuses to do when the sender's server answers with a redirect.
     testImplementation(libs.okhttp.mockwebserver)
+    // The XmlPullParser implementation the unit tests parse RSS/Atom with. Android ships this
+    // library under the hood; the JVM test classpath needs it explicitly because there is no
+    // platform parser off-device. See core/data rss.
+    testImplementation(libs.kxml2)
     // Virtual time, to unit-test the outbox badge without waiting out real undo windows.
     testImplementation(libs.kotlinx.coroutines.test)
     // Real SQLite engine for unit-testing the conversation-grouping SQL on the JVM.

@@ -303,6 +303,20 @@ class SettingsRepository(context: Context) {
         dataStore.edit { it[KEY_IMAGE_ALLOWLIST] = cleaned }
     }
 
+    /** The RSS / Atom feed addresses the user subscribed to (#465). A set, like [imageAllowlist]:
+     *  the same declared store as every other preference, so a subscription survives restarts. */
+    val rssFeeds: Flow<Set<String>> = dataStore.data.map { it[KEY_RSS_FEEDS] ?: emptySet() }
+
+    /** Subscribe to or unsubscribe from [url]. Blank or already-in-the-desired-state is a no-op. */
+    suspend fun setRssSubscribed(url: String, subscribed: Boolean) {
+        val key = url.trim()
+        if (key.isEmpty()) return
+        dataStore.edit { prefs ->
+            val current = prefs[KEY_RSS_FEEDS] ?: emptySet()
+            prefs[KEY_RSS_FEEDS] = if (subscribed) current + key else current - key
+        }
+    }
+
     /** New-mail delivery mode; INSTANT (today's behavior) by default. */
     val deliveryMode: Flow<DeliveryMode> = dataStore.data.map { prefs ->
         prefs[KEY_DELIVERY_MODE]?.let { runCatching { DeliveryMode.valueOf(it) }.getOrNull() }
@@ -334,6 +348,7 @@ class SettingsRepository(context: Context) {
         confirmLinks = confirmLinks.first(),
         askReadReceipt = askReadReceipt.first(),
         imageAllowlist = imageAllowlist.first().toList(),
+        rssFeeds = rssFeeds.first().toList(),
         quietHoursEnabled = quietHoursEnabled.first(),
         quietHoursStart = quietHoursStart.first(),
         quietHoursEnd = quietHoursEnd.first(),
@@ -369,6 +384,9 @@ class SettingsRepository(context: Context) {
         backup.confirmLinks?.let { setConfirmLinks(it) }
         backup.askReadReceipt?.let { setAskReadReceipt(it) }
         backup.imageAllowlist?.let { setImageAllowlist(it.toSet()) }
+        backup.rssFeeds?.let { feeds ->
+            dataStore.edit { prefs -> prefs[KEY_RSS_FEEDS] = feeds.toSet() }
+        }
         backup.quietHoursEnabled?.let { setQuietHoursEnabled(it) }
         backup.quietHoursStart?.let { setQuietHoursStart(it) }
         backup.quietHoursEnd?.let { setQuietHoursEnd(it) }
@@ -456,6 +474,7 @@ class SettingsRepository(context: Context) {
         private val KEY_STRIP_TRACKING = booleanPreferencesKey("strip_tracking_params")
         private val KEY_CONFIRM_LINKS = booleanPreferencesKey("confirm_links")
         private val KEY_IMAGE_ALLOWLIST = stringSetPreferencesKey("image_allowlist")
+        private val KEY_RSS_FEEDS = stringSetPreferencesKey("rss_feeds")
         private val KEY_DELIVERY_MODE = stringPreferencesKey("delivery_mode")
         private val KEY_QUIET_ENABLED = booleanPreferencesKey("quiet_hours_enabled")
         private val KEY_QUIET_START = intPreferencesKey("quiet_hours_start")

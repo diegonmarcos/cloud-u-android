@@ -353,7 +353,8 @@ private fun MainNavHost(
     val motionEnabled = rememberMotionEnabled()
     // Instant transitions by default: the cross-fade sticks on the bare window background during
     // rapid back/forth navigation. The message route opts back into a soft fade.
-    NavHost(
+    Box(Modifier.fillMaxSize()) {
+        NavHost(
         navController = nav,
         startDestination = "inbox",
         enterTransition = { EnterTransition.None },
@@ -686,6 +687,14 @@ private fun MainNavHost(
                 },
             )
         }
+        composable("rss") { entry ->
+            RssScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
+        }
+        }
+        // The floating island (#465): five icon-only items, shown only on the destinations it
+        // owns — the inbox, Home and News — and kept off the full-screen message, composer and
+        // settings routes, which get the whole window to themselves.
+        BottomNavBar(nav = nav)
     }
 }
 

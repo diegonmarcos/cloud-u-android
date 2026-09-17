@@ -1,0 +1,99 @@
+package app.sterna.ui.rss
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import app.sterna.container
+import app.sterna.core.data.rss.RssFetchFailure
+import app.sterna.core.data.rss.RssFeed
+import app.sterna.core.data.rss.RssFetcher
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+/** What the News screen can show for one subscribed feed. */
+sealed interface RssFeedUi {
+    data class Fetched(val url: String, val feed: RssFeed) : RssFeedUi
+
+    /** The fetch did not produce articles. Each reason maps to its own honest sentence. */
+    data class Unavailable(val url: String, val messageKey: RssMessage) : RssFeedUi
+}
+
+/** The user-facing reason a feed could not be shown; each maps to one string on screen. */
+enum class RssMessage { FETCH_FAILED, HOST_UNREACHABLE, NOT_A_FEED, EMPTY }
+
+/** Whether a subscribe request dropped a usable address. */
+enum class RssSubscribeOutcome { ADDED, INVALID }
+
+/**
+ * Backs the News screen (#465): the subscribed feed addresses and what each one currently shows.
+ * Fetching and parsing happen off the main thread through [RssFetcher]; the subscriptions live in
+ * the app's ordinary settings store, so they survive restarts exactly like a theme choice.
+ */
+class RssViewModel(application: Application) : AndroidViewModel(application) {
+    private val settings = application.container.settingsRepository
+    private val fetcher = RssFetcher()
+
+    /** The subscribed feed addresses, live from the settings store. */
+    val subscriptions: StateFlow<Set<String>> = settings.rssFeeds
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptySet())
+
+    private val _feeds = MutableStateFlow<List<RssFeedUi>>(emptyList())
+
+    /** Everything each subscription currently shows: a loaded feed, or the honest reason not. */
+    val feeds: StateFlow<List<RssFeedUi>> = _feeds.asStateFlow()
+
+    /** Start (or re-start) loading every subscribed feed, off the main thread, in sentinel order. */
+    fun refresh() {
+        viewModelScope.launch {
+            val urls = subscriptions.value.toList().sorted()
+            if (urls.isEmpty()) {
+                _feeds.value = emptyList()
+                return@launch
+            }
+            _feeds.value = urls.map { RssFeedUi.Unavailable(it, RssMessage.FETCH_FAILED) }
+            val loaded = urls.map { fetch(it) }
+            _feeds.value = loaded
+        }
+    }
+
+    /** Add [raw] if it is a usable feed address, then (re)load. */
+    fun subscribe(raw: String) {
+        if (!isFeedAddress(raw)) return
+        viewModelScope.launch {
+            settings.setRssSubscribed(raw.trim(), subscribed = true)
+            refresh()
+        }
+    }
+
+    /** Stop following [url], then (re)load. */
+    fun unsubscribe(url: String) {
+        viewModelScope.launch {
+            settings.setRssSubscribed(url, subscribed = false)
+            _feeds.value = _feeds.value.filter { it !is RssFeedUi.Unavailable || it.url != url }
+        }
+    }
+
+    /** Fetch one subscribed feed for display, off the main thread. */
+    private suspend fun fetch(url: String): RssFeedUi = when (fetcher.fetch(url)) {
+        is app.sterna.core.data.rss.RssFetchResult.Loaded -> RssFeedUi.Fetched(url, it.feed)
+        is app.sterna.core.data.rss.RssFetchResult.Failed -> feedUiFor(it.reason, url)
+    }
+
+    /** A transport that died means the host was unreachable — its own sentence, telling the reader
+     *  to check connectivity to THAT feed. An HTTP error is a "could not load". */
+    private fun feedUiFor(reason: RssFetchFailure, url: String): RssFeedUi.Unavailable =
+        RssFeedUi.Unavailable(
+            url = url,
+            messageKey = when (reason) {
+                RssFetchFailure.UNREACHABLE -> RssMessage.HOST_UNREACHABLE
+                RssFetchFailure.HTTP_ERROR -> RssMessage.FETCH_FAILED
+                RssFetchFailure.NOT_A_FEED -> RssMessage.NOT_A_FEED
+                RssFetchFailure.EMPTY -> RssMessage.EMPTY
+            },
+        )
+}
+
+/** The address gate the screen and the view model both use; one definition, no drift. */
+internal fun isFeedAddress(raw: String): Boolean = app.sterna.core.data.rss.isFeedAddress(raw)

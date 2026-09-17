@@ -60,6 +60,11 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 
+# The reference implementation of XmlPullParser — the very library Android bundles for
+# android.util.Xml. Test-scoped only: the RSS reader's parsing runs on Android's own factory at
+# runtime; this gives the JVM unit tests the same parser under the same interface.
+kxml2 = { module = "net.sf.kxml:kxml2", version = "2.3.0" }
+
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]

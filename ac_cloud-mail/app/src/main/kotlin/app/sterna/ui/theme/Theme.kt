@@ -3,6 +3,7 @@ package app.sterna.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -12,8 +13,19 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import app.sterna.core.data.settings.ThemeMode
+
+/**
+ * The bottom-navigation island (#465): a floating rounded shape with fully semicircular ends,
+ * declared once and referenced wherever the bar is drawn so no call site restates the radius.
+ */
+val bottomNavIslandShape: RoundedCornerShape = RoundedCornerShape(percent = 50)
+
+/** How far the floating navigation island sits above the screen's bottom edge (#465). */
+val bottomNavIslandInset: Dp = 12.dp
 
 /**
  * The OLED decision, kept out of the composable so it can be executed in a test.
