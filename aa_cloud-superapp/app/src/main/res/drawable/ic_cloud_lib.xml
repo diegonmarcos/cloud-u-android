@@ -3,15 +3,15 @@
   The single shared fallback home-screen glyph for a constellation LIBRARY APK
   that ships no application icon of its own (kind=="lib" in the fleet manifest).
   Declared exactly once, here; referenced exactly once, by
-  PhoneSmartFolders.installedLibSlots -- the ONLY place a lib tile without its
-  own icon finds a glyph. A filled rounded square with a tidy "stacked blocks"
-  motif reads as a bundled/multi-part payload, which is what a lib engine APK
-  is, without pretending to be a particular app.
+  PhoneSmartFolders.installedLibSlots (the ONLY place a lib tile without its own
+  icon finds a glyph). A filled rounded square with a neat stacked-blocks motif
+  reads as a bundled/multi-part payload, which is what a lib engine APK is,
+  without pretending to be a particular app.
 
-  Self-coloured (the accent purple on a transparent tile) because these icons
-  are handed to setImageDrawable as a real app icon -- unlike the theme-tinted
-  toolbar glyphs, nothing re-tints them, so a currentColor-style black shape
-  would paint invisible on the dark launcher surface.
+  Self-coloured (accent purple on a transparent tile) because these icons are
+  handed to setImageDrawable as a real app icon (unlike the toolbar glyphs,
+  nothing re-tints them, so a currentColor-style black shape would paint
+  invisible on the dark launcher surface).
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="52dp"
