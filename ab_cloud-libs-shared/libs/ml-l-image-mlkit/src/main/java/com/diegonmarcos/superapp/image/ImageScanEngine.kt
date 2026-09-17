@@ -8,7 +8,7 @@ import android.media.ExifInterface
 import android.net.Uri
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.TextRecognizerOptions
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.BinaryBitmap
 import com.google.zxing.DecodeHintType
@@ -144,7 +144,7 @@ class ImageScanEngine(context: Context) {
                 block.lines.map { line ->
                     OcrSegment(
                         text = line.text,
-                        confidence = line.confidence?.floatValue()
+                        confidence = line.confidence
                     )
                 }
             }

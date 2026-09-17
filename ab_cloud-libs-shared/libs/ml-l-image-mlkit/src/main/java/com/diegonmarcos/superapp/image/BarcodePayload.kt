@@ -104,7 +104,7 @@ object BarcodePayloadParser {
 
     /** WIFI:T:WPA;S:mynet;P:secret;H:true;; — each field is semicolon-terminated. */
     private fun parseWifi(value: String): BarcodePayload.Wifi? {
-        val fields = value.substringAfter("WIFI:", ignoreCase = true)
+        val fields = value.substringAfter(':')
         var ssid = ""; var password = ""; var security = ""; var hidden = false
         for (field in fields.split(';')) {
             val trimmed = field.trim()
@@ -124,7 +124,7 @@ object BarcodePayloadParser {
     /** MECARD:N:Last,First;TEL:..;URL:..;; and BEGIN:VCARD blocks. */
     private fun parseContact(value: String): BarcodePayload.Contact? {
         if (value.startsWith("MECARD:", ignoreCase = true)) {
-            val name = value.substringAfter("MECARD:", ignoreCase = true)
+            val name = value.substringAfter(':')
                 .split(';').firstOrNull { it.trim().startsWith("N:", ignoreCase = true) }
                 ?.substringAfter(':')
                 ?.replace('\\', ',') // MECARD writes "Last,First" and escapes commas
@@ -179,7 +179,7 @@ object BarcodePayloadParser {
 
     /** mailto:user@example.com?subject=...&body=... */
     private fun parseMailto(value: String): BarcodePayload.Email? {
-        val rest = value.substringAfter("mailto:", ignoreCase = true)
+        val rest = value.substringAfter(':')
         val address = rest.substringBefore('?').trim()
         if (address.isEmpty()) return null
         var subject: String? = null
@@ -199,7 +199,7 @@ object BarcodePayloadParser {
 
     /** geo:37.422,-122.084 or geo:37.422,-122.084?z=15 */
     private fun parseGeo(value: String): BarcodePayload.Geo? {
-        val coordinates = value.substringAfter("geo:", ignoreCase = true).substringBefore('?')
+        val coordinates = value.substringAfter(':').substringBefore('?')
         val parts = coordinates.split(',')
         if (parts.size < 2) return null
         return try {

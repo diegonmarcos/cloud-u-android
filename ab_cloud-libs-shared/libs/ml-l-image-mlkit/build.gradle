@@ -15,7 +15,17 @@
 // this module exists to prevent.
 plugins {
     id 'com.android.library'
-    id 'org.jetbrains.kotlin.android'
+    // `apply false`: resolve the plugin onto the classpath WITHOUT applying it.
+    // The apply is conditional below, exactly like libs:analytics: this module
+    // is consumed by AGP 8 apps (cloud-drive, lib-apks) where the Kotlin plugin
+    // must be applied explicitly, AND BY media-center which is AGP 9 — where
+    // Kotlin is built in and applying the plugin is a hard error. The `kotlin`
+    // extension is what actually collides, so that is what gets tested.
+    id 'org.jetbrains.kotlin.android' apply false
+}
+
+if (project.extensions.findByName('kotlin') == null) {
+    apply plugin: 'org.jetbrains.kotlin.android'
 }
 
 android {
@@ -31,7 +41,17 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = '17' }
+}
+
+// jvmTarget must match the Java 17 compileOptions above. Set via the top-level
+// `kotlin` extension, NOT android.kotlinOptions: AGP 9 removed kotlinOptions
+// from the android extension and this module is consumed by both AGP 8 and
+// AGP 9 apps. The `kotlin` extension exists in both (added by the Kotlin
+// plugin on AGP 8, by AGP itself on AGP 9), so one path covers both.
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 
 dependencies {
@@ -45,4 +65,9 @@ dependencies {
     // first OCR call exactly like mlkit-translate's models, so the model's tens
     // of MB never sit in the APK.
     implementation 'com.google.mlkit:text-recognition:16.0.1'
+
+    // BarcodePayloadParser is pure JVM with no Android imports; the typed
+    // payload is the contract both apps render actions from, so it is tested
+    // here in the unit phase of EVERY consumer build, not once on a device.
+    testImplementation 'junit:junit:4.13.2'
 }

@@ -71,6 +71,11 @@
         "node"
       ],
       "_doc_requires": "A tester that shells out to a tool which is not installed does not fail — it returns a verdict from the tool's ABSENCE. Listing them here makes a missing one fatal at the engine's preflight instead of a green tick over assertions that never ran. node runs the pdf.js smoke harness (#458): it is the only way to prove the vendored engine really extracts text."
+    },
+    "unit": {
+      "_doc": "Runs gradle test (build.sh test — the app's documented 'gradle test (JVM unit tests)' step) on every ship. The module graph includes :libs:ml-l-image-mlkit, whose typed-payload parser suite lives in this app's unit phase on purpose: the CLI's unit step would otherwise print COVERAGE-GAP and never invoke gradle, leaving the new library's tests compiled-but-never-run.",
+      "task": "test",
+      "enabled": true
     }
   },
   "release": {
