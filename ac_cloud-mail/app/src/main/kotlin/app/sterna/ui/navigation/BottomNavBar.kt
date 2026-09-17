@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import app.sterna.R
+import app.sterna.ui.rememberLeaveOnce
 import app.sterna.ui.theme.bottomNavIslandInset
 import app.sterna.ui.theme.bottomNavIslandShape
 
@@ -46,6 +47,10 @@ import app.sterna.ui.theme.bottomNavIslandShape
 @Composable
 fun BottomNavBar(nav: NavController, currentRoute: String) {
     val context = LocalContext.current
+    // The sanctioned hand-off guard for the two LAUNCH items — a double tap while leaving must not
+    // fire the launch twice. rememberLeaveOnce is @Composable, so it is resolved here and handed to
+    // the tap handler.
+    val leaveOnce = rememberLeaveOnce()
     // Resolved here, once, in the composable's own scope — stringResource must run where the
     // resource is available, never inside a tap callback, so the launch item's "not installed"
     // sentence is read through the context (a plain method, safe in this map lambda) and handed
@@ -70,7 +75,7 @@ fun BottomNavBar(nav: NavController, currentRoute: String) {
             bottomNavItems.forEach { item ->
                 val selected = item.action == BottomNavAction.DESTINATION && item.route == currentRoute
                 IconButton(
-                    onClick = { onItemTap(context, nav, item, currentRoute, missing[item] ?: "") },
+                    onClick = { onItemTap(context, nav, item, currentRoute, leaveOnce, missing[item] ?: "") },
                     modifier = Modifier.weight(1f),
                 ) {
                     Icon(
@@ -91,6 +96,7 @@ private fun onItemTap(
     nav: NavController,
     item: BottomNavItem,
     currentRoute: String,
+    leaveOnce: (() -> Boolean) -> Unit,
     missingMessage: String,
 ) {
     when (item.action) {
@@ -102,7 +108,7 @@ private fun onItemTap(
             nav.navigate(route)
         }
         BottomNavAction.LAUNCH -> item.packageName?.let {
-            launchInstalledApp(context, it, missingMessage)
+            leaveOnce { launchInstalledApp(context, it, missingMessage) }
         }
     }
 }

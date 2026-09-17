@@ -1145,4 +1145,27 @@
     <string name="browser_translate_page">Przetłumacz stronę</string>
     <string name="browser_view_desktop">Wyświetl jak na komputerze</string>
     <string name="browser_view_mobile">Wyświetl jak na telefonie</string>
+
+    <!-- Bottom navigation island (#465) and Rss reader (#465): new strings shipped for this feature. -->
+    <string name="nav_bar_mail">Poczta</string>
+    <string name="nav_bar_chat">Czat</string>
+    <string name="nav_bar_home">Start</string>
+    <string name="nav_bar_rss">Wiadomości</string>
+    <string name="nav_bar_video">Wideo</string>
+    <string name="nav_chat_not_installed">Telegram nie jest zainstalowany</string>
+    <string name="nav_video_not_installed">WhatsApp Business nie jest zainstalowany</string>
+    <string name="nav_launch_not_installed">Ta aplikacja nie jest zainstalowana</string>
+    <string name="rss_title">Wiadomości</string>
+    <string name="rss_add">Dodaj kanał</string>
+    <string name="rss_add_hint">Wklej adres kanału</string>
+    <string name="rss_subscribed">Subskrybowano</string>
+    <string name="rss_unsubscribe">Usuń kanał</string>
+    <string name="rss_no_subscriptions_title">Brak kanałów</string>
+    <string name="rss_no_subscriptions_body">Dodaj adres kanału RSS lub Atom, a jego najnowsze artykuły pojawią się tutaj.</string>
+    <string name="rss_fetch_failed">Nie udało się wczytać tego kanału</string>
+    <string name="rss_host_unreachable">Nie udało się połączyć z tym kanałem</string>
+    <string name="rss_not_a_feed">Ten adres nie jest kanałem RSS ani Atom</string>
+    <string name="rss_empty">Ten kanał nie ma jeszcze artykułów</string>
+    <string name="rss_open_failed">Nie udało się otworzyć tego artykułu</string>
+    <string name="rss_invalid_url">To nie wygląda jak adres internetowy</string>
 </resources>

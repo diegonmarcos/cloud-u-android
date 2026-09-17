@@ -1135,4 +1135,27 @@
     <string name="browser_translate_page">Traduzir a página</string>
     <string name="browser_view_desktop">Ver como computador</string>
     <string name="browser_view_mobile">Ver como telemóvel</string>
+
+    <!-- Bottom navigation island (#465) and Rss reader (#465): new strings shipped for this feature. -->
+    <string name="nav_bar_mail">Correio</string>
+    <string name="nav_bar_chat">Chat</string>
+    <string name="nav_bar_home">Início</string>
+    <string name="nav_bar_rss">Notícias</string>
+    <string name="nav_bar_video">Vídeo</string>
+    <string name="nav_chat_not_installed">O Telegram não está instalado</string>
+    <string name="nav_video_not_installed">O WhatsApp Business não está instalado</string>
+    <string name="nav_launch_not_installed">Esse app não está instalado</string>
+    <string name="rss_title">Notícias</string>
+    <string name="rss_add">Adicionar feed</string>
+    <string name="rss_add_hint">Cole um endereço de feed</string>
+    <string name="rss_subscribed">Inscrito</string>
+    <string name="rss_unsubscribe">Remover feed</string>
+    <string name="rss_no_subscriptions_title">Ainda não há feeds</string>
+    <string name="rss_no_subscriptions_body">Adicione um endereço de feed RSS ou Atom e os artigos mais recentes aparecerão aqui.</string>
+    <string name="rss_fetch_failed">Não foi possível carregar este feed</string>
+    <string name="rss_host_unreachable">Não foi possível acessar este feed</string>
+    <string name="rss_not_a_feed">Este endereço não é um feed RSS ou Atom</string>
+    <string name="rss_empty">Este feed ainda não tem artigos</string>
+    <string name="rss_open_failed">Não foi possível abrir este artigo</string>
+    <string name="rss_invalid_url">Isso não parece um endereço web</string>
 </resources>

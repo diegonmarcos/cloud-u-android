@@ -1137,4 +1137,27 @@
     <string name="browser_translate_page">Traduire la page</string>
     <string name="browser_view_desktop">Afficher en version ordinateur</string>
     <string name="browser_view_mobile">Afficher en version mobile</string>
+
+    <!-- Bottom navigation island (#465) and Rss reader (#465): new strings shipped for this feature. -->
+    <string name="nav_bar_mail">Courrier</string>
+    <string name="nav_bar_chat">Chat</string>
+    <string name="nav_bar_home">Accueil</string>
+    <string name="nav_bar_rss">Actualités</string>
+    <string name="nav_bar_video">Vidéo</string>
+    <string name="nav_chat_not_installed">Telegram n\'est pas installé</string>
+    <string name="nav_video_not_installed">WhatsApp Business n\'est pas installé</string>
+    <string name="nav_launch_not_installed">Cette application n\'est pas installée</string>
+    <string name="rss_title">Actualités</string>
+    <string name="rss_add">Ajouter un flux</string>
+    <string name="rss_add_hint">Collez une adresse de flux</string>
+    <string name="rss_subscribed">Abonné</string>
+    <string name="rss_unsubscribe">Retirer le flux</string>
+    <string name="rss_no_subscriptions_title">Aucun flux pour l\'instant</string>
+    <string name="rss_no_subscriptions_body">Ajoutez une adresse de flux RSS ou Atom et ses derniers articles apparaîtront ici.</string>
+    <string name="rss_fetch_failed">Impossible de charger ce flux</string>
+    <string name="rss_host_unreachable">Impossible de joindre ce flux</string>
+    <string name="rss_not_a_feed">Cette adresse n\'est pas un flux RSS ou Atom</string>
+    <string name="rss_empty">Ce flux n\'a pas encore d\'articles</string>
+    <string name="rss_open_failed">Impossible d\'ouvrir cet article</string>
+    <string name="rss_invalid_url">Cela ne ressemble pas à une adresse web</string>
 </resources>

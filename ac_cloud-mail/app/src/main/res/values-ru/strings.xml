@@ -1148,4 +1148,27 @@
     <string name="browser_translate_page">Перевести страницу</string>
     <string name="browser_view_desktop">Показать как на компьютере</string>
     <string name="browser_view_mobile">Показать как на телефоне</string>
+
+    <!-- Bottom navigation island (#465) and Rss reader (#465): new strings shipped for this feature. -->
+    <string name="nav_bar_mail">Почта</string>
+    <string name="nav_bar_chat">Чат</string>
+    <string name="nav_bar_home">Главная</string>
+    <string name="nav_bar_rss">Новости</string>
+    <string name="nav_bar_video">Видео</string>
+    <string name="nav_chat_not_installed">Telegram не установлен</string>
+    <string name="nav_video_not_installed">WhatsApp Business не установлен</string>
+    <string name="nav_launch_not_installed">Это приложение не установлено</string>
+    <string name="rss_title">Новости</string>
+    <string name="rss_add">Добавить ленту</string>
+    <string name="rss_add_hint">Вставьте адрес ленты</string>
+    <string name="rss_subscribed">Подписано</string>
+    <string name="rss_unsubscribe">Удалить ленту</string>
+    <string name="rss_no_subscriptions_title">Лент пока нет</string>
+    <string name="rss_no_subscriptions_body">Добавьте адрес RSS- или Atom-ленты, и её последние статьи появятся здесь.</string>
+    <string name="rss_fetch_failed">Не удалось загрузить эту ленту</string>
+    <string name="rss_host_unreachable">Не удалось получить доступ к этой ленте</string>
+    <string name="rss_not_a_feed">Этот адрес не является RSS- или Atom-лентой</string>
+    <string name="rss_empty">В этой ленте ещё нет статей</string>
+    <string name="rss_open_failed">Не удалось открыть эту статью</string>
+    <string name="rss_invalid_url">Это не похоже на веб-адрес</string>
 </resources>

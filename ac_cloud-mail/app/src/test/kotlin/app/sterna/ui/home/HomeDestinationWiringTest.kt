@@ -73,8 +73,8 @@ class HomeDestinationWiringTest {
                 "all — and nothing else in this repository would say so.",
             listOf(
                 """composable("home") { entry ->""",
-                "HomeScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })",
-                "}",
+                "Box(Modifier.fillMaxSize()) {",
+                """HomeScreen(onBack = { entry.navigateOnce { nav.popBackStack() } }),""",
             ),
             block(STERNA_APP, """composable("home")""", count = 3),
         )
