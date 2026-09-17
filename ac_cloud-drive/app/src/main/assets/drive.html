@@ -1035,8 +1035,7 @@ function connections() {
 }
 
 function connectionCard(entry) {
-    const light = entry.status === 'ok' ? 'bg-green-500'
-        : entry.status === 'down' ? 'bg-red-500' : 'bg-gray-400';
+    const ok = entry.status === 'ok';
     const facts = [
         ['Kind', entry.kind],
         ['Where', entry.endpoint],
@@ -1046,11 +1045,15 @@ function connectionCard(entry) {
     ].filter(pair => pair[1]).map(pair =>
         '<div class="flex gap-2"><span class="w-12 shrink-0 text-gray-500">' + pair[0] + '</span>' +
         '<span class="break-all">' + escapeHtml(String(pair[1])) + '</span></div>').join('');
+    const message = ok ? '' :
+        '<div class="mt-2 text-xs text-amber-400">Cannot be reached — ' +
+        escapeHtml(entry.reason || 'no reason is declared for this connection.') + '</div>';
     return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-700">' +
         '<div class="flex items-center gap-2">' +
-        '<span class="w-2 h-2 rounded-full ' + light + '"></span>' +
-        '<span class="text-sm font-medium">' + escapeHtml(entry.name || 'Unnamed') + '</span></div>' +
-        '<div class="mt-2 text-xs text-gray-500 space-y-0.5">' + facts + '</div>' +
+        '<span class="w-2 h-2 rounded-full ' + (ok ? 'bg-green-500' : 'bg-red-500') + '"></span>' +
+        '<span class="text-sm font-medium">' + escapeHtml(entry.name || 'Unnamed') + '</span>' +
+        (ok ? '' : '<span class="text-xs text-red-400">unreachable</span>') + '</div>' +
+        '<div class="mt-2 text-xs text-gray-500 space-y-0.5">' + facts + '</div>' + message +
         (entry.notes
             ? '<div class="mt-2 text-xs text-gray-500">' + escapeHtml(entry.notes) + '</div>'
             : '') +
@@ -1096,13 +1099,15 @@ function renderApps() {
    to a trio: Rclone — the rclone remotes and the fleet's declared rclone
    operations, read from data/drive-remotes.json and data/drive-rclone-jobs.json
    through the bridge, never hardcoded here; Mounted — the fleet mesh mounts, the
-   WireGuard-reachable storages from data/drive-mounts.json (mesh addresses and
-   host aliases only, no public IPs); and Git — the fleet's repositories as data
-   from data/drive-git-repos.json, with the honest state of the vendored GitSync
-   lib stated instead of a fake-populated screen. Every section SAYS when it
-   cannot run: a declared-but-unreachable entry renders its reason, an empty sent
-   list renders its own message — an empty box over a declared list is the fleet's
-   dominant defect shape (#292). */
+   WireGuard-reachable storages; Git — the fleet's repositories as data from
+   data/drive-git-repos.json, with the honest state of the vendored GitSync lib
+   stated instead of a fake-populated screen. THE MOUNTED LIST IS THE CONNECTIONS
+   CATALOGUE ITSELF (task #457): data/drive-connections.json is the ONE fleet
+   declaration — the same carrier the Backups tab filters for borg/bup — so
+   there is no second mounts list to keep in step (#170/#261). Every section SAYS
+   when it cannot run: a declared-but-unreachable entry renders its reason, an
+   empty sent list renders its own message — an empty box over a declared list is
+   the fleet's dominant defect shape (#292). */
 
 function syncChoice(value, label) {
     const active = state.syncSub === value;
@@ -1152,15 +1157,6 @@ const RCLONE_JOBS = (() => {
     return () => {
         if (cache === null) {
             try { cache = JSON.parse(Bridge.raw('rcloneJobs') || '[]'); } catch (error) { cache = []; }
-        }
-        return cache;
-    };
-})();
-const DRIVE_MOUNTS = (() => {
-    let cache = null;
-    return () => {
-        if (cache === null) {
-            try { cache = JSON.parse(Bridge.raw('driveMounts') || '[]'); } catch (error) { cache = []; }
         }
         return cache;
     };
@@ -1247,41 +1243,21 @@ function rcloneJobCard(job) {
 }
 
 function renderMountedSubpage() {
-    const mounts = DRIVE_MOUNTS();
+    const mounts = connections();
     return '<div class="pt-2">' +
-        heading('Fleet mesh mounts') +
+        heading('Fleet mesh mounts (connections catalogue)') +
         (mounts.length
-            ? mounts.map(mountCard).join('')
-            : card('Nothing here', 'No fleet mesh mounts are declared in this build.')) +
+            ? mounts.map(connectionCard).join('')
+            : card('Nothing here', 'No fleet connections are declared in this build.')) +
         '<div class="px-4 py-2 text-xs text-gray-500">' +
         (Bridge.available
-            ? 'These surfaces exist on the WireGuard mesh only (10.0.0.x, host aliases). ' +
-              'If WireGuard is down none of them answer — the list above does not shrink, ' +
-              'it stays and the section says why.'
-            : 'The bridge is not attached, so the mount list cannot load.') + '</div>' +
+            ? 'Every entry above is data/drive-connections.json — the ONE fleet declaration, ' +
+              'no second mounts list to keep in step. These surfaces exist on the WireGuard ' +
+              'mesh (10.0.0.x, host aliases) or the public edge; if WireGuard is down the ' +
+              'mesh ones stop answering — the list does not shrink, it stays and each entry ' +
+              'says why.'
+            : 'The bridge is not attached, so the connection list cannot load.') + '</div>' +
         '<div class="h-4"></div>';
-}
-
-function mountCard(mount) {
-    const ok = mount.status === 'ok';
-    const facts = [
-        ['Host', mount.host],
-        ['Mesh', mount.address],
-        ['Protocol', mount.protocol],
-        ['Reach', mount.reach],
-        ['Auth', mount.auth]
-    ].filter(pair => pair[1]).map(pair => entryFact(pair[0], pair[1])).join('');
-    const message = ok ? '' :
-        '<div class="mt-2 text-xs text-amber-400">Cannot be reached — ' +
-        escapeHtml(mount.reason || 'no reason is declared for this mount.') + '</div>';
-    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-700">' +
-        '<div class="flex items-center gap-2">' +
-        statusLight(ok) +
-        '<span class="text-sm font-medium">' + escapeHtml(mount.label || 'Unnamed') + '</span>' +
-        (ok ? '' : '<span class="text-xs text-red-400">unreachable</span>') + '</div>' +
-        '<div class="mt-2 text-xs text-gray-500 space-y-0.5">' + facts + '</div>' + message +
-        (mount.notes ? '<div class="mt-2 text-xs text-gray-500">' + escapeHtml(mount.notes) + '</div>' : '') +
-        '</div>';
 }
 
 function renderGitSubpage() {

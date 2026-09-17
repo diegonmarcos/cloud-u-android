@@ -1102,14 +1102,16 @@ class FilesBridge(
             "[]"
         }
 
-    // ── the Sync tab's declarative lists (task #457c) ────────────────────────
-    // The Rclone subpage's remotes and transfer jobs, the Mounted subpage's
-    // fleet mesh mounts, and the Git subpage's repository family. Same carrier
-    // and same contract as [connections] and [mirrorJobs]: the arrays are baked
-    // in at build time from data/*.json and handed over untouched, so adding a
-    // field to a data file needs no change here. None of these files carries a
-    // credential, and the page renders whatever the carrier says — an empty
-    // list is rendered with its specific reason, never as a silent blank.
+    // ── the Sync tab's declarative lists (task #457c / #457) ─────────────────
+    // The Rclone subpage's remotes and transfer jobs and the Git subpage's
+    // repository family. Same carrier and same contract as [connections] and
+    // [mirrorJobs]: the arrays are baked in at build time from data/*.json and
+    // handed over untouched, so adding a field to a data file needs no change
+    // here. The Mounted subpage renders [connections] itself — the ONE fleet
+    // declaration — there is no second mounts list to keep in step (#170/#261).
+    // None of these files carries a credential, and the page renders whatever
+    // the carrier says — an empty list is rendered with its specific reason,
+    // never as a silent blank.
 
     @JavascriptInterface
     fun rcloneRemotes(): String =
@@ -1125,15 +1127,6 @@ class FilesBridge(
         if (BuildConfig.RCLONE_JOBS_B64.isEmpty()) "[]"
         else try {
             String(android.util.Base64.decode(BuildConfig.RCLONE_JOBS_B64, android.util.Base64.DEFAULT))
-        } catch (error: Exception) {
-            "[]"
-        }
-
-    @JavascriptInterface
-    fun driveMounts(): String =
-        if (BuildConfig.DRIVE_MOUNTS_B64.isEmpty()) "[]"
-        else try {
-            String(android.util.Base64.decode(BuildConfig.DRIVE_MOUNTS_B64, android.util.Base64.DEFAULT))
         } catch (error: Exception) {
             "[]"
         }

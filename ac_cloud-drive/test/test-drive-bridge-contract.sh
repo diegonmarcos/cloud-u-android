@@ -42,6 +42,12 @@
 #   A12 a paste that does not fit is refused with the actual numbers, and
 #       places() lists removable volumes (getExternalFilesDirs) plus a persisted
 #       SAF tree grant and a connect affordance for what path access cannot reach.
+#   A13 (#457) the Sync tab's three sub-tabs all render — a deleted renderer or a
+#       renderSync dispatch that stops routing a chip value fails red — and the
+#       Mounted list reads the ONE connections declaration
+#       (data/drive-connections.json via connections()), with the old
+#       drive-mounts.json second declaration gone from every carrier and an
+#       unreachable connection that renders its reason, not an empty box.
 #
 # NO RIPGREP, DELIBERATELY — testers in this repository have passed on its
 # absence rather than on their assertions. python3 and grep only, both in
@@ -203,7 +209,7 @@ else
     fail "the Apps tab does not reach the bridge both ways (apps list + openApp launch)"
 fi
 
-echo "── A6 the Sync tab has Git and Rclone subpages ──"
+echo "── A6 the Sync tab renders all three subpages (Git | Rclone | Mounted) ──"
 if grep -q 'data-tab="sync"' "$PAGE"; then
     pass "the nav declares the Sync tab"
 else
@@ -214,15 +220,10 @@ if grep -q "renderSync" "$PAGE"; then
 else
     fail "showTab never calls renderSync — the tab would render nothing"
 fi
-if grep -q "renderRcloneSubpage" "$PAGE" && grep -q "renderGitSubpage" "$PAGE"; then
-    pass "Sync renders both subpages"
+if grep -q "renderRcloneSubpage" "$PAGE" && grep -q "renderMountedSubpage" "$PAGE" && grep -q "renderGitSubpage" "$PAGE"; then
+    pass "Sync renders all three subpages"
 else
     fail "one of the Sync subpages has no renderer"
-fi
-if grep -q "connectionCard" "$PAGE" && grep -q "'rclone'" "$PAGE"; then
-    pass "the Rclone subpage reuses the existing connectionCard renderer"
-else
-    fail "the Rclone subpage does not reuse connectionCard — a second renderer to keep in step"
 fi
 if grep -q "VENDORED.md" "$PAGE"; then
     pass "the Git subpage names the vendored lib's record"
@@ -418,11 +419,13 @@ else
 fi
 
 echo "── A9 the Sync tab's declarative lists travel every carrier ──"
-# Same three-carrier rule as A3 for the four lists the Sync tab renders (task
-# #457c): the data file exists and is named in build.gradle with its BuildConfig
-# field; the bridge method decodes that field; the page asks the bridge for the
-# list. Drop any one and the tab renders an empty box over a file that is right
-# there in the repository.
+# Same three-carrier rule as A3 for the three data files the Sync tab renders
+# (remotes + jobs for Rclone, git for Git). The Mounted subpage is deliberately
+# NOT a fourth carrier: it renders the ONE fleet declaration
+# (data/drive-connections.json) through the same connections() carrier the
+# Backups tab filters, so there is no second mounts list to keep in step and no
+# risk of an empty box over a file that is right there in the repository
+# (#170/#261, #292). The #457 gate below pins Mounted to that declaration.
 python3 - "$PAGE" "$BRIDGE" "$GRADLE" "$APP" <<'PYTHON'
 import json, os, re, sys
 
@@ -434,7 +437,6 @@ app_dir = sys.argv[4]
 lists = [
     ("remotes", "drive-remotes.json",     "RCLONE_REMOTES_B64", "rcloneRemotes"),
     ("jobs",    "drive-rclone-jobs.json", "RCLONE_JOBS_B64",    "rcloneJobs"),
-    ("mounts",  "drive-mounts.json",      "DRIVE_MOUNTS_B64",   "driveMounts"),
     ("git",     "drive-git-repos.json",   "GIT_REPOS_B64",      "gitRepos"),
 ]
 failed = False
@@ -498,7 +500,7 @@ if "Cannot be reached" in page and ".reason" in page:
 else:
     print("  FAIL  the page has no status-branching renderer — a declared-but-unreachable entry would render as an empty box")
     failed = True
-if re.search(r"Bridge\.raw\('(rcloneRemotes|rcloneJobs|driveMounts|gitRepos)'\)", page):
+if re.search(r"Bridge\.raw\('(rcloneRemotes|rcloneJobs|gitRepos|connections)'\)", page):
     print("  PASS  at least one Sync section reads its list through the bridge")
 else:
     print("  FAIL  no Sync section reads a declarative list — the tab is not data-driven yet")
@@ -534,6 +536,121 @@ for job in jobs:
     if not isinstance(job.get("delete", False), bool):
         print("  FAIL  %s declares a non-boolean delete" % name); failed = True; continue
     print("  PASS  %s (delete=%s)" % (name, job.get("delete", False)))
+sys.exit(1 if failed else 0)
+PYTHON
+[ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
+
+echo "── #457 gate: three Sync sub-tabs render; Mounted IS the connections declaration ──"
+# The mutation gate the task demands. RED if a Sync sub-tab stops rendering
+# (a renderer deleted, or renderSync's dispatch stops routing its chip value),
+# and RED if the Mounted list stops reading the declaration (it must consume the
+# SAME connections() carrier — data/drive-connections.json — and the second
+# declaration must be gone from every carrier: data file, BuildConfig field,
+# bridge method, page renderer). A hollow green where Mounted renders an empty
+# box over a duplicate list is the defect this makes loud (#170/#261, #292).
+python3 - "$PAGE" "$BRIDGE" "$GRADLE" "$APP" <<'PYTHON'
+import json, os, re, sys
+
+page    = open(sys.argv[1], encoding="utf-8").read()
+bridge  = open(sys.argv[2], encoding="utf-8").read()
+gradle  = open(sys.argv[3], encoding="utf-8").read()
+app_dir = sys.argv[4]
+failed  = False
+
+# Gate 1 — every Sync sub-tab renders, and renderSync routes each chip value to
+# its own renderer. Dropping the mounted branch of the dispatch must fail this.
+# Each slice is bounded to ONE function body (next 'function ' keyword), so a
+# check cannot be satisfied by a later declaration of the same string.
+def fun_body(src, name):
+    start = src.find("function %s" % name)
+    if start < 0:
+        return ""
+    nxt = src.find("function ", start + 1)
+    return src[start:nxt if nxt > 0 else len(src)]
+
+for renderer in ("renderRcloneSubpage", "renderMountedSubpage", "renderGitSubpage"):
+    if renderer in page:
+        print("  PASS  %s renders" % renderer)
+    else:
+        print("  FAIL  %s is missing — that Sync sub-tab has no renderer" % renderer); failed = True
+dispatch = fun_body(page, "renderSync")
+# The dispatch is a ternary: git and mounted name their branch AND their
+# renderer; rclone is the fallback that must still call its renderer. Pin the
+# exact shapes so rewiring any branch or deleting any renderer fails red.
+if "state.syncSub === 'git' ? renderGitSubpage()" in dispatch:
+    print("  PASS  renderSync routes 'git' to renderGitSubpage")
+else:
+    print("  FAIL  renderSync no longer routes 'git' to renderGitSubpage"); failed = True
+if "state.syncSub === 'mounted' ? renderMountedSubpage()" in dispatch:
+    print("  PASS  renderSync routes 'mounted' to renderMountedSubpage")
+else:
+    print("  FAIL  renderSync no longer routes 'mounted' to renderMountedSubpage"); failed = True
+if "renderRcloneSubpage()" in dispatch:
+    print("  PASS  renderSync falls back to renderRcloneSubpage")
+else:
+    print("  FAIL  renderSync no longer falls back to renderRcloneSubpage"); failed = True
+
+# Gate 2 — the Mounted list reads the declaration. renderMountedSubpage must
+# consume connections() and render through connectionCard, the page must read
+# the connections carrier over the bridge, and the old second declaration must
+# be gone from all four places it used to live.
+mounted = fun_body(page, "renderMountedSubpage")
+if "connections()" in mounted:
+    print("  PASS  renderMountedSubpage reads the connections declaration")
+else:
+    print("  FAIL  renderMountedSubpage does not read connections() — the Mounted list is not the declaration"); failed = True
+if "connectionCard" in mounted:
+    print("  PASS  renderMountedSubpage renders through connectionCard")
+else:
+    print("  FAIL  renderMountedSubpage does not use connectionCard — a second renderer to keep in step"); failed = True
+if "Bridge.raw('connections')" in page:
+    print("  PASS  the page reads the connections carrier through the bridge")
+else:
+    print("  FAIL  the page never calls Bridge.raw('connections') — Mounted/Backups cannot load the declaration"); failed = True
+
+data_files = os.listdir(os.path.join(app_dir, "data"))
+for marker, where, label in (
+    ("drive-mounts.json", data_files,  "the data directory"),
+    ("DRIVE_MOUNTS_B64",  gradle,      "build.gradle"),
+    ("driveMounts",       bridge,      "FilesBridge.kt"),
+    ("driveMounts",       page,        "drive.html"),
+    ("mountCard",         page,        "drive.html"),
+):
+    present = (marker in where) if isinstance(where, str) else (marker in where)
+    if present:
+        print("  FAIL  %s still references %s — the second declaration was not removed (#170/#261)" % (label, marker))
+        failed = True
+    else:
+        print("  PASS  no %s anywhere" % marker)
+
+# Constraint 4 has data: the connections catalogue itself declares something
+# unreachable, WITH the reason, and the renderer says it. A list of only-ok
+# entries would make the specific-message path untestable (#292).
+try:
+    connections = json.load(open(os.path.join(app_dir, "data", "drive-connections.json"), encoding="utf-8"))
+except Exception as error:
+    print("  FAIL  data/drive-connections.json does not parse: %s" % error); failed = True
+    connections = []
+if not connections:
+    print("  FAIL  data/drive-connections.json declares no connections — Mounted has nothing to render"); failed = True
+else:
+    unreachable = [c for c in connections if c.get("status") != "ok"]
+    print("  PASS  data/drive-connections.json declares %d connections, %d unreachable" %
+          (len(connections), len(unreachable)))
+    if not unreachable:
+        print("  FAIL  no declared-but-unreachable connection — the specific-message path has no data"); failed = True
+    for entry in unreachable:
+        if not entry.get("reason"):
+            print("  FAIL  %s is not ok but declares no reason — the renderer would guess" %
+                  (entry.get("name") or "<unnamed>")); failed = True
+        else:
+            print("  PASS  %s declares its reason" % (entry.get("name") or "<unnamed>"))
+card = fun_body(page, "connectionCard")
+if "Cannot be reached" in card and ".reason" in card:
+    print("  PASS  connectionCard renders 'Cannot be reached' from the declared reason")
+else:
+    print("  FAIL  connectionCard has no status-branching message — unreachable renders as an empty box"); failed = True
+
 sys.exit(1 if failed else 0)
 PYTHON
 [ $? -eq 0 ] || FAILURES=$((FAILURES + 1))

@@ -1,122 +1,18 @@
 [
-  {
-    "name": "MinIO",
-    "kind": "s3",
-    "endpoint": "crawlee_minio:9000",
-    "auth": "access_key + secret",
-    "vm": "oci-apps",
-    "status": "ok",
-    "scope": "private",
-    "notes": "S3-compatible object store for crawlee runs"
-  },
-  {
-    "name": "Google Drive (me@)",
-    "kind": "google-drive",
-    "endpoint": "drive.google.com",
-    "auth": "oauth2 (google-personal-mcp)",
-    "vm": "oci-apps",
-    "status": "ok",
-    "scope": "public",
-    "notes": "Personal Google account via MCP"
-  },
-  {
-    "name": "Google Workspace",
-    "kind": "google-workspace",
-    "endpoint": "workspace.google.com",
-    "auth": "service_account + domain delegation",
-    "vm": "oci-apps",
-    "status": "ok",
-    "scope": "public",
-    "notes": "Docs/Sheets/Slides/Calendar via google-workspace-mcp"
-  },
-  {
-    "name": "rclone (photoprism)",
-    "kind": "rclone",
-    "endpoint": "photoprism_rclone container",
-    "auth": "shared volume",
-    "vm": "oci-apps",
-    "status": "ok",
-    "scope": "private",
-    "notes": "Photoprism originals sync via rclone"
-  },
-  {
-    "name": "Borg backups",
-    "kind": "borg",
-    "endpoint": "borg-server:2224",
-    "auth": "ssh-key",
-    "vm": "—",
-    "status": "ok",
-    "scope": "private",
-    "notes": "Daily encrypted snapshots"
-  },
-  {
-    "name": "Bup backups",
-    "kind": "bup",
-    "endpoint": "bup-server:2223",
-    "auth": "ssh-key",
-    "vm": "—",
-    "status": "ok",
-    "scope": "private",
-    "notes": "Dedup-backed redundant snapshots"
-  },
-  {
-    "name": "Filebrowser (HTTP)",
-    "kind": "http",
-    "endpoint": "files.diegonmarcos.com",
-    "auth": "two_factor",
-    "vm": "oci-apps",
-    "status": "ok",
-    "scope": "public",
-    "notes": "Browser-facing file manager"
-  },
-  {
-    "name": "Vaultwarden attachments",
-    "kind": "https",
-    "endpoint": "vault.diegonmarcos.com",
-    "auth": "two_factor",
-    "vm": "oci-apps",
-    "status": "ok",
-    "scope": "public",
-    "notes": "Attached files inside Bitwarden vault"
-  },
-  {
-    "name": "Photoprism originals",
-    "kind": "fs-volume",
-    "endpoint": "/opt/containers/photoprism/originals",
-    "auth": "fs-perms",
-    "vm": "oci-apps",
-    "status": "ok",
-    "scope": "private",
-    "notes": "Read-only bind mount of master library"
-  },
-  {
-    "name": "Hedgedoc uploads",
-    "kind": "https",
-    "endpoint": "doc.diegonmarcos.com",
-    "auth": "two_factor",
-    "vm": "oci-apps",
-    "status": "ok",
-    "scope": "public",
-    "notes": "Markdown attachments uploaded to docs"
-  },
-  {
-    "name": "Gitea LFS",
-    "kind": "git-lfs",
-    "endpoint": "git.diegonmarcos.com",
-    "auth": "two_factor + token",
-    "vm": "oci-apps",
-    "status": "ok",
-    "scope": "public",
-    "notes": "Large file storage attached to repos"
-  },
-  {
-    "name": "Stalwart mail blobs",
-    "kind": "imap-attachments",
-    "endpoint": "mail-stalwart.diegonmarcos.com",
-    "auth": "imap+jmap",
-    "vm": "oci-mail",
-    "status": "ok",
-    "scope": "public",
-    "notes": "MIME attachments inside JMAP store"
-  }
+  {"name":"MinIO","kind":"s3","endpoint":"crawlee_minio:9000","auth":"access_key + secret","vm":"oci-apps","status":"ok","scope":"private","notes":"S3-compatible object store for crawlee runs"},
+  {"name":"Google Drive (me@)","kind":"google-drive","endpoint":"drive.google.com","auth":"oauth2 (google-personal-mcp)","vm":"oci-apps","status":"ok","scope":"public","notes":"Personal Google account via MCP"},
+  {"name":"Google Workspace","kind":"google-workspace","endpoint":"workspace.google.com","auth":"service_account + domain delegation","vm":"oci-apps","status":"ok","scope":"public","notes":"Docs/Sheets/Slides/Calendar via google-workspace-mcp"},
+  {"name":"rclone (photoprism)","kind":"rclone","endpoint":"photoprism_rclone container","auth":"shared volume","vm":"oci-apps","status":"ok","scope":"private","notes":"Photoprism originals sync via rclone"},
+  {"name":"Borg backups","kind":"borg","endpoint":"borg-server:2224","auth":"ssh-key","vm":"—","status":"ok","scope":"private","notes":"Daily encrypted snapshots"},
+  {"name":"Bup backups","kind":"bup","endpoint":"bup-server:2223","auth":"ssh-key","vm":"—","status":"ok","scope":"private","notes":"Dedup-backed redundant snapshots"},
+  {"name":"Filebrowser (HTTP)","kind":"http","endpoint":"files.diegonmarcos.com","auth":"two_factor","vm":"oci-apps","status":"ok","scope":"public","notes":"Browser-facing file manager"},
+  {"name":"Vaultwarden attachments","kind":"https","endpoint":"vault.diegonmarcos.com","auth":"two_factor","vm":"oci-apps","status":"ok","scope":"public","notes":"Attached files inside Bitwarden vault"},
+  {"name":"Photoprism originals","kind":"fs-volume","endpoint":"/opt/containers/photoprism/originals","auth":"fs-perms","vm":"oci-apps","status":"ok","scope":"private","notes":"Read-only bind mount of master library"},
+  {"name":"Hedgedoc uploads","kind":"https","endpoint":"doc.diegonmarcos.com","auth":"two_factor","vm":"oci-apps","status":"ok","scope":"public","notes":"Markdown attachments uploaded to docs"},
+  {"name":"Gitea LFS","kind":"git-lfs","endpoint":"git.diegonmarcos.com","auth":"two_factor + token","vm":"oci-apps","status":"ok","scope":"public","notes":"Large file storage attached to repos"},
+  {"name":"Stalwart mail blobs","kind":"imap-attachments","endpoint":"mail-stalwart.diegonmarcos.com","auth":"imap+jmap","vm":"oci-mail","status":"ok","scope":"public","notes":"MIME attachments inside JMAP store"},
+  {"name":"Gitea API (repos feed)","kind":"http-api","endpoint":"10.0.0.6:3002 (mesh-only)","auth":"unauthenticated for the public mirrors (confirmed live by the SuperApp's GiteaFeed); push needs an ssh key this device does not carry","vm":"oci-apps","status":"ok","scope":"private","notes":"Gitea org `diego` mirrors every non-fork GitHub repo except cloud-vault; the Git subpage renders the same family on both remotes"},
+  {"name":"Gitea SSH","kind":"ssh","endpoint":"10.0.0.6:2222 (mesh-only)","auth":"ssh key","vm":"oci-apps","status":"ok","scope":"private","notes":"The way a mesh client actually pushes to the mirrors (ssh_listen_host 10.0.0.6)"},
+  {"name":"Photoprism originals (WebDAV)","kind":"webdav","endpoint":"10.0.0.6 (photos.diegonmarcos.com, wg_only gate)","auth":"would need photoprism credentials on the phone","vm":"oci-apps","status":"unreachable","scope":"private","reason":"The photoprism container ships PHOTOPRISM_DISABLE_WEBDAV=true, so there is NO WebDAV endpoint to mount; the declared connection is refused by the origin itself.","notes":"The originals volume exists (see the fs-volume entry) but is served as a fleet-side bind mount, not a device-facing mount."},
+  {"name":"WireGuard hub","kind":"wireguard","endpoint":"10.0.0.1:51820 (udp; fallback udp/443)","auth":"wg keypair","vm":"gcp-proxy","status":"ok","scope":"private","notes":"Hub of the mesh, not a storage surface — the reason the storages above exist at all"}
 ]

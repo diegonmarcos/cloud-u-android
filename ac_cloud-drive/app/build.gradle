@@ -65,7 +65,7 @@ def connectionsB64  = b64(connectionsFile.exists()
 def mirrorJobsFile = file('../data/drive-mirror-jobs.json')
 def mirrorJobsB64  = b64(mirrorJobsFile.exists()
     ? (new groovy.json.JsonSlurper().parse(mirrorJobsFile).jobs ?: []) : [])
-// The rclone remotes, transfer jobs and fleet mounts the Sync tab renders, on
+// The rclone remotes and transfer jobs the Sync tab renders, on
 // the same carrier as every other declarative list here: a repo data/*.json
 // baked in at build time, so the APK needs no network to render the tab.
 // Task 457c — credentials are NOT in any of these files (drive-remotes.json
@@ -78,9 +78,6 @@ def rcloneRemotesB64  = b64(rcloneRemotesFile.exists()
 def rcloneJobsFile = file('../data/drive-rclone-jobs.json')
 def rcloneJobsB64  = b64(rcloneJobsFile.exists()
     ? (new groovy.json.JsonSlurper().parse(rcloneJobsFile).jobs ?: []) : [])
-def driveMountsFile = file('../data/drive-mounts.json')
-def driveMountsB64  = b64(driveMountsFile.exists()
-    ? (new groovy.json.JsonSlurper().parse(driveMountsFile).mounts ?: []) : [])
 // The Git subpage's repository family — the same curated 8 the SuperApp's
 // GH Repos / Gitea Repos cards reuse — baked whole (instances + repos) so the
 // page renders both remotes from the one declaration. Task 457c.
@@ -235,7 +232,6 @@ android {
         buildConfigField "String", "MIRROR_JOBS_B64", "\"${mirrorJobsB64}\""
         buildConfigField "String", "RCLONE_REMOTES_B64", "\"${rcloneRemotesB64}\""
         buildConfigField "String", "RCLONE_JOBS_B64",    "\"${rcloneJobsB64}\""
-        buildConfigField "String", "DRIVE_MOUNTS_B64",   "\"${driveMountsB64}\""
         buildConfigField "String", "GIT_REPOS_B64",      "\"${gitReposB64}\""
         buildConfigField "String", "UI_APPS_B64",     "\"${driveAppsB64}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""
