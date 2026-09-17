@@ -32,7 +32,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -85,6 +84,7 @@ import app.sterna.ui.components.EmptyArt
 import app.sterna.ui.components.EmptyState
 import app.sterna.ui.components.LoadingRing
 import app.sterna.ui.components.accountColorOf
+import app.sterna.ui.theme.LocalMailListPalette
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -269,8 +269,14 @@ fun SearchScreen(
             // results' space AND the overlay's stage, so opening the panel never resizes the list.
             Box(Modifier.fillMaxWidth().weight(1f).clipToBounds()) {
                 // The results, at full size UNDER the overlay, with a top inset the height of the
-                // handle.
-                Column(Modifier.fillMaxSize().padding(top = handleHeight)) {
+                // handle. The whole area wears the list pane colour: search results are cards too,
+                // and a card needs the deck it sits on (#472).
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(top = handleHeight)
+                        .background(LocalMailListPalette.current.pane),
+                ) {
                     if (!form.expanded) {
                         // Folded: the criteria the RESULTS came from, never the half-edited form.
                         val applied = (state as? SearchState.Results)?.query ?: query
@@ -346,7 +352,6 @@ fun SearchScreen(
                                             originLabel = owner?.label(),
                                             originColor = accountColorOf(owner?.color),
                                         )
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                                     }
                                 }
                             }

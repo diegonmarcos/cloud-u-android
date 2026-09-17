@@ -202,6 +202,7 @@ import app.sterna.ui.components.TernRefreshIndicator
 import app.sterna.ui.components.Monogram
 import app.sterna.ui.components.accountColorOf
 import app.sterna.ui.components.verticalScrollbar
+import app.sterna.ui.theme.LocalMailListPalette
 import app.sterna.ui.isOutgoingFolder
 import app.sterna.ui.messageFolderRole
 import app.sterna.ui.rememberMotionEnabled
@@ -864,9 +865,9 @@ fun InboxScreen(
         ListDetailPanes(panes, detail) {
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-            // The list's ground is the lighter black ([ColorScheme.surfaceContainerLow]); each row
-            // is the darker [ColorScheme.surface] on top of it (task #464).
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            // The list's ground is the message-list PANE — palette's dark grey behind the black
+            // cards (#472). Each row lifts itself off it as its own rounded card.
+            containerColor = LocalMailListPalette.current.pane,
             // imePadding: deleting from search happens with the keyboard open, which would
             // otherwise cover the Undo snackbar for its whole window (zero inset when closed).
             snackbarHost = { SnackbarHost(snackbarHostState, Modifier.imePadding()) },
@@ -1466,13 +1467,13 @@ fun InboxScreen(
                         drawerCanOpen = !permanentDrawer,
                     )
                 }
-                // The hairline between rows: outlineVariant weight, a light rule — never a heavy
-                // band — so rows read as separate cards on the list's lighter ground (task #464).
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
 
             val refreshState = rememberPullToRefreshState()
-            Column(Modifier.fillMaxSize().padding(padding)) {
+            // The list pane the cards sit on (#472): the gutter around every card is this colour
+            // showing through, so it must be the palette's pane — never a scheme surface, which is
+            // close enough to the card in the dark scheme to erase the separation.
+            Column(Modifier.fillMaxSize().padding(padding).background(LocalMailListPalette.current.pane)) {
             // Offline, failed, or neither — never "offline" for a failure the device did not
             // confirm. See [refreshNotice]: the VPN-killswitch case (#65) still reads offline; what
             // no longer does is a server that answered and refused.
@@ -2912,7 +2913,9 @@ private fun ThreadChildren(
         enter = if (motionOn) expandVertically() + fadeIn() else EnterTransition.None,
         exit = if (motionOn) shrinkVertically() + fadeOut() else ExitTransition.None,
     ) {
-        Column(Modifier.background(MaterialTheme.colorScheme.surface)) {
+        // Each unfolded child is its own card, so the column behind them wears the pane colour and
+        // there is no hairline between children — the gutters ARE the separation (#472).
+        Column(Modifier.background(LocalMailListPalette.current.pane)) {
             members.forEach { child ->
                 key(child.accountId, child.id) {
                     val ownerAccount = if (unified) accounts.firstOrNull { it.id == child.accountId } else null
@@ -2952,8 +2955,6 @@ private fun ThreadChildren(
                             modifier = Modifier.weight(1f),
                         )
                     }
-                    // Hairline between expanded-conversation members, matching the list rows (task #464).
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }

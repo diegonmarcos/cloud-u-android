@@ -5,7 +5,9 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import app.sterna.ui.theme.ArcticColorScheme
+import app.sterna.ui.theme.ArcticMailListPalette
 import app.sterna.ui.theme.PelagicColorScheme
+import app.sterna.ui.theme.PelagicMailListPalette
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -70,10 +72,13 @@ class ChipFillTest {
      */
     @Test fun `a chip stands clear of the row it sits on, in both schemes`() {
         for ((name, scheme) in listOf("Arctic" to ArcticColorScheme, "Pelagic" to PelagicColorScheme)) {
+            // Since #472 the plain row wears the palette's CARD (white in light, black in dark),
+            // so the chip's distance is measured from the colour it actually sits on in the list.
+            val card = if (name == "Arctic") ArcticMailListPalette.card else PelagicMailListPalette.card
             val rowColours = listOf(
-                rowBackground(scheme, selected = false, current = false, flash = 0f),
-                rowBackground(scheme, selected = true, current = false, flash = 0f),
-                rowBackground(scheme, selected = false, current = true, flash = 0f),
+                rowBackground(scheme, selected = false, current = false, flash = 0f, card = card),
+                rowBackground(scheme, selected = true, current = false, flash = 0f, card = card),
+                rowBackground(scheme, selected = false, current = true, flash = 0f, card = card),
             )
             val chip = chipFill(scheme)
             rowColours.forEach { row ->

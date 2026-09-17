@@ -1941,7 +1941,6 @@ private fun MessageContent(
                 // Not the same question as `blockRemote`: this one says whether the reader ever had
                 // anything held back on this page, and it is read ONCE.
                 senderAllowed = senderAllowed,
-                onShowImages = viewModel::showImagesOnce,
                 stripTracking = stripTracking,
                 confirmLinks = confirmLinks,
                 attachmentStatus = attachmentStatus,
@@ -2007,7 +2006,6 @@ private fun ConversationBody(
     blockRemote: Boolean,
     /** Whether this sender is on the image allowlist, i.e. nothing was ever held back here. */
     senderAllowed: Boolean,
-    onShowImages: () -> Unit,
     stripTracking: Boolean,
     confirmLinks: Boolean,
     attachmentStatus: String?,
@@ -2017,7 +2015,7 @@ private fun ConversationBody(
     onRespondToInvite: (String) -> Unit,
     textZoom: Int,
     /** Read the message as text rather than as its HTML (#149). It selects the document below and
-     *  decides, with it, whether the images strip exists at all — and nothing else here: the reveal
+     *  decides, with it, whether remote images are allowed at all — and nothing else here: the reveal
      *  machinery is keyed on the message id, so a toggle rebuilds the document without putting the
      *  spinner back over a body already on screen. */
     plainText: Boolean,
@@ -2057,17 +2055,6 @@ private fun ConversationBody(
 ) {
     val msg = messages.firstOrNull() ?: return
     val full = msg.body
-    // Whether the header says anything about blocked pictures at all (#153) — decided when the body
-    // arrives, then held, and re-decided on ONE gesture only.
-    // The ANSWER may not change on its own: the header's measured height keys the remember() that
-    // builds the body's HTML document, so a strip appearing mid-read cancels the load in flight —
-    // before the first reveal that costs the reveal, after it the reader's scroll position.
-    // The KEY is `(full, plainText)`, so only the reading-mode toggle can flip it. That costs TWO
-    // document loads, since the strip's presence feeds the key through the header height a pass later
-    // — accepted only there, because that gesture already replaces the document. `plainText` and NOT
-    // `imageMode`, which flips on its own when DataStore answers; the price is at `imagesStripPresent`.
-    // `blockRemote` is deliberately not read here: it chooses which same-height shape is drawn.
-    val imagesStrip = remember(full, plainText) { imagesStripPresent(plainText, senderAllowed, full?.htmlContent()) }
     val density = LocalDensity.current
     // The body WebView OWNS all vertical scroll. It fills the viewport (so Blink culls offscreen
     // tiles — #5) and there is no outer Compose vertical scroll: a sideways drag reaches the pager
@@ -2240,9 +2227,6 @@ private fun ConversationBody(
                 msg, full, attachmentStatus, onOpenAttachment, onSaveAttachment, calendar, onRespondToInvite,
                 onComposeTo, senderRule, showRecipients, deliveredTo, crypto, onCryptoAction,
                 deliveredToLine = deliveredToLine,
-                imagesStrip = imagesStrip,
-                imagesBlocked = blockRemote,
-                onShowImages = onShowImages,
                 unsubscribe = unsubscribe,
                 unsubscribeState = unsubscribeState,
                 onUnsubscribe = onUnsubscribe,
@@ -2333,12 +2317,6 @@ private fun MessageHeader(
      * re-judged here. Declared AFTER [onCryptoAction] on purpose: the call above passes everything
      *  up to it POSITIONALLY, so a parameter slipped in earlier silently shifts `crypto` by one. */
     deliveredToLine: String? = null,
-    /** Whether this message has remote content that was held back — decided in [ConversationBody] and
-     *  held there for as long as the reading mode does NOT change. */
-    imagesStrip: Boolean = false,
-    /** The LIVE state: which of the strip's two same-height shapes is drawn. */
-    imagesBlocked: Boolean = true,
-    onShowImages: () -> Unit = {},
     unsubscribe: UnsubscribeOptions? = null,
     unsubscribeState: UnsubscribeState = UnsubscribeState.Idle,
     onUnsubscribe: () -> Unit = {},
@@ -2542,13 +2520,6 @@ private fun MessageHeader(
                     },
                 )
             }
-        }
-        // The pictures this message wanted from someone else's server, and did not get (#153). Until
-        // this, nothing on screen said so: the only way through was an overflow entry no one opens for
-        // a message that simply looks broken. The entry stays — it is the way out when detection misses.
-        if (imagesStrip) {
-            HorizontalDivider()
-            ImagesStrip(imagesBlocked, onShowImages)
         }
         // The way out of a mailing list, when the sender offers one. Last of the strips, so it never
         // pushes the crypto verdict or a meeting invitation below the fold.
@@ -3274,54 +3245,6 @@ private fun PgpStatusCard(crypto: CryptoUiState, onAction: () -> Unit) {
                 }
             }
             CryptoUiState.None -> Unit
-        }
-    }
-}
-
-/**
- * The blocked-images strip above the body: one button, offering to fetch the pictures and then —
- * once they are there — saying so, greyed out (#153). A button, no icon, no sentence: the grammar of
- * the FREQUENT strips (see [UnsubscribeStrip]'s KDoc, the reference for all of this).
- *
- * One shape in both states, and that is the whole risk of the feature: the header's measured height
- * keys the `remember` that builds the body's HTML document, so a strip that changes size cancels the
- * body load in flight. Two composables under one `heightIn` do not hold — that is a FLOOR. Hence
- * `maxLines = 1` too, checked on the bench since nothing in the JVM lays Compose out.
- */
-@Composable
-private fun ImagesStrip(blocked: Boolean, onShowImages: () -> Unit) {
-    // Asked, never re-decided from the boolean: a second copy of the rule here is a rule no test can
-    // hold, because the test would be measuring the copy that does not ship.
-    val body = imagesStripBody(blocked)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            // No padding of its own along the height: the button's own minimum IS the strip's height.
-            // See the KDoc — a strip that changes height reloads the body underneath it.
-            .heightIn(min = ButtonDefaults.MinHeight)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Done is done: the same button, in the same place, at the same size. Nothing else is drawn
-        // here — a second shape is a second height.
-        TextButton(
-            onClick = onShowImages,
-            enabled = body.acts,
-            // A disabled TextButton otherwise takes onSurface at 38 % alpha, and the only confirmation
-            // that the pictures arrived would be the palest thing in the header.
-            colors = ButtonDefaults.textButtonColors(
-                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            ),
-        ) {
-            Text(
-                stringResource(body.label),
-                // ONE line whatever the language, and this is a height rule, not typography: heightIn
-                // is a FLOOR, so a wrapped label makes the strip a whole line taller — and the two
-                // strings differ in length in every locale. A clipped German word costs legibility; a
-                // wrap costs the body reload and the reader's place in the message.
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
     }
 }

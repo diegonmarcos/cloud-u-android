@@ -13,18 +13,27 @@ class EmailListItemBackgroundWiringTest {
 
     /** The call, whole, from its opening line to its closing parenthesis. Mutations 1, 2 and 3 —
      *  and, since #103, `current = current,` in its place: `current = false` there leaves the row
-     *  the reading pane shows unmarked on every wide window, with [RowBackgroundTest] green. */
+     *  the reading pane shows unmarked on every wide window, with [RowBackgroundTest] green. And,
+     *  since #472, `card = mailPalette.card,` in its place: a literal black there is a second,
+     *  untested declaration of the card colour. */
     private val expectedCall = listOf(
         "val rowColor = rowBackground(",
         "scheme = MaterialTheme.colorScheme,",
         "selected = selected,",
         "current = current,",
         "flash = highlight.value,",
+        "card = mailPalette.card,",
         ")",
     )
 
     /** Mutation 4: the result reaches the screen through this line and nowhere else. */
     private val expectedBackground = ".background(rowColor)"
+
+    /** The card look (#472): the row lifts itself off the pane with the declared gutters, then
+     *  clips itself to the declared corner before painting. Remove any one of these lines and the
+     *  list goes back to one flat sheet — the exact defect #464 shipped. */
+    private val expectedGutters = ".padding(horizontal = MailListDimens.gutterH, vertical = MailListDimens.gutterV)"
+    private val expectedClip = ".clip(MailListDimens.shape)"
 
     /** Mutation 5: what an unread row IS, for every caller that does not say. */
     private val expectedUnreadDefault = "unread: Boolean = !email.isSeen,"
@@ -98,6 +107,24 @@ class EmailListItemBackgroundWiringTest {
     }
 
     /**
+     * Mutation 9 (#472): the card's separation. Without the gutters the cards touch and the list
+     * is one sheet again; without the clip the corners are square. Both lines must be on the chain,
+     * in this order, reading the ONE dimension declaration.
+     */
+    @Test fun `the row is lifted off the pane by the declared gutters and corner`() {
+        val chain = rowModifierChain()
+        val expected = listOf(expectedGutters, expectedClip)
+        assertEquals(
+            "the row's modifier chain must carry the gutter padding and the corner clip, in this " +
+                "order, exactly as declared:\n" + expected.joinToString("\n") +
+                "\nA card that reads the dimensions itself, or skips one, loses the separation " +
+                "that #472 exists to give. The chain was:\n" + chain.joinToString("\n"),
+            expected,
+            chain.filter { it in expected },
+        )
+    }
+
+    /**
      * Mutation 5: what "unread" means to a caller that does not say — `SearchScreen.kt` is the
      */
     @Test fun `unread defaults to the message's own seen flag`() {
@@ -155,21 +182,24 @@ class EmailListItemBackgroundWiringTest {
     }
 
     /**
-     * The new text treatment: an unread row is bright, a read one dimmed. The colour rule must open
-     * the identical switch on the same three text lines that carry the bold weight — sender, subject
-     * and time — or a row would mix a bright sender with a dimmed subject and read unread as a
-     * gradient. (The closing `else … onSurfaceVariant` also appears on the favourite star, so only
-     * the distinctive opening line is counted here.)
+     * The new text treatment (#472): an unread row is WHITE, a read one LIGHT GREY, decided once by
+     * [mailListTextColor] through the palette — never per-line literals. The same decision must
+     * drive all four text lines (sender, subject, time, preview) or a row would mix a white sender
+     * with a grey subject and read unread as a gradient.
      */
-    @Test fun `the ink colour dims a read row, on exactly the same three text lines`() {
-        val opening = "color = if (unread) MaterialTheme.colorScheme.onSurface"
-        val colourRules = codeLines().filter { it == opening }
+    @Test fun `the ink colour of every message text line is the one palette decision`() {
+        val decision = "val listTextColor = mailListTextColor(unread, mailPalette)"
         assertEquals(
-            "each of the three text lines must open the colour with the bright/dim switch " +
-                "'$opening' (task #464): read state is carried by the ink, and a row that drops " +
-                "it shows no read state beyond bold. Count of the opening line:\n" +
-                colourRules.joinToString("\n"),
-            3,
+            "the row must decide its ink ONCE through the palette, on exactly this line — a " +
+                "literal here is a second declaration the palette tests cannot see (task #472)",
+            1,
+            codeLines().count { it == decision },
+        )
+        val colourRules = codeLines().filter { it == "color = listTextColor," }
+        assertEquals(
+            "every message text line (sender, subject, time, preview) must wear the palette ink — " +
+                "found " + colourRules.size + " of the 4 expected:\n" + colourRules.joinToString("\n"),
+            4,
             colourRules.size,
         )
     }

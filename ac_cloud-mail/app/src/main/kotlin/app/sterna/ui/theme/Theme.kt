@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -48,6 +49,12 @@ fun SternaTheme(
         else -> ArcticColorScheme
     }.let { applyPureBlack(it, darkTheme, pureBlack) }
 
+    // The message list's own palette follows the same theme decision, and the same OLED pull: in a
+    // pure-black device the pane comes down toward black with the rest, while the card and the two
+    // text inks keep their read/unread difference (the card is already black; the inks must not be).
+    val mailListPalette = (if (darkTheme) PelagicMailListPalette else ArcticMailListPalette)
+        .let { if (darkTheme && pureBlack) it.pulledToBlack() else it }
+
     // Match the system bar icons to the app theme (it drives light/dark via Compose,
     // not the system, so the edge-to-edge bars must be told explicitly). In light
     // theme the status-bar icons go dark so they stay legible on the light surface.
@@ -62,9 +69,11 @@ fun SternaTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = SternaTypography,
-        content = content,
-    )
+    CompositionLocalProvider(LocalMailListPalette provides mailListPalette) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = SternaTypography,
+            content = content,
+        )
+    }
 }

@@ -102,8 +102,9 @@ val PelagicColorScheme = darkColorScheme(
 
 /**
  * How far the raised surface roles are pulled toward black in the OLED scheme.
+ * Internal because [MailListPalette.pulledToBlack] pulls the message-list pane the same way.
  */
-private const val PureBlackPull = 0.2f
+internal const val PureBlackPull = 0.2f
 
 /**
  * The OLED variant of a DARK scheme: the page itself becomes true black — the pixels an OLED panel

@@ -38,6 +38,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import app.sterna.core.jmap.model.EmailBodyPart
+import app.sterna.ui.theme.LocalMailListPalette
+import app.sterna.ui.theme.MailListDimens
+import app.sterna.ui.theme.MailListPalette
+import app.sterna.ui.theme.mailListTextColor
 import app.sterna.ui.rememberMotionEnabled
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,12 +74,10 @@ import kotlinx.coroutines.delay
  *
  * Selection comes first and beats everything: the row's own colour is the ONLY sign that a row is
  * selected, and selection is what arms the destructive actions. Then [current], the row the reading
- * pane is showing (#103). Anything else — read or unread alike — is plain [ColorScheme.surface],
- * the darker black that sits on the list's lighter [ColorScheme.surfaceContainerLow] (task #464).
- * Read state is carried by the TEXT, not the row: an unread row is brighter and bold, a read one
- * dimmer and regular, so a filled background stays reserved for real selection, which must remain
- * visually distinct from unread. This is deliberately not the #141 experiment, which tinted the
- * whole row and made bold text the only difference within one row.
+ * pane is showing (#103). Anything else — read or unread alike — is [card], the palette's CARD
+ * colour (#472): black in the dark scheme, white in light. Read state is carried by the TEXT
+ * ([mailListTextColor]), never by the row, so a filled background stays reserved for real
+ * selection, which must remain visually distinct from a plain card.
  *
  * [flash] tints whichever base was retained rather than branching, so it cannot erase the selected
  * or current state while it plays.
@@ -85,11 +87,12 @@ internal fun rowBackground(
     selected: Boolean,
     current: Boolean,
     flash: Float,
+    card: Color,
 ): Color {
     val base = when {
         selected -> scheme.secondaryContainer
         current -> scheme.primaryContainer
-        else -> scheme.surface
+        else -> card
     }
     return if (flash > 0f) lerp(base, scheme.primary, 0.14f * flash) else base
 }
@@ -168,6 +171,10 @@ fun EmailListItem(
         senderName
     }
     val density = LocalListDensity.current
+    // The card look (#472): the active palette from the theme, and the ONE text-ink decision for
+    // this row. Read here so the card fill and every text line below answer from the same palette.
+    val mailPalette = LocalMailListPalette.current
+    val listTextColor = mailListTextColor(unread, mailPalette)
     val rowPadding = when (density) {
         ListDensity.COMPACT -> 6.dp
         ListDensity.NORMAL -> 10.dp
@@ -220,10 +227,17 @@ fun EmailListItem(
         selected = selected,
         current = current,
         flash = highlight.value,
+        card = mailPalette.card,
     )
+    // The card: rounded, lifted off the pane by the declared gutters, and painted with exactly the
+    // one background the state machine decided. The gutters are OUTSIDE the clip so the pane shows
+    // through around the card, which is what makes a row read as its own rectangle — the hairline
+    // of #464 read as one flat sheet, and this is the shape that does not (#472).
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .padding(horizontal = MailListDimens.gutterH, vertical = MailListDimens.gutterV)
+            .clip(MailListDimens.shape)
             .background(rowColor)
             .combinedClickable(onClick = onClick, onLongClick = enterSelection)
             .padding(start = 16.dp, end = 4.dp, top = rowPadding, bottom = rowPadding),
@@ -247,11 +261,10 @@ fun EmailListItem(
                 Text(
                     text = nameLine,
                     style = MaterialTheme.typography.titleMedium,
-                    // Unread is told by the TEXT, as Gmail does: bright (onSurface) AND bold against
-                    // a read row's dimmed (onSurfaceVariant) regular ink. The row behind both is the
-                    // same surface, so it is the dimmer read text that makes unread stand out.
-                    color = if (unread) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    // Unread is told by the TEXT, as Gmail does: WHITE (palette) AND bold against
+                    // a read row's light-grey regular ink (#472). The row behind both is the same
+                    // card, so it is the dimmer read text that makes unread stand out.
+                    color = listTextColor,
                     fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -277,8 +290,7 @@ fun EmailListItem(
                     fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
                     // Same read/unread text treatment as the sender and subject: the stamp is
                     // bright on an unread row and dimmed on a read one.
-                    color = if (unread) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = listTextColor,
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -286,10 +298,9 @@ fun EmailListItem(
                     text = email.subject?.takeIf { it.isNotBlank() } ?: stringResource(R.string.message_no_subject),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,
-                    // Unread subject stays bright and bold; a read one dims to onSurfaceVariant and
-                    // relaxes — the same text treatment as the sender line above.
-                    color = if (unread) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    // Unread subject stays WHITE and bold; a read one dims to light grey and
+                    // relaxes — the same text treatment as the sender line above (#472).
+                    color = listTextColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
@@ -313,7 +324,9 @@ fun EmailListItem(
                     Text(
                         text = preview,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // The preview is message text, so it wears the read/unread ink with the
+                        // sender and subject — a read row is grey all the way down (#472).
+                        color = listTextColor,
                         maxLines = previewLines,
                         overflow = TextOverflow.Ellipsis,
                     )

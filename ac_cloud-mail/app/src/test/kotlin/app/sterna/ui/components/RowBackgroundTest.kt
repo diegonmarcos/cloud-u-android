@@ -11,15 +11,17 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 /**
- * The three-state background of a message row (task #464, #103): selected, current (open in the
- * reading pane), and plain surface. Read and unread rows have the SAME background now — the read
- * state lives in the row's TEXT (bright and bold vs dimmed and regular), never in a row-wide tint,
- * so a filled background stays reserved for selection. Unread could once lift its row to a surface
- * container (#141); that toggle is gone, and this test keeps it gone.
+ * The three-state background of a message row (task #464, #103, #472): selected, current (open in
+ * the reading pane), and the palette's CARD — black in the dark scheme, white in light. Read and
+ * unread rows have the SAME background now — the read state lives in the row's TEXT (bright and
+ * bold vs dimmed and regular), never in a row-wide tint, so a filled background stays reserved for
+ * selection. Unread could once lift its row to a surface container (#141); that toggle is gone,
+ * and this test keeps it gone.
  */
 class RowBackgroundTest {
 
     private val surface = Color(0xFF110000)
+    private val card = Color(0xFF001100)
     private val secondaryContainer = Color(0xFF002200)
     private val primary = Color(0xFF004444)
     private val primaryContainer = Color(0xFF550055)
@@ -34,7 +36,7 @@ class RowBackgroundTest {
     @Test fun `selection wins`() {
         assertEquals(
             secondaryContainer,
-            rowBackground(scheme, selected = true, current = false, flash = 0f),
+            rowBackground(scheme, selected = true, current = false, flash = 0f, card = card),
         )
     }
 
@@ -43,7 +45,7 @@ class RowBackgroundTest {
             "a selected row must keep the selection colour even while it is the one open in the " +
                 "pane — selection is the only sign of what the destructive actions will hit",
             secondaryContainer,
-            rowBackground(scheme, selected = true, current = true, flash = 0f),
+            rowBackground(scheme, selected = true, current = true, flash = 0f, card = card),
         )
     }
 
@@ -52,17 +54,25 @@ class RowBackgroundTest {
             "the row the pane is showing must be painted primaryContainer, or nothing on a wide " +
                 "window says which message is open on the right",
             primaryContainer,
-            rowBackground(scheme, selected = false, current = true, flash = 0f),
+            rowBackground(scheme, selected = false, current = true, flash = 0f, card = card),
         )
     }
 
-    /** Task #464: an ordinary row is plain surface whether the message is read or unread. */
-    @Test fun `every ordinary row is plain surface`() {
+    /** Task #472: an ordinary row is the palette's CARD whether the message is read or unread. */
+    @Test fun `every ordinary row sits on the card colour`() {
         assertEquals(
-            "an unread row must be painted exactly like a read one — task #464 moved the unread " +
-                "signal to the text, so no row carries a background of its own any more",
+            "an unread row must be painted exactly like a read one — both wear the card, and the " +
+                "unread signal lives in the text ink (white vs light grey) that sits on it",
+            card,
+            rowBackground(scheme, selected = false, current = false, flash = 0f, card = card),
+        )
+    }
+
+    /** The card must be the palette's card, never the scheme surface #464 left behind. */
+    @Test fun `an ordinary row is not the scheme surface`() {
+        assertNotEquals(
             surface,
-            rowBackground(scheme, selected = false, current = false, flash = 0f),
+            rowBackground(scheme, selected = false, current = false, flash = 0f, card = card),
         )
     }
 
@@ -70,38 +80,38 @@ class RowBackgroundTest {
     @Test fun `selection stays distinct from a plain row`() {
         assertNotEquals(
             "selection is the only signal naming the rows the destructive actions will hit; with " +
-                "the unread tint gone it must remain visibly distinct from the plain surface row",
-            surface,
-            rowBackground(scheme, selected = true, current = false, flash = 0f),
+                "the unread tint gone it must remain visibly distinct from the plain card row",
+            card,
+            rowBackground(scheme, selected = true, current = false, flash = 0f, card = card),
         )
     }
 
     @Test fun `the flash tints the plain base`() {
         assertEquals(
-            lerp(surface, primary, 0.14f),
-            rowBackground(scheme, selected = false, current = false, flash = 1f),
+            lerp(card, primary, 0.14f),
+            rowBackground(scheme, selected = false, current = false, flash = 1f, card = card),
         )
     }
 
     @Test fun `the flash tints the selected base`() {
         assertEquals(
             lerp(secondaryContainer, primary, 0.14f),
-            rowBackground(scheme, selected = true, current = false, flash = 1f),
+            rowBackground(scheme, selected = true, current = false, flash = 1f, card = card),
         )
     }
 
     @Test fun `the flash tints the current base`() {
         assertEquals(
             lerp(primaryContainer, primary, 0.14f),
-            rowBackground(scheme, selected = false, current = true, flash = 1f),
+            rowBackground(scheme, selected = false, current = true, flash = 1f, card = card),
         )
     }
 
     /** Half-way through the flash the blend is half as strong. */
     @Test fun `the flash scales with its progress`() {
         assertEquals(
-            lerp(surface, primary, 0.07f),
-            rowBackground(scheme, selected = false, current = false, flash = 0.5f),
+            lerp(card, primary, 0.07f),
+            rowBackground(scheme, selected = false, current = false, flash = 0.5f, card = card),
         )
     }
 
@@ -110,7 +120,7 @@ class RowBackgroundTest {
      *  compile, which is the strongest guard this repo has against #141 coming back. */
     @Test fun `the unread tint is gone from the signature`() {
         // No assertion of its own: the shape of the function is fixed by the calls above.
-        assertNotEquals(secondaryContainer, rowBackground(scheme, selected = false, current = false, flash = 0f))
+        assertNotEquals(secondaryContainer, rowBackground(scheme, selected = false, current = false, flash = 0f, card = card))
     }
 
     @Test fun `every state is opaque in the sentinel scheme`() {
@@ -135,7 +145,7 @@ class RowBackgroundTest {
         for (selected in listOf(false, true)) {
             for (current in listOf(false, true)) {
                 for (flash in listOf(0f, 0.5f, 1f)) {
-                    val color = rowBackground(scheme, selected, current, flash)
+                    val color = rowBackground(scheme, selected, current, flash, card = card)
                     assertEquals(
                         "$name selected=$selected current=$current flash=$flash gave $color",
                         1f,
