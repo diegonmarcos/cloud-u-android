@@ -141,13 +141,11 @@ object InstallIdentity {
         // the user id (the same arithmetic the hidden UserHandle.getUserId
         // performs); user 0 is the primary install, any other user is a
         // profile/clone/Secure-Folder copy.
-        val user = Process.myUid()
+        val userId = Process.myUid() / PER_USER_RANGE
         val um = runCatching {
             context.getSystemService(UserManager::class.java)
         }.getOrNull()
-        if (user == 0) return InstallKind.MAIN
-        if (um != null && um.isManagedProfile) return InstallKind.WORK_PROFILE
-        return InstallKind.CLONE
+        return classify(userId, um?.isManagedProfile ?: false)
     }
 
     /** Whether the updater may act on the install this process is running as.
