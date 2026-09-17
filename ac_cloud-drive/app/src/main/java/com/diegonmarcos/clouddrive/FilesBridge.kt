@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.StatFs
+import android.provider.ContactsContract.Intents.Insert
 import android.provider.DocumentsContract
 import android.provider.Settings
 import android.webkit.JavascriptInterface
@@ -1342,13 +1343,15 @@ class FilesBridge(
     /** Opens the system contact-insert screen with the vCard's name (and number when it has one). */
     @JavascriptInterface
     fun addContact(vcard: String, name: String): String {
-        val insert = android.provider.ContactsContract.Intents.Insert
-        val intent = Intent(insert.ACTION)
-        if (name.isNotBlank()) intent.putExtra(insert.NAME, name)
+        // Insert is a Java constant-holder class, not an object — it can only be a
+        // qualifier, never a value. Binding it to a `val` made every field below
+        // unresolvable and took the whole module's compile down with it.
+        val intent = Intent(Insert.ACTION)
+        if (name.isNotBlank()) intent.putExtra(Insert.NAME, name)
         val telephone = vcard.lineSequence()
             .firstOrNull { it.trim().startsWith("TEL", ignoreCase = true) }
             ?.substringAfter(':')?.trim()
-        if (!telephone.isNullOrEmpty()) intent.putExtra(insert.PHONE, telephone)
+        if (!telephone.isNullOrEmpty()) intent.putExtra(Insert.PHONE, telephone)
         return try {
             if (ctx !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             ctx.startActivity(intent)
@@ -1688,7 +1691,10 @@ class FilesBridge(
     fun recognizeText(path: String): String {
         val file = resolve(path) ?: return failure("the image is outside the storage roots")
         val result = scanEngine.recognizeText(file)
-        if (result.error != null) return okErr(false, result.error)
+        // Bound to a local: `result.error` is public API in another module, so Kotlin
+        // will not smart-cast it to non-null across the guard.
+        val scanError = result.error
+        if (scanError != null) return okErr(false, scanError)
         val segments = JSONArray()
         result.segments.forEach { segment ->
             val item = JSONObject().put("text", segment.text)
