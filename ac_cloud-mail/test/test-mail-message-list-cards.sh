@@ -7,6 +7,8 @@
 #   C1  unread and read TEXT INKS are different colours in BOTH schemes (mutation: equal → red)
 #   C2  the CARD and the PANE behind it are different colours in BOTH schemes (mutation: equal → red)
 #   C3  a row's text ink is ONE decision routed through the palette, and the four message lines use it
+#   C3b the BOLD weight rides that SAME decision on sender/time/subject; no inline 'if (unread)'
+#       weight branch exists beside it (mutation: flip or inline → red, #478)
 #   C4  a row is lifted off its neighbours by the declared gutters and corner (mutation: zero → red)
 #   C5  the list panes (inbox and search) paint the declared pane colour behind the cards
 #   C6  the card colour reaches the row through the one rowBackground decision, as the palette's card
@@ -60,12 +62,18 @@ PY
 rc=$?
 [ $rc -eq 0 ] || FAIL=$((FAIL+rc))
 
-# ── C3 one text-ink decision, used by the four message lines ──
-has "$ROW" 'val listTextColor = mailListTextColor(unread, mailPalette)' \
+# ── C3 one text-ink decision (colour AND weight #478), used by the four message lines ──
+has "$ROW" 'val listTextInk = mailListTextInk(unread, mailPalette)' \
   "C3 the row's ink is ONE decision through the palette"
-n=$(grep -c 'color = listTextColor,' "$ROW")
+n=$(grep -c 'color = listTextInk.color,' "$ROW")
 [ "$n" -eq 4 ] && ok "C3 the sender, time, subject and preview all wear the decision ($n lines)" \
-  || bad "C3 expected exactly 4 'color = listTextColor,' lines, found $n"
+  || bad "C3 expected exactly 4 'color = listTextInk.color,' lines, found $n"
+w=$(grep -c 'fontWeight = listTextInk.weight,' "$ROW")
+[ "$w" -eq 3 ] && ok "C3b the sender, time and subject wear the SAME decision's bold weight ($w lines)" \
+  || bad "C3b expected exactly 3 'fontWeight = listTextInk.weight,' lines, found $w"
+i=$(grep -c 'fontWeight = if (unread)' "$ROW")
+[ "$i" -eq 0 ] && ok "C3b no inline 'fontWeight = if (unread)' branch beside the ink decision" \
+  || bad "C3b found $i inline read/unread weight branches — a second declaration (#478)"
 
 # ── C4 the card's separation: gutters and corner, from the ONE dimension declaration ──
 has "$ROW" '.padding(horizontal = MailListDimens.gutterH, vertical = MailListDimens.gutterV)' \

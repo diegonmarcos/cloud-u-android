@@ -4,6 +4,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 /**
@@ -76,10 +77,23 @@ internal object MailListDimens {
 }
 
 /**
- * The one decision that says what colour a row's message text is: unread takes the palette's
- * unread ink, read takes its read ink — never a literal, never a scheme role read here. The two
- * palettes are declared with different inks on purpose (white vs light grey in the dark scheme),
- * so "is this mail unread" is answered by the text even though the card background is the same.
+ * The TEXT answer a message row wears — colour AND weight in one object (#478). One declaration
+ * per fact: a row that reads 'unread' here is BOLD in the unread ink, one that reads 'read' is
+ * regular in the read ink. Nothing in a row may spell the read/unread decision a second time.
  */
-internal fun mailListTextColor(unread: Boolean, palette: MailListPalette): Color =
-    if (unread) palette.unreadText else palette.readText
+internal data class MailListTextInk(
+    val color: Color,
+    val weight: FontWeight,
+)
+
+/**
+ * The one decision that says how a row's message text reads: unread takes the palette's unread
+ * ink AND bold weight, read takes its read ink AND regular weight — never a literal, never a
+ * scheme role read here. The two palettes are declared with different inks on purpose (white vs
+ * light grey in the dark scheme), so "is this mail unread" is answered by the text even though
+ * the card background is the same. The weight rides the SAME branch as the colour (#478): unread
+ * is BOLD, read is NOT — one predicate, never a second 'if (unread)' beside this one.
+ */
+internal fun mailListTextInk(unread: Boolean, palette: MailListPalette): MailListTextInk =
+    if (unread) MailListTextInk(palette.unreadText, FontWeight.Bold)
+    else MailListTextInk(palette.readText, FontWeight.Normal)

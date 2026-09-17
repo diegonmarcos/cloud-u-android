@@ -1,6 +1,7 @@
 package app.sterna.ui.theme
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
@@ -39,10 +40,22 @@ class MailListPaletteTest {
 
     /** The reader routes through the ONE decision, so it cannot spell one side differently. */
     @Test fun `the text-ink decision returns exactly the palette inks`() {
-        assertEquals(PelagicMailListPalette.unreadText, mailListTextColor(unread = true, PelagicMailListPalette))
-        assertEquals(PelagicMailListPalette.readText, mailListTextColor(unread = false, PelagicMailListPalette))
-        assertEquals(ArcticMailListPalette.unreadText, mailListTextColor(unread = true, ArcticMailListPalette))
-        assertEquals(ArcticMailListPalette.readText, mailListTextColor(unread = false, ArcticMailListPalette))
+        assertEquals(PelagicMailListPalette.unreadText, mailListTextInk(unread = true, PelagicMailListPalette).color)
+        assertEquals(PelagicMailListPalette.readText, mailListTextInk(unread = false, PelagicMailListPalette).color)
+        assertEquals(ArcticMailListPalette.unreadText, mailListTextInk(unread = true, ArcticMailListPalette).color)
+        assertEquals(ArcticMailListPalette.readText, mailListTextInk(unread = false, ArcticMailListPalette).color)
+    }
+
+    /**
+     * The weight axis (#478): the SAME decision carries the bold. Unread rows are BOLD in both
+     * schemes, read rows are regular — this is the mutation target 'make unread regular' — and
+     * the two must be exact, not merely different (a swap would still differ but would be wrong).
+     */
+    @Test fun `the text-ink decision weights unread bold and read regular`() {
+        assertEquals(FontWeight.Bold, mailListTextInk(unread = true, PelagicMailListPalette).weight)
+        assertEquals(FontWeight.Normal, mailListTextInk(unread = false, PelagicMailListPalette).weight)
+        assertEquals(FontWeight.Bold, mailListTextInk(unread = true, ArcticMailListPalette).weight)
+        assertEquals(FontWeight.Normal, mailListTextInk(unread = false, ArcticMailListPalette).weight)
     }
 
     // -- card vs pane, the separation ------------------------------------------------------------

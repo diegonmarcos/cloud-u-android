@@ -38,10 +38,11 @@ class EmailListItemBackgroundWiringTest {
     /** Mutation 5: what an unread row IS, for every caller that does not say. */
     private val expectedUnreadDefault = "unread: Boolean = !email.isSeen,"
 
-    /** The read/unread text treatment of the three text lines, whole. Task #464 moved the unread
-     *  signal off the row's background and onto its ink: an unread row is bright (onSurface) and
-     *  bold, a read one dimmed (onSurfaceVariant) and regular. */
-    private val expectedWeight = "fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal,"
+    /** The read/unread text treatment of the three text lines, whole. Task #478 moved the bold
+     *  weight INTO the one ink decision: the row reads colour AND weight from [mailListTextInk],
+     *  so a second 'if (unread)' beside it would be exactly the parallel declaration the task
+     *  exists to remove. */
+    private val expectedWeight = "fontWeight = listTextInk.weight,"
 
     /**
      * Mutations 1, 2 and 3 at once: the arguments the composable actually hands the decision.
@@ -130,7 +131,7 @@ class EmailListItemBackgroundWiringTest {
     @Test fun `unread defaults to the message's own seen flag`() {
         assertEquals(
             "EmailListItem's 'unread' parameter must default to '$expectedUnreadDefault'. It is " +
-                "read for the bold weight and the ink colour of three text lines, and the only " +
+                "read for colour AND bold weight through the row's one ink decision, and the only " +
                 "caller that omits it is the search results list — pinned at 'false' that list " +
                 "shows no unread state at all, with every other rule in this repo green.",
             1,
@@ -160,42 +161,55 @@ class EmailListItemBackgroundWiringTest {
     @Test fun `the unread flag itself is never rewritten inside the composable`() {
         val rebound = codeLines().filter { Regex("""^val\s+unread\s*[:=]""").containsMatchIn(it) }
         assertEquals(
-            "nothing in EmailListItem.kt may re-bind 'unread': it drives the bold weight and the " +
-                "ink colour in three places, and narrowing it here would empty the list of its " +
+            "nothing in EmailListItem.kt may re-bind 'unread': it feeds the row's one ink decision " +
+                "(colour AND bold weight), and narrowing it here would empty the list of its " +
                 "unread cue. Found:\n" + rebound.joinToString("\n"),
             emptyList<String>(),
             rebound,
         )
     }
 
-    /** The bold weight is decided by unread alone, on three lines and no others. */
-    @Test fun `the bold weight is decided by unread alone, on three lines and no others`() {
+    /**
+     * The bold weight comes from the ONE ink decision — never from a second read/unread
+     * predicate. Three text lines (sender, subject, time) read [expectedWeight]; any inline
+     * 'if (unread)' weight branch is a parallel declaration (#478) and imports the defect this
+     * task exists to delete. Weight stays off the preview line by design.
+     */
+    @Test fun `the bold weight flows from the one ink decision, on three lines and no others`() {
         val weights = codeLines().filter { it == expectedWeight }
+        val inlineWeights = codeLines().filter { "fontWeight = if (unread)" in it }
         assertEquals(
-            "the bold weight of a list row must read 'unread' and nothing else, on exactly the " +
-                "three text lines (sender, subject, time). Any other condition here makes one " +
-                "condition do two things and empties the list of its unread cue. Found:\n" +
-                weights.joinToString("\n"),
+            "the bold weight must come from the row's ONE ink decision ([mailListTextInk], #478) " +
+                "on exactly the three text lines (sender, subject, time) — any inline " +
+                "'fontWeight = if (unread)' branch is a second declaration beside the colour's. " +
+                "Found weight lines:\n" + weights.joinToString("\n"),
             3,
             weights.size,
+        )
+        assertEquals(
+            "no line may branch fontWeight on 'unread' itself: the weight rides the same " +
+                "declaration as the colour, so a row can never mix a bold white sender with a " +
+                "regular white subject. Inline branches found:\n" + inlineWeights.joinToString("\n"),
+            emptyList<String>(),
+            inlineWeights,
         )
     }
 
     /**
      * The new text treatment (#472): an unread row is WHITE, a read one LIGHT GREY, decided once by
-     * [mailListTextColor] through the palette — never per-line literals. The same decision must
+     * [mailListTextInk] through the palette — never per-line literals. The same decision must
      * drive all four text lines (sender, subject, time, preview) or a row would mix a white sender
      * with a grey subject and read unread as a gradient.
      */
     @Test fun `the ink colour of every message text line is the one palette decision`() {
-        val decision = "val listTextColor = mailListTextColor(unread, mailPalette)"
+        val decision = "val listTextInk = mailListTextInk(unread, mailPalette)"
         assertEquals(
             "the row must decide its ink ONCE through the palette, on exactly this line — a " +
                 "literal here is a second declaration the palette tests cannot see (task #472)",
             1,
             codeLines().count { it == decision },
         )
-        val colourRules = codeLines().filter { it == "color = listTextColor," }
+        val colourRules = codeLines().filter { it == "color = listTextInk.color," }
         assertEquals(
             "every message text line (sender, subject, time, preview) must wear the palette ink — " +
                 "found " + colourRules.size + " of the 4 expected:\n" + colourRules.joinToString("\n"),
