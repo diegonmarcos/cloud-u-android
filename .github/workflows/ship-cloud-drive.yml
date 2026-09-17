@@ -42,6 +42,7 @@ on:
       - "ab_cloud-libs-shared/libs/analytics/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/devtools/**"
+      - "ab_cloud-libs-shared/libs/ml-l-image-mlkit/**"
       - "ab_cloud-libs-shared/libs/updater/**"
       - "ac_cloud-drive/**"
 permissions:
