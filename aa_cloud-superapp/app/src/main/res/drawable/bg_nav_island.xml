@@ -7,25 +7,28 @@
      bg_liquid_glass itself is untouched: the top island, the search sheet,
      the app drawer and the notification centre are all meant to stay glass.
 
-     Full pill (semicircular ends), not a rounded box: 999dp > half the bar
-     height on any build, so the radius clamps to height/2 and each end is a
-     perfect semicircle — the same convention bg_dynamic_island and
-     bg_liquid_glass_pill use. The bar's content (BottomNavigationView) is
-     inset by the island margins plus the navigation's own internal padding,
-     so the deeper corner round never clips an item. -->
+     Full pill (semicircular ends), not a rounded box: the radius token is
+     larger than half the bar height on any build, so the framework clamps it
+     to height/2 and each end is a perfect semicircle — the same convention
+     bg_dynamic_island and bg_liquid_glass_pill use. The radius is the SAME
+     token the selected-item capsule references (values/dimens.xml), so the
+     container and the item share one declaration and can never drift apart.
+     The bar's content (BottomNavigationView) is inset by the island margins
+     plus the navigation's own internal padding, so the deeper corner round
+     never clips an item. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Opaque fill. Darker than the #2D1B69 the window gradient ends on, so
          the bar reads as a solid box sitting on the page. -->
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="999dp" />
+            <corners android:radius="@dimen/bottom_nav_pill_corner_radius" />
             <solid android:color="#FF140B26" />
         </shape>
     </item>
     <!-- Hairline edge so the box still has a defined boundary. -->
     <item>
         <shape android:shape="rectangle">
-            <corners android:radius="999dp" />
+            <corners android:radius="@dimen/bottom_nav_pill_corner_radius" />
             <solid android:color="@android:color/transparent" />
             <stroke
                 android:width="1dp"

@@ -56,12 +56,24 @@
 
     <style name="Widget.CloudSuperApp.BottomNavigationView"
         parent="Widget.Material3.BottomNavigationView">
+        <!-- Selected-state highlight for a WHOLE item. Material 3's active
+             indicator is bound to the icon alone and can never grow to wrap
+             the label; wrapping the whole item is a property of the item
+             view's background, which itemBackground is. The checked state of
+             that state-list drawable is the full pill (icon + label) that
+             replaces the indicator. The ActiveIndicator style below is made
+             transparent so the two highlights do not stack. -->
+        <item name="itemBackground">@drawable/bg_bottom_nav_item_checked</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.CloudSuperApp.BottomNavigationView.ActiveIndicator</item>
     </style>
 
     <style name="Widget.CloudSuperApp.BottomNavigationView.ActiveIndicator"
         parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
-        <item name="android:color">@color/cloud_primary_container</item>
+        <!-- The pill behind the whole item (itemBackground above) IS the
+             selection indicator now, so the icon-bound active indicator must
+             stop painting or the two would stack as a double highlight.
+             Transparent colour = it draws nothing. -->
+        <item name="android:color">@android:color/transparent</item>
     </style>
 
     <!-- Custom dense text style for drawer rows. The default

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Selected-state capsule behind a WHOLE bottom-nav item: the icon AND the
+     label beneath it, in one pill with fully semicircular ends — the way
+     Telegram's and Revolut's navigation bars highlight their current item.
+
+     WHY THIS IS itemBackground AND NOT itemActiveIndicatorStyle. Material 3's
+     active indicator is a separate view bound to the icon container
+     (navigation_bar_item_active_indicator_view); it is a structural property
+     that the icon is drawn into, so no width/height/shapeAppearance tuning can
+     grow it to wrap the label. Enclosing the whole item is a property of the
+     item view's own background, and that is exactly what itemBackground paints
+     (NavigationBarItemView.setBackgroundResource(itemBackground)). Setting it
+     here is me relying on a property of the platform widget, not a value I can
+     be wrong about.
+
+     Colour is referenced as ?attr/colorPrimaryContainer, not a colour literal,
+     so the capsule follows the active launcher theme: under Power Saving and
+     Minimalist Black that attribute resolves to their black surface, while the
+     default light and dark themes resolve to the brand primary container. A
+     raw colour here would stay light-blue under the two black modes.
+
+     The capsule is inset from the item bounds so it sits INSIDE the nav island
+     with a visible gap top and bottom — nothing touches the container's edge
+     and nothing is clipped. state_checked is the only state that paints, so
+     unchecked items render no background and exactly one pill is lit at a
+     time. The corner radius is the same token the island itself uses, so the
+     item's semicircular ends echo the container's. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true">
+        <inset
+            android:insetTop="8dp"
+            android:insetBottom="8dp">
+            <shape android:shape="rectangle">
+                <solid android:color="?attr/colorPrimaryContainer" />
+                <corners android:radius="@dimen/bottom_nav_pill_corner_radius" />
+            </shape>
+        </inset>
+    </item>
+</selector>

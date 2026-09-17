@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Single declaration of the pill corner radius used by BOTH the bottom-nav
+     island (the container) and the selected-item capsule drawn behind a whole
+     nav item. Both drawables reference this token so the two pills can never
+     drift apart: changing one line here updates the container and the item in
+     step, which is what "the shape and the radius are declared once and
+     referenced" means.
+
+     999dp is the repository's established "full pill" convention (bg_dynamic
+     _island and bg_liquid_glass_pill use it too). The framework clamps any
+     corner radius larger than half the drawable's smaller side, so 999dp
+     always renders a true capsule with fully semicircular ends at whatever
+     height the bar actually measures to — a semicircle, not a rounded box. -->
+<resources>
+    <dimen name="bottom_nav_pill_corner_radius">999dp</dimen>
+</resources>
