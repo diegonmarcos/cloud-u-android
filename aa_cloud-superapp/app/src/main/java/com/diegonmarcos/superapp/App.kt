@@ -147,6 +147,11 @@ class App : Application(), WorkManagerConfiguration.Provider {
      *  an "Updated to vc:N" entry; first-ever launch records the
      *  baseline silently (nothing to update from). */
     private fun detectVersionBump() {
+        // IDENTITY GATE (#453). The "Updated to vc" push is an update
+        // notification from this install. A work-profile, parallel-clone or
+        // Secure Folder copy must not emit it — those copies are not the
+        // install the owner updated.
+        if (!com.diegonmarcos.superapp.updater.InstallIdentity.isManaged(this)) return
         val sp = getSharedPreferences("updater_marker", android.content.Context.MODE_PRIVATE)
         val lastVc = sp.getInt("last_vc", -1)
         val curVc  = BuildConfig.VERSION_CODE

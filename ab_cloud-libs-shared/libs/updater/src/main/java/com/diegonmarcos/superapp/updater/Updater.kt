@@ -32,6 +32,16 @@ object Updater {
     /** Enqueue (or refresh) the periodic update worker. Idempotent. Respects
      *  the runtime Auto-update toggle (AutoUpdatePrefs.enabled) — OFF cancels. */
     fun start(context: Context) {
+        // IDENTITY GATE (#453). A work-profile, parallel-clone or Secure
+        // Folder copy of this app is not the install the updater owns. It must
+        // not schedule the periodic self-update at all — never queue work whose
+        // only job is to draw a badge or ask for an update.
+        if (!InstallIdentity.isManaged(context)) {
+            Log.i("Updater", "identity gate: running as ${InstallIdentity.describe(context)} " +
+                              "— NOT the managed primary install; not scheduling the self-update")
+            cancel(context)
+            return
+        }
         if (!BuildConfig.AUTO_UPDATE_ENABLED || !AutoUpdatePrefs.enabled(context)) {
             cancel(context)
             return

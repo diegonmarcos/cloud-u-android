@@ -19,6 +19,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.diegonmarcos.superapp.updater.Advisory
 import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
+import com.diegonmarcos.superapp.updater.InstallIdentity
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Fleet
 // AUTO_UPDATE_* knobs are baked into the libs:updater BuildConfig (shared AU
@@ -39,6 +40,18 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
     CoroutineWorker(appCtx, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        // IDENTITY GATE (#453). A work-profile, parallel-clone or Secure
+        // Folder copy of this app is not the install the updater owns. The
+        // fleet check is the path that posts the "N constellation update(s)"
+        // notification and the badge — so a clone must not run it at all, and
+        // must not emit a single event the page could read. Same declaration
+        // as the scheduler and the self worker.
+        if (!InstallIdentity.isManaged(applicationContext)) {
+            Log.i(TAG, "identity gate: running as " +
+                  "${InstallIdentity.describe(applicationContext)} — NOT the managed primary " +
+                  "install; constellation check stays silent")
+            return@withContext Result.success()
+        }
         if (!AuConfig.AUTO_UPDATE_ENABLED || !AutoUpdatePrefs.enabled(applicationContext))
             return@withContext Result.success()
         // The metered decision the UNMETERED constraint used to make, made here
@@ -160,6 +173,17 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
 
         /** Schedule the periodic fleet check. Idempotent. Call from App.onCreate. */
         fun start(context: Context) {
+            // IDENTITY GATE (#453). A clone must not schedule the periodic
+            // fleet check (the notification/badge source); if one had it
+            // scheduled already, cancel is the honest state — it must never
+            // run. Same declaration as the self-updater.
+            if (!InstallIdentity.isManaged(context)) {
+                Log.i(TAG, "identity gate: running as ${InstallIdentity.describe(context)} " +
+                           "— NOT the managed primary install; not scheduling the constellation check")
+                WorkManager.getInstance(context).cancelUniqueWork(WORK_NAME)
+                WorkManager.getInstance(context).cancelUniqueWork("$WORK_NAME-now")
+                return
+            }
             // Battery-hungry: a periodic GHCR network check. Gated by the
             // "Constellation update check" toggle (Configs → Launcher → Battery
             // Hunger Ones) in addition to the auto-update master switch. Off →
@@ -208,6 +232,13 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
 
         /** One-shot fleet check shortly after launch. Same gating as [start]. */
         fun checkNow(context: Context) {
+            // IDENTITY GATE (#453). A clone must never enqueue even a manual
+            // fleet check — the notification/badge flows through this worker.
+            if (!InstallIdentity.isManaged(context)) {
+                Log.i(TAG, "identity gate: running as ${InstallIdentity.describe(context)} " +
+                           "— NOT the managed primary install; rejecting the constellation check")
+                return
+            }
             if (!AuConfig.AUTO_UPDATE_ENABLED || !AutoUpdatePrefs.enabled(context)) return
             val constraints = Constraints.Builder().apply {
                 setRequiredNetworkType(NetworkType.CONNECTED)

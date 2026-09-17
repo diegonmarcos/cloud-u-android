@@ -28,6 +28,18 @@ class UpdateWorker(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        // IDENTITY GATE (#453). Belt-and-suspenders under Updater.start: a
+        // clone could have had this worker queued before this build was
+        // installed, or re-armed by an in-app toggle that never re-runs start.
+        // Whatever scheduled it, a non-managed install must act on NOTHING —
+        // no check, no download, no install, no state that a badge or prompt
+        // reads. Same declaration as the scheduler.
+        if (!InstallIdentity.isManaged(applicationContext)) {
+            Log.i("Updater/Worker", "identity gate: running as " +
+                  "${InstallIdentity.describe(applicationContext)} — NOT the managed primary " +
+                  "install; self-update stays silent")
+            return@withContext Result.success()
+        }
         val force = inputData.getBoolean(KEY_FORCE, false)
         // FORCE and CONSENT are two different permissions and used to be one.
         // `force` answers "did a human ask for this?" — it decides whether the
