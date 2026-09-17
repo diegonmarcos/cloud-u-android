@@ -58,13 +58,15 @@ class RssViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Add [raw] if it is a usable feed address, then (re)load. */
-    fun subscribe(raw: String) {
-        if (!isFeedAddress(raw)) return
+    /** Add [raw] if it is a usable feed address, then (re)load. [ADDED] once stored; [INVALID]
+     *  when [raw] is not an http(s) address — the caller says that sentence, never a silent drop. */
+    fun subscribe(raw: String): RssSubscribeOutcome {
+        if (!isFeedAddress(raw)) return RssSubscribeOutcome.INVALID
         viewModelScope.launch {
             settings.setRssSubscribed(raw.trim(), subscribed = true)
             refresh()
         }
+        return RssSubscribeOutcome.ADDED
     }
 
     /** Stop following [url], then (re)load. */

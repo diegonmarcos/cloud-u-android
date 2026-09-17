@@ -1,6 +1,7 @@
 package app.sterna.ui.rss
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -59,6 +60,10 @@ fun RssScreen(
     val subscriptions by viewModel.subscriptions.collectAsStateWithLifecycle()
     val feeds by viewModel.feeds.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    // Resolved here, in the composable's own scope — stringResource must not run inside a tap
+    // callback, so the subscribe outcome sentences are read once per draw and handed to the toast.
+    val invalidUrlMessage = stringResource(R.string.rss_invalid_url)
+    val subscribedMessage = stringResource(R.string.rss_subscribed)
 
     // Load the current subscriptions on entry, and again if the set changes on disk.
     LaunchedEffect(subscriptions) { viewModel.refresh() }
@@ -84,7 +89,12 @@ fun RssScreen(
                 )
                 Button(
                     onClick = {
-                        viewModel.subscribe(address)
+                        // The address gate's verdict is said, never dropped: a non-http(s) string
+                        // gets its own sentence instead of cleaning the field in silence.
+                        when (viewModel.subscribe(address)) {
+                            RssSubscribeOutcome.INVALID -> Toast.makeText(context, invalidUrlMessage, Toast.LENGTH_SHORT).show()
+                            RssSubscribeOutcome.ADDED -> Toast.makeText(context, subscribedMessage, Toast.LENGTH_SHORT).show()
+                        }
                         address = ""
                     },
                     enabled = address.isNotBlank(),

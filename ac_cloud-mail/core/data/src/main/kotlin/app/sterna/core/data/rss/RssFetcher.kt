@@ -79,7 +79,7 @@ class RssFetcher(
             val announced = response.body?.contentLength() ?: 0L
             if (announced > MAX_FEED_BYTES) return null
             val text = response.body?.string().orEmpty()
-            if (text.encodeUtf8().size.toLong() > MAX_FEED_BYTES) return null
+            if (text.toByteArray().size.toLong() > MAX_FEED_BYTES) return null
             return text
         }
     }

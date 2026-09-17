@@ -163,7 +163,7 @@ class RssFeedParser(
 
     private fun itemFields(): ItemFields = ItemFields()
 
-    private data class ItemFields {
+    private class ItemFields {
         var title = ""
         var link = ""
         var published = ""
