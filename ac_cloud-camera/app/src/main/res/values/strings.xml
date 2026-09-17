@@ -240,6 +240,34 @@
     <string name="highest_res_setting">Use highest photo resolution</string>
     <string name="highest_res_setting_desc">Enable using the highest supported resolution for images instead of the default. This can lead to very large images on certain devices.</string>
 
+    <!-- #461a: typed actions for a scanned payload. -->
+    <string name="open_in_fleet_browser">Open link in Cloud Browser</string>
+    <string name="scanned_url_label_prefix">Link: </string>
+    <string name="join_wifi_network">Join this Wi-Fi network</string>
+    <string name="wifi_credentials_prompt_secured_prefix">Wi-Fi network </string>
+    <string name="wifi_credentials_prompt_secured_suffix"> (secured, password </string>
+    <string name="wifi_credentials_prompt_open_prefix">Wi-Fi network </string>
+    <string name="wifi_credentials_prompt_open_suffix"> (open, no password). Open Wi-Fi settings to join.</string>
+    <string name="wifi_credentials_prompt_end">). Open Wi-Fi settings to join.</string>
+    <string name="add_contact">Add this contact</string>
+    <string name="no_contact_intent_handler">No app can add this contact</string>
+    <string name="add_calendar_event">Add this calendar event</string>
+    <string name="no_calendar_intent_handler">No app can add this calendar event</string>
+    <string name="cannot_open_non_web_link">This link does not use http or https, so it cannot be opened in the browser.</string>
+    <string name="cannot_open_scanned_url">Could not open this link</string>
+    <string name="fleet_browser_not_installed">Cloud Browser is not installed. Install it from the Constellation store, or copy the link to open it elsewhere.</string>
+
+    <!-- #461a: voice shutter. -->
+    <string name="voice_shutter">Voice shutter</string>
+    <string name="voice_shutter_desc">Take a photo by saying \"%1$s\". Uses the offline voice engine; the model is downloaded on first use. Off by default.</string>
+    <string name="voice_shutter_trigger_word">capture</string>
+    <string name="voice_permission_refused">Microphone permission was refused, so the voice shutter cannot listen. Grant permission in Settings to use it.</string>
+    <string name="voice_model_not_downloaded">The offline voice model is not downloaded yet. It will download on first enable; keep the app open and connected.</string>
+    <string name="voice_engine_unavailable">The offline voice engine is not available on this device, so the voice shutter cannot run.</string>
+
+    <!-- #461a: an honest "nothing in frame" state for the scanner. -->
+    <string name="no_barcode_in_frame">No barcode or QR code in frame. Point the camera at a code.</string>
+
     <string name="wait_for_focus_lock">Wait for Focus Lock</string>
     <string name="invalid_photo_quality_value">Invalid value set for photo quality</string>
 </resources>

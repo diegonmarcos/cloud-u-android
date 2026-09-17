@@ -21,6 +21,8 @@ import android.os.Handler
 import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.provider.CalendarContract
+import android.provider.ContactsContract
 import android.provider.Settings
 import android.text.util.Linkify
 import android.util.Log
@@ -71,6 +73,7 @@ import cld.camera.CameraMode
 import cld.camera.ITEM_TYPE_IMAGE
 import cld.camera.ITEM_TYPE_VIDEO
 import cld.camera.R
+import cld.camera.analyzer.ScannedPayload
 import cld.camera.capturer.ImageCapturer
 import cld.camera.capturer.VideoCapturer
 import cld.camera.capturer.getVideoThumbnail
@@ -96,6 +99,7 @@ import cld.camera.util.ImageResizer
 import cld.camera.util.executeIfAlive
 import cld.camera.util.resolveActivity
 import cld.camera.util.setBlurBitmapCompat
+import cld.camera.voice.VoiceShutterController
 import com.google.android.material.color.DynamicColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.imageview.ShapeableImageView
@@ -103,7 +107,6 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.google.zxing.BarcodeFormat
 import java.io.File
-import java.nio.charset.StandardCharsets
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -148,6 +151,7 @@ open class MainActivity : AppCompatActivity(),
     lateinit var azToggle: QRToggle
 
     lateinit var imageCapturer: ImageCapturer
+    lateinit var voiceShutter: VoiceShutterController
     lateinit var videoCapturer: VideoCapturer
 
     lateinit var flipCameraCircle: View
@@ -241,6 +245,23 @@ open class MainActivity : AppCompatActivity(),
     }
 
     private val handler = Handler(Looper.getMainLooper())
+
+    // #461a: after a quiet interval with no decode, the scanner says so instead
+    // of holding a silent empty box. Cleared the moment a payload arrives.
+    private val noBarcodeCallback: Runnable = Runnable {
+        if (camConfig.isQRMode && !isQRDialogShowing) {
+            showMessage(R.string.no_barcode_in_frame)
+        }
+    }
+
+    fun scheduleNoBarcodeHint() {
+        handler.removeCallbacks(noBarcodeCallback)
+        handler.postDelayed(noBarcodeCallback, NO_BARCODE_HINT_DELAY_MS)
+    }
+
+    fun clearNoBarcodeHint() {
+        handler.removeCallbacks(noBarcodeCallback)
+    }
 
     private lateinit var snackBar: Snackbar
 
@@ -691,6 +712,19 @@ open class MainActivity : AppCompatActivity(),
         mainOverlay = binding.mainOverlay
         imageCapturer = ImageCapturer(this)
         videoCapturer = VideoCapturer(this)
+        // #461a: the voice shutter. Declared trigger word + off-by-default live
+        // in build.json; this wires it to the real shutter and to honest
+        // failure messages. Deliberately invisible until the settings toggle
+        // opts in — a camera that listens by default is not acceptable.
+        voiceShutter = VoiceShutterController(
+            this,
+            onMessage = { msg -> showMessage(msg) },
+            onShutter = {
+                if (camConfig.canTakePicture && !videoCapturer.isRecording) {
+                    imageCapturer.takePicture()
+                }
+            },
+        )
         thirdOption = binding.thirdOption
         previewLoader = binding.previewLoading
         imagePreview = binding.imagePreview
@@ -1201,81 +1235,148 @@ open class MainActivity : AppCompatActivity(),
 
     private var isQRDialogShowing = false
 
-    fun onScanResultSuccess(rawText: String) {
+    fun onScanResultSuccess(rawText: String, result: com.google.zxing.Result? = null) {
 
         if (isQRDialogShowing) return
 
+        // A payload arrived; the quiet-scanner hint is no longer warranted.
+        clearNoBarcodeHint()
+
         isQRDialogShowing = true
 
-        val hString = bytesToHex(
-            rawText.toByteArray(StandardCharsets.UTF_8)
-        )
+        // The decoder hands over a full ZXing Result so the payload can be
+        // classified. A decoded value is never shown as a bare string: it is
+        // turned into a typed action and the dialog offers what matches.
+        val payload = if (result != null) {
+            ScannedPayload.fromResult(result)
+        } else {
+            // Fallback for any caller that only has text (defensive): bare
+            // http/https strings are still typed so they can open in the fleet
+            // browser; everything else stays copyable plain text.
+            ScannedPayload.fromText(rawText)
+        }
 
         runOnUiThread {
             val builder = MaterialAlertDialogBuilder(this)
             val dialogBinding = ScanResultDialogBinding.inflate(layoutInflater)
             builder.setView(dialogBinding.root)
 
-            val tabLayout: TabLayout = dialogBinding.encodingTabs
             val textView = dialogBinding.scanResultText
+            val openButton = dialogBinding.openWith
+            val copyButton = dialogBinding.copyQrText
+            val shareButton = dialogBinding.shareQrText
+            val rawTabs = dialogBinding.encodingTabs
 
-            val intentView = Intent(Intent.ACTION_VIEW, Uri.parse(rawText))
+            // The Binary/UTF-8 tabs exist only for a raw-string dump, which is
+            // exactly what a typed payload must not be. Hide them: the value is
+            // presented via its action, and the raw text stays copyable below.
+            rawTabs.visibility = View.GONE
 
-            if (packageManager.resolveActivity(intentView, 0L) != null) {
-                dialogBinding.openWith.setOnClickListener {
-                    val chooser = Intent.createChooser(intentView, getString(R.string.open_with))
-                    startActivity(chooser)
+            when (payload) {
+                is ScannedPayload.Url -> {
+                    openButton.visibility = View.VISIBLE
+                    openButton.contentDescription = getString(R.string.open_in_fleet_browser)
+                    openButton.setImageResource(R.drawable.ic_open_with)
+                    openButton.setOnClickListener {
+                        openScannedUrl(payload.address)
+                    }
+                    textView.text = getString(R.string.scanned_url_label_prefix) + payload.address
                 }
-            } else {
-                dialogBinding.openWith.visibility = View.GONE
+
+                is ScannedPayload.Wifi -> {
+                    openButton.visibility = View.VISIBLE
+                    openButton.contentDescription = getString(R.string.join_wifi_network)
+                    openButton.setImageResource(R.drawable.location)
+                    openButton.setOnClickListener {
+                        // Android cannot silently join a Wi-Fi network from an
+                        // app; the honest action is to hand the user to the
+                        // system's own join surface with the network in view.
+                        startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+                    }
+                    val secured = payload.passwordType.isNotBlank()
+                    val prompt = if (secured) {
+                        getString(R.string.wifi_credentials_prompt_secured_prefix) +
+                            payload.ssid +
+                            getString(R.string.wifi_credentials_prompt_secured_suffix) +
+                            payload.password.ifBlank { "—" } +
+                            getString(R.string.wifi_credentials_prompt_end)
+                    } else {
+                        getString(R.string.wifi_credentials_prompt_open_prefix) +
+                            payload.ssid +
+                            getString(R.string.wifi_credentials_prompt_open_suffix)
+                    }
+                    textView.text = prompt
+                }
+
+                is ScannedPayload.Contact -> {
+                    openButton.visibility = View.VISIBLE
+                    openButton.contentDescription = getString(R.string.add_contact)
+                    openButton.setImageResource(R.drawable.info)
+                    openButton.setOnClickListener {
+                        val contactIntent = Intent(Intent.ACTION_INSERT).apply {
+                            type = ContactsContract.Contacts.CONTENT_TYPE
+                            val displayName = payload.names.joinToString(" ")
+                            if (displayName.isNotBlank()) {
+                                putExtra(ContactsContract.Intents.Insert.NAME, displayName)
+                            }
+                            if (payload.phoneNumbers.isNotEmpty()) {
+                                putExtra(ContactsContract.Intents.Insert.PHONE, payload.phoneNumbers[0])
+                            }
+                            if (payload.emails.isNotEmpty()) {
+                                putExtra(ContactsContract.Intents.Insert.EMAIL, payload.emails[0])
+                            }
+                        }
+                        runCatching { startActivity(contactIntent) }
+                            .onFailure { showMessage(getString(R.string.no_contact_intent_handler)) }
+                    }
+                    textView.text = ScannedPayload.describeContact(payload)
+                }
+
+                is ScannedPayload.CalendarEvent -> {
+                    openButton.visibility = View.VISIBLE
+                    openButton.contentDescription = getString(R.string.add_calendar_event)
+                    openButton.setImageResource(R.drawable.exposure_plus)
+                    openButton.setOnClickListener {
+                        val eventIntent = Intent(Intent.ACTION_INSERT).apply {
+                            data = CalendarContract.Events.CONTENT_URI
+                            putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, payload.startMillis)
+                            putExtra(CalendarContract.EXTRA_EVENT_END_TIME, payload.endMillis)
+                            if (payload.title.isNotBlank()) {
+                                putExtra(CalendarContract.Events.TITLE, payload.title)
+                            }
+                            if (payload.location.isNotBlank()) {
+                                putExtra(CalendarContract.Events.EVENT_LOCATION, payload.location)
+                            }
+                            if (payload.description.isNotBlank()) {
+                                putExtra(CalendarContract.Events.DESCRIPTION, payload.description)
+                            }
+                        }
+                        runCatching { startActivity(eventIntent) }
+                            .onFailure { showMessage(getString(R.string.no_calendar_intent_handler)) }
+                    }
+                    textView.text = ScannedPayload.describeCalendar(payload)
+                }
+
+                is ScannedPayload.PlainText -> {
+                    // Any other payload is still shown and copied — the value is
+                    // never lost, it just has no richer action to offer.
+                    openButton.visibility = View.GONE
+                    textView.autoLinkMask = Linkify.WEB_URLS or Linkify.PHONE_NUMBERS or Linkify.EMAIL_ADDRESSES
+                    textView.setTextIsSelectable(true)
+                    textView.text = payload.text.ifBlank { rawText }
+                }
             }
 
-            tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-
-                override fun onTabSelected(tab: TabLayout.Tab?) {
-                    when (tab?.text.toString()) {
-                        "Binary" -> {
-                            textView.autoLinkMask = 0
-                            textView.text = hString
-                        }
-
-                        "UTF-8" -> {
-                            textView.autoLinkMask =
-                                Linkify.WEB_URLS or Linkify.PHONE_NUMBERS or Linkify.EMAIL_ADDRESSES
-                            textView.text = rawText
-                        }
-                    }
-                }
-
-                override fun onTabReselected(tab: TabLayout.Tab?) {}
-
-                override fun onTabUnselected(tab: TabLayout.Tab?) {}
-            })
-
-            tabLayout.addTab(tabLayout.newTab().apply {
-                text = "UTF-8"
-            })
-
-            tabLayout.addTab(tabLayout.newTab().apply {
-                text = "Binary"
-            })
-
-            val ctc: ImageButton = dialogBinding.copyQrText
-            ctc.setOnClickListener {
+            copyButton.setOnClickListener {
                 val clipboardManager = getSystemService(
                     Context.CLIPBOARD_SERVICE
                 ) as ClipboardManager
-                val clipData = ClipData.newPlainText(
-                    "text",
-                    textView.text
-                )
+                val clipData = ClipData.newPlainText("text", textView.text)
                 clipboardManager.setPrimaryClip(clipData)
-
                 showMessage(getString(R.string.copied_text_to_clipboard))
             }
 
-            val sButton: ImageButton = dialogBinding.shareQrText
-            sButton.setOnClickListener {
+            shareButton.setOnClickListener {
                 val sIntent = Intent(Intent.ACTION_SEND)
                 sIntent.type = "text/plain"
                 sIntent.putExtra(Intent.EXTRA_TEXT, textView.text.toString())
@@ -1295,6 +1396,29 @@ open class MainActivity : AppCompatActivity(),
             camConfig.cameraProvider?.unbindAll()
 
             builder.showIgnoringShortEdgeMode()
+        }
+    }
+
+    /**
+     * Open [url] inside the fleet's own browser surface (#156), never a bare
+     * ACTION_VIEW that hands control to whatever app claims the scheme. The
+     * fleet browser is wrapped in an explicit package so the URL stays in the
+     * constellation; if it is not installed the user is told so with a path to
+     * the fleet installer, and the link stays copyable.
+     */
+    private fun openScannedUrl(url: String) {
+        if (!ScannedPayload.usesWebScheme(url)) {
+            showMessage(getString(R.string.cannot_open_non_web_link))
+            return
+        }
+        val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+            setPackage(FLEET_BROWSER_PACKAGE)
+        }
+        if (packageManager.resolveActivity(browserIntent, 0L) != null) {
+            runCatching { startActivity(browserIntent) }
+                .onFailure { showMessage(getString(R.string.cannot_open_scanned_url)) }
+        } else {
+            showMessage(getString(R.string.fleet_browser_not_installed))
         }
     }
 
@@ -1436,6 +1560,14 @@ open class MainActivity : AppCompatActivity(),
 
     companion object {
         private const val TAG = "GOCam"
+        // The fleet's own browser surface (#156). URL opens are pinned to this
+        // package so a scanned link stays inside the constellation instead of
+        // being handed to an arbitrary ACTION_VIEW handler that leaves the app.
+        private const val FLEET_BROWSER_PACKAGE = "com.diegonmarcos.cloudbrowser"
+        // How long the scanner waits with nothing decoded before it says so.
+        // Long enough to let a code actually enter the frame, short enough that
+        // a silent empty box never reads as availability.
+        private const val NO_BARCODE_HINT_DELAY_MS = 3_000L
         private const val autoCenterFocusDuration = 2000L
         private val hexArray = "0123456789ABCDEF".toCharArray()
 

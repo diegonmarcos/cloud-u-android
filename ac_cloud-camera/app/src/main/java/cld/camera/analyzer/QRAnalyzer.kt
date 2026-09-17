@@ -91,16 +91,21 @@ class QRAnalyzer(private val mActivity: MainActivity) : Analyzer {
         val binaryBitmap = BinaryBitmap(HybridBinarizer(source))
         reader.reset()
         try {
-            reader.decodeWithState(binaryBitmap).text?.let {
-                mActivity.onScanResultSuccess(it)
+            val decoded = reader.decodeWithState(binaryBitmap)
+            // Hand the typed action router the full decoded result so the dialog
+            // can classify it (URL/Wi-Fi/contact/calendar) instead of dumping the
+            // payload as an unreadable string.
+            decoded.text?.let { text ->
+                mActivity.onScanResultSuccess(text, decoded)
             }
         } catch (e: ReaderException) {
             val invertedSource = source.invert()
             val invertedBinaryBitmap = BinaryBitmap(HybridBinarizer(invertedSource))
             reader.reset()
             try {
-                reader.decodeWithState(invertedBinaryBitmap).text?.let {
-                    mActivity.onScanResultSuccess(it)
+                val decoded = reader.decodeWithState(invertedBinaryBitmap)
+                decoded.text?.let { text ->
+                    mActivity.onScanResultSuccess(text, decoded)
                 }
             } catch (e: ReaderException) {
             }

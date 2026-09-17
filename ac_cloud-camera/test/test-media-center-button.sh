@@ -595,6 +595,75 @@ check("A12 nothing else forces the circle visible",
       "they should assign thirdOptionIdleVisibility instead: %r"
       % sorted(offenders))
 
+# ── B: TASK 461a — a decoded payload becomes a TYPED action, never a raw dump ──
+# The scanner already decodes off the UI thread (CameraX ImageAnalysis executor).
+# What it must NOT do is hand the raw string to the UI as the whole answer. Each
+# assertion here exists because the naive version passes while the feature is
+# broken: "the raw value can be copied" is true of the value the dialog shows,
+# which is exactly the raw-string dump this task forbids.
+scanned_payload = os.path.join(
+    APP, "app/src/main/java/cld/camera/analyzer/ScannedPayload.kt")
+sp_src = strip_kotlin_comments(open(scanned_payload, encoding="utf-8").read()) \
+    if os.path.isfile(scanned_payload) else ""
+
+check("B1 a payload classifier separates text from typed actions",
+      "ClassScannedPayload" in sp_src
+      or "sealed class" in sp_src
+      or "object ClassScannedPayload" in sp_src,
+      "a decoded string must be classified before the UI decides what to offer; "
+      "no classifier means the raw string is still the only answer")
+
+for action, marker in (("URL", "Url"), ("Wi-Fi", "Wifi"),
+                       ("vCard/MECARD", "Contact"), ("calendar", "Calendar"),
+                       ("plain text", "PlainText")):
+    check("B1 classifier recognises the %s payload kind" % action,
+          marker in sp_src,
+          "the %s case is missing from the classifier: a %s that scans to "
+          "nothing typed falls back to the dump instead" % (action, action))
+
+# ── B2: the dialog routes through the classifier ──
+main_src1 = strip_kotlin_comments(open(
+    os.path.join(APP, "app/src/main/java/cld/camera/ui/activities/MainActivity.kt"),
+    encoding="utf-8").read())
+check("B2 onScanResultSuccess asks the classifier what it scanned",
+      "ScannedPayload" in main_src1 or "ClassScannedPayload" in main_src1,
+      "a typed action can only be offered if the raw string is parsed; a dialog "
+      "that never references the classifier still dumps the raw value")
+
+# ── B3: a URL opens in the fleet's own browser, never a bare ACTION_VIEW out ──
+check("B3 manifest declares <queries> visibility of the fleet browser",
+      "com.diegonmarcos.cloudbrowser" in
+      (open(os.path.join(APP, "app/src/main/AndroidManifest.xml"),
+            encoding="utf-8").read()),
+      "without it resolveActivity() returns null on targetSdk 30+ even when the "
+      "fleet browser IS installed, so the URL cannot leave the app into the "
+      "surface this task names (#156)")
+
+# ── B5: the voice shutter trigger is DECLARED in build.json, not a Kotlin literal ──
+build_json_path = os.path.join(APP, "build.json")
+build_json = open(build_json_path, encoding="utf-8").read() \
+    if os.path.isfile(build_json_path) else ""
+check("B5 build.json declares a voice shutter trigger word",
+      re.search(r'"shutter_trigger_word"\s*:\s*"[^"]+"', build_json) is not None,
+      "the trigger must live in build.json like the rest of the voice "
+      "configuration; a literal in Kotlin is exactly what the task forbids")
+
+check("B5 voice is OFF by default (opt-in)",
+      re.search(r'"shutter_enabled_by_default"\s*:\s*false', build_json) is not None,
+      "a camera that listens by default is not acceptable; the declaration must "
+      "opt the user in")
+
+# ── B6: every ML surface says when it cannot run ──
+strings_path = os.path.join(APP, "app/src/main/res/values/strings.xml")
+string_names = {s.get("name")
+                for s in ET.parse(strings_path).getroot().findall("string")}
+for key in ("no_barcode_in_frame", "voice_model_not_downloaded",
+            "voice_permission_refused"):
+    check("B6 a visible message exists for R.string.%s" % key,
+          key in string_names,
+          "an empty result rendered as an empty box is a hollow green; each "
+          "failure mode must name itself")
+
 print("\n-- %d assertions, %d failed --" % (checked, len(failures)))
 for f in failures:
     print("   FAILED: %s" % f, file=sys.stderr)

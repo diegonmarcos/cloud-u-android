@@ -319,6 +319,48 @@
 
 
                     <LinearLayout
+                        android:id="@+id/voice_shutter_setting"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="@dimen/settings_dialog_menu_item_vertical"
+                        android:paddingHorizontal="@dimen/settings_dialog_menu_item_horizontal"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/voice_shutter"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/voice_shutter_desc"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/voice_shutter_desc"
+                            android:textSize="12sp" />
+
+                        <LinearLayout
+                            android:id="@+id/voice_shutter_container"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:gravity="end|center_vertical">
+
+                            <com.google.android.material.materialswitch.MaterialSwitch
+                                android:id="@+id/voice_shutter_switch"
+                                android:layout_width="wrap_content"
+                                android:layout_height="@dimen/settings_dialog_switch_height"
+                                android:scaleX="@integer/settings_dialog_switch_scale"
+                                android:scaleY="@integer/settings_dialog_switch_scale"
+                                android:checked="false"
+                                android:contentDescription="@string/voice_shutter"/>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+
+                    <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="@dimen/settings_dialog_menu_item_height"
                         android:paddingVertical="@dimen/settings_dialog_menu_item_vertical"

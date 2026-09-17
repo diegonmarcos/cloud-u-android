@@ -12,6 +12,18 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+// #461a: the voice-shutter trigger word is DECLARED in build.json and baked
+// here into BuildConfig, exactly like libs/voice does for the model registry.
+// Keeping the trigger in build.json — not a Kotlin literal — is the point: the
+// shutter's hot word can change without an edit to application code, and it is
+// data in the same file as the rest of the voice configuration.
+val appMetadataJson = groovy.json.JsonSlurper().parse(rootProject.file("build.json")) as Map<*, *>
+val voiceSection = appMetadataJson["voice"] as? Map<*, *>
+val voiceShutterTrigger =
+    (voiceSection?.get("shutter_trigger_word") as? String).orEmpty().ifBlank { "capture" }
+val voiceShutterEnabledByDefault =
+    (voiceSection?.get("shutter_enabled_by_default") as? Boolean) ?: false
+
 java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(17))
@@ -52,6 +64,12 @@ android {
         versionName = versionCode.toString()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Baked from build.json::voice (#461a): the shutter's hot word and the
+        // opt-in default. Kept off by default — a camera that listens by default
+        // is not acceptable.
+        buildConfigField("String", "VOICE_SHUTTER_TRIGGER_WORD", "\"$voiceShutterTrigger\"")
+        buildConfigField("Boolean", "VOICE_SHUTTER_ENABLED_BY_DEFAULT", voiceShutterEnabledByDefault.toString())
     }
 
     buildTypes {

@@ -2015,6 +2015,11 @@ class CamConfig(private val mActivity: MainActivity) {
 
         if (isQRMode) {
             mActivity.qrOverlay.visibility = View.VISIBLE
+            // A scanner that finds nothing for a while says so rather than
+            // holding a silent empty box (#461a deliverable 4). Re-armed on the
+            // next decode-free interval anyway (see MainActivity.onScanResultSuccess).
+            mActivity.clearNoBarcodeHint()
+            mActivity.scheduleNoBarcodeHint()
             // Idle visibility, not a hardcoded INVISIBLE: on the main camera screen the circle is
             // already gone, and INVISIBLE would re-reserve its 96dp and open a blank gap above the
             // Media Center buttons for as long as the scanner is up.
@@ -2041,6 +2046,8 @@ class CamConfig(private val mActivity: MainActivity) {
             mActivity.micOffIcon.visibility = View.GONE
         } else {
             mActivity.qrOverlay.visibility = View.INVISIBLE
+            // Leaving the scanner cancels the quiet hint; the camera UI is back.
+            mActivity.clearNoBarcodeHint()
             // Leaving QR mode restores the normal camera UI, and on the idle screen normal no
             // longer includes the big circle.
             mActivity.thirdOption.visibility = mActivity.thirdOptionIdleVisibility

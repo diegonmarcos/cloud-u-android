@@ -26,6 +26,14 @@
             <data android:scheme="*" />
         </intent>
         <!--
+            The fleet's own browser (Cloud Browser), where a scanned http/https
+            link is opened (#461a, #156). Pinned to this package so a scanned URL
+            stays inside the constellation instead of being handed to whatever app
+            claims the scheme; without this entry resolveActivity() returns null on
+            targetSdk 30+ even when the browser IS installed.
+        -->
+        <package android:name="com.diegonmarcos.cloudbrowser" />
+        <!--
             Cloud Media Center, for the "open capture folder" button under the gallery
             thumbnail. Without this the app is invisible to package queries on
             targetSdk 30+, Intent.resolveActivity() returns null even when Media Center

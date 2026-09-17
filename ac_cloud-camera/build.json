@@ -1,6 +1,18 @@
 {
   "name": "cloud-camera",
   "description": "Diego's Cloud Camera — our own signed build of GrapheneOS Camera. Modern CameraX (photo, video, QR/barcode scan, timer, zoom/exposure bars, in-app gallery), pure Kotlin/Java, no NDK, no Play Services. Vendored upstream tree renamed onto cld.camera so it coexists with an officially-signed GrapheneOS Camera on the same device.",
+  "voice": {
+    "_doc": "Offline voice-shutter configuration, data-driven from this file. The trigger word is read at build time into BuildConfig so the shutter can never drift from what is declared here. A camera listens only when the user opts in.",
+    "shutter_trigger_word": "capture",
+    "shutter_enabled_by_default": false,
+    "default_language": "en-us",
+    "models": {
+      "en-us": {
+        "url": "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip",
+        "dir": "vosk-model-small-en-us-0.15"
+      }
+    }
+  },
   "category": "android",
   "mode": "single-app",
   "_doc_mode": "Hub-less single-fork app, exactly like ac_cloud-media-center: there is no hub module and no IPC contract — the single forks.<key> entry IS the app, built through the engine's step_build_fork machinery.",

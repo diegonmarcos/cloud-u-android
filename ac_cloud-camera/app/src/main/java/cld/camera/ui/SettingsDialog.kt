@@ -258,6 +258,25 @@ class SettingsDialog(val mActivity: MainActivity, themedContext: Context) :
             }
         }
 
+        // #461a voice shutter: opt-in and off by default. The trigger word and
+        // the off-by-default default come from build.json via BuildConfig; the
+        // dialog only persists the user's choice and runs the honest checks.
+        val voiceSwitch = binding.voiceShutterSwitch
+        voiceSwitch.isChecked = mActivity.voiceShutter.enabled
+        // The description names the actual declared trigger word (build.json),
+        // so the placeholder is never shown literally.
+        binding.voiceShutterDesc.text = mActivity.getString(
+            R.string.voice_shutter_desc, mActivity.voiceShutter.triggerWord
+        )
+        voiceSwitch.setOnClickListener {
+            mActivity.voiceShutter.setEnabled(voiceSwitch.isChecked)
+            if (voiceSwitch.isChecked) {
+                // Fires only if every precondition (permission, model, engine)
+                // holds; otherwise it says exactly which one does not.
+                mActivity.voiceShutter.run()
+            }
+        }
+
         selfIlluminationToggle = binding.selfIlluminationSwitch
         selfIlluminationToggle.setOnCheckedChangeListener { _, isChecked ->
             camConfig.selfIlluminate = isChecked
