@@ -1,0 +1,11 @@
+appId: com.viscouspot.gitsync
+---
+
+- runFlow: ../assert.yaml
+- runFlow:
+    when: 
+      notVisible: "SSH"
+    commands:
+      - tapOn: ".*auth dropdown"
+      - assertVisible: "SSH"
+      - tapOn: "SSH"

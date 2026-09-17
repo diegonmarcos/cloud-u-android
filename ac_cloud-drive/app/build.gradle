@@ -65,6 +65,40 @@ def connectionsB64  = b64(connectionsFile.exists()
 def mirrorJobsFile = file('../data/drive-mirror-jobs.json')
 def mirrorJobsB64  = b64(mirrorJobsFile.exists()
     ? (new groovy.json.JsonSlurper().parse(mirrorJobsFile).jobs ?: []) : [])
+// The Apps tab grid. data/drive-apps.json declares WHICH apps the grid links to
+// and how each tile looks; the constellation fleet manifest — the SAME canonical
+// file :libs:updater bakes into CONSTELLATION_FLEET_B64 — supplies each entry's
+// package identity. One declaration for the app list, one for identity, and no
+// second list of packages to keep in step (the #170/#380/#381 defect shape).
+// A declared fleet id that the manifest does not contain is a hard error here:
+// resolving it would bake a tile that can never open anything.
+def driveAppsFile  = file('../data/drive-apps.json')
+def fleetAppsFile  = new File(rootDir, '../aa_cloud-superapp/data/constellation-fleet.json')
+def fleetById      = [:]
+if (fleetAppsFile.exists()) {
+    new groovy.json.JsonSlurper().parse(fleetAppsFile).apps.each { fleetById[it.id] = it }
+}
+def resolvedDriveApps = []
+if (driveAppsFile.exists()) {
+    new groovy.json.JsonSlurper().parse(driveAppsFile).apps.each { entry ->
+        def out = [label: entry.label, icon: entry.icon]
+        if (entry.fleet) {
+            def fleetEntry = fleetById[entry.fleet]
+            if (fleetEntry == null) {
+                throw new GradleException(
+                    "data/drive-apps.json names fleet app '${entry.fleet}' which the " +
+                    "constellation fleet manifest does not contain ($fleetAppsFile). " +
+                    "Rename or remove the entry.")
+            }
+            out.package = fleetEntry.package
+        } else {
+            out.package = entry.package
+            out.fallback_url = entry.fallback_url ?: ''
+        }
+        resolvedDriveApps << out
+    }
+}
+def driveAppsB64  = b64(resolvedDriveApps)
 def uiPermissionsRuntimeB64 = b64(buildJson.ui?.permissions?.runtime ?: [])
 def uiPermissionsRolesB64   = b64(buildJson.ui?.permissions?.roles   ?: [])
 def profileDefault   = buildJson.ui?.profile_default ?: [:]
@@ -177,6 +211,7 @@ android {
         buildConfigField "String", "LOG_SINK_STREAM", "\"${logSinkStream}\""
         buildConfigField "String", "CONNECTIONS_B64", "\"${connectionsB64}\""
         buildConfigField "String", "MIRROR_JOBS_B64", "\"${mirrorJobsB64}\""
+        buildConfigField "String", "UI_APPS_B64",     "\"${driveAppsB64}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64",   "\"${uiPermissionsRolesB64}\""
         buildConfigField "String", "UI_PROFILE_NAME",      "\"${profileName}\""

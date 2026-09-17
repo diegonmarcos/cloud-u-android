@@ -1,0 +1,8 @@
+appId: com.viscouspot.gitsync
+---
+
+- runFlow: ./assert.yaml
+- assertVisible: "USE THIS FOLDER"
+- tapOn: "USE THIS FOLDER"
+- assertVisible: "ALLOW"
+- tapOn: "ALLOW"

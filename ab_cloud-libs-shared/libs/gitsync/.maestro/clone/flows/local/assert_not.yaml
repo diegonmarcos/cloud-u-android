@@ -1,0 +1,5 @@
+appId: com.viscouspot.gitsync
+---
+
+- runFlow: ../assert.yaml
+- assertNotVisible: "I HAVE A LOCAL REPOSITORY"

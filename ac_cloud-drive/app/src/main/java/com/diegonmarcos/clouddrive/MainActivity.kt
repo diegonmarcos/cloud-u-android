@@ -32,10 +32,11 @@ class MainActivity : AppCompatActivity() {
         // very properties the stylesheet already reads.
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowCompat.getInsetsController(window, window.decorView).apply {
-            // The page background is white top and bottom, so the system bar
-            // glyphs have to be drawn dark or they vanish into it.
-            isAppearanceLightStatusBars = true
-            isAppearanceLightNavigationBars = true
+            // The page background is dark top and bottom (the fleet-wide default,
+            // set in values/themes.xml and drive.html), so the system bar glyphs
+            // have to be drawn light or they vanish into it.
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
         }
 
         val webView = WebView(this)

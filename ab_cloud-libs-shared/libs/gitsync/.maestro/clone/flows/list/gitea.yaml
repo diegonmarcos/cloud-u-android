@@ -1,0 +1,5 @@
+appId: com.viscouspot.gitsync
+---
+
+- runFlow: ./assert.yaml
+- tapOn: ${MAESTRO_GITEA_LIST_REPO_NAME}

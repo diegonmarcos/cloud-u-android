@@ -1,0 +1,9 @@
+appId: com.viscouspot.gitsync
+---
+
+- runFlow:
+    when: 
+      visible: "Welcome to the New Version!"
+    commands:
+      - tapOn: "Set Up"
+

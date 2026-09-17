@@ -1,0 +1,4 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow: ../assert.yaml
+- tapOn: "AUTH*"

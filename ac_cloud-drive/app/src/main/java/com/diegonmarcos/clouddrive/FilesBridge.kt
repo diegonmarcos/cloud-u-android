@@ -18,9 +18,10 @@ import java.io.File
 /**
  * Everything the page can do to the phone's storage goes through here: browse, sort, make a
  * folder, rename, copy, move, delete, share, open-with, read a text file into the editor, write
- * it back, and mirror one folder onto another. The UI is HTML and holds no state of its own — it
- * asks for a directory and gets the whole listing back, so a change made here (or by any other
- * app) shows up on the next [list] rather than being tracked in two places that can disagree.
+ * it back, mirror one folder onto another, and launch the data apps the Apps tab links out to.
+ * The UI is HTML and holds no state of its own — it asks for a directory and gets the whole
+ * listing back, so a change made here (or by any other app) shows up on the next [list] rather
+ * than being tracked in two places that can disagree.
  *
  * Every path that crosses the bridge is resolved through [resolve], which refuses anything that
  * escapes the storage roots. The page is local HTML we ship, but a WebView JavascriptInterface is
@@ -71,9 +72,9 @@ class FilesBridge(private val ctx: Context) {
     }
 
     /**
-     * The storage back ends the Apps tab lists, as the raw JSON array baked in at build time from
-     * data/drive-connections.json. Handed over untouched: the page renders the fields it knows and
-     * ignores the rest, so adding a field to the data file needs no change here.
+     * The storage back ends the Sync tab's Rclone subpage lists, as the raw JSON array baked in at
+     * build time from data/drive-connections.json. Handed over untouched: the page renders the
+     * fields it knows and ignores the rest, so adding a field to the data file needs no change here.
      */
     @JavascriptInterface
     fun connections(): String =
@@ -83,6 +84,69 @@ class FilesBridge(private val ctx: Context) {
         } catch (error: Exception) {
             "[]"
         }
+
+    // ── the Apps tab grid ─────────────────────────────────────────────────────────
+
+    /**
+     * The icon-link grid the Apps tab renders, as the JSON array baked in at build time.
+     * data/drive-apps.json declares the selection and the tile presentation; the build resolves
+     * every fleet entry's package from constellation-fleet.json, so this list carries identity
+     * with no second declaration to keep in step (the #170/#380/#381 defect shape).
+     */
+    @JavascriptInterface
+    fun apps(): String =
+        if (BuildConfig.UI_APPS_B64.isEmpty()) "[]"
+        else try {
+            String(android.util.Base64.decode(BuildConfig.UI_APPS_B64, android.util.Base64.DEFAULT))
+        } catch (error: Exception) {
+            "[]"
+        }
+
+    /**
+     * Launches the application named by the JSON payload the Apps tab hands over — the resolved
+     * entry { package, fallback_url } — through the system launcher. The manifest declares a
+     * broad launcher query rather than naming packages, so which apps are reachable is decided by
+     * what Android can launch, not by a second list in this file. If nothing is installed and the
+     * entry carries a fallback URL, that URL opens in the system browser instead.
+     */
+    @JavascriptInterface
+    fun openApp(appJson: String): String {
+        val spec = try {
+            JSONObject(appJson)
+        } catch (error: Exception) {
+            return failure("the app tile handed the bridge an unreadable payload")
+        }
+        val packageId = spec.optString("package")
+        if (packageId.isBlank()) return failure("the app tile declares no package")
+        val launch = try {
+            ctx.packageManager.getLaunchIntentForPackage(packageId)
+        } catch (error: Exception) {
+            null
+        }
+        if (launch != null) {
+            return try {
+                // The bridge is reachable from a plain Context, so the activity flag has to be set
+                // explicitly rather than relying on the caller being an Activity.
+                if (ctx !is Activity) launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                ctx.startActivity(launch)
+                okErr(true, "")
+            } catch (error: Exception) {
+                failure(error.message ?: "cannot open " + packageId)
+            }
+        }
+        val fallback = spec.optString("fallback_url")
+        if (fallback.isNotBlank()) {
+            return try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(fallback))
+                if (ctx !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                ctx.startActivity(intent)
+                okErr(true, "")
+            } catch (error: Exception) {
+                failure(error.message ?: "cannot open the fallback for " + packageId)
+            }
+        }
+        return failure("the app is not installed: " + packageId)
+    }
 
     // ── browsing ─────────────────────────────────────────────────────────────────
 

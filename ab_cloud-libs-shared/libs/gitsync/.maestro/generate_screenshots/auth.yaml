@@ -1,0 +1,5 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow: ../home/flows/auth/positive.yaml
+- tapOn: ".*auth dropdown"
+- takeScreenshot: generate_screenshots/raw/screenshot_auth

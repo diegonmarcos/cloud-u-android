@@ -1,0 +1,10 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow:
+    when:
+      visible: "Sign In"
+    commands:
+      - tapOn: "Sign in with Github"
+- runFlow: ./assert.yaml
+- tapOn:
+    point: "51%,41%"

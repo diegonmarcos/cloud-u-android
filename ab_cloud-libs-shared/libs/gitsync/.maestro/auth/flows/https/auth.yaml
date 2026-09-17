@@ -1,0 +1,9 @@
+appId: com.viscouspot.gitsync
+---
+
+- runFlow: ./assert.yaml
+- tapOn: JohnSmith12
+- inputText: ${MAESTRO_HTTPS_USERNAME}
+- tapOn: ghp_1234abcd5678efgh
+- inputText: ${MAESTRO_HTTPS_TOKEN}
+- tapOn: "LOGIN"

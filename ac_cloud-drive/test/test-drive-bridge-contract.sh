@@ -122,7 +122,152 @@ else
     fail "the page never calls mirrorJobs — the Backups tab would render 'Nothing here'"
 fi
 
-echo "── A4 no declared job can destroy data by construction ──"
+echo "── A5 the Apps grid is one declaration, resolved against the fleet manifest ──"
+APPS="$APP/data/drive-apps.json"
+FLEET="$ROOT/aa_cloud-superapp/data/constellation-fleet.json"
+[ -f "$APPS" ] || { fail "missing data/drive-apps.json — the Apps tab has no declaration"; APPS=""; }
+[ -f "$FLEET" ] || { fail "missing aa_cloud-superapp/data/constellation-fleet.json — the fleet manifest is not in this checkout"; FLEET=""; }
+if [ -n "$APPS" ] && [ -n "$FLEET" ]; then
+python3 - "$APPS" "$FLEET" <<'PYTHON'
+import json, sys
+
+apps_file, fleet_file = sys.argv[1], sys.argv[2]
+declared = json.load(open(apps_file, encoding="utf-8"))
+fleet = json.load(open(fleet_file, encoding="utf-8"))
+
+entries = declared.get("apps", [])
+if not entries:
+    print("  FAIL  data/drive-apps.json declares no apps — the Apps tab has nothing to render")
+    sys.exit(1)
+
+by_id = {a.get("id"): a for a in fleet.get("apps", [])}
+failed = False
+for entry in entries:
+    label = entry.get("label", "<unnamed>")
+    if not label or not entry.get("icon"):
+        print("  FAIL  %s declares no label or no icon" % label); failed = True; continue
+    if entry.get("fleet"):
+        fleet_entry = by_id.get(entry["fleet"])
+        if not fleet_entry:
+            print("  FAIL  %s names fleet id '%s' which the manifest does not contain" %
+                  (label, entry["fleet"])); failed = True; continue
+        package = fleet_entry.get("package", "")
+        if not package:
+            print("  FAIL  fleet id '%s' carries no package in the manifest" % entry["fleet"]); failed = True; continue
+        if "com.diegonmarcos" not in package:
+            print("  FAIL  fleet id '%s' resolves outside the cloud namespace: %s" %
+                  (entry["fleet"], package)); failed = True; continue
+        print("  PASS  %s -> %s" % (label, package))
+    else:
+        if not entry.get("package"):
+            print("  FAIL  non-fleet app %s declares no package" % label); failed = True; continue
+        if "com.diegonmarcos" in entry.get("package", ""):
+            print("  FAIL  %s hardcodes a cloud package '%s' — that identity must come from the fleet manifest" %
+                  (label, entry["package"])); failed = True; continue
+        print("  PASS  %s -> %s (not a fleet app: package declared here)" % (label, entry["package"]))
+
+# The one-declaration rule: a cloud package string appears only in the manifest.
+import re
+raw = open(apps_file, encoding="utf-8").read()
+if re.search(r'"package"\s*:\s*"com\.diegonmarcos', raw):
+    print("  FAIL  drive-apps.json restates a com.diegonmarcos package — identity must come from the fleet manifest")
+    failed = True
+sys.exit(1 if failed else 0)
+PYTHON
+[ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
+fi
+if grep -q "UI_APPS_B64" "$GRADLE" && grep -q "drive-apps.json" "$GRADLE"; then
+    pass "build.gradle bakes data/drive-apps.json into UI_APPS_B64"
+else
+    fail "build.gradle does not bake drive-apps.json into UI_APPS_B64"
+fi
+if grep -q "constellation-fleet.json" "$GRADLE"; then
+    pass "build.gradle resolves package identity from the constellation fleet manifest"
+else
+    fail "build.gradle never reads the fleet manifest — package identity has no source"
+fi
+if grep -q "Bridge.raw('apps')" "$PAGE" && grep -q "Bridge.call('openApp'" "$PAGE"; then
+    pass "the Apps tab reads the grid through the bridge and launches through openApp"
+else
+    fail "the Apps tab does not reach the bridge both ways (apps list + openApp launch)"
+fi
+
+echo "── A6 the Sync tab has Git and Rclone subpages ──"
+if grep -q 'data-tab="sync"' "$PAGE"; then
+    pass "the nav declares the Sync tab"
+else
+    fail "the nav has no data-tab=\"sync\" button"
+fi
+if grep -q "renderSync" "$PAGE"; then
+    pass "showTab dispatches to renderSync"
+else
+    fail "showTab never calls renderSync — the tab would render nothing"
+fi
+if grep -q "renderRcloneSubpage" "$PAGE" && grep -q "renderGitSubpage" "$PAGE"; then
+    pass "Sync renders both subpages"
+else
+    fail "one of the Sync subpages has no renderer"
+fi
+if grep -q "connectionCard" "$PAGE" && grep -q "'rclone'" "$PAGE"; then
+    pass "the Rclone subpage reuses the existing connectionCard renderer"
+else
+    fail "the Rclone subpage does not reuse connectionCard — a second renderer to keep in step"
+fi
+if grep -q "VENDORED.md" "$PAGE"; then
+    pass "the Git subpage names the vendored lib's record"
+else
+    fail "the Git subpage does not reference VENDORED.md — the honest state is not stated"
+fi
+
+echo "── A7 dark is the default, set at the declaration ──"
+THEMES="$APP/app/src/main/res/values/themes.xml"
+MAIN="$APP/app/src/main/java/com/diegonmarcos/clouddrive/MainActivity.kt"
+if grep -q 'Theme.Material3.Dark.NoActionBar' "$THEMES"; then
+    pass "themes.xml declares the Material3 Dark parent"
+else
+    fail "themes.xml still parents Light — the Android chrome is not dark by default"
+fi
+if grep -q "isAppearanceLightStatusBars = false" "$MAIN" && grep -q "isAppearanceLightNavigationBars = false" "$MAIN"; then
+    pass "MainActivity draws LIGHT system-bar glyphs over the dark page"
+else
+    fail "MainActivity still draws dark glyphs — they would vanish into the dark page"
+fi
+if grep -q "background: #111827" "$PAGE" && ! grep -q "bg-white" "$PAGE"; then
+    pass "the page base is dark and no light surface class remains"
+else
+    fail "the page still carries a light background or a bg-white surface"
+fi
+
+echo "── A8 the GitSync lib is vendored, licensed and cannot block the release ──"
+GSYNC="$ROOT/ab_cloud-libs-shared/libs/gitsync"
+VENDORED="$GSYNC/VENDORED.md"
+if [ -f "$VENDORED" ]; then
+    pass "VENDORED.md exists in the vendored tree"
+else
+    fail "no VENDORED.md at ab_cloud-libs-shared/libs/gitsync"
+fi
+if grep -qi "GPL-3.0\|GNU General Public License" "$VENDORED" && grep -q "0f4902fceab3b1572ffea65e332f14605237f32e" "$VENDORED"; then
+    pass "VENDORED.md records the licence verdict and the pinned upstream revision"
+else
+    fail "VENDORED.md does not record the GPL-3.0 verdict and the pinned revision"
+fi
+if [ -f "$GSYNC/LICENSE.md" ] && grep -qi "GNU GENERAL PUBLIC LICENSE" "$GSYNC/LICENSE.md"; then
+    pass "the upstream GPL-3.0 licence text travels with the tree"
+else
+    fail "the vendored tree lost its upstream GPL-3.0 licence text"
+fi
+if [ ! -f "$GSYNC/build.gradle" ]; then
+    pass "the vendored tree is not a Gradle module — no APK can compile it by accident"
+else
+    fail "the vendored tree carries a root build.gradle — it IS a Gradle module now"
+fi
+if ! grep -rq "gitsync" "$GRADLE" "$APP/settings.gradle" 2>/dev/null; then
+    pass "cloud-drive's build never references the lib — a break there cannot fail this release (#254)"
+else
+    fail "cloud-drive's build references the vendored lib — it has veto power over the release (#254)"
+fi
+
+echo
 python3 - "$JOBS" <<'PYTHON'
 import json, posixpath, sys
 

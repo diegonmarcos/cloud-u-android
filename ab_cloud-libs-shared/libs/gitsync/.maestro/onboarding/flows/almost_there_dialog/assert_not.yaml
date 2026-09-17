@@ -1,0 +1,3 @@
+appId: com.viscouspot.gitsync
+---
+- assertNotVisible: "Almost there!"

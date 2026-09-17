@@ -1,0 +1,177 @@
+name: Release OSS (APK)
+
+on:
+  push:
+    tags:
+      - v*
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: true
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', 'rust/.cargo/config.toml') }}
+
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: 1.88.0
+
+      - name: Create Secrets file
+        run: |
+          echo "Creating file with interpolated secrets"
+          cat <<EOF > ./lib/constant/secrets.dart
+          ${{ secrets.SECRETS }}
+          EOF
+
+      - name: Setup Flutter SDK
+        uses: flutter-actions/setup-flutter@v4
+        with:
+          channel: stable
+          version: 3.35.2
+
+      - name: Set Up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "21"
+          cache: "gradle"
+
+      - name: Install flutter_rust_bridge_codegen
+        run: cargo install flutter_rust_bridge_codegen --version 2.12.0 --locked
+
+      - name: Install cargo-expand
+        run: cargo install cargo-expand --version 1.0.121 --locked
+
+      - name: Get Packages
+        run: flutter pub get
+
+      - name: Generate Rust
+        run: |
+          flutter_rust_bridge_codegen generate
+          git checkout HEAD -- rust/src/frb_generated.rs
+
+      - uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r29-beta4
+
+      - uses: SimonMarquis/android-accept-licenses@v1
+
+      - name: Build Release APKs
+        run: |
+          export CARGO_ENCODED_RUSTFLAGS=$(printf '%s\x1f%s\x1f%s' "--remap-path-prefix=$HOME/.cargo/registry/src=/cargo/registry/src" "--remap-path-prefix=$GITHUB_WORKSPACE=." "-Ccodegen-units=1")
+          export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+          # Build each ABI in its own gradle invocation so the gradle task graph
+          # matches F-Droid (which builds one ABI per metadata entry job).
+          flutter build apk --release --split-per-abi --target-platform="android-arm"
+          flutter build apk --release --split-per-abi --target-platform="android-arm64"
+          flutter build apk --release --split-per-abi --target-platform="android-x64"
+
+      - name: Sign App
+        id: sign_app
+        uses: ilharp/sign-android-release@v2
+        with:
+          releaseDir: build/app/outputs/flutter-apk/
+          signingKey: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          keyAlias: ${{ secrets.RELEASE_SIGNING_ALIAS }}
+          keyStorePassword: ${{ secrets.RELEASE_SIGNING_PASSWORD }}
+          keyPassword: ${{ secrets.RELEASE_SIGNING_PASSWORD }}
+          buildToolsVersion: 34.0.0
+
+      - name: Format App List
+        id: signed_file_artifacts
+        run: |
+          {
+            echo "signedFiles<<SIGNED_FILES_EOF_DELIMETER"
+            echo "${{ steps.sign_app.outputs.signedFiles }}" | sed 's/:/\n/g'
+            echo "SIGNED_FILES_EOF_DELIMETER"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload Release Build to Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-artifacts
+          path: |
+            ${{ steps.signed_file_artifacts.outputs.signedFiles }}
+            !*-release.apk
+
+      - uses: jungwinter/split@v2
+        id: signed_files
+        with:
+          msg: ${{ steps.sign_app.outputs.signedFiles }}
+          separator: ":"
+
+      - name: Build Changelog
+        id: changelog
+        uses: ardalanamini/auto-changelog@v4
+        with:
+          preferred-api: Git
+          mention-authors: false
+          mention-new-contributors: false
+          include-compare-link: false
+          semver: false
+
+      - name: Find and Replace
+        uses: mad9000/actions-find-and-replace-string@5
+        id: signed_file_path_0
+        with:
+          source: ${{ steps.signed_files.outputs._0 }}
+          find: "/github/workspace/"
+          replace: ""
+
+      - name: Find and Replace
+        uses: mad9000/actions-find-and-replace-string@5
+        id: signed_file_path_1
+        with:
+          source: ${{ steps.signed_files.outputs._1 }}
+          find: "/github/workspace/"
+          replace: ""
+
+      - name: Find and Replace
+        uses: mad9000/actions-find-and-replace-string@5
+        id: signed_file_path_2
+        with:
+          source: ${{ steps.signed_files.outputs._2 }}
+          find: "/github/workspace/"
+          replace: ""
+
+      - name: Get Previous Tag
+        id: previous_tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PREVIOUS_TAG=$(gh release list --exclude-drafts --limit 1 --json tagName --jq '.[0].tagName // empty')
+          echo "previous_tag=$PREVIOUS_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Create Release
+        id: create_release
+        uses: ncipollo/release-action@v1.21.0
+        with:
+          artifacts: "${{ steps.signed_file_path_0.outputs.value }},${{ steps.signed_file_path_1.outputs.value }},${{ steps.signed_file_path_2.outputs.value }}"
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: true
+          generateReleaseNotes: true
+          generateReleaseNotesPreviousTag: ${{ steps.previous_tag.outputs.previous_tag }}
+          name: Release ${{ github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}

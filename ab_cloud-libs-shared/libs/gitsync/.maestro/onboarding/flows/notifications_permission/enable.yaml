@@ -1,0 +1,9 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow: ./assert.yaml
+# - tapOn: "All GitSync notifications"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn: Allow

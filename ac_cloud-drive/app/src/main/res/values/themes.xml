@@ -1,8 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.CloudDrive" parent="Theme.Material3.Light.NoActionBar">
+    <!-- Dark is the fleet-wide default (#336, #337). Forced DARK, not DayNight:
+         the WebView page paints its own dark surfaces, so a system light-mode
+         switch would recolour only the system chrome and leave the content dark.
+         The declaration lives here, in the theme parent; the page CSS carries its
+         own half. -->
+    <style name="Theme.CloudDrive" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:statusBarColor" tools:targetApi="lollipop">@android:color/transparent</item>
         <item name="android:navigationBarColor" tools:targetApi="lollipop">@android:color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds" tools:targetApi="lollipop">true</item>
+        <!-- Dark page top and bottom -> LIGHT system-bar glyphs. -->
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">false</item>
     </style>
 </resources>

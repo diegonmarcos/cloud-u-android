@@ -1,0 +1,18 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          appId: com.viscouspot.gitsync
+          permissions:
+            all: allow
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - launchApp:
+          appId: com.viscouspot.git-sync
+          permissions:
+            all: unset

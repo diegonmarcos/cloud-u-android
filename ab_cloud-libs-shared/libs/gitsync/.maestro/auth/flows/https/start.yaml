@@ -1,0 +1,11 @@
+appId: com.viscouspot.gitsync
+---
+
+- runFlow: ../assert.yaml
+- runFlow:
+    when: 
+      notVisible: "HTTPS"
+    commands:
+      - tapOn: ".*auth dropdown"
+      - assertVisible: "HTTPS"
+      - tapOn: "HTTPS"

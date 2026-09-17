@@ -1,0 +1,23 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - back
+
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - runFlow:
+          when:
+            visible: "back"
+          commands:
+            - tapOn: "back"
+      - runFlow:
+          when:
+            notVisible: "back"
+          commands:
+            - tapOn:
+                point: "10%,10%"

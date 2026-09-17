@@ -1,0 +1,17 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          appId: com.viscouspot.gitsync
+- assertVisible: "GitSync"
+- tapOn: ".*TestObsidianVault\\.git.*"
+- assertVisible: "MANUAL SYNC"
+- takeScreenshot: generate_screenshots/raw/screenshot_manual_sync
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - runFlow: ../common/back.yaml

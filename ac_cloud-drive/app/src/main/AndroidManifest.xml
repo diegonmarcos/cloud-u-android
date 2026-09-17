@@ -21,6 +21,16 @@
 
     <queries>
         <package android:name="com.diegonmarcos.clouddrive" />
+
+        <!-- The Apps tab launches the fleet's data apps (and Tidal) through the system
+             launcher. A package query per tile would be a second list of packages to
+             keep in step with data/drive-apps.json, so this asks Android the declarative
+             question instead: every installed app that offers a launcher MAIN intent is
+             reachable, and nothing here names one. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application

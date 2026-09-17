@@ -1,0 +1,8 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow: ./assert.yaml
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - tapOn: "OK"

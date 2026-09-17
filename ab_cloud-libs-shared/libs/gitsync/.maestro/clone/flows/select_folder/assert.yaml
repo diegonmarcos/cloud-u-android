@@ -1,0 +1,13 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible: "USE THIS FOLDER"
+      - assertVisible: "Documents"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible: Recents

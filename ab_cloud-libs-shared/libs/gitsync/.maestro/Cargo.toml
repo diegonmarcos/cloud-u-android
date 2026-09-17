@@ -1,0 +1,9 @@
+[package]
+name = "tests"
+
+[dependencies]
+regex = "1.12"
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1.0"
+image = "0.25.10"

@@ -1,0 +1,410 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:GitSync/api/accessibility_service_helper.dart';
+import 'package:GitSync/api/helper.dart';
+import 'package:GitSync/api/issue_duplicate_finder.dart';
+import 'package:GitSync/api/manager/auth/github_manager.dart';
+import 'package:GitSync/api/manager/settings_manager.dart';
+import 'package:GitSync/main.dart';
+import 'package:GitSync/type/git_provider.dart';
+import 'package:GitSync/ui/dialog/github_issue_oauth.dart' as GithubIssueOauthDialog;
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:GitSync/constant/strings.dart';
+import 'package:GitSync/api/manager/storage.dart';
+import 'package:http/http.dart' as http;
+import 'package:mixin_logger/mixin_logger.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import '../global.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:GitSync/ui/dialog/error_occurred.dart' as ErrorOccurredDialog;
+
+import '../ui/dialog/github_issue_report.dart' as GithubIssueReportDialog;
+import '../ui/dialog/issue_duplicate_found.dart' as IssueDuplicateFoundDialog;
+import '../ui/dialog/issue_reported_successfully.dart' as IssueReportedSuccessfullyDialog;
+
+// Also add to rust/src/api/git_manager.rs:21
+enum LogType {
+  TEST,
+
+  Global,
+  AccessibilityService,
+
+  SelectDirectory,
+  GetRepos,
+  Sync,
+  SyncException,
+
+  Clone,
+  UpdateSubmodules,
+  FetchRemote,
+  PullFromRepo,
+  Stage,
+  Unstage,
+  RecommendedAction,
+  Commit,
+  PushToRepo,
+  ForcePull,
+  ForcePush,
+  DownloadAndOverwrite,
+  UploadAndOverwrite,
+  DiscardChanges,
+  UntrackAll,
+  CommitDiff,
+  FileDiff,
+  RecentCommits,
+  CommitDiffStats,
+  ConflictingFiles,
+  UncommittedFiles,
+  StagedFiles,
+  AbortMerge,
+  BranchName,
+  BranchNames,
+  SetRemoteUrl,
+  CheckoutBranch,
+  CreateBranch,
+  RenameBranch,
+  DeleteBranch,
+  ReadGitIgnore,
+  WriteGitIgnore,
+  ReadGitInfoExclude,
+  WriteGitInfoExclude,
+  GetDisableSsl,
+  SetDisableSsl,
+  GenerateKeyPair,
+  GetRemoteUrlLink,
+  DiscardDir,
+  DiscardGitIndex,
+  RecreateGitIndex,
+  DiscardFetchHead,
+  PruneCorruptedObjects,
+  GetSubmodules,
+  HasGitFilters,
+  DownloadChanges,
+  UploadChanges,
+  ListRemotes,
+  AddRemote,
+  DeleteRemote,
+  RenameRemote,
+  InitRepo,
+  CreateBranchFromCommit,
+  CheckoutCommit,
+  CreateTag,
+  RevertCommit,
+  AmendCommit,
+  UndoCommit,
+  ResetToCommit,
+  CherryPickCommit,
+  SquashCommits,
+  GetIssues,
+  GetPullRequests,
+  GetTags,
+  GetReleases,
+  GetActionRuns,
+  GetFeatureCounts,
+  GetIssueDetail,
+  AddIssueComment,
+  UpdateIssueState,
+  AddReaction,
+  RemoveReaction,
+  GetPrDetail,
+  CreateIssue,
+  GetIssueTemplates,
+  UpdateIssue,
+  CreatePullRequest,
+  GetRepoBranches,
+  WorkdirFileDiff,
+  StageFileLines,
+}
+
+enum From { GLOBAL_SETTINGS, ERROR_DIALOG, CODE_EDITOR, SYNC_DURING_DETACHED_HEAD }
+
+void notificationClicked(NotificationResponse _) {
+  Logger.notifClicked = true;
+  runApp(const ProviderScope(child: MyApp()));
+}
+
+class Logger {
+  static const int _errorNotificationId = 1757;
+  static final FlutterLocalNotificationsPlugin notificationsPlugin = FlutterLocalNotificationsPlugin();
+  static bool notifClicked = false;
+
+  static Future<void> init() async {
+    await notificationsPlugin.initialize(
+      const InitializationSettings(
+        android: AndroidInitializationSettings('@mipmap/launcher_icon'),
+        iOS: DarwinInitializationSettings(requestSoundPermission: false, requestBadgePermission: false, requestAlertPermission: false),
+      ),
+      onDidReceiveNotificationResponse: notificationClicked,
+      onDidReceiveBackgroundNotificationResponse: notificationClicked,
+    );
+  }
+
+  static void log(dynamic message, {LogType type = LogType.TEST}) {
+    i("${type.name}: ${message?.toString() ?? "null"}");
+  }
+
+  static void gmLog(dynamic message, {LogType type = LogType.TEST}) {
+    w("${type.name}: ${message?.toString() ?? "null"}");
+  }
+
+  static void logError(LogType type, dynamic error, StackTrace stackTrace, {String? errorContent, bool causeError = true}) async {
+    e("${type.name}: ${"${stackTrace.toString()}\nError: ${error.toString()}"}");
+    if (!causeError) return;
+
+    await repoManager.setStringNullable(StorageKey.repoman_erroring, errorContent ?? error.toString());
+    await sendBugReportNotification(errorContent);
+  }
+
+  static Future<void> dismissError(BuildContext? context) async {
+    debounce(dismissErrorDebounceReference, 500, () async {
+      final error = await repoManager.getStringNullable(StorageKey.repoman_erroring);
+      if (error == null) return;
+
+      try {
+        await notificationsPlugin.cancel(_errorNotificationId);
+      } catch (e) {}
+
+      print(ErrorOccurredDialog.errorDialogKey.currentContext);
+
+      if (ErrorOccurredDialog.errorDialogKey.currentContext != null) {
+        Navigator.of(context ?? ErrorOccurredDialog.errorDialogKey.currentContext!).canPop()
+            ? Navigator.pop(context ?? ErrorOccurredDialog.errorDialogKey.currentContext!)
+            : null;
+      }
+      if (context == null) return;
+
+      await ErrorOccurredDialog.showDialog(context, error, () => Logger.reportIssue(context, From.ERROR_DIALOG, errorMessage: error));
+      await repoManager.setStringNullable(StorageKey.repoman_erroring, null);
+    });
+  }
+
+  static Future<void> sendBugReportNotification(String? contentText) async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      gitSyncBugChannelId,
+      gitSyncBugChannelName,
+      icon: gitSyncIconRes,
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
+
+    await notificationsPlugin.show(_errorNotificationId, reportBug, contentText ?? reportABug, notificationDetails);
+  }
+
+  static Future<void> reportIssue(BuildContext context, From from, {String? errorMessage}) async {
+    String? reportIssueToken = await repoManager.getStringNullable(StorageKey.repoman_reportIssueToken);
+    if (reportIssueToken == "" || reportIssueToken == null) {
+      SettingsManager tempSettingsManager = SettingsManager();
+      await tempSettingsManager.reinit(repoIndex: 0);
+      final provider = await tempSettingsManager.getGitProvider();
+      if (provider == GitProvider.GITHUB) {
+        if (!await tempSettingsManager.getBool(StorageKey.setman_githubScopedOauth)) {
+          reportIssueToken = (await tempSettingsManager.getGitHttpAuthCredentials()).$2;
+        }
+      }
+      uiSettingsManager.reinit();
+    }
+
+    if (reportIssueToken == "" || reportIssueToken == null) {
+      await GithubIssueOauthDialog.showDialog(context, () async {
+        final oauthManager = GithubManager();
+        final result = (await oauthManager.launchOAuthFlow(["public_repo"]));
+        await repoManager.setStringNullable(StorageKey.repoman_reportIssueToken, result?.$3 ?? null);
+        reportIssueToken = await repoManager.getStringNullable(StorageKey.repoman_reportIssueToken);
+      });
+    }
+
+    if (reportIssueToken == "" || reportIssueToken == null) return;
+
+    String? initialTitle;
+    String? errorText;
+    if (errorMessage != null) {
+      final errorMatch = RegExp(r'Error: (.+)').firstMatch(errorMessage);
+      errorText = errorMatch != null ? errorMatch.group(1)! : errorMessage.split('\n').first;
+      initialTitle = 'Error: `$errorText`';
+    }
+
+    final duplicate = errorText == null ? null : await findDuplicateIssue(reportIssueToken!, errorText);
+    if (duplicate != null) {
+      if (!context.mounted) return;
+      if (!await IssueDuplicateFoundDialog.showDialog(context, duplicate)) return;
+      if (!context.mounted) return;
+    }
+
+    final deviceInfoEntries = await generateDeviceInfoEntries();
+
+    await GithubIssueReportDialog.showDialog(context, initialTitle: initialTitle, deviceInfoEntries: deviceInfoEntries, (
+      title,
+      description,
+      minimalRepro,
+      includeLogFiles,
+    ) async {
+      final logs = !includeLogFiles
+          ? ""
+          : utf8.decode(utf8.encode((await _generateLogs()).split("\n").reversed.join("\n")).take(62 * 1024).toList(), allowMalformed: true);
+      final deviceInfo = deviceInfoEntries.map((e) => '**${e.$1}:** ${e.$2}').join('\n');
+
+      final url = Uri.parse('https://api.github.com/repos/ViscousPot/GitSync/issues');
+
+      final issueTitle = '[Bug]: (${Platform.isIOS ? "iOS" : "Android"}) $title';
+      final issueBody =
+          '''
+### Description
+$description
+
+### Minimal Reproduction
+$minimalRepro
+
+### Exception or Error
+
+<details>
+<summary>Expand Logs (origin: ${from.name.toLowerCase()})</summary>
+
+$deviceInfo
+
+```
+$logs
+```
+
+</details>
+''';
+
+      if (duplicate != null) {
+        final commentUrl = await postIssueComment(reportIssueToken!, duplicate.number, issueBody);
+
+        if (commentUrl == null) {
+          Fluttertoast.showToast(msg: t.issueCommentFailedMsg, toastLength: Toast.LENGTH_LONG, gravity: null);
+          return;
+        }
+
+        print('ISSUE_COMMENTED: ${duplicate.number} $commentUrl');
+
+        if (!context.mounted) return;
+        await IssueReportedSuccessfullyDialog.showDialog(context, commentUrl, title: t.issueCommentSuccessTitle, message: t.issueCommentSuccessMsg);
+        return;
+      }
+
+      final http.Response response;
+      try {
+        response = await http.post(
+          url,
+          headers: {'Authorization': 'token $reportIssueToken', 'Accept': 'application/vnd.github+json'},
+          body: jsonEncode({
+            'title': issueTitle,
+            'body': issueBody,
+            'labels': ['bug'],
+          }),
+        );
+      } catch (e, stackTrace) {
+        Logger.logError(LogType.Global, e, stackTrace, causeError: false);
+        Fluttertoast.showToast(msg: t.issueReportFailedMsg, toastLength: Toast.LENGTH_LONG, gravity: null);
+        return;
+      }
+
+      if (response.statusCode != 201) {
+        await repoManager.setStringNullable(StorageKey.repoman_reportIssueToken, null);
+        print('Failed to create issue: ${response.statusCode} ${response.body}');
+        Fluttertoast.showToast(msg: t.issueReportFailedMsg, toastLength: Toast.LENGTH_LONG, gravity: null);
+        return;
+      }
+
+      final issueJson = jsonDecode(utf8.decode(response.bodyBytes));
+
+      final issueNumber = issueJson["number"]?.toString();
+      print('Issue created successfully: ${response.statusCode} ${response.body}');
+
+      final issueUrl = issueJson["html_url"];
+      print('ISSUE_CREATED: ${issueNumber ?? "?"} ${issueUrl ?? "?"}');
+      if (issueUrl == null) {
+        Fluttertoast.showToast(msg: t.issueReportFailedMsg, toastLength: Toast.LENGTH_LONG, gravity: null);
+        return;
+      }
+      if (!context.mounted) return;
+      IssueReportedSuccessfullyDialog.showDialog(context, issueUrl);
+    });
+  }
+
+  static Future<List<(String, String)>> generateDeviceInfoEntries() async {
+    final deviceInfo = DeviceInfoPlugin();
+    final packageInfo = await PackageInfo.fromPlatform();
+
+    String osVersion = '';
+    String deviceModel = '';
+
+    if (Platform.isIOS) {
+      IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+      osVersion = iosInfo.systemVersion;
+      deviceModel = iosInfo.utsname.machine;
+    } else {
+      AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+      osVersion = '${androidInfo.version.release} (SDK ${androidInfo.version.sdkInt})';
+      deviceModel = androidInfo.model;
+    }
+
+    String appVersion = '${packageInfo.version}+${packageInfo.buildNumber}';
+
+    final entries = <(String, String)>[
+      ('Platform', Platform.isIOS ? 'iOS' : 'Android'),
+      ('Device Model', deviceModel),
+      ('OS Version', osVersion),
+      ('App Version', appVersion),
+      (
+        'Git Provider',
+        '${await uiSettingsManager.getStringNullable(StorageKey.setman_gitProvider)}${await uiSettingsManager.getBool(StorageKey.setman_githubScopedOauth) ? " (scoped)" : ""}',
+      ),
+    ];
+
+    if (await AccessibilityServiceHelper.isAccessibilityServiceEnabled()) {
+      entries.addAll([
+        ('Package Names', '[${(await uiSettingsManager.getApplicationPackages()).join(", ")}]'),
+        ('Sync on app opened', (await uiSettingsManager.getBool(StorageKey.setman_syncOnAppOpened)) ? '🟢' : '⭕'),
+        ('Sync on app closed', (await uiSettingsManager.getBool(StorageKey.setman_syncOnAppClosed)) ? '🟢' : '⭕'),
+      ]);
+    }
+
+    final schedule = await uiSettingsManager.getString(StorageKey.setman_schedule);
+    if (schedule.isNotEmpty) {
+      entries.add(('Scheduled Sync', schedule));
+    }
+
+    return entries;
+  }
+
+  static Future<String> generateDeviceInfo() async {
+    final entries = await generateDeviceInfoEntries();
+    return entries.map((e) => '**${e.$1}:** ${e.$2}').join('\n');
+  }
+
+  static Future<String> _generateLogs() async {
+    final Directory dir = await getTemporaryDirectory();
+    final logsDir = Directory("${dir.path}/logs");
+
+    final logFiles = <File>[];
+    if (logsDir.existsSync()) {
+      logFiles.addAll(logsDir.listSync().whereType<File>().where((f) => RegExp(r'log_(\d+)\.log$').hasMatch(f.path)));
+    }
+
+    File logFile;
+    if (logFiles.isEmpty) {
+      logFile = File("${logsDir.path}/log_0.log");
+    } else {
+      // pick file with largest numeric suffix
+      final fileWithMax = logFiles.reduce((a, b) {
+        final ma = RegExp(r'log_(\d+)\.log$').firstMatch(a.path)!.group(1)!;
+        final mb = RegExp(r'log_(\d+)\.log$').firstMatch(b.path)!.group(1)!;
+        final ia = int.parse(ma);
+        final ib = int.parse(mb);
+        return ia >= ib ? a : b;
+      });
+      logFile = File(fileWithMax.path);
+    }
+    final logsString = (await logFile.exists()) ? (await logFile.readAsLines()).join("\n") : "";
+    return logsString;
+  }
+}

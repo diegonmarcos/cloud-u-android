@@ -1,0 +1,1012 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
+
+import 'package:GitSync/api/manager/storage.dart';
+import 'package:GitSync/main.dart';
+import 'package:GitSync/ui/component/ai_wand_field.dart';
+import 'package:GitSync/api/ai_completion_service.dart';
+import 'package:animated_reorderable_list/animated_reorderable_list.dart';
+import 'package:flutter/material.dart' as mat;
+import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:GitSync/api/helper.dart';
+import 'package:GitSync/api/logger.dart';
+import 'package:GitSync/api/manager/git_manager.dart';
+import 'package:GitSync/constant/strings.dart';
+import 'package:GitSync/gitsync_service.dart';
+import 'package:mmap2/mmap2.dart';
+import 'package:mmap2_flutter/mmap2_flutter.dart';
+import 'package:open_file/open_file.dart';
+import 'package:GitSync/src/rust/api/git_manager.dart' as GitManagerRs;
+import '../../../constant/dimens.dart';
+import '../../../global.dart';
+import '../../../ui/dialog/base_alert_dialog.dart';
+import 'package:anchor_scroll_controller/anchor_scroll_controller.dart';
+
+typedef SelectedLine = ({bool isLocal, int lineIndex});
+
+final demoConflictSections = [
+  (
+    0,
+    """
+$conflictStart HEAD.txt
+- Flashlight
+$conflictSeparator
+- Headlamp
+$conflictEnd 77976da35a11db4580b80ae27e8d65caf5208086:gear-update.txt
+""",
+  ),
+  (1, "- First aid kit"),
+  (2, "- Map & compass"),
+  (3, ""),
+  (4, "## Clothing"),
+  (5, "- Waterproof jacket"),
+  (6, "- Extra socks"),
+  (7, "- Hat and gloves"),
+  (8, ""),
+  (9, "## Food"),
+  (10, "- Trail mix"),
+  (11, "- Instant noodles"),
+  (12, "- Granola bars"),
+  (13, "- Water bottles"),
+  (14, ""),
+  (15, "## Misc"),
+  (16, "- Matches/lighter"),
+  (17, "- Pocket knife"),
+  (18, "- Notebook & pen"),
+];
+
+Future<void> showDialog(BuildContext parentContext, List<(String, GitManagerRs.ConflictType)> originalConflictingPaths) async {
+  bool initialised = false;
+  bool isMerging = false;
+  bool isAborting = false;
+  int currentIndex = 0;
+  late final GlobalKey dialogKey = GlobalKey();
+  List<(String, GitManagerRs.ConflictType)> conflictingPaths = [...originalConflictingPaths];
+
+  try {
+    await Logger.notificationsPlugin.cancel(mergeConflictNotificationId);
+  } catch (e) {
+    print(e);
+  }
+
+  MmapFlutter.initialize();
+
+  final clientModeEnabled = await uiSettingsManager.getClientModeEnabled();
+  final syncMessage = await uiSettingsManager.getSyncMessage();
+  final editorLineWrap = await repoManager.getBool(StorageKey.repoman_editorLineWrap);
+  Widget lineContent(Widget child) => editorLineWrap ? Expanded(child: child) : child;
+  final scrollController = AnchorScrollController();
+  final commitMessageController = TextEditingController();
+
+  indexListener(int index, bool userScroll, void Function(void Function()) setState) {
+    currentIndex = index;
+    debounce(mergeConflictDebounceReference, 50, () {
+      if (dialogKey.currentContext != null) setState(() {});
+    });
+  }
+
+  int conflictIndex = 0;
+  List<(int, String)> conflictSections = [];
+  bool updating = false;
+  bool isResolvingConflict = false;
+  Map<int, Set<SelectedLine>> selectedLines = {};
+  Mmap? writeMmap;
+
+  void mapFile(String filePath) {
+    writeMmap?.close();
+    writeMmap = Mmap.fromFile(filePath, mode: AccessMode.write);
+  }
+
+  void closeMmap() {
+    writeMmap?.sync();
+    writeMmap?.close();
+    writeMmap = null;
+  }
+
+  print(conflictingPaths);
+
+  Future<void> updateConflictSections(void Function(void Function())? setState) async {
+    try {
+      selectedLines.clear();
+
+      if (demo) {
+        conflictSections = demoConflictSections;
+        return;
+      }
+
+      if (setState != null && updating) return;
+
+      updating = true;
+      if (setState != null) setState(() {});
+
+      final bookmarkPath = await uiSettingsManager.getString(StorageKey.setman_gitDirPath);
+      if (bookmarkPath.isEmpty) return;
+
+      await useDirectory(bookmarkPath, (bookmarkPath) async => await uiSettingsManager.setGitDirPath(bookmarkPath, true), (path) async {
+        final filePath = "$path/${conflictingPaths[conflictIndex].$1}";
+        closeMmap();
+        mapFile(filePath);
+
+        List<String> conflictStringSections = [];
+        List<String> lines = utf8.decode(writeMmap!.writableData, allowMalformed: true).split('\n');
+        StringBuffer conflictBuffer = StringBuffer();
+        bool inConflict = false;
+
+        for (var line in lines) {
+          if (line.trim().startsWith(conflictStart)) {
+            inConflict = true;
+            conflictBuffer.writeln(line);
+          } else if (line.trim().startsWith(conflictEnd)) {
+            conflictBuffer.writeln(line);
+            conflictStringSections.add(conflictBuffer.toString());
+            conflictBuffer.clear();
+            inConflict = false;
+          } else if (inConflict) {
+            conflictBuffer.writeln(line);
+          } else {
+            conflictStringSections.add(line);
+          }
+        }
+        if (conflictBuffer.isNotEmpty) {
+          conflictStringSections.add(conflictBuffer.toString());
+        }
+
+        conflictSections = conflictStringSections.indexed.toList();
+        if (setState != null) setState(() {});
+
+        await Future.delayed(Duration(milliseconds: 500), () {
+          updating = false;
+          if (setState != null) setState(() {});
+        });
+      });
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  await updateConflictSections(null);
+
+  print(conflictingPaths);
+  String padNumber(int num1) {
+    String num1Str = num1.toString();
+    int targetLength = conflictSections.length.toString().length;
+    return num1Str.padLeft(targetLength, '0');
+  }
+
+  bool isLineSelected(int sectionKey, bool isLocal, int lineIndex) {
+    return selectedLines[sectionKey]?.contains((isLocal: isLocal, lineIndex: lineIndex)) ?? false;
+  }
+
+  void toggleLineSelection(int sectionKey, bool isLocal, int lineIndex, void Function(void Function()) setState) {
+    final key = (isLocal: isLocal, lineIndex: lineIndex);
+    selectedLines.putIfAbsent(sectionKey, () => {});
+    if (selectedLines[sectionKey]!.contains(key)) {
+      selectedLines[sectionKey]!.remove(key);
+      if (selectedLines[sectionKey]!.isEmpty) selectedLines.remove(sectionKey);
+    } else {
+      selectedLines[sectionKey]!.add(key);
+    }
+    setState(() {});
+  }
+
+  bool hasSelection(int sectionKey) {
+    return selectedLines.containsKey(sectionKey) && selectedLines[sectionKey]!.isNotEmpty;
+  }
+
+  void clearSelection(int sectionKey, void Function(void Function()) setState) {
+    selectedLines.remove(sectionKey);
+    setState(() {});
+  }
+
+  Future<void> refreshConflictSectionIndices() async {
+    final bookmarkPath = await uiSettingsManager.getString(StorageKey.setman_gitDirPath);
+    if (bookmarkPath.isEmpty) return;
+
+    await useDirectory(bookmarkPath, (bookmarkPath) async => await uiSettingsManager.setGitDirPath(bookmarkPath, true), (path) async {
+      final filePath = "$path/${conflictingPaths[conflictIndex].$1}";
+      final text = conflictSections.map((section) => section.$2).join('\n');
+      final newBytes = Uint8List.fromList(utf8.encode(text));
+
+      if (writeMmap != null && writeMmap!.isOpen) {
+        if (newBytes.length != writeMmap!.writableData.length) {
+          File(filePath).writeAsStringSync(text);
+          mapFile(filePath);
+        } else {
+          writeMmap!.writableData.setAll(0, newBytes);
+          writeMmap!.sync();
+        }
+      } else {
+        File(filePath).writeAsStringSync(text);
+      }
+
+      for (var indexedSection in conflictSections.indexed) {
+        conflictSections[indexedSection.$1] = (indexedSection.$1, indexedSection.$2.$2);
+      }
+    });
+  }
+
+  Future<void> resolveAllConflicts(String mode, void Function(void Function()) setState) async {
+    isResolvingConflict = true;
+    selectedLines.clear();
+    setState(() {});
+
+    for (int i = conflictSections.length - 1; i >= 0; i--) {
+      final section = conflictSections[i];
+      if (!section.$2.contains(conflictStart)) continue;
+
+      final lines = section.$2.split("\n");
+      final startIdx = lines.indexWhere((line) => line.contains(conflictStart));
+      final midIdx = lines.indexWhere((line) => line.contains(conflictSeparator));
+      final endIdx = lines.indexWhere((line) => line.contains(conflictEnd));
+
+      final localLines = lines.sublist(startIdx + 1, midIdx).indexed;
+      final remoteLines = lines.sublist(midIdx + 1, endIdx).indexed;
+
+      conflictSections.removeAt(i);
+      if (mode == 'local') {
+        conflictSections.insertAll(i, localLines);
+      } else if (mode == 'both') {
+        conflictSections.insertAll(i, remoteLines);
+        conflictSections.insertAll(i, localLines);
+      } else {
+        conflictSections.insertAll(i, remoteLines);
+      }
+    }
+
+    await refreshConflictSectionIndices();
+    isResolvingConflict = false;
+    setState(() {});
+  }
+
+  return await mat.showDialog(
+    context: parentContext,
+    barrierColor: Colors.transparent,
+    builder: (BuildContext context) => PopScope(
+      canPop: !isMerging && !isAborting,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) closeMmap();
+      },
+      child: StatefulBuilder(
+        key: dialogKey,
+        builder: (context, setState) {
+          if (!initialised && conflictSections.isNotEmpty) {
+            Future.delayed(Duration(seconds: 0), () async {
+              final scrollIndex = max(0, conflictSections.indexWhere((section) => section.$2.contains(conflictStart)));
+              await scrollController.scrollToIndex(index: scrollIndex, scrollSpeed: 10);
+              await scrollController.scrollToIndex(index: scrollIndex, scrollSpeed: 5);
+              initialised = true;
+            });
+          }
+          final int firstConflictIndex = conflictSections.indexWhere((section) => section.$2.contains(conflictStart));
+          final int lastConflictIndex = conflictSections.lastIndexWhere((section) => section.$2.contains(conflictStart));
+          final prevEnabled = !updating && ((firstConflictIndex != -1 && currentIndex > firstConflictIndex) || conflictIndex > 0);
+          final nextEnabled =
+              !updating && ((lastConflictIndex != -1 && currentIndex < lastConflictIndex) || conflictIndex < conflictingPaths.length - 1);
+
+          scrollController.removeIndexListener((index, userScroll) => indexListener(index, userScroll, setState));
+          scrollController.addIndexListener((index, userScroll) => indexListener(index, userScroll, setState));
+
+          return BaseAlertDialog(
+            expandable: true,
+            title: SizedBox(
+              width: MediaQuery.of(context).size.width,
+              child: Text(
+                t.mergeConflict.toUpperCase(),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: colours.primaryLight, fontSize: textXL, fontWeight: FontWeight.bold),
+              ),
+            ),
+            contentBuilder: (expanded) =>
+                (expanded
+                ? (List<Widget> children) => Column(children: children)
+                : (List<Widget> children) => SingleChildScrollView(child: ListBody(children: children)))(<Widget>[
+                  Text(
+                    t.mergeDialogMessage,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: colours.secondaryLight, fontWeight: FontWeight.bold, fontSize: textSM),
+                  ),
+                  SizedBox(height: spaceMD + spaceSM),
+                  AiWandField(
+                    multiline: true,
+                    enabled: conflictingPaths.length <= 1 && conflictSections.indexWhere((section) => section.$2.contains("\n")) == -1,
+                    onPressed: () async {
+                      final allFilePaths = originalConflictingPaths.map((e) => e.$1).toList();
+                      final buffer = StringBuffer('Merge conflict resolution.\n\nConflicting files:\n');
+                      for (final path in allFilePaths) {
+                        buffer.writeln('- $path');
+                        final diff = await GitManager.getWorkdirFileDiff(path);
+                        if (diff != null && diff.lines.isNotEmpty) {
+                          buffer.writeln('+${diff.insertions}/-${diff.deletions}');
+                          for (final line in diff.lines) {
+                            if (buffer.length > 4000) break;
+                            if (line.origin == 'H') {
+                              buffer.writeln(line.content);
+                            } else {
+                              buffer.writeln('${line.origin}${line.content}');
+                            }
+                          }
+                        }
+                        buffer.writeln();
+                        if (buffer.length > 4000) break;
+                      }
+                      final result = await aiComplete(
+                        systemPrompt: "Generate a merge conflict resolution commit message. Output only the commit message, nothing else.",
+                        userPrompt: buffer.toString(),
+                      );
+                      if (result != null) commitMessageController.text = result.trim();
+                    },
+                    child: TextField(
+                      contextMenuBuilder: globalContextMenuBuilder,
+                      controller: commitMessageController,
+                      maxLines: null,
+                      style: TextStyle(
+                        color: colours.primaryLight,
+                        fontWeight: FontWeight.bold,
+                        decoration: TextDecoration.none,
+                        decorationThickness: 0,
+                        fontSize: textMD,
+                      ),
+                      decoration: InputDecoration(
+                        fillColor: colours.secondaryDark,
+                        filled: true,
+                        border: const OutlineInputBorder(borderRadius: BorderRadius.all(cornerRadiusSM), borderSide: BorderSide.none),
+                        hintText: syncMessage,
+                        isCollapsed: true,
+                        label: Text(
+                          t.commitMessage.toUpperCase(),
+                          style: TextStyle(color: colours.secondaryLight, fontSize: textSM, fontWeight: FontWeight.bold),
+                        ),
+                        floatingLabelBehavior: FloatingLabelBehavior.always,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: spaceMD, vertical: spaceSM),
+                        isDense: true,
+                      ),
+                      onChanged: (_) {
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                  SizedBox(height: spaceMD),
+                  (expanded ? (Widget child) => Expanded(child: child) : (child) => child)(
+                    Container(
+                      decoration: BoxDecoration(borderRadius: BorderRadius.all(cornerRadiusSM), color: colours.secondaryDark),
+                      padding: EdgeInsets.only(left: spaceXXS, right: spaceXXS, bottom: spaceXXS, top: spaceXXXS),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextButton.icon(
+                                  onPressed: () async =>
+                                      OpenFile.open("${(await uiSettingsManager.getGitDirPath())?.$2}/${conflictingPaths[conflictIndex].$1}"),
+                                  style: ButtonStyle(
+                                    alignment: Alignment.centerLeft,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    shape: WidgetStatePropertyAll(
+                                      RoundedRectangleBorder(borderRadius: BorderRadius.all(cornerRadiusSM), side: BorderSide.none),
+                                    ),
+                                  ),
+                                  icon: FaIcon(FontAwesomeIcons.squareArrowUpRight, color: colours.primaryLight, size: textMD),
+                                  label: Text(
+                                    conflictingPaths.isEmpty ? "-" : conflictingPaths[conflictIndex].$1.split("/").last.toUpperCase(),
+                                    maxLines: 1,
+                                    textAlign: TextAlign.start,
+                                    style: TextStyle(color: colours.primaryLight, fontSize: textSM, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: spaceXXS),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    onPressed: prevEnabled
+                                        ? () async {
+                                            if (conflictSections.isEmpty) return;
+
+                                            if (currentIndex <= firstConflictIndex || firstConflictIndex == -1) {
+                                              conflictIndex = (conflictIndex - 1).clamp(0, conflictingPaths.length - 1);
+                                              await updateConflictSections(setState);
+                                            } else {
+                                              int startIndex = currentIndex < 0 ? 0 : currentIndex;
+                                              int prevConflictIndex = conflictSections
+                                                  .sublist(0, startIndex)
+                                                  .lastIndexWhere((section) => section.$2.contains(conflictStart));
+
+                                              scrollController.scrollToIndex(index: prevConflictIndex < 0 ? 0 : prevConflictIndex);
+                                            }
+                                          }
+                                        : null,
+                                    icon: FaIcon(FontAwesomeIcons.caretLeft),
+                                    style: ButtonStyle(
+                                      backgroundColor: WidgetStatePropertyAll(colours.tertiaryDark),
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      visualDensity: VisualDensity.compact,
+                                      shape: WidgetStatePropertyAll(
+                                        RoundedRectangleBorder(borderRadius: BorderRadius.all(cornerRadiusSM), side: BorderSide.none),
+                                      ),
+                                    ),
+                                    color: colours.primaryLight,
+                                    disabledColor: colours.tertiaryLight,
+                                    iconSize: textSM,
+                                  ),
+                                  SizedBox(width: spaceXS),
+                                  IconButton(
+                                    onPressed: nextEnabled
+                                        ? () async {
+                                            if (conflictSections.isEmpty) return;
+
+                                            if (currentIndex + (expanded ? 30 : 15) >= lastConflictIndex ||
+                                                conflictSections.isEmpty ||
+                                                !conflictSections.any((section) => section.$2.contains(conflictStart))) {
+                                              currentIndex = 0;
+                                              conflictIndex = (conflictIndex + 1).clamp(0, conflictingPaths.length - 1);
+                                              await updateConflictSections(setState);
+                                            } else {
+                                              int startIndex = currentIndex < 0 ? 0 : currentIndex;
+                                              int nextConflictIndex = conflictSections
+                                                  .sublist(startIndex)
+                                                  .indexWhere((section) => section.$2.contains(conflictStart));
+
+                                              scrollController.scrollToIndex(
+                                                index: nextConflictIndex < 0 ? conflictSections.length : nextConflictIndex + startIndex,
+                                              );
+                                            }
+                                          }
+                                        : null,
+                                    icon: FaIcon(FontAwesomeIcons.caretRight),
+                                    style: ButtonStyle(
+                                      backgroundColor: WidgetStatePropertyAll(colours.tertiaryDark),
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      visualDensity: VisualDensity.compact,
+                                      shape: WidgetStatePropertyAll(
+                                        RoundedRectangleBorder(borderRadius: BorderRadius.all(cornerRadiusSM), side: BorderSide.none),
+                                      ),
+                                    ),
+                                    color: colours.primaryLight,
+                                    disabledColor: colours.tertiaryLight,
+                                    iconSize: textSM,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          if (conflictSections.any((s) => s.$2.contains(conflictStart)))
+                            Padding(
+                              padding: EdgeInsets.only(left: spaceXXS, top: spaceXXS),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    t.resolveAll.toUpperCase(),
+                                    style: TextStyle(color: colours.tertiaryLight, fontSize: textXS, fontWeight: FontWeight.bold),
+                                  ),
+                                  SizedBox(width: spaceXS),
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: isResolvingConflict ? null : () => resolveAllConflicts('local', setState),
+                                      style: ButtonStyle(
+                                        backgroundColor: WidgetStatePropertyAll(Colors.transparent),
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        visualDensity: VisualDensity.compact,
+                                        padding: WidgetStatePropertyAll(EdgeInsets.zero),
+                                        shape: WidgetStatePropertyAll(
+                                          RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.all(cornerRadiusSM),
+                                            side: BorderSide(color: colours.tertiaryInfo, width: 2),
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        t.allCurrent.toUpperCase(),
+                                        style: TextStyle(color: colours.tertiaryInfo, fontWeight: FontWeight.bold, fontSize: textXS),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: spaceXXS),
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: isResolvingConflict ? null : () => resolveAllConflicts('both', setState),
+                                      style: ButtonStyle(
+                                        backgroundColor: WidgetStatePropertyAll(Colors.transparent),
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        visualDensity: VisualDensity.compact,
+                                        padding: WidgetStatePropertyAll(EdgeInsets.zero),
+                                        shape: WidgetStatePropertyAll(
+                                          RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.all(cornerRadiusSM),
+                                            side: BorderSide(color: colours.tertiaryLight, width: 2),
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        t.both.toUpperCase(),
+                                        style: TextStyle(color: colours.tertiaryLight, fontWeight: FontWeight.bold, fontSize: textXS),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: spaceXXS),
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: isResolvingConflict ? null : () => resolveAllConflicts('remote', setState),
+                                      style: ButtonStyle(
+                                        backgroundColor: WidgetStatePropertyAll(Colors.transparent),
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        visualDensity: VisualDensity.compact,
+                                        padding: WidgetStatePropertyAll(EdgeInsets.zero),
+                                        shape: WidgetStatePropertyAll(
+                                          RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.all(cornerRadiusSM),
+                                            side: BorderSide(color: colours.tertiaryWarning, width: 2),
+                                          ),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        t.allIncoming.toUpperCase(),
+                                        style: TextStyle(color: colours.tertiaryWarning, fontWeight: FontWeight.bold, fontSize: textXS),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          (expanded ? (Widget child) => Expanded(child: child) : (child) => child)(
+                            Stack(
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.all(spaceXS),
+                                  child: conflictSections.isEmpty
+                                      ? Center(
+                                          child: CircularProgressIndicator(color: colours.primaryLight, padding: EdgeInsets.all(spaceXS)),
+                                        )
+                                      : (editorLineWrap ? (Widget child) => child : (Widget child) => SingleChildScrollView(scrollDirection: Axis.horizontal, child: child))(
+                                          SizedBox(
+                                            height: expanded ? double.infinity : MediaQuery.sizeOf(context).height / 3,
+                                            width: double.maxFinite,
+                                            child: AnimatedListView(
+                                              controller: scrollController,
+                                              items: conflictSections,
+                                              isSameItem: (a, b) => a.$1 == b.$1 && a.$2 == b.$2,
+                                              itemBuilder: (BuildContext context, int index) {
+                                                final item = conflictSections[index];
+
+                                                if (item.$2.contains(conflictStart)) {
+                                                  final lines = item.$2.split("\n");
+                                                  final startIndex = lines.indexWhere((line) => line.contains(conflictStart));
+                                                  final midIndex = lines.indexWhere((line) => line.contains(conflictSeparator));
+                                                  final endIndex = lines.indexWhere((line) => line.contains(conflictEnd));
+
+                                                  final localLines = lines.sublist(startIndex + 1, midIndex).indexed;
+                                                  final remoteLines = lines.sublist(midIndex + 1, endIndex).indexed;
+
+                                                  return AnchorItemWrapper(
+                                                    key: Key("${item.$1}//${item.$2}"),
+                                                    controller: scrollController,
+                                                    index: item.$1,
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Padding(
+                                                          padding: EdgeInsets.only(left: spaceSM, top: spaceSM),
+                                                          child: Text(
+                                                            t.keepChanges.toUpperCase(),
+                                                            style: TextStyle(
+                                                              color: colours.primaryLight,
+                                                              fontSize: textSM,
+                                                              fontWeight: FontWeight.bold,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        SizedBox(height: spaceXXS),
+                                                        SizedBox(
+                                                          width:
+                                                              MediaQuery.of(context).size.width -
+                                                              ((expanded ? 0 : (spaceLG * 2)) + (spaceSM * 2 * 2) + (spaceXS * 2) + (spaceXXS * 2)),
+                                                          child: hasSelection(item.$1)
+                                                              ? Row(
+                                                                  children: [
+                                                                    Expanded(
+                                                                      child: TextButton(
+                                                                        onPressed: isResolvingConflict
+                                                                            ? null
+                                                                            : () => clearSelection(item.$1, setState),
+                                                                        style: ButtonStyle(
+                                                                          backgroundColor: WidgetStatePropertyAll(colours.tertiaryDark),
+                                                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                                          visualDensity: VisualDensity.compact,
+                                                                          padding: WidgetStatePropertyAll(EdgeInsets.zero),
+                                                                          shape: WidgetStatePropertyAll(
+                                                                            RoundedRectangleBorder(
+                                                                              borderRadius: BorderRadius.all(cornerRadiusSM),
+                                                                              side: BorderSide.none,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        child: Text(
+                                                                          t.clearSelection.toUpperCase(),
+                                                                          style: TextStyle(color: colours.primaryLight, fontWeight: FontWeight.bold),
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                    SizedBox(width: spaceXXS),
+                                                                    Expanded(
+                                                                      child: TextButton(
+                                                                        onPressed: isResolvingConflict
+                                                                            ? null
+                                                                            : () async {
+                                                                                isResolvingConflict = true;
+                                                                                setState(() {});
+                                                                                final selected = selectedLines[item.$1]!;
+                                                                                final kept = <(int, String)>[];
+                                                                                for (final s
+                                                                                    in selected.where((s) => s.isLocal).toList()
+                                                                                      ..sort((a, b) => a.lineIndex.compareTo(b.lineIndex))) {
+                                                                                  kept.add(localLines.elementAt(s.lineIndex));
+                                                                                }
+                                                                                for (final s
+                                                                                    in selected.where((s) => !s.isLocal).toList()
+                                                                                      ..sort((a, b) => a.lineIndex.compareTo(b.lineIndex))) {
+                                                                                  kept.add(remoteLines.elementAt(s.lineIndex));
+                                                                                }
+                                                                                conflictSections.removeAt(index);
+                                                                                conflictSections.insertAll(index, kept);
+                                                                                selectedLines.remove(item.$1);
+                                                                                await refreshConflictSectionIndices();
+                                                                                isResolvingConflict = false;
+                                                                                setState(() {});
+                                                                              },
+                                                                        style: ButtonStyle(
+                                                                          backgroundColor: WidgetStatePropertyAll(colours.tertiaryPositive),
+                                                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                                          visualDensity: VisualDensity.compact,
+                                                                          padding: WidgetStatePropertyAll(EdgeInsets.zero),
+                                                                          shape: WidgetStatePropertyAll(
+                                                                            RoundedRectangleBorder(
+                                                                              borderRadius: BorderRadius.all(cornerRadiusSM),
+                                                                              side: BorderSide.none,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        child: Text(
+                                                                          t.keepSelected.toUpperCase(),
+                                                                          style: TextStyle(color: colours.secondaryDark, fontWeight: FontWeight.bold),
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                )
+                                                              : Row(
+                                                                  children: [
+                                                                    Expanded(
+                                                                      child: TextButton(
+                                                                        onPressed: isResolvingConflict
+                                                                            ? null
+                                                                            : () async {
+                                                                                isResolvingConflict = true;
+                                                                                setState(() {});
+                                                                                conflictSections.removeAt(index);
+                                                                                conflictSections.insertAll(index, localLines);
+                                                                                await refreshConflictSectionIndices();
+                                                                                isResolvingConflict = false;
+                                                                                setState(() {});
+                                                                              },
+                                                                        style: ButtonStyle(
+                                                                          backgroundColor: WidgetStatePropertyAll(colours.tertiaryInfo),
+                                                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                                          visualDensity: VisualDensity.compact,
+                                                                          padding: WidgetStatePropertyAll(EdgeInsets.zero),
+                                                                          shape: WidgetStatePropertyAll(
+                                                                            RoundedRectangleBorder(
+                                                                              borderRadius: BorderRadius.all(cornerRadiusSM),
+                                                                              side: BorderSide.none,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        child: Text(
+                                                                           t.current.toUpperCase(),
+                                                                          style: TextStyle(color: colours.secondaryDark, fontWeight: FontWeight.bold),
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                    SizedBox(width: spaceXXS),
+                                                                    Expanded(
+                                                                      child: TextButton(
+                                                                        onPressed: isResolvingConflict
+                                                                            ? null
+                                                                            : () async {
+                                                                                isResolvingConflict = true;
+                                                                                setState(() {});
+                                                                                conflictSections.removeAt(index);
+                                                                                conflictSections.insertAll(index, remoteLines);
+                                                                                conflictSections.insertAll(index, localLines);
+                                                                                await refreshConflictSectionIndices();
+                                                                                isResolvingConflict = false;
+                                                                                setState(() {});
+                                                                              },
+                                                                        style: ButtonStyle(
+                                                                          backgroundColor: WidgetStatePropertyAll(colours.tertiaryLight),
+                                                                          visualDensity: VisualDensity.compact,
+                                                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                                          padding: WidgetStatePropertyAll(EdgeInsets.zero),
+                                                                          shape: WidgetStatePropertyAll(
+                                                                            RoundedRectangleBorder(
+                                                                              borderRadius: BorderRadius.all(cornerRadiusSM),
+                                                                              side: BorderSide.none,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        child: Text(
+                                                                          t.both.toUpperCase(),
+                                                                          style: TextStyle(color: colours.secondaryDark, fontWeight: FontWeight.bold),
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                    SizedBox(width: spaceXXS),
+                                                                    Expanded(
+                                                                      child: TextButton(
+                                                                        onPressed: isResolvingConflict
+                                                                            ? null
+                                                                            : () async {
+                                                                                isResolvingConflict = true;
+                                                                                setState(() {});
+                                                                                conflictSections.removeAt(index);
+                                                                                conflictSections.insertAll(index, remoteLines);
+                                                                                await refreshConflictSectionIndices();
+                                                                                isResolvingConflict = false;
+                                                                                setState(() {});
+                                                                              },
+                                                                        style: ButtonStyle(
+                                                                          backgroundColor: WidgetStatePropertyAll(colours.tertiaryWarning),
+                                                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                                          visualDensity: VisualDensity.compact,
+                                                                          padding: WidgetStatePropertyAll(EdgeInsets.zero),
+                                                                          shape: WidgetStatePropertyAll(
+                                                                            RoundedRectangleBorder(
+                                                                              borderRadius: BorderRadius.all(cornerRadiusSM),
+                                                                              side: BorderSide.none,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                        child: Text(
+                                                                           t.incoming.toUpperCase(),
+                                                                          style: TextStyle(color: colours.secondaryDark, fontWeight: FontWeight.bold),
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                        ),
+                                                        SizedBox(height: spaceXS),
+                                                        ...localLines.map(
+                                                          (line) => GestureDetector(
+                                                            onTap: () => toggleLineSelection(item.$1, true, line.$1, setState),
+                                                            child: Container(
+                                                              color: isLineSelected(item.$1, true, line.$1)
+                                                                  ? colours.tertiaryInfo.withValues(alpha: 0.25)
+                                                                  : Colors.transparent,
+                                                              child: Row(
+                                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                                children: [
+                                                                  Text(
+                                                                    padNumber(item.$1 + line.$1 + 1),
+                                                                    style: TextStyle(
+                                                                      color: colours.tertiaryInfo,
+                                                                      fontSize: textMD,
+                                                                      fontWeight: FontWeight.bold,
+                                                                      fontFamily: "Roboto",
+                                                                    ),
+                                                                  ),
+                                                                  SizedBox(width: spaceSM),
+                                                                  lineContent(
+                                                                    Text(
+                                                                      line.$2.trim(),
+                                                                      style: TextStyle(
+                                                                        color: colours.tertiaryInfo,
+                                                                        fontSize: textMD,
+                                                                        fontWeight: FontWeight.bold,
+                                                                        fontFamily: "RobotoMono",
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        ...remoteLines.map(
+                                                          (line) => GestureDetector(
+                                                            onTap: () => toggleLineSelection(item.$1, false, line.$1, setState),
+                                                            child: Container(
+                                                              color: isLineSelected(item.$1, false, line.$1)
+                                                                  ? colours.tertiaryWarning.withValues(alpha: 0.25)
+                                                                  : Colors.transparent,
+                                                              child: Row(
+                                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                                children: [
+                                                                  Text(
+                                                                    padNumber(item.$1 + line.$1 + 1),
+                                                                    style: TextStyle(
+                                                                      color: colours.tertiaryWarning,
+                                                                      fontSize: textMD,
+                                                                      fontWeight: FontWeight.bold,
+                                                                      fontFamily: "Roboto",
+                                                                    ),
+                                                                  ),
+                                                                  SizedBox(width: spaceSM),
+                                                                  lineContent(
+                                                                    Text(
+                                                                      line.$2.trim(),
+                                                                      style: TextStyle(
+                                                                        color: colours.tertiaryWarning,
+                                                                        fontSize: textMD,
+                                                                        fontWeight: FontWeight.bold,
+                                                                        fontFamily: "RobotoMono",
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        SizedBox(height: spaceSM),
+                                                      ],
+                                                    ),
+                                                  );
+                                                }
+                                                return AnchorItemWrapper(
+                                                  key: Key("${item.$1}//${item.$2}"),
+                                                  controller: scrollController,
+                                                  index: item.$1,
+                                                  child: Row(
+                                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                                    children: [
+                                                      Text(
+                                                        padNumber(item.$1 + 1),
+                                                        style: TextStyle(
+                                                          color: colours.tertiaryLight,
+                                                          fontSize: textMD,
+                                                          fontWeight: FontWeight.bold,
+                                                          fontFamily: "Roboto",
+                                                        ),
+                                                      ),
+                                                      SizedBox(width: spaceSM),
+                                                      lineContent(
+                                                        Text(
+                                                          item.$2.trim(),
+                                                          style: TextStyle(
+                                                            color: colours.secondaryLight,
+                                                            fontSize: textMD,
+                                                            fontWeight: FontWeight.bold,
+                                                            fontFamily: "RobotoMono",
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          ),
+                                        ),
+                                ),
+                                if (isResolvingConflict)
+                                  Positioned.fill(
+                                    child: Container(
+                                      color: colours.secondaryDark.withValues(alpha: 0.7),
+                                      child: Center(child: CircularProgressIndicator(color: colours.primaryLight)),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ]),
+            actionsAlignment: MainAxisAlignment.center,
+            actions: <Widget>[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton.icon(
+                    onPressed: () async {
+                      if (isMerging || isAborting) return;
+
+                      isAborting = true;
+                      setState(() {});
+
+                      closeMmap();
+                      await runGitOperation(LogType.AbortMerge, (event) => event);
+                      isAborting = false;
+                      setState(() {});
+                      Navigator.of(context).canPop() ? Navigator.pop(context) : null;
+                    },
+                    style: ButtonStyle(
+                      alignment: Alignment.center,
+                      backgroundColor: WidgetStatePropertyAll(colours.secondaryNegative),
+                      padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: spaceMD, vertical: spaceSM)),
+                      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.all(cornerRadiusSM), side: BorderSide.none)),
+                    ),
+                    icon: isAborting
+                        ? Container(
+                            height: textSM,
+                            width: textSM,
+                            margin: EdgeInsets.only(right: spaceXXXS),
+                            child: CircularProgressIndicator(color: colours.primaryLight),
+                          )
+                        : null,
+                    label: Text(
+                      (clientModeEnabled ? t.abortMerge : t.resolveLater).toUpperCase(),
+                      style: TextStyle(color: colours.primaryLight, fontSize: textSM, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: conflictSections.indexWhere((section) => section.$2.contains("\n")) == -1
+                        ? () async {
+                            if (isMerging) return;
+
+                            if (conflictingPaths.length > 1) {
+                              conflictingPaths.removeAt(conflictIndex);
+                              conflictIndex = conflictIndex.clamp(0, conflictingPaths.length - 1);
+                              await updateConflictSections(setState);
+
+                              return;
+                            }
+
+                            isMerging = true;
+
+                            closeMmap();
+                            FlutterBackgroundService().invoke(GitsyncService.MERGE, {
+                              COMMIT_MESSAGE: commitMessageController.text.isEmpty ? syncMessage : commitMessageController.text,
+                              CONFLICTING_PATHS: originalConflictingPaths.map((e) => e.$1).join(conflictSeparator),
+                            });
+                            setState(() {});
+                          }
+                        : null,
+                    style: ButtonStyle(
+                      alignment: Alignment.center,
+                      backgroundColor: WidgetStatePropertyAll(
+                        !demo && conflictSections.indexWhere((section) => section.$2.contains("\n")) == -1
+                            ? colours.primaryPositive
+                            : colours.tertiaryDark,
+                      ),
+                      padding: WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: spaceMD, vertical: spaceSM)),
+                      shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.all(cornerRadiusSM), side: BorderSide.none)),
+                    ),
+                    icon: isMerging
+                        ? Container(
+                            height: textSM,
+                            width: textSM,
+                            margin: EdgeInsets.only(right: spaceXXXS),
+                            child: CircularProgressIndicator(color: colours.tertiaryDark),
+                          )
+                        : null,
+                    label: Text(
+                      (isMerging
+                              ? (clientModeEnabled ? t.merging : t.resolving)
+                              : (conflictIndex == conflictingPaths.length - 1 || conflictingPaths.length <= 1
+                                    ? (clientModeEnabled ? t.merge : t.resolve)
+                                    : "next"))
+                          .toUpperCase(),
+                      style: TextStyle(
+                        color: !demo && conflictSections.indexWhere((section) => section.$2.contains("\n")) == -1
+                            ? colours.tertiaryDark
+                            : colours.tertiaryLight,
+                        fontSize: textSM,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: spaceXS),
+            ],
+          );
+        },
+      ),
+    ),
+  );
+}

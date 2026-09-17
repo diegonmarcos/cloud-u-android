@@ -1,0 +1,4 @@
+appId: com.viscouspot.gitsync
+---
+
+- assertVisible: "Select a folder to clone into"

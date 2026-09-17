@@ -1,0 +1,16 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow: ../assert.yaml
+- runFlow:
+    when:
+      notVisible: "GITHUB"
+    commands:
+      - tapOn: ".*auth dropdown"
+      - assertVisible: "GITHUB"
+      - tapOn: "GITHUB"
+- tapOn: "OAUTH (ALL REPOS)"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: Continue

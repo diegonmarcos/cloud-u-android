@@ -1,0 +1,14 @@
+{
+  "_doc": "Which applications the Apps tab links out to, and how each tile looks. Task #437: the Apps tab used to list storage back ends; those moved to Sync > Rclone, and Apps is now a grid of icon links matching the SuperApp's Data Apps row (Calendar - Contacts - Notes - Office - Media Center - Music - Vault). Only the `apps` array crosses into the APK: the _doc_* keys are there for whoever edits this file and would otherwise ship to a phone that cannot read them.",
+  "_doc_identity": "This file declares the SELECTION and the presentation (icon glyph + display label). Every fleet entry resolves its package identity from data/constellation-fleet.json at build time (ac_cloud-drive/app/build.gradle) — there is no second list of packages here, which is the #170/#380/#381 defect shape. Tidal ('Music') is the one entry the fleet manifest cannot carry: it is not a cloud-* app, so its package and fallback URL are declared here directly, exactly as the SuperApp declares its Music tile.",
+  "_doc_fleet_ids": "Calendar is cloud-agenda (renamed by #315): the fleet id is 'agenda' so the resolved package follows the app that exists, never the old name.",
+  "apps": [
+    { "fleet": "agenda",       "label": "Calendar",    "icon": "📅" },
+    { "fleet": "contacts",     "label": "Contacts",    "icon": "👤" },
+    { "fleet": "notes",        "label": "Notes",       "icon": "📝" },
+    { "fleet": "office",       "label": "Office",      "icon": "📊" },
+    { "fleet": "media-center", "label": "Media Center", "icon": "🎬" },
+    { "label": "Music",        "icon": "🎵", "package": "com.aspiro.tidal", "fallback_url": "https://tidal.com" },
+    { "fleet": "vault",        "label": "Vault",       "icon": "🔐" }
+  ]
+}

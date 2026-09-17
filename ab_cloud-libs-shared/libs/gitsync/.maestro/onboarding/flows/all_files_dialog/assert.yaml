@@ -1,0 +1,7 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible: 'Enable "All Files Access"'

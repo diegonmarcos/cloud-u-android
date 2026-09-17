@@ -1,0 +1,23 @@
+appId: com.android.settings
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - clearState: com.viscouspot.git-sync
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp
+      - tapOn: "Search.*"
+      - inputText: "GitSync"
+      - tapOn: "App info"
+      - tapOn: "Storage & cache"
+      - tapOn: "Clear storage"
+      - tapOn: "Delete"
+      - back
+      - back
+      - back
+      - back
+      - killApp

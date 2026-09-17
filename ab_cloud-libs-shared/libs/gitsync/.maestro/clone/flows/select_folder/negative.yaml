@@ -1,0 +1,11 @@
+appId: com.viscouspot.gitsync
+---
+
+- runFlow: ./assert.yaml
+- tapOn: "Documents"
+- tapOn: "USE THIS FOLDER"
+- assertVisible: "ALLOW"
+- tapOn: "ALLOW"
+- assertVisible: "Folder Not Empty"
+- assertVisible: "CANCEL"
+- tapOn: "CANCEL"

@@ -1,0 +1,966 @@
+import 'dart:io';
+
+import 'package:GitSync/api/helper.dart';
+import 'package:GitSync/api/logger.dart';
+import 'package:GitSync/api/manager/git_manager.dart';
+import 'package:GitSync/constant/dimens.dart';
+import 'package:GitSync/constant/values.dart';
+import 'package:GitSync/global.dart';
+import 'package:GitSync/src/rust/api/git_manager.dart' as GitManagerRs;
+import 'package:GitSync/ui/dialog/create_folder.dart' as CreateFolderDialog;
+import 'package:GitSync/ui/dialog/create_file.dart' as CreateFileDialog;
+import 'package:GitSync/ui/dialog/diff_view.dart' as DiffViewDialog;
+import 'package:GitSync/ui/dialog/rename_file_folder.dart' as RenameFileFolderDialog;
+import 'package:GitSync/ui/dialog/confirm_delete_file_folder.dart' as ConfirmDeleteFileFolderDialog;
+import 'package:GitSync/ui/page/code_editor.dart';
+import 'package:extended_text/extended_text.dart';
+import 'package:file_manager/file_manager.dart';
+import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../constant/strings.dart';
+import 'package:path/path.dart' as p;
+
+class FileExplorer extends StatefulWidget {
+  const FileExplorer(this.recentCommits, {super.key, required this.path, this.embedded = false, this.onBackAtRoot});
+
+  final String path;
+  final List<GitManagerRs.Commit> recentCommits;
+  final bool embedded;
+  final VoidCallback? onBackAtRoot;
+
+  @override
+  State<FileExplorer> createState() => FileExplorerState();
+}
+
+class _SafeFileManagerController extends FileManagerController {
+  @override
+  set setCurrentPath(String path) {
+    if (getCurrentPath == path) return;
+    super.setCurrentPath = path;
+  }
+}
+
+class FileExplorerState extends State<FileExplorer> with WidgetsBindingObserver {
+  final FileManagerController controller = _SafeFileManagerController();
+  final ValueNotifier<List<String>> selectedPathsNotifier = ValueNotifier([]);
+  final ValueNotifier<List<String>> heldPathsNotifier = ValueNotifier([]);
+  final ValueNotifier<bool> pastingNotifier = ValueNotifier(false);
+  final ValueNotifier<bool> loadingMoreNotifier = ValueNotifier(false);
+  final ValueNotifier<bool?> copyingMovingNotifier = ValueNotifier(null);
+  final ValueNotifier<List<String>> entityPathsNotifier = ValueNotifier([]);
+  final ValueNotifier<String?> openFilePathNotifier = ValueNotifier(null);
+  int _editorReloadVersion = 0;
+
+  void reloadOpenFile() {
+    if (openFilePathNotifier.value == null) return;
+    _editorReloadVersion++;
+    if (mounted) setState(() {});
+  }
+
+  late final moreOptionsDropdownKey = GlobalKey();
+
+  late final _fileManagerWidget = FileManager(
+    controller: controller,
+    hideHiddenEntity: false,
+    loadingScreen: Center(child: CircularProgressIndicator(color: colours.primaryLight)),
+    emptyFolder: Center(
+      child: Text(
+        t.filesNotFound.toUpperCase(),
+        style: TextStyle(color: colours.secondaryLight, fontWeight: FontWeight.bold, fontSize: textLG),
+      ),
+    ),
+    builder: (context, snapshot) {
+      final List<FileSystemEntity> entities = snapshot;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        entityPathsNotifier.value = entities.map((e) => e.path).toList();
+      });
+
+      return ValueListenableBuilder(
+        valueListenable: selectedPathsNotifier,
+        builder: (context, selectedPaths, child) => RefreshIndicator(
+          color: colours.tertiaryDark,
+          onRefresh: () async {
+            reload();
+            await Future.delayed(Duration(milliseconds: 500));
+          },
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: spaceMD),
+            child: ListView.builder(
+              itemCount: entities.length,
+              itemBuilder: (context, index) {
+                final isHidden = FileManager.basename(entities[index]) == "" || FileManager.basename(entities[index]).startsWith('.');
+                final isFile = FileManager.isFile(entities[index]);
+                final path = entities[index].path;
+                bool longPressTriggered = false;
+
+                return Padding(
+                  padding: EdgeInsets.only(bottom: spaceSM),
+                  child: Material(
+                    color: selectedPaths.contains(path) ? colours.tertiaryLight : colours.tertiaryDark,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(cornerRadiusSM), side: BorderSide.none),
+                    child: InkWell(
+                      onTap: () async {
+                        if (selectedPaths.contains(path)) {
+                          selectedPathsNotifier.value = selectedPathsNotifier.value.where((p) => p != path).toList();
+                          return;
+                        }
+                        if (selectedPaths.isNotEmpty) {
+                          selectedPathsNotifier.value = [...selectedPathsNotifier.value, path];
+                          return;
+                        }
+                        if (longPressTriggered) return;
+
+                        if (FileManager.isDirectory(entities[index])) {
+                          controller.openDirectory(entities[index]);
+                        } else {
+                          if (widget.embedded && _tryOpenInline(path)) return;
+                          viewOrEditFile(context, path);
+                        }
+                      },
+                      onLongPress: () {
+                        longPressTriggered = true;
+                        if (selectedPaths.contains(path)) {
+                          selectedPathsNotifier.value = selectedPathsNotifier.value.where((p) => p != path).toList();
+                        } else {
+                          selectedPathsNotifier.value = [...selectedPathsNotifier.value, path];
+                        }
+                      },
+                      onHighlightChanged: (value) {
+                        if (!value) longPressTriggered = false;
+                      },
+                      borderRadius: BorderRadius.all(cornerRadiusSM),
+                      child: Padding(
+                        padding: EdgeInsets.all(spaceSM),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: textMD,
+                              margin: EdgeInsets.all(spaceXS),
+                              child: FaIcon(
+                                isHidden
+                                    ? (isFile
+                                          ? (extensionToLanguageMap.keys.contains(p.extension(entities[index].path).replaceFirst('.', ''))
+                                                ? FontAwesomeIcons.fileLines
+                                                : (imageExtensions.any((item) => entities[index].path.endsWith(item))
+                                                      ? FontAwesomeIcons.fileImage
+                                                      : FontAwesomeIcons.file))
+                                          : FontAwesomeIcons.folder)
+                                    : (isFile
+                                          ? (extensionToLanguageMap.keys.contains(p.extension(entities[index].path).replaceFirst('.', ''))
+                                                ? FontAwesomeIcons.solidFileLines
+                                                : (imageExtensions.any((item) => entities[index].path.endsWith(item))
+                                                      ? FontAwesomeIcons.solidFileImage
+                                                      : FontAwesomeIcons.solidFile))
+                                          : FontAwesomeIcons.solidFolder),
+                                color: isFile
+                                    ? (selectedPaths.contains(path) ? colours.primaryLight : colours.secondaryLight)
+                                    : (selectedPaths.contains(path) ? colours.tertiaryInfo : colours.primaryInfo),
+                                size: textMD,
+                              ),
+                            ),
+                            SizedBox(width: spaceSM),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    FileManager.basename(entities[index]),
+                                    style: TextStyle(color: colours.primaryLight, fontSize: textMD, overflow: TextOverflow.ellipsis),
+                                  ),
+                                  FutureBuilder<FileStat>(
+                                    future: entities[index].stat(),
+                                    builder: (context, snapshot) => Text(
+                                      snapshot.hasData
+                                          ? (entities[index] is File
+                                                ? formatBytes(snapshot.data!.size)
+                                                : "${snapshot.data!.modified}".substring(0, 10))
+                                          : "",
+                                      style: TextStyle(
+                                        color: (selectedPaths.contains(path) ? colours.primaryLight : colours.secondaryLight),
+                                        fontSize: textSM,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+    },
+  );
+  List<((String, String), Function(List<String>))> get singleSelectOptions => [
+    (
+      (t.rename, t.renameDescription),
+      (List<String> _) async {
+        final oldPath = selectedPathsNotifier.value[0];
+        final entity = FileSystemEntity.typeSync(oldPath);
+        if (entity == FileSystemEntityType.notFound) {
+          throw Exception('Path does not exist.');
+        }
+
+        RenameFileFolderDialog.showDialog(context, p.basename(oldPath), entity == FileSystemEntityType.directory, (fileName) async {
+          final dir = p.dirname(oldPath);
+          final newPath = p.join(dir, fileName);
+
+          try {
+            if (entity == FileSystemEntityType.directory) {
+              await Directory(oldPath).rename(newPath);
+            } else {
+              await File(oldPath).rename(newPath);
+            }
+          } catch (e) {
+            Fluttertoast.showToast(msg: "Failed to rename file/directory: $e", toastLength: Toast.LENGTH_LONG, gravity: null);
+          }
+          selectedPathsNotifier.value = [];
+          reload();
+        });
+      },
+    ),
+    if (viewOrEditFile(context, selectedPathsNotifier.value[0], true))
+      (
+        (t.openFile, t.openFileDescription),
+        (List<String> selectedPaths) async {
+          loadingMoreNotifier.value = true;
+          final path = selectedPathsNotifier.value[0];
+          selectedPathsNotifier.value = [];
+          initAsync(() async {
+            if (widget.embedded && _tryOpenInline(path)) return;
+            viewOrEditFile(context, path);
+          });
+          loadingMoreNotifier.value = false;
+        },
+      ),
+    if (Platform.isIOS && FileSystemEntity.typeSync(selectedPathsNotifier.value[0]) == FileSystemEntityType.file)
+      (
+        (t.openInTextastic, t.openInTextasticDescription),
+        (List<String> selectedPaths) async {
+          final filePath = selectedPathsNotifier.value[0];
+          final encodedFullPath = Uri.encodeComponent(filePath);
+          final textasticUrl = 'textastic://x-callback-url/open?location=fullPath&path=$encodedFullPath';
+
+          selectedPathsNotifier.value = [];
+
+          try {
+            final uri = Uri.parse(textasticUrl);
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri);
+            } else {
+              Fluttertoast.showToast(
+                msg: "Textastic app not installed",
+                toastLength: Toast.LENGTH_LONG,
+                gravity: null,
+              );
+            }
+          } catch (e) {
+            Fluttertoast.showToast(
+              msg: "Failed to open in Textastic: $e",
+              toastLength: Toast.LENGTH_LONG,
+              gravity: null,
+            );
+          }
+        },
+      ),
+    (
+      (t.viewGitLog, t.viewGitLogDescription),
+      (List<String> selectedPaths) async {
+        loadingMoreNotifier.value = true;
+        final path = selectedPathsNotifier.value[0];
+        await DiffViewDialog.showDialog(
+          context,
+          widget.recentCommits,
+          (null, path.replaceAll("${widget.path}/", "")),
+          path.replaceAll("${widget.path}/", ""),
+          null,
+        );
+        loadingMoreNotifier.value = false;
+        selectedPathsNotifier.value = [];
+      },
+    ),
+  ];
+
+  ((String, String), Function(List<String>)) get selectAllOption {
+    final allSelected =
+        selectedPathsNotifier.value.length >= entityPathsNotifier.value.length &&
+        entityPathsNotifier.value.isNotEmpty &&
+        entityPathsNotifier.value.every((p) => selectedPathsNotifier.value.contains(p));
+    return allSelected
+        ? (
+            (t.deselectAll, t.deselectAllDescription),
+            (List<String> _) {
+              selectedPathsNotifier.value = [];
+            },
+          )
+        : (
+            (t.selectAll, t.selectAllDescription),
+            (List<String> _) {
+              selectedPathsNotifier.value = List.from(entityPathsNotifier.value);
+            },
+          );
+  }
+
+  List<((String, String), void Function(List<String>))> get ignoreAndUntrackOptions => [
+    (
+      (t.ignoreUntrack, t.ignoreUntrackDescription),
+      (List<String> selectedPaths) async {
+        loadingMoreNotifier.value = true;
+        addToIgnore(selectedPaths, gitIgnorePath);
+        await runGitOperation(LogType.UntrackAll, (event) => event, {"filePaths": selectedPaths});
+        loadingMoreNotifier.value = false;
+        selectedPathsNotifier.value = [];
+      },
+    ),
+    (
+      (t.excludeUntrack, t.excludeUntrackDescription),
+      (List<String> selectedPaths) async {
+        loadingMoreNotifier.value = true;
+        addToIgnore(selectedPaths, gitInfoExcludePath);
+        await runGitOperation(LogType.UntrackAll, (event) => event, {"filePaths": selectedPaths});
+        loadingMoreNotifier.value = false;
+        selectedPathsNotifier.value = [];
+      },
+    ),
+    (
+      (t.ignoreOnly, t.ignoreOnlyDescription),
+      (List<String> selectedPaths) async {
+        loadingMoreNotifier.value = true;
+        addToIgnore(selectedPaths, gitIgnorePath);
+        loadingMoreNotifier.value = false;
+        selectedPathsNotifier.value = [];
+      },
+    ),
+    (
+      (t.excludeOnly, t.excludeOnlyDescription),
+      (List<String> selectedPaths) async {
+        loadingMoreNotifier.value = true;
+        addToIgnore(selectedPaths, gitInfoExcludePath);
+        loadingMoreNotifier.value = false;
+        selectedPathsNotifier.value = [];
+      },
+    ),
+    (
+      (t.untrack, t.untrackDescription),
+      (List<String> selectedPaths) async {
+        loadingMoreNotifier.value = true;
+        await runGitOperation(LogType.UntrackAll, (event) => event, {"filePaths": selectedPaths});
+        loadingMoreNotifier.value = false;
+        selectedPathsNotifier.value = [];
+      },
+    ),
+  ];
+
+  void addToIgnore(List<String> selectedPaths, [String path = gitIgnorePath]) {
+    final ignoreFullPath = '${widget.path}/$path';
+    final file = File(ignoreFullPath);
+    final parentDir = file.parent;
+    if (!parentDir.existsSync()) {
+      parentDir.createSync(recursive: true);
+    }
+    if (!file.existsSync()) file.createSync();
+    final lines = file.readAsLinesSync();
+    for (final filePath in selectedPaths) {
+      if (!lines.contains(filePath)) {
+        file.writeAsStringSync("\n$filePath\n", mode: FileMode.append);
+      }
+    }
+  }
+
+  void reload() {
+    final root = widget.path.replaceFirst(RegExp(r'/$'), '');
+    var normalised = controller.getCurrentPath.replaceFirst(RegExp(r'/$'), '');
+    if (!normalised.startsWith(root)) normalised = root;
+    while (normalised.length > root.length && !Directory(normalised).existsSync()) {
+      normalised = p.dirname(normalised);
+    }
+    controller.setCurrentPath = "$normalised/";
+    controller.setCurrentPath = normalised;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    controller.setCurrentPath = widget.path;
+  }
+
+  @override
+  void didUpdateWidget(FileExplorer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.path != widget.path) {
+      openFilePathNotifier.value = null;
+      selectedPathsNotifier.value = [];
+      heldPathsNotifier.value = [];
+      pastingNotifier.value = false;
+      controller.setCurrentPath = widget.path;
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    openFilePathNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      reload();
+    }
+  }
+
+  String getPathLeadingText() => widget.path.replaceFirst(RegExp(r'/[^/]+$'), '/');
+
+  bool _isAtRoot() => controller.getCurrentPath.replaceFirst(RegExp(r'/$'), '') == widget.path.replaceFirst(RegExp(r'/$'), '');
+
+  bool handleBack() {
+    if (openFilePathNotifier.value != null) {
+      FocusScope.of(context).unfocus();
+      openFilePathNotifier.value = null;
+      return true;
+    }
+    if (selectedPathsNotifier.value.isNotEmpty) {
+      selectedPathsNotifier.value = [];
+      return true;
+    }
+    if (!_isAtRoot()) {
+      controller.goToParentDirectory();
+      return true;
+    }
+    return false;
+  }
+
+  bool _tryOpenInline(String path) {
+    try {
+      File(path).readAsStringSync();
+      FocusScope.of(context).unfocus();
+      openFilePathNotifier.value = path;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scaffold = Scaffold(
+      backgroundColor: colours.primaryDark,
+      body: Column(
+        children: [
+          Container(
+            margin: EdgeInsets.only(left: spaceMD, right: spaceMD, bottom: spaceSM),
+            padding: EdgeInsets.symmetric(horizontal: spaceXS),
+            decoration: BoxDecoration(color: colours.secondaryDark, borderRadius: BorderRadius.all(cornerRadiusMD)),
+            child: Row(
+              children: [
+                ValueListenableBuilder<String?>(
+                  valueListenable: openFilePathNotifier,
+                  builder: (context, openFile, _) => ValueListenableBuilder(
+                    valueListenable: controller.getPathNotifier,
+                    builder: (context, currentPath, _) => ValueListenableBuilder(
+                      valueListenable: heldPathsNotifier,
+                      builder: (context, heldPaths, _) => ValueListenableBuilder(
+                        valueListenable: selectedPathsNotifier,
+                        builder: (context, selectedPaths, _) {
+                          final fileOpen = openFile != null;
+                          final atRoot = _isAtRoot();
+                          final isLeftArrowState = fileOpen || (widget.embedded && atRoot && heldPaths.isEmpty && selectedPaths.isEmpty);
+                          return IconButton(
+                            onPressed: fileOpen
+                                ? () {
+                                    FocusScope.of(context).unfocus();
+                                    openFilePathNotifier.value = null;
+                                  }
+                                : isLeftArrowState
+                                ? widget.onBackAtRoot
+                                : () {
+                                    if (selectedPaths.isNotEmpty) {
+                                      selectedPathsNotifier.value = [];
+                                    } else {
+                                      if (atRoot) {
+                                        if (heldPaths.isNotEmpty) {
+                                          heldPathsNotifier.value = [];
+                                        } else if (!widget.embedded) {
+                                          (Navigator.of(context).canPop() ? Navigator.pop(context) : null);
+                                        }
+                                      } else {
+                                        controller.goToParentDirectory();
+                                      }
+                                    }
+                                  },
+                            icon: AnimatedRotation(
+                              turns: isLeftArrowState ? -0.25 : 0,
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeInOut,
+                              child: FaIcon(
+                                FontAwesomeIcons.arrowUp,
+                                color: isLeftArrowState
+                                    ? (widget.onBackAtRoot != null ? colours.primaryLight : colours.secondaryLight)
+                                    : colours.primaryLight,
+                                size: textLG,
+                                semanticLabel: t.backLabel,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: spaceXS),
+                Expanded(
+                  child: ValueListenableBuilder<String?>(
+                    valueListenable: openFilePathNotifier,
+                    builder: (context, openFile, _) {
+                      if (openFile != null) {
+                        return Text(
+                          p.basename(openFile),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: textLG, color: colours.primaryLight, fontWeight: FontWeight.bold),
+                        );
+                      }
+                      return ValueListenableBuilder(
+                        valueListenable: controller.getPathNotifier,
+                        builder: (context, currentPath, child) => ValueListenableBuilder(
+                          valueListenable: heldPathsNotifier,
+                          builder: (context, heldPaths, child) => heldPaths.isNotEmpty
+                              ? Text(
+                                  "(${heldPaths.length}) file${heldPaths.length > 1 ? "s" : ""} ${t.selected}",
+                                  style: TextStyle(fontSize: textLG, color: colours.primaryLight, fontWeight: FontWeight.bold),
+                                )
+                              : ExtendedText(
+                                  currentPath.replaceFirst(getPathLeadingText(), ""),
+                                  maxLines: 1,
+                                  textAlign: TextAlign.left,
+                                  softWrap: false,
+                                  overflowWidget: TextOverflowWidget(
+                                    position: TextOverflowPosition.start,
+                                    child: Text(
+                                      "…",
+                                      style: TextStyle(fontSize: textLG, color: colours.primaryLight, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  style: TextStyle(fontSize: textLG, color: colours.primaryLight, fontWeight: FontWeight.bold),
+                                ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                ValueListenableBuilder<String?>(
+                  valueListenable: openFilePathNotifier,
+                  builder: (context, openFile, _) => openFile != null
+                      ? const SizedBox.shrink()
+                      : ValueListenableBuilder(
+                          valueListenable: heldPathsNotifier,
+                          builder: (context, heldPaths, child) => ValueListenableBuilder(
+                            valueListenable: selectedPathsNotifier,
+                            builder: (context, selectedPaths, child) => ValueListenableBuilder(
+                              valueListenable: copyingMovingNotifier,
+                              builder: (context, copyingMoving, child) => ValueListenableBuilder(
+                                valueListenable: loadingMoreNotifier,
+                                builder: (context, loadingMore, child) => Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: selectedPaths.isNotEmpty
+                                      ? [
+                                          Stack(
+                                            children: [
+                                              IconButton(
+                                                onPressed: () async {
+                                                  GestureDetector? detector;
+
+                                                  void searchForGestureDetector(BuildContext? element) {
+                                                    element?.visitChildElements((element) {
+                                                      if (element.widget is GestureDetector) {
+                                                        detector = element.widget as GestureDetector;
+                                                        return;
+                                                      } else {
+                                                        searchForGestureDetector(element);
+                                                      }
+
+                                                      return;
+                                                    });
+                                                  }
+
+                                                  searchForGestureDetector(moreOptionsDropdownKey.currentContext);
+
+                                                  if (detector?.onTap != null) detector?.onTap!();
+                                                },
+                                                style: ButtonStyle(
+                                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                  padding: WidgetStatePropertyAll(EdgeInsets.all(spaceXXS)),
+                                                ),
+                                                icon: loadingMore
+                                                    ? SizedBox.square(
+                                                        dimension: textLG,
+                                                        child: CircularProgressIndicator(color: colours.primaryLight),
+                                                      )
+                                                    : FaIcon(FontAwesomeIcons.ellipsisVertical, color: colours.primaryLight, size: textLG),
+                                              ),
+                                              Positioned(
+                                                top: spaceLG * 1.5,
+                                                child: DropdownButton(
+                                                  key: moreOptionsDropdownKey,
+                                                  borderRadius: BorderRadius.all(cornerRadiusSM),
+                                                  selectedItemBuilder: (context) => List.generate(1, (_) => SizedBox.shrink()),
+                                                  icon: SizedBox.shrink(),
+                                                  underline: const SizedBox.shrink(),
+                                                  menuWidth: MediaQuery.of(context).size.width / 1.5,
+                                                  dropdownColor: colours.secondaryDark,
+                                                  padding: EdgeInsets.zero,
+                                                  alignment: Alignment.bottomCenter,
+                                                  onChanged: (value) {},
+                                                  items:
+                                                      [
+                                                        selectAllOption,
+                                                        if (selectedPaths.length == 1) ...singleSelectOptions,
+                                                        "ignoreAndUntrack",
+                                                        ...ignoreAndUntrackOptions,
+                                                      ].map((option) {
+                                                        if (option is String) {
+                                                          switch (option) {
+                                                            case "ignoreAndUntrack":
+                                                              return DropdownMenuItem(
+                                                                value: null,
+                                                                onTap: () {},
+                                                                enabled: false,
+                                                                child: Column(
+                                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                                  children: [
+                                                                    // Text("", style: TextStyle(fontSize: textSM)),
+                                                                    Container(
+                                                                      margin: EdgeInsets.symmetric(horizontal: spaceMD),
+                                                                      color: colours.tertiaryDark,
+                                                                      height: 2,
+                                                                      width: double.infinity,
+                                                                    ),
+                                                                    SizedBox(height: spaceXXXS),
+                                                                    Text(
+                                                                      t.ignoreAndUntrack.toUpperCase(),
+                                                                      style: TextStyle(
+                                                                        color: colours.tertiaryInfo,
+                                                                        fontSize: textSM,
+                                                                        fontWeight: FontWeight.bold,
+                                                                      ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              );
+                                                          }
+                                                        }
+                                                        if (option is ((String, String), dynamic Function(List<String>))) {
+                                                          return DropdownMenuItem(
+                                                            onTap: () {
+                                                              Future.delayed(Duration.zero, () {
+                                                                option.$2(
+                                                                  selectedPaths.map((path) => path.replaceFirst("${widget.path}/", "")).toList(),
+                                                                );
+                                                              });
+                                                            },
+                                                            value: option.$1.$1,
+                                                            child: Padding(
+                                                              padding: EdgeInsets.symmetric(vertical: spaceXXS),
+                                                              child: Column(
+                                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                                children: [
+                                                                  Flexible(
+                                                                    child: Text(
+                                                                      option.$1.$1.toUpperCase(),
+                                                                      maxLines: 1,
+                                                                      overflow: TextOverflow.ellipsis,
+                                                                      style: TextStyle(
+                                                                        fontSize: textSM,
+                                                                        color: colours.primaryLight,
+                                                                        fontWeight: FontWeight.bold,
+                                                                        overflow: TextOverflow.ellipsis,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  SizedBox(height: spaceXS),
+                                                                  Flexible(
+                                                                    child: Text(
+                                                                      option.$1.$2,
+                                                                      maxLines: 1,
+                                                                      overflow: TextOverflow.ellipsis,
+                                                                      style: TextStyle(
+                                                                        fontSize: textXS,
+                                                                        color: colours.secondaryLight,
+                                                                        fontWeight: FontWeight.bold,
+                                                                        overflow: TextOverflow.ellipsis,
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          );
+                                                        }
+
+                                                        return DropdownMenuItem(child: SizedBox.shrink());
+                                                      }).toList(),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          SizedBox(width: spaceXXS),
+                                          IconButton(
+                                            onPressed: () async {
+                                              ConfirmDeleteFileFolderDialog.showDialog(context, selectedPaths, () async {
+                                                for (var path in selectedPaths) {
+                                                  final entity = FileSystemEntity.typeSync(path);
+                                                  if (entity == FileSystemEntityType.notFound) {
+                                                    throw Exception('Path does not exist.');
+                                                  }
+
+                                                  try {
+                                                    if (entity == FileSystemEntityType.directory) {
+                                                      await Directory(path).delete(recursive: true);
+                                                    } else {
+                                                      await File(path).delete();
+                                                    }
+                                                  } catch (e) {
+                                                    Fluttertoast.showToast(
+                                                      msg: "Failed to delete file/directory: $e",
+                                                      toastLength: Toast.LENGTH_LONG,
+                                                      gravity: null,
+                                                    );
+                                                  }
+
+                                                  selectedPathsNotifier.value = [];
+                                                  reload();
+                                                }
+                                              });
+                                            },
+                                            style: ButtonStyle(
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              padding: WidgetStatePropertyAll(EdgeInsets.all(spaceXXS)),
+                                            ),
+                                            icon: FaIcon(FontAwesomeIcons.trash, color: colours.tertiaryNegative, size: textLG),
+                                          ),
+                                          SizedBox(width: spaceXXS),
+                                          IconButton(
+                                            onPressed: () async {
+                                              heldPathsNotifier.value = selectedPaths;
+                                              selectedPathsNotifier.value = [];
+                                              copyingMoving = true;
+                                            },
+                                            style: ButtonStyle(
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              padding: WidgetStatePropertyAll(EdgeInsets.all(spaceXXS)),
+                                            ),
+                                            icon: FaIcon(FontAwesomeIcons.solidCopy, color: colours.tertiaryInfo, size: textLG),
+                                          ),
+                                          SizedBox(width: spaceXXS),
+                                          IconButton(
+                                            onPressed: () async {
+                                              heldPathsNotifier.value = selectedPaths;
+                                              copyingMoving = false;
+                                              selectedPathsNotifier.value = [];
+                                            },
+                                            style: ButtonStyle(
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              padding: WidgetStatePropertyAll(EdgeInsets.all(spaceXXS)),
+                                            ),
+                                            icon: FaIcon(FontAwesomeIcons.scissors, color: colours.tertiaryInfo, size: textLG),
+                                          ),
+                                        ]
+                                      : heldPaths.isNotEmpty
+                                      ? [
+                                          ValueListenableBuilder(
+                                            valueListenable: pastingNotifier,
+                                            builder: (context, pasting, child) => IconButton(
+                                              onPressed: pasting
+                                                  ? null
+                                                  : () async {
+                                                      final destinationPath = controller.getCurrentPath;
+                                                      for (String filePath in heldPathsNotifier.value) {
+                                                        File sourceFile = File(filePath);
+                                                        String fileName = sourceFile.uri.pathSegments.last;
+                                                        File destinationFile = File('$destinationPath/$fileName');
+
+                                                        pastingNotifier.value = true;
+                                                        try {
+                                                          if (copyingMoving == false) {
+                                                            // Move the file
+                                                            await sourceFile.rename(destinationFile.path);
+                                                            print('Moved: ${sourceFile.path} to ${destinationFile.path}');
+                                                          } else {
+                                                            // Copy the file
+                                                            await sourceFile.copy(destinationFile.path);
+                                                            print('Copied: ${sourceFile.path} to ${destinationFile.path}');
+                                                          }
+                                                        } catch (e) {
+                                                          print('Error: $e');
+                                                        }
+                                                        pastingNotifier.value = false;
+                                                      }
+
+                                                      heldPathsNotifier.value = [];
+                                                      reload();
+                                                    },
+                                              style: ButtonStyle(
+                                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                padding: WidgetStatePropertyAll(EdgeInsets.all(spaceXXS)),
+                                              ),
+                                              icon: pasting
+                                                  ? SizedBox.square(
+                                                      dimension: textLG,
+                                                      child: CircularProgressIndicator(color: colours.tertiaryInfo),
+                                                    )
+                                                  : FaIcon(FontAwesomeIcons.solidPaste, color: colours.tertiaryInfo, size: textLG),
+                                            ),
+                                          ),
+                                          SizedBox(width: spaceXXS),
+                                          IconButton(
+                                            onPressed: () {
+                                              heldPathsNotifier.value = [];
+                                            },
+                                            icon: FaIcon(FontAwesomeIcons.solidCircleXmark, color: colours.primaryLight, size: textLG),
+                                          ),
+                                        ]
+                                      : [
+                                          IconButton(
+                                            onPressed: () async {
+                                              CreateFolderDialog.showDialog(context, (folderName) async {
+                                                try {
+                                                  await Directory(
+                                                    "${controller.getCurrentPath.replaceFirst(RegExp(r'/$'), '')}/$folderName",
+                                                  ).create();
+                                                  controller.setCurrentPath =
+                                                      "${controller.getCurrentPath.replaceFirst(RegExp(r'/$'), '')}/$folderName";
+                                                } catch (e) {
+                                                  Fluttertoast.showToast(
+                                                    msg: "Failed to create directory: $e",
+                                                    toastLength: Toast.LENGTH_LONG,
+                                                    gravity: null,
+                                                  );
+                                                }
+                                              });
+                                            },
+                                            style: ButtonStyle(
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              padding: WidgetStatePropertyAll(EdgeInsets.all(spaceXXS)),
+                                            ),
+                                            icon: FaIcon(
+                                              FontAwesomeIcons.folderPlus,
+                                              color: colours.primaryLight,
+                                              size: textLG,
+                                              semanticLabel: "create folder",
+                                            ),
+                                          ),
+                                          SizedBox(width: spaceXXS),
+                                          IconButton(
+                                            onPressed: () async {
+                                              CreateFileDialog.showDialog(context, (fileName) async {
+                                                try {
+                                                  await File("${controller.getCurrentPath.replaceFirst(RegExp(r'/$'), '')}/$fileName").create();
+                                                } catch (e) {
+                                                  Fluttertoast.showToast(
+                                                    msg: "Failed to create file: $e",
+                                                    toastLength: Toast.LENGTH_LONG,
+                                                    gravity: null,
+                                                  );
+                                                }
+                                                reload();
+                                              });
+                                            },
+                                            style: ButtonStyle(
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              padding: WidgetStatePropertyAll(EdgeInsets.all(spaceXXS)),
+                                            ),
+                                            icon: FaIcon(
+                                              FontAwesomeIcons.fileCirclePlus,
+                                              color: colours.primaryLight,
+                                              size: textLG,
+                                              semanticLabel: "create file",
+                                            ),
+                                          ),
+                                        ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Stack(
+              children: [
+                Positioned.fill(child: _fileManagerWidget),
+                Positioned.fill(
+                  child: ValueListenableBuilder<String?>(
+                    valueListenable: openFilePathNotifier,
+                    builder: (context, openFile, _) => AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      switchInCurve: Curves.ease,
+                      switchOutCurve: Curves.ease,
+                      transitionBuilder: (child, animation) => SlideTransition(
+                        position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(animation),
+                        child: child,
+                      ),
+                      child: openFile == null
+                          ? const SizedBox.shrink(key: ValueKey('no-editor'))
+                          : Container(
+                              key: ValueKey('editor-inner:$openFile:$_editorReloadVersion'),
+                              color: colours.primaryDark,
+                              child: Editor(path: openFile, type: EditorType.DEFAULT),
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (widget.embedded) return scaffold;
+
+    return WillPopScope(
+      onWillPop: () async {
+        if (selectedPathsNotifier.value.isNotEmpty) {
+          selectedPathsNotifier.value = [];
+          return false;
+        }
+        if (_isAtRoot()) {
+          return true;
+        } else {
+          controller.goToParentDirectory();
+          return false;
+        }
+      },
+      child: scaffold,
+    );
+  }
+}
+
+Route createFileExplorerRoute(List<GitManagerRs.Commit> recentCommits, String path) {
+  return PageRouteBuilder(
+    settings: const RouteSettings(name: file_explorer),
+    pageBuilder: (context, animation, secondaryAnimation) => FileExplorer(recentCommits, path: path),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      const begin = Offset(0.0, 1.0);
+      const end = Offset.zero;
+      const curve = Curves.ease;
+
+      var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+      return SlideTransition(position: animation.drive(tween), child: child);
+    },
+  );
+}

@@ -1,0 +1,9 @@
+appId: com.viscouspot.gitsync
+---
+# - assertVisible: "You haven't allowed notifications from this app"
+
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertVisible: "Allow GitSync to send you notifications?"

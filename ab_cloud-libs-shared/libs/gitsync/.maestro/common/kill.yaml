@@ -1,0 +1,10 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - killApp
+      - back
+      - back
+      - back

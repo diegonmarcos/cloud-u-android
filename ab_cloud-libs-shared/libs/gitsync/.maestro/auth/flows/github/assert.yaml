@@ -1,0 +1,22 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - runFlow:
+          when:
+            visible: "Sign in to "
+          commands:
+            - assertVisible: "Sign in to "
+      - runFlow:
+          when:
+            notVisible: "Sign in to "
+          commands:
+            - assertVisible: "Verify Session"
+
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: "‎github.com"

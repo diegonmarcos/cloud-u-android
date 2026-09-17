@@ -1,0 +1,10 @@
+appId: com.google.android.documentsui
+---
+
+- launchApp
+- tapOn: "More options"
+- tapOn: "Select all"
+- tapOn: "Take Up Space"
+- tapOn:
+    id: "com.google.android.documentsui:id/option_menu_search"
+- tapOn: "OK"

@@ -1,0 +1,47 @@
+appId: com.viscouspot.gitsync
+---
+
+- runFlow: ../common/kill.yaml
+
+- runFlow: ../common/launch_notif_perm.yaml
+- runFlow: flows/open_auth/positive.yaml
+- runFlow: flows/ssh/start.yaml
+- runFlow: flows/ssh/auth.yaml
+- runFlow: ../clone/flows/assert.yaml
+- runFlow: ../clone/flows/list/assert_not.yaml
+- runFlow: ../clone/flows/url/ssh_at.yaml
+- runFlow: ../clone/flows/select_folder_dialog/positive.yaml
+- runFlow: ../clone/flows/select_folder/positive.yaml
+- runFlow: ../clone/flows/select_folder/assert_not.yaml
+- runFlow: ../clone/flows/select_folder_dialog/assert_not.yaml
+- runFlow: ../home/flows/deselect_repo/positive.yaml
+- runFlow: ../common/kill.yaml
+
+- runFlow: ../common/launch_notif_perm.yaml
+- runFlow: flows/open_auth/positive.yaml
+- runFlow: flows/ssh/start.yaml
+- runFlow: flows/ssh/auth.yaml
+- runFlow: ../clone/flows/assert.yaml
+- runFlow: ../clone/flows/list/assert_not.yaml
+- runFlow: ../clone/flows/url/ssh_protocol.yaml
+- runFlow: ../clone/flows/select_folder_dialog/positive.yaml
+- runFlow: ../clone/flows/select_folder/positive.yaml
+- runFlow: ../clone/flows/select_folder/assert_not.yaml
+- runFlow: ../clone/flows/select_folder_dialog/assert_not.yaml
+- runFlow: ../home/flows/deselect_repo/positive.yaml
+- runFlow: ../common/kill.yaml
+
+- runFlow: ../common/launch_notif_perm.yaml
+- runFlow: flows/open_auth/positive.yaml
+- runFlow: flows/ssh/start.yaml
+- runFlow: flows/ssh/auth.yaml
+- runFlow: ../clone/flows/assert.yaml
+- runFlow: ../clone/flows/list/assert_not.yaml
+- runFlow: ../clone/flows/local/positive.yaml
+- runFlow: ../clone/flows/select_folder/neutral.yaml
+- runFlow: ../clone/flows/select_folder/assert_not.yaml
+- runFlow: ../clone/flows/select_folder_dialog/assert_not.yaml
+- runFlow: ../home/flows/deselect_repo/positive.yaml
+- runFlow: ../common/kill.yaml
+
+

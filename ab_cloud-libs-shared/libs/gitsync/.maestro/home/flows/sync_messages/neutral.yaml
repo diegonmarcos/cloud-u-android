@@ -1,0 +1,10 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          appId: com.viscouspot.gitsync
+      - assertVisible: "AUTH.*"
+      - tapOn: "disable/enable sync messages"

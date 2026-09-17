@@ -1,0 +1,34 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - launchApp:
+          appId: com.viscouspot.git-sync
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          appId: com.viscouspot.gitsync
+- assertVisible: "GitSync"
+- runFlow:
+    when:
+      notVisible: "Sync on app(s) opened"
+    commands:
+      - tapOn: "App Sync Settings"
+      - runFlow:
+          when:
+            visible: "Accessibility Service Disclosure"
+          commands:
+            - runFlow: ../auto_sync/flows/prominent_disclosure_dialog/positive.yaml
+            - runFlow: ../auto_sync/flows/enable_accessibility_service/positive.yaml
+            - runFlow:
+                when:
+                  notVisible: "Sync on app(s) opened"
+                commands:
+                  - tapOn: "App Sync Settings"
+- scroll
+- runFlow: ../auto_sync/flows/add_applications/single_app.yaml
+- takeScreenshot: generate_screenshots/raw/screenshot_auto_sync_settings

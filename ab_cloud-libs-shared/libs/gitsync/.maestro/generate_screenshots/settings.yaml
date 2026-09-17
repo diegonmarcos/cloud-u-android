@@ -1,0 +1,17 @@
+appId: com.viscouspot.gitsync
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          appId: com.viscouspot.gitsync
+- assertVisible: "GitSync"
+- tapOn: "repository settings"
+- assertVisible: "SETTINGS"
+- takeScreenshot: generate_screenshots/raw/screenshot_settings
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: "back"

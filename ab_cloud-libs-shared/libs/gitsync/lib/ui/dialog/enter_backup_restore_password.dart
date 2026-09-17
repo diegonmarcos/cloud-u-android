@@ -1,0 +1,82 @@
+import 'package:GitSync/api/helper.dart';
+import 'package:flutter/material.dart' as mat;
+import 'package:flutter/material.dart';
+import 'package:sprintf/sprintf.dart';
+import '../../../constant/dimens.dart';
+import '../../../ui/dialog/base_alert_dialog.dart';
+import 'package:GitSync/global.dart';
+
+Future<void> showDialog(BuildContext context, bool backupRestore, Function(String text) callback) {
+  final textController = TextEditingController();
+  return mat.showDialog(
+    context: context,
+    builder: (BuildContext context) => BaseAlertDialog(
+      backgroundColor: colours.secondaryDark,
+      title: SizedBox(
+        width: MediaQuery.of(context).size.width,
+        child: Text(
+          sprintf(t.enterPassword, [(backupRestore ? t.backup : t.restore)]),
+          style: TextStyle(color: colours.primaryLight, fontSize: textXL, fontWeight: FontWeight.bold),
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: ListBody(
+          children: [
+            TextField(
+              contextMenuBuilder: globalContextMenuBuilder,
+              controller: textController,
+              maxLines: 1,
+              obscureText: true,
+              enableSuggestions: false,
+              autocorrect: false,
+              style: TextStyle(
+                color: colours.primaryLight,
+                fontWeight: FontWeight.bold,
+                decoration: TextDecoration.none,
+                decorationThickness: 0,
+                fontSize: textMD,
+              ),
+              decoration: InputDecoration(
+                fillColor: colours.tertiaryDark,
+                filled: true,
+                border: const OutlineInputBorder(borderRadius: BorderRadius.all(cornerRadiusSM), borderSide: BorderSide.none),
+                isCollapsed: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: spaceMD, vertical: spaceSM),
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: <Widget>[
+        TextButton(
+          child: Text(
+            t.cancel.toUpperCase(),
+            style: TextStyle(color: colours.primaryLight, fontSize: textMD),
+          ),
+          onPressed: () {
+            Navigator.of(context).canPop() ? Navigator.pop(context) : null;
+          },
+        ),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: textController,
+          builder: (context, value, _) {
+            final disabled = backupRestore && value.text.isEmpty;
+            return TextButton(
+              onPressed: disabled
+                  ? null
+                  : () async {
+                      callback(textController.text);
+                      Navigator.of(context).canPop() ? Navigator.pop(context) : null;
+                    },
+              child: Text(
+                (backupRestore ? t.encryptedBackup : t.encryptedRestore).toUpperCase(),
+                style: TextStyle(color: disabled ? colours.tertiaryLight : colours.primaryPositive, fontSize: textMD),
+              ),
+            );
+          },
+        ),
+      ],
+    ),
+  );
+}

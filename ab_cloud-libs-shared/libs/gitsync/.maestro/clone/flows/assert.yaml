@@ -1,0 +1,4 @@
+appId: com.viscouspot.gitsync
+---
+
+- assertVisible: "Clone remote repository"

@@ -15,11 +15,11 @@
             --sar: env(safe-area-inset-right, 0px);
         }
 
-        html, body { margin: 0; padding: 0; background: #ffffff; height: 100%; }
+        html, body { margin: 0; padding: 0; background: #111827; height: 100%; }
 
         body {
             font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            color: #111;
+            color: #e5e7eb;
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: none;
         }
@@ -41,11 +41,11 @@
         .app-header { padding-top: var(--sat); }
         .tab-bar { padding-bottom: var(--sab); }
 
-        .tab-button.active { color: #2563eb; border-color: #2563eb; }
-        .tab-button { color: #6b7280; border-color: transparent; }
+        .tab-button.active { color: #60a5fa; border-color: #60a5fa; }
+        .tab-button { color: #9ca3af; border-color: transparent; }
 
-        .row:active { background: #f3f4f6; }
-        .row.selected { background: #eff6ff; }
+        .row:active { background: #1f2937; }
+        .row.selected { background: #1e3a8a; }
 
         /* One line, ellipsised: a long file name must not push the size column off screen. */
         .clip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -54,7 +54,7 @@
 <body>
 <div class="app-container">
 
-    <header class="app-header sticky top-0 z-20 bg-white border-b border-gray-200">
+    <header class="app-header sticky top-0 z-20 bg-gray-900 border-b border-gray-700">
         <div class="flex items-center justify-between px-4 h-12">
             <h1 class="text-base font-semibold">Cloud Drive</h1>
             <div id="header-actions" class="flex items-center gap-3 text-gray-500"></div>
@@ -63,12 +63,15 @@
 
     <main id="panel" class="flex-1 overflow-y-auto hide-scrollbar"></main>
 
-    <!-- Files | Apps | Backups | Configs. The separator between Files and the rest is a plain
-         character, matching how the SuperApp's Data Apps row marks the same boundary. -->
-    <nav class="tab-bar sticky bottom-0 z-20 bg-white border-t border-gray-200 flex">
+    <!-- Files | Apps | Sync | Backups | Configs. The separator between Files and the rest is a plain
+         character, matching how the SuperApp's Data Apps row marks the same boundary. Sync is the
+         new home of the transfer surfaces: Rclone (the storage back ends that used to fill the Apps
+         tab) and Git (the vendored GitSync lib's screen, once its Flutter UI is embedded). -->
+    <nav class="tab-bar sticky bottom-0 z-20 bg-gray-900 border-t border-gray-700 flex">
         <button data-tab="files"   class="tab-button active flex-1 py-3 text-sm font-medium border-t-2">Files</button>
-        <span class="self-center text-gray-300 select-none">|</span>
+        <span class="self-center text-gray-600 select-none">|</span>
         <button data-tab="apps"    class="tab-button flex-1 py-3 text-sm font-medium border-t-2">Apps</button>
+        <button data-tab="sync"    class="tab-button flex-1 py-3 text-sm font-medium border-t-2">Sync</button>
         <button data-tab="backups" class="tab-button flex-1 py-3 text-sm font-medium border-t-2">Backups</button>
         <button data-tab="configs" class="tab-button flex-1 py-3 text-sm font-medium border-t-2">Configs</button>
     </nav>
@@ -108,7 +111,10 @@ const state = {
     /* { path, name, original } while a file is open in the editor, null otherwise. The
        editor is a mode of the Files tab rather than a fifth tab, because what it edits is
        whatever the Files tab is looking at. */
-    editor: null
+    editor: null,
+    /* Which Sync subpage is showing: 'rclone' or 'git'. Session state, not a setting —
+       a subpage is not a choice a user expects to survive a restart. */
+    syncSub: 'rclone'
 };
 
 /* The handful of choices that are settings rather than session state. domStorageEnabled is
@@ -197,7 +203,7 @@ function renderPermissionPrompt() {
     panel.innerHTML =
         '<div class="p-6 space-y-4 text-center">' +
         '<div class="text-4xl">🔒</div>' +
-        '<p class="text-sm text-gray-600">Cloud Drive manages the files on this phone, so Android ' +
+        '<p class="text-sm text-gray-300">Cloud Drive manages the files on this phone, so Android ' +
         'needs you to allow management of all files. Nothing is read until you do.</p>' +
         '<button id="grant" class="px-4 py-2 rounded bg-blue-600 text-white text-sm font-medium">' +
         'Open the Android setting</button></div>';
@@ -209,9 +215,9 @@ function renderPlaces() {
     let places = [];
     try { places = JSON.parse(Bridge.raw('places') || '[]'); } catch (error) { places = []; }
     if (!places.length) return '';
-    return '<div class="flex gap-2 px-4 py-2 overflow-x-auto hide-scrollbar border-b border-gray-100">' +
+    return '<div class="flex gap-2 px-4 py-2 overflow-x-auto hide-scrollbar border-b border-gray-800">' +
         places.map(place =>
-            '<button class="place shrink-0 px-3 py-1 rounded-full bg-gray-100 text-xs" ' +
+            '<button class="place shrink-0 px-3 py-1 rounded-full bg-gray-800 text-xs" ' +
             'data-path="' + escapeHtml(place.path) + '">' + escapeHtml(place.label) + '</button>'
         ).join('') + '</div>';
 }
@@ -221,8 +227,8 @@ function renderUsage() {
     if (!usage.ok || !usage.total) return '';
     const used = usage.total - usage.free;
     const percent = Math.round(used / usage.total * 100);
-    return '<div class="px-4 py-2 border-b border-gray-100">' +
-        '<div class="h-1 rounded bg-gray-200 overflow-hidden">' +
+    return '<div class="px-4 py-2 border-b border-gray-800">' +
+        '<div class="h-1 rounded bg-gray-700 overflow-hidden">' +
         '<div class="h-full bg-blue-500" style="width:' + percent + '%"></div></div>' +
         '<div class="mt-1 text-[11px] text-gray-500">' + humanSize(used) + ' of ' +
         humanSize(usage.total) + ' used</div></div>';
@@ -231,7 +237,7 @@ function renderUsage() {
 function renderFiles() {
     const crumbs = state.path.split('/').filter(Boolean);
     const rows = state.entries.map((entry, index) =>
-        '<div class="row flex items-center gap-3 px-4 py-2 border-b border-gray-50 ' +
+        '<div class="row flex items-center gap-3 px-4 py-2 border-b border-gray-800 ' +
         (state.selection.has(entry.path) ? 'selected' : '') + '" data-index="' + index + '">' +
         '<span class="text-xl">' + glyphFor(entry) + '</span>' +
         '<div class="flex-1 min-w-0">' +
@@ -239,7 +245,7 @@ function renderFiles() {
         '<div class="text-[11px] text-gray-500">' +
         (entry.directory ? 'folder' : humanSize(entry.size)) + ' · ' + humanDate(entry.modified) +
         '</div></div>' +
-        '<button class="more px-2 text-gray-400" data-index="' + index + '">⋮</button>' +
+        '<button class="more px-2 text-gray-500" data-index="' + index + '">⋮</button>' +
         '</div>'
     ).join('');
 
@@ -249,7 +255,7 @@ function renderFiles() {
         renderUsage() +
         (state.entries.length
             ? rows
-            : '<div class="p-6 text-center text-sm text-gray-400">This folder is empty</div>') +
+            : '<div class="p-6 text-center text-sm text-gray-500">This folder is empty</div>') +
         renderSelectionBar();
 
     bindFileRows();
@@ -380,11 +386,11 @@ function openEditor(entry) {
 
 function renderEditor() {
     panel.innerHTML =
-        '<div class="px-4 py-2 text-[11px] text-gray-500 clip border-b border-gray-100">' +
+        '<div class="px-4 py-2 text-[11px] text-gray-500 clip border-b border-gray-800">' +
         escapeHtml(state.editor.name) + '</div>' +
         '<textarea id="editor-text" spellcheck="false" autocapitalize="off" ' +
         'autocorrect="off" class="block w-full min-h-[70vh] p-4 font-mono text-xs ' +
-        'leading-5 outline-none resize-none">' + escapeHtml(state.editor.original) +
+        'leading-5 outline-none resize-none bg-gray-900 text-gray-200">' + escapeHtml(state.editor.original) +
         '</textarea>';
     renderHeaderActions();
 }
@@ -422,7 +428,7 @@ function renderHeaderActions() {
     if (state.tab !== 'files') { headerActions.innerHTML = ''; return; }
     if (state.editor) {
         headerActions.innerHTML =
-            '<button id="editor-save" class="text-sm font-medium text-blue-600">Save</button>' +
+            '<button id="editor-save" class="text-sm font-medium text-blue-400">Save</button>' +
             '<button id="editor-close" class="text-sm">Close</button>';
         document.getElementById('editor-save').onclick = saveEditor;
         document.getElementById('editor-close').onclick = closeEditor;
@@ -452,17 +458,17 @@ function renderHeaderActions() {
     };
 }
 
-/* ── the other three tabs ───────────────────────────────────────────────────── */
+/* ── the other tabs (Apps, Sync, Backups, Configs) ───────────────────────────────────────────────────── */
 
 function card(title, body) {
-    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-200">' +
+    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-700">' +
         '<div class="text-sm font-medium">' + escapeHtml(title) + '</div>' +
         '<div class="mt-1 text-xs text-gray-500">' + body + '</div></div>';
 }
 
 /* The storage back ends, baked in from data/drive-connections.json. Read once: it is build-time
    data, so it cannot change while the app is open. Borg and Bup are backup repositories rather
-   than live storage, which is exactly the Apps/Backups split — one list, one predicate, no second
+   than live storage, which is exactly the Sync/Backups split — one list, one predicate, no second
    copy of the data to keep in step. */
 const BACKUP_KINDS = ['borg', 'bup'];
 
@@ -489,25 +495,103 @@ function connectionCard(entry) {
         ['Host', entry.vm],
         ['Scope', entry.scope]
     ].filter(pair => pair[1]).map(pair =>
-        '<div class="flex gap-2"><span class="w-12 shrink-0 text-gray-400">' + pair[0] + '</span>' +
+        '<div class="flex gap-2"><span class="w-12 shrink-0 text-gray-500">' + pair[0] + '</span>' +
         '<span class="break-all">' + escapeHtml(String(pair[1])) + '</span></div>').join('');
-    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-200">' +
+    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-700">' +
         '<div class="flex items-center gap-2">' +
         '<span class="w-2 h-2 rounded-full ' + light + '"></span>' +
         '<span class="text-sm font-medium">' + escapeHtml(entry.name || 'Unnamed') + '</span></div>' +
         '<div class="mt-2 text-xs text-gray-500 space-y-0.5">' + facts + '</div>' +
         (entry.notes
-            ? '<div class="mt-2 text-xs text-gray-400">' + escapeHtml(entry.notes) + '</div>'
+            ? '<div class="mt-2 text-xs text-gray-500">' + escapeHtml(entry.notes) + '</div>'
             : '') +
         '</div>';
 }
 
+/* ── Apps: a grid of icon links out to the data apps ────────────────────────────────
+   #437: the storage back ends that used to fill this tab live under Sync > Rclone now;
+   this tab presents the fleet's data apps as icon links, matching how the SuperApp
+   renders its tiles. The list comes from FilesBridge.apps() — built from
+   data/drive-apps.json (selection + presentation) resolved against the constellation
+   fleet manifest (identity) — so there is no second copy of the app list to keep in
+   step. Tapping a tile launches the app; one that is not installed and carries a
+   fallback URL opens that instead. */
+
+function appTile(app, index) {
+    return '<button class="app-tile flex flex-col items-center gap-1.5 w-1/4 p-2" data-index="' + index + '">' +
+        '<span class="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center text-xl">' +
+        escapeHtml(app.icon) + '</span>' +
+        '<span class="text-[11px] text-gray-300 text-center leading-tight">' +
+        escapeHtml(app.label) + '</span></button>';
+}
+
 function renderApps() {
+    let apps = [];
+    try { apps = JSON.parse(Bridge.raw('apps') || '[]'); } catch (error) { apps = []; }
+    panel.innerHTML = '<div class="pt-2">' + (apps.length
+        ? '<div class="flex flex-wrap px-2 py-2">' + apps.map(appTile).join('') + '</div>'
+        : card('Nothing here', 'No apps are declared in this build.')) + '</div>';
+    panel.querySelectorAll('.app-tile').forEach(tile => {
+        tile.onclick = () => {
+            const app = apps[Number(tile.dataset.index)];
+            if (!app) return;
+            reportFailure(Bridge.call('openApp', JSON.stringify(app)));
+        };
+    });
+    headerActions.innerHTML = '';
+}
+
+/* ── Sync ───────────────────────────────────────────────────────────────────────────
+   #437: Sync owns the transfer surfaces. Two subpages, switched by the chips at the
+   top, exactly like the Configs choices: Rclone — the storage back ends that used to
+   fill the Apps tab, rendered with the same connectionCard() as the Backups tab so
+   there is no second copy of that renderer — and Git, which hosts the vendored
+   GitSync lib's screen. Until the Flutter engine is embedded (see
+   ab_cloud-libs-shared/libs/gitsync/VENDORED.md) the Git subpage states the honest
+   state of the lib instead of a fake-populated screen. */
+
+function syncChoice(value, label) {
+    const active = state.syncSub === value;
+    return '<button class="sync-choice px-3 py-1 rounded text-xs ' +
+        (active ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300') + '" ' +
+        'data-sub="' + value + '">' + escapeHtml(label) + '</button>';
+}
+
+function syncSubHeader() {
+    return '<div class="flex gap-2 px-4 pt-3 pb-1">' +
+        syncChoice('rclone', 'Rclone') +
+        syncChoice('git', 'Git') +
+        '</div>';
+}
+
+function renderSync() {
+    const sub = state.syncSub === 'git' ? renderGitSubpage() : renderRcloneSubpage();
+    panel.innerHTML = syncSubHeader() + sub;
+    panel.querySelectorAll('.sync-choice').forEach(button => {
+        button.onclick = () => {
+            state.syncSub = button.dataset.sub;
+            renderSync();
+        };
+    });
+    headerActions.innerHTML = '';
+}
+
+function renderRcloneSubpage() {
     const rows = connections().filter(entry => !BACKUP_KINDS.includes(entry.kind));
-    panel.innerHTML = '<div class="pt-2">' + (rows.length
+    return '<div class="pt-2">' + (rows.length
         ? rows.map(connectionCard).join('')
         : card('Nothing here', 'No storage back ends are declared in this build.')) + '</div>';
-    headerActions.innerHTML = '';
+}
+
+function renderGitSubpage() {
+    return '<div class="pt-2">' +
+        card('Git sync',
+            'The GitSync sync engine is vendored as a library in this repository at ' +
+            'ab_cloud-libs-shared/libs/gitsync (GPL-3.0, pinned upstream revision ' +
+            '0f4902fc). Its Flutter user interface is not embedded in this tab yet; the ' +
+            'embedding work is tracked in VENDORED.md at that path. Until it lands, this ' +
+            'subpage deliberately shows nothing that pretends to be a repository list.') +
+        '</div>';
 }
 
 /* ── the Backups tab ─────────────────────────────────────────────────────────────
@@ -533,9 +617,9 @@ const MIRROR_JOBS = (() => {
 
 function mirrorJobCard(job, index) {
     const fact = (label, value) =>
-        '<div class="flex gap-2"><span class="w-10 shrink-0 text-gray-400">' + label +
+        '<div class="flex gap-2"><span class="w-10 shrink-0 text-gray-500">' + label +
         '</span><span class="break-all">' + escapeHtml(String(value)) + '</span></div>';
-    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-200">' +
+    return '<div class="mx-4 my-2 p-4 rounded-lg border border-gray-700">' +
         '<div class="flex items-center gap-2">' +
         '<span class="flex-1 text-sm font-medium">' + escapeHtml(job.name || 'Unnamed') + '</span>' +
         '<button class="run-mirror px-3 py-1 rounded bg-blue-600 text-white text-xs" ' +
@@ -543,15 +627,15 @@ function mirrorJobCard(job, index) {
         '<div class="mt-2 text-xs text-gray-500 space-y-0.5">' +
         fact('From', job.source) + fact('To', job.destination) + '</div>' +
         (job.delete
-            ? '<div class="mt-2 text-xs text-amber-600">Removes whatever the source no longer has.</div>'
+            ? '<div class="mt-2 text-xs text-amber-400">Removes whatever the source no longer has.</div>'
             : '') +
-        (job.notes ? '<div class="mt-2 text-xs text-gray-400">' + escapeHtml(job.notes) + '</div>' : '') +
-        '<div class="mirror-result mt-2 text-xs text-gray-400" data-index="' + index + '"></div>' +
+        (job.notes ? '<div class="mt-2 text-xs text-gray-500">' + escapeHtml(job.notes) + '</div>' : '') +
+        '<div class="mirror-result mt-2 text-xs text-gray-500" data-index="' + index + '"></div>' +
         '</div>';
 }
 
 function heading(text) {
-    return '<div class="px-4 pt-4 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-400">' +
+    return '<div class="px-4 pt-4 pb-1 text-[11px] font-medium uppercase tracking-wide text-gray-500">' +
         escapeHtml(text) + '</div>';
 }
 
@@ -581,7 +665,7 @@ function bindMirrorButtons(jobs) {
                 'destination that the source no longer has. Run it?')) return;
 
             const line = panel.querySelector('.mirror-result[data-index="' + index + '"]');
-            line.className = 'mirror-result mt-2 text-xs text-gray-400';
+            line.className = 'mirror-result mt-2 text-xs text-gray-500';
             line.textContent = 'Running…';
             button.disabled = true;
 
@@ -592,11 +676,11 @@ function bindMirrorButtons(jobs) {
             setTimeout(() => {
                 const result = Bridge.call('mirror', job.source, job.destination, !!job.delete);
                 if (result.copied === undefined) {
-                    line.className = 'mirror-result mt-2 text-xs text-red-600';
+                    line.className = 'mirror-result mt-2 text-xs text-red-400';
                     line.textContent = result.error || 'the mirror failed';
                 } else {
                     line.className = 'mirror-result mt-2 text-xs ' +
-                        (result.failed ? 'text-amber-600' : 'text-gray-500');
+                        (result.failed ? 'text-amber-400' : 'text-gray-500');
                     line.textContent =
                         result.copied + ' copied · ' + result.skipped + ' already there · ' +
                         result.deleted + ' removed · ' + result.failed + ' failed';
@@ -614,14 +698,14 @@ function renderConfigs() {
     const granted = Bridge.available && Bridge.raw('hasStorageAccess') === true;
     const chip = (attribute, value, label, active) =>
         '<button class="cfg-choice px-2 py-1 rounded text-xs ' +
-        (active ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600') + '" ' +
+        (active ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300') + '" ' +
         'data-' + attribute + '="' + value + '">' + escapeHtml(label) + '</button>';
 
     panel.innerHTML =
         '<div class="pt-2">' +
         card('All-files access', granted
             ? 'Granted — the Files tab can manage this phone\'s storage.'
-            : 'Not granted. <button id="cfg-grant" class="underline text-blue-600">Open the Android setting</button>') +
+            : 'Not granted. <button id="cfg-grant" class="underline text-blue-400">Open the Android setting</button>') +
         card('Default sort',
             '<div class="flex flex-wrap gap-2 mt-2">' +
             chip('sort', 'name', 'Name', state.sort === 'name') +
@@ -668,6 +752,7 @@ function showTab(tab) {
         else if (state.path) renderFiles();
         else startAtFirstPlace();
     } else if (tab === 'apps') renderApps();
+    else if (tab === 'sync') renderSync();
     else if (tab === 'backups') renderBackups();
     else renderConfigs();
 }

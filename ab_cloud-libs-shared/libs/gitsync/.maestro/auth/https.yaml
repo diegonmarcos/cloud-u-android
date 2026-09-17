@@ -1,0 +1,43 @@
+appId: com.viscouspot.gitsync
+---
+
+- runFlow: ../common/kill.yaml
+
+- runFlow: ../common/launch_notif_perm.yaml
+- runFlow: flows/open_auth/positive.yaml
+- runFlow: flows/https/start.yaml
+- runFlow: flows/https/auth.yaml
+- runFlow: ../onboarding/flows/author_details_prompt/positive.yaml
+- runFlow: ../settings/flows/assert.yaml
+- runFlow: ../settings/flows/author_name/positive.yaml
+- runFlow: ../settings/flows/author_email/positive.yaml
+- runFlow: ../common/back.yaml
+- runFlow: ../clone/flows/assert.yaml
+- runFlow: ../clone/flows/list/assert_not.yaml
+- runFlow: ../clone/flows/url/https.yaml
+- runFlow: ../clone/flows/select_folder_dialog/positive.yaml
+- runFlow: ../clone/flows/select_folder/positive.yaml
+- runFlow: ../clone/flows/select_folder/assert_not.yaml
+- runFlow: ../clone/flows/select_folder_dialog/assert_not.yaml
+- runFlow: ../home/flows/deselect_repo/positive.yaml
+- runFlow: ../common/kill.yaml
+
+- runFlow: ../common/launch_notif_perm.yaml
+- runFlow: flows/open_auth/positive.yaml
+- runFlow: flows/https/start.yaml
+- runFlow: flows/https/auth.yaml
+- runFlow: ../onboarding/flows/author_details_prompt/positive.yaml
+- runFlow: ../settings/flows/assert.yaml
+- runFlow: ../settings/flows/author_name/positive.yaml
+- runFlow: ../settings/flows/author_email/positive.yaml
+- runFlow: ../common/back.yaml
+- runFlow: ../clone/flows/assert.yaml
+- runFlow: ../clone/flows/list/assert_not.yaml
+- runFlow: ../clone/flows/local/positive.yaml
+- runFlow: ../clone/flows/select_folder/neutral.yaml
+- runFlow: ../clone/flows/select_folder/assert_not.yaml
+- runFlow: ../clone/flows/select_folder_dialog/assert_not.yaml
+- runFlow: ../home/flows/deselect_repo/positive.yaml
+- runFlow: ../common/kill.yaml
+
+

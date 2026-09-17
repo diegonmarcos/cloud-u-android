@@ -1,0 +1,13 @@
+executionOrder:
+    continueOnFailure: false # default is true
+    flowsOrder:
+        - negative
+        - positive
+        - github
+        - gitea
+        - https
+        - ssh
+
+flows:
+  - onboarding/*
+  - auth/*

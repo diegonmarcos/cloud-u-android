@@ -1,0 +1,10 @@
+appId: com.viscouspot.gitsync
+---
+
+- runFlow: ./assert.yaml
+- tapOn: "GENERATE KEYS"
+- assertVisible: "ssh-ed25519.*"
+- tapOn: "ssh-ed25519.*"
+- runFlow: ./save_key.yaml
+- assertVisible: "CONFIRM PUB KEY SAVED"
+- tapOn: "CONFIRM PUB KEY SAVED"

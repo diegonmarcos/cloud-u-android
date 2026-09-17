@@ -1,0 +1,25 @@
+name: Bug Report
+description: Template for bug reports
+title: '[Bug]: '
+labels:
+  - bug
+body:
+  - id: description
+    type: textarea
+    attributes:
+      label: Description
+      description: A clear and concise description of the problem
+    validations:
+      required: true
+  - id: repro_steps
+    type: textarea
+    attributes:
+      label: Minimal Reproduction
+      description: provide steps to reproduce the problem
+    validations:
+      required: true
+  - id: logs
+    type: textarea
+    attributes:
+      label: Exception or Error
+      description: provide error logs

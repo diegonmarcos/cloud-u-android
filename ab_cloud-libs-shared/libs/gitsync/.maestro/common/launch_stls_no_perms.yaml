@@ -1,0 +1,20 @@
+appId: com.viscouspot.gitsync
+---
+# - pressKey: volume down
+# - clearState
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - launchApp:
+          appId: com.viscouspot.gitsync
+          permissions:
+            all: deny
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - launchApp:
+          appId: com.viscouspot.git-sync
+          permissions:
+            all: unset
