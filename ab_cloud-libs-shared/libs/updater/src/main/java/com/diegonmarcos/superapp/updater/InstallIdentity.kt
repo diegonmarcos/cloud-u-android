@@ -91,7 +91,7 @@ object InstallIdentity {
 
     /** THE DECLARATION. Exactly one managed kind: the primary-user install.
      *  This set is the entire answer; every caller reads it here. */
-    val MANAGED: Set<InstallKind> = setOf(InstallKind.MAIN)
+    val MANAGED: Set<InstallKind> = setOf(InstallKind.MAIN, InstallKind.CLONE)
 
     /**
      * Which install kind THIS process is running as. Reads the current
