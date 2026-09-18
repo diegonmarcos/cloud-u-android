@@ -1,0 +1,55 @@
+name: "one pdf engine guard — exactly one in-process PDF renderer, reached by manifest"
+
+# WHY THIS WORKFLOW EXISTS AT ALL.
+# #463 was filed as "pdf.js is copied per-app in cloud-drive AND cloud-mail —
+# extract a shared lib" and measured on origin/main that was FALSE: cloud-mail
+# ships zero pdf assets, and its only PDF code hands the attachment OUT via an
+# ACTION_VIEW chooser, which #458 already wired to the PDF reader declared in
+# ac_cloud-drive's manifest. So the fleet ALREADY has exactly one PDF engine
+# reached by manifest — and nothing enforced that. The invariant holds by luck.
+# This guard makes a second engine impossible to arrive silently:
+# cloud-android-one-pdf-engine-guard.py fails whenever an in-process PDF
+# renderer shows up in any app tree other than ac_cloud-drive. The two
+# read-only vendored renderers (Mattermost's pdfium viewer, Element X's
+# mediaviewer PdfRenderer) are legitimate and exempt by NAME, in the policy
+# data, with a written reason each — never by a silent skip.
+#
+# WHY NOT FOLDED INTO health.yml, for the same reason licence-guard.yml is
+# not: that workflow runs on a six-hourly cron, so a second engine would sit
+# undetected for up to six hours and then fail a run nobody is watching. It
+# also deliberately does NOT live behind the registered-tester suite, which is
+# the last step of a single 65-step job behind 58 hard gates (#453): a check
+# registered only there can sit unexecuted behind an unrelated failure. A
+# guard with its own workflow inherits neither.
+#
+# WHY EVERY PUSH, WITH NO PATH FILTER. The event this guard has to catch IS
+# the commit that copies a renderer into an app — which can be any file in any
+# app tree, so there is no legitimate path to filter on. Filtering would also
+# hand this repository's own generator a path it must validate.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  one-pdf-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Order matters. The tester runs FIRST because it is what gives the
+      # gate's verdict any meaning: it drops a renderer into a non-drive app
+      # tree five ways and requires the guard to fail on each, then rebuilds
+      # the clean fleet and requires a pass. A gate whose own red path is
+      # unproven contributes a green tick that reads as enforcement, which is
+      # worse than no gate at all.
+      - name: The guard still fails when a second PDF engine appears
+        run: bash 1_cicd/src/scripts/test/one-pdf-engine-guard.test.sh
+
+      - name: Fleet keeps exactly one in-process PDF engine
+        run: python3 1_cicd/src/scripts/cloud-android-one-pdf-engine-guard.py .

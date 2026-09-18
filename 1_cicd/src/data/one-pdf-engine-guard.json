@@ -1,0 +1,72 @@
+{
+    "_doc": "ONE-PDF-ENGINE policy. The fleet must have exactly one in-process PDF renderer, and it is vendored ONCE: pdf.min.js + pdf.worker.min.js in ac_cloud-drive/app/src/main/assets/vendor/ (also tailwind.js + a VENDORED.md, all read-only). Every other app reaches that engine through the Android manifest -- cloud-mail hands its attachments OUT via Intent.ACTION_VIEW + createChooser(FLAG_GRANT_READ_URI_PERMISSION), and #458 has already declared ac_cloud-drive as the PDF reader in that manifest, so the chooser cloud-mail raises ALREADY offers Cloud Drive. Consumed by 1_cicd/src/scripts/cloud-android-one-pdf-engine-guard.py; the guard hardcodes no app, no path and no renderer name. Adding a future renderer filename, a future in-process renderer code marker, or a future legitimate exclusion is a DATA edit here -- no script change.",
+    "_doc_why": "Ticket #463 re-scope. It was filed as 'pdf.js is copied per-app in cloud-drive AND cloud-mail -- extract a shared lib', and measured on origin/main that was FALSE: cloud-mail ships zero pdf assets and zero viewer, its only PDF code handing the attachment out via an ACTION_VIEW chooser. So today there is exactly one PDF engine and the fleet already reaches it by manifest -- the outcome the ticket wanted, already holding. That outcome is currently enforced by NO guard; it holds by luck. The re-scoped job is to make a second engine impossible to arrive silently: fail if any in-process renderer appears in any app tree other than ac_cloud-drive. Extracting pdf.js into ab_cloud-libs-shared was explicitly refused because it builds an abstraction with exactly one consumer; if you find yourself creating ab_cloud-libs-shared/libs/pdf you have misread the ticket.",
+    "_rule": "one PDF engine in the fleet, reached by manifest; the way to add a consumer is the manifest, not a copy.",
+    "allowed_owner": "ac_cloud-drive",
+    "app_prefixes": [
+        "ac_cloud-",
+        "ab_cloud-",
+        "aa_cloud-",
+        "ac_c3-"
+    ],
+    "_doc_app_prefixes": "A top-level directory starting with any of these is an app/solution tree and is scanned. Adding a new app family = a data edit. ac_cloud-drive is always excluded because it OWNS the engine. These prefixes deliberately do NOT cover 1_cicd, a_solutions, c_devices, 9_others, 2_configs -- a renderer copy that ever lands there is not an app consuming it, and scanning 1_cicd would let the guard's own source trip it. The realistic duplicate is another APP (mail above all) or a shared lib (ab_cloud-libs-shared), all covered here.",
+    "prune_dirs": [
+        ".git",
+        "node_modules",
+        "build",
+        "dist",
+        "target",
+        "z_archive",
+        "Pods"
+    ],
+    "_doc_prune_dirs": "Never descended into, for both the tree walk and the file scan. build/dist/target/Pods are generated; node_modules is third-party; z_archive holds retired app trees. A hit in any of those is noise that would train a reader to ignore the guard.",
+    "renderer": {
+        "filenames": [
+            "pdf.min.js",
+            "pdf.worker.min.js",
+            "pdf.js",
+            "pdf.worker.js"
+        ],
+        "_doc_filenames": "The named PDF.js artefacts. Extending for a future engine (e.g. pdfjs renamed, or a .mjs build) is a data edit.",
+        "dirnames": [
+            "pdfium"
+        ],
+        "_doc_dirnames": "A directory named 'pdfium' under any scanned app tree is a pdfium binding (the C++ PDF engine, JNI-wrapped). matchers on directory name because a binding is a handful of files across build systems, not one canonical filename.",
+        "code_markers": [
+            "android.graphics.pdf.PdfRenderer",
+            "io.github.barteksc.pdfviewer",
+            "com.tom_roush.pdfium",
+            "com.artifex.mupdf"
+        ],
+        "_doc_code_markers": "In-process renderer is not always a copied .js file. android.graphics.pdf.PdfRenderer is the Android PLATFORM's pdfium-backed renderer (used by the vendored Element X app's mediaviewer). barteksc / tom_roush / artifacts.mupdf are the common standalone Java/Kotlin pdfium bindings. Any of these in a non-excluded app tree is a second engine and the guard must fail. Extending the set = a data edit.",
+        "scan_extensions": [
+            ".kt",
+            ".java",
+            ".gradle",
+            ".kts",
+            ".xml",
+            ".js",
+            ".mjs",
+            ".ts",
+            ".tsx",
+            ".swift",
+            ".mm",
+            ".c",
+            ".cpp",
+            ".rs"
+        ],
+        "_doc_scan_extensions": "Files whose CONTENT is scanned for code_markers. A .js asset named exactly pdf.min.js is already caught by filenames; extension scanning is for markers that appear inside source. Keep it to code-ish extensions so prose/markdown can never trip a marker.",
+        "applies_to": "scan-roots-minus-owner-and-exclusions"
+    },
+    "exclusions": [
+        {
+            "path": "ac_cloud-chat/libraries/@mattermost/secure-pdf-viewer",
+            "reason": "THIRD-PARTY VIEWER VENDORED INSIDE A VENDORED APP. ac_cloud-chat is the Mattermost app, itself vendored read-only by fleet rule. secure-pdf-viewer is Mattermost's own bundled react-native pdf viewer (its own pdfium Java binding under com.mattermost.securepdfviewer.pdfium). It is read-only by that same fleet rule, is not the fleet's shared engine, and is the chat app's private in-app viewer -- the fleet rule does not force one shared renderer into every vendored app's private UI. Excluding it is correct; the exclusion is NAMED here so the guard is never a silent skip."
+        },
+        {
+            "path": "ac_cloud-matrix/libraries/mediaviewer/impl/src/main/kotlin/io/element/android/libraries/mediaviewer/impl/local/pdf",
+            "reason": "VENDORED ELEMENT X IN-APP VIEWER. ac_cloud-matrix is the Element X Android app (upstream_repo element-hq/element-x-android, pinned_tag v26.06.2), vendored read-only by fleet rule. Its mediaviewer renders PDFs in-process with the Android platform's android.graphics.pdf.PdfRenderer (itself a pdfium-backed system service) inside libraries/mediaviewer/impl/.../local/pdf. Same category as the Mattermost viewer: third-party, vendored, read-only, the app's own private UI, not the fleet engine. Found by the ticket's sweep for 'any other legitimately-vendored renderer'; left untouched because THIS ticket adds a guard and changes no app's behaviour."
+        }
+    ],
+    "_doc_exclusions": "Every legally-present in-process renderer outside ac_cloud-drive is named here, with a written reason, so the guard's green is not hiding a silent skip. Both entries were found by sweeping (grep for the marker set across every app tree); neither is in the fleet's shared engine. If a NEW vendored renderer appears (e.g. the fleet vendors another upstream app that renders PDFs in its own UI), name it here with a reason -- a data edit, no script change. Every entry is also expected to be LOAD-BEARING: the guard reports on green that it actually found the markers each exclusion was hiding, so a dead or mis-typed exclusion cannot silently stop guarding."
+}
