@@ -1313,6 +1313,9 @@ fun InboxScreen(
                     // they simply draw none -- the chip cannot appear without something to open.
                     onOpenAttachment = { part -> viewModel.openAttachment(email, part) },
                     openingAttachmentKey = openingAttachmentKey,
+                    // The row's Resume / Copy Code act on the MESSAGE, which a row does not carry
+                    // (#514). This is the fetch, and it is the reader's own.
+                    onLoadMessage = viewModel::messageWithBody,
                     showDraftBadge = if (fromSearch) email.isDraft else showsDraftBadge(
                         isDraft = email.isDraft,
                         accountId = email.accountId,
@@ -1392,6 +1395,8 @@ fun InboxScreen(
                     ThreadChildren(
                         onOpenAttachment = { child, part -> viewModel.openAttachment(child, part) },
                         openingAttachmentKey = openingAttachmentKey,
+                        // An unfolded child is a row like any other, and carries no body either.
+                        onLoadMessage = viewModel::messageWithBody,
                         visible = isExpanded,
                         members = members,
                         unified = ui.unified,
@@ -2326,6 +2331,10 @@ private fun SwipeableEmailRow(
     /** The attachment being downloaded right now, whichever row it belongs to, as [attachmentKey]
      *  spells it. Only the chip whose key matches spins. */
     openingAttachmentKey: String? = null,
+    /** How this row reaches its own MESSAGE for the row's Resume / Copy Code (#514). Threaded, not
+     *  defaulted at the call sites: a row carries no body, and a list that cannot fetch one must
+     *  say so by passing null rather than letting the actions answer about the preview. */
+    onLoadMessage: (suspend (Email) -> Email)? = null,
     onSwipe: (SwipeAction) -> Unit,
     onClick: () -> Unit,
     // Nullable so inline conversation children can omit long-press selection and the star.
@@ -2647,6 +2656,7 @@ private fun SwipeableEmailRow(
                 showNotUploadedBadge = showNotUploadedBadge,
                 onOpenAttachment = onOpenAttachment,
                 openingAttachmentKey = openingAttachmentKey,
+                onLoadMessage = onLoadMessage,
             )
         }
     }
@@ -2885,6 +2895,9 @@ private fun ThreadChildren(
      *  would be the affordance disappearing exactly when the user went looking for it. */
     onOpenAttachment: (Email, EmailBodyPart) -> Unit,
     openingAttachmentKey: String?,
+    /** How a child row reaches its own MESSAGE for Resume / Copy Code (#514) — the same loader the
+     *  top-level rows get, for the same reason: a child is a row, and a row carries no body. */
+    onLoadMessage: (suspend (Email) -> Email)?,
     highlightId: String?,
     /** The reading pane's anchor: the child it names is painted current (#103). */
     paneAnchor: MessageAnchor?,
@@ -2934,6 +2947,7 @@ private fun ThreadChildren(
                             showDraftBadge = showDraftBadgeFor(child),
                             onOpenAttachment = { part -> onOpenAttachment(child, part) },
                             openingAttachmentKey = openingAttachmentKey,
+                            onLoadMessage = onLoadMessage,
                             onSwipe = { action -> onSwipeChild(action, child) },
                             // Children join multi-select like top-level rows.
                             onClick = { if (selectionActive) onToggleSelectChild(child) else onOpenChild(child) },

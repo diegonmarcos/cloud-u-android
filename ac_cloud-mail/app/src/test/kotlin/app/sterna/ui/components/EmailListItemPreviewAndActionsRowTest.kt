@@ -66,6 +66,35 @@ class EmailListItemPreviewAndActionsRowTest {
         )
     }
 
+    /**
+     * #514: and that the row is CALLED. Every assertion above reads the body of a composable, and a
+     * body reads the same whether the app draws it or never reaches it — delete the one line below
+     * from `fun EmailListItem` and all three of them stay green while the phone shows nothing.
+     *
+     * Unconditional, at the weighted Column's own indent: an `if` around it nests it deeper, and a
+     * row whose icons come and go is the same report with an extra step. The whole chain from the
+     * LazyColumn down lives in `test/test-mail-list-row-actions.sh`; this is the hop that belongs
+     * next to the assertions it rescues from vacuity.
+     */
+    @Test
+    fun `the real row composes the actions row, unconditionally`() {
+        val row = emailListItemBlock()
+        assertTrue(
+            "fun EmailListItem must call ListRowActions( at the row column's own level (12 spaces) " +
+                "— a declaration nothing composes draws nothing:\n$row",
+            row.lines().any { it == "            ListRowActions(" },
+        )
+    }
+
+    /** The body of the top-level `fun EmailListItem(...)` — the REAL row, not a preview. */
+    private fun emailListItemBlock(): String {
+        val lines = SOURCE.readLines()
+        val start = lines.indexOfFirst { it.startsWith("fun EmailListItem(") }
+        require(start >= 0) { "could not locate fun EmailListItem in $SOURCE" }
+        val end = lines.withIndex().first { (i, line) -> i > start && line == "}" }.index
+        return lines.subList(start, end + 1).joinToString("\n")
+    }
+
     /** Everything from `if (previewLines > 0) {` up to the row's next declared step. */
     private fun previewBlock(): String {
         val lines = SOURCE.readLines()

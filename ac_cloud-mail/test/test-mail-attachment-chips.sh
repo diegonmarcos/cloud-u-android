@@ -115,9 +115,37 @@ hasnt "$ROW" '\.height(' "A5 no row is given a fixed height"
 hasnt "$ROW" 'heightIn(' "A5 no row is given a minimum height"
 # The chips sit INSIDE the weighted column, above the origin chip -- not in the outer Row, where
 # they would fight the star for width.
-awk '/^fun EmailListItem\(/,/^}/' "$ROW" | grep -q 'AttachmentChips(' \
-  && ok "A5 the chips are drawn inside the row's own column" \
-  || bad "A5 the chips are not where the row's height comes from ($ROW)"
+# PORTABLE, and it follows the ONE hop the chips now sit behind. This used to be
+# `awk '/^fun EmailListItem\(/,/^}/' | grep AttachmentChips(`, which answered differently on the
+# GitHub runner and in the dev container on byte-identical input (an ERE range escape mawk and gawk
+# read differently), and then went stale outright: #500 moved the chips from the row's column into
+# `ListRowActions`, which that column calls. The property never changed -- the chips are reached
+# from inside the weighted column and nowhere else -- so it is asserted directly, in python3, which
+# build.json::tests.shell.requires already guarantees is present.
+python3 - "$ROW" <<'PY'
+import sys
+src = open(sys.argv[1], encoding='utf-8').read().split('\n')
+
+def body(signature):
+    start = next((i for i, l in enumerate(src) if l.startswith(signature)), None)
+    if start is None:
+        return None
+    end = next((i for i, l in enumerate(src) if i > start and l == '}'), None)
+    return '\n'.join(src[start:end + 1]) if end is not None else None
+
+row, actions = body('fun EmailListItem('), body('private fun ListRowActions(')
+if row is None or actions is None:
+    print('  FAIL: A5 EmailListItem / ListRowActions are no longer top-level declarations here')
+    sys.exit(1)
+if 'ListRowActions(' not in row:
+    print("  FAIL: A5 the row's column no longer calls ListRowActions -- the chips are unreachable")
+    sys.exit(1)
+if 'AttachmentChips(' not in actions:
+    print('  FAIL: A5 ListRowActions no longer draws the chips')
+    sys.exit(1)
+print("  ok: A5 the chips are drawn inside the row's own column, through ListRowActions")
+PY
+[ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
 # Long names are shortened from the MIDDLE, keeping the extension: the folder sidebar settled that
 # truncating into unreadability is not this module's answer (b5e47807e).
 has "$ROW" 'internal fun attachmentChipLabel(' "A5 long filenames have a stated rule"

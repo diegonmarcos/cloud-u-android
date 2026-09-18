@@ -76,6 +76,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import android.widget.Toast
+import kotlinx.coroutines.launch
 import app.sterna.R
 import app.sterna.core.data.settings.ListDensity
 import app.sterna.core.jmap.model.Email
@@ -176,6 +177,14 @@ fun EmailListItem(
     // every paging refresh -- an identity comparison would stop matching mid-download, and equality
     // would spin the same-numbered part on a neighbouring row.
     openingAttachmentKey: String? = null,
+    // THE MESSAGE behind this row, fetched on demand (#514). A cached list row carries NO BODY at
+    // all -- `EmailEntity.toEmail()` maps the headers, the preview and nothing else -- so the row's
+    // own Resume and Copy Code, handed this `email`, were reading [Email.preview]: the same ~200
+    // characters already printed two lines above the button. Resume summarised the snippet and Copy
+    // Code looked for a verification code in it, which is never where one is. A list that can open
+    // the message passes this; one that cannot (search hits, which come from the FTS table) passes
+    // null and the actions fall back to the row as it stands.
+    onLoadMessage: (suspend (Email) -> Email)? = null,
 ) {
     val senderName = email.from.firstOrNull()?.display() ?: stringResource(R.string.message_unknown_sender)
     val recipient = if (showRecipients) email.to.firstOrNull() else null
@@ -361,6 +370,7 @@ fun EmailListItem(
             // the point: a fix or a re-wording of any of the three lands here for free.
             ListRowActions(
                 email = email,
+                onLoadMessage = onLoadMessage,
                 onOpenAttachment = onOpenAttachment,
                 attachmentParts = attachmentParts,
                 chipBackground = chipBackground,
@@ -554,6 +564,7 @@ private fun DraftLabel(fill: Color) {
 @Composable
 private fun ListRowActions(
     email: Email,
+    onLoadMessage: (suspend (Email) -> Email)?,
     onOpenAttachment: ((EmailBodyPart) -> Unit)?,
     attachmentParts: List<EmailBodyPart>,
     chipBackground: Color,
@@ -571,11 +582,22 @@ private fun ListRowActions(
     Row(verticalAlignment = Alignment.CenterVertically) {
         IconButton(
             enabled = resumeRunner.busy == null,
-            onClick = { resumeRunner.run(resumeScope, TextTool.RESUME, receivedTextToolSource(email)) },
+            onClick = {
+                resumeScope.launch {
+                    val message = rowMessage(email, onLoadMessage)
+                    resumeRunner.run(resumeScope, TextTool.RESUME, receivedTextToolSource(message))
+                }
+            },
         ) {
             Icon(TextTool.RESUME.icon, contentDescription = stringResource(TextTool.RESUME.label))
         }
-        IconButton(onClick = { copyVerificationCodeOrSayNone(clipboard, context, email) }) {
+        IconButton(
+            onClick = {
+                resumeScope.launch {
+                    copyVerificationCodeOrSayNone(clipboard, context, rowMessage(email, onLoadMessage))
+                }
+            },
+        ) {
             Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.message_copy_code))
         }
         ReadingGroupSeparator()
@@ -590,6 +612,25 @@ private fun ListRowActions(
         }
     }
 }
+
+/**
+ * The message a row's own action acts on (#514).
+ *
+ * THE DEFECT THIS CLOSES: a row is an [Email] built by `EmailEntity.toEmail()`, and that mapper
+ * writes no `textBody`, no `htmlBody` and no `bodyValues` — the body is a separate table, filled
+ * when a message is opened. `bodySource()` therefore fell all the way through to [Email.preview]
+ * for every row, so "Resume Mail" summarised the snippet already printed on the row and "Copy Code"
+ * hunted a verification code in a snippet that is cut long before one appears. Both icons were
+ * drawn, both were tappable, and both answered about the preview instead of the mail.
+ *
+ * So the message is READ FIRST, through the loader the list hands down — the reader's own
+ * `MailRepository.openMessage`, cache before network, and never marking the mail read: using an
+ * action on a message is not the same as having read it. A list with no loader, or a fetch that
+ * fails, falls back to [row] and the tools say what they always say about a message with nothing
+ * in it — which is honest, where summarising the preview was not.
+ */
+private suspend fun rowMessage(row: Email, onLoadMessage: (suspend (Email) -> Email)?): Email =
+    onLoadMessage?.invoke(row) ?: row
 
     /** How many chips a row draws before it stops and says how many are left. Four files is already
      *  an unusual message; twenty is a row six lines tall in a list meant to be scanned. */

@@ -2064,6 +2064,25 @@ class InboxViewModel(
         }
     }
 
+    /**
+     * The MESSAGE behind a list row (#514), for the row's own Resume / Copy Code actions.
+     *
+     * A row is an [Email] the list mapper built: headers, preview, flags — and no body, because the
+     * body lives in its own table and is written when a message is opened. The row's two actions
+     * were handed that row, so `bodySource()` fell through to [Email.preview] and both of them
+     * answered about a snippet instead of the mail. They read the message here instead, through the
+     * SAME door the reader opens, cache first and `markRead = false`: acting on a message is not
+     * the same as having read it, and a list row must not silently clear its own unread mark.
+     *
+     * Returns [email] unchanged when the row has no account or the fetch fails, so a tap under a
+     * thumb degrades to the tool's own "nothing to work with" wording rather than throwing.
+     */
+    suspend fun messageWithBody(email: Email): Email {
+        val credentials = credentialsFor(email) ?: return email
+        return runCatching { repo.openMessage(credentials, email.id, markRead = false).email }
+            .getOrDefault(email)
+    }
+
     /** Route an action to the email's own account (unified inbox), else the current one. */
     private fun credentialsFor(email: Email): AccountCredentials? = credentialsFor(email.emailKey())
 
