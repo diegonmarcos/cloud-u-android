@@ -370,7 +370,7 @@
     <string name="message_export_saved">Saved as %1$s</string>
     <string name="message_save_attachment">Save attachment</string>
     <!-- #461 — scan the CONTENT of an image attachment through the ONE shared
-         ImageScanEngine (ZXing barcode decode + ML Kit OCR) -- the same engine
+         ImageScanEngine (ZXing barcode decode + ML Kit OCR) — the same engine
          cloud-drive, cloud-media-center and cloud-camera run. Every outcome is
          said: a scan that ends without a visible reason is the empty-box defect. -->
     <string name="message_scan_attachment">Scan contents</string>
