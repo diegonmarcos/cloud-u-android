@@ -66,6 +66,11 @@
       "_doc_why_by_reference": "The analytics note above says no module was shared by reference from ab_cloud-libs-shared any more; that was true of libs:analytics, a Java/AGP-9 module this Kotlin/Compose tree on AGP 8.9 could not consume. This one is a Kotlin Android library on the same toolchain with core-ktx as its only dependency, which is why it can be.",
       "dir": "../ab_cloud-libs-shared/libs/text-tools"
     },
+    "libs:bottomnav": {
+      "type": "library",
+      "_doc": "The bottom-navigation island, shared BY REFERENCE from ab_cloud-libs-shared/libs/. THE ONE declaration of the nav's items, icons, labels and selected-destination contract lives here (#493). This app's SternaApp renders libs:bottomnav.BottomNavBar against its own NavHost; there is NO private nav copy left in this tree. A new Compose app that wants a bottom nav adds this same module instead of writing a fifth copy.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav"
+    },
     "libs:core": {
       "_doc_dir": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/ - settings.gradle points projectDir here instead of at a local copy, so a fix lands in every consuming app at build time and copies cannot drift.",
       "_doc": "Pulled in by :libs:updater, which needs its NotificationStore to surface an install result. Also merges the signature-level CONSTELLATION_DATA permission into this app's manifest, which is what makes the constellation's same-key trust on by default.",

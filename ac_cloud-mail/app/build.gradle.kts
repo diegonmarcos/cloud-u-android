@@ -328,6 +328,12 @@ dependencies {
     // API key in a second store.
     implementation(project(":libs:text-tools"))
 
+    // The bottom-navigation island, BY REFERENCE (#493). SternaApp renders
+    // libs:bottomnav.BottomNavBar against this app's own NavHost. The nav's
+    // items/icons/labels/contract are the ONE declaration in the shared module;
+    // this app never restated them and no private copy exists here.
+    implementation(project(":libs:bottomnav"))
+
     // Self-update. The SAME library Constellation - the owner's app store - drives its
     // own updates with, pulling the SAME GHCR image the store distributes for this app.
     // Linking it is reusing the store's engine, not adding a second one: Constellation
