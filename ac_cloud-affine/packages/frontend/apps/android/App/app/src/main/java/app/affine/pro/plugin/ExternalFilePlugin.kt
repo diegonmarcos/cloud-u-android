@@ -33,7 +33,7 @@ import java.io.FileInputStream
  */
 @CapacitorPlugin(
     name = "ExternalFile",
-    permissions = [Permission(Manifest.permission.READ_EXTERNAL_STORAGE)]
+    permissions = [Permission(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE))]
 )
 class ExternalFilePlugin : Plugin() {
 
