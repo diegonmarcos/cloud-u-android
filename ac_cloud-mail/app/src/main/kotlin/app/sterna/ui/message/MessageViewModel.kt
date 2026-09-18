@@ -6,6 +6,9 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
+import com.diegonmarcos.superapp.image.mlkit.BarcodeScan
+import com.diegonmarcos.superapp.image.mlkit.ImageScanEngine
+import com.diegonmarcos.superapp.image.mlkit.OcrResult
 import app.sterna.core.data.mail.MessageCrypto
 import app.sterna.core.data.mail.MessageUnavailableException
 import app.sterna.core.data.mail.requireAttachmentBytes
@@ -402,6 +405,16 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
      *  `rememberLeaveOnce` cannot cover it — the hand-off happens after a suspending download, and a
      *  ViewModel has no composition to latch onto. */
     private var openingAttachment = false
+
+    /** An image attachment is already being scanned (task #461): the tap starts a suspending
+     *  download, and a second tap would start the whole thing again. Held across the download like
+     *  [openingAttachment] — the guard has to cover the download, not just the engine call. */
+    private var scanningAttachment = false
+
+    /** The ONE shared image-scan engine (libs:ml-l-image-mlkit), created lazily: most sessions
+     *  never scan anything, and ML Kit's text-recognition client is a singleton per options, so
+     *  one instance per reading-scope is already reuse, not churn. */
+    private val scanEngine: ImageScanEngine by lazy { ImageScanEngine(application) }
 
     private fun updateMessage(id: String, transform: (ThreadMessage) -> ThreadMessage) {
         _messages.value = _messages.value.map { if (it.id == id) transform(it) else it }
@@ -1478,6 +1491,79 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
                 // theirs to open again as often as they like.
                 openingAttachment = false
             }
+        }
+    }
+
+    /**
+     * Task #461 — scan the CONTENT of an image attachment (barcode + OCR) through
+     * the ONE shared image-scan engine ([ImageScanEngine] in libs:ml-l-image-mlkit),
+     * the same module cloud-drive, cloud-media-center and cloud-camera run — never
+     * a copy of the decode path (#170/#261). The part's bytes go through the SAME
+     * download and cache path as [openAttachment] (the sender's name reaches the
+     * cache only through [StorageRepository.cacheAttachment]'s SafeFileName) and
+     * the engine runs off the main thread. Reports through [_attachmentStatus],
+     * the status line the attachment section already renders; every outcome is
+     * said, including "no barcode and no text" — a silent empty box is the defect
+     * this fleet bans.
+     */
+    fun scanAttachment(part: EmailBodyPart, ownerId: String) {
+        if (scanningAttachment) return
+        scanningAttachment = true
+        val app = getApplication<Application>()
+        _attachmentStatus.value = app.getString(R.string.scan_contents_in_progress)
+        viewModelScope.launch {
+            try {
+                val credentials = credentials()
+                    ?: error(app.getString(R.string.status_no_saved_account))
+                val bytes = repo.downloadAttachment(credentials, part, ownerId)
+                requireAttachmentBytes(ownerId, part.partId ?: part.blobId ?: "", bytes)
+                val file = storage.cacheAttachment(part.name, bytes)
+                val result = withContext(Dispatchers.IO) {
+                    ContentScan(scanEngine.decodeBarcode(file), scanEngine.recognizeText(file))
+                }
+                _attachmentStatus.value = result.statusMessage(app)
+            } catch (cancelled: CancellationException) {
+                // The reader page was swiped away mid-download: not an error to show.
+                throw cancelled
+            } catch (t: ContentTooLargeException) {
+                // Our own refusal, named with the same sentence the open path uses.
+                _attachmentStatus.value = app.getString(R.string.status_attachment_too_large)
+            } catch (t: Throwable) {
+                _attachmentStatus.value = app.getString(R.string.scan_contents_failed)
+            } finally {
+                scanningAttachment = false
+            }
+        }
+    }
+
+    /**
+     * What one scanned attachment produced, and how it is said. The barcode and
+     * OCR halves are both always asked (decodeBarcode returns null for "no
+     * barcode" AND for "could not load"; the OCR error string is the tiebreaker
+     * — but a showing of "no content" is enough for the UI, whose every state
+     * names itself).
+     */
+    private data class ContentScan(
+        val barcode: BarcodeScan?,
+        val ocr: OcrResult,
+    ) {
+        val hasAnyContent: Boolean get() = barcode != null || ocr.text.isNotBlank()
+
+        fun statusMessage(app: Application): String {
+            if (!hasAnyContent) return app.getString(R.string.scan_contents_nothing_found)
+            return buildString {
+                barcode?.let {
+                    append(app.getString(R.string.scan_contents_barcode_label))
+                    append(it.format)
+                    append(" ")
+                    append(it.rawValue)
+                    append("\n")
+                }
+                ocr.text.trim().takeIf { it.isNotEmpty() }?.let {
+                    append(app.getString(R.string.scan_contents_ocr_label))
+                    append(it)
+                }
+            }.trim()
         }
     }
 

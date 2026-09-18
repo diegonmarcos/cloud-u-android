@@ -1945,6 +1945,7 @@ private fun MessageContent(
                 confirmLinks = confirmLinks,
                 attachmentStatus = attachmentStatus,
                 onOpenAttachment = viewModel::openAttachment,
+                onScanAttachment = viewModel::scanAttachment,
                 onSaveAttachment = { part, ownerId ->
                     saveAttachmentFor = ownerId
                     saveAttachmentPart = part.partId ?: part.blobId ?: ""
@@ -2010,6 +2011,7 @@ private fun ConversationBody(
     confirmLinks: Boolean,
     attachmentStatus: String?,
     onOpenAttachment: (EmailBodyPart, String) -> Unit,
+    onScanAttachment: (EmailBodyPart, String) -> Unit,
     onSaveAttachment: (EmailBodyPart, String) -> Unit,
     calendar: CalendarInvite?,
     onRespondToInvite: (String) -> Unit,
@@ -2224,7 +2226,7 @@ private fun ConversationBody(
                 .background(MaterialTheme.colorScheme.surface),
         ) {
             MessageHeader(
-                msg, full, attachmentStatus, onOpenAttachment, onSaveAttachment, calendar, onRespondToInvite,
+                msg, full, attachmentStatus, onOpenAttachment, onScanAttachment, onSaveAttachment, calendar, onRespondToInvite,
                 onComposeTo, senderRule, showRecipients, deliveredTo, crypto, onCryptoAction,
                 deliveredToLine = deliveredToLine,
                 unsubscribe = unsubscribe,
@@ -2301,6 +2303,7 @@ private fun MessageHeader(
     full: Email?,
     attachmentStatus: String?,
     onOpenAttachment: (EmailBodyPart, String) -> Unit,
+    onScanAttachment: (EmailBodyPart, String) -> Unit,
     /** Declared right after [onOpenAttachment] and handed over POSITIONALLY, like everything up to
      *  `onCryptoAction`: two lambdas of the same type, and swapped, the row's name would save and its
      *  icon would open. */
@@ -2506,6 +2509,7 @@ private fun MessageHeader(
                     attachments,
                     attachmentStatus,
                     onOpen = { part -> onOpenAttachment(part, msg.id) },
+                    onScan = { part -> onScanAttachment(part, msg.id) },
                     onSave = { part -> onSaveAttachment(part, msg.id) },
                 )
             }
@@ -3042,6 +3046,7 @@ private fun AttachmentSection(
     attachments: List<EmailBodyPart>,
     status: String?,
     onOpen: (EmailBodyPart) -> Unit,
+    onScan: (EmailBodyPart) -> Unit,
     onSave: (EmailBodyPart) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -3093,6 +3098,18 @@ private fun AttachmentSection(
                         Icons.Filled.SaveAlt,
                         contentDescription = stringResource(R.string.message_save_attachment),
                     )
+                }
+                // #461 — scan this image's CONTENT (barcode + OCR) through the ONE shared
+                // ImageScanEngine. Images only: a PDF or a .doc may be a picture of nothing, and
+                // the engine reads pixels, not formats — a row with no readable pixels must not
+                // carry an action that promises the opposite.
+                if (att.type.startsWith("image/")) {
+                    IconButton(onClick = { onScan(att) }) {
+                        Icon(
+                            Icons.Filled.DocumentScanner,
+                            contentDescription = stringResource(R.string.message_scan_attachment),
+                        )
+                    }
                 }
             }
         }

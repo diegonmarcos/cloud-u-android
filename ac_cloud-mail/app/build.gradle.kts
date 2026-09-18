@@ -334,6 +334,13 @@ dependencies {
     // this app never restated them and no private copy exists here.
     implementation(project(":libs:bottomnav"))
 
+    // Content scan (task #461): the ONE shared image-scan engine (ZXing barcode
+    // decode + ML Kit OCR), BY REFERENCE from ab_cloud-libs-shared exactly like
+    // libs:text-tools above. cloud-drive, cloud-media-center and cloud-camera
+    // compile the SAME directory; scanning an image attachment's contents here
+    // reads the same engine, never a copy of it (#170/#261).
+    implementation(project(":libs:ml-l-image-mlkit"))
+
     // Self-update. The SAME library Constellation - the owner's app store - drives its
     // own updates with, pulling the SAME GHCR image the store distributes for this app.
     // Linking it is reusing the store's engine, not adding a second one: Constellation
