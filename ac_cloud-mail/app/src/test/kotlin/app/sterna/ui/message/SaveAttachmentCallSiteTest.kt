@@ -83,10 +83,16 @@ class SaveAttachmentCallSiteTest {
         // The open path moved into AttachmentOpen.kt, shared with the message list. The
         // cache write is pinned THERE, whole and exactly once, and MessageViewModel must now
         // carry none at all -- a cacheAttachment line reappearing beside the save path is
-        // the copy-into-the-cache this rule exists to stop.
+        // the copy-into-the-cache this rule exists to stop. Task #461's scan path is a second
+        // CALLER of the same file: it must go through cacheForScan in AttachmentOpen, never
+        // write its own cacheAttachment in the ViewModel.
         assertEquals(
-            "the open path must cache an attachment in exactly ONE place. Lines found:",
-            listOf("val file = storage.cacheAttachment(part.name, bytes)"),
+            "the cache write must live in AttachmentOpen and nowhere else: the open path's " +
+                "write and the scan path's cacheForScan, both in the ONE file. Lines found:",
+            listOf(
+                "val file = storage.cacheAttachment(part.name, bytes)",
+                "return storage.cacheAttachment(part.name, bytes)",
+            ),
             codeLines(attachmentOpen().readText()).filter { "cacheAttachment(" in it },
         )
         assertEquals(
@@ -100,6 +106,12 @@ class SaveAttachmentCallSiteTest {
                 "Lines found:",
             emptyList<String>(),
             saveAttachmentBody().filter { "cacheAttachment" in it || "FileProvider" in it },
+        )
+        assertEquals(
+            "…and the scan path must go through AttachmentOpen.cacheForScan, which is the " +
+                "line that owns the cache write. Lines found:",
+            listOf("val file = AttachmentOpen.cacheForScan("),
+            codeLines(viewModel().readText()).filter { "cacheForScan(" in it },
         )
     }
 
