@@ -203,7 +203,8 @@ check("M8 AttachmentSection has an onScan slot",
       and "onScan: (EmailBodyPart) -> Unit" in screen,
       "the section must accept the action before any row can offer it")
 check("M8 the scan action is gated to image mime only",
-      "att.type.startsWith(\"image/\")" in screen,
+      "att.type?.startsWith(\"image/\") == true" in screen
+      or "att.type.startsWith(\"image/\")" in screen,
       "scanning a PDF's bytes as an image would be a silent wrong answer")
 check("M8 the scan action reaches viewModel::scanAttachment",
       "onScanAttachment = viewModel::scanAttachment" in screen,
