@@ -5,13 +5,16 @@
   "vendored_engine": "cloud-affine-engine.sh",
   "_doc_vendored_engine": "Byte-identical to ac_cloud-affine/build.sh, enforced by cloud-android-ship-repo-workflow-engine.sh parity check so the shipped engine and the vendored copy cannot drift.",
   "android": {
-    "application_id": "com.diegonmarcos.affine",
+    "application_id": "com.diegonmarcos.cloudnotes",
     "namespace": "app.affine.pro",
     "flavor": "stable",
     "min_sdk": 24,
     "target_sdk": 36,
     "compile_sdk": 36,
-    "_doc_application_id": "REPLACES-NOT: ships ALONGSIDE the current Cloud Notes (Markor, com.diegonmarcos.cloudnotes) for now. The #469 identity decision is 'ship alongside' — AFFiNE is a genuinely different app and ripping the live Markor tree + superapp wiring out in the same commit as adding a 9000-file vendor would maximise mid-flight breakage. Next step is documented in the report: flip to com.diegonmarcos.cloudnotes and delete ac_cloud-notes once this builds green."
+    "version_code": 164,
+    "version_name": "0.27.5",
+    "_doc_application_id": "FLIPPED (#495): this app now IS Cloud Notes, replacing Markor (formerly ac_cloud-notes, now deleted). #469 shipped it alongside the live Markor under com.diegonmarcos.affine on purpose, to avoid ripping out a live app and a 9000-file vendor in one commit; #495 is the flip that was always the documented next step. namespace stays app.affine.pro — it is the upstream Kotlin/TS package, never shipped as install identity, and renaming it across the vendored tree would be a large, pointless diff.",
+    "_doc_version": "164/0.27.5 (#495). version_code must exceed ac_cloud-notes's last shipped 163 or the fleet updater's downgrade guard refuses to install this as an update over the device's existing Cloud Notes (observed live: 'stale candidate for notes: versionCode 1 is OLDER than the installed 163') — the vendored AFFiNE Gradle defaults to versionCode 1 with no wiring to this file, which is the defect #495 fixes below. version_name FOLLOWS AFFINE'S OWN UPSTREAM VERSIONING (package.json version at the pinned revision) rather than continuing Markor's Apache-tag-mirroring scheme (163/2.16.1 mirrored upstream Markor tag v2.16.1) — the two apps have unrelated release trains and there is nothing for a post-flip Cloud Notes to mirror from Markor any more. Read into Gradle by app/build.gradle via JsonSlurper (see that file) — this is the ONE declaration; nothing else states these numbers."
   },
   "upstream": {
     "repo": "https://github.com/toeverything/AFFiNE.git",

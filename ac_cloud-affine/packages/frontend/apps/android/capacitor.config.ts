@@ -15,7 +15,7 @@ interface AppConfig {
 }
 
 const config: CapacitorConfig & AppConfig = {
-  appId: 'com.diegonmarcos.affine',  // REBRANDED (#469): applicationId move, namespace stays upstream
+  appId: 'com.diegonmarcos.cloudnotes',  // FLIPPED (#495): this app now IS Cloud Notes; namespace stays upstream app.affine.pro
   appName: 'AFFiNE',
   webDir: 'dist',
   affineVersion: packageJson.version,

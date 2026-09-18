@@ -1,10 +1,15 @@
 # Cloud Notes (AFFiNE) — feasibility, and why nothing was shipped
 
-Status: **BLOCKED, awaiting owner decision.** No `ac_cloud-notes/` directory, no
-`build.json`, no ship workflow, no Constellation registration was created. That
-is deliberate: the fleet's own history is that a half-wired project produces a
-false-green build or a 404 at install time, so an unresolved app is worse than
-an absent one.
+Status: **RESOLVED.** #469 vendored AFFiNE as `ac_cloud-affine/` — MIT-licensed
+code only, `packages/backend` and `packages/common/native` pruned exactly as
+this doc's EE-licence analysis below required — shipped alongside the then-live
+Markor (`ac_cloud-notes/`) under a separate identity (`com.diegonmarcos.affine`)
+rather than replacing it outright. #495 completed the replacement: flipped
+`ac_cloud-affine`'s applicationId to `com.diegonmarcos.cloudnotes` and deleted
+`ac_cloud-notes/` (Markor). Cloud Notes is AFFiNE from that commit on. The
+analysis below is kept as the historical record of the licence and toolchain
+investigation that made the #469 vendoring possible; it predates both commits
+and its "nothing was shipped" framing no longer holds.
 
 Investigated against upstream `toeverything/AFFiNE` at canary
 `cfda4858d550c46ec1cd0b574801d7becdd6625b` (2026-09-09), release train

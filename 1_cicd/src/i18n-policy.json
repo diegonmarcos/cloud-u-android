@@ -33,9 +33,6 @@
     "ac_cloud-affine/packages/frontend/apps/android/App/app": {
       "base_language": "en"
     },
-    "ac_cloud-notes/app": {
-      "base_language": "en"
-    },
     "ac_c3-watchtower/app": {
       "base_language": "en"
     },

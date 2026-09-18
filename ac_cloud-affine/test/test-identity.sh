@@ -11,11 +11,14 @@ fail() { printf '  FAIL  %s\n' "$1"; FAIL=1; }
 
 # 1. capacitor config and gradle agree on OUR applicationId
 cap="$(grep -o "appId: '[^']*'" "$ROOT/packages/frontend/apps/android/capacitor.config.ts" | head -1 | sed "s/appId: '//;s/'//")"
-gradle="$(grep -o 'applicationId = "[^"]*"' "$ROOT/packages/frontend/apps/android/App/app/build.gradle" | head -1 | sed 's/applicationId = "//;s/"//')"
-if [ "$cap" = "com.diegonmarcos.affine" ] && [ "$gradle" = "com.diegonmarcos.affine" ]; then
-  ok "applicationId com.diegonmarcos.affine in capacitor.config.ts AND app/build.gradle"
+# app/build.gradle reads applicationId from build.json (#495: JsonSlurper, not
+# a literal), so the gradle-side value is asserted against build.json itself —
+# the ONE declaration — rather than grepped as a string out of build.gradle.
+bj_id="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['android']['application_id'])" "$ROOT/build.json")"
+if [ "$cap" = "com.diegonmarcos.cloudnotes" ] && [ "$bj_id" = "com.diegonmarcos.cloudnotes" ]; then
+  ok "applicationId com.diegonmarcos.cloudnotes in capacitor.config.ts AND build.json"
 else
-  fail "applicationId mismatch: capacitor=$cap gradle=$gradle"
+  fail "applicationId mismatch: capacitor=$cap build.json=$bj_id"
 fi
 
 # 2. upstream applicationId must not survive as a SHIPPED identity. The

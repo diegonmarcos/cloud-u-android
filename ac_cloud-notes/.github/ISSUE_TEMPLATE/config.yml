@@ -1,8 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Search (USE THIS BEFORE POSTING ANYTHING - THANKS!)
-    url: https://github.com/gsantner/markor/issues?q=#js-issues-search
-    about: Link to the search for all kinds (existing issues, questions, recent changes & more)
-  - name: Question
-    url: https://github.com/gsantner/markor/issues/95
-    about: Please search and reply to existing relevant issues/discussions before writing.
