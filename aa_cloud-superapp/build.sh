@@ -314,7 +314,19 @@ step_dev() {
   in_nix adb shell am start -n "$(_release_var '.android.application_id')/com.diegonmarcos.superapp.MainActivity"
 }
 
-step_test()       { log "Test: JVM unit tests"; in_nix gradle test; }
+# The task is build.json::tests.unit.task — the SAME field the CI test engine
+# reads — so there is no second place for the task name to drift. Goes through
+# _resolve_signing + run_gradle exactly like step_build: this project cannot
+# even CONFIGURE without the shared key, and cannot compile without the
+# firestack aar.
+step_test() {
+  local task; task="$(_release_var '.tests.unit.task')"
+  [ -n "$task" ] || task="test"
+  log "Test: JVM unit tests (gradle $task)"
+  _resolve_signing
+  _resolve_media_keys
+  run_gradle "$task"
+}
 step_instrument() { log "Test: instrumented (needs device)"; in_nix gradle connectedAndroidTest; }
 step_lint()       { log "Lint"; in_nix gradle lint; }
 step_clean()      { log "Clean"; in_nix gradle clean; rm -rf "$DIST_DIR"; }

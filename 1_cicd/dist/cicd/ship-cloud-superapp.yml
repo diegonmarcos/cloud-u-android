@@ -301,13 +301,21 @@ jobs:
       # devShell would just re-download them. The engine still reads
       # build.json + build.gradle for everything else (toolchain pins,
       # module graph, registry config, tags).
-      # Kept even though this app has NO JVM unit tests. The step costs a
-      # second and prints the COVERAGE-GAP line naming the gap, so "superapp
-      # has no unit tests" is a fact visible in every run's log rather than
-      # something a reader has to infer from a step that is not there. A
-      # missing step and a passing one look identical in a green summary.
+      # Runs build.json::tests.unit.task through the app's own build.sh. #512:
+      # the first suite here is the Robolectric test that INFLATES
+      # activity_main and measures the bottom-nav's selected pill — four
+      # CI-green "fixes" of that widget shipped while it rendered nothing,
+      # because every check read XML text and none read the resolved view.
+      # Same env as the build step: gradle cannot even CONFIGURE this project
+      # without the shared signing key, and BYPASS_NIX because GHA already
+      # provides the JDK + SDK + Gradle.
       - name: JVM unit tests (fatal on failure)
         if: steps.gate.outputs.skip != 'true'
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
       - name: Build APK (engine)

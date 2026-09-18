@@ -836,6 +836,24 @@ android {
         compose = false
     }
 
+    // #512. Robolectric inflates REAL layouts against the REAL merged
+    // resources + theme, so a test can read what a widget actually resolved
+    // instead of what an XML file says. Every event is logged with full
+    // stack traces: the measured geometry the bottom-nav test prints is the
+    // evidence, and a bare "1 test failed" in the CI log is not.
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            all {
+                testLogging {
+                    events 'passed', 'failed', 'skipped'
+                    exceptionFormat 'full'
+                    showStandardStreams = true
+                }
+            }
+        }
+    }
+
     // Stable signing — required for the in-app updater to install update APKs.
     // The ONE shared Cloud-constellation key (release.jks + sops passwords) lives
     // in vault; build.sh::_resolve_signing resolves it and exports
@@ -1044,6 +1062,11 @@ dependencies {
     // Instrumented tests — proves the build.json → BuildConfig → Sections
     // wiring for the companion external-apps registry (ExternalAppsTest).
     // Run via the engine: ./build.sh test connectedDebugAndroidTest
+    // JVM unit tests (app/src/test) — see testOptions above. Run via the
+    // engine: ./build.sh test  (task = build.json::tests.unit.task)
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'androidx.test:core:1.6.1'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
 }
