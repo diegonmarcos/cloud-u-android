@@ -16,8 +16,8 @@ plugins {
 }
 
 include ':app'
-# DE-CLOUDED (#469): ':service' Apollo module dropped — it ran GraphQL codegen
-# from the EE-licensed server schema under the pruned EE directories. This
-# app is local-first; no server, no schema, no Apollo.
+// DE-CLOUDED (#469): ':service' Apollo module dropped — it ran GraphQL codegen
+// from the EE-licensed server schema under the pruned EE directories. This
+// app is local-first; no server, no schema, no Apollo.
 include ':capacitor-cordova-android-plugins'
 apply from: 'capacitor.settings.gradle'
