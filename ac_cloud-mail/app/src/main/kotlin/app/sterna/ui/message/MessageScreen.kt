@@ -2,6 +2,7 @@ package app.sterna.ui.message
 
 import app.sterna.BuildConfig
 import app.sterna.appLocale
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.VerifiedUser
 import app.sterna.core.data.mail.UnsubscribeAction
@@ -3106,7 +3107,7 @@ private fun AttachmentSection(
                 if (att.type.startsWith("image/")) {
                     IconButton(onClick = { onScan(att) }) {
                         Icon(
-                            Icons.Filled.DocumentScanner,
+                            Icons.Filled.Search,
                             contentDescription = stringResource(R.string.message_scan_attachment),
                         )
                     }
