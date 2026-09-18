@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Tester: Configs ▸ Panel — one page, two tabs (Notify | Control) — and the one
-# rule the Control tab exists to keep.
+# Tester: Configs ▸ Panel — one page, three tabs (Control | Push | Notify) —
+# and the rules each tab exists to keep.
 #
-# WHY THIS EXISTS: this page has exactly two ways to be wrong, and neither one
+# WHY THIS EXISTS: this page has several ways to be wrong, and none of them
 # shows up as a crash or a failed build.
 #
 #   1. A SWITCH THAT LIES. Android forbids a normal app from flipping Wi-Fi,
@@ -16,6 +16,13 @@
 #      page, not clone it. It is a `mirror_page` facet, so it renders the very
 #      fragment `page:communication/my-rss` opens; a second stack_ declaration
 #      here would be the copy that drifts.
+#   3. A DECORATIVE PUSH TAB (#497). Push renders build.json::ui.notification_
+#      center — every notification-center / badge producer this app ships —
+#      and it has to actually be DRIVEN by that array, not by a hardcoded list
+#      of three PushFragment invented on its own. A tab that renders the same
+#      whatever the declaration says would be decorative, so T28 below proves
+#      the render follows an edit to the declaration, the same way T22 proves
+#      it for Battery Hungers.
 #
 # Static tester (no device, no build): build.json is read as data, the Kotlin is
 # checked for the contracts that data relies on.
@@ -34,6 +41,7 @@ NAV="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherNavContro
 TABS="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
 CONTROLS="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/DeviceControls.kt"
 FRAGMENT="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/ControlFragment.kt"
+PUSH="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/PushFragment.kt"
 STATUS="$APP/app/src/main/java/com/diegonmarcos/superapp/ui/StatusLight.kt"
 COLORS="$APP/app/src/main/res/values/colors.xml"
 STRINGS="$APP/app/src/main/res/values/strings.xml"
@@ -50,13 +58,13 @@ for tool in python3 jq; do
     echo "         verdict from its ABSENCE rather than from the code."; exit 2; }
 done
 for f in "$BJ" "$GRADLE" "$SECTIONS" "$PAGES" "$NAV" "$TABS" "$CONTROLS" \
-         "$FRAGMENT" "$STATUS" "$COLORS" "$THEME_BG"; do
+         "$FRAGMENT" "$STATUS" "$COLORS" "$THEME_BG" "$PUSH"; do
   [ -f "$f" ] || {
     echo "  ABORT: no such file: $f — a grep over nothing matches nothing, which"
     echo "         is indistinguishable here from a contract being kept."; exit 2; }
 done
 
-echo "== T1: Configs ▸ Panel is a visible page declaring its two tabs in order =="
+echo "== T1: Configs ▸ Panel is a visible page declaring its three tabs in order =="
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
@@ -64,7 +72,7 @@ pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
 order = [p['id'] for p in pages]
 panel = next((p for p in pages if p['id'] == 'panel'), None)
 if panel is None:                    print('no `panel` page in config')
-elif panel.get('tabs') != ['control', 'notify']:
+elif panel.get('tabs') != ['control', 'push', 'notify']:
                                      print('tabs = %r' % (panel.get('tabs'),))
 elif panel.get('hidden'):            print('the strip itself must stay listed')
 # Panel is the page opened many times a day and About is the page opened once
@@ -79,7 +87,7 @@ elif order.index('panel') + 1 != order.index('about'):
                                            % order[max(0, order.index('about') - 2):])
 else:                                print('OK')
 PY
-)" "panel: tabs = [control, notify], visible, and immediately before About in the Configs grid"
+)" "panel: tabs = [control, push, notify], visible, and immediately before About in the Configs grid"
 
 echo "== T2: both tabs are REAL hidden pages of the SAME section, never the owner =="
 # The strip contract established in 07964787e: a tab is a declared page, so
@@ -99,7 +107,7 @@ for tab in panel.get('tabs', []):
                                   problems.append('tab %r must be hidden' % tab)
 print('; '.join(problems) or 'OK')
 PY
-)" "notify + control are declared, hidden pages of the config section"
+)" "control + push + notify are declared, hidden pages of the config section"
 
 echo "== T3: Notify MIRRORS the ntfy page — it does not carry a copy of it =="
 check "$(python3 - "$BJ" <<'PY'
@@ -317,16 +325,18 @@ print('; '.join(problems) or 'OK')
 PY
 )" "one functional home per control; the derived view gathers by flag, invents nothing"
 
-echo "== T11: Control is routed by id; Notify is NOT (it goes through the facet) =="
+echo "== T11: Control and Push are routed by id; Notify is NOT (it goes through the facet) =="
 r_fail=""
 grep -q 'pageId == "control" ->' "$PAGES"        || r_fail="$r_fail control:not-routed"
 grep -q 'ControlFragment.newInstance()' "$PAGES" || r_fail="$r_fail control:no-fragment"
+grep -q 'pageId == "push" ->' "$PAGES"           || r_fail="$r_fail push:not-routed"
+grep -q 'PushFragment.newInstance()' "$PAGES"    || r_fail="$r_fail push:no-fragment"
 # A SectionPages branch for `notify` would bypass the mirror and hand back a
 # generic placeholder, which is how the tab would quietly stop being the ntfy
 # page while still opening something.
 grep -q 'pageId == "notify"' "$PAGES"            && r_fail="$r_fail notify:shadowed-by-factory"
 [ -z "$r_fail" ] \
-  && ok "config/control → ControlFragment; config/notify left to the mirror" \
+  && ok "config/control → ControlFragment; config/push → PushFragment; config/notify left to the mirror" \
   || bad "page routing wrong:$r_fail"
 
 echo "== T12: the tab a strip OPENS ON is the first declared tab, and nothing else =="
@@ -1141,6 +1151,95 @@ esac
 [ -z "$details_fail" ] \
   && ok "the hand-off is declared, implemented, labelled with its unit in both locales, and the unit is what the code computes" \
   || bad "Battery Hungers' hand-off is wrong:$details_fail"
+
+echo "== T28: ui.notification_center reaches the APK — emitter, constant, reader =="
+np_fail=""
+grep -q 'buildJson.ui.notification_center' "$GRADLE"          || np_fail="$np_fail gradle:no-json-read"
+grep -q 'uiNotificationCenterB64' "$GRADLE"                   || np_fail="$np_fail gradle:no-b64"
+grep -q 'UI_NOTIFICATION_CENTER_B64' "$GRADLE"                || np_fail="$np_fail gradle:no-buildconfig"
+grep -q 'BuildConfig.UI_NOTIFICATION_CENTER_B64' "$PUSH"      || np_fail="$np_fail kotlin:not-read"
+[ -z "$np_fail" ] \
+  && ok "build.json → uiNotificationCenterB64 → BuildConfig.UI_NOTIFICATION_CENTER_B64 → PushFragment" \
+  || bad "the declaration cannot reach the UI:$np_fail"
+
+echo "== T29: Push renders the DECLARATION, not a hardcoded list of three =="
+# THE DECORATIVE-TAB CHECK. Diego named three badges and trailed off — "…." —
+# on purpose, which is only honoured if PushFragment iterates whatever
+# build.json::ui.notification_center carries rather than switching on three
+# known ids. A tab that renders the same regardless of what the declaration
+# says is decorative, which is exactly the #341/#344 empty-bake shape.
+decorative_fail=""
+grep -q 'declaration.optJSONArray("producers")' "$PUSH" \
+  || decorative_fail="$decorative_fail no-array-iteration"
+# No per-producer id may be switched on in the renderer — every id this file
+# names may appear only in a *comment*, never as a live `==` branch, or a
+# fourth producer added to the JSON would render nothing until Kotlin catches
+# up, exactly the drift #497 exists to forbid.
+python3 - "$BJ" "$PUSH" <<'PY' || decorative_fail="$decorative_fail id-switched-on-in-kotlin"
+import json, re, sys
+producers = json.load(open(sys.argv[1]))['ui']['notification_center']['producers']
+code = open(sys.argv[2], encoding='utf-8').read()
+code = re.sub(r'/\*.*?\*/', '', code, flags=re.S)
+code = re.sub(r'//[^\n]*', '', code)
+bad = [p['id'] for p in producers
+       if re.search(r'"%s"\s*(==|->)' % re.escape(p['id']), code)
+       or re.search(r'(==|\bif\s*\()\s*"%s"' % re.escape(p['id']), code)]
+sys.exit(1 if bad else 0)
+PY
+# PROOF, not assertion: dropping one producer from the JSON must shrink the
+# list PushFragment.declaredProducers() would build — computed by walking the
+# SAME optJSONArray/optString/optBoolean shape the Kotlin uses, not restated
+# by hand, so a rewrite of the parser is what this catches, not just word
+# choice.
+python3 - "$BJ" <<'PY' || decorative_fail="$decorative_fail removing-a-producer-does-not-shrink-the-render"
+import json, sys
+nc = json.load(open(sys.argv[1]))['ui']['notification_center']
+def rendered(producers):
+    out = []
+    for o in producers:
+        pid, label = o.get('id', ''), o.get('label', '')
+        if not pid or not label: continue
+        out.append(pid)
+    return out
+before = rendered(nc['producers'])
+after = rendered(nc['producers'][1:])
+sys.exit(0 if len(before) > 0 and len(after) == len(before) - 1 else 1)
+PY
+[ -z "$decorative_fail" ] \
+  && ok "PushFragment iterates the declared array; no producer id is a live branch; removing one shrinks the render" \
+  || bad "Push tab is decorative, not declaration-driven:$decorative_fail"
+
+echo "== T30: every declared producer names a REAL owner file and a resolvable icon =="
+# An id pointing at a file that does not exist is the DeviceControls failure
+# mode restated for Push: a row that draws and means nothing, because the
+# capability it claims to summarise is not where it says it is.
+owner_fail=""
+check "$(python3 - "$BJ" "$APP" "$APP/app/src/main/res/drawable" <<'PY'
+import json, os, sys
+nc = json.load(open(sys.argv[1]))['ui']['notification_center']
+app_src = os.path.join(sys.argv[2], 'app/src/main/java/com/diegonmarcos/superapp')
+lib_src = os.path.join(sys.argv[2], '..', 'ab_cloud-libs-shared')
+drawables = sys.argv[3]
+problems = []
+for p in nc['producers']:
+    pid = p.get('id', '<no id>')
+    owner = p.get('owner', '')
+    if not owner:
+        problems.append('%s: no owner declared' % pid); continue
+    if not (os.path.exists(os.path.join(app_src, owner)) or
+            os.path.exists(os.path.join(lib_src, owner))):
+        problems.append('%s: owner %r does not exist' % (pid, owner))
+    icon = p.get('icon', '')
+    if not icon:
+        problems.append('%s: no icon declared' % pid)
+    elif not any(os.path.exists(os.path.join(drawables, icon + ext))
+                 for ext in ('.xml', '.png', '.webp')):
+        problems.append('%s: icon %r is not a drawable' % (pid, icon))
+    if not p.get('subtitle'):
+        problems.append('%s: no subtitle' % pid)
+print('; '.join(problems) or 'OK')
+PY
+)" "every producer names an owner file that exists and an icon that resolves"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

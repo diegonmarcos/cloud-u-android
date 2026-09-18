@@ -179,6 +179,11 @@ def uiLauncherSettingsB64  = uiLauncherSettingsJson.bytes.encodeBase64().toStrin
 // that never look at it.
 def uiControlPanelJson = groovy.json.JsonOutput.toJson(buildJson.ui.control_panel ?: [:])
 def uiControlPanelB64  = uiControlPanelJson.bytes.encodeBase64().toString()
+// Configs → Panel → Push (#497): the ONE declaration of every notification-center
+// / badge producer this app ships. Own blob for the same reason ui.control_panel
+// is one — it is presentation for a single Panel tab, not navigation taxonomy.
+def uiNotificationCenterJson = groovy.json.JsonOutput.toJson(buildJson.ui.notification_center ?: [:])
+def uiNotificationCenterB64  = uiNotificationCenterJson.bytes.encodeBase64().toString()
 // Configs → AI → Tokens Fleet: WHICH apps take part in AI Routing and what part
 // each plays. Source of truth = build.json::ui.ai_routing_peers, read by
 // AiFleetRoster. Its own blob for the same reason ui.control_panel is one — it is
@@ -718,6 +723,7 @@ android {
         buildConfigField "String", "UI_SCREENSAVERS_B64",      "\"${uiScreensaversB64}\""
         buildConfigField "String", "UI_LAUNCHER_SETTINGS_B64", "\"${uiLauncherSettingsB64}\""
         buildConfigField "String", "UI_CONTROL_PANEL_B64", "\"${uiControlPanelB64}\""
+        buildConfigField "String", "UI_NOTIFICATION_CENTER_B64", "\"${uiNotificationCenterB64}\""
         buildConfigField "String", "UI_AI_ROUTING_PEERS_B64", "\"${uiAiRoutingPeersB64}\""
         buildConfigField "String", "UI_APP_MESH_B64",         "\"${uiAppMeshB64}\""
         buildConfigField "String", "UI_HOME_APPS_TABS_B64",   "\"${uiHomeAppsTabsB64}\""

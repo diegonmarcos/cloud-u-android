@@ -4557,7 +4557,14 @@
             "hidden": true
           },
           {
-            "_doc": "Tab 2 of Panel — the EXISTING ntfy notification centre, not a copy of it. `mirror_page` names sections[communication].pages[my-rss] and LauncherNavController.aggregatorPage renders that page's own fragment, so the cards, the filter row and the stack_my-rss declaration all stay owned by the Notify section. mirror_page is the page-level twin of `mirror_section` (Cloud ▸ Configs / Cloud ▸ C3) and exists for the same reason those do: a tab that IS the other surface cannot drift from it, a second copy of it always does. Mirroring one PAGE rather than the section is what keeps this one tab instead of the Notify section's own six-tab strip nested inside ours.",
+            "_doc": "Tab 2 of Panel — the full declaration of every notification-center / badge producer this app ships (KDE status, media now-playing, the grouped alerts notification, the phone-notification-listener access this app's own badges depend on, the recovery advisory, the floating-nav quick actions and screensaver channels, and the launcher icon badge count they all feed). Which producers exist, what surface each one is (system notification / in-app card / launcher badge), what channel backs it and whether it is declared enabled is ui.notification_center below — this page renders exactly that list and nothing it invents, per #497. Ownership stays split the same way Control/DeviceControls split it: build.json says WHAT exists, the producer's own Kotlin file (KdeStatusNotifier, MediaProxy, InfosNotifier, PhoneNotificationListenerService, RecoveryNotifier, FloatingNavService, ScreensaverService) says how it actually behaves.",
+            "id": "push",
+            "label": "Push",
+            "icon": "ic_stat_notify",
+            "hidden": true
+          },
+          {
+            "_doc": "Tab 3 of Panel — the EXISTING ntfy notification centre, not a copy of it. `mirror_page` names sections[communication].pages[my-rss] and LauncherNavController.aggregatorPage renders that page's own fragment, so the cards, the filter row and the stack_my-rss declaration all stay owned by the Notify section. mirror_page is the page-level twin of `mirror_section` (Cloud ▸ Configs / Cloud ▸ C3) and exists for the same reason those do: a tab that IS the other surface cannot drift from it, a second copy of it always does. Mirroring one PAGE rather than the section is what keeps this one tab instead of the Notify section's own six-tab strip nested inside ours.",
             "id": "notify",
             "label": "Notify",
             "icon": "ic_rss",
@@ -4712,13 +4719,14 @@
             "row_break": true
           },
           {
-            "_doc": "Panel is the page you open to FLIP something, not to configure it — the two things the owner touches many times a day, sitting behind one strip: the device/fleet switches and the ntfy notification centre. It sits immediately before About at the owner's request, so the page touched many times a day is the one nearest the thumb on the Canopus arc; every other entry here is opened to change a setting once. `tabs` lists page ids of this same section in strip order, so it wears the SectionTabsFragment strip Launcher established in 07964787e — no second tab widget in this app.",
-            "_doc_tabs_order": "TAB ORDER IS THE LANDING RULE, so Control leading this array is the whole of 'Panel opens on Control' and there is nothing else to declare. SectionTabsFragment.startIndex falls back to the FIRST tab with a fragment behind it, so a `default_tab` flag would be a second answer to a question this array already answers, and the two could disagree. Control leads because flipping a switch is the errand that brings the owner here — Notify is the thing that ALREADY interrupted them, and it is one tap away plus reachable directly as page:config/notify. The first-tab rule is only the FALLBACK, though: a strip already visited in this process is restored to the tab the user left (LauncherNavController.activeTabBySection, an in-memory map on the controller, so it survives navigation and dies with the process). Cold open lands on Control; for the rest of that process the owner gets the tab they left. That is how EVERY strip in this app behaves and Panel deliberately is not the exception — a page that forgot where you were while its siblings remembered would read as a bug, not as a policy.",
+            "_doc": "Panel is the page you open to FLIP something, not to configure it — the three things the owner touches many times a day, sitting behind one strip: the device/fleet switches, the notification-center/badge declaration, and the ntfy notification centre. It sits immediately before About at the owner's request, so the page touched many times a day is the one nearest the thumb on the Canopus arc; every other entry here is opened to change a setting once. `tabs` lists page ids of this same section in strip order, so it wears the SectionTabsFragment strip Launcher established in 07964787e — no second tab widget in this app.",
+            "_doc_tabs_order": "TAB ORDER IS THE LANDING RULE, so Control leading this array is the whole of 'Panel opens on Control' and there is nothing else to declare. SectionTabsFragment.startIndex falls back to the FIRST tab with a fragment behind it, so a `default_tab` flag would be a second answer to a question this array already answers, and the two could disagree. Control leads because flipping a switch is the errand that brings the owner here — Notify is the thing that ALREADY interrupted them, and it is one tap away plus reachable directly as page:config/notify. Push sits BETWEEN the two (#497): it answers neither of the errands that bookend it, so it goes where it interrupts neither — after the thing you came to flip, before the thing that already interrupted you. The first-tab rule is only the FALLBACK, though: a strip already visited in this process is restored to the tab the user left (LauncherNavController.activeTabBySection, an in-memory map on the controller, so it survives navigation and dies with the process). Cold open lands on Control; for the rest of that process the owner gets the tab they left. That is how EVERY strip in this app behaves and Panel deliberately is not the exception — a page that forgot where you were while its siblings remembered would read as a bug, not as a policy.",
             "id": "panel",
             "label": "Panel",
             "icon": "ic_settings",
             "tabs": [
               "control",
+              "push",
               "notify"
             ]
           },
@@ -7928,6 +7936,99 @@
           "_doc_details": "THE TILES ANSWER 'WHAT IS DRAINING IT THAT I CAN SWITCH OFF'. They do NOT answer 'WHICH APPS ARE EATING MY BATTERY', which is a different question and the one the owner also asked. This group's tiles are a JUDGEMENT recorded per control (see battery_hungry above) — editorial, not measured — and nothing here is a per-app number. The measured answer already exists in this app and was simply unreachable from this page: libs:battery's EnergyUsageDialog, until now openable only from the developer Control page. `details` names the surface a group can hand off to; ControlFragment maps the name to the dialog exactly as Sections.iconResFor maps an icon name to a drawable, and a name it does not know draws no affordance rather than crashing. This is a LINK, not a second copy of the data — a per-app list re-implemented here is the drift that the one-id-one-Control rule above exists to prevent.",
           "details": "energy_usage",
           "details_res": "control_group_battery_details"
+        }
+      ]
+    },
+    "_doc_notification_center": "Configs ▸ Panel ▸ Push (#497) — the ONE declaration of every notification-center / badge producer this app ships, and the source the Push tab renders verbatim: nothing it lists is invented in Kotlin, and nothing this app draws as a badge or a notification is missing from it. Diego asked for 'the kde badge, the music badge, the quickmarks badge….' and trailed off on purpose — that trailing off is what makes this a declaration instead of his list of three: PushFragment iterates `producers` and draws whatever is here, so adding or dropping an entry changes the tab with no Kotlin edit, the same contract configs/DeviceControls.kt keeps for Control.\n\nSplit exactly like Control/DeviceControls: this file owns PRESENTATION — which producers exist, what each one IS (label/subtitle/icon), which surface it occupies (`surface`: a system notification, an in-app card, or a launcher-icon badge count) and whether it is declared on. The CAPABILITY — the actual channel, the actual notify()/cancel() calls, the actual read of NotificationListenerService — stays owned by that producer's own Kotlin file, named in `owner` below, exactly where DeviceControls keeps a control's read/set next to the declaration that names it.\n\n`enabled` is declared, not necessarily live-wired: `infos_alerts` is the one producer whose Kotlin already branches on it (InfosNotifier reads ui.notification_infos.enabled, see below) — every other `enabled` here is what this build ships with and is read-only from the Push tab today, same honesty rule Control's `observed` flag states explicitly rather than implying. A producer with no capability behind it — an id with no file in `owner` implementing it — is exactly the DeviceControls failure mode (a row that draws and means nothing), which is why the tester for this page checks `owner` resolves to a real file, not just that the JSON parses.\n\nQUICKMARKS: swept for an actual unread-count badge on Phone ▸ Apps ▸ Quickmarks tiles and found none — AppIconTile draws a 'Not installed' placeholder glyph, not a notification count. What IS real and what an owner would call 'the quickmarks badge' is the system launcher-icon badge every tile can carry, driven by whichever channels below have `shows_badge: true` and cleared when a notification surface calls cancelAll() — declared here as `launcher_icon_badge`, coupled to `phone_notification_listener` rather than invented as a fourth independent mechanism.",
+    "notification_center": {
+      "producers": [
+        {
+          "id": "kde_status",
+          "label": "KDE Connect status",
+          "subtitle": "Ongoing system notification plus an in-app card mirroring the paired desktop's connection, battery and plugin state.",
+          "icon": "ic_kde",
+          "surface": "system_notification+in_app_card",
+          "channel": "kde_status",
+          "owner": "notificationcenter/KdeStatusNotifier.kt",
+          "shows_badge": false,
+          "enabled": true
+        },
+        {
+          "id": "media_now_playing",
+          "label": "Media now-playing",
+          "subtitle": "A MediaStyle notification mirroring the active session, plus the toolbar equalizer icon while one is playing.",
+          "icon": "ic_music",
+          "surface": "system_notification+toolbar_icon",
+          "channel": "floating_nav_media",
+          "owner": "floatingnav/MediaProxy.kt",
+          "shows_badge": false,
+          "enabled": true
+        },
+        {
+          "id": "infos_alerts",
+          "label": "Grouped alerts",
+          "subtitle": "The WhatsApp-style bundled 'Cloud SA - Alerts' notification — content and on/off declared in ui.notification_infos below.",
+          "icon": "ic_stat_notify",
+          "surface": "system_notification",
+          "channel": "floating_nav_infos",
+          "owner": "floatingnav/InfosNotifier.kt",
+          "shows_badge": true,
+          "enabled": true
+        },
+        {
+          "id": "phone_notification_listener",
+          "label": "Phone notification access",
+          "subtitle": "The NotificationListenerService grant every other phone-notification surface in this app is fed from — Control ▸ Permissions grants it, nothing here can switch it.",
+          "icon": "ic_settings",
+          "surface": "listener_source",
+          "channel": "",
+          "owner": "notificationcenter/PhoneNotificationListenerService.kt",
+          "shows_badge": false,
+          "enabled": true
+        },
+        {
+          "id": "recovery_advisory",
+          "label": "Recovery advisory",
+          "subtitle": "A HIGH-importance 'fleet-advisory-v1' notification for install/repair advisories, rate-limited by the updater.",
+          "icon": "ic_stat_notify",
+          "surface": "system_notification",
+          "channel": "fleet-advisory-v1",
+          "owner": "recovery/RecoveryNotifier.kt",
+          "shows_badge": false,
+          "enabled": true
+        },
+        {
+          "id": "floating_nav_quick_actions",
+          "label": "Floating nav quick actions",
+          "subtitle": "The persistent 'Cloud SA - Quick Actions' notification the floating overlay pins while it is running.",
+          "icon": "ic_settings",
+          "surface": "system_notification",
+          "channel": "floating_nav_actions",
+          "owner": "floatingnav/FloatingNavService.kt",
+          "shows_badge": false,
+          "enabled": true
+        },
+        {
+          "id": "screensaver_channel",
+          "label": "Screensaver",
+          "subtitle": "The silent channel ScreensaverService needs to run as a foreground service while the cover overlay is shown.",
+          "icon": "ic_nav_screensaver",
+          "surface": "system_notification",
+          "channel": "screensaver",
+          "owner": "floatingnav/ScreensaverService.kt",
+          "shows_badge": false,
+          "enabled": true
+        },
+        {
+          "id": "launcher_icon_badge",
+          "label": "Launcher icon badge",
+          "subtitle": "The OS unread-count badge shown on this app's launcher icon, sourced from whichever channels above are shows_badge=true and cleared when a notification surface opens and cancels.",
+          "icon": "ic_link_tile",
+          "surface": "launcher_icon_badge",
+          "channel": "",
+          "owner": "notificationcenter/PhoneNotificationListenerService.kt",
+          "shows_badge": false,
+          "enabled": true
         }
       ]
     },

@@ -198,6 +198,16 @@
          light the page does not draw. -->
     <string name="control_caption">The things flipped often enough to deserve one screen, laid out as a grid of tiles and grouped by WHAT YOU CAME LOOKING FOR: the handset, the network, the tooling, the interface.\n\nTAP a tile to switch it. HOLD it to open the settings screen behind it — and every tile answers a hold, including the ones with nowhere to go, which say so instead of doing nothing.\n\nA lit tile is inverted: it fills with the theme\'s foreground colour and draws its icon in the background one, so on and off are the same two colours swapped and neither can become invisible under a theme. Only what can really move switches on a tap. A tile Android will not let this app flip opens the system screen that owns it instead, and a tile waiting on a grant says which grant on its label.\n\nBattery Hungers is not a fifth category — it is the SAME tiles again, gathered so everything draining the battery can be switched off in one place. A tile flipped there is flipped in its own group at the same instant, because there is only one of it.\n\nThe light under a tile is what the DEVICE answered just now, never what the tile is set to: %1$s, %2$s, or %3$s when it would not say or has not been asked yet. %4$s marks the tiles where nothing but this app\'s own stored preference can be read. Lights refresh every %5$d seconds while this page is open and stop entirely when it is not, so they go unknown before they go stale.</string>
     <string name="control_none_declared">No controls are declared — build.json::ui.control_panel is empty or did not reach this build.</string>
+
+    <!-- ── Configs ▸ Panel ▸ Push (#497) ─────────────────────────────────
+         Page chrome for the notification-center / badge declaration. Per-
+         producer label/subtitle text stays raw English in build.json, same
+         gap the comment above documents for Control's per-control text. -->
+    <string name="push_title">Push</string>
+    <string name="push_caption">Every notification-center and badge producer this app ships, whatever build.json::ui.notification_center declares — the KDE status, the media now-playing notification, the grouped alerts, the phone-notification access every one of them depends on, and the rest. Add or remove one there and this page follows.</string>
+    <string name="push_none_declared">No producers are declared — build.json::ui.notification_center is empty or did not reach this build.</string>
+    <string name="push_producer_on">Declared on</string>
+    <string name="push_producer_off">Declared off</string>
     <!-- A write the device refused. %1$s = the control's label, %2$s = what
          the re-read reported. -->
     <string name="control_write_refused">%1$s: didn\'t change — %2$s</string>
