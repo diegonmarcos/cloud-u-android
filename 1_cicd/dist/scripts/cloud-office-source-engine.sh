@@ -262,18 +262,31 @@ step_build() {
     # inputs: our package id, and native libraries that are the released bytes.
     "$build_tools/aapt2" dump badging "$out" | grep -q "^package: name='$app_id'" \
         || die "$asset does not carry package $app_id"
-    python3 - "$ENGINE_APK" "$out" "$(_json '.upstream.engine.native_libs.from_apk_dir')" <<'PY' || die "native libraries differ from the released ones"
+    python3 - "$ENGINE_APK" "$out" "$(_json '.upstream.engine.native_libs.from_apk_dir')" \
+        "$(_json '.upstream.engine.native_libs.expected_extra // [] | join(" ")')" <<'PY' || die "native libraries differ from the released ones"
 import hashlib, sys, zipfile
 released, built, libs = sys.argv[1], sys.argv[2], sys.argv[3].rstrip("/") + "/"
+extra = set(sys.argv[4].split()) if len(sys.argv) > 4 and sys.argv[4] else set()
 def digests(path):
     with zipfile.ZipFile(path) as z:
         return {i.filename: hashlib.sha256(z.read(i)).hexdigest()
                 for i in z.infolist() if i.filename.startswith(libs) and i.filename.endswith(".so")}
 a, b = digests(released), digests(built)
-if not a or a != b:
-    changed = sorted(set(a) ^ set(b)) + sorted(k for k in set(a) & set(b) if a[k] != b[k])
-    sys.exit(f"build: native libraries differ from the released APK: {changed}")
-print(f"build: all {len(a)} native libraries are byte-identical to the released APK")
+# The invariant is that our patch series does NOT relink the engine: every
+# native library the released APK carries must still be present in the built
+# APK with the identical bytes. A library the built APK carries that the
+# released one lacks is NOT a relink — it is a new native library from a
+# library dependency (the shared ml-l-image-mlkit AAR ships ML Kit's OCR
+# pipeline), and it is allowed only if build.json names it beforehand in
+# upstream.engine.native_libs.expected_extra. Anything else new is a failure.
+missing  = [k for k in a if k not in b]
+relinked = [k for k in a if k in b and a[k] != b[k]]
+unexpected = [k for k in b if k not in a and k not in extra]
+if not a or missing or relinked or unexpected:
+    sys.exit(f"build: native libraries differ from the released APK: "
+             + repr(sorted(missing + relinked + unexpected)))
+print(f"build: {len(a)} released native libraries byte-identical; "
+      f"{len(b) - len(a)} declared extra(s) present")
 PY
     log "build: $out ($(stat -c %s "$out") bytes)"
 }
