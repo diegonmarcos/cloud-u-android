@@ -144,12 +144,14 @@ groups = {g["title"]: g for g in cloud["tile_groups"]}
 # why it is written out here. Projects Me is the personal half, Projects W the
 # work half; the split is what tells the next editor which row a new tile joins.
 ROWS = {
-    # Agenda leads the row and a rule divides it from MySocials — task 309. The rule is numbered 0
-    # rather than renumbering sep-1 and sep-2, whose ids are asserted by name below. The leading tile
-    # was "my-pm" until task 316 renamed it to Agenda and repointed it at Cloud-Me's agenda page.
-    "Projects Me": ["agenda", "projects-me-sep-0", "mysocials",
-                    "projects-me-sep-1", "myburo",
-                    "projects-me-sep-2", "myhealth", "mystudy", "mytrips"],
+    # Agenda leads the row — task 309/316. MySocials TRAILS it now — task 503 moved the owner's one
+    # outward-facing web link from between Agenda and MyBuro to the very end, after MyTrips, so every
+    # tile that points at Cloud-Me sits together before the row's single browser destination. sep-0
+    # and sep-2 keep their names and did not move; sep-1 is the same separator tile MySocials used to
+    # trail, relocated with it so it still divides the web destination from the Cloud-Me deep links.
+    "Projects Me": ["agenda", "projects-me-sep-0", "myburo",
+                    "projects-me-sep-2", "myhealth", "mystudy", "mytrips",
+                    "projects-me-sep-1", "mysocials"],
     # Four named boards and no rule — task 311 removed PM Boards, PM C3 and the
     # "|" between them. The rule had marked the board LIST off from the named
     # boards; with the list gone there are no longer two kinds of destination in
