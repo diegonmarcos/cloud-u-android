@@ -109,6 +109,70 @@ _assert_apk_identity() {
   log "identity: OK $(basename "$apk") is $APP_ID"
 }
 
+# Prove the built APK actually CARRIES AN APPLICATION (#513).
+#
+# The white-page outage shipped green: `yarn bundle` → `cap sync` → gradle is a
+# chain in which every link succeeds on an empty payload. cap sync copies
+# whatever dist/ holds, including nothing; gradle wraps that in a structurally
+# perfect APK; apksigner signs it; aapt confirms the package id; the release
+# uploads. Every gate in this engine passed on an app that could not boot,
+# because not one of them looked INSIDE the zip.
+#
+# So look inside the zip. Floors are declared in build.json::release
+# .artifact_assert — bytes and presence of the real payload, never a filename in
+# a manifest, because an empty index.html has the right filename too.
+_assert_apk_payload() {
+  local apk="$1"
+  [ -f "$apk" ] || die "payload: missing APK $apk"
+  command -v python3 >/dev/null 2>&1 \
+    || die "payload: python3 not on PATH — cannot read the APK's own table of contents, and an unread APK must never be called proven"
+  jq -e '.release.artifact_assert' "$BUILD_JSON" >/dev/null 2>&1 \
+    || die "payload: build.json has no release.artifact_assert — the floors this asserts against are DATA and there is no default worth trusting"
+  python3 - "$apk" "$BUILD_JSON" <<'PY' || die "payload: FATAL the APK does not carry a bootable web bundle — see the lines above"
+import json, sys, zipfile
+
+apk, build_json = sys.argv[1], sys.argv[2]
+cfg = json.load(open(build_json))['release']['artifact_assert']
+zf = zipfile.ZipFile(apk)
+sizes = {i.filename: i.file_size for i in zf.infolist()}
+bad = []
+
+entry = cfg['web_entry']
+got = sizes.get(entry)
+if got is None:
+    bad.append('%s is ABSENT — the WebView has no document to load' % entry)
+elif got < cfg['web_entry_min_bytes']:
+    bad.append('%s is %d bytes, floor is %d' % (entry, got, cfg['web_entry_min_bytes']))
+
+chunks = {n: s for n, s in sizes.items()
+          if n.startswith(cfg['js_prefix']) and n.endswith('.js')}
+total = sum(chunks.values())
+if len(chunks) < cfg['js_min_chunks']:
+    bad.append('%s holds %d .js chunks, floor is %d'
+               % (cfg['js_prefix'], len(chunks), cfg['js_min_chunks']))
+if total < cfg['js_min_total_bytes']:
+    bad.append('%s holds %d bytes of JS, floor is %d'
+               % (cfg['js_prefix'], total, cfg['js_min_total_bytes']))
+
+for lib in cfg['native_libs']:
+    got = sizes.get(lib)
+    if got is None:
+        bad.append('%s is ABSENT — the Rust document store cannot load' % lib)
+    elif got < cfg['native_lib_min_bytes']:
+        bad.append('%s is %d bytes, floor is %d'
+                   % (lib, got, cfg['native_lib_min_bytes']))
+
+for line in bad:
+    print('  payload FAIL  %s' % line)
+if bad:
+    raise SystemExit(1)
+print('  payload OK    %s %d B · %d js chunks / %d B · %s'
+      % (entry, sizes[entry], len(chunks), total,
+         ' '.join('%s %d B' % (l, sizes[l]) for l in cfg['native_libs'])))
+PY
+  log "payload: OK $(basename "$apk") carries the web bundle and the native libraries"
+}
+
 # ── materialize-fork: the source is VENDORED, nothing to clone ────────
 step_materialize_fork() {
   log "materialize-fork: no-op — AFFiNE is vendored at the app root (no .git); revision pinned in build.json"
@@ -162,6 +226,7 @@ step_build_fork() {
   mkdir -p "$DIST_DIR"
   _enforce_signature "$APK"
   _assert_apk_identity "$APK"
+  _assert_apk_payload "$APK"
 
   cp "$APK" "$DIST_DIR/$ASSET"
   log "build-fork: OK $DIST_DIR/$ASSET"

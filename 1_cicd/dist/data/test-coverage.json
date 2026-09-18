@@ -67,7 +67,7 @@
     },
     "ac_cloud-affine": {
       "first_test": "Has 2 shell testers, executed: test-licence-clean.sh (EE dirs absent, no affine_common in Cargo.lock/APK-crate manifests, licence guard green on the tree AND red against a copy with packages/common/native restored \u2014 the mutation half that keeps a constant-green guard honest) and test-identity.sh (applicationId com.diegonmarcos.cloudnotes agrees across capacitor.config.ts and build.json, which app/build.gradle now reads via JsonSlurper rather than a literal (#495), no upstream app.affine.pro applicationId left in the ship config, no Firebase/google-services and no :service Apollo module, and the fleet-rule resConfigs \\\"en\\\" locale filter is declared). THE GAP, NAMED: no JVM test, no rendered-screen test, no installed-APK test. A green run proves the source has the right licence shape and identity and never that the rspack bundle, the Rust NDK cross-compile or the emulated-storage open-file flow work \u2014 those need a real build (CI) and a real phone (unreachable to this agent). First build+test on CI after this commit is the actual smoke test.",
-      "shell_testers": 2,
+      "shell_testers": 3,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,

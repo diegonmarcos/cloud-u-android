@@ -27,7 +27,10 @@
     "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
   },
   "release": {
-    "artifact": { "debug": "Cloud-Notes-debug.apk", "release": "Cloud-Notes.apk" },
+    "artifact": {
+      "debug": "Cloud-Notes-debug.apk",
+      "release": "Cloud-Notes.apk"
+    },
     "ghcr": {
       "enabled": true,
       "registry": "ghcr.io",
@@ -39,10 +42,36 @@
       "enabled": true,
       "rolling_tag": "latest",
       "asset_name": "Cloud-Notes.apk"
+    },
+    "artifact_assert": {
+      "_doc": "Read by cloud-affine-engine.sh::_assert_apk_payload (#513). The ship pipeline could not tell a working app from a blank one: gradle builds a perfectly valid APK around an empty assets/public/, signs it, and CI goes green. These are the floors the BUILT ARTIFACT must clear — bytes and presence, never a filename in a manifest. Set far below what a healthy build produces (observed on the published APK: index.html 2696 B, 114 chunks / 31.2 MB of JS, libaffine_mobile_native.so 51.8 MB) so a real regression trips them and normal upstream churn does not.",
+      "web_entry": "assets/public/index.html",
+      "web_entry_min_bytes": 1024,
+      "js_prefix": "assets/public/js/",
+      "js_min_chunks": 10,
+      "js_min_total_bytes": 5000000,
+      "native_libs": [
+        "lib/arm64-v8a/libaffine_mobile_native.so"
+      ],
+      "native_lib_min_bytes": 1048576
     }
   },
   "tests": {
     "_doc": "Shell testers under ac_cloud-affine/test/ that prove licence-cleanliness and app identity WITHOUT a build. Read by cloud-android-test-engine.sh::tests.shell.",
-    "shell": { "dir": "test", "requires": ["python3", "git"] }
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3",
+        "git"
+      ]
+    },
+    "root_scope": {
+      "_doc": "Read by test/test-root-scope-services.sh (#513). entrypoint is the file whose every render happens on the ROOT framework provider; module_roots are the trees walked to DERIVE which services are registered under a .scope(...) and are therefore unresolvable there. Paths live here, never in the tester.",
+      "entrypoint": "packages/frontend/apps/android/src/app.tsx",
+      "module_roots": [
+        "packages/frontend/core/src",
+        "packages/frontend/apps/android/src"
+      ]
+    }
   }
 }

@@ -64,7 +64,11 @@ import { RouterProvider } from 'react-router-dom';
 import { AffineTheme } from './plugins/affine-theme';
 import { AIButton } from './plugins/ai-button';
 import { Auth } from './plugins/auth';
-import { ExternalFile, EXTERNAL_FILE_ERRORS } from './plugins/external-file';
+import {
+  EXTERNAL_FILE_ERRORS,
+  ExternalFile,
+  type ExternalFileReadResult,
+} from './plugins/external-file';
 import { HashCash } from './plugins/hashcash';
 import { MobileBack } from './plugins/mobile-back';
 import { NbStoreNativeDBApis } from './plugins/nbstore';
@@ -479,49 +483,93 @@ const AndroidBackAdapter = () => {
 // read it through ExternalFilePlugin (every failure carries its own visible
 // message) and import the markdown into the local workspace via AFFiNE's own
 // Obsidian importer, so the vault docs land in the app's document store.
-const ExternalFileOpener = () => {
-  const importService = useService(ImportService);
+//
+// #513 — this used to be `useService(ImportService)` in the component body, and
+// that single line is what painted the white page. ImportService is registered
+// as `framework.scope(WorkspaceScope).service(ImportService, …)` (see
+// core/src/modules/import/index.ts), but everything rendered by App() below
+// lives on the ROOT provider — there is no workspace scope on the stack, so the
+// resolver fell through to `throw new ComponentNotFoundError(ImportService)` on
+// the FIRST render. Nothing above it is an error boundary, so React tore down
+// the whole tree, the WebView painted nothing, and the FAB's listener was never
+// registered — the inert button and the blank page were one fault.
+//
+// So the service is resolved WHERE IT LIVES and WHEN IT IS NEEDED: out of the
+// open workspace's own scope, at event time, exactly as
+// getCurrentDocContentInMarkdown above already does. Rendering this component
+// can no longer resolve anything, so it can no longer throw.
+const openExternalFile = async () => {
+  const path = window.prompt(
+    'Open file from device storage (path under /storage/emulated/0/, e.g. Documents/Obsidian/note.md):'
+  );
+  if (!path) return;
 
+  let file: ExternalFileReadResult;
+  try {
+    file = await ExternalFile.readFile({ path });
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code ?? 'UNKNOWN';
+    const fallback = EXTERNAL_FILE_ERRORS[code] ?? 'Cannot open the file.';
+    notify.error({
+      title: 'Cannot open file',
+      message: err instanceof Error && err.message ? err.message : fallback,
+    });
+    // Permission problems are fixed in Settings, never in a retry of the
+    // same call — offer the jump once.
+    if (
+      code === 'PERMISSION_DENIED' &&
+      window.confirm('Open Settings to grant storage access?')
+    ) {
+      ExternalFile.openSettings().catch(console.error);
+    }
+    return;
+  }
+
+  const workspaceId = frameworkProvider
+    .get(GlobalContextService)
+    .globalContext.workspaceId.get();
+  const workspaceRef = workspaceId
+    ? frameworkProvider.get(WorkspacesService).openByWorkspaceId(workspaceId)
+    : null;
+  if (!workspaceRef) {
+    notify.error({
+      title: 'Cannot open file',
+      message: `Open a workspace first — there is nowhere to import ${file.name} into.`,
+    });
+    return;
+  }
+
+  const { workspace, dispose: disposeWorkspace } = workspaceRef;
+  try {
+    await workspace.scope
+      .get(ImportService)
+      .importObsidianVault([
+        new File([file.content], file.name, { type: 'text/markdown' }),
+      ]);
+    notify.success({
+      title: 'Opened',
+      message: `${file.name} imported into the workspace.`,
+    });
+  } catch (err: unknown) {
+    notify.error({
+      title: 'Import failed',
+      message: err instanceof Error ? err.message : String(err),
+    });
+  } finally {
+    disposeWorkspace();
+  }
+};
+
+const ExternalFileOpener = () => {
   useEffect(() => {
     const listener = () => {
-      const path = window.prompt(
-        'Open file from device storage (path under /storage/emulated/0/, e.g. Documents/Obsidian/note.md):'
-      );
-      if (!path) return;
-      ExternalFile.readFile({ path })
-        .then(res => importService.importObsidianVault([new File([res.content], res.name, { type: 'text/markdown' })])
-          .then(() => {
-            notify.success({
-              title: 'Opened',
-              message: `${res.name} imported into the workspace.`,
-            });
-          })
-          .catch((err: unknown) => {
-            notify.error({
-              title: 'Import failed',
-              message: err instanceof Error ? err.message : String(err),
-            });
-          }))
-        .catch((err: unknown) => {
-          const code = (err as { code?: string })?.code ?? 'UNKNOWN';
-          const fallback = EXTERNAL_FILE_ERRORS[code] ?? 'Cannot open the file.';
-          notify.error({
-            title: 'Cannot open file',
-            message:
-              err instanceof Error && err.message ? err.message : fallback,
-          });
-          // Permission problems are fixed in Settings, never in a retry of the
-          // same call — offer the jump once.
-          if (code === 'PERMISSION_DENIED' && window.confirm('Open Settings to grant storage access?')) {
-            ExternalFile.openSettings().catch(console.error);
-          }
-        });
+      openExternalFile().catch(console.error);
     };
     window.addEventListener('cloud-notes:open-file', listener);
     return () => {
       window.removeEventListener('cloud-notes:open-file', listener);
     };
-  }, [importService]);
+  }, []);
 
   return null;
 };
