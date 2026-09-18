@@ -34,4 +34,10 @@
         app:showAsAction="never"
         android:title="@string/edit_with"
         android:enabled="true"/>
+
+    <item
+        android:id="@+id/scan_contents"
+        android:icon="@drawable/info"
+        android:title="@string/scan_contents"
+        app:showAsAction="never" />
 </menu>

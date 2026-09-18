@@ -44,6 +44,7 @@ import cld.camera.GSlideTransformer
 import cld.camera.GallerySliderAdapter
 import cld.camera.ITEM_TYPE_VIDEO
 import cld.camera.R
+import cld.camera.analyzer.ImageContentScanner
 import cld.camera.databinding.GalleryBinding
 import cld.camera.editCapturedItem
 import cld.camera.shareCapturedItem
@@ -194,6 +195,11 @@ class InAppGallery : AppCompatActivity() {
 
             R.id.share_icon -> {
                 shareCurrentMedia()
+                true
+            }
+
+            R.id.scan_contents -> {
+                scanCurrentMediaContents()
                 true
             }
 
@@ -597,6 +603,58 @@ class InAppGallery : AppCompatActivity() {
 
         shareCapturedItem(this, curItem)?.let {
             showMessage(getString(it))
+        }
+    }
+
+    /**
+     * Task #461 — scan the CONTENT of the captured photo on screen through the
+     * ONE shared image-scan engine (libs:ml-l-image-mlkit: ImageContentScanner
+     * wraps ImageScanEngine = ZXing barcode decode + ML Kit OCR). This is the
+     * camera's natural visual trigger: a camera's captured image is the thing
+     * meant to be read, and [ImageContentScanner] runs the same engine
+     * cloud-drive and cloud-media-center run — no private decode path here.
+     * Runs off the main thread on [asyncImageLoader] and reports the OCR text
+     * and any decoded barcode, or the specific nothing-found/read-failed
+     * reason — a silent empty box is the defect this fleet bans.
+     */
+    private fun scanCurrentMediaContents() {
+        if (isSecureMode) {
+            showMessage(getString(R.string.scan_contents_failed))
+            return
+        }
+        val curItem = getCurrentItem() ?: return
+        if (curItem.type == ITEM_TYPE_VIDEO) {
+            showMessage(getString(R.string.scan_contents_nothing_found))
+            return
+        }
+        showMessage(getString(R.string.scan_contents_in_progress))
+        val scanner = ImageContentScanner(applicationContext)
+        asyncImageLoader.execute {
+            val content = try {
+                scanner.scan(curItem.uri)
+            } catch (error: Exception) {
+                null
+            }
+            runOnUiThread {
+                if (content == null || !content.hasAnyContent) {
+                    showMessage(getString(R.string.scan_contents_nothing_found))
+                    return@runOnUiThread
+                }
+                val message = buildString {
+                    content.barcode?.let {
+                        append(getString(R.string.scan_contents_barcode_label))
+                        append(it.format)
+                        append(" ")
+                        append(it.rawValue)
+                        append("\n")
+                    }
+                    content.ocr.text.trim().takeIf { it.isNotEmpty() }?.let {
+                        append(getString(R.string.scan_contents_ocr_label))
+                        append(it)
+                    }
+                }
+                showMessage(message.trim())
+            }
         }
     }
 

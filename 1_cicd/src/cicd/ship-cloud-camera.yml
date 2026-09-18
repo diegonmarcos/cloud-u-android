@@ -51,6 +51,7 @@ on:
       # The gate skips it, so the run costs the test step alone.
       # ── end MANAGED-PATHS-HEADER ──
       - "1_cicd/src/cicd/ship-cloud-camera.yml"
+      - "ab_cloud-libs-shared/libs/ml-l-image-mlkit/**"
       - "ac_cloud-camera/**"
 permissions:
   contents: write

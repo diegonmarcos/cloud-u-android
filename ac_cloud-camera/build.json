@@ -20,6 +20,13 @@
     "type": "gradle",
     "entry": "build.sh"
   },
+  "modules": {
+    "_doc": "Task #461 — the ONE shared image-scan engine (ZXing barcode decode + ML Kit OCR + typed-payload parsing), consumed BY REFERENCE from ab_cloud-libs-shared exactly like cloud-drive and cloud-media-center. Declared here so the ship workflow watches it and the publish gate hashes it: a fix to the shared engine must trigger a camera rebuild, not silently ride along or skip one.",
+    "libs:ml-l-image-mlkit": {
+      "type": "library",
+      "dir": "../ab_cloud-libs-shared/libs/ml-l-image-mlkit"
+    }
+  },
   "android": {
     "application_id": "cld.camera",
     "compile_sdk": 37,
