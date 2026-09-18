@@ -316,3 +316,7 @@ ac_cloud-nix-on-droid/app/release.jks
 
 ## Tracked here on purpose; overrides the global core.excludesFile `.vscode/`.
 !.vscode/
+
+# Python bytecode (an engine/tester import must never show up as generated-output drift)
+__pycache__/
+*.py[cod]

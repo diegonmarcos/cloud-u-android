@@ -313,6 +313,7 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
     # ship-c3-morpheus.yml canary -- it lit up silently last time this was broken,
     # and a silent loss is worse than the drift this rewrite exists to fix).
     sys.path.insert(0, os.path.join(root, "1_cicd/src/scripts"))
+    sys.dont_write_bytecode = True  # importing the module must not drop a __pycache__ the generated-up-to-date guard flags
     from cloud_android_workflow_paths import rewrite_paths_block
     block = rewrite_paths_block(lines[start + 1:end], final, app)
     new = "\n".join(lines[:start] + block + lines[end:])

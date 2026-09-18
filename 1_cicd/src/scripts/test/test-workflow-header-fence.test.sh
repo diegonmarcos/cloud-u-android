@@ -33,7 +33,7 @@ bad()  { printf '  [FAIL] %s\n' "$1"; fail=$((fail+1)); }
 # The three behaviours the fence must hold, driven through the real module via
 # python3. Each block is printed back for inspection on failure.
 run_py() {
-  python3 - "$MOD" <<'PY'
+  python3 -B - "$MOD" <<'PY'
 import importlib.util, sys
 spec = importlib.util.spec_from_file_location("cwp", sys.argv[1])
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
