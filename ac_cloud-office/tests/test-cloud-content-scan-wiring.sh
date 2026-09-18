@@ -148,6 +148,10 @@ check("O7 the handler posts CLOUD_CONTENT_SCAN to the shell",
 check("O7 capture failure names itself (no-canvas / tainted)",
       "error=no-canvas" in patch_text and "error=tainted" in patch_text,
       "a refusal with no reason is the silent-box defect one layer up")
+check("O7 the downscale 2d context is null-guarded (strict tsc)",
+      "const ctx = out.getContext('2d')" in patch_text and "if (!ctx)" in patch_text,
+      "getContext returns CanvasRenderingContext2D | null; the strict tsc pass failed on exactly "
+      "this (TS2531) before the guard existed")
 
 print("\n-- %d assertions, %d failed --" % (checked, len(failures)))
 for f in failures:

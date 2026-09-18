@@ -1,6 +1,6 @@
-From 953cd4d49722efc50abb62d0b7b1c115531ac74c Mon Sep 17 00:00:00 2001
+From dc897ef630962018a126f1ab92048365256297db Mon Sep 17 00:00:00 2001
 From: Cloud Office <me@diegonmarcos.com>
-Date: Fri, 18 Sep 2026 12:43:24 +0000
+Date: Fri, 18 Sep 2026 13:09:10 +0000
 Subject: [PATCH] cloud-office: content scan through the shared image-scan
  engine
 
@@ -9,8 +9,8 @@ Subject: [PATCH] cloud-office: content scan through the shared image-scan
  .../androidlib/CloudContentScan.java          | 160 ++++++++++++++++++
  .../libreoffice/androidlib/LOActivity.java    |  18 +-
  android/settings.gradle                       |   9 +-
- browser/src/control/Control.Menubar.ts        |  38 ++++-
- 5 files changed, 227 insertions(+), 3 deletions(-)
+ browser/src/control/Control.Menubar.ts        |  43 ++++-
+ 5 files changed, 232 insertions(+), 3 deletions(-)
  create mode 100644 android/lib/src/main/java/org/libreoffice/androidlib/CloudContentScan.java
 
 diff --git a/android/lib/build.gradle b/android/lib/build.gradle
@@ -261,7 +261,7 @@ index ac15c6e..9876410 100644
 +// (#170/#261). materialize places it at android/ml-l-image-mlkit.
 +project(':ml-l-image-mlkit').projectDir = new File(settingsDir, 'ml-l-image-mlkit')
 diff --git a/browser/src/control/Control.Menubar.ts b/browser/src/control/Control.Menubar.ts
-index 1d12400..c33afe8 100644
+index 1d12400..1501847 100644
 --- a/browser/src/control/Control.Menubar.ts
 +++ b/browser/src/control/Control.Menubar.ts
 @@ -180,6 +180,7 @@ class Menubar extends window.L.Control {
@@ -314,7 +314,7 @@ index 1d12400..c33afe8 100644
  		],
  
  		// Only these UNO commands will be enabled in redline management mode
-@@ -2604,6 +2610,36 @@ class Menubar extends window.L.Control {
+@@ -2604,6 +2610,41 @@ class Menubar extends window.L.Control {
  				this._map._clip.setEnhanceRequest(true);
  				app.socket.sendMessage('gettextselection mimetype=text/plain;charset=utf-8');
  			}
@@ -340,7 +340,12 @@ index 1d12400..c33afe8 100644
 +						out = document.createElement('canvas');
 +						out.width = Math.round(canvas.width * scale);
 +						out.height = Math.round(canvas.height * scale);
-+						out.getContext('2d').drawImage(canvas, 0, 0, out.width, out.height);
++						const ctx = out.getContext('2d');
++						if (!ctx) {
++							window.COOLMessageHandler.postMobileMessage('CLOUD_CONTENT_SCAN ' + 'error=tainted');
++							return;
++						}
++						ctx.drawImage(canvas, 0, 0, out.width, out.height);
 +					}
 +					const data = out.toDataURL('image/jpeg', 0.9);
 +					window.COOLMessageHandler.postMobileMessage('CLOUD_CONTENT_SCAN ' + data);
