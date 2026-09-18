@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CloudSync
 import androidx.compose.material.icons.outlined.Slideshow
+import androidx.compose.material.icons.outlined.TextSnippet
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -96,6 +97,7 @@ import com.diegonmarcos.mediacenter.feature_node.domain.model.MediaMetadataState
 import com.diegonmarcos.mediacenter.feature_node.domain.model.MediaState
 import com.diegonmarcos.mediacenter.feature_node.presentation.albumtimeline.components.AlbumSortDropdown
 import com.diegonmarcos.mediacenter.feature_node.presentation.albumtimeline.components.SlideshowOptionsSheet
+import com.diegonmarcos.mediacenter.feature_node.presentation.contentindex.FolderIndexSheet
 import com.diegonmarcos.mediacenter.feature_node.presentation.util.rememberAppBottomSheetState
 import com.diegonmarcos.mediacenter.feature_node.presentation.common.components.MediaGridView
 import com.diegonmarcos.mediacenter.feature_node.presentation.common.components.MosaicMediaGrid
@@ -175,6 +177,7 @@ fun AlbumTimelineScreen(
 
     val slideshowSheetState = rememberAppBottomSheetState()
     val slideshowScope = rememberCoroutineScope()
+    val indexSheetState = rememberAppBottomSheetState()
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
         state = rememberTopAppBarState(),
@@ -250,6 +253,16 @@ fun AlbumTimelineScreen(
                                 imageVector = Icons.Outlined.Slideshow,
                                 contentDescription = stringResource(R.string.slideshow)
                             )
+                        }
+                        if (!isCloudAlbum) {
+                            IconButton(onClick = {
+                                slideshowScope.launch { indexSheetState.show() }
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.TextSnippet,
+                                    contentDescription = stringResource(R.string.index_folder_content)
+                                )
+                            }
                         }
                         AlbumSortDropdown(
                             currentSort = albumMediaSort,
@@ -413,6 +426,17 @@ fun AlbumTimelineScreen(
                 }
             }
         )
+        // Folder content index (task #460): local albums only — the on-device
+        // engine cannot read cloud proxies, and the sheet itself handles the
+        // empty-folder message and the real progress reporting.
+        if (!isCloudAlbum) {
+            FolderIndexSheet(
+                state = indexSheetState,
+                albumId = albumId,
+                albumName = albumName,
+                mediaList = albumMediaState.value.media,
+            )
+        }
     }
 }
 

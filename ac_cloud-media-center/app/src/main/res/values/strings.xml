@@ -1873,5 +1873,45 @@
     <string name="slideshow_previous">Previous</string>
     <string name="slideshow_exit">Exit slideshow</string>
     <string name="folder_request_not_found">No media found in %1$s</string>
+    <!-- Image content reading (task #460): barcode decode + OCR via the shared scan engine -->
+    <string name="scan_image_content">Scan image content</string>
+    <string name="scan_image_content_title">Image content</string>
+    <string name="scan_reading">Reading image…</string>
+    <string name="scan_permission_refused">Read permission refused — allow access to this image in system settings</string>
+    <string name="scan_unsupported_format">This file is not an image the device can read</string>
+    <string name="scan_model_not_downloaded">The on-device text-recognition model is not available</string>
+    <string name="scan_no_barcode">No barcode found in this image</string>
+    <string name="scan_no_text">No text found in this image</string>
+    <string name="scan_read_failed">Could not read this image: %1$s</string>
+    <string name="scan_barcode_found">Barcode found</string>
+    <string name="scan_barcode_format">%1$s</string>
+    <string name="scan_open_link">Open link</string>
+    <string name="scan_wifi_network">Network: %1$s</string>
+    <string name="scan_join_wifi">Join network</string>
+    <string name="scan_contact_name">Contact: %1$s</string>
+    <string name="scan_add_contact">Add contact</string>
+    <string name="scan_calendar_summary">Event: %1$s</string>
+    <string name="scan_add_calendar_event">Add calendar event</string>
+    <string name="scan_phone_number">%1$s</string>
+    <string name="scan_call_number">Call number</string>
+    <string name="scan_compose_email">Compose email</string>
+    <string name="scan_show_on_map">Show on map</string>
+    <string name="scan_not_recognised">This payload is not a known type — the value is shown below</string>
+    <string name="scan_copy">Copy value</string>
+    <string name="scan_recognised_text">Recognised text</string>
+    <string name="scan_language_unknown">Language unknown</string>
+    <string name="scan_language">%1$s</string>
+    <string name="scan_copy_text">Copy text</string>
+    <string name="scan_copied">Copied</string>
+    <string name="scan_copy_failed">Copy failed</string>
+    <!-- Folder content index (task #460): incremental on-device scan of a local album -->
+    <string name="index_folder_content">Index folder content</string>
+    <string name="index_progress">Indexed %1$d of %2$d</string>
+    <string name="index_running_hint">Scanning images into the on-device index. Cancel stops the walk; what is already saved stays.</string>
+    <string name="index_cancel">Cancel</string>
+    <string name="index_empty_folder">This folder has no images to index</string>
+    <string name="index_result">Barcodes: %1$d · With text: %2$d · Unchanged: %3$d</string>
+    <string name="index_failed">%1$d image(s) could not be read</string>
+    <string name="index_cancelled">Stopped at %1$d of %2$d — saved so far stays in the index</string>
 </resources>
 

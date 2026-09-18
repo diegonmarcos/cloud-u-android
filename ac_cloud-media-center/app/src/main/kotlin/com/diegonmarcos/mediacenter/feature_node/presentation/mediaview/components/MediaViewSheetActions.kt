@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.MovieCreation
+import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Wallpaper
@@ -86,6 +87,7 @@ import com.diegonmarcos.mediacenter.feature_node.presentation.util.launchOpenWit
 import com.diegonmarcos.mediacenter.feature_node.presentation.util.launchUseAsIntent
 import com.diegonmarcos.mediacenter.feature_node.presentation.util.rememberActivityResult
 import com.diegonmarcos.mediacenter.feature_node.presentation.util.rememberAppBottomSheetState
+import com.diegonmarcos.mediacenter.feature_node.presentation.scan.ImageScanSheet
 import com.diegonmarcos.mediacenter.feature_node.presentation.util.shareEncryptedMedia
 import com.diegonmarcos.mediacenter.feature_node.presentation.util.shareMedia
 import com.diegonmarcos.mediacenter.feature_node.presentation.vault.VaultViewModel
@@ -115,6 +117,7 @@ fun <T : Media> MediaViewSheetActions(
     val copySheetState = rememberAppBottomSheetState()
     val moveSheetState = rememberAppBottomSheetState()
     val useAsSheetState = rememberAppBottomSheetState()
+    val scanSheetState = rememberAppBottomSheetState()
     var showCollectionSheet by rememberSaveable { mutableStateOf(false) }
 
     val defaultEditor by Settings.Misc.rememberDefaultImageEditor()
@@ -131,6 +134,7 @@ fun <T : Media> MediaViewSheetActions(
     val moreOptionsText = stringResource(R.string.more_options)
     val copyText = stringResource(R.string.copy)
     val moveText = stringResource(R.string.move)
+    val scanImageText = stringResource(R.string.scan_image_content)
     val editText = stringResource(R.string.edit)
     val addToCollectionText = stringResource(R.string.add_to_collection)
     val downloadText = stringResource(R.string.download)
@@ -327,6 +331,16 @@ fun <T : Media> MediaViewSheetActions(
                     onClick = { showCollectionSheet = true }
                 ))
             }
+            // Read image content (task #460): decode a QR/barcode and read the
+            // text in a local image through the shared scan engine. Videos and
+            // cloud-only proxies have nothing for the on-device engine to read.
+            if (media.isImage && media.isLocalContent) {
+                add(ActionGridItem(
+                    icon = Icons.Outlined.QrCodeScanner,
+                    text = scanImageText,
+                    onClick = { scope.launch { scanSheetState.show() } }
+                ))
+            }
             // Download (cloud only)
             if (media.isCloud) {
                 add(ActionGridItem(
@@ -506,6 +520,11 @@ fun <T : Media> MediaViewSheetActions(
             }
         )
     }
+
+    // Read image content (task #460): QR/barcode decode + OCR result sheet.
+    // Composed unconditionally; the sheet's own ModalSheet shows only when
+    // scanSheetState is visible, and ImageScanSheet starts the scan then.
+    ImageScanSheet(state = scanSheetState, media = media)
 }
 
 private data class ActionGridItem(

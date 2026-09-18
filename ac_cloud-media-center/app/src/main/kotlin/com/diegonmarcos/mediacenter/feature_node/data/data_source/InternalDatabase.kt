@@ -31,6 +31,8 @@ import com.diegonmarcos.mediacenter.cloud.data.entity.PersonEntity
 import com.diegonmarcos.mediacenter.cloud.data.entity.CloudUploadPrefEntity
 import com.diegonmarcos.mediacenter.cloud.data.entity.CloudDeleteLocalPrefEntity
 import com.diegonmarcos.mediacenter.cloud.data.entity.SyncStateEntity
+import com.diegonmarcos.mediacenter.feature_node.data.data_source.contentindex.MediaContentIndexDao
+import com.diegonmarcos.mediacenter.feature_node.data.data_source.contentindex.MediaContentIndexEntity
 import com.diegonmarcos.mediacenter.feature_node.domain.model.AlbumGroup
 import com.diegonmarcos.mediacenter.feature_node.domain.model.AlbumGroupMember
 import com.diegonmarcos.mediacenter.feature_node.domain.model.AlbumSection
@@ -94,9 +96,10 @@ import com.diegonmarcos.mediacenter.feature_node.domain.util.Converters
         CloudDeleteLocalPrefEntity::class,
         CloudOfflinePinEntity::class,
         AlbumSection::class,
-        AlbumSectionMember::class
+        AlbumSectionMember::class,
+        MediaContentIndexEntity::class
     ],
-    version = 41,
+    version = 42,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
@@ -142,6 +145,7 @@ import com.diegonmarcos.mediacenter.feature_node.domain.util.Converters
         // (global per-album delete-local table)
         AutoMigration(from = 38, to = 39), // cloud_offline_pin (accounts marked available offline)
         AutoMigration(from = 39, to = 40), // people.hidden (on-device Person grouping)
+        AutoMigration(from = 41, to = 42), // media_content_index (folder content index, task #460)
     ]
 )
 @TypeConverters(Converters::class, CloudConverters::class)
@@ -199,6 +203,8 @@ abstract class InternalDatabase : RoomDatabase() {
     abstract fun getCloudOfflinePinDao(): CloudOfflinePinDao
 
     abstract fun getAlbumSectionDao(): AlbumSectionDao
+
+    abstract fun getMediaContentIndexDao(): MediaContentIndexDao
 
     companion object {
         const val NAME = "internal_db"

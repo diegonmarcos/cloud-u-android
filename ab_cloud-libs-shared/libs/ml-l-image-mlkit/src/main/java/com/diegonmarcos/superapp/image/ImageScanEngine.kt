@@ -150,7 +150,13 @@ class ImageScanEngine(context: Context) {
             }
             OcrResult(
                 text = visionText.text.orEmpty(),
-                segments = segments
+                segments = segments,
+                // The v2 Latin text-recognition model reports the tag of the
+                // language it actually recognised (e.g. "en", "es", "pt", "de");
+                // null means the model could not commit to one. Consumers show
+                // this verbatim so the user sees "Recognised text (English)",
+                // not a guess from the app's own locale.
+                language = languageOf(visionText)
             )
         } catch (error: Exception) {
             // Never throw across the bridge: an OCR failure is shown to the user
@@ -179,6 +185,22 @@ class ImageScanEngine(context: Context) {
         } finally {
             bitmap.recycle()
         }
+    }
+
+
+    /**
+     * The BCP-47 tag of the language the recogniser committed to, or null.
+     *
+     * The top-level Text result has NO recognizedLanguage — verified against
+     * text-recognition's classes.jar, where only TextBlock/Line/Element (via
+     * the package-private TextBase) expose getRecognizedLanguage(). The whole
+     * image is read by one Latin-model pass, so the first block's tag stands
+     * for the image; null means the model could not commit to one.
+     */
+    private fun languageOf(text: com.google.mlkit.vision.text.Text): String? = try {
+        text.textBlocks.firstOrNull()?.recognizedLanguage?.takeIf { it.isNotBlank() }
+    } catch (error: Exception) {
+        null
     }
 
     // ── shared image loading ─────────────────────────────────────────────────
@@ -339,10 +361,12 @@ data class OcrSegment(
 /**
  * The OCR outcome. [text] is the whole recognised text; [segments] are the
  * line-level pieces; [error] is null on success and a short reason on failure
- * (recognizeText never throws).
+ * (recognizeText never throws); [language] is the BCP-47 tag of the language
+ * the recogniser committed to, or null when it could not determine one.
  */
 data class OcrResult(
     val text: String,
     val segments: List<OcrSegment>,
-    val error: String? = null
+    val error: String? = null,
+    val language: String? = null
 )
