@@ -88,20 +88,10 @@ class CenteredLabelBottomNavigationView @JvmOverloads constructor(
         applyVerticalGeometry(labels)
     }
 
-    // MUTATION (#498 red/green proof — reverted in the next commit). The walk
-    // no longer recurses, so it never reaches the label TextViews, which live
-    // two levels down inside NavigationBarItemView. The line that sets
-    // includeFontPadding = false is still here, still spelled exactly as the
-    // static tester greps for it, and still runs — over an empty list. This is
-    // the #498 failure mode in its purest form: the words are present, the
-    // effect is not.
     private fun collectTextViews(view: View, into: MutableList<TextView>) {
         if (view is TextView) into.add(view)
         if (view is ViewGroup) {
-            for (i in 0 until view.childCount) {
-                val child = view.getChildAt(i)
-                if (child is TextView) into.add(child)
-            }
+            for (i in 0 until view.childCount) collectTextViews(view.getChildAt(i), into)
         }
     }
 
@@ -131,11 +121,6 @@ class CenteredLabelBottomNavigationView @JvmOverloads constructor(
 
         itemPaddingTop = pad
         itemPaddingBottom = pad + descent
-        // MUTATION (#498 red/green proof — reverted in the next commit): the
-        // `minimumHeight = 2 * (pillInset + pad) + iconSize + gap + inkHeight`
-        // line is deleted here, so the bar's height cap is never stated —
-        // which is exactly what 89056a756's android:minHeight=0dp did.
-        // Material then hands the wrap_content bar its parent's height and
-        // BottomNavigationMenuView.onMeasure takes all of it, EXACTLY.
+        minimumHeight = 2 * (pillInset + pad) + iconSize + gap + inkHeight
     }
 }
