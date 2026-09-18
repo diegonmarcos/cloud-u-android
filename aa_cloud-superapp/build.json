@@ -2594,7 +2594,7 @@
               },
               {
                 "id": "ai-tmx",
-                "label": "Nix",
+                "label": "Terminal",
                 "icon": "ic_terminal",
                 "target": "app://com.termux.nix?fallback=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.termux.nix"
               },

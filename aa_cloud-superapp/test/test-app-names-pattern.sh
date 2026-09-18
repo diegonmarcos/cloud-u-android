@@ -203,6 +203,30 @@ check(seen_pending == pending_identity_captions,
       "T7 exempts tile ids %s that no longer caption themselves with an identity — delete them "
       "from pending_identity_captions" % sorted(pending_identity_captions - seen_pending))
 
+print("== T8: the AGI terminal tile is captioned by function, not by the upstream app's own name (#499) ==")
+# THE FAILURE THIS EXISTS FOR. #390 gave this tile the caption "Nix" — the
+# same word Phone > Apps' own quickmark uses for the same package — but that
+# word IS the upstream app's own name (ac_cloud-nix-on-droid ships as
+# "Nix-on-Droid"/"cloud-terminal-nix" in the fleet), so the caption still
+# spelled an application's identity rather than what tapping it does. Every
+# other AGI tile with a target spells the FUNCTION (Browser, Navigation,
+# Camera, MyIDE); this one has to as well.
+#
+# Neither T5 nor T7 can catch a reversion back to "Nix". T5 skips it on
+# length: normalise("Nix") == "nix" is shorter than len("cloud")+1, and that
+# filter exists so short incidental words do not false-positive T5's prefix
+# check. T7 only matches a caption equal to a FULL fleet name
+# ("cloud-terminal-nix"), never a three-letter fragment of one. So this is the
+# one check that goes red if the caption reverts to the upstream app's name.
+agi = next((node for _, node in walk(superapp["ui"]["sections"]) if node.get("title") == "AGI"), None)
+check(agi is not None, "T8 found no ui.sections group titled 'AGI' — the detection matched nothing")
+nix_tile = next((t for t in agi["tiles"] if t.get("id") == "ai-tmx"), None) if agi else None
+check(nix_tile is not None, "T8 found no AGI tile with id 'ai-tmx' — the detection matched nothing")
+if nix_tile is not None:
+    check(nix_tile.get("label") == "Terminal",
+          "aa_cloud-superapp/build.json AGI tile ai-tmx.label = %r, want 'Terminal' — "
+          "it must not spell the upstream app's own name" % nix_tile.get("label"))
+
 print()
 print("── test-app-names-pattern: %d passed, %d failed ──" % (passed, failed))
 sys.exit(1 if failed else 0)
