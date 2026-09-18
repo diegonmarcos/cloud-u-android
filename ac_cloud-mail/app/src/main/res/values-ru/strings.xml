@@ -1149,15 +1149,6 @@
     <string name="browser_view_desktop">Показать как на компьютере</string>
     <string name="browser_view_mobile">Показать как на телефоне</string>
 
-    <!-- Bottom navigation island (#465) and Rss reader (#465): new strings shipped for this feature. -->
-    <string name="nav_bar_mail">Почта</string>
-    <string name="nav_bar_chat">Чат</string>
-    <string name="nav_bar_home">Главная</string>
-    <string name="nav_bar_rss">Новости</string>
-    <string name="nav_bar_video">Видео</string>
-    <string name="nav_chat_not_installed">Telegram не установлен</string>
-    <string name="nav_video_not_installed">WhatsApp Business не установлен</string>
-    <string name="nav_launch_not_installed">Это приложение не установлено</string>
     <string name="rss_title">Новости</string>
     <string name="rss_add">Добавить ленту</string>
     <string name="rss_add_hint">Вставьте адрес ленты</string>

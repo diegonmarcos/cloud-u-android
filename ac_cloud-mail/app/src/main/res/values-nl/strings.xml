@@ -1129,15 +1129,6 @@
     <string name="browser_view_desktop">Weergeven als desktop</string>
     <string name="browser_view_mobile">Weergeven als mobiel</string>
 
-    <!-- Bottom navigation island (#465) and Rss reader (#465): new strings shipped for this feature. -->
-    <string name="nav_bar_mail">Post</string>
-    <string name="nav_bar_chat">Chat</string>
-    <string name="nav_bar_home">Start</string>
-    <string name="nav_bar_rss">Nieuws</string>
-    <string name="nav_bar_video">Video</string>
-    <string name="nav_chat_not_installed">Telegram is niet geïnstalleerd</string>
-    <string name="nav_video_not_installed">WhatsApp Business is niet geïnstalleerd</string>
-    <string name="nav_launch_not_installed">Die app is niet geïnstalleerd</string>
     <string name="rss_title">Nieuws</string>
     <string name="rss_add">Feed toevoegen</string>
     <string name="rss_add_hint">Plak een feedadres</string>

@@ -1182,15 +1182,6 @@
     <string name="browser_view_desktop">Ver como escritorio</string>
     <string name="browser_view_mobile">Ver como móvil</string>
 
-    <!-- Bottom navigation island (#465) and Rss reader (#465): new strings shipped for this feature. -->
-    <string name="nav_bar_mail">Correo</string>
-    <string name="nav_bar_chat">Chat</string>
-    <string name="nav_bar_home">Inicio</string>
-    <string name="nav_bar_rss">Noticias</string>
-    <string name="nav_bar_video">Vídeo</string>
-    <string name="nav_chat_not_installed">Telegram no está instalado</string>
-    <string name="nav_video_not_installed">WhatsApp Business no está instalado</string>
-    <string name="nav_launch_not_installed">Esa app no está instalada</string>
     <string name="rss_title">Noticias</string>
     <string name="rss_add">Añadir fuente</string>
     <string name="rss_add_hint">Pega una dirección de fuente</string>

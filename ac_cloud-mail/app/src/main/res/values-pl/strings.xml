@@ -1146,15 +1146,6 @@
     <string name="browser_view_desktop">Wyświetl jak na komputerze</string>
     <string name="browser_view_mobile">Wyświetl jak na telefonie</string>
 
-    <!-- Bottom navigation island (#465) and Rss reader (#465): new strings shipped for this feature. -->
-    <string name="nav_bar_mail">Poczta</string>
-    <string name="nav_bar_chat">Czat</string>
-    <string name="nav_bar_home">Start</string>
-    <string name="nav_bar_rss">Wiadomości</string>
-    <string name="nav_bar_video">Wideo</string>
-    <string name="nav_chat_not_installed">Telegram nie jest zainstalowany</string>
-    <string name="nav_video_not_installed">WhatsApp Business nie jest zainstalowany</string>
-    <string name="nav_launch_not_installed">Ta aplikacja nie jest zainstalowana</string>
     <string name="rss_title">Wiadomości</string>
     <string name="rss_add">Dodaj kanał</string>
     <string name="rss_add_hint">Wklej adres kanału</string>
