@@ -173,6 +173,15 @@ bar = [s for s in secs if s.get("bottom_nav")]
 if len(bar) > 5:
     bad.append(f"{len(bar)} bottom_nav sections — BottomNavigationView drops the sixth")
 
+# Sections.kt::Sections.bottom() is entries.filter{bottomNav}.sortedBy{order}.take(5)
+# — mirror that exactly, not just the membership, so a reordering (not just a
+# removal) of the bar is what this catches. Diego's #504 ask: Buro, Projects,
+# Profile, Agenda, Wallet, left to right.
+bar_order = [s.get("label") for s in sorted(bar, key=lambda s: s.get("order", 0))[:5]]
+EXPECTED_BAR_ORDER = ["Buro", "Projects", "Profile", "Agenda", "Wallet"]
+if bar_order != EXPECTED_BAR_ORDER:
+    bad.append(f"bottom bar order is {bar_order}, expected {EXPECTED_BAR_ORDER}")
+
 for b in sorted(bad): print("FAIL:", b)
 print(f"checked {len(files)} pages, {len(bar)} bar sections, {len(roots)} file trees")
 sys.exit(1 if bad else 0)
