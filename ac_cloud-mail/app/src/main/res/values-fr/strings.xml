@@ -225,7 +225,7 @@
     <string name="scan_contents_barcode_label">Code-barres : </string>
     <string name="scan_contents_failed">Impossible de lire cette image.</string>
     <string name="scan_contents_in_progress">Lecture de cette image…</string>
-    <string name="scan_contents_nothing_found">Aucun code-barres ni texte lisible n'a été trouvé dans cette image.</string>
+    <string name="scan_contents_nothing_found">Aucun code-barres ni texte lisible n\'a été trouvé dans cette image.</string>
     <string name="scan_contents_ocr_label">Texte : </string>
 
     <string name="message_print">Imprimer</string>

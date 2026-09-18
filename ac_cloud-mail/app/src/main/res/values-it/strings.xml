@@ -224,7 +224,7 @@
     <string name="message_scan_attachment">Analizza contenuto</string>
     <string name="scan_contents_barcode_label">Codice a barre: </string>
     <string name="scan_contents_failed">Impossibile leggere questa immagine.</string>
-    <string name="scan_contents_in_progress">Lettura dell'immagine in corso…</string>
+    <string name="scan_contents_in_progress">Lettura dell\'immagine in corso…</string>
     <string name="scan_contents_nothing_found">Nessun codice a barre né testo leggibile trovato in questa immagine.</string>
     <string name="scan_contents_ocr_label">Testo: </string>
 
