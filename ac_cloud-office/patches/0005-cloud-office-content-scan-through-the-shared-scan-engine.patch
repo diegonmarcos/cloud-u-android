@@ -1,0 +1,356 @@
+From 43035088b8c3b440494dee05cfc210a7119def6f Mon Sep 17 00:00:00 2001
+From: Cloud Office <me@diegonmarcos.com>
+Date: Fri, 18 Sep 2026 11:29:00 +0000
+Subject: [PATCH] cloud-office: content scan through the shared image-scan
+ engine
+
+---
+ android/lib/build.gradle                      |   5 +
+ .../androidlib/CloudContentScan.java          | 160 ++++++++++++++++++
+ .../libreoffice/androidlib/LOActivity.java    |  18 +-
+ android/settings.gradle                       |   9 +-
+ browser/src/control/Control.Menubar.ts        |  38 ++++-
+ 5 files changed, 227 insertions(+), 3 deletions(-)
+ create mode 100644 android/lib/src/main/java/org/libreoffice/androidlib/CloudContentScan.java
+
+diff --git a/android/lib/build.gradle b/android/lib/build.gradle
+index 2784fe4..bece8c4 100644
+--- a/android/lib/build.gradle
++++ b/android/lib/build.gradle
+@@ -102,6 +102,11 @@ dependencies {
+     // app that ever sees the credential.
+     implementation project(':text-tools')
+ 
++    // The shared image-scan engine (task #461). Cloud Office is a CALLER: it captures
++    // the current page view in the browser and hands the pixels over; the decode,
++    // the OCR and the typed-payload parsing all stay in the ONE shared module.
++    implementation project(':ml-l-image-mlkit')
++
+     implementation 'androidx.appcompat:appcompat:1.7.1'
+     implementation 'com.google.android.material:material:1.13.0'
+     implementation 'androidx.constraintlayout:constraintlayout:2.2.1'
+diff --git a/android/lib/src/main/java/org/libreoffice/androidlib/CloudContentScan.java b/android/lib/src/main/java/org/libreoffice/androidlib/CloudContentScan.java
+new file mode 100644
+index 0000000..81f6bd3
+--- /dev/null
++++ b/android/lib/src/main/java/org/libreoffice/androidlib/CloudContentScan.java
+@@ -0,0 +1,160 @@
++/* -*- Mode: java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
++/*
++ * Cloud Office — Content Scan.
++ *
++ * This file is not upstream Collabora. It is the Android half of the same
++ * capability the fleet already ships for cloud-drive, cloud-media-center,
++ * cloud-camera and cloud-mail: read what IS in an image (barcode decode + OCR).
++ * Here the image is what the user is looking at — the current page view,
++ * captured in the browser and posted over COOLMessageHandler as a base64 JPEG.
++ *
++ * NOTHING IS REIMPLEMENTED. The scan engine is the ONE shared
++ * libs:ml-l-image-mlkit (ImageScanEngine = ZXing barcode decode + ML Kit OCR)
++ * that the other apps compile in by reference from ab_cloud-libs-shared. This
++ * file only decodes the posted pixels and says what came back — a private copy
++ * of the decode path is the exact defect #170/#261 this fleet fixed.
++ *
++ * NOTHING HERE IS EVER SILENT. Every exit — no canvas, tainted canvas, empty
++ * scan, engine failure — ends in a message on screen. The defect this feature
++ * is fixing WAS the silence.
++ */
++
++package org.libreoffice.androidlib;
++
++import android.app.Activity;
++import android.graphics.Bitmap;
++import android.graphics.BitmapFactory;
++import android.os.Handler;
++import android.os.Looper;
++import android.util.Base64;
++import android.util.Log;
++import android.widget.Toast;
++
++import com.diegonmarcos.superapp.image.mlkit.BarcodeScan;
++import com.diegonmarcos.superapp.image.mlkit.ImageScanEngine;
++import com.diegonmarcos.superapp.image.mlkit.OcrResult;
++
++import java.util.concurrent.ExecutorService;
++import java.util.concurrent.Executors;
++
++final class CloudContentScan {
++
++    private static final String TAG = "CloudContentScan";
++
++    /**
++     * The message the browser sends over COOLMessageHandler when the owner picks
++     * Scan contents: "CLOUD_CONTENT_SCAN <data:image base64 url>", or a short
++     * error marker ("error=no-canvas", "error=tainted") when the browser could
++     * not produce a snapshot.
++     *
++     * IT IS OUR MESSAGE, NOT A COOL ONE, so beforeMessageFromWebView must return
++     * false for it and never forward it to postMobileMessageNative — core has no
++     * such command and would log an unknown-message error for every scan.
++     */
++    static final String MESSAGE = "CLOUD_CONTENT_SCAN";
++
++    /** Longest side the engine ever decodes; the browser downscales to this too. */
++    private static final int MAX_SIDE = 1600;
++
++    private final LOActivity activity;
++    private final ImageScanEngine engine;
++
++    /** The engine BLOCKS (ZXing over a bitmap, ML Kit text recognition). Never the main thread. */
++    private final ExecutorService worker = Executors.newSingleThreadExecutor();
++    private final Handler main = new Handler(Looper.getMainLooper());
++
++    CloudContentScan(LOActivity activity) {
++        this.activity = activity;
++        this.engine = new ImageScanEngine(activity.getApplicationContext());
++    }
++
++    /**
++     * The browser's snapshot has arrived: decode the base64, run the shared
++     * engine's two halves over it, and say what came back — or why nothing did.
++     */
++    void onPagePng(final String dataUrl) {
++        if (dataUrl == null || !dataUrl.startsWith("data:image/")) {
++            say("Could not read this page view");
++            return;
++        }
++        final Bitmap bitmap = decode(dataUrl);
++        if (bitmap == null) {
++            say("Could not read this page view");
++            return;
++        }
++        final Bitmap safe = (bitmap.getWidth() > MAX_SIDE || bitmap.getHeight() > MAX_SIDE)
++                ? downscale(bitmap) : bitmap;
++        worker.execute(new Runnable() {
++            @Override
++            public void run() {
++                try {
++                    final BarcodeScan barcode = engine.decodeBarcode(safe);
++                    final OcrResult ocr = engine.recognizeText(safe);
++                    main.post(new Runnable() {
++                        @Override
++                        public void run() {
++                            say(compose(barcode, ocr));
++                        }
++                    });
++                } finally {
++                    if (safe != bitmap) safe.recycle();
++                    bitmap.recycle();
++                }
++            }
++        });
++    }
++
++    /** "Barcode: QR_CODE https://…\nText: what the page says" — or the named empty reason. */
++    private String compose(BarcodeScan barcode, OcrResult ocr) {
++        if (barcode == null && (ocr == null || ocr.getText() == null || ocr.getText().trim().isEmpty())) {
++            if (ocr != null && ocr.getError() != null) {
++                // The engine names the failure ("cannot decode the image", "download…");
++                // show it verbatim rather than inventing a friendlier lie.
++                return "Could not read this page view (" + ocr.getError() + ")";
++            }
++            return "No barcode and no readable text were found in this page view.";
++        }
++        final StringBuilder out = new StringBuilder();
++        if (barcode != null) {
++            out.append("Barcode: ")
++                    .append(barcode.getFormat())
++                    .append(" ")
++                    .append(barcode.getRawValue())
++                    .append("\n");
++        }
++        if (ocr != null && ocr.getText() != null && !ocr.getText().trim().isEmpty()) {
++            out.append("Text: ")
++                    .append(ocr.getText().trim());
++        }
++        return out.toString().trim();
++    }
++
++    /** data:image/<type>;base64,<bytes> → Bitmap, or null when the bytes are not an image. */
++    private Bitmap decode(String dataUrl) {
++        try {
++            final int comma = dataUrl.indexOf(',');
++            if (comma < 0) return null;
++            final byte[] bytes = Base64.decode(dataUrl.substring(comma + 1), Base64.DEFAULT);
++            return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
++        } catch (Exception e) {
++            Log.w(TAG, "cannot decode page snapshot", e);
++            return null;
++        }
++    }
++
++    private Bitmap downscale(Bitmap src) {
++        final float scale = Math.min(1f, (float) MAX_SIDE / Math.max(src.getWidth(), src.getHeight()));
++        return Bitmap.createScaledBitmap(src, Math.round(src.getWidth() * scale),
++                Math.round(src.getHeight() * scale), true);
++    }
++
++    /** The only way this class speaks, and it always speaks. Safe from any thread. */
++    private void say(final String message) {
++        main.post(new Runnable() {
++            @Override
++            public void run() {
++                Toast.makeText(activity, message, Toast.LENGTH_LONG).show();
++            }
++        });
++    }
++}
+\ No newline at end of file
+diff --git a/android/lib/src/main/java/org/libreoffice/androidlib/LOActivity.java b/android/lib/src/main/java/org/libreoffice/androidlib/LOActivity.java
+index 6be8852..0e25b35 100644
+--- a/android/lib/src/main/java/org/libreoffice/androidlib/LOActivity.java
++++ b/android/lib/src/main/java/org/libreoffice/androidlib/LOActivity.java
+@@ -1345,7 +1345,8 @@ public class LOActivity extends AppCompatActivity {
+     public void postMobileMessage(String message) {
+         String[] messageAndParameterArray= message.split(" ", 2); // the command and the rest (that can potentially contain spaces too)
+ 
+-        if (CloudTextEnhance.MESSAGE.equals(messageAndParameterArray[0])) {
++        if (CloudTextEnhance.MESSAGE.equals(messageAndParameterArray[0])
++                || CloudContentScan.MESSAGE.equals(messageAndParameterArray[0])) {
+             // NEVER LOG THIS ONE'S PAYLOAD. It is the owner's document text, and this fleet
+             // ships a diagnostics path that reads logcat and uploads it, so a selection that
+             // reaches the log is a selection that leaves the phone. The length is enough to
+@@ -1377,6 +1378,15 @@ public class LOActivity extends AppCompatActivity {
+         return mCloudTextEnhance;
+     }
+ 
++    /** Cloud Office Content Scan (task #461). Created lazily: most sessions never scan. */
++    private CloudContentScan mCloudContentScan;
++
++    private CloudContentScan getCloudContentScan() {
++        if (mCloudContentScan == null)
++            mCloudContentScan = new CloudContentScan(this);
++        return mCloudContentScan;
++    }
++
+     /**
+      * Passing messages from JS (instead of the websocket communication).
+      */
+@@ -1527,6 +1537,12 @@ public class LOActivity extends AppCompatActivity {
+                 getCloudTextEnhance().onSelection(
+                         messageAndParam.length > 1 ? messageAndParam[1] : "");
+                 return false;
++            case CloudContentScan.MESSAGE:
++                // OURS, NOT CORE'S — a page snapshot is not a COOL command either.
++                // Blocked here for the same reason as CloudTextEnhance above.
++                getCloudContentScan().onPagePng(
++                        messageAndParam.length > 1 ? messageAndParam[1] : "");
++                return false;
+             case "CLOUD_SETTINGS": {
+                 // Reached BY ACTION, not by class name — see the intent-filter on
+                 // SettingsActivity in android/app's manifest for why.
+diff --git a/android/settings.gradle b/android/settings.gradle
+index ac15c6e..9876410 100644
+--- a/android/settings.gradle
++++ b/android/settings.gradle
+@@ -1,4 +1,4 @@
+-include ':app', ':lib', ':text-tools'
++include ':app', ':lib', ':text-tools', ':ml-l-image-mlkit'
+ 
+ // SHARED BY REFERENCE, not copied. ab_cloud-libs-shared/libs/text-tools is the ITextTools
+ // binder contract and its client, and cloud-mail and the Cloud Keyboard already build the
+@@ -9,3 +9,10 @@ include ':app', ':lib', ':text-tools'
+ // materialize places it at android/text-tools; the path is stable because the engine puts
+ // it there, not because of where this tree happens to sit on disk.
+ project(':text-tools').projectDir = new File(settingsDir, 'text-tools')
++
++// Task #461 — the ONE shared image-scan engine (ZXing barcode decode + ML Kit OCR +
++// typed-payload parsing), shared BY REFERENCE exactly like :text-tools above. The
++// SAME module cloud-drive, cloud-media-center, cloud-camera and cloud-mail build;
++// a copy vendored in here would be the duplicate-engine defect this fleet fixed
++// (#170/#261). materialize places it at android/ml-l-image-mlkit.
++project(':ml-l-image-mlkit').projectDir = new File(settingsDir, 'ml-l-image-mlkit')
+diff --git a/browser/src/control/Control.Menubar.ts b/browser/src/control/Control.Menubar.ts
+index 1d12400..de6e900 100644
+--- a/browser/src/control/Control.Menubar.ts
++++ b/browser/src/control/Control.Menubar.ts
+@@ -180,6 +180,7 @@ class Menubar extends window.L.Control {
+ 				// from the document-browser screen — that is, only by closing the
+ 				// document you were editing, which is why nobody found it.
+ 				{name: _('Settings'), id: 'cloudsettings', type: 'action', mobileapp: true},
++			{name: _('Scan contents'), id: 'cloudscancontents', type: 'action'},
+ 				{type: 'separator'},
+ 				{uno: '.uno:SearchDialog', id: 'searchreplace'},
+ 				{name: _('Find'), id: 'find', type: 'action', shortcut: 'home-search'},
+@@ -1278,6 +1279,7 @@ class Menubar extends window.L.Control {
+ 			// Beside About because that is where a phone owner looks for it, and in
+ 			// EVERY mobile menu because a spreadsheet owner has settings too.
+ 			{name: _('Settings'), id: 'cloudsettings', type: 'action', mobileapp: true},
++			{name: _('Scan contents'), id: 'cloudscancontents', type: 'action'},
+ 			{name: _('About'), id: 'about', type: 'action'},
+ 		],
+ 
+@@ -1349,6 +1351,7 @@ class Menubar extends window.L.Control {
+ 			// Beside About because that is where a phone owner looks for it, and in
+ 			// EVERY mobile menu because a spreadsheet owner has settings too.
+ 			{name: _('Settings'), id: 'cloudsettings', type: 'action', mobileapp: true},
++			{name: _('Scan contents'), id: 'cloudscancontents', type: 'action'},
+ 			{name: _('About'), id: 'about', type: 'action'},
+ 		],
+ 
+@@ -1410,6 +1413,7 @@ class Menubar extends window.L.Control {
+ 			// Beside About because that is where a phone owner looks for it, and in
+ 			// EVERY mobile menu because a spreadsheet owner has settings too.
+ 			{name: _('Settings'), id: 'cloudsettings', type: 'action', mobileapp: true},
++			{name: _('Scan contents'), id: 'cloudscancontents', type: 'action'},
+ 			{name: _('About'), id: 'about', type: 'action'},
+ 		],
+ 
+@@ -1491,6 +1495,7 @@ class Menubar extends window.L.Control {
+ 			// Beside About because that is where a phone owner looks for it, and in
+ 			// EVERY mobile menu because a spreadsheet owner has settings too.
+ 			{name: _('Settings'), id: 'cloudsettings', type: 'action', mobileapp: true},
++			{name: _('Scan contents'), id: 'cloudscancontents', type: 'action'},
+ 			{name: _('About'), id: 'about', type: 'action'},
+ 		],
+ 
+@@ -1649,7 +1654,8 @@ class Menubar extends window.L.Control {
+ 			// dead because a PDF opened read-only is the same defect this menu entry
+ 			// was added to end. 'cloudtextenhance' is deliberately NOT here — it
+ 			// pastes, and a viewer may not write.
+-			'cloudsettings'
++			'cloudsettings',
++			'cloudscancontents'
+ 		],
+ 
+ 		// Only these UNO commands will be enabled in redline management mode
+@@ -2604,6 +2610,36 @@ class Menubar extends window.L.Control {
+ 				this._map._clip.setEnhanceRequest(true);
+ 				app.socket.sendMessage('gettextselection mimetype=text/plain;charset=utf-8');
+ 			}
++		} else if (id === 'cloudscancontents') {
++			// Cloud Office, task #461 — scan WHAT IS IN THE CURRENT VIEW (barcode +
++			// OCR) through the shared ml-l-image-mlkit engine. The capture is the
++			// canvas the user is looking at: #document-canvas holds the composited
++			// viewport, and toDataURL is a browser API that needs no COOL round-trip.
++			// The snapshot is downscaled to 1600px (the engine's MAX_DECODE_DIMENSION)
++			// so the payload stays small enough for the WebView bridge. Every refusal
++			// names itself: no canvas and a tainted canvas are told apart, and the
++			// Android side always answers with a Toast.
++			if (window.COOLMessageHandler) {
++				const canvas = document.getElementById('document-canvas');
++				if (!canvas) {
++					window.COOLMessageHandler.postMobileMessage('CLOUD_CONTENT_SCAN ' + 'error=no-canvas');
++					return;
++				}
++				try {
++					const scale = Math.min(1, 1600 / Math.max(canvas.width, canvas.height));
++					let out = canvas;
++					if (scale < 1) {
++						out = document.createElement('canvas');
++						out.width = Math.round(canvas.width * scale);
++						out.height = Math.round(canvas.height * scale);
++						out.getContext('2d').drawImage(canvas, 0, 0, out.width, out.height);
++					}
++					const data = out.toDataURL('image/jpeg', 0.9);
++					window.COOLMessageHandler.postMobileMessage('CLOUD_CONTENT_SCAN ' + data);
++				} catch (e) {
++					window.COOLMessageHandler.postMobileMessage('CLOUD_CONTENT_SCAN ' + 'error=tainted');
++				}
++			}
+ 		} else if (id === 'cloudsettings') {
+ 			if (window.COOLMessageHandler) {
+ 				window.COOLMessageHandler.postMobileMessage('CLOUD_SETTINGS');
+-- 
+2.47.3
+

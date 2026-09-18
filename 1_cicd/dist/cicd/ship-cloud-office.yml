@@ -35,6 +35,7 @@ on:
       - "1_cicd/src/cicd/ship-cloud-office.yml"
       - "1_cicd/src/scripts/cloud-office-source-engine.sh"
       - "1_cicd/src/templates/ship-source-prebuilt-engine.yml.in"
+      - "ab_cloud-libs-shared/libs/ml-l-image-mlkit/**"
       - "ab_cloud-libs-shared/libs/text-tools/**"
       - "ac_cloud-office/**"
 permissions:

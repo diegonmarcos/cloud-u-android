@@ -239,6 +239,11 @@
         "_doc": "Shared BY REFERENCE from ab_cloud-libs-shared/libs/text-tools — the ITextTools binder contract and its client, the same directory cloud-mail and the Cloud Keyboard build. materialize places it at android/text-tools inside the fetched online tree; patch 0001's settings.gradle include expects it there. A COPY MUST NEVER BE VENDORED: the AIDL's method order is a wire format, and two copies that disagree about it make an installed keyboard answer the wrong call.",
         "dir": "../ab_cloud-libs-shared/libs/text-tools",
         "materialize_to": "android/text-tools"
+      },
+      "ml-l-image-mlkit": {
+        "_doc": "Task #461 — the ONE shared image-scan engine (ZXing barcode decode + ML Kit OCR + typed-payload parsing), shared BY REFERENCE exactly like text-tools: cloud-drive, cloud-media-center, cloud-camera and cloud-mail all compile in the SAME directory. materialize places it at android/ml-l-image-mlkit inside the fetched online tree; patch 0005's settings.gradle include expects it there. A COPY MUST NEVER BE VENDORED: a second decode path is the duplicate-engine defect this fleet fixed (#170/#261).",
+        "dir": "../ab_cloud-libs-shared/libs/ml-l-image-mlkit",
+        "materialize_to": "android/ml-l-image-mlkit"
       }
     },
     "_doc_sdk_packages": "android-37.0 and build-tools 37.0.0 are what upstream's app and lib modules ask for (AGP 9's compileSdk { version = release(37) } resolves to the MINOR package platforms;android-37.0, not platforms;android-37). android-36 is for the shared text-tools module, which declares compileSdk 36 and is built by the AGP 8 apps that share it."
@@ -360,6 +365,19 @@
         ],
         "must_be_view_mode_action": true,
         "why": "#224 asks for the config to move INTO the main menu; it was reachable only from the document-browser screen, i.e. only by closing the document being edited. Every mobile menu, because a spreadsheet owner has settings too. On allowedViewModeActions because _beforeShow greys out every type:'action' not named there once isReadOnlyMode() is true, and settings must not die because a PDF opened read-only."
+      },
+      {
+        "id": "cloudscancontents",
+        "label": "Scan contents",
+        "must_appear_in": [
+          "text",
+          "mobiletext",
+          "mobilepresentation",
+          "mobiledrawing",
+          "mobilespreadsheet"
+        ],
+        "must_be_view_mode_action": true,
+        "why": "#461 asks for the same content-scan capability the fleet already ships: read what is IN the current view (barcode + OCR) through the ONE shared image-scan engine. The phone's hamburger is the only menu a phone has, so it must sit in every mobile array as well as the desktop text menu (tablet Writer). It reads only, so it stays live in a read-only document — named in allowedViewModeActions exactly like cloudsettings. Patch 0005 places it."
       }
     ],
     "view_mode_actions_array": "allowedViewModeActions",
