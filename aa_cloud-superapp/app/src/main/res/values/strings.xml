@@ -204,10 +204,32 @@
          producer label/subtitle text stays raw English in build.json, same
          gap the comment above documents for Control's per-control text. -->
     <string name="push_title">Push</string>
-    <string name="push_caption">Every notification-center and badge producer this app ships, whatever build.json::ui.notification_center declares — the KDE status, the media now-playing notification, the grouped alerts, the phone-notification access every one of them depends on, and the rest. Add or remove one there and this page follows.</string>
+    <string name="push_caption">Every badge that goes in the notification centre, whatever build.json::ui.notification_center declares with badge=true — the boxes themselves first, then a menu for each. A badge that is not in the shade says so here, and why.</string>
     <string name="push_none_declared">No producers are declared — build.json::ui.notification_center is empty or did not reach this build.</string>
     <string name="push_producer_on">Declared on</string>
     <string name="push_producer_off">Declared off</string>
+
+    <!-- #515/#518 Configs ▸ Panel ▸ Push — the two sections. -->
+    <string name="push_section_badges">Badges</string>
+    <string name="push_section_badges_sub">One box per badge that goes in the notification centre, as it appears there. A badge that is not in the shade says why here.</string>
+    <string name="push_section_custom">Customization</string>
+    <string name="push_section_custom_sub">One menu per badge above, same order. Changes take effect on the live badge.</string>
+    <string name="push_none_badges">No badges are declared — build.json::ui.notification_center has no producer with badge=true.</string>
+    <string name="push_state_live">LIVE</string>
+    <string name="push_state_dead">NOT IN THE SHADE</string>
+    <string name="push_state_blocked">BLOCKED</string>
+    <string name="push_state_disabled">OFF</string>
+    <string name="push_state_no_service">NO OWNER</string>
+
+    <!-- Badge faces. -->
+    <string name="badge_media_idle_title">Nothing playing</string>
+    <string name="badge_media_idle_text">Media controls — start something to take over</string>
+    <string name="badge_health_title">Health</string>
+    <string name="badge_health_reading">Reading Health Connect…</string>
+    <string name="badge_health_kcal">%1$d kcal active</string>
+    <string name="badge_health_km">%1$s km walked</string>
+    <string name="badge_health_kcal_unavailable">kcal not available</string>
+    <string name="badge_health_km_unavailable">km not available</string>
     <!-- A write the device refused. %1$s = the control's label, %2$s = what
          the re-read reported. -->
     <string name="control_write_refused">%1$s: didn\'t change — %2$s</string>

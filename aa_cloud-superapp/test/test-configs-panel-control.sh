@@ -42,6 +42,12 @@ TABS="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragm
 CONTROLS="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/DeviceControls.kt"
 FRAGMENT="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/ControlFragment.kt"
 PUSH="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/PushFragment.kt"
+# #515 moved the READING of the declaration out of the pane and into one
+# resolver both the pane and the restart receiver share, so T28/T29 follow
+# the indirection rather than asserting the pane still parses JSON itself.
+NCDIR="$APP/app/src/main/java/com/diegonmarcos/superapp/notificationcenter"
+BADGEDECL="$NCDIR/BadgeDeclaration.kt"
+BADGESVC="$NCDIR/BadgeServices.kt"
 STATUS="$APP/app/src/main/java/com/diegonmarcos/superapp/ui/StatusLight.kt"
 COLORS="$APP/app/src/main/res/values/colors.xml"
 STRINGS="$APP/app/src/main/res/values/strings.xml"
@@ -1157,9 +1163,11 @@ np_fail=""
 grep -q 'buildJson.ui.notification_center' "$GRADLE"          || np_fail="$np_fail gradle:no-json-read"
 grep -q 'uiNotificationCenterB64' "$GRADLE"                   || np_fail="$np_fail gradle:no-b64"
 grep -q 'UI_NOTIFICATION_CENTER_B64' "$GRADLE"                || np_fail="$np_fail gradle:no-buildconfig"
-grep -q 'BuildConfig.UI_NOTIFICATION_CENTER_B64' "$PUSH"      || np_fail="$np_fail kotlin:not-read"
+grep -q 'BuildConfig.UI_NOTIFICATION_CENTER_B64' "$BADGESVC"  || np_fail="$np_fail kotlin:not-read"
+grep -q 'BadgeDeclaration.parse' "$BADGESVC"                  || np_fail="$np_fail kotlin:not-parsed"
+grep -q 'BadgeServices.declared' "$PUSH"                      || np_fail="$np_fail kotlin:pane-not-fed"
 [ -z "$np_fail" ] \
-  && ok "build.json → uiNotificationCenterB64 → BuildConfig.UI_NOTIFICATION_CENTER_B64 → PushFragment" \
+  && ok "build.json → uiNotificationCenterB64 → BuildConfig.UI_NOTIFICATION_CENTER_B64 → BadgeServices → PushFragment" \
   || bad "the declaration cannot reach the UI:$np_fail"
 
 echo "== T29: Push renders the DECLARATION, not a hardcoded list of three =="
@@ -1169,8 +1177,12 @@ echo "== T29: Push renders the DECLARATION, not a hardcoded list of three =="
 # known ids. A tab that renders the same regardless of what the declaration
 # says is decorative, which is exactly the #341/#344 empty-bake shape.
 decorative_fail=""
-grep -q 'declaration.optJSONArray("producers")' "$PUSH" \
+grep -q 'optJSONArray("producers")' "$BADGEDECL" \
   || decorative_fail="$decorative_fail no-array-iteration"
+# #515/#518: the pane draws BOTH of its sections by walking the resolved badge
+# list. A pane that stopped doing that would be back to naming badges itself.
+grep -q 'BadgeDeclaration.badges' "$PUSH" \
+  || decorative_fail="$decorative_fail pane-does-not-derive"
 # No per-producer id may be switched on in the renderer — every id this file
 # names may appear only in a *comment*, never as a live `==` branch, or a
 # fourth producer added to the JSON would render nothing until Kotlin catches
@@ -1195,14 +1207,19 @@ python3 - "$BJ" <<'PY' || decorative_fail="$decorative_fail removing-a-producer-
 import json, sys
 nc = json.load(open(sys.argv[1]))['ui']['notification_center']
 def rendered(producers):
+    # Mirrors BadgeDeclaration.parse + .badges: a producer with no id or no
+    # label is a parse error, and only badge=true reaches the pane. #515 —
+    # the other producers are still DECLARED, they are just not badges.
     out = []
     for o in producers:
         pid, label = o.get('id', ''), o.get('label', '')
         if not pid or not label: continue
+        if not o.get('badge'): continue
         out.append(pid)
     return out
+badges = [p for p in nc['producers'] if p.get('badge')]
 before = rendered(nc['producers'])
-after = rendered(nc['producers'][1:])
+after = rendered([p for p in nc['producers'] if p is not badges[0]])
 sys.exit(0 if len(before) > 0 and len(after) == len(before) - 1 else 1)
 PY
 [ -z "$decorative_fail" ] \

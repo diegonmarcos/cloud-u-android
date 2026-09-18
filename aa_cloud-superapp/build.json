@@ -7808,50 +7808,314 @@
     },
     "_doc_notification_center": "Configs ▸ Panel ▸ Push (#497) — the ONE declaration of every notification-center / badge producer this app ships, and the source the Push tab renders verbatim: nothing it lists is invented in Kotlin, and nothing this app draws as a badge or a notification is missing from it. Diego asked for 'the kde badge, the music badge, the quickmarks badge….' and trailed off on purpose — that trailing off is what makes this a declaration instead of his list of three: PushFragment iterates `producers` and draws whatever is here, so adding or dropping an entry changes the tab with no Kotlin edit, the same contract configs/DeviceControls.kt keeps for Control.\n\nSplit exactly like Control/DeviceControls: this file owns PRESENTATION — which producers exist, what each one IS (label/subtitle/icon), which surface it occupies (`surface`: a system notification, an in-app card, or a launcher-icon badge count) and whether it is declared on. The CAPABILITY — the actual channel, the actual notify()/cancel() calls, the actual read of NotificationListenerService — stays owned by that producer's own Kotlin file, named in `owner` below, exactly where DeviceControls keeps a control's read/set next to the declaration that names it.\n\n`enabled` is declared, not necessarily live-wired: `infos_alerts` is the one producer whose Kotlin already branches on it (InfosNotifier reads ui.notification_infos.enabled, see below) — every other `enabled` here is what this build ships with and is read-only from the Push tab today, same honesty rule Control's `observed` flag states explicitly rather than implying. A producer with no capability behind it — an id with no file in `owner` implementing it — is exactly the DeviceControls failure mode (a row that draws and means nothing), which is why the tester for this page checks `owner` resolves to a real file, not just that the JSON parses.\n\nQUICKMARKS: swept for an actual unread-count badge on Phone ▸ Apps ▸ Quickmarks tiles and found none — AppIconTile draws a 'Not installed' placeholder glyph, not a notification count. What IS real and what an owner would call 'the quickmarks badge' is the system launcher-icon badge every tile can carry, driven by whichever channels below have `shows_badge: true` and cleared when a notification surface calls cancelAll() — declared here as `launcher_icon_badge`, coupled to `phone_notification_listener` rather than invented as a fourth independent mechanism.",
     "notification_center": {
+      "_doc": "One entry per PRODUCER. `badge` is what splits a shade badge from the rest of the channel inventory: true means this producer puts a PERSISTENT entry in the notification centre, and Configs > Panel > Push renders exactly those — one box in section 1, one customization menu in section 2, derived, never a hand-kept name list. `persistent` means it must survive an app update and a reboot: BadgeRestartReceiver re-ensures every persistent producer's `service` on MY_PACKAGE_REPLACED / BOOT_COMPLETED. Before that existed, only KdeStatusService restarted itself (App.kt) and everything owned by FloatingNavService — Quickmarks, Media, Alerts — stayed dead after an update. `requires` names the grants a badge needs so a dead badge can say WHY instead of reading absent. Adding a badge means adding an entry HERE and nothing else.",
       "producers": [
         {
           "id": "kde_status",
-          "label": "KDE Connect status",
-          "subtitle": "Ongoing system notification plus an in-app card mirroring the paired desktop's connection, battery and plugin state.",
+          "label": "KDE Connect",
+          "subtitle": "Ongoing 'Cloud SA - KDE' notification plus an in-app card mirroring the paired desktop's connection, battery and plugin state.",
           "icon": "ic_kde",
           "surface": "system_notification+in_app_card",
           "channel": "kde_status",
           "owner": "notificationcenter/KdeStatusNotifier.kt",
           "shows_badge": false,
-          "enabled": true
+          "enabled": true,
+          "badge": true,
+          "persistent": true,
+          "service": "com.diegonmarcos.superapp.notificationcenter.KdeStatusService",
+          "requires": [],
+          "shows": "Paired desktop name, connection state, battery, plugins.",
+          "customization": [
+            {
+              "key": "enabled",
+              "type": "toggle",
+              "label": "Show this badge",
+              "default": true
+            },
+            {
+              "key": "persistent",
+              "type": "toggle",
+              "label": "Keep it pinned (ongoing)",
+              "default": true
+            },
+            {
+              "key": "importance",
+              "type": "choice",
+              "label": "Importance",
+              "options": [
+                "min",
+                "low",
+                "default"
+              ],
+              "default": "low"
+            },
+            {
+              "key": "actions",
+              "type": "toggle",
+              "label": "Show action buttons",
+              "default": true
+            },
+            {
+              "key": "show_battery",
+              "type": "toggle",
+              "label": "Show desktop battery",
+              "default": true
+            }
+          ]
         },
         {
           "id": "media_now_playing",
-          "label": "Media now-playing",
-          "subtitle": "A MediaStyle notification mirroring the active session, plus the toolbar equalizer icon while one is playing.",
+          "label": "Media Playing",
+          "subtitle": "The 'Cloud SA - Media' transport badge mirroring the active media session. Pinned even when paused so the transport is always reachable.",
           "icon": "ic_music",
           "surface": "system_notification+toolbar_icon",
           "channel": "floating_nav_media",
           "owner": "floatingnav/MediaProxy.kt",
           "shows_badge": false,
-          "enabled": true
+          "enabled": true,
+          "badge": true,
+          "persistent": true,
+          "service": "com.diegonmarcos.superapp.floatingnav.FloatingNavService",
+          "requires": [
+            "overlay"
+          ],
+          "shows": "Track title, artist, album art, prev/play-pause/next.",
+          "customization": [
+            {
+              "key": "enabled",
+              "type": "toggle",
+              "label": "Show this badge",
+              "default": true
+            },
+            {
+              "key": "persistent",
+              "type": "toggle",
+              "label": "Keep it pinned (ongoing)",
+              "default": true
+            },
+            {
+              "key": "importance",
+              "type": "choice",
+              "label": "Importance",
+              "options": [
+                "min",
+                "low",
+                "default"
+              ],
+              "default": "low"
+            },
+            {
+              "key": "actions",
+              "type": "toggle",
+              "label": "Show action buttons",
+              "default": true
+            },
+            {
+              "key": "show_when_idle",
+              "type": "toggle",
+              "label": "Keep the badge when nothing is playing",
+              "default": true
+            },
+            {
+              "key": "show_art",
+              "type": "toggle",
+              "label": "Show album art",
+              "default": true
+            }
+          ]
+        },
+        {
+          "id": "floating_nav_quick_actions",
+          "label": "Quickmarks",
+          "subtitle": "The persistent 'Cloud SA - Quick Actions' badge the floating overlay pins while it is running.",
+          "icon": "ic_settings",
+          "surface": "system_notification",
+          "channel": "floating_nav_actions",
+          "owner": "floatingnav/FloatingNavService.kt",
+          "shows_badge": false,
+          "enabled": true,
+          "badge": true,
+          "persistent": true,
+          "service": "com.diegonmarcos.superapp.floatingnav.FloatingNavService",
+          "requires": [
+            "overlay"
+          ],
+          "shows": "The declared quick-action row (ui.floating_nav.buttons).",
+          "customization": [
+            {
+              "key": "enabled",
+              "type": "toggle",
+              "label": "Show this badge",
+              "default": true
+            },
+            {
+              "key": "persistent",
+              "type": "toggle",
+              "label": "Keep it pinned (ongoing)",
+              "default": true
+            },
+            {
+              "key": "importance",
+              "type": "choice",
+              "label": "Importance",
+              "options": [
+                "min",
+                "low",
+                "default"
+              ],
+              "default": "low"
+            },
+            {
+              "key": "actions",
+              "type": "toggle",
+              "label": "Show action buttons",
+              "default": true
+            },
+            {
+              "key": "show_labels",
+              "type": "toggle",
+              "label": "Show action labels",
+              "default": true
+            }
+          ]
         },
         {
           "id": "infos_alerts",
           "label": "Grouped alerts",
-          "subtitle": "The WhatsApp-style bundled 'Cloud SA - Alerts' notification — content and on/off declared in ui.notification_infos below.",
+          "subtitle": "The bundled 'Cloud SA - Alerts' summary — content and on/off declared in ui.notification_infos below.",
           "icon": "ic_stat_notify",
           "surface": "system_notification",
           "channel": "floating_nav_infos",
           "owner": "floatingnav/InfosNotifier.kt",
           "shows_badge": true,
-          "enabled": true
+          "enabled": true,
+          "badge": true,
+          "persistent": true,
+          "service": "com.diegonmarcos.superapp.floatingnav.FloatingNavService",
+          "requires": [
+            "overlay"
+          ],
+          "shows": "One collapsed summary row per declared alert group.",
+          "customization": [
+            {
+              "key": "enabled",
+              "type": "toggle",
+              "label": "Show this badge",
+              "default": true
+            },
+            {
+              "key": "persistent",
+              "type": "toggle",
+              "label": "Keep it pinned (ongoing)",
+              "default": true
+            },
+            {
+              "key": "importance",
+              "type": "choice",
+              "label": "Importance",
+              "options": [
+                "min",
+                "low",
+                "default"
+              ],
+              "default": "low"
+            },
+            {
+              "key": "actions",
+              "type": "toggle",
+              "label": "Show action buttons",
+              "default": true
+            }
+          ]
+        },
+        {
+          "id": "health_activity",
+          "label": "Health",
+          "subtitle": "Active kcal burned today and km walked today, read from Health Connect on this device. Never estimated — a half with no grant reads 'not available'.",
+          "icon": "ic_p_health_activity",
+          "surface": "system_notification",
+          "channel": "health_activity",
+          "owner": "notificationcenter/HealthBadgeService.kt",
+          "shows_badge": false,
+          "enabled": true,
+          "badge": true,
+          "persistent": true,
+          "service": "com.diegonmarcos.superapp.notificationcenter.HealthBadgeService",
+          "requires": [
+            "health_connect"
+          ],
+          "shows": "Active kcal burned today, km walked today.",
+          "customization": [
+            {
+              "key": "enabled",
+              "type": "toggle",
+              "label": "Show this badge",
+              "default": true
+            },
+            {
+              "key": "persistent",
+              "type": "toggle",
+              "label": "Keep it pinned (ongoing)",
+              "default": true
+            },
+            {
+              "key": "importance",
+              "type": "choice",
+              "label": "Importance",
+              "options": [
+                "min",
+                "low",
+                "default"
+              ],
+              "default": "low"
+            },
+            {
+              "key": "actions",
+              "type": "toggle",
+              "label": "Show action buttons",
+              "default": true
+            },
+            {
+              "key": "show_kcal",
+              "type": "toggle",
+              "label": "Show active kcal",
+              "default": true
+            },
+            {
+              "key": "show_km",
+              "type": "toggle",
+              "label": "Show km walked",
+              "default": true
+            },
+            {
+              "key": "refresh_minutes",
+              "type": "choice",
+              "label": "Refresh every",
+              "options": [
+                "15",
+                "30",
+                "60"
+              ],
+              "default": "30"
+            }
+          ]
         },
         {
           "id": "phone_notification_listener",
           "label": "Phone notification access",
-          "subtitle": "The NotificationListenerService grant every other phone-notification surface in this app is fed from — Control ▸ Permissions grants it, nothing here can switch it.",
+          "subtitle": "The NotificationListenerService grant every other phone-notification surface is fed from — Control ▸ Permissions grants it, nothing here can switch it.",
           "icon": "ic_settings",
           "surface": "listener_source",
           "channel": "",
           "owner": "notificationcenter/PhoneNotificationListenerService.kt",
           "shows_badge": false,
-          "enabled": true
+          "enabled": true,
+          "badge": false,
+          "persistent": false,
+          "service": "",
+          "requires": [],
+          "not_badge_reason": "A listener SOURCE. It posts nothing to the shade.",
+          "customization": []
         },
         {
           "id": "recovery_advisory",
@@ -7862,18 +8126,13 @@
           "channel": "fleet-advisory-v1",
           "owner": "recovery/RecoveryNotifier.kt",
           "shows_badge": false,
-          "enabled": true
-        },
-        {
-          "id": "floating_nav_quick_actions",
-          "label": "Floating nav quick actions",
-          "subtitle": "The persistent 'Cloud SA - Quick Actions' notification the floating overlay pins while it is running.",
-          "icon": "ic_settings",
-          "surface": "system_notification",
-          "channel": "floating_nav_actions",
-          "owner": "floatingnav/FloatingNavService.kt",
-          "shows_badge": false,
-          "enabled": true
+          "enabled": true,
+          "badge": false,
+          "persistent": false,
+          "service": "",
+          "requires": [],
+          "not_badge_reason": "Transient alert — setAutoCancel(true) (RecoveryNotifier.kt:96); it leaves the shade when tapped.",
+          "customization": []
         },
         {
           "id": "screensaver_channel",
@@ -7884,18 +8143,30 @@
           "channel": "screensaver",
           "owner": "floatingnav/ScreensaverService.kt",
           "shows_badge": false,
-          "enabled": true
+          "enabled": true,
+          "badge": false,
+          "persistent": false,
+          "service": "",
+          "requires": [],
+          "not_badge_reason": "Foreground-service plumbing that exists only WHILE the screensaver cover is up (started on demand from FloatingNavService.kt:373), then goes away.",
+          "customization": []
         },
         {
           "id": "launcher_icon_badge",
           "label": "Launcher icon badge",
-          "subtitle": "The OS unread-count badge shown on this app's launcher icon, sourced from whichever channels above are shows_badge=true and cleared when a notification surface opens and cancels.",
+          "subtitle": "The OS unread-count dot on this app's launcher icon, sourced from whichever channels are shows_badge=true.",
           "icon": "ic_link_tile",
           "surface": "launcher_icon_badge",
           "channel": "",
           "owner": "notificationcenter/PhoneNotificationListenerService.kt",
           "shows_badge": false,
-          "enabled": true
+          "enabled": true,
+          "badge": false,
+          "persistent": false,
+          "service": "",
+          "requires": [],
+          "not_badge_reason": "The home-screen icon dot, not an entry in the notification shade.",
+          "customization": []
         }
       ]
     },

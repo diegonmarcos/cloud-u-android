@@ -11,7 +11,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.work.Configuration as WorkManagerConfiguration
 import com.diegonmarcos.superapp.core.NotificationStore
 import com.diegonmarcos.superapp.devcontrol.DevControlServer
-import com.diegonmarcos.superapp.notificationcenter.KdeStatusService
+import com.diegonmarcos.superapp.notificationcenter.BadgeServices
 import com.google.android.material.color.DynamicColors
 
 /**
@@ -112,11 +112,18 @@ class App : Application(), WorkManagerConfiguration.Provider {
         runCatching { CrashLogger.install(this) }
         runCatching { DynamicColors.applyToActivitiesIfAvailable(this) }
         runCatching { detectVersionBump() }
-        // Persistent "Cloud SA - KDE" status notification, live-updated. Owned
-        // by a foreground service (parity with "Cloud SA - Quick Actions") so it
-        // survives "clear all" / process death instead of being a droppable
-        // plain ongoing notify.
-        runCatching { KdeStatusService.start(this) }
+        // #515: this used to be `KdeStatusService.start(this)` — ONE service,
+        // named by hand. That hand-written line is why the KDE badge was the
+        // only one of Diego's three still standing after an update: it was the
+        // only badge with any restart path at all. Quickmarks, Media and Alerts
+        // are all owned by FloatingNavService, which nothing here started.
+        //
+        // Now the declaration decides. ensureAll re-ensures every producer
+        // build.json::ui.notification_center marks persistent, which is the
+        // same set BadgeRestartReceiver ensures on MY_PACKAGE_REPLACED /
+        // BOOT_COMPLETED — one list, one mechanism, cold start and update
+        // converging on the same services running.
+        runCatching { BadgeServices.ensureAll(this) }
         // Schedule the periodic battery-session tick (15 min cadence).
         // Idempotent — KEEP policy ensures re-scheduling on every cold
         // start is a no-op. Without this the discharge anchor only

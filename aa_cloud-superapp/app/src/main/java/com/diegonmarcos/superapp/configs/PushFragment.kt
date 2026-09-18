@@ -2,130 +2,266 @@ package com.diegonmarcos.superapp.configs
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Base64
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Switch
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.launcher.Sections
+import com.diegonmarcos.superapp.notificationcenter.BadgeCustomization
+import com.diegonmarcos.superapp.notificationcenter.BadgeDeclaration
+import com.diegonmarcos.superapp.notificationcenter.BadgeServices
 import com.diegonmarcos.superapp.ui.LauncherPalette
-import org.json.JSONObject
 
 /**
- * Configs ▸ Panel ▸ Push (#497) — every notification-center / badge producer
- * this app ships, drawn from `build.json::ui.notification_center` and NOTHING
- * this file invents.
+ * Configs ▸ Panel ▸ Push — #515 / #518.
  *
- * Diego asked for the KDE badge, the music badge, the quickmarks badge and
- * trailed off with "…." — that trailing-off is the whole reason this page
- * iterates [producers] rather than drawing three rows by name: adding or
- * dropping a producer in the declaration changes this page with no Kotlin
- * edit, same contract [ControlFragment] keeps with `DeviceControls`.
+ * TWO SECTIONS, in this order, both DERIVED from
+ * `build.json::ui.notification_center`:
  *
- * The split is the same one Control uses: this file owns PRESENTATION only —
- * it reads what a producer IS (label, subtitle, icon, which surface it
- * occupies, whether it is declared on) and draws exactly that. The
- * CAPABILITY — the actual channel, the actual notify()/cancel() calls — stays
- * in the producer's own Kotlin file, named as `owner` in the declaration.
- * Nothing here polls a live device state, so unlike Control there is no
- * ticker: a producer's declared `enabled` is a build-time fact, not something
- * that can go stale between reads.
+ *   1. the badge boxes themselves — one per badge, as it appears in the
+ *      notification centre;
+ *   2. a rule;
+ *   3. the customization menus — one per badge, same order.
+ *
+ * What this page is FOR. The #497 version of it listed all eight producers,
+ * which was a channel inventory and not a badge list, and it drew every one of
+ * them from the declared `enabled` flag — a build-time constant. So on the day
+ * three of Diego's badges were missing from his shade, this page said all eight
+ * were "Declared on", which was true and useless. A settings page that cannot
+ * tell you a badge is dead is a page that reads its own JSON back to you.
+ *
+ * Hence section 1 shows LIVE STATE, from [BadgeServices.status]: is the owning
+ * service running, is a declared grant missing, has the owner switched it off.
+ * A dead badge reads dead HERE, with the reason, which is the one thing the
+ * previous pane could not do.
+ *
+ * Nothing on this page is named in Kotlin. `badge=true` in the declaration is
+ * what puts a producer in both sections; the customization rows are whatever
+ * that producer's `customization` array declares. Adding a badge is a
+ * build.json edit and no edit here.
  */
 class PushFragment : Fragment() {
 
-    private data class Producer(
-        val id: String,
-        val label: String,
-        val subtitle: String,
-        val icon: String,
-        val surface: String,
-        val enabled: Boolean,
-    )
+    private lateinit var root: LinearLayout
 
     override fun onCreateView(inf: LayoutInflater, c: ViewGroup?, s: Bundle?): View {
         val ctx = requireContext()
         val pad = dp(16)
-        val root = LinearLayout(ctx).apply {
+        root = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(pad, pad, pad, pad)
         }
-
-        root.addView(title(ctx, getString(R.string.push_title)))
-        root.addView(caption(ctx, getString(R.string.push_caption)))
-
-        val producers = declaredProducers()
-        if (producers.isEmpty()) {
-            root.addView(caption(ctx, getString(R.string.push_none_declared)))
-        } else {
-            for (p in producers) root.addView(row(ctx, p))
-        }
-
+        rebuild()
         return ScrollView(ctx).apply { addView(root) }
     }
 
-    // ─────────────────────────────── Rows ───────────────────────────────
+    /** Live state goes stale the moment a service dies, so the page is rebuilt
+     *  on every return to it rather than only on create. */
+    override fun onResume() {
+        super.onResume()
+        if (this::root.isInitialized) rebuild()
+    }
 
-    private fun row(ctx: Context, p: Producer): View {
-        val palette = LauncherPalette.of(ctx)
-        val v = dp(8)
+    private fun rebuild() {
+        val ctx = requireContext()
+        root.removeAllViews()
+        root.addView(title(ctx, getString(R.string.push_title)))
+        root.addView(caption(ctx, getString(R.string.push_caption)))
+
+        val badges = BadgeDeclaration.badges(BadgeServices.declared)
+        if (badges.isEmpty()) {
+            root.addView(caption(ctx, getString(R.string.push_none_badges)))
+            return
+        }
+
+        // ── Section 1 — the badge boxes themselves ──────────────────────
+        root.addView(sectionHead(ctx, getString(R.string.push_section_badges),
+            getString(R.string.push_section_badges_sub), rule = false))
+        for (b in badges) root.addView(badgeBox(ctx, b))
+
+        // ── The division ────────────────────────────────────────────────
+        // ── Section 2 — one customization menu per badge, same order ────
+        root.addView(sectionHead(ctx, getString(R.string.push_section_custom),
+            getString(R.string.push_section_custom_sub), rule = true))
+        for (b in badges) root.addView(customMenu(ctx, b))
+    }
+
+    // ───────────────────────── Section 1: the badges ─────────────────────
+
+    /**
+     * One badge, drawn the way the shade draws it: icon, title, the line of
+     * state it is currently showing — and, when it is not in the shade at all,
+     * the reason in place of that line.
+     */
+    private fun badgeBox(ctx: Context, b: BadgeDeclaration.Badge): View {
+        val p = LauncherPalette.of(ctx)
+        val st = BadgeServices.status(ctx, b)
 
         val icon = ImageView(ctx).apply {
-            setImageResource(Sections.iconResFor(ctx, p.icon))
+            setImageResource(Sections.iconResFor(ctx, b.icon))
             scaleType = ImageView.ScaleType.FIT_CENTER
-            layoutParams = LinearLayout.LayoutParams(dp(ICON_DP), dp(ICON_DP)).apply {
-                marginEnd = dp(12)
-            }
-            imageTintList = android.content.res.ColorStateList.valueOf(palette.textPrimary)
+            layoutParams = LinearLayout.LayoutParams(dp(ICON_DP), dp(ICON_DP)).apply { marginEnd = dp(12) }
+            imageTintList = android.content.res.ColorStateList.valueOf(p.textPrimary)
         }
 
-        val label = TextView(ctx).apply {
-            text = p.label
-            textSize = 15f
-            setTextColor(palette.textPrimary)
+        val stateColour = when (st.state) {
+            BadgeServices.State.LIVE -> p.accent
+            // Everything that is not LIVE is the same colour on purpose:
+            // "blocked" and "dead" are equally not-in-the-shade, and giving
+            // one of them a softer colour is how a missing badge reads as fine.
+            else -> 0xFFE05252.toInt()
         }
-
-        val subtitle = TextView(ctx).apply {
-            text = p.subtitle
-            textSize = 12f
-            setTextColor(palette.textSecondary)
-        }
-
-        val state = TextView(ctx).apply {
-            text = getString(if (p.enabled) R.string.push_producer_on else R.string.push_producer_off)
-            textSize = 11f
-            setTextColor(if (p.enabled) palette.accent else palette.textSecondary)
-        }
+        val stateLabel = getString(
+            when (st.state) {
+                BadgeServices.State.LIVE -> R.string.push_state_live
+                BadgeServices.State.DEAD -> R.string.push_state_dead
+                BadgeServices.State.BLOCKED -> R.string.push_state_blocked
+                BadgeServices.State.DISABLED -> R.string.push_state_disabled
+                BadgeServices.State.NO_SERVICE -> R.string.push_state_no_service
+            },
+        )
 
         val texts = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            addView(label)
-            addView(subtitle)
-            addView(state)
+            addView(TextView(ctx).apply {
+                text = b.label; textSize = 16f; setTextColor(p.textPrimary)
+            })
+            addView(TextView(ctx).apply {
+                text = "$stateLabel · ${st.reason}"
+                textSize = 12f
+                setTextColor(stateColour)
+            })
+            if (b.shows.isNotBlank()) addView(TextView(ctx).apply {
+                text = b.shows; textSize = 12f; setTextColor(p.textSecondary)
+            })
         }
 
-        // ONE announcement per row, not four — the icon and the three text
-        // lines are one fact about one producer.
-        for (child in listOf(icon, label, subtitle, state)) {
+        // ONE announcement per box — the icon and the three lines are one fact
+        // about one badge, not four things to tab through.
+        for (child in listOf<View>(icon, texts)) {
             child.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }
 
         return LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(0, v, 0, v)
+            setPadding(0, dp(10), 0, dp(10))
             isFocusable = true
-            contentDescription = "${p.label}. ${p.subtitle} " +
-                getString(if (p.enabled) R.string.push_producer_on else R.string.push_producer_off)
+            contentDescription = "${b.label}. $stateLabel. ${st.reason} ${b.shows}"
             addView(icon)
             addView(texts)
         }
     }
+
+    // ──────────────────── Section 2: the customization ───────────────────
+
+    private fun customMenu(ctx: Context, b: BadgeDeclaration.Badge): View {
+        val p = LauncherPalette.of(ctx)
+        val col = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(10), 0, dp(10))
+            addView(TextView(ctx).apply {
+                text = b.label; textSize = 15f; setTextColor(p.textPrimary)
+            })
+        }
+        if (b.customization.isEmpty()) {
+            col.addView(TextView(ctx).apply {
+                text = getString(R.string.push_producer_off)
+                textSize = 12f; setTextColor(p.textSecondary)
+            })
+            return col
+        }
+        for (opt in b.customization) col.addView(control(ctx, b, opt))
+        return col
+    }
+
+    /** The declared `type` picks the widget. This method knows about option
+     *  TYPES, never about option keys — so a new option in build.json gets a
+     *  control here without a Kotlin edit. */
+    private fun control(ctx: Context, b: BadgeDeclaration.Badge, opt: BadgeDeclaration.Option): View {
+        val p = LauncherPalette.of(ctx)
+        return when (opt.type) {
+            "choice" -> {
+                val values = opt.options
+                val row = TextView(ctx).apply {
+                    textSize = 13f
+                    setTextColor(p.textPrimary)
+                    setPadding(0, dp(8), 0, dp(8))
+                }
+                fun render() { row.text = "${opt.label}: ${BadgeCustomization.text(ctx, b, opt.key)}" }
+                render()
+                // Tap cycles. A declared choice is two or three values; a
+                // dialog to pick between three is more chrome than choice.
+                row.setOnClickListener {
+                    if (values.isEmpty()) return@setOnClickListener
+                    val cur = BadgeCustomization.text(ctx, b, opt.key)
+                    val next = values[(values.indexOf(cur).takeIf { it >= 0 }?.plus(1) ?: 0) % values.size]
+                    BadgeCustomization.set(ctx, b, opt.key, next)
+                    render()
+                    applyLive(ctx)
+                }
+                row
+            }
+            else -> {
+                val sw = Switch(ctx).apply {
+                    text = opt.label
+                    textSize = 13f
+                    setTextColor(p.textPrimary)
+                    setPadding(0, dp(8), 0, dp(8))
+                    isChecked = BadgeCustomization.bool(ctx, b, opt)
+                    setOnCheckedChangeListener { _, on ->
+                        BadgeCustomization.set(ctx, b, opt.key, on)
+                        applyLive(ctx)
+                    }
+                }
+                sw
+            }
+        }
+    }
+
+    /**
+     * Take effect on the LIVE badge, which is the half of "declaration AND
+     * customization" a settings page usually forgets: re-ensure the services
+     * (a badge just switched back on needs its owner started) and redraw
+     * section 1 so its state line agrees with the switch that was just moved.
+     */
+    private fun applyLive(ctx: Context) {
+        runCatching { BadgeServices.ensureAll(ctx) }
+        rebuild()
+    }
+
+    // ────────────────────────────── Chrome ───────────────────────────────
+
+    /** Section rule + heading, matching the convention OneHandFragment uses
+     *  for the top-level parts of a Configs page. The rule is what #518 asked
+     *  for as "a division" between the boxes and the menus. */
+    private fun sectionHead(ctx: Context, label: String, sub: String, rule: Boolean) =
+        LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            if (rule) addView(View(ctx).apply {
+                setBackgroundColor(0x33FFFFFF)
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, dp(1),
+                ).apply { topMargin = dp(20); bottomMargin = dp(12) }
+            })
+            addView(TextView(ctx).apply {
+                text = label.uppercase()
+                textSize = 12f
+                setTextColor(LauncherPalette.of(ctx).accent)
+                setPadding(0, if (rule) 0 else dp(16), 0, 0)
+            })
+            addView(TextView(ctx).apply {
+                text = sub; textSize = 11f
+                setTextColor(LauncherPalette.of(ctx).textSecondary)
+                setPadding(0, 0, 0, dp(4))
+            })
+        }
 
     private fun title(ctx: Context, s: String) = TextView(ctx).apply {
         text = s
@@ -142,41 +278,6 @@ class PushFragment : Fragment() {
     }
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
-
-    // ────────────────────────────── Declaration ──────────────────────────
-
-    /**
-     * `build.json::ui.notification_center.producers`, baked into BuildConfig
-     * at build time — the SAME mechanism `DeviceControls.declaration` uses
-     * for `ui.control_panel`. A producer missing a field is dropped rather
-     * than drawn half-blank: a row with no label or icon is not a producer,
-     * it is a parse error nobody would notice on a settings page.
-     */
-    private fun declaredProducers(): List<Producer> {
-        val arr = declaration.optJSONArray("producers") ?: return emptyList()
-        val out = mutableListOf<Producer>()
-        for (i in 0 until arr.length()) {
-            val o = arr.optJSONObject(i) ?: continue
-            val id = o.optString("id")
-            val label = o.optString("label")
-            if (id.isBlank() || label.isBlank()) continue
-            out += Producer(
-                id = id,
-                label = label,
-                subtitle = o.optString("subtitle", ""),
-                icon = o.optString("icon", ""),
-                surface = o.optString("surface", ""),
-                enabled = o.optBoolean("enabled", false),
-            )
-        }
-        return out
-    }
-
-    private val declaration: JSONObject by lazy {
-        runCatching {
-            JSONObject(String(Base64.decode(BuildConfig.UI_NOTIFICATION_CENTER_B64, Base64.NO_WRAP)))
-        }.getOrDefault(JSONObject())
-    }
 
     companion object {
         private const val ICON_DP = 28

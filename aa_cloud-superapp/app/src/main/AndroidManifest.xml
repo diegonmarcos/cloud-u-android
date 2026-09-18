@@ -199,6 +199,26 @@
         <receiver
             android:name=".notificationcenter.KdeQuickActionReceiver"
             android:exported="false" />
+        <!-- #515 — the declared restart path for every PERSISTENT badge in
+             build.json::ui.notification_center.
+
+             Android kills this package's services on replace and sends no
+             BOOT_COMPLETED for an update. Without this receiver the only badge
+             that came back was the one whose service App.onCreate happened to
+             start by hand (KDE); Quickmarks, Media and Alerts — all three owned
+             by FloatingNavService — stayed dead until the owner opened the
+             shell or toggled the overlay.
+
+             exported=true is required: both actions are delivered by the
+             system, from outside this package. -->
+        <receiver
+            android:name=".notificationcenter.BadgeRestartReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
         <!-- HOME — the launcher door. Flips the SuperApp into the Android
              Home Screen replacement candidate list; once the user picks it as
              default, all Home button / home gesture presses route here.
@@ -408,6 +428,21 @@
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Persistent KDE Connect connection + pairing status notification for the Cloud SuperApp" />
+        </service>
+        <!-- #517 HealthBadgeService — pins the persistent "Cloud SA - Health"
+             badge (active kcal + km walked today, read from Health Connect).
+             type=specialUse for the same reason as KdeStatusService: a
+             standing activity-summary badge is not one of the predefined FGS
+             categories, and it is emphatically NOT `health`, which is for
+             active workout tracking. Not exported — only BadgeServices.ensureAll
+             starts it, from the declaration. -->
+        <service
+            android:name=".notificationcenter.HealthBadgeService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Persistent daily activity summary badge (active calories + distance) for the Cloud SuperApp" />
         </service>
 
         <!-- Shizuku provider — required by the Shizuku client lib so the

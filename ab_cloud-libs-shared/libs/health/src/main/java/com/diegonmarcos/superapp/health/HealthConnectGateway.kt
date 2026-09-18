@@ -209,6 +209,73 @@ object HealthConnectGateway {
             snap
         }
 
+    // ── Today's activity, for the Health badge (#517) ────────────────
+    //
+    // [readDailySnapshot] cannot answer this honestly on its own: [readSafe]
+    // turns a missing grant into an empty record list, so "you have not
+    // granted Distance" and "you have not moved today" both come back 0.0.
+    // On a shade badge those are completely different sentences, and printing
+    // the first as the second is a badge that lies about the owner's health
+    // data. So this reader checks the grant for each half FIRST and returns
+    // null — not zero — for a half it is not allowed to read.
+    //
+    // Both halves are MEASURED, never derived: active kcal comes from
+    // ActiveCaloriesBurnedRecord and distance from DistanceRecord, whatever
+    // wrote them (on a Samsung handset, typically Samsung Health via Health
+    // Connect). Nothing here estimates kcal from steps.
+
+    /** A half is null when it could not be READ, with [reason] saying why.
+     *  Null is not zero and must never be rendered as one. */
+    data class ActivityToday(
+        val activeKcal: Double?,
+        val distanceKm: Double?,
+        val reason: String,
+    )
+
+    suspend fun readActivityToday(
+        context: Context,
+        day: LocalDate = LocalDate.now(),
+    ): ActivityToday = withContext(Dispatchers.IO) {
+        when (availability(context)) {
+            Availability.NotInstalled ->
+                return@withContext ActivityToday(null, null, "Health Connect is not installed.")
+            Availability.UpdateRequired ->
+                return@withContext ActivityToday(null, null, "Health Connect needs updating.")
+            Availability.Unsupported ->
+                return@withContext ActivityToday(null, null, "Health Connect is not supported here.")
+            Availability.Installed -> Unit
+        }
+        val c = client(context)
+            ?: return@withContext ActivityToday(null, null, "Health Connect client unavailable.")
+
+        val granted = runCatching { grantedPermissions(context) }.getOrDefault(emptySet())
+        val kcalPerm = HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class)
+        val distPerm = HealthPermission.getReadPermission(DistanceRecord::class)
+        val hasKcal = kcalPerm in granted
+        val hasDist = distPerm in granted
+
+        val zone = ZoneId.systemDefault()
+        val range = TimeRangeFilter.between(
+            day.atStartOfDay(zone).toInstant(),
+            day.plusDays(1).atStartOfDay(zone).toInstant(),
+        )
+
+        val kcal = if (hasKcal)
+            readSafe(c, ActiveCaloriesBurnedRecord::class, range).sumOf { it.energy.inKilocalories }
+        else null
+        val km = if (hasDist)
+            readSafe(c, DistanceRecord::class, range).sumOf { it.distance.inMeters } / 1000.0
+        else null
+
+        val reason = when {
+            hasKcal && hasDist -> ""
+            !hasKcal && !hasDist -> "Active-calories and distance are not granted in Health Connect."
+            !hasKcal -> "Active calories is not granted in Health Connect."
+            else -> "Distance is not granted in Health Connect."
+        }
+        ActivityToday(kcal, km, reason)
+    }
+
     private fun emptySnapshot(day: LocalDate) = DailySnapshot(
         day, 0L, 0.0, 0.0, 0.0, 0.0, 0.0, 0L, 0L, 0.0, 0L, 0, emptySet(),
     )
