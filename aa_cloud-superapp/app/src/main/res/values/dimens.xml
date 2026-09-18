@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bottom-nav pill geometry. FOUR tickets own this file and it must hold
+<!-- Bottom-nav pill geometry. FIVE tickets own this file and it must hold
      all of them: #462 contributed bottom_nav_pill_corner_radius (the ONE
      radius the pill island and the selected-item capsule both reference, so
      the two pills can never drift apart); #473 added bottom_nav_end_inset and
@@ -7,9 +7,14 @@
      bottom_nav_item_vertical_pad (the bar's item stack's vertical inset, read
      as BOTH app:itemPaddingTop and app:itemPaddingBottom so the two gaps are
      equal by declaration) and tab_strip_top_inset (the tab-strip's own top
-     breathing room above the toolbar island). One declaration each, never a
+     breathing room above the toolbar island); #498 bound the selected-item
+     pill's OWN insetTop/insetBottom to that SAME bottom_nav_item_vertical_pad,so
+     the capsule box and the content box derive from ONE token and their centres
+     coincide by construction, not by the coincidence of two numbers (the
+     pill inset was a magic literal 8dp while the content pad was 6dp — the
+     two-source drift that failed five tickets). One declaration each, never a
      literal copied into a layout or style, because a per-view literal is two
-     numbers that can drift apart (the rule #380/#381/#384/#408/#424 closed). -->
+     numbers that can drift apart (the rule #380/#381/#384/#408/#424 closed. -->
 
 <resources>
     <!-- #462. The corner radius used by BOTH the bottom-nav island (the

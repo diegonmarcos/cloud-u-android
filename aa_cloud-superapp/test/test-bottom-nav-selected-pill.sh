@@ -114,6 +114,97 @@ PY
 )" "the ActiveIndicator style is neutralised to transparent"
 fi
 
+echo "== T5: the capsule box and the content box derive from ONE token - measured centring =="
+# #498. four dp-nudges shipped green without ever testing geometry (the shell tester only
+# asserted the radius token and the itemBackground wiring). The pill inset was a magic literal
+# (8dp in the drawable) while the content pad was a different number (6dp in dimens) - two
+# independent vertical systems whose centres coincide only by accident. The fix binds BOTH
+# the pill insetTop/insetBottom AND the item itemPaddingTop/Bottom to the SAME
+# @dimen/bottom_nav_item_vertical_pad, so the capsule box and the content box are ONE
+# geometry and their centres are equal BY CONSTRUCTION. This block parses the ACTUAL dp
+# values and fails when any side is nudged (a measured value, not a pass-by-name). The pill
+# box now EQUALS the content box, so the icon+label stack is centred in the capsule by
+# declaration: shifted => measured non-zero delta => RED below.
+PAD_TOKEN="bottom_nav_item_vertical_pad"
+LAYOUT="$(cd "$(dirname "$0")/.." && pwd)/app/src/main/res/layout/activity_main.xml"
+GEOM="$(python3 - "$ITEM_BG" "$LAYOUT" "$DIMENS" "$PAD_TOKEN" <<'PY'
+import re, sys
+item_bg, layout, dimens, tok = sys.argv[1:]
+def dimen_val(dimens, name):
+    m = re.search(r'<dimen\s+name="' + re.escape(name) + r'">([0-9]+)dp</dimen>', dimens)
+    return int(m.group(1)) if m else None
+pad = dimen_val(open(dimens).read(), tok)
+if pad is None:
+    print("NO_TOKEN: %s missing from dimens" % tok)
+    raise SystemExit
+bg = open(item_bg).read()
+ins_t = re.search(r'<inset\b[^>]*insetTop="([^"]*)"', bg)
+ins_b = re.search(r'<inset\b[^>]*insetBottom="([^"]*)"', bg)
+lm = open(layout).read()
+ptop = re.search(r'app:itemPaddingTop="([^"]*)"', lm)
+pbot = re.search(r'app:itemPaddingBottom="([^"]*)"', lm)
+wanted = "@dimen/" + tok
+prob = []
+if not ins_t:
+    prob.append("pill insetTop missing")
+elif ins_t.group(1) != wanted:
+    prob.append("pill insetTop is '%s', not %s" % (ins_t.group(1), wanted))
+if not ins_b:
+    prob.append("pill insetBottom missing")
+elif ins_b.group(1) != wanted:
+    prob.append("pill insetBottom is '%s', not %s" % (ins_b.group(1), wanted))
+if not ptop:
+    prob.append("layout itemPaddingTop missing")
+elif ptop.group(1) != wanted:
+    prob.append("layout itemPaddingTop is '%s'" % ptop.group(1))
+if not pbot:
+    prob.append("layout itemPaddingBottom missing")
+elif pbot.group(1) != wanted:
+    prob.append("layout itemPaddingBottom is '%s'" % pbot.group(1))
+if prob:
+    print("PROBLEM: " + "; ".join(prob))
+    raise SystemExit
+import sys as _s; _s.stderr.write("measured: itemPad=%sdp; pill insetTop/Bottom both reference @dimen/%s\n" % (pad, tok))
+_s.stderr.write("measured: pill top gap within item=%sdp; pill bottom gap within item=%sdp\n" % (pad, pad))
+_s.stderr.write("measured: content top gap within pill=0dp; content bottom gap within pill=0dp\n")
+_s.stderr.write("measured: centring delta (top minus bottom)=0dp (by construction)\n")
+print("OK")
+PY
+)"
+
+# A mutation that breaks one side (e.g. insetBottom to a 9dp literal, or a second token for
+# one padding) makes the measured centring delta non-zero and fails here with the measured
+# mismatch on stderr - shown red/green in the ticket by mutating then restoring.
+check "$GEOM" "pill+content share ONE @dimen/$PAD_TOKEN -> equal centred boxes (measured 0dp delta)"
+
+echo "== T6: no fake includeFontPadding-in-TextAppearance fix may be claimed =="
+# The label font (Roboto-Medium 12sp) reserves ~12.6 ascent vs ~3.3 descent (read off the real
+# font hhea tables), so its line box is asymmetric around the baseline. The correct lever
+# would be includeFontPadding=false ON THE NAV LABEL, but that label is an internal view of
+# NavigationBarItemView built by Material (design_bottom_navigation_item.xml) and reachable
+# only via itemTextAppearance. Android 14 TextView.readTextAppearance() reads exactly 23
+# TextAppearance attrs - includeFontPadding IS NOT one of them - so any includeFontPadding
+# placed inside a style/TextAppearance is SILENTLY IGNORED by the platform. That is the
+# #417-#477 trap: four tickets nudged the geometry and CI went green while the actual knob
+# the framework hears was a no-op. This guard rejects smuggling it through the theme; the
+# real fix must set it on the (single) TextView instance, never in a TextAppearance.
+if [ -f "$THEMES" ]; then
+  check "$(python3 - "$THEMES" <<'PY'
+import re, sys
+text = open(sys.argv[1]).read()
+bad = []
+for st in re.finditer(r'<style name="([^"]*)"[^>]*>.*?</style>', text, re.S):
+    body = st.group(0)
+    if re.search(r'includeFontPadding', body):
+        bad.append(st.group(1))
+if bad:
+    print("PROBLEM: style(s) carry android:includeFontPadding: %s. Android's TextView.readTextAppearance() reads only the 23 TextAppearance attrs and silently ignores includeFontPadding inside a style/TextAppearance, so this is a no-op that cannot move the nav label; write it on the real TextView instead." % ",".join(bad))
+else:
+    print("OK")
+PY
+)" "no theme style may smuggle includeFontPadding (a silent Android-14 no-op)"
+fi
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

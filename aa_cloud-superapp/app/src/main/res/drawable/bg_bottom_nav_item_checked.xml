@@ -24,12 +24,25 @@
      and nothing is clipped. state_checked is the only state that paints, so
      unchecked items render no background and exactly one pill is lit at a
      time. The corner radius is the same token the island itself uses, so the
-     item's semicircular ends echo the container's. -->
+     item's semicircular ends echo the container's.
+
+     #498 ONE-GEOMETRY: the pill's TOP and BOTTOM inset are BOTH bound to the
+     SAME dimen that binds the item's content padding
+     (bottom_nav_item_vertical_pad, read as BOTH app:itemPaddingTop and
+     app:itemPaddingBottom in the layout). So the pill box and the content box
+     derive from ONE declared value and their centres ARE the same by construction
+     instead of by the coincidence of two unconnected numbers (the pre-#498
+     pill inset was a literal 8dp while the content pad was 6dp — two numbers
+     that could drift apart, which is exactly what happened five tickets in a
+     row). Equal insets top and bottom = centred; one token both directions
+     = cannot drift. The pill now fills exactly the box the content already
+     occupies,so the selected item's icon+label is centred in the capsule by
+     declaration,not by luck. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_checked="true">
         <inset
-            android:insetTop="8dp"
-            android:insetBottom="8dp">
+            android:insetTop="@dimen/bottom_nav_item_vertical_pad"
+            android:insetBottom="@dimen/bottom_nav_item_vertical_pad">
             <shape android:shape="rectangle">
                 <solid android:color="?attr/colorPrimaryContainer" />
                 <corners android:radius="@dimen/bottom_nav_pill_corner_radius" />
