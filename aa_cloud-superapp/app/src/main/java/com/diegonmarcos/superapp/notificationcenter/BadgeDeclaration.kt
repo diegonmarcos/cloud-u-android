@@ -105,7 +105,7 @@ object BadgeDeclaration {
      * decision, and re-ensuring it would override the owner on every reboot.
      */
     fun restartServices(all: List<Badge>): List<String> =
-        all.filter { it.isBadge && it.persistent && it.enabled && it.service.isNotBlank() }
+        all.filter { it.isBadge && it.persistent && it.enabled && it.service.isNotBlank() && it.requires.isEmpty() }
             .map { it.service }
             .distinct()
 
