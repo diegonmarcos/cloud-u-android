@@ -728,8 +728,12 @@ private fun MessageTopBar(
  * is ever written back. The quoted thread is cut — a translation of the whole history is not what was
  * asked for, and it is what the user pays for by the token. ONE function, because the overflow's
  * named entries and the icon row under the tags both run tools and must send the same text.
+ *
+ * `internal` since #500: the message-list row's new action icons run the SAME tool over the SAME
+ * text shape, and a second copy of this flattening decision would be the thing #500 was told not
+ * to write.
  */
-private fun receivedTextToolSource(email: Email): String {
+internal fun receivedTextToolSource(email: Email): String {
     val (raw, isHtml) = bodySource(email)
     return TextToolScope.receivedScope(if (isHtml) htmlToText(raw) else raw)
 }
@@ -739,8 +743,11 @@ private fun receivedTextToolSource(email: Email): String {
  * entry so the two cannot drift apart: the extractor's confident candidate goes to the clipboard
  * with a word, and a message that offers nothing confident gets a word that says so — never a
  * low-confidence guess copied under the user's thumb.
+ *
+ * `internal` since #500: the list row's Copy Code icon calls this SAME gesture rather than a
+ * second extractor wired to a second toast.
  */
-private fun copyVerificationCodeOrSayNone(clipboard: ClipboardManager, context: Context, email: Email?) {
+internal fun copyVerificationCodeOrSayNone(clipboard: ClipboardManager, context: Context, email: Email?) {
     val code = email?.let { verificationCodeFromMessage(it) }
     if (code != null) {
         clipboard.setText(AnnotatedString(code))
@@ -768,9 +775,12 @@ private fun verificationCodeFromMessage(email: Email): String? {
  * The literal `|` that separates the reading row's icon groups (#438). A character, not a
  * `HorizontalDivider`: the ask was for a group marker between icons on one row, and a divider is
  * a full-width bar that would read as a third group of its own.
+ *
+ * `internal` since #500: the list row's new action row uses this SAME literal character, per #303
+ * — a divider View/Composable is the mistake this repo already made once.
  */
 @Composable
-private fun ReadingGroupSeparator() {
+internal fun ReadingGroupSeparator() {
     Text(
         text = "|",
         style = MaterialTheme.typography.bodyMedium,

@@ -353,7 +353,7 @@
     <string name="settings_density_spaced">Luftig</string>
     <string name="settings_preview_subject_only">Nur Betreff</string>
     <string name="settings_preview_one_line">1 Zeile</string>
-    <string name="settings_preview_three_lines">3 Zeilen</string>
+    <string name="settings_preview_three_lines">4 Zeilen</string>
     <string name="settings_preview_five_lines">5 Zeilen</string>
     <string name="settings_reading_screen_title">Lesen und Schreiben</string>
     <string name="settings_swipe_actions_section">Wischaktionen</string>

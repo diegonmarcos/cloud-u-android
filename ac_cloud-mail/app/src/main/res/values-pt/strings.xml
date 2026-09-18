@@ -353,7 +353,7 @@
     <string name="settings_density_spaced">Espaçada</string>
     <string name="settings_preview_subject_only">Apenas o assunto</string>
     <string name="settings_preview_one_line">1 linha</string>
-    <string name="settings_preview_three_lines">3 linhas</string>
+    <string name="settings_preview_three_lines">4 linhas</string>
     <string name="settings_preview_five_lines">5 linhas</string>
     <string name="settings_reading_screen_title">Leitura e escrita</string>
     <string name="settings_swipe_actions_section">Ações de deslize</string>

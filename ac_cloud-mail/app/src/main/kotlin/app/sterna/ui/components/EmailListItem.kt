@@ -17,10 +17,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
@@ -36,8 +38,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import app.sterna.core.jmap.model.EmailBodyPart
+import app.sterna.ui.message.ReadingGroupSeparator
+import app.sterna.ui.message.copyVerificationCodeOrSayNone
+import app.sterna.ui.message.receivedTextToolSource
+import app.sterna.ui.text.TextTool
+import app.sterna.ui.text.TextToolSurface
+import app.sterna.ui.text.rememberTextToolRunner
 import app.sterna.ui.theme.LocalMailListPalette
 import app.sterna.ui.theme.MailListDimens
 import app.sterna.ui.theme.MailListPalette
@@ -52,6 +61,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -60,9 +71,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import app.sterna.R
 import app.sterna.core.data.settings.ListDensity
 import app.sterna.core.jmap.model.Email
@@ -330,26 +343,29 @@ fun EmailListItem(
                         // sender and subject — a read row is grey all the way down (#472). It
                         // stays regular weight: #478 bolds the sender and subject, not the body.
                         color = listTextInk.color,
+                        // Indented and italic since #500: the preview is a QUOTE of the message,
+                        // not the row's own words, so it is set off from the sender/subject lines
+                        // the way a quotation is set off from its surrounding text.
+                        fontStyle = FontStyle.Italic,
                         maxLines = previewLines,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = 12.dp),
                     )
                 }
             }
-            // The attachment chips, LAST inside the weighted column and emitted only when there is
-            // something to draw. That placement is the whole answer to "how does row height vary":
-            // this Row has no fixed or minimum height anywhere, so its height is its content, and a
-            // message with no attachments emits NOTHING here and is exactly as tall as it was. A list
-            // where every row grew because some rows have chips would show the reader fewer messages
-            // per screen and buy them nothing.
-            if (onOpenAttachment != null && attachmentParts.isNotEmpty()) {
-                AttachmentChips(
-                    email = email,
-                    parts = attachmentParts,
-                    fill = chipBackground,
-                    openingKey = openingAttachmentKey,
-                    onOpen = onOpenAttachment,
-                )
-            }
+            // The row's third line (#500): the reader's own Resume/Copy-Code actions, one tap away
+            // without opening the message, then the SAME literal `|` the reader uses (#303 — a
+            // character, never a divider view), then the attachment chips. Reusing the reader's own
+            // declarations here — [TextTool.RESUME], [copyVerificationCodeOrSayNone],
+            // [ReadingGroupSeparator] — rather than re-declaring the icons or the tap handlers is
+            // the point: a fix or a re-wording of any of the three lands here for free.
+            ListRowActions(
+                email = email,
+                onOpenAttachment = onOpenAttachment,
+                attachmentParts = attachmentParts,
+                chipBackground = chipBackground,
+                openingAttachmentKey = openingAttachmentKey,
+            )
             originLabel?.takeIf { it.isNotBlank() }?.let { label ->
                 Spacer(Modifier.size(4.dp))
                 // Tint the chip with the account's accent when there is one; a folder has none.
@@ -518,6 +534,61 @@ private fun DraftLabel(fill: Color) {
             .background(fill)
             .padding(horizontal = 6.dp, vertical = 1.dp),
     )
+}
+
+/**
+ * The row's third line (#500): Resume Mail, Copy Code, the reader's literal `|` (#303), then the
+ * attachment chips — in that order, and no other. All three of the first icons are the READING
+ * PANE'S OWN declarations, called here rather than re-declared:
+ * - [TextTool.RESUME] is the reader's own tool entry (icon, label, and engine routing all live on
+ *   the enum in `TextToolRun.kt`); a runner is remembered here the same public way the reader
+ *   gets its own ([rememberTextToolRunner]), so a tap runs the identical summarise call.
+ * - [copyVerificationCodeOrSayNone] is the reader's ONE Copy Code gesture (#438); called with this
+ *   row's own [email] rather than duplicated so the extractor and its wording can never drift.
+ * - [ReadingGroupSeparator] is the reader's own `|` [Text], not a new one and not a divider view.
+ *
+ * The row always draws its two icons — unlike the chips, which stay silent when there is nothing
+ * to open, an icon that sometimes exists and sometimes does not is the kind of button a thumb
+ * cannot learn the position of.
+ */
+@Composable
+private fun ListRowActions(
+    email: Email,
+    onOpenAttachment: ((EmailBodyPart) -> Unit)?,
+    attachmentParts: List<EmailBodyPart>,
+    chipBackground: Color,
+    openingAttachmentKey: String?,
+) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    val resumeScope = rememberCoroutineScope()
+    val resumeRunner = rememberTextToolRunner(TextToolSurface.READ)
+    LaunchedEffect(resumeRunner.outcome) {
+        val outcome = resumeRunner.outcome ?: return@LaunchedEffect
+        Toast.makeText(context, outcome.text ?: outcome.error, Toast.LENGTH_SHORT).show()
+        resumeRunner.dismiss()
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(
+            enabled = resumeRunner.busy == null,
+            onClick = { resumeRunner.run(resumeScope, TextTool.RESUME, receivedTextToolSource(email)) },
+        ) {
+            Icon(TextTool.RESUME.icon, contentDescription = stringResource(TextTool.RESUME.label))
+        }
+        IconButton(onClick = { copyVerificationCodeOrSayNone(clipboard, context, email) }) {
+            Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.message_copy_code))
+        }
+        ReadingGroupSeparator()
+        if (onOpenAttachment != null && attachmentParts.isNotEmpty()) {
+            AttachmentChips(
+                email = email,
+                parts = attachmentParts,
+                fill = chipBackground,
+                openingKey = openingAttachmentKey,
+                onOpen = onOpenAttachment,
+            )
+        }
+    }
 }
 
     /** How many chips a row draws before it stops and says how many are left. Four files is already

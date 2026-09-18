@@ -353,7 +353,7 @@
     <string name="settings_density_spaced">Ruim</string>
     <string name="settings_preview_subject_only">Alleen onderwerp</string>
     <string name="settings_preview_one_line">1 regel</string>
-    <string name="settings_preview_three_lines">3 regels</string>
+    <string name="settings_preview_three_lines">4 regels</string>
     <string name="settings_preview_five_lines">5 regels</string>
     <string name="settings_reading_screen_title">Lezen en schrijven</string>
     <string name="settings_swipe_actions_section">Veegacties</string>

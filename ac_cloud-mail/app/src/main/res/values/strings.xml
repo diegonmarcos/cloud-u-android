@@ -655,7 +655,7 @@
     <string name="settings_density_spaced">Spaced</string>
     <string name="settings_preview_subject_only">Subject only</string>
     <string name="settings_preview_one_line">1 line</string>
-    <string name="settings_preview_three_lines">3 lines</string>
+    <string name="settings_preview_three_lines">4 lines</string>
     <string name="settings_preview_five_lines">5 lines</string>
     <string name="settings_reading_screen_title">Reading and writing</string>
     <string name="settings_message_section">Message</string>

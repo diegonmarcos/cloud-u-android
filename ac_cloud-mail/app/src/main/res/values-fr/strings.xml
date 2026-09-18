@@ -353,7 +353,7 @@
     <string name="settings_density_spaced">Aérée</string>
     <string name="settings_preview_subject_only">Objet seul</string>
     <string name="settings_preview_one_line">1 ligne</string>
-    <string name="settings_preview_three_lines">3 lignes</string>
+    <string name="settings_preview_three_lines">4 lignes</string>
     <string name="settings_preview_five_lines">5 lignes</string>
     <string name="settings_reading_screen_title">Lecture et écriture</string>
     <string name="settings_swipe_actions_section">Actions de balayage</string>

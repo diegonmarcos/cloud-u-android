@@ -20,8 +20,14 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 /** Vertical density of message-list rows. */
 enum class ListDensity { COMPACT, NORMAL, SPACED }
 
-/** How much of each message's body preview to show in the list. */
-enum class PreviewLines(val lines: Int) { NONE(0), ONE(1), THREE(3), FIVE(5) }
+/**
+ * How much of each message's body preview to show in the list.
+ *
+ * [THREE] carries 4 lines, not 3, since #500: the row's preview grew a line and the identifier
+ * stays put on purpose — it is stored by name in [SettingsRepository.setPreviewLines], and
+ * renaming it would strand every phone that already picked this option back on [ONE].
+ */
+enum class PreviewLines(val lines: Int) { NONE(0), ONE(1), THREE(4), FIVE(5) }
 
 /** An action bound to a swipe gesture on a message row. */
 enum class SwipeAction { NONE, TOGGLE_READ, DELETE, ARCHIVE, FLAG }

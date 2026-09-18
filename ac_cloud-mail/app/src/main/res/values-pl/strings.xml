@@ -353,7 +353,7 @@
     <string name="settings_density_spaced">Luźna</string>
     <string name="settings_preview_subject_only">Tylko temat</string>
     <string name="settings_preview_one_line">1 wiersz</string>
-    <string name="settings_preview_three_lines">3 wiersze</string>
+    <string name="settings_preview_three_lines">4 wiersze</string>
     <string name="settings_preview_five_lines">5 wierszy</string>
     <string name="settings_reading_screen_title">Czytanie i pisanie</string>
     <string name="settings_swipe_actions_section">Akcje przesunięcia</string>

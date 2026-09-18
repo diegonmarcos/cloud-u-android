@@ -353,7 +353,7 @@
     <string name="settings_density_spaced">Просторная</string>
     <string name="settings_preview_subject_only">Только тема</string>
     <string name="settings_preview_one_line">1 строка</string>
-    <string name="settings_preview_three_lines">3 строки</string>
+    <string name="settings_preview_three_lines">4 строки</string>
     <string name="settings_preview_five_lines">5 строк</string>
     <string name="settings_reading_screen_title">Чтение и написание</string>
     <string name="settings_swipe_actions_section">Действия смахиванием</string>
