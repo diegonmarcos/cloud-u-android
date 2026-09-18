@@ -151,7 +151,9 @@ step_build_fork() {
 
   log "build-fork: gradle assemble (${FLAVOR}Release)"
   cd "$APP_ROOT/packages/frontend/apps/android/App"
-  ./gradlew --no-daemon ":app:assemble${FLAVOR^}Release"
+  # --stacktrace: AGP 8 hides package-level failures in problems-report.html;
+  # the fleet needs the CAUSE in the log, not in a file nobody reads.
+  ./gradlew --no-daemon --stacktrace ":app:assemble${FLAVOR^}Release"
 
   APK="$(find "$APP_ROOT/packages/frontend/apps/android/App/app/build/outputs/apk/${FLAVOR}/release" -name '*.apk' | head -1)"
   [ -n "$APK" ] || die "build-fork: no APK under outputs/apk/${FLAVOR}/release"
