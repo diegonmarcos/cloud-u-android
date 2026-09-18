@@ -221,6 +221,13 @@
     <string name="message_export_eml">Сохранить как .eml</string>
     <string name="message_export_saved">Сохранено как %1$s</string>
     <string name="message_save_attachment">Сохранить вложение</string>
+    <string name="message_scan_attachment">Сканировать содержимое</string>
+    <string name="scan_contents_barcode_label">Штрихкод: </string>
+    <string name="scan_contents_failed">Не удалось прочитать это изображение.</string>
+    <string name="scan_contents_in_progress">Чтение изображения…</string>
+    <string name="scan_contents_nothing_found">В этом изображении не найдено ни штрихкода, ни читаемого текста.</string>
+    <string name="scan_contents_ocr_label">Текст: </string>
+
     <string name="message_print">Печать</string>
     <string name="message_headers_title">Заголовки письма</string>
     <string name="message_headers_empty">Нет заголовков для отображения</string>

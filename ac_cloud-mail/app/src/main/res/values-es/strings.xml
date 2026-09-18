@@ -221,6 +221,13 @@
     <string name="message_export_eml">Guardar como .eml</string>
     <string name="message_export_saved">Guardado como %1$s</string>
     <string name="message_save_attachment">Guardar adjunto</string>
+    <string name="message_scan_attachment">Escanear contenido</string>
+    <string name="scan_contents_barcode_label">Código de barras: </string>
+    <string name="scan_contents_failed">No se pudo leer esta imagen.</string>
+    <string name="scan_contents_in_progress">Leyendo esta imagen…</string>
+    <string name="scan_contents_nothing_found">No se encontraron códigos de barras ni texto legible en esta imagen.</string>
+    <string name="scan_contents_ocr_label">Texto: </string>
+
     <string name="message_print">Imprimir</string>
     <string name="message_headers_title">Encabezados del mensaje</string>
     <string name="message_headers_empty">No hay encabezados que mostrar</string>

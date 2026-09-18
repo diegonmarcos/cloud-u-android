@@ -221,6 +221,13 @@
     <string name="message_export_eml">Opslaan als .eml</string>
     <string name="message_export_saved">Opgeslagen als %1$s</string>
     <string name="message_save_attachment">Bijlage opslaan</string>
+    <string name="message_scan_attachment">Inhoud scannen</string>
+    <string name="scan_contents_barcode_label">Barcode: </string>
+    <string name="scan_contents_failed">Deze afbeelding kon niet worden gelezen.</string>
+    <string name="scan_contents_in_progress">Deze afbeelding wordt gelezen…</string>
+    <string name="scan_contents_nothing_found">In deze afbeelding zijn geen barcode of leesbare tekst gevonden.</string>
+    <string name="scan_contents_ocr_label">Tekst: </string>
+
     <string name="message_print">Afdrukken</string>
     <string name="message_headers_title">Berichtheaders</string>
     <string name="message_headers_empty">Geen headers om weer te geven</string>

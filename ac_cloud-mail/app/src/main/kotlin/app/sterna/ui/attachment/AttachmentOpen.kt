@@ -9,6 +9,7 @@ import androidx.core.content.FileProvider
 import app.sterna.R
 import app.sterna.core.data.account.AccountCredentials
 import app.sterna.core.data.mail.MailRepository
+import app.sterna.core.data.mail.requireAttachmentBytes
 import app.sterna.core.data.storage.AttachmentMime
 import app.sterna.core.data.storage.StorageRepository
 import app.sterna.core.jmap.model.EmailBodyPart
@@ -86,4 +87,29 @@ object AttachmentOpen {
         // "this wi-fi is metered" marking, which is the answer they actually want respected.
         manager.isActiveNetworkMetered
     }.getOrDefault(true)
+
+    /**
+     * Task #461 — the bytes of an image attachment, brought to the cache by the ONE
+     * cache path and returned as a [java.io.File] the caller can read from.
+     *
+     * The scan feature needs the part's bytes as a FILE only because the shared
+     * image-scan engine reads a file/bitmap, and the cache write must not grow a
+     * second home: SaveAttachmentCallSiteTest pins "MessageViewModel must not
+     * cache an attachment at all" and the open path owns that write. Same
+     * download, same SafeFileName, same cap as [openExternally]; nothing is
+     * launched and no URI is exposed. THROWS on any failure -- the caller owns
+     * how a failure is said.
+     */
+    suspend fun cacheForScan(
+        app: Application,
+        repo: MailRepository,
+        storage: StorageRepository,
+        credentials: AccountCredentials,
+        part: EmailBodyPart,
+        ownerId: String,
+    ): java.io.File {
+        val bytes = repo.downloadAttachment(credentials, part, ownerId)
+        requireAttachmentBytes(ownerId, part.partId ?: part.blobId ?: "", bytes)
+        return storage.cacheAttachment(part.name, bytes)
+    }
 }

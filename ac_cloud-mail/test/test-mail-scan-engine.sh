@@ -182,6 +182,10 @@ check("M6 scanAttachment runs off the main thread",
 check("M6 scanAttachment is guarded against re-entry",
       "scanningAttachment" in vm,
       "a second tap while a download is in flight would start the whole thing again")
+check("M6 the cache write lives in AttachmentOpen (the ONE cache path), not the VM",
+      "AttachmentOpen.cacheForScan" in vm and "cacheAttachment(" not in vm,
+      "SaveAttachmentCallSiteTest pins that MessageViewModel must not cache an attachment; "
+      "the scan must go through the open path's cache write")
 
 # ── M7: every scan outcome names itself (no silent empty box) ──
 for key in ("scan_contents_in_progress", "scan_contents_nothing_found", "scan_contents_failed",

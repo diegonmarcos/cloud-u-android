@@ -1515,9 +1515,14 @@ class MessageViewModel(application: Application) : AndroidViewModel(application)
             try {
                 val credentials = credentials()
                     ?: error(app.getString(R.string.status_no_saved_account))
-                val bytes = repo.downloadAttachment(credentials, part, ownerId)
-                requireAttachmentBytes(ownerId, part.partId ?: part.blobId ?: "", bytes)
-                val file = storage.cacheAttachment(part.name, bytes)
+                // The download, the SafeFileName cache write and the part-key
+                // guard are AttachmentOpen's: the ONE cache path. This function
+                // only RUNS the engine over the file it returns — the VM never
+                // writes an attachment itself (SaveAttachmentCallSiteTest pins
+                // exactly that).
+                val file = AttachmentOpen.cacheForScan(
+                    app, repo, storage, credentials, part, ownerId,
+                )
                 val result = withContext(Dispatchers.IO) {
                     ContentScan(scanEngine.decodeBarcode(file), scanEngine.recognizeText(file))
                 }

@@ -314,11 +314,25 @@ class SaveAttachmentCallSiteTest {
             listOf(
                 "onSaveAttachment = { part, ownerId ->",
                 "onSaveAttachment: (EmailBodyPart, String) -> Unit,",
-                "msg, full, attachmentStatus, onOpenAttachment, onSaveAttachment, calendar, onRespondToInvite,",
+                "msg, full, attachmentStatus, onOpenAttachment, onScanAttachment, onSaveAttachment, calendar, onRespondToInvite,",
                 "onSaveAttachment: (EmailBodyPart, String) -> Unit,",
                 "onSave = { part -> onSaveAttachment(part, msg.id) },",
             ),
             lines.filter { "onSaveAttachment" in it },
+        )
+        // Task #461 — the scan slot rides the SAME named-wiring chain the save one does, so a
+        // scan row cannot silently stop reaching MessageViewModel.scanAttachment.
+        assertEquals(
+            "the scan lambda must be handed down the full chain, exactly like the save one, " +
+                "and the header must pass it the message id. Lines found:",
+            listOf(
+                "onScanAttachment = viewModel::scanAttachment,",
+                "onScanAttachment: (EmailBodyPart, String) -> Unit,",
+                "msg, full, attachmentStatus, onOpenAttachment, onScanAttachment, onSaveAttachment, calendar, onRespondToInvite,",
+                "onScanAttachment: (EmailBodyPart, String) -> Unit,",
+                "onScan = { part -> onScanAttachment(part, msg.id) },",
+            ),
+            lines.filter { "onScanAttachment" in it },
         )
     }
 
