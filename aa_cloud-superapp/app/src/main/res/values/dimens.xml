@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bottom-nav pill geometry. TWO tickets own this file and it must hold both:
-     #462 contributed bottom_nav_pill_corner_radius (the ONE radius the pill
-     island and the selected-item capsule both reference, so the two pills can
-     never drift apart); #473 added bottom_nav_end_inset and
-     bottom_nav_icon_label_gap (the bar's spacing geometry). One declaration
-     each, never a literal copied into a layout or style, because a per-view
-     literal is two numbers that can drift apart (the rule #380/#381/#384/#408/#424
-     closed). -->
+<!-- Bottom-nav pill geometry. FOUR tickets own this file and it must hold
+     all of them: #462 contributed bottom_nav_pill_corner_radius (the ONE
+     radius the pill island and the selected-item capsule both reference, so
+     the two pills can never drift apart); #473 added bottom_nav_end_inset and
+     bottom_nav_icon_label_gap (the bar's spacing geometry); #477 added
+     bottom_nav_item_vertical_pad (the bar's item stack's vertical inset, read
+     as BOTH app:itemPaddingTop and app:itemPaddingBottom so the two gaps are
+     equal by declaration) and tab_strip_top_inset (the tab-strip's own top
+     breathing room above the toolbar island). One declaration each, never a
+     literal copied into a layout or style, because a per-view literal is two
+     numbers that can drift apart (the rule #380/#381/#384/#408/#424 closed). -->
 
 <resources>
     <!-- #462. The corner radius used by BOTH the bottom-nav island (the
@@ -39,4 +42,27 @@
          (Material's activeIndicatorLabelPadding, default 4dp). Bumped up a
          little so the caption breathes beneath the glyph. -->
     <dimen name="bottom_nav_icon_label_gap">8dp</dimen>
+
+    <!-- #477. The vertical inset of a bottom-nav item's icon+label stack
+         inside its slot, applied as BOTH app:itemPaddingTop and
+         app:itemPaddingBottom of the BottomNavigationView (one dimen, read
+         twice — so the gap above the stack is the gap below it by
+         declaration). Material3's stock defaults are asymmetric
+         (itemPaddingTop=4dp vs itemPaddingBottom=8dp), which is exactly the
+         defect #477 reports: the selected stack rides HIGH in the pill with
+         visibly more space below than above. Equalising the two paddings
+         centres the icon+label stack in the capsule. The value reuses the
+         same total (4+8=12dp) so the bar is no taller than before — only
+         where the stack sits changes. -->
+    <dimen name="bottom_nav_item_vertical_pad">6dp</dimen>
+
+    <!-- #477. The tab-strip's OWN top breathing room above the toolbar island
+         the app draws INTO the camera cutout. This is a base only: the real
+         clearance is added at runtime from the status-bar / display-cutout
+         inset (SectionTabsFragment reads it through an insets listener and
+         sets the strip's top margin to base + inset), because a fixed dp is
+         right at one cutout geometry and wrong at every other — the #407 rule
+         the launcher clock already follows. Declared here once so the base is
+         a single knob, never a literal in the code. -->
+    <dimen name="tab_strip_top_inset">10dp</dimen>
 </resources>

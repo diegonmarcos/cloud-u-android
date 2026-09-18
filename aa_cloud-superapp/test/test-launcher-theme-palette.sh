@@ -497,6 +497,87 @@ print('; '.join(problems) or 'OK')
 PY
 )" "both end buttons inset off the pill's semicircular ends by one dimen, gaps stay equal, icon↔label gap enlarged"
 
+echo "== T12: #477 nav geometry — one dimen each, read from a real declaration =="
+# #477. Two independent geometry defects in the nav chrome. Both are constants
+# that live in a declaration, so a static tester that reads the REAL declaration
+# is a genuine check — and this is that tester. The bottom-nav half is the
+# anti-drift rule from #380/#381/#384/#408/#424: the item's VERTICAL inset must
+# be declared ONCE (bottom_nav_item_vertical_pad) and read as BOTH
+# app:itemPaddingTop and app:itemPaddingBottom, so the gap above the
+# icon+label stack equals the gap below it BY CONSTRUCTION — Material 3's stock
+# defaults are asymmetric (itemPaddingTop=4dp, itemPaddingBottom=8dp), which is
+# exactly the "stack sits high, more space below than above" the owner reported.
+# The top-strip half is the #407 rule: the tab strip's clearance must come from
+# the real status-bar / display-cutout inset through an insets listener (not a
+# hardcoded dp), reading a declared base dimen and NOT consuming the insets.
+# A check that fails when the value is wrong must read the value — every
+# assertion below reads the file on disk, never a hardcoded expectation.
+_BOTTOM_PAD_VIOLATION=$(python3 - "$RES_LAYOUT" "$RES_DIMENS" <<'PY'
+import re, sys
+layout, dims = open(sys.argv[1], encoding='utf-8').read(), open(sys.argv[2], encoding='utf-8').read()
+problems = []
+dimval = {}
+for name, v in re.findall(r'<dimen name="([^"]+)">([^<]+)</dimen>', dims):
+    m = re.match(r'^([0-9.]+)dp$', v.strip())
+    dimval[name] = float(m.group(1)) if m else None
+for needed in ('bottom_nav_item_vertical_pad', 'tab_strip_top_inset'):
+    if needed not in dimval:
+        problems.append('%s is not declared in dimens.xml' % needed)
+    elif dimval[needed] is None:
+        problems.append('%s is not a literal dp value a static reader can check' % needed)
+# The dimen must be REAL (>0) — a 0dp/removed value is the flush regression.
+for needed in ('bottom_nav_item_vertical_pad', 'tab_strip_top_inset'):
+    if dimval.get(needed) is not None and dimval[needed] <= 0:
+        problems.append('%s is %sdp — a zero/negative inset re-introduces the defect' % (needed, dimval[needed]))
+nav = re.search(r'<com\.google\.android\.material\.bottomnavigation\.BottomNavigationView\b[^>]*/?>', layout)
+if not nav:
+    problems.append('the layout no longer contains a BottomNavigationView')
+else:
+    tag = nav.group(0)
+    def attr(name):
+        m = re.search(name + r'\s*=\s*"([^"]+)"', tag)
+        return m.group(1) if m else None
+    pt, pb = attr(r'app:itemPaddingTop'), attr(r'app:itemPaddingBottom')
+    if pt is None or pb is None:
+        problems.append('the nav has no itemPaddingTop/itemPaddingBottom — the stack keeps Material3 asymmetric defaults and sits high')
+    elif pt != pb:
+        problems.append('itemPaddingTop=%s but itemPaddingBottom=%s — the gaps differ, the stack is off-centre' % (pt, pb))
+    elif pt != '@dimen/bottom_nav_item_vertical_pad':
+        problems.append('vertical pad = %s, not @dimen/bottom_nav_item_vertical_pad' % pt)
+print('; '.join(problems) or 'OK')
+PY
+)
+check "$_BOTTOM_PAD_VIOLATION" "bottom-nav item stack centred: one dimen read as BOTH itemPaddingTop and itemPaddingBottom"
+# The TOP half: %477 strip clearance reads a REAL inset, non-consuming.
+_TOP_STRIP_VIOLATION=$(python3 - "$SRC/launcher/SectionTabsFragment.kt" <<'PY'
+import re, sys
+text = open(sys.argv[1], encoding='utf-8').read()
+code = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
+code = re.sub(r'//[^\n]*', '', code)
+problems = []
+if 'setOnApplyWindowInsetsListener' not in code:
+    problems.append('the strip installs no insets listener — its clearance cannot track the real cutout inset')
+if 'WindowInsetsCompat.Type.statusBars()' not in code and 'WindowInsetsCompat.Type.displayCutout()' not in code:
+    problems.append('the listener reads no statusBars()/displayCutout() inset — clearance is a hardcoded dp, not the #407 rule')
+if 'R.dimen.tab_strip_top_inset' not in code:
+    problems.append('the strip does not read the declared @dimen/tab_strip_top_inset base')
+# Non-consuming: the listener must return insets so the toolbar island and
+# ShellActivity's own shell listener still see the window insets (#407 contract).
+if not re.search(r'\n\s+insets\s*\n', code):
+    problems.append('the listener returns nothing / consumes the insets — siblings are starved')
+print('; '.join(problems) or 'OK')
+PY
+)
+check "$_TOP_STRIP_VIOLATION" "tab strip clears the island: declared base + a live status/cutout inset, non-consuming"
+# The consuMED-direction is the hollow twin: the inset being read is the whole
+# point, so verify the CODE shape did not regress to a bare margin literal while
+# keeping this check able to fail (mutation: remove the listener -> T12 goes red).
+if grep -qE 'topMargin *=\s*[0-9]+' "$SRC/launcher/SectionTabsFragment.kt"; then
+  bad "T12: SectionTabsFragment sets a BARE literal topMargin — the strip's clearance is a hardcoded dp again"
+else
+  ok "T12: no bare literal topMargin in the strip — its clearance comes from the inset"
+fi
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
