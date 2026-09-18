@@ -43,6 +43,20 @@ internal object ApkIntegrity {
         java.util.zip.ZipFile(file).use { it.size() > 0 }
     }.getOrDefault(false)
 
+    /** Top-level ABI directory names present under `lib/` in this APK, e.g.
+     *  ["arm64-v8a"]. Empty (never throws) for an APK with no native code —
+     *  that is not an error, it is a pure-JVM app. */
+    fun abis(file: File): List<String> = runCatching {
+        java.util.zip.ZipFile(file).use { zip ->
+            zip.entries().asSequence()
+                .mapNotNull { e -> e.name.removePrefix("lib/").takeIf { it != e.name } }
+                .map { it.substringBefore('/') }
+                .filter { it.isNotBlank() }
+                .distinct()
+                .toList()
+        }
+    }.getOrDefault(emptyList())
+
     /** Package name and versionCode read out of a candidate APK's own binary
      *  manifest, WITHOUT installing it. null when the file cannot be parsed. */
     class Identity(val pkg: String, val versionCode: Long) {

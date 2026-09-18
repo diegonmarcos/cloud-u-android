@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.appstore
 
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -171,6 +172,19 @@ class ConstellationFragment : Fragment() {
         body = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         col.addView(body)
         renderTab(ctx)
+        // THE ONLY PLACE Fleet.downgradePolicy IS EVER ASSIGNED.
+        //
+        // #496: Fleet.commit refuses a downgrade unconditionally by default —
+        // every caller that never touches this var keeps that exact
+        // behaviour (background workers, other constellation-hosting apps
+        // that never open this page). Assigning it here, scoped to exactly
+        // while this page is visible, is deliberate: a policy that shows a
+        // dialog needs a live Activity to show it on, and one that outlived
+        // this fragment would fire from a LATER background pass with no
+        // screen to draw on — see confirmDowngrade's own fail-closed note.
+        Fleet.downgradePolicy = Fleet.DowngradePolicy { app, candidateCode, installedCode ->
+            confirmDowngrade(app, candidateCode, installedCode)
+        }
         return scroll
     }
 
@@ -178,7 +192,54 @@ class ConstellationFragment : Fragment() {
     override fun onDestroyView() {
         UpdateProgress.removeObserver(progressObserver)
         progressRow = null; progressLabel = null; progressBar = null; progressCancel = null
+        // Restore the unconditional-refuse default the moment this page is
+        // no longer visible. Any downgrade a background pass hits after this
+        // must be refused, not asked — there is nothing left to ask it on.
+        Fleet.downgradePolicy = Fleet.DowngradePolicy { _, _, _ -> false }
         super.onDestroyView()
+    }
+
+    /**
+     * THE DOWNGRADE GATE'S UI, and the only place that shows one.
+     *
+     * Called on [Fleet.commit]'s caller thread — always a background
+     * `fleet-install-*`/`fleet-update-all` thread here, never main. Posts the
+     * confirmation to the main thread and BLOCKS this one on a latch until
+     * the human answers, because [Fleet.DowngradePolicy.allowDowngrade] is a
+     * synchronous question: [Fleet.commit] cannot proceed past it either way
+     * without an answer.
+     *
+     * FAIL CLOSED. If the activity is gone (the app was backgrounded or
+     * killed mid-install) there is nothing to show and nobody to ask, so this
+     * refuses rather than guessing — the same "no answer means no" the
+     * unconditional default already enforces for every other caller.
+     */
+    private fun confirmDowngrade(app: Fleet.App, candidateCode: Long, installedCode: Long): Boolean {
+        val act = activity ?: return false
+        if (!isAdded) return false
+        val latch = java.util.concurrent.CountDownLatch(1)
+        // No @Volatile needed: CountDownLatch's await()/countDown() pair
+        // already establishes happens-before, same as any other latch-guarded
+        // handoff between threads.
+        var proceed = false
+        act.runOnUiThread {
+            if (!isAdded) { latch.countDown(); return@runOnUiThread }
+            AlertDialog.Builder(act)
+                .setTitle("Downgrade — ${app.label}")
+                .setMessage(
+                    "This moves the device BACKWARDS:\n\n" +
+                    "  installed   versionCode $installedCode\n" +
+                    "  available   versionCode $candidateCode\n\n" +
+                    "The available build is OLDER than what is on this device. Proceeding " +
+                    "installs it anyway. Refusing is the safe choice and is what happens by " +
+                    "default — only continue if you mean to roll back.")
+                .setCancelable(false)
+                .setNegativeButton("Cancel (recommended)") { d, _ -> proceed = false; d.dismiss(); latch.countDown() }
+                .setPositiveButton("Install anyway") { d, _ -> proceed = true; d.dismiss(); latch.countDown() }
+                .show()
+        }
+        latch.await()
+        return proceed
     }
 
     // ── tabs: one per declared group, then Perms ─────────────────────────────
@@ -683,6 +744,12 @@ class ConstellationFragment : Fragment() {
 
         val actions = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
         actionRows[app.id] = actions
+        // #496: installed vs. available, side by side, and the downgrade
+        // gate's own preview — see ApkDetailSheet. One tap from the row a
+        // user already expanded to reach every other action here.
+        actions.addView(btn(ctx, "Details", 0xFF2A2A33.toInt()) {
+            ApkDetailSheet.show(requireActivity(), app, states[app.id])
+        })
         actions.addView(btn(ctx, "Open", 0xFF2A2A33.toInt()) { openApp(ctx, Fleet.installedId(ctx, app) ?: app.pkg) })
         if (!app.blocked) {
             val installBtn = btn(ctx, "Install / Update", 0xFF7C3AED.toInt()) { install(ctx, app) }

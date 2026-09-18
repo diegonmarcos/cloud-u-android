@@ -101,7 +101,13 @@ object Fleet {
         val bytes: Long,
     ) {
         class Installed(val versionName: String, val versionCode: Long, val sha12: String, bytes: Long = 0L) : State(bytes)
-        class UpdateAvailable(val versionName: String?, val remoteDigest12: String, bytes: Long = 0L) : State(bytes)
+        // [source] is WHICH channel answered — "release" or "ghcr" — set by
+        // [status]/[releaseStatus], the only two places that know it. A detail
+        // screen that wants to say "served by GH release" must read it from
+        // here, not re-derive it from app.releaseUrl.isNotEmpty(): that would
+        // guess the same branch [status] already took and could disagree with
+        // it the day the branching logic changes in one place and not the other.
+        class UpdateAvailable(val versionName: String?, val remoteDigest12: String, bytes: Long = 0L, val source: String) : State(bytes)
         class Missing(bytes: Long = 0L) : State(bytes)
         class Blocked : State(0L)
         class Error(val message: String) : State(0L)
@@ -214,7 +220,7 @@ object Fleet {
             if (currentSha == layer.digest)
                 State.Installed(installed.versionName, installed.versionCode, installed.sha.take(12), layer.size)
             else
-                State.UpdateAvailable(installed.versionName, remote12, layer.size)
+                State.UpdateAvailable(installed.versionName, remote12, layer.size, source = "ghcr")
         } catch (e: GhcrClient.HttpException) {
             // NOT INSTALLED IS A LOCAL FACT. Whether the registry answers has no
             // bearing on it, so a failed probe must not turn "missing" into
@@ -371,13 +377,13 @@ object Fleet {
             return if (i.sha.equals(remote, ignoreCase = true)) {
                 State.Installed(i.versionName, i.versionCode, i.sha.take(12), size)
             } else {
-                State.UpdateAvailable(i.versionName, remote.take(12), size)
+                State.UpdateAvailable(i.versionName, remote.take(12), size, source = "release")
             }
         }
         return if (i.bytes == size) {
             State.Installed(i.versionName, i.versionCode, i.sha.take(12), size)
         } else {
-            State.UpdateAvailable(i.versionName, "release", size)
+            State.UpdateAvailable(i.versionName, "release", size, source = "release")
         }
     }
 
@@ -387,7 +393,7 @@ object Fleet {
      * case the caller falls back to the size compare). Never throws: a missing
      * or malformed sidecar must degrade to the old behaviour, not to an error.
      */
-    internal fun releaseSha256(app: App): String? = runCatching {
+    fun releaseSha256(app: App): String? = runCatching {
         val c = (java.net.URL(app.abiReleaseUrl + ".sha256").openConnection()
                 as java.net.HttpURLConnection)
         c.instanceFollowRedirects = true
@@ -524,6 +530,40 @@ object Fleet {
      *  callers report it, and reporting the attempted channel instead is how
      *  a completely dead `pm install` path spent a day looking like a working
      *  one. */
+    /**
+     * Whether a candidate that would move [app] BACKWARDS may install anyway.
+     *
+     * Called synchronously from [commit], and ONLY when [VersionOrder.isDowngrade]
+     * has already said OLDER — never for SAME, NEWER, or UNKNOWN (see
+     * [VersionOrder]'s own contract on why UNKNOWN must never be treated as a
+     * downgrade). Both codes are real by the time this is asked: a call only
+     * happens once each was actually read.
+     *
+     * Runs on whatever thread [commit] runs on — every caller today is a
+     * caller-owned background thread, never the main thread. An
+     * implementation that wants to ask a human must post to the main thread
+     * and BLOCK this one until the answer lands; this interface says nothing
+     * about how, on purpose. THAT is exactly the part this module must never
+     * learn: [Fleet] is a headless engine in an ab_* shared lib, and ab_* may
+     * not import from an app or gain a View. The app that hosts Constellation
+     * supplies the how; this only supplies the question.
+     */
+    fun interface DowngradePolicy {
+        /** Return true to proceed with the downgrade anyway. */
+        fun allowDowngrade(app: App, candidateCode: Long, installedCode: Long): Boolean
+    }
+
+    /**
+     * The behaviour every caller of [commit] had before this seam existed:
+     * refuse, unconditionally. An app that never assigns this var keeps that
+     * exact behaviour with no code change and no risk — #17's guard is not
+     * weakened by this var merely existing. Only a host that explicitly opts
+     * in, by assigning a UI-backed policy from its own app module, can ever
+     * turn a downgrade into a confirmed question instead of a hard refusal.
+     */
+    @Volatile
+    var downgradePolicy: DowngradePolicy = DowngradePolicy { _, _, _ -> false }
+
     fun commit(ctx: Context, app: App, apk: VerifiedApk): String {
         // ASK THE CANDIDATE WHAT IT IS, BEFORE COMMITTING IT.
         //
@@ -551,11 +591,20 @@ object Fleet {
             Log.i(TAG, "candidate ${app.kind} ${app.id}: $identity " +
                        "(installed: ${installedCode ?: "none"}, ${apk.evidence})")
             if (VersionOrder.isDowngrade(identity.versionCode, installedCode)) {
-                apk.file.delete()   // stale: never re-offer these exact bytes
-                error("stale candidate for ${app.id}: versionCode ${identity.versionCode} is " +
-                      "OLDER than the installed $installedCode — this is a downgrade, not an " +
-                      "update. Discarded the cached artifact; the source served a build older " +
-                      "than the device has. Nothing installed")
+                // installedCode cannot be null here: isDowngrade only returns
+                // true for Order.OLDER, and VersionOrder.compare only reaches
+                // OLDER when both codes are non-null — see its own contract.
+                val allowed = downgradePolicy.allowDowngrade(app, identity.versionCode, installedCode!!)
+                if (!allowed) {
+                    apk.file.delete()   // stale: never re-offer these exact bytes
+                    error("stale candidate for ${app.id}: versionCode ${identity.versionCode} is " +
+                          "OLDER than the installed $installedCode — this is a downgrade, not an " +
+                          "update. Discarded the cached artifact; the source served a build older " +
+                          "than the device has. Nothing installed")
+                }
+                Log.w(TAG, "downgrade of ${app.id} CONFIRMED by an explicit override: candidate " +
+                           "${identity.versionCode} is older than installed $installedCode — " +
+                           "proceeding because the downgrade policy allowed it")
             }
         }
         // NAME WHAT DECLINED, AND WHY. "no install channel accepted <pkg>" was
@@ -581,6 +630,21 @@ object Fleet {
                 "to install with a confirmation dialog instead"
             else "")
     }
+
+    /**
+     * A candidate APK's real pkg/versionCode, read straight out of its own
+     * manifest WITHOUT installing it — the exact fact [commit] reads before
+     * every downgrade decision, now public so a caller can show it BEFORE
+     * committing to anything. [ApkIntegrity] itself stays internal (see its
+     * own header: it is the one place this module hashes or sanity-checks an
+     * APK); this is the narrow public door onto one of its answers.
+     */
+    data class CandidateIdentity(val pkg: String, val versionCode: Long)
+
+    /** [CandidateIdentity] for an already-downloaded, already-verified [file]
+     *  (see [download]), or null when its manifest will not parse. */
+    fun candidateIdentity(ctx: Context, file: File): CandidateIdentity? =
+        ApkIntegrity.identify(ctx, file)?.let { CandidateIdentity(it.pkg, it.versionCode) }
 
     /**
      * THE LADDER, AND WHY IT MUST NEVER BE ONE RUNG LONG.
@@ -1144,6 +1208,92 @@ object Fleet {
     }
 
     private data class Installed(val versionName: String, val versionCode: Long, val sha: String, val bytes: Long)
+
+    /**
+     * Every fact about the INSTALLED build a detail screen would want, beyond
+     * the four [installedInfo] already carries for every other caller.
+     * versionName/versionCode/sha/bytes still come from that one PackageInfo
+     * read — this layers the extra fields on top rather than reading them a
+     * second, separate way, so there remains exactly one place that decides
+     * what "installed" means.
+     */
+    data class InstalledDetails(
+        val pkg: String,
+        val versionName: String,
+        val versionCode: Long,
+        val firstInstallAtMs: Long,
+        val lastUpdateAtMs: Long,
+        val bytes: Long,
+        val sha256: String,
+        /** Hex sha256 of the signing certificate, or null when it could not
+         *  be read (no signature, or the read itself failed). */
+        val signingCertSha256: String?,
+        /** Package that installed this APK (Play Store, our own installer,
+         *  `adb`…), or null when the platform will not say. */
+        val installerPackage: String?,
+        /** ABI folders actually present under the APK's `lib/` directory,
+         *  e.g. ["arm64-v8a"]. Empty for a pure-JVM APK with no native code. */
+        val abis: List<String>,
+        val minSdk: Int,
+        val targetSdk: Int,
+    )
+
+    /** [InstalledDetails] for [app], or null when it is not on the device. */
+    fun installedDetails(ctx: Context, app: App): InstalledDetails? {
+        val pkg = installedId(ctx, app) ?: return null
+        return try {
+            @Suppress("DEPRECATION")
+            val pi = ctx.packageManager.getPackageInfo(pkg, signingFlags())
+            val ai = pi.applicationInfo ?: return null
+            val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) pi.longVersionCode
+                       else @Suppress("DEPRECATION") pi.versionCode.toLong()
+            val file = ai.sourceDir?.let { File(it) }
+            InstalledDetails(
+                pkg = pkg,
+                versionName = pi.versionName ?: "—",
+                versionCode = code,
+                firstInstallAtMs = pi.firstInstallTime,
+                lastUpdateAtMs = pi.lastUpdateTime,
+                bytes = file?.length() ?: 0L,
+                sha256 = file?.let { ApkIntegrity.sha256(it) } ?: "",
+                signingCertSha256 = signingCertSha256(pi),
+                installerPackage = installerPackage(ctx, pkg),
+                abis = file?.let { ApkIntegrity.abis(it) } ?: emptyList(),
+                // Public since API 24; this module's minSdk is 26, so no
+                // version gate is needed to reach it safely.
+                minSdk = ai.minSdkVersion,
+                targetSdk = ai.targetSdkVersion,
+            )
+        } catch (_: PackageManager.NameNotFoundException) {
+            null
+        }
+    }
+
+    private fun signingFlags(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES
+        else @Suppress("DEPRECATION") PackageManager.GET_SIGNATURES
+
+    /** Hex sha256 of the current signing certificate, however this platform
+     *  version makes it available. Null rather than thrown: a detail screen
+     *  losing one field must not lose the rest of it. */
+    private fun signingCertSha256(pi: android.content.pm.PackageInfo): String? = runCatching {
+        val cert = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val info = pi.signingInfo ?: return null
+            (if (info.hasMultipleSigners()) info.apkContentsSigners else info.signingCertificateHistory)
+                ?.firstOrNull()
+        } else {
+            @Suppress("DEPRECATION") pi.signatures?.firstOrNull()
+        } ?: return null
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        md.digest(cert.toByteArray()).joinToString("") { "%02x".format(it) }
+    }.getOrNull()
+
+    /** Package that installed [pkg], or null when the platform will not say. */
+    private fun installerPackage(ctx: Context, pkg: String): String? = runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+            ctx.packageManager.getInstallSourceInfo(pkg).installingPackageName
+        else @Suppress("DEPRECATION") ctx.packageManager.getInstallerPackageName(pkg)
+    }.getOrNull()
 
     /** The package actually on the device for this app — pkg if present, else
      *  the stock upstream altId. null when neither is installed. Used by the UI
