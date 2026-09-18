@@ -1,0 +1,679 @@
+affine_mobile_native v0.0.0 (/home/appuser/git/_work/469/cloud-u-android/ac_cloud-affine/packages/frontend/mobile-native)
+├── affine_nbstore v0.0.0 (/home/appuser/git/_work/469/cloud-u-android/ac_cloud-affine/packages/frontend/native/nbstore)
+│   ├── affine_doc_loader v0.1.8
+│   │   ├── chrono v0.4.45
+│   │   │   ├── iana-time-zone v0.1.65
+│   │   │   ├── num-traits v0.2.19
+│   │   │   │   └── libm v0.2.16
+│   │   │   │   [build-dependencies]
+│   │   │   │   └── autocfg v1.5.1
+│   │   │   └── serde v1.0.229
+│   │   │       ├── serde_core v1.0.229
+│   │   │       └── serde_derive v1.0.229 (proc-macro)
+│   │   │           ├── proc-macro2 v1.0.107
+│   │   │           │   └── unicode-ident v1.0.26
+│   │   │           ├── quote v1.0.47
+│   │   │           │   └── proc-macro2 v1.0.107 (*)
+│   │   │           └── syn v3.0.6
+│   │   │               ├── proc-macro2 v1.0.107 (*)
+│   │   │               ├── quote v1.0.47 (*)
+│   │   │               └── unicode-ident v1.0.26
+│   │   ├── nanoid v0.5.0
+│   │   │   └── rand v0.9.5
+│   │   │       ├── rand_chacha v0.9.0
+│   │   │       │   ├── ppv-lite86 v0.2.21
+│   │   │       │   │   └── zerocopy v0.8.57
+│   │   │       │   └── rand_core v0.9.5
+│   │   │       │       └── getrandom v0.3.4
+│   │   │       │           ├── cfg-if v1.0.5
+│   │   │       │           └── libc v0.2.189
+│   │   │       └── rand_core v0.9.5 (*)
+│   │   ├── pulldown-cmark v0.13.4
+│   │   │   ├── bitflags v2.13.2
+│   │   │   ├── getopts v0.2.24
+│   │   │   │   └── unicode-width v0.2.2
+│   │   │   ├── memchr v2.8.3
+│   │   │   ├── pulldown-cmark-escape v0.11.0
+│   │   │   └── unicase v2.9.0
+│   │   ├── serde v1.0.229 (*)
+│   │   ├── serde_json v1.0.151
+│   │   │   ├── itoa v1.0.18
+│   │   │   ├── memchr v2.8.3
+│   │   │   ├── serde_core v1.0.229
+│   │   │   └── zmij v1.0.23
+│   │   ├── sha2 v0.11.0
+│   │   │   ├── cfg-if v1.0.5
+│   │   │   ├── cpufeatures v0.3.1
+│   │   │   │   └── libc v0.2.189
+│   │   │   └── digest v0.11.3
+│   │   │       ├── block-buffer v0.12.1
+│   │   │       │   └── hybrid-array v0.4.15
+│   │   │       │       └── typenum v1.20.1
+│   │   │       ├── const-oid v0.10.2
+│   │   │       └── crypto-common v0.2.2
+│   │   │           └── hybrid-array v0.4.15 (*)
+│   │   ├── thiserror v2.0.20
+│   │   │   └── thiserror-impl v2.0.20 (proc-macro)
+│   │   │       ├── proc-macro2 v1.0.107 (*)
+│   │   │       ├── quote v1.0.47 (*)
+│   │   │       └── syn v3.0.6 (*)
+│   │   └── y-octo v0.1.0
+│   │       ├── ahash v0.8.12
+│   │       │   ├── cfg-if v1.0.5
+│   │       │   ├── getrandom v0.3.4 (*)
+│   │       │   ├── once_cell v1.21.4
+│   │       │   └── zerocopy v0.8.57
+│   │       │   [build-dependencies]
+│   │       │   └── version_check v0.9.5
+│   │       ├── byteorder v1.5.0
+│   │       ├── log v0.4.34
+│   │       ├── nanoid v0.5.0 (*)
+│   │       ├── nom v8.0.0
+│   │       │   └── memchr v2.8.3
+│   │       ├── ordered-float v5.5.0
+│   │       │   └── num-traits v0.2.19 (*)
+│   │       ├── rand v0.10.2
+│   │       │   ├── chacha20 v0.10.2
+│   │       │   │   ├── cfg-if v1.0.5
+│   │       │   │   └── rand_core v0.10.1
+│   │       │   ├── getrandom v0.4.3
+│   │       │   │   ├── cfg-if v1.0.5
+│   │       │   │   ├── libc v0.2.189
+│   │       │   │   └── rand_core v0.10.1
+│   │       │   └── rand_core v0.10.1
+│   │       ├── rand_distr v0.6.0
+│   │       │   ├── num-traits v0.2.19 (*)
+│   │       │   └── rand v0.10.2 (*)
+│   │       ├── serde v1.0.229 (*)
+│   │       ├── serde_json v1.0.151 (*)
+│   │       ├── smol_str v0.3.6
+│   │       │   └── serde_core v1.0.229
+│   │       └── thiserror v2.0.20 (*)
+│   ├── affine_schema v0.0.0 (/home/appuser/git/_work/469/cloud-u-android/ac_cloud-affine/packages/frontend/native/schema)
+│   │   └── sqlx v0.8.6
+│   │       ├── sqlx-core v0.8.6
+│   │       │   ├── base64 v0.22.1
+│   │       │   ├── bytes v1.12.1
+│   │       │   ├── chrono v0.4.45 (*)
+│   │       │   ├── crc v3.4.0
+│   │       │   │   └── crc-catalog v2.5.0
+│   │       │   ├── crossbeam-queue v0.3.14
+│   │       │   │   └── crossbeam-utils v0.8.23
+│   │       │   ├── either v1.18.0
+│   │       │   │   └── serde v1.0.229 (*)
+│   │       │   ├── event-listener v5.4.2
+│   │       │   │   ├── parking v2.2.1
+│   │       │   │   └── pin-project-lite v0.2.17
+│   │       │   ├── futures-core v0.3.34
+│   │       │   ├── futures-intrusive v0.5.0
+│   │       │   │   ├── futures-core v0.3.34
+│   │       │   │   ├── lock_api v0.4.14
+│   │       │   │   │   └── scopeguard v1.2.0
+│   │       │   │   └── parking_lot v0.12.5
+│   │       │   │       ├── lock_api v0.4.14 (*)
+│   │       │   │       └── parking_lot_core v0.9.12
+│   │       │   │           ├── cfg-if v1.0.5
+│   │       │   │           ├── libc v0.2.189
+│   │       │   │           └── smallvec v1.16.1
+│   │       │   ├── futures-io v0.3.34
+│   │       │   ├── futures-util v0.3.34
+│   │       │   │   ├── futures-channel v0.3.34
+│   │       │   │   │   ├── futures-core v0.3.34
+│   │       │   │   │   └── futures-sink v0.3.34
+│   │       │   │   ├── futures-core v0.3.34
+│   │       │   │   ├── futures-io v0.3.34
+│   │       │   │   ├── futures-macro v0.3.34 (proc-macro)
+│   │       │   │   │   ├── proc-macro2 v1.0.107 (*)
+│   │       │   │   │   ├── quote v1.0.47 (*)
+│   │       │   │   │   └── syn v3.0.6 (*)
+│   │       │   │   ├── futures-sink v0.3.34
+│   │       │   │   ├── futures-task v0.3.34
+│   │       │   │   ├── memchr v2.8.3
+│   │       │   │   ├── pin-project-lite v0.2.17
+│   │       │   │   └── slab v0.4.12
+│   │       │   ├── hashbrown v0.15.5
+│   │       │   │   ├── allocator-api2 v0.2.21
+│   │       │   │   ├── equivalent v1.0.2
+│   │       │   │   └── foldhash v0.1.5
+│   │       │   ├── hashlink v0.10.0
+│   │       │   │   └── hashbrown v0.15.5 (*)
+│   │       │   ├── indexmap v2.14.2
+│   │       │   │   ├── equivalent v1.0.2
+│   │       │   │   └── hashbrown v0.17.1
+│   │       │   ├── log v0.4.34
+│   │       │   ├── memchr v2.8.3
+│   │       │   ├── once_cell v1.21.4
+│   │       │   ├── percent-encoding v2.3.2
+│   │       │   ├── serde v1.0.229 (*)
+│   │       │   ├── sha2 v0.10.9
+│   │       │   │   ├── cfg-if v1.0.5
+│   │       │   │   ├── cpufeatures v0.2.17
+│   │       │   │   │   └── libc v0.2.189
+│   │       │   │   └── digest v0.10.7
+│   │       │   │       ├── block-buffer v0.10.4
+│   │       │   │       │   └── generic-array v0.14.7
+│   │       │   │       │       └── typenum v1.20.1
+│   │       │   │       │       [build-dependencies]
+│   │       │   │       │       └── version_check v0.9.5
+│   │       │   │       └── crypto-common v0.1.7
+│   │       │   │           ├── generic-array v0.14.7 (*)
+│   │       │   │           └── typenum v1.20.1
+│   │       │   ├── smallvec v1.16.1
+│   │       │   ├── thiserror v2.0.20 (*)
+│   │       │   ├── tokio v1.53.1
+│   │       │   │   ├── bytes v1.12.1
+│   │       │   │   ├── libc v0.2.189
+│   │       │   │   ├── mio v1.2.3
+│   │       │   │   │   └── libc v0.2.189
+│   │       │   │   ├── parking_lot v0.12.5 (*)
+│   │       │   │   ├── pin-project-lite v0.2.17
+│   │       │   │   ├── signal-hook-registry v1.4.8
+│   │       │   │   │   ├── errno v0.3.14
+│   │       │   │   │   │   └── libc v0.2.189
+│   │       │   │   │   └── libc v0.2.189
+│   │       │   │   ├── socket2 v0.6.5
+│   │       │   │   │   └── libc v0.2.189
+│   │       │   │   └── tokio-macros v2.7.2 (proc-macro)
+│   │       │   │       ├── proc-macro2 v1.0.107 (*)
+│   │       │   │       ├── quote v1.0.47 (*)
+│   │       │   │       └── syn v3.0.6 (*)
+│   │       │   ├── tokio-stream v0.1.19
+│   │       │   │   ├── futures-core v0.3.34
+│   │       │   │   ├── pin-project-lite v0.2.17
+│   │       │   │   └── tokio v1.53.1 (*)
+│   │       │   ├── tracing v0.1.44
+│   │       │   │   ├── log v0.4.34
+│   │       │   │   ├── pin-project-lite v0.2.17
+│   │       │   │   ├── tracing-attributes v0.1.31 (proc-macro)
+│   │       │   │   │   ├── proc-macro2 v1.0.107 (*)
+│   │       │   │   │   ├── quote v1.0.47 (*)
+│   │       │   │   │   └── syn v2.0.119
+│   │       │   │   │       ├── proc-macro2 v1.0.107 (*)
+│   │       │   │   │       ├── quote v1.0.47 (*)
+│   │       │   │   │       └── unicode-ident v1.0.26
+│   │       │   │   └── tracing-core v0.1.36
+│   │       │   │       └── once_cell v1.21.4
+│   │       │   └── url v2.5.8
+│   │       │       ├── form_urlencoded v1.2.2
+│   │       │       │   └── percent-encoding v2.3.2
+│   │       │       ├── idna v1.1.0
+│   │       │       │   ├── idna_adapter v1.2.2
+│   │       │       │   │   ├── icu_normalizer v2.3.0
+│   │       │       │   │   │   ├── icu_collections v2.3.0
+│   │       │       │   │   │   │   ├── displaydoc v0.2.7 (proc-macro)
+│   │       │       │   │   │   │   │   ├── proc-macro2 v1.0.107 (*)
+│   │       │       │   │   │   │   │   ├── quote v1.0.47 (*)
+│   │       │       │   │   │   │   │   └── syn v3.0.6 (*)
+│   │       │       │   │   │   │   ├── potential_utf v0.1.6
+│   │       │       │   │   │   │   │   └── zerovec v0.11.8
+│   │       │       │   │   │   │   │       ├── yoke v0.8.3
+│   │       │       │   │   │   │   │       │   ├── stable_deref_trait v1.2.1
+│   │       │       │   │   │   │   │       │   ├── yoke-derive v0.8.3 (proc-macro)
+│   │       │       │   │   │   │   │       │   │   ├── proc-macro2 v1.0.107 (*)
+│   │       │       │   │   │   │   │       │   │   ├── quote v1.0.47 (*)
+│   │       │       │   │   │   │   │       │   │   ├── syn v3.0.6 (*)
+│   │       │       │   │   │   │   │       │   │   └── synstructure v0.14.0
+│   │       │       │   │   │   │   │       │   │       ├── proc-macro2 v1.0.107 (*)
+│   │       │       │   │   │   │   │       │   │       ├── quote v1.0.47 (*)
+│   │       │       │   │   │   │   │       │   │       └── syn v3.0.6 (*)
+│   │       │       │   │   │   │   │       │   └── zerofrom v0.1.8
+│   │       │       │   │   │   │   │       │       └── zerofrom-derive v0.1.8 (proc-macro)
+│   │       │       │   │   │   │   │       │           ├── proc-macro2 v1.0.107 (*)
+│   │       │       │   │   │   │   │       │           ├── quote v1.0.47 (*)
+│   │       │       │   │   │   │   │       │           ├── syn v3.0.6 (*)
+│   │       │       │   │   │   │   │       │           └── synstructure v0.14.0 (*)
+│   │       │       │   │   │   │   │       ├── zerofrom v0.1.8 (*)
+│   │       │       │   │   │   │   │       └── zerovec-derive v0.11.6 (proc-macro)
+│   │       │       │   │   │   │   │           ├── proc-macro2 v1.0.107 (*)
+│   │       │       │   │   │   │   │           ├── quote v1.0.47 (*)
+│   │       │       │   │   │   │   │           └── syn v3.0.6 (*)
+│   │       │       │   │   │   │   ├── utf8_iter v1.0.4
+│   │       │       │   │   │   │   ├── yoke v0.8.3 (*)
+│   │       │       │   │   │   │   ├── zerofrom v0.1.8 (*)
+│   │       │       │   │   │   │   └── zerovec v0.11.8 (*)
+│   │       │       │   │   │   ├── icu_normalizer_data v2.3.0
+│   │       │       │   │   │   ├── icu_provider v2.3.1
+│   │       │       │   │   │   │   ├── displaydoc v0.2.7 (proc-macro) (*)
+│   │       │       │   │   │   │   ├── icu_locale_core v2.3.0
+│   │       │       │   │   │   │   │   ├── displaydoc v0.2.7 (proc-macro) (*)
+│   │       │       │   │   │   │   │   ├── litemap v0.8.3
+│   │       │       │   │   │   │   │   ├── tinystr v0.8.4
+│   │       │       │   │   │   │   │   │   ├── displaydoc v0.2.7 (proc-macro) (*)
+│   │       │       │   │   │   │   │   │   └── zerovec v0.11.8 (*)
+│   │       │       │   │   │   │   │   ├── writeable v0.6.4
+│   │       │       │   │   │   │   │   └── zerovec v0.11.8 (*)
+│   │       │       │   │   │   │   ├── writeable v0.6.4
+│   │       │       │   │   │   │   ├── yoke v0.8.3 (*)
+│   │       │       │   │   │   │   ├── zerofrom v0.1.8 (*)
+│   │       │       │   │   │   │   ├── zerotrie v0.2.5
+│   │       │       │   │   │   │   │   ├── displaydoc v0.2.7 (proc-macro) (*)
+│   │       │       │   │   │   │   │   ├── yoke v0.8.3 (*)
+│   │       │       │   │   │   │   │   └── zerofrom v0.1.8 (*)
+│   │       │       │   │   │   │   └── zerovec v0.11.8 (*)
+│   │       │       │   │   │   ├── smallvec v1.16.1
+│   │       │       │   │   │   └── zerovec v0.11.8 (*)
+│   │       │       │   │   └── icu_properties v2.3.0
+│   │       │       │   │       ├── displaydoc v0.2.7 (proc-macro) (*)
+│   │       │       │   │       ├── icu_collections v2.3.0 (*)
+│   │       │       │   │       ├── icu_locale_core v2.3.0 (*)
+│   │       │       │   │       ├── icu_properties_data v2.3.0
+│   │       │       │   │       ├── icu_provider v2.3.1 (*)
+│   │       │       │   │       ├── zerotrie v0.2.5 (*)
+│   │       │       │   │       └── zerovec v0.11.8 (*)
+│   │       │       │   ├── smallvec v1.16.1
+│   │       │       │   └── utf8_iter v1.0.4
+│   │       │       └── percent-encoding v2.3.2
+│   │       ├── sqlx-macros v0.8.6 (proc-macro)
+│   │       │   ├── proc-macro2 v1.0.107 (*)
+│   │       │   ├── quote v1.0.47 (*)
+│   │       │   ├── sqlx-core v0.8.6
+│   │       │   │   ├── base64 v0.22.1
+│   │       │   │   ├── bytes v1.12.1
+│   │       │   │   ├── chrono v0.4.45
+│   │       │   │   │   ├── iana-time-zone v0.1.65
+│   │       │   │   │   └── num-traits v0.2.19
+│   │       │   │   │       [build-dependencies]
+│   │       │   │   │       └── autocfg v1.5.1
+│   │       │   │   ├── crc v3.4.0 (*)
+│   │       │   │   ├── crossbeam-queue v0.3.14 (*)
+│   │       │   │   ├── either v1.18.0 (*)
+│   │       │   │   ├── event-listener v5.4.2 (*)
+│   │       │   │   ├── futures-core v0.3.34
+│   │       │   │   ├── futures-intrusive v0.5.0 (*)
+│   │       │   │   ├── futures-io v0.3.34
+│   │       │   │   ├── futures-util v0.3.34
+│   │       │   │   │   ├── futures-core v0.3.34
+│   │       │   │   │   ├── futures-io v0.3.34
+│   │       │   │   │   ├── futures-sink v0.3.34
+│   │       │   │   │   ├── futures-task v0.3.34
+│   │       │   │   │   ├── memchr v2.8.3
+│   │       │   │   │   ├── pin-project-lite v0.2.17
+│   │       │   │   │   └── slab v0.4.12
+│   │       │   │   ├── hashbrown v0.15.5 (*)
+│   │       │   │   ├── hashlink v0.10.0 (*)
+│   │       │   │   ├── indexmap v2.14.2 (*)
+│   │       │   │   ├── log v0.4.34
+│   │       │   │   ├── memchr v2.8.3
+│   │       │   │   ├── once_cell v1.21.4
+│   │       │   │   ├── percent-encoding v2.3.2
+│   │       │   │   ├── serde v1.0.229 (*)
+│   │       │   │   ├── sha2 v0.10.9 (*)
+│   │       │   │   ├── smallvec v1.16.1
+│   │       │   │   ├── thiserror v2.0.20 (*)
+│   │       │   │   ├── tokio v1.53.1 (*)
+│   │       │   │   ├── tokio-stream v0.1.19 (*)
+│   │       │   │   ├── tracing v0.1.44 (*)
+│   │       │   │   └── url v2.5.8 (*)
+│   │       │   ├── sqlx-macros-core v0.8.6
+│   │       │   │   ├── dotenvy v0.15.7
+│   │       │   │   ├── either v1.18.0 (*)
+│   │       │   │   ├── heck v0.5.0
+│   │       │   │   ├── hex v0.4.3
+│   │       │   │   ├── once_cell v1.21.4
+│   │       │   │   ├── proc-macro2 v1.0.107 (*)
+│   │       │   │   ├── quote v1.0.47 (*)
+│   │       │   │   ├── serde v1.0.229 (*)
+│   │       │   │   ├── serde_json v1.0.151 (*)
+│   │       │   │   ├── sha2 v0.10.9 (*)
+│   │       │   │   ├── sqlx-core v0.8.6 (*)
+│   │       │   │   ├── sqlx-sqlite v0.8.6
+│   │       │   │   │   ├── atoi v2.0.0
+│   │       │   │   │   │   └── num-traits v0.2.19 (*)
+│   │       │   │   │   ├── chrono v0.4.45 (*)
+│   │       │   │   │   ├── flume v0.11.1
+│   │       │   │   │   │   ├── futures-core v0.3.34
+│   │       │   │   │   │   ├── futures-sink v0.3.34
+│   │       │   │   │   │   └── spin v0.9.9
+│   │       │   │   │   │       └── lock_api v0.4.14 (*)
+│   │       │   │   │   ├── futures-channel v0.3.34 (*)
+│   │       │   │   │   ├── futures-core v0.3.34
+│   │       │   │   │   ├── futures-executor v0.3.34
+│   │       │   │   │   │   ├── futures-core v0.3.34
+│   │       │   │   │   │   ├── futures-task v0.3.34
+│   │       │   │   │   │   └── futures-util v0.3.34 (*)
+│   │       │   │   │   ├── futures-intrusive v0.5.0 (*)
+│   │       │   │   │   ├── futures-util v0.3.34 (*)
+│   │       │   │   │   ├── libsqlite3-sys v0.30.1
+│   │       │   │   │   │   [build-dependencies]
+│   │       │   │   │   │   ├── cc v1.4.6
+│   │       │   │   │   │   │   ├── find-msvc-tools v0.1.12
+│   │       │   │   │   │   │   ├── jobserver v0.1.35
+│   │       │   │   │   │   │   │   └── libc v0.2.189
+│   │       │   │   │   │   │   ├── libc v0.2.189
+│   │       │   │   │   │   │   └── shlex v2.0.1
+│   │       │   │   │   │   ├── pkg-config v0.3.34
+│   │       │   │   │   │   └── vcpkg v0.2.15
+│   │       │   │   │   ├── log v0.4.34
+│   │       │   │   │   ├── percent-encoding v2.3.2
+│   │       │   │   │   ├── serde v1.0.229 (*)
+│   │       │   │   │   ├── serde_urlencoded v0.7.1
+│   │       │   │   │   │   ├── form_urlencoded v1.2.2 (*)
+│   │       │   │   │   │   ├── itoa v1.0.18
+│   │       │   │   │   │   ├── ryu v1.0.23
+│   │       │   │   │   │   └── serde v1.0.229 (*)
+│   │       │   │   │   ├── sqlx-core v0.8.6 (*)
+│   │       │   │   │   ├── thiserror v2.0.20 (*)
+│   │       │   │   │   ├── tracing v0.1.44 (*)
+│   │       │   │   │   └── url v2.5.8 (*)
+│   │       │   │   ├── syn v2.0.119 (*)
+│   │       │   │   ├── tokio v1.53.1 (*)
+│   │       │   │   └── url v2.5.8 (*)
+│   │       │   └── syn v2.0.119 (*)
+│   │       └── sqlx-sqlite v0.8.6
+│   │           ├── atoi v2.0.0 (*)
+│   │           ├── chrono v0.4.45 (*)
+│   │           ├── flume v0.11.1 (*)
+│   │           ├── futures-channel v0.3.34 (*)
+│   │           ├── futures-core v0.3.34
+│   │           ├── futures-executor v0.3.34 (*)
+│   │           ├── futures-intrusive v0.5.0 (*)
+│   │           ├── futures-util v0.3.34 (*)
+│   │           ├── libsqlite3-sys v0.30.1 (*)
+│   │           ├── log v0.4.34
+│   │           ├── percent-encoding v2.3.2
+│   │           ├── serde_urlencoded v0.7.1 (*)
+│   │           ├── sqlx-core v0.8.6 (*)
+│   │           ├── thiserror v2.0.20 (*)
+│   │           ├── tracing v0.1.44 (*)
+│   │           └── url v2.5.8 (*)
+│   ├── anyhow v1.0.104
+│   ├── bincode v2.0.1
+│   │   ├── bincode_derive v2.0.1 (proc-macro)
+│   │   │   └── virtue v0.0.18
+│   │   ├── serde v1.0.229 (*)
+│   │   └── unty v0.0.4
+│   ├── chrono v0.4.45 (*)
+│   ├── memory-indexer v0.4.0
+│   │   ├── bincode v2.0.1 (*)
+│   │   ├── crc32fast v1.5.2
+│   │   │   └── cfg-if v1.0.5
+│   │   ├── jieba-rs v0.8.1
+│   │   │   ├── cedarwood v0.4.6
+│   │   │   │   └── smallvec v1.16.1
+│   │   │   ├── include-flate v0.3.4
+│   │   │   │   ├── include-flate-codegen v0.3.4 (proc-macro)
+│   │   │   │   │   ├── include-flate-compress v0.3.4
+│   │   │   │   │   │   ├── libflate v2.3.2
+│   │   │   │   │   │   │   ├── adler32 v1.2.0
+│   │   │   │   │   │   │   ├── crc32fast v1.5.2
+│   │   │   │   │   │   │   │   └── cfg-if v1.0.5
+│   │   │   │   │   │   │   ├── dary_heap v0.3.9
+│   │   │   │   │   │   │   ├── libflate_lz77 v2.3.0
+│   │   │   │   │   │   │   │   ├── hashbrown v0.16.1
+│   │   │   │   │   │   │   │   │   ├── allocator-api2 v0.2.21
+│   │   │   │   │   │   │   │   │   ├── equivalent v1.0.2
+│   │   │   │   │   │   │   │   │   └── foldhash v0.2.0
+│   │   │   │   │   │   │   │   ├── no_std_io2 v0.9.4
+│   │   │   │   │   │   │   │   │   └── memchr v2.8.3
+│   │   │   │   │   │   │   │   └── rle-decode-fast v1.0.3
+│   │   │   │   │   │   │   └── no_std_io2 v0.9.4 (*)
+│   │   │   │   │   │   └── zstd v0.13.3
+│   │   │   │   │   │       └── zstd-safe v7.3.0
+│   │   │   │   │   │           └── zstd-sys v2.1.0+zstd.1.5.7
+│   │   │   │   │   │               [build-dependencies]
+│   │   │   │   │   │               ├── cc v1.4.6 (*)
+│   │   │   │   │   │               └── pkg-config v0.3.34
+│   │   │   │   │   ├── proc-macro-error3 v3.1.1
+│   │   │   │   │   │   ├── proc-macro-error-attr3 v3.1.1 (proc-macro)
+│   │   │   │   │   │   │   ├── proc-macro2 v1.0.107 (*)
+│   │   │   │   │   │   │   └── quote v1.0.47 (*)
+│   │   │   │   │   │   ├── proc-macro2 v1.0.107 (*)
+│   │   │   │   │   │   ├── quote v1.0.47 (*)
+│   │   │   │   │   │   └── syn v3.0.6 (*)
+│   │   │   │   │   ├── proc-macro2 v1.0.107 (*)
+│   │   │   │   │   ├── quote v1.0.47 (*)
+│   │   │   │   │   └── syn v2.0.119 (*)
+│   │   │   │   └── include-flate-compress v0.3.4 (*)
+│   │   │   ├── jieba-macros v0.8.1 (proc-macro)
+│   │   │   │   └── phf_codegen v0.13.1
+│   │   │   │       ├── phf_generator v0.13.1
+│   │   │   │       │   ├── fastrand v2.5.0
+│   │   │   │       │   └── phf_shared v0.13.1
+│   │   │   │       │       └── siphasher v1.0.3
+│   │   │   │       └── phf_shared v0.13.1 (*)
+│   │   │   ├── phf v0.13.1
+│   │   │   │   └── phf_shared v0.13.1
+│   │   │   │       └── siphasher v1.0.3
+│   │   │   ├── regex v1.13.1
+│   │   │   │   ├── aho-corasick v1.1.5
+│   │   │   │   │   └── memchr v2.8.3
+│   │   │   │   ├── memchr v2.8.3
+│   │   │   │   ├── regex-automata v0.4.18
+│   │   │   │   │   ├── aho-corasick v1.1.5 (*)
+│   │   │   │   │   ├── memchr v2.8.3
+│   │   │   │   │   └── regex-syntax v0.8.11
+│   │   │   │   └── regex-syntax v0.8.11
+│   │   │   └── rustc-hash v2.1.3
+│   │   ├── once_cell v1.21.4
+│   │   ├── pinyin v0.11.0
+│   │   ├── roaring v0.11.5
+│   │   │   ├── bytemuck v1.25.2
+│   │   │   ├── byteorder v1.5.0
+│   │   │   └── serde v1.0.229 (*)
+│   │   ├── serde v1.0.229 (*)
+│   │   ├── serde_json v1.0.151 (*)
+│   │   ├── sha2 v0.10.9 (*)
+│   │   ├── smol_str v0.3.6 (*)
+│   │   ├── strsim v0.11.1
+│   │   ├── unicode-normalization v0.1.25
+│   │   │   └── tinyvec v1.13.3
+│   │   ├── unicode-script v0.5.8
+│   │   └── zstd v0.13.3 (*)
+│   ├── napi v3.12.6
+│   │   ├── anyhow v1.0.104
+│   │   ├── bitflags v2.13.2
+│   │   ├── chrono v0.4.45 (*)
+│   │   ├── ctor v1.0.13
+│   │   ├── futures v0.3.34
+│   │   │   ├── futures-channel v0.3.34 (*)
+│   │   │   ├── futures-core v0.3.34
+│   │   │   ├── futures-executor v0.3.34 (*)
+│   │   │   ├── futures-io v0.3.34
+│   │   │   ├── futures-sink v0.3.34
+│   │   │   ├── futures-task v0.3.34
+│   │   │   └── futures-util v0.3.34 (*)
+│   │   ├── libc v0.2.189
+│   │   ├── napi-sys v3.3.1
+│   │   │   └── libloading v0.9.0
+│   │   │       └── cfg-if v1.0.5
+│   │   ├── nohash-hasher v0.2.0
+│   │   ├── rustc-hash v2.1.3
+│   │   ├── serde v1.0.229 (*)
+│   │   └── tokio v1.53.1 (*)
+│   │   [build-dependencies]
+│   │   └── napi-build v2.4.3
+│   ├── napi-derive v3.6.7 (proc-macro)
+│   │   ├── convert_case v0.12.0
+│   │   │   └── unicode-segmentation v1.13.3
+│   │   ├── ctor v1.0.13
+│   │   ├── napi-derive-backend v6.1.3
+│   │   │   ├── convert_case v0.12.0 (*)
+│   │   │   ├── proc-macro2 v1.0.107 (*)
+│   │   │   ├── quote v1.0.47 (*)
+│   │   │   ├── semver v1.0.28
+│   │   │   │   └── serde_core v1.0.229
+│   │   │   └── syn v2.0.119 (*)
+│   │   ├── proc-macro2 v1.0.107 (*)
+│   │   ├── quote v1.0.47 (*)
+│   │   └── syn v2.0.119 (*)
+│   ├── serde v1.0.229 (*)
+│   ├── sqlx v0.8.6 (*)
+│   ├── thiserror v2.0.20 (*)
+│   ├── tokio v1.53.1 (*)
+│   ├── y-octo v0.1.0 (*)
+│   └── zstd v0.13.3 (*)
+│   [build-dependencies]
+│   ├── affine_schema v0.0.0 (/home/appuser/git/_work/469/cloud-u-android/ac_cloud-affine/packages/frontend/native/schema) (*)
+│   ├── dotenvy v0.15.7
+│   ├── napi-build v2.4.3
+│   ├── sqlx v0.8.6 (*)
+│   └── tokio v1.53.1 (*)
+├── anyhow v1.0.104
+├── base64-simd v0.8.0
+│   ├── outref v0.5.2
+│   └── vsimd v0.8.0
+├── chrono v0.4.45 (*)
+├── homedir v0.3.6
+│   ├── cfg-if v1.0.5
+│   └── nix v0.30.1
+│       ├── bitflags v2.13.2
+│       ├── cfg-if v1.0.5
+│       └── libc v0.2.189
+│       [build-dependencies]
+│       └── cfg_aliases v0.2.2
+├── serde_json v1.0.151 (*)
+├── thiserror v2.0.20 (*)
+├── tokio v1.53.1 (*)
+└── uniffi v0.29.5
+    ├── anyhow v1.0.104
+    ├── camino v1.2.6
+    │   └── serde_core v1.0.229
+    ├── cargo_metadata v0.19.2
+    │   ├── camino v1.2.6 (*)
+    │   ├── cargo-platform v0.1.9
+    │   │   └── serde v1.0.229 (*)
+    │   ├── semver v1.0.28 (*)
+    │   ├── serde v1.0.229 (*)
+    │   ├── serde_json v1.0.151 (*)
+    │   └── thiserror v2.0.20 (*)
+    ├── clap v4.6.7
+    │   ├── clap_builder v4.6.7
+    │   │   ├── anstyle v1.0.14
+    │   │   ├── clap_lex v1.1.1
+    │   │   └── strsim v0.11.1
+    │   └── clap_derive v4.6.7 (proc-macro)
+    │       ├── heck v0.5.0
+    │       ├── proc-macro2 v1.0.107 (*)
+    │       ├── quote v1.0.47 (*)
+    │       └── syn v3.0.6 (*)
+    ├── uniffi_bindgen v0.29.5
+    │   ├── anyhow v1.0.104
+    │   ├── askama v0.13.1
+    │   │   ├── askama_derive v0.13.1 (proc-macro)
+    │   │   │   ├── askama_parser v0.13.0
+    │   │   │   │   ├── memchr v2.8.3
+    │   │   │   │   ├── serde v1.0.229 (*)
+    │   │   │   │   ├── serde_derive v1.0.229 (proc-macro) (*)
+    │   │   │   │   └── winnow v0.7.15
+    │   │   │   ├── basic-toml v0.1.10
+    │   │   │   │   └── serde v1.0.229 (*)
+    │   │   │   ├── memchr v2.8.3
+    │   │   │   ├── proc-macro2 v1.0.107 (*)
+    │   │   │   ├── quote v1.0.47 (*)
+    │   │   │   ├── rustc-hash v2.1.3
+    │   │   │   ├── serde v1.0.229 (*)
+    │   │   │   ├── serde_derive v1.0.229 (proc-macro) (*)
+    │   │   │   └── syn v2.0.119 (*)
+    │   │   └── itoa v1.0.18
+    │   ├── camino v1.2.6 (*)
+    │   ├── cargo_metadata v0.19.2 (*)
+    │   ├── fs-err v2.11.0
+    │   │   [build-dependencies]
+    │   │   └── autocfg v1.5.1
+    │   ├── glob v0.3.4
+    │   ├── goblin v0.8.2
+    │   │   ├── log v0.4.34
+    │   │   ├── plain v0.2.3
+    │   │   └── scroll v0.12.0
+    │   │       └── scroll_derive v0.12.1 (proc-macro)
+    │   │           ├── proc-macro2 v1.0.107 (*)
+    │   │           ├── quote v1.0.47 (*)
+    │   │           └── syn v2.0.119 (*)
+    │   ├── heck v0.5.0
+    │   ├── indexmap v2.14.2 (*)
+    │   ├── once_cell v1.21.4
+    │   ├── serde v1.0.229 (*)
+    │   ├── tempfile v3.27.0
+    │   │   ├── fastrand v2.5.0
+    │   │   ├── getrandom v0.4.3 (*)
+    │   │   ├── once_cell v1.21.4
+    │   │   └── rustix v1.1.5
+    │   │       ├── bitflags v2.13.2
+    │   │       └── linux-raw-sys v0.12.1
+    │   ├── textwrap v0.16.4
+    │   │   └── smawk v0.3.3
+    │   ├── toml v0.5.11
+    │   │   └── serde v1.0.229 (*)
+    │   ├── uniffi_internal_macros v0.29.5 (proc-macro)
+    │   │   ├── anyhow v1.0.104
+    │   │   ├── indexmap v2.14.2 (*)
+    │   │   ├── proc-macro2 v1.0.107 (*)
+    │   │   ├── quote v1.0.47 (*)
+    │   │   └── syn v2.0.119 (*)
+    │   ├── uniffi_meta v0.29.5
+    │   │   ├── anyhow v1.0.104
+    │   │   ├── siphasher v0.3.11
+    │   │   ├── uniffi_internal_macros v0.29.5 (proc-macro) (*)
+    │   │   └── uniffi_pipeline v0.29.5
+    │   │       ├── anyhow v1.0.104
+    │   │       ├── heck v0.5.0
+    │   │       ├── indexmap v2.14.2 (*)
+    │   │       ├── tempfile v3.27.0 (*)
+    │   │       └── uniffi_internal_macros v0.29.5 (proc-macro) (*)
+    │   ├── uniffi_pipeline v0.29.5 (*)
+    │   └── uniffi_udl v0.29.5
+    │       ├── anyhow v1.0.104
+    │       ├── textwrap v0.16.4 (*)
+    │       ├── uniffi_meta v0.29.5 (*)
+    │       └── weedle2 v5.0.0
+    │           └── nom v7.1.3
+    │               ├── memchr v2.8.3
+    │               └── minimal-lexical v0.2.1
+    ├── uniffi_core v0.29.5
+    │   ├── anyhow v1.0.104
+    │   ├── async-compat v0.2.6
+    │   │   ├── futures-core v0.3.34
+    │   │   ├── futures-io v0.3.34
+    │   │   ├── once_cell v1.21.4
+    │   │   ├── pin-project-lite v0.2.17
+    │   │   └── tokio v1.53.1 (*)
+    │   ├── bytes v1.12.1
+    │   ├── once_cell v1.21.4
+    │   └── static_assertions v1.1.0
+    ├── uniffi_macros v0.29.5 (proc-macro)
+    │   ├── camino v1.2.6 (*)
+    │   ├── fs-err v2.11.0 (*)
+    │   ├── once_cell v1.21.4
+    │   ├── proc-macro2 v1.0.107 (*)
+    │   ├── quote v1.0.47 (*)
+    │   ├── serde v1.0.229 (*)
+    │   ├── syn v2.0.119 (*)
+    │   ├── toml v0.5.11 (*)
+    │   └── uniffi_meta v0.29.5 (*)
+    └── uniffi_pipeline v0.29.5 (*)
+[build-dependencies]
+└── uniffi v0.29.5
+    ├── anyhow v1.0.104
+    ├── cargo_metadata v0.19.2 (*)
+    ├── uniffi_build v0.29.5
+    │   ├── anyhow v1.0.104
+    │   ├── camino v1.2.6 (*)
+    │   └── uniffi_bindgen v0.29.5
+    │       ├── anyhow v1.0.104
+    │       ├── askama v0.13.1 (*)
+    │       ├── camino v1.2.6 (*)
+    │       ├── fs-err v2.11.0 (*)
+    │       ├── glob v0.3.4
+    │       ├── goblin v0.8.2 (*)
+    │       ├── heck v0.5.0
+    │       ├── indexmap v2.14.2 (*)
+    │       ├── once_cell v1.21.4
+    │       ├── serde v1.0.229 (*)
+    │       ├── tempfile v3.27.0 (*)
+    │       ├── textwrap v0.16.4 (*)
+    │       ├── toml v0.5.11 (*)
+    │       ├── uniffi_internal_macros v0.29.5 (proc-macro) (*)
+    │       ├── uniffi_meta v0.29.5 (*)
+    │       ├── uniffi_pipeline v0.29.5 (*)
+    │       └── uniffi_udl v0.29.5 (*)
+    ├── uniffi_core v0.29.5
+    │   ├── anyhow v1.0.104
+    │   ├── bytes v1.12.1
+    │   ├── once_cell v1.21.4
+    │   └── static_assertions v1.1.0
+    ├── uniffi_macros v0.29.5 (proc-macro) (*)
+    └── uniffi_pipeline v0.29.5 (*)
+[dev-dependencies]
+├── lru v0.16.4
+│   └── hashbrown v0.16.1 (*)
+└── tokio v1.53.1 (*)

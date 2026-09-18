@@ -1,0 +1,16 @@
+FAIL   affine: tmp/mutation: the tree reaches into AFFiNE Enterprise Edition code, which forbids redistribution.
+       restricted directories: packages/backend, packages/common/native
+  [vendored] packages/common/native/ is present in this tree — AFFiNE Enterprise Edition source copied into a repository we publish
+  [known] packages/frontend/mobile-native/Cargo.toml:20: affine_common  = { workspace = true, features = ["hashcash"] }
+          -> affine_common path-dependency on packages/common/native — NOT removed by de-clouding; needs the Rust crate patched
+  [known] packages/frontend/mobile-native/src/lib.rs:13: use affine_common::hashcash::Stamp;
+          -> use affine_common::hashcash::Stamp for the cloud-auth proof-of-work — NOT removed by de-clouding
+  [known] packages/frontend/native/nbstore/Cargo.toml:12: napi       = ["affine_common/napi"]  # de-clouded (#469): the EE Rust helper crate was pruned; nothing in this workspace enables the napi feature
+          -> affine_common is a NON-OPTIONAL dependency of affine_nbstore, which affine_mobile_native depends on unconditionally. The feature line napi = ["affine_common/napi"] adds a feature to that dependency, it does not gate it -- only `optional = true` would. So the EE crate stays in the APK's Cargo build graph, and packages/common/native must be present on disk to build at all, even with hashcash gone. This is the reach the 2026-09-09 scoping recorded as absent.
+  [known] packages/frontend/native/nbstore/Cargo.toml:16: affine_common = { workspace = true, features = ["napi"] }
+          -> affine_common is a NON-OPTIONAL dependency of affine_nbstore, which affine_mobile_native depends on unconditionally. The feature line napi = ["affine_common/napi"] adds a feature to that dependency, it does not gate it -- only `optional = true` would. So the EE crate stays in the APK's Cargo build graph, and packages/common/native must be present on disk to build at all, even with hashcash gone. This is the reach the 2026-09-09 scoping recorded as absent.
+  [known] packages/frontend/native/nbstore/src/lib.rs:12: use affine_common::napi_utils::to_napi_error;
+          -> use affine_common::napi_utils::to_napi_error, behind #[cfg(not(feature = "use-as-lib"))]. The Android build DOES set use-as-lib, so this symbol is compiled out on that path -- the source reach is real, the linked-code reach here is not. Flagged anyway because the guard's job is the source boundary: vendoring the EE directory is the prohibited copy whether or not the optimiser later drops the bytes.
+  [NEW] packages/frontend/native/nbstore/src/indexer/tests.rs:16: const DEMO_BIN: &[u8] = include_bytes!("../../../../../common/native/fixtures/demo.ydoc");
+  [NEW] packages/frontend/native/nbstore/src/indexer/tests.rs:17: const DEMO_JSON: &[u8] = include_bytes!("../../../../../common/native/fixtures/demo.ydoc.json");
+       2 reach(es) NOT in the policy's known_reaches. An upstream bump introduced them; re-scope before shipping.

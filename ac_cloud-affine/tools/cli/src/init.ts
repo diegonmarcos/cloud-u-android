@@ -1,0 +1,134 @@
+import { readFileSync, writeFileSync } from 'node:fs';
+
+import type { Path } from '@affine-tools/utils/path';
+import {
+  type Package,
+  Workspace,
+  yarnList,
+} from '@affine-tools/utils/workspace';
+import { applyEdits, modify } from 'jsonc-parser';
+import { format, type FormatConfig } from 'oxfmt';
+
+import { Command } from './command';
+
+export class InitCommand extends Command {
+  static override paths = [['init'], ['i'], ['codegen']];
+
+  async execute() {
+    this.logger.info('Generating Workspace configs');
+    await this.generateWorkspaceFiles();
+    this.logger.info('Workspace configs generated');
+  }
+
+  async generateWorkspaceFiles() {
+    this.workspace = new Workspace(yarnList());
+    const filesToGenerate: [Path, (prev: string) => string][] = [
+      [this.workspace.join('tsconfig.json'), this.genProjectTsConfig],
+      [
+        this.workspace
+          .getPackage('@affine-tools/utils')
+          .join('src/workspace.gen.ts'),
+        this.genWorkspaceInfo,
+      ],
+      [this.workspace.join('.oxlintrc.json'), this.genOxlintConfig],
+      ...this.workspace.packages
+        .filter(p => p.isTsProject)
+        .map(
+          p =>
+            [
+              p.join('tsconfig.json'),
+              this.genPackageTsConfig.bind(this, p),
+            ] satisfies [Path, (prev: string) => string]
+        ),
+    ];
+
+    for (const [path, content] of filesToGenerate) {
+      this.logger.info(`Generating: ${path}`);
+      const previous = readFileSync(path.value, 'utf-8');
+      const file = await this.format(content(previous), path.value);
+      writeFileSync(path.value, file);
+    }
+  }
+
+  async format(content: string, fileName: string) {
+    const config = JSON.parse(
+      readFileSync(this.workspace.join('.oxfmtrc.json').value, 'utf-8')
+    ) as FormatConfig;
+    const result = await format(fileName, content, config);
+    if (result.errors.length) {
+      throw new Error(
+        result.errors.map(error => error.codeframe ?? error.message).join('\n')
+      );
+    }
+    return result.code;
+  }
+
+  genOxlintConfig = () => {
+    const json = JSON.parse(
+      readFileSync(this.workspace.join('.oxlintrc.json').value, 'utf-8')
+    );
+
+    const ignoreList = readFileSync(
+      this.workspace.join('.prettierignore').value,
+      'utf-8'
+    )
+      .split('\n')
+      .filter(line => line.trim() && !line.startsWith('#'));
+
+    json['ignorePatterns'] = ignoreList;
+
+    return JSON.stringify(json, null, 2);
+  };
+
+  genWorkspaceInfo = () => {
+    const list = yarnList();
+
+    const names = list.map(p => p.name);
+
+    const content = [
+      '// Auto generated content',
+      '// DO NOT MODIFY THIS FILE MANUALLY',
+      `export const PackageList = ${JSON.stringify(list, null, 2)}`,
+      '',
+      `export type PackageName = ${names.map(n => `'${n}'`).join(' | ')}`,
+    ];
+
+    return content.join('\n');
+  };
+
+  genProjectTsConfig = (prev: string) => {
+    return applyEdits(
+      prev,
+      modify(
+        prev,
+        ['references'],
+        this.workspace.packages
+          .filter(p => p.isTsProject)
+          .map(p => ({ path: p.path.relativePath })),
+        {}
+      )
+    );
+  };
+
+  genPackageTsConfig = (pkg: Package, prev: string) => {
+    // TODO(@forehalo):
+    //   currently electron-api => electron => nbstore => electron-api
+    //   this is a circular dependency, we need to fix it
+    //   basically, the electron app don't need to use nbstore for exposing js bridge apis
+    if (pkg.name === '@affine/electron-api') {
+      return prev;
+    }
+
+    return applyEdits(
+      prev,
+      modify(
+        prev,
+        ['references'],
+        pkg.deps
+          .filter(p => p.isTsProject)
+          .map(d => ({ path: pkg.path.relative(d.path.value) })),
+        {}
+      )
+    );
+  };
+}

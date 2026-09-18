@@ -1,0 +1,28 @@
+{
+  "name": "@affine/mobile",
+  "version": "0.27.5",
+  "description": "AFFiNE Desktop Web application",
+  "private": true,
+  "browser": "src/index.tsx",
+  "scripts": {
+    "build": "affine bundle",
+    "dev": "affine bundle --dev"
+  },
+  "dependencies": {
+    "@affine/component": "workspace:*",
+    "@affine/core": "workspace:*",
+    "@affine/env": "workspace:*",
+    "@affine/nbstore": "workspace:*",
+    "@affine/track": "workspace:*",
+    "@blocksuite/affine": "workspace:*",
+    "@toeverything/infra": "workspace:*",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "react-router-dom": "^6.30.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.2",
+    "typescript": "npm:@typescript/typescript6@6.0.2"
+  }
+}

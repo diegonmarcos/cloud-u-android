@@ -1,0 +1,16 @@
+{
+  "name": "@affine/debug",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "debug": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.12",
+    "vitest": "^4.1.8"
+  },
+  "version": "0.27.5"
+}

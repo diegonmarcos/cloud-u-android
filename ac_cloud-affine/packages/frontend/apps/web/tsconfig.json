@@ -1,0 +1,17 @@
+{
+  "extends": "../../../../tsconfig.web.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
+  },
+  "include": ["./src"],
+  "references": [
+    { "path": "../../component" },
+    { "path": "../../core" },
+    { "path": "../../../common/env" },
+    { "path": "../../../common/nbstore" },
+    { "path": "../../track" },
+    { "path": "../../../common/infra" }
+  ]
+}

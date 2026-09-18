@@ -1,0 +1,66 @@
+name: affine
+services:
+  affine:
+    image: ghcr.io/toeverything/affine:stable
+    container_name: affine_server
+    ports:
+      - '3010:3010'
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      affine_migration:
+        condition: service_completed_successfully
+    volumes:
+      - ./data/storage:/root/.affine/storage
+      - ./config:/root/.affine/config
+    environment:
+      - REDIS_SERVER_HOST=redis
+      - DATABASE_URL=postgresql://affine@postgres:5432/affine
+      - DEPLOYMENT_TYPE=selfhosted
+    restart: unless-stopped
+
+  affine_migration:
+    image: ghcr.io/toeverything/affine:stable
+    container_name: affine_migration_job
+    volumes:
+      - ./data/storage:/root/.affine/storage
+      - ./config:/root/.affine/config
+    command: ['sh', '-c', 'node ./scripts/self-host-predeploy.js']
+    environment:
+      - REDIS_SERVER_HOST=redis
+      - DATABASE_URL=postgresql://affine@postgres:5432/affine
+      - DEPLOYMENT_TYPE=selfhosted
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis
+    container_name: affine_redis
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--raw', 'incr', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: affine_postgres
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: affine
+      POSTGRES_DB: affine
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+      POSTGRES_HOST_AUTH_METHOD: trust
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'affine', '-d', 'affine']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped

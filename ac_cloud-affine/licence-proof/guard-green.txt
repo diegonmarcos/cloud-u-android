@@ -1,0 +1,1 @@
+ok     affine: ac_cloud-affine: no reach into AFFiNE Enterprise Edition directories (packages/backend, packages/common/native)

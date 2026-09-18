@@ -1,0 +1,32 @@
+name: PR Title Lint
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+    branches:
+      - canary
+
+permissions:
+  contents: read
+
+jobs:
+  check-pull-request-title:
+    name: Check pull request title
+    runs-on: ubuntu-latest
+    if: ${{ github.event.action != 'edited' || github.event.changes.title != null }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          cache: 'yarn'
+          node-version-file: '.nvmrc'
+      - name: Install dependencies
+        run: yarn workspaces focus @affine/commitlint-config
+      - name: Check PR title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: echo "$TITLE" | yarn workspace @affine/commitlint-config commitlint -g ./.commitlintrc.json

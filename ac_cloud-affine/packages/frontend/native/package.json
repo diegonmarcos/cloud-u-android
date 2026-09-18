@@ -1,0 +1,47 @@
+{
+  "name": "@affine/native",
+  "private": true,
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "binaryName": "affine",
+    "targets": [
+      "x86_64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-pc-windows-msvc",
+      "aarch64-apple-darwin",
+      "aarch64-unknown-linux-gnu",
+      "aarch64-pc-windows-msvc"
+    ],
+    "constEnum": false
+  },
+  "license": "MIT",
+  "ava": {
+    "extensions": {
+      "mts": "module"
+    },
+    "files": [
+      "__tests__/*.spec.mts"
+    ]
+  },
+  "devDependencies": {
+    "@napi-rs/cli": "3.5.0",
+    "@napi-rs/whisper": "^0.0.4",
+    "@types/node": "^22.0.0",
+    "ava": "^7.0.0",
+    "rxjs": "^7.8.2",
+    "typescript": "npm:@typescript/typescript6@6.0.2"
+  },
+  "engines": {
+    "node": ">= 10"
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build -p affine_native --platform --release --strip",
+    "build:debug": "napi build -p affine_native --platform",
+    "universal": "napi universal",
+    "test": "ava --no-worker-threads --concurrency=2",
+    "version": "napi version"
+  },
+  "version": "0.27.5"
+}

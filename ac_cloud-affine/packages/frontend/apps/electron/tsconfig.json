@@ -1,0 +1,17 @@
+{
+  "extends": "../../../../tsconfig.node.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
+  },
+  "include": ["./src"],
+  "references": [
+    { "path": "../../../../tools/utils" },
+    { "path": "../../../common/auth" },
+    { "path": "../../i18n" },
+    { "path": "../../native" },
+    { "path": "../../../common/nbstore" },
+    { "path": "../../../common/infra" }
+  ]
+}

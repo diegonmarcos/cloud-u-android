@@ -1,0 +1,23 @@
+{
+  "extends": "../../../../tsconfig.web.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
+  },
+  "include": ["./src"],
+  "references": [
+    { "path": "../../component" },
+    { "path": "../../core" },
+    { "path": "../../../common/env" },
+    { "path": "../../../common/graphql" },
+    { "path": "../../i18n" },
+    { "path": "../mobile-shared" },
+    { "path": "../../../common/nbstore" },
+    { "path": "../../track" },
+    { "path": "../../../../blocksuite/affine/all" },
+    { "path": "../../../common/infra" },
+    { "path": "../../../../tools/cli" },
+    { "path": "../../../../tools/utils" }
+  ]
+}

@@ -1,0 +1,17 @@
+name: Setup Version
+description: 'Setup Version'
+inputs:
+  app-version:
+    description: 'App Version'
+    required: true
+  ios-app-version:
+    description: 'iOS App Store Version (Optional, use App version if empty)'
+    required: false
+runs:
+  using: 'composite'
+  steps:
+    - name: 'Write Version'
+      shell: bash
+      env:
+        IOS_APP_VERSION: ${{ inputs.ios-app-version }}
+      run: ./scripts/set-version.sh ${{ inputs.app-version }}

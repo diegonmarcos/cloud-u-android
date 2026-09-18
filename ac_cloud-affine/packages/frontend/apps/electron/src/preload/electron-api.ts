@@ -1,0 +1,342 @@
+// Please add modules to `external` in `rollupOptions` to avoid wrong bundling.
+import type { MessagePort } from 'node:worker_threads';
+
+import type { EventBasedChannel } from 'async-call-rpc';
+import { AsyncCall } from 'async-call-rpc';
+import { ipcRenderer, webUtils } from 'electron';
+import { Subject } from 'rxjs';
+import { z } from 'zod';
+
+import type {
+  CreateImportSessionFromSourceOptions,
+  NativeImportBrowserSource,
+} from '../shared/import';
+import {
+  AFFINE_API_CHANNEL_NAME,
+  AFFINE_EVENT_CHANNEL_NAME,
+  AFFINE_EVENT_SUBSCRIBE_CHANNEL_NAME,
+  type ExposedMeta,
+  type HelperToRenderer,
+  type RendererToHelper,
+} from '../shared/type';
+
+type Schema =
+  | 'affine'
+  | 'affine-canary'
+  | 'affine-beta'
+  | 'affine-internal'
+  | 'affine-dev';
+
+// todo: remove duplicated codes
+const ReleaseTypeSchema = z.enum(['stable', 'beta', 'canary', 'internal']);
+const envBuildType = (process.env.BUILD_TYPE || 'canary').trim().toLowerCase();
+const buildType = ReleaseTypeSchema.parse(envBuildType);
+const isDev = process.env.NODE_ENV === 'development';
+let scheme =
+  buildType === 'stable' ? 'affine' : (`affine-${envBuildType}` as Schema);
+scheme = isDev ? 'affine-dev' : scheme;
+
+export const appInfo = {
+  electron: true,
+  windowName:
+    process.argv.find(arg => arg.startsWith('--window-name='))?.split('=')[1] ??
+    'unknown',
+  viewId:
+    process.argv.find(arg => arg.startsWith('--view-id='))?.split('=')[1] ??
+    'unknown',
+  scheme,
+};
+
+export type AppInfo = typeof appInfo;
+
+function getMainAPIs() {
+  const meta: ExposedMeta = (() => {
+    const val = process.argv
+      .find(arg => arg.startsWith('--main-exposed-meta='))
+      ?.split('=')[1];
+
+    return val ? JSON.parse(val) : null;
+  })();
+
+  // main handlers that can be invoked from the renderer process
+  const apis: any = (() => {
+    const { handlers: handlersMeta } = meta;
+
+    const all = handlersMeta.map(([namespace, functionNames]) => {
+      const namespaceApis = functionNames.map(name => {
+        const channel = `${namespace}:${name}`;
+        return [
+          name,
+          (...args: any[]) => {
+            return ipcRenderer.invoke(
+              AFFINE_API_CHANNEL_NAME,
+              channel,
+              ...args
+            );
+          },
+        ];
+      });
+      return [namespace, Object.fromEntries(namespaceApis)];
+    });
+
+    return Object.fromEntries(all);
+  })();
+
+  // main events that can be listened to from the renderer process
+  const events: any = (() => {
+    const { events: eventsMeta } = meta;
+
+    // channel -> callback[]
+    const listenersMap = new Map<string, ((...args: any[]) => void)[]>();
+    const subscribeCounts = new Map<string, number>();
+
+    const subscribe = (channel: string) => {
+      const count = (subscribeCounts.get(channel) ?? 0) + 1;
+      subscribeCounts.set(channel, count);
+      if (count === 1) {
+        ipcRenderer.send(
+          AFFINE_EVENT_SUBSCRIBE_CHANNEL_NAME,
+          'subscribe',
+          channel
+        );
+      }
+    };
+
+    const unsubscribe = (channel: string) => {
+      const count = (subscribeCounts.get(channel) ?? 0) - 1;
+      if (count <= 0) {
+        subscribeCounts.delete(channel);
+        ipcRenderer.send(
+          AFFINE_EVENT_SUBSCRIBE_CHANNEL_NAME,
+          'unsubscribe',
+          channel
+        );
+      } else {
+        subscribeCounts.set(channel, count);
+      }
+    };
+
+    ipcRenderer.on(AFFINE_EVENT_CHANNEL_NAME, (_event, channel, ...args) => {
+      if (typeof channel !== 'string') {
+        console.error('invalid ipc event', channel);
+        return;
+      }
+      const [namespace, name] = channel.split(':');
+      if (!namespace || !name) {
+        console.error('invalid ipc event', channel);
+        return;
+      }
+      const listeners = listenersMap.get(channel) ?? [];
+      listeners.forEach(listener => listener(...args));
+    });
+
+    const all = eventsMeta.map(([namespace, eventNames]) => {
+      const namespaceEvents = eventNames.map(name => {
+        const channel = `${namespace}:${name}`;
+        return [
+          name,
+          (callback: (...args: any[]) => void) => {
+            listenersMap.set(channel, [
+              ...(listenersMap.get(channel) ?? []),
+              callback,
+            ]);
+            subscribe(channel);
+
+            return () => {
+              const listeners = listenersMap.get(channel) ?? [];
+              const index = listeners.indexOf(callback);
+              if (index === -1) {
+                return;
+              }
+              listeners.splice(index, 1);
+              unsubscribe(channel);
+              if (listeners.length === 0) {
+                listenersMap.delete(channel);
+              } else {
+                listenersMap.set(channel, listeners);
+              }
+            };
+          },
+        ];
+      });
+      return [namespace, Object.fromEntries(namespaceEvents)];
+    });
+    return Object.fromEntries(all);
+  })();
+
+  return { apis, events };
+}
+
+const helperPort = new Promise<MessagePort>(resolve =>
+  ipcRenderer.on('helper-connection', e => {
+    console.info('[preload] helper-connection', e);
+    resolve(e.ports[0]);
+  })
+);
+
+const createMessagePortChannel = (port: MessagePort): EventBasedChannel => {
+  return {
+    on(listener) {
+      const listen = (e: MessageEvent) => {
+        listener(e.data);
+      };
+      port.addEventListener('message', listen as any);
+      port.start();
+      return () => {
+        port.removeEventListener('message', listen as any);
+        try {
+          port.close();
+        } catch (err) {
+          console.error('[helper] close port error', err);
+        }
+      };
+    },
+    send(data) {
+      port.postMessage(data);
+    },
+  };
+};
+
+function getHelperAPIs() {
+  const events$ = new Subject<{ channel: string; args: any[] }>();
+  const meta: ExposedMeta | null = (() => {
+    const val = process.argv
+      .find(arg => arg.startsWith('--helper-exposed-meta='))
+      ?.split('=')[1];
+
+    return val ? JSON.parse(val) : null;
+  })();
+
+  const rendererToHelperServer: RendererToHelper = {
+    postEvent: (channel, ...args) => {
+      events$.next({ channel, args });
+    },
+  };
+
+  const rpc = AsyncCall<HelperToRenderer>(rendererToHelperServer, {
+    channel: helperPort.then(helperPort =>
+      createMessagePortChannel(helperPort)
+    ),
+    log: false,
+  });
+
+  const toHelperHandler = (namespace: string, name: string) => {
+    return rpc[`${namespace}:${name}`];
+  };
+
+  const toHelperEventSubscriber = (namespace: string, name: string) => {
+    return (callback: (...args: any[]) => void) => {
+      const subscription = events$.subscribe(({ channel, args }) => {
+        if (channel === `${namespace}:${name}`) {
+          callback(...args);
+        }
+      });
+      return () => {
+        subscription.unsubscribe();
+      };
+    };
+  };
+
+  const setup = (meta: ExposedMeta) => {
+    const { handlers, events } = meta;
+
+    const helperHandlers = Object.fromEntries(
+      handlers.map(([namespace, functionNames]) => {
+        return [
+          namespace,
+          Object.fromEntries(
+            functionNames.map(name => {
+              return [name, toHelperHandler(namespace, name)];
+            })
+          ),
+        ];
+      })
+    );
+
+    const helperEvents = Object.fromEntries(
+      events.map(([namespace, eventNames]) => {
+        return [
+          namespace,
+          Object.fromEntries(
+            eventNames.map(name => {
+              return [name, toHelperEventSubscriber(namespace, name)];
+            })
+          ),
+        ];
+      })
+    );
+    return [helperHandlers, helperEvents];
+  };
+
+  if (meta) {
+    const [apis, events] = setup(meta);
+    return { apis, events };
+  } else {
+    return { apis: {}, events: {} };
+  }
+}
+
+const mainAPIs = getMainAPIs();
+const helperAPIs = getHelperAPIs();
+
+type DirectoryImportFile = File & { webkitRelativePath?: string };
+
+function filePathFromFile(file: File) {
+  return webUtils.getPathForFile(file);
+}
+
+function directoryPathFromFiles(files: File[]) {
+  const first = files.find(
+    (file): file is DirectoryImportFile =>
+      !!(file as DirectoryImportFile).webkitRelativePath
+  );
+  if (!first) return null;
+  const filePath = filePathFromFile(first);
+  if (!filePath) return null;
+  const relativePath = first.webkitRelativePath;
+  if (!relativePath) return null;
+  const relativeParts = relativePath.split('/');
+  let rootPath = filePath.replaceAll('\\', '/');
+  for (let i = relativeParts.length - 1; i > 0; i--) {
+    const part = relativeParts[i];
+    if (part && rootPath.endsWith(`/${part}`)) {
+      rootPath = rootPath.slice(0, -part.length - 1);
+    }
+  }
+  return rootPath || null;
+}
+
+function resolveNativeImportSource(source: NativeImportBrowserSource) {
+  if (source.kind === 'file') {
+    const path = filePathFromFile(source.file);
+    return path ? { kind: 'filePath', path } : null;
+  }
+  const path = directoryPathFromFiles(source.files);
+  return path ? { kind: 'directoryPath', path } : null;
+}
+
+export const apis = {
+  ...mainAPIs.apis,
+  ...helperAPIs.apis,
+  import: {
+    ...mainAPIs.apis.import,
+    createImportSessionFromSource(
+      options: CreateImportSessionFromSourceOptions
+    ) {
+      const source = resolveNativeImportSource(options.source);
+      if (!source) {
+        throw new Error('Native import requires a local file source');
+      }
+      return mainAPIs.apis.import.createImportSession({
+        format: options.format,
+        source,
+        batchLimits: options.batchLimits,
+      });
+    },
+  },
+};
+
+export const events = {
+  ...mainAPIs.events,
+  ...helperAPIs.events,
+};

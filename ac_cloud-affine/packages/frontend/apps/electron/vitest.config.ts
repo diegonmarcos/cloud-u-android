@@ -1,0 +1,34 @@
+// TODO(@forehalo): reuse '@affine-tools/utils' once it's ready to switch to esm module
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { defineConfig } from 'vitest/config';
+
+const rootDir = fileURLToPath(new URL('../../../..', import.meta.url));
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      // prevent tests using two different sources of yjs
+      yjs: resolve(rootDir, 'node_modules/yjs'),
+      '@affine/electron': resolve(
+        rootDir,
+        'packages/frontend/apps/electron/src'
+      ),
+    },
+  },
+
+  test: {
+    setupFiles: [resolve(rootDir, './scripts/setup/global.ts')],
+    include: ['./test/**/*.spec.ts'],
+    testTimeout: 60000,
+    hookTimeout: 30000,
+    pool: 'forks',
+    maxWorkers: 1,
+    coverage: {
+      provider: 'istanbul', // or 'istanbul'
+      reporter: ['lcov'],
+      reportsDirectory: resolve(rootDir, '.coverage/electron'),
+    },
+  },
+});

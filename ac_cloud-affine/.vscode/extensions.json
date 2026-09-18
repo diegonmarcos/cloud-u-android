@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "ms-playwright.playwright",
+    "oxc.oxc-vscode",
+    "deepscan.vscode-deepscan",
+    "streetsidesoftware.code-spell-checker"
+  ]
+}
