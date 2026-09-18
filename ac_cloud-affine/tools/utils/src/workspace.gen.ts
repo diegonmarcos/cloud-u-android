@@ -1101,23 +1101,6 @@ export const PackageList = [
     workspaceDependencies: [],
   },
   {
-    location: 'packages/backend/native',
-    name: '@affine/server-native',
-    workspaceDependencies: [],
-  },
-  {
-    location: 'packages/backend/server',
-    name: '@affine/server',
-    workspaceDependencies: [
-      'packages/common/s3-compat',
-      'packages/backend/native',
-      'tools/cli',
-      'tools/utils',
-      'packages/common/graphql',
-      'packages/common/realtime',
-    ],
-  },
-  {
     location: 'packages/common/auth',
     name: '@affine/auth',
     workspaceDependencies: [],
@@ -1532,8 +1515,6 @@ export type PackageName =
   | '@blocksuite/integration-test'
   | '@blocksuite/playground'
   | '@affine/docs'
-  | '@affine/server-native'
-  | '@affine/server'
   | '@affine/auth'
   | '@affine/debug'
   | '@affine/env'

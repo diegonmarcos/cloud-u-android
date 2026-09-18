@@ -123,8 +123,6 @@
     { "path": "./blocksuite/framework/sync" },
     { "path": "./blocksuite/integration-test" },
     { "path": "./blocksuite/playground" },
-    { "path": "./packages/backend/native" },
-    { "path": "./packages/backend/server" },
     { "path": "./packages/common/auth" },
     { "path": "./packages/common/debug" },
     { "path": "./packages/common/env" },

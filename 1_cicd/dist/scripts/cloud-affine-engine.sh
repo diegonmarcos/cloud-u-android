@@ -129,7 +129,12 @@ step_build_fork() {
   fi
 
   log "build-fork: yarn install (AFFiNE monorepo, Yarn 4.18.0)"
-  yarn install --immutable 2>/dev/null || yarn install
+  # --immutable and nothing else: on CI, Yarn 4 treats CI=true as immutable
+  # anyway, so a fallback would fail equally — and silently regenerating the
+  # lock on CI is drift. The committed yarn.lock already reflects the PRUNED
+  # workspaces (packages/backend, packages/common/native); if it ever stops
+  # matching the tree, regenerate it locally and commit it.
+  yarn install --immutable
 
   log "build-fork: web bundle (rspack) → packages/frontend/apps/android/dist"
   yarn affine @affine/android build
