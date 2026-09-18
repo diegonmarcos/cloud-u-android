@@ -3104,7 +3104,7 @@ private fun AttachmentSection(
                 // ImageScanEngine. Images only: a PDF or a .doc may be a picture of nothing, and
                 // the engine reads pixels, not formats — a row with no readable pixels must not
                 // carry an action that promises the opposite.
-                if (att.type.startsWith("image/")) {
+                if (att.type?.startsWith("image/") == true) {
                     IconButton(onClick = { onScan(att) }) {
                         Icon(
                             Icons.Filled.Search,
