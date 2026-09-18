@@ -202,6 +202,7 @@ object DevControlServer {
                 "diagnostics/logcat" -> { reply(writer, "200 OK", readLogcat(query["n"]?.toIntOrNull() ?: 300)); return }
                 "diagnostics/trace"  -> { reply(writer, "200 OK", readTraceTail(ctx, query["n"]?.toIntOrNull() ?: 300)); return }
                 "diagnostics/crashes" -> { reply(writer, "200 OK", readCrashes(ctx)); return }
+                "diagnostics/exits"  -> { reply(writer, "200 OK", readExitReasons(ctx, query["n"]?.toIntOrNull() ?: 20)); return }
                 "diagnostics/bundle" -> { reply(writer, "200 OK", diagnosticRecord(ctx), "application/json"); return }
                 "diagnostics/download" -> {
                     val name = "cloud-diag-${BuildConfig.APPLICATION_ID}-${BuildConfig.GIT_SHORT_SHA}.json"
@@ -448,6 +449,7 @@ object DevControlServer {
             "logcat"   -> "diagnostics/logcat"
             "trace"    -> "diagnostics/trace"
             "crashes"  -> "diagnostics/crashes"
+            "exits"    -> "diagnostics/exits"
             "goto"     -> "nav/goto"
             "action"   -> "nav/action"
             "update"   -> "system/update"
@@ -470,6 +472,7 @@ object DevControlServer {
             Spec("diagnostics/logcat",  "GET",  false, "Recent logcat lines, threadtime format", "n=lines (default 300)"),
             Spec("diagnostics/trace",   "GET",  false, "Tail of Trace.kt's trace.log", "n=lines (default 300)"),
             Spec("diagnostics/crashes", "GET",  false, "All crash files concatenated, newest first", ""),
+            Spec("diagnostics/exits",   "GET",  false, "The OS's own record of recent process deaths (ApplicationExitInfo): ANR / native crash / lmkd / signal — the deaths CrashLogger cannot see; ANR records inline the system-captured trace head", "n=records (default 20)"),
             Spec("diagnostics/bundle",  "GET",  false, "Full debug bundle (logcat+trace+crashes+device) as one OpenObserve JSON record", ""),
             Spec("diagnostics/download","GET",  false, "Write the debug bundle to public Downloads; returns the filename", ""),
             Spec("diagnostics/push",    "GET",  false, "POST the debug bundle to the cloud log sink (OpenObserve via build.json::diagnostics.log_sink_url)", ""),
@@ -1196,4 +1199,63 @@ object DevControlServer {
         if (files.isEmpty()) return@runCatching "no crash files\n"
         files.joinToString("\n\n──────────────────────────\n\n") { "[${it.name}]\n" + it.readText() }
     }.getOrElse { "crash read failed: $it\n" }
+
+    /** The OS's own record of WHY each recent process died —
+     *  ActivityManager.getHistoricalProcessExitReasons. CrashLogger sees only
+     *  uncaught Java throws; an ANR, a native/hwui crash, an lmkd kill or a
+     *  plain signal leaves its store EMPTY, and until this endpoint existed
+     *  those deaths were unreadable from off the device (2026-09-18: two
+     *  silent Home-screen deaths 30s apart, zero evidence in crashes/, trace
+     *  ring quiet — this route is what would have named the killer). For ANR
+     *  records the system-captured stack is inlined (head only) so the guilty
+     *  frame arrives in the reply rather than staying on a wedged phone. */
+    private fun readExitReasons(ctx: android.content.Context, n: Int): String {
+        // Function-level SDK gate, not inside the lambda: lintVital's NewApi
+        // check (fatal on release) reliably traces only this form.
+        if (android.os.Build.VERSION.SDK_INT < 30)
+            return """{"error":"ApplicationExitInfo requires API 30+"}"""
+        return runCatching {
+        val am = ctx.getSystemService(android.content.Context.ACTIVITY_SERVICE)
+            as android.app.ActivityManager
+        val reasonNames = mapOf(
+            android.app.ApplicationExitInfo.REASON_EXIT_SELF to "EXIT_SELF",
+            android.app.ApplicationExitInfo.REASON_SIGNALED to "SIGNALED",
+            android.app.ApplicationExitInfo.REASON_LOW_MEMORY to "LOW_MEMORY",
+            android.app.ApplicationExitInfo.REASON_CRASH to "CRASH_JAVA",
+            android.app.ApplicationExitInfo.REASON_CRASH_NATIVE to "CRASH_NATIVE",
+            android.app.ApplicationExitInfo.REASON_ANR to "ANR",
+            android.app.ApplicationExitInfo.REASON_INITIALIZATION_FAILURE to "INIT_FAILURE",
+            android.app.ApplicationExitInfo.REASON_PERMISSION_CHANGE to "PERMISSION_CHANGE",
+            android.app.ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE to "EXCESSIVE_RESOURCE",
+            android.app.ApplicationExitInfo.REASON_USER_REQUESTED to "USER_REQUESTED",
+            android.app.ApplicationExitInfo.REASON_USER_STOPPED to "USER_STOPPED",
+            android.app.ApplicationExitInfo.REASON_DEPENDENCY_DIED to "DEPENDENCY_DIED",
+            android.app.ApplicationExitInfo.REASON_OTHER to "OTHER",
+            android.app.ApplicationExitInfo.REASON_FREEZER to "FREEZER",
+            android.app.ApplicationExitInfo.REASON_PACKAGE_STATE_CHANGE to "PACKAGE_STATE_CHANGE",
+            android.app.ApplicationExitInfo.REASON_PACKAGE_UPDATED to "PACKAGE_UPDATED",
+        )
+        val fmt = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+        val sb = StringBuilder("[")
+        am.getHistoricalProcessExitReasons(ctx.packageName, 0, n).forEachIndexed { i, r ->
+            if (i > 0) sb.append(',')
+            sb.append("""{"when":"""").append(fmt.format(java.util.Date(r.timestamp)))
+                .append("""","reason":"""").append(reasonNames[r.reason] ?: "code_${r.reason}")
+                .append("""","status":""").append(r.status)
+                .append(""","importance":""").append(r.importance)
+                .append(""","description":"""").append(jsonEscape(r.description ?: "")).append('"')
+            if (r.reason == android.app.ApplicationExitInfo.REASON_ANR) {
+                val trace = runCatching {
+                    r.traceInputStream?.bufferedReader()?.use { it.readText() }
+                }.getOrNull()
+                if (trace != null)
+                    sb.append(""","anr_trace_head":"""")
+                        .append(jsonEscape(trace.take(6000).replace("\t", "  ").replace("\r", "")))
+                        .append('"')
+            }
+            sb.append('}')
+        }
+        sb.append(']').toString()
+        }.getOrElse { """{"error":"${jsonEscape(it.toString())}"}""" }
+    }
 }

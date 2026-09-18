@@ -302,5 +302,46 @@ PY
 )" "bottom_nav's class chain keeps ?attr/bottomNavigationStyle, and an inflated-view test is wired into CI"
 
 echo
+echo "== T9: the M3 80dp minHeight cannot inflate the bar — override declared AND measured =="
+# Widget.Material3.BottomNavigationView carries android:minHeight =
+# m3_bottom_nav_min_height (80dp). Before #512 the style never applied, so the
+# wrap_content bar hugged its content and T1-T8's pill geometry read symmetric
+# on screen. The moment #512 made the style real, the bar inflated to 80dp,
+# the menu block anchored to the TOP of the frame and the leftover height
+# landed entirely BELOW the items — the pill sat high in the island: small
+# white space above it, large below (reported 2026-09-18, alongside silent
+# process deaths the exits endpoint now records). Two halves, T6/T7's split:
+# the override must be DECLARED in the nav style, and a JVM test must MEASURE
+# the inflated bar against its menu block — the declaration alone would stay
+# green if Material ever stopped honouring it.
+check "$(python3 - "$THEMES" "$(cd "$(dirname "$0")/.." && pwd)/app/src/test" <<'PY'
+import os, re, sys
+themes, testroot = sys.argv[1], sys.argv[2]
+p = []
+text = open(themes).read()
+m = re.search(r'<style name="Widget\.CloudSuperApp\.BottomNavigationView".*?</style>', text, re.S)
+if not m:
+    p.append("style Widget.CloudSuperApp.BottomNavigationView not found in themes.xml")
+else:
+    body = m.group(0)
+    mh = re.search(r'<item name="android:minHeight">([^<]*)</item>', body)
+    if not mh:
+        p.append("the nav style no longer overrides android:minHeight - Widget.Material3.BottomNavigationView's 80dp m3_bottom_nav_min_height inflates the wrap_content bar again (pill high in the island: small gap above, large below)")
+    elif mh.group(1).strip() != "0dp":
+        p.append("android:minHeight is %r, not 0dp - any non-zero floor re-decouples the bar's height from the ONE-GEOMETRY tokens" % mh.group(1))
+proof = []
+for dirpath, _, files in os.walk(testroot):
+    for f in files:
+        if not f.endswith(".kt"): continue
+        t = open(os.path.join(dirpath, f)).read()
+        if all(k in t for k in ("MenuView", "minimumHeight", "@Test")) and re.search(r'assertEquals[^;]*menu\.height,\s*nav\.height', t):
+            proof.append(f)
+if not proof:
+    p.append("no JVM test measures the inflated bar against its menu block (menu.height == nav.height) - the minHeight declaration alone would stay green if Material stopped honouring it")
+print("; ".join(p) or "OK")
+PY
+)" "the nav style zeroes android:minHeight, and a JVM test measures bar==menu (no 80dp inflation)"
+
+echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
