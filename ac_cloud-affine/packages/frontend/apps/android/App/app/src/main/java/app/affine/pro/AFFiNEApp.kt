@@ -10,11 +10,7 @@ import androidx.webkit.WebViewStartUpConfig
 import androidx.webkit.WebViewStartUpResult
 import androidx.webkit.WebViewStartupException
 import app.affine.pro.utils.logger.AffineDebugTree
-import app.affine.pro.utils.logger.CrashlyticsTree
 import app.affine.pro.utils.logger.FileTree
-import com.google.firebase.crashlytics.ktx.crashlytics
-import com.google.firebase.crashlytics.setCustomKeys
-import com.google.firebase.ktx.Firebase
 import dagger.hilt.android.HiltAndroidApp
 import timber.log.Timber
 import java.util.concurrent.Executors
@@ -26,19 +22,17 @@ class AFFiNEApp : Application() {
         super.onCreate()
         startWebView()
         _context = applicationContext
-        // init logger
+        // DE-CLOUDED (#469): Firebase/Crashlytics removed — this is a local-first
+        // note app; there is no cloud backend and no telemetry. Logs stay on
+        // device only.
         if (BuildConfig.DEBUG) {
             Timber.plant(AffineDebugTree())
         } else {
-            Timber.plant(CrashlyticsTree(), FileTree(applicationContext))
+            Timber.plant(FileTree(applicationContext))
         }
         Timber.i("Application started.")
         // init capacitor config
         CapacitorConfig.init(baseContext)
-        // init crashlytics
-        Firebase.crashlytics.setCustomKeys {
-            key("affine_version", CapacitorConfig.getAffineVersion())
-        }
     }
 
     private fun startWebView() {

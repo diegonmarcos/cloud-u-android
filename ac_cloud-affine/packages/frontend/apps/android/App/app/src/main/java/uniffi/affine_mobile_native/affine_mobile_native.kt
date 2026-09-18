@@ -663,152 +663,6 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // For large crates we prevent `MethodTooLargeException` (see #2340)
 // N.B. the name of the extension is very misleading, since it is 
 // rather `InterfaceTooLargeException`, caused by too many methods 
@@ -824,8 +678,6 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 // when the library is loaded.
 internal interface IntegrityCheckingUniffiLib : Library {
     // Integrity check functions only
-    fun uniffi_affine_mobile_native_checksum_func_hashcash_mint(
-): Short
 fun uniffi_affine_mobile_native_checksum_func_new_doc_storage_pool(
 ): Short
 fun uniffi_affine_mobile_native_checksum_func_render_mermaid_preview_svg(
@@ -1045,9 +897,6 @@ fun uniffi_affine_mobile_native_fn_method_docstoragepool_set_peer_remote_clock(`
 ): Long
 fun uniffi_affine_mobile_native_fn_method_docstoragepool_set_space_id(`ptr`: Pointer,`universalId`: RustBuffer.ByValue,`spaceId`: RustBuffer.ByValue,
 ): Long
-fun uniffi_affine_mobile_native_fn_func_hashcash_mint(`resource`: RustBuffer.ByValue,`bits`: Int,uniffi_out_err: UniffiRustCallStatus, 
-): RustBuffer.ByValue
-fun uniffi_affine_mobile_native_fn_func_new_doc_storage_pool(uniffi_out_err: UniffiRustCallStatus, 
 ): Pointer
 fun uniffi_affine_mobile_native_fn_func_render_mermaid_preview_svg(`code`: RustBuffer.ByValue,`theme`: RustBuffer.ByValue,`fontFamily`: RustBuffer.ByValue,`fontSize`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -1179,9 +1028,8 @@ private fun uniffiCheckContractApiVersion(lib: IntegrityCheckingUniffiLib) {
 }
 @Suppress("UNUSED_PARAMETER")
 private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
-    if (lib.uniffi_affine_mobile_native_checksum_func_hashcash_mint() != 23633.toShort()) {
-        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
-    }
+    // DE-CLOUDED (#469): hashcash_mint (cloud-auth proof-of-work) was removed
+    // from the Rust crate; the generated binding is patched to match.
     if (lib.uniffi_affine_mobile_native_checksum_func_new_doc_storage_pool() != 32882.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -2774,9 +2622,6 @@ open class DocStoragePool: Disposable, AutoCloseable, DocStoragePoolInterface
     }
 
     
-
-    
-    
     companion object
     
 }
@@ -2808,7 +2653,6 @@ public object FfiConverterTypeDocStoragePool: FfiConverter<DocStoragePool, Point
         buf.putLong(Pointer.nativeValue(lower(value)))
     }
 }
-
 
 
 data class Blob (
@@ -2852,7 +2696,6 @@ public object FfiConverterTypeBlob: FfiConverterRustBuffer<Blob> {
             FfiConverterLong.write(value.`createdAt`, buf)
     }
 }
-
 
 
 data class BlockInfo (
@@ -2914,7 +2757,6 @@ public object FfiConverterTypeBlockInfo: FfiConverterRustBuffer<BlockInfo> {
 }
 
 
-
 data class CrawlResult (
     var `blocks`: List<BlockInfo>, 
     var `title`: kotlin.String, 
@@ -2950,7 +2792,6 @@ public object FfiConverterTypeCrawlResult: FfiConverterRustBuffer<CrawlResult> {
 }
 
 
-
 data class DocClock (
     var `docId`: kotlin.String, 
     var `timestamp`: kotlin.Long
@@ -2980,7 +2821,6 @@ public object FfiConverterTypeDocClock: FfiConverterRustBuffer<DocClock> {
             FfiConverterLong.write(value.`timestamp`, buf)
     }
 }
-
 
 
 data class DocIndexedClock (
@@ -3018,7 +2858,6 @@ public object FfiConverterTypeDocIndexedClock: FfiConverterRustBuffer<DocIndexed
 }
 
 
-
 data class DocRecord (
     var `docId`: kotlin.String, 
     var `bin`: kotlin.String, 
@@ -3052,7 +2891,6 @@ public object FfiConverterTypeDocRecord: FfiConverterRustBuffer<DocRecord> {
             FfiConverterLong.write(value.`timestamp`, buf)
     }
 }
-
 
 
 data class DocUpdate (
@@ -3090,7 +2928,6 @@ public object FfiConverterTypeDocUpdate: FfiConverterRustBuffer<DocUpdate> {
 }
 
 
-
 data class IndexAggregateResult (
     var `total`: kotlin.UInt, 
     var `buckets`: List<IndexBucket>
@@ -3120,7 +2957,6 @@ public object FfiConverterTypeIndexAggregateResult: FfiConverterRustBuffer<Index
             FfiConverterSequenceTypeIndexBucket.write(value.`buckets`, buf)
     }
 }
-
 
 
 data class IndexBucket (
@@ -3162,7 +2998,6 @@ public object FfiConverterTypeIndexBucket: FfiConverterRustBuffer<IndexBucket> {
 }
 
 
-
 data class IndexField (
     var `field`: kotlin.String, 
     var `values`: List<kotlin.String>
@@ -3192,7 +3027,6 @@ public object FfiConverterTypeIndexField: FfiConverterRustBuffer<IndexField> {
             FfiConverterSequenceString.write(value.`values`, buf)
     }
 }
-
 
 
 data class IndexHighlight (
@@ -3226,7 +3060,6 @@ public object FfiConverterTypeIndexHighlight: FfiConverterRustBuffer<IndexHighli
 }
 
 
-
 data class IndexHighlightValue (
     var `valueIndex`: kotlin.UInt, 
     var `spans`: List<IndexSpan>
@@ -3256,7 +3089,6 @@ public object FfiConverterTypeIndexHighlightValue: FfiConverterRustBuffer<IndexH
             FfiConverterSequenceTypeIndexSpan.write(value.`spans`, buf)
     }
 }
-
 
 
 data class IndexHit (
@@ -3298,7 +3130,6 @@ public object FfiConverterTypeIndexHit: FfiConverterRustBuffer<IndexHit> {
 }
 
 
-
 data class IndexSearchResult (
     var `total`: kotlin.UInt, 
     var `hits`: List<IndexHit>
@@ -3330,7 +3161,6 @@ public object FfiConverterTypeIndexSearchResult: FfiConverterRustBuffer<IndexSea
 }
 
 
-
 data class IndexSpan (
     var `start`: kotlin.UInt, 
     var `end`: kotlin.UInt
@@ -3360,7 +3190,6 @@ public object FfiConverterTypeIndexSpan: FfiConverterRustBuffer<IndexSpan> {
             FfiConverterUInt.write(value.`end`, buf)
     }
 }
-
 
 
 data class ListedBlob (
@@ -3402,7 +3231,6 @@ public object FfiConverterTypeListedBlob: FfiConverterRustBuffer<ListedBlob> {
 }
 
 
-
 data class SetBlob (
     var `key`: kotlin.String, 
     var `data`: kotlin.String, 
@@ -3436,9 +3264,6 @@ public object FfiConverterTypeSetBlob: FfiConverterRustBuffer<SetBlob> {
             FfiConverterString.write(value.`mime`, buf)
     }
 }
-
-
-
 
 
 sealed class UniffiException: kotlin.Exception() {
@@ -3533,8 +3358,6 @@ public object FfiConverterTypeUniffiError : FfiConverterRustBuffer<UniffiExcepti
 }
 
 
-
-
 /**
  * @suppress
  */
@@ -3563,8 +3386,6 @@ public object FfiConverterOptionalLong: FfiConverterRustBuffer<kotlin.Long?> {
         }
     }
 }
-
-
 
 
 /**
@@ -3597,8 +3418,6 @@ public object FfiConverterOptionalDouble: FfiConverterRustBuffer<kotlin.Double?>
 }
 
 
-
-
 /**
  * @suppress
  */
@@ -3627,8 +3446,6 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
         }
     }
 }
-
-
 
 
 /**
@@ -3661,8 +3478,6 @@ public object FfiConverterOptionalTypeBlob: FfiConverterRustBuffer<Blob?> {
 }
 
 
-
-
 /**
  * @suppress
  */
@@ -3691,8 +3506,6 @@ public object FfiConverterOptionalTypeDocClock: FfiConverterRustBuffer<DocClock?
         }
     }
 }
-
-
 
 
 /**
@@ -3725,8 +3538,6 @@ public object FfiConverterOptionalTypeDocIndexedClock: FfiConverterRustBuffer<Do
 }
 
 
-
-
 /**
  * @suppress
  */
@@ -3755,8 +3566,6 @@ public object FfiConverterOptionalTypeDocRecord: FfiConverterRustBuffer<DocRecor
         }
     }
 }
-
-
 
 
 /**
@@ -3789,8 +3598,6 @@ public object FfiConverterOptionalSequenceString: FfiConverterRustBuffer<List<ko
 }
 
 
-
-
 /**
  * @suppress
  */
@@ -3815,8 +3622,6 @@ public object FfiConverterSequenceLong: FfiConverterRustBuffer<List<kotlin.Long>
         }
     }
 }
-
-
 
 
 /**
@@ -3845,8 +3650,6 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
 }
 
 
-
-
 /**
  * @suppress
  */
@@ -3871,8 +3674,6 @@ public object FfiConverterSequenceTypeBlockInfo: FfiConverterRustBuffer<List<Blo
         }
     }
 }
-
-
 
 
 /**
@@ -3901,8 +3702,6 @@ public object FfiConverterSequenceTypeDocClock: FfiConverterRustBuffer<List<DocC
 }
 
 
-
-
 /**
  * @suppress
  */
@@ -3927,8 +3726,6 @@ public object FfiConverterSequenceTypeDocIndexedClock: FfiConverterRustBuffer<Li
         }
     }
 }
-
-
 
 
 /**
@@ -3957,8 +3754,6 @@ public object FfiConverterSequenceTypeDocUpdate: FfiConverterRustBuffer<List<Doc
 }
 
 
-
-
 /**
  * @suppress
  */
@@ -3983,8 +3778,6 @@ public object FfiConverterSequenceTypeIndexBucket: FfiConverterRustBuffer<List<I
         }
     }
 }
-
-
 
 
 /**
@@ -4013,8 +3806,6 @@ public object FfiConverterSequenceTypeIndexField: FfiConverterRustBuffer<List<In
 }
 
 
-
-
 /**
  * @suppress
  */
@@ -4039,8 +3830,6 @@ public object FfiConverterSequenceTypeIndexHighlight: FfiConverterRustBuffer<Lis
         }
     }
 }
-
-
 
 
 /**
@@ -4069,8 +3858,6 @@ public object FfiConverterSequenceTypeIndexHighlightValue: FfiConverterRustBuffe
 }
 
 
-
-
 /**
  * @suppress
  */
@@ -4095,8 +3882,6 @@ public object FfiConverterSequenceTypeIndexHit: FfiConverterRustBuffer<List<Inde
         }
     }
 }
-
-
 
 
 /**
@@ -4125,8 +3910,6 @@ public object FfiConverterSequenceTypeIndexSpan: FfiConverterRustBuffer<List<Ind
 }
 
 
-
-
 /**
  * @suppress
  */
@@ -4153,20 +3936,6 @@ public object FfiConverterSequenceTypeListedBlob: FfiConverterRustBuffer<List<Li
 }
 
 
-
-
-
-
-
- fun `hashcashMint`(`resource`: kotlin.String, `bits`: kotlin.UInt): kotlin.String {
-            return FfiConverterString.lift(
-    uniffiRustCall() { _status ->
-    UniffiLib.INSTANCE.uniffi_affine_mobile_native_fn_func_hashcash_mint(
-        FfiConverterString.lower(`resource`),FfiConverterUInt.lower(`bits`),_status)
-}
-    )
-    }
-    
  fun `newDocStoragePool`(): DocStoragePool {
             return FfiConverterTypeDocStoragePool.lift(
     uniffiRustCall() { _status ->
@@ -4196,5 +3965,3 @@ public object FfiConverterSequenceTypeListedBlob: FfiConverterRustBuffer<List<Li
     )
     }
     
-
-

@@ -1,0 +1,45 @@
+{
+  "name": "cloud-affine",
+  "description": "Cloud AFFiNE — our own signed build of AFFiNE (the local-first notes/whiteboard app), vendored at ac_cloud-affine/ as owned code. DE-CLOUDED (#469): no AFFiNE server, no Firebase/telemetry, no AI chat, no EE-licensed code. The one feature added over upstream is opening files from emulated storage (/storage/emulated/0/...) reached via the fleet rule about EAR discipline — see the ship workflow and testers.",
+  "category": "android",
+  "vendored_engine": "cloud-affine-engine.sh",
+  "_doc_vendored_engine": "Byte-identical to ac_cloud-affine/build.sh, enforced by cloud-android-ship-repo-workflow-engine.sh parity check so the shipped engine and the vendored copy cannot drift.",
+  "android": {
+    "application_id": "com.diegonmarcos.affine",
+    "namespace": "app.affine.pro",
+    "flavor": "stable",
+    "min_sdk": 24,
+    "target_sdk": 36,
+    "compile_sdk": 36,
+    "_doc_application_id": "REPLACES-NOT: ships ALONGSIDE the current Cloud Notes (Markor, com.diegonmarcos.cloudnotes) for now. The #469 identity decision is 'ship alongside' — AFFiNE is a genuinely different app and ripping the live Markor tree + superapp wiring out in the same commit as adding a 9000-file vendor would maximise mid-flight breakage. Next step is documented in the report: flip to com.diegonmarcos.cloudnotes and delete ac_cloud-notes once this builds green."
+  },
+  "upstream": {
+    "repo": "https://github.com/toeverything/AFFiNE.git",
+    "pinned_revision": "cfda4858d550c46ec1cd0b574801d7becdd6625b",
+    "license": "MIT",
+    "_doc": "Full clone vendored as owned code (no .git, no upstream remote). MIT except packages/backend + packages/common/native — BOTH PRUNED (EE licence forbids copying/distributing). Proven at the Cargo level in ac_cloud-affine/VENDORING-LICENCE.md and enforced by the licence-boundary-guard on every push."
+  },
+  "signing": {
+    "vault_keystore": "A0_keys/providers/android/release.jks",
+    "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
+  },
+  "release": {
+    "artifact": { "debug": "Cloud-Notes-debug.apk", "release": "Cloud-Notes.apk" },
+    "ghcr": {
+      "enabled": true,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-affine",
+      "media_type": "application/vnd.android.package-archive"
+    },
+    "gh_release": {
+      "enabled": true,
+      "rolling_tag": "latest",
+      "asset_name": "Cloud-Notes.apk"
+    }
+  },
+  "tests": {
+    "_doc": "Shell testers under ac_cloud-affine/test/ that prove licence-cleanliness and app identity WITHOUT a build. Read by cloud-android-test-engine.sh::tests.shell.",
+    "shell": { "dir": "test", "requires": ["python3", "git"] }
+  }
+}

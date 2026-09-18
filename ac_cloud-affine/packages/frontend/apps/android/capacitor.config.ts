@@ -15,7 +15,7 @@ interface AppConfig {
 }
 
 const config: CapacitorConfig & AppConfig = {
-  appId: 'app.affine.pro',
+  appId: 'com.diegonmarcos.affine',  // REBRANDED (#469): applicationId move, namespace stays upstream
   appName: 'AFFiNE',
   webDir: 'dist',
   affineVersion: packageJson.version,

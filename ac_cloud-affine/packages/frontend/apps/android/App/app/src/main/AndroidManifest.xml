@@ -32,23 +32,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-
-                <data
-                    android:host="authentication"
-                    android:pathPattern=".*"
-                    android:scheme="affine" />
-            </intent-filter>
+            <!-- DE-CLOUDED (#469): the affine://authentication deep link reached
+                 the AFFiNE cloud auth flow, which does not exist here. -->
         </activity>
-
-        <activity
-            android:name=".ai.AIActivity"
-            android:theme="@style/AppTheme.NoActionBar"
-            android:windowSoftInputMode="adjustResize" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
