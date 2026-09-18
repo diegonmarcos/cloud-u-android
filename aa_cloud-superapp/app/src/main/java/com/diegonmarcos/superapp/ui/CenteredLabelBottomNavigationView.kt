@@ -25,11 +25,22 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
  * set directly on the TextView instance, so this subclass walks its own
  * tree — once, right after Material's own constructor has built the item
  * views from app:menu — and sets it there.
+ *
+ * #512 — defStyleAttr MUST default to Material's own bottomNavigationStyle.
+ * As first written it defaulted to 0, which to a View constructor means "no
+ * default style attribute": Material's two-arg constructor supplies
+ * R.attr.bottomNavigationStyle itself, but a subclass that calls the
+ * three-arg one with 0 opts out of it, and the whole themed style
+ * (Widget.CloudSuperApp.BottomNavigationView — itemBackground, i.e. the
+ * selected-item pill, the Material3 parent, the 80dp height) was silently
+ * never applied. The launcher shipped with no selection UI at all while
+ * every XML tester stayed green. Proven on the inflated view by
+ * app/src/test/.../BottomNavSelectedPillTest.kt.
  */
 class CenteredLabelBottomNavigationView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0,
+    defStyleAttr: Int = com.google.android.material.R.attr.bottomNavigationStyle,
 ) : BottomNavigationView(context, attrs, defStyleAttr) {
 
     init {

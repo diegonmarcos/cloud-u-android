@@ -15,7 +15,10 @@
 # resurrect the icon-only highlight or re-introduce a disconnected radius.
 #
 # Static tester (no device, no build): pure resource-file checks, so it runs
-# in seconds inside the ship workflow's shell phase.
+# in seconds inside the ship workflow's shell phase. STATIC MEANS PARTIAL: it
+# was green for a whole release with no pill on screen (#512). What the view
+# actually resolved is proven by app/src/test/.../BottomNavSelectedPillTest.kt,
+# and T8 fails this file if that test is missing or not run by CI.
 set -u
 APP="$(cd "$(dirname "$0")/.." && pwd)"          # -> aa_cloud-superapp
 RES="$APP/app/src/main/res"
@@ -248,6 +251,55 @@ if "TextView" not in body:
 print("OK")
 PY
 )" "bottom_nav is a custom view class that sets includeFontPadding=false on its real TextView descendants"
+
+echo "== T8: the themed style can actually REACH the view, and the resolved view is tested =="
+# #512. T1-T7 all passed on a build that painted NO pill. The pill is itemBackground in the
+# style behind ?attr/bottomNavigationStyle, and the #498 subclass declared
+# `defStyleAttr: Int = 0` and handed that to Material's constructor — 0 means "no default
+# style attribute", so the whole themed style was dropped while every XML file this tester
+# reads stayed correct. Text cannot prove a view applied a style; only an inflated view can.
+# So this block (a) rejects the one static shape of that bug, on whatever class the layout
+# names at @+id/bottom_nav (resolved by id, walked up to Material's class — no hardcoded
+# class name), and (b) FAILS unless the runtime proof exists and CI is told to run it: a JVM
+# test that inflates activity_main and reads the resolved itemBackground off the view.
+check "$(python3 - "$LAYOUT" "$JAVA_ROOT" "$APP" <<'PY'
+import json, os, re, sys
+layout, java_root, app = sys.argv[1:]
+MATERIAL = "com.google.android.material.bottomnavigation.BottomNavigationView"
+m = re.search(r'<([A-Za-z0-9_.]+)\s+android:id="@\+id/bottom_nav"', open(layout).read())
+if not m:
+    print("PROBLEM: no view declares android:id=\"@+id/bottom_nav\""); raise SystemExit
+cls, p, hops = m.group(1), [], 0
+while cls != MATERIAL:
+    hops += 1
+    path = os.path.join(java_root, cls.replace(".", "/") + ".kt")
+    if hops > 8 or not os.path.isfile(path):
+        p.append("cannot resolve %s up to %s (no source at %s)" % (cls, MATERIAL, path)); break
+    body = open(path).read()
+    d = re.search(r'defStyleAttr\s*:\s*Int\s*=\s*([^,)\n]+)', body)
+    if d and not d.group(1).strip().endswith("R.attr.bottomNavigationStyle"):
+        p.append("%s defaults defStyleAttr to '%s' — anything but R.attr.bottomNavigationStyle drops the themed style (and the pill with it)" % (cls, d.group(1).strip()))
+    sup = re.search(r'\)\s*:\s*([A-Za-z0-9_.]+)\s*\(', body)
+    if not sup:
+        p.append("%s has no superclass constructor call to follow" % cls); break
+    name = sup.group(1)
+    imp = re.search(r'^import\s+([\w.]+\.%s)\s*$' % re.escape(name), body, re.M)
+    pkg = re.search(r'^package\s+([\w.]+)', body, re.M)
+    cls = name if "." in name else imp.group(1) if imp else "%s.%s" % (pkg.group(1), name)
+unit = json.load(open(os.path.join(app, "build.json"))).get("tests", {}).get("unit", {})
+if not unit.get("task") or unit.get("enabled") is False:
+    p.append("build.json::tests.unit is off — the resolved-view proof would never run in CI")
+proof = []
+for root, _, files in os.walk(os.path.join(app, "app", "src", "test")):
+    for f in files:
+        t = open(os.path.join(root, f)).read()
+        if all(k in t for k in ("R.layout.activity_main", "R.id.bottom_nav", "itemBackgroundResource", "@Test")):
+            proof.append(f)
+if not proof:
+    p.append("no JVM test under app/src/test inflates R.layout.activity_main and reads itemBackgroundResource off R.id.bottom_nav — this tester alone is XML text and has been green with no pill on screen")
+print("; ".join(p) or "OK")
+PY
+)" "bottom_nav's class chain keeps ?attr/bottomNavigationStyle, and an inflated-view test is wired into CI"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
