@@ -156,12 +156,12 @@
       "workflow": "ship-cloud-keyboard.yml"
     },
     "ac_cloud-mail": {
-      "first_test": "Has 13 shell testers and 763 JVM unit test classes, both executed. The only application in the fleet whose ship run proves anything beyond compilation.",
+      "first_test": "Has 13 shell testers and 769 JVM unit test classes, both executed. The only application in the fleet whose ship run proves anything beyond compilation.",
       "shell_testers": 14,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
-      "unit_test_sources": 766,
+      "unit_test_sources": 769,
       "workflow": "ship-cloud-mail.yml"
     },
     "ac_cloud-matrix": {

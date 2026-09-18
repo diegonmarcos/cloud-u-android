@@ -669,7 +669,18 @@ private fun MainNavHost(
         // start destination: the app still opens on the inbox, which is what the reader came for.
         composable("home") { entry ->
             Box(Modifier.fillMaxSize()) {
-                HomeScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
+                HomeScreen(
+                    onBack = { entry.navigateOnce { nav.popBackStack() } },
+                    onOpenCompose = { entry.navigateOnce { nav.navigate("compose") } },
+                    onOpenSearch = { q -> entry.navigateOnce { nav.navigate("search?q=${Uri.encode(q)}") } },
+                    onOpenStarred = { entry.navigateOnce { nav.navigate("search?flagged=true") } },
+                    onOpenSettings = { entry.navigateOnce { nav.navigate("settings") } },
+                    onOpenScheduled = { entry.navigateOnce { nav.navigate("scheduled") } },
+                    onOpenSnoozed = { entry.navigateOnce { nav.navigate("snoozed") } },
+                    onOpenOutbox = { entry.navigateOnce { nav.navigate("outbox") } },
+                    onOpenMailBySender = { entry.navigateOnce { nav.navigate("bysender") } },
+                    onOpenRss = { entry.navigateOnce { nav.navigate("rss") } },
+                )
                 BottomNavBar(nav = nav, currentRoute = "home")
             }
         }

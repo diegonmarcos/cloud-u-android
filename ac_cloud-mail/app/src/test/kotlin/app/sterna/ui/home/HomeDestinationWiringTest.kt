@@ -67,16 +67,30 @@ class HomeDestinationWiringTest {
             block(STERNA_APP, "onOpenHome =", count = 1),
         )
         assertEquals(
-            "the \"home\" route no longer resolves to HomeScreen, or no longer pops back through " +
-                "the guard. A route declared but never reached from the drawer, or a drawer row " +
-                "pointing at a route the NavHost does not declare, is a row that does nothing at " +
-                "all — and nothing else in this repository would say so.",
+            "the \"home\" route no longer resolves to HomeScreen with its shortcuts and quickmarks " +
+                "wired (#501), or no longer pops back through the guard. A route declared but never " +
+                "reached from the drawer, or a drawer row pointing at a route the NavHost does not " +
+                "declare, is a row that does nothing at all — and nothing else in this repository " +
+                "would say so. Each onOpenXxx below must resolve to a REAL route this NavHost " +
+                "declares elsewhere: a shortcut or quickmark pointed at a route that does not exist " +
+                "is a tap that does nothing, silently.",
             listOf(
                 """composable("home") { entry ->""",
                 "Box(Modifier.fillMaxSize()) {",
-                "HomeScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })",
+                "HomeScreen(",
+                "onBack = { entry.navigateOnce { nav.popBackStack() } },",
+                """onOpenCompose = { entry.navigateOnce { nav.navigate("compose") } },""",
+                """onOpenSearch = { q -> entry.navigateOnce { nav.navigate("search?q=${'$'}{Uri.encode(q)}") } },""",
+                """onOpenStarred = { entry.navigateOnce { nav.navigate("search?flagged=true") } },""",
+                """onOpenSettings = { entry.navigateOnce { nav.navigate("settings") } },""",
+                """onOpenScheduled = { entry.navigateOnce { nav.navigate("scheduled") } },""",
+                """onOpenSnoozed = { entry.navigateOnce { nav.navigate("snoozed") } },""",
+                """onOpenOutbox = { entry.navigateOnce { nav.navigate("outbox") } },""",
+                """onOpenMailBySender = { entry.navigateOnce { nav.navigate("bysender") } },""",
+                """onOpenRss = { entry.navigateOnce { nav.navigate("rss") } },""",
+                ")",
             ),
-            block(STERNA_APP, """composable("home")""", count = 3),
+            block(STERNA_APP, """composable("home")""", count = 14),
         )
     }
 
