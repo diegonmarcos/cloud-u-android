@@ -138,6 +138,10 @@ check("O7 patch adds the JS handler for cloudscancontents",
 check("O7 the handler captures #document-canvas (what the user sees)",
       "document.getElementById('document-canvas')" in patch_text,
       "a capture that reads nothing is a button that lies")
+check("O7 the handler casts the capture to HTMLCanvasElement",
+      "as HTMLCanvasElement" in patch_text,
+      "getElementById returns HTMLElement; width/height/getContext/toDataURL are canvas-only — "
+      "a missing cast is the TS2339 build failure this app already shipped once")
 check("O7 the handler posts CLOUD_CONTENT_SCAN to the shell",
       "postMobileMessage('CLOUD_CONTENT_SCAN '" in patch_text
       or "postMobileMessage(\"CLOUD_CONTENT_SCAN \"" in patch_text)

@@ -1,6 +1,6 @@
-From 43035088b8c3b440494dee05cfc210a7119def6f Mon Sep 17 00:00:00 2001
+From 953cd4d49722efc50abb62d0b7b1c115531ac74c Mon Sep 17 00:00:00 2001
 From: Cloud Office <me@diegonmarcos.com>
-Date: Fri, 18 Sep 2026 11:29:00 +0000
+Date: Fri, 18 Sep 2026 12:43:24 +0000
 Subject: [PATCH] cloud-office: content scan through the shared image-scan
  engine
 
@@ -261,7 +261,7 @@ index ac15c6e..9876410 100644
 +// (#170/#261). materialize places it at android/ml-l-image-mlkit.
 +project(':ml-l-image-mlkit').projectDir = new File(settingsDir, 'ml-l-image-mlkit')
 diff --git a/browser/src/control/Control.Menubar.ts b/browser/src/control/Control.Menubar.ts
-index 1d12400..de6e900 100644
+index 1d12400..c33afe8 100644
 --- a/browser/src/control/Control.Menubar.ts
 +++ b/browser/src/control/Control.Menubar.ts
 @@ -180,6 +180,7 @@ class Menubar extends window.L.Control {
@@ -328,7 +328,7 @@ index 1d12400..de6e900 100644
 +			// names itself: no canvas and a tainted canvas are told apart, and the
 +			// Android side always answers with a Toast.
 +			if (window.COOLMessageHandler) {
-+				const canvas = document.getElementById('document-canvas');
++				const canvas = document.getElementById('document-canvas') as HTMLCanvasElement;
 +				if (!canvas) {
 +					window.COOLMessageHandler.postMobileMessage('CLOUD_CONTENT_SCAN ' + 'error=no-canvas');
 +					return;
