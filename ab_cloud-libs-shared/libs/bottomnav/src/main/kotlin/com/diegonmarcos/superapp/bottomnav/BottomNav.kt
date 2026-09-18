@@ -1,4 +1,4 @@
-package app.sterna.ui.navigation
+package com.diegonmarcos.superapp.bottomnav
 
 /**
  * The five bottom-navigation items of the mail home bar (#465), in display order, Home in the
@@ -9,27 +9,30 @@ package app.sterna.ui.navigation
  * not move the selected indicator, so they carry no route; [BottomNavItem.packageName] is where the
  * interim Telegram / WhatsApp Business link is declared, so swapping "Chat" for a real in-app
  * screen later is a change to this one table and nothing else.
+ *
+ * THE ONE DECLARATION (#493). The item list, the routes, the launch targets and the selected-destination
+ * contract all live here, once, in the shared module. The consuming app adds this module BY
+ * REFERENCE and renders [BottomNavBar]; it does not restate any item. This file is package-visible
+ * so apps + screened tests see the model, and there is exactly one copy in the constellation.
  */
 
 /** What a tap on a bottom-nav item does: move inside this app, or leave it for another app. */
-enum class BottomNavAction { DESTINATION, LAUNCH }
+public enum class BottomNavAction { DESTINATION, LAUNCH }
 
 /** One bottom-nav item: what kind of action it is and what it acts on. */
-data class BottomNavItem(
+public data class BottomNavItem(
     /** Stable identifier, also the suffix of its accessible content description (`nav_bar_<id>`). */
-    val id: String,
-    val action: BottomNavAction,
+    public val id: String,
+    public val action: BottomNavAction,
     /** The NavHost destination for [BottomNavAction.DESTINATION]; null for a launch. */
-    val route: String? = null,
-    /**
-     * The app to launch for [BottomNavAction.LAUNCH]: resolved against the device rather than
-     * assumed installed, and named here once so the interim links are one declaration each.
-     */
-    val packageName: String? = null,
+    public val route: String? = null,
+    /** The app to launch for [BottomNavAction.LAUNCH]: resolved against the device rather than
+     *  assumed installed, and named here once so the interim links are one declaration each. */
+    public val packageName: String? = null,
 )
 
 /** The five items, left to right. Order is load-bearing: Home is deliberately the centre item. */
-val bottomNavItems: List<BottomNavItem> = listOf(
+public val bottomNavItems: List<BottomNavItem> = listOf(
     BottomNavItem(id = "mail", action = BottomNavAction.DESTINATION, route = "inbox"),
     BottomNavItem(id = "chat", action = BottomNavAction.LAUNCH, packageName = "org.telegram.messenger"),
     BottomNavItem(id = "home", action = BottomNavAction.DESTINATION, route = "home"),
@@ -40,5 +43,5 @@ val bottomNavItems: List<BottomNavItem> = listOf(
 /** The destinations the bar owns: only these routes draw the bar. Everything else is a full-size
  *  screen (compose, read, settings) that the island would only get in the way of. One place, so
  *  the verdict for a new route is a single line here rather than a scattered boolean per site. */
-fun bottomNavOwns(route: String): Boolean =
+public fun bottomNavOwns(route: String): Boolean =
     bottomNavItems.any { it.action == BottomNavAction.DESTINATION && it.route == route }

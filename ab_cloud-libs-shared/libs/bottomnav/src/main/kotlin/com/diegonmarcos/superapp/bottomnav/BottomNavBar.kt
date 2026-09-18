@@ -1,4 +1,4 @@
-package app.sterna.ui.navigation
+package com.diegonmarcos.superapp.bottomnav
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Home
@@ -24,28 +25,35 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import app.sterna.R
-import app.sterna.ui.rememberLeaveOnce
-import app.sterna.ui.theme.bottomNavIslandInset
-import app.sterna.ui.theme.bottomNavIslandShape
 
 /**
  * The floating bottom-navigation island (#465): five icon-only items in a fully rounded shape that
  * floats above the screen content, inset from the bottom edge. The selected destination's icon is
- * tinted primary; the others sit in the surface's onSurfaceVariant tone. (This app's material3 does
- * not expose the navigation-bar item with a selectable, label-free pill this ticket could rely on,
+ * tinted primary; the others sit in the surface's onSurfaceVariant tone. (This toolchain's material3
+ * does not expose the navigation-bar item with a selectable, label-free pill this bar could rely on,
  * so selection is a color, not a pill — the geometry and icon-only rules are what is load-bearing.)
  *
  * It is drawn once per destination the bar owns — the caller passes the route it is on, so the bar
- * needs no live read of the navigation back stack (on this app's compose/navigation stack a
- * `currentBackStackEntryAsState()` cannot be observed as a property delegate). [currentRoute] names
- * the screen it overlays; [BottomNavAction.DESTINATION] items navigate inside the NavHost and set
- * the selection, [BottomNavAction.LAUNCH] items hand off to another app and do NOT move it.
+ * needs no live read of the navigation back stack. [currentRoute] names the screen it overlays;
+ * [BottomNavAction.DESTINATION] items navigate inside the NavHost and set the selection,
+ * [BottomNavAction.LAUNCH] items hand off to another app and do NOT move it.
+ *
+ * Shared by reference (#493): the bar and its geometry live in this module, the consuming app adds
+ * it as a dependency and renders [BottomNavBar] against its own NavHost. There is no per-app copy.
  */
+
+/** The island geometry (#465): a floating rounded shape with fully semicircular ends, declared once
+ *  so no call site restates the radius. */
+public val bottomNavIslandShape: RoundedCornerShape = RoundedCornerShape(32.dp)
+
+/** How far the floating navigation island sits above the screen's bottom edge (#465). */
+public val bottomNavIslandInset: Dp = 12.dp
+
 @Composable
-fun BottomNavBar(nav: NavController, currentRoute: String) {
+public fun BottomNavBar(nav: NavController, currentRoute: String) {
     val context = LocalContext.current
     // The sanctioned hand-off guard for the two LAUNCH items — a double tap while leaving must not
     // fire the launch twice. rememberLeaveOnce is @Composable, so it is resolved here and handed to
@@ -116,9 +124,7 @@ private fun onItemTap(
 /**
  * Launch [packageName]'s front-door activity, reporting whether it exists on this device — the
  * launch intent is resolved against the device rather than assumed, so a device without the app
- * gets the specific honest sentence ([missingMessage]) instead of this bar pretending. Mirrors the
- * declared-intent path used for other cross-app launches in this app: resolve, then start, and the
- * caller learns whether the whole hand-off happened.
+ * gets the specific honest sentence ([missingMessage]) instead of this bar pretending.
  */
 internal fun launchInstalledApp(
     context: android.content.Context,

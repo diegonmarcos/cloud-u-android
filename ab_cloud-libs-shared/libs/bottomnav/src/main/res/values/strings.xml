@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Bottom navigation island (#465): five icon-only items. Each icon carries a content
+         description because an unlabelled icon row is unusable with a screen reader otherwise. -->
+    <string name="nav_bar_mail">Mail</string>
+    <string name="nav_bar_chat">Chat</string>
+    <string name="nav_bar_home">Home</string>
+    <string name="nav_bar_rss">News</string>
+    <string name="nav_bar_video">Video</string>
+    <!-- The launch items are interim links to other apps (Diego: "for now"). The sentence is what
+         the bar says when the target app is not on the device — honest and specific, never a
+         silent no-op and never a claim that it is missing when it is present. -->
+    <string name="nav_chat_not_installed">Telegram is not installed</string>
+    <string name="nav_video_not_installed">WhatsApp Business is not installed</string>
+    <string name="nav_launch_not_installed">That app is not installed</string>
+</resources>

@@ -1,0 +1,61 @@
+// libs:bottomnav — the ONE Compose bottom-navigation island, shared by reference.
+//
+// This is cloud-mail's bottom nav (#465), lifted out of the app layer so no app
+// carries a private copy. The four legacy apps (superapp / me / nav / notes) each
+// still draw their OWN XML BottomNavigationView and are deliberately NOT merged
+// here — they are divergent (different ids, different menu sources, different
+// styling) and harmonising them is a redesign nobody asked for (#493). A NEW
+// app that wants a Compose bottom nav can consume this module by reference and
+// gets the item list, the icons, the labels and the selected-tab contract from
+// the ONE declaration in BottomNav.kt.
+//
+// Deliberately sparse on the independent-version axis (text-tools / core
+// precedent): behaves like the other shared libs, so it builds under whichever
+// AGP app pulls it in. Versions below match cloud-mail's catalog.
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    // @Composable source needs the compose compiler. Resolved from the consuming app's root
+    // build (cloud-mail declares it `apply false` in its root, so the bare id works here).
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace 'com.diegonmarcos.superapp.bottomnav'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // Compose UI + Material3 + the extended icon set the island draws, and the
+    // navigation-compose NavController that drives destination moves. Pinned to
+    // the same BOM and versions cloud-mail's app module links, so this lib
+    // composes against the app's own compose/AGP toolchain.
+    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.navigation:navigation-compose:2.8.5'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
+    implementation 'androidx.core:core-ktx:1.15.0'
+}
