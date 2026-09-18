@@ -1,0 +1,35 @@
+import { registerPlugin } from '@capacitor/core';
+
+export interface ExternalFileReadResult {
+  content: string;
+  name: string;
+  size: number;
+  path: string;
+}
+
+export interface ExternalReadError {
+  code: string;
+  message: string;
+}
+
+export type ExternalFilePluginType = {
+  readFile(options: { path: string }): Promise<ExternalFileReadResult>;
+  openSettings(): Promise<void>;
+};
+
+// Wired to app.affine.pro.plugin.ExternalFilePlugin on Android. Every failure
+// resolves to REJECT with a code AND a human message — nothing here returns an
+// empty box (ticket #469 requirement).
+export const ExternalFile = registerPlugin<ExternalFilePluginType>('ExternalFile');
+
+export const EXTERNAL_FILE_ERRORS: Record<string, string> = {
+  NO_PATH: 'No path was given.',
+  OUTSIDE_EMULATED_STORAGE: 'Path must start with /storage/emulated/0/.',
+  PERMISSION_DENIED:
+    'Storage access is not granted. Use the error message shown to open Settings.',
+  NOT_FOUND: 'The file does not exist at that path.',
+  IS_DIRECTORY: 'That path is a folder, not a file.',
+  UNSUPPORTED_EXTENSION: 'That file type is not supported for import.',
+  TOO_LARGE: 'The file is larger than the 10 MiB import limit.',
+  READ_ERROR: 'The file could not be read.',
+};

@@ -50,4 +50,15 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- #469 emulated-storage open-file: MANAGE_EXTERNAL_STORAGE is the
+         Android 11+ mechanism that lets a file-manager-style app read
+         /storage/emulated/0/... by raw path after the user grants All-files
+         access in Settings (checked via Environment.isExternalStorageManager
+         in ExternalFilePlugin). READ_EXTERNAL_STORAGE covers Android 10 and
+         older. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 </manifest>

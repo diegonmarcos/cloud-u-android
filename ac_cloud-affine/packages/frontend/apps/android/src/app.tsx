@@ -20,6 +20,7 @@ import {
 } from '@affine/core/modules/cloud';
 import { registerNativePreviewHandlers } from '@affine/core/modules/code-block-preview-renderer';
 import { DocsService } from '@affine/core/modules/doc';
+import { ImportService } from '@affine/core/modules/import';
 import { GlobalContextService } from '@affine/core/modules/global-context';
 import { I18nProvider } from '@affine/core/modules/i18n';
 import { LifecycleService } from '@affine/core/modules/lifecycle';
@@ -63,6 +64,7 @@ import { RouterProvider } from 'react-router-dom';
 import { AffineTheme } from './plugins/affine-theme';
 import { AIButton } from './plugins/ai-button';
 import { Auth } from './plugins/auth';
+import { ExternalFile, EXTERNAL_FILE_ERRORS } from './plugins/external-file';
 import { HashCash } from './plugins/hashcash';
 import { MobileBack } from './plugins/mobile-back';
 import { NbStoreNativeDBApis } from './plugins/nbstore';
@@ -471,6 +473,59 @@ const AndroidBackAdapter = () => {
   return null;
 };
 
+
+// #469 — the ONE feature over upstream: open a file from emulated storage.
+// The native FAB dispatches 'cloud-notes:open-file'; here we ask for a path,
+// read it through ExternalFilePlugin (every failure carries its own visible
+// message) and import the markdown into the local workspace via AFFiNE's own
+// Obsidian importer, so the vault docs land in the app's document store.
+const ExternalFileOpener = () => {
+  const importService = useService(ImportService);
+
+  useEffect(() => {
+    const listener = () => {
+      const path = window.prompt(
+        'Open file from device storage (path under /storage/emulated/0/, e.g. Documents/Obsidian/note.md):'
+      );
+      if (!path) return;
+      ExternalFile.readFile({ path })
+        .then(res => importService.importObsidianVault([new File([res.content], res.name, { type: 'text/markdown' })])
+          .then(() => {
+            notify.success({
+              title: 'Opened',
+              message: `${res.name} imported into the workspace.`,
+            });
+          })
+          .catch((err: unknown) => {
+            notify.error({
+              title: 'Import failed',
+              message: err instanceof Error ? err.message : String(err),
+            });
+          }))
+        .catch((err: unknown) => {
+          const code = (err as { code?: string })?.code ?? 'UNKNOWN';
+          const fallback = EXTERNAL_FILE_ERRORS[code] ?? 'Cannot open the file.';
+          notify.error({
+            title: 'Cannot open file',
+            message:
+              err instanceof Error && err.message ? err.message : fallback,
+          });
+          // Permission problems are fixed in Settings, never in a retry of the
+          // same call — offer the jump once.
+          if (code === 'PERMISSION_DENIED' && window.confirm('Open Settings to grant storage access?')) {
+            ExternalFile.openSettings().catch(console.error);
+          }
+        });
+    };
+    window.addEventListener('cloud-notes:open-file', listener);
+    return () => {
+      window.removeEventListener('cloud-notes:open-file', listener);
+    };
+  }, [importService]);
+
+  return null;
+};
+
 export function App() {
   return (
     <Suspense>
@@ -480,6 +535,7 @@ export function App() {
             <AffineContext store={getCurrentStore()}>
               <ThemeProvider />
               <AndroidBackAdapter />
+              <ExternalFileOpener />
               <RouterProvider
                 fallbackElement={<AppFallback />}
                 router={router}

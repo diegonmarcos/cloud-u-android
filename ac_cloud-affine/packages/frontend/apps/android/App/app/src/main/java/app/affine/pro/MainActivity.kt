@@ -2,6 +2,7 @@ package app.affine.pro
 
 import android.content.ComponentCallbacks2
 import android.os.Bundle
+import android.view.Gravity
 import android.view.View
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -10,12 +11,18 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import app.affine.pro.plugin.AFFiNEThemePlugin
+import app.affine.pro.plugin.ExternalFilePlugin
 import app.affine.pro.plugin.NbStorePlugin
 import app.affine.pro.plugin.MobileBackPlugin
 import app.affine.pro.plugin.PreviewPlugin
+import app.affine.pro.utils.dp2px
 import app.affine.pro.utils.px2dp
 import com.getcapacitor.BridgeActivity
 import com.getcapacitor.WebViewListener
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.view.updateMargins
+import androidx.core.content.ContextCompat
 import dagger.hilt.android.AndroidEntryPoint
 
 // DE-CLOUDED (#469): upstream wired this activity to the AFFiNE cloud: AI chat
@@ -33,6 +40,7 @@ class MainActivity : BridgeActivity(), AFFiNEThemePlugin.Callback {
                 NbStorePlugin::class.java,
                 MobileBackPlugin::class.java,
                 PreviewPlugin::class.java,
+                ExternalFilePlugin::class.java,
             )
         )
     }
@@ -46,6 +54,34 @@ class MainActivity : BridgeActivity(), AFFiNEThemePlugin.Callback {
         ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
             navHeight = px2dp(insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom)
             ViewCompat.onApplyWindowInsets(v, insets)
+        }
+        setupOpenFileFab()
+    }
+
+    // #469: the ONE feature over upstream — open a file from emulated storage.
+    // The FAB asks the editor for a path; the editor reads it through the
+    // ExternalFilePlugin and imports the markdown into the local workspace.
+    private fun setupOpenFileFab() {
+        val fab = FloatingActionButton(this).apply {
+            layoutParams = CoordinatorLayout.LayoutParams(dp2px(52), dp2px(52)).apply {
+                gravity = Gravity.END or Gravity.BOTTOM
+                updateMargins(0, 0, dp2px(24), dp2px(86))
+            }
+            customSize = dp2px(52)
+            setImageResource(R.drawable.ic_open_file)
+            backgroundTintList = android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(context, R.color.affine_primary)
+            )
+            setOnClickListener {
+                bridge.webView.post {
+                    bridge.webView.evaluateJavascript(
+                        "window.dispatchEvent(new Event('cloud-notes:open-file'))",
+                        null,
+                    )
+                }
+            }
+            val parent = bridge.webView.parent as CoordinatorLayout
+            parent.addView(this)
         }
     }
 
