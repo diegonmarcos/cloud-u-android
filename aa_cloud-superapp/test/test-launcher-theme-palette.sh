@@ -283,7 +283,7 @@ for needed in ('bottom_nav_end_inset', 'bottom_nav_icon_label_gap'):
 # The nav view must apply the SAME inset dimen to BOTH ends. Reading the same
 # @dimen/… ref twice is what makes left margin == right margin by construction;
 # two different refs or a literal on either side is the unequal-gap regression.
-nav = re.search(r'<com\.google\.android\.material\.bottomnavigation\.BottomNavigationView\b[^>]*/?>', layout)
+nav = re.search(r'<[\w.]*BottomNavigationView\b[^>]*/?>', layout)
 if not nav:
     problems.append('the layout no longer contains a BottomNavigationView')
 else:
@@ -350,7 +350,7 @@ for needed in ('bottom_nav_item_vertical_pad', 'tab_strip_top_inset'):
 for needed in ('bottom_nav_item_vertical_pad', 'tab_strip_top_inset'):
     if dimval.get(needed) is not None and dimval[needed] <= 0:
         problems.append('%s is %sdp — a zero/negative inset re-introduces the defect' % (needed, dimval[needed]))
-nav = re.search(r'<com\.google\.android\.material\.bottomnavigation\.BottomNavigationView\b[^>]*/?>', layout)
+nav = re.search(r'<[\w.]*BottomNavigationView\b[^>]*/?>', layout)
 if not nav:
     problems.append('the layout no longer contains a BottomNavigationView')
 else:
