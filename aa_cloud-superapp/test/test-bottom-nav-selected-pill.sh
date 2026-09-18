@@ -205,6 +205,50 @@ PY
 )" "no theme style may smuggle includeFontPadding (a silent Android-14 no-op)"
 fi
 
+echo "== T7: the REAL font-metrics fix is wired — includeFontPadding=false set on the actual TextView =="
+# T6 only rejects the fake fix (a no-op placement). This checks the real one exists: the
+# bottom_nav tag in activity_main.xml must be a custom view class (not the bare Material
+# BottomNavigationView), and that class must set includeFontPadding=false directly on the
+# TextView instances it finds in its own tree — the only lever Android 14 actually reads,
+# per T6's own comment. A mutation reverting the layout tag to the stock Material class, or
+# gutting the class body, must fail here.
+LAYOUT="$(cd "$(dirname "$0")/.." && pwd)/app/src/main/res/layout/activity_main.xml"
+JAVA_ROOT="$(cd "$(dirname "$0")/.." && pwd)/app/src/main/java"
+check "$(python3 - "$LAYOUT" "$JAVA_ROOT" <<'PY'
+import re, sys
+layout, java_root = sys.argv[1:]
+lm = open(layout).read()
+m = re.search(r'<([A-Za-z0-9_.]+)\s+android:id="@\+id/bottom_nav"', lm)
+if not m:
+    print("PROBLEM: no view declares android:id=\"@+id/bottom_nav\"")
+    raise SystemExit
+cls = m.group(1)
+if cls == "com.google.android.material.bottomnavigation.BottomNavigationView":
+    print("PROBLEM: bottom_nav is the bare Material BottomNavigationView again — the font-metrics fix (includeFontPadding on the real label TextView) has nowhere to live")
+    raise SystemExit
+if "." not in cls:
+    print("PROBLEM: bottom_nav view class '%s' is unqualified/unexpected" % cls)
+    raise SystemExit
+rel = cls.replace(".", "/") + ".kt"
+import os
+path = os.path.join(java_root, rel)
+if not os.path.isfile(path):
+    print("PROBLEM: bottom_nav references %s but %s does not exist" % (cls, path))
+    raise SystemExit
+body = open(path).read()
+if "BottomNavigationView" not in body:
+    print("PROBLEM: %s does not extend/reference BottomNavigationView" % path)
+    raise SystemExit
+if not re.search(r'includeFontPadding\s*=\s*false', body):
+    print("PROBLEM: %s never sets includeFontPadding = false — the class exists but does not apply the fix" % path)
+    raise SystemExit
+if "TextView" not in body:
+    print("PROBLEM: %s sets includeFontPadding but never targets TextView, so it cannot reach the internal label view" % path)
+    raise SystemExit
+print("OK")
+PY
+)" "bottom_nav is a custom view class that sets includeFontPadding=false on its real TextView descendants"
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
