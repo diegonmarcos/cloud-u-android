@@ -26,7 +26,7 @@
   },
   "modules": {
     "_doc": "Every module in the repository that owns a src/main/res/values/strings.xml must appear here, or the guard fails. That is deliberate and it is the answer to 'what happens to the NEXT app the owner builds': a new module with a new strings.xml is not silently exempt, it stops CI until somebody states in this file what its base language is. `base_language: en` means this module packages an APK and its build file must declare the English locale filter — the guard reads the build file and checks. `base_language: host` means this is a library: it ships locales, it packages nothing, and the filter in whichever app merges it is what drops them. `exempt` is a sentence saying why the rule does not bite, read by a human in review. `require` lists locale qualifiers that must cover every translatable key, and is unused while English is the base language.",
-    "_doc_libraries": "The three libraries below carry the fleet's own translated strings rather than a vendored catalogue. They are declared `host` and not `exempt` because the distinction is load-bearing: the Spanish in them is real, complete and unreachable, and if a future app ever drops the filter it comes straight back. libs/keyboard is the extreme case at 103 locale directories, and its Spanish is genuinely ours — at the vendoring commit 2dba4ec53 values/strings.xml and values-es/strings.xml each held 534 keys, and every key added since was added by this repository.",
+    "_doc_libraries": "The three libraries below carry the fleet's own translated strings rather than a vendored catalogue. They are declared `host` and not `exempt` because the distinction is load-bearing: the Spanish in them is real, complete and unreachable, and if a future app ever drops the filter it comes straight back. libs/keyboard is the extreme case at 103 locale directories, and its Spanish is genuinely ours — at the vendoring commit 2dba4ec53 values/strings.xml and values-es/strings.xml each held 534 keys, and every key added since was added by this repository. libs/bottomnav (#493) is a FOURTH host library and the one exception to the sentence above: it owns eight user-facing strings (five nav content descriptions and three not-installed sentences) and NO locale directory at all, so it has no Spanish of its own to become unreachable. It is host for the mechanical reason rather than the translation one - a library module cannot carry the package-time filter, so its strings are filtered at the packaging app merge step, and ac_cloud-mail declares the en resourceConfigurations filter.",
     "aa_cloud-superapp/app": {
       "base_language": "en"
     },
@@ -70,6 +70,9 @@
       "base_language": "host"
     },
     "ab_cloud-libs-shared/libs/keyboard": {
+      "base_language": "host"
+    },
+    "ab_cloud-libs-shared/libs/bottomnav": {
       "base_language": "host"
     },
     "ac_cloud-vault/ui": {
