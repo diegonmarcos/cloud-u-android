@@ -432,7 +432,7 @@ grep -qF 'LazyRow(' "$S" && bad "T8 LazyRow in the table — nest that in the se
   || ok "T8 the strip is a horizontalScroll, perpendicular to the settings list's vertical scroll"
 # Colours come from the theme. A literal here is wrong under the dark and Samsung-black themes.
 grep -qE 'Color\(0x|Color\.(White|Black|Gray|Red|Blue|Green)' "$S" \
-  && bad "T8 a colour literal in the table — the dark and power-saving themes supply their own" \
+  && bad "T8 a colour literal in the table — the dark theme supplies its own" \
   || ok "T8 every colour in the table comes from the theme"
 # Table and picker must agree, and both sort by the same presentation comparator.
 n=$(grep -cF 'sortedWith(byModelSize)' "$S")

@@ -681,7 +681,7 @@ PYX
 
 echo "== T19: the lights stay READABLE on the themes this app actually ships =="
 # A green picked against white is a green nobody can find on the Samsung-black
-# power-saving theme, and a status light that cannot be seen is worse than
+# terminal theme, and a status light that cannot be seen is worse than
 # none: its absence reads as nothing being wrong. The surfaces come from the
 # app's own window background, so a theme that darkens or lightens the page
 # re-runs this arithmetic instead of invalidating it.

@@ -12,18 +12,13 @@ import androidx.work.WorkManager
  *
  * Triggered by the active launcher theme's `background_pause` feature
  * flag (build.json::ui.launcher_themes[*].features.background_pause).
- * Cloud Power Saving sets it true → on theme application MainActivity
- * calls [applyForTheme] and we tear down every battery-hungry
- * subsystem we own: Maps location tracker, ntfy / message foreground
- * services, WorkManager periodic jobs, Phone-tab cache warm-up
- * threads. When the user flips back to Cloud or Minimalist the same
- * call resumes them by no-op (each producer re-arms on its own next
- * onCreate / onResume cycle).
- *
- * EXCEPTION: WireGuard. Per Diego — Power Saving mirrors Samsung /
- * Apple / Pixel power-save (cuts compute, keeps connectivity), so
- * the WG tunnel stays up. The `wireguard_required` feature flag
- * actually pins WG ON in this mode rather than off.
+ * A theme that sets it true → on theme application MainActivity calls
+ * [applyForTheme] and we tear down every battery-hungry subsystem we
+ * own: Maps location tracker, ntfy / message foreground services,
+ * WorkManager periodic jobs, Phone-tab cache warm-up threads. When the
+ * user flips to a theme that does not set it the same call resumes
+ * them by no-op (each producer re-arms on its own next onCreate /
+ * onResume cycle).
  *
  * Resilient to missing modules: every call site is wrapped in a
  * runCatching block so the orchestrator never crashes the launcher
@@ -42,31 +37,14 @@ object BackgroundOrchestrator {
     private fun pauseAll(context: Context) {
         stopMapsTracker(context)
         cancelPeriodicWork(context)
-        systemLevers(context) { PowerLevers.applyAll(it) }
         // Phone-tab warm-up is a one-shot thread fired from
         // MainActivity.onCreate — nothing to stop after it completes,
-        // but we DON'T fire it again on Power Saving themes (the
+        // but we DON'T fire it again on a background_pause theme (the
         // launcher's PhoneAppsFragment.warmUp now reads features
         // before kicking off and bails on power-save).
     }
 
-    /**
-     * Run a lever sweep off the main thread.
-     *
-     * [applyForTheme] is called from onResume, and every lever is a shell
-     * round-trip on the privileged channel — twenty of them on the UI thread is
-     * a visible freeze on the very screen the mode is trying to make cheap.
-     */
-    private fun systemLevers(context: Context, sweep: (Context) -> Int) {
-        val app = context.applicationContext
-        Thread({ runCatching { sweep(app) } }, "power-levers").start()
-    }
-
     private fun resumeAll(context: Context) {
-        // Leaving the mode is the ONLY moment the remembered values are still
-        // around to be put back, so this is not symmetry for its own sake: skip
-        // it and the user keeps a 15%-brightness 60Hz phone with no way back.
-        systemLevers(context) { PowerLevers.restoreAll(it) }
         // Subsystems re-arm on their own normal lifecycle hooks; we
         // don't have to explicitly start anything here. Keeping the
         // hook so future producers (e.g. an analytics ping batcher)
@@ -91,8 +69,8 @@ object BackgroundOrchestrator {
     }
 
     /** Cancel every WorkManager periodic / one-shot job we've enqueued
-     *  by tag. Producers that want their work to survive Power Saving
-     *  mode can simply enqueue under a different tag. */
+     *  by tag. Producers that want their work to survive a
+     *  background_pause theme can simply enqueue under a different tag. */
     private fun cancelPeriodicWork(context: Context) = runCatching {
         val wm = WorkManager.getInstance(context.applicationContext)
         TAGGED_JOBS.forEach { tag ->

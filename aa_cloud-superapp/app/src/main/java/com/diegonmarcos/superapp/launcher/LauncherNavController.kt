@@ -9,7 +9,6 @@ import com.diegonmarcos.superapp.settings.LauncherTheme
 import com.diegonmarcos.superapp.settings.LauncherThemePrefs
 import com.diegonmarcos.superapp.launcher.themes.cloud.Home3DFragment
 import com.diegonmarcos.superapp.launcher.themes.minimalist.MinimalistBlackFragment
-import com.diegonmarcos.superapp.launcher.themes.powersaving.PowerSavingFragment
 
 /**
  * Owns launcher navigation POLICY + state, separated from the Activity's view
@@ -65,21 +64,16 @@ class LauncherNavController(private val host: NavHost) {
         host.currentLabel = ctx.getString(R.string.section_home)
         host.setSectionTitle(host.currentLabel)
         // Each theme that declares a home pane of its own gets it; everything
-        // else gets the 3D cube. Power Saving used to fall through to the cube,
-        // which is why the mode meant to look like an ordinary phone rendered in
-        // the full colourful design.
+        // else gets the 3D cube.
         val themePrefs = LauncherThemePrefs(ctx)
         // The default-launcher question used to be asked FIRST, and it answered for
         // every theme. On a phone whose home button belongs to One UI Home — which
-        // is this phone — that meant picking Power Saving repainted the palette and
-        // then handed back the 3D cube anyway. That is the whole of the "it is only
-        // a colour change from the default one" defect: the mode was never once
-        // rendered. Power Saving and Minimalist Black are modes of THIS app, not
-        // launcher replacements, so the theme decides; being the default launcher
-        // only ever mattered to the plain Cloud theme.
+        // is this phone — that meant picking a mode repainted the palette and then
+        // handed back the 3D cube anyway. Minimalist Black is a mode of THIS app,
+        // not a launcher replacement, so the theme decides; being the default
+        // launcher only ever mattered to the plain Cloud theme.
         val homePane: Fragment = when (themePrefs.theme) {
             LauncherTheme.CloudMinimalistBlack -> MinimalistBlackFragment.newInstance()
-            LauncherTheme.CloudPowerSaving     -> PowerSavingFragment.newInstance()
             else                               -> Home3DFragment.newInstance()
         }
         host.swapContent(homePane, clearBackStack = true)

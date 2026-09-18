@@ -303,35 +303,6 @@
     <string name="ai_enhance_language">Idioma de salida: %1$s</string>
     <string name="ai_enhance_summary">Forma del resumen: %1$s</string>
 
-    <!-- ── Added to values/ while this locale was being written ──────────
-         Four commits landed between the audit and the push (the Power Saving
-         home-app editor and the One-Hand Recent Tabs star). Translated in the
-         same pass rather than left for later, which is the whole point of the
-         guard that now runs on every push. -->
-
-    <!-- App tiles. The ● / ○ glyph is the selection marker and carries the
-         meaning on a greyscale screen, so it stays exactly where it is. -->
-    <string name="app_tile_selected">● %1$s</string>
-    <string name="app_tile_unselected">○ %1$s</string>
-    <string name="app_tile_not_installed">%1$s — no instalada</string>
-
-    <string name="power_saving_apps_title">Apps del inicio de Power Saving</string>
-    <string name="power_saving_apps_caption">Las doce apps de la pantalla de inicio de Cloud Power Saving, en este orden. Toca una para apuntar ese hueco a otro sitio. Un hueco que se deja con la app que trae de fábrica sigue a la que enviemos después; un hueco que eliges tú se queda como lo dejes.</string>
-    <string name="power_saving_slot_chooser">Fila %1$d · hueco %2$d</string>
-    <string name="power_saving_slot_default">Predeterminada (%1$s)</string>
-    <string name="power_saving_settings">Ajustes</string>
-    <string name="power_saving_on">Ahorro de energía activado</string>
-    <string name="power_saving_off">Ahorro de energía desactivado</string>
-    <string name="power_saving_charging">Cargando</string>
-    <string name="power_saving_estimate_unknown">Tiempo restante no disponible</string>
-    <string name="power_saving_estimate_days">Quedan unos %1$d d %2$d h</string>
-    <string name="power_saving_estimate_hours">Quedan unas %1$d h</string>
-    <string name="power_saving_header">AHORRO DE ENERGÍA</string>
-    <string name="power_saving_estimate_label">TIEMPO DE USO RESTANTE ESTIMADO</string>
-    <string name="power_saving_chip_hz">%1$s Hz</string>
-    <string name="power_saving_chip_brightness">Brillo %1$d%%</string>
-    <string name="power_saving_chip_dark">Pantalla negra</string>
-
     <!-- One-Hand stars. Sirius, Canopus and Centauri are the stars' own names
          and stay; "Recent Tabs" is not a star name but a description of what
          the fourth one holds, so it is translated — and translated the same

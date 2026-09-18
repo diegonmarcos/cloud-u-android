@@ -1043,24 +1043,22 @@ open class ShellActivity : AppCompatActivity(),
                 toolbarIsland?.visibility = View.VISIBLE
                 bottomNavIsland?.visibility = View.VISIBLE
             }
-            // No isLauncher here, deliberately. These two themes are modes of this
-            // app; gating their chrome on owning the home button meant that on a
-            // phone where One UI Home owns it the mode kept the full toolbar and
+            // No isLauncher here, deliberately. This theme is a mode of this app;
+            // gating its chrome on owning the home button meant that on a phone
+            // where One UI Home owns it the mode kept the full toolbar and
             // bottom-nav islands, so the "mode" was a repaint. See LauncherNavController.
-            theme == LauncherTheme.CloudMinimalistBlack ||
-                theme == LauncherTheme.CloudPowerSaving -> {
-                // The two dark modes — Samsung / Apple / Pixel-style.
+            theme == LauncherTheme.CloudMinimalistBlack -> {
+                // The dark terminal mode — Samsung / Apple / Pixel-style.
                 // No top strip and no bottom-nav island anywhere, and
                 // the window background is pure black for OLED
                 // self-emission savings (the oled_black feature flag
-                // drives this). Background services are paused via
-                // BackgroundOrchestrator below; WireGuard stays up.
+                // drives this).
                 strip?.visibility = View.GONE
                 bottomNavIsland?.visibility = View.GONE
 
                 // ...but the toolbar island is NOT decoration: it is
                 // where action_back lives. Hiding it on every screen
-                // turned both modes into a trap with no way out of any
+                // turned the mode into a trap with no way out of any
                 // submenu — the owner reported exactly that ("as you
                 // remove the top buttons nothing now has a back
                 // button"). So it goes away only on the mode's OWN home
@@ -1095,8 +1093,8 @@ open class ShellActivity : AppCompatActivity(),
         }
         // The backdrop every fragment is drawn over, from the theme's own
         // palette. Unconditional, and that is the point: it used to be one
-        // `setBackgroundColor(Color.BLACK)` inside the Power Saving arm and
-        // nothing in any other arm, so switching AWAY from Power Saving left
+        // `setBackgroundColor(Color.BLACK)` inside a single dark-mode arm and
+        // nothing in any other arm, so switching AWAY from that mode left
         // the decor black — the gradient did not come back until the process
         // was killed. A surface painted in one branch has to be repainted in
         // all of them, which is what a palette read outside the `when` gives.
@@ -1104,8 +1102,8 @@ open class ShellActivity : AppCompatActivity(),
 
         // Apply the theme's background_pause / wireguard_required
         // policy. Reads features map declared in build.json::ui
-        // .launcher_themes[theme].features so this stays declarative
-        // — Power Saving's background_pause=true tears down the Maps
+        // .launcher_themes[theme].features so this stays declarative —
+        // a theme with background_pause=true tears down the Maps
         // tracker + WorkManager periodic jobs; flipping back to Cloud
         // is a no-op (producers re-arm on their own lifecycle).
         runCatching {
@@ -1956,26 +1954,6 @@ open class ShellActivity : AppCompatActivity(),
                 applyLauncherSettings()          // re-applies the live views (stars/waves/pets)
                 findViewById<View>(R.id.fragment_container)
                     ?.snack("Animations ${if (on) "on" else "off"}")
-            }
-            // A toggle, not a one-way switch: Samsung's own control goes in AND
-            // out, and a user who cannot leave a black screen from the same button
-            // that entered it has to go hunting through Configs to undo a tap. The
-            // theme it came from is remembered so leaving restores it rather than
-            // guessing Cloud.
-            actionType == "power_saving" -> {
-                val prefs = com.diegonmarcos.superapp.settings.LauncherThemePrefs(this)
-                val on = prefs.theme != LauncherTheme.CloudPowerSaving
-                prefs.theme = if (on) {
-                    prefs.themeBeforePowerSaving = prefs.theme
-                    LauncherTheme.CloudPowerSaving
-                } else {
-                    prefs.themeBeforePowerSaving
-                }
-                applyLauncherChrome()
-                goHome()
-                findViewById<View>(R.id.fragment_container)
-                    ?.snack(getString(
-                        if (on) R.string.power_saving_on else R.string.power_saving_off))
             }
             actionType == "open_home_apps" -> {
                 if (currentSection != "home") goHome()

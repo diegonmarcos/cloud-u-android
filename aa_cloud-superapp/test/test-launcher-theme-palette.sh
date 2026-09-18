@@ -148,8 +148,8 @@ grep -q 'LauncherPalette.invalidate()' "$SHELL_ACT" \
   || bad "nothing calls LauncherPalette.invalidate() on a theme change"
 
 echo "== T5: the window backdrop is repainted for EVERY theme, not one branch =="
-# It was one setBackgroundColor(Color.BLACK) inside the Power Saving arm and
-# nothing in any other arm, so switching AWAY from Power Saving left the decor
+# It was one setBackgroundColor(Color.BLACK) inside a single dark-mode arm and
+# nothing in any other arm, so switching AWAY from that mode left the decor
 # black until the process was killed. A surface painted in one branch of a
 # `when` has to be repainted in all of them.
 check "$(python3 - "$SHELL_ACT" <<'PY'
@@ -170,75 +170,12 @@ print('; '.join(problems) or 'OK')
 PY
 )" "the backdrop is applied once, outside the per-theme branches"
 
-echo "== T6: Power Saving is a MODE, not a palette entry =="
-# The owner asked for "a exact match of samsung super power saving: a full black
-# one screen with the 12 apps + edge menus". A colour-scheme entry can never be
-# that however black it gets. The reduction has to be structural, so this checks
-# the structure and not the darkness.
-ps_fail=""
-grep -q 'LauncherTheme.CloudPowerSaving *-> *PowerSavingFragment.newInstance()' \
-     "$SRC/launcher/LauncherNavController.kt" \
-  || ps_fail="$ps_fail no-home-pane-of-its-own"
-# Each mode now owns a folder under launcher/themes/ holding its screen and the
-# design vocabulary that screen is built from — "all themes have their own
-# folders, all different, nothing can be equal".
-[ -f "$SRC/launcher/themes/powersaving/PowerSavingFragment.kt" ] \
-  || ps_fail="$ps_fail pane-file-missing"
-check "$(python3 - "$BJ" <<'PY'
-import json, sys
-ui = json.load(open(sys.argv[1]))["ui"]
-ps = next(t for t in ui["launcher_themes"] if t["id"] == "cloud_power_saving")
-f = ps["features"]
-problems = []
-# What makes it REDUCED. Each of these is a piece of the phone that is gone,
-# not a colour: the cube, the bottom nav, the island, the animations.
-for key in ("home_3d", "bottom_nav", "dynamic_island", "animations"):
-    if f.get(key) is not False:
-        problems.append("features.%s is %r — Power Saving would still render it, "
-                        "which makes it a black skin rather than a reduced mode"
-                        % (key, f.get(key)))
-# ...and the one piece that must SURVIVE, because the owner asked for it by name.
-if f.get("drawer") is not True:
-    problems.append("features.drawer is %r — the owner asked for the edge menus "
-                    "to stay reachable in this mode" % f.get("drawer"))
-if f.get("grid") != "6x2":
-    problems.append("features.grid = %r, want '6x2' — twelve slots in two rows" % f.get("grid"))
-if len(ps.get("home_apps") or []) != 12:
-    problems.append("%d home_apps, want 12" % len(ps.get("home_apps") or []))
-print("; ".join(problems) or "OK")
-PY
-)" "Power Saving strips the 3D home, bottom nav, island and animations, keeps the edge menus, and is twelve slots in 6x2"
-[ -z "$ps_fail" ] && ok "Power Saving renders its own reduced home pane" \
-                  || bad "Power Saving falls back to the full home:$ps_fail"
-
-echo "== T7: Minimalist Black is a DIFFERENT theme, not the same one twice =="
-# The owner asked for two themes and got two names. If their palettes and their
-# feature sets are identical then only one of them exists and picking either is
-# the same choice under two labels.
-check "$(python3 - "$BJ" <<'PY'
-import json, sys
-ui = json.load(open(sys.argv[1]))["ui"]
-by = {t["id"]: t for t in ui["launcher_themes"]}
-mb, ps = by["cloud_minimalist_black"], by["cloud_power_saving"]
-problems = []
-if mb["palette"] == ps["palette"]:
-    problems.append("the two themes declare an identical palette")
-if mb["features"] == ps["features"]:
-    problems.append("the two themes declare an identical feature set")
-# Both are OLED themes, so both must be TRUE black. A near-black like #121212
-# lights every subpixel and costs power the mode claims to save.
-if not mb["features"].get("oled_black") or not ps["features"].get("oled_black"):
-    problems.append("an oled_black theme is not marked oled_black")
-print("; ".join(problems) or "OK")
-PY
-)" "Minimalist Black and Power Saving differ in palette AND in what they render"
-
-echo "== T8: the OLED themes are TRUE black, and every text role is READABLE =="
+echo "== T6: the OLED themes are TRUE black, and every text role is READABLE =="
 # Two things at once because they are the same arithmetic. #000000 costs an OLED
-# panel no power per pixel and #121212 does, so a power-saving mode that reuses
-# the ordinary dark surface saves nothing it claims to. And a role is only a
-# colour that follows the theme if it can still be READ on that theme — alpha
-# composited over its own surface over its own window, not assumed opaque.
+# panel no power per pixel and #121212 does, so a dark theme that reuses the
+# ordinary surface saves nothing it claims to. And a role is only a colour that
+# follows the theme if it can still be READ on that theme — alpha composited
+# over its own surface over its own window, not assumed opaque.
 check "$(python3 - "$BJ" "$COLORS" "$DRAWABLES" <<'PY'
 import json, os, re, sys
 themes = json.load(open(sys.argv[1]))["ui"]["launcher_themes"]
@@ -301,124 +238,8 @@ print("; ".join(problems) or "OK")
 PY
 )" "every OLED theme is #000000 and every text role clears WCAG AA on its own theme"
 
-echo "== T9: the twelve-slot editor draws the grid it edits, with real icons =="
-# It was twelve stacked Spinners of app NAMES, editing a screen that is two rows
-# of six with icons on it — nothing about the control resembled the thing it
-# controlled. And the column count must come from the theme's declared grid, not
-# from a constant in each file: two constants that have to agree, with nothing
-# making them, is how the pane and its editor drift apart.
-CFG="$SRC/settings/LauncherConfigFragment.kt"
-PANE="$SRC/launcher/themes/powersaving/PowerSavingFragment.kt"
-TILE="$SRC/launcher/AppIconTile.kt"
-ed_fail=""
-grep -q 'AppIconTile.grid(' "$CFG"  || ed_fail="$ed_fail editor-does-not-draw-the-grid"
-# INVERTED 2026-09-13. This line used to REQUIRE the pane to call
-# AppIconTile.grid — and that requirement was the bug. Painting Power Saving's
-# twelve slots with the default launcher's own tile builder is exactly why the
-# mode read as "the normal home screen in black" twice in a row, which is what
-# the owner rejected. The pane now draws its own cells; reusing the shared
-# builder again is the regression. The KDoc mentions [AppIconTile] to explain
-# the history, so this matches a member ACCESS, not the name.
-grep -q 'AppIconTile\.' "$PANE"     && ed_fail="$ed_fail pane-reuses-the-default-launchers-tile-builder"
-grep -q 'Spinner' "$PANE"           && ed_fail="$ed_fail pane-still-has-a-spinner"
-# Painting its own cells does not license the pane to invent its own app LIST:
-# the twelve slots still come from the owner's overrides, so the editor and the
-# mode are always showing the same twelve apps in the same order.
-grep -q 'PowerSavingAppsPrefs(ctx).resolved()' "$PANE" \
-  || ed_fail="$ed_fail pane-ignores-the-owners-slot-overrides"
-# The COLUMN count is no longer a shared number, and that is deliberate. This
-# used to require the pane to read gridColumnsFor() so its width could not drift
-# from the editor's — which assumed both surfaces draw a grid. The mode does not
-# have a grid any more: twelve launcher icons are twelve full-colour bitmaps
-# lighting every subpixel at once, the single most expensive thing an OLED
-# power-saving screen could put on itself, so the pane lists its apps as text
-# rows. A column count it has no columns for would be a constant no screen reads.
-# What IS still asserted is that the mode owns its own layout vocabulary rather
-# than borrowing the shared one.
-grep -q 'PowerSavingDesign\.' "$PANE" \
-  || ed_fail="$ed_fail pane-does-not-draw-from-its-own-modes-design"
-grep -qE '^import com\.diegonmarcos\.superapp\.ui\.' "$PANE" \
-  && ed_fail="$ed_fail pane-imports-the-shared-look-from-ui"
-# Scoped to the CALL SITE, not to the file. A bare `grep gridColumnsFor` over
-# LauncherConfigFragment.kt passes on the function's own DEFINITION, which lives
-# in that same file — so it stayed green with the editor's columns replaced by a
-# literal 4. An assertion that cannot fail is not an assertion.
-col_verdict="$(python3 - "$CFG" <<'PYC'
-import re, sys
-
-def call_args(body):
-    """The full argument list of AppIconTile.grid(...), paren-balanced.
-
-    A non-greedy regex is not enough: the argument list CONTAINS nested calls
-    (AppIconTile.Slot(...)), so the first ')' it reaches belongs to one of them
-    and the slice stops before the columns argument is ever seen — which is how
-    an earlier version of this check stayed green while the columns had been
-    replaced by a literal."""
-    k = body.find('AppIconTile.grid(')
-    if k < 0:
-        return None
-    k += len('AppIconTile.grid(')
-    depth, start = 1, k
-    while k < len(body) and depth:
-        if body[k] == '(': depth += 1
-        elif body[k] == ')': depth -= 1
-        k += 1
-    return body[start:k - 1]
-
-problems = []
-# The editor only. The pane no longer calls AppIconTile at all — its own column
-# count is asserted by the gridColumnsFor grep above.
-for path, marker in ((sys.argv[1], 'the editor'),):
-    args = call_args(open(path, encoding='utf-8').read())
-    if args is None:
-        problems.append('%s does not call AppIconTile.grid' % marker); continue
-    m = re.search(r'columns\s*=\s*([^,\n]*)', args)
-    if not m:
-        problems.append('%s passes no columns argument' % marker)
-    elif 'gridColumnsFor' not in m.group(1):
-        problems.append("%s sets columns to %s instead of reading the theme's "
-                        "declared grid" % (marker, m.group(1).strip()))
-print('; '.join(problems))
-PYC
-)"
-[ -n "$col_verdict" ] && ed_fail="$ed_fail $col_verdict"
-[ -z "$ed_fail" ] && ok "the pane paints its own grid at the theme's declared width, and the editor mirrors it" \
-                  || bad "the pane/editor grid contract is broken:$ed_fail"
-# Icons come from the CENTRAL classification, not a third enumeration.
-grep -q 'PhoneAppsFragment.snapshot' "$TILE" \
-  && ok "icons come from the same app list the Phone tab and the search index read" \
-  || bad "AppIconTile enumerates apps its own way — a third source of what an app is"
-# Twelve badged icons is the ~600ms load PhoneAppsFragment documents. On the
-# main thread that is a visibly frozen screen.
-grep -q 'Thread {' "$TILE" && grep -q 'Handler(Looper.getMainLooper())' "$TILE" \
-  && ok "icons load off the main thread and post back" \
-  || bad "icon loading is on the main thread"
-# A slot outlives the app it points at. That tile must SAY so.
-grep -q 'R.string.app_tile_not_installed' "$TILE" \
-  && ok "an uninstalled app renders as a stated placeholder, not a blank hole" \
-  || bad "nothing states that a slot's app is gone — it would render as an empty tile"
-# Selection has to survive greyscale and colour blindness, so it is a glyph and
-# not only a background tint.
-grep -q 'R.string.app_tile_selected' "$TILE" \
-  && ok "selection is marked by shape as well as by colour" \
-  || bad "selection is a background tint alone — invisible in greyscale"
-
-echo "== T10: every string this change added is in the string table =="
-# The owner reads this app in Spanish. There is no translated locale yet, so
-# this asserts the STRINGS ARE EXTRACTABLE, which is the part that has to be
-# true before any locale can exist.
-STRINGS="$APP/app/src/main/res/values/strings.xml"
-str_fail=""
-for k in app_tile_selected app_tile_unselected app_tile_not_installed \
-         power_saving_apps_title power_saving_apps_caption \
-         power_saving_slot_chooser power_saving_slot_default power_saving_settings; do
-  grep -q "name=\"$k\"" "$STRINGS" || str_fail="$str_fail missing:$k"
-done
-[ -z "$str_fail" ] && ok "the eight new user-visible strings are resources" \
-                   || bad "a new string is compiled into Kotlin:$str_fail"
-
 echo
-echo "== T11: the bottom-nav bar is a full pill, and its selection geometry is declared NOT flush =="
+echo "== T7: the bottom-nav bar is a full pill, and its selection geometry is declared NOT flush =="
 # #473. Diego's request: the home bottom bar has semicircular (pill) ends and each
 # extreme button must sit further INSIDE so that when one of them is selected its
 # selection shadow is concentrically ringed by the bar's curved end — never

@@ -33,7 +33,7 @@ object SystemDisplay {
     /**
      * The phone's real uiMode, not our own intention. A switch that reports
      * what we last tried to write is the failure the whole screen exists to
-     * make impossible — see PowerLevers.liveState for the same rule.
+     * make impossible.
      */
     fun isNight(ctx: Context): Boolean =
         (ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==

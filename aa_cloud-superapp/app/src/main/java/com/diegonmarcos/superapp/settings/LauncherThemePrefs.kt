@@ -22,21 +22,9 @@ class LauncherThemePrefs(context: Context) {
             sp.edit().putString(KEY_THEME, value.id).apply()
         }
 
-    /** What to go back to when Power Saving is switched off. The action that turns
-     *  the mode on is a toggle, and a toggle that could only ever return to Cloud
-     *  would quietly discard a Minimalist Black user's choice on the way out. */
-    var themeBeforePowerSaving: LauncherTheme
-        get() = LauncherTheme.fromId(sp.getString(KEY_THEME_BEFORE, null))
-        set(value) {
-            // Storing Power Saving here would make leaving it a no-op.
-            if (value == LauncherTheme.CloudPowerSaving) return
-            sp.edit().putString(KEY_THEME_BEFORE, value.id).apply()
-        }
-
     companion object {
         private const val PREFS            = "launcher_theme_prefs"
         private const val KEY_THEME        = "theme"
-        private const val KEY_THEME_BEFORE = "theme_before_power_saving"
     }
 }
 
@@ -45,8 +33,7 @@ class LauncherThemePrefs(context: Context) {
  *  while keeping the runtime switch a closed enum. */
 enum class LauncherTheme(val id: String) {
     Cloud("cloud"),
-    CloudMinimalistBlack("cloud_minimalist_black"),
-    CloudPowerSaving("cloud_power_saving");
+    CloudMinimalistBlack("cloud_minimalist_black");
 
     companion object {
         fun fromId(id: String?): LauncherTheme =

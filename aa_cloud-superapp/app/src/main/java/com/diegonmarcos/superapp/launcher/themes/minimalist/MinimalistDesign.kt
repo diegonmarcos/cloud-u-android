@@ -14,20 +14,15 @@ import android.widget.TextView
  * The COMPLETE design vocabulary of the Cloud Minimalist Black mode.
  *
  * ── Why this file exists ─────────────────────────────────────────────────
- * Same rule as [
- * com.diegonmarcos.superapp.launcher.themes.powersaving.PowerSavingDesign]:
- * a mode that borrows its components from another mode cannot look different
+ * A mode that borrows its components from another mode cannot look different
  * from it, so each mode owns its vocabulary outright and imports nothing from
  * `ui/`. The owner asked for exactly that — "make all themes have their own
  * folders", "all different, nothing can be equal" — and a rule enforced by
  * what is in scope beats a rule someone has to remember.
  *
  * ── Why this design looks the way it does ────────────────────────────────
- * Minimalist Black is a TERMINAL, and it is a different idea from Power
- * Saving even though both are black. Power Saving is about spending as few
- * lit pixels as possible; this one is about a single-typeface, single-hue,
- * text-only machine that shows everything at once. The shared black ground is
- * a coincidence of taste, not shared code.
+ * Minimalist Black is a TERMINAL: a single-typeface, single-hue, text-only
+ * machine that shows everything at once.
  *
  *   · PHOSPHOR GREEN on black. One hue, like a VT220. [INK] is the readable
  *     body green; [GLOW] is the brighter accent reserved for the things the

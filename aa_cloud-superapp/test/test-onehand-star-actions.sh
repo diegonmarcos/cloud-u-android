@@ -11,7 +11,7 @@
 #      entry could only be deleted once. A future edit that re-adds it, drops a
 #      neighbour, or reorders them is a UI change with no compiler opinion.
 #   2. A STORED PREFERENCE STILL NAMES IT. Targets are persisted on-device
-#      (recent-tiles LRU, power-saving home slots, one-hand gesture overrides).
+#      (recent-tiles LRU, one-hand gesture overrides).
 #      A preference written before the removal outlives the APK that removed
 #      it, so the dispatcher must treat an unknown action as a defined no-op.
 #      An unhandled branch here is a blank slot or a crash on a device that has
@@ -54,13 +54,9 @@ case "$STAR_ACTIONS" in
 esac
 
 # Nothing else moved. The original ask was one entry out, order untouched.
-# Power Saving was appended later (#323) — the theme switch has to be reachable
-# from the star, not only from a Configs page, because the mode it enters blacks
-# the screen and the star is the one control that is always on top of whatever
-# is drawn. It is pinned here in LAST position for the same reason the other
-# three are pinned: the star's order is data, and a silent reshuffle of it is a
-# UI regression no other assertion in this file would catch.
-EXPECTED="Update All · KDE Connect · Animations · Power Saving"
+# The star's order is data, and a silent reshuffle of it is a UI regression no
+# other assertion in this file would catch.
+EXPECTED="Update All · KDE Connect · Animations"
 [ "$STAR_ACTIONS" = "$EXPECTED" ] \
   && check OK "the remaining actions are exactly [$EXPECTED], in order" \
   || check "got [$STAR_ACTIONS]" "the remaining actions are exactly [$EXPECTED], in order"

@@ -1,9 +1,7 @@
 package com.diegonmarcos.superapp.settings
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.R
-import com.diegonmarcos.superapp.launcher.AppIconTile
 import com.diegonmarcos.superapp.system.BackgroundOrchestrator
-import com.diegonmarcos.superapp.system.PowerLevers
 import com.diegonmarcos.superapp.system.SystemDisplay
 import com.diegonmarcos.superapp.configs.DeviceControls
 import com.diegonmarcos.superapp.launcher.Sections
@@ -24,7 +22,6 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.content.pm.LauncherApps
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -63,9 +60,8 @@ class LauncherConfigFragment : Fragment() {
      *
      * #349: every control here used to answer a flip with [rerenderPage] — a
      * detach+attach of the whole fragment — to change one badge and one derived
-     * label. That rebuilt twenty-four tiles, two pickers, the Battery Hunger
-     * table (twenty shell round-trips) and the twelve-slot app editor, and threw
-     * the scroll position away on every tap.
+     * label. That rebuilt twenty-four tiles and two pickers, and threw the
+     * scroll position away on every tap.
      *
      * A row registers a lambda that RE-READS the store and repaints, so nothing
      * cached in a captured `val` can go stale: the registry is the only state,
@@ -120,13 +116,13 @@ class LauncherConfigFragment : Fragment() {
         // A theme IS a mode, and the screen has to say so before the tiles.
         // Calling these "themes" taught the wrong thing: a theme is a colour
         // scheme you can try on, and picking one here instead rewrites the
-        // launcher's whole design, flips the service toggles below, and — for
-        // Power Saving — writes system settings on the device itself. The word
-        // and the subtitle are the only warning the user gets before tapping.
+        // launcher's whole design and flips the service toggles below. The
+        // word and the subtitle are the only warning the user gets before
+        // tapping.
         root.addView(sectionHeader(ctx, "Mode",
-            "A mode is not a colour scheme. It owns this launcher's design, the " +
-                "service toggles below, and the system settings under Battery " +
-                "Hunger. Switching mode changes all of them together."))
+            "A mode is not a colour scheme. It owns this launcher's design and " +
+                "the service toggles below. Switching mode changes all of them " +
+                "together."))
 
         // Mode tiles — data-driven from BuildConfig.
         val themes = LauncherThemes.loadFromBuildConfig()
@@ -288,10 +284,6 @@ class LauncherConfigFragment : Fragment() {
                 root.addView(spacer(ctx, dp(ctx, 8)))
             }
         }
-        // The label lives in the data-driven rows, not on the stored theme, which
-        // carries only the id — fall back to the id so the header is never blank.
-        root.addView(batteryHungerSection(
-            ctx, themes.firstOrNull { it.id == current.id }?.label ?: current.id))
         // Screen brightness (device-wide → needs WRITE_SETTINGS)
         val b = LauncherSettingsPrefs.Config.brightness
         root.addView(sliderRow(ctx, b.label, b.subtitle, b.min, b.max,
@@ -330,229 +322,7 @@ class LauncherConfigFragment : Fragment() {
             }
         })
 
-        // ── Power Saving home apps — the very bottom of the page ────────────
-        addPowerSavingAppsEditor(root, ctx)
-
         return scroll
-    }
-
-    /**
-     * The twelve Cloud Power Saving slots, drawn as the grid they actually are.
-     *
-     * WHY IT IS NOT TWELVE SPINNERS ANY MORE. It was, and the owner's word for
-     * it was that it needed to look "more nicee": twelve stacked dropdowns of
-     * app NAMES, in a vertical column, editing a screen that is two rows of six
-     * with icons on it. Nothing about the control resembled the thing it
-     * controlled, and an app is recognised by its icon well before its name is
-     * read. Now the editor IS the grid — same shape, same order, same real
-     * icons, from the same central classification the Phone tab reads.
-     *
-     * The number of columns is the theme's own declared grid ("6x2"), not a 6
-     * written here: the pane and its editor must not be able to disagree about
-     * the layout, and one of two constants is always the one that gets missed.
-     *
-     * Writes back to [PowerSavingAppsPrefs], which is the same store the home
-     * pane reads — the defaults it falls back to are the ones declared in
-     * build.json, so this editor overrides data rather than replacing it, and a
-     * slot the user never touches keeps tracking whatever default we ship next.
-     */
-    private fun addPowerSavingAppsEditor(root: LinearLayout, ctx: android.content.Context) {
-        val themeId = LauncherTheme.CloudPowerSaving.id
-        val slots = LauncherThemes.homeAppsFor(themeId)
-        if (slots.isEmpty()) return
-
-        root.addView(spacer(ctx, dp(ctx, 32)))
-        root.addView(sectionHeader(ctx,
-            ctx.getString(R.string.power_saving_apps_title),
-            ctx.getString(R.string.power_saving_apps_caption)))
-
-        val prefs = PowerSavingAppsPrefs(ctx)
-        root.addView(AppIconTile.grid(
-            ctx,
-            slots = prefs.resolved(themeId).map { slot ->
-                AppIconTile.Slot(
-                    id = slot.id,
-                    label = slot.label,
-                    target = slot.target,
-                    // "Selected" here means the user chose this one, as against
-                    // a slot still tracking whatever build.json ships. That is
-                    // the distinction the screen exists to make visible: which
-                    // of the twelve are yours and which are still ours.
-                    selected = prefs.target(slot.id)?.isNotBlank() == true,
-                )
-            },
-            columns = LauncherThemes.gridColumnsFor(themeId),
-            showSelection = true,
-        ) { slot -> chooseAppFor(ctx, prefs, slots, slot.id, themeId) })
-    }
-
-    /**
-     * Point one slot somewhere else.
-     *
-     * A single-choice dialog rather than the Spinner it replaces, for the
-     * reason the Spinner's own comment documented at length: Spinner.setSelection
-     * POSTS its callback, so merely opening the screen re-entered the listener
-     * and could persist an override for all twelve slots, freezing them against
-     * every future default. A dialog only calls back when a human taps a row,
-     * so that whole class of bug has nowhere to live.
-     */
-    private fun chooseAppFor(
-        ctx: android.content.Context,
-        prefs: PowerSavingAppsPrefs,
-        declared: List<LauncherThemes.HomeApp>,
-        slotId: String,
-        themeId: String,
-    ) {
-        val slot = declared.firstOrNull { it.id == slotId } ?: return
-        // Derived here rather than threaded in from the caller: the row/slot
-        // numbers this dialog prints have to describe the grid the user just
-        // tapped, and a column count passed down is a copy that can be handed
-        // in stale.
-        val columns = LauncherThemes.gridColumnsFor(themeId)
-        val index = declared.indexOfFirst { it.id == slotId }
-        // Entry 0 names THIS slot's own shipped app: "Default (Mail)" is
-        // readable where a bare "Default" leaves the user guessing.
-        val options = listOf(
-            Option(ctx.getString(R.string.power_saving_slot_default, slot.label), null),
-        ) + installedApps(ctx).map { Option(it.label, "app:${it.pkg}") }
-        val current = prefs.target(slotId)
-        val selected = options.indexOfFirst { it.target == current }.coerceAtLeast(0)
-
-        androidx.appcompat.app.AlertDialog.Builder(ctx)
-            .setTitle(ctx.getString(
-                R.string.power_saving_slot_chooser,
-                index / columns + 1,
-                index % columns + 1,
-            ))
-            .setSingleChoiceItems(options.map { it.label }.toTypedArray(), selected) { dialog, which ->
-                prefs.setTarget(slotId, options[which].target)
-                dialog.dismiss()
-                rerenderPage()
-            }
-            .show()
-    }
-
-    private data class Option(val label: String, val target: String?)
-    private data class InstalledApp(val label: String, val pkg: String)
-
-    /** Launchable apps on this device, by label. The editor offers real
-     *  packages only — a slot cannot be pointed at something that is not there. */
-    private fun installedApps(ctx: android.content.Context): List<InstalledApp> = runCatching {
-        val la = ctx.getSystemService(android.content.Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
-            ?: return emptyList()
-        la.getActivityList(null, android.os.Process.myUserHandle())
-            .map { InstalledApp(it.label?.toString().orEmpty().ifBlank { it.componentName.packageName },
-                                it.componentName.packageName) }
-            .distinctBy { it.pkg }
-            .sortedBy { it.label.lowercase() }
-    }.getOrDefault(emptyList())
-
-    /**
-     * "Battery Hunger" — every SYSTEM lever the active mode pulls, with the
-     * live value read off the device.
-     *
-     * A mode is not a palette. Switching to Cloud Power Saving writes the
-     * phone's brightness, refresh rate, animation scales, radio scanning,
-     * standby buckets and background-data policy, and until this section existed
-     * the only way to learn that was to read the source. So the whole lever
-     * table is rendered here, one row each, in the same order it is applied.
-     *
-     * The state on each row is READ BACK FROM THE DEVICE, never derived from
-     * our own "applied" flag. That is the whole point: a lever the privileged
-     * channel failed to write must read as off. A row that reported our
-     * intention would turn this screen into exactly the reassuring lie it
-     * exists to prevent — and a lever silently failing is the normal case, since
-     * the channel goes away with every reboot until wireless debugging is back.
-     */
-    private fun batteryHungerSection(ctx: android.content.Context, modeLabel: String): View {
-        val palette = LauncherPalette.of(ctx)
-        val column = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        column.addView(spacer(ctx, dp(ctx, 8)))
-        column.addView(sectionHeader(ctx, "Battery Hunger",
-            "System levers the \"$modeLabel\" mode switches — live device state"))
-
-        val channelLine = TextView(ctx).apply {
-            textSize = 11f
-            setTextColor(palette.textSecondary)
-            setPadding(dp(ctx, 12), 0, dp(ctx, 12), dp(ctx, 6))
-            text = "Reading device state…"
-        }
-        column.addView(channelLine)
-
-        val cells = LinkedHashMap<String, TextView>()
-        for (lever in PowerLevers.ALL) {
-            val row = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-                setPadding(dp(ctx, 12), dp(ctx, 6), dp(ctx, 12), dp(ctx, 6))
-            }
-            val labels = LinearLayout(ctx).apply {
-                orientation = LinearLayout.VERTICAL
-                layoutParams = LinearLayout.LayoutParams(
-                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-            }
-            labels.addView(TextView(ctx).apply {
-                text = lever.label
-                textSize = 14f
-                setTextColor(palette.textPrimary)
-            })
-            labels.addView(TextView(ctx).apply {
-                text = lever.detail
-                textSize = 11f
-                setTextColor(palette.textSecondary)
-            })
-            row.addView(labels)
-            val cell = TextView(ctx).apply {
-                text = "…"
-                textSize = 11f
-                gravity = Gravity.END
-                setTextColor(palette.textSecondary)
-            }
-            row.addView(cell)
-            cells[lever.id] = cell
-            column.addView(row)
-        }
-
-        // Off the main thread: every lever is a shell round-trip, and there are
-        // twenty of them. Posting back through the column keeps the update on
-        // the view's own handler, so a user who leaves the page mid-read simply
-        // never sees it land.
-        Thread({
-            val channel = runCatching { PowerLevers.channelName(ctx) }.getOrNull()
-            val live = runCatching { PowerLevers.liveState(ctx) }.getOrDefault(emptyMap())
-            column.post {
-                channelLine.text = if (channel == null)
-                    "No privileged channel — pair wireless debugging to switch these"
-                else "Privileged channel: $channel"
-                for (lever in PowerLevers.ALL) {
-                    val cell = cells[lever.id] ?: continue
-                    val value = live[lever.id]
-                    when {
-                        lever.need == PowerLevers.Need.ROOT -> {
-                            cell.text = "needs root"
-                            cell.setTextColor(palette.textSecondary)
-                        }
-                        value == null -> {
-                            // A lever with no readable value is an ACTION, not a
-                            // state — it says whether the sweep has run, which is
-                            // the only honest thing there is to say about it.
-                            cell.text = if (PowerLevers.isApplied(ctx)) "applied" else "not applied"
-                            cell.setTextColor(palette.textSecondary)
-                        }
-                        value == lever.saving -> {
-                            cell.text = "saving"
-                            cell.setTextColor(palette.accent)
-                        }
-                        else -> {
-                            cell.text = value
-                            cell.setTextColor(palette.textSecondary)
-                        }
-                    }
-                }
-            }
-        }, "battery-hunger-read").start()
-
-        return column
     }
 
     /** A label/subtitle + right-aligned switch row, persisted on toggle.
@@ -633,11 +403,10 @@ class LauncherConfigFragment : Fragment() {
      * A tile REPAINTS ITSELF. It used to be painted once and rely on the page
      * being rebuilt under it, on the grounds that a flip rebuilt the page
      * anyway — and that assumption is #349: one badge changing colour was
-     * paying for a detach+attach of a page holding twenty-four tiles, two
-     * pickers, twenty shell round-trips and a twelve-slot app editor, and it
-     * took the scroll position with it. The tile still tracks no state of its
-     * own: it re-reads [prefs] each time it paints, which is why [prefs] is
-     * passed down here instead of a boolean.
+     * paying for a detach+attach of a page holding twenty-four tiles and two
+     * pickers, and it took the scroll position with it. The tile still tracks
+     * no state of its own: it re-reads [prefs] each time it paints, which is
+     * why [prefs] is passed down here instead of a boolean.
      */
     private fun toggleGrid(
         ctx: android.content.Context,
@@ -1012,23 +781,6 @@ object LauncherThemes {
     fun featuresFor(themeId: String): Features = featuresById[themeId] ?: Features.SAFE_DEFAULT
     fun featuresFor(theme: LauncherTheme): Features = featuresFor(theme.id)
 
-    /**
-     * Tiles per row, from the theme's declared `features.grid` ("6x2" ⇒ 6).
-     *
-     * The home pane and the editor that configures it BOTH read this. They each
-     * used to carry their own 6 — a private const in one file and an integer
-     * division in another — which is two constants that have to agree and no
-     * mechanism making them, so changing the grid in build.json would have
-     * silently relaid one of the two.
-     *
-     * A grid string that is not "<columns>x<rows>" falls back to the whole list
-     * on one row rather than throwing: a wrong-looking grid is recoverable, a
-     * home screen that crashes on a typo is not.
-     */
-    fun gridColumnsFor(themeId: String): Int =
-        featuresFor(themeId).grid.substringBefore('x').toIntOrNull()?.takeIf { it > 0 }
-            ?: Int.MAX_VALUE
-
     // ── Theme → toggle mapping ──────────────────────────────────────────────
     /**
      * The device state each theme sets, read from
@@ -1103,7 +855,7 @@ object LauncherThemes {
      * The picker shows "· modified" when this is true rather than silently
      * claiming a theme the phone no longer matches. A label that lies is worse
      * than no label: the user came to this screen precisely to find out what is
-     * on, and the honest answer is "Power Saving, except you changed something".
+     * on, and the honest answer is "Cloud Minimalist Black, except you changed something".
      */
     fun isModified(ctx: android.content.Context, theme: LauncherTheme): Boolean {
         val settings = LauncherSettingsPrefs(ctx)
@@ -1113,33 +865,6 @@ object LauncherThemes {
             settings.toggle(item) != want
         }
     }
-
-    // ── Power Saving's twelve home slots ────────────────────────────────────
-    /** One launch target on the Power Saving home pane. [target] is the ordinary
-     *  tile grammar, so it goes through the same dispatcher every other tile
-     *  uses and `extapp:` keeps its install-if-missing fallback. */
-    data class HomeApp(val id: String, val label: String, val target: String)
-
-    private val homeAppsById: Map<String, List<HomeApp>> by lazy { parseHomeApps() }
-
-    /** The theme's DEFAULT slots. The user's edits live in PowerSavingAppsPrefs,
-     *  which falls back to this list per slot. */
-    fun homeAppsFor(themeId: String): List<HomeApp> = homeAppsById[themeId] ?: emptyList()
-
-    private fun parseHomeApps(): Map<String, List<HomeApp>> = runCatching {
-        val arr = JSONArray(String(Base64.decode(BuildConfig.UI_LAUNCHER_THEMES_B64, Base64.NO_WRAP)))
-        val out = mutableMapOf<String, List<HomeApp>>()
-        for (i in 0 until arr.length()) {
-            val o = arr.optJSONObject(i) ?: continue
-            val id = o.optString("id")
-            val slots = o.optJSONArray("home_apps") ?: continue
-            out[id] = (0 until slots.length()).mapNotNull { idx ->
-                val s = slots.optJSONObject(idx) ?: return@mapNotNull null
-                HomeApp(s.optString("id"), s.optString("label"), s.optString("target"))
-            }
-        }
-        out
-    }.getOrDefault(emptyMap())
 
     private fun parseFeatures(): Map<String, Features> = runCatching {
         val json = String(Base64.decode(BuildConfig.UI_LAUNCHER_THEMES_B64, Base64.NO_WRAP))

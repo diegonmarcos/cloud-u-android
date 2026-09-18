@@ -123,40 +123,7 @@
       without touching any of the 24 layouts.
     -->
 
-    <!-- Cloud Power Saving. Pure black ground: an OLED pixel at #000000 is an
-         OFF pixel, so every surface here is black and separation is carried
-         by outline hairlines instead of by lifted fills. Monochrome
-         throughout — there is no hue anywhere in this mode, deliberately.
-         Ink is #C8C8C8 rather than white (11.6:1 on black, ~78% of white's
-         luminance). Keep these in step with PowerSavingDesign.kt, which is
-         the same palette for the Kotlin-drawn half of the mode. -->
-    <style name="Theme.Superapp.PowerSaving" parent="Theme.Superapp">
-        <item name="android:windowBackground">@color/theme_powersave_window</item>
-        <item name="android:colorBackground">@color/theme_powersave_window</item>
-        <item name="colorPrimary">@color/theme_powersave_text_primary</item>
-        <item name="colorOnPrimary">@color/theme_powersave_window</item>
-        <item name="colorPrimaryContainer">@color/theme_powersave_window</item>
-        <item name="colorOnPrimaryContainer">@color/theme_powersave_text_primary</item>
-        <item name="colorSecondary">@color/theme_powersave_text_secondary</item>
-        <item name="colorOnSecondary">@color/theme_powersave_window</item>
-        <item name="colorSecondaryContainer">@color/theme_powersave_window</item>
-        <item name="colorOnSecondaryContainer">@color/theme_powersave_text_primary</item>
-        <item name="colorSurface">@color/theme_powersave_window</item>
-        <item name="colorOnSurface">@color/theme_powersave_text_primary</item>
-        <item name="colorSurfaceVariant">@color/theme_powersave_window</item>
-        <item name="colorOnSurfaceVariant">@color/theme_powersave_text_secondary</item>
-        <item name="colorOutline">@color/theme_powersave_hairline</item>
-        <item name="colorOutlineVariant">@color/theme_powersave_hairline</item>
-        <item name="android:textColorPrimary">@color/theme_powersave_text_primary</item>
-        <item name="android:textColorSecondary">@color/theme_powersave_text_secondary</item>
-        <item name="android:textColorTertiary">@color/theme_powersave_text_tertiary</item>
-        <item name="android:textColorHint">@color/theme_powersave_text_tertiary</item>
-        <item name="android:colorEdgeEffect">@color/theme_powersave_hairline</item>
-    </style>
-
-    <!-- Cloud Minimalist Black. Shares Power Saving's black ground and
-         nothing else: this one keeps the terminal-green ink it has always
-         had, so the two black modes stay visibly different modes. -->
+    <!-- Cloud Minimalist Black. Pure black ground, terminal-green ink. -->
     <style name="Theme.Superapp.MinimalistBlack" parent="Theme.Superapp">
         <item name="android:windowBackground">@color/theme_terminal_window</item>
         <item name="android:colorBackground">@color/theme_terminal_window</item>
