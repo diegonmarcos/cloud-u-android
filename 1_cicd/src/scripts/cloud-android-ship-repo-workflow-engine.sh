@@ -297,39 +297,23 @@ for wf in sorted(glob.glob(os.path.join(root, "1_cicd/src/cicd/*.yml"))):
     # Exclusions LAST: GitHub applies paths in order, and a `!` entry only
     # removes what a positive entry BEFORE it matched.
     final = sorted(set(derived) | set(kept)) + excluded
-    header = ["      # MANAGED by cloud-android-ship-repo-workflow-engine.sh: every dir",
-              f"      # {app}/build.json::modules declares is added automatically, dead",
-              "      # entries are dropped, and cloud-android-source-identity.sh hashes",
-              "      # this list — so nothing can trigger a build the publish gate does",
-              "      # not weigh. Extra entries no module map can express",
-              "      # (settings.gradle.kts references, scan roots) are kept: add them",
-              "      # here and they stay.",
-              "      # ONE path is watched here and deliberately NOT hashed: the",
-              "      # tester directory build.json::tests.shell.dir declares. A tester",
-              "      # edit must START a run (it is the only pipeline that executes",
-              "      # that tester) and must NOT publish an APK (it changed no bytes).",
-              "      # The gate skips it, so the run costs the test step alone."]
 
-    # A comment inside paths: is an author explaining why a trigger is, or is
-    # deliberately not, there -- and this block is the only place that reasoning
-    # lives. Rebuilding from the header template alone DELETED it:
-    # ship-c3-morpheus.yml lost eight lines explaining why it watches no shared
-    # lib directory, and it lost them silently, which is a worse failure than the
-    # drift the rewrite exists to fix. Anything that is not one of OUR header
-    # lines belongs to the author and is carried through verbatim.
-    managed = {line.strip() for line in header}
-
-    def is_header_line(line):
-        text = line.strip()
-        # The second header line carries the app name, so it is matched by shape
-        # rather than by text: a renamed app must not leave its old line behind.
-        return text in managed or bool(re.match(
-            r'#\s+\S+/build\.json::modules declares is added automatically, dead$', text))
-
-    authored = [line for line in lines[start + 1:end]
-                if line.strip().startswith("#") and not is_header_line(line)]
-
-    block = ["    paths:"] + header + authored + [f'      - "{e}"' for e in final]
+    # The paths header is OURS, and OURS is now fenced (#483). The old engine
+    # recognised its own header by exact text match against the CURRENT header
+    # and emitted everything else as the author's, so the moment anyone re-worded
+    # the header every old-wrapping line stopped matching, was reclassified as
+    # authored, and was re-emitted below the new header forever. Recognition
+    # after the fact cannot be made safe; explicit ownership markers can.
+    # cloud_android_workflow_paths.py holds the header template and the fence
+    # logic, and the regression tester (test-workflow-header-fence.test.sh)
+    # drives that SAME module -- the code under test is the code that runs, for a
+    # copy would drift the way the old header list did. Authored comments still
+    # survive: anything after the END fence is carried through verbatim (the
+    # ship-c3-morpheus.yml canary -- it lit up silently last time this was broken,
+    # and a silent loss is worse than the drift this rewrite exists to fix).
+    sys.path.insert(0, os.path.join(root, "1_cicd/src/scripts"))
+    from cloud_android_workflow_paths import rewrite_paths_block
+    block = rewrite_paths_block(lines[start + 1:end], final, app)
     new = "\n".join(lines[:start] + block + lines[end:])
     if new != text:
         open(wf, "w").write(new)
