@@ -674,7 +674,7 @@ private fun MainNavHost(
                     onOpenCompose = { entry.navigateOnce { nav.navigate("compose") } },
                     onOpenSearch = { q -> entry.navigateOnce { nav.navigate("search?q=${Uri.encode(q)}") } },
                     onOpenStarred = { entry.navigateOnce { nav.navigate("search?flagged=true") } },
-                    onOpenSettings = { entry.navigateOnce { nav.navigate("settings") } },
+                    onOpenAppSettings = { entry.navigateOnce { nav.navigate("settings") } },
                     onOpenScheduled = { entry.navigateOnce { nav.navigate("scheduled") } },
                     onOpenSnoozed = { entry.navigateOnce { nav.navigate("snoozed") } },
                     onOpenOutbox = { entry.navigateOnce { nav.navigate("outbox") } },

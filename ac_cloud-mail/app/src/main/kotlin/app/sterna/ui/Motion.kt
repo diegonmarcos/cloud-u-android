@@ -48,4 +48,4 @@ fun rememberMotionEnabled(): Boolean {
  * device is not in battery saver. Either one alone is enough to hold every animation still.
  */
 internal fun motionEnabled(animatorDurationScale: Float, powerSaveMode: Boolean): Boolean =
-    animatorDurationScale != 0f
+    animatorDurationScale != 0f && !powerSaveMode

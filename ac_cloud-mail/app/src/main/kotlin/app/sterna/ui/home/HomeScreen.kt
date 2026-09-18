@@ -70,7 +70,7 @@ fun HomeScreen(
     onOpenCompose: () -> Unit,
     onOpenSearch: (query: String) -> Unit,
     onOpenStarred: () -> Unit,
-    onOpenSettings: () -> Unit,
+    onOpenAppSettings: () -> Unit,
     onOpenScheduled: () -> Unit,
     onOpenSnoozed: () -> Unit,
     onOpenOutbox: () -> Unit,
@@ -99,7 +99,7 @@ fun HomeScreen(
                 listOf(
                     HomeAction(Icons.Filled.Create, stringResource(R.string.inbox_compose), onOpenCompose),
                     HomeAction(Icons.Filled.Search, stringResource(R.string.inbox_search), { onOpenSearch("") }),
-                    HomeAction(Icons.Filled.Settings, stringResource(R.string.inbox_settings), onOpenSettings),
+                    HomeAction(Icons.Filled.Settings, stringResource(R.string.inbox_settings), onOpenAppSettings),
                 ),
             )
             QuickmarksRow(
@@ -275,7 +275,7 @@ private fun StatRow(label: String, value: Int?, accent: Color, motionOn: Boolean
         } else {
             val animated by animateIntAsState(
                 targetValue = value,
-                animationSpec = tween(SCREEN_SLIDE_MS),
+                animationSpec = if (motionOn) tween(SCREEN_SLIDE_MS) else snap(),
                 label = "homeStat",
             )
             Text(
