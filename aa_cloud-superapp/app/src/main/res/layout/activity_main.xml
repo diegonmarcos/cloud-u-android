@@ -374,6 +374,7 @@
                 android:paddingStart="@dimen/bottom_nav_end_inset"
                 android:paddingEnd="@dimen/bottom_nav_end_inset"
                 app:activeIndicatorLabelPadding="@dimen/bottom_nav_icon_label_gap"
+                app:itemIconSize="@dimen/bottom_nav_icon_size"
                 app:itemPaddingTop="@dimen/bottom_nav_item_vertical_pad"
                 app:itemPaddingBottom="@dimen/bottom_nav_item_vertical_pad"
                 app:labelVisibilityMode="labeled"

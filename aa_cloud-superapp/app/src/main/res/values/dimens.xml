@@ -61,6 +61,28 @@
          where the stack sits changes. -->
     <dimen name="bottom_nav_item_vertical_pad">6dp</dimen>
 
+    <!-- #498 (third attempt). The SELECTED capsule's inset from the item
+         cell's top and bottom edge. Until now this was bound to
+         bottom_nav_item_vertical_pad on the theory that "one token both
+         directions = the pill box IS the content box", which is only true if
+         the content's ink fills its box — it does not, and nothing ever
+         measured it. The pill and the content pad are two different distances
+         with a deliberate relationship: the content is inset by
+         bottom_nav_item_vertical_pad, the capsule by this, and the difference
+         between them is the breathing room the icon+label has INSIDE the
+         capsule. Two tokens, one declared relationship, and
+         BottomNavGeometryTest measures that the rendered pill really is
+         (pad - pillInset) clear of the ink on BOTH sides. -->
+    <dimen name="bottom_nav_pill_inset">6dp</dimen>
+
+    <!-- #498 (third attempt). The nav glyph's size. Material's own default is
+         24dp and that is what the bar has always rendered, but it was never
+         the APP's number, so no tester could assert it without asserting a
+         Material default back to itself. Declared here and read into
+         app:itemIconSize, it becomes one of the measured terms in the bar's
+         height. -->
+    <dimen name="bottom_nav_icon_size">24dp</dimen>
+
     <!-- #477. The tab-strip's OWN top breathing room above the toolbar island
          the app draws INTO the camera cutout. This is a base only: the real
          clearance is added at runtime from the status-bar / display-cutout

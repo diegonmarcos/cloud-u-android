@@ -117,68 +117,64 @@ PY
 )" "the ActiveIndicator style is neutralised to transparent"
 fi
 
-echo "== T5: the capsule box and the content box derive from ONE token - measured centring =="
-# #498. four dp-nudges shipped green without ever testing geometry (the shell tester only
-# asserted the radius token and the itemBackground wiring). The pill inset was a magic literal
-# (8dp in the drawable) while the content pad was a different number (6dp in dimens) - two
-# independent vertical systems whose centres coincide only by accident. The fix binds BOTH
-# the pill insetTop/insetBottom AND the item itemPaddingTop/Bottom to the SAME
-# @dimen/bottom_nav_item_vertical_pad, so the capsule box and the content box are ONE
-# geometry and their centres are equal BY CONSTRUCTION. This block parses the ACTUAL dp
-# values and fails when any side is nudged (a measured value, not a pass-by-name). The pill
-# box now EQUALS the content box, so the icon+label stack is centred in the capsule by
-# declaration: shifted => measured non-zero delta => RED below.
+echo "== T5: the pill inset and the item pad are each declared ONCE, as tokens =="
+# #498 (third attempt). WHAT THIS BLOCK USED TO BE. It printed four lines
+# beginning "measured:" - "content top gap within pill=0dp", "centring delta
+# (top minus bottom)=0dp (by construction)" - and every one of those numbers
+# was a literal typed into this script. It had measured nothing. It checked
+# that the pill's insetTop/insetBottom and the item's itemPaddingTop/Bottom
+# all named the SAME dimen and concluded the stack was centred "by
+# construction". The real laid-out bar has a different distance above the icon
+# than below the label inside that pill, and a gap between icon and label far
+# wider than the declared token - so the conclusion was false for five tickets
+# while this file stayed green. That is the #511 blindness in its purest form.
+#
+# A shell tester reading XML CANNOT see rendered geometry: the distance from
+# the pill edge to the glyph depends on Material's internal view tree and on
+# font metrics, neither of which is in any file here. So this block now claims
+# only what text can prove - each distance is declared once, as a token, so it
+# cannot be restated as a drifting literal - and T9 makes this file FAIL unless
+# the tester that really measures exists and is run by CI.
 PAD_TOKEN="bottom_nav_item_vertical_pad"
+PILL_TOKEN="bottom_nav_pill_inset"
 LAYOUT="$(cd "$(dirname "$0")/.." && pwd)/app/src/main/res/layout/activity_main.xml"
-GEOM="$(python3 - "$ITEM_BG" "$LAYOUT" "$DIMENS" "$PAD_TOKEN" <<'PY'
+check "$(python3 - "$ITEM_BG" "$LAYOUT" "$DIMENS" "$PAD_TOKEN" "$PILL_TOKEN" <<'PY'
 import re, sys
-item_bg, layout, dimens, tok = sys.argv[1:]
-def dimen_val(dimens, name):
-    m = re.search(r'<dimen\s+name="' + re.escape(name) + r'">([0-9]+)dp</dimen>', dimens)
-    return int(m.group(1)) if m else None
-pad = dimen_val(open(dimens).read(), tok)
-if pad is None:
-    print("NO_TOKEN: %s missing from dimens" % tok)
-    raise SystemExit
-bg = open(item_bg).read()
-ins_t = re.search(r'<inset\b[^>]*insetTop="([^"]*)"', bg)
-ins_b = re.search(r'<inset\b[^>]*insetBottom="([^"]*)"', bg)
-lm = open(layout).read()
-ptop = re.search(r'app:itemPaddingTop="([^"]*)"', lm)
-pbot = re.search(r'app:itemPaddingBottom="([^"]*)"', lm)
-wanted = "@dimen/" + tok
+item_bg, layout, dimens, pad_tok, pill_tok = sys.argv[1:]
+dm = open(dimens).read()
 prob = []
-if not ins_t:
-    prob.append("pill insetTop missing")
-elif ins_t.group(1) != wanted:
-    prob.append("pill insetTop is '%s', not %s" % (ins_t.group(1), wanted))
-if not ins_b:
-    prob.append("pill insetBottom missing")
-elif ins_b.group(1) != wanted:
-    prob.append("pill insetBottom is '%s', not %s" % (ins_b.group(1), wanted))
-if not ptop:
-    prob.append("layout itemPaddingTop missing")
-elif ptop.group(1) != wanted:
-    prob.append("layout itemPaddingTop is '%s'" % ptop.group(1))
-if not pbot:
-    prob.append("layout itemPaddingBottom missing")
-elif pbot.group(1) != wanted:
-    prob.append("layout itemPaddingBottom is '%s'" % pbot.group(1))
-if prob:
-    print("PROBLEM: " + "; ".join(prob))
-    raise SystemExit
-import sys as _s; _s.stderr.write("measured: itemPad=%sdp; pill insetTop/Bottom both reference @dimen/%s\n" % (pad, tok))
-_s.stderr.write("measured: pill top gap within item=%sdp; pill bottom gap within item=%sdp\n" % (pad, pad))
-_s.stderr.write("measured: content top gap within pill=0dp; content bottom gap within pill=0dp\n")
-_s.stderr.write("measured: centring delta (top minus bottom)=0dp (by construction)\n")
-print("OK")
+vals = {}
+for tok in (pad_tok, pill_tok):
+    m = re.search(r'<dimen\s+name="' + re.escape(tok) + r'">([0-9.]+)dp</dimen>', dm)
+    if not m:
+        prob.append("@dimen/%s is not declared" % tok)
+    else:
+        vals[tok] = float(m.group(1))
+bg = open(item_bg).read()
+for attr in ("insetTop", "insetBottom"):
+    m = re.search(r'<inset\b[^>]*%s="([^"]*)"' % attr, bg, re.S)
+    if not m:
+        prob.append("pill %s missing" % attr)
+    elif m.group(1) != "@dimen/" + pill_tok:
+        prob.append("pill %s is '%s', not @dimen/%s" % (attr, m.group(1), pill_tok))
+lm = open(layout).read()
+for attr in ("itemPaddingTop", "itemPaddingBottom"):
+    m = re.search(r'app:%s="([^"]*)"' % attr, lm)
+    if not m:
+        prob.append("layout %s missing" % attr)
+    elif m.group(1) != "@dimen/" + pad_tok:
+        prob.append("layout %s is '%s', not @dimen/%s" % (attr, m.group(1), pad_tok))
+# Deliberately NOT asserted here: how the two values relate on screen. The
+# breathing room the ink gets inside the capsule is (rendered ink inset minus
+# pill inset), and the rendered ink inset is not either of these numbers - it
+# is these numbers plus whatever Material's own item tree adds. Guessing that
+# relation from the dp literals is precisely the mistake this block used to
+# make. BottomNavGeometryTest.theSelectedPillWrapsThatInkConcentrically
+# measures it on the laid-out view; T9 makes this file fail if that test is
+# missing.
+print("; ".join(prob) or "OK")
 PY
-)"
-
-# A mutation that breaks one side (e.g. insetBottom to a 9dp literal, or a second token for
-# one padding) makes the measured centring delta non-zero and fails here with the measured
-# mismatch on stderr - shown red/green in the ticket by mutating then restoring.
-check "$GEOM" "pill+content share ONE @dimen/$PAD_TOKEN -> equal centred boxes (measured 0dp delta)"
+)" "pill inset and item pad are each declared ONE token, referenced by name from drawable and layout"
 
 echo "== T6: no fake includeFontPadding-in-TextAppearance fix may be claimed =="
 # The label font (Roboto-Medium 12sp) reserves ~12.6 ascent vs ~3.3 descent (read off the real
@@ -300,6 +296,47 @@ if not proof:
 print("; ".join(p) or "OK")
 PY
 )" "bottom_nav's class chain keeps ?attr/bottomNavigationStyle, and an inflated-view test is wired into CI"
+
+echo "== T9: the geometry is proven on a laid-out view, not on this file =="
+# #498 (third attempt). T1-T8 are text. T8 already refuses to pass without a
+# test that inflates the nav and reads the RESOLVED itemBackground; that
+# caught #512's missing pill but says nothing about SPACING, which is what
+# Diego reports and what four tickets kept getting wrong. This block refuses
+# to pass unless a JVM test also LAYS THE BAR OUT and asserts the distances:
+# the icon-to-label gap against @dimen/bottom_nav_icon_label_gap, the ink's
+# inset against @dimen/bottom_nav_item_vertical_pad, and includeFontPadding
+# read back off a real TextView instance (T7 can only grep for the words).
+check "$(python3 - "$APP" <<'PY'
+import json, os, sys
+app = sys.argv[1]
+need = [
+    ("R.layout.activity_main",         "it never inflates the real layout"),
+    ("R.id.bottom_nav",                "it never finds the bar by its role id"),
+    ("offsetDescendantRectToMyCoords", "it never converts a child's laid-out bounds into bar coordinates, so it cannot be measuring positions"),
+    ("bottom_nav_icon_label_gap",      "it never checks the rendered icon-to-label gap against the declared token"),
+    ("bottom_nav_item_vertical_pad",   "it never checks the rendered inset against the declared pad"),
+    ("includeFontPadding",             "it never reads includeFontPadding back off a TextView instance"),
+]
+prob = []
+unit = json.load(open(os.path.join(app, "build.json"))).get("tests", {}).get("unit", {})
+if not unit.get("task") or unit.get("enabled") is False:
+    prob.append("build.json::tests.unit is off - a measuring test would never run in CI")
+best, best_missing = None, None
+for root, _, files in os.walk(os.path.join(app, "app", "src", "test")):
+    for f in files:
+        t = open(os.path.join(root, f)).read()
+        if "@Test" not in t:
+            continue
+        missing = [why for key, why in need if key not in t]
+        if best_missing is None or len(missing) < len(best_missing):
+            best, best_missing = f, missing
+if best_missing is None:
+    prob.append("there is no JVM test at all under app/src/test")
+elif best_missing:
+    prob.append("no JVM test measures the laid-out bar (closest is %s: %s)" % (best, "; ".join(best_missing)))
+print("; ".join(prob) or "OK")
+PY
+)" "a JVM test lays the bar out and asserts its distances against the declared dimens"
 
 echo
 echo "== T9: the M3 80dp minHeight cannot inflate the bar — override declared AND measured =="
