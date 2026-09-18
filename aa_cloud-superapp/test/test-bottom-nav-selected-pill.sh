@@ -297,7 +297,7 @@ print("; ".join(p) or "OK")
 PY
 )" "bottom_nav's class chain keeps ?attr/bottomNavigationStyle, and an inflated-view test is wired into CI"
 
-echo "== T9: the geometry is proven on a laid-out view, not on this file =="
+echo "== T10: the geometry is proven on a laid-out view, not on this file =="
 # #498 (third attempt). T1-T8 are text. T8 already refuses to pass without a
 # test that inflates the nav and reads the RESOLVED itemBackground; that
 # caught #512's missing pill but says nothing about SPACING, which is what
@@ -339,18 +339,19 @@ PY
 )" "a JVM test lays the bar out and asserts its distances against the declared dimens"
 
 echo
-echo "== T9: the M3 80dp minHeight cannot inflate the bar — override declared AND measured =="
+echo "== T9: the bar's height is stated and capped — it may not fill its parent =="
 # Widget.Material3.BottomNavigationView carries android:minHeight =
-# m3_bottom_nav_min_height (80dp). Before #512 the style never applied, so the
-# wrap_content bar hugged its content and T1-T8's pill geometry read symmetric
-# on screen. The moment #512 made the style real, the bar inflated to 80dp,
-# the menu block anchored to the TOP of the frame and the leftover height
-# landed entirely BELOW the items — the pill sat high in the island: small
-# white space above it, large below (reported 2026-09-18, alongside silent
-# process deaths the exits endpoint now records). Two halves, T6/T7's split:
-# the override must be DECLARED in the nav style, and a JVM test must MEASURE
-# the inflated bar against its menu block — the declaration alone would stay
-# green if Material ever stopped honouring it.
+# m3_bottom_nav_min_height (80dp), and when the bar came out too tall the
+# instinct was to zero it. That is backwards. In
+# BottomNavigationView.makeMinHeightSpec this attribute is not a floor, it is
+# the CAP - min(available, minHeight), forced to EXACTLY - and
+# BottomNavigationMenuView.onMeasure then takes whatever height it is handed,
+# EXACTLY. Zero skips the clamp entirely and the wrap_content bar fills its
+# parent: 788.00dp of bottom bar measured on CI 35402703581, while the tester
+# written to catch that inflation stayed green because it compared the bar to
+# its own menu block - and those are equal by construction at every height.
+# So: the style must NOT carry a zero (or any) android:minHeight, and a JVM
+# test must assert the measured height against the DECLARED geometry.
 check "$(python3 - "$THEMES" "$(cd "$(dirname "$0")/.." && pwd)/app/src/test" <<'PY'
 import os, re, sys
 themes, testroot = sys.argv[1], sys.argv[2]
@@ -360,24 +361,33 @@ m = re.search(r'<style name="Widget\.CloudSuperApp\.BottomNavigationView".*?</st
 if not m:
     p.append("style Widget.CloudSuperApp.BottomNavigationView not found in themes.xml")
 else:
-    body = m.group(0)
-    mh = re.search(r'<item name="android:minHeight">([^<]*)</item>', body)
-    if not mh:
-        p.append("the nav style no longer overrides android:minHeight - Widget.Material3.BottomNavigationView's 80dp m3_bottom_nav_min_height inflates the wrap_content bar again (pill high in the island: small gap above, large below)")
-    elif mh.group(1).strip() != "0dp":
-        p.append("android:minHeight is %r, not 0dp - any non-zero floor re-decouples the bar's height from the ONE-GEOMETRY tokens" % mh.group(1))
+    mh = re.search(r'<item name="android:minHeight">([^<]*)</item>', m.group(0))
+    if mh:
+        p.append("the nav style sets android:minHeight=%r. That attribute is Material's height CAP, "
+                 "not a floor: 0dp removes the cap and the bar fills its parent (788dp, CI 35402703581), "
+                 "and any literal decouples the height from the declared item geometry. The height is "
+                 "computed from the tokens plus the label's ink height in "
+                 "CenteredLabelBottomNavigationView." % mh.group(1))
 proof = []
 for dirpath, _, files in os.walk(testroot):
     for f in files:
-        if not f.endswith(".kt"): continue
+        if not f.endswith(".kt"):
+            continue
         t = open(os.path.join(dirpath, f)).read()
-        if all(k in t for k in ("MenuView", "minimumHeight", "@Test")) and re.search(r'assertEquals[^;]*menu\.height,\s*nav\.height', t):
+        if "@Test" not in t or "minimumHeight" not in t:
+            continue
+        # The height must be checked against declared dimens, never against
+        # another view of the same bar - menu.height == nav.height is a
+        # tautology and shipped as one.
+        if "bottom_nav_pill_inset" in t and "bottom_nav_icon_label_gap" in t and "nav.height" in t:
             proof.append(f)
 if not proof:
-    p.append("no JVM test measures the inflated bar against its menu block (menu.height == nav.height) - the minHeight declaration alone would stay green if Material stopped honouring it")
+    p.append("no JVM test asserts the measured bar height against the declared dimens "
+             "(pill inset + pad + icon + gap + label + pad + pill inset) - a height check that "
+             "compares the bar to its own menu block cannot fail")
 print("; ".join(p) or "OK")
 PY
-)" "the nav style zeroes android:minHeight, and a JVM test measures bar==menu (no 80dp inflation)"
+)" "no android:minHeight in the nav style, and the height is measured against the declared geometry"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

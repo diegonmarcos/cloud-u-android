@@ -1,6 +1,8 @@
 package com.diegonmarcos.superapp.ui
 
 import android.app.Application
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Rect
 import android.graphics.drawable.InsetDrawable
 import android.view.ContextThemeWrapper
@@ -45,8 +47,8 @@ import org.robolectric.annotation.GraphicsMode
  * The contract, all of it measured against the app's OWN declared dimens:
  *   M1 the bar is exactly as tall as the declared item geometry needs
  *   M2 the icon-to-label gap is @dimen/bottom_nav_icon_label_gap
- *   M3 the icon+label ink is centred in its cell, by the declared pad
- *   M4 the selected pill wraps that ink, concentrically, by one declared inset
+ *   M3 the icon+label ink is centred in its cell, at pill inset + pad
+ *   M4 the selected pill wraps that ink concentrically, by the declared pad
  *   M5 the icon is @dimen/bottom_nav_icon_size
  *   M6 the bar's end insets are @dimen/bottom_nav_end_inset, equal both ends
  *   M7 includeFontPadding is OFF on the real label — #498's whole fix, proven
@@ -103,11 +105,16 @@ class BottomNavGeometryTest {
     fun barIsExactlyAsTallAsTheDeclaredItemGeometryNeeds() {
         val cell = cells[0]
         val ink = ink(cell)
-        val need = 2 * pad + icon(cell).height() + iconLabelGap + label(cell).height()
+        // The pill is an InsetDrawable, and View.setBackground() folds a
+        // background's getPadding() into the view's own padding — so the
+        // capsule's inset is also item padding, on every item. The ink
+        // therefore starts at (pillInset + pad), not at pad.
+        val need = 2 * (pillInset + pad) + icon(cell).height() + iconLabelGap + label(cell).height()
         assertEquals(
             "the bar measures ${dp(nav.height)} but the declared geometry " +
-                "(${dp(pad)} pad + ${dp(icon(cell).height())} icon + ${dp(iconLabelGap)} gap + " +
-                "${dp(label(cell).height())} label + ${dp(pad)} pad) needs ${dp(need)} — " +
+                "(${dp(pillInset)} pill inset + ${dp(pad)} pad + ${dp(icon(cell).height())} icon + " +
+                "${dp(iconLabelGap)} gap + ${dp(label(cell).height())} label + ${dp(pad)} pad + " +
+                "${dp(pillInset)} pill inset) needs ${dp(need)} — " +
                 "${dp(nav.height - need)} of slack that no declared value asks for, and " +
                 "Material drops all of it between the icon and the label. ink=$ink cell=${cell.height}",
             need, nav.height)
@@ -136,18 +143,20 @@ class BottomNavGeometryTest {
                     "label — the stack is not centred in its cell. ink=$ink cell=${cell.height}",
                 above, below)
             assertEquals(
-                "item '${title(cell)}': the stack sits ${dp(above)} from the cell edge but the " +
-                    "app declares @dimen/bottom_nav_item_vertical_pad = ${dp(pad)}. ink=$ink",
-                pad, above)
+                "item '${title(cell)}': the stack sits ${dp(above)} from the cell edge, but the " +
+                    "declared geometry puts it at @dimen/bottom_nav_pill_inset (${dp(pillInset)}) " +
+                    "+ @dimen/bottom_nav_item_vertical_pad (${dp(pad)}) = ${dp(pillInset + pad)}. " +
+                    "ink=$ink",
+                pillInset + pad, above)
         }
     }
 
     @Test
     fun theSelectedPillWrapsThatInkConcentrically() {
+        val bitmap = drawNav()
         val cell = cells.first { it.id == selected }
         val ink = ink(cell)
         val pill = pill(cell)
-        val breathing = pad - pillInset
         assertTrue(
             "the pill $pill does not contain the icon+label ink $ink",
             pill.contains(ink.left, ink.top, ink.right, ink.bottom))
@@ -158,9 +167,25 @@ class BottomNavGeometryTest {
             ink.top - pill.top, pill.bottom - ink.bottom)
         assertEquals(
             "the pill breathes ${dp(ink.top - pill.top)} around the ink, but the declared " +
-                "difference between @dimen/bottom_nav_item_vertical_pad (${dp(pad)}) and " +
-                "@dimen/bottom_nav_pill_inset (${dp(pillInset)}) is ${dp(breathing)}",
-            breathing, ink.top - pill.top)
+                "breathing room is @dimen/bottom_nav_item_vertical_pad = ${dp(pad)}",
+            pad, ink.top - pill.top)
+        bitmap.recycle()
+    }
+
+    @Test
+    fun theBarIsNotAllowedToFillItsParent() {
+        // The whole point of stating a height. minimumHeight is a CAP in
+        // BottomNavigationView.makeMinHeightSpec — min(available, minHeight),
+        // EXACTLY — and BottomNavigationMenuView takes whatever it is handed,
+        // so a bar with no cap swallows its parent. 2026-09-18 shipped 788dp
+        // of bottom bar this way (CI 35402703581).
+        assertTrue(
+            "the bar declares no minimumHeight, so nothing caps it and it fills its parent",
+            nav.minimumHeight > 0)
+        assertEquals(
+            "the bar measures ${dp(nav.height)} but its own minimumHeight cap is " +
+                "${dp(nav.minimumHeight)} — something else is driving the height",
+            nav.minimumHeight, nav.height)
     }
 
     @Test
@@ -227,6 +252,13 @@ class BottomNavGeometryTest {
     /** What the user actually sees painted in the cell: glyph plus caption. */
     private fun ink(cell: ViewGroup): Rect = Rect(icon(cell)).also { it.union(label(cell)) }
 
+    /** Backgrounds get their bounds when a view DRAWS, not when it lays out. */
+    private fun drawNav(): Bitmap {
+        assertTrue("nav was laid out with no size", nav.width > 0 && nav.height > 0)
+        return Bitmap.createBitmap(nav.width, nav.height, Bitmap.Config.ARGB_8888)
+            .also { nav.draw(Canvas(it)) }
+    }
+
     /** The painted capsule — the checked state's inset shape, in cell coords. */
     private fun pill(cell: ViewGroup): Rect {
         val current = cell.background?.current
@@ -263,16 +295,23 @@ class BottomNavGeometryTest {
             "${nav.paddingLeft}/${nav.paddingTop}/${nav.paddingRight}/${nav.paddingBottom}px")
         println("#498 declared px: pad=$pad pillInset=$pillInset gap=$iconLabelGap " +
             "endInset=$endInset iconSize=$iconSize")
+        println("#498 effective px: itemPaddingTop=${nav.itemPaddingTop} " +
+            "itemPaddingBottom=${nav.itemPaddingBottom} " +
+            "activeIndicatorLabelPadding=${nav.activeIndicatorLabelPadding} " +
+            "minimumHeight=${nav.minimumHeight}")
         for (cell in cells) {
             val i = icon(cell)
             val l = label(cell)
             val k = ink(cell)
             println("#498 item '${title(cell)}'${if (cell.id == selected) " [SELECTED]" else ""} " +
+                "padT=${cell.paddingTop} padB=${cell.paddingBottom} ")
+            println("#498   " +
                 "cell=${cell.width}x${cell.height} icon=$i label=$l ink=$k " +
                 "above=${k.top}px gap=${l.top - i.bottom}px below=${cell.height - k.bottom}px")
             for (t in cell.descendants().filterIsInstance<TextView>()) {
                 println("#498   label text='${t.text}' vis=${t.visibility} " +
                     "size=${t.textSize}px includeFontPadding=${t.includeFontPadding} " +
+                    "ascent=${t.paint.fontMetricsInt.ascent} descent=${t.paint.fontMetricsInt.descent} " +
                     "baseline=${t.baseline} box=${t.width}x${t.height} " +
                     "parentPadB=${(t.parent as View).paddingBottom}")
             }

@@ -132,28 +132,18 @@ class BottomNavSelectedPillTest {
         bitmap.recycle()
     }
 
-    @Test
-    fun barHugsItsContentNoM3MinHeightInflation() {
-        // Widget.Material3.BottomNavigationView carries android:minHeight =
-        // m3_bottom_nav_min_height (80dp). Before #512 the style never applied,
-        // so the wrap_content bar hugged its content and the equal-inset pill
-        // geometry read symmetric. The moment #512 made the style real, the bar
-        // inflated to 80dp, the menu block anchored to the TOP of the frame and
-        // every leftover pixel landed BELOW the items — small white space above
-        // the pill, large below (reported 2026-09-18). The theme now zeroes
-        // android:minHeight; this asserts the geometry that follows: the bar is
-        // exactly its menu content, no dead band on either side.
-        val menu = (0 until nav.childCount).map { nav.getChildAt(it) }
-            .first { it.javaClass.name.contains("MenuView") } as ViewGroup
-        val spaceAbove = menu.top
-        val spaceBelow = nav.height - menu.bottom
-        println("#518 measured: nav=${nav.height}px menu=${menu.height}px " +
-            "above=${spaceAbove}px below=${spaceBelow}px minimumHeight=${nav.minimumHeight}px")
-        assertEquals("the bar inflates beyond its menu content — the M3 80dp minHeight is back",
-            menu.height, nav.height)
-        assertEquals("dead band ABOVE the menu block", 0, spaceAbove)
-        assertEquals("dead band BELOW the menu block", 0, spaceBelow)
-    }
+    // REMOVED (#498, third attempt): barHugsItsContentNoM3MinHeightInflation.
+    // It asserted menu.height == nav.height with zero dead band above and
+    // below, to prove the bar was not inflated by Material's 80dp minHeight.
+    // Those three assertions can never fail: BottomNavigationMenuView.onMeasure
+    // rebuilds its height spec as MeasureSpec.EXACTLY of whatever size it is
+    // offered, so the menu block IS the bar, at every height. It passed on CI
+    // 35402703581 printing "nav=2364px menu=2364px above=0px below=0px" — a
+    // 788dp bottom bar, the very inflation it was written to catch. The bar's
+    // height is asserted against the DECLARED geometry instead, in
+    // BottomNavGeometryTest (barIsExactlyAsTallAsTheDeclaredItemGeometryNeeds
+    // and theBarIsNotAllowedToFillItsParent), where the expected value comes
+    // from the dimens and the font rather than from the view itself.
 
     /** Backgrounds get their bounds when a view DRAWS, not when it lays out. */
     private fun drawNav(): Bitmap {

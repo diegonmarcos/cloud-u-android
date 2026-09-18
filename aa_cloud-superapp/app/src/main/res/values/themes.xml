@@ -65,18 +65,26 @@
              transparent so the two highlights do not stack. -->
         <item name="itemBackground">@drawable/bg_bottom_nav_item_checked</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.CloudSuperApp.BottomNavigationView.ActiveIndicator</item>
-        <!-- Widget.Material3.BottomNavigationView carries
-             android:minHeight = m3_bottom_nav_min_height (80dp). Before #512
-             this style never actually applied, so the wrap_content bar in
-             activity_main.xml hugged its content and #498's equal-inset pill
-             geometry read symmetric. The moment #512 made the style real, the
-             bar inflated to 80dp, the menu block anchors to the TOP of the
-             frame, and the leftover height lands entirely BELOW the items —
-             the pill sits high in the island: small white space above it,
-             large below. Zeroing minHeight hands the bar's height back to the
-             ONE-GEOMETRY tokens (itemPaddingTop/Bottom + content, the same
-             dimen the pill insets read), symmetric by construction again. -->
-        <item name="android:minHeight">0dp</item>
+        <!-- NO android:minHeight HERE, deliberately, and NEVER 0dp.
+             Widget.Material3.BottomNavigationView carries android:minHeight =
+             m3_bottom_nav_min_height (80dp), and the instinct when the bar
+             came out too tall was to zero it. That is backwards: in
+             BottomNavigationView.makeMinHeightSpec this attribute is not a
+             floor, it is the CAP — min(available, minHeight), forced to
+             EXACTLY — and BottomNavigationMenuView.onMeasure then takes
+             whatever height it is handed, EXACTLY. Zero skips the clamp
+             entirely and the wrap_content bar fills its parent: measured
+             788.00dp of bottom bar on 2026-09-18 (CI 35402703581), while the
+             tester written to catch exactly that stayed green because it
+             compared the bar to its own menu block and those two are equal by
+             construction in every case.
+             The height is therefore not an attribute at all — it is the sum
+             of the declared item geometry plus the label's ink height, which
+             is a font number. CenteredLabelBottomNavigationView computes it
+             once and sets minimumHeight, and BottomNavGeometryTest measures
+             every term of the sum back off the laid-out bar. Material's 80dp
+             stays inherited underneath as an inert fallback: wrong, but not
+             catastrophic, if that class is ever bypassed. -->
     </style>
 
     <style name="Widget.CloudSuperApp.BottomNavigationView.ActiveIndicator"
