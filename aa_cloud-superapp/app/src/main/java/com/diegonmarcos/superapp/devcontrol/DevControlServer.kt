@@ -203,6 +203,19 @@ object DevControlServer {
                 "diagnostics/trace"  -> { reply(writer, "200 OK", readTraceTail(ctx, query["n"]?.toIntOrNull() ?: 300)); return }
                 "diagnostics/crashes" -> { reply(writer, "200 OK", readCrashes(ctx)); return }
                 "diagnostics/exits"  -> { reply(writer, "200 OK", readExitReasons(ctx, query["n"]?.toIntOrNull() ?: 20)); return }
+                "diagnostics/navgeometry" -> {
+                    // The bottom nav has now rendered differently ON-DEVICE
+                    // than under Robolectric twice (2026-09-19: the icon-only
+                    // halo both before and after the indicator kill switch)
+                    // while every JVM assertion stayed green. This route ends
+                    // the divergence class: it walks the LIVE view tree on the
+                    // main thread and reports every rect, background class and
+                    // drawable bounds — the device testifies about itself.
+                    val d = dispatchToHost("diagnostics/navgeometry") { host -> navGeometryJson(host) }
+                    reply(writer, d.status,
+                        d.value ?: """{"error":"${jsonEscape(d.message)}"}""", "application/json")
+                    return
+                }
                 "diagnostics/bundle" -> { reply(writer, "200 OK", diagnosticRecord(ctx), "application/json"); return }
                 "diagnostics/download" -> {
                     val name = "cloud-diag-${BuildConfig.APPLICATION_ID}-${BuildConfig.GIT_SHORT_SHA}.json"
@@ -450,6 +463,7 @@ object DevControlServer {
             "trace"    -> "diagnostics/trace"
             "crashes"  -> "diagnostics/crashes"
             "exits"    -> "diagnostics/exits"
+            "navgeometry" -> "diagnostics/navgeometry"
             "goto"     -> "nav/goto"
             "action"   -> "nav/action"
             "update"   -> "system/update"
@@ -473,6 +487,7 @@ object DevControlServer {
             Spec("diagnostics/trace",   "GET",  false, "Tail of Trace.kt's trace.log", "n=lines (default 300)"),
             Spec("diagnostics/crashes", "GET",  false, "All crash files concatenated, newest first", ""),
             Spec("diagnostics/exits",   "GET",  false, "The OS's own record of recent process deaths (ApplicationExitInfo): ANR / native crash / lmkd / signal — the deaths CrashLogger cannot see; ANR records inline the system-captured trace head", "n=records (default 20)"),
+            Spec("diagnostics/navgeometry", "GET", false, "The LIVE bottom-nav view tree, measured on-device: every rect, background class and drawable bounds — for the renders Robolectric cannot reproduce; needs the app foregrounded", ""),
             Spec("diagnostics/bundle",  "GET",  false, "Full debug bundle (logcat+trace+crashes+device) as one OpenObserve JSON record", ""),
             Spec("diagnostics/download","GET",  false, "Write the debug bundle to public Downloads; returns the filename", ""),
             Spec("diagnostics/push",    "GET",  false, "POST the debug bundle to the cloud log sink (OpenObserve via build.json::diagnostics.log_sink_url)", ""),
@@ -1209,6 +1224,76 @@ object DevControlServer {
      *  ring quiet — this route is what would have named the killer). For ANR
      *  records the system-captured stack is inlined (head only) so the guilty
      *  frame arrives in the reply rather than staying on a wedged phone. */
+    /** The live bottom-nav tree as JSON — rects, background classes, drawable
+     *  bounds — read on the main thread from the foreground activity. The
+     *  device's own testimony for renders the JVM harness cannot reproduce. */
+    private fun navGeometryJson(host: DevControlBridge.ActivityHost): String = runCatching {
+        val act = host as? android.app.Activity
+            ?: return """{"error":"host is not an Activity"}"""
+        val nav = act.findViewById<android.view.ViewGroup>(R.id.bottom_nav)
+            ?: return """{"error":"no bottom_nav in the foreground activity"}"""
+        fun rectOf(v: android.view.View) =
+            org.json.JSONArray(listOf(v.left, v.top, v.right, v.bottom, v.width, v.height))
+        fun drawableOf(d: android.graphics.drawable.Drawable?): Any =
+            if (d == null) org.json.JSONObject.NULL
+            else org.json.JSONObject().apply {
+                put("class", d.javaClass.name)
+                put("bounds", d.bounds.toShortString())
+                runCatching {
+                    if (d is android.graphics.drawable.DrawableContainer) {
+                        val c = d.current
+                        put("current", (c?.javaClass?.name ?: "null") + " " +
+                            (c?.bounds?.toShortString() ?: ""))
+                        if (c is android.graphics.drawable.InsetDrawable)
+                            put("current_inner", (c.drawable?.javaClass?.name ?: "") + " " +
+                                (c.drawable?.bounds?.toShortString() ?: ""))
+                    }
+                }
+            }
+        val o = org.json.JSONObject()
+        o.put("density", act.resources.displayMetrics.density.toDouble())
+        act.findViewById<android.view.View>(R.id.bottom_nav_island)?.let {
+            o.put("island", org.json.JSONObject().apply {
+                put("rect", rectOf(it)); put("background", drawableOf(it.background))
+            })
+        }
+        o.put("nav", org.json.JSONObject().apply {
+            put("class", nav.javaClass.name); put("rect", rectOf(nav))
+            put("paddingLR", org.json.JSONArray(listOf(nav.paddingLeft, nav.paddingRight)))
+            put("minimumHeight", nav.minimumHeight)
+        })
+        val menu = (0 until nav.childCount).map { nav.getChildAt(it) }
+            .firstOrNull { it.javaClass.name.contains("MenuView") } as? android.view.ViewGroup
+        if (menu == null) { o.put("menu", "NOT FOUND"); return o.toString() }
+        o.put("menu", org.json.JSONObject().apply {
+            put("class", menu.javaClass.name); put("rect", rectOf(menu))
+        })
+        val cells = org.json.JSONArray()
+        for (i in 0 until menu.childCount) {
+            val cell = menu.getChildAt(i) as? android.view.ViewGroup ?: continue
+            val cj = org.json.JSONObject()
+            cj.put("rect", rectOf(cell))
+            cj.put("selected", cell.isSelected)
+            cj.put("background", drawableOf(cell.background))
+            val kids = org.json.JSONArray()
+            fun walk(v: android.view.View, depth: Int) {
+                kids.put(org.json.JSONObject().apply {
+                    put("d", depth); put("class", v.javaClass.simpleName)
+                    put("rect", rectOf(v)); put("vis", v.visibility)
+                    v.background?.let { put("bg", drawableOf(it)) }
+                    if (v is android.widget.TextView) put("text", v.text.toString())
+                })
+                if (v is android.view.ViewGroup && depth < 3)
+                    for (k in 0 until v.childCount) walk(v.getChildAt(k), depth + 1)
+            }
+            for (k in 0 until cell.childCount) walk(cell.getChildAt(k), 1)
+            cj.put("children", kids)
+            cells.put(cj)
+        }
+        o.put("cells", cells)
+        o.toString()
+    }.getOrElse { """{"error":"${jsonEscape(it.toString())}"}""" }
+
     private fun readExitReasons(ctx: android.content.Context, n: Int): String {
         // Function-level SDK gate, not inside the lambda: lintVital's NewApi
         // check (fatal on release) reliably traces only this form.
