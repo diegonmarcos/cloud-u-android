@@ -62,7 +62,7 @@ env:
 
 jobs:
   build_and_publish:
-    name: "Build + publish (affine · arm64-v8a)"
+    name: "Build + publish (notes · arm64-v8a)"
     runs-on: ubuntu-latest
     timeout-minutes: 120
     env:
