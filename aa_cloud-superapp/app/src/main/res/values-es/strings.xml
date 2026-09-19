@@ -173,8 +173,8 @@
     <string name="shortcut_linktree_long">Abrir Linktree</string>
 
     <!-- Drawer affordances -->
-    <string name="drawer_open">Abrir la navegación</string>
-    <string name="drawer_close">Cerrar la navegación</string>
+    <string name="main_menu_open">Abrir el menú principal</string>
+    <string name="main_menu_close">Cerrar el menú principal</string>
     <string name="drawer_tab_home">Inicio</string>
 
     <!-- Accessibility-service strings shown in Settings → Accessibility →

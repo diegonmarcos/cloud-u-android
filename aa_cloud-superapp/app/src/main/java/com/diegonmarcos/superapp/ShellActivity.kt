@@ -541,7 +541,7 @@ open class ShellActivity : AppCompatActivity(),
 
             val toggle = ActionBarDrawerToggle(
                 this, drawerLayout, toolbar,
-                R.string.drawer_open, R.string.drawer_close,
+                R.string.main_menu_open, R.string.main_menu_close,
             )
             drawerLayout.addDrawerListener(toggle)
             toggle.syncState()
@@ -562,7 +562,7 @@ open class ShellActivity : AppCompatActivity(),
             // deck lives inside Cloud-Me now), read from UI_TOP_ORBS_B64,
             // never hardcoded here. Visibility is toggled with atHomeRoot in
             // onPrepareOptionsMenu alongside the bar-dissolve.
-            findViewById<android.view.View>(R.id.top_menu_orb)?.setOnClickListener {
+            findViewById<android.view.View>(R.id.main_menu_orb)?.setOnClickListener {
                 Haptics.tap(it)
                 drawerLayout.openDrawer(androidx.core.view.GravityCompat.START)
             }
@@ -2147,7 +2147,7 @@ open class ShellActivity : AppCompatActivity(),
         // own pills). Off the root the classic toolbar returns:
         // hamburger | island | back.
         val orbVis = if (atHomeRoot) android.view.View.VISIBLE else android.view.View.GONE
-        findViewById<android.view.View>(R.id.top_menu_orb)?.visibility = orbVis
+        findViewById<android.view.View>(R.id.main_menu_orb)?.visibility = orbVis
         findViewById<android.view.View>(R.id.top_wallet_orb)?.visibility = orbVis
         findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
             ?.navigationIcon = if (atHomeRoot) null

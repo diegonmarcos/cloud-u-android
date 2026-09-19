@@ -6145,7 +6145,7 @@
       ]
     },
     "_doc_modes": "Global UI mode (Apps <-> Admin). No longer a toolbar toggle: Apps and Admin are ordinary PAGES of the sections that have both, marked \"facet\": true. Opening one sets the mode, so the Home grid, drawer and bottom-nav icon variants (icon_apps/icon_admin) follow the page just opened. Sections with tiles_shared ignore the mode. Persisted via ModePrefs (regular SharedPreferences - not encrypted, it's just a view-pref).",
-"_doc_top_orbs": "Revolut-style Home-root corner orbs (activity_main.xml top_menu_orb / top_wallet_orb). LEFT is the main menu \u2014 it opens the drawer and declares nothing. RIGHT launches an external constellation app: right_extapp names it, and ShellActivity reads it from UI_TOP_ORBS_B64 \u2014 never hardcoded in Kotlin. Default is cloud-me because the Wallet deck moved INTO Cloud-Me (Buro/Agenda/Profile/Projects/Wallet); it was cloud-wallet before 2026-09-19. Changing the target is an edit here.",
+"_doc_top_orbs": "Revolut-style Home-root corner orbs (activity_main.xml main_menu_orb / top_wallet_orb). LEFT is the MAIN MENU \u2014 it opens the drawer and declares nothing. RIGHT launches an external constellation app: right_extapp names it, and ShellActivity reads it from UI_TOP_ORBS_B64 \u2014 never hardcoded in Kotlin. Default is cloud-me because the Wallet deck moved INTO Cloud-Me (Buro/Agenda/Profile/Projects/Wallet); it was cloud-wallet before 2026-09-19. Changing the target is an edit here.",
     "top_orbs": {
      "right_extapp": "cloud-me"
     },

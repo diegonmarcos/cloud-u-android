@@ -24,7 +24,7 @@ check "$(python3 - "$LAYOUT" <<'PY'
 import re, sys
 t = open(sys.argv[1]).read()
 p = []
-for orb in ("top_menu_orb", "top_wallet_orb"):
+for orb in ("main_menu_orb", "top_wallet_orb"):
     i = t.find('android:id="@+id/%s"' % orb)
     if i < 0:
         p.append("%s is not declared" % orb); continue
@@ -33,7 +33,7 @@ for orb in ("top_menu_orb", "top_wallet_orb"):
         p.append("%s is not backed by bg_liquid_glass_pill — not the glass family the islands use" % orb)
 print("; ".join(p) or "OK")
 PY
-)" "top_menu_orb + top_wallet_orb declared with bg_liquid_glass_pill"
+)" "main_menu_orb + top_wallet_orb declared with bg_liquid_glass_pill"
 
 echo "== T2: the right orb's target is DECLARED, and it is cloud-me =="
 check "$(python3 - build.json <<'PY'
@@ -60,7 +60,7 @@ if 'UI_TOP_ORBS_B64' not in t:
 for lit in ('launchExternalApp("cloud-wallet")', 'launchExternalApp("cloud-me")'):
     if lit in t:
         p.append("hardcoded %s — the exact defect the declaration replaces" % lit)
-if 'top_menu_orb' not in t or 'top_wallet_orb' not in t:
+if 'main_menu_orb' not in t or 'top_wallet_orb' not in t:
     p.append("orbs are not wired in ShellActivity")
 print("; ".join(p) or "OK")
 PY

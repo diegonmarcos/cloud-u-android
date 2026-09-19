@@ -154,8 +154,8 @@
     <string name="shortcut_linktree_long">Open Linktree</string>
 
     <!-- Drawer affordances -->
-    <string name="drawer_open">Open navigation</string>
-    <string name="drawer_close">Close navigation</string>
+    <string name="main_menu_open">Open main menu</string>
+    <string name="main_menu_close">Close main menu</string>
     <string name="drawer_tab_home">Home</string>
 
     <!-- Accessibility-service strings shown in Settings → Accessibility →

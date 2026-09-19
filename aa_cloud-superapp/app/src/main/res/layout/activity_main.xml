@@ -234,7 +234,7 @@
                  full-width glass bar dissolves (ShellActivity nulls the
                  island background and the toolbar hamburger) and these two
                  detached liquid-glass circles carry the same two actions the
-                 toolbar carried: left opens the main menu (drawer), right
+                 toolbar carried: left opens the MAIN MENU (drawer), right
                  launches the wallet's home app. The right orb's target is
                  DECLARED in build.json::ui.top_orbs (baked as
                  UI_TOP_ORBS_B64), never hardcoded — the wallet deck moved
@@ -242,7 +242,7 @@
                  future move is a JSON edit. Off the Home root both orbs hide
                  and the classic toolbar returns (hamburger | island | back). -->
             <FrameLayout
-                android:id="@+id/top_menu_orb"
+                android:id="@+id/main_menu_orb"
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 android:layout_gravity="start|center_vertical"
@@ -250,7 +250,7 @@
                 android:background="@drawable/bg_liquid_glass_pill"
                 android:clickable="true"
                 android:focusable="true"
-                android:contentDescription="@string/drawer_open"
+                android:contentDescription="@string/main_menu_open"
                 android:visibility="gone">
                 <ImageView
                     android:layout_width="24dp"
