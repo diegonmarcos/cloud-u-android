@@ -9,6 +9,7 @@ import com.diegonmarcos.superapp.system.Trace
 import com.diegonmarcos.superapp.system.ShizukuUserService
 import com.diegonmarcos.superapp.system.CrashLogger
 import com.diegonmarcos.superapp.App
+import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.apps.PhoneSmartFolders
 import com.diegonmarcos.superapp.apps.PhoneFolders
