@@ -1,0 +1,62 @@
+name: "wireguard profiles guard — the APK's export block cannot drift from the vault-published dist"
+
+# WHY THIS WORKFLOW EXISTS.
+#
+# The four phone tunnel profiles are declared TWICE with nothing deriving one
+# from the other:
+#
+#   1. cloud-vault/A0_keys/providers/wireguard/termux-public/config-v{4,6}-* is
+#      the _source. cloud-infra derives
+#      1_cloud-configs/dist/build-cloud-superapp-diego.json from it, and that
+#      dist is public.
+#   2. aa_cloud-superapp/build.json::ui.wireguard_profiles in THIS repo is the
+#      block WireGuardProfiles.kt renders and the export writes. Its own _doc
+#      says it is "mirrored from the vault" and "must not disagree" — but
+#      nothing enforced that, and on 2026-09-19 #523 (wg-v6-full never
+#      handshakes: a v6 default route covers the oci-analytics peer's own v6
+#      endpoint) was fixed in the vault and cloud-infra while the APK's copy
+#      still exported the broken `::/0`.
+#
+# This job makes the drift a build failure. Step 1 runs the ticket's guard:
+# the NORMALISED peer set per profile (public_key / endpoint / allowed_ips,
+# order-insensitive within allowed_ips, whitespace-insensitive) compared
+# against the published dist, fetched live from the PUBLIC cloud-infra repo.
+# Step 2 enforces the derivation: build.json's ui.wireguard_profiles must be
+# byte-for-byte what the deriver would produce from that same dist (this also
+# pins interface_address, interface_mtu, per-profile dns and
+# persistent_keepalive — fields the peer-set check deliberately does not
+# weigh). Step 3 proves, on every run, that both comparisons can actually go
+# red — a guard only ever watched passing proves nothing.
+#
+# WHY THE FETCH IS LIVE AND WHY IT FAILS CLOSED. The APK is measured against
+# the dist as published today, not against a cached copy; and a fetch failure
+# (network, empty body, unparseable JSON, missing wireguard object) exits 1 —
+# a guard that passed because it could not read its reference is worse than
+# no guard.
+#
+# NO PATH FILTER, deliberately. The drift enters through
+# aa_cloud-superapp/build.json, but a filter keyed on that directory would be
+# a second, hand-maintained copy of the answer this guard exists to compute —
+# and the reference itself moves in cloud-infra. The job costs one HTTPS GET
+# per step and no build toolchain.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wireguard-profiles:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: The phone's exportable profiles match the published dist
+        run: python3 1_cicd/src/scripts/cloud-android-wireguard-profiles-guard.py check
+      - name: build.json's wireguard block is exactly what the deriver would produce
+        run: python3 1_cicd/src/scripts/cloud-android-wireguard-profiles-guard.py derive --check
+      - name: The guard still fails on drift, endpoint changes, and a missing reference
+        run: bash 1_cicd/src/scripts/test/wireguard-profiles-guard.test.sh
