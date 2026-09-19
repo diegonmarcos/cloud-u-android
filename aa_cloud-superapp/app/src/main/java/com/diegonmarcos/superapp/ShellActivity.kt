@@ -2157,9 +2157,13 @@ open class ShellActivity : AppCompatActivity(),
         findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
             ?.navigationIcon = if (atHomeRoot) null
             else androidx.core.content.ContextCompat.getDrawable(this, R.drawable.ic_hamburger_asymmetric)
-        findViewById<android.view.View>(R.id.toolbar_island)?.background =
-            if (atHomeRoot) null
-            else androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_liquid_glass)
+        // NO toolbar_island background, EVER. The first orbs commit
+        // "restored" bg_liquid_glass here off the Home root — but the layout
+        // declares no background on that island at all, so this code was not
+        // restoring anything: it was INVENTING a full-width slab that
+        // appeared the moment a section was selected. The owner never asked
+        // for it and reported it the same day. Icons and the centre islands
+        // float over the wallpaper on every screen.
         return super.onPrepareOptionsMenu(menu)
     }
 

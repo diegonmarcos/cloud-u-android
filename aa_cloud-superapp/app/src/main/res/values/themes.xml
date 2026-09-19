@@ -65,6 +65,19 @@
              transparent so the two highlights do not stack. -->
         <item name="itemBackground">@drawable/bg_bottom_nav_item_checked</item>
         <item name="itemActiveIndicatorStyle">@style/Widget.CloudSuperApp.BottomNavigationView.ActiveIndicator</item>
+        <!-- DISABLED, not merely transparent — the distinction is the whole
+             bug. NavigationBarItemView.refreshItemBackground checks the
+             indicator's ENABLED FLAG: while it is on, itemBackground is
+             suppressed and the item paints the icon-bound indicator/selected
+             ripple instead. A transparent indicator colour changes what the
+             indicator looks like, not whether it wins. On-device (Samsung,
+             2026-09-19 13:43 screenshot) the selection rendered as a small
+             icon-only halo sitting high in the cell — label outside it,
+             dead band below — while every JVM assertion stayed green,
+             because Robolectric applied itemBackground and the device did
+             not. False = both environments take the same branch: the full
+             capsule paints, the indicator never exists. -->
+        <item name="itemActiveIndicatorEnabled">false</item>
         <!-- NO android:minHeight HERE, deliberately, and NEVER 0dp.
              Widget.Material3.BottomNavigationView carries android:minHeight =
              m3_bottom_nav_min_height (80dp), and the instinct when the bar

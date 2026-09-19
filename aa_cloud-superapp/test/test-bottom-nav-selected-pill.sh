@@ -416,5 +416,28 @@ PY
 )" "end inset aliases the pill inset, and the edge ring is measured on the laid-out bar"
 
 echo
+echo "== T12: the M3 active indicator is DISABLED — transparent was never enough =="
+# NavigationBarItemView.refreshItemBackground checks the indicator's ENABLED
+# flag: while it is on, itemBackground (the full capsule) is SUPPRESSED and
+# the item paints the icon-bound indicator/selected halo instead. Making the
+# indicator transparent changed how the indicator looked, not whether it won;
+# on-device (2026-09-19 13:43 screenshot) the selection was a small icon-only
+# halo high in the cell while every Robolectric assertion stayed green —
+# Robolectric took the itemBackground branch, the device did not. Only
+# itemActiveIndicatorEnabled=false puts both on the same branch.
+check "$(python3 - "$THEMES" <<'PY'
+import re, sys
+t = open(sys.argv[1]).read()
+m = re.search(r'<style name="Widget\.CloudSuperApp\.BottomNavigationView".*?</style>', t, re.S)
+if not m:
+    print("PROBLEM: nav style not found")
+elif not re.search(r'<item name="itemActiveIndicatorEnabled">false</item>', m.group(0)):
+    print("PROBLEM: itemActiveIndicatorEnabled=false is gone - with the indicator merely transparent, refreshItemBackground suppresses the full pill on-device and the icon-only halo returns")
+else:
+    print("OK")
+PY
+)" "the nav style declares itemActiveIndicatorEnabled=false"
+
+echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

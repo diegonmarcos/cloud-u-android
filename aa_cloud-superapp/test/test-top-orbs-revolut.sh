@@ -79,19 +79,27 @@ print("; ".join(p) or "OK")
 PY
 )" "UI_TOP_ORBS_B64 baked from buildJson.ui.top_orbs"
 
-echo "== T5: at the Home root the full-width bar dissolves =="
-# Revolut's look is floating circles, not a restyled slab: ShellActivity must
-# null the toolbar_island background (and the toolbar hamburger) at the Home
-# root, restoring both off it.
-check "$(python3 - "$SHELL_KT" <<'PY'
+echo "== T5: the top slab does not exist — on ANY screen =="
+# The first orbs commit "restored" bg_liquid_glass on toolbar_island off the
+# Home root. The layout declares NO background on that island, so the code
+# invented a full-width slab that appeared whenever a section was selected —
+# reported by the owner the same day (screenshot 2026-09-19 13:43). Neither
+# the XML nor ShellActivity may give toolbar_island a background; icons and
+# the centre islands float over the wallpaper everywhere.
+check "$(python3 - "$LAYOUT" "$SHELL_KT" <<'PY'
 import re, sys
-t = open(sys.argv[1]).read()
 p = []
-if not re.search(r'toolbar_island[\s\S]{0,200}?background\s*=[\s\S]{0,80}?atHomeRoot|atHomeRoot[\s\S]{0,400}?toolbar_island[\s\S]{0,120}?background', t):
-    p.append("toolbar_island's background is not toggled with atHomeRoot — the glass slab stays behind the orbs")
+lay = open(sys.argv[1]).read()
+i = lay.find('android:id="@+id/toolbar_island"')
+tag = lay[lay.rfind('<', 0, i):lay.find('>', i) + 1]
+if 'android:background' in tag:
+    p.append("toolbar_island declares a background in the layout — the slab is back")
+kt = open(sys.argv[2]).read()
+if re.search(r'toolbar_island[\s\S]{0,200}?background\s*=\s*(?!\s*null)[^\n]*getDrawable', kt):
+    p.append("ShellActivity assigns a drawable to toolbar_island's background — the invented slab is back")
 print("; ".join(p) or "OK")
 PY
-)" "toolbar_island background nulls at Home root (bar dissolves)"
+)" "no background on toolbar_island, in XML or in code"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
