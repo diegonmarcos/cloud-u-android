@@ -42,7 +42,17 @@ import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+
+/** #498-ANR: PackageManager.getApplicationIcon loads the ENTIRE foreign APK's
+ *  resources (ApkAssets.loadFromPath). Cache per package per PROCESS, loaded
+ *  off the main thread, and remember misses so an uninstalled package is not
+ *  re-probed on every shade render. */
+private val appIconCache =
+    java.util.concurrent.ConcurrentHashMap<String, android.graphics.drawable.Drawable>()
+private val appIconMisses: MutableSet<String> =
+    java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap())
 
 /**
  * Stack-render variant of an aggregator section. When an aggregator
@@ -2039,10 +2049,27 @@ class AggregatorStackFragment : Fragment(),
      * the channel, which is the affordance the header gave up to collapsing.
      */
     private fun groupAvatar(ctx: android.content.Context, g: NotifGroup): View {
-        val icon: android.graphics.drawable.Drawable? =
-            if (g.launchPackage.isBlank()) null
-            else runCatching { ctx.packageManager.getApplicationIcon(g.launchPackage) }.getOrNull()
-        val view: View = if (icon != null) ImageView(ctx).apply { setImageDrawable(icon) }
+        // #498-ANR: this used to call packageManager.getApplicationIcon on the
+        // MAIN thread, once per group on every shade re-render. A cold call
+        // loads the ENTIRE foreign APK's resources — ApkAssets.loadFromPath is
+        // the exact main-thread stack in all three of the OS's recorded
+        // HomeActivity ANRs ("Input dispatching timed out", 2026-09-18
+        // 21:28:12 / 21:28:42 / 21:56:31, read via /api/diagnostics/exits
+        // after CrashLogger showed nothing — an ANR is not an uncaught throw).
+        // Icons now come from the process-wide cache above; a miss shows the
+        // monogram immediately and ONE background load swaps the icon in.
+        val holder = FrameLayout(ctx)
+        fun iconView(d: android.graphics.drawable.Drawable) = ImageView(ctx).apply {
+            // newDrawable(): one cached Drawable serves many rows — sharing
+            // the instance would share bounds/state across ImageViews.
+            setImageDrawable(d.constantState?.newDrawable(ctx.resources) ?: d)
+        }
+        fun fillParams() = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        val pkg = g.launchPackage
+        val cached = if (pkg.isBlank()) null else appIconCache[pkg]
+        holder.addView(
+            if (cached != null) iconView(cached)
             else TextView(ctx).apply {
                 text = g.label.trim().take(1).uppercase()
                 gravity = android.view.Gravity.CENTER
@@ -2053,12 +2080,27 @@ class AggregatorStackFragment : Fragment(),
                     shape = android.graphics.drawable.GradientDrawable.OVAL
                     setColor(monogramColor(g.key))
                 }
+            }, fillParams())
+        if (cached == null && pkg.isNotBlank() && pkg !in appIconMisses) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val loaded = withContext(Dispatchers.IO) {
+                    runCatching { ctx.packageManager.getApplicationIcon(pkg) }.getOrNull()
+                }
+                if (loaded == null) appIconMisses.add(pkg)
+                else {
+                    appIconCache[pkg] = loaded
+                    if (holder.isAttachedToWindow) {
+                        holder.removeAllViews()
+                        holder.addView(iconView(loaded), fillParams())
+                    }
+                }
             }
+        }
         val sz = dp(30)
-        view.layoutParams = LinearLayout.LayoutParams(sz, sz)
+        holder.layoutParams = LinearLayout.LayoutParams(sz, sz)
         if (g.launchPackage.isNotBlank() || g.url.isNotBlank()) {
-            view.isClickable = true
-            view.setOnClickListener {
+            holder.isClickable = true
+            holder.setOnClickListener {
                 // A group that names a package IS that app, so launching it is
                 // the whole point and stays a direct intent. A group that only
                 // carries a URL is a published ntfy channel — plain web content
@@ -2075,7 +2117,7 @@ class AggregatorStackFragment : Fragment(),
                 }
             }
         }
-        return view
+        return holder
     }
 
     /** A stable colour per publisher, derived from the grouping key, so the
