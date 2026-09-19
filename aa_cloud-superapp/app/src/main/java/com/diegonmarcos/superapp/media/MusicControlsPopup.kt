@@ -19,6 +19,7 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.SeekBar
 import android.widget.TextView
+import com.diegonmarcos.superapp.ui.AppIconCache
 
 /**
  * Samsung One-UI-style now-playing controls popup, anchored under
@@ -102,9 +103,7 @@ class MusicControlsPopup(private val ctx: Context) {
         // package, so leave the icon empty and the tap inert.
         val iconView = view.findViewById<ImageView>(R.id.music_popup_icon)
         if (playingPackage != null) {
-            runCatching {
-                iconView.setImageDrawable(ctx.packageManager.getApplicationIcon(playingPackage))
-            }
+            AppIconCache.into(iconView, playingPackage)
             iconView.setOnClickListener {
                 runCatching {
                     val intent = ctx.packageManager.getLaunchIntentForPackage(playingPackage)
@@ -397,15 +396,15 @@ class MusicControlsPopup(private val ctx: Context) {
         val gap = (6 * d).toInt()
         var firstAdded = false
         for (pkg in IDLE_LAUNCH_PKGS) {
-            val appIcon = runCatching { pm.getApplicationIcon(pkg) }.getOrNull()
             val iv = ImageView(ctx)
+            AppIconCache.into(iv, pkg)
             iv.layoutParams = LinearLayout.LayoutParams(sz, sz).apply {
                 if (firstAdded) marginStart = gap
             }
             iv.scaleType = ImageView.ScaleType.FIT_CENTER
-            if (appIcon != null) {
-                iv.setImageDrawable(appIcon)
-            } else {
+            // AppIconCache.into() painted a cache hit already; a pending or
+            // missing icon shows the fallback glyph until (unless) it lands.
+            if (iv.drawable == null) {
                 iv.setImageResource(R.drawable.ic_music_recognise)
                 iv.imageTintList =
                     android.content.res.ColorStateList.valueOf(0xCCFFFFFF.toInt())

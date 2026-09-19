@@ -10,7 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.system.Trace
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.diegonmarcos.superapp.ui.CloudBottomNavView
 import java.util.Random
 
 /**
@@ -25,7 +25,7 @@ import java.util.Random
  */
 class LauncherToolbarFx(
     private val activity: AppCompatActivity,
-    private val bottomNav: BottomNavigationView,
+    private val bottomNav: CloudBottomNavView,
     private val onTile: (String) -> Unit,
     /** Resolve a bottom_nav.xml menu item id to its build.json section id
      *  (MainActivity.sectionIdForNavId) — reused here instead of duplicating
@@ -58,9 +58,9 @@ class LauncherToolbarFx(
      *  list (Sections.Section.pages) — empty ⇒ no fan menu for that item. */
     private fun installNavFanMenus() {
         bottomNav.post {
-            val menuView = bottomNav.getChildAt(0) as? ViewGroup ?: run {
-                Trace.w(TAG, "fan install: no menuView — long-press disabled"); return@post
-            }
+            // CloudBottomNavView (2026-09-19 rebuild): item cells are DIRECT
+            // children — there is no inner Material menu view.
+            val menuView: ViewGroup = bottomNav
             val items = bottomNav.menu
             for (i in 0 until items.size()) {
                 val navId = items.getItem(i).itemId
@@ -139,7 +139,7 @@ class LauncherToolbarFx(
             override fun onChildViewRemoved(parent: View?, child: View?) = Unit
         }
         bottomNav.post {
-            (bottomNav.getChildAt(0) as? ViewGroup)?.let {
+            bottomNav.let {
                 it.setOnHierarchyChangeListener(hookListener); applyToChildren(it)
             }
         }

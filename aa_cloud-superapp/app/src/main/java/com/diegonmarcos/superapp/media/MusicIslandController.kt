@@ -6,6 +6,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.ui.AppIconCache
 
 /**
  * Drives the music-playing mini-island above the Dynamic Island, extracted from
@@ -43,9 +44,9 @@ class MusicIslandController(private val activity: AppCompatActivity) {
                     icon?.visibility = View.VISIBLE
                     title?.visibility = View.VISIBLE
                     wave?.visibility = View.VISIBLE
-                    runCatching {
-                        icon?.setImageDrawable(activity.packageManager.getApplicationIcon(playingPackage))
-                    }.onFailure { icon?.setImageDrawable(null) }
+                    // #ANR-loop 2026-09-19: this fetched the icon through
+                    // Knox ON MAIN on EVERY playback callback. Cache-or-async.
+                    icon?.let { AppIconCache.into(it, playingPackage) }
                     val song = songTitle ?: runCatching {
                         activity.packageManager.getApplicationLabel(
                             activity.packageManager.getApplicationInfo(playingPackage, 0)).toString()

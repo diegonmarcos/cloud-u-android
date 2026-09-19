@@ -73,7 +73,7 @@ import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.diegonmarcos.superapp.ui.CloudBottomNavView
 import com.google.android.material.tabs.TabLayout
 import com.diegonmarcos.superapp.updater.Updater
 import com.diegonmarcos.superapp.mail.MailHost
@@ -133,7 +133,7 @@ open class ShellActivity : AppCompatActivity(),
 
     private val TAG = "MainActivity"
     private lateinit var drawerLayout: DrawerLayout
-    private lateinit var bottomNav: BottomNavigationView
+    private lateinit var bottomNav: CloudBottomNavView
     private lateinit var toolbarFx: LauncherToolbarFx
     private lateinit var drawerTabs: TabLayout
     private lateinit var drawerPageTabs: TabLayout
@@ -2131,6 +2131,10 @@ open class ShellActivity : AppCompatActivity(),
             if (iconRes != 0) item.setIcon(iconRes)
             if (section.label.isNotBlank()) item.title = section.label
         }
+        // CloudBottomNavView renders from the menu snapshot — re-render after
+        // the mutation (Material observed menu changes; the rebuilt view is
+        // explicit about it instead).
+        bottomNav.refresh()
     }
 
     // ── toolbar (right-side Back action) ─────────────────────────────────

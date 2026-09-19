@@ -39,12 +39,20 @@
      occupies,so the selected item's icon+label is centred in the capsule by
      declaration,not by luck. -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_checked="true">
+    <!-- state_selected, not state_checked, since the 2026-09-19 rebuild:
+         CloudBottomNavView's cells are plain views driven by View.isSelected
+         (state propagates to the drawable natively), not Checkable Material
+         item views. -->
+    <item android:state_selected="true">
         <inset
             android:insetTop="@dimen/bottom_nav_pill_inset"
             android:insetBottom="@dimen/bottom_nav_pill_inset">
             <shape android:shape="rectangle">
-                <solid android:color="?attr/colorPrimaryContainer" />
+                <!-- Revolut look (owner, 2026-09-19): a LIGHT capsule on the dark
+                     bar, from the theme palette - colorSurfaceInverse is the
+                     light surface in a dark theme (and dark in a light one),
+                     with colorOnSurfaceInverse content in bottom_nav_content. -->
+                <solid android:color="?attr/colorSurfaceInverse" />
                 <corners android:radius="@dimen/bottom_nav_pill_corner_radius" />
             </shape>
         </inset>

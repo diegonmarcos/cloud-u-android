@@ -28,6 +28,7 @@ import com.diegonmarcos.superapp.onehand.OneHandPrefs
 import com.diegonmarcos.superapp.floatingnav.FloatingNavPrefs
 import com.diegonmarcos.superapp.floatingnav.FloatingNavService
 import com.diegonmarcos.superapp.settings.HomeSwipePrefs
+import com.diegonmarcos.superapp.ui.AppIconCache
 
 /**
  * Configs > Launcher > One-Hand (the second tab of that page; it was a
@@ -528,7 +529,7 @@ class OneHandFragment : Fragment() {
                 // row drew a label with no glyph. Same order, same catalogue and
                 // same normalised key the overlay uses, so the picker and the menu
                 // cannot show a sector differently.
-                val icon = runCatching { pm.getApplicationIcon(it.pkg) }.getOrNull()
+                val icon = AppIconCache.load(ctx, it.pkg)
                     ?: declaredAppIcon(ctx, cfg, "app:${it.pkg}")
                 add(Option("★ ${it.label}", GestureAction.OpenApp(it.pkg), icon))
             }

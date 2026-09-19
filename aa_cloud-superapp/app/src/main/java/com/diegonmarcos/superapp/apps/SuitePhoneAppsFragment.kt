@@ -34,6 +34,7 @@ import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import org.json.JSONArray
+import com.diegonmarcos.superapp.ui.AppIconCache
 
 /**
  * Suite section's Phone tab — curated phone apps grouped under the
@@ -221,7 +222,7 @@ class SuitePhoneAppsFragment : Fragment() {
             byPkg[pkg]?.let { app ->
                 // icon is nullable on PhoneApp (getBadgedIcon can throw).
                 val icon = app.icon
-                    ?: runCatching { ctx.packageManager.getApplicationIcon(pkg) }.getOrNull()
+                    ?: AppIconCache.load(ctx, pkg)
                 if (icon != null) return AppInfo(pkg = pkg, label = app.label, icon = icon)
             }
             // The cache is a LOOKUP TABLE here, not the guest list. snapshot()
@@ -235,7 +236,10 @@ class SuitePhoneAppsFragment : Fragment() {
             val pm = ctx.packageManager
             return runCatching {
                 val ai = pm.getApplicationInfo(pkg, 0)
-                AppInfo(pkg = pkg, label = pm.getApplicationLabel(ai).toString(), icon = pm.getApplicationIcon(ai))
+                AppInfo(pkg = pkg, label = pm.getApplicationLabel(ai).toString(),
+                    // load() already remembered the miss; a same-package retry
+                    // through PM would just hit Knox again for the same null.
+                    icon = AppIconCache.load(ctx, pkg) ?: error("no icon for $pkg"))
             }.getOrNull()
         }
 

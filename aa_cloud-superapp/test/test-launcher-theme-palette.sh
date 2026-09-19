@@ -319,9 +319,16 @@ else:
             problems.append('end inset resolves to %sdp — the pill would be flush' % inset)
     # icon↔label distance must come from the ONE declared dimen, and be larger
     # than the Material default (4dp) — "increase a little".
-    gap = attr(r'app:activeIndicatorLabelPadding')
+    # 2026-09-19 rebuild: the gap is no longer a Material attr on the tag —
+    # CloudBottomNavView reads the SAME token in code (label topMargin = gap).
+    kt = open(os.path.join(os.path.dirname(sys.argv[1]),
+        '../java/com/diegonmarcos/superapp/ui/CloudBottomNavView.kt')).read() \
+        if False else open(sys.argv[1].replace('res/layout/activity_main.xml',
+        'java/com/diegonmarcos/superapp/ui/CloudBottomNavView.kt')).read()
+    gap = '@dimen/bottom_nav_icon_label_gap' \
+        if 'R.dimen.bottom_nav_icon_label_gap' in kt and 'topMargin = gap' in kt else None
     if gap is None:
-        problems.append('no activeIndicatorLabelPadding set — icon/label gap not increased')
+        problems.append('CloudBottomNavView no longer reads bottom_nav_icon_label_gap into the label topMargin — icon/label gap lost')
     elif gap != '@dimen/bottom_nav_icon_label_gap':
         problems.append('icon/label gap = %s, not @dimen/bottom_nav_icon_label_gap' % gap)
     else:
@@ -373,13 +380,15 @@ else:
     def attr(name):
         m = re.search(name + r'\s*=\s*"([^"]+)"', tag)
         return m.group(1) if m else None
-    pt, pb = attr(r'app:itemPaddingTop'), attr(r'app:itemPaddingBottom')
-    if pt is None or pb is None:
-        problems.append('the nav has no itemPaddingTop/itemPaddingBottom — the stack keeps Material3 asymmetric defaults and sits high')
-    elif pt != pb:
-        problems.append('itemPaddingTop=%s but itemPaddingBottom=%s — the gaps differ, the stack is off-centre' % (pt, pb))
-    elif pt != '@dimen/bottom_nav_item_vertical_pad':
-        problems.append('vertical pad = %s, not @dimen/bottom_nav_item_vertical_pad' % pt)
+    # 2026-09-19 rebuild: the pads live in CloudBottomNavView — ONE token
+    # (bottom_nav_item_vertical_pad) applied symmetrically in a single
+    # setPadding call, top and bottom the same expression by construction.
+    kt2 = open(sys.argv[1].replace('res/layout/activity_main.xml',
+        'java/com/diegonmarcos/superapp/ui/CloudBottomNavView.kt')).read()
+    if 'R.dimen.bottom_nav_item_vertical_pad' not in kt2:
+        problems.append('CloudBottomNavView no longer reads bottom_nav_item_vertical_pad — the stack pad is untokened')
+    elif 'setPadding(0, pillInset + pad, 0, pillInset + pad)' not in kt2:
+        problems.append('the cell padding is no longer one symmetric expression — top and bottom can drift apart again')
 print('; '.join(problems) or 'OK')
 PY
 )

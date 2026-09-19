@@ -45,14 +45,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** #498-ANR: PackageManager.getApplicationIcon loads the ENTIRE foreign APK's
- *  resources (ApkAssets.loadFromPath). Cache per package per PROCESS, loaded
- *  off the main thread, and remember misses so an uninstalled package is not
- *  re-probed on every shade render. */
-private val appIconCache =
-    java.util.concurrent.ConcurrentHashMap<String, android.graphics.drawable.Drawable>()
-private val appIconMisses: MutableSet<String> =
-    java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap())
 
 /**
  * Stack-render variant of an aggregator section. When an aggregator
@@ -2067,7 +2059,7 @@ class AggregatorStackFragment : Fragment(),
         fun fillParams() = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         val pkg = g.launchPackage
-        val cached = if (pkg.isBlank()) null else appIconCache[pkg]
+        val cached = if (pkg.isBlank()) null else com.diegonmarcos.superapp.ui.AppIconCache.cached(pkg)
         holder.addView(
             if (cached != null) iconView(cached)
             else TextView(ctx).apply {
@@ -2081,14 +2073,12 @@ class AggregatorStackFragment : Fragment(),
                     setColor(monogramColor(g.key))
                 }
             }, fillParams())
-        if (cached == null && pkg.isNotBlank() && pkg !in appIconMisses) {
+        if (cached == null && pkg.isNotBlank() && !com.diegonmarcos.superapp.ui.AppIconCache.knownMissing(pkg)) {
             viewLifecycleOwner.lifecycleScope.launch {
                 val loaded = withContext(Dispatchers.IO) {
-                    runCatching { ctx.packageManager.getApplicationIcon(pkg) }.getOrNull()
+                    com.diegonmarcos.superapp.ui.AppIconCache.load(ctx, pkg)
                 }
-                if (loaded == null) appIconMisses.add(pkg)
-                else {
-                    appIconCache[pkg] = loaded
+                if (loaded != null) {
                     if (holder.isAttachedToWindow) {
                         holder.removeAllViews()
                         holder.addView(iconView(loaded), fillParams())

@@ -85,6 +85,10 @@
          BottomNavGeometryTest measures that the rendered pill really is
          (pad - pillInset) clear of the ink on BOTH sides. -->
     <dimen name="bottom_nav_pill_inset">6dp</dimen>
+    <!-- Label size for the rebuilt CloudBottomNavView — declared here like
+         every other bottom-nav distance, not a literal in Kotlin. 12sp is
+         what Material's labelMedium rendered before the rebuild. -->
+    <dimen name="bottom_nav_label_text_size">12sp</dimen>
 
     <!-- #498 (third attempt). The nav glyph's size. Material's own default is
          24dp and that is what the bar has always rendered, but it was never

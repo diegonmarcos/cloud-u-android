@@ -14,7 +14,6 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.R
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -60,7 +59,7 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class BottomNavGeometryTest {
 
-    private lateinit var nav: BottomNavigationView
+    private lateinit var nav: CloudBottomNavView
     private lateinit var cells: List<ViewGroup>
     private var selected = 0
 

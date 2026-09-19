@@ -13,7 +13,6 @@ import android.view.View.MeasureSpec
 import android.view.ViewGroup
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.R
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.color.MaterialColors
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -46,7 +45,7 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class BottomNavSelectedPillTest {
 
-    private lateinit var nav: BottomNavigationView
+    private lateinit var nav: CloudBottomNavView
     private val selectedId = R.id.nav_home
     private val unselectedId = R.id.nav_cloud
 
@@ -65,19 +64,26 @@ class BottomNavSelectedPillTest {
     }
 
     @Test
-    fun resolvedItemBackgroundIsThePillDrawable() {
-        println("#512 nav class=${nav.javaClass.name} size=${nav.width}x${nav.height}px")
-        val res = nav.resources
-        @Suppress("DEPRECATION")
-        val resolved = nav.itemBackgroundResource
-        println("#512 resolved itemBackground=" +
-            (if (resolved == 0) "0 (none)" else res.getResourceName(resolved)))
-        assertEquals(
-            "the inflated bottom nav did not resolve itemBackground to the pill drawable — " +
-                "the themed ?attr/bottomNavigationStyle never reached the view",
-            res.getResourceName(R.drawable.bg_bottom_nav_item_checked),
-            if (resolved == 0) "0 (none)" else res.getResourceName(resolved))
-        assertNotNull("resolved nav has no item background drawable", nav.itemBackground)
+    fun everyCellCarriesTheCapsuleSelectorAndOnlySelectedShowsIt() {
+        // Rebuilt world: no Material style chain to "reach" the view — the
+        // capsule selector is applied per cell by CloudBottomNavView itself.
+        println("nav class=${nav.javaClass.name} size=${nav.width}x${nav.height}px")
+        drawNav()
+        for (i in 0 until nav.childCount) {
+            val cell = nav.getChildAt(i)
+            assertNotNull("cell $i has no background — the capsule selector is not applied", cell.background)
+            val current = cell.background.current
+            if (cell.id == selectedId) {
+                assertTrue(
+                    "the SELECTED cell's background state is ${current?.javaClass?.name}, " +
+                        "not the inset capsule — no selection UI is painted",
+                    current is InsetDrawable)
+            } else {
+                assertTrue(
+                    "an UNSELECTED cell paints the capsule too",
+                    current !is InsetDrawable)
+            }
+        }
     }
 
     @Test

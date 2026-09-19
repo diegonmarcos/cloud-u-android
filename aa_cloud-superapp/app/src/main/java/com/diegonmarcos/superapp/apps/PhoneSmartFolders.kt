@@ -13,6 +13,7 @@ import android.util.Base64
 import androidx.core.content.ContextCompat
 import com.diegonmarcos.superapp.R
 import org.json.JSONArray
+import com.diegonmarcos.superapp.ui.AppIconCache
 
 /**
  * Smart Folders rendered at the bottom of the Home Apps/Phone tab.
@@ -290,7 +291,7 @@ object PhoneSmartFolders {
             .mapNotNull { app ->
                 val info = runCatching { pm.getPackageInfo(app.pkg, 0) }.getOrNull()
                     ?: return@mapNotNull null // declared but NOT installed → not invented (#280)
-                val icon = runCatching { pm.getApplicationIcon(app.pkg) }.getOrNull()
+                val icon = AppIconCache.load(ctx, app.pkg)
                     ?: ContextCompat.getDrawable(ctx, R.drawable.ic_cloud_lib)
                 PhoneApp(
                     packageName       = app.pkg,

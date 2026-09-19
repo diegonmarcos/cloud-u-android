@@ -38,9 +38,6 @@
         <item name="android:enforceStatusBarContrast" tools:targetApi="q">false</item>
         <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
 
-        <!-- BottomNav: branded active indicator using the brand container. -->
-        <item name="bottomNavigationStyle">@style/Widget.CloudSuperApp.BottomNavigationView</item>
-
         <!-- Tooltip frame — fully transparent. android:tooltipFrameBackground
              is `@hide` so AAPT2 rejects `android:` prefix; the `*android:`
              escape hatch tells AAPT2 to allow setting private framework
@@ -54,57 +51,14 @@
         <item name="*android:tooltipFrameBackground">@drawable/bg_tooltip_transparent</item>
     </style>
 
-    <style name="Widget.CloudSuperApp.BottomNavigationView"
-        parent="Widget.Material3.BottomNavigationView">
-        <!-- Selected-state highlight for a WHOLE item. Material 3's active
-             indicator is bound to the icon alone and can never grow to wrap
-             the label; wrapping the whole item is a property of the item
-             view's background, which itemBackground is. The checked state of
-             that state-list drawable is the full pill (icon + label) that
-             replaces the indicator. The ActiveIndicator style below is made
-             transparent so the two highlights do not stack. -->
-        <item name="itemBackground">@drawable/bg_bottom_nav_item_checked</item>
-        <item name="itemActiveIndicatorStyle">@style/Widget.CloudSuperApp.BottomNavigationView.ActiveIndicator</item>
-        <!-- The indicator must be DISABLED, not merely transparent — the
-             distinction is the whole bug (on-device 2026-09-19 the selection
-             painted as an icon-only halo while the full capsule was
-             suppressed: NavigationBarItemView.refreshItemBackground checks
-             the ENABLED flag, and a transparent colour changes what the
-             indicator looks like, not whether it wins). Material 1.12 has NO
-             itemActiveIndicatorEnabled style attribute (AAPT: 'attr not
-             found', run 23666db07) — the flag is code-only, so the kill
-             switch lives in CenteredLabelBottomNavigationView.init. -->
-
-        <!-- NO android:minHeight HERE, deliberately, and NEVER 0dp.
-             Widget.Material3.BottomNavigationView carries android:minHeight =
-             m3_bottom_nav_min_height (80dp), and the instinct when the bar
-             came out too tall was to zero it. That is backwards: in
-             BottomNavigationView.makeMinHeightSpec this attribute is not a
-             floor, it is the CAP — min(available, minHeight), forced to
-             EXACTLY — and BottomNavigationMenuView.onMeasure then takes
-             whatever height it is handed, EXACTLY. Zero skips the clamp
-             entirely and the wrap_content bar fills its parent: measured
-             788.00dp of bottom bar on 2026-09-18 (CI 35402703581), while the
-             tester written to catch exactly that stayed green because it
-             compared the bar to its own menu block and those two are equal by
-             construction in every case.
-             The height is therefore not an attribute at all — it is the sum
-             of the declared item geometry plus the label's ink height, which
-             is a font number. CenteredLabelBottomNavigationView computes it
-             once and sets minimumHeight, and BottomNavGeometryTest measures
-             every term of the sum back off the laid-out bar. Material's 80dp
-             stays inherited underneath as an inert fallback: wrong, but not
-             catastrophic, if that class is ever bypassed. -->
-    </style>
-
-    <style name="Widget.CloudSuperApp.BottomNavigationView.ActiveIndicator"
-        parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
-        <!-- The pill behind the whole item (itemBackground above) IS the
-             selection indicator now, so the icon-bound active indicator must
-             stop painting or the two would stack as a double highlight.
-             Transparent colour = it draws nothing. -->
-        <item name="android:color">@android:color/transparent</item>
-    </style>
+    <!-- The bottom nav is CloudBottomNavView since 2026-09-19 — no Material
+         navigation classes, no themed style, no active indicator. The two
+         styles that lived here (Widget.CloudSuperApp.BottomNavigationView +
+         its transparent ActiveIndicator) were the rat's nest: four
+         generations of counter-patches against framework branches that
+         rendered differently on-device than under Robolectric. Geometry and
+         the selection capsule are owned entirely by the view itself, from
+         the dimens tokens and bg_bottom_nav_item_checked. -->
 
     <!-- Custom dense text style for drawer rows. The default
          textAppearanceBodyMedium has ~20sp lineHeight which dominates
