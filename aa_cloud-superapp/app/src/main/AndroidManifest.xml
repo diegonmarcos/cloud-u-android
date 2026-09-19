@@ -444,6 +444,22 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Persistent daily activity summary badge (active calories + distance) for the Cloud SuperApp" />
         </service>
+        <!-- WeatherBadgeService — pins the persistent "Cloud SA - Weather"
+             badge (current temp, day max/min, hourly forecast, place name;
+             Open-Meteo + last-known location, no key). type=specialUse for the
+             same reason as its siblings: a standing forecast badge is not one
+             of the predefined FGS categories, and it is NOT `location` — that
+             type is for apps actively tracking position, while this one only
+             reads the last known fix. Not exported — only
+             BadgeServices.ensureAll starts it, from the declaration. -->
+        <service
+            android:name=".notificationcenter.WeatherBadgeService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Persistent today-forecast badge (current temp, day max/min, hourly) for the Cloud SuperApp" />
+        </service>
 
         <!-- #517 MarketsBadgeService — pins the persistent "Cloud SA - Markets"
              badge (declared FX / crude / gold prices from Yahoo Finance).

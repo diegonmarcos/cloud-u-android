@@ -122,6 +122,10 @@ object BadgeServices {
                 return "\"Display over other apps\" is not granted — Control ▸ Permissions."
             "health_connect" -> if (!healthConnectInstalled(ctx))
                 return "Health Connect is not installed on this device."
+            "location" -> if (ContextCompat.checkSelfPermission(ctx,
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                return "Location permission is not granted — Control ▸ Permissions."
             else -> return "Declared requirement \"$req\" is not one this build knows how to check."
         }
         return null

@@ -231,6 +231,11 @@
     <string name="badge_health_kcal_unavailable">kcal not available</string>
     <string name="badge_health_km_unavailable">km not available</string>
 
+    <string name="badge_weather_title">Weather</string>
+    <string name="badge_weather_title_fmt">%1$s° — %2$s</string>
+    <string name="badge_weather_range_fmt">↑ %1$s°   ↓ %2$s°</string>
+    <string name="badge_weather_no_data">No forecast yet — waiting for a known location and a reachable sky.</string>
+
     <!-- #517 Markets badge. The instrument captions are NOT here: they are
          declared per instrument in build.json, because the caption and the
          number have to be changed together. -->

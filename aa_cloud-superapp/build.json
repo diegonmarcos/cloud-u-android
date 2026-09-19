@@ -8101,6 +8101,66 @@
           ]
         },
         {
+         "id": "weather_today",
+         "label": "Weather",
+         "subtitle": "Today where the device is: current temperature, the day's max/min and the hour-by-hour forecast, from Open-Meteo (no key, no account) for the last known position. The place name comes from Android's own geocoder. Location is never actively requested — the badge reads the position someone else already paid for.",
+         "icon": "ic_p_weather_today",
+         "surface": "system_notification",
+         "channel": "weather_today",
+         "owner": "notificationcenter/WeatherBadgeService.kt",
+         "shows_badge": false,
+         "enabled": true,
+         "badge": true,
+         "persistent": true,
+         "service": "com.diegonmarcos.superapp.notificationcenter.WeatherBadgeService",
+         "requires": [
+          "location"
+         ],
+         "shows": "Current temp, day max/min and the location name; expands to today's forecast by hour.",
+         "customization": [
+          {
+           "key": "enabled",
+           "type": "toggle",
+           "label": "Show this badge",
+           "default": true
+          },
+          {
+           "key": "persistent",
+           "type": "toggle",
+           "label": "Keep it pinned (ongoing)",
+           "default": true
+          },
+          {
+           "key": "importance",
+           "type": "choice",
+           "label": "Importance",
+           "options": [
+            "min",
+            "low",
+            "default"
+           ],
+           "default": "low"
+          },
+          {
+           "key": "show_hourly",
+           "type": "toggle",
+           "label": "Show the hour-by-hour forecast",
+           "default": true
+          },
+          {
+           "key": "refresh_minutes",
+           "type": "choice",
+           "label": "Refresh every",
+           "options": [
+            "30",
+            "60",
+            "180"
+           ],
+           "default": "60"
+          }
+         ]
+        },
+        {
           "id": "markets_prices",
           "label": "Markets",
           "subtitle": "Live last-traded prices for the declared instruments, from Yahoo Finance. One action button per instrument opens that instrument's Yahoo ticker page in the app's own embedded browser. A quote that could not be fetched reads '—', never the last good number.",
