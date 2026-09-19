@@ -82,6 +82,17 @@ class CenteredLabelBottomNavigationView @JvmOverloads constructor(
 ) : BottomNavigationView(context, attrs, defStyleAttr) {
 
     init {
+        // The M3 active indicator must be DISABLED, not merely transparent.
+        // NavigationBarItemView.refreshItemBackground checks this ENABLED
+        // flag: while it is on, itemBackground (the full icon+label capsule)
+        // is SUPPRESSED and the item paints the icon-bound indicator/selected
+        // halo instead — exactly what the device showed on 2026-09-19 (small
+        // halo high in the cell, label outside it) while Robolectric happened
+        // to take the itemBackground branch and kept every test green.
+        // Material 1.12 exposes no style attribute for the flag (AAPT rejects
+        // itemActiveIndicatorEnabled in a theme, run 23666db07), so the kill
+        // switch lives here, in the subclass that closes Material's gaps.
+        isItemActiveIndicatorEnabled = false
         val labels = ArrayList<TextView>()
         collectTextViews(this, labels)
         for (label in labels) label.includeFontPadding = false

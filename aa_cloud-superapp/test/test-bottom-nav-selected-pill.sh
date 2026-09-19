@@ -425,18 +425,17 @@ echo "== T12: the M3 active indicator is DISABLED — transparent was never enou
 # halo high in the cell while every Robolectric assertion stayed green —
 # Robolectric took the itemBackground branch, the device did not. Only
 # itemActiveIndicatorEnabled=false puts both on the same branch.
-check "$(python3 - "$THEMES" <<'PY'
-import re, sys
+check "$(python3 - "$(cd "$(dirname "$0")/.." && pwd)/app/src/main/java/com/diegonmarcos/superapp/ui/CenteredLabelBottomNavigationView.kt" <<'PY'
+import sys
 t = open(sys.argv[1]).read()
-m = re.search(r'<style name="Widget\.CloudSuperApp\.BottomNavigationView".*?</style>', t, re.S)
-if not m:
-    print("PROBLEM: nav style not found")
-elif not re.search(r'<item name="itemActiveIndicatorEnabled">false</item>', m.group(0)):
-    print("PROBLEM: itemActiveIndicatorEnabled=false is gone - with the indicator merely transparent, refreshItemBackground suppresses the full pill on-device and the icon-only halo returns")
+# Material 1.12 has NO style attribute for this flag (AAPT: attr not found,
+# run 23666db07) — it is code-only, so the subclass must set it.
+if "isItemActiveIndicatorEnabled = false" not in t:
+    print("PROBLEM: the subclass no longer disables the active indicator - with it merely transparent, refreshItemBackground suppresses the full pill on-device and the icon-only halo returns")
 else:
     print("OK")
 PY
-)" "the nav style declares itemActiveIndicatorEnabled=false"
+)" "CenteredLabelBottomNavigationView sets isItemActiveIndicatorEnabled = false"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
