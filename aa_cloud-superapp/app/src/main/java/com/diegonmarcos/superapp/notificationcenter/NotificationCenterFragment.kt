@@ -31,6 +31,21 @@ import androidx.fragment.app.Fragment
  * usable immediately — real notification feed wires here later via a
  * NotificationCenter source (DevControl trace lines / Updater state /
  * MailHost unread / …).
+ *
+ * THIS IS THE SECOND NOTIFICATION CENTRE. The first one — the one that got
+ * built instead of the "later" this docstring is still waiting for — is the
+ * Notify page: AggregatorStackFragment's `notification_center` panel kind,
+ * declared in build.json::ui.sections[communication].stack_my-rss. Both
+ * surfaces read the same core.NotificationStore and both call
+ * NotificationManager.cancelAll() on render, so whichever is opened first
+ * destroys the dismissal state the other would have shown.
+ *
+ * Diagnosed under #497 clause 3, NOT fixed: retiring this surface means
+ * editing ShellActivity.kt, which #497 forbids, and it would take the KDE
+ * badge below and the `notifications` value of ui.dynamic_island_action with
+ * it. Evidence, chronology and the two ways out are in
+ * a0_docs/eng-specs/superapp-notification-centre-duplicate.md — read that
+ * before touching either surface.
  */
 class NotificationCenterFragment : Fragment() {
 
