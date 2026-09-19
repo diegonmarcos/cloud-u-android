@@ -36,6 +36,25 @@ object BadgeDeclaration {
         val options: List<String>,
     )
 
+    /**
+     * One thing a badge quotes. #517: the Markets badge's four instruments are
+     * DATA — swapping WTI (`CL=F`) for Brent (`BZ=F`), reordering them or
+     * changing a caption is an edit to `build.json` and no Kotlin at all.
+     *
+     * [label] is not cosmetic. Yahoo's `BRL=X` is the USD->BRL cross — reais
+     * per dollar, ~5.x — so the caption has to run the same way round as the
+     * number or a correct 5.14 reads as a broken 0.19. [url] is declared
+     * rather than built from [symbol] because the ticker page is Yahoo's URL
+     * shape, not ours, and a string-built URL is a silent 404 the day they
+     * change it.
+     */
+    data class Instrument(
+        val symbol: String,
+        val label: String,
+        val decimals: Int,
+        val url: String,
+    )
+
     data class Badge(
         val id: String,
         val label: String,
@@ -57,6 +76,9 @@ object BadgeDeclaration {
         val requires: List<String>,
         val notBadgeReason: String,
         val customization: List<Option>,
+        /** What this badge quotes, in declaration order. Empty for every badge
+         *  that is not quoting anything. */
+        val instruments: List<Instrument> = emptyList(),
     )
 
     /** Parse the whole declaration. A producer with no id or no label is
@@ -87,6 +109,7 @@ object BadgeDeclaration {
                 requires = strings(o.optJSONArray("requires")),
                 notBadgeReason = o.optString("not_badge_reason", ""),
                 customization = options(o.optJSONArray("customization")),
+                instruments = instruments(o.optJSONArray("instruments")),
             )
         }
         return out
@@ -117,6 +140,31 @@ object BadgeDeclaration {
     private fun strings(a: JSONArray?): List<String> {
         if (a == null) return emptyList()
         return (0 until a.length()).mapNotNull { a.optString(it).takeIf(String::isNotBlank) }
+    }
+
+    /** An instrument with no symbol, no caption or no ticker page is dropped
+     *  for the same reason a half-blank producer is: a badge row captioned
+     *  nothing, or one whose tap goes nowhere, is worse than one row fewer. */
+    private fun instruments(a: JSONArray?): List<Instrument> {
+        if (a == null) return emptyList()
+        val out = mutableListOf<Instrument>()
+        for (i in 0 until a.length()) {
+            val o = a.optJSONObject(i) ?: continue
+            val symbol = o.optString("symbol")
+            val label = o.optString("label")
+            val url = o.optString("url")
+            if (symbol.isBlank() || label.isBlank() || url.isBlank()) continue
+            out += Instrument(
+                symbol = symbol,
+                label = label,
+                // Coerced, not trusted: String.format with a negative
+                // precision throws, and that would take the whole badge down
+                // over a typo in one row of data.
+                decimals = o.optInt("decimals", 2).coerceIn(0, 8),
+                url = url,
+            )
+        }
+        return out
     }
 
     private fun options(a: JSONArray?): List<Option> {

@@ -230,6 +230,14 @@
     <string name="badge_health_km">%1$s km walked</string>
     <string name="badge_health_kcal_unavailable">kcal not available</string>
     <string name="badge_health_km_unavailable">km not available</string>
+
+    <!-- #517 Markets badge. The instrument captions are NOT here: they are
+         declared per instrument in build.json, because the caption and the
+         number have to be changed together. -->
+    <string name="badge_markets_title">Markets</string>
+    <string name="badge_markets_source">Cloud SA - Markets · Yahoo Finance</string>
+    <string name="badge_markets_no_instruments">No instruments are declared for this badge.</string>
+    <string name="badge_markets_power_saving">Power saving is on — prices are not being refreshed.</string>
     <!-- A write the device refused. %1$s = the control's label, %2$s = what
          the re-read reported. -->
     <string name="control_write_refused">%1$s: didn\'t change — %2$s</string>

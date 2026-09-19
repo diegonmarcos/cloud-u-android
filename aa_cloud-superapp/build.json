@@ -8101,6 +8101,92 @@
           ]
         },
         {
+          "id": "markets_prices",
+          "label": "Markets",
+          "subtitle": "Live last-traded prices for the declared instruments, from Yahoo Finance. One action button per instrument opens that instrument's Yahoo ticker page in the app's own embedded browser. A quote that could not be fetched reads '—', never the last good number.",
+          "icon": "ic_p_markets_prices",
+          "surface": "system_notification",
+          "channel": "markets_prices",
+          "owner": "notificationcenter/MarketsBadgeService.kt",
+          "shows_badge": false,
+          "enabled": true,
+          "badge": true,
+          "persistent": true,
+          "service": "com.diegonmarcos.superapp.notificationcenter.MarketsBadgeService",
+          "requires": [],
+          "shows": "Last price per declared instrument, with the age of the quote when it is stale.",
+          "_doc_instruments": "WHAT the badge quotes, as data — symbol is Yahoo's, label is what the owner reads, decimals is how the number is printed, url is the ticker page a tap opens. Changing the four instruments, their order, their captions or their precision is an edit HERE and no Kotlin. `BRL=X` is Yahoo's USD->BRL cross (reais per dollar, ~5.x), so its label says USD/BRL: the number and the caption have to run the same way round or a 5.14 reads as a broken 0.19. Petrol is WTI front-month (CL=F); Brent is BZ=F and is a one-line swap here if the owner wants the global benchmark instead.",
+          "instruments": [
+            {
+              "symbol": "BRL=X",
+              "label": "USD/BRL",
+              "decimals": 4,
+              "url": "https://finance.yahoo.com/quote/BRL%3DX"
+            },
+            {
+              "symbol": "EURUSD=X",
+              "label": "EUR/USD",
+              "decimals": 4,
+              "url": "https://finance.yahoo.com/quote/EURUSD%3DX"
+            },
+            {
+              "symbol": "CL=F",
+              "label": "WTI",
+              "decimals": 2,
+              "url": "https://finance.yahoo.com/quote/CL%3DF"
+            },
+            {
+              "symbol": "GC=F",
+              "label": "Gold",
+              "decimals": 2,
+              "url": "https://finance.yahoo.com/quote/GC%3DF"
+            }
+          ],
+          "customization": [
+            {
+              "key": "enabled",
+              "type": "toggle",
+              "label": "Show this badge",
+              "default": true
+            },
+            {
+              "key": "persistent",
+              "type": "toggle",
+              "label": "Keep it pinned (ongoing)",
+              "default": true
+            },
+            {
+              "key": "importance",
+              "type": "choice",
+              "label": "Importance",
+              "options": [
+                "min",
+                "low",
+                "default"
+              ],
+              "default": "low"
+            },
+            {
+              "key": "actions",
+              "type": "toggle",
+              "label": "Show action buttons",
+              "default": true
+            },
+            {
+              "key": "refresh_minutes",
+              "type": "choice",
+              "label": "Refresh every",
+              "options": [
+                "15",
+                "30",
+                "60",
+                "120"
+              ],
+              "default": "30"
+            }
+          ]
+        },
+        {
           "id": "phone_notification_listener",
           "label": "Phone notification access",
           "subtitle": "The NotificationListenerService grant every other phone-notification surface is fed from — Control ▸ Permissions grants it, nothing here can switch it.",

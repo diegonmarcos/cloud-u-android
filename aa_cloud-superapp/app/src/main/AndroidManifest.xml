@@ -445,6 +445,21 @@
                 android:value="Persistent daily activity summary badge (active calories + distance) for the Cloud SuperApp" />
         </service>
 
+        <!-- #517 MarketsBadgeService — pins the persistent "Cloud SA - Markets"
+             badge (declared FX / crude / gold prices from Yahoo Finance).
+             type=specialUse for the same reason as the two badge services
+             above: a standing price ticker is not one of the predefined FGS
+             categories. Not exported — only BadgeServices.ensureAll starts it,
+             from the declaration. -->
+        <service
+            android:name=".notificationcenter.MarketsBadgeService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Persistent market price badge (FX, crude and gold last prices) for the Cloud SuperApp" />
+        </service>
+
         <!-- Shizuku provider — required by the Shizuku client lib so the
              app can talk to the Shizuku server (binder + permission).
              Backs the exact per-app energy attribution (ShizukuEnergy +

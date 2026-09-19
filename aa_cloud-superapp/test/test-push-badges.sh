@@ -230,6 +230,133 @@ else:
 PY
 )" "both halves come from Health Connect records, with the grant checked"
 
+MQ="$NC/MarketsQuotes.kt"
+MSVC="$NC/MarketsBadgeService.kt"
+
+echo "== T11: the Markets badge is declared, with its instruments as DATA =="
+# The ticket is "add the Markets badge", and the contract this badge system was
+# built on is that adding one is a build.json edit. So the four instruments,
+# their captions, their precision and the page each opens have to be IN the
+# declaration — not a list in Kotlin that the declaration merely gestures at.
+check "$(python3 - "$BJ" "$MSVC" <<'PY'
+import json, sys, os
+bj, svc = sys.argv[1], sys.argv[2]
+ps = json.load(open(bj))['ui']['notification_center']['producers']
+m = next((p for p in ps if p['id'] == 'markets_prices'), None)
+if m is None:                     print('no markets_prices producer'); raise SystemExit
+if not m.get('badge'):            print('markets_prices is not a badge'); raise SystemExit
+if not m.get('persistent'):       print('markets_prices is not persistent'); raise SystemExit
+if not os.path.exists(svc):       print('MarketsBadgeService.kt does not exist'); raise SystemExit
+ins = m.get('instruments') or []
+want = ['BRL=X', 'EURUSD=X', 'CL=F', 'GC=F']
+got = [i.get('symbol') for i in ins]
+if got != want:
+    print('declared instruments are %s, not the four asked for %s' % (got, want)); raise SystemExit
+# The BRL direction. Yahoo's BRL=X is the USD->BRL cross (reais per dollar,
+# ~5.x). A caption reading "BRL/USD" over that number is wrong by a factor of
+# ~27 and looks just as plausible as the right one, so it is asserted.
+brl = next(i for i in ins if i['symbol'] == 'BRL=X')
+if brl.get('label') != 'USD/BRL':
+    print('BRL=X is captioned %r - it is the USD->BRL cross and must read USD/BRL' % brl.get('label'))
+elif any(not i.get('label') for i in ins):
+    print('an instrument has no caption')
+elif any(not str(i.get('url', '')).startswith('https://finance.yahoo.com/quote/') for i in ins):
+    print('an instrument has no Yahoo ticker page to open')
+else:
+    # And the Kotlin must read them rather than carry its own copy.
+    s = open(svc).read()
+    code = '\n'.join(l for l in s.split('\n')
+                     if not l.strip().startswith('*') and not l.strip().startswith('//')
+                     and not l.strip().startswith('/*'))
+    hard = [sym for sym in want if sym in code]
+    if hard:    print('the service hardcodes symbols the declaration already carries: %s' % hard)
+    elif 'instruments' not in code:
+                print('the service never reads the declared instruments')
+    else:       print('OK')
+PY
+)" "Markets is one declaration entry, and its four instruments live there"
+
+echo "== T12: a quote that failed can NEVER be rendered as a price =="
+# THE DEFECT SHAPE THIS FLEET KEEPS PAYING FOR: a fetch fails, and the badge
+# goes on showing the last good number as though it were live. The mechanism
+# that prevents it is that there is no cache to redraw from and that the render
+# path dashes on any non-OK status. Both are asserted here; the JVM test
+# (MarketsBadgeTest) proves the rendered TEXT carries no digit.
+check "$(python3 - "$MQ" "$MSVC" <<'PY'
+import re, sys, os
+mq, msvc = sys.argv[1], sys.argv[2]
+for p in (mq, msvc):
+    if not os.path.exists(p):
+        print('%s does not exist' % os.path.basename(p)); raise SystemExit
+def code(p):
+    return '\n'.join(l for l in open(p).read().split('\n')
+                     if not l.strip().startswith('*') and not l.strip().startswith('//')
+                     and not l.strip().startswith('/*'))
+q, s = code(mq), code(msvc)
+if 'UNAVAILABLE' not in q:
+    print('no unavailable status - a failed fetch has nowhere to land')
+elif 'DASH' not in q:
+    print('no dash rendering - a failed row would print something numeric')
+elif not re.search(r'status\s*!=\s*Status\.OK', q):
+    print('row() does not gate on the status, so a failed quote can still format a price')
+# A cache is precisely the mechanism that redraws a dead price as a live one.
+elif re.search(r'SharedPreferences|getSharedPreferences', q + s):
+    print('a price cache exists - that is how stale becomes "live"')
+# The per-cycle map must be REPLACED, not merged: a merge leaves last cycle's
+# price in place for a symbol that failed this cycle.
+elif 'quotes.clear()' not in s:
+    print('quotes are merged rather than replaced, so a failed symbol keeps its old price')
+elif 'regularMarketTime' not in q:
+    print('the quote carries no timestamp of its own, so staleness cannot be told')
+else:
+    print('OK')
+PY
+)" "there is no cache, the row dashes on failure, and each cycle replaces the last"
+
+echo "== T13: v8 unauthenticated, tap stays in the app, polling is declared =="
+# Three things that each turn into a silent failure in the owner's pocket:
+#   v7 needs a cookie+crumb and answers 401 in production while a mocked test
+#   stays green; an ACTION_VIEW would make this the seventh leak #156 removed;
+#   and a hardcoded interval is how a public endpoint gets an IP rate-limited.
+check "$(python3 - "$MQ" "$MSVC" "$BJ" <<'PY'
+import json, re, sys
+mq, msvc, bj = sys.argv[1], sys.argv[2], sys.argv[3]
+def code(p):
+    return '\n'.join(l for l in open(p).read().split('\n')
+                     if not l.strip().startswith('*') and not l.strip().startswith('//')
+                     and not l.strip().startswith('/*'))
+q, s = code(mq), code(msvc)
+if 'v8/finance/chart' not in q:
+    print('not using the v8 chart endpoint')
+elif 'v7/finance/quote' in q:
+    print('v7 is in the fetch path - it needs a cookie+crumb and 401s unauthenticated')
+elif 'ACTION_VIEW' in s:
+    print('the badge leaves the app via ACTION_VIEW - #156 removed six of those')
+elif 'shortcut_action' not in s:
+    print('the tap does not route through the in-app shortcut_action handler')
+elif 'isPowerSaveMode' not in s:
+    print('power saving is not honoured - the badge would poll flat out on a dying battery')
+else:
+    m = next((p for p in json.load(open(bj))['ui']['notification_center']['producers']
+              if p['id'] == 'markets_prices'), None)
+    opt = None if m is None else \
+        next((c for c in m.get('customization', []) if c['key'] == 'refresh_minutes'), None)
+    if m is None:
+        # T11 says this louder, but a tester that raises prints NOTHING and
+        # reports "FAIL: — ", which reads like a broken tester rather than a
+        # missing badge. Every path here ends in a sentence.
+        print('no markets_prices producer, so there is no cadence to check')
+    elif opt is None:
+        print('refresh_minutes is not declared, so the interval lives in Kotlin')
+    elif min(int(o) for o in opt['options']) < 15:
+        print('a sub-15-minute poll is offered: %s' % opt['options'])
+    elif not re.search(r'refresh_minutes', s):
+        print('the service ignores the declared cadence')
+    else:
+        print('OK')
+PY
+)" "the proven endpoint, the in-app browser, and a declared non-aggressive cadence"
+
 echo
 echo "  ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ]
