@@ -266,17 +266,32 @@ layout, dims = open(sys.argv[1], encoding='utf-8').read(), open(sys.argv[2], enc
 problems = []
 
 # The dims must exist and be real (not 0dp) — a 0dp/removed entry is the flush
-# regression #473 ships to remove.
-dimval = {}
-for name, v in re.findall(r'<dimen name="([^"]+)">([^<]+)</dimen>', dims):
-    m = re.match(r'^([0-9.]+)dp$', v.strip())
-    dimval[name] = float(m.group(1)) if m else None
+# regression #473 ships to remove. A dimen may be an ALIAS (@dimen/other):
+# #498's curvature fix binds bottom_nav_end_inset to bottom_nav_pill_inset so
+# the pill's end arcs stay concentric with the island's — an alias IS a
+# literal one hop away, and a reader that refuses to follow the reference
+# would force the pair back into two numbers that can drift, which is the
+# exact defect the alias exists to prevent. Resolve chains, cap the depth.
+raw = dict(re.findall(r'<dimen name="([^"]+)">([^<]+)</dimen>', dims))
+def resolve(name, depth=0):
+    v = raw.get(name)
+    if v is None or depth > 4:
+        return None
+    v = v.strip()
+    m = re.match(r'^([0-9.]+)dp$', v)
+    if m:
+        return float(m.group(1))
+    r = re.match(r'^@dimen/([\w.]+)$', v)
+    if r:
+        return resolve(r.group(1), depth + 1)
+    return None
+dimval = {name: resolve(name) for name in raw}
 for needed in ('bottom_nav_end_inset', 'bottom_nav_icon_label_gap'):
     if needed not in dimval:
         problems.append('%s is not declared in dimens.xml' % needed)
         continue
     if dimval[needed] is None:
-        problems.append('%s is not a literal dp value a static reader can check' % needed)
+        problems.append('%s does not resolve to a literal dp value (broken or cyclic @dimen chain?)' % needed)
     elif dimval[needed] <= 0:
         problems.append('%s is %sdp — flush/zero is exactly the regression this asserts away' % (needed, dimval[needed]))
 
