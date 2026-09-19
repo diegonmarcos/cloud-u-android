@@ -47,7 +47,6 @@ import com.diegonmarcos.superapp.onehand.CanopusStar
 import com.diegonmarcos.superapp.onehand.CircularMenu
 import com.diegonmarcos.superapp.onehand.SiriusStar
 import com.diegonmarcos.superapp.media.MusicIslandController
-import com.diegonmarcos.superapp.notificationcenter.NotificationCenterFragment
 
 import com.diegonmarcos.superapp.core.SuppressHorizontalSwipe
 
@@ -576,9 +575,10 @@ open class ShellActivity : AppCompatActivity(),
             // back-stack change, drawer open) AND after a profile edit.
             refreshDynamicIsland()
             // Tap the island → fire whatever `ui.dynamic_island_action`
-            // resolves to. Default is `app:com.termux.nix` (open the
-            // Nix-on-Droid Termux app); legacy `notifications` opens
-            // the Notification Centre. Parsed at runtime so editing
+            // resolves to. The declared value is `app:com.termux.nix`
+            // (open the Nix-on-Droid Termux app); the supported forms
+            // are build.json::ui._vocab_dynamic_island_action and the
+            // build fails on anything else. Parsed at runtime so editing
             // build.json + rebuilding is the only edit needed.
             findViewById<View>(R.id.dynamic_island)?.apply {
                 isClickable = true
@@ -1140,13 +1140,21 @@ open class ShellActivity : AppCompatActivity(),
 
     /** Parse [BuildConfig.UI_DYNAMIC_ISLAND_ACTION] and dispatch. Formats:
      *   • `app:<packageName>`  → launch that app's main activity.
-     *   • `notifications`      → open the Notification Centre.
      *   • `shortcut:<id>`      → fire a shortcut-style intent (currently
      *     unused, reserved for future bindings like `shortcut:wallet`).
      *  Tolerant of an uninstalled target — shows a short Toast instead of
-     *  silently falling back, so the user's binding stays authoritative. */
+     *  silently falling back, so the user's binding stays authoritative.
+     *
+     *  There is no blank-value default here, and there must never be one
+     *  again: the previous `ifBlank { "notifications" }` named the
+     *  launcher's drop-down shade, the second notification centre #515
+     *  deleted. The forms are declared in
+     *  build.json::ui._vocab_dynamic_island_action and app/build.gradle
+     *  fails the build on an absent, blank or unlisted value, so by the
+     *  time this reads BuildConfig the value is already one of the
+     *  branches below. */
     private fun dispatchDynamicIslandAction() {
-        val action = BuildConfig.UI_DYNAMIC_ISLAND_ACTION.ifBlank { "notifications" }
+        val action = BuildConfig.UI_DYNAMIC_ISLAND_ACTION
         val parts = action.split(":", limit = 2)
         when (parts.getOrNull(0)) {
             "app" -> {
@@ -1158,7 +1166,6 @@ open class ShellActivity : AppCompatActivity(),
                     android.widget.Toast.makeText(this, "$pkg not installed", android.widget.Toast.LENGTH_SHORT).show()
                 }
             }
-            "notifications" -> openNotificationCenter()
             "shortcut"      -> parts.getOrNull(1)?.let { handleShortcutById(it) }
             else            -> {}
         }
@@ -2006,7 +2013,6 @@ open class ShellActivity : AppCompatActivity(),
             // so it resolved to nothing and snacked "No app handles".
             actionType == "open_camera" -> openCamera()
             actionType == "open_screenshots" -> openScreenshots()
-            actionType == "open_notification_center" -> openNotificationCenter()
             actionType == "reapply_mail_rules" -> reapplyMailRules(anchor)
             // Configs → Keyboard now hands off to the standalone Cloud-Keyboard
             // app via extapp:cloud-keyboard (ui.external_apps[cloud-keyboard]);
@@ -2073,21 +2079,6 @@ open class ShellActivity : AppCompatActivity(),
         val frag = BusinessCardFragment.newInstance()
         if (!isTwoPane()) applyChrome(frag)
         pushContent(frag)
-    }
-
-    /** Slide the Notification Centre down from the top. Reuses the
-     *  search-sheet animation set so transitions stay consistent. */
-    private fun openNotificationCenter() {
-        if (supportFragmentManager.findFragmentByTag(NotificationCenterFragment.BACK_STACK_TAG) != null) return
-        supportFragmentManager.beginTransaction()
-            .setCustomAnimations(
-                R.anim.slide_in_up,  R.anim.fade_out,
-                R.anim.fade_in,      R.anim.slide_out_down,
-            )
-            .add(R.id.overlay_container, NotificationCenterFragment.newInstance(),
-                NotificationCenterFragment.BACK_STACK_TAG)
-            .addToBackStack(NotificationCenterFragment.BACK_STACK_TAG)
-            .commit()
     }
 
     /** Dynamic Island is now an [IslandWaveView] (purely decorative

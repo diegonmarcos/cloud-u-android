@@ -19,9 +19,16 @@
 # which one the updater MAY act on ([MANAGED] = exactly the primary install),
 # and maps the device's current Android user to a kind. Every emitting path —
 # the self-update scheduler and worker, and the constellation (fleet) scheduler
-# and worker, and the app's "Updated to vc:" push — calls InstallIdentity
-# .isManaged() at its head and returns silently when the current install is not
-# the managed one. Nothing suppresses; nothing is a second copy of the answer.
+# and worker — calls InstallIdentity.isManaged() at its head and returns
+# silently when the current install is not the managed one. Nothing suppresses;
+# nothing is a second copy of the answer.
+#
+# #515 removed the fifth emitting path, App.detectVersionBump's "Updated to vc:"
+# push. It was a SECOND announcement of an install PackageInstallerReceiver had
+# already recorded, and it fired from Application.onCreate — the one place with
+# no install session behind it, which is exactly why it needed a gate of its own.
+# T8 below now asserts the path is gone rather than that it is gated: a launch-
+# time push is un-gated by construction the moment someone writes one.
 #
 # Mutation-proofing shape: this tester asserts BOTH the declaration (T1/T2) and
 # the reader (T3+T). Remove the gate from any emitting path and its assertion
@@ -129,12 +136,21 @@ else
     bad "T7 ConstellationWorker.doWork does NOT consult InstallIdentity.isManaged — a clone worker could still post update notifications"
 fi
 
-# T8 — the "Updated to vc:" notification is an update notification this install
-# emits; a clone must not.
-if grep -E 'InstallIdentity\.isManaged\(this\)' "$APP_KT" >/dev/null; then
-    ok "T8 App.detectVersionBump consults InstallIdentity.isManaged before the 'Updated to vc:' push"
+# T8 — Application.onCreate announces NOTHING into the in-app feed (#515).
+#
+# This used to assert that App.detectVersionBump called isManaged() first. The
+# function is gone: it announced an install the PackageInstaller callback had
+# already recorded, under the same source, so every update left two entries.
+# What replaces the assertion is stronger, not weaker. Every OTHER emitting path
+# runs behind an install session or a worker that gates at its head (T4-T7); a
+# push written into Application.onCreate has neither, so it reaches a clone on
+# the clone's first launch no matter what. The invariant is therefore that the
+# launch path holds no producer at all, and re-adding one is RED here whether
+# or not whoever added it remembered the gate.
+if grep -nE 'NotificationStore\.push' "$APP_KT"; then
+    bad "T8 App.kt pushes into NotificationStore from the Application lifecycle — there is no install session behind onCreate, so a work-profile or parallel clone announces it on its own first launch (#453), and PackageInstallerReceiver.surface() has already recorded that install anyway (#515)"
 else
-    bad "T8 App.detectVersionBump does NOT consult InstallIdentity.isManaged — a clone would announce its own 'Updated to vc:' on launch"
+    ok "T8 App.kt contains no NotificationStore producer — the install feed is written only from the install callback, which cannot run in a copy the updater never installed"
 fi
 
 echo

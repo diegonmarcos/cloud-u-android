@@ -293,10 +293,42 @@ def suiteLastApps    = buildJson.ui.sections.find { it.id == "phone" }?.last_app
 def lastAppsEnabled  = (suiteLastApps.enabled != false)
 def lastAppsTitle    = (suiteLastApps.title ?: 'Last Apps').toString()
 def lastAppsLimit    = ((suiteLastApps.limit ?: 12) as Number).intValue()
-// Dynamic-island tap target. Format: "app:<pkg>" | "notifications" |
-// "shortcut:<id>". Parsed at runtime by MainActivity. Default lives in
-// build.json::ui.dynamic_island_action.
-def dynamicIslandAction = (buildJson.ui.dynamic_island_action ?: 'notifications').toString()
+// Dynamic-island tap target. The supported forms are DECLARED in
+// build.json::ui._vocab_dynamic_island_action and validated here; the value
+// itself is build.json::ui.dynamic_island_action. Parsed at runtime by
+// ShellActivity.
+//
+// THERE IS DELIBERATELY NO `?:` DEFAULT. This line used to read
+// `(buildJson.ui.dynamic_island_action ?: 'notifications')`, and that default
+// named the launcher's own drop-down notification shade — the second
+// notification centre #515 deleted. A default is only ever reached when the
+// declaration is absent, which is exactly the moment nobody is looking, so
+// dropping or renaming one JSON key would have silently re-armed a surface
+// that no longer exists. An absent, blank or unlisted value is a build
+// failure instead: the declaration is the contract, and a missing contract
+// must be loud rather than guessed.
+def islandVocab = buildJson.ui._vocab_dynamic_island_action
+if (!islandVocab) throw new GradleException(
+    "build.json::ui._vocab_dynamic_island_action is missing. It is the declared " +
+    "vocabulary of dynamic-island tap targets; without it there is nothing to " +
+    "validate ui.dynamic_island_action against, and an unsupported form would " +
+    "reach the runtime unchecked.")
+def dynamicIslandAction = buildJson.ui.dynamic_island_action?.toString()?.trim()
+if (!dynamicIslandAction) throw new GradleException(
+    "build.json::ui.dynamic_island_action is absent or blank, and it has no " +
+    "default on purpose (#515). Declare one of the forms listed in " +
+    "ui._vocab_dynamic_island_action: ${islandVocab}")
+// The vocabulary lists SCHEMES, spelled without the colon. That is not
+// cosmetic: `"app:"` in this file is harvested by test-app-identity-resolves.sh
+// as an `app:<packageName>` target with an empty package, so the vocabulary
+// entry would be read as a broken app binding by a different reader entirely.
+def islandScheme = dynamicIslandAction.split(":", 2)[0]
+if (!islandVocab.any { it.toString() == islandScheme }) throw new GradleException(
+    "build.json::ui.dynamic_island_action = '${dynamicIslandAction}' uses scheme " +
+    "'${islandScheme}', which is not among the declared schemes ${islandVocab}. " +
+    "Adding one means adding it to ui._vocab_dynamic_island_action AND giving it " +
+    "a branch in ShellActivity.dispatchDynamicIslandAction — a scheme with no " +
+    "branch is a dead tap, which is how 'notifications' outlived the surface it opened.")
 // Maps BuildConfig fields used to live here; moved to libs:maps in the
 // libs:maps lift. app/ no longer reads build.json::ui.maps_* — every
 // Maps consumer is inside libs:maps and resolves the fields via

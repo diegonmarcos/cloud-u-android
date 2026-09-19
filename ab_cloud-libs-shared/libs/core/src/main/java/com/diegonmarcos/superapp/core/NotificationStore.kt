@@ -7,10 +7,23 @@ import java.util.UUID
 
 /**
  * Append-only in-app notification feed. Shared across modules — lives
- * in libs:core so both the app code (CrashLogger, App.onCreate
- * version-bump detector) AND libs:updater (PackageInstallerReceiver
- * mirror) can push to it. NotificationCenterFragment +
- * AggregatorStackFragment's "notifications" panel read from it.
+ * in libs:core so both the app code (CrashLogger) AND libs:updater
+ * (PackageInstallerReceiver, UpdateOverlayFragment) can push to it.
+ *
+ * EXACTLY ONE SURFACE READS IT: AggregatorStackFragment's
+ * `notification_center` panel — the Notify page. There used to be a
+ * second, the launcher's drop-down NotificationCenterFragment, which
+ * drew the same entries and called NotificationManager.cancelAll() on
+ * render just as the Notify page does, so whichever opened first
+ * destroyed the dismissal state the other would have shown. #515
+ * deleted it.
+ *
+ * ONE EVENT, ONE PRODUCER. App.onCreate used to run a version-bump
+ * detector that pushed "Updated to vc:N" on the first launch after an
+ * install, for the same install PackageInstallerReceiver had already
+ * recorded here under the same source "Updater" — two entries per
+ * update. #515 deleted the detector; the install callback, which knows
+ * the actual outcome, is the producer.
  *
  * Why not Android's framework notifications? Those go to the system
  * shade and are subject to user channel preferences / DND / etc. This

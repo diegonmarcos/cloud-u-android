@@ -1,9 +1,10 @@
 # The notification centre exists TWICE — #497 clause 3
 
-Diagnosis only. Nothing was changed as a result of it; the reason is in
-**Why this was not fixed** at the bottom.
+**RESOLVED under #515.** Surface A is deleted. Everything below is the diagnosis
+as it stood; read **What #515 did** at the bottom for what is true now.
 
-All line numbers are against `398978cf7` (the commit this was read at).
+All line numbers are against `398978cf7` (the commit this was read at) and no
+longer resolve — the deleted file is gone and `ShellActivity.kt` has moved.
 
 
 ## The two surfaces
@@ -88,7 +89,7 @@ drop-down shade, or two entrances to the Notify page (bottom nav vs. Configs ▸
 Panel ▸ Notify, which are the same screen and *should* look identical).
 
 
-## Why this was not fixed
+## Why this was not fixed (superseded — kept for the record)
 
 Retiring surface A means deleting `openNotificationCenter()` and its two call
 sites in **`ShellActivity.kt`**, which #497 forbids touching (it is Diego's file,
@@ -117,3 +118,46 @@ Two things would also be lost and are not mechanical:
 3. If it should: make it a *view* of surface B rather than a second
    implementation — one store, one `cancelAll()`, one theme — which is an edit
    confined to `NotificationCenterFragment.kt` and needs no forbidden file.
+
+
+## What #515 did
+
+Diego's call, 2026-09-19: the drop-down shade dies. Path 2 of *What would be
+needed* was taken, in one commit.
+
+**Deleted.** `notificationcenter/NotificationCenterFragment.kt`;
+`ShellActivity.openNotificationCenter()`; its two call sites (the
+dynamic-island `"notifications"` branch and the `open_notification_center`
+home action); the import in `ShellActivity.kt`; a dead
+`NotificationCenterFragment` import in `AggregatorStackFragment.kt` that this
+diagnosis had not noticed.
+
+**Declared.** `notifications` is gone from the dynamic-island vocabulary, and
+that vocabulary is now DATA rather than prose: `ui._vocab_dynamic_island_action`
+lists the supported forms and `app/build.gradle` validates the value against it.
+The `?: 'notifications'` default in `app/build.gradle` and the
+`ifBlank { "notifications" }` default in `ShellActivity` are both gone — an
+absent, blank or unlisted value now FAILS THE BUILD. Those two defaults were the
+real hazard this document under-weighted: deleting the Kotlin while leaving them
+meant one absent JSON key re-armed a surface that no longer existed.
+
+**The KDE badge was not lost.** `ui.notification_center.producers[kde_status]`
+is declared `badge: true`, so Configs ▸ Panel ▸ Push renders it from the
+declaration — verified on the tree before the delete, nothing had to be ported.
+
+**One producer per install event.** This document listed
+`App.detectVersionBump` and `CrashLogger` as the store's producers and missed
+two more in `libs:updater`. `PackageInstallerReceiver.surface()`
+(`PackageInstallerReceiver.kt:352`) pushes into the same store, under the same
+source `"Updater"`, from the install-result callback — so every update left TWO
+entries for one event, the installer's and the next launch's "Updated to vc:N".
+Worse, `versionCode` is minted from wall-clock minutes (`app/build.gradle`,
+`codeFinal`), so every CI build is a distinct "version bump" and the
+auto-updater installs them continuously. `detectVersionBump` is deleted; the
+install callback, which knows the actual outcome, is the producer.
+
+**Guarded.** `test/test-notification-centre-is-singular.sh` asserts one reader,
+one `cancelAll()`, no Application-lifecycle producer, a vocabulary with no
+unbranched form, and no fallback default. Every subject is resolved from a
+declaration (the manifest, `build.json`, the BuildConfig field) rather than
+matched by class name, per #511.

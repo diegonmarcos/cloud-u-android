@@ -3,7 +3,6 @@ import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.MainActivity
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.system.CrashLogger
-import com.diegonmarcos.superapp.notificationcenter.NotificationCenterFragment
 import com.diegonmarcos.superapp.notificationcenter.PhoneNotificationListenerService
 import com.diegonmarcos.superapp.rss.NtfyCatalog
 import com.diegonmarcos.superapp.rss.RssFeedFragment
