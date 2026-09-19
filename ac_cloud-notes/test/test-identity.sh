@@ -59,6 +59,34 @@ else
   fail "resConfigs \"en\" missing from app/build.gradle"
 fi
 
+# 5. the ship workflow the fleet runs this app under is titled Cloud Notes,
+#    never the upstream project. #522 renamed the workflow's own title from
+#    "Ship → Cloud AFFiNE ..." by hand and nothing guarded it back — the rename
+#    family the fleet keeps breaking is exactly a surface that spells AFFiNE
+#    where Cloud Notes belongs. The workflow path is RESOLVED from the declared
+#    name (build.json::name), so a rename moves every assertion with it, and a
+#    declared path that resolves to nothing is a FAILURE, never a silent skip
+#    (#511). The title's display form is "Cloud Notes" (the product, human
+#    casing); the upstream project's own name is "AFFiNE" and must not appear
+#    as the product in any title line.
+app_name="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['name'])" "$ROOT/build.json")"
+workflow="$ROOT/../1_cicd/src/cicd/ship-$app_name.yml"
+if [ -f "$workflow" ]; then
+  title_line="$(grep -m1 '^name:' "$workflow")"
+  if printf '%s\n' "$title_line" | grep -q "Cloud Notes"; then
+    ok "ship workflow '$app_name' is titled Cloud Notes (resolved from build.json::name)"
+  else
+    fail "ship workflow '$app_name' title '$title_line' does not name the product (Cloud Notes)"
+  fi
+  if printf '%s\n' "$title_line" | grep -qi "AFFiNE"; then
+    fail "ship workflow '$app_name' title '$title_line' declares the upstream project (AFFiNE) as the product"
+  else
+    ok "ship workflow '$app_name' title does not spell the upstream project (AFFiNE)"
+  fi
+else
+  fail "ship workflow '$workflow' (resolved from build.json::name) does not exist — a declared surface that resolves to nothing must fail"
+fi
+
 if [ "$FAIL" -eq 0 ]; then
   printf '  cloud-notes identity tester: ALL PASS\n'
 else
