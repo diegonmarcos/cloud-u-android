@@ -330,10 +330,9 @@ class BottomNavGeometryTest {
             "${nav.paddingLeft}/${nav.paddingTop}/${nav.paddingRight}/${nav.paddingBottom}px")
         println("#498 declared px: pad=$pad pillInset=$pillInset gap=$iconLabelGap " +
             "endInset=$endInset iconSize=$iconSize")
-        println("#498 effective px: itemPaddingTop=${nav.itemPaddingTop} " +
-            "itemPaddingBottom=${nav.itemPaddingBottom} " +
-            "activeIndicatorLabelPadding=${nav.activeIndicatorLabelPadding} " +
-            "minimumHeight=${nav.minimumHeight}")
+        // Rebuilt view: no Material item-padding properties — the effective
+        // numbers ARE the cells' own padding, printed per cell below.
+        println("#498 effective px: minimumHeight=${nav.minimumHeight}")
         for (cell in cells) {
             val i = icon(cell)
             val l = label(cell)
