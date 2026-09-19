@@ -1,6 +1,6 @@
-name: "Ship → Cloud AFFiNE (build + publish to GHCR)"
+name: "Ship → Cloud Notes APK (build + publish to GHCR)"
 
-# Independent per-app workflow for Cloud AFFiNE (a full vendored clone of
+# Independent per-app workflow for Cloud Notes (a full vendored clone of
 # toeverything/AFFiNE at cfda4858d550c46ec1cd0b574801d7becdd6625b, de-clouded).
 # ENGINE: 1_cicd/src/scripts/cloud-notes-engine.sh (vendored byte-identical as
 # ac_cloud-notes/build.sh; parity enforced by the workflow generator).
@@ -58,7 +58,7 @@ concurrency:
 
 env:
   WORK_DIR: ac_cloud-notes
-  FORK: affine
+  FORK: notes
 
 jobs:
   build_and_publish:
