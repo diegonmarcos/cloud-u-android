@@ -41,7 +41,18 @@
          amount, keeping the spacing perfectly symmetrical and regular.
          Deliberately modest: on a 360dp phone the slot stays above the 64dp
          active-indicator width, so #417 ("nothing may overflow") holds. -->
-    <dimen name="bottom_nav_end_inset">16dp</dimen>
+    <!-- #498 curvature: the island (bg_nav_island) and the selected pill are
+         both stadiums on the SAME radius token, so their end arcs are
+         concentric exactly when the horizontal gap between pill end and
+         island end equals the pill's vertical inset — the radii then differ
+         by that same gap and the arc centres coincide, at ANY bar height.
+         The bar's paddingStart/End IS that horizontal gap (the island wraps
+         the bar with no padding of its own), so this dimen is an ALIAS of
+         the pill inset, not a number. It was a literal 16dp against a 6dp
+         pill inset: end arcs 10dp off-centre, which is the misalignment
+         reported on the leftmost/rightmost items (2026-09-19). One token,
+         both directions — the pair cannot drift. -->
+    <dimen name="bottom_nav_end_inset">@dimen/bottom_nav_pill_inset</dimen>
 
     <!-- #473. The vertical distance between each item's icon and its label
          (Material's activeIndicatorLabelPadding, default 4dp). Bumped up a

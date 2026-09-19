@@ -238,6 +238,42 @@ class BottomNavGeometryTest {
             1, distinctLabels.size)
     }
 
+    @Test
+    fun theEdgePillsShareTheIslandsEndCurvature() {
+        // The island and the pill are both stadiums on the SAME radius token,
+        // so each end is a perfect semicircle. Concentric end arcs need
+        // exactly one thing: the horizontal gap between the pill's end and
+        // the island's end must equal the pill's vertical inset — the radii
+        // then differ by that gap and the centres coincide. The island's edge
+        // is the bar's edge (the island wraps the bar with no padding), so
+        // that gap IS the bar's own start/end padding. 16dp of end inset
+        // against 6dp of pill inset put the arcs 10dp off-centre — the
+        // leftmost/rightmost misalignment reported 2026-09-19.
+        for (idx in intArrayOf(0, nav.menu.size() - 1)) {
+            val id = nav.menu.getItem(idx).itemId
+            nav.selectedItemId = id
+            drawNav()
+            val cell = cells.first { it.id == id }
+            val pill = pill(cell)
+            val sidePad = if (idx == 0) nav.paddingLeft else nav.paddingRight
+            println("#498 edge '${title(cell)}': pill=$pill cell=${cell.width}x${cell.height} " +
+                "sidePad=${dp(sidePad)} pillInset=${dp(pillInset)} bar=${dp(nav.height)}")
+            assertEquals("item '${title(cell)}': the pill stops ${dp(pill.left)} short of its " +
+                "cell's start edge — a horizontal pill inset breaks the end ring", 0, pill.left)
+            assertEquals("item '${title(cell)}': the pill stops ${dp(cell.width - pill.right)} " +
+                "short of its cell's end edge", cell.width, pill.right)
+            assertEquals(
+                "the bar's end padding is ${dp(sidePad)} but the pill's vertical inset is " +
+                    "${dp(pillInset)} — the pill's end arc and the island's end arc are not " +
+                    "concentric (the ring differs horizontally vs vertically)",
+                pillInset, sidePad)
+            assertEquals(
+                "stadium centres differ: (bar ${dp(nav.height)} − pill ${dp(pill.height())})/2 " +
+                    "≠ end gap ${dp(sidePad)}",
+                sidePad, (nav.height - pill.height()) / 2)
+        }
+    }
+
     // ── measurement helpers: nothing here reads a file ────────────────────
 
     /** The icon: the one ImageView Material builds into every item. */

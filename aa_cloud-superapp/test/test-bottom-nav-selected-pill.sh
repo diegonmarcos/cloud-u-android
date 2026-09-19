@@ -390,5 +390,31 @@ PY
 )" "no android:minHeight in the nav style, and the height is measured against the declared geometry"
 
 echo
+echo "== T11: the end inset IS the pill inset — concentric end arcs by one token =="
+# The island and the pill share one radius token and both clamp to stadium
+# ends. Their end arcs are concentric only when the horizontal pill→island
+# gap (the bar's paddingStart/End = bottom_nav_end_inset) equals the pill's
+# vertical inset (bottom_nav_pill_inset): radii then differ by exactly that
+# gap and the centres coincide. A literal here CAN drift — a 16dp literal
+# against the 6dp pill inset put the end arcs 10dp off-centre (reported
+# 2026-09-19). The dimen must be an ALIAS, and the JVM geometry test must
+# measure the ring on the laid-out edge cells.
+check "$(python3 - "$RES/values/dimens.xml" "$(cd "$(dirname "$0")/.." && pwd)/app/src/test/java/com/diegonmarcos/superapp/ui/BottomNavGeometryTest.kt" <<'PY'
+import re, sys
+p = []
+t = open(sys.argv[1]).read()
+m = re.search(r'<dimen name="bottom_nav_end_inset">([^<]*)</dimen>', t)
+if not m:
+    p.append("bottom_nav_end_inset is not declared")
+elif m.group(1).strip() != "@dimen/bottom_nav_pill_inset":
+    p.append("bottom_nav_end_inset is %r, not an alias of @dimen/bottom_nav_pill_inset - the end arcs drift off-centre the moment either number changes" % m.group(1))
+jt = open(sys.argv[2]).read()
+if "theEdgePillsShareTheIslandsEndCurvature" not in jt:
+    p.append("BottomNavGeometryTest no longer measures the edge-cell ring (theEdgePillsShareTheIslandsEndCurvature) - the alias alone cannot prove the drawn arcs are concentric")
+print("; ".join(p) or "OK")
+PY
+)" "end inset aliases the pill inset, and the edge ring is measured on the laid-out bar"
+
+echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
