@@ -868,6 +868,11 @@ fun InboxScreen(
             // The list's ground is the message-list PANE — palette's dark grey behind the black
             // cards (#472). Each row lifts itself off it as its own rounded card.
             containerColor = LocalMailListPalette.current.pane,
+            // And what is drawn ON the pane (#518). The pane is a palette colour, not a scheme role,
+            // so the default `contentColorFor(containerColor)` answers Unspecified and falls back to
+            // LocalContentColor -- which nothing above this Scaffold sets, leaving material3's
+            // default: Color.Black, on a near-black pane. Stated, because it cannot be inferred.
+            contentColor = LocalMailListPalette.current.unreadText,
             // imePadding: deleting from search happens with the keyboard open, which would
             // otherwise cover the Undo snackbar for its whole window (zero inset when closed).
             snackbarHost = { SnackbarHost(snackbarHostState, Modifier.imePadding()) },

@@ -23,10 +23,12 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -375,6 +377,7 @@ fun EmailListItem(
                 attachmentParts = attachmentParts,
                 chipBackground = chipBackground,
                 openingAttachmentKey = openingAttachmentKey,
+                ink = listTextInk.color,
             )
             originLabel?.takeIf { it.isNotBlank() }?.let { label ->
                 Spacer(Modifier.size(4.dp))
@@ -561,6 +564,7 @@ private fun DraftLabel(fill: Color) {
  * to open, an icon that sometimes exists and sometimes does not is the kind of button a thumb
  * cannot learn the position of.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ListRowActions(
     email: Email,
@@ -569,6 +573,12 @@ private fun ListRowActions(
     attachmentParts: List<EmailBodyPart>,
     chipBackground: Color,
     openingAttachmentKey: String?,
+    // The row's own text ink (#518). The card paints its own background, so it has to say what is
+    // drawn ON it, the way a Surface would: the list's Scaffold sits on a palette colour that is no
+    // scheme role, `contentColorFor` answers Unspecified for it, and with no Surface above the list
+    // LocalContentColor was still material3's default -- Color.Black, on a black card. Both icons
+    // were composed, tappable and invisible.
+    ink: Color,
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
@@ -579,7 +589,12 @@ private fun ListRowActions(
         Toast.makeText(context, outcome.text ?: outcome.error, Toast.LENGTH_SHORT).show()
         resumeRunner.dismiss()
     }
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    // A FlowRow, not a Row (#518): behind two 48 dp buttons and the bar a Row left the chips about a
+    // third of a phone's width, measured last and clipped to it. Here the chips stay on this line
+    // when they fit and take a full-width line of their own when they do not -- #196's "taller rows
+    // to fit them", which the #500 move onto this line had quietly dropped.
+    CompositionLocalProvider(LocalContentColor provides ink) {
+    FlowRow {
         IconButton(
             enabled = resumeRunner.busy == null,
             onClick = {
@@ -600,7 +615,7 @@ private fun ListRowActions(
         ) {
             Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.message_copy_code))
         }
-        ReadingGroupSeparator()
+        Box(Modifier.align(Alignment.CenterVertically)) { ReadingGroupSeparator() }
         if (onOpenAttachment != null && attachmentParts.isNotEmpty()) {
             AttachmentChips(
                 email = email,
@@ -608,8 +623,10 @@ private fun ListRowActions(
                 fill = chipBackground,
                 openingKey = openingAttachmentKey,
                 onOpen = onOpenAttachment,
+                modifier = Modifier.align(Alignment.CenterVertically).padding(start = 4.dp),
             )
         }
+    }
     }
 }
 
@@ -656,9 +673,13 @@ private fun AttachmentChips(
     fill: Color,
     openingKey: String?,
     onOpen: (EmailBodyPart) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Spacer(Modifier.size(4.dp))
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    FlowRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         parts.take(MAX_ATTACHMENT_CHIPS).forEach { part ->
             AttachmentChip(
                 part = part,
