@@ -6087,7 +6087,7 @@
         {
           "id": "v6-full",
           "label": "IPv6 · full",
-          "comment": "wg-v6-full - IPv6-only wifi, FULL tunnel (everything via oci-analytics)",
+          "comment": "wg-v6-full - IPv6-only wifi, FULL tunnel for IPv4 (everything v4 via oci-analytics). NOT ::/0: a v6 default route covers this peer's own v6 endpoint, so the handshake is routed into the tunnel it is trying to establish and the peer never comes up (#523). Nothing is lost - native-v6 sites are directly reachable and IPv4-only hosts ride 0.0.0.0/0 through the tunnel.",
           "dns": "fd0c:1d01::1, 10.1.0.1",
           "peers": [
             {
@@ -6102,10 +6102,10 @@
             {
               "name": "oci-analytics",
               "mesh": "wg-public",
-              "comment": "oci-analytics - ALL traffic; DNS64/NAT64 reaches IPv4-only sites over v6",
+              "comment": "oci-analytics - ALL IPv4 traffic; DNS64/NAT64 reaches IPv4-only sites over v6. The v6 side is deliberately two specific prefixes, never ::/0: the mesh (fd0c:1d01::/64, which is also the DNS64 resolver fd0c:1d01::1) and the NAT64 prefix that resolver synthesises into - CUSTOM here, not the well-known 64:ff9b::/96",
               "public_key": "Bnyf83VpvGY4BjcjQEXgutNEzx9OXMltHIcKNh7cKkc=",
               "endpoint": "[2603:c026:c104:8f00:0:c704:63b:6eee]:51821",
-              "allowed_ips": "0.0.0.0/0, ::/0",
+              "allowed_ips": "0.0.0.0/0, fd0c:1d01::/64, 2603:c026:c104:8f00:ff9b::/96",
               "persistent_keepalive": "25"
             }
           ]
