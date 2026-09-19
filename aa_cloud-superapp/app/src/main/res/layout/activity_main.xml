@@ -230,6 +230,54 @@
                 app:titleCentered="false"
                 app:title="" />
 
+            <!-- Revolut-style corner orbs — Home root ONLY. At the root the
+                 full-width glass bar dissolves (ShellActivity nulls the
+                 island background and the toolbar hamburger) and these two
+                 detached liquid-glass circles carry the same two actions the
+                 toolbar carried: left opens the main menu (drawer), right
+                 launches the wallet's home app. The right orb's target is
+                 DECLARED in build.json::ui.top_orbs (baked as
+                 UI_TOP_ORBS_B64), never hardcoded — the wallet deck moved
+                 into Cloud-Me, so the declaration points there today and a
+                 future move is a JSON edit. Off the Home root both orbs hide
+                 and the classic toolbar returns (hamburger | island | back). -->
+            <FrameLayout
+                android:id="@+id/top_menu_orb"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_gravity="start|center_vertical"
+                android:layout_marginStart="4dp"
+                android:background="@drawable/bg_liquid_glass_pill"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="@string/drawer_open"
+                android:visibility="gone">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_hamburger_asymmetric" />
+            </FrameLayout>
+            <FrameLayout
+                android:id="@+id/top_wallet_orb"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_gravity="end|center_vertical"
+                android:layout_marginEnd="4dp"
+                android:background="@drawable/bg_liquid_glass_pill"
+                android:clickable="true"
+                android:focusable="true"
+                android:contentDescription="@string/action_wallet"
+                android:visibility="gone">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_wallet" />
+            </FrameLayout>
+
             <!-- Music-playing mini-island — Samsung now-playing style:
                  small dark pill above the main Dynamic Island, with
                  the currently-playing app's icon on the LEFT and the

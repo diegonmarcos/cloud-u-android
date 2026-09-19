@@ -556,6 +556,21 @@ open class ShellActivity : AppCompatActivity(),
                 Haptics.tap(it)
                 drawerLayout.openDrawer(androidx.core.view.GravityCompat.START)
             }
+            // Revolut-style Home-root corner orbs: the same two actions the
+            // toolbar carried, in detached liquid-glass circles. Left IS the
+            // hamburger; right launches the wallet's home app — target
+            // DECLARED in build.json::ui.top_orbs.right_extapp (the Wallet
+            // deck lives inside Cloud-Me now), read from UI_TOP_ORBS_B64,
+            // never hardcoded here. Visibility is toggled with atHomeRoot in
+            // onPrepareOptionsMenu alongside the bar-dissolve.
+            findViewById<android.view.View>(R.id.top_menu_orb)?.setOnClickListener {
+                Haptics.tap(it)
+                drawerLayout.openDrawer(androidx.core.view.GravityCompat.START)
+            }
+            findViewById<android.view.View>(R.id.top_wallet_orb)?.setOnClickListener {
+                Haptics.tap(it)
+                topOrbExtapp().takeIf { id -> id.isNotBlank() }?.let { id -> launchExternalApp(id) }
+            }
             // Bind the central Dynamic Island label — "{INITIALS} · {Mode}".
             // Updated whenever onPrepareOptionsMenu fires (mode toggle,
             // back-stack change, drawer open) AND after a profile edit.
@@ -1698,6 +1713,17 @@ open class ShellActivity : AppCompatActivity(),
      * getLaunchIntentForPackage returns null for them and we fall through
      * to the hub switcher — exactly the intended behaviour.
      */
+    /** The right corner orb's app id — build.json::ui.top_orbs.right_extapp,
+     *  baked as UI_TOP_ORBS_B64. Blank (missing declaration) disables the
+     *  orb's tap rather than guessing an app: the target moved once already
+     *  (cloud-wallet → cloud-me when the Wallet deck moved into Cloud-Me),
+     *  and a hardcoded fallback here is how it would silently move back. */
+    private fun topOrbExtapp(): String = runCatching {
+        org.json.JSONObject(String(android.util.Base64.decode(
+            BuildConfig.UI_TOP_ORBS_B64, android.util.Base64.NO_WRAP)))
+            .optString("right_extapp")
+    }.getOrDefault("")
+
     private fun launchExternalApp(rawPayload: String) {
         val payload = rawPayload.substringBefore(StackAnchors.FRAGMENT)
         val deepTarget = rawPayload.substringAfter(StackAnchors.FRAGMENT, "")
@@ -2120,10 +2146,20 @@ open class ShellActivity : AppCompatActivity(),
         val atHomeRoot = currentSection == "home" &&
             supportFragmentManager.backStackEntryCount == 0
         menu.findItem(R.id.action_back)?.isVisible = !atHomeRoot
-        // action_wallet: ONLY at the Home root (mirror of action_back).
-        // Slots into the same top-right toolbar position so the user
-        // gets a single context-appropriate action there at all times.
-        menu.findItem(R.id.action_wallet)?.isVisible = atHomeRoot
+        // Revolut top: at the Home root the full-width bar DISSOLVES — no
+        // glass slab, no toolbar hamburger — and the two corner orbs carry
+        // menu + wallet as detached circles (the centre islands keep their
+        // own pills). Off the root the classic toolbar returns:
+        // hamburger | island | back.
+        val orbVis = if (atHomeRoot) android.view.View.VISIBLE else android.view.View.GONE
+        findViewById<android.view.View>(R.id.top_menu_orb)?.visibility = orbVis
+        findViewById<android.view.View>(R.id.top_wallet_orb)?.visibility = orbVis
+        findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+            ?.navigationIcon = if (atHomeRoot) null
+            else androidx.core.content.ContextCompat.getDrawable(this, R.drawable.ic_hamburger_asymmetric)
+        findViewById<android.view.View>(R.id.toolbar_island)?.background =
+            if (atHomeRoot) null
+            else androidx.core.content.ContextCompat.getDrawable(this, R.drawable.bg_liquid_glass)
         return super.onPrepareOptionsMenu(menu)
     }
 
@@ -2154,12 +2190,9 @@ open class ShellActivity : AppCompatActivity(),
                 }
                 return true
             }
-            R.id.action_wallet -> {
-                // Wallet moved to ac_cloud-wallet (constellation APK).
-                // Launch it as an external app; installs from GHCR if absent.
-                launchExternalApp("cloud-wallet")
-                return true
-            }
+            // action_wallet is GONE from the menu: the Home-root wallet
+            // affordance is the top_wallet_orb (Revolut corner circle), whose
+            // target is declared in build.json::ui.top_orbs.
         }
         return super.onOptionsItemSelected(item)
     }
