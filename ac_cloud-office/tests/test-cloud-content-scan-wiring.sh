@@ -159,5 +159,8 @@ for f in failures:
 sys.exit(1 if failures else 0)
 PY
 
-[ "$FAIL" -eq 0 ] || { echo "FAILED" >&2; exit 1; }
+# FAIL above is declared but never incremented (the python owns the verdict);
+# propagate the python's own exit status so the shell gate can actually go red.
+rc=$?
+[ "$rc" -eq 0 ] || { echo "FAILED: cloud-office content-scan wiring is broken" >&2; exit 1; }
 exit 0
