@@ -181,6 +181,70 @@ else:
 PY
 )" "bottom_nav_end_inset aliases bottom_nav_pill_inset"
 
+echo "== T10 (measured): the selection geometry is centred — numbers from the declarations =="
+# Diego rejected CI-green for this widget: CI green never proved anything while
+# the geometry drifted. What "proven" means here is a NUMBER — the capsule's
+# top and bottom insets resolving to the same value, the content gravity-centred
+# with no asymmetric horizontal inset — computed from the real declared tokens
+# the app renders with, not from an attribute's presence. An empty resolution
+# is a RED, never a skip.
+check "$(python3 - "$DIMENS" "$ITEM_BG" "$NAV_KT" <<'PY'
+import re, sys
+DIMENS, ITEM_BG, NAV_KT = sys.argv[1], sys.argv[2], sys.argv[3]
+dims = open(DIMENS).read()
+bg = open(ITEM_BG).read()
+kt = open(NAV_KT).read()
+p = []
+raw = dict(re.findall(r'<dimen name="([^"]+)">([^<]+)</dimen>', dims))
+def resolve_ref(value, depth=0):
+    # Accept a dimen NAME ('bottom_nav_pill_inset'), a VALUE alias
+    # ('@dimen/other'), or a literal ('7dp'), and chase to a number.
+    if value is None or depth > 4:
+        return None
+    r = re.match(r'^@dimen/([\w.]+)$', value)
+    if r:
+        return resolve_ref(r.group(1), depth + 1)
+    lit = re.match(r'^([0-9.]+)dp$', value)
+    if lit:
+        return float(lit.group(1))
+    v = raw.get(value)
+    if v is None:
+        return None
+    return resolve_ref(v.strip(), depth + 1)
+
+# The capsule: insetTop == insetBottom so the selected area sits centred
+# between the top and the bottom of the box; no horizontal inset so the capsule
+# spans the full cell width and its centre is the cell's.
+it = re.search(r'android:insetTop="([^"]+)"', bg)
+ib = re.search(r'android:insetBottom="([^"]+)"', bg)
+il = re.search(r'android:insetLeft="([^"]+)"', bg)
+ir = re.search(r'android:insetRight="([^"]+)"', bg)
+top = resolve_ref(it.group(1)) if it else None
+bot = resolve_ref(ib.group(1)) if ib else None
+if top is None or bot is None:
+    p.append('capsule insetTop/insetBottom do not both resolve to a dp — the selected area has no declared vertical inset to prove')
+elif top != bot:
+    p.append('capsule insetTop=%gdp vs insetBottom=%gdp — the selected black area is not centred between top and bottom of the box; it needs (boxHeight - selectedHeight)/2 on BOTH edges, to the pixel' % (top, bot))
+if il is not None or ir is not None:
+    p.append('the capsule declares a horizontal inset (insetLeft/insetRight) — its horizontal centre can drift from the cell centre, breaking content-inside-pill centring')
+
+# Content inside the pill: horizontally centred by gravity, no asymmetric child
+# margin that would shift the icon/label off the capsule centre.
+if 'CENTER_HORIZONTAL' not in kt:
+    p.append('CloudBottomNavView no longer sets gravity=CENTER_HORIZONTAL — the icon+label are not horizontally centred in the cell (= the pill)')
+for tok in ('marginStart', 'marginLeft', 'marginRight', 'layout_marginStart'):
+    if tok in kt:
+        p.append('CloudBottomNavView sets %s on a cell child — a horizontal content inset that pushes the pill content off its centre' % tok)
+
+# Content inside the capsule, vertically: one symmetric padding expression, so
+# top inset and bottom inset are the same number by construction.
+if 'setPadding(0, pillInset + pad, 0, pillInset + pad)' not in kt:
+    p.append('the cell padding is no longer one symmetric expression — content top/bottom inset can drift apart (the #477 defect)')
+
+print('; '.join(p) or 'OK')
+PY
+)" "selection geometry centred: capsule top/bottom insets resolve equal, content gravity-centred, no asymmetric horizontal inset, one symmetric pad expression"
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]
