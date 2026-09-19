@@ -72,7 +72,8 @@ class BottomNavSelectedPillTest {
         for (i in 0 until nav.childCount) {
             val cell = nav.getChildAt(i)
             assertNotNull("cell $i has no background — the capsule selector is not applied", cell.background)
-            val current = cell.background.current
+            // Platform getCurrent() may be null while no selector state matches.
+            val current = cell.background?.let { bg -> runCatching { bg.current }.getOrNull() }
             if (cell.id == selectedId) {
                 assertTrue(
                     "the SELECTED cell's background state is ${current?.javaClass?.name}, " +
@@ -91,10 +92,11 @@ class BottomNavSelectedPillTest {
         val bitmap = drawNav()
         val item = nav.findViewById<ViewGroup>(selectedId)
         val pill = pillBounds(item)
-        val icon = rectIn(item, item.findViewById(
-            com.google.android.material.R.id.navigation_bar_item_icon_view))
-        val label = rectIn(item, item.findViewById(
-            com.google.android.material.R.id.navigation_bar_item_large_label_view))
+        // Rebuilt cells: no Material internal ids — find children by ROLE.
+        val icon = rectIn(item, (0 until item.childCount).map { item.getChildAt(it) }
+            .first { it is android.widget.ImageView })
+        val label = rectIn(item, (0 until item.childCount).map { item.getChildAt(it) }
+            .first { it is android.widget.TextView && it.visibility == View.VISIBLE })
         println("#512 measured (px, item coords): cell=${item.width}x${item.height} " +
             "pill=$pill icon=$icon label=$label")
         println("#512 measured: pill centre=(${pill.exactCenterX()}, ${pill.exactCenterY()}) " +
@@ -115,8 +117,9 @@ class BottomNavSelectedPillTest {
     @Test
     fun onlyTheSelectedItemPaintsThePill() {
         val bitmap = drawNav()
+        // Revolut capsule (2026-09-19): the LIGHT inverse surface pair.
         val expected = MaterialColors.getColor(
-            nav, com.google.android.material.R.attr.colorPrimaryContainer)
+            nav, com.google.android.material.R.attr.colorSurfaceInverse)
         val selected = nav.findViewById<ViewGroup>(selectedId)
         val unselected = nav.findViewById<ViewGroup>(unselectedId)
         // Probe 1dp inside the pill's top edge on the cell's centre line: above

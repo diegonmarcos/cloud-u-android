@@ -173,18 +173,20 @@ class BottomNavGeometryTest {
 
     @Test
     fun theBarIsNotAllowedToFillItsParent() {
-        // The whole point of stating a height. minimumHeight is a CAP in
-        // BottomNavigationView.makeMinHeightSpec — min(available, minHeight),
-        // EXACTLY — and BottomNavigationMenuView takes whatever it is handed,
-        // so a bar with no cap swallows its parent. 2026-09-18 shipped 788dp
-        // of bottom bar this way (CI 35402703581).
-        assertTrue(
-            "the bar declares no minimumHeight, so nothing caps it and it fills its parent",
-            nav.minimumHeight > 0)
+        // Rebuilt view: a LinearLayout wraps its content honestly — offered
+        // the whole screen AT_MOST it must still measure its content height.
+        // The Material stack needed a minimumHeight CAP for this (its menu
+        // view took every offered pixel: 788dp of bar shipped that way, CI
+        // 35402703581). The rebuilt bar needs no cap; this measures that.
+        val laidOut = nav.height
+        nav.measure(
+            MeasureSpec.makeMeasureSpec(nav.width, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(
+                nav.resources.displayMetrics.heightPixels, MeasureSpec.AT_MOST))
         assertEquals(
-            "the bar measures ${dp(nav.height)} but its own minimumHeight cap is " +
-                "${dp(nav.minimumHeight)} — something else is driving the height",
-            nav.minimumHeight, nav.height)
+            "offered the whole screen AT_MOST the bar measures " +
+                "${dp(nav.measuredHeight)} — it must stay its content height ${dp(laidOut)}",
+            laidOut, nav.measuredHeight)
     }
 
     @Test

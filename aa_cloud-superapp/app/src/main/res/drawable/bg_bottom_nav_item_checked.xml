@@ -57,4 +57,10 @@
             </shape>
         </inset>
     </item>
+    <!-- Default (unselected): explicit nothing — a selector with no default
+         hands out a null current drawable, which is a platform NPE trap for
+         anything that reads it. -->
+    <item>
+        <color android:color="@android:color/transparent" />
+    </item>
 </selector>
