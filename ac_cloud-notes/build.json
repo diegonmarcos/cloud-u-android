@@ -1,0 +1,87 @@
+{
+  "name": "cloud-notes",
+  "description": "Cloud Notes \u2014 our own signed build of AFFiNE (the local-first notes/whiteboard app), vendored at ac_cloud-notes/ as owned code. AFFiNE is the UPSTREAM PROJECT, never the product name: the product is cloud-notes and always was (#522).  DE-CLOUDED (#469): no AFFiNE server, no Firebase/telemetry, no AI chat, no EE-licensed code. The one feature added over upstream is opening files from emulated storage (/storage/emulated/0/...) reached via the fleet rule about EAR discipline \u2014 see the ship workflow and testers.",
+  "category": "android",
+  "vendored_engine": "cloud-notes-engine.sh",
+  "_doc_vendored_engine": "Byte-identical to ac_cloud-notes/build.sh, enforced by cloud-android-ship-repo-workflow-engine.sh parity check so the shipped engine and the vendored copy cannot drift.",
+  "android": {
+    "application_id": "com.diegonmarcos.cloudnotes",
+    "namespace": "app.affine.pro",
+    "flavor": "stable",
+    "min_sdk": 24,
+    "target_sdk": 36,
+    "compile_sdk": 36,
+    "gradle_module": "packages/frontend/apps/android/App/app",
+    "_doc_gradle_module": "Path (app-relative) of the Gradle module that builds the APK. EVERY other app in this fleet keeps it at ./app, so test-app-names-pattern.sh T6 hardcoded that convention and looked for <dir>/app/build.gradle \u2014 which this app has never had, because the Android project is nested inside the vendored AFFiNE monorepo. T6 therefore SKIPPED this app in silence, which is exactly how a launcher tile reading \"AFFiNE\" shipped behind 18 green checks (#522). The path is DATA now; T6 reads it and falls back to \"app\" for everyone else.",
+    "version_code": 165,
+    "version_name": "0.27.5",
+    "_doc_application_id": "FLIPPED (#495): this app now IS Cloud Notes, replacing Markor (formerly ac_cloud-notes, now deleted). #469 shipped it alongside the live Markor under com.diegonmarcos.affine on purpose, to avoid ripping out a live app and a 9000-file vendor in one commit; #495 is the flip that was always the documented next step. namespace stays app.affine.pro \u2014 it is the upstream Kotlin/TS package, never shipped as install identity, and renaming it across the vendored tree would be a large, pointless diff.",
+    "_doc_version": "164/0.27.5 (#495). version_code must exceed ac_cloud-notes's last shipped 163 or the fleet updater's downgrade guard refuses to install this as an update over the device's existing Cloud Notes (observed live: 'stale candidate for notes: versionCode 1 is OLDER than the installed 163') \u2014 the vendored AFFiNE Gradle defaults to versionCode 1 with no wiring to this file, which is the defect #495 fixes below. version_name FOLLOWS AFFINE'S OWN UPSTREAM VERSIONING (package.json version at the pinned revision) rather than continuing Markor's Apache-tag-mirroring scheme (163/2.16.1 mirrored upstream Markor tag v2.16.1) \u2014 the two apps have unrelated release trains and there is nothing for a post-flip Cloud Notes to mirror from Markor any more. Read into Gradle by app/build.gradle via JsonSlurper (see that file) \u2014 this is the ONE declaration; nothing else states these numbers. BUMPED TO 165 (#522): the fleet updater compares versionCode and will not offer an update that is not strictly newer, so a rebuild that kept 164 would fix the name and the logging in the repository and leave the owner's phone on the same bytes it has now. 164 is what run 5ba51c1ce published and what is installed today. The applicationId is UNCHANGED (com.diegonmarcos.cloudnotes since #495), so 165 installs straight over it as an ordinary update \u2014 no uninstall, no data loss."
+  },
+  "upstream": {
+    "repo": "https://github.com/toeverything/AFFiNE.git",
+    "pinned_revision": "cfda4858d550c46ec1cd0b574801d7becdd6625b",
+    "license": "MIT",
+    "_doc": "Full clone vendored as owned code (no .git, no upstream remote). MIT except packages/backend + packages/common/native \u2014 BOTH PRUNED (EE licence forbids copying/distributing). Proven at the Cargo level in ac_cloud-notes/VENDORING-LICENCE.md and enforced by the licence-boundary-guard on every push."
+  },
+  "signing": {
+    "vault_keystore": "A0_keys/providers/android/release.jks",
+    "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
+  },
+  "release": {
+    "artifact": {
+      "debug": "Cloud-Notes-debug.apk",
+      "release": "Cloud-Notes.apk"
+    },
+    "ghcr": {
+      "enabled": true,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-notes",
+      "media_type": "application/vnd.android.package-archive"
+    },
+    "gh_release": {
+      "enabled": true,
+      "rolling_tag": "latest",
+      "asset_name": "Cloud-Notes.apk"
+    },
+    "artifact_assert": {
+      "_doc": "Read by cloud-notes-engine.sh::_assert_apk_payload (#513). The ship pipeline could not tell a working app from a blank one: gradle builds a perfectly valid APK around an empty assets/public/, signs it, and CI goes green. These are the floors the BUILT ARTIFACT must clear \u2014 bytes and presence, never a filename in a manifest. Set far below what a healthy build produces (observed on the published APK: index.html 2696 B, 114 chunks / 31.2 MB of JS, libaffine_mobile_native.so 51.8 MB) so a real regression trips them and normal upstream churn does not.",
+      "web_entry": "assets/public/index.html",
+      "web_entry_min_bytes": 1024,
+      "js_prefix": "assets/public/js/",
+      "js_min_chunks": 10,
+      "js_min_total_bytes": 5000000,
+      "native_libs": [
+        "lib/arm64-v8a/libaffine_mobile_native.so"
+      ],
+      "native_lib_min_bytes": 1048576,
+      "required_globs": [
+        "assets/public/js/nbstore-*.worker.js",
+        "assets/public/assets/onboarding.*.zip"
+      ],
+      "_doc_required_globs": "#522: the two payload files the FIRST LAUNCH cannot proceed without, named because the first launch is where this app has failed twice. app.tsx opens the local document store with `new Worker(getWorkerUrl(nbstore))`, and core/src/utils/first-app-data.ts bootstraps the first workspace with `fetch(onboardingUrl)` over the bundled onboarding template. Either one absent and createFirstAppData() rejects, the rejection is caught in core/src/desktop/pages/index/index.tsx, and the owner is shown \"An internal error occurred.\" behind a green CI run. Globs, not literal names, because both carry a content hash / a version.",
+      "kotlin_binding": "packages/frontend/apps/android/App/app/src/main/java/uniffi/affine_mobile_native/affine_mobile_native.kt",
+      "_doc_kotlin_binding": "#522: the committed UniFFI binding, asserted against the SHIPPED .so by test-launch-payload.sh. #469 hand-edited this file to drop hashcash_mint and cut two lines too many, leaving `uniffi_affine_mobile_native_fn_func_new_doc_storage_pool` CALLED but never DECLARED and an orphan `): Pointer` in the interface body \u2014 committed Kotlin that does not parse. Nothing noticed, because Gradle regenerates the file from the built .so before javaCompile (the generate<Variant>UniFFIBindings task, which #469 believed was a no-op). A committed source that is never the source that builds is a trap with a fuse on it."
+    }
+  },
+  "tests": {
+    "_doc": "Shell testers under ac_cloud-notes/test/ that prove licence-cleanliness and app identity WITHOUT a build. Read by cloud-android-test-engine.sh::tests.shell.",
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3",
+        "git",
+        "curl"
+      ]
+    },
+    "root_scope": {
+      "_doc": "Read by test/test-root-scope-services.sh (#513). entrypoint is the file whose every render happens on the ROOT framework provider; module_roots are the trees walked to DERIVE which services are registered under a .scope(...) and are therefore unresolvable there. Paths live here, never in the tester.",
+      "entrypoint": "packages/frontend/apps/android/src/app.tsx",
+      "module_roots": [
+        "packages/frontend/core/src",
+        "packages/frontend/apps/android/src"
+      ]
+    }
+  }
+}

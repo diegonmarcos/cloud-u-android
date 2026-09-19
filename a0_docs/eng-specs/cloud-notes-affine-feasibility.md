@@ -1,11 +1,11 @@
 # Cloud Notes (AFFiNE) — feasibility, and why nothing was shipped
 
-Status: **RESOLVED.** #469 vendored AFFiNE as `ac_cloud-affine/` — MIT-licensed
+Status: **RESOLVED.** #469 vendored AFFiNE as `ac_cloud-notes/` — MIT-licensed
 code only, `packages/backend` and `packages/common/native` pruned exactly as
 this doc's EE-licence analysis below required — shipped alongside the then-live
 Markor (`ac_cloud-notes/`) under a separate identity (`com.diegonmarcos.affine`)
 rather than replacing it outright. #495 completed the replacement: flipped
-`ac_cloud-affine`'s applicationId to `com.diegonmarcos.cloudnotes` and deleted
+`ac_cloud-notes`'s applicationId to `com.diegonmarcos.cloudnotes` and deleted
 `ac_cloud-notes/` (Markor). Cloud Notes is AFFiNE from that commit on. The
 analysis below is kept as the historical record of the licence and toolchain
 investigation that made the #469 vendoring possible; it predates both commits

@@ -38,7 +38,7 @@ modifications — including any surface we build on top of it — must be releas
 under GPL-3.0 with the same attribution. `LICENSE.md`, `README.md` and the
 upstream notices therefore stay untouched in this tree by design, the same way
 every other vendored-owned-code tree in this fleet keeps its upstream licence
-and notices with the code (see e.g. ac_cloud-affine/VENDORING-LICENCE.md).
+and notices with the code (see e.g. ac_cloud-notes/VENDORING-LICENCE.md).
 
 Distribution consequence for anything that links this tree into an APK: the
 APK must be distributable under GPL-3.0-compatible terms. This is recorded in

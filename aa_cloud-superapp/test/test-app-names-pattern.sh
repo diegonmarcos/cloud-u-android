@@ -142,20 +142,34 @@ print("== T6: an app whose gradle reads its build.json takes its launcher label 
 # inherited, so a strings.xml copy is a defect. Fork-apps whose label sits inside
 # vendored upstream source (Mattermost, Element, Fossify, Termux) have no such
 # reader and are not covered here.
+#
+# #522: THE GRADLE MODULE PATH IS DATA, NOT A CONVENTION. This block used to
+# look only at <dir>/app/build.gradle. ac_cloud-notes has never had that path —
+# its Android project is nested inside a vendored AFFiNE monorepo at
+# packages/frontend/apps/android/App/app — so T6 did not fail on it, it SKIPPED
+# it, silently, and a launcher tile reading "AFFiNE" shipped behind 18 green
+# checks. An app that needs a different path DECLARES it in
+# build.json::android.gradle_module; "app" is the default nobody has to write.
 reads_build_json = re.compile(r"JsonSlurper\(\)\s*\.parse\(\s*file\(")
 derives_label = re.compile(r"resValue\s*\(?\s*[\"']string[\"']\s*,\s*[\"']app_name[\"']\s*,\s*buildJson\.name\b")
 covered = 0
 for directory in sorted(build_files):
-    gradle = os.path.join(root, directory, "app", "build.gradle")
-    if not os.path.isfile(gradle) or not build_files[directory].get("name", "").startswith("cloud-"):
+    data = build_files[directory]
+    module = (data.get("android") or {}).get("gradle_module") or "app"
+    gradle = os.path.join(root, directory, module, "build.gradle")
+    if not os.path.isfile(gradle) or not data.get("name", "").startswith("cloud-"):
         continue
     source = open(gradle).read()
     if not reads_build_json.search(source):
+        # Fork-apps whose label sits inside vendored upstream source
+        # (Mattermost, Element, Fossify, Termux, Nix-on-Droid) have no reader
+        # and are out of scope here, exactly as before #522.
         continue
     covered += 1
     check(derives_label.search(source) is not None,
-          "%s/app/build.gradle reads build.json but does not set app_name from buildJson.name" % directory)
-    resources = os.path.join(root, directory, "app", "src")
+          "%s/%s/build.gradle reads build.json but does not set app_name from buildJson.name"
+          % (directory, module))
+    resources = os.path.join(root, directory, module, "src")
     for base, _, files in os.walk(resources):
         if "strings.xml" in files and os.path.basename(base).startswith("values"):
             path = os.path.join(base, "strings.xml")
@@ -163,6 +177,14 @@ for directory in sorted(build_files):
                 check(False, "%s restates app_name — the launcher label comes from build.json::name"
                       % os.path.relpath(path, root))
 check(covered > 0, "T6 found no application whose gradle reads its build.json — the detection matched nothing")
+# A declared gradle_module that points at nothing is a check that quietly
+# stopped guarding: the app would drop out of T6 exactly as it did before #522.
+for directory, data in sorted(build_files.items()):
+    module = (data.get("android") or {}).get("gradle_module")
+    if module:
+        check(os.path.isfile(os.path.join(root, directory, module, "build.gradle")),
+              "%s/build.json::android.gradle_module = %r has no build.gradle — T6 would skip this app in silence"
+              % (directory, module))
 
 print("== T7: a launcher tile shows a caption, never an application's identity ==")
 # THE FAILURE THIS EXISTS FOR (#380, #381). Cloud ▸ Apps drew a Data Apps tile

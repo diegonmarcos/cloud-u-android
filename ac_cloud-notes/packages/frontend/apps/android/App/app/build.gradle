@@ -1,0 +1,232 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
+
+plugins {
+    alias libs.plugins.android.application
+    alias libs.plugins.kotlin.android
+    alias libs.plugins.kotlin.parcelize
+    alias libs.plugins.kotlin.serialization
+    alias libs.plugins.ksp
+    alias libs.plugins.rust.android
+    alias libs.plugins.compose
+    alias libs.plugins.hilt
+}
+
+def nativeTarget = System.getenv('AFFINE_ANDROID_NATIVE_TARGET') ?: 'arm64'
+def nativeAbi = nativeTarget == 'x86_64' ? 'x86_64' : 'arm64-v8a'
+
+apply from: 'capacitor.build.gradle'
+
+// #495: application identity and version are DECLARED ONCE in build.json at
+// the app root (android.application_id / version_code / version_name) and
+// READ here, the same JsonSlurper pattern ac_cloud-camera/app/build.gradle.kts
+// uses for its own build.json data. Before this the vendored Gradle's own
+// versionCode default (1) shipped untouched, which is a downgrade against any
+// installed Cloud Notes with a higher versionCode — see build.json::android._doc_version.
+//
+// #522: the variable is named buildJson, and the file is reached through
+// file(), because that is the shape the whole fleet uses and the shape
+// test-app-names-pattern.sh T6 detects (ac_cloud-browser, ac_cloud-news,
+// aa_cloud-superapp all read `new groovy.json.JsonSlurper().parse(file(...))`
+// into `buildJson`). Spelling it `buildMeta` + `rootProject.file(` made this
+// app invisible to T6 — which is why a launcher tile reading "AFFiNE" shipped
+// behind 18 green checks.
+def buildJson = new groovy.json.JsonSlurper().parse(file('../../../../../../build.json'))
+def androidMeta = buildJson.android
+
+android {
+    namespace = "app.affine.pro"
+    compileSdk = rootProject.ext.compileSdkVersion
+    // PINNED (#469): upstream resolves "whatever NDK happens to be installed"
+    // (listFiles().sort().last()) — a floating version from the runner image.
+    // This fleet refuses to build against an unpinned toolchain. The ship
+    // workflow installs exactly this NDK (android-actions/setup-android).
+    ndkVersion = "27.2.12479018"
+    defaultConfig {
+        applicationId = androidMeta.application_id
+        minSdkVersion = rootProject.ext.minSdkVersion
+        targetSdkVersion = rootProject.ext.targetSdkVersion
+        // Fleet rule (#299): English is the base language. This filter drops
+        // every values-* locale this app and its libraries merge, so a phone
+        // set to Spanish still gets English — and the i18n guard requires it.
+        resConfigs "en"
+        versionCode = androidMeta.version_code
+        versionName = androidMeta.version_name
+        // #522: the LAUNCHER LABEL. It lived in res/values/strings.xml as the
+        // literal "AFFiNE" — the upstream project's name rendered as this
+        // product's identity on the owner's home screen, the #380/#381/#390/#424
+        // defect family exactly. The name is DECLARED ONCE in build.json::name
+        // and derived here; strings.xml no longer states it at all.
+        resValue "string", "app_name", buildJson.name
+        resValue "string", "title_activity_main", buildJson.name
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders = [usesCleartextTraffic: "false"]
+        aaptOptions {
+            // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+            // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+        ndk {
+            abiFilters nativeAbi
+        }
+    }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+        viewBinding = true
+    }
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        profile {
+            initWith release
+            profileable true
+            signingConfig signingConfigs.debug
+            matchingFallbacks = ['release']
+        }
+        debug {
+            minifyEnabled false
+            debuggable true
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
+        }
+    }
+    flavorDimensions = ['chanel']
+    productFlavors {
+        stable
+        beta
+        internal
+        canary
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+}
+
+repositories {
+    flatDir {
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation project(':capacitor-android')
+    implementation project(':capacitor-cordova-android-plugins')
+
+    implementation libs.androidx.appcompat
+    implementation libs.androidx.browser
+    implementation libs.timber
+
+    implementation libs.hilt.android.core
+    ksp libs.hilt.compiler
+
+    def composeBom = platform(libs.androidx.compose.bom)
+    implementation composeBom
+    implementation libs.androidx.activity.compose
+    implementation libs.androidx.compose.foundation.layout
+    implementation libs.androidx.compose.material3
+    implementation libs.androidx.compose.material.icons.extended
+    implementation libs.androidx.compose.runtime.livedata
+    implementation libs.androidx.compose.ui.tooling.preview
+    implementation libs.androidx.compose.ui.util
+    implementation libs.androidx.compose.ui.viewbinding
+    implementation libs.androidx.compose.ui.googlefonts
+    implementation libs.androidx.lifecycle.viewModelCompose
+    implementation libs.androidx.lifecycle.runtime.compose
+    implementation libs.androidx.navigation.compose
+    debugImplementation composeBom
+    debugImplementation libs.androidx.compose.ui.test.manifest
+    debugImplementation libs.androidx.compose.ui.tooling
+
+    implementation libs.androidx.coordinatorlayout
+    implementation libs.androidx.core.ktx
+    implementation libs.androidx.core.splashscreen
+    implementation libs.androidx.datastore.preferences
+    implementation libs.androidx.navigation.fragment
+    implementation libs.androidx.navigation.ui.ktx
+    implementation libs.androidx.webkit
+
+    implementation libs.kotlinx.coroutines.android
+    implementation libs.kotlinx.serialization.json
+
+    implementation (libs.jna) {
+        artifact {
+            type = 'aar'
+        }
+    }
+
+    implementation libs.richtext.commonmark
+    implementation libs.richtext.ui
+
+    testImplementation libs.junit
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.espresso.core
+    androidTestImplementation platform(libs.okhttp.bom)
+    androidTestImplementation "com.squareup.okhttp3:mockwebserver"
+}
+
+cargo {
+    module = "../../../../mobile-native"
+    libname = "affine_mobile_native"
+    features {
+        defaultAnd("use-as-lib")
+    }
+    targets = [nativeTarget]
+    pythonCommand = "python3"
+    targetDirectory = "../../../../../../target"
+    apiLevel = 28
+    targetIncludes = ["libaffine_mobile_native.so"]
+    profile = "release"
+}
+
+kotlin {
+    compilerOptions {
+        apiVersion = KotlinVersion.KOTLIN_2_2
+        languageVersion = KotlinVersion.KOTLIN_2_2
+        jvmTarget = JvmTarget.JVM_21
+    }
+}
+
+afterEvaluate {
+    // The `cargoBuild` task isn't available until after evaluation.
+    android.applicationVariants.configureEach { variant ->
+        def productFlavor = ""
+        variant.productFlavors.each {
+            productFlavor += "${it.name.capitalize()}"
+        }
+        def buildType = "${variant.buildType.name.capitalize()}"
+        tasks["generate${productFlavor}${buildType}Assets"].dependsOn(tasks["cargoBuild"])
+        def variantName = "${variant.name.substring(0,1).toUpperCase()}${variant.name.substring(1)}"
+        def mergeNativeLibsTask = tasks.findByName("merge${variantName}NativeLibs")
+        if (mergeNativeLibsTask != null) {
+            mergeNativeLibsTask.dependsOn(tasks["cargoBuild"])
+        }
+    }
+}
+
+def localProps = new Properties()
+def localPropsFile = file("${rootProject.projectDir}/local.properties")
+if (localPropsFile.exists()) {
+    localPropsFile.withInputStream { localProps.load(it) }
+}
+def cargoPath = localProps.getProperty("rust.cargoCommand") ?: 'cargo'
+android.applicationVariants.configureEach { variant ->
+    def variantName = "${variant.name.substring(0,1).toUpperCase()}${variant.name.substring(1)}"
+    def t = tasks.register("generate${variantName}UniFFIBindings", Exec) {
+        workingDir "${project.projectDir}"
+        // Runs the bindings generation, note that you must have uniffi-bindgen installed and in your PATH environment variable
+        commandLine "${cargoPath}", 'run', '--bin', 'uniffi-bindgen', 'generate', '--library', "${buildDir}/rustJniLibs/android/${nativeAbi}/libaffine_mobile_native.so", '--language', 'kotlin', '--out-dir', "${project.projectDir}/src/main/java"
+        dependsOn("cargoBuild")
+    }
+    variant.javaCompileProvider.get().dependsOn(t)
+}
+
+tasks.whenTaskAdded { task ->
+    if ((task.name == 'javaPreCompileDebug' || task.name == 'javaPreCompileRelease')) {
+        task.dependsOn 'cargoBuild'
+    }
+}

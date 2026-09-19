@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <!-- #522: app_name and title_activity_main are NOT declared here.
+         They said "AFFiNE" — the upstream project's name printed as this
+         product's identity on the owner's home screen. The name is declared
+         ONCE in ac_cloud-notes/build.json::name and emitted by app/build.gradle
+         as a resValue; a copy here would be a second, disagreeing declaration
+         (#351) and test-app-names-pattern.sh T6 fails on exactly that.
+         package_name / custom_url_scheme stay: they are the upstream Kotlin/TS
+         namespace (app.affine.pro), never an install identity and never shown. -->
+    <string name="package_name">app.affine.pro</string>
+    <string name="custom_url_scheme">app.affine.pro</string>
+</resources>
