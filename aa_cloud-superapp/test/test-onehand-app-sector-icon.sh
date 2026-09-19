@@ -248,13 +248,16 @@ echo "== T4: the CONFIGS PICKER falls back too — it is the page he was looking
 # a per-line grep for "does this end at getOrNull()" calls the FIXED code broken.
 FRAGC=$(strip_kt "$FRAG" | tr '\n' ' ' | tr -s ' ')
 
-echo "$FRAGC" | grep -qF 'runCatching { pm.getApplicationIcon(it.pkg) }.getOrNull() ?: declaredAppIcon(ctx, cfg, "app:${it.pkg}")' \
+# 2026-09-19: the PM lookup goes through AppIconCache (Knox prices each raw
+# getApplicationIcon in SECONDS; the cache is the one file allowed to pay it).
+# Same order, same fallback: cache(=PackageManager, once) first, tile second.
+echo "$FRAGC" | grep -qF 'AppIconCache.load(ctx, it.pkg) ?: declaredAppIcon(ctx, cfg, "app:${it.pkg}")' \
   && ok "the picker's favourite rows fall back from PackageManager to the declared drawable" \
   || bad "the picker's favourite rows still take PackageManager as their only icon source"
 
 # The order is the assertion, not an accident: PackageManager first means an
 # INSTALLED app keeps showing its own launcher icon rather than a tile stand-in.
-echo "$FRAGC" | grep -qF 'declaredAppIcon(ctx, cfg, "app:${it.pkg}") ?: runCatching' \
+echo "$FRAGC" | grep -qF 'declaredAppIcon(ctx, cfg, "app:${it.pkg}") ?: AppIconCache' \
   && bad "the picker consults the tile BEFORE PackageManager — an installed app loses its own icon" \
   || ok "and PackageManager is consulted first, so an installed app keeps its own icon"
 
