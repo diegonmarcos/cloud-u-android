@@ -16,10 +16,11 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.navigation.NavigationView
 
 /**
- * "Home" drawer page — the all-sections index. Menu is built programmatically
- * from [Sections] so it mirrors `build.json::ui.sections[*].pages[*]` and
- * `ui.home_actions`. Single source of truth; the drawer has no hardcoded
- * Kotlin/XML inventory.
+ * "Home" drawer page — the main-menu: the site-map index of the whole app.
+ * Menu is built programmatically from [Sections] (one declaration in
+ * `build.json::ui.main_menu` for the quick/search entries below the Profile
+ * badge, plus `ui.home_groups` / `ui.sections[*].pages[*]`), so the menu holds
+ * the ONE site map and has no hardcoded Kotlin inventory.
  *
  * Each top-level group is a section; its sub-items are that section's pages
  * (or `drawer_default_children` as fallback when no pages[] is declared).
@@ -130,12 +131,12 @@ class HomeDrawerFragment : Fragment() {
         dispatch.clear()
         var id = MENU_BASE
 
-        // Prepend entries (build.json::ui.home_drawer_prepend) — render
-        // ABOVE the first section so quick-access items (Home Apps sheet,
-        // …) stay above the alphabetical section list. Same dispatch as
-        // home_actions.
+        // Prepend entries (build.json::ui.main_menu) — the main-menu site map,
+        // rendered ABOVE the first section, directly below the header's Profile
+        // badge, so the two search entries (Search ML, Search CGC) sit below the
+        // profile in their declared order. Same dispatch as home_actions.
         val prependGroupId = id++
-        for (action in Sections.homeDrawerPrepend()) {
+        for (action in Sections.mainMenu()) {
             val actId = id++
             val actItem = menu.add(prependGroupId, actId, Menu.NONE, action.label)
             Sections.iconResFor(ctx, action.iconName).takeIf { it != 0 }

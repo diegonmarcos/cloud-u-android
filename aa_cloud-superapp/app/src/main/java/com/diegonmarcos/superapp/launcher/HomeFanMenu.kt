@@ -39,19 +39,35 @@ object HomeFanMenu {
         fun dismiss()
     }
 
-    /** Home's own fixed 4-bubble layout — unchanged by the generic
-     *  [show] overload other bottom-nav items now use (build.json::
-     *  sections[*].pages). Kept separate per the user's "Home
-     *  stays as it is" instruction. */
-    val HOME_ITEMS = listOf(
-        // "config", NOT "configs" — build.json declares the section id
-        // singular, and an unknown section: target silently no-ops, which is
-        // why this bubble looked like it never landed.
-        "section:config"          to (R.drawable.ic_settings  to "Configs"),
-        "page:recentapps/grid"    to (R.drawable.ic_file_stack to "Recent Apps"),
-        "page:apptabs/grid"       to (R.drawable.ic_mode_apps to "Tabs"),
-        "action:check_updates"    to (R.drawable.ic_refresh   to "Update"),
-    )
+    /** Home's own fixed 4-bubble layout — DERIVED from the ONE declarations
+     *  (the ui.pages page registry plus ui.sections), never a hand-written
+     *  Kotlin list, so the fan cannot drift from the site map. Home keeps
+     *  its own fixed 4-bubble layout rather than the generic
+     *  [show] overload (which renders build.json::sections[*].pages) per the
+     *  user's "Home stays as it is" instruction.
+     *
+     *  Everything here is looked up, not restated: the section bubble reads
+     *  [Sections.byId] for its label and icon, the three page bubbles read
+     *  the ui.pages registry head-on so a rename of the destination moves the
+     *  bubble with it. No destination string or label is written in Kotlin.
+     */
+    fun homeItems(ctx: android.content.Context): List<Pair<String, Pair<Int, String>>> {
+        val out = mutableListOf<Pair<String, Pair<Int, String>>>()
+        Sections.byId("config")?.let { cfg ->
+            out += "section:config" to
+                (iconRes(ctx, cfg.iconName) to cfg.label)
+        }
+        // ui.pages registry ids, in Home's fixed order.
+        for (id in listOf("recent-apps", "apptabs-grid", "update")) {
+            Pages.byId(id)?.let { pg ->
+                out += pg.target to (iconRes(ctx, pg.icon) to pg.label)
+            }
+        }
+        return out
+    }
+
+    private fun iconRes(ctx: android.content.Context, name: String): Int =
+        if (name.isBlank()) 0 else Sections.iconResFor(ctx, name)
 
     /** items ordering = render order = bubble index. Top entry FIRST so
      *  bubbles[0] is the centered top bubble; commit() reads items[idx]

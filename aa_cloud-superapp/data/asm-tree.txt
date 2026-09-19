@@ -259,7 +259,7 @@ GLOBAL CHROME & SERVICES
 
 Drawer (← swipe) ── HomeDrawerFragment
   [Home] → master index
-  + prepend actions (home_drawer_prepend)
+  + main-menu entries (ui.main_menu) — incl. Search ML, Search CGC below the Profile badge
   All sections listed with 2-level expand
 
 Dynamic Island pill ── toolbar

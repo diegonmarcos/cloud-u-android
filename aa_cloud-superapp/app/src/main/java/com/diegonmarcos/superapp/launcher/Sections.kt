@@ -1156,12 +1156,15 @@ object Sections {
         return cachedActions!!
     }
 
-    /** Drawer prepend list — rendered ABOVE the first section in the
-     *  home drawer (build.json::ui.home_drawer_prepend). Same shape as
-     *  home_actions; the actions dispatch through the same path. */
-    fun homeDrawerPrepend(): List<Action> {
+    /** main-menu site map — the ONE declaration the home drawer's top-left
+     *  menu renders (build.json::ui.main_menu). Rendered ABOVE the first
+     *  section group, directly below the drawer header's Profile badge. Same
+     *  shape as home_actions; the actions dispatch through the same path.
+     *  This is the source of truth for the menu: no navigation surface
+     *  restates a main-menu label as a Kotlin literal. */
+    fun mainMenu(): List<Action> {
         cachedPrepend?.let { return it }
-        cachedPrepend = parseActionsB64(BuildConfig.UI_HOME_DRAWER_PREPEND_B64)
+        cachedPrepend = parseActionsB64(BuildConfig.UI_MAIN_MENU_B64)
         return cachedPrepend!!
     }
 
@@ -1173,7 +1176,7 @@ object Sections {
             val o = arr.getJSONObject(i)
             parsed.add(
                 Action(
-                    // home_drawer_prepend entries don't have an `id` field
+                    // main_menu entries don't have an `id` field
                     // (action_type is unique enough); fall back to that.
                     id         = o.optString("id", o.getString("action_type")),
                     label      = o.getString("label"),

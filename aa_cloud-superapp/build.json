@@ -6151,12 +6151,24 @@
     },
         "_doc_home_actions": "App-level action tiles shown in the Home master TileGrid AFTER the section tiles. Each `action_type` is handled by MainActivity.onTileClicked('action:<id>'). A URL-shaped action_type is launched via launchUri. Extend by adding entries here — never hardcoded in Kotlin.",
     "home_actions": [],
-    "_doc_home_drawer_prepend": "Drawer menu entries prepended ABOVE the first section. Same {label, icon, action_type} shape as home_actions; dispatched through MainActivity.dispatchHomeAction. Use for quick-access items that aren't tied to a single section — e.g. opening the swipe-up Home Apps sheet from the drawer too.",
-    "home_drawer_prepend": [
+    "_doc_main_menu": "main-menu — the home-screen top-left menu, carried by the drawer's Home pane (HomeDrawerFragment). It IS the site map: THE ONE declaration of the quick destinations the app offers, and navigation surfaces render it (or the ui.pages page registry it sits beside) rather than hand-writing their own copy of the same list (#521). Each entry is {label, icon, action_type}, dispatched through MainActivity.dispatchHomeAction; entries render below the Profile badge (the drawer header's identity row, nav_header), so this array is the declared order a tester reads. The two search entries are what #524 and #526 asked for together: 'Search ML' (the existing general search sheet, formerly the draw-mended label 'Search') and 'Search CGC' (the cloud code-graph search, formerly 'Search plus') — both declared HERE once, in this order, and rendered by the main-menu; a Kotlin literal of either label in any navigation surface is a second copy and fails the main-menu tester. Renamed from home_drawer_prepend in #521 so the menu's identity is the declaration.",
+    "main_menu": [
       {
         "label": "Home Apps",
         "icon": "ic_home_apps",
         "action_type": "open_home_apps"
+      },
+      {
+        "id": "search-ml",
+        "label": "Search ML",
+        "icon": "ic_search",
+        "action_type": "open_search"
+      },
+      {
+        "id": "search-cgc",
+        "label": "Search CGC",
+        "icon": "ic_search",
+        "action_type": "open_search"
       }
     ],
     "_doc_config_source": "Where Configs → Profile → 'OWebAuth Authelia · Auto Import Configs' pulls the whole config from. DATA-DRIVEN ON PURPOSE: nothing here appears as a Kotlin literal — app/build.gradle bakes these into BuildConfig.UI_CONFIG_SOURCE_* and ConfigSyncClient/ProfileFragment read only those, so repointing the endpoint or changing the user slug is a JSON edit + rebuild, never a code change. AUTH: the user pastes an Authelia token which is sent verbatim as `Authorization: Bearer <token>`; it is validated server-side by the existing introspect-proxy / @bearer gate in front of the route. There is deliberately NO in-app OAuth dance and no client secret to keep in sync. The token is never persisted, logged, or exported. FORMAT_VERSION is the artifact contract version: ConfigAutoImport refuses the whole artifact (applying nothing) unless _meta.format_version matches this major version. base_url + path_template are joined with {user} substituted. ROUTE: this is one more member of c3-infra-api's /cloud-data/* family (siblings: /cloud-data/configs, /cloud-data/caddy-routes, /cloud-data/cloudflare-dns, /cloud-data/authelia-acl). If the cloud side lands on a different final spelling, edit path_template here — no Kotlin changes.",

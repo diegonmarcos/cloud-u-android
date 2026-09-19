@@ -53,7 +53,7 @@ class LauncherToolbarFx(
     fun pause() = cancelHamburgerJitter()
 
     // ── long-press fan menu on every bottom-nav item ─────────────────────
-    /** Home keeps its own fixed 4-bubble layout ([HomeFanMenu.HOME_ITEMS]);
+    /** Home keeps its own fixed 4-bubble layout ([HomeFanMenu.homeItems]);
      *  the other 4 items render their build.json::sections[*].pages
      *  list (Sections.Section.pages) — empty ⇒ no fan menu for that item. */
     private fun installNavFanMenus() {
@@ -66,7 +66,7 @@ class LauncherToolbarFx(
                 val navId = items.getItem(i).itemId
                 val itemView = menuView.getChildAt(i) ?: continue
                 val fanItems: List<Pair<String, Pair<Int, String>>> = if (navId == R.id.nav_home) {
-                    HomeFanMenu.HOME_ITEMS
+                    HomeFanMenu.homeItems(itemView.context)
                 } else {
                     val sectionId = sectionIdForNavId(navId) ?: continue
                     val section = Sections.byId(sectionId) ?: continue
