@@ -350,7 +350,7 @@
     "db_engine": null
   },
   {
-    "name": "hermes-agent",
+    "name": "cloud-agi-hermes",
     "service": "hermes-agent",
     "vm": "oci-A1-f_0",
     "private_dns": "hermes-agent.app:8642",
@@ -380,7 +380,7 @@
     "db_engine": "surrealdb"
   },
   {
-    "name": "my-ai-api",
+    "name": "cloud-agi-goose",
     "service": "my-ai-api",
     "vm": "oci-A1-f_0",
     "private_dns": "my-ai-api.app:3217",
@@ -390,7 +390,7 @@
     "db_engine": null
   },
   {
-    "name": "my-ai_claude-api",
+    "name": "cloud-agi-claude",
     "service": "my-ai_claude-api",
     "vm": "oci-A1-f_0",
     "private_dns": "my-ai-claude-api.app:3117",
