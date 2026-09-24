@@ -22,7 +22,7 @@ import com.google.android.material.color.MaterialColors
 object ShellBottomNav {
 
     /** ui.bottom_nav in bar order, each item labelled and iconed by its section for [mode]. */
-    fun items(ctx: Context, mode: String): List<BottomNavViewItem> = Sections.bottomNav().map {
+    fun items(ctx: Context, mode: String): List<BottomNavViewItem> = Sections.bottomNav().reversed().map {
         BottomNavViewItem(it.id, it.label, Sections.iconResFor(ctx, it.iconForMode(mode)))
     }
 
@@ -33,7 +33,7 @@ object ShellBottomNav {
     fun colorScheme(ctx: Context): ColorScheme {
         fun attr(id: Int) = Color(MaterialColors.getColor(ctx, id, "ShellBottomNav"))
         return darkColorScheme(
-            inverseSurface = attr(com.google.android.material.R.attr.colorSurfaceInverse),
+            inverseSurface = attr(com.google.android.material.R.attr.colorOnSurfaceVariant),
             inverseOnSurface = attr(com.google.android.material.R.attr.colorOnSurfaceInverse),
             onSurfaceVariant = attr(com.google.android.material.R.attr.colorOnSurfaceVariant),
         )
@@ -44,6 +44,6 @@ object ShellBottomNav {
         nav.colorScheme = colorScheme(nav.context)
         // ShellActivity.applyEdgeToEdgeInsets pads shell_linear by the system-bar inset, and the
         // island sits inside it. Reading the live inset again would lift the bar twice (#477).
-        nav.insets = WindowInsets(0, 0, 0, 0)
+        nav.insets = null
     }
 }

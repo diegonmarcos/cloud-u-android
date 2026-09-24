@@ -110,13 +110,12 @@ internal fun WalletBottomNav(
     MaterialTheme(colorScheme = walletNavScheme) {
         BottomNavIsland(
             entries = entries,
-            selectedId = WalletNavItem.entries.firstOrNull { it.tab == selected }?.name,
+            selectedId = WalletNavItem.entries.firstOrNull { it.tab == selected }?.name ?: WalletNavItem.IDs.name,
             onSelect = { entry -> WalletNavItem.valueOf(entry.id).tab?.let(onSelect) ?: onOpenMe() },
             modifier = modifier,
             // Cloud Wallet's fragment_container (fitsSystemWindows) already pads for the system
             // bars, and the island sits inside it. Reading the live inset again would lift the bar
             // twice (#477).
-            insets = WindowInsets(0, 0, 0, 0),
         )
     }
 }
