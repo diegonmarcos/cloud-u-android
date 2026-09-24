@@ -30,6 +30,13 @@ data class OneHandConfig(
      *  one sector render as a raw URL three times. Falls back to
      *  circular_menu.actions for a config baked before that key existed. */
     val appActions: List<AppAction> = emptyList(),
+    /** build.json::onehand.retired_targets — a destination that no longer
+     *  exists, keyed by its serialized form, mapped to where it moved. A stored
+     *  override outlives every default shipped after it, so without this an
+     *  override picked before Drive left the app (#302/#304) kept the edge on a
+     *  dead `section:drive` with no glyph, however often the default was fixed
+     *  (#404, #537). Applied in [effective], the one place overrides meet. */
+    val retiredTargets: Map<String, GestureAction> = emptyMap(),
 ) {
     enum class Edge { LEFT, RIGHT, BOTTOM }
 
@@ -133,10 +140,15 @@ data class OneHandConfig(
                         add(AppAction(label, target, a.optString("icon")))
                 }
             }
+            val retiredJson = json.optJSONObject("retired_targets") ?: JSONObject()
+            val retired = buildMap {
+                for (k in retiredJson.keys())
+                    GestureAction.parse(retiredJson.optString(k))?.let { put(k, it) }
+            }
             return OneHandConfig(
                 handles, apps, d.optInt("swipe_threshold_dp", 24),
                 trigger, d.optInt("long_press_ms", 300),
-                d.optInt("edge_inset_gesture_dp", 28), radial, appActions,
+                d.optInt("edge_inset_gesture_dp", 28), radial, appActions, retired,
             )
         }
 
@@ -151,7 +163,7 @@ data class OneHandConfig(
                 val merged = LinkedHashMap<String, GestureAction>()
                 for (slot in slotsFor(h.edge)) {
                     OneHandPrefs.actionFor(ctx, h.id, slot.key, h.gestures[slot.key])
-                        ?.let { merged[slot.key] = it }
+                        ?.let { merged[slot.key] = base.retiredTargets[it.serialize()] ?: it }
                 }
                 h.copy(gestures = merged)
             })
