@@ -226,12 +226,15 @@ public fun BottomNavBar(nav: NavController, currentRoute: String, content: @Comp
     }?.id
     val collapse = rememberBottomNavCollapse()
     val insets = bottomNavInsets()
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // The island below already clears the bottom system bar, so the content must not clear it
         // a second time: consumed for the content ONLY. The island still reads it (#477).
         Box(
             Modifier
-                .fillMaxSize()
+                .weight(1f)
+                .fillMaxWidth()
+                .consumeWindowInsets(insets.only(WindowInsetsSides.Bottom))
+                .nestedScroll(collapse)
                 .testTag(TAG_CONTENT),
         ) { content() }
         BottomNavIsland(
@@ -241,7 +244,6 @@ public fun BottomNavBar(nav: NavController, currentRoute: String, content: @Comp
                 val item = bottomNavItems.first { it.id == entry.id }
                 onItemTap(context, nav, item, currentRoute, leaveOnce, missing[item] ?: "")
             },
-            modifier = Modifier.align(Alignment.BottomCenter),
             collapsed = collapse.collapsed,
             insets = insets,
         )
