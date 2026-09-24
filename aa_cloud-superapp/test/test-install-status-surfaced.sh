@@ -49,7 +49,10 @@ RCV="$UPD/PackageInstallerReceiver.kt"
 INST="$UPD/install/UpdateInstaller.kt"
 SRC="$UPD/source/ApkSource.kt"
 FLEET="$UPD/Fleet.kt"
-PAGE="$LIB/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreCloudFragment.kt"
+# #564: both Store tabs install through FleetInstall.run — the one body that
+# decides whether the advisory clears (test-store-classification.sh T6 holds
+# that nothing else calls Fleet.install).
+PAGE="$LIB/appstore/src/main/java/com/diegonmarcos/superapp/appstore/FleetInstall.kt"
 
 echo "== T1: NO status branch is silent =="
 # THE ASSERTION THAT WOULD HAVE CAUGHT THIS. Walk the `when (status)` block by
@@ -153,7 +156,7 @@ echo "== T7: no success is reported without observing success =="
 # record a later failure was supposed to leave.
 has_code "$FLEET" 'fun observesOutcome(channelName: String)' "the two meanings of 'the channel returned' are distinguished"
 has_code "$FLEET" 'channelName == ShellInstall.name'         "only the channel that reads pm's answer counts as observed"
-has_code "$PAGE"  'if (Fleet.install(ctx, app)) Advisory.recordSuccess' "the page clears the advisory only on an observed install"
+has_code "$PAGE"  'if (Fleet.install(ctx, app)) Advisory.recordSuccess' "the store clears the advisory only on an observed install"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
