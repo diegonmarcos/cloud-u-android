@@ -48,7 +48,7 @@ object AppInventory {
         val pm = ctx.packageManager
         val fleet = fleetPackages()
         val shelves = AppStoreHost.classify(ctx, labels)
-        return labels.keys.sorted().mapNotNull { pkg ->
+        return labels.keys.mapNotNull { pkg ->
             val info = runCatching { pm.getPackageInfo(pkg, 0) }.getOrNull() ?: return@mapNotNull null
             val origin = PhoneAppActions.installerOf(ctx, pkg)
             Entry(pkg, info.versionName.orEmpty(), PackageInfoCompat.getLongVersionCode(info),
@@ -58,7 +58,7 @@ object AppInventory {
 
     fun toJson(entries: List<Entry>): String {
         val apps = JSONArray()
-        for (e in entries.sortedBy { it.pkg }) apps.put(JSONObject().apply {
+        for (e in entries) apps.put(JSONObject().apply {
             put("package", e.pkg)
             put("version_name", e.versionName)
             put("version_code", e.versionCode)
@@ -111,7 +111,7 @@ object AppInventory {
             val page = PhoneAppActions.storePage(sources, e.origin, e.pkg)
             when {
                 e.pkg in installed -> have += e
-                e.pkg in fleet -> ours += e
+                e.ours -> ours += e
                 page != null -> store += StoreLink(e, page.first, page.second)
                 else -> manual += e
             }
