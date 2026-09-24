@@ -49,6 +49,37 @@ DEPENDS = re.compile(r"""^[^/*]*project\(\s*['"]:libs:updater['"]\s*\)""")
 # The defect itself: a ternary or elvis that hands back an empty string when the
 # manifest is absent. This is what made the bug silent, so it is named directly.
 EMPTY_FALLBACK = re.compile(r"""fleet\w*\s*=.*(\?|\?:).*["']{2}""")
+# A bake of the manifest as ONE quoted literal: buildConfigField "String",
+# "CONSTELLATION_FLEET_B64", "\"${...}\"". javac caps a single string constant at
+# 65,535 UTF-8 bytes (JVMS 4.4.7); the manifest's base64 crossed that on
+# 2026-09-24 (68,072 bytes at 72 entries) and every consumer's BuildConfig
+# failed with "constant string too long". The bake has to be a NON-constant
+# expression (parts joined at class init), whatever the manifest's size today.
+SINGLE_CONSTANT_BAKE = re.compile(
+    r"""buildConfigField\s*\(?\s*["']String["']\s*,\s*["']CONSTELLATION_FLEET_B64["']\s*,\s*["']\\?["']\$\{""")
+
+
+def find_bakes(root):
+    """Every build file that bakes CONSTELLATION_FLEET_B64, with the lines that do."""
+    hits = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames
+                       if d not in (".git", "build", ".gradle", "node_modules", "z_archive")]
+        for name in filenames:
+            if name not in ("build.gradle", "build.gradle.kts"):
+                continue
+            path = os.path.join(dirpath, name)
+            try:
+                with open(path, encoding="utf-8", errors="replace") as handle:
+                    lines = handle.read().splitlines()
+            except OSError:
+                continue
+            for number, line in enumerate(lines, 1):
+                if line.lstrip().startswith("//"):
+                    continue
+                if SINGLE_CONSTANT_BAKE.search(line):
+                    hits.append((path, number, line.strip()))
+    return hits
 
 
 def find_consumers(root):
@@ -145,6 +176,15 @@ def main():
             "      fleet-blind application." % UPDATER_GRADLE)
 
     # 2. Every consumer must resolve a populated manifest.
+    for path, number, line in find_bakes(root):
+        failures.append(
+            "%s:%d bakes the manifest as ONE string constant.\n"
+            "      javac refuses a constant over 65,535 bytes and the manifest's base64\n"
+            "      passed that on 2026-09-24 — every consumer's BuildConfig then fails with\n"
+            "      'constant string too long'. Bake it as String.join(\"\", new String[]{...})\n"
+            "      parts, as libs/updater/build.gradle does.\n"
+            "      %s" % (os.path.relpath(path, root), number, line))
+
     consumers = find_consumers(root)
     if not consumers:
         print("FAIL   no module depends on :libs:updater — this guard would prove nothing.")

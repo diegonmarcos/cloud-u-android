@@ -77,6 +77,19 @@ drop_the_throw() {
     mv "$1/tmp.gradle" "$1/ab_cloud-libs-shared/libs/updater/build.gradle"
 }
 
+# The bake that stopped compiling on 2026-09-24: the manifest's base64 as ONE
+# quoted literal. javac's 65,535-byte constant cap makes that a build break for
+# every consumer the moment the fleet grows past it, so the guard must catch the
+# SHAPE regardless of how big the manifest is on the day.
+reinstate_single_constant_bake() {
+    printf 'android { defaultConfig {\n    buildConfigField "String", "CONSTELLATION_FLEET_B64", "\\"${fleetB64}\\""\n} }\n' \
+        >> "$1/ab_cloud-libs-shared/libs/updater/build.gradle"
+}
+add_chunked_bake() {
+    printf 'android { defaultConfig {\n    buildConfigField "String", "CONSTELLATION_FLEET_B64", %s\n} }\n' \
+        "'String.join(\"\", new String[]{' + (0..<fleetB64.length()).step(60000).collect { '\"' + fleetB64.substring(it, Math.min(it + 60000, fleetB64.length())) + '\"' }.join(', ') + '})'" \
+        >> "$1/ab_cloud-libs-shared/libs/updater/build.gradle"
+}
 delete_canonical()  { rm -f "$1/aa_cloud-superapp/data/constellation-fleet.json"; }
 empty_the_fleet()   { printf '{"apps":[]}\n' > "$1/aa_cloud-superapp/data/constellation-fleet.json"; }
 corrupt_the_fleet() { printf '{"apps":[\n' > "$1/aa_cloud-superapp/data/constellation-fleet.json"; }
@@ -92,6 +105,8 @@ case_is "healthy tree passes"                            0 untouched
 case_is "own data/ override is accepted"                 0 add_valid_override
 case_is "original rootDir + empty-string defect is CAUGHT" 1 reinstate_defect
 case_is "removing the GradleException is CAUGHT"         1 drop_the_throw
+case_is "chunked String.join bake is accepted"           0 add_chunked_bake
+case_is "manifest baked as ONE string constant is CAUGHT" 1 reinstate_single_constant_bake
 case_is "missing canonical manifest is CAUGHT"           1 delete_canonical
 case_is "manifest listing no applications is CAUGHT"     1 empty_the_fleet
 case_is "unparseable manifest is CAUGHT"                 1 corrupt_the_fleet

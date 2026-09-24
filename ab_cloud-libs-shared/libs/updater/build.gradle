@@ -133,7 +133,14 @@ android {
         buildConfigField "boolean", "AU_REQUIRE_CHARGING",         "${au.require_charging}"
         buildConfigField "String",  "AU_INSTALL_MODE",             "\"${au.install_mode}\""
         buildConfigField "String",  "GIT_SHORT_SHA",               "\"${shortSha}\""
-        buildConfigField "String",  "CONSTELLATION_FLEET_B64",     "\"${fleetB64}\""
+        // javac caps ONE string constant at 65,535 UTF-8 bytes (JVMS 4.4.7, CONSTANT_Utf8).
+        // The fleet manifest's base64 crossed that on 2026-09-24 — 68,072 bytes at 72
+        // entries, once the four #567 engine libraries registered — and every consumer's
+        // BuildConfig stopped compiling: "constant string too long". Baked as parts joined
+        // at class-init time, which is NOT a constant expression and has no cap, so the
+        // readers' one CONSTELLATION_FLEET_B64 String is unchanged and the manifest can
+        // keep growing. The fleet-manifest guard fails any bake that goes back to one literal.
+        buildConfigField "String",  "CONSTELLATION_FLEET_B64",     'String.join("", new String[]{' + (0..<fleetB64.length()).step(60000).collect { '"' + fleetB64.substring(it, Math.min(it + 60000, fleetB64.length())) + '"' }.join(', ') + '})'
     }
 
     buildFeatures { buildConfig = true }
