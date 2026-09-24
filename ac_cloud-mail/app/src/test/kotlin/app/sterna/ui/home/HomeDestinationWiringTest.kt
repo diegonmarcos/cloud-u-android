@@ -76,7 +76,7 @@ class HomeDestinationWiringTest {
                 "is a tap that does nothing, silently.",
             listOf(
                 """composable("home") { entry ->""",
-                "Box(Modifier.fillMaxSize()) {",
+                """BottomNavBar(nav = nav, currentRoute = "home") {""",
                 "HomeScreen(",
                 "onBack = { entry.navigateOnce { nav.popBackStack() } },",
                 """onOpenCompose = { entry.navigateOnce { nav.navigate("compose") } },""",

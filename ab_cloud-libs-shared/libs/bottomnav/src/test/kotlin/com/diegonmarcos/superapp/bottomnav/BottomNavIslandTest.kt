@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.navigation.compose.rememberNavController
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -352,6 +355,75 @@ class BottomNavIslandTest {
         sameColour("#532 nothing drawn just above the island", page, pixels(ROOT)[island.center.x.toInt(), island.top.toInt() - 1])
     }
 
+    // ── #534 mail's bar hosts its screen ABOVE the island ────────────────────────────────
+
+    /** Mail's real [BottomNavBar] as SternaApp draws it: the screen is its content. [INNER] is a
+     *  screen that pads itself for the system bars, the way every M3 Scaffold in the app does. */
+    private fun showMailBar() {
+        compose.setContent {
+            hostView = LocalView.current
+            list = rememberLazyListState()
+            Box(Modifier.fillMaxSize().testTag(ROOT)) {
+                BottomNavBar(rememberNavController(), destinations[0]) {
+                    LazyColumn(Modifier.fillMaxSize().testTag(LIST), state = list) {
+                        items(200) { Spacer(Modifier.fillMaxWidth().height(40.dp)) }
+                    }
+                    Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars).testTag(INNER))
+                }
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    private fun navBarInset(px: Int) {
+        val insets = WindowInsetsCompat.Builder()
+            .setInsets(WindowInsetsCompat.Type.navigationBars(), Insets.of(0, 0, 0, px))
+            .setVisible(WindowInsetsCompat.Type.navigationBars(), true)
+            .build()
+        compose.runOnUiThread { ViewCompat.dispatchApplyWindowInsets(hostView, insets) }
+        compose.waitForIdle()
+    }
+
+    /** Nothing the screen draws reaches under the island: the screen's own node ends exactly
+     *  where the island begins, and the island sits at its #477 clearance below that. */
+    private fun assertScreenAboveIsland(why: String) {
+        val island = bounds(TAG_ISLAND)
+        near("#534 $why: the screen's content box ends where the island begins", island.top, bounds(TAG_CONTENT).bottom)
+        near("#534 $why: the screen's list ends where the island begins", island.top, bounds(LIST).bottom)
+    }
+
+    @Test
+    fun `534 mail's screen is laid out above the island, not under it`() {
+        showMailBar()
+        navBarInset(30)
+        val island = bounds(TAG_ISLAND)
+        // The inset really is live, or the rest proves nothing about a real phone.
+        near("#534 island still clears margin + the 30px nav bar", px(R.dimen.bottom_nav_island_bottom_margin) + 30, bounds(ROOT).bottom - island.bottom)
+        assertScreenAboveIsland("expanded")
+        assertTrue("#534 the island has height, so the lift is real", island.height > 0f)
+    }
+
+    @Test
+    fun `534 the screen does not clear the nav bar a second time`() {
+        showMailBar()
+        navBarInset(30)
+        near("#534 a screen padding for systemBars gets no extra bottom gap above the island",
+            bounds(TAG_CONTENT).bottom, bounds(INNER).bottom)
+    }
+
+    @Test
+    fun `534 scrolling mail's screen collapses the island and the screen follows it down`() {
+        showMailBar()
+        val expanded = bounds(TAG_ISLAND).height
+        compose.onNodeWithTag(LIST, useUnmergedTree = true).performTouchInput { swipeUp(startY = centerY, endY = top) }
+        compose.waitForIdle()
+        assertTrue("#534 the page itself still scrolled", list.firstVisibleItemIndex > 0)
+        val iconsOnly = 2 * px(R.dimen.bottom_nav_pill_inset) + 2 * px(R.dimen.bottom_nav_item_vertical_pad) + px(R.dimen.bottom_nav_icon_size)
+        near("#534 scrolling mail's screen collapsed its island", iconsOnly, bounds(TAG_ISLAND).height)
+        assertTrue("#534 collapsing shrank the bar", expanded > iconsOnly + 1f)
+        assertScreenAboveIsland("collapsed")
+    }
+
     // ── ported, not wrapped ───────────────────────────────────────────────────────────────
 
     @Test
@@ -367,5 +439,6 @@ class BottomNavIslandTest {
     private companion object {
         const val ROOT = "test_root"
         const val LIST = "test_list"
+        const val INNER = "test_inner"
     }
 }

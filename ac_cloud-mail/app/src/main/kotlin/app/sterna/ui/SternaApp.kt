@@ -362,7 +362,7 @@ private fun MainNavHost(
         exitTransition = { ExitTransition.None },
     ) {
         composable("inbox") { entry ->
-            Box(Modifier.fillMaxSize()) {
+            BottomNavBar(nav = nav, currentRoute = "inbox") {
             // The "inbox" entry's own ViewModel, shared with the reader and the composer.
             val inboxViewModel: InboxViewModel = viewModel(entry)
             // What the reading pane shows (null anchor = the invitation line).
@@ -446,7 +446,6 @@ private fun MainNavHost(
                     }
                 },
             )
-            BottomNavBar(nav = nav, currentRoute = "inbox")
         }
         }
         composable(
@@ -668,7 +667,7 @@ private fun MainNavHost(
         // The mail statistics of every configured account. A destination like "snoozed" and not a
         // start destination: the app still opens on the inbox, which is what the reader came for.
         composable("home") { entry ->
-            Box(Modifier.fillMaxSize()) {
+            BottomNavBar(nav = nav, currentRoute = "home") {
                 HomeScreen(
                     onBack = { entry.navigateOnce { nav.popBackStack() } },
                     onOpenCompose = { entry.navigateOnce { nav.navigate("compose") } },
@@ -681,7 +680,6 @@ private fun MainNavHost(
                     onOpenMailBySender = { entry.navigateOnce { nav.navigate("bysender") } },
                     onOpenRss = { entry.navigateOnce { nav.navigate("rss") } },
                 )
-                BottomNavBar(nav = nav, currentRoute = "home")
             }
         }
         composable("scheduled") { entry ->
@@ -706,9 +704,8 @@ private fun MainNavHost(
             )
         }
         composable("rss") { entry ->
-            Box(Modifier.fillMaxSize()) {
+            BottomNavBar(nav = nav, currentRoute = "rss") {
                 RssScreen(onBack = { entry.navigateOnce { nav.popBackStack() } })
-                BottomNavBar(nav = nav, currentRoute = "rss")
             }
         }
     }

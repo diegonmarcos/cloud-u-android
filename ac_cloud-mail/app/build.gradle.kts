@@ -314,6 +314,13 @@ android {
         compose = true
         buildConfig = true
     }
+
+    // Robolectric resolves the app's own resources and theme for the rendered-Compose tests (#534).
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
 }
 
 dependencies {
@@ -384,4 +391,7 @@ dependencies {
     // Virtual time + a background scope, to drive the unfolded conversations' live member stream
     // (a flow of flows) without sleeping on a real clock.
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 }

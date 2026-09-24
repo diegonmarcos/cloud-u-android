@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -40,6 +43,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -89,6 +93,7 @@ public data class BottomNavEntry(val id: String, val label: String, val icon: Pa
 public val bottomNavPillShape: RoundedCornerShape = RoundedCornerShape(percent = 50)
 
 internal const val TAG_ISLAND = "bottomnav_island"
+internal const val TAG_CONTENT = "bottomnav_content"
 internal fun itemTag(id: String) = "bottomnav_item_$id"
 internal fun iconTag(id: String) = "bottomnav_icon_$id"
 internal fun labelTag(id: String) = "bottomnav_label_$id"
@@ -203,12 +208,14 @@ internal fun mailEntries(): List<BottomNavEntry> = bottomNavItems.map {
 }
 
 /**
- * cloud-mail's bottom nav (#465): [bottomNavItems] on the shared island, overlaid at the bottom
- * of the screen it is drawn on. DESTINATION items navigate and move the selected pill. LAUNCH
- * items hand off to another app and leave the pill where it is.
+ * cloud-mail's bottom nav (#465): [bottomNavItems] on the shared island, with the screen's
+ * [content] laid out ABOVE it (#534). The content ends where the island's clearance begins, so
+ * nothing the screen draws can hide under the bar. Scrolling the content collapses the island to
+ * icons (#532). DESTINATION items navigate and move the selected pill. LAUNCH items hand off to
+ * another app and leave the pill where it is.
  */
 @Composable
-public fun BottomNavBar(nav: NavController, currentRoute: String) {
+public fun BottomNavBar(nav: NavController, currentRoute: String, content: @Composable () -> Unit) {
     val context = LocalContext.current
     // The sanctioned hand-off guard: a double tap while leaving must not fire the launch twice.
     val leaveOnce = rememberLeaveOnce()
@@ -217,7 +224,19 @@ public fun BottomNavBar(nav: NavController, currentRoute: String) {
     val selected = bottomNavItems.firstOrNull {
         it.action == BottomNavAction.DESTINATION && it.route == currentRoute
     }?.id
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+    val collapse = rememberBottomNavCollapse()
+    val insets = bottomNavInsets()
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        // The island below already clears the bottom system bar, so the content must not clear it
+        // a second time: consumed for the content ONLY. The island still reads it (#477).
+        Box(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .consumeWindowInsets(insets.only(WindowInsetsSides.Bottom))
+                .nestedScroll(collapse)
+                .testTag(TAG_CONTENT),
+        ) { content() }
         BottomNavIsland(
             entries = mailEntries(),
             selectedId = selected,
@@ -225,6 +244,8 @@ public fun BottomNavBar(nav: NavController, currentRoute: String) {
                 val item = bottomNavItems.first { it.id == entry.id }
                 onItemTap(context, nav, item, currentRoute, leaveOnce, missing[item] ?: "")
             },
+            collapsed = collapse.collapsed,
+            insets = insets,
         )
     }
 }
