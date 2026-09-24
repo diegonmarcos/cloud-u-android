@@ -284,6 +284,14 @@ android {
             // libraries' jars (JGit, jsch, …) collide on their notice files.
             excludes += (buildJson.android?.packaging_excludes ?: []) as List
         }
+        jniLibs {
+            // libs:rclone ships the static rclone binary as librclone.so and
+            // execs it from nativeLibraryDir — the one place an app may exec
+            // from on API 29+. AGP's default keeps .so files compressed inside
+            // the APK and extracts NOTHING, so without this the file the runner
+            // execs does not exist. See libs/rclone/data/rclone-binary.json.
+            useLegacyPackaging = true
+        }
     }
 
     compileOptions {

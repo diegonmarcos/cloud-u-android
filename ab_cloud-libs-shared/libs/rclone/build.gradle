@@ -1,4 +1,6 @@
-// libs:rclone — the rclone engine — remotes config, declared and ad-hoc sync/copy jobs with live progress, remote browsing, over a sha256-pinned static rclone binary (push 4 lands the engine).
+// libs:rclone — the rclone engine: remotes config, declared and ad-hoc sync/copy
+// jobs with live progress, remote browsing, over a sha256-pinned STATIC rclone
+// binary (data/rclone-binary.json is the one pin; read its _doc first).
 //
 // ONE OF THE FOUR cloud-drive ENGINE LIBRARIES (#567). The owner's rule for that
 // application: the main APK is chrome, every tooling is its own library, and the
@@ -12,11 +14,6 @@
 // cloud-lib-rclone as its own installable APK (#474 naming, from the one
 // declaration in aa_cloud-superapp/data/regen.sh).
 //
-// Deliberately sparse on the independent-version axis (bottomnav / text-tools
-// precedent): it builds under whichever AGP the app that pulls it in uses —
-// cloud-drive's 8.7.3 and lib-apks' 8.13.2 both. Compose BOM and versions match
-// libs:bottomnav so the two compose against one toolchain inside one app.
-//
 // TESTED where it builds: src/test/ (JVM, no emulator) runs inside the consuming
 // app's own `gradle test` (ac_cloud-drive/build.json::tests.unit is enabled), and
 // that app's ship workflow watches this directory, so a change here re-runs it.
@@ -25,7 +22,90 @@ plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
+
+// ── the pinned binary ───────────────────────────────────────────────────────
+// Everything below is read from data/rclone-binary.json. Nothing here names a
+// version, a URL or a hash.
+def rclonePin = new groovy.json.JsonSlurper().parse(file('data/rclone-binary.json'))
+def rcloneJniDir = new File(buildDir, 'generated/rclone-jni')
+def rcloneCacheDir = new File(buildDir, 'rclone-cache')
+
+def sha256Of(File f) {
+    def digest = java.security.MessageDigest.getInstance('SHA-256')
+    f.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
+    return digest.digest().encodeHex().toString()
+}
+
+def fetchPinned(String url, File target, String sha256) {
+    if (target.exists() && sha256Of(target) == sha256) return
+    logger.quiet("rclone: downloading " + url)
+    target.parentFile.mkdirs(); target.delete()
+    def connection = new URL(url).openConnection()
+    connection.setInstanceFollowRedirects(true)
+    target.withOutputStream { it << connection.inputStream }
+    def actual = sha256Of(target)
+    if (actual != sha256) {
+        target.delete()
+        throw new GradleException("rclone: wrong sha256 for " + url + "\n  expected " + sha256 + "\n  actual   " + actual)
+    }
+}
+
+/** True when the ELF64 file has a PT_INTERP program header (i.e. is dynamically linked). */
+def hasProgramInterpreter(File elf) {
+    def raf = new RandomAccessFile(elf, 'r')
+    try {
+        def magic = new byte[4]; raf.readFully(magic)
+        if (magic[0] != (byte) 0x7f || magic[1] != (byte) 'E' || magic[2] != (byte) 'L' || magic[3] != (byte) 'F')
+            throw new GradleException("rclone: " + elf + " is not an ELF file")
+        def order = java.nio.ByteOrder.LITTLE_ENDIAN
+        def header = new byte[64]; raf.seek(0); raf.readFully(header)
+        def bb = java.nio.ByteBuffer.wrap(header).order(order)
+        long phoff = bb.getLong(0x20); int phentsize = bb.getShort(0x36) & 0xffff; int phnum = bb.getShort(0x38) & 0xffff
+        for (int i = 0; i < phnum; i++) {
+            raf.seek(phoff + (long) i * phentsize)
+            def ph = new byte[4]; raf.readFully(ph)
+            int type = java.nio.ByteBuffer.wrap(ph).order(order).getInt(0)
+            if (type == 3) return true   // PT_INTERP
+        }
+        return false
+    } finally { raf.close() }
+}
+
+task fetchRcloneBinaries {
+    description = "Download, verify (sha256 + no PT_INTERP) and stage the pinned rclone binaries as jniLibs"
+    inputs.file file('data/rclone-binary.json')
+    outputs.dir rcloneJniDir
+    doLast {
+        rclonePin.binaries.each { abi, pin ->
+            def url = rclonePin.url_template.replace('{version}', rclonePin.version).replace('{arch}', pin.arch)
+            def zip = new File(rcloneCacheDir, "rclone-${rclonePin.version}-${pin.arch}.zip")
+            fetchPinned(url, zip, pin.zip_sha256)
+            def entry = rclonePin.entry_template.replace('{version}', rclonePin.version).replace('{arch}', pin.arch)
+            def out = new File(rcloneJniDir, "${abi}/${rclonePin.jni_name}")
+            out.parentFile.mkdirs()
+            def zf = new java.util.zip.ZipFile(zip)
+            try {
+                def ze = zf.getEntry(entry)
+                if (ze == null) throw new GradleException("rclone: " + zip + " has no entry " + entry)
+                out.withOutputStream { o -> zf.getInputStream(ze).withStream { i -> o << i } }
+            } finally { zf.close() }
+            def actual = sha256Of(out)
+            if (actual != pin.binary_sha256) {
+                out.delete()
+                throw new GradleException("rclone: extracted binary sha256 mismatch for " + abi + "\n  expected " + pin.binary_sha256 + "\n  actual   " + actual)
+            }
+            if (rclonePin.interp == 'none' && hasProgramInterpreter(out)) {
+                out.delete()
+                throw new GradleException("rclone: " + abi + " binary carries a PT_INTERP — it is dynamically linked and will not run under bionic; the pin declares interp=none")
+            }
+            out.setExecutable(true, false)
+            logger.quiet("rclone: staged ${abi}/${rclonePin.jni_name} (" + out.length() + " bytes, static)")
+        }
+    }
+}
+preBuild.dependsOn fetchRcloneBinaries
 
 android {
     namespace 'com.diegonmarcos.cloudlib.rclone'
@@ -33,10 +113,23 @@ android {
 
     defaultConfig {
         minSdk 26
+        // The pin, baked so the engine card can state what it runs without
+        // shelling out first, and so RcloneRunner can name the .so it execs.
+        buildConfigField 'String', 'RCLONE_VERSION', "\"${rclonePin.version}\""
+        buildConfigField 'String', 'RCLONE_JNI_NAME', "\"${rclonePin.jni_name}\""
+        buildConfigField 'String', 'RCLONE_ARM64_SHA256', "\"${rclonePin.binaries['arm64-v8a'].binary_sha256}\""
+        buildConfigField 'String', 'RCLONE_X86_64_SHA256', "\"${rclonePin.binaries['x86_64'].binary_sha256}\""
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs += rcloneJniDir
+        }
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     testOptions {
@@ -71,6 +164,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
     implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
 
     testImplementation 'junit:junit:4.13.2'
 }

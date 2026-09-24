@@ -1,0 +1,24 @@
+{
+  "_doc": "THE ONE PIN of the rclone binary libs:rclone ships (#567 push 4). build.gradle reads this file, downloads each ABI's official release zip ONCE into build/, refuses on a sha256 mismatch of the zip AND of the extracted binary (the #288 / #348 fetch-once-refuse-on-mismatch pattern), reads the ELF program headers and refuses if PT_INTERP is present, and lands the binary as jniLibs/<abi>/librclone.so. That name is not decoration: on API 29+ an app may not exec a file it wrote into its own data directory (W^X), but it MAY exec what the installer extracted into nativeLibraryDir, and only files named lib*.so get extracted there — which is also why the PACKAGING app must set packaging.jniLibs.useLegacyPackaging = true (AGP's default keeps .so files compressed inside the APK and mmaps them, extracting nothing). ac_cloud-drive/app/build.gradle sets it; RcloneRunner execs applicationInfo.nativeLibraryDir + '/librclone.so'.",
+  "_doc_interp": "WHY THE OFFICIAL linux-{arch} BUILD RUNS ON ANDROID. rclone's release binaries for linux/arm64 and linux/amd64 are Go builds with cgo disabled: measured on 2026-09-24 with a program-header walk over both binaries — NO PT_INTERP and NO PT_DYNAMIC, i.e. fully static, raw syscalls, no libc at all. Bionic vs glibc is therefore moot: nothing is dynamically linked, so the kernel runs it directly, the way Termux users run stock Go binaries. That is the property `interp: none` below declares and build.gradle re-measures on every build; a future release that links dynamically fails the build here rather than dying ENOENT on a phone. rclone publishes no android-* asset in v1.75.1 (checked via the GitHub releases API the same day), so this static linux build IS the bionic-safe choice — not a proot rootfs, which would have cost the nix-on-droid rootfs bake for one binary.",
+  "_doc_size": "78 MB (arm64) / 85 MB (amd64) uncompressed; ~28 MB in the APK (zip-compressed by AGP) and extracted once at install. A per-ABI split APK carries one of them: the drive builds arm64 and x86_64 as separate variants, so a phone never downloads both.",
+  "version": "v1.75.1",
+  "url_template": "https://github.com/rclone/rclone/releases/download/{version}/rclone-{version}-linux-{arch}.zip",
+  "entry_template": "rclone-{version}-linux-{arch}/rclone",
+  "jni_name": "librclone.so",
+  "interp": "none",
+  "binaries": {
+    "arm64-v8a": {
+      "arch": "arm64",
+      "zip_sha256": "03f2504174034b6d004152ed7369251c9a9ec1f7e0836eda420f5c7a5ec0dff9",
+      "binary_sha256": "d7ecfc17726b34f95c5f7ea9470862c2aef53dce1bb0677b83142ca38503f489",
+      "binary_bytes": 78315682
+    },
+    "x86_64": {
+      "arch": "amd64",
+      "zip_sha256": "982b5aa772841168f8e380f139e9e787b2a105403e32b94da8676a0e1c0a13ab",
+      "binary_sha256": "f66d8c1d552ad90296a11bc8b46d56a7fa5da1a7fa05e7ca522d95df92c4a4c0",
+      "binary_bytes": 85360802
+    }
+  }
+}
