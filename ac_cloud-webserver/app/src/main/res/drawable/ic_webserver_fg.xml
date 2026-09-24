@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A globe: circle, equator, meridian. 108dp canvas, art inside the 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:strokeColor="#7AA2F7" android:strokeWidth="3"
+        android:pathData="M54,30a24,24 0 1,0 0.01,0zM30,54h48M54,30c-10,8 -10,40 0,48M54,30c10,8 10,40 0,48" />
+</vector>

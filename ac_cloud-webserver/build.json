@@ -1,0 +1,147 @@
+{
+  "name": "cloud-webserver",
+  "description": "my-webserver on the phone, as an APK: the same glibc Node SEA binary cloud-u-linux publishes, run under the proot + glibc rootfs ac_cloud-nix-on-droid already bakes (#348). Route D of #288.",
+  "category": "android",
+  "build": {
+    "type": "gradle",
+    "entry": "build.sh"
+  },
+  "_doc": "ROUTE D (#288). my-webserver's per-arch binaries are glibc: PT_INTERP /lib/ld-linux-aarch64.so.1 and DT_NEEDED libdl.so.2, libstdc++.so.6, libm.so.6, libgcc_s.so.1, libpthread.so.0, libc.so.6 (read off the e3577a70 asset with readelf, 2026-09-24). Bionic has none of those and no APK can add a /lib. Routes A-C each produce a DIFFERENT Node that bionic will load. Route D ships the glibc the binary already wants, from the rootfs ac_cloud-nix-on-droid already bakes: proot-static is bionic and runs natively, and binds the glibc store directory to the binary's own PT_INTERP directory. No nix closure is evaluated anywhere on this path -- the binary is fetched as a release asset against a pinned sha256 -- so #203's fixed-output hash mismatch that breaks closure builds of my-webserver cannot reach this APK.",
+  "bake": {
+    "_doc": "THE ONE declaration of what this APK carries. app/build.gradle::bakeWebserver reads nothing else. Three assets: the rootfs zip, the binary, and webserver-runtime.json, which app/resolve_runtime.py DERIVES at build time from the binary's own program headers and the rootfs's own listing. Nothing about loader paths or /nix/store directories is written anywhere by hand; if the rootfs cannot satisfy the binary the build fails.",
+    "rootfs": {
+      "from": "../ac_cloud-nix-on-droid/build.json",
+      "pointer": "forks.nixdroid.bootstrap",
+      "_doc": "REFERENCED, NOT COPIED. The pin (url_base, release, per-ABI sha256) is owned by ac_cloud-nix-on-droid and read from there at build time, so the terminal and this app can never carry two different rootfses under one name. That file is in this app's ship workflow paths list, so a new pin there republishes this APK too. We take the UNPATCHED zip: nix-on-droid rewrites com.termux.nix -> cld.termux.nix because ITS bin/login and usr/lib/login-inner hardcode that path. This app never runs either script -- it execs proot-static itself with its own getFilesDir() paths -- so the rewrite has nothing to fix here."
+    },
+    "launcher": "bin/proot-static",
+    "_doc_launcher": "The entry inside the rootfs that the app execs. resolve_runtime.py refuses a launcher that is missing, a symlink or not an ELF.",
+    "launcher_flags": [
+      "--link2symlink"
+    ],
+    "_doc_launcher_flags": "Passed to the launcher before the binds. --link2symlink because Android's app sandbox refuses hard links; nix-on-droid's own bin/login passes it for the same reason.",
+    "binary": {
+      "repo": "diegonmarcos/cloud-u-linux",
+      "tag": "my-webserver-e3577a70",
+      "_doc_tag": "An immutable per-commit tag (cloud-u-linux da_my-webserver/build.json::build._release_tag_note), never my-webserver-latest. The sha256 values are the same bytes as cloud-u-linux da_my-webserver/nix/hashes.json's SRI hashes, hex-decoded. Because both tag and pins live here, a new binary is a commit to this file and the publish gate sees it without build.external_inputs.",
+      "archs": {
+        "arm64-v8a": {
+          "asset": "my-webserver-aarch64",
+          "sha256": "3a7b7ad53c142063f856b04638068b675d84dcf9e8e57077d5eada75834d985f"
+        },
+        "x86_64": {
+          "asset": "my-webserver-x86_64",
+          "sha256": "b5fb3c95b2860cd34092ac2dddb00b12f31c8fc99cb0dde53022b86aaa1e8d56"
+        }
+      }
+    },
+    "assets": {
+      "rootfs": "rootfs.zip",
+      "binary": "my-webserver",
+      "runtime": "webserver-runtime.json"
+    }
+  },
+  "runtime": {
+    "_doc": "Copied into webserver-runtime.json by the bake, and read by the app from there. my-webserver takes <port> <root> positionally and binds 127.0.0.1 only (cloud-u-linux da_my-webserver/src/my-webserver.cjs).",
+    "port": 8000,
+    "serve_root": "/storage/emulated/0"
+  },
+  "android": {
+    "application_id": "com.diegonmarcos.cloudwebserver",
+    "compile_sdk": 36,
+    "min_sdk": 26,
+    "target_sdk": 28,
+    "_doc_target_sdk": "28, and it cannot move. From targetSdk 29 SELinux denies execve() of any file in the app's own data directory, and everything this app runs -- proot-static, the loader proot maps, my-webserver -- is extracted there. ac_cloud-nix-on-droid and ac_cloud-termux sit at 28 for the same reason.",
+    "version_code": 1,
+    "version_name": "0.1.0-dev",
+    "abi_filters": [
+      "arm64-v8a"
+    ]
+  },
+  "modules": {
+    "_doc": "settings.gradle iterates this. One module and no shared library.",
+    "app": {
+      "type": "application"
+    }
+  },
+  "toolchain": {
+    "agp": "8.7.3",
+    "gradle": "8.10.2",
+    "kotlin": "1.9.24",
+    "jdk": "17"
+  },
+  "signing": {
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps, resolved by build.sh::_resolve_signing from the vault. No fallback key.",
+    "vault_keystore": "A0_keys/providers/android/release.jks",
+    "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
+  },
+  "release": {
+    "_doc": "Per-APK distribution, same data-driven block as every app here; build.sh oras-push and gh-release read it.",
+    "artifact": {
+      "debug": "Cloud-WebServer.apk",
+      "release": "Cloud-WebServer-release.apk"
+    },
+    "ghcr": {
+      "enabled": true,
+      "registry": "ghcr.io",
+      "namespace": "diegonmarcos",
+      "image": "cloud-webserver",
+      "media_type": "application/vnd.android.package-archive",
+      "tags": [
+        "latest",
+        "sha-{sha}",
+        "v{version_name}"
+      ]
+    },
+    "auto_update": {
+      "enabled": true,
+      "tag": "latest",
+      "interval_hours": 6,
+      "max_installs_per_pass": 3
+    },
+    "gh_release": {
+      "enabled": true,
+      "rolling_tag": "latest",
+      "tag_pattern": "ac_cloud-webserver-v*",
+      "asset_name": "Cloud-WebServer.apk"
+    },
+    "variants": [
+      {
+        "id": "arm64",
+        "abis": [
+          "arm64-v8a"
+        ],
+        "supported_abis": [
+          "arm64-v8a"
+        ],
+        "artifact_debug": "Cloud-WebServer.apk",
+        "gh_asset": "Cloud-WebServer.apk",
+        "ghcr_tag_suffix": "",
+        "update_tag": "latest",
+        "_doc": "supported_abis is exactly the one ABI each APK's binary is built for. The template's arm64 entry also listed armeabi-v7a, which would hand a 32-bit-only phone an aarch64 ELF that cannot start."
+      },
+      {
+        "id": "x86_64",
+        "abis": [
+          "x86_64"
+        ],
+        "supported_abis": [
+          "x86_64"
+        ],
+        "artifact_debug": "Cloud-WebServer-x86_64.apk",
+        "gh_asset": "Cloud-WebServer-x86_64.apk",
+        "ghcr_tag_suffix": "-x86_64",
+        "update_tag": "latest-x86_64"
+      }
+    ]
+  },
+  "tests": {
+    "shell": {
+      "dir": "test",
+      "requires": [
+        "python3",
+        "readelf"
+      ]
+    }
+  }
+}

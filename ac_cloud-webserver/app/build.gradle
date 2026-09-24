@@ -1,0 +1,165 @@
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+def buildJson = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json"))
+def a = buildJson.android
+
+// versionCode: minutes since 2026-01-01 UTC over a 3,000,000 base, the same
+// encoding as ac_c3-watchtower and the rest of the fleet, so it only ever moves
+// forward whichever workflow built it. COMMS_BUILD_TIMESTAMP wins when CI sets it.
+def codeFinal = { ->
+    def base  = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
+    def built = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    def stamp = System.getenv('COMMS_BUILD_TIMESTAMP')
+    if (stamp) {
+        try {
+            built = java.time.LocalDateTime.parse(stamp,
+                java.time.format.DateTimeFormatter.ofPattern('yyyyMMdd.HHmmss'))
+        } catch (ignored) { }
+    }
+    long mins = java.time.Duration.between(base, built).toMinutes()
+    return mins > 0 ? (int) (3000000L + mins) : 3000000
+}()
+
+android {
+    namespace 'com.diegonmarcos.cloudwebserver'
+    compileSdk a.compile_sdk
+
+    defaultConfig {
+        resConfigs "en"
+        applicationId a.application_id
+        minSdk        a.min_sdk
+        targetSdk     a.target_sdk
+        versionCode   codeFinal
+        versionName   a.version_name
+        // The only name the app is told: everything else it needs is IN this asset.
+        buildConfigField "String", "RUNTIME_ASSET", "\"${buildJson.bake.assets.runtime}\""
+    }
+
+    buildFeatures { buildConfig = true }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions { jvmTarget = '17' }
+
+    lint {
+        // targetSdk 28 is load-bearing (build.json::android._doc_target_sdk):
+        // from 29 SELinux refuses execve() of anything in the app's data dir,
+        // which is where proot and the binary live. Play's minimum is not a
+        // constraint for a sideloaded fleet app.
+        disable.add('ExpiredTargetSdkVersion')
+    }
+
+    buildTypes {
+        release { minifyEnabled false }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// #288 Route D — bake the rootfs, the binary and the derived launch recipe.
+//
+// Everything is read from build.json::bake. The rootfs pin is NOT there: it is
+// followed from bake.rootfs.from / .pointer into ac_cloud-nix-on-droid's own
+// declaration, so this APK and cloud-terminal-nix bake one rootfs, declared
+// once. The download pattern (fetch once in CI, refuse on a sha256 mismatch) is
+// the #348 bakeBootstrap pattern.
+//
+// resolve_runtime.py then reads the binary's PT_INTERP / DT_NEEDED and finds
+// each of them in the rootfs listing. A rootfs that cannot run the binary fails
+// HERE, in CI, and never becomes an APK that dies ENOENT on a phone.
+// ---------------------------------------------------------------------------
+
+def bakeSpec() {
+    def bake = new groovy.json.JsonSlurper().parse(file("${rootDir}/build.json")).bake
+    if (bake == null)
+        throw new GradleException("build.json has no bake block; this APK is nothing without it")
+    def from = file("${rootDir}/" + bake.rootfs.from)
+    if (!from.exists())
+        throw new GradleException("bake.rootfs.from names " + from + ", which does not exist")
+    def rootfs = new groovy.json.JsonSlurper().parse(from)
+    bake.rootfs.pointer.split('\\.').each { rootfs = rootfs?.get(it) }
+    if (rootfs?.archs == null)
+        throw new GradleException(from.toString() + " has nothing at " + bake.rootfs.pointer)
+    return [bake: bake, rootfs: rootfs]
+}
+
+// The variant's ABI (CLOUDNAV_ABIS, exported by build.sh), else the default
+// build.json::android.abi_filters names. One rootfs + one binary per APK.
+def bakeAbi(defaultAbi) {
+    def selected = System.getenv("CLOUDNAV_ABIS")
+    return (selected?.trim()) ? selected.split(",")[0].trim() : defaultAbi
+}
+
+def fetchPinned(String url, File target, String sha256) {
+    if (target.exists() && sha256Of(target) == sha256) return
+    logger.quiet("bakeWebserver: downloading " + url + " ...")
+    target.parentFile.mkdirs()
+    target.delete()
+    def connection = new URL(url).openConnection()
+    connection.setInstanceFollowRedirects(true)
+    target.withOutputStream { it << connection.inputStream }
+    def actual = sha256Of(target)
+    if (actual != sha256) {
+        target.delete()
+        throw new GradleException("bakeWebserver: wrong sha256 for " + url
+                + "\n  expected " + sha256 + "\n  actual   " + actual)
+    }
+}
+
+def sha256Of(File file) {
+    def digest = java.security.MessageDigest.getInstance("SHA-256")
+    file.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
+    return digest.digest().encodeHex().toString()
+}
+
+def bakedAssetsDir = new File(buildDir, "generated/webserver/assets")
+
+task bakeWebserver() {
+    outputs.dir bakedAssetsDir
+    outputs.upToDateWhen { false }
+    doLast {
+        def spec = bakeSpec()
+        def bake = spec.bake
+        def abi = bakeAbi(buildJson.android.abi_filters[0])
+        def rootfsPin = spec.rootfs.archs[abi]
+        def binaryPin = bake.binary.archs[abi]
+        if (rootfsPin == null || binaryPin == null)
+            throw new GradleException("ABI " + abi + " is missing from " + (rootfsPin == null
+                    ? bake.rootfs.from + "::" + bake.rootfs.pointer + ".archs" : "build.json::bake.binary.archs"))
+
+        def rootfs = new File(bakedAssetsDir, bake.assets.rootfs)
+        def binary = new File(bakedAssetsDir, bake.assets.binary)
+        fetchPinned(spec.rootfs.url_base + "/" + spec.rootfs.release + "/bootstrap-" + rootfsPin.arch + ".zip",
+                rootfs, rootfsPin.sha256)
+        fetchPinned("https://github.com/" + bake.binary.repo + "/releases/download/" + bake.binary.tag + "/"
+                + binaryPin.asset, binary, binaryPin.sha256)
+
+        def resolved = new File(buildDir, "generated/webserver/resolved.json")
+        def result = exec {
+            commandLine "python3", file("resolve_runtime.py").absolutePath, rootfs.absolutePath,
+                    binary.absolutePath, bake.launcher, resolved.absolutePath
+            ignoreExitValue = true
+        }
+        if (result.exitValue != 0)
+            throw new GradleException("resolve_runtime.py: the rootfs cannot run " + binaryPin.asset
+                    + " for " + abi + " (exit " + result.exitValue + "); see log above")
+
+        def runtime = new groovy.json.JsonSlurper().parse(resolved)
+        runtime.launcher_flags = bake.launcher_flags
+        runtime.assets = bake.assets
+        runtime.port = buildJson.runtime.port
+        runtime.serve_root = buildJson.runtime.serve_root
+        runtime.stamp = rootfsPin.sha256 + "+" + binaryPin.sha256
+        new File(bakedAssetsDir, bake.assets.runtime).text = groovy.json.JsonOutput.prettyPrint(
+                groovy.json.JsonOutput.toJson(runtime))
+        logger.quiet("bakeWebserver: " + abi + " -> " + rootfs.length() + " B rootfs, "
+                + binary.length() + " B binary, interp " + runtime.interp)
+    }
+}
+
+android.sourceSets.main.assets.srcDir bakedAssetsDir
+
+// Assets merge long before javaCompile, so hook the merge (#348's lesson).
+tasks.matching { it.name ==~ /merge.*Assets/ }.configureEach { dependsOn bakeWebserver }

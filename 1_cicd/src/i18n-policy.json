@@ -36,6 +36,9 @@
     "ac_c3-watchtower/app": {
       "base_language": "en"
     },
+    "ac_cloud-webserver/app": {
+      "base_language": "en"
+    },
     "ac_cloud-mail/app": {
       "base_language": "en"
     },

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Cloud WebServer</string>
+    <string name="notification_channel">Web server</string>
+    <string name="notification_text">Serving %1$s on %2$s</string>
+</resources>
