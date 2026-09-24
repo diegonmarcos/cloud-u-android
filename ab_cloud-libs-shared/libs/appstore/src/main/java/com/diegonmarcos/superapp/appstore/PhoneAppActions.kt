@@ -53,20 +53,20 @@ object PhoneAppActions {
         val pm = ctx.packageManager
         fun s(id: Int) = ctx.getString(id)
         val out = mutableListOf<Action>()
-        if (false && fleetApp != null) out += Action(Kind.UPDATE, s(R.string.store_phone_update), null,
-            if (fleetApp!!.blocked) s(R.string.store_phone_why_unpublished) else null)
+        if (fleetApp != null) out += Action(Kind.UPDATE, s(R.string.store_phone_update), null,
+            if (fleetApp.blocked) s(R.string.store_phone_why_unpublished) else null)
         val launch = pm.getLaunchIntentForPackage(pkg)
         out += Action(Kind.OPEN, s(R.string.store_phone_open), launch,
             if (launch == null) s(R.string.store_phone_why_no_launcher) else null)
         out += Action(Kind.STOP, s(R.string.store_phone_stop), null, when {
             pkg == ctx.packageName -> s(R.string.store_phone_why_self)
-            !shellReady -> null
+            !shellReady -> s(R.string.store_phone_why_no_shell)
             else -> null
         })
         val flags = runCatching { pm.getApplicationInfo(pkg, 0).flags }.getOrDefault(0)
         out += Action(Kind.REMOVE, s(R.string.store_phone_remove),
             Intent(Intent.ACTION_DELETE, Uri.fromParts("package", pkg, null)),
-            null)
+            if (flags and ApplicationInfo.FLAG_SYSTEM != 0) s(R.string.store_phone_why_system) else null)
         out += Action(Kind.APP_INFO, s(R.string.store_phone_app_info), appInfo(pkg), null)
         out += origin(ctx, pkg, fleetApp != null, sources)
         return out
@@ -84,22 +84,22 @@ object PhoneAppActions {
     fun storePage(sources: JSONObject, installer: String?, pkg: String): Pair<String, Intent>? {
         val store = installer?.let { sources.getJSONObject("sources").optJSONObject(it) } ?: return null
         return store.getString("label") to
-            Intent(Intent.ACTION_VIEW, Uri.parse(store.getString("deeplink").replace("{pkg}", pkg)))
+            Intent(Intent.ACTION_VIEW, Uri.parse(store.getString("deeplink").replace("{pkg}", pkg))).setPackage(installer)
     }
 
     private fun origin(ctx: Context, pkg: String, fleetMember: Boolean, sources: JSONObject): Action {
         val installer = installerOf(ctx, pkg)
-        if (fleetMember) {
+        if (isOurs(ctx, fleetMember, installer)) {
             val label = sources.getJSONObject("ours").getString("label")
             // The same page target the update notification opens.
             val target = AppStoreHost.launchActivity
-                ?: return Action(Kind.ORIGIN, label, null, null)
+                ?: return Action(Kind.ORIGIN, label, null, ctx.getString(R.string.store_phone_why_no_host))
             val open = Intent(ctx, target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             AppStoreHost.launchExtras.forEach { (k, v) -> open.putExtra(k, v) }
             return Action(Kind.ORIGIN, label, open, null)
         }
         val (label, page) = storePage(sources, installer, pkg)
-            ?: return Action(Kind.ORIGIN, sources.getJSONObject("unknown").getString("label"), null, null)
+            ?: return Action(Kind.ORIGIN, sources.getJSONObject("unknown").getString("label"), appInfo(pkg), null)
         return Action(Kind.ORIGIN, label, page, null)
     }
 
