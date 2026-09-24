@@ -1,0 +1,8 @@
+/node_modules
+package-lock.json
+# cloud-code: upstream commits dist/ (package.json main) despite this file; vendored
+# here it must be committed too, and `git add -f` is not how this fleet commits.
+/test/*.js
+/test/*.d.ts
+/test/*.d.ts.map
+.tern-*

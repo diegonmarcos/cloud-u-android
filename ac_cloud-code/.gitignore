@@ -1,0 +1,30 @@
+node_modules
+# cloud-code: /build.json is the FLEET declaration here (committed); Cordova is handed an
+# explicit --buildConfig by build.sh instead, so upstream's signing build.json never exists.
+/dist
+/www/build
+/plugins
+/platforms
+/keystore.jks
+/platforms/android/debug-signing.properties
+/platforms/android/release-signing.properties
+**/*/.DS_Store
+.DS_Store
+pnpm-lock.yaml
+.zed
+.idea
+ace-builds
+fdroid.bool
+CLAUDE.md
+graphify-out/
+.graphify_python
+.gradle/
+local.properties
+tsconfig.tsbuildinfo
+.dev-cert.pem
+.dev-key.pem
+/www/cordova.js
+/www/cordova_plugins.js
+.pnpm-store/
+# cloud-code: written by tools/resolve-targets.py at build time
+/src/cloud/targets.gen.json

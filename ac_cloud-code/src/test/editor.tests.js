@@ -1,0 +1,1901 @@
+import {
+	defaultKeymap,
+	history,
+	historyKeymap,
+	isolateHistory,
+	redo,
+	undo,
+} from "@codemirror/commands";
+import { javascript } from "@codemirror/lang-javascript";
+import {
+	bracketMatching,
+	defaultHighlightStyle,
+	foldable,
+	foldEffect,
+	foldedRanges,
+	foldGutter,
+	StreamLanguage,
+	syntaxHighlighting,
+} from "@codemirror/language";
+import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
+import { Compartment, EditorSelection, EditorState } from "@codemirror/state";
+import { EditorView, keymap, runScopeHandlers } from "@codemirror/view";
+import createBaseExtensions from "cm/baseExtensions";
+import {
+	createEditorReadOnlyExtension,
+	reconfigureEditorReadOnly,
+} from "cm/editorReadOnly";
+import {
+	copyLineDownFoldAware,
+	copyLineUpFoldAware,
+	deleteLineFoldAware,
+	moveLineDownFoldAware,
+	moveLineUpFoldAware,
+} from "cm/foldAwareLineCommands";
+import { foldAllCodeBlocks, unfoldAllCodeBlocks } from "cm/foldingCommands";
+import indentGuides from "cm/indentGuides";
+import {
+	canonicalizeKeyBinding,
+	keyBindingsConflict,
+	toCodeMirrorKey,
+} from "cm/keyBindingUtils";
+import quickToolsModifierInput from "cm/quickToolsModifierInput";
+import {
+	findQuickToolCommand,
+	getShortcutAlternatives,
+	mapQuickToolShiftText,
+} from "cm/quickToolsModifierKeys";
+import {
+	createQuickToolKeyEvent,
+	runQuickToolKey,
+	runQuickToolNavigation,
+} from "cm/quickToolsNavigation";
+import {
+	isMultiCursorSelectionActive,
+	isShiftSelectionActive,
+} from "cm/shiftSelection";
+import {
+	addPointerSelectionRange,
+	getEdgeScrollDirections,
+} from "cm/touchSelectionMenu";
+import quickTools from "components/quickTools";
+import quickToolsActions, {
+	clearQuickToolsModifierState,
+	key as quickToolsKey,
+} from "handlers/quickTools";
+import keyBindings, { CODEMIRROR_COMMAND_NAMES } from "lib/keyBindings";
+import { TestRunner } from "./tester";
+
+export async function runCodeMirrorTests(writeOutput) {
+	const runner = new TestRunner("CodeMirror 6 Editor Tests");
+
+	function createEditor(doc = "", extensions = [], baseExtensionOptions = {}) {
+		const container = document.createElement("div");
+		container.style.width = "500px";
+		container.style.height = "300px";
+		container.style.backgroundColor = "#1e1e1e";
+		document.body.appendChild(container);
+
+		const state = EditorState.create({
+			doc,
+			extensions: [
+				...createBaseExtensions(baseExtensionOptions),
+				keymap.of([...defaultKeymap, ...historyKeymap]),
+				...extensions,
+			],
+		});
+
+		const view = new EditorView({ state, parent: container });
+		return { view, container };
+	}
+
+	function foldLineRange(view, fromLine, toLine) {
+		const from = view.state.doc.line(fromLine).to;
+		const to = view.state.doc.line(toLine).from;
+		view.dispatch({ effects: foldEffect.of({ from, to }) });
+	}
+
+	function countFolds(view) {
+		let count = 0;
+		foldedRanges(view.state).between(0, view.state.doc.length, () => count++);
+		return count;
+	}
+
+	async function withEditor(
+		test,
+		fn,
+		initialDoc = "",
+		extensions = [],
+		baseExtensionOptions = {},
+	) {
+		let view, container;
+
+		try {
+			({ view, container } = createEditor(
+				initialDoc,
+				extensions,
+				baseExtensionOptions,
+			));
+			test.assert(view != null, "EditorView instance should be created");
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			await fn(view);
+			await new Promise((resolve) => setTimeout(resolve, 200));
+		} finally {
+			if (view) view.destroy();
+			if (container) container.remove();
+		}
+	}
+
+	function applyDetectedTextInput(view, { from, to, text }) {
+		let defaultTransaction;
+		const getDefaultTransaction = () => {
+			defaultTransaction ||= view.state.update({
+				changes: { from, to, insert: text },
+				selection: { anchor: from + text.length },
+			});
+			return defaultTransaction;
+		};
+		const handled = view.state
+			.facet(EditorView.inputHandler)
+			.some((handler) => handler(view, from, to, text, getDefaultTransaction));
+		if (!handled) view.dispatch(getDefaultTransaction());
+		return handled;
+	}
+
+	function dispatchQuickToolsTextInput(text) {
+		quickTools.$input.value = text;
+		quickTools.$input.dispatchEvent(new Event("input", { bubbles: true }));
+	}
+
+	// =========================================
+	// BASIC EDITOR TESTS
+	// =========================================
+
+	runner.test("CodeMirror imports available", async (test) => {
+		test.assert(
+			typeof EditorView !== "undefined",
+			"EditorView should be defined",
+		);
+		test.assert(
+			typeof EditorState !== "undefined",
+			"EditorState should be defined",
+		);
+		test.assert(
+			typeof EditorState.create === "function",
+			"EditorState.create should be a function",
+		);
+	});
+
+	runner.test("Acode exposes shared CodeMirror modules", async (test) => {
+		const codemirror = acode.require("codemirror");
+		const language = acode.require("@codemirror/language");
+		const lezer = acode.require("@lezer/highlight");
+		const state = acode.require("@codemirror/state");
+		const view = acode.require("@codemirror/view");
+
+		test.assert(codemirror != null, "codemirror namespace should exist");
+		test.assert(language != null, "@codemirror/language should exist");
+		test.assert(lezer != null, "@lezer/highlight should exist");
+		test.assert(state != null, "@codemirror/state should exist");
+		test.assert(view != null, "@codemirror/view should exist");
+		test.assert(
+			language.StreamLanguage != null,
+			"@codemirror/language should export StreamLanguage",
+		);
+		test.assert(lezer.tags != null, "@lezer/highlight should export tags");
+		test.assert(
+			state.EditorState != null,
+			"@codemirror/state should export EditorState",
+		);
+		test.assert(
+			view.EditorView != null,
+			"@codemirror/view should export EditorView",
+		);
+		test.assertEqual(
+			language.StreamLanguage,
+			codemirror.language.StreamLanguage,
+			"language exports should share the same singleton instance",
+		);
+		test.assertEqual(
+			lezer.tags,
+			codemirror.lezer.tags,
+			"lezer exports should share the same singleton instance",
+		);
+		test.assertEqual(
+			state.EditorState,
+			codemirror.state.EditorState,
+			"state exports should share the same singleton instance",
+		);
+		test.assertEqual(
+			view.EditorView,
+			codemirror.view.EditorView,
+			"view exports should share the same singleton instance",
+		);
+	});
+
+	runner.test(
+		"Acode exposes the static CodeMirror highlighter",
+		async (test) => {
+			const codeHighlight = acode.require("codeHighlight");
+			const codemirror = acode.require("codemirror");
+
+			test.assert(codeHighlight != null, "codeHighlight module should exist");
+			test.assertEqual(
+				typeof codeHighlight.highlightCodeBlock,
+				"function",
+				"highlightCodeBlock should be a function",
+			);
+			test.assertEqual(
+				typeof codeHighlight.highlightLine,
+				"function",
+				"highlightLine should be a function",
+			);
+			test.assertEqual(
+				typeof codeHighlight.applyStyles,
+				"function",
+				"applyStyles should be a function",
+			);
+			test.assertEqual(
+				typeof codeHighlight.getStyles,
+				"function",
+				"getStyles should be a function",
+			);
+			test.assertEqual(
+				codeHighlight.HIGHLIGHT_CLASS,
+				"cm-highlighted",
+				"HIGHLIGHT_CLASS should match the internal token wrapper",
+			);
+			test.assertEqual(
+				codemirror.highlight,
+				codeHighlight,
+				"codemirror.highlight should be the same highlighter module",
+			);
+
+			const css = codeHighlight.getStyles();
+			test.assert(
+				typeof css === "string" && css.includes(".tok-keyword"),
+				"getStyles should return token CSS",
+			);
+
+			const highlighted = await codeHighlight.highlightCodeBlock(
+				'const value = "acode";',
+				"javascript",
+			);
+			test.assert(
+				highlighted.includes("value") && !highlighted.includes("<script"),
+				"highlightCodeBlock should return escaped highlighted HTML",
+			);
+
+			const host = document.createElement("div");
+			const shadow = host.attachShadow({ mode: "open" });
+			codeHighlight.applyStyles(shadow);
+			const sheet = codeHighlight.getStyleSheet();
+			test.assert(
+				sheet == null ||
+					Array.from(shadow.adoptedStyleSheets || []).includes(sheet) ||
+					shadow.querySelector("#cm-static-highlight-styles") != null,
+				"applyStyles should attach highlight CSS to a shadow root",
+			);
+		},
+	);
+
+	runner.test("Editor creation", async (test) => {
+		const { view, container } = createEditor();
+		test.assert(view != null, "EditorView instance should be created");
+		test.assert(view.dom instanceof HTMLElement, "Editor should have DOM");
+		test.assert(view.state instanceof EditorState, "Editor should have state");
+		view.destroy();
+		container.remove();
+	});
+
+	runner.test("Backspace deletes an auto-closed bracket pair", async (test) => {
+		await withEditor(
+			test,
+			async (view) => {
+				view.dispatch({ selection: { anchor: 1 } });
+				const handled = runScopeHandlers(
+					view,
+					new KeyboardEvent("keydown", { key: "Backspace" }),
+					"editor",
+				);
+
+				test.assert(
+					handled,
+					"Backspace should be handled between a bracket pair",
+				);
+				test.assertEqual(view.state.doc.toString(), "");
+			},
+			"()",
+		);
+	});
+
+	runner.test(
+		"Backspace behaves normally when auto-close is disabled",
+		async (test) => {
+			await withEditor(
+				test,
+				async (view) => {
+					view.dispatch({ selection: { anchor: 1 } });
+					const handled = runScopeHandlers(
+						view,
+						new KeyboardEvent("keydown", { key: "Backspace" }),
+						"editor",
+					);
+
+					test.assert(handled, "Backspace should retain its default behavior");
+					test.assertEqual(view.state.doc.toString(), ")");
+				},
+				"()",
+				[],
+				{ autoCloseBrackets: false },
+			);
+		},
+	);
+
+	runner.test("State access", async (test) => {
+		await withEditor(test, async (view) => {
+			const state = view.state;
+			test.assert(state != null, "Editor state should exist");
+			test.assert(typeof state.doc !== "undefined", "State should have doc");
+			test.assert(
+				typeof state.doc.toString === "function",
+				"Doc should have toString",
+			);
+		});
+	});
+
+	runner.test("Set and get document content", async (test) => {
+		await withEditor(test, async (view) => {
+			const text = "Hello CodeMirror 6";
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: text },
+			});
+			test.assertEqual(view.state.doc.toString(), text);
+		});
+	});
+
+	// =========================================
+	// CURSOR AND SELECTION TESTS
+	// =========================================
+
+	runner.test("Cursor movement", async (test) => {
+		await withEditor(test, async (view) => {
+			const doc = "line1\nline2\nline3";
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: doc },
+			});
+
+			const line2 = view.state.doc.line(2);
+			const targetPos = line2.from + 2;
+			view.dispatch({
+				selection: { anchor: targetPos, head: targetPos },
+			});
+
+			const pos = view.state.selection.main.head;
+			const lineInfo = view.state.doc.lineAt(pos);
+			test.assertEqual(lineInfo.number, 2);
+			test.assertEqual(pos - lineInfo.from, 2);
+		});
+	});
+
+	runner.test("Selection handling", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: "abc\ndef" },
+			});
+			view.dispatch({
+				selection: { anchor: 0, head: view.state.doc.length },
+			});
+
+			const { from, to } = view.state.selection.main;
+			const selectedText = view.state.doc.sliceString(from, to);
+			test.assert(selectedText.length > 0, "Should have selected text");
+			test.assertEqual(selectedText, "abc\ndef");
+		});
+	});
+
+	runner.test("Multiple selections", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: "foo bar foo" },
+			});
+
+			view.dispatch({
+				selection: EditorSelection.create([
+					EditorSelection.range(0, 3),
+					EditorSelection.range(8, 11),
+				]),
+			});
+
+			test.assertEqual(view.state.selection.ranges.length, 2);
+			test.assertEqual(view.state.doc.sliceString(0, 3), "foo");
+			test.assertEqual(view.state.doc.sliceString(8, 11), "foo");
+		});
+	});
+
+	runner.test("Selection with cursor (empty range)", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: "hello world" },
+			});
+
+			view.dispatch({
+				selection: EditorSelection.cursor(5),
+			});
+
+			const main = view.state.selection.main;
+			test.assertEqual(main.from, 5);
+			test.assertEqual(main.to, 5);
+			test.assert(main.empty, "Cursor selection should be empty");
+		});
+	});
+
+	runner.test(
+		"Quick tools arrow moves cursor without selection",
+		async (test) => {
+			await withEditor(test, async (view) => {
+				view.dispatch({
+					changes: { from: 0, to: view.state.doc.length, insert: "abc" },
+					selection: EditorSelection.cursor(0),
+				});
+
+				const handled = runQuickToolNavigation(view, 39, { shiftKey: false });
+				const main = view.state.selection.main;
+
+				test.assert(handled, "Right arrow should be handled");
+				test.assert(main.empty, "Selection should stay empty");
+				test.assertEqual(main.head, 1);
+			});
+		},
+	);
+
+	runner.test("Quick tools Shift+Right extends selection", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: "abc" },
+				selection: EditorSelection.cursor(0),
+			});
+
+			const handled = runQuickToolNavigation(view, 39, { shiftKey: true });
+			const main = view.state.selection.main;
+
+			test.assert(handled, "Shift+Right should be handled");
+			test.assertEqual(main.anchor, 0);
+			test.assertEqual(main.head, 1);
+			test.assertEqual(view.state.sliceDoc(main.from, main.to), "a");
+		});
+	});
+
+	runner.test("Quick tools Ctrl+Right moves by word", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: "one two" },
+				selection: EditorSelection.cursor(0),
+			});
+
+			const handled = runQuickToolKey(view, 39, { ctrlKey: true });
+			const main = view.state.selection.main;
+
+			test.assert(handled, "Ctrl+Right should be handled");
+			test.assert(main.empty, "Selection should stay empty");
+			test.assert(
+				main.head > 1,
+				"Ctrl+Right should move farther than one character",
+			);
+		});
+	});
+
+	runner.test("Quick tools Ctrl+Shift+Right selects by word", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: "one two" },
+				selection: EditorSelection.cursor(0),
+			});
+
+			const handled = runQuickToolKey(view, 39, {
+				ctrlKey: true,
+				shiftKey: true,
+			});
+			const main = view.state.selection.main;
+
+			test.assert(handled, "Ctrl+Shift+Right should be handled");
+			test.assertEqual(main.anchor, 0);
+			test.assert(
+				main.head > 1,
+				"Ctrl+Shift+Right should select farther than one character",
+			);
+		});
+	});
+
+	runner.test("Quick tools Shift+Home selects to line start", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: "abc\ndef" },
+				selection: EditorSelection.cursor(6),
+			});
+
+			const handled = runQuickToolKey(view, 36, { shiftKey: true });
+			const main = view.state.selection.main;
+
+			test.assert(handled, "Shift+Home should be handled");
+			test.assertEqual(main.anchor, 6);
+			test.assertEqual(main.head, 4);
+		});
+	});
+
+	runner.test("Quick tools key events preserve modifiers", (test) => {
+		const event = createQuickToolKeyEvent(39, {
+			ctrlKey: true,
+			shiftKey: true,
+			altKey: true,
+			metaKey: true,
+		});
+
+		test.assertEqual(event.key, "ArrowRight");
+		test.assertEqual(event.keyCode, 39);
+		test.assert(event.ctrlKey, "Ctrl should be preserved");
+		test.assert(event.shiftKey, "Shift should be preserved");
+		test.assert(event.altKey, "Alt should be preserved");
+		test.assert(event.metaKey, "Meta should be preserved");
+	});
+
+	runner.test("Quick tools unsupported key falls back", async (test) => {
+		await withEditor(test, async (view) => {
+			const handled = runQuickToolKey(view, 112, {
+				ctrlKey: true,
+				shiftKey: true,
+			});
+			test.assert(!handled, "Unsupported key should not be handled");
+		});
+	});
+
+	runner.test(
+		"Quick tools Shift+Up and Shift+Down extend selection",
+		async (test) => {
+			await withEditor(test, async (view) => {
+				const doc = "abc\ndef\nghi";
+				const line2 = 5;
+				view.dispatch({
+					changes: { from: 0, to: view.state.doc.length, insert: doc },
+					selection: EditorSelection.cursor(line2),
+				});
+
+				const downHandled = runQuickToolNavigation(view, 40, {
+					shiftKey: true,
+				});
+				let main = view.state.selection.main;
+				test.assert(downHandled, "Shift+Down should be handled");
+				test.assertEqual(main.anchor, line2);
+				test.assertEqual(main.head, 9);
+
+				view.dispatch({ selection: EditorSelection.cursor(line2) });
+				const upHandled = runQuickToolNavigation(view, 38, { shiftKey: true });
+				main = view.state.selection.main;
+				test.assert(upHandled, "Shift+Up should be handled");
+				test.assertEqual(main.anchor, line2);
+				test.assertEqual(main.head, 1);
+			});
+		},
+	);
+
+	runner.test("Shift pointer selection follows setting", (test) => {
+		test.assert(
+			isShiftSelectionActive({
+				event: { shiftKey: false },
+				quickToolsShift: true,
+				shiftClickSelection: true,
+			}),
+			"Quick tools Shift should extend selection when enabled",
+		);
+		test.assert(
+			!isShiftSelectionActive({
+				event: { shiftKey: false },
+				quickToolsShift: true,
+				shiftClickSelection: false,
+			}),
+			"Quick tools Shift should respect disabled setting",
+		);
+		test.assert(
+			!isShiftSelectionActive({
+				event: { shiftKey: true },
+				quickToolsShift: false,
+				shiftClickSelection: false,
+			}),
+			"Physical Shift should respect disabled setting",
+		);
+		test.assert(
+			isShiftSelectionActive({
+				event: { shiftKey: true },
+				quickToolsShift: false,
+				shiftClickSelection: true,
+			}),
+			"Physical Shift should work when setting is enabled",
+		);
+		test.assert(
+			isShiftSelectionActive({
+				event: { shiftKey: true },
+				quickToolsShift: false,
+			}),
+			"Physical Shift should default to enabled",
+		);
+	});
+
+	runner.test("Quick tools Ctrl/Meta enable multi-cursor selection", (test) => {
+		test.assert(
+			isMultiCursorSelectionActive({
+				event: { ctrlKey: false, metaKey: false },
+				quickToolsCtrl: true,
+				quickToolsMeta: false,
+			}),
+			"Quick tools Ctrl should add a cursor",
+		);
+		test.assert(
+			isMultiCursorSelectionActive({
+				event: { ctrlKey: false, metaKey: false },
+				quickToolsCtrl: false,
+				quickToolsMeta: true,
+			}),
+			"Quick tools Meta should add a cursor",
+		);
+	});
+
+	runner.test("Physical multi-cursor modifier follows platform", (test) => {
+		test.assert(
+			isMultiCursorSelectionActive({
+				event: { ctrlKey: true, metaKey: false },
+				isMac: false,
+			}),
+			"Ctrl should add a cursor on non-macOS",
+		);
+		test.assert(
+			!isMultiCursorSelectionActive({
+				event: { ctrlKey: false, metaKey: true },
+				isMac: false,
+			}),
+			"Meta should not be the default add-cursor modifier on non-macOS",
+		);
+		test.assert(
+			isMultiCursorSelectionActive({
+				event: { ctrlKey: false, metaKey: true },
+				isMac: true,
+			}),
+			"Meta should add a cursor on macOS",
+		);
+		test.assert(
+			!isMultiCursorSelectionActive({
+				event: { ctrlKey: true, metaKey: false },
+				isMac: true,
+			}),
+			"Ctrl should not be the default add-cursor modifier on macOS",
+		);
+	});
+
+	runner.test("Pointer multi-cursor appends cursor and range", (test) => {
+		const cursorSelection = addPointerSelectionRange(
+			EditorSelection.single(10),
+			{
+				anchor: 10,
+				head: 4,
+			},
+		);
+
+		test.assertEqual(cursorSelection.ranges.length, 2);
+		test.assert(cursorSelection.main.empty, "Added cursor should be empty");
+		test.assertEqual(cursorSelection.main.head, 4);
+
+		const rangeSelection = addPointerSelectionRange(
+			EditorSelection.single(10),
+			{
+				anchor: 0,
+				head: 4,
+				extend: true,
+			},
+		);
+
+		test.assertEqual(rangeSelection.ranges.length, 2);
+		test.assertEqual(rangeSelection.main.anchor, 0);
+		test.assertEqual(rangeSelection.main.head, 4);
+	});
+
+	runner.test("Quick tools Shift maps printable text", (test) => {
+		test.assertEqual(mapQuickToolShiftText("a"), "A");
+		test.assertEqual(mapQuickToolShiftText("1"), "!");
+		test.assertEqual(mapQuickToolShiftText("/"), "?");
+	});
+
+	runner.test("Quick tools modifier combos resolve commands", (test) => {
+		const commands = [
+			{ name: "selectall", key: "Ctrl-A" },
+			{ name: "saveFile", key: "Ctrl-S" },
+			{ name: "redo", key: "Ctrl-Shift-Z|Ctrl-Y" },
+		];
+
+		test.assertEqual(
+			findQuickToolCommand(commands, "a", { ctrlKey: true })?.name,
+			"selectall",
+		);
+		test.assertEqual(
+			findQuickToolCommand(commands, "s", { ctrlKey: true })?.name,
+			"saveFile",
+		);
+		test.assertEqual(
+			findQuickToolCommand(commands, "y", { ctrlKey: true })?.name,
+			"redo",
+		);
+		test.assertEqual(
+			getShortcutAlternatives("Ctrl-Shift-Z|Ctrl-Y").join(","),
+			"Ctrl-Shift-Z,Ctrl-Y",
+		);
+	});
+
+	runner.test(
+		"Quick tools Ctrl+C captures Android input outside CodeMirror",
+		async (test) => {
+			const doc = 'import { history } from "@codemirror/commands";';
+			await withEditor(
+				test,
+				async (view) => {
+					const clipboard = cordova?.plugins?.clipboard;
+					test.assert(
+						typeof clipboard?.copy === "function",
+						"Cordova clipboard should be available",
+					);
+					const originalCopy = clipboard.copy;
+					let copied = "";
+
+					try {
+						clipboard.copy = (text) => {
+							copied = text;
+						};
+						clearQuickToolsModifierState();
+						const from = doc.indexOf("codemirror");
+						const to = from + "codemirror".length;
+						view.dispatch({ selection: { anchor: from, head: to } });
+						view.focus();
+						quickToolsActions("ctrl");
+
+						test.assert(quickToolsKey.ctrl, "Ctrl should be armed");
+						test.assert(
+							document.activeElement === quickTools.$input,
+							"Command modifiers should focus the capture input",
+						);
+
+						dispatchQuickToolsTextInput("cc");
+						test.assertEqual(view.state.doc.toString(), doc);
+						test.assertEqual(view.state.selection.main.from, from);
+						test.assertEqual(view.state.selection.main.to, to);
+						test.assert(
+							quickToolsKey.ctrl,
+							"Invalid captured input should leave Ctrl armed",
+						);
+
+						dispatchQuickToolsTextInput("c");
+						test.assertEqual(copied, "codemirror");
+						test.assertEqual(view.state.doc.toString(), doc);
+						test.assertEqual(view.state.selection.main.from, from);
+						test.assertEqual(view.state.selection.main.to, to);
+						test.assert(!quickToolsKey.ctrl, "Ctrl should reset after Copy");
+						test.assert(
+							document.activeElement === view.contentDOM,
+							"Editor focus should be restored before Copy runs",
+						);
+
+						view.dispatch({ selection: { anchor: 0, head: doc.length } });
+						quickToolsActions("ctrl");
+						dispatchQuickToolsTextInput("c");
+						test.assertEqual(copied, doc);
+						test.assertEqual(view.state.doc.toString(), doc);
+						test.assertEqual(view.state.selection.main.from, 0);
+						test.assertEqual(view.state.selection.main.to, doc.length);
+
+						quickToolsActions("shift");
+						test.assert(
+							document.activeElement === view.contentDOM,
+							"Shift-only input should stay in CodeMirror",
+						);
+						quickToolsActions("ctrl");
+						test.assert(
+							document.activeElement === quickTools.$input,
+							"Ctrl+Shift should use the capture input",
+						);
+						quickToolsActions("ctrl");
+						test.assert(
+							document.activeElement === view.contentDOM,
+							"Turning Ctrl off should restore Shift-only editor focus",
+						);
+					} finally {
+						clipboard.copy = originalCopy;
+						clearQuickToolsModifierState();
+					}
+				},
+				doc,
+				[quickToolsModifierInput()],
+			);
+		},
+	);
+
+	runner.test(
+		"Quick tools modifier fallback holds Android split replacements",
+		async (test) => {
+			const doc = 'import { history } from "@codemirror/commands";';
+			await withEditor(
+				test,
+				async (view) => {
+					const clipboard = cordova?.plugins?.clipboard;
+					test.assert(
+						typeof clipboard?.copy === "function",
+						"Cordova clipboard should be available",
+					);
+					const originalCopy = clipboard.copy;
+					let copied = "";
+
+					try {
+						clipboard.copy = (text) => {
+							copied = text;
+						};
+						view.dispatch({ selection: { anchor: 0, head: doc.length } });
+						view.focus();
+						clearQuickToolsModifierState();
+						quickToolsActions("ctrl");
+						view.focus();
+
+						test.assert(
+							applyDetectedTextInput(view, {
+								from: 0,
+								to: doc.length,
+								text: "",
+							}),
+							"Queued Android deletion should be held",
+						);
+						test.assertEqual(view.state.doc.toString(), doc);
+						test.assert(quickToolsKey.ctrl, "Ctrl should remain armed");
+
+						test.assert(
+							applyDetectedTextInput(view, {
+								from: 0,
+								to: doc.length,
+								text: "c",
+							}),
+							"Queued Ctrl+C insertion should be handled",
+						);
+						test.assertEqual(copied, doc);
+						test.assertEqual(view.state.doc.toString(), doc);
+						test.assertEqual(view.state.selection.main.from, 0);
+						test.assertEqual(view.state.selection.main.to, doc.length);
+						test.assert(!quickToolsKey.ctrl, "Ctrl should reset after Copy");
+					} finally {
+						clipboard.copy = originalCopy;
+						clearQuickToolsModifierState();
+					}
+				},
+				doc,
+				[quickToolsModifierInput()],
+			);
+		},
+	);
+
+	runner.test(
+		"Quick tools capture keeps read-only selections unchanged",
+		async (test) => {
+			const doc = 'import { history } from "@codemirror/commands";';
+			const readOnlyCompartment = new Compartment();
+			await withEditor(
+				test,
+				async (view) => {
+					const clipboard = cordova?.plugins?.clipboard;
+					test.assert(
+						typeof clipboard?.copy === "function",
+						"Cordova clipboard should be available",
+					);
+					const originalCopy = clipboard.copy;
+					const from = doc.indexOf("codemirror");
+					const to = from + "codemirror".length;
+					let copied = "";
+
+					try {
+						clipboard.copy = (text) => {
+							copied = text;
+						};
+						view.dispatch({ selection: { anchor: from, head: to } });
+						view.focus();
+						clearQuickToolsModifierState();
+						quickToolsActions("ctrl");
+						reconfigureEditorReadOnly(view, readOnlyCompartment, true);
+
+						dispatchQuickToolsTextInput("c");
+						test.assertEqual(copied, "codemirror");
+						test.assertEqual(view.state.doc.toString(), doc);
+						test.assertEqual(view.state.selection.main.from, from);
+						test.assertEqual(view.state.selection.main.to, to);
+						test.assert(
+							!view.hasFocus,
+							"Read-only Copy must not focus the editor",
+						);
+
+						quickToolsActions("ctrl");
+						dispatchQuickToolsTextInput("x");
+						test.assertEqual(view.state.doc.toString(), doc);
+						test.assertEqual(view.state.selection.main.from, from);
+						test.assertEqual(view.state.selection.main.to, to);
+						test.assert(!view.hasFocus, "Read-only Cut must remain unfocused");
+
+						quickToolsActions("shift");
+						dispatchQuickToolsTextInput("b");
+						test.assertEqual(view.state.doc.toString(), doc);
+						test.assertEqual(view.state.selection.main.from, from);
+						test.assertEqual(view.state.selection.main.to, to);
+						test.assert(
+							!view.hasFocus,
+							"Read-only Shift must remain unfocused",
+						);
+					} finally {
+						clipboard.copy = originalCopy;
+						clearQuickToolsModifierState();
+					}
+				},
+				doc,
+				[
+					quickToolsModifierInput(),
+					readOnlyCompartment.of(createEditorReadOnlyExtension(false)),
+				],
+			);
+		},
+	);
+
+	runner.test(
+		"Quick tools modifier input preserves Copy, Cut, Shift, and multi-selection",
+		async (test) => {
+			const doc = 'import { history } from "@codemirror/commands";';
+			await withEditor(
+				test,
+				async (view) => {
+					const clipboard = cordova?.plugins?.clipboard;
+					const originalCopy = clipboard.copy;
+					let copied = "";
+
+					try {
+						clipboard.copy = (text) => {
+							copied = text;
+						};
+
+						const wordFrom = doc.indexOf("codemirror");
+						const wordTo = wordFrom + "codemirror".length;
+						view.dispatch({ selection: { anchor: wordFrom, head: wordTo } });
+						view.focus();
+						clearQuickToolsModifierState();
+						quickToolsActions("ctrl");
+						dispatchQuickToolsTextInput("c");
+						test.assertEqual(copied, "codemirror");
+						test.assertEqual(view.state.doc.toString(), doc);
+
+						view.dispatch({ selection: { anchor: 0, head: 6 } });
+						quickToolsActions("ctrl");
+						dispatchQuickToolsTextInput("x");
+						test.assertEqual(copied, "import");
+						test.assertEqual(view.state.doc.toString(), doc.slice(6));
+
+						quickToolsActions("ctrl");
+						dispatchQuickToolsTextInput("z");
+						test.assertEqual(view.state.doc.toString(), doc);
+
+						view.dispatch({
+							changes: {
+								from: 0,
+								to: view.state.doc.length,
+								insert: "one two three",
+							},
+							selection: EditorSelection.create([
+								EditorSelection.range(0, 3),
+								EditorSelection.range(8, 13),
+							]),
+						});
+						quickToolsActions("ctrl");
+						dispatchQuickToolsTextInput("c");
+						test.assertEqual(copied, "one\nthree");
+						test.assertEqual(view.state.doc.toString(), "one two three");
+
+						view.dispatch({
+							changes: { from: 0, to: view.state.doc.length, insert: "abc" },
+							selection: { anchor: 1, head: 2 },
+						});
+						quickToolsActions("shift");
+						applyDetectedTextInput(view, { from: 1, to: 2, text: "b" });
+						test.assertEqual(view.state.doc.toString(), "aBc");
+					} finally {
+						clipboard.copy = originalCopy;
+						clearQuickToolsModifierState();
+					}
+				},
+				doc,
+				[quickToolsModifierInput()],
+			);
+		},
+	);
+
+	runner.test("Every CodeMirror command can be assigned a key", (test) => {
+		const missingCommands = Array.from(CODEMIRROR_COMMAND_NAMES).filter(
+			(name) => !keyBindings[name],
+		);
+
+		test.assertEqual(missingCommands.join(","), "");
+	});
+
+	runner.test("Default key bindings have one owner per shortcut", (test) => {
+		const shortcuts = [];
+		const conflicts = [];
+		for (const [name, binding] of Object.entries(keyBindings)) {
+			for (const shortcut of String(binding.key || "").split("|")) {
+				if (!shortcut) continue;
+				const normalized = canonicalizeKeyBinding(shortcut);
+				if (!normalized) continue;
+				const claimed = shortcuts.find(({ key }) =>
+					keyBindingsConflict(key, normalized),
+				);
+				if (claimed) {
+					const repeatedKeyForSameCommand =
+						claimed.name === name && claimed.key === normalized;
+					if (!repeatedKeyForSameCommand) {
+						conflicts.push(`${shortcut}: ${claimed.name}, ${name}`);
+					}
+				} else if (!claimed) {
+					shortcuts.push({ key: normalized, name });
+				}
+			}
+		}
+
+		test.assertEqual(conflicts.join("; "), "");
+	});
+
+	runner.test("Ctrl-K stays available for the terminal plugin", (test) => {
+		const ctrlKBindings = [];
+		for (const [name, binding] of Object.entries(keyBindings)) {
+			for (const shortcut of String(binding.key || "").split("|")) {
+				if (keyBindingsConflict(shortcut, "Ctrl-K")) {
+					ctrlKBindings.push(`${name}: ${shortcut}`);
+				}
+			}
+		}
+		test.assertEqual(ctrlKBindings.join("; "), "");
+	});
+
+	runner.test(
+		"CodeMirror can compile the generated default keymap",
+		async (test) => {
+			const generatedKeymap = Object.values(keyBindings).flatMap((binding) =>
+				String(binding.key || "")
+					.split("|")
+					.filter(Boolean)
+					.map((shortcut) => ({
+						key: toCodeMirrorKey(shortcut),
+						run: () => false,
+					})),
+			);
+
+			await withEditor(
+				test,
+				(view) => {
+					let error = null;
+					try {
+						runScopeHandlers(
+							view,
+							new KeyboardEvent("keydown", { key: "Enter" }),
+							"editor",
+						);
+					} catch (caught) {
+						error = caught;
+					}
+					test.assert(
+						!error,
+						error?.message || "Generated keymap should compile",
+					);
+				},
+				"",
+				[keymap.of(generatedKeymap)],
+			);
+		},
+	);
+
+	runner.test("Normalized key bindings remain stable", (test) => {
+		test.assertEqual(canonicalizeKeyBinding("Ctrl-Tab"), "mod-tab");
+		test.assertEqual(canonicalizeKeyBinding("Mod-Tab"), "mod-tab");
+		test.assertEqual(canonicalizeKeyBinding("Ctrl-Shift-Tab"), "mod-shift-tab");
+		test.assertEqual(canonicalizeKeyBinding("Mod-Shift-Tab"), "mod-shift-tab");
+		test.assertEqual(canonicalizeKeyBinding("Ctrl-K S"), "mod-k s");
+		test.assertEqual(canonicalizeKeyBinding("Ctrl-K Ctrl-X"), "mod-k mod-x");
+		test.assert(keyBindingsConflict("Ctrl-K", "Ctrl-K S"));
+		test.assert(!keyBindingsConflict("Ctrl-K S", "Ctrl-K Ctrl-X"));
+	});
+
+	runner.test(
+		"Conventional editor shortcuts are available by default",
+		(test) => {
+			test.assertEqual(keyBindings.saveAllChanges.key, null);
+			test.assertEqual(keyBindings.problems.key, "Ctrl-Shift-M");
+			test.assertEqual(keyBindings.formatDocument.key, "Alt-Shift-F");
+			test.assertEqual(keyBindings.jumpToDefinition.key, "F12");
+			test.assertEqual(keyBindings.findReferences.key, "Shift-F12");
+			test.assertEqual(keyBindings.nextDiagnostic.key, "F8");
+			test.assertEqual(keyBindings.previousDiagnostic.key, "Shift-F8");
+			test.assertEqual(keyBindings.simplifySelection.key, "Escape");
+			test.assertEqual(keyBindings.deleteToLineEnd.key, null);
+			test.assertEqual(keyBindings.deleteTrailingWhitespace.key, null);
+			test.assertEqual(keyBindings.renameSymbol.key, null);
+			test.assertEqual(
+				keyBindings.toggleBlockComment.key,
+				"Ctrl-Shift-/|Shift-Alt-A",
+			);
+		},
+	);
+
+	runner.test(
+		"Pane focus shortcuts override conflicting editor defaults",
+		(test) => {
+			test.assertEqual(keyBindings.focusPaneUp.key, "Ctrl-Alt-Up");
+			test.assertEqual(keyBindings.focusPaneDown.key, "Ctrl-Alt-Down");
+			test.assertEqual(keyBindings.addCursorAbove.key, null);
+			test.assertEqual(keyBindings.addCursorBelow.key, null);
+		},
+	);
+
+	runner.test(
+		"Legacy modes fold indentation while preserving blank lines",
+		(test) => {
+			const streamLanguage = StreamLanguage.define({
+				startState: () => ({}),
+				copyState: (state) => ({ ...state }),
+				token: (stream) => {
+					stream.skipToEnd();
+					return null;
+				},
+			});
+			const state = EditorState.create({
+				doc: "root\n\tchild\n\n\tchild2\nnext",
+				extensions: [
+					...createBaseExtensions(),
+					EditorState.tabSize.of(4),
+					streamLanguage,
+				],
+			});
+			const firstLine = state.doc.line(1);
+			const range = foldable(state, firstLine.from, firstLine.to);
+
+			test.assert(range != null, "Indented lines should be foldable");
+			test.assertEqual(range.from, firstLine.to);
+			test.assertEqual(range.to, state.doc.line(4).to);
+		},
+	);
+
+	runner.test(
+		"Fold all includes same-line nested blocks and unfold all clears them",
+		async (test) => {
+			await withEditor(
+				test,
+				async (view) => {
+					test.assert(foldAllCodeBlocks(view), "Nested blocks should fold");
+					test.assertEqual(countFolds(view), 2);
+					test.assert(unfoldAllCodeBlocks(view), "All folds should unfold");
+					test.assertEqual(countFolds(view), 0);
+				},
+				"function outer() { if (true) {\n  console.log('nested');\n} }",
+				[javascript()],
+			);
+		},
+	);
+
+	// =========================================
+	// FOLD-AWARE LINE COMMAND TESTS
+	// =========================================
+
+	const foldedBlock = [
+		"function demo() {",
+		'  console.log("one");',
+		'  console.log("two");',
+		"}",
+	].join("\n");
+
+	function createFoldedBlockEditor() {
+		const editor = createEditor(`before\n${foldedBlock}\nafter`);
+		foldLineRange(editor.view, 2, 5);
+		editor.view.dispatch({
+			selection: EditorSelection.cursor(editor.view.state.doc.line(2).from),
+		});
+		return editor;
+	}
+
+	runner.test("Copy line down copies and preserves a folded block", (test) => {
+		const { view, container } = createFoldedBlockEditor();
+		try {
+			test.assert(copyLineDownFoldAware(view), "Command should be handled");
+			test.assertEqual(
+				view.state.doc.toString(),
+				`before\n${foldedBlock}\n${foldedBlock}\nafter`,
+			);
+			test.assertEqual(countFolds(view), 2);
+			test.assertEqual(
+				view.state.doc.lineAt(view.state.selection.main.head).number,
+				6,
+			);
+		} finally {
+			view.destroy();
+			container.remove();
+		}
+	});
+
+	runner.test("Copy line up copies and preserves a folded block", (test) => {
+		const { view, container } = createFoldedBlockEditor();
+		try {
+			test.assert(copyLineUpFoldAware(view), "Command should be handled");
+			test.assertEqual(
+				view.state.doc.toString(),
+				`before\n${foldedBlock}\n${foldedBlock}\nafter`,
+			);
+			test.assertEqual(countFolds(view), 2);
+			test.assertEqual(
+				view.state.doc.lineAt(view.state.selection.main.head).number,
+				2,
+			);
+		} finally {
+			view.destroy();
+			container.remove();
+		}
+	});
+
+	runner.test(
+		"Move line down moves a folded block past the next visible line",
+		(test) => {
+			const { view, container } = createFoldedBlockEditor();
+			try {
+				test.assert(moveLineDownFoldAware(view), "Command should be handled");
+				test.assertEqual(
+					view.state.doc.toString(),
+					`before\nafter\n${foldedBlock}`,
+				);
+				test.assertEqual(countFolds(view), 1);
+				test.assertEqual(
+					view.state.doc.lineAt(view.state.selection.main.head).number,
+					3,
+				);
+			} finally {
+				view.destroy();
+				container.remove();
+			}
+		},
+	);
+
+	runner.test(
+		"Move line up moves a folded block past the previous visible line",
+		(test) => {
+			const { view, container } = createFoldedBlockEditor();
+			try {
+				test.assert(moveLineUpFoldAware(view), "Command should be handled");
+				test.assertEqual(
+					view.state.doc.toString(),
+					`${foldedBlock}\nbefore\nafter`,
+				);
+				test.assertEqual(countFolds(view), 1);
+				test.assertEqual(
+					view.state.doc.lineAt(view.state.selection.main.head).number,
+					1,
+				);
+			} finally {
+				view.destroy();
+				container.remove();
+			}
+		},
+	);
+
+	runner.test("Remove line deletes an entire folded block", (test) => {
+		const { view, container } = createFoldedBlockEditor();
+		try {
+			test.assert(deleteLineFoldAware(view), "Command should be handled");
+			test.assertEqual(view.state.doc.toString(), "before\nafter");
+			test.assertEqual(countFolds(view), 0);
+		} finally {
+			view.destroy();
+			container.remove();
+		}
+	});
+
+	// =========================================
+	// HISTORY (UNDO/REDO) TESTS
+	// =========================================
+
+	runner.test("Undo works", async (test) => {
+		const { view, container } = createEditor("one");
+
+		try {
+			view.dispatch({
+				changes: { from: 3, insert: "\ntwo" },
+			});
+			test.assertEqual(view.state.doc.toString(), "one\ntwo");
+
+			undo(view);
+			test.assertEqual(view.state.doc.toString(), "one");
+		} finally {
+			view.destroy();
+			container.remove();
+		}
+	});
+
+	runner.test("Redo works", async (test) => {
+		const { view, container } = createEditor("one");
+
+		try {
+			view.dispatch({
+				changes: { from: 3, insert: "\ntwo" },
+			});
+
+			undo(view);
+			test.assertEqual(view.state.doc.toString(), "one");
+
+			redo(view);
+			test.assertEqual(view.state.doc.toString(), "one\ntwo");
+		} finally {
+			view.destroy();
+			container.remove();
+		}
+	});
+
+	runner.test("Multiple undo steps", async (test) => {
+		const { view, container } = createEditor("");
+
+		try {
+			// Use isolateHistory to force each change into separate history entries
+			view.dispatch({
+				changes: { from: 0, insert: "a" },
+				annotations: isolateHistory.of("full"),
+			});
+			view.dispatch({
+				changes: { from: 1, insert: "b" },
+				annotations: isolateHistory.of("full"),
+			});
+			view.dispatch({
+				changes: { from: 2, insert: "c" },
+				annotations: isolateHistory.of("full"),
+			});
+
+			test.assertEqual(view.state.doc.toString(), "abc");
+
+			undo(view);
+			undo(view);
+			test.assertEqual(view.state.doc.toString(), "a");
+		} finally {
+			view.destroy();
+			container.remove();
+		}
+	});
+
+	// =========================================
+	// DOCUMENT MANIPULATION TESTS
+	// =========================================
+
+	runner.test("Line count", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: "a\nb\nc\nd" },
+			});
+			test.assertEqual(view.state.doc.lines, 4);
+		});
+	});
+
+	runner.test("Insert text at position", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: "hello world" },
+			});
+
+			view.dispatch({
+				changes: { from: 5, to: 5, insert: " there" },
+			});
+
+			test.assertEqual(view.state.doc.toString(), "hello there world");
+		});
+	});
+
+	runner.test("Replace text range", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: "hello world" },
+			});
+
+			view.dispatch({
+				changes: { from: 6, to: 11, insert: "cm6" },
+			});
+
+			test.assertEqual(view.state.doc.toString(), "hello cm6");
+		});
+	});
+
+	runner.test("Delete text", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, insert: "hello world" },
+			});
+
+			view.dispatch({
+				changes: { from: 5, to: 11, insert: "" },
+			});
+
+			test.assertEqual(view.state.doc.toString(), "hello");
+		});
+	});
+
+	runner.test("Batch changes", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, insert: "aaa bbb ccc" },
+			});
+
+			view.dispatch({
+				changes: [
+					{ from: 0, to: 3, insert: "xxx" },
+					{ from: 4, to: 7, insert: "yyy" },
+					{ from: 8, to: 11, insert: "zzz" },
+				],
+			});
+
+			test.assertEqual(view.state.doc.toString(), "xxx yyy zzz");
+		});
+	});
+
+	runner.test("Line information", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: {
+					from: 0,
+					to: view.state.doc.length,
+					insert: "line one\nline two\nline three",
+				},
+			});
+
+			const line2 = view.state.doc.line(2);
+			test.assertEqual(line2.number, 2);
+			test.assertEqual(line2.text, "line two");
+			test.assert(line2.from > 0, "Line 2 should have positive from");
+		});
+	});
+
+	runner.test("Position conversions", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: {
+					from: 0,
+					to: view.state.doc.length,
+					insert: "abc\ndefgh\nij",
+				},
+			});
+
+			const pos = 7; // 'g' in "defgh"
+			const lineInfo = view.state.doc.lineAt(pos);
+
+			test.assertEqual(lineInfo.number, 2);
+			test.assertEqual(lineInfo.text, "defgh");
+			test.assertEqual(pos - lineInfo.from, 3);
+		});
+	});
+
+	runner.test("Empty document handling", async (test) => {
+		await withEditor(test, async (view) => {
+			test.assertEqual(view.state.doc.length, 0);
+			test.assertEqual(view.state.doc.lines, 1);
+			test.assertEqual(view.state.doc.toString(), "");
+		});
+	});
+
+	// =========================================
+	// DOM AND VIEW TESTS
+	// =========================================
+
+	runner.test("DOM elements exist", async (test) => {
+		await withEditor(test, async (view) => {
+			test.assert(view.dom != null, "view.dom should exist");
+			test.assert(view.scrollDOM != null, "view.scrollDOM should exist");
+			test.assert(view.contentDOM != null, "view.contentDOM should exist");
+		});
+	});
+
+	runner.test("Indent guides render as indentation spans", async (test) => {
+		const doc = "function x() {\n  if (true) {\n    return 1;\n  }\n}";
+		await withEditor(
+			test,
+			async (view) => {
+				const guideLine = view.dom.querySelector(".cm-indent-guides");
+				const legacyWidget = view.dom.querySelector(
+					".cm-indent-guides-wrapper",
+				);
+				test.assert(guideLine != null, "Indent guide span should exist");
+				test.assert(
+					legacyWidget == null,
+					"Indent guides should not create widget wrapper DOM",
+				);
+			},
+			doc,
+			[indentGuides()],
+		);
+	});
+
+	runner.test("Focus and blur", async (test) => {
+		await withEditor(test, async (view) => {
+			view.focus();
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			test.assert(view.hasFocus, "Editor should have focus");
+
+			view.contentDOM.blur();
+			await new Promise((resolve) => setTimeout(resolve, 50));
+			test.assert(!view.hasFocus, "Editor should not have focus after blur");
+		});
+	});
+
+	runner.test("Scroll API", async (test) => {
+		await withEditor(test, async (view) => {
+			const longDoc = Array(100).fill("line").join("\n");
+			view.dispatch({
+				changes: { from: 0, to: view.state.doc.length, insert: longDoc },
+			});
+
+			const line50 = view.state.doc.line(50);
+			view.dispatch({
+				effects: EditorView.scrollIntoView(line50.from, { y: "center" }),
+			});
+
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			test.assert(
+				view.scrollDOM.scrollTop >= 0,
+				"scrollTop should be accessible",
+			);
+		});
+	});
+
+	runner.test("Viewport info", async (test) => {
+		await withEditor(test, async (view) => {
+			const longDoc = Array(200).fill("some text content").join("\n");
+			view.dispatch({
+				changes: { from: 0, insert: longDoc },
+			});
+
+			const viewport = view.viewport;
+			test.assert(typeof viewport.from === "number", "viewport.from exists");
+			test.assert(typeof viewport.to === "number", "viewport.to exists");
+			test.assert(viewport.to > viewport.from, "viewport has range");
+		});
+	});
+
+	// =========================================
+	// CODEMIRROR-SPECIFIC FEATURES
+	// =========================================
+
+	runner.test("EditorState facets", async (test) => {
+		const { view, container } = createEditor("test");
+
+		try {
+			const readOnly = view.state.facet(EditorState.readOnly);
+			test.assert(typeof readOnly === "boolean", "readOnly facet exists");
+			test.assertEqual(readOnly, false);
+		} finally {
+			view.destroy();
+			container.remove();
+		}
+	});
+
+	runner.test("Read-only facet value", async (test) => {
+		const container = document.createElement("div");
+		container.style.width = "500px";
+		container.style.height = "300px";
+		document.body.appendChild(container);
+
+		const state = EditorState.create({
+			doc: "read only content",
+			extensions: [EditorState.readOnly.of(true)],
+		});
+
+		const view = new EditorView({ state, parent: container });
+
+		try {
+			const isReadOnly = view.state.facet(EditorState.readOnly);
+			test.assertEqual(isReadOnly, true, "Should report as read-only");
+		} finally {
+			view.destroy();
+			container.remove();
+		}
+	});
+
+	runner.test("Transaction filtering", async (test) => {
+		let filterCalled = false;
+
+		const container = document.createElement("div");
+		container.style.width = "500px";
+		container.style.height = "300px";
+		document.body.appendChild(container);
+
+		const state = EditorState.create({
+			doc: "original",
+			extensions: [
+				EditorState.transactionFilter.of((tr) => {
+					if (tr.docChanged) filterCalled = true;
+					return tr;
+				}),
+			],
+		});
+
+		const view = new EditorView({ state, parent: container });
+
+		try {
+			view.dispatch({
+				changes: { from: 0, to: 8, insert: "modified" },
+			});
+
+			test.assert(filterCalled, "Transaction filter should be called");
+			test.assertEqual(view.state.doc.toString(), "modified");
+		} finally {
+			view.destroy();
+			container.remove();
+		}
+	});
+
+	runner.test("Update listener", async (test) => {
+		let updateCount = 0;
+		let docChanged = false;
+
+		const container = document.createElement("div");
+		container.style.width = "500px";
+		container.style.height = "300px";
+		document.body.appendChild(container);
+
+		const state = EditorState.create({
+			doc: "",
+			extensions: [
+				EditorView.updateListener.of((update) => {
+					updateCount++;
+					if (update.docChanged) docChanged = true;
+				}),
+			],
+		});
+
+		const view = new EditorView({ state, parent: container });
+
+		try {
+			view.dispatch({
+				changes: { from: 0, insert: "hello" },
+			});
+
+			test.assert(updateCount > 0, "Update listener should fire");
+			test.assert(docChanged, "docChanged should be true");
+		} finally {
+			view.destroy();
+			container.remove();
+		}
+	});
+
+	runner.test("State effects", async (test) => {
+		const { StateEffect } = await import("@codemirror/state");
+		const myEffect = StateEffect.define();
+
+		let effectReceived = false;
+
+		const container = document.createElement("div");
+		container.style.width = "500px";
+		container.style.height = "300px";
+		document.body.appendChild(container);
+
+		const state = EditorState.create({
+			doc: "",
+			extensions: [
+				EditorView.updateListener.of((update) => {
+					for (const tr of update.transactions) {
+						for (const effect of tr.effects) {
+							if (effect.is(myEffect)) {
+								effectReceived = true;
+							}
+						}
+					}
+				}),
+			],
+		});
+
+		const view = new EditorView({ state, parent: container });
+
+		try {
+			view.dispatch({
+				effects: myEffect.of("test-value"),
+			});
+
+			test.assert(effectReceived, "Custom state effect should be received");
+		} finally {
+			view.destroy();
+			container.remove();
+		}
+	});
+
+	runner.test("Compartments for dynamic config", async (test) => {
+		const readOnlyComp = new Compartment();
+
+		const container = document.createElement("div");
+		container.style.width = "500px";
+		container.style.height = "300px";
+		document.body.appendChild(container);
+
+		const state = EditorState.create({
+			doc: "test",
+			extensions: [readOnlyComp.of(EditorState.readOnly.of(false))],
+		});
+
+		const view = new EditorView({ state, parent: container });
+
+		try {
+			test.assertEqual(view.state.facet(EditorState.readOnly), false);
+
+			view.dispatch({
+				effects: readOnlyComp.reconfigure(EditorState.readOnly.of(true)),
+			});
+
+			test.assertEqual(view.state.facet(EditorState.readOnly), true);
+		} finally {
+			view.destroy();
+			container.remove();
+		}
+	});
+
+	runner.test("Document iteration", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, insert: "line1\nline2\nline3" },
+			});
+
+			const lines = [];
+			for (let i = 1; i <= view.state.doc.lines; i++) {
+				lines.push(view.state.doc.line(i).text);
+			}
+
+			test.assertEqual(lines.length, 3);
+			test.assertEqual(lines[0], "line1");
+			test.assertEqual(lines[1], "line2");
+			test.assertEqual(lines[2], "line3");
+		});
+	});
+
+	runner.test("Text iterator", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, insert: "hello world" },
+			});
+
+			const iter = view.state.doc.iter();
+			let text = "";
+			while (!iter.done) {
+				text += iter.value;
+				iter.next();
+			}
+
+			test.assertEqual(text, "hello world");
+		});
+	});
+
+	runner.test("Slice string", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, insert: "hello world" },
+			});
+
+			test.assertEqual(view.state.doc.sliceString(0, 5), "hello");
+			test.assertEqual(view.state.doc.sliceString(6, 11), "world");
+			test.assertEqual(view.state.doc.sliceString(6), "world");
+		});
+	});
+
+	runner.test("Line at position", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, insert: "aaa\nbbb\nccc" },
+			});
+
+			const lineAtStart = view.state.doc.lineAt(0);
+			test.assertEqual(lineAtStart.number, 1);
+
+			const lineAtMiddle = view.state.doc.lineAt(5);
+			test.assertEqual(lineAtMiddle.number, 2);
+
+			const lineAtEnd = view.state.doc.lineAt(10);
+			test.assertEqual(lineAtEnd.number, 3);
+		});
+	});
+
+	runner.test("Visible ranges", async (test) => {
+		await withEditor(test, async (view) => {
+			const longDoc = Array(100).fill("content").join("\n");
+			view.dispatch({
+				changes: { from: 0, insert: longDoc },
+			});
+
+			const visibleRanges = view.visibleRanges;
+			test.assert(Array.isArray(visibleRanges), "visibleRanges is an array");
+			test.assert(visibleRanges.length > 0, "Should have visible ranges");
+
+			for (const range of visibleRanges) {
+				test.assert(typeof range.from === "number", "range.from exists");
+				test.assert(typeof range.to === "number", "range.to exists");
+			}
+		});
+	});
+
+	runner.test("coordsAtPos", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, insert: "hello" },
+			});
+
+			const coords = view.coordsAtPos(0);
+			test.assert(coords != null, "coords should exist");
+			test.assert(typeof coords.left === "number", "coords.left exists");
+			test.assert(typeof coords.top === "number", "coords.top exists");
+		});
+	});
+
+	runner.test("posAtCoords", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, insert: "hello world" },
+			});
+
+			const rect = view.contentDOM.getBoundingClientRect();
+			const pos = view.posAtCoords({ x: rect.left + 10, y: rect.top + 10 });
+
+			test.assert(pos != null || pos === null, "posAtCoords should return");
+		});
+	});
+
+	runner.test("Edge scroll direction helper", async (test) => {
+		const rect = {
+			left: 100,
+			right: 300,
+			top: 200,
+			bottom: 400,
+		};
+
+		const leftTop = getEdgeScrollDirections({
+			x: 110,
+			y: 210,
+			rect,
+			allowHorizontal: true,
+		});
+		test.assertEqual(leftTop.horizontal, -1);
+		test.assertEqual(leftTop.vertical, -1);
+
+		const rightBottom = getEdgeScrollDirections({
+			x: 295,
+			y: 395,
+			rect,
+			allowHorizontal: true,
+		});
+		test.assertEqual(rightBottom.horizontal, 1);
+		test.assertEqual(rightBottom.vertical, 1);
+
+		const noHorizontal = getEdgeScrollDirections({
+			x: 110,
+			y: 395,
+			rect,
+			allowHorizontal: false,
+		});
+		test.assertEqual(noHorizontal.horizontal, 0);
+		test.assertEqual(noHorizontal.vertical, 1);
+	});
+
+	runner.test("lineBlockAt", async (test) => {
+		await withEditor(test, async (view) => {
+			view.dispatch({
+				changes: { from: 0, insert: "line1\nline2\nline3" },
+			});
+
+			const line2Start = view.state.doc.line(2).from;
+			const block = view.lineBlockAt(line2Start);
+
+			test.assert(block != null, "lineBlockAt should return block");
+			test.assert(typeof block.from === "number", "block.from exists");
+			test.assert(typeof block.to === "number", "block.to exists");
+			test.assert(typeof block.height === "number", "block.height exists");
+		});
+	});
+
+	return await runner.run(writeOutput);
+}
+
+export { runCodeMirrorTests as runAceEditorTests };

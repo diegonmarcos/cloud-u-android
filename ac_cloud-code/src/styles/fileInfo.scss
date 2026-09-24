@@ -1,0 +1,102 @@
+#file-info {
+  overflow-x: hidden;
+  padding: 0.8rem;
+
+  .file-header {
+    margin-bottom: 1.5rem;
+
+    .file-name {
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--popup-text-color);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+
+      .name-part {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        position: relative;
+
+        &:hover {
+          overflow: visible;
+          white-space: normal;
+          word-break: break-all;
+          z-index: 1;
+          border-radius: 4px;
+          background: var(--popup-background-color);
+        }
+      }
+      .file-extension {
+        background: color-mix(
+          in srgb,
+          var(--button-background-color) 40%,
+          transparent
+        );
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        color: var(--active-color);
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        flex-shrink: 0;
+      }
+    }
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+
+  .info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .info-label {
+      font-size: 0.875rem;
+      color: color-mix(in srgb, var(--popup-text-color) 60%, transparent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-value {
+      font-size: 1rem;
+      color: var(--popup-text-color);
+      font-weight: 500;
+    }
+  }
+
+  .path-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+
+    .path-value {
+      word-break: break-all;
+    }
+  }
+
+  @supports not (gap: 1px) {
+    .file-name > * + * { margin-left: 0.5rem; }
+    .info-grid > * { margin-right: 1.5rem; margin-bottom: 1.5rem; }
+    .info-item > * + * { margin-top: 0.5rem; }
+  }
+
+  @media (max-width: 480px) {
+    .file-card {
+      padding: 1.5rem;
+    }
+
+    .info-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+}

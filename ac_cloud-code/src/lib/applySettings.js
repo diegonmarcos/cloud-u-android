@@ -1,0 +1,62 @@
+import quickTools from "../components/quickTools";
+import actions from "../handlers/quickTools";
+import appSettings from "../lib/settings";
+import themes from "../theme/list";
+import config from "./config";
+import fonts from "./fonts";
+
+export default {
+	beforeRender() {
+		//animation
+		appSettings.applyAnimationSetting();
+
+		//full-screen
+		if (appSettings.value.fullscreen) {
+			acode.exec("enable-fullscreen");
+		}
+
+		//setup vibration
+		app.addEventListener("click", function (e) {
+			const $target = e.target;
+			if ($target.hasAttribute("vibrate") && appSettings.value.vibrateOnTap) {
+				navigator.vibrate(config.VIBRATION_TIME);
+			}
+		});
+
+		system.setInputType(appSettings.value.keyboardMode);
+		appSettings.applyUiZoomSetting();
+		// Keep native context menu enabled globally; editor manager scopes disabling to CodeMirror focus.
+		system.setNativeContextMenuDisabled(false);
+	},
+	afterRender() {
+		const { value: settings } = appSettings;
+		const { $toggler } = quickTools;
+		const activeFile = editorManager.activeFile;
+		if (settings.floatingButton && !activeFile?.hideQuickTools) {
+			clearTimeout($toggler._hideTimeout);
+			$toggler._hideTimeout = null;
+			$toggler.classList.remove("hide");
+			if (!$toggler.isConnected) {
+				root.appendOuter($toggler);
+			}
+		} else {
+			clearTimeout($toggler._hideTimeout);
+			$toggler.classList.add("hide");
+			$toggler._hideTimeout = setTimeout(() => {
+				$toggler.remove();
+				$toggler._hideTimeout = null;
+			}, 300);
+		}
+
+		if (activeFile?.hideQuickTools) {
+			actions("set-height", { height: 0, save: false });
+		} else {
+			actions("set-height", settings.quickTools);
+		}
+		fonts.setAppFont(settings.appFont);
+		fonts.setEditorFont(settings.editorFont);
+		if (!themes.applied) {
+			themes.apply("dark");
+		}
+	},
+};

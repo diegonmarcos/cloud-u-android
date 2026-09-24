@@ -1,0 +1,1063 @@
+import "core-js/stable";
+import "html-tag-js/dist/polyfill";
+
+import "./main.scss";
+import "res/icons/style.css";
+import "res/file-icons/style.css";
+import "styles/overrideAceStyle.scss";
+import "styles/wideScreen.scss";
+// Editor tabs use a shadow root that only links build/main.css.
+import "pages/welcome/welcome.scss";
+
+import "lib/polyfill";
+import "cm/supportedModes";
+import "components/WebComponents";
+import "handlers/editorWorkaround";
+
+import fsOperation from "fileSystem";
+import sidebarApps from "sidebarApps";
+import { setKeyBindings } from "cm/commandRegistry";
+import { hasConnectedServers } from "cm/lsp/connectionState";
+import {
+	getModeForPath,
+	getModes,
+	getModesByName,
+	initModes,
+} from "cm/modelist";
+import Contextmenu from "components/contextmenu";
+import Sidebar from "components/sidebar";
+import tile from "components/tile";
+import toast from "components/toast";
+import { initIconTooltips } from "components/tooltip";
+import alert from "dialogs/alert";
+import confirm from "dialogs/confirm";
+import intentHandler, { processPendingIntents } from "handlers/intent";
+import keyboardHandler, { keydownState } from "handlers/keyboard";
+import quickToolsInit from "handlers/quickToolsInit";
+import windowResize from "handlers/windowResize";
+import acode from "lib/acode";
+import actionStack from "lib/actionStack";
+import adRewards from "lib/adRewards";
+import ajax from "lib/ajax";
+import applySettings from "lib/applySettings";
+import checkFiles from "lib/checkFiles";
+import { canSaveFile } from "lib/commands";
+import config from "lib/config";
+import EditorFile from "lib/editorFile";
+import EditorManager from "lib/editorManager";
+import fileIcons from "lib/fileIcons";
+import { initFileList } from "lib/fileList";
+import fonts from "lib/fonts";
+import lang from "lib/lang";
+import loadPlugins from "lib/loadPlugins";
+import Logger from "lib/logger";
+import notificationManager from "lib/notificationManager";
+import openFolder, { addedFolder } from "lib/openFolder";
+import { registerPrettierFormatter } from "lib/registerPrettierFormatter";
+import restoreFiles from "lib/restoreFiles";
+import settings from "lib/settings";
+import { migrateLegacySftpProfiles } from "lib/sftpProfiles";
+import startAd, {
+	BANNER_SUPPRESSION_REASON,
+	setBannerSuppressed,
+} from "lib/startAd";
+import mustache from "mustache";
+import themes from "theme/list";
+import { initHighlighting } from "utils/codeHighlight";
+import { getEncoding, initEncodings } from "utils/encodings";
+import helpers from "utils/helpers";
+import { INSTALL_SOURCE_PLAY, isPlayStoreInstall } from "utils/installSource";
+import loadPolyFill from "utils/polyfill";
+import Url from "utils/Url";
+import $_fileMenu from "views/file-menu.hbs";
+import $_menu from "views/menu.hbs";
+import auth, { loginEvents } from "./lib/auth";
+// cloud-code seam (#562): the 7-tab bottom nav. Everything else in Acode is untouched.
+import mountCloudNav from "./cloud";
+
+const oldPreventDefault = TouchEvent.prototype.preventDefault;
+const previousVersionCode = Number.parseInt(localStorage.versionCode, 10);
+const logger = new Logger();
+
+ajax.response = (xhr) => {
+	return xhr.response;
+};
+
+ajax.configure = (xhr, url) => {
+	if (url.includes("acode.app/api")) {
+		xhr.withCredentials = true;
+	}
+};
+
+TouchEvent.prototype.preventDefault = function () {
+	if (this.cancelable) {
+		oldPreventDefault.bind(this)();
+	}
+};
+
+loadPolyFill.apply(window);
+loginEvents.addListener(onLogin);
+window.addEventListener("resize", windowResize);
+document.addEventListener("pause", pauseHandler);
+document.addEventListener("resume", resumeHandler);
+document.addEventListener("keydown", keyboardHandler);
+document.addEventListener("deviceready", onDeviceReady);
+document.addEventListener("backbutton", backButtonHandler);
+document.addEventListener("menubutton", menuButtonHandler);
+
+async function ensurePermission(permission) {
+	try {
+		const granted = await helpers.promisify(system.hasPermission, permission);
+		if (!granted) {
+			await helpers.promisify(system.requestPermission, permission);
+		}
+	} catch (error) {
+		logger.log(
+			"error",
+			`Failed to request permission ${permission}: ${error.message || error}`,
+		);
+	}
+}
+
+async function onDeviceReady() {
+	await initEncodings(); // important to load encodings before anything else
+
+	const isFreePackage = /(free)$/.test(BuildInfo.packageName);
+	const oldResolveURL = window.resolveLocalFileSystemURL;
+	const {
+		externalCacheDirectory, //
+		externalDataDirectory,
+		cacheDirectory,
+		dataDirectory,
+	} = cordova.file;
+
+	async function resolveStorageDir(preferred, fallback) {
+		if (!preferred) return fallback;
+		const fs = fsOperation(preferred);
+		if (!fs) return fallback;
+		try {
+			await fs.stat();
+			return preferred;
+		} catch (error) {
+			logger.log(
+				"warn",
+				`Storage dir unavailable (${preferred}), falling back to ${fallback}: ${error.message || error}`,
+			);
+			return fallback;
+		}
+	}
+
+	window.app = document.body;
+	window.root = tag.get("#root");
+	window.addedFolder = addedFolder;
+	window.editorManager = null;
+	window.toast = toast;
+	window.ASSETS_DIRECTORY = Url.join(cordova.file.applicationDirectory, "www");
+	window.DATA_STORAGE = await resolveStorageDir(
+		externalDataDirectory,
+		dataDirectory,
+	);
+	window.CACHE_STORAGE = await resolveStorageDir(
+		externalCacheDirectory,
+		cacheDirectory,
+	);
+
+	window.PLUGIN_DIR = Url.join(DATA_STORAGE, "plugins");
+	window.KEYBINDING_FILE = Url.join(DATA_STORAGE, ".key-bindings.json");
+	window.log = logger.log.bind(logger);
+
+	config.HAS_PRO = !isFreePackage;
+
+	// Capture synchronous errors
+	window.addEventListener("error", (event) => {
+		const errorMsg = `Error: ${event.message}, Source: ${event.filename}, Line: ${event.lineno}, Column: ${event.colno}, Stack: ${event.error?.stack || "N/A"}`;
+		window.log("error", errorMsg);
+	});
+	// Capture unhandled promise rejections
+	window.addEventListener("unhandledrejection", (event) => {
+		window.log(
+			"error",
+			`Unhandled rejection: ${event.reason ? event.reason.message : "Unknown reason"}\nStack: ${event.reason ? event.reason.stack : "No stack available"}`,
+		);
+	});
+
+	let installSource = INSTALL_SOURCE_PLAY;
+
+	try {
+		installSource = await helpers.promisify(system.getInstaller);
+	} catch (error) {
+		console.error(error);
+	}
+
+	Object.defineProperty(window, "appInstallSource", {
+		get() {
+			return installSource;
+		},
+		set() {
+			console.warn("appInstallSource is readonly");
+		},
+		configurable: false,
+		enumerable: false,
+	});
+
+	try {
+		await helpers.promisify(iap.startConnection).catch((e) => {
+			window.log("error", "connection error");
+			window.log("error", e);
+		});
+
+		if (localStorage.acode_pro === "true") {
+			config.HAS_PRO = true;
+		}
+
+		if (navigator.onLine) {
+			const purchases = await helpers.promisify(iap.getPurchases);
+			const isPro = purchases.find((p) =>
+				p.productIds.includes("acode_pro_new"),
+			);
+			if (isPro) {
+				config.HAS_PRO = true;
+			} else {
+				config.HAS_PRO = !isFreePackage;
+			}
+		}
+	} catch (error) {
+		window.log("error", "Purchase error");
+		window.log("error", error);
+	}
+
+	try {
+		window.ANDROID_SDK_INT = await new Promise((resolve, reject) =>
+			system.getAndroidVersion(resolve, reject),
+		);
+	} catch (error) {
+		window.ANDROID_SDK_INT = Number.parseInt(device.version);
+	}
+	window.DOES_SUPPORT_THEME = (() => {
+		const $testEl = (
+			<div
+				style={{
+					height: "var(--test-height)",
+					width: "var(--test-height)",
+				}}
+			/>
+		);
+		document.body.append($testEl);
+		const client = $testEl.getBoundingClientRect();
+
+		$testEl.remove();
+
+		if (client.height === 0) return false;
+		return true;
+	})();
+	window.acode = acode;
+	await adRewards.init();
+	ensureAceCompatApi();
+
+	if (Number.isInteger(window.ANDROID_SDK_INT) && window.ANDROID_SDK_INT < 33) {
+		await ensurePermission("android.permission.READ_EXTERNAL_STORAGE");
+		await ensurePermission("android.permission.WRITE_EXTERNAL_STORAGE");
+	}
+	await ensurePermission("android.permission.POST_NOTIFICATIONS");
+
+	const { versionCode } = BuildInfo;
+
+	if (
+		previousVersionCode != null &&
+		!Number.isNaN(previousVersionCode) &&
+		previousVersionCode !== versionCode
+	) {
+		system.clearCache();
+	}
+
+	if (!(await fsOperation(PLUGIN_DIR).exists())) {
+		try {
+			await fsOperation(DATA_STORAGE).createDirectory("plugins");
+		} catch (error) {
+			logger.log(
+				"error",
+				`Failed to create plugins directory, falling back to internal storage: ${error.message || error}`,
+			);
+			window.DATA_STORAGE = dataDirectory;
+			window.CACHE_STORAGE = cacheDirectory;
+			window.PLUGIN_DIR = Url.join(window.DATA_STORAGE, "plugins");
+			window.KEYBINDING_FILE = Url.join(
+				window.DATA_STORAGE,
+				".key-bindings.json",
+			);
+			await fsOperation(window.DATA_STORAGE).createDirectory("plugins");
+		}
+	}
+
+	localStorage.versionCode = versionCode;
+
+	try {
+		await setDebugInfo();
+	} catch (e) {
+		console.error(e);
+	}
+
+	acode.setLoadingMessage("Loading settings...");
+
+	window.resolveLocalFileSystemURL = function (url, ...args) {
+		oldResolveURL.call(this, Url.safe(url), ...args);
+	};
+
+	setTimeout(async () => {
+		if (document.body.classList.contains("loading")) {
+			window.log("warn", "App is taking unexpectedly long time!");
+			document.body.setAttribute(
+				"data-small-msg",
+				"This is taking unexpectedly long time!",
+			);
+		}
+	}, 1000 * 10);
+
+	acode.setLoadingMessage("Loading settings...");
+	await settings.init();
+	fileIcons.bindSettings(settings);
+	fileIcons.syncFromSettings();
+	themes.init();
+	initHighlighting();
+
+	// Inject default terminal font face early so browser preloads it
+	fonts.injectFontFace("MesloLGS NF Regular");
+
+	registerPrettierFormatter();
+
+	acode.setLoadingMessage("Loading language...");
+	await lang.set(settings.value.lang);
+
+	acode.setLoadingMessage("Securing SFTP profiles...");
+	const sftpMigration = await migrateLegacySftpProfiles();
+	if (sftpMigration.failures.length) {
+		for (const failure of sftpMigration.failures) {
+			logger.log(
+				"error",
+				`SFTP profile migration failed for ${failure.username}@${failure.hostname}: ${failure.message}`,
+			);
+		}
+	}
+
+	if (settings.value.developerMode) {
+		try {
+			const devTools = (await import("lib/devTools")).default;
+			await devTools.init(false);
+		} catch (error) {
+			console.error("Failed to initialize developer tools", error);
+		}
+	}
+
+	try {
+		await loadApp();
+		if (sftpMigration.failures.length) {
+			showSftpMigrationReport(sftpMigration);
+		}
+	} catch (error) {
+		window.log("error", error);
+		toast(`Error: ${error.message}`);
+	} finally {
+		setTimeout(async () => {
+			document.body.removeAttribute("data-small-msg");
+			app.classList.remove("loading", "splash");
+
+			// load plugins
+			try {
+				await loadPlugins();
+				fileIcons.refreshRenderedIcons();
+				// Ensure at least one sidebar app is active after all plugins are loaded
+				// This handles cases where the stored section was from an uninstalled plugin
+				sidebarApps.ensureActiveApp();
+
+				// Re-emit events for active file after plugins are loaded
+				const { activeFile } = editorManager;
+				for (const file of editorManager.files) {
+					if (file?.type === "editor") {
+						file.setMode();
+					}
+				}
+				editorManager.reapplyActiveFile();
+				if (activeFile?.uri) {
+					if (activeFile.loaded && !activeFile.loading) {
+						editorManager.emit("file-loaded", activeFile);
+					}
+					// Re-emit switch-file event
+					editorManager.emit("switch-file", activeFile);
+				}
+			} catch (error) {
+				window.log("error", "Failed to load plugins!");
+				window.log("error", error);
+				toast("Failed to load plugins!");
+			} finally {
+				void processPendingIntents().catch(intentHandler.onError);
+			}
+			applySettings.afterRender();
+
+			// Check login status before emitting events
+			try {
+				const user = await auth.getLoggedInUser();
+				if (user) {
+					if (Boolean(user.acode_pro)) {
+						config.HAS_PRO = true;
+					}
+					loginEvents.emit();
+				}
+			} catch (error) {
+				console.error("Error checking login status:", error);
+			}
+
+			fetchPromotions();
+			startAd();
+		}, 500);
+	}
+
+	await promptUpdateCheckConsent();
+
+	// Check for app updates
+	if (
+		!isPlayStoreInstall() &&
+		settings.value.checkForAppUpdates &&
+		navigator.onLine
+	) {
+		cordova.plugin.http.sendRequest(
+			"https://api.github.com/repos/Acode-Foundation/Acode/releases/latest",
+			{
+				method: "GET",
+				responseType: "json",
+			},
+			(response) => {
+				const release = response.data;
+				// assuming version is in format v1.2.3
+				const versionFormat = /^v?(\d+(?:\.\d+)*)/;
+				const latestVersion = release.tag_name
+					.match(versionFormat)?.[1]
+					.split(".")
+					.map(Number);
+				const currentVersion = BuildInfo.version
+					.match(versionFormat)?.[1]
+					.split(".")
+					.map(Number);
+				if (!(latestVersion && currentVersion)) {
+					window.log(
+						"error",
+						"Failed to parse version while checking for updates.",
+					);
+					return;
+				}
+
+				let hasUpdate = false;
+				for (let i = 0; i < latestVersion.length; i++) {
+					const latest = latestVersion[i];
+					const current = currentVersion[i] || 0;
+					if (latest > current) {
+						hasUpdate = true;
+						break;
+					} else if (latest < current) {
+						break;
+					}
+				}
+
+				if (hasUpdate) {
+					acode.pushNotification(
+						strings["update available"],
+						strings["update available info"].replace(
+							/\{version\}/,
+							release.tag_name,
+						),
+						{
+							icon: "update",
+							type: "warning",
+							action: () => {
+								system.openInBrowser(release.html_url);
+							},
+						},
+					);
+				}
+			},
+			(err) => {
+				window.log("error", "Failed to check for updates");
+				window.log("error", err);
+			},
+		);
+	}
+	const { default: checkPluginsUpdate } = await import(
+		/* webpackChunkName: "checkPluginsUpdate" */ "lib/checkPluginsUpdate"
+	);
+	checkPluginsUpdate()
+		.then((updates) => {
+			if (!updates.length) return;
+			acode.pushNotification(
+				strings["plugin updates"],
+				getUpdateMessage(updates.length),
+				{
+					icon: "extension",
+					action: async () => {
+						const { default: plugins } = await import(
+							/* webpackChunkName: "plugins" */ "pages/plugins"
+						);
+						plugins(updates);
+					},
+				},
+			);
+		})
+		.catch(console.error);
+}
+
+function showSftpMigrationReport({
+	failures,
+	removedReferences,
+	recoveredFiles,
+}) {
+	const details = failures
+		.map(
+			({ username, hostname, message }) =>
+				`${escapeHtml(username)}@${escapeHtml(hostname)}: ${escapeHtml(message)}`,
+		)
+		.join("<br>");
+	const recoveryMessage = recoveredFiles
+		? `<br><br>${recoveredFiles} unsaved remote file${recoveredFiles === 1 ? " was" : "s were"} kept as a recovery tab.`
+		: "";
+
+	alert(
+		"Some SFTP connections were removed",
+		`Acode could not move ${failures.length} saved SFTP connection${failures.length === 1 ? "" : "s"} into encrypted storage. The affected connection data and ${removedReferences} saved reference${removedReferences === 1 ? " were" : "s were"} removed so Acode could start safely. Please add the connection${failures.length === 1 ? "" : "s"} again.<br><br>${details}${recoveryMessage}`,
+	);
+}
+
+function escapeHtml(value) {
+	return String(value)
+		.replaceAll("&", "&amp;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("'", "&#039;");
+}
+
+async function onLogin() {
+	try {
+		const user = await auth.getLoggedInUser();
+		if (!user) return;
+		if (Boolean(user.acode_pro)) {
+			config.HAS_PRO = true;
+		}
+		if (config.HAS_PRO) {
+			setBannerSuppressed(BANNER_SUPPRESSION_REASON.PRO, true);
+		}
+	} catch (error) {
+		console.error(error);
+	}
+}
+
+async function fetchPromotions() {
+	try {
+		const res = await fetch(`${config.API_BASE}/promotions`);
+		if (res.ok) {
+			const data = await res.json();
+			if (Array.isArray(data)) {
+				localStorage.setItem("cached_promotions", JSON.stringify(data));
+			}
+		}
+	} catch (err) {
+		console.debug("Failed to fetch promotions:", err);
+	}
+}
+
+async function setDebugInfo() {
+	const { version, versionCode } = BuildInfo;
+
+	const userAgent = navigator.userAgent;
+	const language = navigator.language;
+
+	// Extract Android version
+	const androidMatch = userAgent.match(/Android\s([0-9.]+)/);
+	const androidVersion = androidMatch ? androidMatch[1] : "Unknown";
+
+	// Extract Chrome/WebView version
+	const chromeMatch = userAgent.match(/Chrome\/([0-9.]+)/);
+	const webviewVersion = chromeMatch ? chromeMatch[1] : "Unknown";
+	const webviewMajor = Number.parseInt(webviewVersion, 10);
+	const minWebviewMajor = window.__ACODE_MIN_WEBVIEW_MAJOR__ || 84;
+	const webviewStatus =
+		Number.isFinite(webviewMajor) && webviewMajor < minWebviewMajor
+			? ` (minimum supported: ${minWebviewMajor})`
+			: "";
+
+	const info = [
+		`App: v${version} (${versionCode})`,
+		`Android: ${androidVersion}`,
+		`WebView: ${webviewVersion}${webviewStatus}`,
+		`Language: ${language}`,
+	].join("\n");
+
+	document.body.setAttribute("data-version", info);
+}
+
+function getUpdateMessage(count) {
+	return count === 1
+		? strings["plugin updates singular"]
+		: strings["plugin updates plural"].replace(/\{count\}/, count);
+}
+
+async function promptUpdateCheckConsent() {
+	try {
+		if (isPlayStoreInstall()) {
+			localStorage.setItem("checkForUpdatesPrompted", "true");
+
+			if (settings.value.checkForAppUpdates) {
+				await settings.update({ checkForAppUpdates: false }, false);
+			}
+
+			return;
+		}
+
+		if (Boolean(localStorage.getItem("checkForUpdatesPrompted"))) return;
+
+		if (settings.value.checkForAppUpdates) {
+			localStorage.setItem("checkForUpdatesPrompted", "true");
+			return;
+		}
+
+		const message = strings["prompt update check consent message"];
+		const shouldEnable = await confirm(strings?.confirm, message);
+
+		localStorage.setItem("checkForUpdatesPrompted", "true");
+		if (shouldEnable) {
+			await settings.update({ checkForAppUpdates: true }, false);
+		}
+	} catch (error) {
+		console.error("Failed to prompt for update check consent", error);
+	}
+}
+
+async function loadApp() {
+	let $mainMenu;
+	let $fileMenu;
+	const $editMenuToggler = (
+		<span
+			className="icon edit"
+			attr-action="toggle-edit-menu"
+			style={{ fontSize: "1.2em" }}
+		/>
+	);
+	const $navToggler = (
+		<span className="icon menu" attr-action="toggle-sidebar" />
+	);
+	const $menuToggler = (
+		<span className="icon more_vert" attr-action="toggle-menu" />
+	);
+	const $header = tile({
+		type: "header",
+		text: "Acode",
+		lead: $navToggler,
+		tail: $menuToggler,
+	});
+	const $main = <main />;
+	const $sidebar = <Sidebar container={$main} toggler={$navToggler} />;
+	const $runBtn = (
+		<span
+			style={{ fontSize: "1.2em" }}
+			className="icon play_arrow"
+			attr-action="run"
+			onclick={() => acode.exec("run")}
+			oncontextmenu={() => acode.exec("run-file")}
+		/>
+	);
+	const $floatingNavToggler = (
+		<span
+			id="sidebar-toggler"
+			className="floating icon menu"
+			onclick={() => acode.exec("toggle-sidebar")}
+		/>
+	);
+	const $headerToggler = (
+		<span className="floating icon keyboard_arrow_left" id="header-toggler" />
+	);
+	const folders = helpers.parseJSON(localStorage.folders);
+	const files = helpers.parseJSON(localStorage.files) || [];
+	const editorManager = await EditorManager($header, $main);
+
+	const setMainMenu = () => {
+		if ($mainMenu) {
+			$mainMenu.removeEventListener("click", handleMenu);
+			$mainMenu.destroy();
+		}
+		$mainMenu = createMainMenu({ top: "6px", toggler: $menuToggler });
+		$mainMenu.addEventListener("click", handleMenu);
+	};
+
+	const setFileMenu = () => {
+		if ($fileMenu) {
+			$fileMenu.removeEventListener("click", handleMenu);
+			$fileMenu.destroy();
+		}
+		$fileMenu = createFileMenu({ top: "6px", toggler: $editMenuToggler });
+		$fileMenu.addEventListener("click", handleMenu);
+	};
+
+	acode.$headerToggler = $headerToggler;
+	window.actionStack = actionStack.windowCopy();
+	window.editorManager = editorManager;
+	setMainMenu(settings.value.openFileListPos);
+	setFileMenu(settings.value.openFileListPos);
+	actionStack.onCloseApp = () => acode.exec("save-state");
+	$headerToggler.onclick = function () {
+		root.classList.toggle("show-header");
+		this.classList.toggle("keyboard_arrow_left");
+		this.classList.toggle("keyboard_arrow_right");
+	};
+
+	//#region rendering
+	applySettings.beforeRender();
+	root.appendOuter($header, $main, $floatingNavToggler, $headerToggler);
+	mountCloudNav(); // cloud-code seam (#562)
+	//#endregion
+
+	//#region Add event listeners
+	initModes();
+	quickToolsInit();
+	editorManager.on("switch-file", initIconTooltips());
+	sidebarApps.init($sidebar);
+	await sidebarApps.loadApps();
+	editorManager.onupdate = onEditorUpdate;
+	root.on("show", mainPageOnShow);
+	app.addEventListener("click", onClickApp);
+	editorManager.on("rename-file", onFileUpdate);
+	editorManager.on("switch-file", onFileUpdate);
+	editorManager.on("file-loaded", onFileUpdate);
+	navigator.app.overrideButton("menubutton", true);
+	system.setIntentHandler(intentHandler, intentHandler.onError);
+	system.getCordovaIntent(intentHandler, intentHandler.onError);
+	settings.on("update:openFileListPos", () => {
+		setMainMenu();
+		setFileMenu();
+	});
+	settings.on("update:fullscreen", () => {
+		setMainMenu();
+		setFileMenu();
+	});
+
+	$sidebar.onshow = () => {
+		const activeFile = editorManager.activeFile;
+		if (activeFile) editorManager.editor.contentDOM.blur();
+	};
+	sdcard.watchFile(KEYBINDING_FILE, async () => {
+		const conflicts = await setKeyBindings(editorManager.editor);
+		if (conflicts.length) {
+			const conflict = conflicts[0];
+			console.warn("Ignored conflicting key bindings", conflicts);
+			toast(
+				`Keybinding conflict: ${conflict.key} is already used by ${conflict.shadowedBy}`,
+			);
+			return;
+		}
+		toast(strings["key bindings updated"]);
+	});
+	//#endregion
+
+	notificationManager.init();
+	window.log("info", "Started app and its services...");
+
+	if (!files.length) {
+		const { default: openWelcomeTab } = await import(
+			/* webpackChunkName: "welcome" */ "pages/welcome"
+		);
+		openWelcomeTab();
+	}
+
+	// load theme plugins
+	try {
+		await loadPlugins(true);
+	} catch (error) {
+		window.log("error", "Failed to load theme plugins!");
+		window.log("error", error);
+		toast("Failed to load theme plugins!");
+	}
+
+	acode.setLoadingMessage("Loading folders...");
+	if (Array.isArray(folders)) {
+		for (const folder of folders) {
+			folder.opts.listFiles = !!folder.opts.listFiles;
+			openFolder(folder.url, folder.opts);
+		}
+	}
+
+	if (Array.isArray(files) && files.length) {
+		try {
+			await restoreFiles(files);
+		} catch (error) {
+			window.log("error", "File loading failed!");
+			window.log("error", error);
+			toast("File loading failed!");
+		} finally {
+			// Mark restoration complete even after a partial failure so
+			// switch-file persistence and queued intents are not blocked.
+			sessionStorage.setItem("isfilesRestored", true);
+		}
+		// Process any pending intents that were queued before files were restored
+		await processPendingIntents();
+	} else {
+		// Even when no files need to be restored, mark as restored and process pending intents
+		sessionStorage.setItem("isfilesRestored", true);
+		await processPendingIntents();
+		onEditorUpdate(undefined, false);
+	}
+
+	acode.exec("save-state");
+	initFileList();
+
+	import(/* webpackChunkName: "terminal" */ "components/terminal").then(
+		({ TerminalManager }) => {
+			TerminalManager.restorePersistedSessions().catch((error) => {
+				console.error("Terminal restoration failed:", error);
+			});
+		},
+		(error) => {
+			console.error("Failed to load terminal module:", error);
+		},
+	);
+
+	/**
+	 *
+	 * @param {MouseEvent} e
+	 */
+	function handleMenu(e) {
+		const $target = e.target;
+		const action = $target.getAttribute("action");
+		const value = $target.getAttribute("value") || undefined;
+		if (!action) return;
+
+		if ($mainMenu.contains($target)) $mainMenu.hide();
+		if ($fileMenu.contains($target)) $fileMenu.hide();
+		acode.exec(action, value);
+	}
+
+	function onEditorUpdate(mode, saveState = true) {
+		const { activeFile } = editorManager;
+
+		// if (!$editMenuToggler.isConnected) {
+		// 	$header.insertBefore($editMenuToggler, $header.lastChild);
+		// }
+		if (
+			activeFile &&
+			activeFile.type !== "page" &&
+			activeFile.type !== "terminal"
+		) {
+			if (!$editMenuToggler.isConnected) {
+				$header.insertBefore($editMenuToggler, $header.lastChild);
+			}
+		} else {
+			$editMenuToggler.remove();
+		}
+
+		if (mode === "switch-file") {
+			if (settings.value.rememberFiles && activeFile) {
+				localStorage.setItem("lastfile", activeFile.id);
+			}
+			if (saveState && sessionStorage.getItem("isfilesRestored") === "true") {
+				acode.exec("save-state");
+			}
+			return;
+		}
+
+		if (saveState && sessionStorage.getItem("isfilesRestored") === "true") {
+			acode.exec("save-state");
+		}
+	}
+
+	async function onFileUpdate() {
+		try {
+			const { serverPort, previewPort } = settings.value;
+			let canRun = false;
+			if (serverPort !== previewPort) {
+				canRun = true;
+			} else {
+				const { activeFile } = editorManager;
+				canRun = await activeFile?.canRun();
+			}
+
+			if (canRun) {
+				$header.insertBefore($runBtn, $header.lastChild);
+			} else {
+				$runBtn.remove();
+			}
+		} catch (error) {
+			$runBtn.removeAttribute("run-file");
+			$runBtn.remove();
+		}
+	}
+}
+
+function onClickApp(e) {
+	let el = e.target;
+	if (el instanceof HTMLAnchorElement || checkIfInsideAnchor()) {
+		e.preventDefault();
+		e.stopPropagation();
+
+		system.openInBrowser(el.href);
+	}
+
+	function checkIfInsideAnchor() {
+		const allAs = [...document.body.getAll("a")];
+
+		for (const a of allAs) {
+			if (a.contains(el)) {
+				el = a;
+				return true;
+			}
+		}
+
+		return false;
+	}
+}
+
+function mainPageOnShow() {
+	const { editor } = editorManager;
+	// TODO : Codemirror
+	//editor.resize(true);
+}
+
+function createMainMenu({ top, bottom, toggler }) {
+	return Contextmenu({
+		right: "6px",
+		top,
+		bottom,
+		toggler,
+		transformOrigin: top ? "top right" : "bottom right",
+		innerHTML: () => {
+			return mustache.render($_menu, {
+				...strings,
+				"running processes":
+					strings["running processes"] || "Running processes",
+				can_save_file: canSaveFile(window.editorManager?.activeFile),
+			});
+		},
+	});
+}
+
+function createFileMenu({ top, bottom, toggler }) {
+	const $menu = Contextmenu({
+		top,
+		bottom,
+		toggler,
+		transformOrigin: top ? "top right" : "bottom right",
+		innerHTML: () => {
+			const file = window.editorManager?.activeFile;
+
+			if (!file || file.type === "page" || file.type === "terminal") {
+				return "";
+			}
+
+			if (file.loading) {
+				$menu.classList.add("disabled");
+			} else {
+				$menu.classList.remove("disabled");
+			}
+
+			const { label: encoding } = getEncoding(file.encoding);
+			const isEditorFile = file.type === "editor";
+			const cmEditor = window.editorManager?.editor;
+			const hasSelection = !!cmEditor && !cmEditor.state.selection.main.empty;
+			return mustache.render($_fileMenu, {
+				...strings,
+				file_id: file.id,
+				toggle_pin_tab_text: file.pinned
+					? strings["unpin tab"] || "Unpin tab"
+					: strings["pin tab"] || "Pin tab",
+				toggle_pin_tab_icon: file.pinned ? "icon pin-off" : "icon pin",
+				close_tabs_to_right_text:
+					strings["close tabs to right"] || "Close Right",
+				close_tabs_to_left_text: strings["close tabs to left"] || "Close Left",
+				close_other_tabs_text: strings["close other tabs"] || "Close Others",
+				// Use CodeMirror mode stored on EditorFile (set in setMode)
+				file_mode: isEditorFile ? file.currentMode || "" : "",
+				file_encoding: isEditorFile ? encoding : "",
+				file_read_only: !file.editable,
+				file_on_disk: !!file.uri,
+				file_eol: isEditorFile ? file.eol : "",
+				copy_text: isEditorFile ? hasSelection : false,
+				is_editor: isEditorFile,
+				has_lsp_servers: isEditorFile && hasConnectedServers(),
+			});
+		},
+	});
+
+	return $menu;
+}
+
+function backButtonHandler() {
+	if (keydownState.esc) {
+		keydownState.esc = false;
+		return;
+	}
+	actionStack.pop();
+}
+
+function menuButtonHandler() {
+	const { acode } = window;
+	acode?.exec("toggle-sidebar");
+}
+
+async function pauseHandler() {
+	const { acode } = window;
+	await window.editorManager?.flushCacheWrites?.();
+	acode?.exec("save-state");
+}
+
+function resumeHandler() {
+	adRewards.handleResume();
+	if (!settings.value.checkFiles) return;
+	checkFiles();
+}
+
+function createAceModelistCompatModule() {
+	const toAceMode = (mode) => {
+		const resolved = mode || getModeForPath("");
+		if (!resolved) return null;
+		const name = resolved.name || "text";
+		const rawMode = String(resolved.mode || name);
+		const modePath = rawMode.startsWith("ace/mode/")
+			? rawMode
+			: `ace/mode/${rawMode}`;
+		return {
+			...resolved,
+			name,
+			caption: resolved.caption || name,
+			mode: modePath,
+		};
+	};
+
+	return {
+		get modes() {
+			return getModes()
+				.map((mode) => toAceMode(mode))
+				.filter(Boolean);
+		},
+		get modesByName() {
+			const source = getModesByName();
+			const result = {};
+			Object.keys(source).forEach((name) => {
+				result[name] = toAceMode(source[name]);
+			});
+			return result;
+		},
+		getModeForPath(path) {
+			return toAceMode(getModeForPath(String(path || "")));
+		},
+	};
+}
+
+function ensureAceCompatApi() {
+	const ace = window.ace || {};
+	const modelistModule = createAceModelistCompatModule();
+	const originalRequire =
+		typeof ace.require === "function" ? ace.require.bind(ace) : null;
+
+	ace.require = (moduleId) => {
+		if (moduleId === "ace/ext/modelist" || moduleId === "ace/ext/modelist.js") {
+			return modelistModule;
+		}
+		return originalRequire?.(moduleId);
+	};
+
+	window.ace = ace;
+}

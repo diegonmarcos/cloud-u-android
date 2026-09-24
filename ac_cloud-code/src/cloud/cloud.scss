@@ -1,0 +1,150 @@
+// cloud-code bottom nav + panels (#562). Colours are Acode's own theme
+// variables, so every Acode theme restyles the bar with the editor.
+
+body.cloud-nav {
+  // Every Acode page (wc-page, the editor's #root included) is position:fixed at
+  // height:100%; give the bar its own strip instead of drawing over the editor.
+  wc-page {
+    height: calc(100% - var(--cloud-nav-h)) !important;
+  }
+}
+
+#cloud-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--cloud-nav-h);
+  display: flex;
+  z-index: 109; // above wc-page (108), below Acode's dialogs and toasts
+  background-color: var(--primary-color);
+  border-top: 1px solid var(--border-color);
+
+  .cloud-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: none;
+    background: none;
+    color: var(--primary-text-color);
+    opacity: 0.7;
+
+    .icon {
+      font-size: var(--cloud-nav-icon);
+    }
+
+    .cloud-tab-label {
+      font-size: var(--cloud-nav-label);
+      white-space: nowrap; // never truncate or wrap: fit() switches to compact instead
+    }
+
+    &.active {
+      opacity: 1;
+      color: var(--active-color);
+    }
+  }
+
+  &.compact .cloud-tab:not(.active) .cloud-tab-label {
+    display: none;
+  }
+}
+
+.cloud-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: var(--cloud-nav-h);
+  z-index: 109;
+  overflow-y: auto;
+  padding: 0 12px 12px;
+  box-sizing: border-box;
+  background-color: var(--secondary-color);
+  color: var(--secondary-text-color);
+  user-select: text;
+
+  &[hidden] {
+    display: none;
+  }
+
+  button {
+    color: inherit;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px;
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px;
+    color: inherit;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+  }
+}
+
+.cloud-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cloud-muted {
+  opacity: 0.7;
+}
+
+.cloud-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cloud-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.cloud-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.cloud-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 6px !important;
+
+  .icon {
+    font-size: 26px;
+  }
+}
+
+.cloud-md {
+  table {
+    border-collapse: collapse;
+    display: block;
+    overflow-x: auto;
+  }
+
+  td,
+  th {
+    border: 1px solid var(--border-color);
+    padding: 2px 6px;
+  }
+
+  a {
+    color: var(--link-text-color, var(--active-color));
+  }
+}

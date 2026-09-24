@@ -1,0 +1,59 @@
+@use '../../styles/mixins.scss';
+
+#quick-tools {
+  #search_row1 {
+    [data-id="close"] {
+      display: none;
+      flex: 0 0 40px;
+    }
+
+    &.inline-close [data-id="close"] {
+      display: inline-flex;
+    }
+  }
+
+  .icon.click:not([disabled]) {
+    @include mixins.active-icon;
+    transition: all 0.3s ease-in-out;
+    transform: scale(1.2);
+  }
+
+  [disabled] {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  [data-id="paste"] {
+    font-size: 0.9em;
+  }
+
+  &[data-alt="true"] {
+    [data-id="alt-key"] {
+      @include mixins.active-icon;
+    }
+  }
+
+  &[data-shift="true"] {
+    [data-id="shift-key"] {
+      @include mixins.active-icon;
+    }
+  }
+
+  &[data-ctrl="true"] {
+    [data-id="ctrl-key"] {
+      @include mixins.active-icon;
+    }
+  }
+
+  &[data-meta="true"] {
+    [data-id="meta-key"] {
+      @include mixins.active-icon;
+    }
+  }
+
+  &[data-unsaved="true"] {
+    [data-id="save"] {
+      @include mixins.icon-badge;
+    }
+  }
+}

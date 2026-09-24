@@ -1,0 +1,123 @@
+import { getAllFolds, getScrollPosition, getSelection } from "cm/editorUtils";
+import config from "./config";
+import { addedFolder } from "./openFolder";
+import appSettings from "./settings";
+
+export default () => {
+	if (!window.editorManager) return;
+
+	const filesToSave = [];
+	const folders = [];
+	const { editor, files, activeFile } = editorManager;
+	const { value: settings } = appSettings;
+
+	files.forEach((file) => {
+		if (file.type !== "editor") return;
+		if (file.id === config.DEFAULT_FILE_SESSION) return;
+		if (file.persistInSession === false) return;
+
+		// Selection per file:
+		// - Active file uses live EditorView selection
+		// - Inactive files use their persisted EditorState selection
+		let cursorPos;
+		if (!file.loaded && file.restoredSelection) {
+			cursorPos = file.restoredSelection;
+		} else if (activeFile?.id === file.id) {
+			cursorPos = getSelection(editor);
+		} else {
+			const sel = file.session?.selection;
+			if (sel) {
+				cursorPos = {
+					ranges: sel.ranges.map((r) => ({ from: r.from, to: r.to })),
+					mainIndex: sel.mainIndex ?? 0,
+				};
+			} else {
+				cursorPos = null;
+			}
+		}
+		cursorPos = collapseSelectionForRestore(cursorPos);
+
+		// Scroll per file:
+		// - Active file uses live scroll from EditorView
+		// - Inactive files use lastScrollTop/Left captured on tab switch
+		let scrollTop, scrollLeft;
+		if (!file.loaded) {
+			scrollTop =
+				typeof file.lastScrollTop === "number" ? file.lastScrollTop : 0;
+			scrollLeft =
+				typeof file.lastScrollLeft === "number" ? file.lastScrollLeft : 0;
+		} else if (activeFile?.id === file.id) {
+			const sp = getScrollPosition(editor);
+			scrollTop = sp.scrollTop;
+			scrollLeft = sp.scrollLeft;
+		} else {
+			scrollTop =
+				typeof file.lastScrollTop === "number" ? file.lastScrollTop : 0;
+			scrollLeft =
+				typeof file.lastScrollLeft === "number" ? file.lastScrollLeft : 0;
+		}
+
+		const fileJson = {
+			id: file.id,
+			uri: file.uri,
+			type: file.type,
+			filename: file.filename,
+			pinned: file.pinned,
+			isUnsaved: file.isUnsaved,
+			docVersion: file.docVersion,
+			savedVersion: file.savedVersion,
+			cacheVersion: file.cacheVersion,
+			savedMtime: file.savedMtime,
+			diskMtime: file.diskMtime,
+			hasDiskConflict: file.hasDiskConflict,
+			readOnly: file.readOnly,
+			SAFMode: file.SAFMode,
+			deletedFile: file.deletedFile,
+			cursorPos,
+			scrollTop,
+			scrollLeft,
+			editable: file.editable,
+			encoding: file.encoding,
+			render: activeFile?.id === file.id,
+			folds: file.restoredFolds ?? getAllFolds(file.session),
+		};
+
+		if (settings.rememberFiles || fileJson.isUnsaved)
+			filesToSave.push(fileJson);
+	});
+
+	if (settings.rememberFolders) {
+		addedFolder.forEach((folder) => {
+			const { url, saveState, title, listState, listFiles } = folder;
+			folders.push({
+				url,
+				opts: {
+					saveState,
+					name: title,
+					listState,
+					listFiles,
+				},
+			});
+		});
+	}
+
+	localStorage.files = JSON.stringify(filesToSave);
+	localStorage.folders = JSON.stringify(folders);
+};
+
+function collapseSelectionForRestore(selection) {
+	if (!selection?.ranges?.length) return selection;
+
+	const mainIndex =
+		selection.mainIndex >= 0 && selection.mainIndex < selection.ranges.length
+			? selection.mainIndex
+			: 0;
+	const main = selection.ranges[mainIndex];
+	const head = Number.isFinite(main?.to) ? main.to : (main?.from ?? 0);
+	const cursor = Math.max(0, head | 0);
+
+	return {
+		ranges: [{ from: cursor, to: cursor }],
+		mainIndex: 0,
+	};
+}

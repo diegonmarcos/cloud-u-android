@@ -1,0 +1,1526 @@
+/**
+ * Terminal Component using xtermjs
+ * Provides a pluggable and customizable terminal interface
+ */
+
+import { AttachAddon } from "@xterm/addon-attach";
+import { FitAddon } from "@xterm/addon-fit";
+import { ImageAddon } from "@xterm/addon-image";
+import { SearchAddon } from "@xterm/addon-search";
+import { Unicode11Addon } from "@xterm/addon-unicode11";
+import { WebLinksAddon } from "@xterm/addon-web-links";
+import { WebglAddon } from "@xterm/addon-webgl";
+import { Terminal as Xterm } from "@xterm/xterm";
+import {
+	executeCommand,
+	getEffectiveKeyBindings,
+	getResolvedKeyBindingsVersion,
+} from "cm/commandRegistry";
+import confirm from "dialogs/confirm";
+import fonts from "lib/fonts";
+import appSettings from "lib/settings";
+import { quotePosixShellArg } from "utils/shell";
+import LigaturesAddon from "./ligatures";
+import {
+	DEFAULT_TERMINAL_SETTINGS,
+	getTerminalSettings,
+} from "./terminalDefaults";
+import TerminalThemeManager from "./terminalThemeManager";
+import TerminalTouchScrolling from "./terminalTouchScrolling";
+import TerminalTouchSelection from "./terminalTouchSelection";
+
+export default class TerminalComponent {
+	constructor(options = {}) {
+		// Get terminal settings from shared defaults
+		const terminalSettings = getTerminalSettings();
+
+		this.options = {
+			allowProposedApi: true,
+			scrollOnUserInput: true,
+			rows: options.rows || 24,
+			cols: options.cols || 80,
+			port: options.port || 8767,
+			renderer: options.renderer || "auto", // 'auto' | 'canvas' | 'webgl'
+			fontSize: terminalSettings.fontSize,
+			fontFamily: terminalSettings.fontFamily,
+			fontWeight: terminalSettings.fontWeight,
+			theme: TerminalThemeManager.getTheme(terminalSettings.theme),
+			cursorBlink: terminalSettings.cursorBlink,
+			cursorStyle: terminalSettings.cursorStyle,
+			cursorInactiveStyle: terminalSettings.cursorInactiveStyle,
+			scrollback: terminalSettings.scrollback,
+			tabStopWidth: terminalSettings.tabStopWidth,
+			convertEol: terminalSettings.convertEol,
+			letterSpacing: terminalSettings.letterSpacing,
+			...options,
+		};
+
+		this.terminal = null;
+		this.fitAddon = null;
+		this.attachAddon = null;
+		this.unicode11Addon = null;
+		this.searchAddon = null;
+		this.webLinksAddon = null;
+		this.imageAddon = null;
+		this.ligaturesAddon = null;
+		this.container = null;
+		this.websocket = null;
+		this.pid = null;
+		this.isConnected = false;
+		this.serverMode = options.serverMode !== false; // Default true
+		this.remoteSsh = options.remoteSsh || null;
+		this.remoteShellId = null;
+		this.remoteInputDisposable = null;
+		this.touchSelection = null;
+		this.touchScrolling = null;
+		this.parsedAppKeybindings = [];
+		this.parsedAppKeybindingsVersion = -1;
+		this.boundNativeSelectionMenuHandler = null;
+		this.visibleScrollbarWidth = undefined;
+		this.lastRequestedServerSize = null;
+		// Lifecycle flags so exit/disconnect/error don't race into zombie tabs
+		this.intentionalClose = false;
+		this.processExited = false;
+
+		this.init();
+	}
+
+	init() {
+		this.terminal = new Xterm(this.options);
+
+		// Initialize addons
+		this.fitAddon = new FitAddon();
+		this.unicode11Addon = new Unicode11Addon();
+		this.searchAddon = new SearchAddon();
+		this.webLinksAddon = new WebLinksAddon(async (event, uri) => {
+			const linkOpenConfirm = await confirm(
+				"Terminal",
+				`Do you want to open ${uri} in browser?`,
+			);
+			if (linkOpenConfirm) {
+				system.openInBrowser(uri);
+			}
+		});
+		this.webglAddon = null;
+
+		// Load addons
+		this.terminal.loadAddon(this.fitAddon);
+		this.terminal.loadAddon(this.unicode11Addon);
+		this.terminal.loadAddon(this.searchAddon);
+		this.terminal.loadAddon(this.webLinksAddon);
+
+		// Load conditional addons based on settings
+		const terminalSettings = getTerminalSettings();
+
+		// Load image addon if enabled
+		if (terminalSettings.imageSupport) {
+			this.loadImageAddon();
+		}
+
+		// Load font in background - apply when ready without blocking render
+		this._fontReady = this.loadTerminalFont().then(() => {
+			if (this.terminal) {
+				this.terminal.options.fontFamily = this.options.fontFamily;
+				this.terminal.refresh(0, this.terminal.rows - 1);
+			}
+		});
+
+		// Set up terminal event handlers
+		this.setupEventHandlers();
+	}
+
+	setupEventHandlers() {
+		// terminal resize handling
+		this.setupResizeHandling();
+
+		// Handle terminal title changes
+		this.terminal.onTitleChange((title) => {
+			this.onTitleChange?.(title);
+		});
+
+		// Handle bell
+		this.terminal.onBell(() => {
+			this.onBell?.();
+		});
+
+		// Handle copy/paste keybindings
+		this.setupCopyPasteHandlers();
+
+		// Handle custom OSC 7777 for acode CLI commands
+		this.setupOscHandler();
+	}
+
+	/**
+	 * Setup custom OSC handler for acode CLI integration
+	 * OSC 7777 format: \e]7777;command;arg1;arg2;...\a
+	 */
+	setupOscHandler() {
+		// Register custom OSC handler for ID 7777
+		// Format: command;arg1;arg2;... where arg2 (path) may contain semicolons
+		this.terminal.parser.registerOscHandler(7777, (data) => {
+			const firstSemi = data.indexOf(";");
+			if (firstSemi === -1) {
+				console.warn("Invalid OSC 7777 format:", data);
+				return true;
+			}
+
+			const command = data.substring(0, firstSemi);
+			const rest = data.substring(firstSemi + 1);
+
+			switch (command) {
+				case "open": {
+					// Format: open;type;path (path may contain semicolons)
+					const secondSemi = rest.indexOf(";");
+					if (secondSemi === -1) {
+						console.warn("Invalid OSC 7777 open format:", data);
+						return true;
+					}
+					const type = rest.substring(0, secondSemi);
+					const path = rest.substring(secondSemi + 1);
+					this.handleOscOpen(type, path);
+					break;
+				}
+				default:
+					console.warn("Unknown OSC 7777 command:", command);
+			}
+			return true;
+		});
+	}
+
+	/**
+	 * Handle OSC open command from acode CLI
+	 * @param {string} type - "file" or "folder"
+	 * @param {string} path - Path to open
+	 */
+	handleOscOpen(type, path) {
+		if (!path) return;
+
+		// Emit event for the app to handle
+		this.onOscOpen?.(type, path);
+	}
+
+	/**
+	 * Setup resize handling for keyboard events and content preservation
+	 */
+	setupResizeHandling() {
+		let resizeTimeout = null;
+		let lastKnownScrollPosition = 0;
+		let isResizing = false;
+		let resizeCount = 0;
+		const RESIZE_DEBOUNCE = 100;
+		const MAX_RAPID_RESIZES = 3;
+
+		// Store original dimensions for comparison
+		let originalRows = this.terminal.rows;
+		let originalCols = this.terminal.cols;
+
+		this.terminal.onResize((size) => {
+			// Track resize events
+			resizeCount++;
+			isResizing = true;
+
+			// Store current scroll position before resize
+			if (this.terminal.buffer && this.terminal.buffer.active) {
+				lastKnownScrollPosition = this.terminal.buffer.active.viewportY;
+			}
+
+			// Clear any existing timeout
+			if (resizeTimeout) {
+				clearTimeout(resizeTimeout);
+			}
+
+			// Debounced resize handling
+			resizeTimeout = setTimeout(async () => {
+				try {
+					// Only proceed with server resize if dimensions actually changed significantly
+					const rowDiff = Math.abs(size.rows - originalRows);
+					const colDiff = Math.abs(size.cols - originalCols);
+
+					// If this is a minor resize (likely intermediate state), skip server update
+					if (rowDiff < 2 && colDiff < 2 && resizeCount > 1) {
+						console.log("Skipping minor resize to prevent instability");
+						isResizing = false;
+						resizeCount = 0;
+						return;
+					}
+
+					// Handle server resize
+					if (this.serverMode) {
+						await this.resizeTerminal(size.cols, size.rows);
+					}
+
+					// Handle keyboard resize cursor positioning
+					const heightRatio = size.rows / originalRows;
+					if (
+						heightRatio < 0.75 &&
+						this.terminal.buffer &&
+						this.terminal.buffer.active
+					) {
+						// Keyboard resize detected - ensure cursor is visible
+						const buffer = this.terminal.buffer.active;
+						const cursorY = buffer.cursorY;
+						const cursorViewportPos = buffer.baseY + cursorY;
+						const viewportTop = buffer.viewportY;
+						const viewportBottom = viewportTop + this.terminal.rows - 1;
+
+						if (
+							cursorViewportPos <= viewportTop + 1 ||
+							cursorViewportPos >= viewportBottom - 1
+						) {
+							const targetScroll = Math.max(
+								0,
+								Math.min(
+									buffer.length - this.terminal.rows,
+									cursorViewportPos - Math.floor(this.terminal.rows * 0.25),
+								),
+							);
+							this.terminal.scrollToLine(targetScroll);
+						}
+					} else {
+						// Regular resize - preserve scroll position
+						this.preserveViewportPosition(lastKnownScrollPosition);
+					}
+
+					// Update stored dimensions
+					originalRows = size.rows;
+					originalCols = size.cols;
+
+					// Mark resize as complete
+					isResizing = false;
+					resizeCount = 0;
+
+					// Notify touch selection if it exists
+					if (this.touchSelection) {
+						this.touchSelection.onTerminalResize(size);
+					}
+				} catch (error) {
+					console.error("Resize handling failed:", error);
+					isResizing = false;
+					resizeCount = 0;
+				}
+			}, RESIZE_DEBOUNCE);
+		});
+
+		// Also handle viewport changes for scroll position preservation
+		this.terminal.onData(() => {
+			// If we're not resizing and user types, everything is stable
+			if (!isResizing && this.terminal.buffer && this.terminal.buffer.active) {
+				lastKnownScrollPosition = this.terminal.buffer.active.viewportY;
+			}
+		});
+	}
+
+	/**
+	 * Preserve viewport position during resize to prevent jumping
+	 */
+	preserveViewportPosition(targetScrollPosition) {
+		if (!this.terminal.buffer || !this.terminal.buffer.active) return;
+
+		const buffer = this.terminal.buffer.active;
+		const maxScroll = Math.max(0, buffer.length - this.terminal.rows);
+
+		// Ensure scroll position is within valid bounds
+		const safeScrollPosition = Math.min(targetScrollPosition, maxScroll);
+
+		// Only adjust if we have significant content and the position differs
+		if (
+			buffer.length > this.terminal.rows &&
+			buffer.viewportY !== safeScrollPosition
+		) {
+			this.terminal.scrollToLine(safeScrollPosition);
+		}
+	}
+
+	/**
+	 * Setup touch selection for mobile devices
+	 */
+	setupTouchSelection() {
+		// Only initialize touch selection on mobile devices
+		if (window.cordova && this.container) {
+			const terminalSettings = getTerminalSettings();
+			this.touchSelection = new TerminalTouchSelection(
+				this.terminal,
+				this.container,
+				{
+					tapHoldDuration:
+						terminalSettings.touchSelectionTapHoldDuration || 400,
+					moveThreshold: terminalSettings.touchSelectionMoveThreshold || 8,
+					handleSize: terminalSettings.touchSelectionHandleSize || 24,
+					hapticFeedback:
+						terminalSettings.touchSelectionHapticFeedback !== false,
+					showContextMenu:
+						terminalSettings.touchSelectionShowContextMenu !== false,
+					onFontSizeChange: (fontSize) => this.updateFontSize(fontSize),
+				},
+			);
+		}
+		if (this.touchScrolling) {
+			this.touchScrolling.touchSelection = this.touchSelection;
+		}
+	}
+
+	/**
+	 * Setup custom touch scrolling with momentum physics
+	 */
+	setupTouchScrolling() {
+		if (!this.terminal?.element || this.touchScrolling) return;
+
+		this.touchScrolling = new TerminalTouchScrolling(
+			this.terminal,
+			this.touchSelection,
+		);
+	}
+
+	/**
+	 * Parse app keybindings into a format usable by the keyboard handler
+	 */
+	parseAppKeybindings() {
+		const version = getResolvedKeyBindingsVersion();
+		if (this.parsedAppKeybindingsVersion === version) {
+			return this.parsedAppKeybindings;
+		}
+
+		const parsedBindings = [];
+
+		Object.entries(getEffectiveKeyBindings()).forEach(([name, binding]) => {
+			if (!binding.key) return;
+
+			// Skip editor-only keybindings in terminal
+			if (binding.editorOnly) return;
+
+			// Handle multiple key combinations separated by |
+			const keys = binding.key.split("|");
+
+			keys.forEach((keyCombo) => {
+				// CodeMirror supports multi-stroke chords, while xterm's keyboard
+				// callback receives one event at a time. Do not misread a chord as
+				// a single malformed terminal shortcut.
+				if (/\s/.test(keyCombo.trim())) return;
+
+				const parts = keyCombo.endsWith("-")
+					? [...keyCombo.slice(0, -1).split("-").filter(Boolean), "-"]
+					: keyCombo.split("-");
+				const parsed = {
+					name,
+					ctrl: false,
+					shift: false,
+					alt: false,
+					meta: false,
+					key: "",
+				};
+
+				parts.forEach((part) => {
+					const lowerPart = part.toLowerCase();
+					if (lowerPart === "ctrl") {
+						parsed.ctrl = true;
+					} else if (lowerPart === "shift") {
+						parsed.shift = true;
+					} else if (lowerPart === "alt") {
+						parsed.alt = true;
+					} else if (lowerPart === "meta" || lowerPart === "cmd") {
+						parsed.meta = true;
+					} else {
+						// This is the actual key
+						parsed.key = part.toLowerCase();
+					}
+				});
+
+				if (parsed.key) {
+					parsedBindings.push(parsed);
+				}
+			});
+		});
+
+		this.parsedAppKeybindings = parsedBindings;
+		this.parsedAppKeybindingsVersion = version;
+
+		return this.parsedAppKeybindings;
+	}
+
+	/**
+	 * Setup copy/paste keyboard handlers
+	 */
+	setupCopyPasteHandlers() {
+		// Add keyboard event listener to terminal element
+		this.terminal.attachCustomKeyEventHandler((event) => {
+			// xterm.js invokes this handler for both "keydown" and "keyup", so
+			// any side-effecting action must only run once, on keydown, or it
+			// fires twice per keypress (e.g. paste happening twice).
+			const isKeyDown = event.type === "keydown";
+
+			// Check for Ctrl+Shift+C (copy)
+			if (event.ctrlKey && event.shiftKey && event.key === "C") {
+				event.preventDefault();
+				if (isKeyDown) this.copySelection();
+				return false;
+			}
+
+			// Check for Ctrl+Shift+V (paste)
+			if (event.ctrlKey && event.shiftKey && event.key === "V") {
+				event.preventDefault();
+				if (isKeyDown) this.pasteFromClipboard();
+				return false;
+			}
+
+			// Keep terminal font zoom local. Shift variants are handled by app keybindings below.
+			if (
+				event.ctrlKey &&
+				!event.shiftKey &&
+				!event.altKey &&
+				!event.metaKey &&
+				(event.key === "+" || event.key === "=")
+			) {
+				event.preventDefault();
+				if (isKeyDown) this.increaseFontSize();
+				return false;
+			}
+
+			if (
+				event.ctrlKey &&
+				!event.shiftKey &&
+				!event.altKey &&
+				!event.metaKey &&
+				event.key === "-"
+			) {
+				event.preventDefault();
+				if (isKeyDown) this.decreaseFontSize();
+				return false;
+			}
+
+			if (event.ctrlKey || event.altKey || event.metaKey) {
+				if (["Control", "Alt", "Meta", "Shift"].includes(event.key)) {
+					return true;
+				}
+
+				const appKeybindings = this.parseAppKeybindings();
+				const eventKey = event.key === "_" ? "-" : event.key.toLowerCase();
+				const binding = appKeybindings.find(
+					(binding) =>
+						binding.ctrl === event.ctrlKey &&
+						binding.shift === event.shiftKey &&
+						binding.alt === event.altKey &&
+						binding.meta === event.metaKey &&
+						binding.key === eventKey,
+				);
+
+				if (binding) {
+					if (isKeyDown) {
+						this._lastAppKeybindingHandled = executeCommand(binding.name);
+					}
+					if (this._lastAppKeybindingHandled) {
+						return false;
+					}
+				}
+			}
+
+			if (event.ctrlKey || event.altKey || event.metaKey) return true;
+
+			// Return true to allow normal processing for other keys
+			return true;
+		});
+	}
+
+	/**
+	 * Copy selected text to clipboard
+	 */
+	copySelection() {
+		if (!this.terminal?.hasSelection()) return;
+		const selectedStr = this.terminal?.getSelection();
+		if (selectedStr && cordova?.plugins?.clipboard) {
+			cordova.plugins.clipboard.copy(selectedStr);
+		}
+	}
+
+	/**
+	 * Paste text from clipboard
+	 */
+	pasteFromClipboard() {
+		if (cordova?.plugins?.clipboard) {
+			cordova.plugins.clipboard.paste((text) => {
+				this.terminal?.paste(text);
+			});
+		}
+	}
+
+	/**
+	 * Create terminal container element
+	 * @returns {HTMLElement} Container element
+	 */
+	createContainer() {
+		this.container = document.createElement("div");
+		this.container.className = "terminal-container";
+		this.container.style.cssText = `
+      width: 100%;
+      height: 100%;
+      position: relative;
+      background: ${this.options.theme.background};
+      overflow: hidden;
+      box-sizing: border-box;
+    `;
+		this.disableNativeSelectionMenu(this.container);
+
+		return this.container;
+	}
+
+	/**
+	 * Mount terminal to container
+	 * @param {HTMLElement} container - Container element
+	 */
+	mount(container) {
+		if (!container) {
+			container = this.createContainer();
+		}
+
+		this.container = container;
+
+		// Apply terminal background color to container to match theme
+		this.container.style.background = this.options.theme.background;
+		this.disableNativeSelectionMenu(this.container);
+
+		try {
+			// Open first to ensure a stable renderer is attached
+			this.terminal.open(container);
+			this.updateBackgroundColor();
+			this.updateScrollbarVisibility(
+				getTerminalSettings().showScrollbar !== false,
+			);
+
+			// Renderer selection: 'canvas' (default core), 'webgl', or 'auto'
+			if (
+				this.options.renderer === "webgl" ||
+				this.options.renderer === "auto"
+			) {
+				try {
+					const addon = new WebglAddon();
+					this.terminal.loadAddon(addon);
+					if (typeof addon.onContextLoss === "function") {
+						addon.onContextLoss(() => this._handleWebglContextLoss());
+					}
+					this.webglAddon = addon;
+				} catch (error) {
+					console.error("Failed to enable WebGL renderer:", error);
+					try {
+						this.webglAddon?.dispose?.();
+					} catch {}
+					this.webglAddon = null; // stay on canvas
+				}
+			}
+			const terminalSettings = getTerminalSettings();
+			// Load ligatures addon if enabled
+			if (terminalSettings.fontLigatures) {
+				this.loadLigaturesAddon();
+			}
+
+			// Setup custom touch scrolling with momentum physics
+			this.setupTouchScrolling();
+
+			// First render pass: schedule a fit + focus once the frame is ready
+			if (typeof requestAnimationFrame === "function") {
+				requestAnimationFrame(() => {
+					if (!this.terminal) return;
+					this.fitAddon.fit();
+					this.terminal.focus();
+					this.setupTouchSelection();
+				});
+			} else {
+				setTimeout(() => {
+					if (!this.terminal) return;
+					this.fitAddon.fit();
+					this.terminal.focus();
+					this.setupTouchSelection();
+				}, 0);
+			}
+
+			// Safety: re-apply fontFamily on next frame to ensure xterm
+			// uses correct metrics even if font wasn't ready for first paint
+			if (typeof requestAnimationFrame === "function") {
+				requestAnimationFrame(() => {
+					if (this.terminal) {
+						this.terminal.options.fontFamily = this.options.fontFamily;
+						this.terminal.refresh(0, this.terminal.rows - 1);
+					}
+				});
+			} else {
+				setTimeout(() => {
+					if (this.terminal) {
+						this.terminal.options.fontFamily = this.options.fontFamily;
+						this.terminal.refresh(0, this.terminal.rows - 1);
+					}
+				}, 16);
+			}
+		} catch (error) {
+			console.error("Failed to mount terminal:", error);
+		}
+
+		return container;
+	}
+
+	/**
+	 * Disable the platform/browser text-selection menu in terminal views.
+	 * Terminal selection is handled by TerminalTouchSelection and xterm APIs.
+	 */
+	disableNativeSelectionMenu(container) {
+		if (!container) return;
+
+		container.classList.add("terminal-native-selection-disabled");
+
+		if (this.boundNativeSelectionMenuHandler) {
+			container.removeEventListener(
+				"contextmenu",
+				this.boundNativeSelectionMenuHandler,
+				true,
+			);
+		}
+
+		this.boundNativeSelectionMenuHandler = (event) => {
+			if (event.target?.closest?.(".terminal-context-menu")) return;
+			event.preventDefault();
+			event.stopPropagation();
+		};
+
+		container.addEventListener(
+			"contextmenu",
+			this.boundNativeSelectionMenuHandler,
+			true,
+		);
+	}
+
+	/**
+	 * Create new terminal session using global Terminal API
+	 * @returns {Promise<string>} Terminal PID
+	 */
+	async createSession() {
+		if (!this.serverMode) {
+			throw new Error(
+				"Terminal is in local mode, cannot create server session",
+			);
+		}
+
+		try {
+			// Check if terminal is installed before starting AXS
+			if (!(await Terminal.isInstalled())) {
+				throw new Error(
+					"Terminal not installed. Please install terminal first.",
+				);
+			}
+
+			// Start AXS if not running
+			if (!(await Terminal.isAxsRunning())) {
+				const values = appSettings.value;
+				// Initialize terminal settings with defaults if not present
+				if (!values.terminalSettings) {
+					values.terminalSettings = {
+						...DEFAULT_TERMINAL_SETTINGS,
+						fontFamily:
+							DEFAULT_TERMINAL_SETTINGS.fontFamily ||
+							appSettings.value.fontFamily,
+					};
+				}
+
+				const terminalValues = values.terminalSettings;
+
+				Executor.setProotDebug(terminalValues.prootDebug);
+				Executor.BackgroundExecutor.setProotDebug(terminalValues.prootDebug);
+
+				await Terminal.startAxs(
+					false,
+					() => {},
+					console.error,
+					terminalValues.failsafeMode,
+				);
+			}
+
+			// A live AXS process does not guarantee that its HTTP listener is ready.
+			// This is especially noticeable during a cold app start.
+			await this.waitForServerReady();
+
+			const requestBody = {
+				cols: this.terminal.cols,
+				rows: this.terminal.rows,
+			};
+
+			const response = await new Promise((resolve, reject) => {
+				cordova.plugin.http.sendRequest(
+					`http://127.0.0.1:${this.options.port}/terminals`,
+					{
+						method: "POST",
+						responseType: "text",
+						serializer: "json",
+						data: requestBody,
+					},
+					(res) => resolve(res),
+					(err) => reject(new Error(err.error || `HTTP error!`)),
+				);
+			});
+
+			if (response.status < 200 || response.status >= 300) {
+				throw new Error(`HTTP error! status: ${response.status}`);
+			}
+
+			this.pid = response.data.trim();
+			return this.pid;
+		} catch (error) {
+			console.error("Failed to create terminal session:", error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Wait until the AXS HTTP server is accepting requests.
+	 * @param {number} maxAttempts - Maximum number of readiness checks
+	 * @param {number} retryDelay - Delay between checks in milliseconds
+	 */
+	async waitForServerReady(maxAttempts = 20, retryDelay = 500) {
+		const statusUrl = `http://127.0.0.1:${this.options.port}/status`;
+
+		for (let attempt = 0; attempt < maxAttempts; attempt++) {
+			try {
+				const response = await new Promise((resolve, reject) => {
+					cordova.plugin.http.sendRequest(
+						statusUrl,
+						{ method: "GET", responseType: "text" },
+						resolve,
+						reject,
+					);
+				});
+
+				if (
+					response.status >= 200 &&
+					response.status < 300 &&
+					response.data?.trim() === "OK"
+				) {
+					return;
+				}
+			} catch {
+				// Connection failures are expected while AXS is binding its port.
+			}
+
+			if (attempt < maxAttempts - 1) {
+				await new Promise((resolve) => setTimeout(resolve, retryDelay));
+			}
+		}
+
+		throw new Error(
+			`AXS terminal server did not become ready on port ${this.options.port}`,
+		);
+	}
+
+	/**
+	 * Connect to terminal session via WebSocket
+	 * @param {string} pid - Terminal PID
+	 */
+	async connectToSession(pid) {
+		if (!this.serverMode) {
+			throw new Error(
+				"Terminal is in local mode, cannot connect to server session",
+			);
+		}
+		if (this.remoteSsh) {
+			return this.connectToRemoteShell();
+		}
+
+		if (!pid) {
+			pid = await this.createSession();
+		}
+
+		this.pid = pid;
+
+		const wsUrl = `ws://127.0.0.1:${this.options.port}/terminals/${pid}`;
+
+		await new Promise((resolve, reject) => {
+			const websocket = new WebSocket(wsUrl);
+			const CONNECT_TIMEOUT = 5000;
+			let settled = false;
+			let hasOpened = false;
+
+			this.websocket = websocket;
+
+			const rejectInitialConnect = (message, error) => {
+				if (settled || hasOpened) return;
+				settled = true;
+				this.isConnected = false;
+				try {
+					websocket.close();
+				} catch {}
+				reject(error || new Error(message));
+			};
+
+			const connectionTimeout = setTimeout(() => {
+				rejectInitialConnect(
+					`Timed out while connecting to terminal session ${pid}`,
+				);
+			}, CONNECT_TIMEOUT);
+
+			websocket.onopen = () => {
+				clearTimeout(connectionTimeout);
+				hasOpened = true;
+				this.isConnected = true;
+				this.onConnect?.();
+
+				// Load attach addon after connection
+				this.attachAddon = new AttachAddon(websocket);
+				this.terminal.loadAddon(this.attachAddon);
+				this.terminal.unicode.activeVersion = "11";
+
+				// Focus terminal and ensure it's ready
+				this.terminal.focus();
+				void this.fitAndResizeTerminal(true);
+
+				if (!settled) {
+					settled = true;
+					resolve();
+				}
+			};
+
+			websocket.onmessage = (event) => {
+				// Lifecycle control (AXS exit JSON) is always a text frame.
+				// Never decode binary frames as exit — ordinary PTY output can
+				// contain the same bytes and must not close the session.
+				// AttachAddon still receives frames via addEventListener for I/O.
+				if (typeof event.data !== "string") return;
+				// Cordova websocket may flag binary payloads even when decoded as string
+				if (event.binary === true) return;
+
+				try {
+					const message = JSON.parse(event.data);
+					if (message?.type === "exit") {
+						this.processExited = true;
+						this.onProcessExit?.(message.data);
+					}
+				} catch {
+					// Not a JSON control message — terminal I/O is handled by AttachAddon.
+				}
+			};
+
+			websocket.onclose = (event) => {
+				clearTimeout(connectionTimeout);
+				this.isConnected = false;
+
+				if (!hasOpened) {
+					const code = event?.code ? ` (code ${event.code})` : "";
+					const reason = event?.reason ? `: ${event.reason}` : "";
+					rejectInitialConnect(
+						`Terminal session ${pid} is unavailable${code}${reason}`,
+					);
+					return;
+				}
+
+				this.onDisconnect?.({
+					intentional: this.intentionalClose,
+					processExited: this.processExited,
+					code: event?.code,
+					reason: event?.reason,
+				});
+			};
+
+			websocket.onerror = (error) => {
+				if (!hasOpened) {
+					clearTimeout(connectionTimeout);
+					rejectInitialConnect(
+						`Failed to connect to terminal session ${pid}`,
+						new Error(`Failed to connect to terminal session ${pid}`),
+					);
+					return;
+				}
+
+				// Ignore teardown noise from intentional close / already-handled exit
+				if (this.intentionalClose || this.processExited) return;
+
+				console.error("WebSocket error:", error);
+				this.onError?.(error);
+			};
+		});
+	}
+
+	/**
+	 * Connect xterm to an interactive Maverick SSH shell.
+	 */
+	connectToRemoteShell() {
+		const profile = this.remoteSsh;
+		if (!profile) throw new Error("SSH profile is required");
+
+		return new Promise((resolve, reject) => {
+			let settled = false;
+			const finishConnecting = (event) => {
+				this.remoteInputDisposable = this.terminal.onData((data) => {
+					if (!this.isConnected || !this.remoteShellId) return;
+					sftp.writeShell(
+						this.remoteShellId,
+						data,
+						() => {},
+						(error) => this.onError?.(error),
+					);
+				});
+				this.terminal.unicode.activeVersion = "11";
+				this.terminal.focus();
+				void this.fitAndResizeTerminal(true);
+				this.onConnect?.();
+				settled = true;
+				resolve(event.sessionId);
+			};
+			const onEvent = (event) => {
+				switch (event?.type) {
+					case "ready":
+						this.remoteShellId = event.sessionId;
+						this.pid = `ssh:${event.sessionId}`;
+						this.isConnected = true;
+						if (profile.initialDirectory && profile.initialDirectory !== "/") {
+							try {
+								sftp.writeShell(
+									event.sessionId,
+									`cd ${quotePosixShellArg(profile.initialDirectory)}\n`,
+									() => finishConnecting(event),
+									onFailure,
+								);
+							} catch (error) {
+								onFailure(error?.message);
+							}
+							break;
+						}
+						finishConnecting(event);
+						break;
+
+					case "data": {
+						const binary = atob(event.data || "");
+						const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+						this.terminal.write(bytes);
+						break;
+					}
+
+					case "exit":
+						this.isConnected = false;
+						this.processExited = true;
+						if (!this.intentionalClose) {
+							this.onProcessExit?.({ exit_code: event.exitCode });
+						}
+						break;
+
+					case "error": {
+						const error = new Error(event.message || "SSH shell error");
+						this.isConnected = false;
+						if (!settled) reject(error);
+						else if (!this.intentionalClose) this.onError?.(error);
+						break;
+					}
+				}
+			};
+
+			const onFailure = (message) => {
+				const error = new Error(
+					typeof message === "string" ? message : "Failed to open SSH shell",
+				);
+				this.isConnected = false;
+				if (!settled) reject(error);
+				else if (!this.intentionalClose) this.onError?.(error);
+			};
+
+			const openShell = () => {
+				sftp.openShellUsingProfile(
+					profile.profileId,
+					this.terminal.cols,
+					this.terminal.rows,
+					onEvent,
+					onFailure,
+				);
+			};
+
+			openShell();
+		});
+	}
+
+	/**
+	 * Resize terminal
+	 * @param {number} cols - Number of columns
+	 * @param {number} rows - Number of rows
+	 * @param {boolean} force - Send even if these dimensions were requested before
+	 */
+	async resizeTerminal(cols, rows, force = false) {
+		if (!this.pid || !this.serverMode) return;
+		const resizeKey = `${cols}x${rows}`;
+		if (!force && this.lastRequestedServerSize === resizeKey) return;
+		this.lastRequestedServerSize = resizeKey;
+		if (this.remoteSsh) {
+			if (!this.remoteShellId) return;
+			sftp.resizeShell(
+				this.remoteShellId,
+				cols,
+				rows,
+				() => {},
+				(error) => {
+					this.lastRequestedServerSize = null;
+					this.onError?.(error);
+				},
+			);
+			return;
+		}
+
+		try {
+			await new Promise((resolve, reject) => {
+				cordova.plugin.http.sendRequest(
+					`http://127.0.0.1:${this.options.port}/terminals/${this.pid}/resize`,
+					{
+						method: "POST",
+						serializer: "json",
+						data: { cols, rows },
+					},
+					(res) => resolve(res),
+					(err) => reject(err),
+				);
+			});
+		} catch (error) {
+			if (this.lastRequestedServerSize === resizeKey) {
+				this.lastRequestedServerSize = null;
+			}
+			console.error("Failed to resize terminal:", error);
+		}
+	}
+
+	/**
+	 * Fit terminal to container
+	 */
+	fit() {
+		if (this.fitAddon) {
+			this.fitAddon.fit();
+		}
+	}
+
+	/**
+	 * Fit the client and immediately synchronize dimensions to the PTY.
+	 * @param {boolean} forceServerSync Sync even when fitting kept the same size
+	 */
+	async fitAndResizeTerminal(forceServerSync = false) {
+		if (!this.terminal || !this.fitAddon) return;
+
+		const previousCols = this.terminal.cols;
+		const previousRows = this.terminal.rows;
+		this.fit();
+
+		if (
+			this.serverMode &&
+			(forceServerSync ||
+				this.terminal.cols !== previousCols ||
+				this.terminal.rows !== previousRows)
+		) {
+			await this.resizeTerminal(
+				this.terminal.cols,
+				this.terminal.rows,
+				forceServerSync,
+			);
+		}
+	}
+
+	/**
+	 * Write data to terminal
+	 * @param {string} data - Data to write
+	 */
+	write(data) {
+		if (this.remoteSsh && this.isConnected && this.remoteShellId) {
+			sftp.writeShell(
+				this.remoteShellId,
+				data,
+				() => {},
+				(error) => this.onError?.(error),
+			);
+			return;
+		}
+		if (
+			this.serverMode &&
+			this.isConnected &&
+			this.websocket &&
+			this.websocket.readyState === WebSocket.OPEN
+		) {
+			// Send data through WebSocket instead of direct write
+			this.websocket.send(data);
+		} else {
+			// For local mode or disconnected terminals, write directly
+			this.terminal.write(data);
+		}
+	}
+
+	/**
+	 * Write line to terminal
+	 * @param {string} data - Data to write
+	 */
+	writeln(data) {
+		this.terminal.writeln(data);
+	}
+
+	/**
+	 * Clear terminal
+	 */
+	clear() {
+		this.terminal.clear();
+	}
+
+	/**
+	 * Focus terminal
+	 */
+	focus() {
+		this.terminal.focus();
+	}
+
+	/**
+	 * Blur terminal
+	 */
+	blur() {
+		this.terminal.blur();
+	}
+
+	/**
+	 * Search in terminal
+	 * @param {string} term - Search term
+	 * @param {number} skip Number of search results to skip
+	 * @param {boolean} backward Whether to search backward
+	 */
+	search(term, skip, backward) {
+		if (this.searchAddon) {
+			const searchOptions = {
+				regex: appSettings.value.search.regExp || false,
+				wholeWord: appSettings.value.search.wholeWord || false,
+				caseSensitive: appSettings.value.search.caseSensitive || false,
+				decorations: {
+					matchBorder: "#FFA500",
+					activeMatchBorder: "#FFFF00",
+				},
+			};
+			if (!term) {
+				return false;
+			}
+
+			if (backward) {
+				return this.searchAddon.findPrevious(term, searchOptions);
+			} else {
+				return this.searchAddon.findNext(term, searchOptions);
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Update terminal theme
+	 * @param {object|string} theme - Theme object or theme name
+	 */
+	updateTheme(theme) {
+		if (typeof theme === "string") {
+			theme = TerminalThemeManager.getTheme(theme);
+		}
+		this.options.theme = { ...this.options.theme, ...theme };
+		this.terminal.options.theme = this.options.theme;
+		this.updateBackgroundColor();
+	}
+
+	/** Keep xterm's viewport chrome aligned with the active theme. */
+	updateBackgroundColor() {
+		const background = this.terminal?.options.theme?.background;
+		if (!background) return;
+
+		if (this.container) this.container.style.background = background;
+		if (this.terminal?.element) {
+			this.terminal.element.style.backgroundColor = background;
+		}
+	}
+
+	/**
+	 * Toggle xterm.js 6's custom scrollbar without disabling scroll APIs.
+	 * @param {boolean} visible Whether the scrollbar should be shown
+	 */
+	updateScrollbarVisibility(visible) {
+		if (!this.terminal) return;
+
+		const overviewRuler = {
+			...(this.terminal.options.overviewRuler ?? {}),
+		};
+		if (visible === false) {
+			if (
+				!this.terminal.element?.classList.contains("terminal-scrollbar-hidden")
+			) {
+				this.visibleScrollbarWidth = overviewRuler.width;
+			}
+			// xterm 6 and FitAddon fall back to 14px when width is zero. A tiny,
+			// truthy width removes the gutter while CSS hides the remaining fraction.
+			overviewRuler.width = 0.001;
+		} else if (this.visibleScrollbarWidth === undefined) {
+			delete overviewRuler.width;
+		} else {
+			overviewRuler.width = this.visibleScrollbarWidth;
+		}
+		this.terminal.options.overviewRuler = overviewRuler;
+		this.terminal.element?.classList.toggle(
+			"terminal-scrollbar-hidden",
+			visible === false,
+		);
+
+		requestAnimationFrame(() => {
+			if (!this.terminal) return;
+			void this.fitAndResizeTerminal();
+		});
+	}
+
+	/**
+	 * Update terminal options
+	 * @param {object} options - Options to update
+	 */
+	updateOptions(options) {
+		Object.keys(options).forEach((key) => {
+			if (key === "theme") {
+				this.updateTheme(options.theme);
+			} else {
+				this.terminal.options[key] = options[key];
+				this.options[key] = options[key];
+			}
+		});
+	}
+
+	/**
+	 * Load image addon
+	 */
+	loadImageAddon() {
+		if (!this.imageAddon) {
+			try {
+				this.imageAddon = new ImageAddon();
+				this.terminal.loadAddon(this.imageAddon);
+			} catch (error) {
+				console.error("Failed to load ImageAddon:", error);
+			}
+		}
+	}
+
+	/**
+	 * Dispose image addon
+	 */
+	disposeImageAddon() {
+		if (this.imageAddon) {
+			try {
+				this.imageAddon.dispose();
+				this.imageAddon = null;
+			} catch (error) {
+				console.error("Failed to dispose ImageAddon:", error);
+			}
+		}
+	}
+
+	/**
+	 * Update image support setting
+	 * @param {boolean} enabled - Whether to enable image support
+	 */
+	updateImageSupport(enabled) {
+		if (enabled) {
+			this.loadImageAddon();
+		} else {
+			this.disposeImageAddon();
+		}
+	}
+
+	/**
+	 * Load ligatures addon
+	 */
+	loadLigaturesAddon() {
+		if (!this.ligaturesAddon) {
+			try {
+				this.ligaturesAddon = new LigaturesAddon();
+				this.terminal.loadAddon(this.ligaturesAddon);
+			} catch (error) {
+				console.error("Failed to load LigaturesAddon:", error);
+			}
+		}
+	}
+
+	/**
+	 * Dispose ligatures addon
+	 */
+	disposeLigaturesAddon() {
+		if (this.ligaturesAddon) {
+			try {
+				this.ligaturesAddon.dispose();
+				this.ligaturesAddon = null;
+			} catch (error) {
+				console.error("Failed to dispose LigaturesAddon:", error);
+			}
+		}
+	}
+
+	/**
+	 * Update font ligatures setting
+	 * @param {boolean} enabled - Whether to enable font ligatures
+	 */
+	updateFontLigatures(enabled) {
+		if (enabled) {
+			this.loadLigaturesAddon();
+		} else {
+			this.disposeLigaturesAddon();
+		}
+	}
+
+	/**
+	 * Load terminal font if it's not already loaded
+	 */
+	async loadTerminalFont() {
+		const fontFamily = this.options.fontFamily;
+		if (fontFamily && fonts.get(fontFamily)) {
+			try {
+				fonts.injectFontFace(fontFamily);
+				await fonts.loadFont(fontFamily);
+			} catch (error) {
+				console.warn(`Failed to load terminal font ${fontFamily}:`, error);
+			}
+		}
+	}
+
+	/**
+	 * Increase terminal font size
+	 */
+	increaseFontSize() {
+		const currentSize = this.terminal.options.fontSize;
+		const newSize = Math.min(currentSize + 1, 24); // Max font size 24
+		this.updateFontSize(newSize);
+	}
+
+	/**
+	 * Decrease terminal font size
+	 */
+	decreaseFontSize() {
+		const currentSize = this.terminal.options.fontSize;
+		const newSize = Math.max(currentSize - 1, 8); // Min font size 8
+		this.updateFontSize(newSize);
+	}
+
+	/**
+	 * Update terminal font size and refresh display
+	 */
+	updateFontSize(fontSize) {
+		if (fontSize === this.terminal.options.fontSize) return;
+
+		this.terminal.options.fontSize = fontSize;
+		this.options.fontSize = fontSize;
+
+		// Update terminal settings properly
+		const currentSettings = appSettings.value.terminalSettings || {};
+		const updatedSettings = { ...currentSettings, fontSize };
+		appSettings.update({ terminalSettings: updatedSettings }, false);
+
+		// Refresh terminal display
+		this.terminal.refresh(0, this.terminal.rows - 1);
+
+		// Fit terminal to container after font size change to prevent empty space
+		setTimeout(() => {
+			if (this.fitAddon) {
+				this.fitAddon.fit();
+			}
+		}, 50);
+
+		// Update touch selection cell dimensions if it exists
+		if (this.touchSelection) {
+			setTimeout(() => {
+				this.touchSelection.updateCellDimensions();
+			}, 100);
+		}
+	}
+
+	/**
+	 * Terminate terminal session
+	 */
+	async terminate() {
+		this.intentionalClose = true;
+		this.remoteInputDisposable?.dispose?.();
+		this.remoteInputDisposable = null;
+
+		if (this.remoteShellId) {
+			const shellID = this.remoteShellId;
+			this.remoteShellId = null;
+			this.isConnected = false;
+			await new Promise((resolve) => {
+				sftp.closeShell(shellID, resolve, resolve);
+			});
+			return;
+		}
+
+		if (this.websocket) {
+			try {
+				this.websocket.close();
+			} catch {
+				// Already closed
+			}
+			this.websocket = null;
+		}
+
+		if (this.pid && this.serverMode) {
+			try {
+				await new Promise((resolve, reject) => {
+					cordova.plugin.http.sendRequest(
+						`http://127.0.0.1:${this.options.port}/terminals/${this.pid}/terminate`,
+						{
+							method: "POST",
+							data: {}, // Added empty object to satisfy the plugin's type checker
+						},
+						(res) => resolve(res),
+						(err) => reject(err),
+					);
+				});
+			} catch (error) {
+				console.error("Failed to terminate terminal:", error);
+			}
+		}
+	}
+
+	/**
+	 * Dispose terminal
+	 */
+	dispose() {
+		this.intentionalClose = true;
+		this.terminate();
+
+		// Dispose touch selection
+		if (this.touchSelection) {
+			this.touchSelection.destroy();
+			this.touchSelection = null;
+		}
+
+		// Dispose touch scrolling
+		if (this.touchScrolling) {
+			this.touchScrolling.destroy();
+			this.touchScrolling = null;
+		}
+
+		// Dispose addons
+		this.disposeImageAddon();
+		this.disposeLigaturesAddon();
+
+		if (this.terminal) {
+			this.terminal.dispose();
+		}
+
+		if (this.container && this.boundNativeSelectionMenuHandler) {
+			this.container.removeEventListener(
+				"contextmenu",
+				this.boundNativeSelectionMenuHandler,
+				true,
+			);
+			this.boundNativeSelectionMenuHandler = null;
+		}
+
+		if (this.container) {
+			this.container.remove();
+		}
+	}
+
+	// Event handlers (can be overridden)
+	onConnect() {}
+	onDisconnect(_info) {}
+	onError(error) {}
+	onTitleChange(title) {}
+	onBell() {}
+	onProcessExit(exitData) {}
+}
+
+// Internal helpers for WebGL renderer lifecycle
+TerminalComponent.prototype._handleWebglContextLoss = function () {
+	try {
+		console.warn("WebGL context lost; terminal rendering will be degraded");
+		try {
+			this.webglAddon?.dispose?.();
+		} catch {}
+		this.webglAddon = null;
+	} catch (e) {
+		console.error("Error handling WebGL context loss:", e);
+	}
+};

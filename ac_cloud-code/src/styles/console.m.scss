@@ -1,0 +1,433 @@
+html[console-only],
+html[console-only] body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--primary-color, #313131) !important;
+}
+
+c-console {
+  --console-background: #313131;
+  --console-background-text: #eee;
+  --console-surface: #313131;
+  --console-surface-text: #eee;
+  --console-control: #414141;
+  --console-control-text: #d6d3d3;
+  --console-active: #555;
+  --console-active-text: #fff;
+  --console-border: rgba(204, 204, 204, 0.35);
+  --console-muted: #aaa;
+  --console-placeholder: #929292;
+  --console-scrollbar: #666;
+  --console-danger: #ff9b9b;
+  --console-danger-fill: #a00000;
+  --console-warning-fill: #ffb95c;
+  --console-error-surface: #422;
+  --console-warning-surface: #633;
+  --console-link: #99f;
+  --console-accent: rgb(120, 105, 225);
+  --console-function: rgb(145, 136, 168);
+  --console-success: rgb(59, 161, 59);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: var(--console-viewport-top, 0);
+  left: var(--console-viewport-left, 0);
+  width: var(--console-viewport-width, 100vw);
+  height: var(--console-viewport-height, 100dvh);
+  min-height: 0;
+  overflow: hidden;
+  z-index: 99998;
+  background: var(--console-background);
+  color: var(--console-background-text);
+  font-family: var(--app-font-family, Verdana, Geneva, Tahoma, sans-serif);
+  color-scheme: dark;
+}
+
+html[console-only] c-console {
+  --console-background: var(--primary-color, #313131);
+  --console-background-text: var(--primary-text-color, #eee);
+  --console-surface: var(--secondary-color, var(--primary-color, #313131));
+  --console-surface-text: var(
+    --secondary-text-color,
+    var(--primary-text-color, #eee)
+  );
+  --console-control: var(
+    --popup-background-color,
+    var(--secondary-color, #414141)
+  );
+  --console-control-text: var(
+    --popup-text-color,
+    var(--secondary-text-color, #d6d3d3)
+  );
+  --console-active: var(--active-color, #555);
+  --console-active-text: var(--active-text-color, #fff);
+  --console-border: var(--border-color, rgba(204, 204, 204, 0.35));
+  --console-muted: var(--secondary-text-color, #aaa);
+  --console-placeholder: var(--secondary-text-color, #929292);
+  --console-scrollbar: var(--scrollbar-color, #666);
+  --console-danger: var(--error-text-color, #ff9b9b);
+  --console-danger-fill: var(--danger-color, #a00000);
+  --console-warning-fill: var(--error-text-color, #ffb95c);
+  --console-link: var(--link-text-color, #99f);
+  --console-accent: var(--active-color, rgb(120, 105, 225));
+  --console-function: var(--secondary-text-color, rgb(145, 136, 168));
+  --console-success: var(--success-text-color, rgb(59, 161, 59));
+}
+
+html[theme-type="light"] c-console {
+  color-scheme: light;
+}
+
+// The console-only Activity already resizes its WebView for the keyboard.
+// Filling that layout directly avoids stale visualViewport pixels after the
+// keyboard closes; the floating page overlay still uses measured CSS variables.
+c-console[standalone] {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+}
+
+.__c-action {
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--console-surface-text);
+  font: inherit;
+  font-size: 0.76rem;
+  touch-action: manipulation;
+}
+
+.__c-action:active {
+  background: var(--console-active);
+  color: var(--console-active-text);
+}
+
+.__c-action-danger {
+  color: var(--console-danger);
+}
+
+.__c-context {
+  box-sizing: border-box;
+  max-width: 112px;
+  min-height: 32px;
+  padding: 4px 20px 4px 6px;
+  border: 0;
+  border-radius: 3px;
+  outline: none;
+  background: var(--console-control);
+  color: var(--console-control-text);
+  font: inherit;
+  font-size: 0.7rem;
+}
+
+.__c-context:focus-visible {
+  outline: 1px solid var(--console-active);
+  outline-offset: -1px;
+}
+
+.__c-context:disabled {
+  opacity: 0.55;
+}
+
+c-output {
+  display: block;
+  flex: 1 1 100%;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--console-scrollbar) transparent;
+}
+
+c-output > .variable-virtual-spacer,
+c-output > .variable-virtual-items {
+  display: block;
+  width: 100%;
+}
+
+c-input {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  width: 100%;
+  min-height: 96px;
+  padding: 7px 7px max(8px, env(safe-area-inset-bottom));
+  background: var(--console-surface);
+  color: var(--console-surface-text);
+}
+
+c-input::before {
+  content: ">>";
+  align-self: flex-start;
+  padding-top: 9px;
+  color: var(--console-accent);
+  font: italic 13px/1 "Courier New", Courier, monospace;
+}
+
+#__c-input {
+  box-sizing: border-box;
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  min-height: 82px;
+  max-height: 120px;
+  margin: 0;
+  padding: 7px 3px;
+  border: 0;
+  outline: none;
+  resize: none;
+  overflow-y: auto;
+  background: transparent;
+  color: var(--console-surface-text);
+  caret-color: currentColor !important;
+  font: 13px/1.45 "Courier New", Courier, monospace;
+}
+
+c-input-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  padding-bottom: 2px;
+}
+
+#__c-input::placeholder {
+  color: var(--console-placeholder);
+  opacity: 0.75;
+}
+
+#__c-input:disabled {
+  opacity: 0.55;
+}
+
+c-message {
+  box-sizing: border-box;
+  display: flex;
+  position: relative;
+  flex-wrap: wrap;
+  min-height: 45px;
+  padding: 5px 7px 4px;
+  border-bottom: 1px solid var(--console-border);
+  background: var(--console-surface);
+  color: var(--console-surface-text);
+  font-size: 0.9rem;
+}
+
+c-message[log-level="error"] {
+  background: var(--console-error-surface);
+  background: color-mix(
+    in srgb,
+    var(--console-danger-fill) 16%,
+    var(--console-surface)
+  );
+}
+
+c-message[log-level="warn"] {
+  background: var(--console-warning-surface);
+  background: color-mix(
+    in srgb,
+    var(--console-warning-fill) 20%,
+    var(--console-surface)
+  );
+}
+
+c-text,
+c-code {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 2px 4px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font: 0.9rem/1.45 Verdana, Geneva, Tahoma, sans-serif;
+}
+
+c-code {
+  position: relative;
+  padding-right: 42px;
+  overflow-x: auto;
+  color: var(--console-surface-text);
+  font-family: "Courier New", Courier, monospace;
+  white-space: pre-wrap;
+  cursor: pointer;
+}
+
+c-code::before {
+  content: ">>";
+  padding-right: 5px;
+  font-style: italic;
+}
+
+c-code::after {
+  content: "use";
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--console-active);
+  color: var(--console-active-text);
+  font: 0.62rem/1.4 var(--app-font-family, sans-serif);
+}
+
+c-stack {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1 0 100%;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  margin-top: 3px;
+  padding: 3px 4px 0;
+  color: var(--console-muted);
+  opacity: 0.8;
+  font-size: 0.7rem;
+}
+
+c-date,
+c-trace {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+c-trace {
+  direction: rtl;
+  text-align: right;
+}
+
+c-object {
+  color: var(--console-link);
+  text-decoration: underline;
+}
+
+c-line {
+  display: block;
+}
+
+c-key {
+  margin-right: 5px;
+  color: var(--console-accent);
+  font-size: 0.9rem;
+}
+
+c-text.__c-boolean,
+c-text.__c-number,
+c-text.__c-symbol {
+  color: var(--console-accent);
+}
+
+c-text.__c-function {
+  color: var(--console-function);
+  font-family: "Courier New", Courier, monospace;
+}
+
+c-text.__c-object,
+c-text.__c-undefined {
+  color: var(--console-success);
+}
+
+c-text.__c-string {
+  color: var(--console-success);
+}
+
+c-text.__c-string:not(.no-quotes)::before {
+  content: '"';
+  margin-right: 2px;
+}
+
+c-text.__c-string:not(.no-quotes)::after {
+  content: '"';
+  margin-left: 2px;
+}
+
+c-group {
+  display: none;
+  margin-left: 14px;
+}
+
+c-type[type="body-toggler"] {
+  cursor: pointer;
+  user-select: none;
+}
+
+c-type[type="body-toggler"].__show-data + c-group {
+  display: block;
+}
+
+c-type[type="body-toggler"]::before {
+  display: inline-block;
+  content: "▸";
+  margin-right: 3px;
+}
+
+c-type[type="body-toggler"]::after {
+  content: " {…}";
+}
+
+c-type[type="body-toggler"].__show-data::before {
+  content: "▾";
+}
+
+c-type[type="body-toggler"].__show-data::after {
+  display: none;
+}
+
+c-table {
+  display: table;
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--console-surface-text);
+}
+
+c-table c-row {
+  display: table-row;
+  border-bottom: 1px solid var(--console-border);
+}
+
+c-table c-cell {
+  display: table-cell;
+  padding: 5px;
+}
+
+c-toggler {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  z-index: 99999;
+  opacity: 0.5;
+  background-color: #fff;
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAQAAABKfvVzAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAAE9JREFUOMtjYBh0gBHO+k+cSkYilcPVMpHqpIHRwIgUFERp+I8SekQ5CY8WXH7AqYWJyGglqIERV3QykaYcV7DiSSwsODw8yJIGdTPQIAQAg9gKJl7UINwAAAAASUVORK5CYII=);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 24px;
+  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.4);
+  touch-action: none;
+}
+
+c-toggler:active {
+  opacity: 0.8;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+@supports not (height: 100dvh) {
+  c-console {
+    height: var(--console-viewport-height, 100vh);
+  }
+}

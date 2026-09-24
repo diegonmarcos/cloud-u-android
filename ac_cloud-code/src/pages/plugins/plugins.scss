@@ -1,0 +1,313 @@
+#plugins {
+  display: flex;
+  flex-direction: column;
+
+  .filter-message {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--popup-text-color);
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--secondary-color);
+    border-radius: 8px 8px 0 0;
+    margin-bottom: 2px;
+
+    strong {
+      color: var(--link-text-color);
+      margin-left: 0.25rem;
+    }
+
+    span {
+      margin-left: auto;
+      padding: 0.5rem;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        cursor: pointer;
+        background-color: var(--error-text-color);
+        transform: scale(1.05);
+      }
+    }
+  }
+
+  .list {
+    overflow-y: auto;
+    padding: 0.5rem 0;
+
+    &:empty::after {
+      content: attr(empty-msg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: var(--secondary-text-color);
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+  }
+
+  .list-item {
+    margin: 0 0.5rem 0.5rem 0.5rem;
+    background: var(--secondary-color);
+    padding: 0.875rem;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    position: relative;
+
+    &:hover {
+      background: var(--primary-color);
+      background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-color: var(--active-color);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    .plugin-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      width: 100%;
+      max-width: 100%;
+      height: fit-content;
+      min-height: 40px;
+
+      .plugin-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        flex-shrink: 0;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center;
+        }
+      }
+
+      .plugin-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin: 0;
+        height: fit-content;
+
+        .plugin-main {
+          min-width: 0;
+          flex: 1;
+
+          .plugin-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 0;
+            margin-bottom: 0.375rem;
+
+            .plugin-name {
+              font-weight: 600;
+              font-size: 0.95rem;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+              min-width: 0;
+              max-width: calc(100% - 60px);
+              color: var(--primary-text-color);
+            }
+
+            .plugin-version {
+              color: var(--secondary-text-color);
+              font-size: 0.75rem;
+              font-weight: 500;
+              padding: 0.25rem 0.5rem;
+              background: var(--primary-color);
+              border-radius: 6px;
+              white-space: nowrap;
+              flex-shrink: 0;
+            }
+          }
+
+          .plugin-meta {
+            font-size: 0.875rem;
+            color: var(--secondary-text-color);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+
+            .plugin-meta-dot {
+              width: 4px;
+              height: 4px;
+              background: var(--secondary-text-color);
+              border-radius: 50%;
+              display: inline-block;
+              opacity: 0.6;
+            }
+
+            .plugin-stats {
+              display: flex;
+              align-items: center;
+              gap: 0.375rem;
+              font-size: 0.875rem;
+
+              &.plugin-author {
+                max-width: 150px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+
+              .icon {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 14px;
+                height: 14px;
+                font-size: 14px;
+                line-height: 1;
+                flex-shrink: 0;
+                opacity: 0.8;
+              }
+            }
+          }
+        }
+
+        .plugin-price {
+          background: var(--active-color);
+          color: var(--button-text-color);
+          padding: 0.375rem 0.75rem;
+          border-radius: 8px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          flex-shrink: 0;
+          height: fit-content;
+          box-shadow: 0 2px 4px var(--box-shadow-color);
+        }
+      }
+    }
+
+    .plugin-toggle-switch {
+      display: flex !important;
+      align-items: center;
+      gap: 0;
+      cursor: pointer;
+      z-index: 100;
+      min-width: auto;
+      pointer-events: auto !important;
+      position: relative;
+      margin-left: auto;
+      justify-content: flex-end;
+      padding: 0;
+      border-radius: 999px;
+      transition: background-color 0.2s ease;
+
+      &:hover {
+        background-color: transparent;
+      }
+    }
+
+    .plugin-toggle-track {
+      width: 2.8rem;
+      height: 1.65rem;
+      border-radius: 999px;
+      border: 1px solid var(--border-color);
+      border: 1px solid color-mix(in srgb, var(--border-color), transparent 6%);
+      background: var(--secondary-color);
+      background: color-mix(
+        in srgb,
+        var(--secondary-color),
+        var(--popup-background-color) 30%
+      );
+      position: relative;
+      transition:
+        background-color 160ms ease,
+        border-color 160ms ease,
+        box-shadow 180ms ease;
+      display: inline-block;
+      margin-right: 0;
+      box-sizing: border-box;
+      box-shadow: none;
+    }
+
+    .plugin-toggle-switch[data-enabled="true"] .plugin-toggle-track,
+    .plugin-toggle-track[data-enabled="true"] {
+      background: var(--button-background-color);
+      border-color: var(--button-background-color);
+      border-color: color-mix(in srgb, var(--button-background-color), transparent 10%);
+      box-shadow: inset 0 0 0 1px var(--button-background-color);
+      box-shadow: inset 0 0 0 1px
+        color-mix(in srgb, var(--button-background-color), transparent 12%);
+    }
+
+    .plugin-toggle-thumb {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1.25rem;
+      height: 1.25rem;
+      margin: 0.14rem;
+      border-radius: 999px;
+      background: var(--popup-text-color);
+      background: color-mix(
+        in srgb,
+        var(--popup-text-color),
+        var(--popup-background-color) 18%
+      );
+      border: 1px solid var(--border-color);
+      border: 1px solid color-mix(in srgb, var(--border-color), transparent 15%);
+      box-sizing: border-box;
+      box-shadow:
+        0 0 0 1px var(--border-color),
+        0 1px 3px rgba(0, 0, 0, 0.22);
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--border-color), transparent 34%),
+        0 1px 3px rgba(0, 0, 0, 0.22);
+      transition:
+        transform 180ms cubic-bezier(0.2, 0.9, 0.3, 1),
+        background-color 160ms ease,
+        box-shadow 180ms ease;
+    }
+
+    @supports not (gap: 1px) {
+      .plugin-header > * + * { margin-left: 0.75rem; }
+      .plugin-info > * + * { margin-left: 0.75rem; }
+      .plugin-title > * + * { margin-left: 0.75rem; }
+      .plugin-meta > * + * { margin-left: 0.5rem; }
+      .plugin-stats > * + * { margin-left: 0.375rem; }
+      .plugin-price > * + * { margin-left: 0.25rem; }
+    }
+
+    .plugin-toggle-switch[data-enabled="true"] .plugin-toggle-thumb,
+    .plugin-toggle-track[data-enabled="true"] .plugin-toggle-thumb {
+      transform: translateX(1.12rem);
+      background: var(--button-text-color);
+      box-shadow: 0 2px 8px var(--button-background-color);
+      box-shadow: 0 2px 8px color-mix(in srgb, var(--button-background-color), transparent 55%);
+    }
+  }
+}

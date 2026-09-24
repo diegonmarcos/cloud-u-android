@@ -1,0 +1,169 @@
+@use "../../styles/mixins.scss";
+
+#lsp-status-bar {
+    position: relative;
+    padding: 8px 12px;
+    padding-right: 36px;
+    background-color: var(--secondary-color);
+    color: var(--secondary-text-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px var(--box-shadow-color);
+    border: 1px solid var(--border-color);
+    animation: toastSlideIn 0.3s ease-out;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 200px;
+    max-width: min(400px, 100%);
+
+    &.hiding {
+        opacity: 0;
+        transform: translateX(40px);
+        transition: all 0.3s ease;
+    }
+
+    .lsp-status-content {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .lsp-status-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        &.autorenew {
+            animation: lspSpinSlow 2s linear infinite;
+        }
+    }
+
+    .lsp-status-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .lsp-status-title {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--primary-text-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        opacity: 0.8;
+    }
+
+    .lsp-status-message {
+        font-size: 0.85rem;
+        font-weight: 400;
+        color: var(--secondary-text-color);
+        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 60vw;
+    }
+
+    .lsp-status-progress {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .lsp-status-progress-text {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--active-color);
+        min-width: 36px;
+        text-align: right;
+    }
+
+    .lsp-status-close {
+        position: absolute;
+        top: 50%;
+        right: 6px;
+        transform: translateY(-50%);
+        width: 24px;
+        height: 24px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        color: var(--secondary-text-color);
+        cursor: pointer;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        padding: 0;
+
+        &:hover,
+        &:active {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: var(--primary-text-color);
+        }
+    }
+
+    // Status type colors
+    &.info {
+        .lsp-status-icon {
+            color: var(--active-color);
+        }
+    }
+
+    &.success {
+        .lsp-status-icon {
+            color: #48c158;
+        }
+
+        .lsp-status-progress-text {
+            color: #48c158;
+        }
+    }
+
+    &.warning {
+        .lsp-status-icon {
+            color: #f59e0b;
+        }
+    }
+
+    &.error {
+        .lsp-status-icon {
+            color: var(--error-text-color);
+        }
+    }
+}
+
+@supports not (gap: 1px) {
+    #lsp-status-bar {
+        .lsp-status-content>*+* {
+            margin-left: 10px;
+        }
+
+        .lsp-status-text>*+* {
+            margin-top: 2px;
+        }
+
+        .lsp-status-progress>*+* {
+            margin-left: 8px;
+        }
+    }
+}
+
+@keyframes lspSpinSlow {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

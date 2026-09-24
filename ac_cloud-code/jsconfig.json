@@ -1,0 +1,12 @@
+{
+  "exclude": ["**/node_modules", "**/platforms", "**/www", "www/js/ace/**/*"],
+  "compilerOptions": {
+    "paths": {
+      "*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "typeAcquisition": {
+    "enable": true
+  }
+}

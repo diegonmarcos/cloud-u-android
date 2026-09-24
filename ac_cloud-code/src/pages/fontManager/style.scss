@@ -1,0 +1,190 @@
+wc-page.font-manager-page {
+	background: var(--secondary-color);
+
+	.font-manager-list {
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		max-width: 48rem;
+		margin: 0 auto;
+		padding: 0.5rem 0 5.5rem;
+		box-sizing: border-box;
+		background: var(--secondary-color);
+	}
+
+	.font-manager-list > .list-item {
+		display: flex;
+		width: 100%;
+		min-height: 4.1rem;
+		margin: 0;
+		padding: 0.75rem 1rem;
+		box-sizing: border-box;
+		align-items: center;
+		gap: 0.85rem;
+		background: transparent;
+		cursor: pointer;
+		transition: background-color 140ms ease;
+		text-decoration: none;
+
+		&:not(:last-of-type) {
+			border-bottom: 1px solid var(--border-color);
+			border-bottom: 1px solid color-mix(in srgb, var(--border-color), transparent 20%);
+		}
+
+		&:focus,
+		&:active {
+			background: color-mix(
+				in srgb,
+				var(--secondary-color),
+				var(--popup-text-color) 4%
+			);
+		}
+
+		> .icon:first-child {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 1.4rem;
+			min-width: 1.4rem;
+			height: 1.4rem;
+			font-size: 1.15rem;
+			color: color-mix(in srgb, var(--secondary-text-color), transparent 18%);
+		}
+
+		> .container {
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			min-width: 0;
+			overflow: visible;
+			gap: 0.24rem;
+			padding-right: 0.6rem;
+
+			> .text {
+				display: flex;
+				align-items: center;
+				min-width: 0;
+				font-size: 1rem;
+				line-height: 1.2;
+				font-weight: 600;
+				color: var(--popup-text-color);
+			}
+
+			> .value {
+				display: block;
+				font-size: 0.82rem;
+				line-height: 1.35;
+				color: color-mix(in srgb, var(--secondary-text-color), transparent 30%);
+				text-transform: none;
+				white-space: normal;
+				overflow: visible;
+				overflow-wrap: anywhere;
+				opacity: 1;
+			}
+		}
+
+		> .setting-tail {
+			display: flex;
+			align-items: center;
+			justify-content: flex-end;
+			flex-shrink: 0;
+			min-height: 1.65rem;
+			gap: 0.65rem;
+			margin-left: 0.9rem;
+			align-self: center;
+		}
+	}
+
+	.font-manager-list > .list-item.current-font {
+		background: color-mix(in srgb, var(--secondary-color), var(--active-color) 8%);
+	}
+
+	.font-manager-list > .list-item.current-font:focus,
+	.font-manager-list > .list-item.current-font:active {
+		background: color-mix(in srgb, var(--secondary-color), var(--active-color) 12%);
+	}
+
+	.font-manager-list > .list-item.current-font > .icon:first-child {
+		color: color-mix(in srgb, var(--active-color), transparent 10%);
+	}
+
+	.font-manager-list > .list-item.current-font > .container > .text {
+		font-weight: 700;
+	}
+
+  @supports not (gap: 1px) {
+    .font-manager-list > .list-item {
+      > * + * { margin-left: 0.85rem; }
+      > .container > * + * { margin-top: 0.24rem; }
+      > .setting-tail > * + * { margin-left: 0.65rem; }
+    }
+  }
+
+  @media screen and (min-width: 768px) {
+		.font-manager-list {
+			padding-left: 0.5rem;
+			padding-right: 0.5rem;
+		}
+	}
+
+	.font-manager-badge {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0.16rem 0.48rem;
+		border-radius: 999px;
+		font-size: 0.82rem;
+		font-weight: 600;
+		line-height: 1.2;
+		background: color-mix(in srgb, var(--secondary-color), var(--active-color) 10%);
+		color: color-mix(in srgb, var(--active-color), transparent 12%);
+	}
+
+	.font-manager-badge-editor {
+		background: color-mix(in srgb, var(--secondary-color), #4ca3ff 14%);
+		color: color-mix(in srgb, #4ca3ff, white 4%);
+	}
+
+	.font-manager-badge-terminal {
+		background: color-mix(in srgb, var(--secondary-color), #21b36b 14%);
+		color: color-mix(in srgb, #21b36b, white 4%);
+	}
+
+	.font-manager-badge-app {
+		background: color-mix(in srgb, var(--secondary-color), var(--active-color) 12%);
+		color: color-mix(in srgb, var(--active-color), transparent 14%);
+	}
+
+	.font-manager-action {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 1.2rem;
+		min-width: 1.2rem;
+		height: 1.2rem;
+		font-size: 1.1rem;
+		line-height: 1;
+		color: color-mix(in srgb, var(--secondary-text-color), transparent 28%);
+		cursor: pointer;
+		transition: color 140ms ease;
+
+		&:hover,
+		&:active {
+			color: var(--error-text-color);
+		}
+	}
+}
+
+.prompt.box {
+	.font-css-editor {
+		&.input {
+			border-bottom: 1px solid var(--border-color);
+			min-height: 120px;
+			margin-top: 5px;
+
+			&:focus {
+				border-bottom-color: var(--active-color);
+			}
+		}
+	}
+}

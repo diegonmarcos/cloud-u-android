@@ -1,0 +1,54 @@
+<li action="new-file">
+  <span class="text">{{new file}}</span>
+  <span class="icon file-control document-add"></span>
+</li>
+<li action="save" {{^can_save_file}}class="disabled" {{/can_save_file}}>
+  <span class="text">{{save}}</span>
+  <span class="icon save"></span>
+</li>
+<li action="save-as" {{^can_save_file}}class="disabled" {{/can_save_file}}>
+  <span class="text">{{save as}}</span>
+  <span class="icon save" style="filter: brightness(85%)"></span>
+</li>
+<li action="files">
+  <span class="text">{{files}}</span>
+  <span class="icon folder"></span></span>
+</li>
+<li action="close-current-tab">
+  <span class="text">{{close file}}</span>
+  <span class="icon clearclose"></span></span>
+</li>
+<li action="recent">
+  <span class="text">{{open recent}}</span>
+  <span class="icon historyrestore"></span>
+</li>
+<li action="find-file">
+  <span class="text">{{find file}}</span>
+  <span class="icon search"></span>
+</li>
+<li action="console">
+  <span class="text">{{console}}</span>
+  <span class="icon code"></span>
+</li>
+<li action="new-terminal">
+  <span class="text">{{terminal}}</span>
+  <span class="icon terminal"></span>
+</li>
+<li action="running-processes">
+  <span class="text">{{running processes}}</span>
+  <span class="icon apps"></span>
+</li>
+<hr>
+<li action="open" value="settings">
+  <span class="text">{{settings}}</span>
+  <span class="icon settings"></span>
+</li>
+<li action="open" value="help">
+  <span class="text">{{help}}</span>
+  <span class="icon help"></span>
+</li>
+<hr>
+<li action="exit">
+  <span class="text">{{exit}}</span>
+  <span class="icon logout"></span>
+</li>

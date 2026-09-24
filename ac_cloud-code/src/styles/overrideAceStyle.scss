@@ -1,0 +1,59 @@
+.ace_mobile-menu,
+.ace_tooltip.ace_doc-tooltip {
+  display: none !important;
+}
+
+.ace_editor {
+  &[data-font="Fira Code"] {
+    font-feature-settings:
+      "liga" on,
+      "calt" on;
+    -webkit-font-feature-settings:
+      "liga" on,
+      "calt" on;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    unicode-bidi: isolate;
+  }
+}
+
+.ace_tooltip {
+  background-color: rgb(255, 255, 255);
+  background-color: var(--secondary-color);
+  color: rgb(37, 37, 37);
+  color: var(--secondary-text-color);
+  max-width: 68%;
+  white-space: pre-wrap;
+}
+
+main .ace_editor {
+  textarea {
+    user-select: none !important;
+    pointer-events: none !important;
+    transform: translate(-100000px, -10000px) !important;
+  }
+}
+
+.ace-container {
+  height: 100%;
+}
+
+.ace_dark.ace_editor.ace_autocomplete .ace_marker-layer .ace_active-line {
+  background-color: rgba(from var(--active-color) r g b / 0.3);
+}
+
+.ace_dark.ace_editor.ace_autocomplete .ace_completion-highlight {
+  color: var(--popup-active-color);
+}
+
+.ace_dark.ace_editor.ace_autocomplete {
+  border: 1px solid var(--popup-border-color);
+  box-shadow: 2px 3px 5px var(--box-shadow-color);
+  line-height: 1.4;
+  background: var(--primary-color);
+  color: var(--primary-text-color);
+}
+
+.ace_hidden-cursors .ace_cursor {
+  opacity: 0.8 !important;
+}

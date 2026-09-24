@@ -1,0 +1,45 @@
+{
+  "name": "Acode Development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "target": "devcontainer"
+  },
+
+  "containerEnv": {
+    "JAVA_HOME": "/usr/local/openjdk-21"
+  },
+  "remoteEnv": {
+    "JAVA_HOME": "/usr/local/openjdk-21",
+    "ANDROID_SDK_ROOT": "${containerEnv:ANDROID_HOME}",
+    "PATH": "${containerEnv:PATH}:${containerEnv:ANDROID_HOME}/build-tools/36.0.0"
+  },
+
+  "features": {
+    "ghcr.io/nordcominc/devcontainer-features/android-sdk:1": {
+      "platform": "36",
+      "build_tools": "36.0.0"
+    },
+    "ghcr.io/devcontainers/features/node:2.1": {
+      "nodeGypDependencies": false,
+      "installYarnUsingApt": false,
+      "version": "lts",
+      "pnpmVersion": "latest",
+      "nvmVersion": "latest"
+    }
+  },
+  "overrideCommand": true,
+  "postCreateCommand": "pnpm run setup",
+  "remoteUser": "root",
+  "customizations": {
+    "vscode": {
+      "extensions": ["biomejs.biome", "redhat.java"],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "biomejs.biome",
+        "[java]": {
+          "editor.defaultFormatter": "redhat.java"
+        }
+      }
+    }
+  }
+}

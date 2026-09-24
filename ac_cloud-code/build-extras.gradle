@@ -1,0 +1,43 @@
+android {
+    packagingOptions {
+        pickFirst 'META-INF/versions/9/OSGI-INF/MANIFEST.MF'
+    }
+    buildTypes {
+        release {
+            //might cause ClassNotFoundException errors
+            //to fix those errors you need to either put @Keep on the class/feild or add a entry in progrud rules file
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+configurations {
+  all {
+      exclude module: 'commons-logging'
+      exclude group: 'org.bouncycastle', module: 'bcprov-jdk15on'
+      exclude group: 'org.bouncycastle', module: 'bcpkix-jdk15on'
+      exclude group: 'org.bouncycastle', module: 'bcpkix-jdk18on'
+      exclude group: 'org.bouncycastle', module: 'bcprov-jdk18on'
+  }
+}
+// ── cloud-code (#562): install identity comes from the fleet declaration ──
+// build.json::android is the ONE declaration of this app's applicationId and
+// version. Cordova derives both from config.xml's widget id/version, and that id
+// must STAY com.foxdebug.acode: it is also the Java namespace, and upstream
+// plugin sources import com.foxdebug.acode.R. So the namespace is left alone and
+// only the install identity is overridden, in onVariants — which runs after the
+// android {} block Cordova applies this file BEFORE (a DSL applicationId here
+// would be silently overwritten by that block). ${applicationId} manifest
+// placeholders resolve to the overridden value.
+def cloudBuildJson = new groovy.json.JsonSlurper().parse(new File(rootProject.projectDir, '../../build.json'))
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.applicationId.set(cloudBuildJson.android.application_id as String)
+        variant.outputs.each { output ->
+            output.versionCode.set(cloudBuildJson.android.version_code as Integer)
+            output.versionName.set(cloudBuildJson.android.version_name as String)
+        }
+    }
+}

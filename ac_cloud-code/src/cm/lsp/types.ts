@@ -1,0 +1,673 @@
+import type {
+	LSPClient,
+	LSPClientConfig,
+	LSPClientExtension,
+	Transport,
+	Workspace,
+	WorkspaceFile,
+} from "@codemirror/lsp-client";
+import type { Language } from "@codemirror/language";
+import type { ChangeSet, Extension, MapMode, Text } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
+
+import type {
+	Diagnostic as LSPDiagnostic,
+	FormattingOptions as LSPFormattingOptions,
+	Position,
+	Range,
+	TextEdit,
+} from "vscode-languageserver-types";
+
+export type {
+	LSPClient,
+	LSPClientConfig,
+	LSPClientExtension,
+	LSPDiagnostic,
+	LSPFormattingOptions,
+	Position,
+	Range,
+	TextEdit,
+	Transport,
+	Workspace,
+	WorkspaceFile,
+};
+
+export interface WorkspaceFileUpdate {
+	file: WorkspaceFile;
+	prevDoc: Text;
+	changes: ChangeSet;
+}
+
+// ============================================================================
+// Transport Types
+// ============================================================================
+
+export type TransportKind = "websocket" | "stdio" | "external";
+type MaybePromise<T> = T | Promise<T>;
+
+export interface WebSocketTransportOptions {
+	binary?: boolean;
+	timeout?: number;
+	reconnect?: boolean;
+	maxReconnectAttempts?: number;
+}
+
+export interface TransportDescriptor {
+	kind: TransportKind;
+	url?: string;
+	command?: string;
+	args?: string[];
+	options?: WebSocketTransportOptions;
+	protocols?: string[];
+	create?: (
+		server: LspServerDefinition,
+		context: TransportContext,
+	) => TransportHandle;
+}
+
+export interface TransportHandle {
+	transport: Transport;
+	dispose: () => Promise<void> | void;
+	ready: Promise<void>;
+}
+
+export interface TransportContext {
+	uri?: string;
+	file?: AcodeFile;
+	view?: EditorView;
+	languageId?: string;
+	rootUri?: string | null;
+	originalRootUri?: string | null;
+	debugWebSocket?: boolean;
+	/** Dynamically discovered port from auto-port discovery */
+	dynamicPort?: number;
+}
+
+// ============================================================================
+// Runtime Provider Types
+// ============================================================================
+
+export type WorkspaceKind =
+	| "app-private"
+	| "builtin-alpine"
+	| "termux-saf"
+	| "saf"
+	| "remote"
+	| "proot-distro"
+	| "virtual"
+	| "unknown";
+
+export interface LspRuntimeContext extends TransportContext {
+	documentUri?: string | null;
+	originalDocumentUri?: string;
+	serverId?: string;
+	workspaceKind?: WorkspaceKind;
+	allowNonTerminalWorkspace?: boolean;
+	runtimeAction?: "checkInstallation" | "install" | "uninstall" | "command";
+}
+
+export type LspClientScope = "workspace" | "document";
+
+export interface LspRuntimeUriResolutionContext extends LspRuntimeContext {
+	originalDocumentUri: string;
+	originalRootUri: string | null;
+	normalizedDocumentUri: string | null;
+	normalizedRootUri: string | null;
+}
+
+export interface LspRuntimeUriResolution {
+	documentUri?: string | null;
+	rootUri?: string | null;
+	scope?: LspClientScope;
+}
+
+export type LspRuntimeConnection =
+	| {
+			kind: "transport";
+			providerId: string;
+			transport: TransportHandle;
+			dispose?: () => Promise<void> | void;
+	  }
+	| {
+			kind: "websocket";
+			providerId: string;
+			url: string;
+			protocols?: string[];
+			dispose?: () => Promise<void> | void;
+	  };
+
+export interface LspRuntimeProvider {
+	id: string;
+	label: string;
+	priority?: number;
+	canHandle: (
+		server: LspServerDefinition,
+		context: LspRuntimeContext,
+	) => boolean | Promise<boolean>;
+	/**
+	 * Translate editor URIs into paths visible inside this runtime. The hook runs
+	 * only after this provider has been selected, so one runtime cannot rewrite
+	 * another provider's documents.
+	 */
+	resolveUris?: (
+		server: LspServerDefinition,
+		context: LspRuntimeUriResolutionContext,
+	) => MaybePromise<LspRuntimeUriResolution | null | undefined>;
+	checkInstallation?: (
+		server: LspServerDefinition,
+		context: LspRuntimeContext,
+	) => Promise<InstallCheckResult>;
+	install?: (
+		server: LspServerDefinition,
+		context: LspRuntimeContext,
+		mode: "install" | "update" | "reinstall",
+		options?: { promptConfirm?: boolean },
+	) => Promise<boolean>;
+	uninstall?: (
+		server: LspServerDefinition,
+		context: LspRuntimeContext,
+		options?: { promptConfirm?: boolean },
+	) => Promise<boolean>;
+	getInstallCommand?: (
+		server: LspServerDefinition,
+		context: LspRuntimeContext,
+		mode?: "install" | "update",
+	) => string | null;
+	getUninstallCommand?: (
+		server: LspServerDefinition,
+		context: LspRuntimeContext,
+	) => string | null;
+	start: (
+		server: LspServerDefinition,
+		context: LspRuntimeContext,
+	) => Promise<LspRuntimeConnection>;
+	stop?: (connection: LspRuntimeConnection) => Promise<void> | void;
+}
+
+// ============================================================================
+// Server Registry Types
+// ============================================================================
+
+export interface BridgeConfig {
+	kind: "axs";
+	/** Optional port - if not provided, auto-port discovery will be used */
+	port?: number;
+	command: string;
+	args?: string[];
+	/** Session ID for port file naming (defaults to command name) */
+	session?: string;
+}
+
+export type InstallerKind =
+	| "apk"
+	| "npm"
+	| "pip"
+	| "cargo"
+	| "github-release"
+	| "manual"
+	| "shell";
+
+export interface LauncherInstallConfig {
+	kind?: InstallerKind;
+	command?: string;
+	updateCommand?: string;
+	uninstallCommand?: string;
+	label?: string;
+	source?: string;
+	executable?: string;
+	packages?: string[];
+	pipCommand?: string;
+	npmCommand?: string;
+	pythonCommand?: string;
+	global?: boolean;
+	breakSystemPackages?: boolean;
+	repo?: string;
+	assetNames?: Record<string, string>;
+	archiveType?: "zip" | "binary";
+	extractFile?: string;
+	binaryPath?: string;
+}
+
+export interface LauncherConfig {
+	command?: string;
+	args?: string[];
+	startCommand?: string | string[];
+	logOutput?: "all" | "warnings-and-errors";
+	checkCommand?: string;
+	versionCommand?: string;
+	updateCommand?: string;
+	uninstallCommand?: string;
+	install?: LauncherInstallConfig;
+	bridge?: BridgeConfig;
+}
+
+export interface BuiltinExtensionsConfig {
+	hover?: boolean;
+	completion?: boolean;
+	signature?: boolean;
+	keymaps?: boolean;
+	diagnostics?: boolean;
+	inlayHints?: boolean;
+	formatting?: boolean;
+	/** Document color chips via textDocument/documentColor (default true). */
+	documentColors?: boolean;
+}
+
+export interface AcodeClientConfig {
+	useDefaultExtensions?: boolean;
+	builtinExtensions?: BuiltinExtensionsConfig;
+	extensions?: (Extension | LSPClientExtension)[];
+	notificationHandlers?: Record<
+		string,
+		(client: LSPClient, params: unknown) => boolean
+	>;
+	workspace?: (client: LSPClient) => Workspace;
+	rootUri?: string;
+	timeout?: number;
+	highlightLanguage?: (name: string) => Language | null;
+}
+
+export interface LanguageResolverContext {
+	languageId: string;
+	languageName?: string;
+	uri?: string;
+	file?: AcodeFile;
+}
+
+export interface DocumentUriContext extends RootUriContext {
+	normalizedUri?: string | null;
+}
+
+export interface LspServerManifest {
+	id?: string;
+	label?: string;
+	enabled?: boolean;
+	/** Higher-priority servers own single-provider features such as formatting. */
+	priority?: number;
+	languages?: string[];
+	transport?: TransportDescriptor;
+	initializationOptions?: Record<string, unknown>;
+	workspaceConfiguration?: Record<string, unknown>;
+	clientConfig?: Record<string, unknown> | AcodeClientConfig;
+	startupTimeout?: number;
+	capabilityOverrides?: Record<string, unknown>;
+	rootUri?:
+		| ((uri: string, context: unknown) => MaybePromise<string | null>)
+		| ((uri: string, context: RootUriContext) => MaybePromise<string | null>)
+		| null;
+	documentUri?:
+		| ((
+				uri: string,
+				context: DocumentUriContext,
+		  ) => MaybePromise<string | null | undefined>)
+		| null;
+	resolveLanguageId?:
+		| ((context: LanguageResolverContext) => string | null)
+		| null;
+	launcher?: LauncherConfig;
+	runtimes?: string[];
+	useWorkspaceFolders?: boolean;
+}
+
+export interface LspServerBundle {
+	id: string;
+	label?: string;
+	getServers: () => LspServerManifest[];
+	getExecutable?: (
+		serverId: string,
+		manifest: LspServerManifest,
+	) => string | null | undefined;
+	checkInstallation?: (
+		serverId: string,
+		manifest: LspServerManifest,
+	) => Promise<InstallCheckResult | null | undefined>;
+	installServer?: (
+		serverId: string,
+		manifest: LspServerManifest,
+		mode: "install" | "update" | "reinstall",
+		options?: { promptConfirm?: boolean },
+	) => Promise<boolean>;
+	uninstallServer?: (
+		serverId: string,
+		manifest: LspServerManifest,
+		options?: { promptConfirm?: boolean },
+	) => Promise<boolean>;
+}
+
+export type LspServerProvider = LspServerBundle;
+
+export interface LspServerDefinition {
+	id: string;
+	label: string;
+	enabled: boolean;
+	priority: number;
+	languages: string[];
+	transport: TransportDescriptor;
+	initializationOptions?: Record<string, unknown>;
+	workspaceConfiguration?: Record<string, unknown>;
+	clientConfig?: AcodeClientConfig;
+	startupTimeout?: number;
+	capabilityOverrides?: Record<string, unknown>;
+	rootUri?:
+		| ((uri: string, context: RootUriContext) => MaybePromise<string | null>)
+		| null;
+	documentUri?:
+		| ((
+				uri: string,
+				context: DocumentUriContext,
+		  ) => MaybePromise<string | null | undefined>)
+		| null;
+	resolveLanguageId?:
+		| ((context: LanguageResolverContext) => string | null)
+		| null;
+	launcher?: LauncherConfig;
+	runtimes?: string[];
+	/**
+	 * When true, uses a single server instance with workspace folders
+	 * instead of starting separate servers per project root.
+	 * Heavy LSP servers like TypeScript and rust-analyzer should use this.
+	 */
+	useWorkspaceFolders?: boolean;
+}
+
+export interface RootUriContext {
+	uri?: string;
+	file?: AcodeFile;
+	view?: EditorView;
+	languageId?: string;
+	rootUri?: string;
+}
+
+export type RegistryEventType = "register" | "unregister" | "update";
+
+export type RegistryEventListener = (
+	event: RegistryEventType,
+	server: LspServerDefinition,
+) => void;
+
+// ============================================================================
+// Client Manager Types
+// ============================================================================
+
+export interface FileMetadata {
+	uri: string;
+	languageId?: string;
+	languageName?: string;
+	view?: EditorView;
+	file?: AcodeFile;
+	rootUri?: string;
+}
+
+export interface FormattingOptions {
+	tabSize?: number;
+	insertSpaces?: boolean;
+	[key: string]: unknown;
+}
+
+export interface ClientManagerOptions {
+	diagnosticsUiExtension?: Extension | Extension[];
+	clientExtensions?: Extension | Extension[];
+	resolveRoot?: (context: RootUriContext) => Promise<string | null>;
+	displayFile?: (uri: string) => Promise<EditorView | null>;
+	openFile?: (uri: string) => Promise<EditorView | null>;
+	resolveLanguageId?: (uri: string) => string | null;
+	/** Delay before an unreferenced client is reported as idle. */
+	clientIdleGracePeriodMs?: number;
+	onClientIdle?: (info: ClientIdleInfo) => void;
+	allowNonTerminalWorkspace?: boolean;
+}
+
+export interface ClientIdleInfo {
+	server: LspServerDefinition;
+	client: LSPClient;
+	rootUri: string | null;
+	/** Disposes only this idle client instance (not every client for the server id). */
+	dispose: () => Promise<void>;
+}
+
+export interface ClientState {
+	server: LspServerDefinition;
+	client: LSPClient;
+	transport: TransportHandle;
+	rootUri: string | null;
+	attach: (uri: string, view: EditorView, aliases?: string[]) => void;
+	detach: (uri: string, view?: EditorView) => void;
+	dispose: () => Promise<void>;
+}
+
+export interface NormalizedRootUri {
+	normalizedRootUri: string | null;
+	originalRootUri: string | null;
+}
+
+// ============================================================================
+// Server Launcher Types
+// ============================================================================
+
+export interface ManagedServerEntry {
+	uuid: string;
+	command: string;
+	startedAt: number;
+	/** Port number for the axs proxy (for stats endpoint) */
+	port?: number;
+}
+
+export type InstallStatus = "present" | "declined" | "failed";
+
+export interface InstallCheckResult {
+	status: "present" | "missing" | "failed" | "unknown";
+	version?: string | null;
+	canInstall: boolean;
+	canUpdate: boolean;
+	message?: string;
+}
+
+/**
+ * Port information from auto-port discovery
+ */
+export interface PortInfo {
+	/** The discovered port number */
+	port: number;
+	/** Path to the port file */
+	filePath: string;
+	/** Session ID used for the port file */
+	session: string;
+}
+
+export interface WaitOptions {
+	attempts?: number;
+	delay?: number;
+	probeTimeout?: number;
+}
+
+/**
+ * Result from ensureServerRunning
+ */
+export interface EnsureServerResult {
+	uuid: string | null;
+	/** Port discovered from port file (for auto-port discovery) */
+	discoveredPort?: number;
+}
+
+/**
+ * Stats returned from the axs proxy /status endpoint
+ */
+export interface LspServerStats {
+	program: string;
+	processes: Array<{
+		pid: number;
+		uptime_secs: number;
+		memory_bytes: number;
+	}>;
+}
+
+/**
+ * Formatted stats for UI display
+ */
+export interface LspServerStatsFormatted {
+	memoryBytes: number;
+	memoryFormatted: string;
+	uptimeSeconds: number;
+	uptimeFormatted: string;
+	pid: number | null;
+	processCount: number;
+}
+
+// ============================================================================
+// Workspace Types
+// ============================================================================
+
+export interface WorkspaceOptions {
+	displayFile?: (uri: string) => Promise<EditorView | null>;
+	openFile?: (uri: string) => Promise<EditorView | null>;
+	resolveLanguageId?: (uri: string) => string | null;
+	/** Folders already advertised in `initialize`; do not re-notify. */
+	initialFolders?: string[];
+}
+
+// ============================================================================
+// Diagnostics Types
+// ============================================================================
+
+export interface LspDiagnostic {
+	from: number;
+	to: number;
+	severity: "error" | "warning" | "info" | "hint";
+	message: string;
+	source?: string;
+	/** Related diagnostic information (e.g., location of declaration for 'unused' errors) */
+	relatedInformation?: DiagnosticRelatedInformation[];
+}
+
+/** Related information for a diagnostic (mapped to editor positions) */
+export interface DiagnosticRelatedInformation {
+	/** Document URI */
+	uri: string;
+	/** Start position (offset in document) */
+	from: number;
+	/** End position (offset in document) */
+	to: number;
+	/** Message describing the relationship */
+	message: string;
+}
+
+export interface PublishDiagnosticsParams {
+	uri: string;
+	version?: number;
+	diagnostics: RawDiagnostic[];
+}
+
+export interface DocumentDiagnosticParams {
+	textDocument: {
+		uri: string;
+	};
+	identifier?: string;
+	previousResultId?: string;
+}
+
+export interface FullDocumentDiagnosticReport {
+	kind: "full";
+	resultId?: string;
+	items: RawDiagnostic[];
+}
+
+export interface UnchangedDocumentDiagnosticReport {
+	kind: "unchanged";
+	resultId: string;
+}
+
+export type DocumentDiagnosticReport =
+	| FullDocumentDiagnosticReport
+	| UnchangedDocumentDiagnosticReport;
+
+export interface RawDiagnostic {
+	range: Range;
+	severity?: number;
+	code?: number | string;
+	source?: string;
+	message: string;
+	/** Related diagnostic locations from LSP (raw positions) */
+	relatedInformation?: RawDiagnosticRelatedInformation[];
+}
+
+/** Raw related information from LSP (before position mapping) */
+export interface RawDiagnosticRelatedInformation {
+	location: {
+		uri: string;
+		range: Range;
+	};
+	message: string;
+}
+
+// ============================================================================
+// Formatter Types
+// ============================================================================
+
+export interface AcodeApi {
+	registerFormatter: (
+		id: string,
+		extensions: string[],
+		formatter: () => Promise<boolean>,
+		label: string,
+	) => void;
+}
+
+/**
+ * Uri utility interface
+ */
+export interface ParsedUri {
+	docId?: string;
+	rootUri?: string;
+	isFileUri?: boolean;
+}
+
+/**
+ * Interface representing the LSPPlugin instance API.
+ */
+export interface LSPPluginAPI {
+	/** The document URI this plugin is attached to */
+	uri: string;
+	/** The LSP client instance */
+	client: LSPClient & { sync: () => void; connected?: boolean };
+	/** Convert a document offset to an LSP Position */
+	toPosition: (offset: number) => { line: number; character: number };
+	/** The currently synced document state */
+	syncedDoc: Text;
+	/** Pending changes that haven't been synced yet */
+	unsyncedChanges: {
+		mapPos: (pos: number, assoc?: number, mode?: MapMode) => number | null;
+		empty: boolean;
+		newLength: number;
+	};
+	/** Clear pending changes */
+	clear: () => void;
+}
+
+/**
+ * Interface for workspace file with view access
+ */
+export interface WorkspaceFileWithView {
+	version: number;
+	getView: () => EditorView | null;
+}
+
+/**
+ * Interface for workspace with file access
+ */
+export interface WorkspaceWithFileAccess {
+	getFile: (uri: string) => WorkspaceFileWithView | null;
+}
+
+/**
+ * LSPClient with workspace access (for type casting in notification handlers)
+ */
+export interface LSPClientWithWorkspace {
+	workspace: WorkspaceWithFileAccess;
+}
+
+// Extend the LSPClient with Acode-specific properties
+declare module "@codemirror/lsp-client" {
+	interface LSPClient {
+		__acodeLoggedInfo?: boolean;
+	}
+}

@@ -1,0 +1,1055 @@
+import "./style.scss";
+import fsOperation from "fileSystem";
+import collapsableList from "components/collapsableList";
+import Sidebar from "components/sidebar";
+import alert from "dialogs/alert";
+import prompt from "dialogs/prompt";
+import select from "dialogs/select";
+import purchaseListener from "handlers/purchase";
+import auth from "lib/auth";
+import config from "lib/config";
+import InstallState from "lib/installState";
+import loadPlugin from "lib/loadPlugin";
+import settings from "lib/settings";
+import { interstitialAd } from "lib/startAd";
+import FileBrowser from "pages/fileBrowser";
+import plugin from "pages/plugin";
+import helpers from "utils/helpers";
+import Url from "utils/Url";
+
+/** @type {HTMLElement} */
+let $installed = null;
+/** @type {HTMLElement} */
+let $explore = null;
+/** @type {HTMLElement} */
+let container = null;
+/** @type {HTMLElement} */
+let $searchResult = null;
+
+const LIMIT = 50;
+const SEARCH_INPUT_WAIT_TIMEOUT = 1000;
+let currentPage = 1;
+let hasMore = true;
+let isLoading = false;
+let currentFilter = null;
+let filterHasMore = true;
+let isFilterLoading = false;
+
+function withSupportedEditor(url) {
+	const separator = url.includes("?") ? "&" : "?";
+	return `${url}${separator}supported_editor=${config.SUPPORTED_EDITOR}`;
+}
+
+const $header = (
+	<div className="header">
+		<div className="title">
+			<span>{strings.plugins}</span>
+			<div className="actions">
+				<button type="button" className="icon-button" onclick={filterPlugins}>
+					<span className="icon tune" />
+				</button>
+				<button
+					type="button"
+					className="icon-button"
+					onclick={() => addSource()}
+				>
+					<span className="icon add" />
+				</button>
+			</div>
+		</div>
+		<input
+			oninput={searchPlugin}
+			type="search"
+			name="search-ext"
+			placeholder="Search"
+		/>
+	</div>
+);
+
+const $style = <style></style>;
+/** @type {Set<HTMLElement>} */
+const $scrollableLists = new Set();
+
+let searchTimeout = null;
+let installedPlugins = [];
+
+export default [
+	"extension", // icon
+	"extensions", // id
+	strings.plugins, // title
+	initApp, // init function
+	false, // prepend
+	onSelected, // onSelected function
+];
+
+/**
+ * On selected handler for files app
+ * @param {HTMLElement} el
+ */
+function onSelected(el) {
+	const $scrollableLists = container.getAll(":scope .scroll[data-scroll-top]");
+	for (const $el of $scrollableLists) {
+		$el.scrollTop = $el.dataset.scrollTop;
+	}
+}
+
+/**
+ * Initialize extension app
+ * @param {HTMLElement} el
+ */
+function initApp(el) {
+	container = el;
+	container.classList.add("extensions");
+	container.content = $header;
+
+	if (!$searchResult) {
+		$searchResult = <ul className="list search-result scroll" />;
+		container.append($searchResult);
+	}
+
+	if (!$explore) {
+		$explore = collapsableList(strings.explore);
+		$explore.ontoggle = loadExplore;
+		$explore.$ul.onscroll = handleScroll;
+		container.append($explore);
+	}
+
+	if (!$installed) {
+		$installed = collapsableList(strings.installed);
+		$installed.ontoggle = loadInstalled;
+		container.append($installed);
+	}
+
+	Sidebar.on("show", onSelected);
+	document.head.append($style);
+}
+
+async function handleScroll(e) {
+	if (isLoading || !hasMore) return;
+
+	const { scrollTop, scrollHeight, clientHeight } = e.target;
+
+	if (scrollTop + clientHeight >= scrollHeight - 50) {
+		await loadMorePlugins();
+	}
+}
+
+async function handleFilterScroll(e) {
+	if (isFilterLoading || !filterHasMore || !currentFilter) return;
+
+	const { scrollTop, scrollHeight, clientHeight } = e.target;
+
+	if (scrollTop + clientHeight >= scrollHeight - 50) {
+		await loadFilteredPlugins(currentFilter, false);
+	}
+}
+
+async function loadMorePlugins() {
+	try {
+		isLoading = true;
+		startLoading($explore);
+
+		const response = await fetch(
+			withSupportedEditor(
+				`${config.API_BASE}/plugins?page=${currentPage}&limit=${LIMIT}`,
+			),
+		);
+		const newPlugins = await response.json();
+
+		if (newPlugins.length < LIMIT) {
+			hasMore = false;
+		}
+
+		installedPlugins = await listInstalledPlugins();
+		const pluginElements = newPlugins.map(ListItem);
+		$explore.$ul.append(...pluginElements);
+
+		currentPage++;
+		updateHeight($explore);
+	} catch (error) {
+		window.log("error", error);
+	} finally {
+		isLoading = false;
+		stopLoading($explore);
+	}
+}
+
+async function loadFilteredPlugins(filterState, isInitial = false) {
+	if (isFilterLoading || !filterHasMore || !filterState) return;
+
+	try {
+		isFilterLoading = true;
+
+		const { items, hasMore } = await getFilteredPlugins(filterState);
+
+		if (currentFilter !== filterState) {
+			return;
+		}
+
+		installedPlugins = await listInstalledPlugins();
+		const pluginElements = items.map(ListItem);
+		if (pluginElements.length) {
+			$searchResult.append(...pluginElements);
+		} else if (isInitial) {
+			$searchResult.append(
+				<span className="error empty">
+					{strings["no plugins found"] || strings.empty || "No plugins found"}
+				</span>,
+			);
+		}
+
+		filterHasMore = hasMore;
+		if (!filterHasMore) {
+			$searchResult.onscroll = null;
+		}
+
+		updateHeight($searchResult);
+	} catch (error) {
+		window.log("error", "Error loading filtered plugins:");
+		window.log("error", error);
+	} finally {
+		isFilterLoading = false;
+	}
+}
+
+async function searchPlugin() {
+	clearTimeout(searchTimeout);
+	searchTimeout = setTimeout(async () => {
+		await runSearch(this.value);
+	}, 500);
+}
+
+async function runSearch(query) {
+	// Clear filter when searching
+	currentFilter = null;
+	filterHasMore = true;
+	isFilterLoading = false;
+	$searchResult.onscroll = null;
+
+	$searchResult.content = "";
+	const status = await helpers.checkAPIStatus();
+	if (!status) {
+		$searchResult.content = <span className="error">{strings.api_error}</span>;
+		return;
+	}
+
+	query = String(query || "").trim();
+	if (!query) return;
+
+	try {
+		$searchResult.classList.add("loading");
+		const plugins = await fsOperation(
+			withSupportedEditor(
+				Url.join(config.API_BASE, `plugins?name=${encodeURIComponent(query)}`),
+			),
+		).readFile("json");
+
+		installedPlugins = await listInstalledPlugins();
+		$searchResult.content = plugins.length ? (
+			plugins.map(ListItem)
+		) : (
+			<span className="error empty">
+				{strings["no plugins found"] || strings.empty || "No plugins found"}
+			</span>
+		);
+		updateHeight($searchResult);
+	} catch (error) {
+		window.log("error", error);
+		$searchResult.content = <span className="error">{strings.error}</span>;
+	} finally {
+		$searchResult.classList.remove("loading");
+	}
+}
+
+function getSearchInput() {
+	return container?.querySelector('input[name="search-ext"]');
+}
+
+function waitForSearchInput() {
+	const startTime = Date.now();
+
+	return new Promise((resolve) => {
+		const check = () => {
+			const searchInput = getSearchInput();
+			if (searchInput || Date.now() - startTime >= SEARCH_INPUT_WAIT_TIMEOUT) {
+				resolve(searchInput);
+				return;
+			}
+
+			requestAnimationFrame(check);
+		};
+
+		check();
+	});
+}
+
+export async function openWithSearch(query) {
+	Sidebar.show();
+	document
+		.querySelector('[data-action="sidebar-app"][data-id="extensions"]')
+		?.click();
+
+	const searchInput = await waitForSearchInput();
+	if (!searchInput) return;
+
+	searchInput.value = query;
+	clearTimeout(searchTimeout);
+	void runSearch(query);
+}
+
+async function filterPlugins() {
+	const verifiedLabel = strings["verified publisher"];
+	const authorLabel = strings.author || strings.name;
+	const keywordsLabel = strings.keywords;
+
+	const filterItems = [
+		{ value: "orderBy:top_rated", text: strings.top_rated },
+		{ value: "orderBy:newest", text: strings.newly_added },
+		{ value: "orderBy:downloads", text: strings.most_downloaded },
+		{ value: "attribute:verified", text: verifiedLabel },
+		{ value: "attribute:author", text: authorLabel },
+		{ value: "attribute:keywords", text: keywordsLabel },
+	];
+
+	const filterConfig = {
+		"orderBy:top_rated": {
+			type: "orderBy",
+			value: "top_rated",
+			baseLabel: strings.top_rated,
+		},
+		"orderBy:newest": {
+			type: "orderBy",
+			value: "newest",
+			baseLabel: strings.newly_added,
+		},
+		"orderBy:downloads": {
+			type: "orderBy",
+			value: "downloads",
+			baseLabel: strings.most_downloaded,
+		},
+		"attribute:verified": {
+			type: "verified",
+			baseLabel: verifiedLabel,
+			value: true,
+		},
+		"attribute:author": { type: "author", baseLabel: authorLabel },
+		"attribute:keywords": { type: "keywords", baseLabel: keywordsLabel },
+	};
+
+	const selection = await select("Filter", filterItems);
+	if (!selection) return;
+
+	const option = filterConfig[selection];
+	if (!option) return;
+
+	const filterState = {
+		...option,
+		nextPage: 1,
+		buffer: [],
+		hasMoreSource: true,
+		displayLabel: option.baseLabel,
+	};
+
+	if (option.type === "author") {
+		const authorName = (
+			await prompt(strings["enter author name"], "", "text")
+		)?.trim();
+		if (!authorName) return;
+		filterState.value = authorName.toLowerCase();
+		filterState.originalValue = authorName;
+		filterState.displayLabel = `${option.baseLabel}: ${authorName}`;
+	} else if (option.type === "keywords") {
+		const rawKeywords = (
+			await prompt(strings["enter keywords"], "", "text")
+		)?.trim();
+		if (!rawKeywords) return;
+		const keywordList = rawKeywords
+			.split(",")
+			.map((item) => item.trim())
+			.filter(Boolean);
+		if (!keywordList.length) return;
+		filterState.value = keywordList.map((item) => item.toLowerCase());
+		filterState.originalValue = keywordList.join(", ");
+		filterState.displayLabel = `${option.baseLabel}: ${filterState.originalValue}`;
+	}
+
+	currentFilter = filterState;
+	filterHasMore = true;
+	isFilterLoading = false;
+	$searchResult.content = "";
+
+	try {
+		$searchResult.classList.add("loading");
+		const filterMessage = (
+			<div className="filter-message">
+				<span>
+					{strings["filtered by"]} <strong>{filterState.displayLabel}</strong>
+				</span>
+				<span
+					className="icon clearclose close-button"
+					data-action="clear-filter"
+					onclick={() => clearFilter()}
+				/>
+			</div>
+		);
+		$searchResult.content = [filterMessage];
+		$searchResult.onscroll = handleFilterScroll;
+		await loadFilteredPlugins(currentFilter, true);
+		updateHeight($searchResult);
+
+		function clearFilter() {
+			currentFilter = null;
+			filterHasMore = true;
+			isFilterLoading = false;
+			$searchResult.content = "";
+			$searchResult.onscroll = null;
+			updateHeight($searchResult);
+		}
+	} catch (error) {
+		window.log("error", "Error filtering plugins:");
+		window.log("error", error);
+		$searchResult.content = <span className="error">{strings.error}</span>;
+	} finally {
+		$searchResult.classList.remove("loading");
+	}
+}
+
+async function addSource(sourceType, value = "https://") {
+	if (!sourceType) {
+		const sourceOption = [
+			["remote", strings.remote],
+			["local", strings.local],
+		];
+		sourceType = await select("Select Source", sourceOption);
+	}
+
+	if (!sourceType) return;
+	let source;
+	if (sourceType === "remote") {
+		source = await prompt(strings["enter plugin source"], value, "url");
+	} else {
+		source = (await FileBrowser("file", "Select plugin source")).url;
+	}
+
+	if (!source) return;
+
+	try {
+		const { default: installPlugin } = await import("lib/installPlugin");
+		await installPlugin(source);
+		if (!$explore.collapsed) {
+			$explore.ontoggle();
+		}
+		if (!$installed.collapsed) {
+			$installed.ontoggle();
+		}
+	} catch (error) {
+		console.error(error);
+		window.toast(helpers.errorMessage(error));
+		addSource(sourceType, source);
+	}
+}
+
+async function loadInstalled() {
+	if (this.collapsed) return;
+
+	const plugins = await listInstalledPlugins();
+	if (!plugins.length) {
+		$installed.collapse();
+	}
+	$installed.$ul.content = plugins.map(ListItem);
+	updateHeight($installed);
+}
+
+async function loadExplore() {
+	if (this.collapsed) return;
+
+	const status = await helpers.checkAPIStatus();
+	if (!status) {
+		$explore.$ul.content = <span className="error">{strings.api_error}</span>;
+		return;
+	}
+
+	try {
+		startLoading($explore);
+		currentPage = 1;
+		hasMore = true;
+
+		const response = await fetch(
+			withSupportedEditor(
+				`${config.API_BASE}/plugins?page=${currentPage}&limit=${LIMIT}`,
+			),
+		);
+		const plugins = await response.json();
+
+		if (plugins.length < LIMIT) {
+			hasMore = false;
+		}
+
+		installedPlugins = await listInstalledPlugins();
+		$explore.$ul.content = plugins.map(ListItem);
+		currentPage++;
+		updateHeight($explore);
+	} catch (error) {
+		console.error("Failed to load plugins in sidebar explore:", error);
+		$explore.$ul.content = <span className="error">{strings.error}</span>;
+	} finally {
+		stopLoading($explore);
+	}
+}
+
+async function listInstalledPlugins() {
+	const plugins = await Promise.all(
+		(await fsOperation(PLUGIN_DIR).lsDir()).map(async (item) => {
+			const id = Url.basename(item.url);
+
+			try {
+				const url = Url.join(item.url, "plugin.json");
+				const plugin = await fsOperation(url).readFile("json");
+
+				if (plugin.icon) {
+					const iconUrl = getLocalRes(id, plugin.icon);
+					try {
+						plugin.icon = await helpers.toInternalUri(iconUrl);
+					} catch (error) {
+						console.warn(
+							`Failed to resolve plugin icon for "${id}" in sidebar.`,
+							error,
+						);
+					}
+				}
+
+				plugin.installed = true;
+				return plugin;
+			} catch (error) {
+				console.warn(
+					`Skipping unreadable installed plugin "${id}" in sidebar.`,
+					error,
+				);
+				return null;
+			}
+		}),
+	);
+
+	return plugins.filter(Boolean);
+}
+
+async function getFilteredPlugins(filterState) {
+	if (!filterState) return { items: [], hasMore: false };
+
+	if (filterState.type === "orderBy") {
+		const page = filterState.nextPage || 1;
+		try {
+			let response;
+			if (filterState.value === "top_rated") {
+				response = await fetch(
+					withSupportedEditor(
+						`${config.API_BASE}/plugins?explore=random&page=${page}&limit=${LIMIT}`,
+					),
+				);
+			} else {
+				response = await fetch(
+					withSupportedEditor(
+						`${config.API_BASE}/plugin?orderBy=${filterState.value}&page=${page}&limit=${LIMIT}`,
+					),
+				);
+			}
+			const items = await response.json();
+			if (!Array.isArray(items)) {
+				return { items: [], hasMore: false };
+			}
+			filterState.nextPage = page + 1;
+			const hasMore = items.length === LIMIT;
+			return { items, hasMore };
+		} catch (error) {
+			console.error(`Failed to get Filtered Plugins: `, error);
+			return { items: [], hasMore: false };
+		}
+	}
+
+	if (!Array.isArray(filterState.buffer)) {
+		filterState.buffer = [];
+	}
+	if (filterState.hasMoreSource === undefined) {
+		filterState.hasMoreSource = true;
+	}
+	if (!filterState.nextPage) {
+		filterState.nextPage = 1;
+	}
+
+	const items = [];
+
+	while (items.length < LIMIT) {
+		if (filterState.buffer.length) {
+			items.push(filterState.buffer.shift());
+			continue;
+		}
+
+		if (filterState.hasMoreSource === false) break;
+
+		try {
+			const page = filterState.nextPage;
+			const response = await fetch(
+				withSupportedEditor(
+					`${config.API_BASE}/plugins?page=${page}&limit=${LIMIT}`,
+				),
+			);
+			const data = await response.json();
+			filterState.nextPage = page + 1;
+
+			if (!Array.isArray(data) || !data.length) {
+				filterState.hasMoreSource = false;
+				break;
+			}
+
+			if (data.length < LIMIT) {
+				filterState.hasMoreSource = false;
+			}
+
+			const matched = data.filter((plugin) =>
+				doesPluginMatchFilter(plugin, filterState),
+			);
+			filterState.buffer.push(...matched);
+		} catch (error) {
+			window.log("error", "Failed to fetch filtered plugins:");
+			window.log("error", error);
+			filterState.hasMoreSource = false;
+			break;
+		}
+	}
+
+	while (items.length < LIMIT && filterState.buffer.length) {
+		items.push(filterState.buffer.shift());
+	}
+
+	const hasMore =
+		(filterState.hasMoreSource !== false && filterState.nextPage) ||
+		filterState.buffer.length > 0;
+
+	return { items, hasMore: Boolean(hasMore) };
+}
+
+function doesPluginMatchFilter(plugin, filterState) {
+	if (!plugin) return false;
+
+	switch (filterState.type) {
+		case "verified":
+			return Boolean(plugin.author_verified);
+		case "author": {
+			const authorName = getPluginAuthorName(plugin);
+			if (!authorName) return false;
+			return authorName.toLowerCase().includes(filterState.value);
+		}
+		case "keywords": {
+			const pluginKeywords = getPluginKeywords(plugin)
+				.map((keyword) => keyword.toLowerCase())
+				.filter(Boolean);
+			if (!pluginKeywords.length) return false;
+			return filterState.value.some((keyword) =>
+				pluginKeywords.some((pluginKeyword) => pluginKeyword.includes(keyword)),
+			);
+		}
+		default:
+			return true;
+	}
+}
+
+function getPluginAuthorName(plugin) {
+	const { author } = plugin || {};
+	if (!author) return "";
+	if (typeof author === "string") return author;
+	if (typeof author === "object") {
+		return author.name || author.username || author.github || "";
+	}
+	return "";
+}
+
+function getPluginKeywords(plugin) {
+	const { keywords } = plugin || {};
+	if (!keywords) return [];
+	if (Array.isArray(keywords)) return keywords;
+	if (typeof keywords === "string") {
+		try {
+			const parsed = JSON.parse(keywords);
+			if (Array.isArray(parsed)) return parsed;
+		} catch (error) {
+			return keywords
+				.split(",")
+				.map((item) => item.trim())
+				.filter(Boolean);
+		}
+	}
+	return [];
+}
+
+function startLoading($list) {
+	$list.$title.classList.add("loading");
+}
+
+function stopLoading($list) {
+	$list.$title.classList.remove("loading");
+}
+
+/**
+ * Update the height of the element
+ * @param {HTMLElement} $el
+ */
+function updateHeight($el) {
+	removeHeight($installed, $el !== $installed);
+	removeHeight($explore, $el !== $explore);
+
+	try {
+		let height = $header?.getBoundingClientRect().height;
+		const tileHeight = $el.get(":scope>.tile")?.getBoundingClientRect().height;
+		if ($el === $searchResult) {
+			height += 60;
+		} else {
+			height += $searchResult?.getBoundingClientRect().height + tileHeight;
+		}
+
+		setHeight($el, height);
+	} catch (error) {
+		console.error(error);
+	}
+}
+
+/**
+ * Remove height styles from an element
+ * @param {HTMLElement} $el
+ * @param {Boolean} collapse
+ */
+function removeHeight($el, collapse = false) {
+	if (collapse) $el.collapse?.();
+
+	$scrollableLists.delete($el);
+	updateStyle();
+}
+
+/**
+ * Change the height of an element
+ * @param {HTMLElement} $el
+ * @param {Number} height
+ */
+function setHeight($el, height) {
+	$scrollableLists.add($el);
+
+	const calcHeight = height ? `calc(100% - ${height}px)` : "100%";
+	$el.dataset.height = calcHeight;
+	if ($el === $searchResult) {
+		$el.style.height = "fit-content";
+		return;
+	}
+
+	updateStyle();
+}
+
+function updateStyle() {
+	let style = "";
+
+	$scrollableLists.forEach(($el) => {
+		style += `
+			.list.collapsible[data-id="${$el.dataset.id}"] {
+				max-height: ${$el.dataset.height} !important;
+			}
+		`;
+	});
+
+	$style.innerHTML = style;
+}
+
+function getLocalRes(id, name) {
+	return Url.join(PLUGIN_DIR, id, name);
+}
+
+function ListItem({
+	icon,
+	name,
+	id,
+	version,
+	downloads,
+	installed,
+	source,
+	price,
+}) {
+	if (installed === undefined) {
+		installed = !!installedPlugins.find(({ id: _id }) => _id === id);
+	}
+	const disabledMap = settings.value.pluginsDisabled || {};
+	const enabled = disabledMap[id] !== true;
+	const $el = (
+		<div
+			data-plugin-id={id}
+			data-plugin-enabled={enabled !== false}
+			className="tile"
+			style={enabled === false ? { opacity: 0.6 } : {}}
+		>
+			<span className="icon" style={{ backgroundImage: `url(${icon})` }} />
+			<span
+				className="text sub-text"
+				data-subtext={`v${version} • ${installed ? `${strings.installed}` : helpers.formatDownloadCount(downloads)}`}
+			>
+				{name}
+			</span>
+			{installed ? (
+				<>
+					{source && (
+						<span className="icon replay" data-action="rebuild-plugin" />
+					)}
+					<span className="icon more_vert" data-action="more-plugin-action" />
+				</>
+			) : (
+				!price && (
+					<button
+						type="button"
+						className="install-btn"
+						data-action="install-plugin"
+					>
+						<span className="icon file_downloadget_app" />
+					</button>
+				)
+			)}
+		</div>
+	);
+
+	$el.onclick = async (event) => {
+		const morePluginActionButton = event.target.closest(
+			'[data-action="more-plugin-action"]',
+		);
+		const installPluginBtn = event.target.closest(
+			'[data-action="install-plugin"]',
+		);
+		const rebuildPluginBtn = event.target.closest(
+			'[data-action="rebuild-plugin"]',
+		);
+		if (morePluginActionButton) {
+			more_plugin_action(id, name);
+			return;
+		}
+		if (installPluginBtn) {
+			try {
+				let purchaseToken;
+				let product;
+				const pluginUrl = Url.join(config.API_BASE, `plugin/${id}`);
+				const remotePlugin = await fsOperation(pluginUrl)
+					.readFile("json")
+					.catch(() => {
+						throw new Error("Failed to fetch plugin details");
+					});
+
+				const { default: installPlugin } = await import("lib/installPlugin");
+				await Promise.all([
+					loadAd(),
+					installPlugin(
+						id,
+						remotePlugin.name,
+						purchaseToken ? purchaseToken : undefined,
+					),
+				]);
+
+				const searchInput = container.querySelector('input[name="search-ext"]');
+				if (searchInput) {
+					searchInput.value = "";
+					$searchResult.content = "";
+					// Reset filter state when clearing search results
+					currentFilter = null;
+					filterHasMore = true;
+					isFilterLoading = false;
+					$searchResult.onscroll = null;
+					updateHeight($searchResult);
+					$installed.expand();
+				}
+
+				window.toast(strings.success, 3000);
+				if (!$explore.collapsed) {
+					$explore.ontoggle();
+				}
+				if (!$installed.collapsed) {
+					$installed.ontoggle();
+				}
+				await helpers.showInterstitialIfReady();
+
+				async function getPurchase(sku) {
+					const purchases = await helpers.promisify(iap.getPurchases);
+					const purchase = purchases.find((p) => p.productIds.includes(sku));
+					return purchase;
+				}
+			} catch (err) {
+				console.error(err);
+				window.toast(helpers.errorMessage(err), 3000);
+			}
+			return;
+		}
+		if (rebuildPluginBtn) {
+			try {
+				const { default: installPlugin } = await import("lib/installPlugin");
+				await installPlugin(source);
+				window.toast(strings.success, 3000);
+			} catch (err) {
+				console.error(err);
+				window.toast(helpers.errorMessage(err), 3000);
+			}
+			return;
+		}
+
+		plugin(
+			{ id },
+			() => {
+				if (!$explore.collapsed) {
+					$explore.ontoggle();
+				}
+				if (!$installed.collapsed) {
+					$installed.ontoggle();
+				}
+			},
+			() => {
+				if (!$explore.collapsed) {
+					$explore.ontoggle();
+				}
+				if (!$installed.collapsed) {
+					$installed.ontoggle();
+				}
+			},
+		);
+	};
+
+	return $el;
+}
+
+async function loadAd() {
+	if (!helpers.canShowAds()) return;
+	try {
+		if (!(await interstitialAd?.isLoaded())) {
+			await interstitialAd?.load();
+		}
+	} catch (error) {
+		console.error(error);
+	}
+}
+
+async function uninstall(id) {
+	try {
+		const pluginDir = Url.join(PLUGIN_DIR, id);
+		const state = await InstallState.new(id);
+		await Promise.all([
+			loadAd(),
+			fsOperation(pluginDir).delete(),
+			state.delete(state.storeUrl),
+		]);
+		const pluginMainScript = document.getElementById(`${id}-mainScript`);
+		if (pluginMainScript) document.head.removeChild(pluginMainScript);
+		acode.unmountPlugin(id);
+
+		const searchInput = container.querySelector('input[name="search-ext"]');
+		if (searchInput) {
+			searchInput.value = "";
+			$searchResult.content = "";
+			// Reset filter state when clearing search results
+			currentFilter = null;
+			filterHasMore = true;
+			isFilterLoading = false;
+			$searchResult.onscroll = null;
+			updateHeight($searchResult);
+			if ($installed.collapsed) {
+				$installed.expand();
+			}
+		}
+
+		// Show Ad If Its Free Version, interstitial Ad(iad) is loaded.
+		await helpers.showInterstitialIfReady();
+	} catch (err) {
+		helpers.error(err);
+	}
+}
+
+async function more_plugin_action(id, pluginName) {
+	const disabledMap = settings.value.pluginsDisabled || {};
+	const enabled = disabledMap[id] !== true;
+	let actions = [];
+	const pluginSettings = settings.uiSettings[`plugin-${id}`];
+
+	if (pluginSettings) {
+		actions.push(strings.settings);
+	}
+
+	actions.push(
+		enabled ? strings.disable || "Disable" : strings.enable || "Enable",
+	);
+
+	actions.push(strings.uninstall);
+	const action = await select("Action", actions);
+	if (!action) return;
+	switch (action) {
+		case strings.settings:
+			pluginSettings.setTitle(pluginName);
+			pluginSettings.show();
+			break;
+		case strings.uninstall:
+			await uninstall(id);
+			if (!$explore.collapsed) {
+				$explore.ontoggle();
+			}
+			if (!$installed.collapsed) {
+				$installed.ontoggle();
+			}
+			break;
+		case strings.disable || "Disable":
+		// fallthrough
+		case strings.enable || "Enable":
+			if (enabled) {
+				disabledMap[id] = true; // Disabling
+			} else {
+				delete disabledMap[id]; // Enabling
+			}
+
+			settings.update({ pluginsDisabled: disabledMap }, false);
+
+			// INFO: I don't know how to get all loaded plugins(not installed).
+			const choice = await select(
+				strings.info,
+				[
+					// { value: "reload_plugins", text: strings["reload_plugins"] || "Reload Plugins" },
+					{
+						value: "restart_app",
+						text: strings["restart_app"] || "Restart App",
+					},
+					{
+						value: "single",
+						text: enabled
+							? strings["disable_plugin"] || "Disable this Plugin"
+							: strings["enable_plugin"] || "Enable this Plugin",
+					},
+				],
+				{
+					default: "single",
+				},
+			);
+
+			// if (choice === "reload_plugins") {
+			// 	// Unmount all currently loaded plugins before reloading
+			// 	if (window.acode && typeof window.acode.getLoadedPluginIds === "function") {
+			// 		for (const pluginId of window.acode.getLoadedPluginIds()) {
+			// 			window.acode.unmountPlugin(pluginId);
+			// 		}
+			// 	}
+			// 	await window.loadPlugins?.();
+			// 	window.toast(strings.success);
+			// }
+			if (choice === "restart_app") {
+				location.reload();
+			} else if (choice === "single") {
+				if (enabled) {
+					window.acode.unmountPlugin(id);
+					window.toast(strings["plugin_disabled"] || "Plugin Disabled");
+				} else {
+					await loadPlugin(id);
+					window.toast(strings["plugin_enabled"] || "Plugin enabled");
+				}
+				if (!$explore.collapsed) {
+					$explore.ontoggle();
+				}
+				if (!$installed.collapsed) {
+					$installed.ontoggle();
+				}
+			}
+			break;
+	}
+}

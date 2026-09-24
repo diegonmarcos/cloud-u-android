@@ -1,0 +1,41 @@
+{
+  "_doc": "THE ONE DECLARATION of cloud-code's bottom navigation (#562). tabs.js builds the bar from this list in this order and nothing else restates it: the tester (test/test-cloud-nav.sh) renders the bar through the same tabs.js and reads the order back off the rendered model. `view` selects the renderer in index.js::VIEWS; `icon` is a class of Acode's own icon font (src/res/icons/style.css) and the tester proves each one exists there. The Editor tab is Acode itself, untouched: selecting it hides every cloud panel and nothing else.",
+  "default_tab": "editor",
+  "tabs": [
+    { "id": "backlog",    "label": "Backlog",    "icon": "notes",           "view": "backlog" },
+    { "id": "editor",     "label": "Editor",     "icon": "code",            "view": "editor" },
+    { "id": "repos",      "label": "Repos",      "icon": "git",             "view": "repos" },
+    { "id": "home",       "label": "Home",       "icon": "home",            "view": "home" },
+    { "id": "agents",     "label": "Agents",     "icon": "brain",           "view": "agents" },
+    { "id": "browser",    "label": "Browser",    "icon": "public",          "view": "browser" },
+    { "id": "myterminal", "label": "MyTerminal", "icon": "square-terminal", "view": "myterminal" }
+  ],
+  "nav": {
+    "_doc": "Measured fit (#562): seven tabs is more than any fleet nav. At 360 px CSS width (the narrowest phone the owner's fleet targets) a tab is 51.4 px wide, above the 48 px touch floor, but 'MyTerminal' at 10 px is wider than its tab. So the bar does not truncate: tabs.js::fitLabels measures every label against its own tab on the device, and if ANY label overflows the bar switches to compact mode (icons for all tabs, the label only under the active one). min_viewport_px is the width the tester holds the touch floor to.",
+    "height_px": 56,
+    "label_font_px": 10,
+    "icon_font_px": 22,
+    "min_touch_target_px": 48,
+    "min_viewport_px": 360
+  },
+  "backlog": {
+    "_doc": "Backlog reads the ONE existing source: the dist output of cloud-data-my-ai-memory/1.1.Product-Backlog (built by its own build.js). Nothing here re-derives it: `entry` is loaded and rendered as-is, and every other view is reached through the links that file itself carries ('Views: per project · per status …'). That repository is PRIVATE and this APK is PUBLIC, so the backlog is never baked into the bundle; it is read on the device from the owner's clone. source_dir is only the default; the tab lets the owner point it elsewhere (kept in localStorage).",
+    "source_dir": "file:///storage/emulated/0/git/cloud-data-my-ai-memory/1.1.Product-Backlog/dist/",
+    "entry": "P-Backlog-sts.md"
+  },
+  "repos": {
+    "_doc": "Default on-device directory whose children are listed as repositories (a child holding .git). SEAM: seams.js::listRepos is the stub a real provider (gitea / cloud-myterminal's workspace broker) replaces.",
+    "root": "file:///storage/emulated/0/git/"
+  },
+  "browser": {
+    "_doc": "The Browser tab opens LOCAL pages in Acode's own in-app browser plugin (src/plugins/browser, the one Acode's Run command uses). `presets` are local servers the owner runs on the phone.",
+    "presets": [
+      { "label": "localhost:8080", "url": "http://localhost:8080/" },
+      { "label": "localhost:8765 (cloud-webserver)", "url": "http://localhost:8765/" }
+    ]
+  },
+  "myterminal": {
+    "_doc": "THE ONE PLACE the MyTerminal target is named (#562). It is a fleet application id, never a package: tools/resolve-targets.py reads the sibling app whose build.json::name equals it and derives the package (android.application_id) and the launcher activity (its manifest) into src/cloud/targets.gen.json at build time. #561 renamed cloud-ide to cloud-myterminal; if a later rename happens, this one value moves and the resolver fails the build loudly until it does.",
+    "target": "cloud-myterminal"
+  }
+}

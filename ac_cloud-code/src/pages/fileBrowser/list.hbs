@@ -1,0 +1,29 @@
+<ul class="list" id="list" empty-msg="{{msg}}">{{#list}}
+  {{#.}}
+  <li
+    tabindex="1"
+    class="tile {{#isLink}}symlink{{/isLink}}"
+    data-action="open"
+    data-type="{{type}}"
+    data-name="{{name}}"
+    {{#home}}data-home="{{.}}"{{/home}}
+    {{#notSelectable}}data-not-selectable{{/notSelectable}}
+    {{#openDoc}}data-open-doc{{/openDoc}}
+    {{#ftpAccount}}data-ftp-account{{/ftpAccount}}
+    {{#uuid}}data-uuid="{{uuid}}"{{/uuid}}
+    {{#storageType}}data-storage-type="{{.}}"{{/storageType}}
+    {{#disabled}}disabled{{/disabled}}
+  >
+    <span
+      class="icon {{icon}} {{#uuid}}user-added-storage{{/uuid}}"
+      {{#storageType}}data-storage-type="{{.}}"{{/storageType}}
+    ></span>
+
+    <div class="text">
+      <span>{{name}}</span>
+    </div>
+    <data-url>{{url}}</data-url>
+  </li>
+  {{/.}}
+  {{/list}}
+</ul>
