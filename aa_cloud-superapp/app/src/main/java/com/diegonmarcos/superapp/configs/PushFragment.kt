@@ -111,7 +111,7 @@ class PushFragment : Fragment() {
         // A running owner with nothing in the shade is NOT live — that is
         // exactly the swiped-away badge the previous pane called green.
         val st = BadgeServices.status(ctx, b).let {
-            if (it.state == BadgeServices.State.LIVE)
+            if (it.state == BadgeServices.State.LIVE && live == null)
                 it.copy(state = BadgeServices.State.DEAD, reason = getString(R.string.push_not_posted, b.channel))
             else it
         }
