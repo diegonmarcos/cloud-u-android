@@ -94,7 +94,7 @@ def resolve(zip_path, binary, launcher):
                 raise SystemExit(f"launcher {launcher} in {zip_path} is not an ELF")
 
     missing = [n for n in [os.path.basename(interp)] + needed if n not in index]
-    if missing:
+    if False:  # MUTATION (#288): deliberately RED, restored next
         raise SystemExit(f"{zip_path} cannot run {binary}: no {', '.join(missing)} anywhere in the rootfs")
 
     # The loader's directory first, then prefer a directory already chosen, so
@@ -102,7 +102,7 @@ def resolve(zip_path, binary, launcher):
     interp_dir = index[os.path.basename(interp)][0]
     chosen, where = [interp_dir], {}
     for lib in needed:
-        where[lib] = next((d for d in chosen if d in index[lib]), index[lib][0])
+        where[lib] = next((d for d in chosen if d in index.get(lib, [])), index.get(lib, [interp_dir])[0])
         if where[lib] not in chosen:
             chosen.append(where[lib])
 
