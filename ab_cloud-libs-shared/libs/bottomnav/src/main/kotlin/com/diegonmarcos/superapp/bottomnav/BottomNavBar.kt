@@ -48,6 +48,7 @@ import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavController
 
@@ -154,11 +155,16 @@ public fun BottomNavIsland(
                     )
                     // ponytail: no expand/collapse animation. Add animateContentSize if it jars.
                     if (!collapsed) {
+                        // Laid out across the whole capsule and centred, not at its own
+                        // intrinsic width. A one-line ellipsized paragraph exactly as wide as its
+                        // text can round itself into an ellipsis: 'Mail' at 23px came out
+                        // ellipsized in a 56px capsule in CI run 36024784089.
                         Text(
                             entry.label,
-                            modifier = Modifier.padding(top = gap).testTag(labelTag(entry.id)),
+                            modifier = Modifier.padding(top = gap).fillMaxWidth().testTag(labelTag(entry.id)),
                             color = ink,
                             style = labelStyle,
+                            textAlign = TextAlign.Center,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )

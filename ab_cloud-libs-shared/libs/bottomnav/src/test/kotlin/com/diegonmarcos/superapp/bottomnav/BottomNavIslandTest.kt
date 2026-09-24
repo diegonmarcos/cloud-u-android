@@ -248,8 +248,10 @@ class BottomNavIslandTest {
                 if (id == sel) sameColour("#462 capsule $id is painted as the pill", pill, probe)
                 else sameColour("#462 capsule $id is unlit (island fill)", fill, probe)
             }
-            // The pill is clipped to its stadium: its corner shows the island, not the pill.
-            sameColour("#462 pill corner is outside its semicircle", fill, pixels(itemTag(sel))[1, 1])
+            // The pill is clipped to its stadium: its corner is not pill-coloured. What shows there
+            // is the island, or the page for an end capsule, whose corner also lies outside the
+            // island's own concentric end arc.
+            otherColour("#462 pill corner is outside its semicircle", pill, pixels(itemTag(sel))[1, 1])
         }
         show(destinations[0])
         check(destinations[0])
