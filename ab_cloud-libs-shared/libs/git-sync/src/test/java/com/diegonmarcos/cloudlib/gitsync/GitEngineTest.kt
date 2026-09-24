@@ -23,6 +23,8 @@ class GitEngineTest {
     private lateinit var root: File
     private lateinit var work: File
     private lateinit var bare: File
+    /** JGit normalises a file URI to file:///…; Java's File.toURI() prints file:/…, so the test speaks JGit's form. */
+    private val bareUrl: String get() = "file://" + bare.absolutePath
 
     private fun write(dir: File, path: String, text: String) {
         val f = File(dir, path); f.parentFile.mkdirs(); f.writeText(text)
@@ -146,14 +148,14 @@ class GitEngineTest {
     @Test fun remotesAreListedAddedRenamedAndRemoved() {
         GitEngine.init(work).use { e ->
             assertTrue(e.remotes().isEmpty())
-            e.addRemote("origin", bare.toURI().toString())
+            e.addRemote("origin", bareUrl)
             val r = e.remotes().single()
             assertEquals("origin", r.name)
-            assertEquals(bare.toURI().toString(), r.fetchUrl)
+            assertEquals(bareUrl, r.fetchUrl)
             assertEquals(r.fetchUrl, r.pushUrl)
             e.setRemoteUrl("origin", "https://example.invalid/x.git", push = true)
             assertEquals("https://example.invalid/x.git", e.remotes().single().pushUrl)
-            assertEquals(bare.toURI().toString(), e.remotes().single().fetchUrl)
+            assertEquals(bareUrl, e.remotes().single().fetchUrl)
             e.removeRemote("origin")
             assertTrue(e.remotes().isEmpty())
         }
@@ -162,7 +164,7 @@ class GitEngineTest {
     @Test fun pushSetsUpstreamThenPullAndFetchTrackAheadBehind() {
         GitEngine.init(work).use { e ->
             write(work, "f", "1\n"); e.stageAll(); e.commit("c1", "T", "t@x")
-            e.addRemote("origin", bare.toURI().toString())
+            e.addRemote("origin", bareUrl)
             assertNull(e.status().upstream)
             val pushed = e.push("origin")
             assertTrue(pushed.summary, pushed.ok)
@@ -184,7 +186,7 @@ class GitEngineTest {
 
         // A second clone commits and pushes; the first is then BEHIND until it pulls.
         val other = File(root, "other")
-        GitEngine.clone(bare.toURI().toString(), other).use { o ->
+        GitEngine.clone(bareUrl, other).use { o ->
             write(other, "g", "from other\n"); o.stageAll(); o.commit("c3", "O", "o@x")
             assertTrue(o.push("origin").ok)
         }
@@ -205,10 +207,10 @@ class GitEngineTest {
         // Seed the remote with one file.
         GitEngine.init(work).use { e ->
             write(work, "shared.txt", "base\n"); e.stageAll(); e.commit("base", "T", "t@x")
-            e.addRemote("origin", bare.toURI().toString()); assertTrue(e.push("origin").ok)
+            e.addRemote("origin", bareUrl); assertTrue(e.push("origin").ok)
         }
         val other = File(root, "other")
-        GitEngine.clone(bare.toURI().toString(), other).use { o ->
+        GitEngine.clone(bareUrl, other).use { o ->
             write(other, "shared.txt", "theirs\n"); o.stageAll(); o.commit("theirs", "O", "o@x"); assertTrue(o.push("origin").ok)
         }
         GitEngine(work).use { e ->
@@ -265,7 +267,7 @@ class GitEngineTest {
             val noRemote = e.sync("sync", "T", "t@x")
             assertTrue(noRemote.ok)
             assertTrue(noRemote.summary, noRemote.summary.contains("committed") && noRemote.summary.contains("no remote"))
-            e.addRemote("origin", bare.toURI().toString())
+            e.addRemote("origin", bareUrl)
             write(work, "n.md", "v2\n")
             val r = e.sync("sync", "T", "t@x")
             assertTrue(r.summary, r.ok)
