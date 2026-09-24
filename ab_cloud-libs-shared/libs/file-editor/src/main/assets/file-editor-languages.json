@@ -1,0 +1,30 @@
+{
+  "_doc": "The syntax colouring the editor knows, as DATA: one entry per language, matched by file extension (lower-cased, no dot). SyntaxHighlighter reads this file and nothing else — adding a language is adding an entry here. Each rule is optional: line_comment (prefix to end of line), block_comment ([open, close]), strings (each delimiter, with backslash escapes honoured), keywords (whole words), heading_prefix (markdown-style: a line starting with it is a heading), number (whether bare numeric literals are coloured). Kept deliberately regex-free at the data level so a typo here cannot hang the tokenizer.",
+  "languages": [
+    { "id": "kotlin", "extensions": ["kt", "kts"], "line_comment": "//", "block_comment": ["/*", "*/"], "strings": ["\"", "'"], "number": true,
+      "keywords": ["fun", "val", "var", "class", "object", "interface", "return", "if", "else", "when", "for", "while", "do", "in", "is", "as", "null", "true", "false", "import", "package", "private", "public", "internal", "override", "data", "sealed", "enum", "try", "catch", "finally", "throw", "this", "super", "companion", "suspend", "lateinit", "by", "get", "set", "abstract", "open", "const", "inline"] },
+    { "id": "java", "extensions": ["java"], "line_comment": "//", "block_comment": ["/*", "*/"], "strings": ["\""], "number": true,
+      "keywords": ["public", "private", "protected", "class", "interface", "enum", "return", "if", "else", "for", "while", "do", "switch", "case", "break", "continue", "new", "null", "true", "false", "import", "package", "static", "final", "void", "int", "long", "boolean", "String", "try", "catch", "finally", "throw", "throws", "this", "super", "extends", "implements", "abstract"] },
+    { "id": "javascript", "extensions": ["js", "mjs", "cjs", "ts", "tsx", "jsx"], "line_comment": "//", "block_comment": ["/*", "*/"], "strings": ["\"", "'", "`"], "number": true,
+      "keywords": ["function", "const", "let", "var", "return", "if", "else", "for", "while", "do", "switch", "case", "break", "continue", "new", "null", "undefined", "true", "false", "import", "export", "from", "default", "class", "extends", "this", "async", "await", "try", "catch", "finally", "throw", "typeof", "instanceof", "in", "of", "interface", "type", "enum"] },
+    { "id": "python", "extensions": ["py"], "line_comment": "#", "strings": ["\"", "'"], "number": true,
+      "keywords": ["def", "class", "return", "if", "elif", "else", "for", "while", "in", "not", "and", "or", "is", "None", "True", "False", "import", "from", "as", "try", "except", "finally", "raise", "with", "lambda", "yield", "pass", "break", "continue", "global", "self", "async", "await"] },
+    { "id": "shell", "extensions": ["sh", "bash", "zsh"], "line_comment": "#", "strings": ["\"", "'"], "number": false,
+      "keywords": ["if", "then", "else", "elif", "fi", "for", "while", "do", "done", "case", "esac", "in", "function", "return", "exit", "local", "export", "set", "echo", "printf", "read"] },
+    { "id": "json", "extensions": ["json", "jsonc"], "line_comment": "//", "block_comment": ["/*", "*/"], "strings": ["\""], "number": true,
+      "keywords": ["true", "false", "null"] },
+    { "id": "yaml", "extensions": ["yml", "yaml"], "line_comment": "#", "strings": ["\"", "'"], "number": true,
+      "keywords": ["true", "false", "null", "yes", "no"] },
+    { "id": "toml", "extensions": ["toml"], "line_comment": "#", "strings": ["\"", "'"], "number": true, "keywords": ["true", "false"] },
+    { "id": "markdown", "extensions": ["md", "markdown"], "heading_prefix": "#", "block_comment": ["```", "```"], "strings": ["`"], "number": false, "keywords": [] },
+    { "id": "xml", "extensions": ["xml", "html", "htm", "svg"], "block_comment": ["<!--", "-->"], "strings": ["\"", "'"], "number": false, "keywords": [] },
+    { "id": "css", "extensions": ["css", "scss"], "block_comment": ["/*", "*/"], "strings": ["\"", "'"], "number": true, "keywords": ["important"] },
+    { "id": "gradle", "extensions": ["gradle", "groovy"], "line_comment": "//", "block_comment": ["/*", "*/"], "strings": ["\"", "'"], "number": true,
+      "keywords": ["def", "return", "if", "else", "for", "while", "in", "true", "false", "null", "new", "import", "apply", "plugins", "dependencies", "android", "implementation", "api", "id", "version"] },
+    { "id": "nix", "extensions": ["nix"], "line_comment": "#", "block_comment": ["/*", "*/"], "strings": ["\""], "number": true,
+      "keywords": ["let", "in", "with", "rec", "inherit", "if", "then", "else", "import", "true", "false", "null"] },
+    { "id": "ini", "extensions": ["ini", "conf", "cfg", "properties", "env"], "line_comment": "#", "strings": ["\""], "number": false, "keywords": ["true", "false"] },
+    { "id": "sql", "extensions": ["sql"], "line_comment": "--", "block_comment": ["/*", "*/"], "strings": ["'"], "number": true,
+      "keywords": ["select", "from", "where", "insert", "into", "values", "update", "set", "delete", "create", "table", "drop", "alter", "join", "left", "inner", "on", "and", "or", "not", "null", "as", "order", "by", "group", "limit", "primary", "key"] }
+  ]
+}

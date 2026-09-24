@@ -25,6 +25,9 @@ plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
+    // file-editor-languages.json (the colouring catalogue) is parsed with
+    // kotlinx-serialization, so the JVM suite parses the real asset.
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
 android {
@@ -71,6 +74,7 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
     implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
 
     testImplementation 'junit:junit:4.13.2'
 }
