@@ -3,7 +3,6 @@ package com.diegonmarcos.superapp.profile
 import android.app.Application
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.core.ConfigSyncClient
-import com.sun.net.httpserver.HttpServer
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
@@ -14,7 +13,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.net.InetSocketAddress
+import java.net.InetAddress
+import java.net.ServerSocket
+import kotlin.concurrent.thread
 
 /**
  * #566/#569 — Configs ▸ Profile ▸ Connect ▸ Vault configs, and the Imported tab.
@@ -29,31 +30,70 @@ import java.net.InetSocketAddress
 @Config(sdk = [34], application = Application::class)
 class VaultConnectTest {
 
-    private lateinit var server: HttpServer
-    private val seen = mutableListOf<Triple<String, String, String>>() // method, path, body
-    private val seenAuth = mutableListOf<String>()
+    private lateinit var server: ServerSocket
+    // Written by the server thread, read by the test: synchronized.
+    private val seen = java.util.Collections.synchronizedList(mutableListOf<Triple<String, String, String>>()) // method, path, body
+    private val seenAuth = java.util.Collections.synchronizedList(mutableListOf<String>())
     private var status = 200
     private var reply = "{}"
     private var location = ""
 
+    /**
+     * A one-request-per-connection HTTP/1.1 server on a plain ServerSocket —
+     * the JDK's com.sun httpserver is not on the Android unit-test classpath.
+     * It records the request line, the Authorization header and the body, and
+     * answers with [status] / [location] / [reply].
+     */
     @Before fun up() {
-        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
-        server.createContext("/") { ex ->
-            seen += Triple(ex.requestMethod, ex.requestURI.path, ex.requestBody.readBytes().decodeToString())
-            seenAuth += ex.requestHeaders.getFirst("Authorization").orEmpty()
-            if (location.isNotEmpty()) ex.responseHeaders.add("Location", location)
-            val bytes = reply.toByteArray()
-            ex.sendResponseHeaders(status, if (bytes.isEmpty()) -1 else bytes.size.toLong())
-            if (bytes.isNotEmpty()) ex.responseBody.use { it.write(bytes) }
-            ex.close()
+        server = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
+        thread(isDaemon = true) {
+            while (!server.isClosed) {
+                val sock = runCatching { server.accept() }.getOrNull() ?: break
+                sock.use { c ->
+                    val input = c.getInputStream().buffered()
+                    fun line(): String {
+                        val b = StringBuilder()
+                        while (true) {
+                            val ch = input.read()
+                            if (ch == -1 || ch == '\n'.code) break
+                            if (ch != '\r'.code) b.append(ch.toChar())
+                        }
+                        return b.toString()
+                    }
+                    val (method, path) = line().split(" ").let { it[0] to it[1] }
+                    var length = 0
+                    var auth = ""
+                    while (true) {
+                        val h = line()
+                        if (h.isEmpty()) break
+                        val (k, v) = h.split(":", limit = 2).map { it.trim() }
+                        if (k.equals("Content-Length", true)) length = v.toInt()
+                        if (k.equals("Authorization", true)) auth = v
+                    }
+                    val body = ByteArray(length).also {
+                        var n = 0
+                        while (n < length) { val r = input.read(it, n, length - n); if (r < 0) break; n += r }
+                    }
+                    seen += Triple(method, path, body.decodeToString())
+                    seenAuth += auth
+                    val bytes = reply.toByteArray()
+                    val head = buildString {
+                        append("HTTP/1.1 $status X\r\n")
+                        if (location.isNotEmpty()) append("Location: $location\r\n")
+                        append("Content-Type: application/json\r\n")
+                        append("Content-Length: ${bytes.size}\r\n")
+                        append("Connection: close\r\n\r\n")
+                    }
+                    c.getOutputStream().apply { write(head.toByteArray()); write(bytes); flush() }
+                }
+            }
         }
-        server.start()
     }
 
-    @After fun down() = server.stop(0)
+    @After fun down() = server.close()
 
     private fun endpoints() = VaultConnect.Endpoints(
-        baseUrl = "http://127.0.0.1:${server.address.port}/pub",
+        baseUrl = "http://127.0.0.1:${server.localPort}/pub",
         startPath = BuildConfig.UI_VAULT_CONNECT_START_PATH,
         fetchPath = BuildConfig.UI_VAULT_CONNECT_FETCH_PATH,
         connectTimeoutMs = BuildConfig.UI_VAULT_CONNECT_CONNECT_MS,
