@@ -1,0 +1,9 @@
+{
+  "_doc": "#564 THE ONE MAP from an app's REAL installer (PackageManager.getInstallSourceInfo().installingPackageName) to the Store ▸ Phone Apps origin button. Read by PhoneAppActions; nothing else in the store names an installer package. Foreign store -> the button opens that store's own page for the app ({pkg} is substituted, and the intent is aimed at the installer so market:// lands in the store that installed it, not whichever handler wins). `ours` is a Cloud fleet member (by the fleet manifest, or installed by this app) -> the host's Store ▸ Cloud page, where we update it. `unknown` is anything else (sideloaded APK, adb, no installer recorded) -> the system App info screen. Adding a store = one entry under `sources`.",
+  "sources": {
+    "com.android.vending": { "label": "Play", "deeplink": "market://details?id={pkg}" },
+    "org.fdroid.fdroid": { "label": "F-Droid", "deeplink": "market://details?id={pkg}" }
+  },
+  "ours": { "label": "Cloud" },
+  "unknown": { "label": "APK" }
+}

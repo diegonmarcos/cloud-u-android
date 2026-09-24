@@ -115,16 +115,27 @@ for needle, what in (
     if needle in cloud: ok(what)
     else: bad(what + " — missing from StoreCloudFragment")
 
-print("== T6: Phone Apps offers only the verbs that work without a privileged channel ==")
-verbs = re.findall(r'btn\(ctx, "([^"]+)"\)', phone)
-if verbs == ["Open", "App info"]: ok("rows offer %s" % verbs)
-else: bad("Phone Apps offers %s — install/uninstall of a foreign package needs adb/Shizuku, which is not paired" % verbs)
-if re.search(r"Fleet\.(install|uninstall|installAll)|PackageInstaller|ACTION_DELETE|UNINSTALL_PACKAGE", phone):
-    bad("Phone Apps reaches for an install/uninstall path it cannot complete")
-else: ok("no install/uninstall path on Phone Apps")
-if re.search(r"\.filter \{ it\.first !in fleetPkgs \}", phone) and "Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)" in phone:
-    ok("fleet members are excluded by the fleet manifest itself")
-else: bad("Phone Apps does not exclude the fleet by its manifest")
+print("== T6: Phone Apps buttons come from ONE capability derivation and ONE install path (#564) ==")
+# #564 replaced #563's Open + App info with Update | Open | Stop | Remove |
+# App info | {origin store}. WHICH of them work is decided on the device and
+# asserted on the resolved value by app/src/test/.../apps/StorePhoneActionsTest.kt;
+# this pins the wiring that test cannot see from inside one call.
+if re.search(r'btn\(ctx, "', phone): bad("Phone Apps hardcodes a button label - its buttons must come from PhoneAppActions.of")
+elif "PhoneAppActions.of(" in phone: ok("Phone Apps draws each row from PhoneAppActions.of")
+else: bad("Phone Apps does not draw its buttons from PhoneAppActions.of")
+installers = [f for f, t in store_files.items() if re.search(r"\bFleet\.install\(", t)]
+if installers == ["FleetInstall.kt"]: ok("Fleet.install is called from FleetInstall.kt alone - no second updater")
+else: bad("Fleet.install is called from %s - the store has more than one update path" % installers)
+for name, text in (("StoreCloudFragment", cloud), ("StorePhoneFragment", phone)):
+    if "FleetInstall.run(ctx, app)" in text: ok(name + " updates through FleetInstall.run")
+    else: bad(name + " does not update through FleetInstall.run")
+assets = os.path.join(store_dir, "../../../../../assets/appstore-install-sources.json")
+src = json.loads(read(assets))
+keys = sorted(src["sources"])
+if not keys: bad("the install-source map declares no store")
+named = ["%s: %s" % (f, k) for f, t in store_files.items() for k in keys if '"%s"' % k in t]
+if keys and not named: ok("no installer package from the map (%s) is written into the store's code" % ", ".join(keys))
+else: bad("an installer package is hardcoded outside the one map (#102): %s" % named)
 
 print("RESULT: %d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)

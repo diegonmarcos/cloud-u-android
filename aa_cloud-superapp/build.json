@@ -4696,7 +4696,7 @@
             "is_action": true
           },
           {
-            "_doc": "#563 THE STORE — the one declaration of its identity (id `store`) and its display title (label). It was 'Constellation', an action page (action:constellation) with its own branch in ShellActivity; it is now an ordinary tabbed page, so every way in is a page: target resolved by the same strip Panel/Launcher/AI use. Tab 1 is the fleet (every constellation APK: install/update/uninstall/open, per-app versions and digests); tab 2 is every APK that is NOT in the fleet. Both tabs group by the central classification (ui.phone_folders + ui.phone_sections, through PhoneTaxonomy) — the store holds no taxonomy of its own. test-store-identity.sh guards that nothing routes here by the old name and that every tile pointing here carries this label.",
+            "_doc": "#563 THE STORE — the one declaration of its identity (id `store`) and its display title (label). It was 'Constellation', an action page (action:constellation) with its own branch in ShellActivity; it is now an ordinary tabbed page, so every way in is a page: target resolved by the same strip Panel/Launcher/AI use. Tab 1 is the fleet (every constellation APK: install/update/uninstall/open, per-app versions and digests); tab 2 is every launchable APK on the phone, each row with Update (fleet apps only, through the fleet's own install path) / Open / Stop / Remove / App info / its origin store read from the real installer (#564; map in libs/appstore assets/appstore-install-sources.json). Both tabs group by the central classification (ui.phone_folders + ui.phone_sections, through PhoneTaxonomy) — the store holds no taxonomy of its own. test-store-identity.sh guards that nothing routes here by the old name and that every tile pointing here carries this label.",
             "_doc_tabs_order": "Cloud first: the fleet is what the store exists to manage, and it is the tab the Update-All action, the update notification and a lib tile all land on (page:config/store-cloud).",
             "id": "store",
             "label": "Store",
@@ -4715,7 +4715,7 @@
             "hidden": true
           },
           {
-            "_doc": "Store tab 2 — every launchable APK that is NOT a fleet member (libs:appstore StorePhoneFragment). No privileged channel is paired (#225/#280/#281), so the verbs are Open and App info only; install/uninstall of a package this app does not own needs adb or Shizuku, and the page says so rather than offering a button that fails.",
+            "_doc": "Store tab 2 — every launchable APK on the phone (libs:appstore StorePhoneFragment). #564: each row draws Update | Open | Stop | Remove | App info | {origin store}, derived by PhoneAppActions from the device's own answers: Update only for Cloud fleet apps (FleetInstall, the Cloud tab's path); Stop only while the embedded adb channel is paired (#225/#280/#281), otherwise drawn disabled with the reason; Remove is ACTION_DELETE (Android confirms), disabled for system apps; the origin button reads getInstallSourceInfo through the one declared map (libs/appstore assets/appstore-install-sources.json): ours -> Store ▸ Cloud, a foreign store -> that store's page for the app, unknown -> App info.",
             "id": "store-phone",
             "label": "Phone Apps",
             "icon": "ic_p_dialer",

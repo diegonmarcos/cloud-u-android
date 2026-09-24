@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:appstore — Store ▸ Phone Apps (#564). English base (#298/#299);
+     prefixed store_phone_ so nothing collides at the host's resource merge. -->
+<resources>
+    <string name="store_phone_caption">Every app on this phone. Cloud fleet apps update here; any other app\'s origin button opens the store that installed it. Stop needs the paired adb channel; Remove asks Android to confirm.</string>
+    <string name="store_phone_loading">Loading…</string>
+    <string name="store_phone_count">%1$d apps</string>
+    <string name="store_phone_list_failed">Could not list apps: %1$s</string>
+    <string name="store_phone_other">Other</string>
+
+    <string name="store_phone_update">Update</string>
+    <string name="store_phone_open">Open</string>
+    <string name="store_phone_stop">Stop</string>
+    <string name="store_phone_remove">Remove</string>
+    <string name="store_phone_app_info">App info</string>
+
+    <string name="store_phone_updating">Updating %1$s…</string>
+    <string name="store_phone_stopped">%1$s stopped</string>
+    <string name="store_phone_failed">%1$s: %2$s</string>
+
+    <string name="store_phone_why_unpublished">Not published in the Cloud fleet yet, so there is nothing to update to.</string>
+    <string name="store_phone_why_no_launcher">This app has no launcher screen to open.</string>
+    <string name="store_phone_why_no_shell">Force-stop needs the embedded adb channel. Pair Wireless Debugging (Store ▸ Cloud header) or use App info ▸ Force stop.</string>
+    <string name="store_phone_why_self">Stopping SuperApp would close this store.</string>
+    <string name="store_phone_why_system">A system app cannot be removed, only disabled from App info.</string>
+    <string name="store_phone_why_no_host">This build has no Cloud store page to open.</string>
+</resources>

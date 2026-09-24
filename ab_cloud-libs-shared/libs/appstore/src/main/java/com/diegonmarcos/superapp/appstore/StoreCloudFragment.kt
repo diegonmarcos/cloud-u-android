@@ -23,7 +23,6 @@ import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.adbdebug.PackageVerifier
 import com.diegonmarcos.superapp.adbdebug.ShellAccess
 import com.diegonmarcos.superapp.adbdebug.WirelessDebugging
-import com.diegonmarcos.superapp.updater.Advisory
 import com.diegonmarcos.superapp.updater.AutoUpdatePrefs
 import com.diegonmarcos.superapp.updater.BootstrapInstall
 import com.diegonmarcos.superapp.updater.Fleet
@@ -882,40 +881,8 @@ class StoreCloudFragment : Fragment() {
     private fun install(ctx: Context, app: Fleet.App) {
         Toast.makeText(ctx, "Installing ${app.label}…", Toast.LENGTH_SHORT).show()
         thread(name = "fleet-install-${app.id}") {
-            com.diegonmarcos.superapp.updater.UpdateProgress.beginDownload()
-            try {
-                // ONLY AN OBSERVED INSTALL CLEARS THE ADVISORY.
-                //
-                // Success CLEARS the advisory: a warning that outlives the
-                // problem is noise, and noise is how the next real one is
-                // ignored. But [Fleet.install] returns as soon as a channel
-                // ACCEPTED the APK, and for the PackageInstaller channel
-                // "accepted" only means a session was handed to the system —
-                // the actual outcome lands minutes later at
-                // PackageInstallerReceiver. Clearing here regardless meant a
-                // commit that went on to fail wiped the very record that was
-                // meant to survive it, so three consecutive failures could
-                // never accumulate into the "use Direct" banner they exist to
-                // raise. Now it returns whether the channel WATCHED the install
-                // finish, and only that clears anything.
-                if (Fleet.install(ctx, app)) Advisory.recordSuccess(ctx, app.id)
-            } catch (t: Throwable) {
-                // The Toast used to be the ONLY record of this, and it said
-                // "no install channel accepted <pkg>" — a permanent dead end
-                // phrased as a transient error, gone in four seconds, with no
-                // way out offered. It is still shown, because the reason is
-                // worth showing, but it now also feeds the advisory so a third
-                // consecutive failure raises the banner and the notification
-                // that point at Direct install.
-                // A user cancel is not a failure. Now that this page offers a
-                // Cancel button, counting cancels here would let three of them
-                // raise the "install is broken — use Direct" advisory, which
-                // would be the app telling the user their own choice was a
-                // malfunction.
-                if (!UpdateProgress.cancelRequested) {
-                    Advisory.recordFailure(ctx, app.id, app.label, t.message ?: "install failed")
-                    view?.post { Toast.makeText(ctx, "${app.label}: ${t.message}", Toast.LENGTH_LONG).show() }
-                }
+            FleetInstall.run(ctx, app)?.let { msg ->
+                view?.post { Toast.makeText(ctx, "${app.label}: $msg", Toast.LENGTH_LONG).show() }
             }
             val st = Fleet.status(ctx, app)
             body.post { paint(app.id, st); updateSummary(current()) }

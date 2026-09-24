@@ -6,7 +6,7 @@
 # with a hand-written branch in ShellActivity, three copies of its label in
 # build.json and a "Constellation AppStore" heading inside the fragment. It is
 # now Configs ▸ Store, an ordinary tabbed page whose two tabs are Cloud
-# Constellation (the fleet) and Phone Apps (every non-fleet APK).
+# Constellation (the fleet) and Phone Apps (every APK on the phone, #564).
 #
 # WHY A GUARD AND NOT A GREP FOR THE NEW NAME. The subpage is DELIBERATELY
 # titled "Cloud Constellation", so "the word is gone" is the wrong test — it
