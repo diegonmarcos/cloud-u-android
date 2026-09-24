@@ -129,6 +129,10 @@ for kw in "pkg:cld.termux" "pkg:cld.termux.nix" "pkg:cld.termux.nix.boot" \
           "pkg:com.termux.nix.boot" "pkg^cld.termux." "pkg^com.termux." \
           "pkg:com.foxdebug.acode"; do
     owner="$(q "[.ui.phone_folders[] | select((.match_keywords // []) | index(\"$kw\")) | .id] | join(\",\")")"
+    # #571: a fleet package classifies through ui.external_apps[].folder, the
+    # ONE record test-app-identity-resolves.sh T8b allows -- cld.termux moved
+    # there when the AGI Terminal tile started launching it. Same folder.
+    [ -z "$owner" ] && owner="$(q "[.ui.external_apps[] | select(.hub_package == \"${kw#pkg:}\") | .folder] | join(\",\")")"
     if [ "$owner" = "prod_terminals" ]; then
         ok "$kw is in prod_terminals"
     else

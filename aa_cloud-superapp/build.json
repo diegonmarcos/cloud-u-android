@@ -2602,16 +2602,25 @@
                 "target": "app://com.diegonmarcos.superapp"
               },
               {
+                "_doc": "#571. Terminal opens cloud-terminal-termux (ac_cloud-termux, applicationId cld.termux) through ui.external_apps[cloud-terminal-termux]. Until #571 this tile was app://com.termux.nix with a Play Store fallback: com.termux.nix is the UPSTREAM Nix-on-Droid id, which no fleet build installs (our fork is cld.termux.nix), so on the owner's phone the tap walked straight to a Play page for somebody else's app. #499 guarded the caption; test-agi-tiles.sh guards where the tap lands.",
                 "id": "ai-tmx",
                 "label": "Terminal",
                 "icon": "ic_terminal",
-                "target": "app://com.termux.nix?fallback=https%3A%2F%2Fplay.google.com%2Fstore%2Fapps%2Fdetails%3Fid%3Dcom.termux.nix"
+                "target": "extapp:cloud-terminal-termux"
               },
               {
+                "_doc": "#571. MyTerminal opens cloud-myterminal's own applicationId (com.diegonmarcos.ide, kept by the #561 rename so installs survive). The forkless extapp:cloud-myterminal resolves to hub_package; it used to name the '/files' fork, a separate APK the rename did not make the app.",
                 "id": "drive",
                 "label": "MyTerminal",
                 "icon": "ic_code",
-                "target": "extapp:cloud-myterminal/files"
+                "target": "extapp:cloud-myterminal"
+              },
+              {
+                "_doc": "#571. IDE opens cloud-code (ac_cloud-code, applicationId com.diegonmarcos.code, our Acode build) through ui.external_apps[cloud-code]. The APK is often not installed yet, so GroupedTilesFragment draws this tile as the #249 placeholder (ic_app_not_installed + 'Not installed') and the tap installs it from the constellation Store's own release asset. icon ic_ide is cloud-code's launcher foreground copied verbatim from ac_cloud-code/res/android/drawable/ic_launcher_foreground.xml, the same way Writer/Camera/Drive carry theirs.",
+                "id": "ide",
+                "label": "IDE",
+                "icon": "ic_ide",
+                "target": "extapp:cloud-code"
               },
               {
                 "_doc": "B-LLM - the three Telegram agent bots behind one icon instead of three tiles in the row. The icon is ic_ai_sparkle, the same one S-LLM carries: the two folders are siblings on the same row and the owner reads them as one pair, so a generic folder glyph on one and an AI glyph on the other told the eye they were different kinds of thing. 'B' is for big: Hermes, Goose and Claude each answer from a full-size hosted model. A tile that carries a nested 'tiles' array IS a folder - GroupedTilesFragment opens the popup instead of dispatching 'target' - which is why this entry has no target of its own. Giving a folder a target as well would make the first tap ambiguous: open, or navigate?",
@@ -5480,12 +5489,11 @@
         ]
       },
       {
-        "_doc": "Every terminal on the device, gathered out of sys_dev on 2026-09-10 at the owner's request ('move all Terminals inside a folder called Terminals in the section Tools Inboxes & AI'). WHAT COUNTS AS A TERMINAL was read off what sys_dev actually held rather than off the names: the seven exact ids below plus the two startsWith families are precisely the termux-lineage entries that were in it, in both the upstream (com.termux*) and the fleet-fork (cld.termux*) namespace. Acode joins them because the owner put it here explicitly — it is an editor, not a shell, and it is here because he said so.\n\nTHE TWO pkg^ RULES HAD TO COME TOO. 'pkg^com.termux.' and 'pkg^cld.termux.' are the startsWith families that catch a termux sibling nobody has declared yet (termux-api, termux-boot, a future addon). Leaving either behind in sys_dev — order 310, which is walked before this folder's 460 — would have kept every such app in _Dev while the seven named ones moved, and the folder would have looked correct in the diff and been wrong on the device. Note that pkg^com.termux. does NOT cover the bare 'com.termux', and pkg^cld.termux. does not cover 'cld.termux', so both exact ids are listed as well.\n\nThe cld.termux* ids are OUR forks and ui._doc_phone_folders says fleet packages belong in ui.external_apps[].folder rather than in a match_keywords list. They are kept here verbatim because there is no external_apps entry for cloud-termux or cloud-nix-on-droid to derive them from, so dropping them would not relocate them — it would drop them into the `others` sink. Pre-existing condition, moved intact, flagged rather than silently changed.",
+        "_doc": "Every terminal on the device, gathered out of sys_dev on 2026-09-10 at the owner's request ('move all Terminals inside a folder called Terminals in the section Tools Inboxes & AI'). WHAT COUNTS AS A TERMINAL was read off what sys_dev actually held rather than off the names: the seven exact ids below plus the two startsWith families are precisely the termux-lineage entries that were in it, in both the upstream (com.termux*) and the fleet-fork (cld.termux*) namespace. Acode joins them because the owner put it here explicitly — it is an editor, not a shell, and it is here because he said so.\n\nTHE TWO pkg^ RULES HAD TO COME TOO. 'pkg^com.termux.' and 'pkg^cld.termux.' are the startsWith families that catch a termux sibling nobody has declared yet (termux-api, termux-boot, a future addon). Leaving either behind in sys_dev — order 310, which is walked before this folder's 460 — would have kept every such app in _Dev while the seven named ones moved, and the folder would have looked correct in the diff and been wrong on the device. Note that pkg^com.termux. does NOT cover the bare 'com.termux', and pkg^cld.termux. does not cover 'cld.termux', so both exact ids are listed as well.\n\nThe cld.termux* ids are OUR forks and ui._doc_phone_folders says fleet packages belong in ui.external_apps[].folder rather than in a match_keywords list. They are kept here verbatim because there is no external_apps entry for cloud-termux or cloud-nix-on-droid to derive them from, so dropping them would not relocate them — it would drop them into the `others` sink. Pre-existing condition, moved intact, flagged rather than silently changed. #571 gave cld.termux that entry (ui.external_apps[cloud-terminal-termux], folder prod_terminals) because the AGI Terminal tile launches it, so its exact pkg: keyword left this list and is derived from the entry instead; the folder it lands in did not change. The cld.termux.nix* ids still have no entry and stay.",
         "id": "prod_terminals",
         "order": "660",
         "label": "@Terminals",
         "match_keywords": [
-          "pkg:cld.termux",
           "pkg:cld.termux.nix",
           "pkg:cld.termux.nix.boot",
           "pkg:com.foxdebug.acode",
@@ -7086,6 +7094,24 @@
           "utils": "com.diegonmarcos.ide.utils",
           "editor": "com.diegonmarcos.ide.editor"
         }
+      },
+      {
+        "_doc": "#571. cloud-terminal-termux (ac_cloud-termux, our Termux fork, applicationId cld.termux) — the app the Cloud ▸ Apps ▸ AGI Terminal tile launches. install_apk_url is the fleet's release_url for it; ShellActivity.launchExternalApp swaps in the x86_64 asset from data/constellation-fleet.json on an x86_64 phone. folder prod_terminals is where the exact pkg:cld.termux keyword used to classify it, so the app lands in the same folder as before.",
+        "id": "cloud-terminal-termux",
+        "folder": "prod_terminals",
+        "hub_package": "cld.termux",
+        "install_package": "cld.termux",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-terminal.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "#571. cloud-code (ac_cloud-code, our Acode build, applicationId com.diegonmarcos.code) — the AGI IDE tile. folder prod_terminals because the owner put upstream Acode (pkg:com.foxdebug.acode) in Terminals himself, and this is the same editor under our id.",
+        "id": "cloud-code",
+        "folder": "prod_terminals",
+        "hub_package": "com.diegonmarcos.code",
+        "install_package": "com.diegonmarcos.code",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-Code.apk",
+        "forks": {}
       },
       {
         "_doc": "Cloud-Nav — the dedicated maps/navigation/tracker app (ac_cloud-nav). libs:maps was MOVED out of the SuperApp into this standalone app, so the Cloud 'Navigation' tile (target extapp:cloud-nav) opens it if installed, else downloads + installs install_apk_url. Single app (no forks), so the forkless extapp:cloud-nav resolves straight to hub_package. install_apk_url mirrors ac_cloud-nav/build.json::release.gh_release (asset Cloud-Nav.apk, published by ship-cloud-nav.yml).",

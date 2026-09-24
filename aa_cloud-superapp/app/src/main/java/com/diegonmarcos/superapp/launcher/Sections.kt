@@ -1635,6 +1635,22 @@ object Sections {
 
     fun externalApp(id: String): ExternalApp? = externalApps().firstOrNull { it.id == id }
 
+    /** #571: true when [target] is `extapp:<id>[/<fork>][#…]` and NONE of the
+     *  packages ShellActivity.launchExternalApp would try is launchable here —
+     *  the case a tile draws as the #249 not-installed placeholder. Any other
+     *  target, or an id external_apps does not know, is never "missing": the
+     *  tile keeps its own icon and the dispatcher reports the problem on tap. */
+    fun extappMissing(ctx: Context, target: String): Boolean {
+        if (!target.startsWith("extapp:")) return false
+        val parts = target.removePrefix("extapp:")
+            .substringBefore(StackAnchors.FRAGMENT).split("/", limit = 2)
+        val app = externalApp(parts[0]) ?: return false
+        val fork = parts.getOrNull(1)?.let { app.forks[it] }
+        return listOfNotNull(fork, app.hubPackage, app.altPackage)
+            .filter { it.isNotBlank() }
+            .none { ctx.packageManager.getLaunchIntentForPackage(it) != null }
+    }
+
     /** Every package the constellation already offers a way into — the hub,
      *  the resigned-stock alt, the install target and every fork of each
      *  ui.external_apps entry, plus [ownPackage].

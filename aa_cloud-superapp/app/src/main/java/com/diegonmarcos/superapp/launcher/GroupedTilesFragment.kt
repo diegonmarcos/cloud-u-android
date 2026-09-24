@@ -252,24 +252,46 @@ class GroupedTilesFragment : Fragment() {
                 }
             }
         }
-        val iconRes = Sections.iconResFor(ctx, tile.iconName)
+        // #571: an extapp tile whose app is not on the phone draws the #249
+        // placeholder Phone ▸ Apps uses — same glyph, same strings — instead
+        // of an icon that promises an app. The tap is unchanged: it still
+        // reaches launchExternalApp, which installs from the Store's asset.
+        val missing = Sections.extappMissing(ctx, tile.target)
+        val palette = com.diegonmarcos.superapp.ui.LauncherPalette.of(ctx)
+        if (missing) {
+            cell.contentDescription = ctx.getString(
+                com.diegonmarcos.superapp.R.string.phone_app_not_installed_tile_hint, tile.label)
+        }
+        val iconRes = if (missing) com.diegonmarcos.superapp.R.drawable.ic_app_not_installed
+                      else Sections.iconResFor(ctx, tile.iconName)
         if (iconRes != 0) {
             cell.addView(android.widget.ImageView(ctx).apply {
                 setImageResource(iconRes)
-                imageTintList = android.content.res.ColorStateList.valueOf(0xFFFFFFFF.toInt())
+                imageTintList = android.content.res.ColorStateList.valueOf(
+                    if (missing) palette.textSecondary else 0xFFFFFFFF.toInt())
                 val sz = dp(32)
                 layoutParams = LinearLayout.LayoutParams(sz, sz)
             })
         }
         cell.addView(TextView(ctx).apply {
             text = tile.label
-            setTextColor(0xCCFFFFFF.toInt())
+            setTextColor(if (missing) palette.textSecondary else 0xCCFFFFFF.toInt())
             setTextAppearance(android.R.style.TextAppearance_Material_Caption)
             gravity = android.view.Gravity.CENTER
             maxLines = 2
             ellipsize = android.text.TextUtils.TruncateAt.END
             setPadding(0, dp(4), 0, 0)
         })
+        if (missing) {
+            cell.addView(TextView(ctx).apply {
+                setText(com.diegonmarcos.superapp.R.string.phone_app_not_installed)
+                setTextColor(palette.accent)
+                textSize = 9f
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                gravity = android.view.Gravity.CENTER
+            })
+        }
         return cell
     }
 

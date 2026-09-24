@@ -1740,7 +1740,8 @@ open class ShellActivity : AppCompatActivity(),
         }
         // Nothing installed → install the companion APK (user-confirmed).
         if (app.installApkUrl.isBlank() || app.installPackage.isBlank()) {
-            findViewById<View>(R.id.fragment_container).snack("${app.label} not installed")
+            findViewById<View>(R.id.fragment_container)
+                .snack(getString(R.string.phone_install_no_source, app.label))
             return
         }
         // ABI. build.json::ui.external_apps gives every companion exactly ONE
@@ -1783,7 +1784,7 @@ open class ShellActivity : AppCompatActivity(),
             this, installUrl, app.installPackage, app.label,
         )
         findViewById<View>(R.id.fragment_container)
-            .snack("${app.label} not installed — downloading…")
+            .snack(getString(R.string.phone_install_downloading, app.label))
     }
 
     // ── tile click dispatch ──────────────────────────────────────────────
