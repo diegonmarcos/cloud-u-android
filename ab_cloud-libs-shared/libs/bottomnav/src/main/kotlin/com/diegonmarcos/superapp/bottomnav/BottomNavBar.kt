@@ -95,7 +95,7 @@ internal fun labelTag(id: String) = "bottomnav_label_$id"
 
 /** The insets the island clears: system bars AND the display cutout (#477). */
 @Composable
-public fun bottomNavInsets(): WindowInsets = WindowInsets.systemBars // MUTATION B: display cutout dropped
+public fun bottomNavInsets(): WindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout)
 
 @Composable
 public fun BottomNavIsland(
