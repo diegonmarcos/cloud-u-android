@@ -13,6 +13,9 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import app.affine.pro.plugin.AFFiNEThemePlugin
 import app.affine.pro.plugin.ExternalFilePlugin
+import app.affine.pro.plugin.LocalAIButtonPlugin
+import app.affine.pro.plugin.LocalAuthPlugin
+import app.affine.pro.plugin.LocalHashCashPlugin
 import app.affine.pro.plugin.NbStorePlugin
 import app.affine.pro.plugin.MobileBackPlugin
 import app.affine.pro.plugin.PreviewPlugin
@@ -33,6 +36,13 @@ import timber.log.Timber
 // services, and log upload. None of that exists in this local-first build.
 // What remains is the editor WebView, the Android IME bridge and the local
 // storage plugins.
+//
+// #543: the de-clouding deleted those plugins' NATIVE side but not the web code
+// that calls them, and an unregistered Capacitor plugin throws rather than
+// degrades — which killed local workspace creation. They are back as local-only
+// implementations (DeCloudedPlugins.kt); still no server, but the bridge
+// resolves. This list is the ONE registration site for app-local plugins and
+// `cap sync` does not rewrite it, so the fix survives a re-vendor.
 @AndroidEntryPoint
 class MainActivity : BridgeActivity(), AFFiNEThemePlugin.Callback {
 
@@ -44,6 +54,9 @@ class MainActivity : BridgeActivity(), AFFiNEThemePlugin.Callback {
                 MobileBackPlugin::class.java,
                 PreviewPlugin::class.java,
                 ExternalFilePlugin::class.java,
+                LocalAuthPlugin::class.java,
+                LocalHashCashPlugin::class.java,
+                LocalAIButtonPlugin::class.java,
             )
         )
     }

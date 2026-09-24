@@ -82,6 +82,12 @@
         "packages/frontend/core/src",
         "packages/frontend/apps/android/src"
       ]
+    },
+    "capacitor_surface": {
+      "_doc": "Read by test/test-capacitor-plugin-surface.sh (#543). web_root is the tree walked to DERIVE which Capacitor plugin NAMES this app's bundle calls (registerPlugin<T>('Name')); activity is the ONE file that registers their native implementations; kotlin_root is where the @CapacitorPlugin(name = \"...\") annotations are read from. No plugin name is ever written in the tester — a missing native side must be derived, because that is the defect (#543: the web side called 'Auth', the de-clouding had deleted the native class, and Capacitor threw 'plugin is not implemented on android' on the LOCAL workspace path).",
+      "web_root": "packages/frontend/apps/android/src",
+      "activity": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro/MainActivity.kt",
+      "kotlin_root": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro"
     }
   }
 }

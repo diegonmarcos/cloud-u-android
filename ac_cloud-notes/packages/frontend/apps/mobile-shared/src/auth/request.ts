@@ -52,8 +52,12 @@ export function createAuthFetch(
     const retry = request.clone();
     const skipStoredAuth = shouldSkipStoredAuthToken(request.url);
     const endpoint = skipStoredAuth ? null : authEndpointForUrl(request.url);
+    // #543: an unavailable auth provider must not fail the REQUEST. The XHR
+    // wrapper below already sends with no token when the provider rejects; this
+    // path propagated instead, so one broken provider turned every same-origin
+    // fetch — including purely local ones — into a hard failure.
     const token = endpoint
-      ? await provider.getValidAccessToken(endpoint)
+      ? await provider.getValidAccessToken(endpoint).catch(() => null)
       : null;
 
     if (token) {
