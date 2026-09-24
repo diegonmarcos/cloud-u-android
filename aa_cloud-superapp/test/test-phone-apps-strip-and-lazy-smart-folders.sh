@@ -641,12 +641,12 @@ else
     bad "the opt-in folder no longer selects the full list -- Cloud Apps would be filtered wrong"
 fi
 
-echo "== T19: a lib tile taps to the in-app Constellation AppStore -- never a no-op, never leaving the app (#474/#156) =="
+echo "== T19: a lib tile taps to the in-app Store ▸ Cloud Constellation -- never a no-op, never leaving the app (#474/#156/#563) =="
 # A lib cannot be launched (no component). Its tap must OPEN SOMETHING useful
 # in-app; a silent nil-receiver on startMainActivity or an external ACTION_VIEW
 # would each be the exact regression #156 exists to stop.
 load expTile "$PHONE" 8 makeExpandedAppTile
-load constellationHop "$PHONE" 8 openConstellation
+load storeHop "$PHONE" 8 openStore
 TILE="$(body expTile)"
 if printf '%s\n' "$TILE" | grep -qF 'app.activityComponent'; then
     ok "the expanded tile reads the (now nullable) launch component"
@@ -658,7 +658,7 @@ if printf '%s\n' "$TILE" | grep -qF 'comp != null'; then
 else
     bad "the tile does not branch on launchability -- it would launch a lib's null component"
 fi
-if printf '%s\n' "$TILE" | grep -qF 'openConstellation(ctx)'; then
+if printf '%s\n' "$TILE" | grep -qF 'openStore(ctx)'; then
     ok "a non-launchable tile opens the store instead of silently no-opping"
 else
     bad "no non-launchable tap path exists -- a lib tap either crashes or does nothing"
@@ -668,11 +668,15 @@ if printf '%s\n' "$TILE" | grep -qF 'ACTION_VIEW'; then
 else
     ok "no external leave-the-app intent in the lib path"
 fi
-HOP="$(body constellationHop)"
-if printf '%s\n' "$HOP" | grep -qF 'openSectionPage("config", "constellation"'; then
-    ok "opening the lib's store is the in-app Configs ▸ Constellation section page"
+HOP="$(body storeHop)"
+# The tab id is READ from build.json (the store page's first tab — its fleet
+# tab, where libs live), never written here, so renaming it there without
+# repointing the hop fails this line (#563).
+STORE_FLEET_TAB="$(jq -r '.ui.sections[] | select(.id=="config") | .pages[] | select(.id=="store") | .tabs[0] // empty' "$APP/build.json")"
+if [ -n "$STORE_FLEET_TAB" ] && printf '%s\n' "$HOP" | grep -qF "openSectionPage(\"config\", \"$STORE_FLEET_TAB\""; then
+    ok "opening the lib's store is the in-app Configs ▸ Store fleet tab ($STORE_FLEET_TAB)"
 else
-    bad "the store hop is not the in-app constellation page -- it is not opening the lib's entry"
+    bad "the store hop is not the in-app Store fleet tab (declared: '${STORE_FLEET_TAB}') -- it is not opening the lib's entry"
 fi
 
 echo "== T20: every lib carries the canonical cloud-lib-{name}, from its ONE declaration (#474/#351) =="

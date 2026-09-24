@@ -90,7 +90,7 @@ fi
 echo "== T3: an app that cannot be built is not offered for install =="
 # build.host present-but-null IS the declaration "this app requires a dedicated
 # build host and none has been established". Fleet.kt::status short-circuits to
-# State.Blocked and ConstellationFragment hides Install/Update and Direct, so a
+# State.Blocked and StoreCloudFragment hides Install/Update and Direct, so a
 # blocked row still opens an installed copy but stops promising a download.
 HAS_HOST_KEY="$(jq -r '(.build // {}) | has("host")' "$OFFICE")"
 HOST="$(jq -r '.build.host // "null"' "$OFFICE")"

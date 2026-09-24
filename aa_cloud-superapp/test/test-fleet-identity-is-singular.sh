@@ -23,7 +23,7 @@
 #      installing could never satisfy, on every pass, forever.
 #
 #   2. THE BATCH KILLED ITSELF AT ENTRY ONE. UpdateWorker.doWork and
-#      ConstellationFragment.updateAll each carry the SAME comment: the
+#      StoreCloudFragment.updateAll each carry the SAME comment: the
 #      self-update goes LAST, because installing our own APK replaces it and
 #      Android kills this process, taking the rest of the batch with it.
 #      Neither could honour that, because the list they hand to the batch

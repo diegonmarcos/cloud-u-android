@@ -238,7 +238,7 @@ regen_constellation() {
                              # IS the statement "a host is required and there is
                              # none", so no second field can disagree with it.
                              # Fleet.kt::status returns State.Blocked and
-                             # ConstellationFragment hides Install/Direct, so the
+                             # StoreCloudFragment hides Install/Direct, so the
                              # row still shows and still opens — it just stops
                              # promising an install that cannot happen.
                              blocked: (((.build // {}) | has("host")) and (.build.host == null)),
@@ -346,7 +346,7 @@ regen_constellation() {
     # two can never drift. `capture` emits nothing when the id is not an ML name,
     # so `// null` is what turns "not ML" into a value the validator below can
     # see - without it the whole row would silently vanish from the output.
-    # ConstellationFragment renders exactly these groups and names none of them,
+    # StoreCloudFragment renders exactly these groups and names none of them,
     # so a missing or unknown group is a row in no tab at all - every way the
     # data can disagree with itself therefore fails the regen instead of
     # shipping.

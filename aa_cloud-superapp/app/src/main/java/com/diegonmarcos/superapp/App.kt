@@ -83,7 +83,9 @@ class App : Application(), WorkManagerConfiguration.Provider {
         com.diegonmarcos.superapp.appstore.AppStoreHost.apply {
             launchActivity = MainActivity::class.java
             notificationIcon = R.drawable.ic_stat_notify
-            launchExtras = mapOf("shortcut_action" to "action:constellation")
+            launchExtras = mapOf("shortcut_action" to "page:config/store-cloud")
+            // #563: both Store pages group by the launcher's own taxonomy.
+            classify = com.diegonmarcos.superapp.apps.StoreShelves::of
             periodicCheckAllowed = { ctx ->
                 com.diegonmarcos.superapp.settings.LauncherSettingsPrefs(ctx).toggle("fleet_check")
             }

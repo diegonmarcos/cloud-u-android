@@ -1949,21 +1949,13 @@ open class ShellActivity : AppCompatActivity(),
                     .addToBackStack(null)
                     .commit()
             }
-            // Constellation AppStore — Configs → Constellation.
-            actionType == "constellation" -> {
-                val frag = com.diegonmarcos.superapp.appstore.ConstellationFragment()
-                applyChrome(frag)
-                supportFragmentManager.beginTransaction()
-                    .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
-                    .replace(R.id.fragment_container, frag)
-                    .addToBackStack(null)
-                    .commit()
-            }
-            // Config → Update tile: update EVERY constellation app. Opens the
-            // Constellation page (per-app progress) and kicks Update-all. The
-            // shared update overlay (with Cancel) shows install progress.
+            // Config → Update tile: update EVERY constellation app. Opens
+            // Store ▸ Cloud Constellation (per-app progress) and kicks
+            // Update-all. The shared update overlay (with Cancel) shows install
+            // progress. The Store is an ordinary tabbed page since #563, so
+            // this is a page: target, not an action with its own branch here.
             actionType == "update_all" -> {
-                dispatchHomeAction("constellation")
+                routeTarget("page:config/store-cloud")
                 kotlin.concurrent.thread {
                     val fleet = com.diegonmarcos.superapp.updater.Fleet
                         .parse(BuildConfig.CONSTELLATION_FLEET_B64)

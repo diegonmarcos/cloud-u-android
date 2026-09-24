@@ -25,8 +25,9 @@ object AppStoreHost {
 
     /**
      * Extras put on the launch Intent, so the host decides how the tap is
-     * routed. SuperApp uses its launcher's shortcut_action grammar
-     * ("action:constellation"); another host can use its own.
+     * routed. SuperApp uses its launcher's shortcut_action grammar (a
+     * `page:` target naming Store ▸ Cloud Constellation); another host can use
+     * its own.
      */
     @Volatile var launchExtras: Map<String, String> = emptyMap()
 
@@ -40,4 +41,22 @@ object AppStoreHost {
      * before — a default of "denied" would silently stop checking.
      */
     @Volatile var periodicCheckAllowed: (android.content.Context) -> Boolean = { true }
+
+    /** Where the host's classification files one package: the heading drawn
+     *  over its run and the key that orders that run among the others. */
+    class Shelf(val heading: String, val order: String)
+
+    /**
+     * package → [Shelf], from the HOST's central classification (#563) — the
+     * same section and folder its own app grid files that package under.
+     * Both store pages group by this and neither holds a taxonomy of its
+     * own: #170/#102/#405 each deleted a second copy, and a library cannot
+     * read the app's build.json anyway. Batched (label by package) because
+     * a classifier that probes the PackageManager pays per call, not per app.
+     *
+     * A package the host leaves out has no shelf. Defaults to classifying
+     * nothing, so a host that sets nothing gets the flat lists it had.
+     */
+    @Volatile var classify: (android.content.Context, Map<String, String>) -> Map<String, Shelf> =
+        { _, _ -> emptyMap() }
 }

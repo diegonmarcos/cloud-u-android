@@ -49,7 +49,7 @@ RCV="$UPD/PackageInstallerReceiver.kt"
 INST="$UPD/install/UpdateInstaller.kt"
 SRC="$UPD/source/ApkSource.kt"
 FLEET="$UPD/Fleet.kt"
-PAGE="$LIB/appstore/src/main/java/com/diegonmarcos/superapp/appstore/ConstellationFragment.kt"
+PAGE="$LIB/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreCloudFragment.kt"
 
 echo "== T1: NO status branch is silent =="
 # THE ASSERTION THAT WOULD HAVE CAUGHT THIS. Walk the `when (status)` block by

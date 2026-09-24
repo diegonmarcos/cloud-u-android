@@ -5,7 +5,7 @@
 #   T2  the real on-device ML modules moved OUT of plain libs
 #   T3  reference rows live outside `apps`, installable:false, with no package
 #   T4  the updater cannot reach a reference row
-#   T5  ConstellationFragment names no group: no id or label literal, no kind
+#   T5  StoreCloudFragment names no group: no id or label literal, no kind
 #       partition, no hardcoded tab list
 #   T6  #383 Lite-ML is declared before Tiny-ML, and the keys are untouched
 #   T7  #405 an ML lib names its own section (ml-{t|l}-{domain}-{name}) and
@@ -16,7 +16,7 @@ ROOT="$(cd "$APP/.." && pwd)"
 FLEET="$APP/data/constellation-fleet.json"
 BUILD="$APP/build.json"
 LIBS="$ROOT/ab_cloud-libs-shared/libs"
-PAGE="$LIBS/appstore/src/main/java/com/diegonmarcos/superapp/appstore/ConstellationFragment.kt"
+PAGE="$LIBS/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreCloudFragment.kt"
 ENGINE="$LIBS/updater/src/main/java/com/diegonmarcos/superapp/updater/Fleet.kt"
 PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
@@ -96,10 +96,10 @@ grep -qF 'updateAll(ctx, "the whole fleet", fleet)' "$PAGE" \
   && ok "Update all runs over Fleet.parse's list, which holds no reference row" \
   || bad "Update all is no longer built from the parsed fleet"
 
-echo "== T5: ConstellationFragment names no group =="
+echo "== T5: StoreCloudFragment names no group =="
 for literal in $(jq -r '.groups[] | .id, .label' "$FLEET"); do
   grep -nF "\"$literal\"" "$PAGE" \
-    && bad "ConstellationFragment hardcodes group literal \"$literal\"" \
+    && bad "StoreCloudFragment hardcodes group literal \"$literal\"" \
     || ok "no \"$literal\" literal"
 done
 grep -nF 'listOf("Apps"' "$PAGE" && bad "hardcoded tab list is back" || ok "no hardcoded tab list"
@@ -146,7 +146,7 @@ jq -e 'all(.groups[]; (.blurb | test("Lightweight"; "i")) | not)' "$FLEET" >/dev
 echo "== T7: #405 an ML lib names its own section, and nothing else sits in one =="
 # The scheme is ml-{t|l}-{domain}-{name}, worn behind the store's lib- row
 # prefix. THAT NAME IS THE WHOLE CLASSIFICATION: regen.sh derives the tab from
-# its weight-class segment and ConstellationFragment derives the application
+# its weight-class segment and StoreCloudFragment derives the application
 # heading from its domain segment, so there is no second list to disagree with
 # it - and a name that does not parse is a row in no tab and under no heading.
 #
@@ -198,11 +198,11 @@ jq -e '.constellation | has("group_members")' "$BUILD" >/dev/null 2>&1 \
 #     wearing a different hat.
 command grep -qF 'applicationOf(app.id)' "$PAGE" \
   && ok "the page reads each row's application off its own id" \
-  || bad "ConstellationFragment no longer derives the application from the row id"
+  || bad "StoreCloudFragment no longer derives the application from the row id"
 for application in $(jq -r '[.apps[], .catalogue[]] | .[].id
         | capture("^lib-ml-[tl]-(?<domain>[a-z0-9]+)-") | .domain' "$FLEET" | sort -u); do
   command grep -nF "\"$application\"" "$PAGE" \
-    && bad "ConstellationFragment hardcodes the application literal \"$application\"" \
+    && bad "StoreCloudFragment hardcodes the application literal \"$application\"" \
     || ok "no \"$application\" literal on the page"
 done
 

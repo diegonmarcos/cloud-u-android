@@ -102,7 +102,10 @@ object SectionPages {
         sectionId == "config" && pageId == "profiles" -> LauncherProfilesFragment.newInstance()
         sectionId == "config" && pageId == "theme" -> LauncherConfigFragment.newInstance()
         sectionId == "config" && pageId == "kde"            -> com.diegonmarcos.superapp.kdeconnect.KdeConnectFragment.newInstance()
-        sectionId == "config" && pageId == "constellation"  -> com.diegonmarcos.superapp.appstore.ConstellationFragment()
+        // Store's two tabs (#563). The `store` page itself declares `tabs`, so
+        // the strip branch at the top already answered it.
+        sectionId == "config" && pageId == "store-cloud"    -> com.diegonmarcos.superapp.appstore.StoreCloudFragment()
+        sectionId == "config" && pageId == "store-phone"    -> com.diegonmarcos.superapp.appstore.StorePhoneFragment()
         sectionId == "config" && pageId == "wg"             -> WireGuardFragment.newInstance()
         // "myfin" section is GONE — the dashboard moved to Cloud-Me (Buro > Fin)
         // and libs:fin left with it. The tile that deep-linked to it is gone too

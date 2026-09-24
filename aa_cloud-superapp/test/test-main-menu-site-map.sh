@@ -104,7 +104,10 @@ for pg in (d['ui'].get('pages') or []):
     t = pg.get('target','')
     if t.startswith('action:'): vocab.add(t[7:])
 # Built-in dispatcher actions (ShellActivity dispatchHomeAction / tile grammar).
-vocab.update(['open_search', 'open_home_apps', 'check_updates', 'constellation', 'import_configs'])
+# 'constellation' left this list with its ShellActivity branch (#563): the
+# store is page:config/store now, so a main-menu entry naming the old action
+# would dispatch to nothing and must fail here.
+vocab.update(['open_search', 'open_home_apps', 'check_updates', 'import_configs'])
 bad_ones = []
 for e in mm:
     at = (e.get('action_type','') or '').strip()

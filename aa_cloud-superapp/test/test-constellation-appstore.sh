@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Tester for the Constellation AppStore (superapp = fleet manager).
+# Tester for the Store's fleet tab, Store ▸ Cloud Constellation (superapp = fleet manager).
 #
 # Static wiring assertions + a live GHCR check that every app image resolves a
 # remote digest (proving the AppStore can see every constellation app's build).
@@ -49,11 +49,15 @@ has "$ENG" "UpdateInstaller(ctx).install(apk, app.pkg)" "Fleet installs foreign 
 has "$ENG" "packageInstaller.uninstall(pkg" "Fleet uninstall via PackageInstaller"
 
 echo "== T4: UI page + navigation + worker wired =="
-has "$(cd "$APP/.." && pwd)/ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/ConstellationFragment.kt" "CONSTELLATION_FLEET_B64" "ConstellationFragment reads the fleet"
-has "$APP/app/src/main/java/com/diegonmarcos/superapp/MainActivity.kt" 'actionType == "constellation"' "MainActivity routes the constellation action"
+has "$(cd "$APP/.." && pwd)/ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreCloudFragment.kt" "CONSTELLATION_FLEET_B64" "StoreCloudFragment reads the fleet"
+# #563: the store is an ordinary tabbed page now (config/store, tabs
+# store-cloud + store-phone), routed by SectionPages like every other page —
+# there is no action branch left to assert. test-store-identity.sh owns the
+# full identity check; this line only keeps the old wiring claim honest.
+has "$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt" 'pageId == "store-cloud"    -> com.diegonmarcos.superapp.appstore.StoreCloudFragment()' "SectionPages routes Store ▸ Cloud Constellation"
 has "$APP/app/src/main/java/com/diegonmarcos/superapp/App.kt" "ConstellationWorker.start(this)" "App.onCreate starts the fleet worker"
-jq -e '.ui.sections[] | select(.id=="config") | .pages[] | select(.id=="constellation")' "$APP/build.json" >/dev/null 2>&1 \
-  && ok "build.json config.pages has the Constellation entry" || bad "Constellation page not in build.json ui.sections"
+jq -e '.ui.sections[] | select(.id=="config") | .pages[] | select(.id=="store")' "$APP/build.json" >/dev/null 2>&1 \
+  && ok "build.json config.pages has the Store entry" || bad "Store page not in build.json ui.sections"
 
 echo "== T5: LIVE — every app image resolves a GHCR digest (AppStore can see them) =="
 if command -v curl >/dev/null && [ -f "$FLEET" ]; then

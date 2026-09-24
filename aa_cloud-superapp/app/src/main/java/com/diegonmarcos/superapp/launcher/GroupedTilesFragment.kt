@@ -99,6 +99,16 @@ class GroupedTilesFragment : Fragment() {
             // buildInto entry point stays for Home's own use.
             col.post {
                 if (!isAdded) return@post
+                // ── All Apps (#563) — the same section Phone ▸ Apps has (#249),
+                //    mirrored: Phone draws every installed app EXCEPT the
+                //    fleet's, this draws ONLY the fleet's, through the one
+                //    renderer and the one taxonomy. Distinct from the removed
+                //    Home grid below: that was ui.home_groups tiles repeated,
+                //    this is installed apps grouped by purpose.
+                col.addView(sectionDivider(ctx))
+                col.addView(groupHeader(ctx, "All Apps"))
+                com.diegonmarcos.superapp.apps.PhoneAppsFragment.renderAllApps(ctx, col,
+                    only = Sections.constellationPackages(ctx.packageName))
                 // ── Smart Folders → Recently Used. Cloud tiles have no
                 //    existing pin/favorite/most-used signal the way Phone
                 //    apps do — this is the one real per-tile signal

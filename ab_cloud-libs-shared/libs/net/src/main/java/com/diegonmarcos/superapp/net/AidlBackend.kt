@@ -88,7 +88,7 @@ class AidlBackend(context: Context) : Backend {
 
     override fun setState(tunnel: Tunnel, state: Tunnel.State, config: Config?): Tunnel.State {
         val r = remote() ?: throw IllegalStateException(
-            "Cloud-Lib-Net-Wg is not installed - install it from the Constellation Libs tab to use WireGuard")
+            "Cloud-Lib-Net-Wg is not installed - install it from Store ▸ Cloud Constellation ▸ Libs to use WireGuard")
         val name = r.setState(tunnel.name, state.name, config?.toWgQuickString())
         val resulting = runCatching { Tunnel.State.valueOf(name) }.getOrDefault(Tunnel.State.DOWN)
         // The caller's Tunnel is a local object the remote knows nothing

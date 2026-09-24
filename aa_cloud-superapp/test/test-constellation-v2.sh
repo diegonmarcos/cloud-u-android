@@ -23,26 +23,28 @@ echo "== T2: fleet manifest carries the GH release URL per app =="
 jq -e '.apps[] | select(.id=="superapp") | .release_url and .asset' "$APP/data/constellation-fleet.json" >/dev/null 2>&1 \
   && ok "manifest has release_url + asset" || bad "manifest missing release_url/asset"
 has "$UPD/Fleet.kt" "val releaseUrl: String" "Fleet.App carries releaseUrl"
-has "$CFG/ConstellationFragment.kt" "app.releaseUrl" "UI shows the release URL link"
+has "$CFG/StoreCloudFragment.kt" "app.releaseUrl" "UI shows the release URL link"
 
 echo "== T3: per-app CONCURRENT status (fixes Dialer no-status / Chat loop) =="
-has "$CFG/ConstellationFragment.kt" "thread(name = \"fleet-check-" "each app checked on its own thread"
-grep -q 'for (app in list)' "$CFG/ConstellationFragment.kt" && grep -q 'thread(name = "fleet-check' "$CFG/ConstellationFragment.kt" \
+has "$CFG/StoreCloudFragment.kt" "thread(name = \"fleet-check-" "each app checked on its own thread"
+grep -q 'for (app in list)' "$CFG/StoreCloudFragment.kt" && grep -q 'thread(name = "fleet-check' "$CFG/StoreCloudFragment.kt" \
   && ok "checkAll spawns a thread per app (non-blocking)" || bad "checkAll not concurrent"
 has "$CFG/ConstellationWorker.kt" "Result.success()" "fleet worker returns success (no retry loop)"
 
 echo "== T4: Update All + Cancel =="
 has "$UPD/Fleet.kt" "fun installAll(" "Fleet.installAll (Update All)"
-has "$CFG/ConstellationFragment.kt" "Update all" "UI has Update-all button"
+has "$CFG/StoreCloudFragment.kt" "Update all" "UI has Update-all button"
 has "$UPD/UpdateProgress.kt" "object Cancelled" "UpdateProgress has Cancelled state"
 has "$UPD/Updater.kt" "fun cancelNow(" "Updater.cancelNow exists"
 has "$UPD/UpdateOverlayFragment.kt" "Updater.cancelNow" "overlay Cancel button wired"
 grep -q '"action:update_all"' "$APP/build.json" && ok "Config Update tile → Update All" || bad "Config Update tile not repointed"
 
-echo "== T5: update notification deep-links to the Constellation page (not Home) =="
+echo "== T5: update notification deep-links to Store ▸ Cloud Constellation (not Home) =="
 # A library cannot name the host's Activity, so the worker now replays
 # AppStoreHost.launchExtras; the host supplies the deep-link in App.kt.
-has "$APP/app/src/main/java/com/diegonmarcos/superapp/App.kt" '"shortcut_action" to "action:constellation"' "host supplies shortcut_action deep-link"
+# #563: the target is the store's fleet tab; test-store-identity.sh proves
+# that tab id is the one build.json declares.
+has "$APP/app/src/main/java/com/diegonmarcos/superapp/App.kt" '"shortcut_action" to "page:config/store-cloud"' "host supplies shortcut_action deep-link"
 has "$CFG/ConstellationWorker.kt" 'AppStoreHost.launchExtras.forEach' "notification replays the host launch extras"
 grep -q '"open_action"' "$CFG/ConstellationWorker.kt" && bad "old open_action extra still present" || ok "old dead open_action extra removed"
 

@@ -45,7 +45,7 @@ GHCR="$UPD/source/GhcrClient.kt"
 FLEET="$UPD/Fleet.kt"
 PROG="$UPD/UpdateProgress.kt"
 OVL="$UPD/UpdateOverlayFragment.kt"
-PAGE="$LIB/appstore/src/main/java/com/diegonmarcos/superapp/appstore/ConstellationFragment.kt"
+PAGE="$LIB/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StoreCloudFragment.kt"
 CWORK="$LIB/appstore/src/main/java/com/diegonmarcos/superapp/appstore/ConstellationWorker.kt"
 PREFS="$UPD/AutoUpdatePrefs.kt"
 

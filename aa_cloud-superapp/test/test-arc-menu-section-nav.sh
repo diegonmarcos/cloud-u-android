@@ -3,7 +3,7 @@
 # action-page INTO its own section instead of rendering it over Home.
 #
 # BUG: tapping Constellation in the bottom Canopus arc menu (shown only on the
-# home section) rendered ConstellationFragment straight over the home screen —
+# home section) rendered StoreCloudFragment straight over the home screen —
 # currentSection stayed "home", Back went Home, the page never landed in the
 # Configs section. Root cause: LauncherNavController.openSectionPage dispatched a
 # page's `action:` (constellation → action:constellation) and RETURNED EARLY,

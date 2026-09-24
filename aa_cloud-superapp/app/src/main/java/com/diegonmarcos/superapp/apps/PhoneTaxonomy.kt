@@ -34,7 +34,9 @@ object PhoneTaxonomy {
      *  keyword list, which is pure waste to repeat for a package we just saw.
      *  The memo is what keeps the metadata path affordable too: the
      *  PackageManager reads below happen at most once per package. */
-    private val cache = HashMap<String, String>()
+    // Concurrent since #563: Store ▸ Phone Apps classifies a few hundred
+    // packages off the main thread while the launcher reads it on the main one.
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     /** Human-readable name of a folder id — the KIND, as the user named it in
      *  build.json. Blank for an id no folder declares. */

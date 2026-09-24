@@ -32,7 +32,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Periodic constellation-fleet check. Unlike self-update (Updater), this scans
  * EVERY constellation app's GHCR image and, when any have updates available,
- * posts a single tap-to-open notification → Constellation AppStore page.
+ * posts a single tap-to-open notification → Store ▸ Cloud Constellation.
  * Install stays user-initiated (P1) — background-installing N foreign APKs is
  * intentionally not silent. Data-driven interval from the shared AU knobs.
  */
@@ -108,7 +108,7 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
             if (pass.acted > 0)
                 notify(applicationContext, NOTIF_ID,
                     "${pass.acted} constellation update${if (pass.acted == 1) "" else "s"} installed",
-                    "Tap to open the Constellation AppStore")
+                    "Tap to open the Store")
             // "Cannot install unattended" has to be visible to the USER, not
             // just to logcat — otherwise a phone with no privileged channel is
             // indistinguishable from a phone with nothing to update.
@@ -136,10 +136,13 @@ class ConstellationWorker(appCtx: Context, params: WorkerParameters) :
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL, "Constellation", NotificationManager.IMPORTANCE_DEFAULT))
+                // The id stays "constellation": a channel id is the user's saved
+                // notification settings, and renaming it would reset them. The
+                // NAME is display, and Android renames an existing channel in place.
+                NotificationChannel(CHANNEL, "Store", NotificationManager.IMPORTANCE_DEFAULT))
         // Deep-link via the launcher's shortcut_action grammar (MainActivity
         // .handleShortcutIntent → onTileClicked → dispatchHomeAction) so the tap
-        // opens the Constellation page, not just Home. The old custom extra was
+        // opens Store ▸ Cloud Constellation, not just Home. The old custom extra was
         // read by nothing → fell through to Home.
         // Target and routing come from the HOST: a library cannot name the
         // app's Activity. Null target = a notification with no tap action,

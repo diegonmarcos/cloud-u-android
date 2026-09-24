@@ -33,15 +33,25 @@ import kotlin.concurrent.thread
 import org.json.JSONObject
 
 /**
- * Constellation AppStore — Configs → Constellation. superapp is the fleet
- * manager: install / update / uninstall / open every constellation APK.
+ * Store ▸ Cloud Constellation (#563) — the page that used to BE the store
+ * ("Constellation AppStore"), now the first of Store's two subpages. superapp
+ * is the fleet manager: install / update / uninstall / open every
+ * constellation APK. Its sibling [StorePhoneFragment] covers every APK that is
+ * NOT in the fleet.
+ *
+ * IDENTITY vs TITLE. "Constellation" survives here as a display word only —
+ * the subpage's label, which build.json declares beside its id. Nothing that
+ * ROUTES to this page (class, page id, target) says constellation; the
+ * fleet's own names (constellation-fleet.json, CONSTELLATION_DATA,
+ * [ConstellationWorker]) are the fleet's identity, not the store's, and
+ * stay. test-store-identity.sh holds that line.
  *
  * Each app's status is fetched on its OWN thread (concurrently), so one slow or
  * unreachable image never blocks the others — the previous single-thread loop
  * was why Dialer showed no status and unpublished Chat looked "stuck". Fleet
  * list is data-driven from BuildConfig.CONSTELLATION_FLEET_B64.
  */
-class ConstellationFragment : Fragment() {
+class StoreCloudFragment : Fragment() {
 
     // Declared in libs:core's manifest at protectionLevel="signature" and merged
     // into every constellation app. Kept as one constant so the UI and any future
@@ -87,12 +97,28 @@ class ConstellationFragment : Fragment() {
     private fun applicationOf(id: String): String? =
         mlApplication.find(id)?.groupValues?.get(1)
 
+    // #563: every other row is grouped by the host's CENTRAL classification -
+    // the section and folder the launcher's All Apps files the same package
+    // under (cloud-drive -> "Tools · Data Apps / Storage"). Asked once, as one
+    // batch, of the host; this page holds no taxonomy of its own, because
+    // #170/#102/#405 each deleted a second copy of exactly that.
+    private val shelves by lazy {
+        AppStoreHost.classify(requireContext(),
+            fleet.filter { it.pkg.isNotEmpty() }.associate { it.pkg to it.label })
+    }
+
+    /** The heading a row is drawn under: its ML application (#405) when its
+     *  name declares one, else its classification shelf, else none. */
+    private fun headingOf(app: Fleet.App): String? =
+        applicationOf(app.id)?.replaceFirstChar { it.uppercase() } ?: shelves[app.pkg]?.heading
+
     // Tabs are a VIEW over the fleet: one per group data/regen.sh declares, in
     // its declared order, holding the members it lists and skipping a group with
     // no rows - never a hardcoded list here. Sorted at this single point rather
     // than at each call site: the rows, the detail pane and the copy dump all
-    // read these lists, so ordering here orders the whole page. Application
-    // first, then display name, so each application is one contiguous run and
+    // read these lists, so ordering here orders the whole page. Heading first
+    // (ML application, else the shelf's declared order; unshelved rows last),
+    // then display name (#334), so each heading is one contiguous run and
     // renderList can head it with a single pass and no regrouping.
     private val tabs by lazy {
         val everyRow = (fleet + references).associateBy { it.id }
@@ -101,7 +127,9 @@ class ConstellationFragment : Fragment() {
             val rows = (0 until (members?.length() ?: 0))
                 .mapNotNull { index -> members?.optString(index)?.let(everyRow::get) }
             Tab(group.optString("label", group.getString("id")), group.optString("blurb"),
-                rows.sortedWith(compareBy({ applicationOf(it.id) ?: "" }, { it.label.lowercase() })))
+                rows.sortedWith(compareBy(
+                    { applicationOf(it.id) ?: shelves[it.pkg]?.order ?: UNSHELVED },
+                    { it.label.lowercase() })))
         }.filter { it.rows.isNotEmpty() }
     }
 
@@ -164,7 +192,10 @@ class ConstellationFragment : Fragment() {
         }
         scroll.addView(col)
 
-        col.addView(title(ctx, "Constellation AppStore"))
+        // No title line: the host's toolbar names the page ("Store") and its
+        // tab strip names this subpage, both from their one declaration in
+        // build.json. A third copy here is how the old "Constellation
+        // AppStore" heading outlived the rename it described.
         col.addView(caption(ctx,
             (tabs.map { "${it.rows.size} ${it.label}" } + "superapp is the fleet manager").joinToString(" · ")))
 
@@ -345,14 +376,15 @@ class ConstellationFragment : Fragment() {
         fullStatusViews.clear(); dots.clear(); quickBtns.clear()
         val shown = list.filter { inFilter(it) }
         if (shown.isEmpty()) { listHost.addView(caption(ctx, "Nothing in this filter.")); return }
-        // One heading per run of rows sharing an application. The list is
-        // already sorted by application, so a change of application is the only
-        // place a heading can belong.
-        var application: String? = null
+        // One heading per run of rows sharing a heading. The list is already
+        // sorted by heading, so a change of heading is the only place one can
+        // belong. Unshelved rows sort last; once a list has had headings they
+        // get their own "Other" so they do not read as part of the run above.
+        var heading: String? = null
         for (app in shown) {
-            val here = applicationOf(app.id)
-            if (here != null && here != application) listHost.addView(applicationHeading(ctx, here))
-            application = here
+            val here = headingOf(app) ?: if (heading != null) OTHER else null
+            if (here != null && here != heading) listHost.addView(applicationHeading(ctx, here))
+            heading = here
             listHost.addView(fleetRow(ctx, app))
         }
         // Repaint from cache so a filtered rebuild shows real state immediately
@@ -1173,20 +1205,24 @@ class ConstellationFragment : Fragment() {
 
     // ── view helpers ─────────────────────────────────────────────────────────
     private fun dp(ctx: Context, v: Int) = (v * ctx.resources.displayMetrics.density).toInt()
-    private fun title(ctx: Context, t: String) = TextView(ctx).apply {
-        text = t; textSize = 21f; typeface = Typeface.DEFAULT_BOLD; setTextColor(0xFFFFFFFF.toInt()); setPadding(0, dp(ctx, 4), 0, dp(ctx, 2))
-    }
     private fun caption(ctx: Context, t: String) = TextView(ctx).apply {
         text = t; textSize = 12f; setTextColor(cDim); setPadding(0, 0, 0, dp(ctx, 8))
     }
 
-    /** The application an ML row serves - Voice, Text, Image, ... - drawn as a
-     *  heading over its run. The word is the row id's own domain segment, so an
-     *  ML lib in a new application gets its heading with no edit here. */
-    private fun applicationHeading(ctx: Context, application: String) = TextView(ctx).apply {
-        text = application.replaceFirstChar { it.uppercase() }
+    /** A run's heading - an ML row's application (Voice, Text, ...) or the
+     *  central classification's "Section / Folder" - drawn over its run. Both
+     *  words come off the row, so a new application or folder gets its
+     *  heading with no edit here. */
+    private fun applicationHeading(ctx: Context, heading: String) = TextView(ctx).apply {
+        text = heading
         textSize = 12f; setTextColor(cUpd)
         setPadding(0, dp(ctx, 10), 0, dp(ctx, 4))
+    }
+
+    private companion object {
+        /** Sorts after every folder order and every application name. */
+        const val UNSHELVED = "￿"
+        const val OTHER = "Other"
     }
     private fun mono(ctx: Context, t: String) = TextView(ctx).apply {
         text = t; textSize = 11f; setTextColor(cDim); typeface = Typeface.MONOSPACE

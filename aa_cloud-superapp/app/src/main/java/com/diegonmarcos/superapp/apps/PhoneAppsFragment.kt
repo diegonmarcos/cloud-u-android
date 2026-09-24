@@ -216,11 +216,17 @@ class PhoneAppsFragment : Fragment() {
          *  Shared between the standalone Phone tab ([buildCategories])
          *  and SuitePhoneAppsFragment's merged Suite→Phone page, which
          *  embeds this exact rendering inline instead of navigating to
-         *  a separate "more" screen. */
+         *  a separate "more" screen.
+         *
+         *  [only] is the mirror of [exclude] (#563): Phone ▸ Apps draws every
+         *  app EXCEPT ours, Cloud ▸ Apps draws ONLY ours, through this same
+         *  grid and the same taxonomy, so the two All Apps cannot disagree
+         *  about where an app belongs. */
         fun renderAllApps(
             ctx: Context,
             rootCol: LinearLayout,
             exclude: Set<String> = emptySet(),
+            only: Set<String>? = null,
         ) {
             // Process-level cache populated by [warmUp] at app launch. By
             // the time the user navigates here it's usually already
@@ -231,12 +237,12 @@ class PhoneAppsFragment : Fragment() {
             // identical for hot + cold.
             val folders  = sCachedFolders ?: PhoneFolders.loadFromBuildConfig().also { sCachedFolders = it }
             val all      = sCachedApps    ?: collectLaunchableAppsStatic(ctx).also { sCachedApps = it }
-            val apps     = if (exclude.isEmpty()) all else all.filter { it.packageName !in exclude }
+            val apps     = all.filter { it.packageName !in exclude && (only == null || it.packageName in only) }
             // The grouped cache is only reusable for the UNFILTERED set — and
             // must not be WRITTEN from a filtered one either, or the next
             // caller that wants every app silently gets somebody else's
-            // subset. A caller that excludes pays one regroup.
-            val grouped  = if (exclude.isEmpty()) {
+            // subset. A caller that filters pays one regroup.
+            val grouped  = if (exclude.isEmpty() && only == null) {
                 sCachedGrouped ?: PhoneAppClassifier.groupByFolder(apps, folders).also { sCachedGrouped = it }
             } else {
                 PhoneAppClassifier.groupByFolder(apps, folders)
@@ -683,7 +689,7 @@ class PhoneAppsFragment : Fragment() {
                             launcherApps.startMainActivity(comp, app.user, null, null)
                         }
                     } else {
-                        openConstellation(ctx)
+                        openStore(ctx)
                     }
                     dialog.dismiss()
                 }
@@ -720,18 +726,17 @@ class PhoneAppsFragment : Fragment() {
             return tile
         }
 
-        /** In-app open of the Constellation AppStore — where every lib's
+        /** In-app open of Store ▸ Cloud Constellation — where every lib's
          *  entry lives. Carefully NOT a launch and NOT an external intent:
          *  a library has no launcher activity to fire, and #156 forbids
          *  showing it as "opening" while actually leaving the app or doing
-         *  nothing. The Constellation page is an in-app section page whose
-         *  `action:constellation` target openSectionPage dispatches back
-         *  into the shell, exactly as if the user tapped its config tile.
+         *  nothing. `store-cloud` is a tab of Configs ▸ Store, and
+         *  openSectionPage resolves a tab id to its owner page on that tab.
          *  The Phone tab lives inside the launcher ([ShellActivity]), so its
          *  nav controller is the single in-app route to the store. */
-        private fun openConstellation(ctx: Context) {
+        private fun openStore(ctx: Context) {
             (ctx as? android.app.Activity)?.let { act ->
-                (act as? ShellActivity)?.nav?.openSectionPage("config", "constellation", null)
+                (act as? ShellActivity)?.nav?.openSectionPage("config", "store-cloud", null)
             }
         }
 

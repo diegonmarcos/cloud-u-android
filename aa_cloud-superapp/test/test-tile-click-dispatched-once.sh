@@ -178,10 +178,19 @@ else
 fi
 
 echo "== the targets that take the trip, read out of build.json =="
-# Naming `action:constellation` here would let this file go on passing after
-# the declaration that produces the round trip had moved. The set is derived:
-# a page whose action is an `action:` target and which is NOT is_action is
-# exactly what Sections.screenPageForTarget matches.
+# Naming a page here would let this file go on passing after the declaration
+# that produces the hop had moved. The set is derived: EVERY page that declares
+# an `action` is dispatched by LauncherNavController.openSectionPage through
+# host.routeTarget — the return leg T3 guards — whether or not it opens a
+# screen (Configs ▸ Update All, KDE Connect, Animations, WireGuard's
+# section:wg all walk it from the Configs grid).
+#
+# #563 retired the only SCREEN-opening action page: Configs ▸ Constellation
+# (action:constellation) became Configs ▸ Store, an ordinary tabbed page. This
+# check used to count only that screen-opening subset, so it went red with
+# "T3 is guarding a path nothing walks" — which was no longer true, because
+# the is_action pages still walk it. The subset is still printed, as
+# information, so a future screen-opening action page is visible here.
 TRIPPERS="$(python3 - "$APP/build.json" <<'PY'
 import json, sys
 d = json.load(open(sys.argv[1]))
@@ -189,15 +198,16 @@ for sec in d["ui"]["sections"]:
     for key in ("pages", "pages_hidden"):
         for pg in sec.get(key) or []:
             a = pg.get("action", "")
-            if a.startswith("action:") and not pg.get("is_action", False):
-                print("%s/%s -> %s" % (sec.get("id"), pg.get("id"), a))
+            if a:
+                kind = "fires" if pg.get("is_action", False) or not a.startswith("action:") else "opens a screen"
+                print("%s/%s -> %s (%s)" % (sec.get("id"), pg.get("id"), a, kind))
 PY
 )"
 if [ -n "$TRIPPERS" ]; then
-  ok "T5: $(printf '%s' "$TRIPPERS" | grep -c .) declared target(s) take the re-home round trip, so T3 guards something real:"
+  ok "T5: $(printf '%s' "$TRIPPERS" | grep -c .) declared page action(s) take the openSectionPage -> routeTarget hop, so T3 guards something real:"
   printf '%s\n' "$TRIPPERS" | sed 's/^/        /'
 else
-  bad "T5: no page declares a screen-opening action: target any more — T3 is guarding a path nothing walks. Either the declaration moved, or this check needs retiring on purpose."
+  bad "T5: no page declares an action any more — T3 is guarding a path nothing walks. Either the declaration moved, or this check needs retiring on purpose."
 fi
 
 echo "== the second delivery was removed, not hidden =="

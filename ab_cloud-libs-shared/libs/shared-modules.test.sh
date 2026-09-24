@@ -134,7 +134,7 @@ fi
 # The store moved out of the app into libs:appstore. Located by NAME rather
 # than a fixed path, so the next move does not silently skip this check -
 # a rule that points at a file which no longer exists passes by default.
-UI=$(command find . -name ConstellationFragment.kt -not -path "*/build/*" -not -path "./z_archive/*" 2>/dev/null | command head -1)
+UI=$(command find . -name StoreCloudFragment.kt -not -path "*/build/*" -not -path "./z_archive/*" 2>/dev/null | command head -1)
 command grep -q "\"$PERM\"" "$UI" \
     && note ok "Constellation UI uses the same permission string" \
     || note FAIL "$UI: CONSTELLATION_PERM does not match the manifest ($PERM)"

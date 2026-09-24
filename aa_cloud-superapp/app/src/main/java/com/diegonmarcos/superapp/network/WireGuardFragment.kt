@@ -410,7 +410,7 @@ class WireGuardFragment : Fragment() {
             // absent there is nothing to ask and nothing to start. Say which
             // APK and where to get it rather than failing silently.
             Toast.makeText(requireContext(),
-                "WireGuard engine not installed — install Cloud-Lib-Net-Wg from Configs → Constellation → Libs",
+                "WireGuard engine not installed — install Cloud-Lib-Net-Wg from Configs → Store → Cloud Constellation → Libs",
                 Toast.LENGTH_LONG).show()
             return
         }

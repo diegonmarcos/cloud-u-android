@@ -72,7 +72,7 @@
         "kind": "lib"
       }
     ],
-    "_doc_groups": "Constellation tabs, in the order they render (#343). ConstellationFragment draws one tab per group below that has at least one row, then appends Perms; it names no group itself. regen.sh stamps every fleet entry with a group: group_members[<fleet id>] when declared, otherwise the group whose default_for_kind matches the entry's kind. An entry whose kind has no default, a member naming an undeclared group, a member id that is not in the fleet, or an id used twice fails the regen instead of silently landing a row in the wrong tab. Tiny-ML = extreme edge and microcontroller models under about 2MB; Lite-ML = mobile and desktop CPU models, roughly 5MB-50MB. ORDER (#383): the owner asked for Lite-ML before Tiny-ML, so Lite-ML is declared first — the tab row IS this array's order. The two ids are IDENTITY: #343 created them and nothing may rename one to follow a label or a position, so the swap moves objects and touches no key.",
+    "_doc_groups": "Constellation tabs, in the order they render (#343). StoreCloudFragment draws one tab per group below that has at least one row, then appends Perms; it names no group itself. regen.sh stamps every fleet entry with a group: group_members[<fleet id>] when declared, otherwise the group whose default_for_kind matches the entry's kind. An entry whose kind has no default, a member naming an undeclared group, a member id that is not in the fleet, or an id used twice fails the regen instead of silently landing a row in the wrong tab. Tiny-ML = extreme edge and microcontroller models under about 2MB; Lite-ML = mobile and desktop CPU models, roughly 5MB-50MB. ORDER (#383): the owner asked for Lite-ML before Tiny-ML, so Lite-ML is declared first — the tab row IS this array's order. The two ids are IDENTITY: #343 created them and nothing may rename one to follow a label or a position, so the swap moves objects and touches no key.",
     "groups": [
       {
         "id": "apps",
@@ -97,8 +97,8 @@
         "blurb": "Tiny-ML: extreme edge and microcontroller models, under about 2MB. Reference rows are third-party libraries with nothing to install; Update all never fetches them."
       }
     ],
-    "_doc_ml_naming": "#405. AN ML LIB SAYS SO IN ITS OWN NAME, AND THAT NAME IS THE ONLY PLACE IT IS SAID. Every ML entry — real module or reference row — is named ml-{t|l}-{domain}-{name}: t = Tiny-ML, l = Lite-ML, domain = the application the model serves (voice, text, image, sensor, tabular). A scanned lib module carries the store's lib- row prefix in front of it, so its fleet id is lib-ml-l-voice-vosk; a catalogue row is written that way directly. regen.sh derives the tab from the name (the t-or-l segment of an id matching ^lib-ml-{t|l}- names the tab, libs-t-ml or libs-l-ml) and ConstellationFragment derives the application heading from the same name's domain segment, so the tab, the heading and the name cannot disagree — there is nothing left to keep in sync. This REPLACED group_members, a hand-written {fleet id -> tab} map: it stated three things, and all three are now either derived (the two engines name their own weight class) or unnecessary. keyboard-engines was the third. It is Cloud-Keyboard-Libs.apk (~55MB arm64), the companion APK that BUNDLES the two engines, and it was pinned into Lite-ML for that reason; the owner asked for it back in Libs, because the engines it bundles are already their own installable rows and listing the bundle beside them counted the same ML twice. It now takes the libs default for kind lib by saying nothing at all. THE WEIGHT-CLASS CRITERION is the groups[].blurb size rule, applied to measured numbers: Vosk + JNA ship ~25MB of .so per ABI (keyboard-engines/build.json::android._doc_abi_filters) and each small Vosk model is a further ~40-50MB download (build.json::voice._doc); ML Kit bundles no .so at all but downloads a model per language pair. Both clear the 2MB Tiny-ML ceiling by more than an order of magnitude, so the large gap between them does not place them in different tabs — both are l. libs:voice and libs:translate are NOT ML and keep their plain names: they are the engine INTERFACES and their build.gradle files carry no ML runtime, which is the test test-constellation-groups.sh T2/T7 actually measure. libs:keyboard is not a fleet entry.",
-    "_doc_catalogue": "REFERENCE ROWS, not buildable modules (#343): third-party ML libraries listed so the Tiny-ML and Lite-ML tabs describe what exists, with no APK, package, image or release asset. regen.sh emits them into constellation-fleet.json's top-level `catalogue` array, never into `apps`, and stamps each installable:false itself. Fleet.parse reads only `apps`, so the updater, both auto-update workers, PrivilegedGrants and the recovery screens can never be handed an entry with no package. ConstellationFragment draws them as blocked rows, which Fleet.installAllLocked drops before it checks status, so no batch fetches one or counts it as a failure.",
+    "_doc_ml_naming": "#405. AN ML LIB SAYS SO IN ITS OWN NAME, AND THAT NAME IS THE ONLY PLACE IT IS SAID. Every ML entry — real module or reference row — is named ml-{t|l}-{domain}-{name}: t = Tiny-ML, l = Lite-ML, domain = the application the model serves (voice, text, image, sensor, tabular). A scanned lib module carries the store's lib- row prefix in front of it, so its fleet id is lib-ml-l-voice-vosk; a catalogue row is written that way directly. regen.sh derives the tab from the name (the t-or-l segment of an id matching ^lib-ml-{t|l}- names the tab, libs-t-ml or libs-l-ml) and StoreCloudFragment derives the application heading from the same name's domain segment, so the tab, the heading and the name cannot disagree — there is nothing left to keep in sync. This REPLACED group_members, a hand-written {fleet id -> tab} map: it stated three things, and all three are now either derived (the two engines name their own weight class) or unnecessary. keyboard-engines was the third. It is Cloud-Keyboard-Libs.apk (~55MB arm64), the companion APK that BUNDLES the two engines, and it was pinned into Lite-ML for that reason; the owner asked for it back in Libs, because the engines it bundles are already their own installable rows and listing the bundle beside them counted the same ML twice. It now takes the libs default for kind lib by saying nothing at all. THE WEIGHT-CLASS CRITERION is the groups[].blurb size rule, applied to measured numbers: Vosk + JNA ship ~25MB of .so per ABI (keyboard-engines/build.json::android._doc_abi_filters) and each small Vosk model is a further ~40-50MB download (build.json::voice._doc); ML Kit bundles no .so at all but downloads a model per language pair. Both clear the 2MB Tiny-ML ceiling by more than an order of magnitude, so the large gap between them does not place them in different tabs — both are l. libs:voice and libs:translate are NOT ML and keep their plain names: they are the engine INTERFACES and their build.gradle files carry no ML runtime, which is the test test-constellation-groups.sh T2/T7 actually measure. libs:keyboard is not a fleet entry.",
+    "_doc_catalogue": "REFERENCE ROWS, not buildable modules (#343): third-party ML libraries listed so the Tiny-ML and Lite-ML tabs describe what exists, with no APK, package, image or release asset. regen.sh emits them into constellation-fleet.json's top-level `catalogue` array, never into `apps`, and stamps each installable:false itself. Fleet.parse reads only `apps`, so the updater, both auto-update workers, PrivilegedGrants and the recovery screens can never be handed an entry with no package. StoreCloudFragment draws them as blocked rows, which Fleet.installAllLocked drops before it checks status, so no batch fetches one or counts it as a failure.",
     "catalogue": [
       { "id": "lib-ml-t-image-ultra-light-face-detector", "label": "Ref: Ultra-Light Face Detector", "description": "Face presence and location in a camera feed at near-zero battery drain (smart doorbells)." },
       { "id": "lib-ml-t-image-mobilefacenet", "label": "Ref: MobileFaceNet", "description": "Facial feature extraction for identity verification and biometric unlock on low-power devices." },
@@ -211,7 +211,7 @@
       "_doc_quarantine": "Filename → the REASON it may fail. Enumerated and visible, NOT a blanket tolerance: a quarantined tester that starts PASSING fails the build, so an entry cannot outlive its reason. Anything not named here is fatal.",
       "quarantine": {
         "test-arc-menu-section-nav.sh": "T1 'CanopusStar no longer emits page: targets (routing changed?)' — the tester's own parenthesis concedes it cannot tell a routing refactor from a regression. Needs an owner decision on which it is before it can be either fixed or rewritten.",
-        "test-constellation-appstore.sh": "Three failures (fleet entry superapp incomplete, foreign-pkg install via UpdateInstaller, MainActivity constellation route). Unverified whether the Constellation AppStore work landed partially or the assertions ran ahead of it — these have never executed in CI, so there is no last-known-good run to diff against.",
+        "test-constellation-appstore.sh": "Failures: fleet entries superapp (and, since #561 renamed cloud-ide to cloud-myterminal, ide) missing from the tester's hand list, and foreign-pkg install via UpdateInstaller. The third, the MainActivity constellation-action route, was retired by #563: the store is the tabbed page config/store now and the tester asserts that route instead. Unverified whether the Store fleet-tab work landed partially or the assertions ran ahead of it — these have never executed in CI, so there is no last-known-good run to diff against.",
         "test-constellation-v2.sh": "T2 'manifest missing release_url/asset' — same origin as the appstore tester above and probably the same root cause in the generated fleet manifest.",
         "test-comms-tile-retarget.sh": "T5 'FloatingNav comms parent opens the Communications section (not the dead hub)' FAILS, on this container AND on the runner (run 34441579646) — it is a python3 check, so it does not depend on rg. GENUINE FINDING: the FloatingNav 'Cloud Comms' parent still targets the DECOMMISSIONED cloud-comms hub instead of section:communication. build.json's own _doc_external_apps says the hub is archived and the four forks are now standalone apps, so the nav entry contradicts the documented model and would open a dead target. This tester was previously UNRUNNABLE evidence: its T1/T2 blocks call rg, which no machine here had, so the whole file's verdict was noise and this real T5 failure sat underneath it. Fix belongs in application data, which this CI task must not touch."
       }
@@ -279,7 +279,7 @@
     },
     "libs:appstore": {
       "dir": "../ab_cloud-libs-shared/libs/appstore",
-      "_doc": "The Constellation store: fleet list, install/update actions, background pass. Split from the app so store, launcher and updater are separable - libs:updater is the engine, this is the storefront. UI, so it cannot go out-of-process like libs:net; the win is the boundary."
+      "_doc": "The Store (#563; formerly the Constellation store): fleet list, install/update actions, background pass. Split from the app so store, launcher and updater are separable - libs:updater is the engine, this is the storefront. UI, so it cannot go out-of-process like libs:net; the win is the boundary."
     },
     "libs:mail": {
       "dir": "../ab_cloud-libs-shared/libs/mail",
@@ -2862,10 +2862,10 @@
             "title": "Configs",
             "tiles": [
               {
-                "_doc": "Same action: the tile the Configs grid draws for its own constellation page. It opens the AppStore in-app rather than the config page ABOUT it, which is what the owner means by configs/Constellation.",
-                "label": "Constellation",
+                "_doc": "The Configs row's way into Configs ▸ Store (#563). Its label must equal the store page's label — test-store-identity.sh derives both and fails if they drift.",
+                "label": "Store",
                 "icon": "ic_refresh",
-                "target": "action:constellation"
+                "target": "page:config/store"
               },
               {
                 "_doc": "The Configs section itself. section: and action:section: resolve identically (see test-onehand-sector-resolution.sh), so the shorter spelling is used here for the same reason the floating nav uses it.",
@@ -4683,12 +4683,12 @@
             "hidden": true
           },
           {
-            "_doc": "Update ALL constellation apps (not just self). Opens the Constellation page + runs Fleet.installAll; the shared update overlay shows per-install progress with a Cancel button. MainActivity.dispatchHomeAction('update_all').",
+            "_doc": "Update ALL constellation apps (not just self). Opens Store ▸ Cloud Constellation (page:config/store-cloud) + runs Fleet.installAll; the shared update overlay shows per-install progress with a Cancel button. MainActivity.dispatchHomeAction('update_all').",
             "id": "update",
             "label": "Update All",
             "icon": "ic_refresh",
             "action": "action:update_all",
-            "_doc_is_action": "Fires and returns — no page behind it. Puts this entry under Actions in the Configs grid and on the ArcMenu's inner arc, instead of guessing from the action: prefix (import/keyboard/constellation carry one too but DO open a page).",
+            "_doc_is_action": "Fires and returns — no page behind it. Puts this entry under Actions in the Configs grid and on the ArcMenu's inner arc, instead of guessing from the action: prefix (import/keyboard carry one too but DO open a page).",
             "is_action": true
           },
           {
@@ -4707,12 +4707,30 @@
             "is_action": true
           },
           {
-            "_doc": "Constellation AppStore — superapp is the fleet manager: install/update/uninstall/open every constellation APK, full per-app data (installed version+sha, remote GHCR digest, status). Fleet list is data-driven from data/constellation-fleet.json (auto-scanned from each app's build.json by data/regen.sh) → BuildConfig.CONSTELLATION_FLEET_B64. Opens ConstellationFragment via MainActivity.dispatchHomeAction.",
-            "id": "constellation",
-            "label": "Constellation",
+            "_doc": "#563 THE STORE — the one declaration of its identity (id `store`) and its display title (label). It was 'Constellation', an action page (action:constellation) with its own branch in ShellActivity; it is now an ordinary tabbed page, so every way in is a page: target resolved by the same strip Panel/Launcher/AI use. Tab 1 is the fleet (every constellation APK: install/update/uninstall/open, per-app versions and digests); tab 2 is every APK that is NOT in the fleet. Both tabs group by the central classification (ui.phone_folders + ui.phone_sections, through PhoneTaxonomy) — the store holds no taxonomy of its own. test-store-identity.sh guards that nothing routes here by the old name and that every tile pointing here carries this label.",
+            "_doc_tabs_order": "Cloud first: the fleet is what the store exists to manage, and it is the tab the Update-All action, the update notification and a lib tile all land on (page:config/store-cloud).",
+            "id": "store",
+            "label": "Store",
             "icon": "ic_refresh",
-            "action": "action:constellation",
+            "tabs": [
+              "store-cloud",
+              "store-phone"
+            ],
             "row_break": true
+          },
+          {
+            "_doc": "Store tab 1 — the fleet store that used to be the whole page (libs:appstore StoreCloudFragment). The LABEL keeps the word Constellation deliberately; the id does not, because the id is identity and the label is only display. hidden = reached through the Store strip, not as its own Configs tile.",
+            "id": "store-cloud",
+            "label": "Cloud Constellation",
+            "icon": "ic_refresh",
+            "hidden": true
+          },
+          {
+            "_doc": "Store tab 2 — every launchable APK that is NOT a fleet member (libs:appstore StorePhoneFragment). No privileged channel is paired (#225/#280/#281), so the verbs are Open and App info only; install/uninstall of a package this app does not own needs adb or Shizuku, and the page says so rather than offering a button that fails.",
+            "id": "store-phone",
+            "label": "Phone Apps",
+            "icon": "ic_p_dialer",
+            "hidden": true
           },
           {
             "_doc": "Panel is the page you open to FLIP something, not to configure it — the three things the owner touches many times a day, sitting behind one strip: the device/fleet switches, the notification-center/badge declaration, and the ntfy notification centre. It sits immediately before About at the owner's request, so the page touched many times a day is the one nearest the thumb on the Canopus arc; every other entry here is opened to change a setting once. `tabs` lists page ids of this same section in strip order, so it wears the SectionTabsFragment strip Launcher established in 07964787e — no second tab widget in this app.",
@@ -7322,7 +7340,7 @@
         },
         {
           "id": "fleet_check",
-          "label": "Constellation update check",
+          "label": "Store update check",
           "subtitle": "Periodic GHCR check for sibling-app updates (off = manual only, saves network).",
           "default": true,
           "group": "connectivity",
@@ -8886,10 +8904,10 @@
         "target": "page:phone/apps"
       },
       {
-        "id": "constellation",
-        "label": "Constellation",
+        "id": "store",
+        "label": "Store",
         "icon": "ic_refresh",
-        "target": "action:constellation"
+        "target": "page:config/store"
       },
       {
         "id": "recent-apps",
