@@ -86,7 +86,7 @@ for profile in ui["profiles"]:
         "config_text": "# fixture derived from build.json by the mutation test",
         "parsed": {
             "interface": {
-                "address": split_list(ui["interface_address"]),
+                "address": split_list(profile["address"]),
                 "dns": split_list(profile["dns"]),
                 "mtu": int(ui["interface_mtu"]),
                 "private_key": None,
@@ -183,6 +183,16 @@ elif action == "flip_endpoint":
         '"id": "v4-split"',
         '"endpoint": "35.226.147.64:443"',
         '              "endpoint": "35.226.147.64:51820",')
+elif action == "flip_address":
+    # #522: the v6 profiles' Address in the v4 profiles' order, which is what
+    # the old shared interface_address exported. Same set, different FIRST
+    # IPv4 — and the first IPv4 is the source Android sends every v4 packet
+    # from, so this is the whole defect, not a cosmetic reorder.
+    replace_line_after(
+        '"id": "v6-split"',
+        '"address": ',
+        '          "address": "10.0.0.9/24, 10.1.0.9/24, fd0c:1d00::9/64, fd0c:1d01::9/64"',
+        limit=80)
 elif action == "flip_dns":
     replace_line_after(
         '"id": "v6-split"',
@@ -364,6 +374,18 @@ mutate flip_dns "$SB/aa_cloud-superapp/build.json"
 expect_clean "a dns drift is outside the peer-set check's scope" "$SB" "$DIST_FIXTURE" check
 expect_caught "but the derivation pins dns too" \
     '"dns": "fd0c:1d01::1, 10.1.0.1"' "$SB" "$DIST_FIXTURE" derive --check
+
+# ── #522: the per-profile Address order is pinned by the derivation ─
+SB="$(sandbox address-drift)"
+mutate flip_address "$SB/aa_cloud-superapp/build.json"
+expect_caught "a v6 profile exporting the v4 profiles' Address order is caught" \
+    '"address": "10.0.0.9/24, 10.1.0.9/24' "$SB" "$DIST_FIXTURE" derive --check
+if out="$(run_guard "$SB" "$DIST_FIXTURE" derive --write)"; then
+    expect_clean "and derive --write restores that profile's own Address" "$SB" "$DIST_FIXTURE" derive --check
+else
+    fail "derive --write could not heal the Address drift. Output:"
+    printf '%s\n' "$out" | sed 's/^/    /'
+fi
 
 # ── the deriver heals: derive --write makes the drifted tree green ─
 SB="$(sandbox heal)"

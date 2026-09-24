@@ -35,8 +35,8 @@ about what a peer is:
                             ticket's guard, verbatim.
   derive --check Fail when the working tree is not exactly what the deriver
                             would produce — a strictly stronger statement
-                            than `check`: it also pins interface_address,
-                            interface_mtu, per-profile dns and
+                            than `check`: it also pins per-profile address
+                            and dns, the shared interface_mtu, and
                             persistent_keepalive. This is how CI enforces
                             the derivation without writing.
   derive --write Rewrite aa_cloud-superapp/build.json's ui.wireguard_profiles
@@ -251,10 +251,19 @@ def derive_ui_value(ui, wireguard):
     """The ui.wireguard_profiles VALUE the dist implies. Local annotations —
     profile label/comment, peer name/mesh/comment — are preserved verbatim;
     every operator-controlled DATA field comes from the dist: per-peer
-    endpoint + allowed_ips, per-profile dns, and the shared interface
-    address/mtu. A profile or peer without a dist counterpart is an error
-    (see the module docstring on why)."""
+    endpoint + allowed_ips, per-profile address and dns, and the shared
+    interface mtu. A profile or peer without a dist counterpart is an error
+    (see the module docstring on why).
+
+    Address is PER PROFILE (#522). It used to be one shared interface_address
+    taken from whichever profile came first, and that silently discarded the
+    v6 profiles' own order. The order is load-bearing: Android sources every
+    IPv4 packet from the FIRST IPv4 Address, and a hub drops a source it does
+    not allow. The APK exported v4-split's order into the v6 profiles, so they
+    sourced from the wg0 identity and the wg-public hub dropped all their
+    IPv4."""
     out = dict(ui)
+    out.pop("interface_address", None)
     shared_interface = None
     for profile in out.get("profiles", []) or []:
         profile_id = profile.get("id")
@@ -289,14 +298,16 @@ def derive_ui_value(ui, wireguard):
                     "profile %s peer %s exists in the published dist but NOT in build.json — "
                     "add the peer by hand once (name/mesh/comment are local annotations), "
                     "then re-run" % (profile_id, extra_key))
+        if "address" not in interface:
+            raise DeriveError(
+                "profile %s: the published dist has no interface address — refusing "
+                "to export a profile without its own Address line" % profile_id)
+        profile["address"] = ", ".join(
+            str(token).strip() for token in interface["address"] if str(token).strip())
         if "dns" in profile and "dns" in interface:
             profile["dns"] = ", ".join(
                 str(token).strip() for token in interface.get("dns", []) if str(token).strip())
     if shared_interface is not None:
-        if "interface_address" in out and "address" in shared_interface:
-            out["interface_address"] = ", ".join(
-                str(token).strip() for token in shared_interface.get("address", [])
-                if str(token).strip())
         if "interface_mtu" in out and "mtu" in shared_interface:
             mtu = shared_interface["mtu"]
             out["interface_mtu"] = mtu.strip() if isinstance(mtu, str) else str(mtu)

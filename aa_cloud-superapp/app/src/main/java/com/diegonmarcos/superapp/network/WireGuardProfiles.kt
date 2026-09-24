@@ -43,6 +43,10 @@ object WireGuardProfiles {
         val id: String,
         val label: String,
         val comment: String,
+        /** This profile's own Address line. Per profile, not shared: Android
+         *  sources every IPv4 packet from the FIRST IPv4 address, so the order
+         *  decides which hub accepts it (#522). */
+        val address: String,
         val dns: String,
         val peers: List<Peer>,
     ) {
@@ -68,7 +72,6 @@ object WireGuardProfiles {
         }.getOrDefault(JSONObject())
     }
 
-    val interfaceAddress: String get() = root.optString("interface_address")
     val interfaceMtu: String get() = root.optString("interface_mtu")
 
     /** The four profiles, in build.json order. Empty if the blob is missing or
@@ -83,6 +86,7 @@ object WireGuardProfiles {
                 id = o.optString("id"),
                 label = o.optString("label"),
                 comment = o.optString("comment"),
+                address = o.optString("address"),
                 dns = o.optString("dns"),
                 peers = (0 until (peers?.length() ?: 0)).mapNotNull { j ->
                     val p = peers?.optJSONObject(j) ?: return@mapNotNull null
@@ -130,7 +134,7 @@ object WireGuardProfiles {
         appendLine("# and a placeholder that parsed would build a tunnel that silently never")
         appendLine("# handshakes.")
         appendLine("PrivateKey = ")
-        appendLine("Address = $interfaceAddress")
+        appendLine("Address = ${profile.address}")
         if (interfaceMtu.isNotBlank()) appendLine("MTU = $interfaceMtu")
         appendLine("DNS = ${profile.dns}")
         profile.peers.forEach { peer ->

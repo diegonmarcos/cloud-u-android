@@ -298,6 +298,10 @@ has "build.json" '"wireguard_profiles"'                  "build.json declares th
 hasnt_code "$WG_PROFILES" "35.226.147.64"  "no hub endpoint literal in the renderer"
 hasnt_code "$WG_PROFILES" "129.151.228.66" "no second hub endpoint literal"
 hasnt_code "$WG_PROFILES" "10.0.0.9"       "no address literal in the renderer"
+# #522: each profile exports ITS OWN Address. A shared one exported v4-split's
+# order into the v6 profiles, whose IPv4 then left from the wrong mesh.
+has "$WG_PROFILES" 'Address = ${profile.address}' "the Address line is the profile's own"
+hasnt_code "$WG_PROFILES" "interface_address"      "no shared Address to fall back to"
 # Render-only: it must never write the tunnel's stored settings, or it becomes
 # a second writer racing applyCloudPreset().
 hasnt_code "$WG_PROFILES" "WireGuardPrefs" "the exporter never writes tunnel prefs"
@@ -327,10 +331,13 @@ profiles = blk["profiles"]
 chk(len(profiles) == 4, "exactly 4 profiles (one merged tunnel each, not 8)")
 chk({p["id"] for p in profiles} == {"v4-split", "v4-full", "v6-split", "v6-full"},
     "the four ids are v{4,6}-{split,full}")
-# One shared Address line, carrying BOTH v6 identities.
-addr = blk["interface_address"]
-chk("fd0c:1d00::9/64" in addr, "Address carries the wg0 identity fd0c:1d00::9")
-chk("fd0c:1d01::9/64" in addr, "Address carries the wg-public identity fd0c:1d01::9")
+# #522: Address is PER PROFILE (its IPv4 order is the source Android uses), and
+# every one carries BOTH v6 identities.
+chk("interface_address" not in blk, "no shared interface_address overrides the per-profile order")
+for p in profiles:
+    addr = p.get("address", "")
+    chk("fd0c:1d00::9/64" in addr, f"{p['id']}: Address carries the wg0 identity fd0c:1d00::9")
+    chk("fd0c:1d01::9/64" in addr, f"{p['id']}: Address carries the wg-public identity fd0c:1d01::9")
 chk(blk["interface_mtu"] == "1380", "MTU is 1380, not the in-app form's 1280")
 
 for p in profiles:

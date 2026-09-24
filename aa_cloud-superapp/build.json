@@ -6011,7 +6011,6 @@
     },
     "_doc_wireguard_profiles": "The four EXPORTABLE tunnel profiles, mirrored from vault/A0_keys/providers/wireguard/termux-public/config-v{4,6}-{split,full}. SEPARATE FROM wireguard_default ON PURPOSE: wireguard_default seeds the in-app form and is what matchesCloudPreset() compares against, so folding these values into it would make every existing install read as drifted and prompt to replace a config the user may have hand-built. Nothing here is ever written to WireGuardPrefs; it is render-only, consumed by WireGuardProfiles.kt to emit wg-quick text for export. The phone is a SINGLE-TUNNEL mesh spoke (Android allows one active WG profile), so each profile is ONE merged config carrying BOTH meshes as two peers - there are 4 files, not 8. Both v6 prefixes appear on every Address line and they are NOT interchangeable: fd0c:1d00::9 is the wg0 identity and fd0c:1d01::9 is the wg-public identity. Sending fd0c:1d00:: traffic to oci-analytics is cryptokey-dropped there (its allowed source for this phone is fd0c:1d01::9), which is the 14-30s happy-eyeballs stall. MTU is 1380 and the gcp-proxy endpoint is udp/443 (redirected to 51820) because port filtering eats 51820; DNS is mesh-only. No private key is present or permitted here - the export omits it by design.",
     "wireguard_profiles": {
-      "interface_address": "10.0.0.9/24, 10.1.0.9/24, fd0c:1d00::9/64, fd0c:1d01::9/64",
       "interface_mtu": "1380",
       "profiles": [
         {
@@ -6038,7 +6037,8 @@
               "allowed_ips": "10.1.0.0/24, fd0c:1d01::/64, 2603:c026:c104:8f00:ff9b::/96",
               "persistent_keepalive": "25"
             }
-          ]
+          ],
+          "address": "10.0.0.9/24, 10.1.0.9/24, fd0c:1d00::9/64, fd0c:1d01::9/64"
         },
         {
           "id": "v4-full",
@@ -6064,7 +6064,8 @@
               "allowed_ips": "10.1.0.0/24, fd0c:1d01::/64, ::/0",
               "persistent_keepalive": "25"
             }
-          ]
+          ],
+          "address": "10.0.0.9/24, 10.1.0.9/24, fd0c:1d00::9/64, fd0c:1d01::9/64"
         },
         {
           "id": "v6-split",
@@ -6090,7 +6091,8 @@
               "allowed_ips": "10.1.0.0/24, fd0c:1d01::/64, 2603:c026:c104:8f00:ff9b::/96",
               "persistent_keepalive": "25"
             }
-          ]
+          ],
+          "address": "10.1.0.9/24, 10.0.0.9/24, fd0c:1d01::9/64, fd0c:1d00::9/64"
         },
         {
           "id": "v6-full",
@@ -6116,7 +6118,8 @@
               "allowed_ips": "0.0.0.0/0, fd0c:1d01::/64, 2603:c026:c104:8f00:ff9b::/96",
               "persistent_keepalive": "25"
             }
-          ]
+          ],
+          "address": "10.1.0.9/24, 10.0.0.9/24, fd0c:1d01::9/64, fd0c:1d00::9/64"
         }
       ]
     },
