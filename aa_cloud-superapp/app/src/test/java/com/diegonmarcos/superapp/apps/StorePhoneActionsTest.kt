@@ -138,9 +138,14 @@ class StorePhoneActionsTest {
 
     @Test
     fun `an unpublished fleet app shows Update disabled with a reason`() {
-        val app = fleet.firstOrNull { it.blocked } ?: return  // fleet has none unpublished today
+        // The baked fleet has no unpublished entry today, so a real one is
+        // taken and marked unpublished — waiting for the data to carry one
+        // would leave this test passing on an early return.
+        val app = fleet.first().copy(blocked = true)
         install(app.pkg, installer = null)
-        assertNotNull(actions(app.pkg).of(Kind.UPDATE)!!.disabledReason)
+        val update = PhoneAppActions.of(ctx, app.pkg, app, false, sources).of(Kind.UPDATE)
+        assertNotNull("an unpublished fleet app lost its Update button", update)
+        assertNotNull("an unpublished fleet app's Update must say why it cannot", update!!.disabledReason)
     }
 
     @Test
