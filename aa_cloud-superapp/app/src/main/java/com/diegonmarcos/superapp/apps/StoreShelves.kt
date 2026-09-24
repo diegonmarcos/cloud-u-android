@@ -33,10 +33,10 @@ object StoreShelves {
             val folder = folders[PhoneTaxonomy.folderIdOf(pkg, label, ctx)] ?: continue
             val section = sections.firstOrNull { folder.label.startsWith(it.prefix) } ?: continue
             out[pkg] = AppStoreHost.Shelf(
-                heading = folder.label, // MUTATION #563: section dropped
+                heading = "${section.title} / ${folder.label.removePrefix(section.prefix)}",
                 // The folder's declared order, whose hundred-block IS its
                 // section's position (#312), so shelves sort in All Apps order.
-                order = folder.id, // MUTATION #563: declared order ignored
+                order = folder.order,
             )
         }
         return out
