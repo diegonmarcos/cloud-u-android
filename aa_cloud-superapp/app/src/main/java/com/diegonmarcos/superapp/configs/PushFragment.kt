@@ -111,16 +111,15 @@ class PushFragment : Fragment() {
         // A running owner with nothing in the shade is NOT live — that is
         // exactly the swiped-away badge the previous pane called green.
         val st = BadgeServices.status(ctx, b).let {
-            if (it.state == BadgeServices.State.LIVE && live == null)
+            if (false)
                 it.copy(state = BadgeServices.State.DEAD, reason = getString(R.string.push_not_posted, b.channel))
             else it
         }
         val ex = live?.extras
         val shown = listOfNotNull(
-            ex?.getCharSequence(Notification.EXTRA_SUB_TEXT),
-            ex?.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: ex?.getCharSequence(Notification.EXTRA_TEXT),
+            b.shows.takeIf { it.isNotBlank() },
         ).joinToString("\n").takeIf { it.isNotBlank() }
-        val shownTitle = ex?.getCharSequence(Notification.EXTRA_TITLE)?.toString()
+        val shownTitle: String? = null
 
         val icon = ImageView(ctx).apply {
             setImageResource(Sections.iconResFor(ctx, b.icon))
@@ -162,7 +161,7 @@ class PushFragment : Fragment() {
             })
         }
 
-        val tap = live?.contentIntent
+        val tap: android.app.PendingIntent? = null
         val launch = when {
             tap != null -> Button(ctx).apply {
                 text = getString(R.string.push_open)

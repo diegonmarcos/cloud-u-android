@@ -162,7 +162,7 @@ data class OneHandConfig(
             return base.copy(handles = base.handles.map { h ->
                 val merged = LinkedHashMap<String, GestureAction>()
                 for (slot in slotsFor(h.edge)) {
-                    OneHandPrefs.actionFor(ctx, h.id, slot.key, h.gestures[slot.key])
+                    h.gestures[slot.key]
                         ?.let { merged[slot.key] = base.retiredTargets[it.serialize()] ?: it }
                 }
                 h.copy(gestures = merged)
