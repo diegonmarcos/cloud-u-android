@@ -90,7 +90,6 @@ jobs:
         run: |
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh shell "$WORK_DIR"
           sh 1_cicd/dist/scripts/cloud-android-test-engine.sh lint  "$WORK_DIR"
-          sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit  "$WORK_DIR"
 
       # Publish-if-changed gate. Android builds are not byte-reproducible, so a
       # rebuild of unchanged source published different bytes, a different
@@ -147,6 +146,28 @@ jobs:
             | sudo tar -C /usr/local/bin -xzf - oras
           curl -fsSL https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 \
             | sudo tee /usr/local/bin/sops >/dev/null && sudo chmod +x /usr/local/bin/sops
+
+      # The JVM unit test source set, which MEASURES cloud-me's bottom-nav island
+      # (MeBottomNavTest on the real activity_main). NO EMULATOR: src/test/ runs on the
+      # runner's own JVM.
+      #
+      # PLACED HERE, after the vault checkout and sops, and not up with the shell testers
+      # (#531: run 5fda75555 died there on "nix not on PATH" before one test compiled). It
+      # shells out through the app's build.sh, so it needs the JDK/SDK/Gradle the shell step
+      # does not provide, and app/build.gradle's signingConfig throws during Gradle's
+      # CONFIGURATION phase without the shared key — so the key has to be resolvable before
+      # the suite can be enumerated. Same placement as ship-cloud-browser.yml.
+      #
+      # Gated on the publish gate, unlike the shell testers: when the gate has already proved
+      # the source did not move, recompiling buys nothing.
+      - name: JVM unit tests (fatal on failure)
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: ${{ github.workspace }}
+        env:
+          BYPASS_NIX: "1"
+          VAULT_DIR: ${{ github.workspace }}/.vault
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: sh 1_cicd/dist/scripts/cloud-android-test-engine.sh unit "$WORK_DIR"
 
       - name: Determine variant
         if: steps.gate.outputs.skip != 'true'
