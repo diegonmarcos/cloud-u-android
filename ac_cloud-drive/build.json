@@ -17,7 +17,7 @@
     "abi_filters": [
       "arm64-v8a"
     ],
-    "_doc_packaging_excludes": "Duplicate META-INF files that must not reach the APK. #567 push 2 links libs:git-sync, which pulls JGit, jsch and their notices; two jars carrying the same META-INF/LICENSE fail mergeDebugJavaResource for the WHOLE app. Same block, same reason and same list as ab_cloud-libs-shared/lib-apks/build.json, which packages these very modules 36 times over. Data, not gradle, so the next collision is a one-line edit here. Never add *.kotlin_module: dropping those breaks Kotlin reflection at runtime, silently. META-INF/versions/9/OSGI-INF/MANIFEST.MF: the mwiede jsch fork (libs:git-sync's SSH transport) and jspecify both ship an OSGi manifest under the multi-release tree — measured on run 36068993994, 2026-09-24.",
+    "_doc_packaging_excludes": "Duplicate META-INF files that must not reach the APK. #567 push 2 links libs:git-sync, which pulls JGit, jsch and their notices; two jars carrying the same META-INF/LICENSE fail mergeDebugJavaResource for the WHOLE app. Same block, same reason and same list as ab_cloud-libs-shared/lib-apks/build.json, which packages these very modules 36 times over. Data, not gradle, so the next collision is a one-line edit here. Never add *.kotlin_module: dropping those breaks Kotlin reflection at runtime, silently. META-INF/versions/*/OSGI-INF/MANIFEST.MF (a glob, every multi-release level): the mwiede jsch fork ships an OSGi manifest under versions/9 AND versions/15, and so do jspecify (9) and bouncycastle via sshj (15) — measured on runs 36068993994 and 36074399160, 2026-09-24. One level at a time was a chase.",
     "packaging_excludes": [
       "META-INF/NOTICE",
       "META-INF/NOTICE.txt",
@@ -29,7 +29,7 @@
       "META-INF/AL2.0",
       "META-INF/LGPL2.1",
       "META-INF/INDEX.LIST",
-      "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+      "META-INF/versions/*/OSGI-INF/MANIFEST.MF"
     ]
   },
   "signing": {

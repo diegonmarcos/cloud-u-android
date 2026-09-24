@@ -31,7 +31,7 @@
     "version_name": "1.0",
     "min_sdk": 26,
     "target_sdk": 35,
-    "_doc_packaging_excludes": "Duplicate files that must not reach the APK. This repo packages 29 unrelated dependency sets through ONE wrapper module, so license/notice collisions are the normal case rather than an exception: libs:wallet pulls com.sun.mail:android-mail AND android-activation, which both carry META-INF/NOTICE.md, and mergeWalletDebugJavaResource failed the WHOLE build - one flavor taking all 29 APKs down with it. ac_cloud-wallet has carried the same block for its own APK all along. Data, not gradle, so the next collision is a one-line edit here. Never add *.kotlin_module: dropping those breaks Kotlin reflection at runtime, silently. META-INF/versions/9/OSGI-INF/MANIFEST.MF: the mwiede jsch fork (libs:git-sync's SSH transport) and jspecify both ship an OSGi manifest under the multi-release tree — measured on run 36068993994, 2026-09-24.",
+    "_doc_packaging_excludes": "Duplicate files that must not reach the APK. This repo packages 29 unrelated dependency sets through ONE wrapper module, so license/notice collisions are the normal case rather than an exception: libs:wallet pulls com.sun.mail:android-mail AND android-activation, which both carry META-INF/NOTICE.md, and mergeWalletDebugJavaResource failed the WHOLE build - one flavor taking all 29 APKs down with it. ac_cloud-wallet has carried the same block for its own APK all along. Data, not gradle, so the next collision is a one-line edit here. Never add *.kotlin_module: dropping those breaks Kotlin reflection at runtime, silently. META-INF/versions/*/OSGI-INF/MANIFEST.MF (a glob, every multi-release level): the mwiede jsch fork ships an OSGi manifest under versions/9 AND versions/15, and so do jspecify (9) and bouncycastle via sshj (15) — measured on runs 36068993994 and 36074399160, 2026-09-24. One level at a time was a chase.",
     "packaging_excludes": [
       "META-INF/NOTICE",
       "META-INF/NOTICE.txt",
@@ -43,7 +43,7 @@
       "META-INF/AL2.0",
       "META-INF/LGPL2.1",
       "META-INF/INDEX.LIST",
-      "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+      "META-INF/versions/*/OSGI-INF/MANIFEST.MF"
     ]
   },
   "toolchain": {
