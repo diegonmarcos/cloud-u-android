@@ -1,10 +1,12 @@
 package com.diegonmarcos.superapp.configs
 
+import android.app.Notification
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -95,13 +97,30 @@ class PushFragment : Fragment() {
     // ───────────────────────── Section 1: the badges ─────────────────────
 
     /**
-     * One badge, drawn the way the shade draws it: icon, title, the line of
-     * state it is currently showing — and, when it is not in the shade at all,
-     * the reason in place of that line.
+     * One badge, drawn from the notification ACTUALLY POSTED for it
+     * ([BadgeServices.live]) — its sub-text, title and text as the shade shows
+     * them, and an Open button that fires that notification's own tap. #535:
+     * this used to print the declaration's `shows` sentence, a description of
+     * the badge, which read the same whether the badge was in the shade or had
+     * been swiped away an hour ago. When nothing is posted, the state line
+     * says why, and a dead owner gets a Start button.
      */
     private fun badgeBox(ctx: Context, b: BadgeDeclaration.Badge): View {
         val p = LauncherPalette.of(ctx)
-        val st = BadgeServices.status(ctx, b)
+        val live = BadgeServices.live(ctx, b)
+        // A running owner with nothing in the shade is NOT live — that is
+        // exactly the swiped-away badge the previous pane called green.
+        val st = BadgeServices.status(ctx, b).let {
+            if (it.state == BadgeServices.State.LIVE && live == null)
+                it.copy(state = BadgeServices.State.DEAD, reason = getString(R.string.push_not_posted, b.channel))
+            else it
+        }
+        val ex = live?.extras
+        val shown = listOfNotNull(
+            ex?.getCharSequence(Notification.EXTRA_SUB_TEXT),
+            ex?.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: ex?.getCharSequence(Notification.EXTRA_TEXT),
+        ).joinToString("\n").takeIf { it.isNotBlank() }
+        val shownTitle = ex?.getCharSequence(Notification.EXTRA_TITLE)?.toString()
 
         val icon = ImageView(ctx).apply {
             setImageResource(Sections.iconResFor(ctx, b.icon))
@@ -131,16 +150,29 @@ class PushFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             addView(TextView(ctx).apply {
-                text = b.label; textSize = 16f; setTextColor(p.textPrimary)
+                text = shownTitle ?: b.label; textSize = 16f; setTextColor(p.textPrimary)
+            })
+            if (shown != null) addView(TextView(ctx).apply {
+                text = shown; textSize = 12f; setTextColor(p.textSecondary)
             })
             addView(TextView(ctx).apply {
                 text = "$stateLabel · ${st.reason}"
                 textSize = 12f
                 setTextColor(stateColour)
             })
-            if (b.shows.isNotBlank()) addView(TextView(ctx).apply {
-                text = b.shows; textSize = 12f; setTextColor(p.textSecondary)
-            })
+        }
+
+        val tap = live?.contentIntent
+        val launch = when {
+            tap != null -> Button(ctx).apply {
+                text = getString(R.string.push_open)
+                setOnClickListener { runCatching { tap.send() } }
+            }
+            st.state == BadgeServices.State.DEAD -> Button(ctx).apply {
+                text = getString(R.string.push_start)
+                setOnClickListener { applyLive(ctx) }
+            }
+            else -> null
         }
 
         // ONE announcement per box — the icon and the three lines are one fact
@@ -153,9 +185,10 @@ class PushFragment : Fragment() {
             orientation = LinearLayout.HORIZONTAL
             setPadding(0, dp(10), 0, dp(10))
             isFocusable = true
-            contentDescription = "${b.label}. $stateLabel. ${st.reason} ${b.shows}"
+            contentDescription = "${shownTitle ?: b.label}. ${shown.orEmpty()} $stateLabel. ${st.reason}"
             addView(icon)
             addView(texts)
+            launch?.let { addView(it) }
         }
     }
 

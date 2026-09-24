@@ -138,6 +138,7 @@ class HealthBadgeService : Service() {
             .setSubText("Cloud SA - Health")
             .setOnlyAlertOnce(true)
             .setOngoing(true)
+            .setDeleteIntent(BadgeServices.repostOnDismiss(this, NOTIF_ID))
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE) // health data stays off the lockscreen
             .apply {
                 // The WHY, where the owner can actually read it, instead of a

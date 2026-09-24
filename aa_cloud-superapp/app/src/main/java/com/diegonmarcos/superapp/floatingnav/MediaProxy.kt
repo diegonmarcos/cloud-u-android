@@ -53,6 +53,9 @@ class MediaProxy(private val ctx: Context) {
 
     /** Forward a `media:*` action to the active session's transport. */
     fun transport(target: String) {
+        // #535: the badge was swiped away. Forget what was posted so the poll
+        // loop's next refresh() re-posts instead of deduping against it.
+        if (target == REPOST) { lastKey = null; return }
         val c = activeController() ?: return
         when (target) {
             "media:playpause" ->
@@ -113,6 +116,7 @@ class MediaProxy(private val ctx: Context) {
             .setOnlyAlertOnce(true)
             // #515: declared, not derived from `playing`. See [persistent].
             .setOngoing(persistent() || playing)
+            .apply { if (persistent() || playing) setDeleteIntent(pi(REPOST)) }
             .setGroup("nc_media") // own group → not auto-bundled with the others
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         if (art != null) b.setLargeIcon(art)
@@ -152,6 +156,7 @@ class MediaProxy(private val ctx: Context) {
             .setSubText("Cloud SA - Media")
             .setOnlyAlertOnce(true)
             .setOngoing(true)
+            .setDeleteIntent(pi(REPOST))
             .setGroup("nc_media")
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         // Play is the only transport that means anything with no session; the
@@ -184,6 +189,7 @@ class MediaProxy(private val ctx: Context) {
     companion object {
         const val NOTIF_MEDIA = 0xF3
         private const val MEDIA_CHANNEL_ID = "floating_nav_media"
+        private const val REPOST = "media:repost"
 
         /** This badge's id in build.json::ui.notification_center.producers.
          *  The declaration is the contract; this is the key into it. */

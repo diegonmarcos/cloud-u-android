@@ -176,6 +176,7 @@ class MarketsBadgeService : Service() {
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setOngoing(true)
+            .setDeleteIntent(BadgeServices.repostOnDismiss(this, NOTIF_ID))
             .setGroup("nc_markets")
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)

@@ -7954,7 +7954,7 @@
           "subtitle": "The persistent 'Cloud SA - Quick Actions' badge the floating overlay pins while it is running.",
           "icon": "ic_settings",
           "surface": "system_notification",
-          "channel": "floating_nav_actions",
+          "channel": "floating_nav",
           "owner": "floatingnav/FloatingNavService.kt",
           "shows_badge": false,
           "enabled": true,

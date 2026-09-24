@@ -1,6 +1,10 @@
 package com.diegonmarcos.superapp.notificationcenter
 
 import android.app.ActivityManager
+import android.app.Notification
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
@@ -89,7 +93,42 @@ object BadgeServices {
         false
     }
 
+    /**
+     * #535 — the delete intent every persistent badge carries. Since Android 14
+     * an ongoing (even foreground-service) notification is swipeable, and a
+     * badge with no delete intent is then simply gone while its service keeps
+     * running and the Push pane keeps saying LIVE. Re-starting the owner lands
+     * in its onStartCommand, which re-posts. KDE and FloatingNav already did
+     * this by hand; Health, Weather and Markets did not.
+     */
+    fun repostOnDismiss(svc: Service, requestCode: Int): PendingIntent =
+        PendingIntent.getService(
+            svc, requestCode, Intent(svc, svc.javaClass),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+
     // ── What the Push pane shows ─────────────────────────────────────────
+
+    /**
+     * #535 — the badge AS IT IS IN THE SHADE: this app's own posted
+     * notification on the badge's declared `channel`, or null when nothing is
+     * posted there. The pane renders this instead of the declaration's `shows`
+     * sentence, which described a badge rather than showing one, and it is the
+     * only way to see a badge that was swiped away while its service ran on.
+     *
+     * The channel is the join key, so it has to be the channel the owner really
+     * posts on — Quick Actions declared `floating_nav_actions` while
+     * FloatingNavService posts on `floating_nav`, and nothing noticed because
+     * nothing read it. A group (Infos posts a summary plus children on one
+     * channel) answers with its summary.
+     */
+    fun live(ctx: Context, b: Badge): Notification? = runCatching {
+        if (b.channel.isBlank()) return null
+        val mine = (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+            .activeNotifications.map { it.notification }.filter { it.channelId == b.channel }
+        mine.firstOrNull { it.flags and Notification.FLAG_GROUP_SUMMARY != 0 } ?: mine.firstOrNull()
+    }.getOrNull()
+
 
     fun statuses(ctx: Context): List<Status> =
         BadgeDeclaration.badges(declared).map { status(ctx, it) }

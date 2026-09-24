@@ -198,6 +198,7 @@ class WeatherBadgeService : Service() {
             .setSubText("Cloud SA - Weather")
             .setOnlyAlertOnce(true)
             .setOngoing(true)
+            .setDeleteIntent(BadgeServices.repostOnDismiss(this, NOTIF_ID))
             // Weather is not sensitive — unlike the Health badge this one may
             // sit on the lockscreen, which is exactly where a forecast helps.
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -227,7 +228,9 @@ class WeatherBadgeService : Service() {
     }
 
     companion object {
-        const val NOTIF_ID = 7714
+        // 7714 is Markets'. Sharing it meant each badge's post REPLACED the
+        // other one in the shade (#535).
+        const val NOTIF_ID = 7715
         private const val CHANNEL_ID = "weather_today"
         private const val DEFAULT_REFRESH_MIN = 60L
 

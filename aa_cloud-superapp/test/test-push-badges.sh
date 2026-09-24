@@ -357,6 +357,66 @@ else:
 PY
 )" "the proven endpoint, the in-app browser, and a declared non-aggressive cadence"
 
+# ── #535 — the badge the pane renders is the badge the producer POSTED ──
+# The pane now finds each badge's live notification by its declared channel
+# (BadgeServices.live), so that channel stops being decoration: it has to be
+# the one the owner really posts on. #515 already paid once for a declaration
+# naming a producer that was not the real one. These read the owner sources
+# the declaration points at, never a list typed here.
+SRC="$APP/app/src/main/java/com/diegonmarcos/superapp"
+OWNERS_PY='
+import json, os, re, sys
+bj, src = sys.argv[1], sys.argv[2]
+ps = [p for p in json.load(open(bj))["ui"]["notification_center"]["producers"] if p.get("badge")]
+def code(path):
+    return "\n".join(l for l in open(path).read().split("\n")
+                     if not l.strip().startswith(("*", "//", "/*")))
+def svc_path(fqcn):
+    rel = fqcn.split("com.diegonmarcos.superapp.", 1)[-1].replace(".", "/") + ".kt"
+    return os.path.join(src, rel)
+files = {}
+for p in ps:
+    for f in (os.path.join(src, p.get("owner", "")), svc_path(p.get("service", ""))):
+        if os.path.isfile(f): files[f] = code(f)
+'
+
+echo "== T14: every badge's declared channel is the channel its owner posts on =="
+check "$(python3 -c "$OWNERS_PY"'
+bad = []
+for p in ps:
+    f = os.path.join(src, p.get("owner", ""))
+    if not os.path.isfile(f): bad.append("%s: owner %s missing" % (p["id"], p.get("owner"))); continue
+    chans = set(re.findall(r"CHANNEL_ID\s*=\s*\"([^\"]+)\"", files[f]))
+    if p.get("channel") not in chans:
+        bad.append("%s declares %r, %s posts on %s" % (p["id"], p.get("channel"), p["owner"], sorted(chans)))
+print("; ".join(bad) or "OK")
+' "$BJ" "$SRC")" "the pane's channel join key names the real producer"
+
+echo "== T15: no two badges share a notification id =="
+# Weather shipped with Markets' 7714: each post REPLACED the other badge.
+check "$(python3 -c "$OWNERS_PY"'
+seen, bad = {}, []
+for f, c in files.items():
+    for name, v in re.findall(r"\b(NOTIF_\w+)\s*=\s*(0x[0-9A-Fa-f_]+|\d[\d_]*)\b", c):
+        n = int(v.replace("_", ""), 0)
+        who = "%s.%s" % (os.path.basename(f), name)
+        if n in seen: bad.append("%s == %s (%d)" % (who, seen[n], n))
+        else: seen[n] = who
+if not seen: print("found no notification ids at all — the scan is blind")
+else: print("; ".join(bad) or "OK")
+' "$BJ" "$SRC")" "each badge owns its own slot in the shade"
+
+echo "== T16: every ongoing badge comes back when swiped away =="
+# Android 14 lets the user dismiss ongoing (even FGS) notifications. With no
+# delete intent the badge is gone while its service runs on.
+check "$(python3 -c "$OWNERS_PY"'
+bad = []
+for f, c in files.items():
+    on, di = len(re.findall(r"\.setOngoing\(", c)), len(re.findall(r"setDeleteIntent\(", c))
+    if di < on: bad.append("%s: %d setOngoing, %d setDeleteIntent" % (os.path.basename(f), on, di))
+print("; ".join(bad) or "OK")
+' "$BJ" "$SRC")" "a dismissed persistent badge is re-posted"
+
 echo
 echo "  ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ]
