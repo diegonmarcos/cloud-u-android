@@ -32,13 +32,18 @@ def rclonePin = new groovy.json.JsonSlurper().parse(file('data/rclone-binary.jso
 def rcloneJniDir = new File(buildDir, 'generated/rclone-jni')
 def rcloneCacheDir = new File(buildDir, 'rclone-cache')
 
-def sha256Of(File f) {
+// CLOSURES, not `def name(...)` methods: a script method is not reachable from a
+// closure nested inside a task's doLast (Gradle resolves against the task's
+// delegate and stops — run 36072226945: "Could not find method fetchPinned()
+// … on task"). A closure held in a script variable is captured lexically and
+// resolves from any depth.
+def sha256Of = { File f ->
     def digest = java.security.MessageDigest.getInstance('SHA-256')
     f.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
     return digest.digest().encodeHex().toString()
 }
 
-def fetchPinned(String url, File target, String sha256) {
+def fetchPinned = { String url, File target, String sha256 ->
     if (target.exists() && sha256Of(target) == sha256) return
     logger.quiet("rclone: downloading " + url)
     target.parentFile.mkdirs(); target.delete()
@@ -53,7 +58,7 @@ def fetchPinned(String url, File target, String sha256) {
 }
 
 /** True when the ELF64 file has a PT_INTERP program header (i.e. is dynamically linked). */
-def hasProgramInterpreter(File elf) {
+def hasProgramInterpreter = { File elf ->
     def raf = new RandomAccessFile(elf, 'r')
     try {
         def magic = new byte[4]; raf.readFully(magic)
