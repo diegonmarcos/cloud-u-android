@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:file-editor carries its own user-facing strings; the packaging app's English
+     locale filter is what keeps them English on the device (i18n-policy.json
+     declares this module as base_language: host). -->
+<resources>
+    <string name="cloudlib_fileeditor_title">FileEditor</string>
+</resources>

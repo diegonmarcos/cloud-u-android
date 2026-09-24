@@ -1,0 +1,76 @@
+// libs:git-sync — the fleet's native git manager — status, stage/unstage, commit, push/pull, branch list, log, diff, remotes, conflicts, over JGit (push 2 lands the engine).
+//
+// ONE OF THE FOUR cloud-drive ENGINE LIBRARIES (#567). The owner's rule for that
+// application: the main APK is chrome, every tooling is its own library, and the
+// module boundary is law — this module imports NOTHING from any application
+// (lib -> app is forbidden; ac_cloud-drive/test/test-drive-engine-modules.sh
+// fails the build on the first such import). Compose only (#565): the screen
+// this module exports is a @Composable, hosted by whichever app links it.
+//
+// Shared BY REFERENCE the way every module on this shelf is: cloud-drive names
+// this directory in build.json::modules, and lib-apks discovers it and ships
+// cloud-lib-git-sync as its own installable APK (#474 naming, from the one
+// declaration in aa_cloud-superapp/data/regen.sh).
+//
+// Deliberately sparse on the independent-version axis (bottomnav / text-tools
+// precedent): it builds under whichever AGP the app that pulls it in uses —
+// cloud-drive's 8.7.3 and lib-apks' 8.13.2 both. Compose BOM and versions match
+// libs:bottomnav so the two compose against one toolchain inside one app.
+//
+// TESTED where it builds: src/test/ (JVM, no emulator) runs inside the consuming
+// app's own `gradle test` (ac_cloud-drive/build.json::tests.unit is enabled), and
+// that app's ship workflow watches this directory, so a change here re-runs it.
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace 'com.diegonmarcos.cloudlib.gitsync'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+    }
+
+    buildFeatures {
+        compose = true
+    }
+
+    testOptions {
+        unitTests {
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
+    implementation 'androidx.core:core-ktx:1.15.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
+    testImplementation 'junit:junit:4.13.2'
+}

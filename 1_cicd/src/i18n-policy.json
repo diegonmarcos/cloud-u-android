@@ -141,6 +141,19 @@
     },
     "ab_cloud-libs-shared/libs/gitsync/android/app": {
       "exempt": "Vendored GitSync clone; the Android shell's strings.xml is upstream's own Flutter launcher shell (two strings, no locale directory), the interface strings live in Dart ARB catalogues that no Android locale filter can reach, and the tree is not a Gradle module here — it packages into nothing."
+    },
+    "_doc_drive_engines": "#567: the four cloud-drive engine libraries (git-sync, file-editor, rclone, mounts) are host libraries in the libs/bottomnav sense — each owns its own English strings and no locale directory, and ac_cloud-drive/app carries the en filter that packages them. Declared at the moment the modules were created, because this guard has no path filter and #493 turned main red twice on a module that arrived undeclared.",
+    "ab_cloud-libs-shared/libs/git-sync": {
+      "base_language": "host"
+    },
+    "ab_cloud-libs-shared/libs/file-editor": {
+      "base_language": "host"
+    },
+    "ab_cloud-libs-shared/libs/rclone": {
+      "base_language": "host"
+    },
+    "ab_cloud-libs-shared/libs/mounts": {
+      "base_language": "host"
     }
   }
 }
