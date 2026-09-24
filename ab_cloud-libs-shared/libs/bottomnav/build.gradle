@@ -45,6 +45,14 @@ android {
     testOptions {
         unitTests {
             includeAndroidResources = true
+            // Print the assertion MESSAGE in the CI log. Gradle's default prints only the
+            // exception class and line, and the measured numbers are the whole point of the test.
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
         }
     }
 

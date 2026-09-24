@@ -219,8 +219,10 @@ class BottomNavIslandTest {
             inside("#417 icon $id inside its capsule", item, bounds(iconTag(id)))
             inside("#417 label $id inside its capsule", item, bounds(labelTag(id)))
             val text = textLayout(labelTag(id))
-            assertFalse("#417 label $id overflows", text.hasVisualOverflow)
-            assertFalse("#417 label $id is ellipsized", text.isLineEllipsized(0))
+            val why = "'${text.layoutInput.text}' laid out ${text.size.width}px wide, needs " +
+                "${text.multiParagraph.intrinsics.maxIntrinsicWidth}px, capsule ${item.width}px"
+            assertFalse("#417 label $id overflows: $why", text.hasVisualOverflow)
+            assertFalse("#417 label $id is ellipsized: $why", text.isLineEllipsized(0))
         }
     }
 
