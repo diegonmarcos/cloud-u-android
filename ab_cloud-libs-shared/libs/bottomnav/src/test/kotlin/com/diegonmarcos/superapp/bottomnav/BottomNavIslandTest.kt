@@ -1,6 +1,8 @@
 package com.diegonmarcos.superapp.bottomnav
 
 import android.content.ComponentName
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.view.View
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
@@ -24,6 +26,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -32,7 +35,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -51,6 +53,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import java.io.File
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -138,8 +141,20 @@ class BottomNavIslandTest {
     private fun bounds(tag: String): Rect =
         compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
 
-    private fun pixels(tag: String): PixelMap =
-        compose.onNodeWithTag(tag, useUnmergedTree = true).captureToImage().toPixelMap()
+    /** The node's pixels as the view actually draws them. The host view is drawn into a bitmap,
+     *  the way superapp's View geometry tests do. captureToImage is not used on purpose: it
+     *  waits for a frame-commit callback that Robolectric's paused looper never fires
+     *  (ComposeTimeoutException in run 36023376462). Compose draws its layers, clip included,
+     *  on a software canvas. */
+    private fun pixels(tag: String): PixelMap {
+        val b = bounds(tag)
+        val full = compose.runOnUiThread {
+            Bitmap.createBitmap(hostView.width, hostView.height, Bitmap.Config.ARGB_8888)
+                .also { hostView.draw(Canvas(it)) }
+        }
+        return Bitmap.createBitmap(full, b.left.roundToInt(), b.top.roundToInt(), b.width.roundToInt(), b.height.roundToInt())
+            .asImageBitmap().toPixelMap()
+    }
 
     private fun textLayout(tag: String): TextLayoutResult {
         val out = mutableListOf<TextLayoutResult>()
