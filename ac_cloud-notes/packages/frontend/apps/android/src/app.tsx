@@ -31,7 +31,10 @@ import {
 import { PopupWindowProvider } from '@affine/core/modules/url';
 import { ClientSchemeProvider } from '@affine/core/modules/url/providers/client-schema';
 import { configureBrowserWorkbenchModule } from '@affine/core/modules/workbench';
-import { WorkspacesService } from '@affine/core/modules/workspace';
+import {
+  getAFFiNEWorkspaceSchema,
+  WorkspacesService,
+} from '@affine/core/modules/workspace';
 import { configureBrowserWorkspaceFlavours } from '@affine/core/modules/workspace-engine';
 import { getWorkerUrl } from '@affine/env/worker';
 import { I18n } from '@affine/i18n';
@@ -44,6 +47,7 @@ import {
   MarkdownAdapter,
   titleMiddleware,
 } from '@blocksuite/affine/shared/adapters';
+import { HtmlTransformer } from '@blocksuite/affine/widgets/linked-doc';
 import { App as CapacitorApp } from '@capacitor/app';
 import { Keyboard } from '@capacitor/keyboard';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -498,6 +502,24 @@ const AndroidBackAdapter = () => {
 // open workspace's own scope, at event time, exactly as
 // getCurrentDocContentInMarkdown above already does. Rendering this component
 // can no longer resolve anything, so it can no longer throw.
+//
+// #547 — HTML is CONVERTED, not previewed. ExternalFilePlugin has always
+// accepted .html, and this function then wrapped it as a text/markdown File for
+// the Obsidian importer, so the doc showed the literal markup. An HTML file now
+// goes through upstream's own HtmlAdapter (HtmlTransformer.importHTMLToDoc, the
+// exact path the desktop import dialog's `html` entry uses) and lands as a
+// real BlockSuite doc: editable, searchable, synced like every other doc. A
+// separate preview surface was rejected: it would be a second viewer beside the
+// editor, it would not persist anything, and it would run the file's own markup
+// inside the WebView that carries the Capacitor bridge — the converter keeps
+// only what maps to blocks, so no script in the file ever executes.
+// Which extensions take this route is asserted against the native SUPPORTED set
+// by test/test-html-import-route.sh.
+const HTML_EXTENSIONS = new Set(['html', 'htm']);
+
+const isHtmlFile = (name: string) =>
+  HTML_EXTENSIONS.has(name.split('.').pop()?.toLowerCase() ?? '');
+
 const openExternalFile = async () => {
   const path = window.prompt(
     'Open file from device storage (path under /storage/emulated/0/, e.g. Documents/Obsidian/note.md):'
@@ -541,11 +563,22 @@ const openExternalFile = async () => {
 
   const { workspace, dispose: disposeWorkspace } = workspaceRef;
   try {
-    await workspace.scope
-      .get(ImportService)
-      .importObsidianVault([
-        new File([file.content], file.name, { type: 'text/markdown' }),
-      ]);
+    if (isHtmlFile(file.name)) {
+      const docId = await HtmlTransformer.importHTMLToDoc({
+        collection: workspace.docCollection,
+        schema: getAFFiNEWorkspaceSchema(),
+        extensions: getStoreManager().config.init().value.get('store'),
+        html: file.content,
+        fileName: file.name.replace(/\.[^.]+$/, ''),
+      });
+      if (!docId) throw new Error(`${file.name} produced no document.`);
+    } else {
+      await workspace.scope
+        .get(ImportService)
+        .importObsidianVault([
+          new File([file.content], file.name, { type: 'text/markdown' }),
+        ]);
+    }
     notify.success({
       title: 'Opened',
       message: `${file.name} imported into the workspace.`,

@@ -40,7 +40,7 @@ class ExternalFilePlugin : Plugin() {
     companion object {
         private const val MAX_BYTES = 10L * 1024 * 1024 // 10 MiB import cap (markdown vaults)
         private val SUPPORTED = setOf(
-            "md", "markdown", "txt", "text", "json", "yaml", "yml", "html", "csv"
+            "md", "markdown", "txt", "text", "json", "yaml", "yml", "html", "htm", "csv"
         )
     }
 

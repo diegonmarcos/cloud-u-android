@@ -88,6 +88,12 @@
       "web_root": "packages/frontend/apps/android/src",
       "activity": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro/MainActivity.kt",
       "kotlin_root": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro"
+    },
+    "html_import": {
+      "_doc": "Read by test/test-html-import-route.sh (#547). entrypoint is where an opened file is dispatched to an importer; native_plugin is the ONE file declaring which extensions the device will read (its SUPPORTED set); converter is upstream's HtmlTransformer source, read to derive the options importHTMLToDoc accepts. Which extensions ARE html is derived from Python's built-in MIME table, never written in the tester.",
+      "entrypoint": "packages/frontend/apps/android/src/app.tsx",
+      "native_plugin": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro/plugin/ExternalFilePlugin.kt",
+      "converter": "blocksuite/affine/widgets/linked-doc/src/transformers/html.ts"
     }
   }
 }
