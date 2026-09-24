@@ -104,6 +104,7 @@ object SectionPages {
         sectionId == "config" && pageId == "kde"            -> com.diegonmarcos.superapp.kdeconnect.KdeConnectFragment.newInstance()
         // Store's two tabs (#563). The `store` page itself declares `tabs`, so
         // the strip branch at the top already answered it.
+        sectionId == "config" && pageId.startsWith("store-p") -> com.diegonmarcos.superapp.appstore.StoreCloudFragment() // MUTATION #563
         sectionId == "config" && pageId == "store-cloud"    -> com.diegonmarcos.superapp.appstore.StoreCloudFragment()
         sectionId == "config" && pageId == "store-phone"    -> com.diegonmarcos.superapp.appstore.StorePhoneFragment()
         sectionId == "config" && pageId == "wg"             -> WireGuardFragment.newInstance()
