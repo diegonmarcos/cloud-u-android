@@ -110,10 +110,16 @@ for needle, what in (
         ("{ it.label.lowercase() }", "#334 A-Z within a run"),
         ("Updater.cancelNow(requireContext())", "#140 Cancel"),
         ("UpdateProgress.addObserver(progressObserver)", "#88 live progress"),
-        ("AutoUpdatePrefs.setEnabled(ctx, !autoOn)", "#274/#99 auto-update toggle"),
-        ("ConstellationWorker.start(ctx)", "#274/#99 auto-update reschedules the fleet worker")):
+        ("StoreBar.render(this, headerControls", "#565 the Cloud tab draws the shared Store bar")):
     if needle in cloud: ok(what)
     else: bad(what + " — missing from StoreCloudFragment")
+# #565: the header moved into the ONE bar both Store tabs draw.
+bar = store_files.get("StoreBar.kt", "")
+for needle, what in (
+        ("AutoUpdatePrefs.setEnabled(ctx, !autoOn)", "#274/#99 auto-update toggle"),
+        ("ConstellationWorker.start(ctx)", "#274/#99 auto-update reschedules the fleet worker")):
+    if needle in bar: ok(what)
+    else: bad(what + " — missing from StoreBar")
 
 print("== T6: Phone Apps buttons come from ONE capability derivation and ONE install path (#564) ==")
 # #564 replaced #563's Open + App info with Update | Open | Stop | Remove |

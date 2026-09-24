@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.appstore
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.Bundle
 import android.text.TextUtils
 import android.view.Gravity
@@ -14,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
 import com.diegonmarcos.superapp.updater.Fleet
@@ -29,6 +31,11 @@ import kotlin.concurrent.thread
  * App info, and the origin store read from the real installer. Which of them
  * work is decided there from the device's own answers; a button that cannot
  * work is drawn dimmed and says why when tapped.
+ *
+ * Above the rows (#565): the Cloud tab's own top bar ([StoreBar] — one
+ * declaration, two pages), then Export / Import of the installed-apps
+ * inventory ([AppInventory]); an import shows its plan ([StoreImport]) before
+ * anything acts.
  */
 class StorePhoneFragment : Fragment() {
 
@@ -39,12 +46,36 @@ class StorePhoneFragment : Fragment() {
     private val cHead = 0xFFED8936.toInt()
     private var list: LinearLayout? = null
 
+    // #565 export / import. Registered at construction, as the Activity Result
+    // API requires; the system picker owns where the file lives.
+    private val exportDoc = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) exportTo(uri)
+    }
+    private val importDoc = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) importFrom(uri)
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         val ctx = requireContext()
         val col = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             val p = dp(ctx, 14); setPadding(p, p, p, p)
         }
+        // The SAME bar the Cloud tab draws. Check all re-reads this phone;
+        // Install all and Update all would need a privileged channel no
+        // foreign package gives us (#225), so they are drawn disabled with the
+        // reason under them - per-app Update on a fleet row is the real path.
+        col.addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            StoreBar.render(this@StorePhoneFragment, this, StoreBar.Verbs(
+                checkAll = { reload() }, installAll = null, updateAll = null,
+                disabledReason = R.string.store_phone_bar_disabled))
+        })
+        col.addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(fileBtn(ctx, ctx.getString(R.string.store_export)) { exportDoc.launch(EXPORT_NAME) })
+            addView(fileBtn(ctx, ctx.getString(R.string.store_import)) { importDoc.launch(IMPORT_TYPES) })
+        })
         col.addView(caption(ctx, ctx.getString(R.string.store_phone_caption)))
         val rowsView = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         list = rowsView
@@ -56,6 +87,10 @@ class StorePhoneFragment : Fragment() {
     // screen, and what they changed must not be drawn stale.
     override fun onResume() {
         super.onResume()
+        reload()
+    }
+
+    private fun reload() {
         val ctx = requireContext()
         val into = list ?: return
         into.removeAllViews()
@@ -75,6 +110,39 @@ class StorePhoneFragment : Fragment() {
     }
 
     override fun onDestroyView() { list = null; super.onDestroyView() }
+
+    /** Every launchable app, fleet included, as [AppInventory] JSON. */
+    private fun exportTo(uri: Uri) {
+        val app = requireContext().applicationContext
+        thread(name = "store-export") {
+            val result = runCatching {
+                val entries = AppInventory.entriesFor(app, AppInventory.launchable(app))
+                app.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(AppInventory.toJson(entries).toByteArray()) }
+                entries.size
+            }
+            toastLater(app, result.fold({ app.getString(R.string.store_export_done, it) },
+                { app.getString(R.string.store_file_failed, it.message) }))
+        }
+    }
+
+    /** Read a file, diff it against this phone, show the plan. Acts on nothing. */
+    private fun importFrom(uri: Uri) {
+        val app = requireContext().applicationContext
+        thread(name = "store-import") {
+            val result = runCatching {
+                val text = app.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() }
+                val wanted = AppInventory.parse(text)
+                val pm = app.packageManager
+                val installed = wanted.map { it.pkg }.filter { runCatching { pm.getPackageInfo(it, 0) }.isSuccess }.toSet()
+                AppInventory.plan(wanted, installed, AppInventory.fleetPackages(), PhoneAppActions.sources(app))
+            }
+            view?.post {
+                if (!isAdded) return@post
+                result.onSuccess { StoreImport.show(this, it) }
+                    .onFailure { Toast.makeText(app, app.getString(R.string.store_file_failed, it.message), Toast.LENGTH_LONG).show() }
+            }
+        }
+    }
 
     /** Launchable packages with their actions, classified and sorted: shelf
      *  order, then label; unshelved last. */
@@ -171,7 +239,19 @@ class StorePhoneFragment : Fragment() {
         isClickable = true; setOnClickListener { onClick() }
     }
 
+    private fun fileBtn(ctx: Context, label: String, onClick: () -> Unit) = TextView(ctx).apply {
+        text = label; textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+        setTextColor(0xFFFFFFFF.toInt()); setBackgroundColor(0xFF2B6CB0.toInt())
+        setPadding(dp(ctx, 10), dp(ctx, 7), dp(ctx, 10), dp(ctx, 7))
+        layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            .apply { setMargins(dp(ctx, 3), dp(ctx, 2), dp(ctx, 3), dp(ctx, 8)) }
+        isClickable = true; setOnClickListener { onClick() }
+    }
+
     private companion object {
         const val UNSHELVED = "￿"
+        const val EXPORT_NAME = "cloud-sa-apps.json"
+        // A .json picked from Downloads is as often octet-stream as json.
+        val IMPORT_TYPES = arrayOf("application/json", "application/octet-stream", "text/plain")
     }
 }

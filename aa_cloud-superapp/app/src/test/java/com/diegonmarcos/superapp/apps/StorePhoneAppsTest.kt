@@ -1,0 +1,175 @@
+package com.diegonmarcos.superapp.apps
+
+import android.app.Application
+import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import androidx.test.core.app.ApplicationProvider
+import com.diegonmarcos.superapp.appstore.AppInventory
+import com.diegonmarcos.superapp.appstore.AppStoreHost
+import com.diegonmarcos.superapp.appstore.PhoneAppActions
+import com.diegonmarcos.superapp.appstore.StoreBar
+import com.diegonmarcos.superapp.appstore.StoreCloudFragment
+import com.diegonmarcos.superapp.appstore.StorePhoneFragment
+import org.json.JSONObject
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+
+/**
+ * #565 — Store ▸ Phone Apps: the shared top bar, export and import, asserted on
+ * what the code RENDERS and RETURNS.
+ *
+ * Bar: both Store fragments are hosted and their bars read back by the tag
+ * StoreBar puts on every control — same controls, same labels, and only the
+ * two verbs a foreign app cannot do are disabled, on Phone Apps alone.
+ *
+ * Export: packages are installed into Robolectric's PackageManager with a real
+ * install-source record, and every field of the exported JSON is compared to
+ * what the PackageManager, the fleet manifest and the central classification
+ * answer for that package.
+ *
+ * Import: the plan is built over the ONE installer→store map (#564's
+ * appstore-install-sources.json, read through PhoneAppActions.sources), and
+ * each bucket is read back.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [34], application = Application::class)
+class StorePhoneAppsTest {
+
+    private val ctx: Context = ApplicationProvider.getApplicationContext()
+    private val pm get() = ctx.packageManager
+
+    @After fun resetHost() {
+        AppStoreHost.classify = { _, _ -> emptyMap() }
+    }
+
+    private fun host(f: Fragment): View {
+        val act = Robolectric.buildActivity(FragmentActivity::class.java).setup().get()
+        act.supportFragmentManager.beginTransaction().add(android.R.id.content, f).commitNow()
+        return f.requireView()
+    }
+
+    private fun texts(v: View): List<TextView> = when (v) {
+        is TextView -> listOf(v)
+        is ViewGroup -> (0 until v.childCount).flatMap { texts(v.getChildAt(it)) }
+        else -> emptyList()
+    }
+
+    private class Bar(val controls: Map<StoreBar.Item, TextView>, val captions: Set<String>)
+
+    private fun barOf(f: Fragment): Bar {
+        val bar = host(f).findViewWithTag<ViewGroup>(StoreBar.TAG)
+        assertNotNull("${f::class.simpleName} draws no Store bar", bar)
+        val all = texts(bar!!)
+        return Bar(all.filter { it.tag is StoreBar.Item }.associateBy { it.tag as StoreBar.Item },
+            all.filter { it.tag !is StoreBar.Item }.map { it.text.toString() }.toSet())
+    }
+
+    @Test
+    fun `Phone Apps draws the Cloud tab's bar, with only the privileged verbs disabled and explained`() {
+        val cloud = barOf(StoreCloudFragment())
+        val phone = barOf(StorePhoneFragment())
+        assertEquals("the Cloud bar lost controls", StoreBar.Item.values().toSet(), cloud.controls.keys)
+        assertEquals("Phone Apps does not draw the same controls", cloud.controls.keys, phone.controls.keys)
+        for ((item, view) in cloud.controls)
+            assertEquals("$item label differs between the tabs", view.text.toString(), phone.controls.getValue(item).text.toString())
+        assertEquals("the Cloud tab has a disabled control", emptySet<StoreBar.Item>(),
+            cloud.controls.filterValues { !it.isEnabled }.keys)
+        assertEquals("Phone Apps must disable exactly the verbs a foreign app cannot do",
+            setOf(StoreBar.Item.INSTALL, StoreBar.Item.UPDATE), phone.controls.filterValues { !it.isEnabled }.keys)
+        val reasons = phone.captions - cloud.captions
+        assertTrue("Phone Apps disables verbs without saying why: $reasons",
+            reasons.size == 1 && reasons.single().isNotBlank())
+        assertTrue("a disabled control still answers a tap",
+            phone.controls.filterValues { !it.isEnabled }.values.none { it.hasOnClickListeners() })
+    }
+
+    private fun install(pkg: String, versionName: String, code: Long, installer: String?) {
+        shadowOf(pm).installPackage(PackageInfo().apply {
+            packageName = pkg; this.versionName = versionName; longVersionCode = code
+            applicationInfo = ApplicationInfo().apply { packageName = pkg }
+        })
+        shadowOf(pm).setInstallSourceInfo(pkg, installer, installer)
+    }
+
+    @Test
+    fun `export records what the phone reports, sorted, stable, with the central shelf`() {
+        AppStoreHost.classify = StoreShelves::of
+        val fleetPkg = (AppInventory.fleetPackages() - ctx.packageName).sorted().first()
+        val whatsapp = "com.whatsapp"
+        val side = "org.example.sideloaded"
+        install(whatsapp, "2.24.1", 241_000L, "com.android.vending")
+        install(side, "0.9", 9L, "com.google.android.packageinstaller")
+        install(fleetPkg, "1.0", 3_000_001L, ctx.packageName)
+        val labels = linkedMapOf(side to "Side", whatsapp to "WhatsApp", fleetPkg to "cloud")
+
+        val json = AppInventory.toJson(AppInventory.entriesFor(ctx, labels))
+        val doc = JSONObject(json)
+        assertEquals(AppInventory.KIND, doc.getString("kind"))
+        assertEquals(AppInventory.SCHEMA, doc.getInt("schema"))
+        val apps = doc.getJSONArray("apps").let { a -> (0 until a.length()).map(a::getJSONObject) }
+        assertEquals("not sorted by package id", labels.keys.sorted(), apps.map { it.getString("package") })
+
+        for (a in apps) {
+            val pkg = a.getString("package")
+            val info = pm.getPackageInfo(pkg, 0)
+            val src = pm.getInstallSourceInfo(pkg)
+            assertEquals("$pkg version_code", info.longVersionCode, a.getLong("version_code"))
+            assertEquals("$pkg version_name", info.versionName, a.getString("version_name"))
+            assertEquals("$pkg origin_store is not the install-source record",
+                src.installingPackageName, a.getString("origin_store"))
+            assertEquals("$pkg ours flag", pkg == fleetPkg, a.getBoolean("ours"))
+        }
+        val shelf = StoreShelves.of(ctx, mapOf(whatsapp to "WhatsApp"))[whatsapp]
+        assertNotNull("the central classification shelves nothing for WhatsApp", shelf)
+        assertEquals("category is not the central shelf", shelf!!.heading,
+            apps.first { it.getString("package") == whatsapp }.getString("category"))
+
+        val again = AppInventory.toJson(AppInventory.entriesFor(ctx, labels.entries.reversed().associate { it.key to it.value }))
+        assertEquals("the same phone exported different bytes", json, again)
+    }
+
+    @Test
+    fun `import plans ours to Constellation, foreign to its declared store, the rest to manual`() {
+        val sources = PhoneAppActions.sources(ctx)
+        val stores = sources.getJSONObject("sources")
+        val storeInstaller = stores.keys().asSequence().sorted().first()
+        val fleet = AppInventory.fleetPackages()
+        val fleetPkg = (fleet - ctx.packageName).sorted().first()
+        fun e(pkg: String, origin: String?, ours: Boolean) = AppInventory.Entry(pkg, "1", 1, origin, ours, null)
+        val file = AppInventory.toJson(listOf(
+            e(fleetPkg, ctx.packageName, true),
+            e("com.example.foreign", storeInstaller, false),
+            e("com.example.sideloaded", "com.google.android.packageinstaller", false),
+            e("com.example.claims.ours", null, true),
+            e("com.example.here", storeInstaller, false)))
+
+        val plan = AppInventory.plan(AppInventory.parse(file), setOf("com.example.here"), fleet, sources)
+        assertEquals(listOf("com.example.here"), plan.installed.map { it.pkg })
+        assertEquals("ours must be the fleet's missing members only", listOf(fleetPkg), plan.ours.map { it.pkg })
+        assertEquals(listOf("com.example.foreign"), plan.store.map { it.entry.pkg })
+        val link = plan.store.single()
+        assertEquals("foreign app sent to the wrong store", stores.getJSONObject(storeInstaller).getString("label"), link.label)
+        assertEquals("the store page is not aimed at the store that installed it", storeInstaller, link.intent.`package`)
+        assertTrue("the store link does not name the app: ${link.intent.data}",
+            link.intent.data.toString().contains("com.example.foreign"))
+        assertEquals("a sideload, or a file claiming `ours`, must be manual",
+            listOf("com.example.claims.ours", "com.example.sideloaded"), plan.manual.map { it.pkg })
+        assertFalse("a newer-schema file must be refused",
+            runCatching { AppInventory.parse(JSONObject(file).put("schema", AppInventory.SCHEMA + 1).toString()) }.isSuccess)
+    }
+}

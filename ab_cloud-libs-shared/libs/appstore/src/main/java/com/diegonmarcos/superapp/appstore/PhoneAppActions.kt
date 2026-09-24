@@ -72,9 +72,24 @@ object PhoneAppActions {
         return out
     }
 
+    /** Ours = a Cloud fleet member, or installed by this app. The row's
+     *  origin button and the #565 export/import both ask this. */
+    fun isOurs(ctx: Context, fleetMember: Boolean, installer: String?): Boolean =
+        fleetMember || installer == ctx.packageName
+
+    /** [installer]'s own page for [pkg], from the one map: its label and an
+     *  intent aimed at the installer, so market:// lands in the store that
+     *  installed the app rather than whichever market handler the chooser
+     *  prefers. Null = [installer] is not a declared store. */
+    fun storePage(sources: JSONObject, installer: String?, pkg: String): Pair<String, Intent>? {
+        val store = installer?.let { sources.getJSONObject("sources").optJSONObject(it) } ?: return null
+        return store.getString("label") to
+            Intent(Intent.ACTION_VIEW, Uri.parse(store.getString("deeplink").replace("{pkg}", pkg))).setPackage(installer)
+    }
+
     private fun origin(ctx: Context, pkg: String, fleetMember: Boolean, sources: JSONObject): Action {
         val installer = installerOf(ctx, pkg)
-        if (fleetMember || installer == ctx.packageName) {
+        if (isOurs(ctx, fleetMember, installer)) {
             val label = sources.getJSONObject("ours").getString("label")
             // The same page target the update notification opens.
             val target = AppStoreHost.launchActivity
@@ -83,13 +98,9 @@ object PhoneAppActions {
             AppStoreHost.launchExtras.forEach { (k, v) -> open.putExtra(k, v) }
             return Action(Kind.ORIGIN, label, open, null)
         }
-        val store = installer?.let { sources.getJSONObject("sources").optJSONObject(it) }
+        val (label, page) = storePage(sources, installer, pkg)
             ?: return Action(Kind.ORIGIN, sources.getJSONObject("unknown").getString("label"), appInfo(pkg), null)
-        // Aimed at the installer, so market:// opens the store that installed
-        // the app rather than whichever market handler the chooser prefers.
-        return Action(Kind.ORIGIN, store.getString("label"),
-            Intent(Intent.ACTION_VIEW, Uri.parse(store.getString("deeplink").replace("{pkg}", pkg)))
-                .setPackage(installer), null)
+        return Action(Kind.ORIGIN, label, page, null)
     }
 
     private fun appInfo(pkg: String) =

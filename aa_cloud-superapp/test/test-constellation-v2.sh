@@ -33,7 +33,8 @@ has "$CFG/ConstellationWorker.kt" "Result.success()" "fleet worker returns succe
 
 echo "== T4: Update All + Cancel =="
 has "$UPD/Fleet.kt" "fun installAll(" "Fleet.installAll (Update All)"
-has "$CFG/StoreCloudFragment.kt" "Update all" "UI has Update-all button"
+# #565: the button lives in the Store's shared bar, its label in strings.xml.
+has "$CFG/StoreBar.kt" "R.string.store_bar_update_all" "UI has Update-all button"
 has "$UPD/UpdateProgress.kt" "object Cancelled" "UpdateProgress has Cancelled state"
 has "$UPD/Updater.kt" "fun cancelNow(" "Updater.cancelNow exists"
 has "$UPD/UpdateOverlayFragment.kt" "Updater.cancelNow" "overlay Cancel button wired"

@@ -24,4 +24,44 @@
     <string name="store_phone_why_self">Stopping SuperApp would close this store.</string>
     <string name="store_phone_why_system">A system app cannot be removed, only disabled from App info.</string>
     <string name="store_phone_why_no_host">This build has no Cloud store page to open.</string>
+
+    <!-- #565: the shared Store bar (StoreBar), export/import (AppInventory, StoreImport). -->
+    <string name="store_bar_asking_shell">Asking the shell channel…</string>
+    <string name="store_bar_auto_update">Auto update: %1$s</string>
+    <string name="store_bar_auto_update_toast">Auto-update %1$s</string>
+    <string name="store_bar_check_all">↻  Check all</string>
+    <string name="store_bar_install_all">⬇  Install all</string>
+    <string name="store_bar_open">Open ↗</string>
+    <string name="store_bar_play_protect">Play Protect: %1$s</string>
+    <string name="store_bar_play_protect_off">No install-scan prompt - fleet installs go straight through.</string>
+    <string name="store_bar_play_protect_on">Play Protect prompts on every install. Turning it off needs the embedded adb channel (or Shizuku, if you run it); it is device-wide and survives uninstall.</string>
+    <string name="store_bar_silent_off">Grant \'Install unknown apps\' for no-tap updates.</string>
+    <string name="store_bar_silent_on">Silent installs enabled.</string>
+    <string name="store_bar_update_all">⬆  Update all</string>
+    <string name="store_bar_wifi_only">Up Wifi Only: %1$s</string>
+    <string name="store_bar_wifi_only_toast">Update over Wi-Fi only %1$s</string>
+    <string name="store_bar_wireless_changed">Wireless debugging %1$s via %2$s</string>
+    <string name="store_bar_wireless_debug">Wireless Debug: %1$s</string>
+    <string name="store_bar_wireless_off">Off: no embedded adb channel. \'Direct\' on any row still installs, through the system confirmation sheet.</string>
+    <string name="store_bar_wireless_on">adbd is listening - the embedded channel can install without a tap.</string>
+    <string name="store_bar_wireless_unchanged">NOT changed (%1$s) - still %2$s</string>
+    <string name="store_close">Close</string>
+    <string name="store_export">⇪  Export app list</string>
+    <string name="store_export_done">Exported %1$d apps.</string>
+    <string name="store_file_failed">App list file failed: %1$s</string>
+    <string name="store_import">⇩  Import app list</string>
+    <string name="store_import_install_ours">Install %1$d via Constellation</string>
+    <string name="store_import_installed">Already installed (%1$d)</string>
+    <string name="store_import_installing">Installing %1$d fleet apps…</string>
+    <string name="store_import_manual">Manual - sideloaded or unknown store (%1$d)</string>
+    <string name="store_import_no_origin">no store recorded</string>
+    <string name="store_import_no_store">%1$s is not available on this phone.</string>
+    <string name="store_import_open_in">Open in %1$s</string>
+    <string name="store_import_ours">Ours - Constellation install (%1$d)</string>
+    <string name="store_import_store">From their store (%1$d)</string>
+    <string name="store_import_summary">%1$d already installed · %2$d to install · %3$d manual. Nothing happens until you tap.</string>
+    <string name="store_import_title">Import app list</string>
+    <string name="store_off">OFF</string>
+    <string name="store_on">ON</string>
+    <string name="store_phone_bar_disabled">Install all and Update all are off here: these apps belong to other stores, and installing or updating them needs a privileged channel (adb/Shizuku) that is not paired. Each app\'s own store updates it.</string>
 </resources>
