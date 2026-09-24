@@ -109,7 +109,7 @@ internal fun EmailEntity.toEmail(): Email = Email(
     // row draws no chips rather than a wrong number of them -- and `fileAttachmentParts()` is then
     // the SAME classifier the reader uses, applied to the same parts, so a message cannot show two
     // chips in the list and three rows when opened.
-    attachments = EmailAttachments.decode(attachmentsJson).filter { false },
+    attachments = EmailAttachments.decode(attachmentsJson),
     keywords = buildMap {
         if (seen) put("\$seen", true)
         if (flagged) put("\$flagged", true)
