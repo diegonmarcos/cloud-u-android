@@ -26,6 +26,8 @@ android {
     compileSdk a.compile_sdk
 
     defaultConfig {
+        // Launcher label = build.json::name, the application's one name (#351).
+        resValue "string", "app_name", buildJson.name
         resConfigs "en"
         applicationId a.application_id
         minSdk        a.min_sdk
