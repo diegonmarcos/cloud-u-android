@@ -49,7 +49,11 @@ abstract class FetchRcloneBinaries extends DefaultTask {
         def pinJson = new groovy.json.JsonSlurper().parse(pinFile.get().asFile)
         def cache = cacheDir.get().asFile
         def out = outDir.get().asFile
-        pinJson.binaries.each { abi, pin ->
+        // A plain loop, not .each { }: Gradle runs a DECORATED subclass of this task,
+        // and a closure inside it cannot see the class's own helpers (run 36073449747:
+        // "Could not find method fetchPinned() … of type FetchRcloneBinaries").
+        for (entryAbi in pinJson.binaries.entrySet()) {
+            def abi = entryAbi.key; def pin = entryAbi.value
             def url = pinJson.url_template.replace('{version}', pinJson.version).replace('{arch}', pin.arch)
             def zip = new File(cache, "rclone-${pinJson.version}-${pin.arch}.zip")
             fetchPinned(url, zip, pin.zip_sha256)
@@ -76,13 +80,13 @@ abstract class FetchRcloneBinaries extends DefaultTask {
         }
     }
 
-    private static String sha256Of(File f) {
+    protected static String sha256Of(File f) {
         def digest = java.security.MessageDigest.getInstance('SHA-256')
         f.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
         return digest.digest().encodeHex().toString()
     }
 
-    private void fetchPinned(String url, File target, String sha256) {
+    protected void fetchPinned(String url, File target, String sha256) {
         if (target.exists() && sha256Of(target) == sha256) return
         logger.quiet("rclone: downloading " + url)
         target.parentFile.mkdirs(); target.delete()
@@ -97,7 +101,7 @@ abstract class FetchRcloneBinaries extends DefaultTask {
     }
 
     /** True when the ELF64 file has a PT_INTERP program header (i.e. is dynamically linked). */
-    private static boolean hasProgramInterpreter(File elf) {
+    protected static boolean hasProgramInterpreter(File elf) {
         def raf = new RandomAccessFile(elf, 'r')
         try {
             def magic = new byte[4]; raf.readFully(magic)
