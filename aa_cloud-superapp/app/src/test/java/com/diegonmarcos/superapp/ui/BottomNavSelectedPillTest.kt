@@ -91,7 +91,11 @@ class BottomNavSelectedPillTest : ShellIslandHarness() {
         println("#531 ink pixels: selected $centre=$sel in $onPill, unselected $other=$unsel in $offPill")
         assertTrue("the selected icon has no pixel in colorOnSurfaceInverse $onPill", sel > 0)
         assertTrue("the unselected icon has no pixel in colorOnSurfaceVariant $offPill", unsel > 0)
-        assertEquals("the selected icon is drawn in the unselected ink", 0, inkPixels(bmp, icon(centre), offPill))
+        // Not zero: anti-aliased glyph edges blend the ink into the pill, and a handful of those
+        // blends land on the other ink by coincidence (6 of 1556 in CI run 36059377093). The
+        // selected glyph must be DOMINATED by its own ink; swapping the two inks inverts this.
+        val stray = inkPixels(bmp, icon(centre), offPill)
+        assertTrue("the selected icon has $stray px in the unselected ink against $sel in its own", sel >= 10 * maxOf(stray, 1))
     }
 
     @Test
