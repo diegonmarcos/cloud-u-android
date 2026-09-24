@@ -71,7 +71,7 @@ BOTTOM NAV — 5 AGGREGATOR SECTIONS
 [4] SUITE  ── tab-split aggregator (SuiteCloudPhoneTabsFragment) ─────────────────
     ┌── Cloud tab ── GroupedTilesFragment ─────────────────────────────────────────
     │   tile_groups (5 themed rows):
-    │     AI ──────── AI-Chat (web)=Gemini   │ AI-Chat (local)=localhost:8080 │ IDE=Cloud-IDE
+    │     AI ──────── AI-Chat (web)=Gemini   │ AI-Chat (local)=localhost:8080 │ MyTerminal=cloud-myterminal
     │     Communications ── Mail │ Chat-Mattermost │ Chat-Matrix │ Dialer
     │     Data Apps ─── Calendar │ Contacts │ Notes(Obsidian) │ Sheets │ Photos │ Music(Tidal)
     │     Tools Primary ─── Browser │ Tabs(AppTabs) │ Wallet │ Navigation(Cloud-Nav) │ Vault
@@ -279,11 +279,11 @@ Background   ── BackgroundOrchestrator  (sync, updater WorkManager)
              ── LockScreenAccessibilityService + LockScreenAdminReceiver
 
 In-app Updater ── libs:updater  (OCI/GHCR HTTP API → WorkManager → PackageInstaller)
-  Shared signing key across SuperApp / Cloud-Nav / Cloud-Comms / Cloud-IDE
+  Shared signing key across SuperApp / Cloud-Nav / Cloud-Comms / cloud-myterminal
 
 External App Launcher  (extapp: grammar)
   cloud-comms  hub → mail fork / matrix fork / chat fork / dialer fork
-  cloud-ide    hub → files fork
+  cloud-myterminal  hub → files fork
   cloud-nav    dedicated Maps/Nav APK (ac_cloud-nav)
   (install fallback: libs:updater fetches APK from installApkUrl if not installed)
 

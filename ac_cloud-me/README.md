@@ -19,7 +19,7 @@ Almost nothing. That is the design.
 
 | Surface | Where the data actually lives |
 |---|---|
-| Buro → Docs | Cloud IDE (files) |
+| Buro → Docs | cloud-myterminal (files) |
 | Buro → IDs | Cloud Wallet (the card deck) |
 | Buro → Vault | Cloud Vault (Vaultwarden) |
 | Buro → Accounting | `libs:fin`, from `build.json::ui.myfin_mock` |

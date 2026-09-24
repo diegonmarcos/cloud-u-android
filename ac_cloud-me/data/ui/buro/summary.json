@@ -26,7 +26,7 @@
         "accent": "#7E57C2",
         "body": "Empty here, and meant to be. Housing, vehicle, insurance and the rest are folders, not records: nothing about a contract, a policy or a payment is stored on the phone, so the tab has no documents to count and each card opens the file app at the matching folder instead.",
         "meta": [
-          { "label": "Source", "value": "none here — the files live in Cloud IDE" }
+          { "label": "Source", "value": "none here — the files live in cloud-myterminal" }
         ],
         "target": "page:buro/docs"
       },

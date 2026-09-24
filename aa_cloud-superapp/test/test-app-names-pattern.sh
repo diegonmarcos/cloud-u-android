@@ -43,7 +43,7 @@ done
 command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 required" >&2; exit 2; }
 
 python3 - "$ROOT" "$FLEET" "$APP/build.json" <<'PY'
-import json, os, re, sys
+import glob, json, os, re, sys
 
 root, fleet_path, superapp_path = sys.argv[1:4]
 PATTERN = re.compile(r"^(cloud|c3)-[a-z0-9]+(-[a-z0-9]+)*$")
@@ -240,7 +240,7 @@ print("== T8: the AGI terminal tile is captioned by function, not by the upstrea
 # "Nix-on-Droid"/"cloud-terminal-nix" in the fleet), so the caption still
 # spelled an application's identity rather than what tapping it does. Every
 # other AGI tile with a target spells the FUNCTION (Browser, Navigation,
-# Camera, MyIDE); this one has to as well.
+# Camera, MyTerminal); this one has to as well.
 #
 # Neither T5 nor T7 can catch a reversion back to "Nix". T5 skips it on
 # length: normalise("Nix") == "nix" is shorter than len("cloud")+1, and that
@@ -256,6 +256,95 @@ if nix_tile is not None:
     check(nix_tile.get("label") == "Terminal",
           "aa_cloud-superapp/build.json AGI tile ai-tmx.label = %r, want 'Terminal' — "
           "it must not spell the upstream app's own name" % nix_tile.get("label"))
+
+print("== T9: a retired brand stays retired, and no caption collides inside its group (#561) ==")
+# THE CHANGE THIS EXISTS FOR. #561 renamed cloud-ide (launcher "Cloud-IDE",
+# asset Cloud-IDE-Hub.apk, AGI tile "MyIDE") to cloud-myterminal. A rename is
+# only real if every copy moved, and #351/#522 are the record of copies that
+# did not: the one declaration changed and a restated string kept the old
+# spelling. So the retired spellings are a LEDGER here, like T7's, and they
+# are looked for on every surface a user or the updater reads — never only
+# where this commit happened to edit.
+#
+# Deliberately NOT scanned: _doc/description/comment prose (history is allowed
+# to say what a thing used to be called) and on-device state that must keep
+# its old name on an installed phone — the WorkManager unique names, the
+# notification channel id and the /storage/emulated/0/CloudIDE workspace
+# (renaming those orphans a job, the user's channel settings or their files).
+# The applicationId com.diegonmarcos.ide is identity, not brand: #405/#495
+# measured that moving it forces a manual reinstall, so it stays.
+retired = re.compile(r"(?i)(?<![a-z0-9])(cloud[-_ ]?ide|my[-_ ]?ide)(?![a-z0-9])")
+PROSE = ("description", "comment")
+def values(node, path=""):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key.startswith("_") or key in PROSE:
+                continue
+            yield from values(value, path + "." + key)
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            yield from values(value, "%s[%d]" % (path, index))
+    elif isinstance(node, str):
+        yield path, node
+scanned = 0
+for entry in json.load(open(fleet_path))["apps"]:
+    for path, value in values(entry, "[%s]" % entry.get("id")):
+        scanned += 1
+        retired.search(value) and check(False, "constellation-fleet.json%s = %r spells a retired brand" % (path, value))
+for directory, data in sorted(build_files.items()):
+    for path, value in values(data):
+        scanned += 1
+        retired.search(value) and check(False, "%s/build.json%s = %r spells a retired brand" % (directory, path, value))
+    module = (data.get("android") or {}).get("gradle_module") or "app"
+    for base, _, files in os.walk(os.path.join(root, directory, module, "src")):
+        if "strings.xml" in files and os.path.basename(base).startswith("values"):
+            xml = os.path.join(base, "strings.xml")
+            for name, text in re.findall(r'<string\s+name="([^"]+)"[^>]*>(.*?)</string>', open(xml).read(), re.S):
+                scanned += 1
+                retired.search(text) and check(False, "%s <string name=%r> = %r spells a retired brand"
+                      % (os.path.relpath(xml, root), name, text))
+for ui_json in sorted(glob.glob(os.path.join(root, "*", "data", "ui", "**", "*.json"), recursive=True)):
+    for path, value in values(json.load(open(ui_json))):
+        scanned += 1
+        retired.search(value) and check(False, "%s%s = %r spells a retired brand" % (os.path.relpath(ui_json, root), path, value))
+for workflows in ("1_cicd/src/cicd", ".github/workflows"):
+    for name in os.listdir(os.path.join(root, workflows)):
+        scanned += 1
+        retired.search(name) and check(False, "%s/%s ships under a retired brand" % (workflows, name))
+# One pass per scan, however many values it read: a hit fails on its own line above.
+check(scanned > 0, "T9 scanned no surface — the detection matched nothing")
+
+# #499 shipped an AGI tile captioned "Terminal"; this app's tile sits in the
+# same row, so its caption could not be "Terminal" too. The rule is general:
+# two tiles in one group with one caption are two doors nobody can tell apart.
+groups = 0
+for path, node in walk(superapp["ui"]["sections"], ".ui.sections"):
+    tiles = node.get("tiles")
+    if not isinstance(tiles, list):
+        continue
+    groups += 1
+    captions = [t["label"] for t in tiles if isinstance(t, dict) and isinstance(t.get("label"), str)
+                and isinstance(t.get("target"), str)]
+    for caption in sorted({c for c in captions if captions.count(c) > 1}):
+        check(False, "aa_cloud-superapp/build.json%s has %d tiles captioned %r"
+              % (path, captions.count(caption), caption))
+check(groups > 0, "T9 found no tile group under ui.sections — the detection matched nothing")
+
+# A companion's first-install URL is hand-written in ui.external_apps, and it
+# is the copy a rename leaves behind: it must be the URL the fleet derives
+# from that app's own build.json, or a tap on an uninstalled app downloads
+# an asset that is no longer published.
+fleet_by_name = {entry["label"]: entry for entry in fleet}
+for app in superapp["ui"]["external_apps"]:
+    entry = fleet_by_name.get(app["id"])
+    if entry is None or not app.get("install_apk_url"):
+        continue
+    check(app["install_apk_url"] == entry["release_url"],
+          "ui.external_apps[%s].install_apk_url = %r, but the fleet publishes %s at %r"
+          % (app["id"], app["install_apk_url"], app["id"], entry["release_url"]))
+    check(app.get("install_package") in (None, entry["package"]),
+          "ui.external_apps[%s].install_package = %r, but the fleet installs %r"
+          % (app["id"], app.get("install_package"), entry["package"]))
 
 print()
 print("── test-app-names-pattern: %d passed, %d failed ──" % (passed, failed))

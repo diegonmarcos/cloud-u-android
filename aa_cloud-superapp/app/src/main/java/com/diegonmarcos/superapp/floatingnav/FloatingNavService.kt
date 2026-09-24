@@ -37,8 +37,8 @@ import com.diegonmarcos.superapp.updater.Updater
  * Context is data-driven ([FloatingNavConfig]): a poll loop reads the
  * foreground package via [UsageStatsManager] every `poll_ms` and picks the
  * matching [NavContext] (Cloud-Comms → Fossy | Element | Mattermost |
- * FairMail; Cloud-IDE → Acode | Amaze File; otherwise the default
- * Cloud-Comms | Cloud-IDE). When the foreground IS Cloud-SuperApp the overlay
+ * FairMail; cloud-myterminal → Acode | Amaze File; otherwise the default
+ * Cloud-Comms | cloud-myterminal). When the foreground IS Cloud-SuperApp the overlay
  * is hidden entirely — we're already home.
  *
  * Self-managing foreground service (START_STICKY) so Android keeps it alive
@@ -300,7 +300,7 @@ class FloatingNavService : Service() {
         // Line 1 — the constellation apex (Cloud SuperApp), BIGGEST; bold when
         // SuperApp itself is foreground (the default context).
         cfg.root?.let { col.addView(itemRow(listOf(it), boldCtx = ctx, size = 16f)) }
-        // Line 2 — the sibling hubs (Cloud IDE · Comms · Nav), medium; bold the
+        // Line 2 — the sibling hubs (cloud-myterminal · Comms · Nav), medium; bold the
         // hub matching the current foreground app.
         col.addView(itemRow(cfg.parents, boldCtx = ctx, topGap = true, size = 13f))
         // Line 3 — the current context's children, SMALLEST. Omitted when the

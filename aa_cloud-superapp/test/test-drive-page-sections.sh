@@ -15,7 +15,7 @@
 # What this asserts:
 #   T1  the Data Apps group still leads with Drive, and that tile now targets
 #       `extapp:cloud-drive` — NOT the `drive` tile in Cloud ▸ AGI, which is
-#       MyIDE files and a different thing entirely
+#       MyTerminal files and a different thing entirely
 #   T2  the extraction is COMPLETE on this side: no `drive` section, no
 #       `drive_connections` panel kind, no DriveConnectionsFragment, no
 #       DRIVE_CONNECTIONS_B64 — a leftover route with no fragment is a crash and
@@ -111,12 +111,12 @@ else:
             emit("T1", "the leading Drive tile targets %r — it must launch the extracted "
                        "APK as extapp:cloud-drive" % first.get("target"))
 
-# The AGI `drive` tile is a different thing (MyIDE files) and must not have been
+# The AGI `drive` tile is a different thing (MyTerminal files) and must not have been
 # swept up by the rename.
 for _section, group in all_groups:
     for tile in group.get("tiles", []):
         if tile.get("id") == "drive" and tile.get("target") == "extapp:cloud-drive":
-            emit("T1", "the Cloud ▸ AGI `drive` tile (MyIDE files) was retargeted at the "
+            emit("T1", "the Cloud ▸ AGI `drive` tile (MyTerminal files) was retargeted at the "
                        "Drive APK — it is a different page")
 
 # ── T2 ────────────────────────────────────────────────────────────────────────

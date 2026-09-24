@@ -40,14 +40,14 @@ class ExternalAppsTest {
         assertEquals("com.diegonmarcos.comms.matrix", app.forks["matrix"])
     }
 
-    @Test fun cloudIde_registryResolves() {
-        val app = Sections.externalApp("cloud-ide")
-        assertNotNull("cloud-ide must be declared in ui.external_apps", app)
+    @Test fun cloudMyTerminal_registryResolves() {
+        val app = Sections.externalApp("cloud-myterminal")
+        assertNotNull("cloud-myterminal must be declared in ui.external_apps", app)
         app!!
         assertEquals("com.diegonmarcos.ide", app.hubPackage)
         assertEquals("com.diegonmarcos.ide", app.installPackage)
-        assertTrue("install URL must be the Cloud-IDE-Hub.apk release asset",
-            app.installApkUrl.endsWith("/Cloud-IDE-Hub.apk"))
+        assertTrue("install URL must be the Cloud-MyTerminal.apk release asset",
+            app.installApkUrl.endsWith("/Cloud-MyTerminal.apk"))
         assertEquals("com.diegonmarcos.ide.files", app.forks["files"])
         assertEquals("com.diegonmarcos.ide.utils", app.forks["utils"])
         assertEquals("com.diegonmarcos.ide.editor", app.forks["editor"])

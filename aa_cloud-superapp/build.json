@@ -19,7 +19,7 @@
     ]
   },
   "signing": {
-    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps (Cloud-Comms hub+forks, Cloud-Nav, Cloud-IDE, Cloud-SuperApp). The SAME key signs every app so cross-app signature-IPC + the in-app fleet updater never hit a signature mismatch. KEY LOCATION (raw credential + sops passwords live ONLY in the vault repo): A0_keys/providers/android/release.jks (OU=Cloud Constellation) + A0_keys/providers/android/signing.secrets.yaml. build.sh::_resolve_signing resolves $VAULT_DIR (default ~/git/cloud-vault) + sops-decrypts the passwords, exporting ANDROID_KEYSTORE_FILE/ANDROID_KEYSTORE_PASSWORD/ANDROID_KEY_ALIAS/ANDROID_KEY_PASSWORD which the gradle signingConfig reads. CI does the same via a vault checkout + the SOPS_AGE_KEY secret. THERE IS NO FALLBACK: if the key is unavailable the build FAILS LOUD telling you to use the one shared key — it never generates or substitutes a random/legacy key.",
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps (Cloud-Comms hub+forks, Cloud-Nav, cloud-myterminal, Cloud-SuperApp). The SAME key signs every app so cross-app signature-IPC + the in-app fleet updater never hit a signature mismatch. KEY LOCATION (raw credential + sops passwords live ONLY in the vault repo): A0_keys/providers/android/release.jks (OU=Cloud Constellation) + A0_keys/providers/android/signing.secrets.yaml. build.sh::_resolve_signing resolves $VAULT_DIR (default ~/git/cloud-vault) + sops-decrypts the passwords, exporting ANDROID_KEYSTORE_FILE/ANDROID_KEYSTORE_PASSWORD/ANDROID_KEY_ALIAS/ANDROID_KEY_PASSWORD which the gradle signingConfig reads. CI does the same via a vault checkout + the SOPS_AGE_KEY secret. THERE IS NO FALLBACK: if the key is unavailable the build FAILS LOUD telling you to use the one shared key — it never generates or substitutes a random/legacy key.",
     "vault_keystore": "A0_keys/providers/android/release.jks",
     "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
   },
@@ -2604,9 +2604,9 @@
               },
               {
                 "id": "drive",
-                "label": "MyIDE",
+                "label": "MyTerminal",
                 "icon": "ic_code",
-                "target": "extapp:cloud-ide/files"
+                "target": "extapp:cloud-myterminal/files"
               },
               {
                 "_doc": "B-LLM - the three Telegram agent bots behind one icon instead of three tiles in the row. The icon is ic_ai_sparkle, the same one S-LLM carries: the two folders are siblings on the same row and the owner reads them as one pair, so a generic folder glyph on one and an AI glyph on the other told the eye they were different kinds of thing. 'B' is for big: Hermes, Goose and Claude each answer from a full-size hosted model. A tile that carries a nested 'tiles' array IS a folder - GroupedTilesFragment opens the popup instead of dispatching 'target' - which is why this entry has no target of its own. Giving a folder a target as well would make the first tap ambiguous: open, or navigate?",
@@ -5247,7 +5247,7 @@
         "order": "310",
         "_doc_label": "Renamed from '_Dev & Terminal' to '_Dev' on 2026-09-10, when every terminal left for prod_terminals below. THE LEADING UNDERSCORE IS LOAD-BEARING AND IS NOT PART OF THE NAME THE OWNER READS: ui._doc_phone_sections buckets a folder into a section by its label's FIRST CHARACTER, and '_' is Tools · System. Renaming this to a bare 'Dev' would not rename the folder, it would evict it — a label matching no declared prefix belongs to no section and renders last, down with the Misc and Others sinks. test-phone-taxonomy-prefixes.sh asserts this across every folder so the next rename cannot make the mistake quietly.",
         "label": "_Dev",
-        "_doc_whats_left": "After the 2026-09-10 surgery this folder keeps MacroDroid, Google Admin, Google Analytics, Parallel Space, AutoClicker and Shizuku, plus our own com.diegonmarcos.cloudlib.*/ide.* families and the three constellation apps that name it from ui.external_apps (cloud-ide, c3-watchdog, c3-morpheus). It is thinner but it is not empty, so it was NOT deleted — that is the owner's call to make, not this commit's.",
+        "_doc_whats_left": "After the 2026-09-10 surgery this folder keeps MacroDroid, Google Admin, Google Analytics, Parallel Space, AutoClicker and Shizuku, plus our own com.diegonmarcos.cloudlib.*/ide.* families and the three constellation apps that name it from ui.external_apps (cloud-myterminal, c3-watchdog, c3-morpheus). It is thinner but it is not empty, so it was NOT deleted — that is the owner's call to make, not this commit's.",
         "match_keywords": [
           "pkg:com.arlosoft.macrodroid",
           "pkg:com.diegonmarcos.cloudkeyboardlibs",
@@ -7058,11 +7058,11 @@
         "forks": {}
       },
       {
-        "id": "cloud-ide",
+        "id": "cloud-myterminal",
         "folder": "sys_dev",
         "hub_package": "com.diegonmarcos.ide",
         "install_package": "com.diegonmarcos.ide",
-        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-IDE-Hub.apk",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/Cloud-MyTerminal.apk",
         "forks": {
           "files": "com.diegonmarcos.ide.files",
           "utils": "com.diegonmarcos.ide.utils",
@@ -8377,7 +8377,7 @@
     "floating_nav": {
       "enabled": true,
       "poll_ms": 1000,
-      "_doc_layout": "The expanded menu renders the SAME 3-line box wherever it is triggered (single engine: FloatingNavService.showBar). Line 1 = `root` (the constellation apex, BIGGEST font) = Cloud SuperApp. Line 2 = `parents` (the sibling hubs Cloud IDE · Cloud Comms · Cloud Nav, medium font), constant everywhere, centred; the hub matching the current foreground app is bold. Line 3 = the `children` of the context matched from the foreground package (Cloud-IDE → Acode·Amaze; Cloud-Comms → Mail·Chat·Messenger·Dialer; Cloud-Nav → none; otherwise the `default` context = Cloud-SuperApp's first-level pages), SMALLEST font. Font size strictly decreases per line (root > parents > children). Layout: `top_offset_dp` = distance from the top edge (renders below the centred island cluster); `width_pct` = box width as % of screen width. Every item has a `target`: `self` brings Cloud-SuperApp home; `app:<pkg>` launches that package (installing the `install_app` companion APK if absent); `section:<id>` / `action:<id>` / `page:<...>` bring Cloud-SuperApp forward and dispatch via its shortcut_action handler (onTileClicked). Bolding of the current hub is data-driven from each context's `match_prefixes` — nothing in Kotlin hardcodes a label or package. Add a hub / child = edit here.",
+      "_doc_layout": "The expanded menu renders the SAME 3-line box wherever it is triggered (single engine: FloatingNavService.showBar). Line 1 = `root` (the constellation apex, BIGGEST font) = Cloud SuperApp. Line 2 = `parents` (the sibling hubs cloud-myterminal · Cloud Comms · Cloud Nav, medium font), constant everywhere, centred; the hub matching the current foreground app is bold. Line 3 = the `children` of the context matched from the foreground package (cloud-myterminal → Acode·Amaze; Cloud-Comms → Mail·Chat·Messenger·Dialer; Cloud-Nav → none; otherwise the `default` context = Cloud-SuperApp's first-level pages), SMALLEST font. Font size strictly decreases per line (root > parents > children). Layout: `top_offset_dp` = distance from the top edge (renders below the centred island cluster); `width_pct` = box width as % of screen width. Every item has a `target`: `self` brings Cloud-SuperApp home; `app:<pkg>` launches that package (installing the `install_app` companion APK if absent); `section:<id>` / `action:<id>` / `page:<...>` bring Cloud-SuperApp forward and dispatch via its shortcut_action handler (onTileClicked). Bolding of the current hub is data-driven from each context's `match_prefixes` — nothing in Kotlin hardcodes a label or package. Add a hub / child = edit here.",
       "top_offset_dp": 150,
       "width_pct": 90,
       "root": {
@@ -8386,9 +8386,9 @@
       },
       "parents": [
         {
-          "label": "cloud-ide",
+          "label": "cloud-myterminal",
           "target": "app:com.diegonmarcos.ide",
-          "install_app": "cloud-ide"
+          "install_app": "cloud-myterminal"
         },
         {
           "label": "Inboxes",

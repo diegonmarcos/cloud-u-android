@@ -15,12 +15,12 @@
       {
         "label": "Notes",
         "icon": "ic_code",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       },
       {
         "label": "Files",
         "icon": "ic_p_folder",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       },
       {
         "label": "Media",

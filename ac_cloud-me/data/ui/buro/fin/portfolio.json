@@ -36,7 +36,7 @@
         "title": "Property",
         "subtitle": "Real assets · vehicle · valuables",
         "accent": "#26A69A",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       }
     ]
   }

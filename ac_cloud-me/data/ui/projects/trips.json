@@ -22,7 +22,7 @@
       {
         "label": "Docs",
         "icon": "ic_p_folder",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       }
     ]
   },

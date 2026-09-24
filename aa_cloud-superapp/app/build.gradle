@@ -894,7 +894,7 @@ android {
     // in vault; build.sh::_resolve_signing resolves it and exports
     // ANDROID_KEYSTORE_FILE / _PASSWORD / KEY_ALIAS / KEY_PASSWORD (CI does the
     // same via the vault checkout + SOPS_AGE_KEY). The SAME key signs SuperApp /
-    // Cloud-Nav / Cloud-Comms / Cloud-IDE so local + CI + every app produce a
+    // Cloud-Nav / Cloud-Comms / cloud-myterminal so local + CI + every app produce a
     // matching signature and the in-app updater never rejects an install on a
     // signature mismatch. THERE IS NO FALLBACK: if ANDROID_KEYSTORE_FILE is
     // absent the build FAILS LOUD — it never substitutes a debug/legacy/freshly
@@ -1078,7 +1078,7 @@ dependencies {
     //
     // Pinned to the 6.10.x line, not 7.x: 7 targets Java 17 bytecode, 6.10
     // targets 11, and this module still desugars for minSdk 26. The ssh.jsch
-    // half rides on com.github.mwiede:jsch, which libs:watchdog and cloud-ide
+    // half rides on com.github.mwiede:jsch, which libs:watchdog and cloud-myterminal
     // already ship under the same com.jcraft.jsch package — one SSH stack in
     // the constellation, not two.
     implementation 'org.eclipse.jgit:org.eclipse.jgit:6.10.1.202505221210-r'

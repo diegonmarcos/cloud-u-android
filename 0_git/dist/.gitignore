@@ -158,8 +158,8 @@ aa_cloud-superapp/**/*.keystore
 aa_cloud-superapp/**/*.jks
 ea_cloud-comms/**/*.keystore
 ea_cloud-comms/**/*.jks
-ac_cloud-ide/**/*.keystore
-ac_cloud-ide/**/*.jks
+ac_cloud-myterminal/**/*.keystore
+ac_cloud-myterminal/**/*.jks
 ac_cloud-nav/**/*.keystore
 ac_cloud-nav/**/*.jks
 ## Bitwarden Android for ac_cloud-vault's `vault-bitwarden` fork, added
@@ -204,11 +204,11 @@ ac_net-wireguard/
 ac_vault-keepassdx/
 ac_net-kdeconnect/
 ac_net-rethinkdns/
-## Re-ignore Gradle build outputs inside the whitelisted ac_cloud-ide/ tree
-## (the !ac_cloud-ide/** whitelist would otherwise track build/.gradle dirs).
-ac_cloud-ide/.gradle/
-ac_cloud-ide/build/
-ac_cloud-ide/**/build/
+## Re-ignore Gradle build outputs inside the whitelisted ac_cloud-myterminal/ tree
+## (the !ac_cloud-myterminal/** whitelist would otherwise track build/.gradle dirs).
+ac_cloud-myterminal/.gradle/
+ac_cloud-myterminal/build/
+ac_cloud-myterminal/**/build/
 ac_cloud-nav/.gradle/
 ac_cloud-nav/build/
 ac_cloud-nav/**/build/
@@ -274,8 +274,8 @@ aa_cloud-superapp/dist/
 aa_cloud-superapp/**/*.apk
 ea_cloud-comms/dist/
 ea_cloud-comms/**/*.apk
-ac_cloud-ide/dist/
-ac_cloud-ide/**/*.apk
+ac_cloud-myterminal/dist/
+ac_cloud-myterminal/**/*.apk
 ac_cloud-nav/dist/
 ac_cloud-nav/**/*.apk
 ac_cloud-wallet/dist/

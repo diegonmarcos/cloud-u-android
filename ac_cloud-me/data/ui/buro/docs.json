@@ -7,12 +7,12 @@
       {
         "label": "Files",
         "icon": "ic_p_folder",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       },
       {
         "label": "Notes",
         "icon": "ic_code",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       },
       {
         "label": "Media",
@@ -42,43 +42,43 @@
         "title": "Housing",
         "subtitle": "Lease \u00b7 utilities \u00b7 registration",
         "accent": "#7E57C2",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       },
       {
         "title": "Vehicle",
         "subtitle": "Registration \u00b7 insurance \u00b7 service",
         "accent": "#42A5F5",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       },
       {
         "title": "Insurance",
         "subtitle": "Health \u00b7 liability \u00b7 contents",
         "accent": "#26A69A",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       },
       {
         "title": "Taxes",
         "subtitle": "Filings \u00b7 receipts \u00b7 correspondence",
         "accent": "#66BB6A",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       },
       {
         "title": "Employment",
         "subtitle": "Contracts \u00b7 payslips \u00b7 certificates",
         "accent": "#FFA726",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       },
       {
         "title": "Banking",
         "subtitle": "Statements \u00b7 mandates \u00b7 cards",
         "accent": "#EF5350",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       },
       {
         "title": "Health admin",
         "subtitle": "Invoices \u00b7 claims \u00b7 prescriptions",
         "accent": "#EC407A",
-        "target": "extapp:cloud-ide"
+        "target": "extapp:cloud-myterminal"
       }
     ]
   }

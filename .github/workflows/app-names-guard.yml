@@ -43,3 +43,18 @@ jobs:
             exit 1
           fi
           echo "the tester went red on the reintroduced name, as it must"
+      - name: The tester still fails when the retired cloud-ide brand is put back (#561)
+        run: |
+          set -eu
+          # Undo the previous step's mutation first, or this step would be red for
+          # ac_cloud-chat's name and prove nothing about the brand.
+          git checkout -- .
+          bash aa_cloud-superapp/test/test-app-names-pattern.sh >/dev/null
+          jq '.release.gh_release.asset_name = "Cloud-IDE-Hub.apk"' ac_cloud-myterminal/build.json > /tmp/myterminal-build.json
+          mv /tmp/myterminal-build.json ac_cloud-myterminal/build.json
+          if out="$(bash aa_cloud-superapp/test/test-app-names-pattern.sh)"; then
+            echo "::error::test-app-names-pattern.sh passed with the release asset renamed back to Cloud-IDE-Hub.apk — T9 is vacuous"
+            exit 1
+          fi
+          echo "$out" | grep -F "gh_release.asset_name = 'Cloud-IDE-Hub.apk' spells a retired brand"
+          echo "T9 went red on the retired brand, as it must"

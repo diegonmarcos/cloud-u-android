@@ -22,7 +22,7 @@ data class NavItem(
     /** `self` | `app:<pkg>` | `section:<id>` | `action:<id>` | `page:<...>` */
     val target: String,
     /** ui.external_apps id used to install the companion APK when an `app:`
-     *  target isn't present (e.g. the Cloud-IDE / Cloud-Comms hubs). */
+     *  target isn't present (e.g. the cloud-myterminal / Cloud-Comms hubs). */
     val installApp: String,
 )
 
@@ -46,7 +46,7 @@ data class FloatingNavConfig(
     val widthPct: Int,
     /** Line 1 apex — the constellation root (Cloud SuperApp), biggest font. */
     val root: NavItem?,
-    /** Line 2 — the sibling hubs (Cloud IDE · Comms · Nav), medium font. */
+    /** Line 2 — the sibling hubs (cloud-myterminal · Comms · Nav), medium font. */
     val parents: List<NavItem>,
     /** Global utility actions. Compact menu shows the first [compactActionCount];
      *  the Expanded view shows them all. */

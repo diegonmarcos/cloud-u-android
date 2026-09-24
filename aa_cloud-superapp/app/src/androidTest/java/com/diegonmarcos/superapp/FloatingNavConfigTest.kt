@@ -18,7 +18,7 @@ import org.junit.runner.RunWith
  * FloatingNavService).
  *
  * Line 1 = the three hub parents (constant everywhere). Line 2 = the matched
- * context's children — Cloud-IDE → Acode·Amaze; Cloud-Comms → Mail·Chat·
+ * context's children — cloud-myterminal → Acode·Amaze; Cloud-Comms → Mail·Chat·
  * Messenger·Dialer; otherwise the default = Cloud-SuperApp's first-level pages.
  *
  * Run via the engine: ./build.sh instrument
@@ -37,8 +37,8 @@ class FloatingNavConfigTest {
     @Test fun line1IsTheThreeHubs() {
         val byLabel = cfg.parents.associateBy { it.label }
         assertEquals("self", byLabel["cloud-superapp"]?.target)
-        assertEquals("app:com.diegonmarcos.ide", byLabel["cloud-ide"]?.target)
-        assertEquals("cloud-ide", byLabel["cloud-ide"]?.installApp)
+        assertEquals("app:com.diegonmarcos.ide", byLabel["cloud-myterminal"]?.target)
+        assertEquals("cloud-myterminal", byLabel["cloud-myterminal"]?.installApp)
         assertEquals("app:com.diegonmarcos.comms", byLabel["Cloud Comms"]?.target)
         assertEquals("cloud-comms", byLabel["Cloud Comms"]?.installApp)
     }
