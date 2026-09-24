@@ -75,6 +75,9 @@
     "ab_cloud-libs-shared/libs/bottomnav": {
       "base_language": "host"
     },
+    "ab_cloud-libs-shared/libs/appstore": {
+      "base_language": "host"
+    },
     "ac_cloud-vault/ui": {
       "base_language": "host"
     },
