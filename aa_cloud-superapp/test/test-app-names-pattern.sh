@@ -150,7 +150,15 @@ print("== T6: an app whose gradle reads its build.json takes its launcher label 
 # it, silently, and a launcher tile reading "AFFiNE" shipped behind 18 green
 # checks. An app that needs a different path DECLARES it in
 # build.json::android.gradle_module; "app" is the default nobody has to write.
-reads_build_json = re.compile(r"JsonSlurper\(\)\s*\.parse\(\s*file\(")
+#
+# #470: "reads its build.json" means the file() argument names build.json. The
+# pattern used to stop at `file(`, so ANY JSON a gradle file parsed counted —
+# ac_cloud-termux reading rootfs/rootfs.json for an asset directory name was
+# pulled into T6 and failed for a launcher label that lives in vendored
+# Termux strings, exactly the fork case the comment above excludes. Measured
+# on the tree at the time: the narrower pattern covers the same 12 apps minus
+# ac_cloud-termux, and nothing else.
+reads_build_json = re.compile(r"JsonSlurper\(\)\s*\.parse\(\s*file\([^)]*build\.json")
 derives_label = re.compile(r"resValue\s*\(?\s*[\"']string[\"']\s*,\s*[\"']app_name[\"']\s*,\s*buildJson\.name\b")
 covered = 0
 for directory in sorted(build_files):
