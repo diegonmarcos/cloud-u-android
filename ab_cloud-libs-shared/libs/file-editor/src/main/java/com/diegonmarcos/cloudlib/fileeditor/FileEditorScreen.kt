@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
@@ -140,7 +141,7 @@ fun FileEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text((file?.name ?: "untitled") + if (dirty) " •" else "", maxLines = 1) },
+                title = { Text((file?.name ?: stringResource(R.string.cloudlib_fileeditor_title)) + if (dirty) " •" else "", maxLines = 1) },
                 navigationIcon = { IconButton(onClick = { if (dirty) confirmClose = true else onClose() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") } },
                 actions = {
                     IconButton(enabled = buffer.canUndo && !readOnly, onClick = { if (buffer.undo()) value = TextFieldValue(buffer.text, TextRange(buffer.text.length.coerceAtMost(value.selection.start))) }) { Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo") }
