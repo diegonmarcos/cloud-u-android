@@ -242,9 +242,16 @@
         "libs:battery",
         "libs:datamanager",
         "libs:launcher-onehand",
-        "libs:launcher-zoomies"
+        "libs:launcher-zoomies",
+        "libs:bottomnav"
       ],
       "comment": "Launcher / shell. Hosts navigation to each feature module."
+    },
+    "libs:bottomnav": {
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library",
+      "depends_on": [],
+      "comment": "THE bottom nav of the fleet, in Compose, shared BY REFERENCE (#565/#531). The shell hosts it through BottomNavIslandView in activity_main; ShellBottomNav feeds it ui.bottom_nav. There is no private nav left in this tree."
     },
     "libs:search": {
       "dir": "../ab_cloud-libs-shared/libs/search",
@@ -1150,7 +1157,8 @@
       ]
     },
     "_doc": "Navigation taxonomy - data-driven source for MainActivity's BottomNavigationView (bottom buttons), DrawerLayout (left-side collapsable 2-level menu), and per-section Toolbar menus. Every section child is a PAGE: one `pages` list per section feeds the section grid, the bottom-nav long-press fan, the Sirius ring and the tablet detail pane. The retired `tab:` and `mode:` target prefixes and the per-section `long_press` list were all just 'open child X of section Y' - write `page:<section>/<page>`. Adding a new section = one entry here + one drawable + one fragment placeholder.",
-    "_doc_bottom_cap": "BottomNavigationView hard-caps at 5 items (Material design rule, enforced by NavigationBarMenu.addInternal → IllegalArgumentException). Sections with bottom_nav=false appear ONLY in the drawer; secondary / ops-y sections live there. Drive does the same: 4 in the bottom bar, the rest are drawer overflow.",
+    "_doc_bottom_nav": "The bottom-nav island (libs:bottomnav, #531): the sections it shows, left to right. THE one declaration of which sections are in the bar and in what order - Home in the centre. It replaced res/menu/bottom_nav.xml (the order and ids) AND the per-section bottom_nav booleans (membership), which were two declarations of one list. Each entry is a ui.sections id; its label and per-mode icon come from that section. A section not listed here is reached from the drawer or a tile. ShellBottomNav reads it through BuildConfig.UI_BOTTOM_NAV; five fit the island's even cells at phone width.",
+    "bottom_nav": ["communication", "infos", "home", "cloud", "phone"],
     "_doc_home_index": "The `home` section is the master index — its content is a TileGrid of every other section. Lives at the center of the bottom nav (replacing Chat, which moves to drawer-only). Tapping any drawer tab or bottom-nav button always lands the right-pane on that section's TileGrid (sub-pages as squared tiles).",
     "_doc_aggregator_sections": "Aggregator sections are pure NAV — their tiles deep-link into real content sections via target ids ('section:X' | 'page:X/Y' | 'action:X' | 'extapp:X' | a URI). Each declares tiles_shared (section-wide) and/or a tiles_<page-id> / stack_<page-id> pair per child. Children marked \"facet\": true render THIS section's lists (LauncherNavController.aggregatorPage, which prefers stack_<id>, then tiles_<id>, then the section-wide tile_groups); non-facet children are ordinary pages served by a SectionPages factory — or, when they declare a `url`, by WebPageFragment. The bottom nav hosts exactly these 5 aggregators: Inboxes · Projects · HOME · Cloud · Phone.",
     "sections": [
@@ -1159,7 +1167,6 @@
         "label": "Notify",
         "icon": "ic_p_inbox",
         "module": null,
-        "bottom_nav": true,
         "is_aggregator": true,
         "pages": [
           {
@@ -2076,7 +2083,6 @@
         "label": "Projects",
         "icon": "ic_pm_boards",
         "module": null,
-        "bottom_nav": true,
         "is_aggregator": true,
         "pages": [
           {
@@ -2285,7 +2291,6 @@
         "icon_apps": "ic_suite",
         "icon_admin": "ic_p_c3_stack",
         "module": null,
-        "bottom_nav": true,
         "_doc_hidden_pages": "Cloud's listed children are Cloud | Labs | C3. The six subject Labs (Data & ML, Engineering, Quant, Aero & Space, Circus) render INSIDE the Labs page via tiles_labs; `hidden` keeps them routable as page:cloud/<id> without listing them as top-level children. C3's own two children are NOT here at all: Cloud ▸ C3 mirrors the `c3` section, which carries them as its own Observability | Topology tab strip.",
         "is_aggregator": true,
         "pages": [
@@ -2919,7 +2924,6 @@
         "label": "Phone",
         "icon": "ic_p_dialer",
         "module": null,
-        "bottom_nav": true,
         "is_aggregator": true,
         "_doc_active_apps": "Phone-only \"Active Apps\" section at the top of SuitePhoneAppsFragment, directly above Last Apps. Lists apps that are STILL RUNNING — holding a foreground service open, or currently in the foreground — most recently active first (libs:datamanager AppUsageProvider.activeNow, replaying FOREGROUND_SERVICE_START/STOP and ACTIVITY_RESUMED/STOPPED so a START with no matching STOP counts as alive). It is deliberately NOT a recency ranking: recentUsed returned the same head of the list as Last Apps, so the two sections rendered as twins. An app you opened and then left behind, with no service and no visible activity, belongs to Last Apps and not here. Empty (section hidden) when usage-access is not granted. Baked to scalar BuildConfig fields UI_SUITE_ACTIVE_APPS_{ENABLED,TITLE,LIMIT}.",
         "active_apps": {
@@ -3347,7 +3351,6 @@
         "icon": "ic_mail",
         "module": "libs:mail",
         "supports_accounts": true,
-        "bottom_nav": false,
         "jmap_default_server": "https://jmap.diegonmarcos.com",
         "drawer_default_children": [
           "All inboxes",
@@ -3517,7 +3520,6 @@
         "icon": "ic_rss",
         "module": "libs:feed",
         "supports_accounts": true,
-        "bottom_nav": false,
         "drawer_default_children": [
           "All feeds",
           "+ Subscribe"
@@ -3568,7 +3570,6 @@
         "icon": "ic_home",
         "module": null,
         "supports_accounts": false,
-        "bottom_nav": true,
         "is_master_index": true,
         "_doc": "Master index — content is a TileGrid of every other section. Sits at the center of the bottom nav. No own drawer page (the [Home] drawer tab already covers it)."
       },
@@ -3578,7 +3579,6 @@
         "icon": "ic_calendar",
         "module": "libs:cal",
         "supports_accounts": true,
-        "bottom_nav": false,
         "drawer_default_children": [
           "All calendars",
           "+ Add CalDAV"
@@ -3634,7 +3634,6 @@
         "label": "Vault",
         "icon": "ic_vault",
         "supports_accounts": false,
-        "bottom_nav": false,
         "drawer_default_children": [
           "Passwords",
           "TOTP",
@@ -3685,7 +3684,6 @@
         "icon": "ic_chat",
         "module": "libs:chat",
         "supports_accounts": true,
-        "bottom_nav": false,
         "drawer_default_children": [
           "Mattermost",
           "Matrix-Bridges",
@@ -3747,7 +3745,6 @@
         "icon": "ic_wg",
         "module": "libs:net",
         "supports_accounts": false,
-        "bottom_nav": false,
         "_doc_parent": "WireGuard is its own (non-bottom-nav) section but is surfaced from the Configs Home-Apps row (home_groups Configs → section:wg). parent=config makes the toolbar/system Back at the WG root return to the Configs section instead of Home — consumed by MainActivity.navigateUpToParent (data-driven, sections[*].parent).",
         "parent": "config",
         "single_page": true,
@@ -3776,7 +3773,6 @@
         "icon": "ic_solutions",
         "module": null,
         "supports_accounts": false,
-        "bottom_nav": false,
         "drawer_default_children": [
           "Professional",
           "Personal",
@@ -3821,7 +3817,6 @@
         "icon": "ic_settings",
         "module": "libs:ops",
         "supports_accounts": false,
-        "bottom_nav": false,
         "tabs": true,
         "_doc_tabs": "C3 IS its two halves, so it wears the same tab strip every other tabbed section wears (SectionTabsFragment + AppTabsStyle, driven purely by `tabs` + the visible `pages` below). Observability and Topology are the only two listed pages; the six detail pages under them are `hidden` — still routable as page:c3/<id>, and reached from the tile_row that leads each tab, exactly where they were reached from before. Two listed pages is also what makes this a strip rather than a rail: goSection only falls to SectionMenuFragment past SectionTabsFragment.MAX_PANES.",
         "drawer_default_children": [
@@ -4351,7 +4346,6 @@
         "label": "Tabs",
         "icon": "ic_mode_apps",
         "module": null,
-        "bottom_nav": false,
         "pages": [
           {
             "id": "grid",
@@ -4366,7 +4360,6 @@
         "label": "Recent Apps",
         "icon": "ic_file_stack",
         "module": null,
-        "bottom_nav": false,
         "pages": [
           {
             "id": "grid",
@@ -4381,7 +4374,6 @@
         "label": "Browser",
         "icon": "ic_world",
         "module": null,
-        "bottom_nav": false,
         "pages": [
           {
             "id": "all",
@@ -4402,7 +4394,6 @@
         "label": "Wallet",
         "icon": "ic_wallet",
         "module": null,
-        "bottom_nav": false,
         "pages": [
           {
             "id": "cards",
@@ -4418,7 +4409,6 @@
         "label": "MyHealth",
         "icon": "ic_heart",
         "module": null,
-        "bottom_nav": false,
         "_doc_taxonomy": "Metric grouping mirrors Health Connect's own UI categories (verified against es-ES locale: Actividad / Constantes vitales / Medidas corporales / Nutrición / Seguimiento del ciclo / Sueño) so the per-metric counts in MyHealth match exactly what the HC permission screen shows. Vo2Max sits under Activity (not Heart) per HC; Exercise stays under Activity (no separate Workouts category in HC). Total perms across all metrics = 34, matching HC's count when every category is granted.",
         "metrics": [
           {
@@ -4550,7 +4540,6 @@
         "label": "Configs",
         "icon": "ic_settings",
         "module": null,
-        "bottom_nav": false,
         "_doc_pages_order": "Order here is the single source of truth — drives both the Configs section page-grid AND (via home_groups tiles_from_section: 'config') the Home Apps Configs row. WireGuard appears in the row via an explicit `tiles` entry on the home_groups row with insert_after_id, since WG lives in its own section. `row_break: true` on a page starts a fresh grid row at that tile, which is how the grid keeps the shape Profile/WireGuard/KDE/AI/Permissions — Launcher — Constellation/Panel/About instead of reflowing at ui.tile_columns.",
         "pages": [
           {

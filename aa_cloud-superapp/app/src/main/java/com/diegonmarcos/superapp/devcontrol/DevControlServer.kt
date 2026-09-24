@@ -1225,74 +1225,23 @@ object DevControlServer {
      *  ring quiet — this route is what would have named the killer). For ANR
      *  records the system-captured stack is inlined (head only) so the guilty
      *  frame arrives in the reply rather than staying on a wedged phone. */
-    /** The live bottom-nav tree as JSON — rects, background classes, drawable
-     *  bounds — read on the main thread from the foreground activity. The
-     *  device's own testimony for renders the JVM harness cannot reproduce. */
+    /** The live bottom nav as JSON, read on the main thread from the foreground activity: the
+     *  island host's rect, its items in bar order, and which one holds the pill. The island is
+     *  Compose (libs:bottomnav, #531), so there is no child-View tree to walk; its geometry is
+     *  measured by the lib's own tests and superapp's BottomNavGeometryTest. */
     private fun navGeometryJson(host: DevControlBridge.ActivityHost): String = runCatching {
         val act = host as? android.app.Activity
             ?: return """{"error":"host is not an Activity"}"""
-        val nav = act.findViewById<android.view.ViewGroup>(R.id.bottom_nav)
-            ?: return """{"error":"no bottom_nav in the foreground activity"}"""
-        fun rectOf(v: android.view.View) =
-            org.json.JSONArray(listOf(v.left, v.top, v.right, v.bottom, v.width, v.height))
-        fun drawableOf(d: android.graphics.drawable.Drawable?): Any =
-            if (d == null) org.json.JSONObject.NULL
-            else org.json.JSONObject().apply {
-                put("class", d.javaClass.name)
-                put("bounds", d.bounds.toShortString())
-                runCatching {
-                    if (d is android.graphics.drawable.DrawableContainer) {
-                        val c = d.current
-                        put("current", (c?.javaClass?.name ?: "null") + " " +
-                            (c?.bounds?.toShortString() ?: ""))
-                        if (c is android.graphics.drawable.InsetDrawable)
-                            put("current_inner", (c.drawable?.javaClass?.name ?: "") + " " +
-                                (c.drawable?.bounds?.toShortString() ?: ""))
-                    }
-                }
-            }
-        val o = org.json.JSONObject()
-        o.put("density", act.resources.displayMetrics.density.toDouble())
-        act.findViewById<android.view.View>(R.id.bottom_nav_island)?.let {
-            o.put("island", org.json.JSONObject().apply {
-                put("rect", rectOf(it)); put("background", drawableOf(it.background))
-            })
-        }
-        o.put("nav", org.json.JSONObject().apply {
-            put("class", nav.javaClass.name); put("rect", rectOf(nav))
-            put("paddingLR", org.json.JSONArray(listOf(nav.paddingLeft, nav.paddingRight)))
-            put("minimumHeight", nav.minimumHeight)
-        })
-        val menu = (0 until nav.childCount).map { nav.getChildAt(it) }
-            .firstOrNull { it.javaClass.name.contains("MenuView") } as? android.view.ViewGroup
-        if (menu == null) { o.put("menu", "NOT FOUND"); return o.toString() }
-        o.put("menu", org.json.JSONObject().apply {
-            put("class", menu.javaClass.name); put("rect", rectOf(menu))
-        })
-        val cells = org.json.JSONArray()
-        for (i in 0 until menu.childCount) {
-            val cell = menu.getChildAt(i) as? android.view.ViewGroup ?: continue
-            val cj = org.json.JSONObject()
-            cj.put("rect", rectOf(cell))
-            cj.put("selected", cell.isSelected)
-            cj.put("background", drawableOf(cell.background))
-            val kids = org.json.JSONArray()
-            fun walk(v: android.view.View, depth: Int) {
-                kids.put(org.json.JSONObject().apply {
-                    put("d", depth); put("class", v.javaClass.simpleName)
-                    put("rect", rectOf(v)); put("vis", v.visibility)
-                    v.background?.let { put("bg", drawableOf(it)) }
-                    if (v is android.widget.TextView) put("text", v.text.toString())
-                })
-                if (v is android.view.ViewGroup && depth < 3)
-                    for (k in 0 until v.childCount) walk(v.getChildAt(k), depth + 1)
-            }
-            for (k in 0 until cell.childCount) walk(cell.getChildAt(k), 1)
-            cj.put("children", kids)
-            cells.put(cj)
-        }
-        o.put("cells", cells)
-        o.toString()
+        val nav = act.findViewById<com.diegonmarcos.superapp.bottomnav.BottomNavIslandView>(R.id.bottom_nav_island)
+            ?: return """{"error":"no bottom_nav_island in the foreground activity"}"""
+        org.json.JSONObject().apply {
+            put("density", act.resources.displayMetrics.density.toDouble())
+            put("class", nav.javaClass.name)
+            put("rect", org.json.JSONArray(listOf(nav.left, nav.top, nav.right, nav.bottom, nav.width, nav.height)))
+            put("visibility", nav.visibility)
+            put("selected", nav.selectedId ?: org.json.JSONObject.NULL)
+            put("items", org.json.JSONArray(nav.items.map { it.id }))
+        }.toString()
     }.getOrElse { """{"error":"${jsonEscape(it.toString())}"}""" }
 
     private fun readExitReasons(ctx: android.content.Context, n: Int): String {

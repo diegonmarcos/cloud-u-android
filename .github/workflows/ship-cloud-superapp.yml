@@ -93,6 +93,7 @@ on:
       - "ab_cloud-libs-shared/libs/analytics/**"
       - "ab_cloud-libs-shared/libs/appstore/**"
       - "ab_cloud-libs-shared/libs/battery/**"
+      - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/chat/**"
       - "ab_cloud-libs-shared/libs/core/**"
       - "ab_cloud-libs-shared/libs/datamanager/**"

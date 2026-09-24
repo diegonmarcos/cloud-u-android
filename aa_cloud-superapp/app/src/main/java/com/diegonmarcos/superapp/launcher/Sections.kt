@@ -903,7 +903,7 @@ object Sections {
                     iconApps        = o.optString("icon_apps", "").takeIf { it.isNotBlank() },
                     iconAdmin       = o.optString("icon_admin", "").takeIf { it.isNotBlank() },
                     module          = module,
-                    bottomNav       = o.optBoolean("bottom_nav", false),
+                    bottomNav       = o.getString("id") in bottomNavIds(),
                     parent          = o.optString("parent", "").takeIf { it.isNotBlank() },
                     isMasterIndex   = o.optBoolean("is_master_index", false),
                     pages           = pages.filter { !it.hidden },
@@ -971,6 +971,12 @@ object Sections {
     }
 
     fun byId(id: String): Section? = all().firstOrNull { it.id == id }
+
+    /** build.json::ui.bottom_nav — the section ids the bottom-nav island shows, left to right. */
+    fun bottomNavIds(): List<String> = BuildConfig.UI_BOTTOM_NAV.split(',').filter { it.isNotBlank() }
+
+    /** The island's sections in bar order. An id with no section is dropped, not drawn blank. */
+    fun bottomNav(): List<Section> = bottomNavIds().mapNotNull { byId(it) }
 
     fun defaultSectionId(): String = BuildConfig.UI_DEFAULT_SECTION
 

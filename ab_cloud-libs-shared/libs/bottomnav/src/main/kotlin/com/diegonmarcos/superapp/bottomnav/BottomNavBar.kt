@@ -110,6 +110,10 @@ public fun BottomNavIsland(
     modifier: Modifier = Modifier,
     collapsed: Boolean = false,
     insets: WindowInsets = bottomNavInsets(),
+    /** Extra behaviour the HOST hangs on one item's capsule (superapp's long-press fan, #531).
+     *  Applied inside the capsule's clip, before its click, so a gesture it consumes wins. The
+     *  bar itself stays behaviour-free: an item still does nothing but select on a tap. */
+    itemModifier: (BottomNavEntry) -> Modifier = { Modifier },
 ) {
     val density = LocalDensity.current
     val res = LocalContext.current.resources
@@ -146,6 +150,7 @@ public fun BottomNavIsland(
                         .testTag(itemTag(entry.id))
                         .clip(bottomNavPillShape)
                         .background(if (selected) scheme.inverseSurface else Color.Transparent)
+                        .then(itemModifier(entry))
                         .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(entry) })
                         .padding(vertical = pad),
                     horizontalAlignment = Alignment.CenterHorizontally,

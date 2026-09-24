@@ -1,103 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Bottom-nav pill geometry. FIVE tickets own this file and it must hold
-     all of them: #462 contributed bottom_nav_pill_corner_radius (the ONE
-     radius the pill island and the selected-item capsule both reference, so
-     the two pills can never drift apart); #473 added bottom_nav_end_inset and
-     bottom_nav_icon_label_gap (the bar's spacing geometry); #477 added
-     bottom_nav_item_vertical_pad (the bar's item stack's vertical inset, read
-     as BOTH app:itemPaddingTop and app:itemPaddingBottom so the two gaps are
-     equal by declaration) and tab_strip_top_inset (the tab-strip's own top
-     breathing room above the toolbar island); #498 bound the selected-item
-     pill's OWN insetTop/insetBottom to that SAME bottom_nav_item_vertical_pad,so
-     the capsule box and the content box derive from ONE token and their centres
-     coincide by construction, not by the coincidence of two numbers (the
-     pill inset was a magic literal 8dp while the content pad was 6dp — the
-     two-source drift that failed five tickets). One declaration each, never a
-     literal copied into a layout or style, because a per-view literal is two
-     numbers that can drift apart (the rule #380/#381/#384/#408/#424 closed. -->
+<!-- The app's own spacing tokens. One declaration each, never a literal copied into a layout or
+     style (the rule #380/#381/#384/#408/#424 closed).
+
+     NO bottom_nav_* token lives here any more (#531). The bottom nav is libs:bottomnav's island
+     and its geometry is declared once, in that module's res/values/dimens.xml. A same-named
+     dimen here would silently OVERRIDE the library's at resource merge, which is a second
+     declaration of every number #462/#473/#477/#498 settled. BottomNavGeometryTest reads the
+     library's tokens back and fails if the rendered island disagrees with them. -->
 
 <resources>
-    <!-- #462. The corner radius used by BOTH the bottom-nav island (the
-         container) and the selected-item capsule drawn behind a whole nav item.
-         Both drawables reference this token so the two pills can never drift
-         apart. 999dp is the repository's established "full pill" convention
-         (bg_dynamic_island and bg_liquid_glass_pill use it too): the framework
-         clamps any corner radius larger than half the drawable's smaller side,
-         so 999dp always renders a true capsule with fully semicircular ends at
-         whatever height the bar actually measures to — a semicircle, not a
-         rounded box. -->
-    <dimen name="bottom_nav_pill_corner_radius">999dp</dimen>
-
-    <!-- #473. The horizontal inset pushed into BOTH ends of the bar. It is the
-         paddingStart AND paddingEnd of the navigation view (one dimen, read
-         twice — so the left margin is the right margin by declaration). The
-         Material3 BottomNavigationView divides its width into equal item slots
-         and centres each icon in its slot, so two effects fall out of this
-         single inset: the FIRST and LAST buttons move inward off the bar's
-         semicircular ends (so when one of them is selected its pill is
-         concentrically ringed by the curved end instead of being flush against
-         or clipped by it), and because the two insets eat into the total
-         width, every inter-icon slot — hence every gap — reduces by the same
-         amount, keeping the spacing perfectly symmetrical and regular.
-         Deliberately modest: on a 360dp phone the slot stays above the 64dp
-         active-indicator width, so #417 ("nothing may overflow") holds. -->
-    <!-- #498 curvature: the island (bg_nav_island) and the selected pill are
-         both stadiums on the SAME radius token, so their end arcs are
-         concentric exactly when the horizontal gap between pill end and
-         island end equals the pill's vertical inset — the radii then differ
-         by that same gap and the arc centres coincide, at ANY bar height.
-         The bar's paddingStart/End IS that horizontal gap (the island wraps
-         the bar with no padding of its own), so this dimen is an ALIAS of
-         the pill inset, not a number. It was a literal 16dp against a 6dp
-         pill inset: end arcs 10dp off-centre, which is the misalignment
-         reported on the leftmost/rightmost items (2026-09-19). One token,
-         both directions — the pair cannot drift. -->
-    <dimen name="bottom_nav_end_inset">@dimen/bottom_nav_pill_inset</dimen>
-
-    <!-- #473. The vertical distance between each item's icon and its label
-         (Material's activeIndicatorLabelPadding, default 4dp). Bumped up a
-         little so the caption breathes beneath the glyph. -->
-    <dimen name="bottom_nav_icon_label_gap">8dp</dimen>
-
-    <!-- #477. The vertical inset of a bottom-nav item's icon+label stack
-         inside its slot, applied as BOTH app:itemPaddingTop and
-         app:itemPaddingBottom of the BottomNavigationView (one dimen, read
-         twice — so the gap above the stack is the gap below it by
-         declaration). Material3's stock defaults are asymmetric
-         (itemPaddingTop=4dp vs itemPaddingBottom=8dp), which is exactly the
-         defect #477 reports: the selected stack rides HIGH in the pill with
-         visibly more space below than above. Equalising the two paddings
-         centres the icon+label stack in the capsule. The value reuses the
-         same total (4+8=12dp) so the bar is no taller than before — only
-         where the stack sits changes. -->
-    <dimen name="bottom_nav_item_vertical_pad">6dp</dimen>
-
-    <!-- #498 (third attempt). The SELECTED capsule's inset from the item
-         cell's top and bottom edge. Until now this was bound to
-         bottom_nav_item_vertical_pad on the theory that "one token both
-         directions = the pill box IS the content box", which is only true if
-         the content's ink fills its box — it does not, and nothing ever
-         measured it. The pill and the content pad are two different distances
-         with a deliberate relationship: the content is inset by
-         bottom_nav_item_vertical_pad, the capsule by this, and the difference
-         between them is the breathing room the icon+label has INSIDE the
-         capsule. Two tokens, one declared relationship, and
-         BottomNavGeometryTest measures that the rendered pill really is
-         (pad - pillInset) clear of the ink on BOTH sides. -->
-    <dimen name="bottom_nav_pill_inset">6dp</dimen>
-    <!-- Label size for the rebuilt CloudBottomNavView — declared here like
-         every other bottom-nav distance, not a literal in Kotlin. 12sp is
-         what Material's labelMedium rendered before the rebuild. -->
-    <dimen name="bottom_nav_label_text_size">12sp</dimen>
-
-    <!-- #498 (third attempt). The nav glyph's size. Material's own default is
-         24dp and that is what the bar has always rendered, but it was never
-         the APP's number, so no tester could assert it without asserting a
-         Material default back to itself. Declared here and read into
-         app:itemIconSize, it becomes one of the measured terms in the bar's
-         height. -->
-    <dimen name="bottom_nav_icon_size">24dp</dimen>
-
     <!-- #477. The tab-strip's OWN top breathing room above the toolbar island
          the app draws INTO the camera cutout. This is a base only: the real
          clearance is added at runtime from the status-bar / display-cutout

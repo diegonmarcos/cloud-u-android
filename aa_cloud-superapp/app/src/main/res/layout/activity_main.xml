@@ -403,32 +403,15 @@
 
         </FrameLayout>
 
-        <!-- Bottom island — same pattern. -->
-        <FrameLayout
+        <!-- Bottom island (#531): libs:bottomnav's Compose island, the fleet's ONE bottom nav.
+             The island draws its own pill, width (80%), end insets and bottom clearance from
+             the lib's dimens, so this tag carries no geometry of its own. ShellBottomNav feeds
+             it build.json::ui.bottom_nav. It keeps the id every anchor (stars, chrome) uses. -->
+        <com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
             android:id="@+id/bottom_nav_island"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="12dp"
-            android:layout_marginBottom="12dp"
-            android:background="@drawable/bg_nav_island">
-
-            <!-- Rebuilt 2026-09-19: CloudBottomNavView, no Material. Every
-                 geometry attribute the old tag carried lives INSIDE the view
-                 now, read from the same dimens tokens; the menu is inflated
-                 internally from @menu/bottom_nav. Only the bar's own two
-                 declarations remain here: the end insets (the concentric-arc
-                 gap) and the transparent own-background (the island paints). -->
-            <com.diegonmarcos.superapp.ui.CloudBottomNavView
-                android:id="@+id/bottom_nav"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@android:color/transparent"
-                android:paddingStart="@dimen/bottom_nav_end_inset"
-                android:paddingEnd="@dimen/bottom_nav_end_inset" />
-
-        </FrameLayout>
+            android:layout_gravity="bottom" />
     </FrameLayout>
 
     <include layout="@layout/view_drawer_panel" />

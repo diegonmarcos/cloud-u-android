@@ -2,180 +2,111 @@ package com.diegonmarcos.superapp.ui
 
 import android.app.Application
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Rect
-import android.graphics.drawable.InsetDrawable
-import android.view.ContextThemeWrapper
-import android.view.LayoutInflater
-import android.view.View
-import android.view.View.MeasureSpec
-import android.view.ViewGroup
-import androidx.test.core.app.ApplicationProvider
-import com.diegonmarcos.superapp.R
-import com.google.android.material.color.MaterialColors
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.isSelected
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
+import com.diegonmarcos.superapp.bottomnav.BottomNavTags
+import com.diegonmarcos.superapp.launcher.Sections
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import com.google.android.material.R as MR
 
 /**
- * #512 — the selected bottom-nav pill, proven on the RESOLVED view.
+ * #512 / #531 — the selected bottom-nav pill, proven on what the shell PAINTS.
  *
- * #462/#473/#477/#498 each shipped CI-green on this widget while it was wrong,
- * and after #498 the pill did not render AT ALL: the subclass #498 introduced
- * handed defStyleAttr=0 to Material's constructor, which means "no default
- * style attribute", so ?attr/bottomNavigationStyle — the style that carries
- * itemBackground, i.e. the pill — was never applied. Every tester stayed green
- * because every tester read XML text, and the XML was fine.
- *
- * So nothing here reads a file. It inflates the real activity_main under the
- * real app theme, resolves the nav by its id (whatever class the layout tag
- * names), and asserts what the widget ended up with: the resolved
- * itemBackground id, the pill's measured bounds against the measured icon and
- * label, and the pixels the nav actually paints.
+ * The selected pill once vanished for a whole release while every XML tester stayed green, so
+ * nothing here reads a file. The bar is now libs:bottomnav's Compose island (#531); the part
+ * that is superapp's own is the THEME: ShellBottomNav carries Theme.Superapp's inverse pair into
+ * the island. So this draws the configured host and reads pixels back: the selected capsule is
+ * the theme's colorSurfaceInverse, every other capsule is the island's fill, and the ink is the
+ * theme's colorOnSurfaceInverse on the pill and colorOnSurfaceVariant elsewhere. Then it taps,
+ * and checks the pill follows the tap and a re-tap is routed as a re-tap.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class, qualifiers = "w360dp-h800dp-xxhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class BottomNavSelectedPillTest {
+class BottomNavSelectedPillTest : ShellIslandHarness() {
 
-    private lateinit var nav: CloudBottomNavView
-    private val selectedId = R.id.nav_home
-    private val unselectedId = R.id.nav_cloud
+    private val centre get() = Sections.bottomNavIds().let { it[it.size / 2] }
+    private val other get() = Sections.bottomNavIds().first { it != centre }
 
-    @Before
-    fun inflateRealLayout() {
-        val ctx = ContextThemeWrapper(
-            ApplicationProvider.getApplicationContext<Application>(), R.style.Theme_Superapp)
-        val root = LayoutInflater.from(ctx).inflate(R.layout.activity_main, null)
-        nav = root.findViewById(R.id.bottom_nav)
-        nav.selectedItemId = selectedId
-        val dm = ctx.resources.displayMetrics
-        root.measure(
-            MeasureSpec.makeMeasureSpec(dm.widthPixels, MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec(dm.heightPixels, MeasureSpec.EXACTLY))
-        root.layout(0, 0, dm.widthPixels, dm.heightPixels)
+    /** Inside the capsule's left end at mid-height: clear of the centred icon and label, so
+     *  only the capsule's own fill can have painted it. */
+    private fun capsuleProbe(bmp: Bitmap, id: String): Color {
+        val c = cell(id)
+        return bmp.at(c.left + 3 * res.displayMetrics.density, c.center.y)
     }
 
-    @Test
-    fun everyCellCarriesTheCapsuleSelectorAndOnlySelectedShowsIt() {
-        // Rebuilt world: no Material style chain to "reach" the view — the
-        // capsule selector is applied per cell by CloudBottomNavView itself.
-        println("nav class=${nav.javaClass.name} size=${nav.width}x${nav.height}px")
-        drawNav()
-        for (i in 0 until nav.childCount) {
-            val cell = nav.getChildAt(i)
-            assertNotNull("cell $i has no background — the capsule selector is not applied", cell.background)
-            // Platform getCurrent() may be null while no selector state matches.
-            val current = cell.background?.let { bg -> runCatching { bg.current }.getOrNull() }
-            if (cell.id == selectedId) {
-                assertTrue(
-                    "the SELECTED cell's background state is ${current?.javaClass?.name}, " +
-                        "not the inset capsule — no selection UI is painted",
-                    current is InsetDrawable)
-            } else {
-                assertTrue(
-                    "an UNSELECTED cell paints the capsule too",
-                    current !is InsetDrawable)
-            }
+    /** How many of the icon's pixels are [ink]: the glyph's solid strokes are drawn in exactly
+     *  the tint, so a correctly tinted icon has many and a wrongly tinted one has none. */
+    private fun inkPixels(bmp: Bitmap, box: Rect, ink: Color): Int {
+        var n = 0
+        for (x in box.left.toInt() until box.right.toInt()) for (y in box.top.toInt() until box.bottom.toInt()) {
+            if (distance(bmp.at(x.toFloat(), y.toFloat()), ink) <= 3f / 255f) n++
         }
+        return n
     }
 
     @Test
-    fun pillWrapsIconAndLabelAndIsCentredInTheItemCell() {
-        val bitmap = drawNav()
-        val item = nav.findViewById<ViewGroup>(selectedId)
-        val pill = pillBounds(item)
-        // Rebuilt cells: no Material internal ids — find children by ROLE.
-        val icon = rectIn(item, (0 until item.childCount).map { item.getChildAt(it) }
-            .first { it is android.widget.ImageView })
-        val label = rectIn(item, (0 until item.childCount).map { item.getChildAt(it) }
-            .first { it is android.widget.TextView && it.visibility == View.VISIBLE })
-        println("#512 measured (px, item coords): cell=${item.width}x${item.height} " +
-            "pill=$pill icon=$icon label=$label")
-        println("#512 measured: pill centre=(${pill.exactCenterX()}, ${pill.exactCenterY()}) " +
-            "cell centre=(${item.width / 2f}, ${item.height / 2f})")
-
-        assertTrue("pill has no area: $pill", pill.width() > 0 && pill.height() > 0)
-        assertTrue("icon has no area: $icon", icon.width() > 0 && icon.height() > 0)
-        assertTrue("label has no area: $label", label.width() > 0 && label.height() > 0)
-        assertTrue("pill $pill does not contain the icon $icon", pill.contains(icon))
-        assertTrue("pill $pill does not contain the label $label", pill.contains(label))
-        assertEquals("pill is off-centre horizontally in its cell",
-            item.width / 2f, pill.exactCenterX(), 0.5f)
-        assertEquals("pill is off-centre vertically in its cell",
-            item.height / 2f, pill.exactCenterY(), 0.5f)
-        bitmap.recycle()
+    fun `exactly one capsule is selected and it is the selected section`() {
+        showShellNav(centre)
+        compose.onAllNodes(isSelected()).assertCountEquals(1)
+        val selected = compose.onAllNodes(isSelected()).onFirst().fetchSemanticsNode().boundsInRoot
+        assertEquals("the selected node is not $centre's capsule", cell(centre), selected)
     }
 
     @Test
-    fun onlyTheSelectedItemPaintsThePill() {
-        val bitmap = drawNav()
-        // Revolut capsule (2026-09-19): the LIGHT inverse surface pair.
-        val expected = MaterialColors.getColor(
-            nav, com.google.android.material.R.attr.colorSurfaceInverse)
-        val selected = nav.findViewById<ViewGroup>(selectedId)
-        val unselected = nav.findViewById<ViewGroup>(unselectedId)
-        // Probe 1dp inside the pill's top edge on the cell's centre line: above
-        // the icon (which starts lower, centred in its container), so nothing
-        // but the pill itself can have painted it.
-        val dy = pillBounds(selected).top + nav.resources.displayMetrics.density.toInt()
-        val on = probe(bitmap, selected, dy)
-        val off = probe(bitmap, unselected, dy)
-        println("#512 painted: selected=#%08X unselected=#%08X expected pill=#%08X"
-            .format(on, off, expected))
-        // ponytail: ±2 per channel absorbs premultiplied-alpha rounding, nothing more.
-        val drift = listOf(Color.alpha(on) - Color.alpha(expected), Color.red(on) - Color.red(expected),
-            Color.green(on) - Color.green(expected), Color.blue(on) - Color.blue(expected))
-            .maxOf { kotlin.math.abs(it) }
-        assertTrue("the selected item paints #%08X, not the pill colour #%08X".format(on, expected),
-            Color.alpha(on) > 0 && drift <= 2)
-        assertEquals("an UNSELECTED item paints a background too",
-            0, Color.alpha(off))
-        bitmap.recycle()
+    fun `the selected capsule is the theme's light pill and the rest are the island fill`() {
+        showShellNav(centre)
+        val pill = themeColor(MR.attr.colorSurfaceInverse)
+        val bmp = paint()
+        for (id in ids) {
+            val probe = capsuleProbe(bmp, id)
+            val want = if (id == centre) pill else islandFill
+            assertTrue("capsule $id painted $probe, expected ${if (id == centre) "Theme.Superapp colorSurfaceInverse" else "the island fill"} $want",
+                distance(probe, want) <= 3f / 255f)
+        }
+        assertTrue("the theme's pill colour IS the island fill — the probe could not tell them apart",
+            distance(pill, islandFill) > 16f / 255f)
     }
 
-    // REMOVED (#498, third attempt): barHugsItsContentNoM3MinHeightInflation.
-    // It asserted menu.height == nav.height with zero dead band above and
-    // below, to prove the bar was not inflated by Material's 80dp minHeight.
-    // Those three assertions can never fail: BottomNavigationMenuView.onMeasure
-    // rebuilds its height spec as MeasureSpec.EXACTLY of whatever size it is
-    // offered, so the menu block IS the bar, at every height. It passed on CI
-    // 35402703581 printing "nav=2364px menu=2364px above=0px below=0px" — a
-    // 788dp bottom bar, the very inflation it was written to catch. The bar's
-    // height is asserted against the DECLARED geometry instead, in
-    // BottomNavGeometryTest (barIsExactlyAsTallAsTheDeclaredItemGeometryNeeds
-    // and theBarIsNotAllowedToFillItsParent), where the expected value comes
-    // from the dimens and the font rather than from the view itself.
-
-    /** Backgrounds get their bounds when a view DRAWS, not when it lays out. */
-    private fun drawNav(): Bitmap {
-        assertTrue("nav was laid out with no size", nav.width > 0 && nav.height > 0)
-        return Bitmap.createBitmap(nav.width, nav.height, Bitmap.Config.ARGB_8888)
-            .also { nav.draw(Canvas(it)) }
+    @Test
+    fun `the ink is the theme's inverse pair on the pill and onSurfaceVariant elsewhere`() {
+        showShellNav(centre)
+        val onPill = themeColor(MR.attr.colorOnSurfaceInverse)
+        val offPill = themeColor(MR.attr.colorOnSurfaceVariant)
+        assertTrue("the two inks are indistinguishable", distance(onPill, offPill) > 16f / 255f)
+        val bmp = paint()
+        val sel = inkPixels(bmp, icon(centre), onPill)
+        val unsel = inkPixels(bmp, icon(other), offPill)
+        println("#531 ink pixels: selected $centre=$sel in $onPill, unselected $other=$unsel in $offPill")
+        assertTrue("the selected icon has no pixel in colorOnSurfaceInverse $onPill", sel > 0)
+        assertTrue("the unselected icon has no pixel in colorOnSurfaceVariant $offPill", unsel > 0)
+        assertEquals("the selected icon is drawn in the unselected ink", 0, inkPixels(bmp, icon(centre), offPill))
     }
 
-    /** The painted capsule: the checked state's inset shape, in item coords. */
-    private fun pillBounds(item: View): Rect {
-        val current = item.background?.current
-        assertTrue(
-            "the selected item's background in its checked state is " +
-                "${current?.javaClass?.name}, not the inset pill — no selection UI is painted",
-            current is InsetDrawable)
-        return Rect((current as InsetDrawable).drawable!!.bounds)
-    }
+    @Test
+    fun `a tap moves the pill and a re-tap is routed as a re-tap`() {
+        showShellNav(centre)
+        compose.onNodeWithTag(BottomNavTags.item(other), useUnmergedTree = true).performClick()
+        compose.waitForIdle()
+        assertEquals("a tap on $other did not reach onSelect", listOf(other), picked)
+        val bmp = paint()
+        assertTrue("the pill did not move to $other", distance(capsuleProbe(bmp, other), themeColor(MR.attr.colorSurfaceInverse)) <= 3f / 255f)
+        assertTrue("$centre still paints the pill", distance(capsuleProbe(bmp, centre), islandFill) <= 3f / 255f)
 
-    private fun rectIn(ancestor: ViewGroup, v: View): Rect =
-        Rect(0, 0, v.width, v.height).also { ancestor.offsetDescendantRectToMyCoords(v, it) }
-
-    private fun probe(bitmap: Bitmap, item: ViewGroup, dy: Int): Int {
-        val r = rectIn(nav, item)
-        return bitmap.getPixel(r.centerX(), r.top + dy)
+        compose.onNodeWithTag(BottomNavTags.item(other), useUnmergedTree = true).performClick()
+        compose.waitForIdle()
+        assertEquals("a re-tap on the selected $other was not routed to onReselect", listOf(other), repicked)
+        assertEquals("a re-tap was also routed as a new pick", listOf(other), picked)
     }
 }

@@ -73,7 +73,7 @@ object HomeFanMenu {
      *  bubbles[0] is the centered top bubble; commit() reads items[idx]
      *  by the same index the finger-detection loop fills in. 1 item ⇒
      *  top-only; 2-4 items ⇒ 1 top + rest along the bottom row. */
-    fun show(host: View, items: List<Pair<String, Pair<Int, String>>>, onPick: (target: String) -> Unit): Controller {
+    fun show(host: View, anchor: android.graphics.Rect, items: List<Pair<String, Pair<Int, String>>>, onPick: (target: String) -> Unit): Controller {
         val ctx = host.context
         val container = android.widget.LinearLayout(ctx).apply {
             orientation = android.widget.LinearLayout.VERTICAL
@@ -128,19 +128,18 @@ object HomeFanMenu {
         }
 
         // Measure the container so we know its actual width, then center
-        // horizontally over the host's centre on the screen.
+        // horizontally over the anchor (the pressed nav item, in screen px).
         container.measure(
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED),
         )
         val containerW = container.measuredWidth
         val containerH = container.measuredHeight
-        val hostPos = IntArray(2); host.getLocationOnScreen(hostPos)
-        val cx = hostPos[0] + host.width / 2
+        val cx = anchor.centerX()
         val screenW = ctx.resources.displayMetrics.widthPixels
         val margin = dp(ctx, 8)
         val x  = (cx - containerW / 2).coerceIn(margin, screenW - containerW - margin)
-        val y  = hostPos[1] - containerH - dp(ctx, 12)
+        val y  = anchor.top - containerH - dp(ctx, 12)
         popup.showAtLocation(host, android.view.Gravity.NO_GRAVITY, x, y)
 
         // Fan-in animation matched to the triangle layout:

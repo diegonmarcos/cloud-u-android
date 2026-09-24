@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Icon tint + label colour for CloudBottomNavView items, one selector for
-     both (the icon duplicates its parent cell's SELECTED state). Theme attrs,
-     never literals, so every launcher theme resolves its own pair. -->
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:state_selected="true" android:color="?attr/colorOnSurfaceInverse" />
-    <item android:color="?attr/colorOnSurfaceVariant" />
-</selector>

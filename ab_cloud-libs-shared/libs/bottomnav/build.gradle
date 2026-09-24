@@ -8,8 +8,8 @@
 // one-dimen bottom clearance plus the live cutout inset, and scroll-collapse to icons only. It
 // is ported, not wrapped: there is no AndroidView here. Items are injected (BottomNavEntry), so
 // no app's menu is baked in. cloud-mail's five-item table (BottomNav.kt) is its first consumer.
-// superapp / me / nav / notes still draw their own View navs until pushes 2-4 migrate them onto
-// this module. That migration is the plan now, no longer "deliberately unmerged".
+// superapp consumes it since #531 through BottomNavIslandView, the Compose host an XML shell
+// drops into its layout. me / nav / notes still draw their own View navs until their pushes.
 //
 // Deliberately sparse on the independent-version axis (text-tools / core precedent): it builds
 // under whichever AGP the app that pulls it in uses. The versions below match cloud-mail's

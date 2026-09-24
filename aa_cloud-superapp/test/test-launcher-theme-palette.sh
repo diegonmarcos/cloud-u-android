@@ -239,106 +239,10 @@ PY
 )" "every OLED theme is #000000 and every text role clears WCAG AA on its own theme"
 
 echo
-echo "== T7: the bottom-nav bar is a full pill, and its selection geometry is declared NOT flush =="
-# #473. Diego's request: the home bottom bar has semicircular (pill) ends and each
-# extreme button must sit further INSIDE so that when one of them is selected its
-# selection shadow is concentrically ringed by the bar's curved end — never
-# clipped, never flush against the edge — while the gaps between all icons stay
-# equal (hard constraint: left margin == right margin, every inter-item gap
-# identical), and the icon↔label distance grows a little.
-#
-# WHY THIS EXISTS: a Material3 BottomNavigationView divides its available width
-# into equal item slots, so once the available width is fixed the gaps between
-# icons are EQUAL BY CONSTRUCTION and shrink together whenever the width shrinks.
-# That is exactly the two-effect lever #473 wants: a single horizontal inset
-# declared on BOTH ends (paddingStart AND paddingEnd = the SAME dimen) moves the
-# end buttons inward off the pill's semicircular ends AND, because it eats the
-# same amount out of both sides of the total width, reduces every inter-icon gap
-# by the same amount. So the whole geometry is TWO numbers, both from ONE
-# declaration each, and the two regressions that hollow out this change are:
-#   1. the inset reverted to flush (0dp / removed)  → end pill sits against the
-#      curved end, clipped.
-#   2. the two ends differently inset (an unequal gap sneaks in) → left and
-#      right margins no longer match.
-check "$(python3 - "$RES_LAYOUT" "$RES_DIMENS" <<'PY'
-import os, re, sys
-layout, dims = open(sys.argv[1], encoding='utf-8').read(), open(sys.argv[2], encoding='utf-8').read()
-problems = []
-
-# The dims must exist and be real (not 0dp) — a 0dp/removed entry is the flush
-# regression #473 ships to remove. A dimen may be an ALIAS (@dimen/other):
-# #498's curvature fix binds bottom_nav_end_inset to bottom_nav_pill_inset so
-# the pill's end arcs stay concentric with the island's — an alias IS a
-# literal one hop away, and a reader that refuses to follow the reference
-# would force the pair back into two numbers that can drift, which is the
-# exact defect the alias exists to prevent. Resolve chains, cap the depth.
-raw = dict(re.findall(r'<dimen name="([^"]+)">([^<]+)</dimen>', dims))
-def resolve(name, depth=0):
-    v = raw.get(name)
-    if v is None or depth > 4:
-        return None
-    v = v.strip()
-    m = re.match(r'^([0-9.]+)dp$', v)
-    if m:
-        return float(m.group(1))
-    r = re.match(r'^@dimen/([\w.]+)$', v)
-    if r:
-        return resolve(r.group(1), depth + 1)
-    return None
-dimval = {name: resolve(name) for name in raw}
-for needed in ('bottom_nav_end_inset', 'bottom_nav_icon_label_gap'):
-    if needed not in dimval:
-        problems.append('%s is not declared in dimens.xml' % needed)
-        continue
-    if dimval[needed] is None:
-        problems.append('%s does not resolve to a literal dp value (broken or cyclic @dimen chain?)' % needed)
-    elif dimval[needed] <= 0:
-        problems.append('%s is %sdp — flush/zero is exactly the regression this asserts away' % (needed, dimval[needed]))
-
-# The nav view must apply the SAME inset dimen to BOTH ends. Reading the same
-# @dimen/… ref twice is what makes left margin == right margin by construction;
-# two different refs or a literal on either side is the unequal-gap regression.
-nav = re.search(r'<[\w.]+\b[^>]*android:id="@\+id/bottom_nav"[^>]*/?>', layout)
-if not nav:
-    problems.append('no view declares android:id="@+id/bottom_nav" — resolved by ROLE (the id), not by class name, so any BottomNavigationView subclass still matches')
-else:
-    tag = nav.group(0)
-    def attr(name):
-        m = re.search(name + r'\s*=\s*"([^"]+)"', tag)
-        return m.group(1) if m else None
-    ps, pe = attr(r'android:paddingStart'), attr(r'android:paddingEnd')
-    if ps is None or pe is None:
-        problems.append('the nav has no explicit start/end padding — the end buttons sit flush')
-    elif ps != pe:
-        problems.append('paddingStart=%s but paddingEnd=%s — left/right margins differ' % (ps, pe))
-    elif ps != '@dimen/bottom_nav_end_inset':
-        problems.append('start/end inset = %s, not @dimen/bottom_nav_end_inset' % ps)
-    else:
-        inset = dimval.get('bottom_nav_end_inset')
-        if inset is not None and inset <= 0:
-            problems.append('end inset resolves to %sdp — the pill would be flush' % inset)
-    # icon↔label distance must come from the ONE declared dimen, and be larger
-    # than the Material default (4dp) — "increase a little".
-    # 2026-09-19 rebuild: the gap is no longer a Material attr on the tag —
-    # CloudBottomNavView reads the SAME token in code (label topMargin = gap).
-    kt = open(os.path.join(os.path.dirname(sys.argv[1]),
-        '../java/com/diegonmarcos/superapp/ui/CloudBottomNavView.kt')).read() \
-        if False else open(sys.argv[1].replace('res/layout/activity_main.xml',
-        'java/com/diegonmarcos/superapp/ui/CloudBottomNavView.kt')).read()
-    gap = '@dimen/bottom_nav_icon_label_gap' \
-        if 'R.dimen.bottom_nav_icon_label_gap' in kt and 'topMargin = gap' in kt else None
-    if gap is None:
-        problems.append('CloudBottomNavView no longer reads bottom_nav_icon_label_gap into the label topMargin — icon/label gap lost')
-    elif gap != '@dimen/bottom_nav_icon_label_gap':
-        problems.append('icon/label gap = %s, not @dimen/bottom_nav_icon_label_gap' % gap)
-    else:
-        gv = dimval.get('bottom_nav_icon_label_gap')
-        if gv is not None and gv <= 4:
-            problems.append('icon/label gap is %sdp — the request was to INCREASE it above the 4dp default' % gv)
-
-print('; '.join(problems) or 'OK')
-PY
-)" "both end buttons inset off the pill's semicircular ends by one dimen, gaps stay equal, icon↔label gap enlarged"
+# T7 (the bottom-nav pill ends and end insets, #473) is retired here (#531): the bar is
+# libs:bottomnav's Compose island, its geometry is declared once in that module's dimens, and
+# BottomNavGeometryTest (M4/M6) MEASURES the rendered end insets and pill insets instead of
+# reading attributes off a layout tag that no longer carries them.
 
 echo "== T12: #477 nav geometry — one dimen each, read from a real declaration =="
 # #477. Two independent geometry defects in the nav chrome. Both are constants
@@ -355,44 +259,21 @@ echo "== T12: #477 nav geometry — one dimen each, read from a real declaration
 # hardcoded dp), reading a declared base dimen and NOT consuming the insets.
 # A check that fails when the value is wrong must read the value — every
 # assertion below reads the file on disk, never a hardcoded expectation.
-_BOTTOM_PAD_VIOLATION=$(python3 - "$RES_LAYOUT" "$RES_DIMENS" <<'PY'
+# The bottom-nav half of #477 (one symmetric item pad) is measured on the rendered island by
+# BottomNavGeometryTest M4 since #531. The tab-strip base dimen stays declared here.
+_STRIP_BASE_VIOLATION=$(python3 - "$RES_DIMENS" <<'PY'
 import re, sys
-layout, dims = open(sys.argv[1], encoding='utf-8').read(), open(sys.argv[2], encoding='utf-8').read()
-problems = []
-dimval = {}
-for name, v in re.findall(r'<dimen name="([^"]+)">([^<]+)</dimen>', dims):
-    m = re.match(r'^([0-9.]+)dp$', v.strip())
-    dimval[name] = float(m.group(1)) if m else None
-for needed in ('bottom_nav_item_vertical_pad', 'tab_strip_top_inset'):
-    if needed not in dimval:
-        problems.append('%s is not declared in dimens.xml' % needed)
-    elif dimval[needed] is None:
-        problems.append('%s is not a literal dp value a static reader can check' % needed)
-# The dimen must be REAL (>0) — a 0dp/removed value is the flush regression.
-for needed in ('bottom_nav_item_vertical_pad', 'tab_strip_top_inset'):
-    if dimval.get(needed) is not None and dimval[needed] <= 0:
-        problems.append('%s is %sdp — a zero/negative inset re-introduces the defect' % (needed, dimval[needed]))
-nav = re.search(r'<[\w.]+\b[^>]*android:id="@\+id/bottom_nav"[^>]*/?>', layout)
-if not nav:
-    problems.append('no view declares android:id="@+id/bottom_nav" — resolved by ROLE (the id), not by class name, so any BottomNavigationView subclass still matches')
+dims = open(sys.argv[1], encoding='utf-8').read()
+m = re.search(r'<dimen name="tab_strip_top_inset">([0-9.]+)dp</dimen>', dims)
+if not m:
+    print('tab_strip_top_inset is not declared as a literal dp in dimens.xml')
+elif float(m.group(1)) <= 0:
+    print('tab_strip_top_inset is %sdp - a zero/negative inset re-introduces the defect' % m.group(1))
 else:
-    tag = nav.group(0)
-    def attr(name):
-        m = re.search(name + r'\s*=\s*"([^"]+)"', tag)
-        return m.group(1) if m else None
-    # 2026-09-19 rebuild: the pads live in CloudBottomNavView — ONE token
-    # (bottom_nav_item_vertical_pad) applied symmetrically in a single
-    # setPadding call, top and bottom the same expression by construction.
-    kt2 = open(sys.argv[1].replace('res/layout/activity_main.xml',
-        'java/com/diegonmarcos/superapp/ui/CloudBottomNavView.kt')).read()
-    if 'R.dimen.bottom_nav_item_vertical_pad' not in kt2:
-        problems.append('CloudBottomNavView no longer reads bottom_nav_item_vertical_pad — the stack pad is untokened')
-    elif 'setPadding(0, pillInset + pad, 0, pillInset + pad)' not in kt2:
-        problems.append('the cell padding is no longer one symmetric expression — top and bottom can drift apart again')
-print('; '.join(problems) or 'OK')
+    print('OK')
 PY
 )
-check "$_BOTTOM_PAD_VIOLATION" "bottom-nav item stack centred: one dimen read as BOTH itemPaddingTop and itemPaddingBottom"
+check "$_STRIP_BASE_VIOLATION" "tab_strip_top_inset is a real declared base"
 # The TOP half: %477 strip clearance reads a REAL inset, non-consuming.
 _TOP_STRIP_VIOLATION=$(python3 - "$SRC/launcher/SectionTabsFragment.kt" <<'PY'
 import re, sys

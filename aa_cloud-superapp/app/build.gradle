@@ -1,8 +1,9 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    // Compose compiler plugin removed — libs:wallet (the only Compose
-    // surface) moved to ac_cloud-wallet; buildFeatures.compose = false.
+    // Compose is mandatory (Diego's decree, 2026-09-24, #565): the shell's bottom nav is
+    // libs:bottomnav's Compose island, hosted in activity_main by BottomNavIslandView.
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 // Capture wall-clock start so we can emit gradle's config-phase
@@ -744,6 +745,8 @@ android {
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64", "\"${uiPermissionsRolesB64}\""
         buildConfigField "String", "UI_PERMISSIONS_PRIVILEGED_B64", "\"${uiPermissionsPrivilegedB64}\""
         buildConfigField "String", "UI_DEFAULT_SECTION",    "\"${defaultSection}\""
+        // #531 the bottom-nav island's sections, in bar order (build.json::ui.bottom_nav).
+        buildConfigField "String", "UI_BOTTOM_NAV",         "\"${(buildJson.ui.bottom_nav ?: []).join(',')}\""
         buildConfigField "String", "UI_DEFAULT_MODE",       "\"${defaultMode}\""
         buildConfigField "int",    "UI_TILE_COLUMNS",       "${tileColumns}"
         buildConfigField "String", "UI_HOME_ACTIONS_B64",   "\"${uiActionsB64}\""
@@ -864,11 +867,9 @@ android {
         // that runs `dumpsys batterystats` in shell context for exact
         // per-app energy attribution.
         aidl = true
-        // Jetpack Compose was used for libs:wallet (now moved to
-        // ac_cloud-wallet — standalone constellation APK). No remaining
-        // compose surfaces in this module; disabled so the Compose
-        // compiler plugin is not invoked unnecessarily.
-        compose = false
+        // compose = false was REVERSED by decree on 2026-09-24 (#565/#531): Compose is
+        // mandatory in every app, and the bottom nav is the shared Compose island.
+        compose = true
     }
 
     // #512. Robolectric inflates REAL layouts against the REAL merged
@@ -1061,8 +1062,13 @@ dependencies {
     implementation 'dev.rikka.shizuku:api:13.1.5'
     implementation 'dev.rikka.shizuku:provider:13.1.5'
 
-    // Compose BOM removed — libs:wallet (the only compose surface) was
-    // moved to ac_cloud-wallet standalone APK (see compose = false above).
+    // #531 the ONE bottom nav (libs:bottomnav), and the Compose the shell needs to host it and
+    // hang the long-press fan on its items. Same BOM the lib composes against.
+    implementation project(':libs:bottomnav')
+    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
 
     // ── Maps / Tracker stack lifted OUT to the ac_cloud-nav app ──
     // libs:maps (MapLibre Native + tracker + timeline + MyTrips) was moved
@@ -1102,6 +1108,9 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'androidx.test:core:1.6.1'
     testImplementation 'org.robolectric:robolectric:4.16.1'
+    // #531 the bottom-nav tests measure the real island through the compose test rule.
+    testImplementation platform('androidx.compose:compose-bom:2025.01.00')
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
 }

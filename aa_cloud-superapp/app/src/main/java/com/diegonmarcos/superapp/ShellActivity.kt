@@ -72,7 +72,8 @@ import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentTransaction
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.MaterialToolbar
-import com.diegonmarcos.superapp.ui.CloudBottomNavView
+import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
+import com.diegonmarcos.superapp.ui.ShellBottomNav
 import com.google.android.material.tabs.TabLayout
 import com.diegonmarcos.superapp.updater.Updater
 import com.diegonmarcos.superapp.mail.MailHost
@@ -132,7 +133,7 @@ open class ShellActivity : AppCompatActivity(),
 
     private val TAG = "MainActivity"
     private lateinit var drawerLayout: DrawerLayout
-    private lateinit var bottomNav: CloudBottomNavView
+    private lateinit var bottomNav: BottomNavIslandView
     private lateinit var toolbarFx: LauncherToolbarFx
     private lateinit var drawerTabs: TabLayout
     private lateinit var drawerPageTabs: TabLayout
@@ -437,13 +438,11 @@ open class ShellActivity : AppCompatActivity(),
         recentTabEntries().firstOrNull { it.key == key }?.let { onAppTabPicked(it) }
     }
 
-    /** Re-entrancy guards: both drawerTabs.selectTab() AND
-     *  bottomNav.selectedItemId fire their selection listeners. When the
-     *  selection change originated from goHome/goSection itself we must
-     *  not bounce back into it (Material's setSelectedItemId fires the
-     *  listener even on programmatic set → StackOverflowError otherwise). */
+    /** Re-entrancy guard: drawerTabs.selectTab() fires its selection
+     *  listener. When the selection change originated from goHome/goSection
+     *  itself we must not bounce back into it. The bottom nav needs no guard:
+     *  BottomNavIslandView.selectedId only moves the pill, it never calls back. */
     private var suppressTabReentry:       Boolean = false
-    private var suppressBottomNavReentry: Boolean = false
 
     /** Latest gesture/navigation-bar inset captured by the edge-to-edge
      *  listener — applyChrome adds it to the BottomNav clearance so
@@ -533,7 +532,7 @@ open class ShellActivity : AppCompatActivity(),
             // a `?attr/colorPrimaryDark` (blue-gray) scrim across the
             // status-bar area, hiding our galaxy beneath. Force-clear it.
             drawerLayout.setStatusBarBackground(null)
-            bottomNav = findViewById(R.id.bottom_nav)
+            bottomNav = findViewById(R.id.bottom_nav_island)
             drawerTabs = findViewById(R.id.drawer_tabs)
             drawerPageTabs = findViewById(R.id.drawer_page_tabs)
 
@@ -606,14 +605,12 @@ open class ShellActivity : AppCompatActivity(),
                 override fun onTabReselected(tab: TabLayout.Tab) {}
             })
 
-            // Apply mode-aware bottom-nav icons on init. Sections with
-            // icon_apps/icon_admin overrides will swap glyphs; the rest
-            // keep their bottom_nav.xml static icon.
+            // Fill the bottom-nav island from build.json::ui.bottom_nav with
+            // mode-aware icons (icon_apps/icon_admin swap the glyph).
             refreshBottomNavIconsForMode()
 
-            bottomNav.setOnItemSelectedListener { onBottomNavPicked(it) }
-            bottomNav.setOnItemReselectedListener { item ->
-                val tappedSection = sectionIdForNavId(item.itemId)
+            bottomNav.onSelect = { onBottomNavPicked(it) }
+            bottomNav.onReselect = reselect@{ tappedSection ->
                 Trace.i(TAG, "bnv-reselect: tapped=$tappedSection current=$currentSection")
                 // RULE 1 — Home BNV always returns to the 3D Home screen.
                 //   Even if BNV's selected id "matches" the visible fragment
@@ -622,14 +619,14 @@ open class ShellActivity : AppCompatActivity(),
                 if (tappedSection == "home" && currentSection != "home") {
                     fireGeminiPattern()
                     goHome()
-                    return@setOnItemReselectedListener
+                    return@reselect
                 }
                 // RULE 2 — Other BNV slots with a different currentSection:
                 //   take the user there.
-                if (tappedSection != null && tappedSection != currentSection) {
+                if (tappedSection != currentSection) {
                     fireGeminiPattern()
                     goSection(tappedSection, Sections.byId(tappedSection)?.label ?: tappedSection)
-                    return@setOnItemReselectedListener
+                    return@reselect
                 }
                 // RULE 3 — True same-section re-tap.
                 //   • App-drawer-sheet is up → pop the sheet to expose the
@@ -651,9 +648,10 @@ open class ShellActivity : AppCompatActivity(),
             }
 
             if (savedInstanceState == null) {
-                // Default landing per build.json::ui.default_section.
+                // Default landing per build.json::ui.default_section, taken as a
+                // bottom-nav pick so the pill and the screen start together.
                 val target = Sections.defaultSectionId()
-                bottomNav.selectedItemId = idForSectionId(target) ?: R.id.nav_home
+                onBottomNavPicked(if (target in Sections.bottomNavIds()) target else "home")
             }
 
             // Warm-up the Phone tab data path on a low-priority Thread
@@ -718,7 +716,7 @@ open class ShellActivity : AppCompatActivity(),
             }
 
             installNavSwipeGesture()
-            toolbarFx = LauncherToolbarFx(this, bottomNav, { onTileClicked(it) }, ::sectionIdForNavId)
+            toolbarFx = LauncherToolbarFx(this, bottomNav) { onTileClicked(it) }
             toolbarFx.install()
 
             Updater.start(applicationContext)
@@ -913,14 +911,12 @@ open class ShellActivity : AppCompatActivity(),
 
     private val haptHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
-    private fun onBottomNavPicked(item: MenuItem): Boolean {
-        if (suppressBottomNavReentry) return true
-        val id = sectionIdForNavId(item.itemId) ?: return false
+    private fun onBottomNavPicked(id: String) {
+        bottomNav.selectedId = id
         fireGeminiPattern()
         // "Home" fully resets to the home root (pop pages, close drawer) — same as
         // the system HOME button — not just a section switch.
         if (id == "home") resetToHome() else goSection(id, Sections.byId(id)?.label ?: id)
-        return true
     }
 
     /** Gemini-like rhythm for any section-change action (bottom-nav tap,
@@ -940,24 +936,6 @@ open class ShellActivity : AppCompatActivity(),
         haptHandler.postDelayed({ Haptics.segmentTick(anchor) }, 410)
         haptHandler.postDelayed({ Haptics.segmentTick(anchor) }, 490)
         haptHandler.postDelayed({ Haptics.gestureEnd(anchor) }, 560)
-    }
-
-    private fun sectionIdForNavId(navId: Int): String? = when (navId) {
-        R.id.nav_communication -> "communication"
-        R.id.nav_infos         -> "infos"
-        R.id.nav_home          -> "home"
-        R.id.nav_cloud         -> "cloud"
-        R.id.nav_phone         -> "phone"
-        else -> null
-    }
-
-    private fun idForSectionId(id: String): Int? = when (id) {
-        "communication" -> R.id.nav_communication
-        "infos"         -> R.id.nav_infos
-        "home"          -> R.id.nav_home
-        "cloud"         -> R.id.nav_cloud
-        "phone"         -> R.id.nav_phone
-        else            -> null
     }
 
     // ── drawer tab navigation ─────────────────────────────────────────────
@@ -1285,12 +1263,8 @@ open class ShellActivity : AppCompatActivity(),
     fun openSection(id: String) = goSection(id, Sections.byId(id)?.label ?: id)
 
     override fun syncBottomNav(sectionId: String) {
-        val navId = idForSectionId(sectionId) ?: return
-        if (bottomNav.selectedItemId != navId) {
-            suppressBottomNavReentry = true
-            bottomNav.selectedItemId = navId
-            suppressBottomNavReentry = false
-        }
+        // Only the bar's own sections move the pill; any other section leaves it where it was.
+        if (sectionId in Sections.bottomNavIds()) bottomNav.selectedId = sectionId
     }
 
     override fun syncDrawerTab(index: Int) {
@@ -2097,28 +2071,10 @@ open class ShellActivity : AppCompatActivity(),
         // a tablet's detail pane back to the section's first page.
     }
 
-    /** Rebind bottom-nav menu items to their per-mode icons AND to
-     *  their data-driven labels. Reads Section.iconForMode + Section.label
-     *  from build.json::ui.sections — bottom_nav.xml is now only the
-     *  structural anchor (item ids + fallback static icons); the human-
-     *  visible label is whatever sections[id=X].label says today. Lets
-     *  us rename Tools→Labs purely in build.json without touching
-     *  res/values/strings.xml. Safe to call repeatedly. */
-    private fun refreshBottomNavIconsForMode() {
-        val mode = modePrefs.mode
-        for (i in 0 until bottomNav.menu.size()) {
-            val item = bottomNav.menu.getItem(i)
-            val sectionId = sectionIdForNavId(item.itemId) ?: continue
-            val section = Sections.byId(sectionId) ?: continue
-            val iconRes = Sections.iconResFor(this, section.iconForMode(mode))
-            if (iconRes != 0) item.setIcon(iconRes)
-            if (section.label.isNotBlank()) item.title = section.label
-        }
-        // CloudBottomNavView renders from the menu snapshot — re-render after
-        // the mutation (Material observed menu changes; the rebuilt view is
-        // explicit about it instead).
-        bottomNav.refresh()
-    }
+    /** Refill the bottom-nav island for the current Apps/Admin mode: each item's icon is its
+     *  section's iconForMode and its label the section's label, both from build.json, so
+     *  renaming a section is a build.json edit. Safe to call repeatedly. */
+    private fun refreshBottomNavIconsForMode() = ShellBottomNav.configure(bottomNav, modePrefs.mode)
 
     // ── toolbar (right-side Back action) ─────────────────────────────────
 

@@ -51,14 +51,9 @@
         <item name="*android:tooltipFrameBackground">@drawable/bg_tooltip_transparent</item>
     </style>
 
-    <!-- The bottom nav is CloudBottomNavView since 2026-09-19 — no Material
-         navigation classes, no themed style, no active indicator. The two
-         styles that lived here (Widget.CloudSuperApp.BottomNavigationView +
-         its transparent ActiveIndicator) were the rat's nest: four
-         generations of counter-patches against framework branches that
-         rendered differently on-device than under Robolectric. Geometry and
-         the selection capsule are owned entirely by the view itself, from
-         the dimens tokens and bg_bottom_nav_item_checked. -->
+    <!-- The bottom nav is libs:bottomnav's Compose island (#531). No Material navigation
+         classes and no themed style: ShellBottomNav carries this theme's colorSurfaceInverse /
+         colorOnSurfaceInverse / colorOnSurfaceVariant into the island's pill and ink. -->
 
     <!-- Custom dense text style for drawer rows. The default
          textAppearanceBodyMedium has ~20sp lineHeight which dominates
