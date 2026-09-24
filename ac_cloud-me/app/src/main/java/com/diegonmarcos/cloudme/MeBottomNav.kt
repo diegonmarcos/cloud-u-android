@@ -43,11 +43,12 @@ object MeBottomNav {
         // activity_main's DrawerLayout (fitsSystemWindows) already margins its content by the
         // system-bar inset, and the island sits inside that content. Reading the live inset
         // again would lift the bar twice (#477).
-        nav.insets = null
+        nav.insets = WindowInsets(0, 0, 0, 0)
         nav.onSelect = { id ->
             val section = Sections.byId(id)
             when {
                 section == null -> Unit
+                section.target.isNotBlank() -> onTarget(section.target)
                 else -> { nav.selectedId = id; onOpen(id) }
             }
         }
