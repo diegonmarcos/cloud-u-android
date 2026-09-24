@@ -7530,7 +7530,7 @@
         "wireguard_required": "wireguard_pinned"
       },
       "feature_not_toggleable": {
-        "grid": "A LAYOUT choice, not a device state. It names the shape of the home pane ('6x2' = two rows of six) and the user changes it by editing those twelve slots in the Power Saving home apps editor at the bottom of this tab, not by flipping a switch. A boolean could not express it and a switch labelled 'grid' would explain nothing."
+        "grid": "A LAYOUT choice, not a device state. It names the shape of the home pane ('default', 'monospace_list') and each launcher theme declares its own, not a switch the user flips. A boolean could not express it and a switch labelled 'grid' would explain nothing."
       },
       "_doc_background_jobs": "The background work `background_pause` tears down, and the toggle that shows each piece of it. BackgroundOrchestrator cancels these WorkManager tags and stops the Maps tracker; before this list existed the user got no signal that notifications had stopped arriving. Keep in sync with BackgroundOrchestrator.TAGGED_JOBS — the tester asserts every entry here names a toggle that exists.",
       "background_jobs": {

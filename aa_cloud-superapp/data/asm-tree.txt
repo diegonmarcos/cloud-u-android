@@ -244,7 +244,7 @@ DRAWER SECTIONS  (not in bottom nav)
     KDE              ← KdeConnectFragment  (clean-room KDE Connect over wg_ip:1716)
     AI               ← AiFragment
     Launcher         ← LauncherConfigFragment
-      ├─ Themes:  Cloud Theme (default) │ Cloud Minimalist Black │ Cloud Power Saving
+      ├─ Themes:  Cloud Theme (default) │ Cloud Minimalist Black
       └─ Profiles: Personal │ Work │ Guest (locked-down, WG off)
     Import           → action:import_configs  (ImportConfigsFragment)
     Update           → action:check_updates   (UpdateOverlayFragment via libs:updater)

@@ -45,7 +45,9 @@ echo "== T2: no REFERENCE to the mode survives anywhere in the shipped app =="
 # theme id/enum entry, its class names, its style/colour tokens, its action
 # id, and every string resource minted for it. rg over app/ + build.json +
 # data/, never over test/ (a tester is allowed to document history).
-PATTERNS='CloudPowerSaving|cloud_power_saving|PowerSavingFragment|PowerSavingChrome|PowerSavingDesign|PowerSavingAppsPrefs|PowerLevers|Theme\.Superapp\.PowerSaving|theme_powersave_|power_saving_'
+# 'Cloud Power Saving' is the display name: data/asm-tree.txt (the sitemap
+# the About screen ships) kept listing it as a theme after the code was gone.
+PATTERNS='Cloud Power Saving|Power Saving home apps|CloudPowerSaving|cloud_power_saving|PowerSavingFragment|PowerSavingChrome|PowerSavingDesign|PowerSavingAppsPrefs|PowerLevers|Theme\.Superapp\.PowerSaving|theme_powersave_|power_saving_'
 HITS="$(rg -n --hidden -g '!*/build/*' "$PATTERNS" "$APP/app" "$BJ" "$APP/data" 2>/dev/null)"
 if [ -z "$HITS" ]; then
   ok "no code, resource or build.json reference to the mode's identifiers"
@@ -75,16 +77,20 @@ if [ -f "$LTP" ]; then
     && bad "LauncherTheme enum still declares CloudPowerSaving" \
     || ok "LauncherTheme enum has no CloudPowerSaving entry"
 fi
-if [ -f "$BJ" ]; then
-  python3 - "$BJ" <<'PY'
+# Captured, NOT piped into `{ read; ok|bad; }`: a pipeline's right side is a
+# subshell, so its bad() bumped a FAIL counter that died with it — this check
+# printed FAIL and the tester still exited 0 (#435 mutation-proof caught it).
+LT="$(python3 - "$BJ" <<'PY'
 import json, sys
 ui = json.load(open(sys.argv[1]))["ui"]
 ids = [t["id"] for t in ui["launcher_themes"]]
 print("FAIL" if "cloud_power_saving" in ids else "OK", "|", ",".join(ids))
 PY
-fi | { read -r verdict rest;
-  if [ "$verdict" = "OK" ]; then ok "build.json launcher_themes has no cloud_power_saving entry ($rest)";
-  else bad "build.json launcher_themes still declares cloud_power_saving ($rest)"; fi; }
+)"
+case "$LT" in
+  "OK "*) ok "build.json launcher_themes has no cloud_power_saving entry (${LT#OK })" ;;
+  *)      bad "build.json launcher_themes still declares cloud_power_saving, or could not be read (${LT:-no output})" ;;
+esac
 # ShellActivity (shared chrome, #435's "do NOT delete that file, remove only
 # its power-saving branches"): the file must still exist, still handle
 # Minimalist Black, and no longer branch on CloudPowerSaving.

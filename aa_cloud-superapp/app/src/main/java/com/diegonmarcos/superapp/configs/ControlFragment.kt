@@ -46,7 +46,7 @@ import java.util.concurrent.Executors
  * `tile_ink`. Two consequences, and both are the reason it is written this
  * way. Contrast is symmetric, so a theme whose off tile is legible cannot have
  * an illegible on tile — there is no pair of colours that can be got wrong on
- * one side only. And it survives a theme: under Cloud Power Saving,
+ * one side only. And it survives a theme: under a black theme where
  * `text_primary` IS white and `tile_ink` IS black, so the owner's words come
  * out exactly, while under Minimalistic Black the same rule reads as terminal
  * green on black inverting to black on green. Hard-coding #000 and #FFF would
