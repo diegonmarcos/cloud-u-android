@@ -30,85 +30,99 @@ plugins {
 // version, a URL or a hash.
 def rclonePin = new groovy.json.JsonSlurper().parse(file('data/rclone-binary.json'))
 def rcloneJniDir = new File(buildDir, 'generated/rclone-jni')
-def rcloneCacheDir = new File(buildDir, 'rclone-cache')
 
-// CLOSURES, not `def name(...)` methods: a script method is not reachable from a
-// closure nested inside a task's doLast (Gradle resolves against the task's
-// delegate and stops — run 36072226945: "Could not find method fetchPinned()
-// … on task"). A closure held in a script variable is captured lexically and
-// resolves from any depth.
-def sha256Of = { File f ->
-    def digest = java.security.MessageDigest.getInstance('SHA-256')
-    f.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
-    return digest.digest().encodeHex().toString()
-}
+/**
+ * A REAL task class, not a doLast closure: cloud-drive builds with Gradle's
+ * configuration cache, which refuses a task action that reaches for script
+ * objects ("Cannot reference a Gradle script object from a Groovy closure",
+ * run 36072917399). Managed @Input/@Output properties and self-contained
+ * helpers are what the cache supports. Downloads once, refuses on either hash
+ * mismatch, reads the ELF program headers for PT_INTERP, stages jniLibs.
+ */
+abstract class FetchRcloneBinaries extends DefaultTask {
+    @InputFile abstract RegularFileProperty getPinFile()
+    @Internal abstract DirectoryProperty getCacheDir()
+    @OutputDirectory abstract DirectoryProperty getOutDir()
 
-def fetchPinned = { String url, File target, String sha256 ->
-    if (target.exists() && sha256Of(target) == sha256) return
-    logger.quiet("rclone: downloading " + url)
-    target.parentFile.mkdirs(); target.delete()
-    def connection = new URL(url).openConnection()
-    connection.setInstanceFollowRedirects(true)
-    target.withOutputStream { it << connection.inputStream }
-    def actual = sha256Of(target)
-    if (actual != sha256) {
-        target.delete()
-        throw new GradleException("rclone: wrong sha256 for " + url + "\n  expected " + sha256 + "\n  actual   " + actual)
-    }
-}
-
-/** True when the ELF64 file has a PT_INTERP program header (i.e. is dynamically linked). */
-def hasProgramInterpreter = { File elf ->
-    def raf = new RandomAccessFile(elf, 'r')
-    try {
-        def magic = new byte[4]; raf.readFully(magic)
-        if (magic[0] != (byte) 0x7f || magic[1] != (byte) 'E' || magic[2] != (byte) 'L' || magic[3] != (byte) 'F')
-            throw new GradleException("rclone: " + elf + " is not an ELF file")
-        def order = java.nio.ByteOrder.LITTLE_ENDIAN
-        def header = new byte[64]; raf.seek(0); raf.readFully(header)
-        def bb = java.nio.ByteBuffer.wrap(header).order(order)
-        long phoff = bb.getLong(0x20); int phentsize = bb.getShort(0x36) & 0xffff; int phnum = bb.getShort(0x38) & 0xffff
-        for (int i = 0; i < phnum; i++) {
-            raf.seek(phoff + (long) i * phentsize)
-            def ph = new byte[4]; raf.readFully(ph)
-            int type = java.nio.ByteBuffer.wrap(ph).order(order).getInt(0)
-            if (type == 3) return true   // PT_INTERP
-        }
-        return false
-    } finally { raf.close() }
-}
-
-task fetchRcloneBinaries {
-    description = "Download, verify (sha256 + no PT_INTERP) and stage the pinned rclone binaries as jniLibs"
-    inputs.file file('data/rclone-binary.json')
-    outputs.dir rcloneJniDir
-    doLast {
-        rclonePin.binaries.each { abi, pin ->
-            def url = rclonePin.url_template.replace('{version}', rclonePin.version).replace('{arch}', pin.arch)
-            def zip = new File(rcloneCacheDir, "rclone-${rclonePin.version}-${pin.arch}.zip")
+    @TaskAction
+    void fetch() {
+        def pinJson = new groovy.json.JsonSlurper().parse(pinFile.get().asFile)
+        def cache = cacheDir.get().asFile
+        def out = outDir.get().asFile
+        pinJson.binaries.each { abi, pin ->
+            def url = pinJson.url_template.replace('{version}', pinJson.version).replace('{arch}', pin.arch)
+            def zip = new File(cache, "rclone-${pinJson.version}-${pin.arch}.zip")
             fetchPinned(url, zip, pin.zip_sha256)
-            def entry = rclonePin.entry_template.replace('{version}', rclonePin.version).replace('{arch}', pin.arch)
-            def out = new File(rcloneJniDir, "${abi}/${rclonePin.jni_name}")
-            out.parentFile.mkdirs()
+            def entry = pinJson.entry_template.replace('{version}', pinJson.version).replace('{arch}', pin.arch)
+            def staged = new File(out, "${abi}/${pinJson.jni_name}")
+            staged.parentFile.mkdirs()
             def zf = new java.util.zip.ZipFile(zip)
             try {
                 def ze = zf.getEntry(entry)
                 if (ze == null) throw new GradleException("rclone: " + zip + " has no entry " + entry)
-                out.withOutputStream { o -> zf.getInputStream(ze).withStream { i -> o << i } }
+                staged.withOutputStream { o -> zf.getInputStream(ze).withStream { i -> o << i } }
             } finally { zf.close() }
-            def actual = sha256Of(out)
+            def actual = sha256Of(staged)
             if (actual != pin.binary_sha256) {
-                out.delete()
+                staged.delete()
                 throw new GradleException("rclone: extracted binary sha256 mismatch for " + abi + "\n  expected " + pin.binary_sha256 + "\n  actual   " + actual)
             }
-            if (rclonePin.interp == 'none' && hasProgramInterpreter(out)) {
-                out.delete()
+            if (pinJson.interp == 'none' && hasProgramInterpreter(staged)) {
+                staged.delete()
                 throw new GradleException("rclone: " + abi + " binary carries a PT_INTERP — it is dynamically linked and will not run under bionic; the pin declares interp=none")
             }
-            out.setExecutable(true, false)
-            logger.quiet("rclone: staged ${abi}/${rclonePin.jni_name} (" + out.length() + " bytes, static)")
+            staged.setExecutable(true, false)
+            logger.quiet("rclone: staged ${abi}/${pinJson.jni_name} (" + staged.length() + " bytes, static)")
         }
     }
+
+    private static String sha256Of(File f) {
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        f.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
+        return digest.digest().encodeHex().toString()
+    }
+
+    private void fetchPinned(String url, File target, String sha256) {
+        if (target.exists() && sha256Of(target) == sha256) return
+        logger.quiet("rclone: downloading " + url)
+        target.parentFile.mkdirs(); target.delete()
+        def connection = new URL(url).openConnection()
+        connection.setInstanceFollowRedirects(true)
+        target.withOutputStream { it << connection.inputStream }
+        def actual = sha256Of(target)
+        if (actual != sha256) {
+            target.delete()
+            throw new GradleException("rclone: wrong sha256 for " + url + "\n  expected " + sha256 + "\n  actual   " + actual)
+        }
+    }
+
+    /** True when the ELF64 file has a PT_INTERP program header (i.e. is dynamically linked). */
+    private static boolean hasProgramInterpreter(File elf) {
+        def raf = new RandomAccessFile(elf, 'r')
+        try {
+            def magic = new byte[4]; raf.readFully(magic)
+            if (magic[0] != (byte) 0x7f || magic[1] != (byte) 'E' || magic[2] != (byte) 'L' || magic[3] != (byte) 'F')
+                throw new GradleException("rclone: " + elf + " is not an ELF file")
+            def order = java.nio.ByteOrder.LITTLE_ENDIAN
+            def header = new byte[64]; raf.seek(0); raf.readFully(header)
+            def bb = java.nio.ByteBuffer.wrap(header).order(order)
+            long phoff = bb.getLong(0x20); int phentsize = bb.getShort(0x36) & 0xffff; int phnum = bb.getShort(0x38) & 0xffff
+            for (int i = 0; i < phnum; i++) {
+                raf.seek(phoff + (long) i * phentsize)
+                def ph = new byte[4]; raf.readFully(ph)
+                int type = java.nio.ByteBuffer.wrap(ph).order(order).getInt(0)
+                if (type == 3) return true   // PT_INTERP
+            }
+            return false
+        } finally { raf.close() }
+    }
+}
+
+def fetchRcloneBinaries = tasks.register('fetchRcloneBinaries', FetchRcloneBinaries) {
+    description = "Download, verify (sha256 + no PT_INTERP) and stage the pinned rclone binaries as jniLibs"
+    pinFile = file('data/rclone-binary.json')
+    cacheDir = layout.buildDirectory.dir('rclone-cache')
+    outDir = layout.buildDirectory.dir('generated/rclone-jni')
 }
 preBuild.dependsOn fetchRcloneBinaries
 
