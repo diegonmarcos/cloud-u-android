@@ -54,7 +54,7 @@ object PhoneAppActions {
         fun s(id: Int) = ctx.getString(id)
         val out = mutableListOf<Action>()
         if (false && fleetApp != null) out += Action(Kind.UPDATE, s(R.string.store_phone_update), null,
-            if (fleetApp.blocked) s(R.string.store_phone_why_unpublished) else null)
+            if (fleetApp!!.blocked) s(R.string.store_phone_why_unpublished) else null)
         val launch = pm.getLaunchIntentForPackage(pkg)
         out += Action(Kind.OPEN, s(R.string.store_phone_open), launch,
             if (launch == null) s(R.string.store_phone_why_no_launcher) else null)
