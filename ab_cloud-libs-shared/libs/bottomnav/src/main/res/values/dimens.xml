@@ -15,7 +15,7 @@
          arcs are concentric only when the horizontal gap between capsule end and island
          end equals the capsule's vertical inset. So this is an ALIAS of the pill inset,
          not a number of its own. -->
-    <dimen name="bottom_nav_end_inset">@dimen/bottom_nav_pill_inset</dimen>
+    <dimen name="bottom_nav_end_inset">16dp</dimen><!-- MUTATION #473 -->
 
     <!-- #477. The icon+label stack's inset inside the capsule, the same above and below. -->
     <dimen name="bottom_nav_item_vertical_pad">6dp</dimen>
