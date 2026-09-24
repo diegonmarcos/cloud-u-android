@@ -1,9 +1,6 @@
 package com.diegonmarcos.superapp.bottomnav
 
 import android.widget.Toast
-import androidx.compose.foundation.border
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView // MUTATION wrap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -98,7 +95,7 @@ internal fun labelTag(id: String) = "bottomnav_label_$id"
 
 /** The insets the island clears: system bars AND the display cutout (#477). */
 @Composable
-public fun bottomNavInsets(): WindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout)
+public fun bottomNavInsets(): WindowInsets = WindowInsets.systemBars // MUTATION B: display cutout dropped
 
 @Composable
 public fun BottomNavIsland(
@@ -114,8 +111,7 @@ public fun BottomNavIsland(
     val widthFraction = res.getFraction(R.fraction.bottom_nav_width_fraction, 1, 1)
     // Read, never consumed: getBottom is a plain snapshot read that recomposes when the inset
     // changes. It is the Compose form of a non-consuming insets listener.
-    val bottom = dimensionResource(R.dimen.bottom_nav_pill_inset) + // MUTATION #477: wrong margin dimen
-       
+    val bottom = dimensionResource(R.dimen.bottom_nav_island_bottom_margin) +
         with(density) { insets.getBottom(this).toDp() }
     val pillInset = dimensionResource(R.dimen.bottom_nav_pill_inset)
     val pad = dimensionResource(R.dimen.bottom_nav_item_vertical_pad)
@@ -128,11 +124,10 @@ public fun BottomNavIsland(
     Box(modifier.fillMaxWidth().padding(bottom = bottom), contentAlignment = Alignment.BottomCenter) {
         Row(
             Modifier
-                .fillMaxWidth() // MUTATION #536
+                .fillMaxWidth(widthFraction)
                 .testTag(TAG_ISLAND)
-                // MUTATION #417: island no longer clipped to the pill
+                .clip(bottomNavPillShape)
                 .background(colorResource(R.color.bottom_nav_island_fill))
-                .border(1.dp, Color(0x33FFFFFF), bottomNavPillShape) // MUTATION #532: the stroke layer is back
                 .padding(horizontal = dimensionResource(R.dimen.bottom_nav_end_inset)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -145,7 +140,7 @@ public fun BottomNavIsland(
                         .padding(vertical = pillInset)
                         .testTag(itemTag(entry.id))
                         .clip(bottomNavPillShape)
-                        .background(Color.Transparent) // MUTATION #462: selection is colour only
+                        .background(if (selected) scheme.inverseSurface else Color.Transparent)
                         .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(entry) })
                         .padding(vertical = pad),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -159,7 +154,7 @@ public fun BottomNavIsland(
                         modifier = Modifier.size(iconSize).testTag(iconTag(entry.id)),
                     )
                     // ponytail: no expand/collapse animation. Add animateContentSize if it jars.
-                    if (true) { // MUTATION #532: never collapses
+                    if (!collapsed) {
                         // Laid out across the whole capsule and centred, not at its own
                         // intrinsic width. A one-line ellipsized paragraph exactly as wide as its
                         // text can round itself into an ellipsis: 'Mail' at 23px came out
