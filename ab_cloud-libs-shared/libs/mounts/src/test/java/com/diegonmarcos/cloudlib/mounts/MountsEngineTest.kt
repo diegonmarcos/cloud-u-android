@@ -59,7 +59,7 @@ class MountsEngineTest {
         assertEquals(1790238600000L, entries[2].modifiedEpochMillis)   // Wed, 24 Sep 2026 08:30:00 GMT
         assertEquals(0L, entries[1].modifiedEpochMillis)
         // Apache-style prefix (D:) parses the same — the parser is namespace-agnostic.
-        val apache = xml.replace("d:", "D:").replace("xmlns:D=\"DAV:\"", "xmlns:D=\"DAV:\"")
+        val apache = xml.replace("d:", "D:").replace("xmlns:d=", "xmlns:D=")
         assertEquals(3, WebDavParser.parseMultistatus(apache, "/remote.php/dav/files/diego/docs").size)
         assertEquals("/a", WebDavParser.normalise("/a/")); assertEquals("/", WebDavParser.normalise("/")); assertEquals("/", WebDavParser.normalise(""))
     }
