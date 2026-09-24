@@ -177,9 +177,9 @@ internal fun ShortcutsRow(actions: List<HomeAction>) {
                     Modifier
                         .size(48.dp)
                         .testTag(SHORTCUT_CIRCLE_TAG)
-                        .clip(CircleShape)
+                        .clip(androidx.compose.ui.graphics.RectangleShape)
                         .background(ink.copy(alpha = 0.08f))
-                        .border(1.dp, ink.copy(alpha = 0.2f), CircleShape)
+                        .border(1.dp, ink.copy(alpha = 0.2f), androidx.compose.ui.graphics.RectangleShape)
                         .clickable(role = Role.Button, onClick = action.onClick),
                     contentAlignment = Alignment.Center,
                 ) {
