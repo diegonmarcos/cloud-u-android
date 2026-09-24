@@ -32,7 +32,7 @@ object VaultConnect {
     )
 
     fun start(e: Endpoints, bearer: String): ConfigSyncClient.Outcome =
-        post(e, e.fetchPath, bearer, JSONObject())
+        post(e, e.startPath, bearer, JSONObject())
 
     fun fetch(e: Endpoints, bearer: String, code: String): ConfigSyncClient.Outcome =
         post(e, e.fetchPath, bearer, JSONObject().put("code", code))
