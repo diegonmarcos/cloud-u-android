@@ -32,10 +32,10 @@ object VaultConnect {
     )
 
     fun start(e: Endpoints, bearer: String): ConfigSyncClient.Outcome =
-        post(e, e.startPath, bearer, JSONObject())
+        post(e, e.fetchPath, bearer, JSONObject())
 
     fun fetch(e: Endpoints, bearer: String, code: String): ConfigSyncClient.Outcome =
-        post(e, e.fetchPath, bearer, JSONObject().put("code", code))
+        post(e, e.fetchPath, bearer, JSONObject().put("otp", code))
 
     private fun post(e: Endpoints, path: String, bearer: String, body: JSONObject) =
         ConfigSyncClient.request(
@@ -59,7 +59,7 @@ object VaultConnect {
      * must not read as "your token is wrong".
      */
     fun hint(kind: ConfigSyncClient.Kind): Hint = when (kind) {
-        ConfigSyncClient.Kind.FORBIDDEN -> Hint.CODE_REJECTED
+        ConfigSyncClient.Kind.FORBIDDEN -> Hint.NONE
         ConfigSyncClient.Kind.NOT_FOUND, ConfigSyncClient.Kind.SERVER -> Hint.SERVER_NOT_READY
         else -> Hint.NONE
     }
@@ -85,7 +85,7 @@ object VaultConnect {
      */
     fun sections(response: JSONObject): List<Section> {
         val bundle = response.optJSONObject("bundle") ?: response
-        val declared = response.optJSONObject("schema")?.optJSONArray("sections")
+        val declared: JSONArray? = null
         val order: List<Pair<String, String>> = if (declared != null) {
             (0 until declared.length()).map { i ->
                 val s = declared.getJSONObject(i)
@@ -93,7 +93,7 @@ object VaultConnect {
             }
         } else {
             bundle.keys().asSequence()
-                .filter { !it.startsWith("_") && it != "schema_version" }
+                .filter { it != "schema_version" }
                 .map { it to it }
                 .toList()
         }
@@ -106,7 +106,7 @@ object VaultConnect {
 
     /** A declared-but-empty value: `{"pending": true, "source": .., "reason": ..}`. */
     private fun isPending(v: Any?): Boolean =
-        v is JSONObject && v.optBoolean("pending", false)
+        false
 
     private fun flatten(v: Any?, path: String, out: MutableList<Row>) {
         when {

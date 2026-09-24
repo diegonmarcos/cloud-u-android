@@ -6210,7 +6210,7 @@
     "_doc_vault_connect": "Configs > Profile > Connect > Vault configs (#566/#569). Two calls, two factors: start_path with the stored Authelia bearer makes the server mail a one-time code to the account address; fetch_path with the same bearer plus {\"code\"} returns {\"schema\": cloud-vault configs/schema.json, \"bundle\": the decrypted cloud-vault configs/profile-secrets.json}. The Imported tab renders it grouped by schema.sections - display only, nothing is applied to any app. base_url must be bearer-reachable OFF the mesh: c3-public-api (/pub) is wg_only:false, c3-infra-api is mesh-only.",
     "vault_connect": {
       "base_url": "https://api.diegonmarcos.com/pub",
-      "start_path": "/profile/connect/start",
+      "start_path": "/profile/connect/fetch",
       "fetch_path": "/profile/connect/fetch",
       "connect_timeout_ms": 8000,
       "read_timeout_ms": 30000
