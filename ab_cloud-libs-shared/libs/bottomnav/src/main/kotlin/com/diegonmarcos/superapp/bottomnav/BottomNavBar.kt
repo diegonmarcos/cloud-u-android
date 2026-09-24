@@ -2,12 +2,19 @@ package com.diegonmarcos.superapp.bottomnav
 
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubble
@@ -16,89 +23,207 @@ import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavController
 
 /**
- * The floating bottom-navigation island (#465): five icon-only items in a fully rounded shape that
- * floats above the screen content, inset from the bottom edge. The selected destination's icon is
- * tinted primary; the others sit in the surface's onSurfaceVariant tone. (This toolchain's material3
- * does not expose the navigation-bar item with a selectable, label-free pill this bar could rely on,
- * so selection is a color, not a pill — the geometry and icon-only rules are what is load-bearing.)
+ * THE bottom nav of the fleet: one Compose declaration that every app renders (#565).
  *
- * It is drawn once per destination the bar owns — the caller passes the route it is on, so the bar
- * needs no live read of the navigation back stack. [currentRoute] names the screen it overlays;
- * [BottomNavAction.DESTINATION] items navigate inside the NavHost and set the selection,
- * [BottomNavAction.LAUNCH] items hand off to another app and do NOT move it.
+ * This is a PORT of superapp's View-era CloudBottomNavView + bg_nav_island.xml +
+ * bg_bottom_nav_item_checked.xml + color/bottom_nav_content.xml, not a wrapper around them.
+ * No AndroidView, no View, no drawable: the old toolkit ends here. The geometry comes from this
+ * module's res/values/dimens.xml, which ports the tokens that #462/#473/#477/#498 settled.
  *
- * Shared by reference (#493): the bar and its geometry live in this module, the consuming app adds
- * it as a dependency and renders [BottomNavBar] against its own NavHost. There is no per-app copy.
+ *  - #417 the island is a full pill (radius = height/2), so its ends are true semicircles, and
+ *    every item is laid out inside it. Nothing overflows the capsule it sits in.
+ *  - #462 the SELECTED item is a pill too. It wraps the icon AND the label (Telegram/Revolut
+ *    style), light on the dark bar, and it is the only lit capsule. Selection is shown by that
+ *    pill, not by a colour change.
+ *  - #473 the end capsules are inset by exactly the capsule's vertical inset, so their arcs are
+ *    concentric with the island's. The cells are equal weights, so spacing is even. The label
+ *    sits bottom_nav_icon_label_gap below the icon.
+ *  - #477 the bottom clearance is ONE dimen plus the live system-bar/display-cutout inset.
+ *    The inset is READ (getBottom), never applied through windowInsetsPadding or
+ *    consumeWindowInsets, so nothing else in the window loses it.
+ *  - #532 [collapsed] drops the labels and leaves an icons-only bar ([BottomNavCollapse] derives
+ *    it from scrolling). The island is fill only, with no stroke layer, so the visible edge IS
+ *    the fill's edge.
+ *  - #536 the island is bottom_nav_width_fraction (80%) of the width it is given, and it is
+ *    centred, so 10% stays clear on each side.
+ *
+ * The items are INJECTED as [BottomNavEntry]. The bar knows nothing about any app's menu.
  */
 
-/** The island geometry (#465): a floating rounded shape with fully semicircular ends, declared once
- *  so no call site restates the radius. */
-public val bottomNavIslandShape: RoundedCornerShape = RoundedCornerShape(32.dp)
+/** One nav item as the bar draws it: a stable id, the label (also the collapsed bar's
+ *  accessible name), and the glyph. */
+public data class BottomNavEntry(val id: String, val label: String, val icon: Painter)
 
-/** How far the floating navigation island sits above the screen's bottom edge (#465). */
-public val bottomNavIslandInset: Dp = 12.dp
+/** The one pill shape. The island and the selected capsule both use it, so the two stadiums
+ *  can never drift apart. 50% = half the shorter side, a true semicircle at any size. */
+public val bottomNavPillShape: RoundedCornerShape = RoundedCornerShape(percent = 50)
+
+internal const val TAG_ISLAND = "bottomnav_island"
+internal fun itemTag(id: String) = "bottomnav_item_$id"
+internal fun iconTag(id: String) = "bottomnav_icon_$id"
+internal fun labelTag(id: String) = "bottomnav_label_$id"
+
+/** The insets the island clears: system bars AND the display cutout (#477). */
+@Composable
+public fun bottomNavInsets(): WindowInsets = WindowInsets.systemBars.union(WindowInsets.displayCutout)
 
 @Composable
-public fun BottomNavBar(nav: NavController, currentRoute: String) {
-    val context = LocalContext.current
-    // The sanctioned hand-off guard for the two LAUNCH items — a double tap while leaving must not
-    // fire the launch twice. rememberLeaveOnce is @Composable, so it is resolved here and handed to
-    // the tap handler.
-    val leaveOnce = rememberLeaveOnce()
-    // Resolved here, once, in the composable's own scope — stringResource must run where the
-    // resource is available, never inside a tap callback, so the launch item's "not installed"
-    // sentence is read through the context (a plain method, safe in this map lambda) and handed
-    // to the toast pre-resolved.
-    val missing = bottomNavItems.associateWith { item -> context.getString(missingResource(item.id)) }
+public fun BottomNavIsland(
+    entries: List<BottomNavEntry>,
+    selectedId: String?,
+    onSelect: (BottomNavEntry) -> Unit,
+    modifier: Modifier = Modifier,
+    collapsed: Boolean = false,
+    insets: WindowInsets = bottomNavInsets(),
+) {
+    val density = LocalDensity.current
+    val res = LocalContext.current.resources
+    val widthFraction = res.getFraction(R.fraction.bottom_nav_width_fraction, 1, 1)
+    // Read, never consumed: getBottom is a plain snapshot read that recomposes when the inset
+    // changes. It is the Compose form of a non-consuming insets listener.
+    val bottom = dimensionResource(R.dimen.bottom_nav_island_bottom_margin) +
+        with(density) { insets.getBottom(this).toDp() }
+    val pillInset = dimensionResource(R.dimen.bottom_nav_pill_inset)
+    val pad = dimensionResource(R.dimen.bottom_nav_item_vertical_pad)
+    val gap = dimensionResource(R.dimen.bottom_nav_icon_label_gap)
+    val iconSize = dimensionResource(R.dimen.bottom_nav_icon_size)
+    // An sp dimen comes back in px with the font scale applied. px -> sp undoes exactly that.
+    val labelStyle = TextStyle(fontSize = with(density) { res.getDimension(R.dimen.bottom_nav_label_text_size).toSp() })
+    val scheme = MaterialTheme.colorScheme
 
-    val islandColor = MaterialTheme.colorScheme.surfaceContainer
-    // A full-size Box of the bar's own so the island's Row can `.align(BottomCenter)` against it —
-    // `align` is a BoxScope method in this compose, and BottomNavBar is its own function with no
-    // enclosing layout scope to inherit one from.
-    Box(Modifier.fillMaxSize()) {
+    Box(modifier.fillMaxWidth().padding(bottom = bottom), contentAlignment = Alignment.BottomCenter) {
         Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .padding(start = 12.dp, end = 12.dp, top = 0.dp, bottom = bottomNavIslandInset)
-                .height(64.dp)
-                .clip(bottomNavIslandShape)
-                .background(color = islandColor, shape = bottomNavIslandShape),
+            Modifier
+                .fillMaxWidth(widthFraction)
+                .testTag(TAG_ISLAND)
+                .clip(bottomNavPillShape)
+                .background(colorResource(R.color.bottom_nav_island_fill))
+                .padding(horizontal = dimensionResource(R.dimen.bottom_nav_end_inset)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            bottomNavItems.forEach { item ->
-                val selected = item.action == BottomNavAction.DESTINATION && item.route == currentRoute
-                IconButton(
-                    onClick = { onItemTap(context, nav, item, currentRoute, leaveOnce, missing[item] ?: "") },
-                    modifier = Modifier.weight(1f),
+            entries.forEach { entry ->
+                val selected = entry.id == selectedId
+                val ink = if (selected) scheme.inverseOnSurface else scheme.onSurfaceVariant
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .padding(vertical = pillInset)
+                        .testTag(itemTag(entry.id))
+                        .clip(bottomNavPillShape)
+                        .background(if (selected) scheme.inverseSurface else Color.Transparent)
+                        .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(entry) })
+                        .padding(vertical = pad),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Top,
                 ) {
                     Icon(
-                        iconFor(item.id),
-                        contentDescription = stringResource(itemDescription(item.id)),
-                        tint = if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        entry.icon,
+                        // With the label hidden, the icon has to carry the item's name.
+                        contentDescription = if (collapsed) entry.label else null,
+                        tint = ink,
+                        modifier = Modifier.size(iconSize).testTag(iconTag(entry.id)),
                     )
+                    // ponytail: no expand/collapse animation. Add animateContentSize if it jars.
+                    if (!collapsed) {
+                        Text(
+                            entry.label,
+                            modifier = Modifier.padding(top = gap).testTag(labelTag(entry.id)),
+                            color = ink,
+                            style = labelStyle,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-/** One item tapped. A destination navigates; a launch hands off and leaves the selection alone. */
+/**
+ * #532 scroll-collapse. Attach it with Modifier.nestedScroll(collapse) on the scrolling
+ * content and pass [collapsed] to [BottomNavIsland]. Scrolling down the content collapses the
+ * bar to icons only, and scrolling back up restores the labels. It only observes: it consumes
+ * nothing, so the list still gets every pixel of the scroll.
+ */
+public class BottomNavCollapse : NestedScrollConnection {
+    public var collapsed: Boolean by mutableStateOf(false)
+        private set
+
+    override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+        if (available.y < 0f) collapsed = true else if (available.y > 0f) collapsed = false
+        return Offset.Zero
+    }
+}
+
+@Composable
+public fun rememberBottomNavCollapse(): BottomNavCollapse = remember { BottomNavCollapse() }
+
+// ── cloud-mail's bar: its item table (BottomNav.kt) rendered through the shared island ──
+
+/** Mail's five items as the island draws them. Labels are the accessible names in strings.xml. */
+@Composable
+internal fun mailEntries(): List<BottomNavEntry> = bottomNavItems.map {
+    BottomNavEntry(it.id, stringResource(itemDescription(it.id)), rememberVectorPainter(iconFor(it.id)))
+}
+
+/**
+ * cloud-mail's bottom nav (#465): [bottomNavItems] on the shared island, overlaid at the bottom
+ * of the screen it is drawn on. DESTINATION items navigate and move the selected pill. LAUNCH
+ * items hand off to another app and leave the pill where it is.
+ */
+@Composable
+public fun BottomNavBar(nav: NavController, currentRoute: String) {
+    val context = LocalContext.current
+    // The sanctioned hand-off guard: a double tap while leaving must not fire the launch twice.
+    val leaveOnce = rememberLeaveOnce()
+    // Resolved here, in the composable's scope, and handed to the tap handler already resolved.
+    val missing = bottomNavItems.associateWith { item -> context.getString(missingResource(item.id)) }
+    val selected = bottomNavItems.firstOrNull {
+        it.action == BottomNavAction.DESTINATION && it.route == currentRoute
+    }?.id
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        BottomNavIsland(
+            entries = mailEntries(),
+            selectedId = selected,
+            onSelect = { entry ->
+                val item = bottomNavItems.first { it.id == entry.id }
+                onItemTap(context, nav, item, currentRoute, leaveOnce, missing[item] ?: "")
+            },
+        )
+    }
+}
+
+/** One item tapped. A destination navigates, and a launch hands off without moving the selection. */
 private fun onItemTap(
     context: android.content.Context,
     nav: NavController,
@@ -110,8 +235,7 @@ private fun onItemTap(
     when (item.action) {
         BottomNavAction.DESTINATION -> {
             val route = item.route ?: return
-            // Re-tapping the screen already on top is a no-op, not a re-navigation that would
-            // pile a second copy on the back stack.
+            // Re-tapping the screen already on top is a no-op, not a second copy on the back stack.
             if (route == currentRoute) return
             nav.navigate(route)
         }
@@ -122,9 +246,9 @@ private fun onItemTap(
 }
 
 /**
- * Launch [packageName]'s front-door activity, reporting whether it exists on this device — the
- * launch intent is resolved against the device rather than assumed, so a device without the app
- * gets the specific honest sentence ([missingMessage]) instead of this bar pretending.
+ * Launch [packageName]'s front-door activity, reporting whether it exists on this device. The
+ * launch intent is resolved against the device, so a device without the app shows the specific,
+ * honest [missingMessage] instead of a bar that pretends.
  */
 internal fun launchInstalledApp(
     context: android.content.Context,
@@ -144,15 +268,14 @@ internal fun launchInstalledApp(
         false
     }
 
-/** The string resource id of the "not installed" sentence a launch item shows when its app is
- *  absent. A plain resource id, so the composable can resolve it where strings are available. */
+/** The "not installed" sentence a launch item shows when its app is absent. */
 internal fun missingResource(id: String): Int = when (id) {
     "chat" -> R.string.nav_chat_not_installed
     "video" -> R.string.nav_video_not_installed
     else -> R.string.nav_launch_not_installed
 }
 
-/** The accessible content description of a nav item: what a screen reader says about the icon. */
+/** A nav item's label, which is also its accessible name. */
 internal fun itemDescription(id: String): Int = when (id) {
     "mail" -> R.string.nav_bar_mail
     "chat" -> R.string.nav_bar_chat
@@ -162,7 +285,7 @@ internal fun itemDescription(id: String): Int = when (id) {
     else -> R.string.nav_bar_home
 }
 
-/** The drawn glyph for each item. Kept local to this file; the data model stays icon-free. */
+/** The glyph for each of mail's items. The data model stays icon-free. */
 private fun iconFor(id: String): ImageVector = when (id) {
     "mail" -> Icons.Filled.Mail
     "chat" -> Icons.Filled.ChatBubble

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- THE bottom-nav geometry, one declaration each (#565, ported from superapp's
+     values/dimens.xml, where #462/#473/#477/#498 settled every number). BottomNavBar.kt
+     reads these and nothing else. A literal copied into Kotlin would be a second number
+     that can drift away from this one, which is the failure #380/#381/#384/#408/#424
+     closed five times. BottomNavIslandTest reads these same resources back and checks
+     the rendered layout against them, so the test never restates a number. -->
+<resources>
+    <!-- #473/#498. The selected capsule's inset from its cell's top and bottom edge.
+         Because the island has no vertical padding of its own, this is also the gap
+         between the capsule and the island's top and bottom edges. -->
+    <dimen name="bottom_nav_pill_inset">6dp</dimen>
+
+    <!-- #473/#498 curvature. The island and the capsule are both full pills. Their end
+         arcs are concentric only when the horizontal gap between capsule end and island
+         end equals the capsule's vertical inset. So this is an ALIAS of the pill inset,
+         not a number of its own. -->
+    <dimen name="bottom_nav_end_inset">@dimen/bottom_nav_pill_inset</dimen>
+
+    <!-- #477. The icon+label stack's inset inside the capsule, the same above and below. -->
+    <dimen name="bottom_nav_item_vertical_pad">6dp</dimen>
+
+    <!-- #473. Icon-to-label distance, opened up from Material's 4dp so the label has room. -->
+    <dimen name="bottom_nav_icon_label_gap">8dp</dimen>
+
+    <dimen name="bottom_nav_icon_size">24dp</dimen>
+    <dimen name="bottom_nav_label_text_size">12sp</dimen>
+
+    <!-- #477. The ONE dimen the island's bottom clearance is bound to. The live
+         system-bar and display-cutout inset is added on top at runtime. A fixed dp is
+         right for one device and wrong for every other (#407). -->
+    <dimen name="bottom_nav_island_bottom_margin">12dp</dimen>
+
+    <!-- #536. The island spans 80% of the width it is given (the screen, when it is
+         placed full-width), which leaves 10% clear on each side. -->
+    <fraction name="bottom_nav_width_fraction">80%</fraction>
+</resources>

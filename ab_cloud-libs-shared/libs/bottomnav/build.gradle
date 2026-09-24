@@ -1,17 +1,24 @@
-// libs:bottomnav — the ONE Compose bottom-navigation island, shared by reference.
+// libs:bottomnav: THE bottom nav of the whole fleet, in Compose, shared by reference.
 //
-// This is cloud-mail's bottom nav (#465), lifted out of the app layer so no app
-// carries a private copy. The four legacy apps (superapp / me / nav / notes) each
-// still draw their OWN XML BottomNavigationView and are deliberately NOT merged
-// here — they are divergent (different ids, different menu sources, different
-// styling) and harmonising them is a redesign nobody asked for (#493). A NEW
-// app that wants a Compose bottom nav can consume this module by reference and
-// gets the item list, the icons, the labels and the selected-tab contract from
-// the ONE declaration in BottomNav.kt.
+// Decree 2026-09-24: every app converts to Compose, and Compose is mandatory. This module is
+// the ONE declaration of the bottom nav they all render (#565). It began as cloud-mail's
+// icon-only bar (#465/#493). It now holds the port of superapp's View-era design
+// (CloudBottomNavView + bg_nav_island + bg_bottom_nav_item_checked + the bottom_nav_* tokens):
+// a full-pill island at 80% width, a selected PILL around icon+label, concentric end insets, a
+// one-dimen bottom clearance plus the live cutout inset, and scroll-collapse to icons only. It
+// is ported, not wrapped: there is no AndroidView here. Items are injected (BottomNavEntry), so
+// no app's menu is baked in. cloud-mail's five-item table (BottomNav.kt) is its first consumer.
+// superapp / me / nav / notes still draw their own View navs until pushes 2-4 migrate them onto
+// this module. That migration is the plan now, no longer "deliberately unmerged".
 //
-// Deliberately sparse on the independent-version axis (text-tools / core
-// precedent): behaves like the other shared libs, so it builds under whichever
-// AGP app pulls it in. Versions below match cloud-mail's catalog.
+// Deliberately sparse on the independent-version axis (text-tools / core precedent): it builds
+// under whichever AGP the app that pulls it in uses. The versions below match cloud-mail's
+// catalog.
+//
+// TESTED where it builds: src/test/ (Robolectric, JVM, no emulator) runs as
+// :libs:bottomnav:testReleaseUnitTest inside the consuming app's own `testReleaseUnitTest`
+// (ac_cloud-mail/build.json::tests.unit). The consuming app's ship workflow watches this
+// directory, so a change here re-runs that test.
 
 plugins {
     id 'com.android.library'
@@ -31,6 +38,14 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    // Robolectric resolves this module's own R.dimen / R.color / R.fraction, which is how the
+    // geometry test reads the tokens back instead of restating them.
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
     }
 
     compileOptions {
@@ -58,4 +73,11 @@ dependencies {
     implementation 'androidx.navigation:navigation-compose:2.8.5'
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
     implementation 'androidx.core:core-ktx:1.15.0'
+
+    // The geometry test (BottomNavIslandTest): renders the real island under Robolectric and
+    // measures it. NATIVE graphics lets it read pixels back.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+    testImplementation platform('androidx.compose:compose-bom:2025.01.00')
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
 }

@@ -1,19 +1,18 @@
 package com.diegonmarcos.superapp.bottomnav
 
 /**
- * The five bottom-navigation items of the mail home bar (#465), in display order, Home in the
- * centre. Icons only, no labels, so the ordering and the content descriptions are the only thing a
- * screen reader has to navigate by — both live here, where a test can pin them.
+ * cloud-mail's five bottom-navigation items (#465), in display order, with Home in the centre.
+ * This is the item TABLE of one app. The bar that draws it is the fleet-wide [BottomNavIsland]
+ * (#565), which takes its items injected as [BottomNavEntry]. [BottomNavBar] maps this table
+ * onto it. Each item's accessible name (strings.xml nav_bar_*) is also its visible label.
  *
- * Two of the five are LAUNCHES of other apps, not destinations of this NavHost. Tapping them must
- * not move the selected indicator, so they carry no route; [BottomNavItem.packageName] is where the
- * interim Telegram / WhatsApp Business link is declared, so swapping "Chat" for a real in-app
- * screen later is a change to this one table and nothing else.
+ * Two of the five LAUNCH other apps and are not destinations of mail's NavHost. Tapping them
+ * must not move the selected pill, so they carry no route. [BottomNavItem.packageName] is where
+ * the interim Telegram / WhatsApp Business link is declared, so swapping "Chat" for a real
+ * in-app screen later is a change to this one table and nothing else.
  *
- * THE ONE DECLARATION (#493). The item list, the routes, the launch targets and the selected-destination
- * contract all live here, once, in the shared module. The consuming app adds this module BY
- * REFERENCE and renders [BottomNavBar]; it does not restate any item. This file is package-visible
- * so apps + screened tests see the model, and there is exactly one copy in the constellation.
+ * This table lives in the shared module only because mail was the module's first consumer.
+ * Moving it into ac_cloud-mail is part of push 2 (#565).
  */
 
 /** What a tap on a bottom-nav item does: move inside this app, or leave it for another app. */

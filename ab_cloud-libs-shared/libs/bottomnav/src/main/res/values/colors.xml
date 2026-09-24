@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The island's opaque fill, ported from superapp's bg_nav_island.xml. It is darker
+         than the window gradient, so the bar reads as a solid box. #532: the FILL ALONE
+         now makes up the whole island. The 1dp #33FFFFFF stroke that the XML stacked on
+         top is gone, so the island's visible boundary IS the edge of this fill. -->
+    <color name="bottom_nav_island_fill">#FF140B26</color>
+</resources>

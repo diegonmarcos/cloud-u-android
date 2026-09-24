@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Bottom navigation island (#465): five icon-only items. Each icon carries a content
-         description because an unlabelled icon row is unusable with a screen reader otherwise. -->
+    <!-- cloud-mail's five nav items (#465). Each string is the item's visible label AND its
+         accessible name. When the bar collapses to icons only (#532), it moves onto the icon. -->
     <string name="nav_bar_mail">Mail</string>
     <string name="nav_bar_chat">Chat</string>
     <string name="nav_bar_home">Home</string>
