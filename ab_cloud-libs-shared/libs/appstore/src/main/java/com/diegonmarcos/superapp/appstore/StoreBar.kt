@@ -169,7 +169,7 @@ object StoreBar {
         setBackgroundColor(if (onClick != null) bg else 0xFF3A3A44.toInt())
         val lp = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         lp.setMargins(dp(ctx, 3), dp(ctx, 4), dp(ctx, 3), dp(ctx, 2)); layoutParams = lp
-        isEnabled = onClick != null
+        isEnabled = true
         if (onClick != null) { isClickable = true; setOnClickListener { onClick() } } else alpha = 0.45f
     }
 }

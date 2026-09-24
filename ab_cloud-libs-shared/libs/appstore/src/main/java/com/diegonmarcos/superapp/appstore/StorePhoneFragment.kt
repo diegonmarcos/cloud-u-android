@@ -68,7 +68,7 @@ class StorePhoneFragment : Fragment() {
         col.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             StoreBar.render(this@StorePhoneFragment, this, StoreBar.Verbs(
-                checkAll = { reload() }, installAll = { reload() }, updateAll = null,
+                checkAll = { reload() }, installAll = null, updateAll = null,
                 disabledReason = R.string.store_phone_bar_disabled))
         })
         col.addView(LinearLayout(ctx).apply {
