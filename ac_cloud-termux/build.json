@@ -51,7 +51,8 @@
             "asset": "my-watchdog-tui-x86_64"
           }
         ],
-        "external_inputs_doc": "Artifacts this APK bakes in from ANOTHER repo, so the publish gate can see them. The gate hashes git objects and none of these are in this repo: the panel binary was rebuilt with fixes, this app's own source had not moved, and the gate skipped publishing forever while every rebuild agreed the APK was current."
+        "external_inputs_doc": "Artifacts this APK bakes in from ANOTHER repo, so the publish gate can see them. The gate hashes git objects and none of these are in this repo: the panel binary was rebuilt with fixes, this app's own source had not moved, and the gate skipped publishing forever while every rebuild agreed the APK was current.",
+        "_doc_rootfs": "#470: the agent-coding rootfs (glibc Debian + the fleet tool belt + claude, goose, hermes, agy, fish as login shell) is declared in rootfs/rootfs.json, NOT in external_inputs. external_inputs names rolling GitHub release assets whose bytes move without this repo moving (the gate keys them on size:updatedAt); every rootfs input is pinned by version, digest or commit inside this app's own tree, which the gate already hashes, so a pin bump republishes on its own. The one cross-repo input, the fleet tool belt in cloud-u-containers, is pinned by commit sha in rootfs.json for the same reason."
       },
       "comment": "Cloud Terminal (Termux) fork."
     }
@@ -118,5 +119,18 @@
       "release": "cloud-terminal.apk",
       "debug": "cloud-terminal.apk"
     }
+  },
+  "tests": {
+    "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. The shell phase runs test/test-rootfs-declared.sh (the rootfs declaration holds together, consumes the fleet tool belt, and is wired into build, gradle and Java). Its runtime half, rootfs/verify-rootfs.sh, needs the built tree, so the ship workflow's rootfs job runs it per ABI on a native runner; test-rootfs-declared.sh fails if that step is ever removed.",
+    "shell": {
+      "dir": "test",
+      "_doc_requires": "python3 reads the JSON, curl fetches the pinned fleet tool belt, git answers check-ignore.",
+      "requires": [
+        "python3",
+        "curl",
+        "git"
+      ]
+    },
+    "_doc_unit": "tests.unit.task is deliberately still UNSET: the 21 upstream JVM test classes have never run in this fork and turning them on is its own job, not a side effect of #470."
   }
 }

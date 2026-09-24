@@ -228,8 +228,8 @@
       "workflow": "ship-cloud-office.yml"
     },
     "ac_cloud-termux": {
-      "first_test": "21 JVM unit test classes have never executed. Declare tests.unit.task.",
-      "shell_testers": 0,
+      "first_test": "Now has 1 shell tester (test-rootfs-declared.sh, #470): the baked agent-coding rootfs is one declaration that consumes the fleet tool belt and is wired into build, gradle and Java; its runtime half (rootfs/verify-rootfs.sh) runs in the ship workflow's rootfs job and proves every declared binary loads and executes under the shipped proot. 21 JVM unit test classes still have never executed; declare tests.unit.task.",
+      "shell_testers": 1,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": false,
@@ -282,6 +282,6 @@
       "workflow": "ship-firestack-aar.yml"
     }
   },
-  "with_executed_tests": 12,
-  "with_no_tests_at_all": 19
+  "with_executed_tests": 13,
+  "with_no_tests_at_all": 18
 }

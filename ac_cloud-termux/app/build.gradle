@@ -2,6 +2,9 @@ plugins {
     id "com.android.application"
 }
 
+// #470 — the glibc root filesystem this terminal ships (see ../rootfs/rootfs.json).
+def cloudRootfs = new groovy.json.JsonSlurper().parse(file("$projectDir/../rootfs/rootfs.json"))
+
 android {
 
     compileSdkVersion project.properties.compileSdkVersion.toInteger()
@@ -36,6 +39,11 @@ android {
 
         if (appVersionName) versionName = appVersionName
         validateVersionName(versionName)
+
+        // #470: where the baked glibc rootfs lives inside the APK. Read from the
+        // declaration so the Java that stages it and the CI that builds it
+        // cannot disagree on a directory name.
+        buildConfigField "String", "CLOUD_ROOTFS_ASSET_DIR", "\"${cloudRootfs.asset_dir}\""
 
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "cld.termux"
         manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal (Termux)"
@@ -141,6 +149,12 @@ android {
 
     lintOptions {
         disable 'ProtectedPermissions'
+    }
+
+    // rootfs.tar.zst is already zstd; deflating it again costs build time and
+    // makes AssetManager inflate 600 MB on the phone for nothing.
+    aaptOptions {
+        noCompress 'zst'
     }
 
     testOptions {
@@ -351,3 +365,22 @@ tasks.register('fetchFleetTools') {
     }
 }
 preBuild.dependsOn tasks.named('fetchFleetTools')
+
+// ── the baked agent-coding rootfs (#470) ───────────────────────────────────
+// CI builds and verifies it (rootfs/build-rootfs.sh, rootfs/verify-rootfs.sh)
+// on a runner of this APK's CPU and drops the four files here before gradle
+// runs. Building without them would ship a terminal whose login shell has
+// nothing to enter, so that is a build failure, not a quieter APK.
+tasks.register('verifyCloudRootfs') {
+    description = 'Fail unless the baked rootfs artefacts are in assets/.'
+    doLast {
+        def dir = file("$projectDir/src/main/assets/${cloudRootfs.asset_dir}")
+        ['rootfs.tar.zst', 'rootfs.sha256', 'proot', 'enter.sh'].each { name ->
+            def f = new File(dir, name)
+            if (!f.isFile() || f.length() == 0) {
+                throw new GradleException("${f} is missing: run ac_cloud-termux/rootfs/build-rootfs.sh <abi> ${dir} first (CI does)")
+            }
+        }
+    }
+}
+preBuild.dependsOn tasks.named('verifyCloudRootfs')

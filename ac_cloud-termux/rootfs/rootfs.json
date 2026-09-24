@@ -1,0 +1,143 @@
+{
+  "_comment": "ticket #470 — the ONE declaration of the glibc root filesystem this terminal ships inside its APK and enters through proot, so a fresh install is ready for agent coding with no network and no first-run installs. It does NOT carry a copy of the fleet tool belt: `shared_toolbelt` points at cloud-u-containers/_shared/agent-toolbelt.json (#509) by commit sha, and every apt package, tarball and verified binary declared there is installed here too. The keys below are ONLY what a phone terminal needs on top of what every AI container already gets, and the tester fails if any of them repeats a shared entry, so this can never grow into a second copy of that list. Read by rootfs/build-rootfs.sh (CI builds the tree), rootfs/verify-rootfs.sh (CI proves it runs under the proot that ships) and app/build.gradle (asset directory name).",
+  "shared_toolbelt": {
+    "_doc": "Why a pinned fetch and not a copy: the two repositories are separate git histories, so a file cannot be shared by path. Both are public, so CI reads the file at this exact commit from raw.githubusercontent.com. The commit sha is the content address: bumping it is an edit to THIS file, which moves the publish gate's source identity, so a tool-belt change republishes the APK instead of hiding outside the gate. Bump `ref` to the latest commit that touched `path` when the fleet list changes.",
+    "repo": "diegonmarcos/cloud-u-containers",
+    "ref": "3a8f7a445988ec8076dd33246bf427aa84b05245",
+    "path": "_shared/agent-toolbelt.json"
+  },
+  "base_image": {
+    "_doc": "Multi-architecture index digest of debian:bookworm-slim, so arm64 and amd64 builds start from the same pinned snapshot. glibc is the whole point: claude, node and antigravity publish linux-gnu builds, which Android's bionic cannot load (#288). proot supplies this root so their PT_INTERP resolves.",
+    "ref": "debian:bookworm-slim@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251"
+  },
+  "apt_packages": [
+    "git",
+    "fish",
+    "python3-venv"
+  ],
+  "_doc_apt_packages": "Terminal-only additions, installed together with the shared apt_packages. git: the shared list counts it as a base-image binary of the AI containers, and debian slim does not carry it. fish: the default shell. python3-venv: hermes is installed into its own virtual environment (pip_venvs below).",
+  "tarballs": {
+    "node": {
+      "_doc": "Node 22 LTS from nodejs.org rather than Debian's nodejs 18 + ~300 node-* packages. Carries npm and npx, which claude's MCP servers are launched with.",
+      "version": "22.23.3",
+      "url": "https://nodejs.org/dist/v{version}/node-v{version}-linux-{arch}.tar.xz",
+      "arch_names": {
+        "amd64": "x64",
+        "arm64": "arm64"
+      },
+      "extract_to": "/usr/local",
+      "strip_components": 1,
+      "provides": [
+        "node",
+        "npm",
+        "npx"
+      ]
+    },
+    "goose": {
+      "_doc": "Same release the fleet's my-ai-api image installs (user-ai_my-ai-api/src/code/Dockerfile, GOOSE_VER). The -unknown-linux-gnu build: glibc, which is why it needs this root and cannot run against bionic.",
+      "version": "1.44.0",
+      "url": "https://github.com/block/goose/releases/download/v{version}/goose-{arch}.tar.gz",
+      "arch_names": {
+        "amd64": "x86_64-unknown-linux-gnu",
+        "arm64": "aarch64-unknown-linux-gnu"
+      },
+      "extracted_bin": "goose"
+    },
+    "agy": {
+      "_doc": "Google Antigravity's agent CLI (google-antigravity/antigravity-cli), the component the termux flake already ships as `agy`. NOT the Antigravity IDE: that is an Electron GUI (apt repo us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev, arm64 1.23.2 exists, 725 MB unpacked plus GTK/X11) and a terminal with no X server cannot display it — #470's first brief said to ship the CLI when one exists. The archive holds one glibc ELF named `antigravity` (PT_INTERP /lib/ld-linux-aarch64.so.1 on arm64, measured), installed as /usr/local/bin/agy.",
+      "version": "1.2.10",
+      "url": "https://github.com/google-antigravity/antigravity-cli/releases/download/{version}/agy_cli_linux_{arch}.tar.gz",
+      "arch_names": {
+        "amd64": "x64",
+        "arm64": "arm64"
+      },
+      "extracted_bin": "antigravity"
+    }
+  },
+  "npm_globals": {
+    "_doc": "Installed with the node above. claude-code publishes a native binary per platform as optionalDependencies; npm picks the linux-gnu one for this glibc root.",
+    "@anthropic-ai/claude-code": {
+      "version": "2.1.281",
+      "provides": [
+        "claude"
+      ]
+    }
+  },
+  "pip_venvs": {
+    "_doc": "Python agents, each in its own venv so their pins cannot fight Debian's python3 packages. hermes-agent is Nous Research's PyPI release of the agent the fleet runs as the hermes-agent container (that image is built FROM nousresearch/hermes-agent, which installs this same project); its pyproject declares the `hermes` console script. requires-python >=3.11,<3.14 — bookworm's python3 is 3.11.",
+    "hermes-agent": {
+      "version": "0.19.0",
+      "venv": "/opt/hermes",
+      "provides": [
+        "hermes"
+      ]
+    }
+  },
+  "binaries": [
+    "fish",
+    "node",
+    "npm",
+    "npx",
+    "claude",
+    "goose",
+    "hermes",
+    "agy"
+  ],
+  "_doc_binaries": "Every name here must resolve on PATH inside the rootfs, and together with the shared list's `binaries` it is the set verify-rootfs.sh proves present, loadable (PT_INTERP inside the root) and executable under the shipped proot.",
+  "default_shell": "/usr/bin/fish",
+  "_doc_default_shell": "Written into the rootfs as root's login shell (/etc/passwd). The device entry script (rootfs/enter.sh) does not name a shell: it reads root's entry from the extracted rootfs, so this key is the only place the default lives.",
+  "smoke": {
+    "_doc": "Commands that must print something under proot. Each command's first word must be a declared binary.",
+    "claude": [
+      "claude",
+      "--version"
+    ],
+    "goose": [
+      "goose",
+      "--version"
+    ],
+    "hermes": [
+      "hermes",
+      "--version"
+    ],
+    "fish": [
+      "fish",
+      "--version"
+    ],
+    "git": [
+      "git",
+      "--version"
+    ],
+    "node": [
+      "node",
+      "--version"
+    ],
+    "antigravity": [
+      "agy",
+      "--version"
+    ]
+  },
+  "nameservers": [
+    "1.1.1.1",
+    "8.8.8.8"
+  ],
+  "_doc_nameservers": "docker export leaves /etc/resolv.conf empty, and Android has no /etc/resolv.conf to bind in.",
+  "proot": {
+    "_doc": "The Android-built static proot that #348 already pins inside the cloud-terminal-nix bootstrap. Static means no PT_INTERP: the same binary runs on bionic Android and on the glibc CI runner, so CI tests the exact bytes the phone executes. Read from that app's build.json rather than pinned twice.",
+    "source_build_json": "ac_cloud-nix-on-droid/build.json",
+    "entry": "bin/proot-static"
+  },
+  "asset_dir": "cloud-rootfs",
+  "_doc_asset_dir": "APK assets/<asset_dir>/ holds rootfs.tar.xz, rootfs.sha256, proot and enter.sh. The app stages them under $PREFIX/var/lib/<asset_dir>/ and enter.sh extracts the tree there on first shell.",
+  "abis": {
+    "arm64-v8a": {
+      "docker_arch": "arm64",
+      "runner": "ubuntu-24.04-arm"
+    },
+    "x86_64": {
+      "docker_arch": "amd64",
+      "runner": "ubuntu-latest"
+    }
+  },
+  "_doc_abis": "Keyed by the Android ABI from build.json release.variants[].abis. The rootfs is built and tested on a runner of the SAME CPU, natively: no qemu, so what the tester executes is what the phone executes."
+}

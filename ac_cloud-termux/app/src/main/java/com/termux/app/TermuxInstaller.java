@@ -10,6 +10,7 @@ import android.util.Pair;
 import android.view.WindowManager;
 
 import com.termux.R;
+import com.termux.cloud.CloudRootfs;
 import com.termux.app.utils.CrashUtils;
 import com.termux.shared.file.FileUtils;
 import com.termux.shared.file.TermuxFileUtils;
@@ -102,7 +103,7 @@ final class TermuxInstaller {
             if(PREFIX_FILE_LIST == null || PREFIX_FILE_LIST.length == 0 || (PREFIX_FILE_LIST.length == 1 && TermuxConstants.TERMUX_TMP_PREFIX_DIR_PATH.equals(PREFIX_FILE_LIST[0].getAbsolutePath()))) {
                 Logger.logInfo(LOG_TAG, "The termux prefix directory \"" + TERMUX_PREFIX_DIR_PATH + "\" exists but is empty or only contains the tmp directory.");
             } else {
-                whenDone.run();
+                stageCloudRootfs(activity, whenDone);
                 return;
             }
         } else if (FileUtils.fileExists(TERMUX_PREFIX_DIR_PATH, false)) {
@@ -241,7 +242,7 @@ final class TermuxInstaller {
                     }
 
                     Logger.logInfo(LOG_TAG, "Bootstrap packages installed successfully.");
-                    activity.runOnUiThread(whenDone);
+                    activity.runOnUiThread(() -> stageCloudRootfs(activity, whenDone));
 
                 } catch (final Exception e) {
                     showBootstrapErrorDialog(activity, whenDone, Logger.getStackTracesMarkdownString(null, Logger.getStackTracesStringArray(e)));
@@ -253,6 +254,40 @@ final class TermuxInstaller {
                         } catch (RuntimeException e) {
                             // Activity already dismissed - ignore.
                         }
+                    });
+                }
+            }
+        }.start();
+    }
+
+    /**
+     * #470: copy the glibc rootfs baked into this APK next to the prefix when its
+     * digest moved, on EVERY start and not only on first bootstrap, so an update
+     * reaches phones that installed this app before the rootfs existed. A failure
+     * is logged and the terminal still opens: enter.sh falls back to bash when
+     * its files are missing, and the failsafe session never touches them.
+     */
+    private static void stageCloudRootfs(final Activity activity, final Runnable whenDone) {
+        if (CloudRootfs.isStaged(activity)) {
+            whenDone.run();
+            return;
+        }
+        final ProgressDialog progress = ProgressDialog.show(activity, null, activity.getString(R.string.bootstrap_installer_body), true, false);
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    CloudRootfs.stage(activity);
+                } catch (Exception e) {
+                    Logger.logStackTraceWithMessage(LOG_TAG, "Staging the baked rootfs failed", e);
+                } finally {
+                    activity.runOnUiThread(() -> {
+                        try {
+                            progress.dismiss();
+                        } catch (RuntimeException e) {
+                            // Activity already dismissed - ignore.
+                        }
+                        whenDone.run();
                     });
                 }
             }

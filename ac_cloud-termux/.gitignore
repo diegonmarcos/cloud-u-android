@@ -44,3 +44,6 @@ Thumbs.db
 # with no error. A repo .gitignore outranks the global one, so this wins.
 !**/shell/command/result/
 !**/shell/command/result/**
+
+# #470: the baked rootfs artefacts, built by CI (rootfs/build-rootfs.sh). ~600 MB; never in git.
+app/src/main/assets/cloud-rootfs/

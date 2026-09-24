@@ -44,8 +44,56 @@ env:
   FORK: termux
 
 jobs:
+  # ── the baked agent-coding rootfs (#470) ─────────────────────────────────
+  # One leg per release.variants[] entry, each on a runner of THAT CPU
+  # (rootfs.json::abis[].runner): the rootfs is built natively and then
+  # entered through the exact proot + enter.sh the APK ships, so the tester
+  # runs what the phone runs. No qemu anywhere.
+  rootfs_plan:
+    name: "Rootfs plan"
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: plan
+        run: |
+          m="$(jq -c --slurpfile r "$WORK_DIR/rootfs/rootfs.json" \
+                '{include: [.release.variants[] | {abi: .id, android_abi: .abis[0], runner: $r[0].abis[.abis[0]].runner}]}' \
+                "$WORK_DIR/build.json")"
+          echo "$m"
+          echo "matrix=$m" >> "$GITHUB_OUTPUT"
+
+  rootfs:
+    name: "Rootfs build + verify (${{ matrix.abi }})"
+    needs: rootfs_plan
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.rootfs_plan.outputs.matrix) }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools the builder and tester call
+        run: sudo apt-get update -y && sudo apt-get install -y --no-install-recommends zstd binutils file
+      - name: Build the rootfs from rootfs.json + the fleet tool belt
+        run: sh "$WORK_DIR/rootfs/build-rootfs.sh" "${{ matrix.android_abi }}" "$RUNNER_TEMP/cloud-rootfs"
+      # The tester: every declared binary present, its PT_INTERP inside the
+      # root, its libraries resolvable, executed under the shipped proot;
+      # fish is the login shell enter.sh starts; claude/goose/hermes/agy print.
+      - name: "Test → the rootfs runs under the proot the APK ships"
+        run: sh "$WORK_DIR/rootfs/verify-rootfs.sh" "$RUNNER_TEMP/cloud-rootfs"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cloud-rootfs-${{ matrix.abi }}-${{ github.sha }}
+          path: ${{ runner.temp }}/cloud-rootfs
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
   build_and_publish:
     name: "Build + publish (${{ matrix.abi }})"
+    needs: rootfs
     strategy:
       fail-fast: false
       matrix:
@@ -136,6 +184,20 @@ jobs:
         run: |
           chmod +x build.sh
           ./build.sh materialize-fork "$FORK"
+
+      # The verified rootfs from this run's own rootfs job, into the assets
+      # dir gradle's verifyCloudRootfs insists on.
+      - name: Rootfs asset dir (from rootfs.json)
+        if: steps.gate.outputs.skip != 'true'
+        id: rootfs
+        run: echo "dir=$(jq -r .asset_dir "$WORK_DIR/rootfs/rootfs.json")" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the verified rootfs
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: cloud-rootfs-${{ matrix.abi }}-${{ github.sha }}
+          path: ${{ env.WORK_DIR }}/app/src/main/assets/${{ steps.rootfs.outputs.dir }}
 
       - name: Generate build stamp
         if: steps.gate.outputs.skip != 'true'
