@@ -33,6 +33,16 @@
         "npx"
       ]
     },
+    "goose": {
+      "_doc": "Same release the fleet's my-ai-api image installs (user-ai_my-ai-api/src/code/Dockerfile, GOOSE_VER). The -unknown-linux-gnu build: glibc, which is why it needs this root and cannot run against bionic.",
+      "version": "1.44.0",
+      "url": "https://github.com/block/goose/releases/download/v{version}/goose-{arch}.tar.gz",
+      "arch_names": {
+        "amd64": "x86_64-unknown-linux-gnu",
+        "arm64": "aarch64-unknown-linux-gnu"
+      },
+      "extracted_bin": "goose"
+    },
     "agy": {
       "_doc": "Google Antigravity's agent CLI (google-antigravity/antigravity-cli), the component the termux flake already ships as `agy`. NOT the Antigravity IDE: that is an Electron GUI (apt repo us-central1-apt.pkg.dev/projects/antigravity-auto-updater-dev, arm64 1.23.2 exists, 725 MB unpacked plus GTK/X11) and a terminal with no X server cannot display it — #470's first brief said to ship the CLI when one exists. The archive holds one glibc ELF named `antigravity` (PT_INTERP /lib/ld-linux-aarch64.so.1 on arm64, measured), installed as /usr/local/bin/agy.",
       "version": "1.2.10",

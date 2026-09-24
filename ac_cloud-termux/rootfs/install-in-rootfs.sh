@@ -41,7 +41,6 @@ printf '%s\n' "$PIP_VENVS" | while IFS='|' read -r pkg version venv provides; do
     for b in $provides; do ln -sf "$venv/bin/$b" "/usr/local/bin/$b"; done
 done
 
-usermod -s "$DEFAULT_SHELL" root
 
 apt-get clean
 rm -rf /var/lib/apt/lists/* /root/.npm /tmp/*
