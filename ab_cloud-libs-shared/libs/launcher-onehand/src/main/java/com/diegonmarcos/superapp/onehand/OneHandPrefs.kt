@@ -17,7 +17,6 @@ object OneHandPrefs {
 
     /** Override string wins; else the baked default; null = unmapped slot. */
     fun actionFor(ctx: Context, handleId: String, slotKey: String, default: GestureAction?): GestureAction? {
-        if (default != null || handleId.isNotEmpty()) return default
         val raw = prefs(ctx).getString("$handleId.$slotKey", null) ?: return default
         return GestureAction.parse(raw) ?: default
     }
