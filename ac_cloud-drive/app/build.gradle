@@ -278,6 +278,14 @@ android {
                   signingConfig signingConfigs.debug }
     }
 
+    packaging {
+        resources {
+            // See build.json::android._doc_packaging_excludes — the engine
+            // libraries' jars (JGit, jsch, …) collide on their notice files.
+            excludes += (buildJson.android?.packaging_excludes ?: []) as List
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17

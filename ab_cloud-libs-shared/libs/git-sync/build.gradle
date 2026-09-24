@@ -25,6 +25,10 @@ plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
     id 'org.jetbrains.kotlin.plugin.compose'
+    // ManagedRepo is persisted as JSON by RepoRegistry; kotlinx-serialization,
+    // like libs:updater, so the JVM tests exercise the real (de)serialisation
+    // rather than android.jar's org.json stubs.
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
 android {
@@ -71,6 +75,33 @@ dependencies {
     implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
     implementation 'androidx.core:core-ktx:1.15.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+
+    // THE ENGINE. JGit is the maintained pure-Java git (Eclipse), the same
+    // engine the original Kotlin GitSync used before it moved to Flutter + git2.
+    // Verified against the 7.8.0 sources jar on 2026-09-24: every command this
+    // module calls (status/add/rm/reset/commit/push/pull/fetch/branchList/log/
+    // diff/remote*/checkout stage) exists with the signature used. Its POM pulls
+    // JavaEWAH, slf4j-api and commons-codec; nothing native, nothing Android
+    // cannot load on minSdk 26 (java.nio.file, java.time, javax.net.ssl).
+    implementation 'org.eclipse.jgit:org.eclipse.jgit:7.8.0.202609011348-r'
+    // SSH transport over jsch. JGit's own ssh.jsch module declares the ORIGINAL
+    // com.jcraft:jsch (0.1.55, unmaintained since 2018); it is excluded and the
+    // maintained mwiede fork — same com.jcraft.jsch package, drop-in — is what
+    // ships. That fork is what understands StrictHostKeyChecking=accept-new,
+    // which GitEngine.sshCallback relies on to record a host key on first
+    // contact and refuse a changed one after.
+    implementation('org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:7.8.0.202609011348-r') {
+        exclude group: 'com.jcraft', module: 'jsch'
+    }
+    implementation 'com.github.mwiede:jsch:2.28.7'
+    // slf4j-api arrives through JGit; without a binding slf4j 2 prints one
+    // "no providers" line and discards everything, which is the wanted outcome
+    // on a phone. The nop binding makes that explicit instead of accidental.
+    implementation 'org.slf4j:slf4j-nop:2.0.16'
+    // Tokens and passphrases at rest (GitCredentialStore): keystore-backed,
+    // the same dependency libs:mail / libs:chat / libs:ops already carry.
+    implementation 'androidx.security:security-crypto:1.1.0'
 
     testImplementation 'junit:junit:4.13.2'
 }
