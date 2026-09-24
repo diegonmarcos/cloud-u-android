@@ -166,11 +166,11 @@
     },
     "ac_cloud-me": {
       "first_test": "HAD one tester that no workflow ever called. Now executed, plus a second: the release contract (release.variants[].gh_asset / gh_release.asset_name / phone_install.asset_name / artifact.debug) must name ONE file, or the ship publishes an asset the phone never downloads and every run stays green.",
-      "shell_testers": 2,
+      "shell_testers": 3,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
-      "unit_task_declared": false,
-      "unit_test_sources": 0,
+      "unit_task_declared": true,
+      "unit_test_sources": 1,
       "workflow": "ship-cloud-me.yml"
     },
     "ac_cloud-media-center": {
@@ -256,10 +256,10 @@
     },
     "ac_cloud-wallet": {
       "first_test": "Assert every wallet record type under data/ parses and carries the fields the card renderer requires.",
-      "shell_testers": 0,
+      "shell_testers": 1,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
-      "unit_task_declared": false,
+      "unit_task_declared": true,
       "unit_test_sources": 0,
       "workflow": "ship-cloud-wallet.yml"
     },
@@ -300,6 +300,6 @@
       "workflow": "ship-firestack-aar.yml"
     }
   },
-  "with_executed_tests": 15,
-  "with_no_tests_at_all": 18
+  "with_executed_tests": 16,
+  "with_no_tests_at_all": 17
 }

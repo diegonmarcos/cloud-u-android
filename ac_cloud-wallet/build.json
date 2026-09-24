@@ -42,7 +42,8 @@
       "depends_on": [
         "libs:core",
         "libs:wallet",
-        "libs:updater"
+        "libs:updater",
+        "libs:bottomnav"
       ]
     },
     "libs:core": {
@@ -58,6 +59,11 @@
     "libs:wallet": {
       "dir": "../ab_cloud-libs-shared/libs/wallet",
       "type": "library"
+    },
+    "libs:bottomnav": {
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library",
+      "_doc": "#531/#533 THE bottom nav of the fleet, in Compose, shared BY REFERENCE. libs:wallet's WalletBottomNav draws the wallet's top-level tabs on it, at the bottom; the old top WalletTabStrip is gone."
     },
     "libs:updater": {
       "_doc_dir": "Shared BY REFERENCE from aa_cloud-superapp/libs/ — settings.gradle points projectDir here instead of at a local copy. Every app used to carry its own copy-pasted tree and they drifted: 6 apps sat 228 source lines behind superapp's updater. One directory, no sync step, no drift.",
@@ -243,6 +249,18 @@
     ],
     "_doc_me_app_package": "applicationId the wallet's `Me` pill launches — cloud-me, which owns the personal-administration surface the wallet does not. Data so repointing it is a JSON edit; blank disables the pill's launch and it reports the app as missing. Baked by libs/wallet/build.gradle into BuildConfig.UI_ME_APP_PACKAGE.",
     "me_app_package": "com.diegonmarcos.cloudme"
+  },
+  "tests": {
+    "_doc": "What CI runs to prove this app works (1_cicd/src/scripts/cloud-android-test-engine.sh). Added by #531, when the wallet's top strip moved onto the fleet's bottom nav: the shell tester pins the structure, the JVM test MEASURES the rendered bar.",
+    "shell": {
+      "dir": "test",
+      "requires": ["python3"]
+    },
+    "unit": {
+      "_doc": "WalletBottomNavTest (libs:wallet src/test) renders the real WalletBottomNav under Robolectric: item order, the light pill on the selected tab only, Me launching without moving the pill, Config lighting nothing, and the island's width and clearance from libs:bottomnav's own dimens.",
+      "task": ":libs:wallet:testDebugUnitTest",
+      "enabled": true
+    }
   },
   "release": {
     "artifact": {

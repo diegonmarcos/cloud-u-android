@@ -104,10 +104,10 @@
       "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory."
     },
     "ac_cloud-wallet/app": {
-      "exempt": "Vendored clone; the module's own strings.xml holds nothing but the app label, and it owns no locale directory."
+      "base_language": "en"
     },
     "ac_cloud-me/app": {
-      "exempt": "Four strings, all of them the app label and its launcher shortcuts; no locale directory."
+      "base_language": "en"
     },
     "ac_cloud-chat/android/app": {
       "exempt": "Vendored Mattermost clone; a React Native app whose interface strings live in the JS bundle's i18n catalogue, not in Android resources, so no locale filter can reach them."

@@ -44,7 +44,8 @@
         "libs:analytics",
         "libs:health",
         "libs:fin",
-        "libs:cal"
+        "libs:cal",
+        "libs:bottomnav"
       ]
     },
     "libs:core": {
@@ -74,6 +75,11 @@
     "libs:cal": {
       "dir": "../ab_cloud-libs-shared/libs/cal",
       "type": "library"
+    },
+    "libs:bottomnav": {
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library",
+      "_doc": "#531 THE bottom nav of the fleet, in Compose, shared BY REFERENCE. MainActivity hosts it through BottomNavIslandView; the stock Material BottomNavigationView is gone."
     }
   },
   "ui": {
@@ -720,8 +726,9 @@
       ]
     },
     "unit": {
-      "_doc": "No JVM test source set exists yet (src/test/ is empty). Declared and disabled rather than omitted, so the engine prints the COVERAGE-GAP line naming the gap on every run instead of the gap being invisible.",
-      "enabled": false
+      "_doc": "Robolectric suite under app/src/test/ (#531): MeBottomNavTest inflates the REAL activity_main under Theme.CloudMe, configures the bottom-nav island exactly as MainActivity does (MeBottomNav.configure) and measures it - bar order, pill paint, tap routing, clearance, and that the page ends where the island begins.",
+      "task": ":app:testDebugUnitTest",
+      "enabled": true
     }
   }
 }

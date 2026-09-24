@@ -98,6 +98,9 @@ android {
         applicationId 'com.diegonmarcos.cloudme'
         minSdk 26
         targetSdk 35
+        // English is the fleet's base language (#299): package-time filter, so no merged
+        // library locale (libs:bottomnav and the rest, #531) can make the app come up in Spanish.
+        resConfigs "en"
         versionCode codeFinal
         versionName "${buildJson.android.version_name} (sha-${shortSha})"
         ndk {
@@ -118,6 +121,21 @@ android {
     }
 
     buildFeatures { buildConfig = true; compose = true }
+
+    // #531 Robolectric resolves the real layout, theme and libs:bottomnav's dimens, and the CI
+    // log prints each measured number when an assertion fails.
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            all {
+                testLogging {
+                    events 'passed', 'failed'
+                    exceptionFormat 'full'
+                    showStandardStreams = true
+                }
+            }
+        }
+    }
 
     // Both data trees ship verbatim as assets. data/files so Buro > Wallet can
     // browse the real wallet records as folders — AssetManager.list()
@@ -182,6 +200,7 @@ dependencies {
     implementation project(':libs:health')   // Health section (Health Connect)
     implementation project(':libs:fin')      // Buro → Accounting
     implementation project(':libs:cal')      // Agenda → events + todos
+    implementation project(':libs:bottomnav') // #531 the fleet's one bottom nav (Compose island)
 
     // Photo grid on Profile > Personal. Same version libs:media already pins.
     implementation 'io.coil-kt:coil:2.7.0'
@@ -197,6 +216,12 @@ dependencies {
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.foundation:foundation'
     implementation 'androidx.compose.material3:material3'
+
+    // #531 MeBottomNavTest renders the real activity_main under Robolectric and measures the island.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+    testImplementation platform('androidx.compose:compose-bom:2025.11.01')
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
 
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

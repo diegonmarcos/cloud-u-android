@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Cloud Wallet: single full-screen container for WalletFragment.
-     The wallet's own tab strip (WalletTabStrip) lives inside the Compose
-     surface — no bottom nav bar needed here. -->
+     The wallet's top-level tabs are the fleet's bottom nav (libs:bottomnav),
+     drawn by WalletBottomNav inside the Compose surface, at its bottom (#531).
+     fitsSystemWindows pads this container for the system bars, so the island
+     inside it takes zero insets. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/fragment_container"
     android:layout_width="match_parent"

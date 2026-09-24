@@ -2,8 +2,6 @@ package com.diegonmarcos.superapp.wallet
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,13 +14,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.annotation.DrawableRes
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.foundation.layout.WindowInsets
+import com.diegonmarcos.superapp.bottomnav.BottomNavEntry
+import com.diegonmarcos.superapp.bottomnav.BottomNavIsland
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
@@ -73,37 +75,49 @@ enum class TicketsSubTab(val label: String) {
 // ─── Tab strips ───────────────────────────────────────────────────────────────
 
 /**
- * Top-level strip: IDs · Pay · Me · Vcards · Events.
+ * The wallet's bottom-nav items, left to right: IDs · Pay · Me · Vcards · Events (#533).
  *
- * NOT built from WalletTab.values() any more, because the strip and the enum
- * no longer describe the same set. Config has no pill at all — it is
- * [WalletConfigGear], down in the opposite corner — and Me is a pill without a
- * destination: it launches cloud-me, the separate app that owns the
- * personal-administration surface this one deliberately does not.
- *
- * The pills scroll horizontally. Five at widthIn(min = 70.dp) plus their gaps
- * already exceed a 360dp phone, and a Row that overflows clips silently — the
- * last pill simply is not there.
+ * The strip that used to sit at the TOP is gone (#531): the wallet's top-level navigation is
+ * the fleet's one bottom nav, libs:bottomnav's island, at the bottom like every other app.
+ * [tab] is the destination; Me has none, because it LEAVES this app for cloud-me, the app that
+ * owns the personal-administration surface the wallet deliberately does not. Config has no item
+ * at all — it is [WalletConfigGear], floating in the content's corner.
+ */
+internal enum class WalletNavItem(val label: String, @DrawableRes val icon: Int, val tab: WalletTab?) {
+    IDs(WalletTab.IDs.label, R.drawable.ic_tab_ids, WalletTab.IDs),
+    Pay(WalletTab.Pay.label, R.drawable.ic_tab_pay, WalletTab.Pay),
+    Me("Me", R.drawable.ic_tab_me, null),
+    Vcards(WalletTab.Vcards.label, R.drawable.ic_tab_vcards, WalletTab.Vcards),
+    Events(WalletTab.Tickets.label, R.drawable.ic_tab_events, WalletTab.Tickets),
+}
+
+/** The wallet is a dark surface with no View theme to borrow, so the island takes Material's
+ *  dark scheme: its inverseSurface is the light pill the whole fleet shows on the dark bar. */
+internal val walletNavScheme = darkColorScheme()
+
+/**
+ * [WalletNavItem] on the shared island. A destination tap moves the pill; Me launches cloud-me
+ * and the pill stays on the tab you are still on. Config lights no item.
  */
 @Composable
-internal fun WalletTabStrip(
+internal fun WalletBottomNav(
     selected: WalletTab,
     onSelect: (WalletTab) -> Unit,
     onOpenMe: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Pill(WalletTab.IDs.label, R.drawable.ic_tab_ids, WalletTab.IDs == selected) { onSelect(WalletTab.IDs) }
-        Pill(WalletTab.Pay.label, R.drawable.ic_tab_pay, WalletTab.Pay == selected) { onSelect(WalletTab.Pay) }
-        // Never "selected": tapping it leaves this app entirely.
-        Pill("Me", R.drawable.ic_tab_me, active = false, onClick = onOpenMe)
-        Pill(WalletTab.Vcards.label, R.drawable.ic_tab_vcards, WalletTab.Vcards == selected) { onSelect(WalletTab.Vcards) }
-        Pill(WalletTab.Tickets.label, R.drawable.ic_tab_events, WalletTab.Tickets == selected) { onSelect(WalletTab.Tickets) }
+    val entries = WalletNavItem.entries.map { BottomNavEntry(it.name, it.label, painterResource(it.icon)) }
+    MaterialTheme(colorScheme = walletNavScheme) {
+        BottomNavIsland(
+            entries = entries,
+            selectedId = WalletNavItem.entries.firstOrNull { it.tab == selected }?.name,
+            onSelect = { entry -> WalletNavItem.valueOf(entry.id).tab?.let(onSelect) ?: onOpenMe() },
+            modifier = modifier,
+            // Cloud Wallet's fragment_container (fitsSystemWindows) already pads for the system
+            // bars, and the island sits inside it. Reading the live inset again would lift the bar
+            // twice (#477).
+            insets = WindowInsets(0, 0, 0, 0),
+        )
     }
 }
 
@@ -131,35 +145,6 @@ internal fun WalletConfigGear(active: Boolean, onClick: () -> Unit) {
             contentDescription = "Config",
             tint = Color.White,
             modifier = Modifier.size(20.dp),
-        )
-    }
-}
-
-/** One strip pill: icon over label, so the strip is readable at a glance and
- *  still says what it means — an icon-only bar makes IDs and Vcards a guess. */
-@Composable
-private fun Pill(label: String, @DrawableRes icon: Int, active: Boolean, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .widthIn(min = 66.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(if (active) Color(0xFF7C3AED) else Color(0x22FFFFFF))
-            .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 7.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = null,
-            tint = if (active) Color.White else Color(0xCCFFFFFF),
-            modifier = Modifier.size(18.dp),
-        )
-        Text(
-            text = label,
-            color = Color.White,
-            fontSize = 11.sp,
-            fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
         )
     }
 }

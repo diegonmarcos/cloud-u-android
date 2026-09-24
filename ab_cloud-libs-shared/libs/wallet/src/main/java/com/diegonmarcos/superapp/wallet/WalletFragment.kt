@@ -199,20 +199,7 @@ private fun WalletScreen(modeState: MutableState<WalletMode>) {
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0B0414))) {
         Column(modifier = Modifier.fillMaxSize()) {
             if (!hideChrome) {
-                WalletTabStrip(
-                    selected = tab,
-                    onOpenMe = onOpenMe,
-                    onSelect = { next ->
-                        if (next != tab) {
-                            tab  = next
-                            mode = WalletMode.Idle
-                            ticketsShowArchive = false
-                            calShowArchive = false
-                            bookingsShowArchive = false
-                        }
-                    },
-                )
-                // Tickets inner sub-tab strip
+                // Tickets inner sub-tab strip. The top-level tabs are the bottom nav below (#531).
                 if (tab == WalletTab.Tickets) {
                     TicketsSubTabStrip(
                         selected = ticketsSub,
@@ -313,16 +300,32 @@ private fun WalletScreen(modeState: MutableState<WalletMode>) {
                         )
                     }
                 }
-            }
-        }
-        // Bottom-right corner, floating over the deck — the strip up top is for
-        // where you are going, this is for how the app behaves.
-        if (!hideChrome) {
-            Box(modifier = Modifier.align(Alignment.BottomEnd)) {
-                WalletConfigGear(active = tab == WalletTab.Config) {
-                    tab  = WalletTab.Config
-                    mode = WalletMode.Idle
+                // Bottom-right corner of the CONTENT, floating over the deck and above the bottom
+                // nav — the nav is for where you are going, this is for how the app behaves.
+                if (!hideChrome) {
+                    Box(modifier = Modifier.align(Alignment.BottomEnd)) {
+                        WalletConfigGear(active = tab == WalletTab.Config) {
+                            tab  = WalletTab.Config
+                            mode = WalletMode.Idle
+                        }
+                    }
                 }
+            }
+            // #531/#533 the wallet's top-level tabs, on the fleet's one bottom nav, at the BOTTOM.
+            if (!hideChrome) {
+                WalletBottomNav(
+                    selected = tab,
+                    onOpenMe = onOpenMe,
+                    onSelect = { next ->
+                        if (next != tab) {
+                            tab  = next
+                            mode = WalletMode.Idle
+                            ticketsShowArchive = false
+                            calShowArchive = false
+                            bookingsShowArchive = false
+                        }
+                    },
+                )
             }
         }
         if (showAddSheet) {

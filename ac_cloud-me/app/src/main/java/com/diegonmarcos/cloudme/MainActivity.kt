@@ -13,13 +13,13 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.commit
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.navigation.NavigationView
 
 /**
  * Single-activity shell: hamburger drawer, toolbar with a Configs gear, a
- * content host and a bottom bar — the SuperApp's shape, at a fraction of its
+ * content host and the fleet's bottom-nav island — the SuperApp's shape, at a fraction of its
  * size, because Cloud Me has no launcher, no home index and no modes.
  *
  * Both menus are built here from [Sections] rather than inflated from
@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var drawer: DrawerLayout
     private lateinit var toolbar: MaterialToolbar
-    private lateinit var bottomNav: BottomNavigationView
+    private lateinit var bottomNav: BottomNavIslandView
 
     /** Section currently on screen — the back handler's only state. */
     private var currentSection: String? = null
@@ -58,6 +58,7 @@ class MainActivity : AppCompatActivity() {
             handleShortcutIntent(intent)
         } else {
             currentSection = savedInstanceState.getString(STATE_SECTION)
+            MeBottomNav.sync(bottomNav, currentSection)
             supportActionBar?.title = Sections.byId(currentSection)?.label ?: getString(R.string.app_name)
         }
 
@@ -105,20 +106,10 @@ class MainActivity : AppCompatActivity() {
 
     // ── menus, built from build.json ─────────────────────────────────
 
+    /** The bar is libs:bottomnav's island (#531); MeBottomNav fills it from [Sections.bottom]
+     *  and routes a tap: a page section opens here, a launch section leaves the app. */
     private fun buildBottomNav() {
-        val menu = bottomNav.menu
-        menu.clear()
-        // Item ids are 1-based: 0 is Menu.NONE, which BottomNavigationView
-        // also uses to mean "nothing selected", so a zero-id first tab can
-        // never be shown as checked.
-        Sections.bottom().forEachIndexed { index, s ->
-            menu.add(Menu.NONE, index + 1, index, s.label).apply {
-                iconRes(s.icon)?.let { setIcon(it) }
-            }
-        }
-        bottomNav.setOnItemSelectedListener { item ->
-            select(Sections.bottom().getOrNull(item.itemId - 1))
-        }
+        MeBottomNav.configure(bottomNav, onOpen = { open(it) }, onTarget = { onTarget(it) })
     }
 
     private fun buildDrawer() {
@@ -183,15 +174,8 @@ class MainActivity : AppCompatActivity() {
             replace(R.id.fragment_container, SectionFragment.newInstance(section.id, pageId))
         }
         // Keep the bar's highlight honest when the section was reached from
-        // the drawer or a tile: an off-bar section leaves nothing checked.
-        val barIndex = Sections.bottom().indexOfFirst { it.id == section.id }
-        if (barIndex >= 0 && bottomNav.selectedItemId != barIndex + 1) {
-            bottomNav.menu.findItem(barIndex + 1)?.isChecked = true
-        } else if (barIndex < 0) {
-            bottomNav.menu.setGroupCheckable(Menu.NONE, true, false)
-            for (i in 0 until bottomNav.menu.size()) bottomNav.menu.getItem(i).isChecked = false
-            bottomNav.menu.setGroupCheckable(Menu.NONE, true, true)
-        }
+        // the drawer or a tile: an off-bar section leaves nothing lit.
+        MeBottomNav.sync(bottomNav, section.id)
     }
 
     /**

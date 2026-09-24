@@ -40,6 +40,20 @@ android {
         // surface is fully self-contained here.
         compose = true
     }
+    // #531 Robolectric resolves this module's and libs:bottomnav's resources; a failed
+    // measurement prints its numbers in the CI log.
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            all {
+                testLogging {
+                    events 'passed', 'failed'
+                    exceptionFormat 'full'
+                    showStandardStreams = true
+                }
+            }
+        }
+    }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -49,6 +63,8 @@ android {
 
 dependencies {
     implementation project(':libs:core')
+    // #531/#533 the wallet's top-level tabs are the fleet's ONE bottom nav (Compose island).
+    implementation project(':libs:bottomnav')
 
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.fragment:fragment-ktx:1.8.5'
@@ -73,4 +89,10 @@ dependencies {
     // JavaMail for Android — IMAP scanner (Mail Connector in Config tab).
     // android-mail bundles android-activation; no second artifact needed.
     implementation 'com.sun.mail:android-mail:1.6.7'
+
+    // #531 WalletBottomNavTest renders the real WalletBottomNav under Robolectric and measures it.
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+    testImplementation platform('androidx.compose:compose-bom:2025.11.01')
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
 }

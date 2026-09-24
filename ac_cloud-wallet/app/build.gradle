@@ -143,6 +143,9 @@ android {
         applicationId 'com.diegonmarcos.cloudwallet'
         minSdk 26
         targetSdk 35
+        // English is the fleet's base language (#299): package-time filter, so no merged
+        // library locale (libs:bottomnav and the rest, #531) can make the app come up in Spanish.
+        resConfigs "en"
         versionCode codeFinal
         versionName "${buildJson.android.version_name} (sha-${shortSha})"
         ndk {

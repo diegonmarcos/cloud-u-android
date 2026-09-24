@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Cloud Me shell. Three pieces and no more: the hamburger drawer on the
      start edge, a toolbar whose only action is the Configs gear, and a
-     content host above a bottom bar.
+     content host above the fleet's bottom-nav island (libs:bottomnav, #531).
 
      Neither menu is declared in XML. The bottom bar's five items and the
      drawer's list are both built at runtime from build.json::ui.sections
@@ -38,14 +38,13 @@
             android:layout_height="0dp"
             android:layout_weight="1" />
 
-        <com.google.android.material.bottomnavigation.BottomNavigationView
+        <!-- #531 the fleet's ONE bottom nav: libs:bottomnav's Compose island, below the
+             content so nothing the page draws can hide under it. MeBottomNav feeds it the
+             bar sections of build.json; the island owns its own geometry. -->
+        <com.diegonmarcos.superapp.bottomnav.BottomNavIslandView
             android:id="@+id/bottom_nav"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@color/me_surface"
-            app:labelVisibilityMode="labeled"
-            app:itemIconTint="@color/nav_item_tint"
-            app:itemTextColor="@color/nav_item_tint" />
+            android:layout_height="wrap_content" />
     </LinearLayout>
 
     <com.google.android.material.navigation.NavigationView
