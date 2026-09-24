@@ -78,15 +78,18 @@ ui = d.get('ui', {})
 p = []
 if 'home_groups' not in ui or not isinstance(ui['home_groups'], list) or not ui['home_groups']:
     p.append("build.json::ui.home_groups is missing or empty — the drawer's inventory")
-if 'home_drawer_prepend' not in ui:
-    p.append("build.json::ui.home_drawer_prepend is missing — the prepend inventory")
+# #521 renamed home_drawer_prepend -> main_menu. Demanding the old key made
+# this tester and test-main-menu-site-map.sh (which demands it GONE) mutually
+# unsatisfiable, so main could not be green while both stood.
+if not isinstance(ui.get('main_menu'), list) or not ui['main_menu']:
+    p.append("build.json::ui.main_menu is missing or empty — the main-menu's own entries")
 # Exactly ONE JSON key named home_groups — the decoration lives in _doc_*,
 # the data is one list.
 if (json.dumps(list(ui.keys())).count('"home_groups"') != 1):
     p.append("ui declares home_groups more than once")
 dt = open(drawer).read()
-if 'Sections.homeGroups()' not in dt or 'Sections.homeDrawerPrepend()' not in dt:
-    p.append("HomeDrawerFragment does not build from the home_groups/prepend accessors")
+if 'Sections.homeGroups()' not in dt or 'Sections.mainMenu()' not in dt:
+    p.append("HomeDrawerFragment does not build from the home_groups/main_menu accessors")
 # The drawer declares no hardcoded section-page inventory of its own: every
 # MenuItem label it emits comes from a Sections accessor, never a literal.
 for lit in ('"communication"', '"configs"', '"infos"', '"labs"', '"suite"', '"tools"'):
