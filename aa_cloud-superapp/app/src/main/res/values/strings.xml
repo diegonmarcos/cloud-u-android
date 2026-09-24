@@ -468,4 +468,21 @@
     <string name="onehand_edge_reset_confirm">Reset</string>
     <string name="onehand_edge_reset_done">%1$d sector overrides cleared — both edge menus follow the built-in order again</string>
 
+    <!-- Configs > Profile > Connect > Vault configs + Imported tab (#566/#569) -->
+    <string name="vault_tab_imported">Imported</string>
+    <string name="vault_connect_header">Vault configs</string>
+    <string name="vault_connect_caption">Fetch your consolidated vault configs: mesh, mail, AI, git, about, autocomplete. Two factors. The stored Authelia bearer above asks the server to mail a one-time code to your account address, and the bearer plus that code fetch the bundle. What arrives is shown in the Imported tab and is NOT applied to any app. It stays in memory until the app closes, so nothing is written to this device\'s storage.</string>
+    <string name="vault_connect_send_code">1 · Mail me a code</string>
+    <string name="vault_connect_code_hint">code from the vault email</string>
+    <string name="vault_connect_fetch">2 · Fetch vault configs</string>
+    <string name="vault_connect_no_bearer">Store an Authelia bearer (with its account email) above first.</string>
+    <string name="vault_connect_no_code">Enter the code from the email.</string>
+    <string name="vault_connect_sent">✓ Code sent. Check your mail, then press Fetch.</string>
+    <string name="vault_connect_fetched">✓ Fetched %1$d values in %2$d sections. See the Imported tab.</string>
+    <string name="vault_imported_empty">Nothing imported yet. Use Connect ▸ Vault configs to fetch.</string>
+    <string name="vault_imported_caption">Display only. Nothing here has been applied to any app. Values over %1$d characters are shortened; tap one to show it in full.</string>
+    <string name="vault_connect_code_rejected">The server refused the code: wrong, expired or already used. Mail a new one.</string>
+    <string name="vault_connect_server_not_ready">The vault endpoint is not deployed or not configured on the server yet. This is not a problem with your token.</string>
+    <string name="vault_imported_pending">pending</string>
+
 </resources>

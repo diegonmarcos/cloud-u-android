@@ -12,6 +12,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.launcher.AppTabsStyle
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import com.diegonmarcos.superapp.ui.snack
@@ -54,6 +55,9 @@ class ProfileFragment : Fragment() {
     /** Which of the two tabs is showing. Held on the fragment so the many
      *  detach/attach redraws below do not bounce the user back to Connect. */
     private var selectedTab = 0
+
+    /** Position of the Imported tab, read off the strip's own list. */
+    private var importedTab = 0
 
     /** Gallery picker for the profile photo (round avatar). */
     private val picturePicker =
@@ -109,8 +113,10 @@ class ProfileFragment : Fragment() {
         // have no column at all — see [tabStrip].
         val connect = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val imported = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         page.addView(connect)
         page.addView(col)
+        page.addView(imported)
 
         val root = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -122,12 +128,15 @@ class ProfileFragment : Fragment() {
         // A null column means a LINK, not a page — see [tabStrip]. WireGuard
         // and AI both already have a screen, and re-hosting either here would
         // be a second copy to keep in step.
-        root.addView(tabStrip(ctx, listOf(
+        val tabs = listOf(
             Tab("Connect", connect),
             Tab("WireGuard", null, WG_ROUTE),
             Tab("AI", null, AI_ROUTE),
             Tab("Infos", col),
-        )))
+            Tab(getString(R.string.vault_tab_imported), imported),
+        )
+        importedTab = tabs.indexOfFirst { it.column === imported }
+        root.addView(tabStrip(ctx, tabs))
         root.addView(scroll)
 
         col.addView(sectionHeader(ctx, "Personal Data"))
@@ -265,6 +274,21 @@ class ProfileFragment : Fragment() {
         connect.addView(mailConfirmationField(ctx))
         connect.addView(caption(ctx, MAIL_2FA_TEXT))
         connect.addView(pickButton(ctx, "Confirm in Authelia") { confirmMailCode() })
+
+        // ── Vault configs (Connect → Imported) ───────────────────────────
+        connect.addView(sectionHeader(ctx, getString(R.string.vault_connect_header)))
+        connect.addView(caption(ctx, getString(R.string.vault_connect_caption)))
+        val vaultStatus = TextView(ctx).apply { visibility = View.GONE }
+        connect.addView(pickButton(ctx, getString(R.string.vault_connect_send_code)) {
+            vaultStart(vaultStatus)
+        })
+        connect.addView(vaultCodeField(ctx))
+        connect.addView(pickButton(ctx, getString(R.string.vault_connect_fetch)) {
+            vaultFetch(vaultStatus)
+        })
+        connect.addView(vaultStatus)
+
+        renderImported(ctx, imported)
 
         // ── Privacy ──────────────────────────────────────────────────────
         // Disclosure lives on the collecting screen on purpose: "what is held
@@ -466,6 +490,125 @@ class ProfileFragment : Fragment() {
         showAutheliaWebAuthDialog()
         view?.snack("Code copied — paste it into the Authelia page")
     }
+
+    // ── vault configs ────────────────────────────────────────────────────
+
+    private fun vaultEndpoints() = VaultConnect.Endpoints(
+        baseUrl          = com.diegonmarcos.superapp.BuildConfig.UI_VAULT_CONNECT_BASE_URL,
+        startPath        = com.diegonmarcos.superapp.BuildConfig.UI_VAULT_CONNECT_START_PATH,
+        fetchPath        = com.diegonmarcos.superapp.BuildConfig.UI_VAULT_CONNECT_FETCH_PATH,
+        connectTimeoutMs = com.diegonmarcos.superapp.BuildConfig.UI_VAULT_CONNECT_CONNECT_MS,
+        readTimeoutMs    = com.diegonmarcos.superapp.BuildConfig.UI_VAULT_CONNECT_READ_MS,
+    )
+
+    /** The vault code box. Like [mailConfirmationField] it is never stored:
+     *  a one-use code with minutes of life, cleared once it has been sent. */
+    private var vaultCodeBox: EditText? = null
+
+    private fun vaultCodeField(ctx: android.content.Context): EditText =
+        EditText(ctx).apply {
+            hint = getString(R.string.vault_connect_code_hint)
+            setSingleLine()
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
+            vaultCodeBox = this
+        }
+
+    /** The stored bearer, or null with the reason already on screen. */
+    private fun vaultBearer(status: TextView): String? {
+        val token = ConfigsPrefs(requireContext()).autheliaToken
+        if (token.isNotBlank()) return token
+        show(status, RED, "✗ " + getString(R.string.vault_connect_no_bearer))
+        return null
+    }
+
+    private fun vaultStart(status: TextView) {
+        val bearer = vaultBearer(status) ?: return
+        val e = vaultEndpoints()
+        viewLifecycleOwner.lifecycleScope.launch {
+            when (val o = withContext(Dispatchers.IO) { VaultConnect.start(e, bearer) }) {
+                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed ->
+                    showVaultFailure(status, o)
+                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok ->
+                    show(status, GREEN, getString(R.string.vault_connect_sent))
+            }
+        }
+    }
+
+    private fun vaultFetch(status: TextView) {
+        val bearer = vaultBearer(status) ?: return
+        val box = vaultCodeBox ?: return
+        val code = box.text?.toString()?.trim().orEmpty()
+        if (code.isEmpty()) {
+            box.error = getString(R.string.vault_connect_no_code)
+            return
+        }
+        box.setText("")
+        val e = vaultEndpoints()
+        viewLifecycleOwner.lifecycleScope.launch {
+            when (val o = withContext(Dispatchers.IO) { VaultConnect.fetch(e, bearer, code) }) {
+                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed ->
+                    showVaultFailure(status, o)
+                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> {
+                    val sections = VaultConnect.sections(o.body)
+                    VaultConnect.Imported.last = sections
+                    show(status, GREEN, getString(
+                        R.string.vault_connect_fetched, sections.sumOf { it.rows.size }, sections.size))
+                    selectedTab = importedTab
+                    parentFragmentManager.beginTransaction().detach(this@ProfileFragment).commitNow()
+                    parentFragmentManager.beginTransaction().attach(this@ProfileFragment).commitNow()
+                }
+            }
+        }
+    }
+
+    private fun showVaultFailure(
+        status: TextView,
+        o: com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed,
+    ) {
+        val hint = when (VaultConnect.hint(o.kind)) {
+            VaultConnect.Hint.CODE_REJECTED -> getString(R.string.vault_connect_code_rejected) + "\n"
+            VaultConnect.Hint.SERVER_NOT_READY -> getString(R.string.vault_connect_server_not_ready) + "\n"
+            VaultConnect.Hint.NONE -> ""
+        }
+        show(status, RED, "✗ ${o.kind}\n$hint${o.message}")
+    }
+
+    /**
+     * The Imported tab: every leaf of the last fetch, grouped by the vault's
+     * own section list. Read-only text — no field here writes anywhere.
+     */
+    private fun renderImported(ctx: android.content.Context, into: LinearLayout) {
+        val sections = VaultConnect.Imported.last
+        if (sections == null) {
+            into.addView(caption(ctx, getString(R.string.vault_imported_empty)))
+            return
+        }
+        into.addView(caption(ctx, getString(R.string.vault_imported_caption, IMPORTED_PREVIEW_CHARS)))
+        for (section in sections) {
+            into.addView(sectionHeader(ctx, "${section.label}  (${section.rows.size})"))
+            for (row in section.rows) {
+                into.addView(label(ctx, row.path))
+                into.addView(importedValue(ctx, row))
+            }
+        }
+    }
+
+    /** One value, shortened past [IMPORTED_PREVIEW_CHARS]; a tap toggles full text. */
+    private fun importedValue(ctx: android.content.Context, row: VaultConnect.Row): TextView =
+        TextView(ctx).apply {
+            val short = if (row.value.length > IMPORTED_PREVIEW_CHARS)
+                row.value.take(IMPORTED_PREVIEW_CHARS) + "… (+${row.value.length - IMPORTED_PREVIEW_CHARS})"
+            else row.value
+            text = if (row.pending) getString(R.string.vault_imported_pending) + " · " + short else short
+            typeface = android.graphics.Typeface.MONOSPACE
+            setTextIsSelectable(true)
+            if (row.pending) setTextColor(NEUTRAL)
+            if (short != row.value) {
+                var full = false
+                setOnClickListener { full = !full; text = if (full) row.value else short }
+            }
+        }
 
     /** Retry a queued upload whenever this screen comes back — a plausible
      *  moment for connectivity to have returned since the last failure. */
@@ -1323,6 +1466,9 @@ class ProfileFragment : Fragment() {
          * directly, and its `parent: config` makes Back return to Configs.
          */
         private const val WG_ROUTE = "section:wg"
+
+        /** Imported values longer than this are shortened until tapped. */
+        private const val IMPORTED_PREVIEW_CHARS = 400
 
         /** Advisory shape check for the birth field. Range/real-calendar
          *  validity is deliberately not checked — the field is optional and a

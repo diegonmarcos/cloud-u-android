@@ -368,4 +368,21 @@
     <string name="onehand_edge_reset_confirm">Restablecer</string>
     <string name="onehand_edge_reset_done">Se han borrado %1$d sectores personalizados: los dos menús de borde vuelven a seguir el orden que trae la app</string>
 
+    <!-- Configs > Profile > Connect > Vault configs + Imported tab (#566/#569) -->
+    <string name="vault_tab_imported">Importado</string>
+    <string name="vault_connect_header">Configuración del vault</string>
+    <string name="vault_connect_caption">Descarga la configuración consolidada del vault: malla, correo, IA, git, sobre mí y autocompletado. Usa dos factores. Con el token de Authelia guardado arriba, el servidor envía un código de un solo uso a la dirección de tu cuenta, y con el token y ese código se descarga el paquete. Lo recibido se muestra en la pestaña Importado y NO se aplica a ninguna app. Solo queda en memoria hasta que se cierra la app, así que no se guarda nada en el almacenamiento del dispositivo.</string>
+    <string name="vault_connect_send_code">1 · Enviarme un código</string>
+    <string name="vault_connect_code_hint">código del correo del vault</string>
+    <string name="vault_connect_fetch">2 · Descargar configuración</string>
+    <string name="vault_connect_no_bearer">Primero guarda arriba un token de Authelia con su correo de cuenta.</string>
+    <string name="vault_connect_no_code">Introduce el código del correo.</string>
+    <string name="vault_connect_sent">✓ Código enviado. Revisa tu correo y pulsa Descargar.</string>
+    <string name="vault_connect_fetched">✓ %1$d valores descargados en %2$d secciones. Ve a la pestaña Importado.</string>
+    <string name="vault_imported_empty">Aún no hay nada importado. Usa Conectar ▸ Configuración del vault.</string>
+    <string name="vault_imported_caption">Solo lectura. Nada de esto se ha aplicado a ninguna app. Los valores de más de %1$d caracteres se acortan; toca uno para verlo entero.</string>
+    <string name="vault_connect_code_rejected">El servidor rechazó el código: es incorrecto, ha caducado o ya se usó. Pide uno nuevo.</string>
+    <string name="vault_connect_server_not_ready">El endpoint del vault aún no está desplegado o configurado en el servidor. El problema no es tu token.</string>
+    <string name="vault_imported_pending">pendiente</string>
+
 </resources>

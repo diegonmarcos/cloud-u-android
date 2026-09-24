@@ -141,11 +141,13 @@ object ConfigSyncClient {
         connectTimeoutMs: Int,
         readTimeoutMs: Int,
         accept: String = "application/json",
+        method: String = "GET",
+        jsonBody: String? = null,
     ): Outcome {
         if (secret.isBlank()) {
             return fail(Kind.UNAUTHORIZED, "No credential supplied")
         }
-        Log.i(TAG, "GET $url (credential ${secret.length} chars, not logged)")
+        Log.i(TAG, "$method $url (credential ${secret.length} chars, not logged)")
 
         var conn: HttpURLConnection? = null
         val code: Int
@@ -153,7 +155,7 @@ object ConfigSyncClient {
         val location: String
         try {
             conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
+                requestMethod = method
                 connectTimeout = connectTimeoutMs
                 readTimeout = readTimeoutMs
                 // NEVER follow redirects. The Authelia forward-auth gate answers
@@ -165,6 +167,11 @@ object ConfigSyncClient {
                 setRequestProperty("Accept", accept)
                 setRequestProperty("User-Agent", "Cloud-SuperApp-ConfigSync/1")
                 headers.forEach { (k, v) -> setRequestProperty(k, v) }
+                if (jsonBody != null) {
+                    doOutput = true
+                    setRequestProperty("Content-Type", "application/json")
+                    outputStream.use { it.write(jsonBody.toByteArray()) }
+                }
             }
             code = conn.responseCode
             location = conn.getHeaderField("Location").orEmpty()

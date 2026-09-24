@@ -6207,6 +6207,14 @@
         "token_url": "https://github.com/login/oauth/access_token"
       }
     },
+    "_doc_vault_connect": "Configs > Profile > Connect > Vault configs (#566/#569). Two calls, two factors: start_path with the stored Authelia bearer makes the server mail a one-time code to the account address; fetch_path with the same bearer plus {\"code\"} returns {\"schema\": cloud-vault configs/schema.json, \"bundle\": the decrypted cloud-vault configs/profile-secrets.json}. The Imported tab renders it grouped by schema.sections - display only, nothing is applied to any app. base_url must be bearer-reachable OFF the mesh: c3-public-api (/pub) is wg_only:false, c3-infra-api is mesh-only.",
+    "vault_connect": {
+      "base_url": "https://api.diegonmarcos.com/pub",
+      "start_path": "/profile/connect/start",
+      "fetch_path": "/profile/connect/fetch",
+      "connect_timeout_ms": 8000,
+      "read_timeout_ms": 30000
+    },
     "_doc_import_schema": "Schema shown in ImportConfigsFragment as the placeholder text. Users paste a JSON conforming to this shape; ConfigsPrefs persists the whole blob into EncryptedSharedPreferences (AES-256-GCM, key in Android Keystore). Per-field consumers (JmapPrefs, WireGuard libs:net, ssh-agent for vault clone) pull what they need lazily.",
     "import_schema": {
       "wg": {

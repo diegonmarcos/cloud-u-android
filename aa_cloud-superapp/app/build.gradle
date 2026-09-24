@@ -389,6 +389,14 @@ def configSrcUser      = (configSource.user ?: '').toString()
 def configSrcVersion   = ((configSource.format_version ?: 1) as Number).intValue()
 def configSrcConnectMs = ((configSource.connect_timeout_ms ?: 8000) as Number).intValue()
 def configSrcReadMs    = ((configSource.read_timeout_ms ?: 20000) as Number).intValue()
+// Configs → Profile → Connect → Vault configs. Endpoint data only; see
+// build.json::_doc_vault_connect.
+def vaultConnect       = buildJson.ui.vault_connect ?: [:]
+def vaultBaseUrl       = (vaultConnect.base_url ?: '').toString()
+def vaultStartPath     = (vaultConnect.start_path ?: '').toString()
+def vaultFetchPath     = (vaultConnect.fetch_path ?: '').toString()
+def vaultConnectMs     = ((vaultConnect.connect_timeout_ms ?: 8000) as Number).intValue()
+def vaultReadMs        = ((vaultConnect.read_timeout_ms ?: 30000) as Number).intValue()
 // Configs → Profile → Config import, GitHub half. The vault repo coordinates and
 // the OAuth client_id are DATA (build.json::ui.config_source.git / .github_oauth)
 // for the same reason the Authelia endpoint is: repointing them must be a JSON
@@ -801,6 +809,11 @@ android {
         buildConfigField "int",    "UI_CONFIG_SOURCE_READ_MS",        "${configSrcReadMs}"
         buildConfigField "String", "LOG_INGEST_URL",  "\"${logIngestUrl}\""
         buildConfigField "String", "UI_C3_OPS_BASE_URL", "\"${c3OpsBaseUrl}\""
+        buildConfigField "String", "UI_VAULT_CONNECT_BASE_URL",   "\"${vaultBaseUrl}\""
+        buildConfigField "String", "UI_VAULT_CONNECT_START_PATH", "\"${vaultStartPath}\""
+        buildConfigField "String", "UI_VAULT_CONNECT_FETCH_PATH", "\"${vaultFetchPath}\""
+        buildConfigField "int",    "UI_VAULT_CONNECT_CONNECT_MS", "${vaultConnectMs}"
+        buildConfigField "int",    "UI_VAULT_CONNECT_READ_MS",    "${vaultReadMs}"
         buildConfigField "String", "UI_CONFIG_GIT_REPO",      "\"${configGitRepo}\""
         buildConfigField "String", "UI_CONFIG_GIT_PATH",      "\"${configGitPath}\""
         buildConfigField "String", "UI_CONFIG_GIT_REF",       "\"${configGitRef}\""
