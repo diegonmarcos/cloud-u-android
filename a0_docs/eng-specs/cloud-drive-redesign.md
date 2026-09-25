@@ -105,7 +105,7 @@ Portrait (the phone):
 ┌ ToolbarIsland: "Files" · <active pane path, monospace> · [⇄ dual] [🔍] [⋮] ┐
 ├────────────────────────────────────────────────────────────────────────────┤
 │ PANE A (active)                                                            │
-│ ┌ tab strip: [Cloud Drive ×] [Download ×] [+]                            ┐ │
+│ ┌ tab strip: [Shared store ×] [Download ×] [+]                          ┐ │
 │ │ breadcrumbs: Internal storage › CloudDrive › cloud-infra  ▸ tree|list │ │
 │ │ toolbar row: [Sort: Name ↓] [Filter: All] [.hidden] [★]               │ │
 │ │ storage bar (only at a volume root): ▓▓▓▓▓░░░ 41.2 GB free of 128 GB   │ │
@@ -132,7 +132,7 @@ Portrait (the phone):
 | element | behaviour |
 |---|---|
 | **tab strip** | one chip per open location (folder name, or `archive.zip` with the archive glyph); × closes; + opens the Places sheet; long-press a chip = bookmark it. The active chip is the raised surface. |
-| **breadcrumbs** | one crumb per segment from the volume root, horizontally scrollable, the last crumb bold; tap a crumb = go there; the volume root crumb is the place's label (Cloud Drive, Internal storage, SD card) never `/storage/emulated/0`. Inside an archive the crumbs continue past the archive name. |
+| **breadcrumbs** | one crumb per segment from the volume root, horizontally scrollable, the last crumb bold; tap a crumb = go there; the volume root crumb is the place's label (Shared store, Internal storage, SD card) never `/storage/emulated/0`. Inside an archive the crumbs continue past the archive name. |
 | **view toggle** | list (rows) or tree. Tree = the same LazyColumn showing a collapsible hierarchy from the pane's root: a chevron per folder, 16dp indent per depth, children read lazily on expand; tapping a file in tree mode opens it, tapping a folder's name (not its chevron) makes it the pane's current folder in list mode. |
 | **toolbar row** | Sort pill (sheet: name / size / modified / type, ascending/descending — `ui.files.sort_keys`), Filter pill (chips from `ui.files.filters`), hidden-files toggle, ★ bookmark toggle for the current folder. |
 | **storage bar** | shown only when the pane is at a volume root or the shared store root: a 6dp track, accent fill = used fraction, text "X free of Y". |
@@ -168,7 +168,7 @@ selection bar says so ("read-only inside archive").
 
 Opened by the pane's + chip or the toolbar's folder icon. A `ModalBottomSheet`:
 
-1. **Cloud Drive** — the shared store root as a hero card (accent border,
+1. **Shared store** — the store root as a hero card (accent border,
    the store's usage, "the one folder every fleet app reads and writes").
    It is `ui.files.places[]` entry `kind: shared_root` and is always first.
 2. **Places** — the remaining declared places that exist on this device

@@ -133,7 +133,7 @@
 
     <!-- Apps -->
     <string name="apps_title">Apps</string>
-    <string name="apps_hint">The fleet's data apps, from the constellation manifest</string>
+    <string name="apps_hint">The fleet\'s data apps, from the constellation manifest</string>
 
     <!-- Sync -->
     <string name="sync_title">Sync</string>

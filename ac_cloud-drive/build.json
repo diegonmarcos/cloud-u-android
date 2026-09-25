@@ -99,11 +99,11 @@
       ]
     },
     "files": {
-      "_doc_places": "The Places sheet, in order. kind: shared_root = storage.shared_root under shared storage (ALWAYS first, hero); external_root = shared storage itself; public_dir = Environment.DIRECTORY_<dir> under it; external_path = a relative path under it. A place whose folder does not exist on the device is not offered. Removable volumes, the app's slice on them and the SAF grant are discovered at runtime, not declared.",
+      "_doc_places": "The Places sheet, in order. kind: shared_root = storage.shared_root under shared storage (ALWAYS first, hero); external_root = shared storage itself; public_dir = Environment.DIRECTORY_<dir> under it; external_path = a relative path under it. A place whose folder does not exist on the device is not offered. Removable volumes, the app's slice on them and the SAF grant are discovered at runtime, not declared. The store's label is 'Shared store', never the application's name: the fleet's app-names guard (aa_cloud-superapp/test/test-app-names-pattern.sh T5) refuses any label that spells an app name the old way.",
       "places": [
         {
           "id": "store",
-          "label": "Cloud Drive",
+          "label": "Shared store",
           "icon": "cloud",
           "kind": "shared_root",
           "hero": true
