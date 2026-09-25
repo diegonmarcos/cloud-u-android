@@ -24,7 +24,7 @@ the claim puts it. **MISSING** — no code does it.
 | Clone | PROVEN (engine + dialog) | `GitEngine.kt:359` `clone(url, dir, auth)`; `GitSyncScreen.kt:259-286` Add dialog, "Clone" mode |
 | Pull / push / fetch / commit | PROVEN | `GitEngine.kt:182` pull, `:141` push, `:170` fetch, `:124` commit; buttons `GitSyncScreen.kt:392-397` |
 | One-tap sync (stage → commit → pull → push) | PROVEN | `GitEngine.kt:208` `sync()`; list-row Sync `GitSyncScreen.kt:200-217`, repo Sync `:396` |
-| Per-repo config (auth, rebase, message, author) | PROVEN | `GitModels.kt:553-570` `ManagedRepo`; `GitSyncScreen.kt:634` SettingsTab; secrets in `GitCredentialStore.kt:586` (EncryptedSharedPreferences) |
+| Per-repo config (auth, rebase, message, author) | PROVEN | `GitModels.kt:91-108` `ManagedRepo`; `GitSyncScreen.kt:634` SettingsTab; secrets in `GitCredentialStore.kt:17` (EncryptedSharedPreferences) |
 | Scheduled background sync | **MISSING** | `grep -rn WorkManager\|PeriodicWork\|JobScheduler\|AlarmManager libs/git-sync ac_cloud-drive/app/src` → 0 hits. The only periodic worker in the fleet is `libs/updater/.../Updater.kt:61` |
 | Declared repositories (data/drive-git-repos.json) can be cloned from the page | **PARTIAL** | `drive.html:1314-1349` renders the 8 repos as TEXT (owner/name → mirror). The single button passes an empty target (`:1350`), so the user re-types URL and folder by hand (`GitSyncScreen.kt:265-268`). No per-repo clone. `cloud-data-my-ai-memory` is not declared at all |
 | The build.json story matches the code | **PARTIAL** | `ac_cloud-drive/build.json:3` still says "vendored GitSync lib whose Flutter UI is embedded once the engine's add-to-app integration lands" — stale since #567 push 2 |
@@ -44,13 +44,13 @@ the claim puts it. **MISSING** — no code does it.
 | Claim | Verdict | Evidence |
 |---|---|---|
 | A real rclone binary runs on the phone | PROVEN | `libs/rclone/data/rclone-binary.json` (v1.75.1, sha256-pinned, static, PT_INTERP checked at build); `RcloneRunner.kt:15` execs `nativeLibraryDir/librclone.so`; `ac_cloud-drive/app/build.gradle:299` `useLegacyPackaging = true` |
-| Remotes: add / edit / test / delete, obscured secrets | PROVEN | `RcloneScreen.kt:139-188`, `RcloneConfig.kt:177-231`, `RcloneRunner.kt:53` obscure |
+| Remotes: add / edit / test / delete, obscured secrets | PROVEN | `RcloneScreen.kt:139-188`, `RcloneConfig.kt:16` parse, `:56` upsert, `:61` remove, `RcloneRunner.kt:53` obscure |
 | Jobs run with live stats and cancel | PROVEN | `RcloneScreen.kt:269-282` → `RcloneRunner.kt:67` `start()` (`--use-json-log --stats 1s`) |
 | Browse a remote, download a file | PROVEN, sandboxed | `RcloneScreen.kt:366-410`; download lands in `RcloneRunner.kt:19` `getExternalFilesDir(null)/rclone-downloads` = `Android/data/com.diegonmarcos.clouddrive/…`, unreadable by any other app on Android 11+ |
 | Declared remotes (drive-remotes.json) reach rclone.conf | **MISSING** | `EngineActivity.kt:90-113` `declareFromBuild` declares JOBS and MOUNTS only. `RCLONE_REMOTES_B64` is consumed solely by `FilesBridge.kt:1121` `rcloneRemotes()` for the page. On the phone `rclone.conf` starts empty (`RcloneScreen.kt:152`) |
 | Declared jobs (drive-rclone-jobs.json) run on the phone | **MISSING in effect** | The only declared job is `kind: mount` (`data/drive-rclone-jobs.json`), which `EngineActivity.kt:96` drops (`kind !in RcloneJob.OPS`). Zero declared jobs reach the engine; the page renders it as fleet-side information |
 | `rclone mount` | **MISSING (platform)** | FUSE mounts need root on Android; no code attempts it and no DocumentsProvider stands in for it |
-| Local job paths relative to a shared root | **MISSING** | `RcloneJob.arguments()` (`RcloneJobs.kt:122`) passes `source`/`destination` verbatim; a phone-side leg has to be an absolute path typed by hand |
+| Local job paths relative to a shared root | **MISSING** | `RcloneJob.arguments()` (`RcloneJobs.kt:30`) passes `source`/`destination` verbatim; a phone-side leg has to be an absolute path typed by hand |
 
 ## (d) Total Commander / X-plore class
 
