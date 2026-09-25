@@ -50,7 +50,7 @@ import re, sys
 text = open(sys.argv[1], encoding="utf-8").read()
 consts = dict(re.findall(r'const val (ENGINE_\w+) = "([a-z]+)"', text))
 route = re.search(r"when \(engine\) \{(.*?)\n\s*\}", text, re.S)
-used = re.findall(r"^\s*(ENGINE_\w+) -> (\w+Screen)\(target, onOpenFile, onClose\)", route.group(1), re.M) if route else []
+used = re.findall(r"^\s*(ENGINE_\w+) -> (\w+Screen)\(target, onOpenFile, onClose[^)]*\)", route.group(1), re.M) if route else []
 print(" ".join(sorted(consts[c] for c, _ in used if c in consts)))
 PYTHON
 )"
@@ -71,7 +71,7 @@ route = re.search(r"when \(engine\) \{(.*?)\n\s*\}", text, re.S).group(1)
 imports = dict(re.findall(r"^import com\.diegonmarcos\.cloudlib\.(\w+)\.(\w+Screen)$", text, re.M))
 expected = {"git": ("gitsync", "GitSyncScreen"), "editor": ("fileeditor", "FileEditorScreen"), "rclone": ("rclone", "RcloneScreen"), "mounts": ("mounts", "MountsScreen")}
 bad = 0
-for c, screen in re.findall(r"^\s*(ENGINE_\w+) -> (\w+Screen)\(target, onOpenFile, onClose\)", route, re.M):
+for c, screen in re.findall(r"^\s*(ENGINE_\w+) -> (\w+Screen)\(target, onOpenFile, onClose[^)]*\)", route, re.M):
     eid = consts.get(c)
     pkg, want = expected.get(eid, (None, None))
     if want != screen or imports.get(pkg) != screen:
@@ -82,8 +82,8 @@ PYTHON
 echo "── W3 the seam at both ends ──"
 if grep -qE "@JavascriptInterface" "$BRIDGE" && grep -qE "fun openEngine\(engine: String, target: String\): String" "$BRIDGE"; then pass "bridge declares openEngine"; else fail "bridge lacks @JavascriptInterface openEngine(engine, target)"; fi
 if grep -qE "if \(engine !in known\) return failure\(" "$BRIDGE"; then pass "bridge refuses an unknown engine id"; else fail "bridge does not refuse an unknown engine id"; fi
-if grep -qE "launchEngine\(engine, target\)" "$BRIDGE"; then pass "bridge hands off to the Activity-owned launcher"; else fail "openEngine does not call launchEngine"; fi
-if grep -qE "launchEngine = \{ engine, target -> engineLauncher\.launch\(EngineActivity\.intent\(this, engine, target\)\) \}" "$MAIN"; then pass "MainActivity starts EngineActivity for a result"; else fail "MainActivity does not construct the bridge with the engine launcher"; fi
+if grep -qE "launchEngine\(engine, target, url\)" "$BRIDGE"; then pass "bridge hands off to the Activity-owned launcher (engine, target, url — #575)"; else fail "openEngine does not call launchEngine(engine, target, url)"; fi
+if grep -qE "launchEngine = \{ engine, target, url -> engineLauncher\.launch\(EngineActivity\.intent\(this, engine, target, url\)\) \}" "$MAIN"; then pass "MainActivity starts EngineActivity for a result"; else fail "MainActivity does not construct the bridge with the engine launcher"; fi
 
 echo "── W4 the hand-off comes back into the page ──"
 if grep -qE "putExtra\(RESULT_PATH, path\)" "$HOST"; then pass "EngineActivity returns RESULT_PATH"; else fail "EngineActivity does not return the opened path"; fi

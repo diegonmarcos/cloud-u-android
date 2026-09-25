@@ -83,6 +83,18 @@ def rcloneJobsB64  = b64(rcloneJobsFile.exists()
 // The Git subpage's repository family — the same curated 8 the SuperApp's
 // GH Repos / Gitea Repos cards reuse — baked whole (instances + repos) so the
 // page renders both remotes from the one declaration. Task 457c.
+// #575 THE ONE shared repo store. build.json::storage.shared_root, relative to
+// shared storage (never /storage/emulated/0 — that is one device's fact); the
+// runtime half is SharedStore.kt. A missing or absolute value fails the build
+// here: an APK whose clones land nowhere shared is the bug this replaces.
+def storageDecl = buildJson.storage ?: [:]
+def sharedRoot  = (storageDecl.shared_root ?: '').toString().trim()
+if (!sharedRoot || sharedRoot.startsWith('/') || sharedRoot.contains('..')) {
+    throw new GradleException("build.json::storage.shared_root must be a relative folder name under shared storage (got '${sharedRoot}')")
+}
+def gitSyncDecl      = storageDecl.git_sync ?: [:]
+def gitSyncMinutes   = (gitSyncDecl.interval_minutes ?: 60) as long
+def gitSyncUnmetered = gitSyncDecl.require_unmetered_network == null ? true : gitSyncDecl.require_unmetered_network
 def gitReposFile = file('../data/drive-git-repos.json')
 def gitReposB64  = b64(gitReposFile.exists()
     ? new groovy.json.JsonSlurper().parse(gitReposFile) : [:])
@@ -235,6 +247,9 @@ android {
         buildConfigField "String", "RCLONE_REMOTES_B64", "\"${rcloneRemotesB64}\""
         buildConfigField "String", "RCLONE_JOBS_B64",    "\"${rcloneJobsB64}\""
         buildConfigField "String", "GIT_REPOS_B64",      "\"${gitReposB64}\""
+        buildConfigField "String",  "SHARED_ROOT",               "\"${sharedRoot}\""
+        buildConfigField "long",    "GIT_SYNC_INTERVAL_MINUTES", "${gitSyncMinutes}L"
+        buildConfigField "boolean", "GIT_SYNC_REQUIRE_UNMETERED", "${gitSyncUnmetered}"
         buildConfigField "String", "UI_APPS_B64",     "\"${driveAppsB64}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64",   "\"${uiPermissionsRolesB64}\""
@@ -326,6 +341,9 @@ dependencies {
     implementation platform('androidx.compose:compose-bom:2025.01.00')
     implementation 'androidx.compose.material3:material3'
     implementation 'androidx.activity:activity-compose:1.9.3'
+    // #575 the scheduled git sync (GitSyncWorker) — the same WorkManager libs:updater
+    // already schedules its own periodic check with, same version.
+    implementation 'androidx.work:work-runtime-ktx:2.9.1'
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.google.android.material:material:1.12.0'

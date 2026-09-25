@@ -94,4 +94,51 @@ the claim puts it. **MISSING** — no code does it.
 3. GitSync flows: per-repo Clone/Open buttons on the Sync ▸ Git subpage targeting `<root>/<repo>`, clone URL prefilled; scheduled background sync (WorkManager, interval and network rule declared in build.json, per-repo opt-in).
 4. rclone: declared remotes land in the phone's rclone.conf as secret-less skeletons (the user adds the key on the device); relative local paths in jobs resolve against the shared root.
 
-Residuals are listed at the end of this file after the fix lands.
+## What landed (Phase 2) and what did not
+
+Landed, mutation-proven by `ac_cloud-drive/test/test-drive-shared-store.sh` (S1–S6)
+and `ac_cloud-code/test/test-cloud-nav.sh` (the #575 block of `cloud_nav.mjs`):
+
+1. **ONE declaration** — `ac_cloud-drive/build.json::storage.shared_root = "CloudDrive"`
+   (relative; the build refuses an absolute value). Baked into `BuildConfig.SHARED_ROOT`;
+   `SharedStore.kt` derives `<shared storage>/CloudDrive` on the device. `storage.git_sync`
+   declares the scheduled-sync period and network rule the same way.
+2. **Proof case** — cloud-code's `nav.json` names the store by fleet id (`shared_store.app =
+   cloud-drive`); `tools/resolve-targets.py` reads that app's `storage.shared_root` at build time
+   into `targets.gen.json`; `index.js` composes every path from the device's
+   `externalRootDirectory` + that root. Backlog reads `cloud-data-my-ai-memory/1.1.Product-Backlog/dist/`
+   from the store and WRITES through it: "Edit this file" opens the rendered file in Acode's editor
+   (saved in place), "Open the repository" opens the clone as a folder. No absolute `/storage` path
+   is left in `src/cloud/`; cloud-code clones nothing.
+3. **GitSync flows** — Sync ▸ Git lists every declared repository (now including
+   `cloud-data-my-ai-memory`, marked private) with a *Clone / open* button carrying
+   `<root>/<name>` and the upstream URL; the git manager opens on the store when no target is
+   named; `GitSyncWorker` (WorkManager, `ExistingPeriodicWorkPolicy.UPDATE`) runs one-tap sync for
+   repositories that opted in (`ManagedRepo.autoSync`, Settings switch).
+4. **rclone** — every remote in `data/drive-remotes.json` that carries an `rclone` block is
+   declared into the phone's `rclone.conf` once, secret-less (`RcloneConfig.declare`, add-only,
+   JVM-tested); a job's relative local leg resolves against the store (`SharedStore.resolve`).
+
+Residuals — honest, not faked:
+
+- **No DocumentsProvider.** The store is plain shared storage; a fleet app reaches it only with
+  all-files access (cloud-drive and cloud-code both hold it). An app without that grant would need
+  a `DocumentsProvider` in cloud-drive, which was not built: it is a second access path to the
+  same bytes and nothing in the fleet needs it today.
+- **No phone-side rclone job is declared.** The mechanism (skeleton remotes, relative legs) is in;
+  the data is not, because every current bucket is fleet-owned (photos Takeout, OS images) and
+  creating a phone bucket is a cloud-infra decision. `drive-rclone-jobs.json::_doc_paths` says so.
+- **Google Drive stays "token from another rclone".** No on-device OAuth. The `gdrive` /
+  `gdrive_photos` skeletons now land in `rclone.conf`, so the owner pastes a token once on the
+  phone instead of editing a config file.
+- **rclone / mount downloads still land in `Android/data`.** `RcloneRunner.downloadDir` and
+  `MountsScreen.downloadDir` are library-owned; moving them to the store means the libraries
+  taking a host-supplied directory. Not done in this run.
+- **Scheduled sync does not resolve conflicts.** A conflicting pull leaves the repository in
+  MERGING with `lastSyncSummary` saying so; the user resolves it in the manager. The worker
+  reports success so the period stays regular (a retry storm would not fix a conflict).
+- **On-device proof needs two installed apps.** Every assertion here is static; that a clone
+  cloud-drive makes is readable by cloud-code on one phone is unverified until both APKs are
+  installed together.
+- The code-graph MCP index of this repository is stale (see top); it was reachable and was
+  queried, but every claim rests on file reads.

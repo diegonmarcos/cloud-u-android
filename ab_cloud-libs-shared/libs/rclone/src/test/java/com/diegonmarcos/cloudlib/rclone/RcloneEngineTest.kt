@@ -96,6 +96,27 @@ class RcloneEngineTest {
         assertEquals("11s", RcloneOutput.humanEta(11)); assertEquals("2m 5s", RcloneOutput.humanEta(125)); assertEquals("1h 1m", RcloneOutput.humanEta(3660)); assertEquals("–", RcloneOutput.humanEta(null))
     }
 
+    @Test fun configDeclareAddsMissingRemotesAndNeverTouchesExistingOnes() {
+        val f = File(Files.createTempDirectory("rc").toFile(), "rclone/rclone.conf")
+        // the user already configured oracle_s3 WITH a key on the device
+        RcloneConfig.upsert(f, RcloneRemote("oracle_s3", "s3", mapOf("endpoint" to "old", "access_key_id" to "AKIA")))
+        val declared = listOf(
+            RcloneRemote("oracle_s3", "s3", mapOf("endpoint" to "new")),
+            RcloneRemote("gdrive", "drive", mapOf("scope" to "drive")),
+            RcloneRemote("bad:name", "s3"),
+        )
+        val after = RcloneConfig.declare(f, declared)
+        assertEquals(listOf("oracle_s3", "gdrive"), after.map { it.name })
+        assertEquals("AKIA", RcloneConfig.read(f).first { it.name == "oracle_s3" }.options["access_key_id"])
+        assertEquals("old", RcloneConfig.read(f).first { it.name == "oracle_s3" }.options["endpoint"])
+        assertEquals("drive", RcloneConfig.read(f).first { it.name == "gdrive" }.type)
+        // idempotent: a second declare changes nothing
+        assertEquals(after, RcloneConfig.declare(f, declared))
+        // an empty file gets exactly the valid skeletons
+        val g = File(Files.createTempDirectory("rc2").toFile(), "rclone.conf")
+        assertEquals(listOf("oracle_s3", "gdrive"), RcloneConfig.declare(g, declared).map { it.name })
+    }
+
     @Test fun jobStoreDeclareKeepsUserJobsAndDeclaredHistory() {
         val store = RcloneJobStore(File(Files.createTempDirectory("jobs").toFile(), "rclone/jobs.json"))
         store.upsert(RcloneJob("mine", "my copy", "copy", "a:", "/b"))

@@ -33,7 +33,7 @@
 #       project(':libs:<name>')` in app/build.gradle — both ends.
 #   E2  the root build.gradle declares the Compose compiler plugin `apply false`
 #       — the libs apply the bare id, which resolves only if the root names it.
-#   E3  each engine exports EXACTLY ONE @Composable `<X>Screen(target: String?,
+#   E3  each engine exports EXACTLY ONE @Composable `<X>Screen(target: String?,  (+ optional defaulted args, #575)
 #       onOpenFile: (String) -> Unit, onClose: () -> Unit)` — the host contract
 #       push 5 wires against, in the lib's own namespace package.
 #   E4  the module boundary: no source under an engine imports this app's
@@ -145,7 +145,10 @@ for dirpath, _, files in os.walk(src):
             r"@Composable\s*\nfun\s+(\w+Screen)\s*\(\s*"
             r"target:\s*String\?\s*,\s*"
             r"onOpenFile:\s*\(String\)\s*->\s*Unit\s*,\s*"
-            r"onClose:\s*\(\)\s*->\s*Unit\s*,?\s*\)", text):
+            # #575: an engine may take FURTHER named, defaulted arguments after the
+            # host contract (git-sync's cloneUrl); the three the host always passes
+            # stay first and positional.
+            r"onClose:\s*\(\)\s*->\s*Unit\s*,?\s*(?:\w+:\s*[^=,)]+=\s*[^,)]+,?\s*)*\)", text):
             if os.path.dirname(os.path.join(dirpath, f)) == src:
                 found.append(m.group(1))
 if len(found) != 1:

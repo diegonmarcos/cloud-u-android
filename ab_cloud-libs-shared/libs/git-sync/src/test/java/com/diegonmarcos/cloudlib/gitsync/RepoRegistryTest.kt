@@ -16,7 +16,7 @@ class RepoRegistryTest {
         assertTrue(reg.load().isEmpty())
         val a = ManagedRepo("r1", "notes", "/sdcard/notes", remoteUrl = "https://x/y.git", authKind = "https",
             authUsername = "me", sshKeyPath = "", authorName = "Me", authorEmail = "me@x", pullRebase = false,
-            syncMessage = "auto", lastSyncEpochSeconds = 42, lastSyncSummary = "pushed")
+            syncMessage = "auto", autoSync = true, lastSyncEpochSeconds = 42, lastSyncSummary = "pushed")
         reg.upsert(a)
         reg.upsert(ManagedRepo("r2", "other", "/sdcard/other"))
         assertEquals(listOf(a, ManagedRepo("r2", "other", "/sdcard/other")), reg.load())
@@ -38,6 +38,8 @@ class RepoRegistryTest {
         val f = tmp(); f.parentFile.mkdirs()
         f.writeText("""[{"id":"a","name":"a","path":"/a","futureField":true}]""")
         assertEquals("a", RepoRegistry(f).load().single().id)
+        // #575: a registry written before autoSync existed reads as opted OUT.
+        assertEquals(false, RepoRegistry(f).load().single().autoSync)
     }
 
     @Test fun idIsStableForOnePathAndDistinctAcrossPaths() {

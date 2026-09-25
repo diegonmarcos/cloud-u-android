@@ -88,12 +88,15 @@ import kotlinx.coroutines.withContext
  * @param onOpenFile the host's file hand-off: a LOCAL path the host may open in
  *   its own viewer or editor.
  * @param onClose the host's way out of this screen.
+ * @param cloneUrl (#575) when the host names a repository to clone, the URL to
+ *   prefill the Add dialog with; [target] is then the folder it lands in.
  */
 @Composable
 fun GitSyncScreen(
     target: String?,
     onOpenFile: (String) -> Unit,
     onClose: () -> Unit,
+    cloneUrl: String? = null,
 ) {
     val context = LocalContext.current
     val registry = remember { RepoRegistry(File(context.filesDir, "git-sync/repos.json")) }
@@ -110,7 +113,8 @@ fun GitSyncScreen(
             open = existing ?: ManagedRepo(RepoRegistry.idFor(t), dir.name, dir.absolutePath).also {
                 repos = registry.upsert(it)
             }
-        } else if (dir.isDirectory) {
+        } else if (dir.isDirectory || !cloneUrl.isNullOrBlank()) {
+            // A folder to add or init — or (#575) a clone target that does not exist yet.
             addPrefill = dir.absolutePath
         }
     }
@@ -118,7 +122,7 @@ fun GitSyncScreen(
     val current = open
     if (current == null) {
         RepoListScreen(
-            repos = repos, credentials = credentials, addPrefill = addPrefill,
+            repos = repos, credentials = credentials, addPrefill = addPrefill, addPrefillUrl = cloneUrl,
             onAddDismiss = { addPrefill = null },
             onAdd = { repo -> repos = registry.upsert(repo); open = repo },
             onOpen = { open = it }, onClose = onClose,
@@ -144,6 +148,7 @@ private fun RepoListScreen(
     repos: List<ManagedRepo>,
     credentials: GitCredentialStore,
     addPrefill: String?,
+    addPrefillUrl: String?,
     onAddDismiss: () -> Unit,
     onAdd: (ManagedRepo) -> Unit,
     onOpen: (ManagedRepo) -> Unit,
@@ -233,6 +238,7 @@ private fun RepoListScreen(
     if (showAdd || addPrefill != null) {
         AddRepoDialog(
             prefillPath = addPrefill ?: "",
+            prefillUrl = addPrefillUrl ?: "",
             credentials = credentials,
             onDismiss = { showAdd = false; onAddDismiss() },
             onAdded = { showAdd = false; onAddDismiss(); onAdd(it) },
@@ -241,11 +247,11 @@ private fun RepoListScreen(
 }
 
 @Composable
-private fun AddRepoDialog(prefillPath: String, credentials: GitCredentialStore, onDismiss: () -> Unit, onAdded: (ManagedRepo) -> Unit) {
+private fun AddRepoDialog(prefillPath: String, prefillUrl: String, credentials: GitCredentialStore, onDismiss: () -> Unit, onAdded: (ManagedRepo) -> Unit) {
     val scope = rememberCoroutineScope()
     var mode by remember { mutableIntStateOf(if (prefillPath.isNotEmpty() && !GitEngine.isRepository(File(prefillPath))) 1 else 0) }
     var path by remember { mutableStateOf(prefillPath) }
-    var url by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf(prefillUrl) }
     var username by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -641,6 +647,7 @@ private fun SettingsTab(repo: ManagedRepo, credentials: GitCredentialStore, onSa
     var keyPath by remember { mutableStateOf(repo.sshKeyPath) }
     var rebase by remember { mutableStateOf(repo.pullRebase) }
     var syncMessage by remember { mutableStateOf(repo.syncMessage) }
+    var autoSync by remember { mutableStateOf(repo.autoSync) }
     var confirmRemove by remember { mutableStateOf(false) }
     val hasSecret = remember(repo.id) { credentials.hasSecret(repo.id) }
 
@@ -674,6 +681,8 @@ private fun SettingsTab(repo: ManagedRepo, credentials: GitCredentialStore, onSa
         Spacer(Modifier.height(8.dp))
         Text("Sync", style = MaterialTheme.typography.labelLarge)
         Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = rebase, onCheckedChange = { rebase = it }); Spacer(Modifier.width(8.dp)); Text("Pull with rebase") }
+        // #575 GitSync's scheduler: the host runs Sync for opted-in repositories in the background.
+        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = autoSync, onCheckedChange = { autoSync = it }); Spacer(Modifier.width(8.dp)); Text("Sync on a schedule (background)") }
         OutlinedTextField(syncMessage, { syncMessage = it }, label = { Text("Sync commit message") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
@@ -683,7 +692,7 @@ private fun SettingsTab(repo: ManagedRepo, credentials: GitCredentialStore, onSa
                 if (authKind == "none") credentials.clear(repo.id)
                 onSave(repo.copy(name = name.trim().ifBlank { repo.name }, authorName = authorName.trim(), authorEmail = authorEmail.trim(),
                     authKind = authKind, authUsername = username.trim(), sshKeyPath = keyPath.trim(), pullRebase = rebase,
-                    syncMessage = syncMessage.trim().ifBlank { repo.syncMessage }))
+                    syncMessage = syncMessage.trim().ifBlank { repo.syncMessage }, autoSync = autoSync))
                 secret = ""
             }) { Text("Save") }
         }

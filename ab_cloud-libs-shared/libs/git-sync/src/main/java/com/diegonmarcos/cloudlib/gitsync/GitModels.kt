@@ -103,6 +103,8 @@ data class ManagedRepo(
     val pullRebase: Boolean = true,
     /** Message used when Sync commits everything in one go. */
     val syncMessage: String = "sync from cloud-drive",
+    /** #575 opted in to the host's scheduled background sync (GitSync's scheduler). */
+    val autoSync: Boolean = false,
     val lastSyncEpochSeconds: Long = 0,
     val lastSyncSummary: String = "",
 )

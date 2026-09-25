@@ -56,7 +56,7 @@ class FilesBridge(
     /** The Activity-owned launcher behind the four engines (#567 push 5): the page names an
      *  engine id and a target, the Activity starts EngineActivity for a result, and the
      *  engine's "open this file" hand-off comes back through the page's revealPath(). */
-    private val launchEngine: (engine: String, target: String) -> Unit = { _, _ -> }
+    private val launchEngine: (engine: String, target: String, url: String) -> Unit = { _, _, _ -> }
 ) {
     /** Where the persisted SAF tree grant lives. SharedPreferences rather than a file because
      *  the system stores the persistable permission itself; this is only the remembered URI and
@@ -195,6 +195,8 @@ class FilesBridge(
         val external = Environment.getExternalStorageDirectory()
         val named = listOf(
             "Internal storage" to external,
+            // #575 THE shared repo store — the one folder every fleet app reads and writes.
+            "Cloud Drive" to SharedStore.root(),
             "Downloads" to File(external, Environment.DIRECTORY_DOWNLOADS),
             "Documents" to File(external, Environment.DIRECTORY_DOCUMENTS),
             "Pictures" to File(external, Environment.DIRECTORY_PICTURES),
@@ -1278,12 +1280,24 @@ class FilesBridge(
      * page is a WebView; this is the seam between them, and the only one.
      */
     @JavascriptInterface
-    fun openEngine(engine: String, target: String): String {
+    fun openEngine(engine: String, target: String): String = openEngine(engine, target, "")
+
+    /** #575: the git engine may also be handed the URL to clone into [target] (a Sync ▸ Git "Clone" tap). */
+    @JavascriptInterface
+    fun openEngine(engine: String, target: String, url: String): String {
         val known = listOf(EngineActivity.ENGINE_GIT, EngineActivity.ENGINE_EDITOR, EngineActivity.ENGINE_RCLONE, EngineActivity.ENGINE_MOUNTS)
         if (engine !in known) return failure("unknown engine '$engine' — one of ${known.joinToString()}")
-        launchEngine(engine, target)
+        launchEngine(engine, target, url)
         return okErr(true, "")
     }
+
+    /**
+     * #575 the ONE shared repo store's absolute path on THIS device, resolved from
+     * build.json::storage.shared_root (SharedStore). The page composes
+     * `<root>/<repo name>` clone targets from it and never holds the path itself.
+     */
+    @JavascriptInterface
+    fun sharedRoot(): String = SharedStore.root().absolutePath
 
     @JavascriptInterface
     fun openUrl(url: String): String {

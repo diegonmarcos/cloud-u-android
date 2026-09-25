@@ -63,6 +63,22 @@ object RcloneConfig {
         write(file, next); return next
     }
 
+    /**
+     * #575 the host's declared remotes (its build-time data), as skeletons: a name
+     * the file does not have yet is ADDED with the given type and options; a name
+     * it already has is left exactly as it is — that entry may carry the key the
+     * user typed on the device, and a declaration must never wipe it. Returns the
+     * resulting list.
+     */
+    fun declare(file: File, remotes: List<RcloneRemote>): List<RcloneRemote> {
+        val current = read(file)
+        val have = current.map { it.name }.toSet()
+        val added = remotes.filter { it.name !in have && isValidName(it.name) }
+        if (added.isEmpty()) return current
+        val next = current + added
+        write(file, next); return next
+    }
+
     /** rclone remote names: letters, digits, `_`, `-`, `.`, space — and never a colon, which is the remote:path separator. */
     fun isValidName(name: String): Boolean = name.isNotBlank() && name.none { it == ':' || it == '[' || it == ']' || it == '/' || it == '\n' }
 }

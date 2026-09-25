@@ -987,21 +987,34 @@ function reportFailure(result) {
    rest. The ids here are the one vocabulary the bridge and the activity share —
    test/test-drive-engine-wiring.sh derives the set from these calls and checks the
    activity routes every one of them. */
-function openEngine(engine, target) {
-    reportFailure(Bridge.call('openEngine', engine, target || ''));
+function openEngine(engine, target, url) {
+    reportFailure(Bridge.call('openEngine', engine, target || '', url || ''));
 }
 
-function engineButton(engine, target, label) {
+/* #575: `url` is only meaningful for the git engine — the repository to clone into
+   `target` when that folder does not hold a clone yet. */
+function engineButton(engine, target, label, url) {
     return '<button class="engine-open px-3 py-1.5 rounded bg-blue-600 text-white text-xs" ' +
-        'data-engine="' + engine + '" data-target="' + escapeHtml(target || '') + '">' + escapeHtml(label) + '</button>';
+        'data-engine="' + engine + '" data-target="' + escapeHtml(target || '') + '"' +
+        ' data-url="' + escapeHtml(url || '') + '">' + escapeHtml(label) + '</button>';
 }
 
 /** Wire every engine button the current panel holds. Called by the renderers that draw one. */
 function bindEngineButtons() {
     panel.querySelectorAll('.engine-open').forEach(button => {
-        button.onclick = () => openEngine(button.dataset.engine, button.dataset.target);
+        button.onclick = () => openEngine(button.dataset.engine, button.dataset.target, button.dataset.url);
     });
 }
+
+/* #575 THE ONE shared repo store, as the device resolves it from build.json's
+   storage.shared_root. Read once; the page never holds the path itself. */
+const SHARED_ROOT = (() => {
+    let cache = null;
+    return () => {
+        if (cache === null) cache = Bridge.raw('sharedRoot') || '';
+        return cache;
+    };
+})();
 
 /** An engine handed a file back (download, reveal): show its folder in Files. */
 window.revealPath = function (path) {
@@ -1328,15 +1341,27 @@ function renderGitSubpage() {
             ? '<div class="mt-1 text-xs text-gray-500">Auth: ' + escapeHtml(instance.auth) + '</div>'
             : '') +
         '</div>').join('');
-    const repoLines = repos.map(repo =>
-        '<div class="px-4 py-2 border-b border-gray-800 last:border-b-0">' +
+    /* #575: every declared repository clones INTO THE SHARED STORE — <root>/<name> —
+       from the upstream instance's host (the github entry above), so the target
+       folder and the URL are composed here from the one declaration and the one
+       root, never typed. A folder that already holds the clone opens instead. */
+    const upstream = instances.find(instance => instance.kind === 'upstream') || {};
+    const root = SHARED_ROOT();
+    const repoLines = repos.map(repo => {
+        const url = upstream.host ? 'https://' + upstream.host + '/' + repo.github_owner + '/' + repo.name + '.git' : '';
+        const target = root ? root + '/' + repo.name : '';
+        return '<div class="px-4 py-2 border-b border-gray-800 last:border-b-0">' +
         '<div class="flex items-center justify-between gap-2">' +
-        '<span class="text-sm">' + escapeHtml(repo.name) + '</span>' +
+        '<span class="text-sm">' + (repo.private ? '🔒 ' : '') + escapeHtml(repo.name) + '</span>' +
         '<span class="text-xs text-gray-500">' +
         escapeHtml(repo.github_owner + '/' + repo.name + ' → ' + repo.gitea_owner + '/' + repo.name) +
         '</span></div>' +
         (repo.notes ? '<div class="mt-0.5 text-xs text-gray-500">' + escapeHtml(repo.notes) + '</div>' : '') +
-        '</div>').join('');
+        (target && url ? '<div class="mt-2 flex items-center gap-2">' +
+            engineButton('git', target, 'Clone / open', url) +
+            '<span class="text-xs text-gray-500 break-all">' + escapeHtml(target) + '</span></div>' : '') +
+        '</div>';
+    }).join('');
     return '<div class="pt-2">' +
         heading('Instances') +
         (instances.length ? '<div class="mx-4 my-2 rounded-lg border border-gray-700">' + instanceLines + '</div>'
@@ -1349,7 +1374,8 @@ function renderGitSubpage() {
         '<div class="mt-1 text-xs text-gray-400">#567: the native git manager (libs:git-sync, over JGit) — ' +
         'GitSync\'s UX: repositories with one-tap sync, and per repository status, stage / unstage, ' +
         'commit, push / pull, branches (read-only), log, diff, remotes and conflict resolution. ' +
-        'Clone any of the repositories above into a folder, or add a folder that already is one.</div>' +
+        'Every clone lives in the shared store' + (root ? ' (' + escapeHtml(root) + ')' : '') +
+        ', where every fleet app reads and writes it; repositories that opt in sync on a schedule in the background.</div>' +
         '<div class="mt-3">' + engineButton('git', '', 'Open git manager') + '</div></div>' +
         '<div class="h-4"></div>';
 }

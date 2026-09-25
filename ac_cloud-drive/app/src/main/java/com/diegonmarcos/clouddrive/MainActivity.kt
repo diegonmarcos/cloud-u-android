@@ -81,7 +81,7 @@ class MainActivity : AppCompatActivity() {
         filesBridge = FilesBridge(
             this,
             launchTreeGrant = { openTreeLauncher.launch(null) },
-            launchEngine = { engine, target -> engineLauncher.launch(EngineActivity.intent(this, engine, target)) },
+            launchEngine = { engine, target, url -> engineLauncher.launch(EngineActivity.intent(this, engine, target, url)) },
         )
 
         webView = WebView(this)
@@ -118,6 +118,8 @@ class MainActivity : AppCompatActivity() {
         // the URI in this initial intent; the page drains it once it exists.
         handlePdfIntent(intent)
         Updater.start(this)
+        // #575 the GitSync scheduler: repositories that opted in sync in the background.
+        GitSyncWorker.schedule(this)
     }
 
     /**
