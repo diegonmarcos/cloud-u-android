@@ -594,7 +594,6 @@ private fun ListRowActions(
     // when they fit and take a full-width line of their own when they do not -- #196's "taller rows
     // to fit them", which the #500 move onto this line had quietly dropped.
     CompositionLocalProvider(LocalContentColor provides ink) {
-    CompositionLocalProvider(LocalContentColor provides LocalContentColor.current.copy(alpha = 0f)) {
     FlowRow {
         IconButton(
             enabled = resumeRunner.busy == null,
@@ -627,7 +626,6 @@ private fun ListRowActions(
                 modifier = Modifier.align(Alignment.CenterVertically).padding(start = 4.dp),
             )
         }
-    }
     }
     }
 }
