@@ -1,6 +1,7 @@
 package com.diegonmarcos.clouddrive.ui
 
 import android.content.ComponentName
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.material3.Text
 import androidx.compose.ui.test.assertIsDisplayed
@@ -109,7 +110,8 @@ class DriveShellTest {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
         val controller = FilesController(ctx, FilesUiState.initial(Location.Local(root.absolutePath), Location.Local(second.absolutePath), "name", false, false), scope, DrivePrefs(ctx))
         compose.setContent { DriveTheme { FilesScreen(controller, fakeActions, hasAccess = true) } }
-        compose.waitUntil(5_000) { controller.listings.value[Location.Local(root.absolutePath).key]?.loading == false }
+        // The listing loads on IO and resumes on Main; Robolectric's paused main looper only runs that resume when told to.
+        compose.waitUntil(5_000) { shadowOf(Looper.getMainLooper()).idle(); controller.listings.value[Location.Local(root.absolutePath).key]?.loading == false }
         compose.waitForIdle()
         val strip = compose.onNodeWithTag(DriveTags.FILES_TAB_STRIP).fetchSemanticsNode().boundsInRoot.top
         val crumbs = compose.onNodeWithTag(DriveTags.FILES_BREADCRUMBS).fetchSemanticsNode().boundsInRoot.top

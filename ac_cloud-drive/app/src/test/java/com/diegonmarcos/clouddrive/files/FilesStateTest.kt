@@ -41,7 +41,8 @@ class FilesStateTest {
         // Up from the archive root lands in the folder that holds the zip.
         assertEquals(Location.Local("/a/b"), root.parent())
         val crumbs = deep.crumbs()
-        assertEquals(listOf(Location.Local("/"), Location.Local("/a"), Location.Local("/a/b"), Location.Archive("/a/b/x.zip", ""), Location.Archive("/a/b/x.zip", "docs"), deep), crumbs)
+        // Crumbs start at the first path segment, the same top the Local chain stops at (Local("/a").parent() is null).
+        assertEquals(listOf(Location.Local("/a"), Location.Local("/a/b"), Location.Archive("/a/b/x.zip", ""), Location.Archive("/a/b/x.zip", "docs"), deep), crumbs)
     }
 
     @Test fun openPushesHistoryAndBackWalksIt() {

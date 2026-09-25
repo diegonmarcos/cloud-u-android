@@ -444,14 +444,14 @@ object FileOps {
         return files.mapIndexed { i, f ->
             val date = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(f.lastModified()))
             val newName = pattern.replace("{name}", f.nameWithoutExtension).replace("{n}", (i + 1).toString()).replace("{ext}", f.extension).replace("{date}", date)
-            val reason = sanitize(newName)?.let { c ->
-                when {
-                    c == f.name -> "the name does not change"
-                    File(f.parentFile, c).exists() -> "that name already exists on disk"
-                    c in used -> "two files would get the same name"
-                    else -> null
-                }
-            } ?: "the pattern produced an empty name"
+            val c = sanitize(newName)
+            val reason = when {
+                c == null -> "the pattern produced an empty name"
+                c == f.name -> "the name does not change"
+                File(f.parentFile, c).exists() -> "that name already exists on disk"
+                c in used -> "two files would get the same name"
+                else -> null
+            }
             if (newName != f.name) used += newName
             RenameStep(f.absolutePath, f.name, newName, reason)
         }
