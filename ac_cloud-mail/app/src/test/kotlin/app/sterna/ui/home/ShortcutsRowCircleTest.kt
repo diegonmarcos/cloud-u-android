@@ -132,6 +132,23 @@ class ShortcutsRowCircleTest {
     }
 
     @Test
+    fun `534 the coin is filled with the shared glass orb token, not a private colour`() {
+        show()
+        // Superapp's bg_liquid_glass_pill resolves the same glass_orb_fill (libs:bottomnav), so a
+        // coin that matches it here matches superapp home's orbs. Resolved from the app's own
+        // resources at run time, never restated as a literal.
+        val orb = Color(RuntimeEnvironment.getApplication().getColor(GlassOrb.fill))
+        for (i in actions.indices) {
+            val px = pixels(circles()[i].fetchSemanticsNode().boundsInRoot)
+            // Top centre, 5px in: inside the 1dp ring, above the icon.
+            assertTrue(
+                "#534 coin ${actions[i].label} must be filled with the shared glass_orb_fill $orb, got ${px[px.width / 2, 5]}",
+                distance(orb, px[px.width / 2, 5]) <= 3f / 255f,
+            )
+        }
+    }
+
+    @Test
     fun `534 each coin is the tap target and carries its action's name`() {
         show()
         for (i in actions.indices) {

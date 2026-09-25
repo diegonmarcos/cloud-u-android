@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -216,26 +217,24 @@ private fun actionsOf(kind: HomeDestination.Kind, onOpen: (HomeDestination) -> U
 internal data class HomeAction(val icon: ImageVector, val label: String, val onClick: () -> Unit)
 
 /** The page's primary actions: compose, search, settings — the three every other screen reaches
- *  from its own top bar or FAB, now one tap from the landing page too. Each icon sits in a round
- *  glass coin, superapp home's bg_icon_glass in Compose (#534): a faint fill and a faint ring, both
- *  from onSurface so the coin reads on the dark, Samsung-black and light themes alike. */
+ *  from its own top bar or FAB, now one tap from the landing page too. Each icon sits in the
+ *  glass orb superapp home draws behind its top icons (#534): the fill and ring are the shared
+ *  glass_orb_* tokens of libs:bottomnav, the same ones superapp's bg_liquid_glass_pill resolves. */
 @Composable
 internal fun ShortcutsRow(actions: List<HomeAction>) {
-    val ink = MaterialTheme.colorScheme.onSurface
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         actions.forEach { action ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // ponytail: flat fill, not bg_icon_glass's 135° gradient; its stops differ by 5% alpha.
                 Box(
                     Modifier
                         .size(48.dp)
                         .testTag(SHORTCUT_CIRCLE_TAG)
                         .clip(CircleShape)
-                        .background(ink.copy(alpha = 0.08f))
-                        .border(1.dp, ink.copy(alpha = 0.2f), CircleShape)
+                        .background(colorResource(GlassOrb.fill))
+                        .border(1.dp, colorResource(GlassOrb.stroke), CircleShape)
                         .clickable(role = Role.Button, onClick = action.onClick),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -245,6 +244,12 @@ internal fun ShortcutsRow(actions: List<HomeAction>) {
             }
         }
     }
+}
+
+/** The shared orb tokens, by resource id: the test resolves the same ids the row draws. */
+internal object GlassOrb {
+    val fill = com.diegonmarcos.superapp.bottomnav.R.color.glass_orb_fill
+    val stroke = com.diegonmarcos.superapp.bottomnav.R.color.glass_orb_stroke
 }
 
 internal const val SHORTCUT_CIRCLE_TAG = "home_shortcut_circle"

@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Pill shape used by the AppDrawerSheet tabs strip. Same colour
      family as the island chrome — dark surface, faint violet outline,
-     soft pressed-state ripple. The radius is generous so even short
+     soft pressed-state ripple. The three colours are the shared glass_orb_*
+     tokens in libs:bottomnav (#534), also drawn by cloud-mail's round icon coins. The radius is generous so even short
      labels round into the chip aesthetic Google Maps uses. -->
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
-    android:color="#22B794F4">
+    android:color="@color/glass_orb_ripple">
     <item>
         <shape android:shape="rectangle">
-            <solid android:color="#FF1A0033" />
+            <solid android:color="@color/glass_orb_fill" />
             <stroke
                 android:width="1dp"
-                android:color="#55B794F4" />
+                android:color="@color/glass_orb_stroke" />
             <corners android:radius="999dp" />
         </shape>
     </item>

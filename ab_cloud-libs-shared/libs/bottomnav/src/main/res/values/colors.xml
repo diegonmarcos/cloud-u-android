@@ -5,4 +5,12 @@
          now makes up the whole island. The 1dp #33FFFFFF stroke that the XML stacked on
          top is gone, so the island's visible boundary IS the edge of this fill. -->
     <color name="bottom_nav_island_fill">#FF140B26</color>
+
+    <!-- The glass orb: the round coin behind a top icon, declared ONCE (#534). Superapp's
+         bg_liquid_glass_pill.xml (the Home hamburger and wallet orbs, and the drawer tabs)
+         and cloud-mail's Home shortcut coins both resolve these, so a change to the orb's
+         look is one edit here. Values are the ones the superapp drawable carried. -->
+    <color name="glass_orb_fill">#FF1A0033</color>
+    <color name="glass_orb_stroke">#55B794F4</color>
+    <color name="glass_orb_ripple">#22B794F4</color>
 </resources>
