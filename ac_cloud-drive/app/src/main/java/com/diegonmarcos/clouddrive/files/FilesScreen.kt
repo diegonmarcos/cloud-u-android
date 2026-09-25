@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -77,6 +78,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -307,7 +309,11 @@ private fun Pane(
             .clip(RoundedCornerShape(DriveMetrics.cardRadius))
             .border(1.dp, borderColour, RoundedCornerShape(DriveMetrics.cardRadius))
             .background(MaterialTheme.colorScheme.surface)
-            .clickable(enabled = !isActive) { controller.activate(id) },
+            // Any touch on the inactive pane activates it. Not clickable{}: that merges the whole pane
+            // into one semantics node, hiding the strip, crumbs, toolbar and rows from TalkBack.
+            .pointerInput(isActive, id) {
+                if (!isActive) awaitPointerEventScope { while (true) { awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial); controller.activate(id) } }
+            },
     ) {
         TabStrip(id, pane, controller, onOpenPlaces)
         Breadcrumbs(id, loc, controller)
