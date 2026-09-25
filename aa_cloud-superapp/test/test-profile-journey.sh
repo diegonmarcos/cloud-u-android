@@ -98,7 +98,7 @@ fourways() {
         || { echo "the web-auth pill does not open the web-auth dialog"; return 1; }
     echo "$code" | awk '/SignIn.Kind.AUTHELIA_BEARER ->/{getline l; print l}' | grep -q 'showAutheliaBearerDialog()' \
         || { echo "the bearer pill does not open the bearer dialog"; return 1; }
-    echo "$code" | grep -q 'via = autheliaProvider(SignIn.Kind.AUTHELIA_WEB)' \
+    grep -q 'via = autheliaProvider(SignIn.Kind.AUTHELIA_WEB)' <<<"$code" \
         || { echo "the web-auth session is not recorded against the web-auth provider"; return 1; }
     return 0
 }
@@ -143,7 +143,7 @@ t4() {   # $1 = ProfileFragment path; prints nothing, returns 0 when the tab is 
     # The markers are comment lines, so slice the raw file first, then drop comments.
     block=$(awk '/Connect \(tab 1\)/{f=1} f{print} f&&/renderImported\(ctx, imported\)/{exit}' "$pf" | codeof)
     [ -n "$block" ] || return 1
-    echo "$block" | grep -qE 'addView|sectionHeader|label\(|caption\(|pickButton' && return 1
+    grep -qE 'addView|sectionHeader|label\(|caption\(|pickButton' <<<"$block" && return 1
     for old in autheliaEmailEditor 'secretField(' '"Mail 2FA confirmation code"' vault_connect_header '"Imports"' showGithubDeviceDialog 'buildSignIn(' 'buildRegistry(' registry_peer_pick; do
         grep -qF -- "$old" "$pf" && return 1
     done
@@ -153,7 +153,7 @@ echo "== T4: the Connect tab IS the journey, and the old surface is gone =="
 t4 "$PF" && ok "T4: Connect builds renderJourney and nothing else; the old boxes and tiles are gone" || bad "T4: the Connect tab is not (only) the journey, or an old control survives"
 STEPS=$(grep -oE 'enum class Step \{ [A-Z_, ]+ \}' "$PJ" | sed 's/.*{ //; s/ }//; s/,//g')
 [ "$(echo $STEPS | wc -w)" = 4 ] && ok "T4: four steps: $STEPS" || bad "T4: ProfileJourney.Step is not four steps ($STEPS)"
-echo "$STEPS" | grep -q '^SIGN_IN WHO DEVICE GET$' && ok "T4: in order sign in → who → device → get" || bad "T4: step order is $STEPS"
+grep -q '^SIGN_IN WHO DEVICE GET$' <<<"$STEPS" && ok "T4: in order sign in → who → device → get" || bad "T4: step order is $STEPS"
 grep -q 'ProfileJourney.tag(step)' "$PV" && grep -q 'fun tag(step: Step): String = "step:"' "$PJ" && ok "T4: every card is tagged step:<name>" || bad "T4: cards are not tagged by step"
 grep -q 'FleetCockpitView.card(' "$PV" && grep -q 'FleetCockpitView.hero(' "$PV" && grep -q 'FleetCockpitView.pill(' "$PF" \
     && ok "T4: the chrome is the cockpit's (hero, card, pill)" || bad "T4: the journey does not use the cockpit chrome"
@@ -183,8 +183,8 @@ grep -q 'fun current(ctx: Context): Registry?' "$UR" && grep -q 'fun remember(ct
     && ok "T6: the registry is cached so steps 2–3 survive a restart" || bad "T6: no registry cache"
 grep -q 'VaultCockpit.selectDevice(ctx, p.vaultDevice)' "$PF" && ok "T6: the peer pick selects the cockpit device" || bad "T6: the peer pick does not select the cockpit device"
 RF=$(codeof "$PF" | awk '/private fun runFetch\(/{f=1} f{print} f&&/^    }$/{exit}')
-echo "$RF" | grep -q 'UserRegistry.remember(appCtx, outcome.body)' && ok "T6: every fetch route remembers and caches the registry" || bad "T6: runFetch does not remember the artifact"
-echo "$RF" | grep -q 'ConfigAutoImport.apply' && bad "T6: a fetch still applies — step 4 is the only apply" || ok "T6: a fetch never applies"
+grep -q 'UserRegistry.remember(appCtx, outcome.body)' <<<"$RF" && ok "T6: every fetch route remembers and caches the registry" || bad "T6: runFetch does not remember the artifact"
+grep -q 'ConfigAutoImport.apply' <<<"$RF" && bad "T6: a fetch still applies — step 4 is the only apply" || ok "T6: a fetch never applies"
 [ "$(codeof "$PF" | grep -c 'ConfigAutoImport.apply(')" = 1 ] && ok "T6: exactly one Apply on the page" || bad "T6: ConfigAutoImport.apply is called more than once on the page"
 grep -q 'UserRegistry.selectedPeer(context)' "$CA" && grep -q 'UserRegistry.peerProfiles(root, peerId)' "$CA" \
     && ok "T6: the apply step writes the chosen peer's profiles" || bad "T6: ConfigAutoImport ignores the chosen peer"
@@ -197,7 +197,7 @@ for c in "$APP/../../cloud-infra" "$APP/../../../cloud-infra"; do
 done
 if [ -n "$USERS" ]; then
     for id in $(jq -r '.users[].auth_providers[]' "$USERS" | sort -u); do
-        echo "$IDS" | grep -qx "$id" && ok "T7: policy provider '$id' is declared here" || bad "T7: superapp-users.json offers '$id', which build.json does not declare"
+        grep -qx "$id" <<<"$IDS" && ok "T7: policy provider '$id' is declared here" || bad "T7: superapp-users.json offers '$id', which build.json does not declare"
     done
     for id in $IDS; do
         jq -e --arg id "$id" '[.users[].auth_providers[]] | index($id)' "$USERS" >/dev/null \
