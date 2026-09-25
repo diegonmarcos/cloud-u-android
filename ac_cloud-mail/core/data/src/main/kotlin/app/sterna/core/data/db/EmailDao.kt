@@ -347,7 +347,7 @@ interface EmailDao {
      */
     @Query(
         "SELECT accountId, " +
-            "SUM(CASE WHEN flagged = 0 THEN 1 ELSE 0 END) AS starred, " +
+            "SUM(CASE WHEN flagged = 1 THEN 1 ELSE 0 END) AS starred, " +
             "SUM(CASE WHEN hasAttachment = 1 THEN 1 ELSE 0 END) AS withAttachments, " +
             "SUM(CASE WHEN sortKey > 0 AND sortKey >= :sinceMillis THEN 1 ELSE 0 END) AS recent, " +
             "MIN(CASE WHEN sortKey > 0 THEN sortKey END) AS oldest " +

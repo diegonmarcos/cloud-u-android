@@ -135,10 +135,10 @@ internal fun accountMailStatsList(
     accounts: List<StoredAccount>,
     foldersPerAccount: List<List<Mailbox>>,
     cachedMessages: Map<String, Int>,
-    /** `MailRepository.folderRowsBadgeUnread`, per account id. */
-    unreadIsCounted: (String) -> Boolean,
     /** `StorageRepository.homeCounts`, per account id. */
     homeCounts: Map<String, AccountHomeCounts> = emptyMap(),
+    /** `MailRepository.folderRowsBadgeUnread`, per account id. Last, so a trailing lambda binds it. */
+    unreadIsCounted: (String) -> Boolean,
 ): List<AccountMailStats> = accounts.zip(foldersPerAccount) { account, folders ->
     accountMailStats(
         account = account,
