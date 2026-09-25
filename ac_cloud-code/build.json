@@ -26,7 +26,7 @@
         "license": "MIT"
       }
     },
-    "_doc": "Full clone vendored as owned code (#253/#469: a clone, not a fork \u2014 no .git, no upstream remote, the submodule inlined). The brief said 'Acode is GPL \u2014 verify': it is NOT. license.txt at the pinned revision is MIT (Foxdebug / Ajit Kumar). The GPL in upstream's tree is the PREBUILT proot/talloc binaries and Alpine rootfs of src/plugins/proot, which are PRUNED here: they are GPL-2.0/LGPL binaries shipped without corresponding source, and the F-Droid flavour this fleet builds removes that plugin anyway. Full inventory in CLOUD-CODE.md; guarded by test/test-licence-clean.sh.",
+    "_doc": "Full clone vendored as owned code (#253/#469: a clone, not a fork \u2014 no .git, no upstream remote, the submodule inlined). The brief said 'Acode is GPL \u2014 verify': it is NOT. license.txt at the pinned revision is MIT (Foxdebug / Ajit Kumar). The GPL in upstream's tree is the PREBUILT proot/talloc binaries and Alpine rootfs of src/plugins/proot, which are PRUNED here: they are GPL-2.0/LGPL binaries shipped without corresponding source, and the F-Droid flavour this fleet builds removes that plugin anyway. Full inventory in CLOUD-CODE.md. Guarded twice: test/test-cloud-nav.sh keeps every `pruned` path absent and refuses any *.so / *.rootfs in the tree, and the FLEET licence guard (1_cicd/src/data/licence-boundaries.json::upstreams.acode, run by licence-guard.yml on every push, #239) fails the repository if the plugin directory returns or package.json / package-lock.json / config.xml name it again.",
     "pruned": [
       ".github",
       "src/plugins/proot"

@@ -10,13 +10,16 @@
 
 import fsOperation from "fileSystem";
 
-// SEAM: agents — replace with the agent runner's task list (my-ai claude-api,
-// mesh-only). Stub: an empty list plus the reason, which the tab shows as-is.
+// SEAM: agents — the LIVE half only: running status and token utilisation from
+// the agent runner (my-ai claude-api, mesh-only). Assignment, model and batch
+// are NOT this seam's: the backlog dist already derives them, and the tab
+// renders that view (nav.json::agents.entry). Stub: an empty list plus the
+// reason, which the tab shows under the view as-is.
 export async function listAgents() {
 	return {
 		stub: true,
 		items: [],
-		note: "Agent runner not wired yet — this tab is UI only (#562).",
+		note: "Live status and token use: agent runner not wired yet (#562). Assignments above come from the backlog.",
 	};
 }
 

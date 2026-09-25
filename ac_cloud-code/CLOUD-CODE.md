@@ -32,6 +32,13 @@ F-Droid flavour removes that plugin, and the terminal need is served by
 the MyTerminal tab. `test/test-cloud-nav.sh` keeps them out: no `*.so` or
 `*.rootfs` anywhere, and every `build.json::upstream.pruned` path stays absent.
 
+The fleet-level guard #239 requires of every vendored upstream is the `acode`
+entry of `1_cicd/src/data/licence-boundaries.json` (run by `licence-guard.yml`
+on every push): it finds this tree by shape, fails if `src/plugins/proot`
+returns, and fails if `package.json`, `package-lock.json` or `config.xml`
+name the plugin again. Case 11 of `licence-boundary-guard.test.sh` holds it
+red against upstream's pristine `package.json` and green against ours.
+
 ## What differs from upstream (the whole list)
 
 1. `.github/`, `src/plugins/proot/` removed; proot dropped from `package.json`
@@ -74,9 +81,15 @@ Backlog | Editor | Repos | Home | Agents | Browser | MyTerminal.
   as-is and follows the files' own "Views:" links. That repo is private and this
   APK is public, so it is read from the owner's on-device clone (the folder can be
   changed in the tab). Nothing is re-derived.
-- **Repos / Home / Agents**: UI over `src/cloud/seams.js`, where every provider
+- **Agents**: the SAME source as Backlog, by design. The backlog engine
+  derives task-effort, task-complexity and agent-model per task and curates
+  agent-slot, and emits them as its own "agent batches" and "per agent-model"
+  views; this tab renders `nav.json::agents.entry` through the one renderer
+  Backlog uses, from the same folder. Only the live half (running status,
+  token use) is behind `seams.js::listAgents`, and that is the stub.
+- **Repos / Home**: UI over `src/cloud/seams.js`, where every provider
   is a `SEAM:`-marked function. Repos is a small real engine (children of a root
-  that hold `.git`, tap opens the folder in the editor). Agents and Home are stubs.
+  that hold `.git`, tap opens the folder in the editor). Home is a stub.
 - **Browser**: local pages in Acode's own browser plugin (the one Run uses).
 - **MyTerminal**: link-out. `nav.json::myterminal.target` is a fleet id
   (`cloud-myterminal`, #561). `tools/resolve-targets.py` derives package and

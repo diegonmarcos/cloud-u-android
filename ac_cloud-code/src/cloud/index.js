@@ -52,7 +52,9 @@ function panelHeader(title, ...actions) {
 }
 
 // ── Backlog: render the ONE existing source, as-is ─────────────────────────
-async function renderBacklog(panel) {
+// Backlog and Agents are two entry files of the same backlog dist, read from
+// the same folder (one localStorage key), through this one renderer.
+async function renderBacklogView(panel, title, entry, ...extra) {
 	const md = markdownIt({ html: false, linkify: true });
 	let dir = stored("backlog.dir", nav.backlog.source_dir);
 	const body = el("div", { className: "cloud-md" });
@@ -91,11 +93,15 @@ async function renderBacklog(panel) {
 			if (!next) return;
 			dir = next.endsWith("/") ? next : `${next}/`;
 			store("backlog.dir", dir);
-			load(nav.backlog.entry);
+			load(entry);
 		},
 	});
-	panel.replaceChildren(panelHeader("Backlog", change), body);
-	await load(nav.backlog.entry);
+	panel.replaceChildren(panelHeader(title, change), body, ...extra);
+	await load(entry);
+}
+
+function renderBacklog(panel) {
+	return renderBacklogView(panel, "Backlog", nav.backlog.entry);
 }
 
 // ── Repos: small engine behind the seam ────────────────────────────────────
@@ -123,15 +129,15 @@ async function renderRepos(panel) {
 	}
 }
 
-// ── Agents: UI over the seam ───────────────────────────────────────────────
+// ── Agents: the backlog's own agent views, plus the live seam ──────────────
+// Assignment, model and batch come from the backlog dist (one source with the
+// Backlog tab); running status and token use are the seam's, stubbed for now.
 async function renderAgents(panel) {
 	const { items, note } = await listAgents();
-	panel.replaceChildren(
-		panelHeader("Agents"),
-		items.length
-			? el("div", { className: "cloud-list" }, items.map((a) => el("div", { className: "cloud-row" }, a.name)))
-			: el("p", { className: "cloud-muted" }, note),
-	);
+	const live = items.length
+		? el("div", { className: "cloud-list" }, items.map((a) => el("div", { className: "cloud-row" }, a.name)))
+		: el("p", { className: "cloud-muted" }, note);
+	await renderBacklogView(panel, "Agents", nav.agents.entry, live);
 }
 
 // ── Home: one card per other tab, plus whatever the seam reports ───────────

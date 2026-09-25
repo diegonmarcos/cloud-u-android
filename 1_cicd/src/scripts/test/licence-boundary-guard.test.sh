@@ -293,9 +293,58 @@ else
   fi
 fi
 
+# ── case 11: the acode entry (#562) — a reach declared at the tree ROOT ───
+# Cordova declares its plugins in package.json, which sits in no scan root.
+# Until scan_files existed the policy could not express that, so the entry
+# would have scanned three directories that mention nothing and reported the
+# pristine upstream clean. The fixture is upstream's package.json lines
+# VERBATIM at the pinned revision, on the REAL policy's acode key.
+build_acode() {
+  local t="$1"
+  mkdir -p "$t/utils/scripts" "$t/codemirror-lsp-client" "$t/src/plugins/system"
+  : > "$t/package-lock.json"; : > "$t/config.xml"
+  cat > "$t/package.json" <<'EOF'
+{
+  "cordova": {
+    "plugins": {
+      "com.foxdebug.acode.rk.exec.proot": {}
+    }
+  },
+  "devDependencies": {
+    "com.foxdebug.acode.rk.exec.proot": "file:src/plugins/proot"
+  }
+}
+EOF
+}
+run_acode() { python3 "$GUARD" "$1" acode "$POLICY" 2>&1; }
+T="$WORK/acode-pristine"; build_acode "$T"
+OUT="$(run_acode "$T")"; RC=$?
+if [ "$RC" -ne 1 ]; then
+  fail "acode pristine: expected exit 1 (package.json reaches the proot plugin), got $RC: $OUT"
+elif ! contains "$OUT" "package.json:"; then
+  fail "acode pristine: guard did not name package.json — root-level manifests are not scanned: $OUT"
+else
+  ok "acode pristine: exit 1, the root package.json reach is named (scan_files works)"
+fi
+T="$WORK/acode-pruned"; build_acode "$T"; printf '{}\n' > "$T/package.json"
+OUT="$(run_acode "$T")"; RC=$?
+[ "$RC" -eq 0 ] && ok "acode pruned: exit 0 (the entry can go green)" \
+  || fail "acode pruned: expected exit 0, got $RC: $OUT"
+mkdir -p "$T/src/plugins/proot/libs"; : > "$T/src/plugins/proot/libs/libproot.so"
+OUT="$(run_acode "$T")"; RC=$?
+if [ "$RC" -ne 1 ] || ! contains "$OUT" "[vendored]"; then
+  fail "acode binaries restored: expected exit 1 tagged [vendored], got $RC: $OUT"
+else
+  ok "acode binaries restored: exit 1 — the pruned plugin directory coming back is caught"
+fi
+T="$WORK/acode-nomanifest"; build_acode "$T"; rm "$T/package.json"
+OUT="$(run_acode "$T")"; RC=$?
+[ "$RC" -eq 2 ] && ok "acode without package.json: exit 2, a declared scan file missing fails closed" \
+  || fail "acode without package.json: expected exit 2, got $RC (a missing manifest must not read as clean): $OUT"
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
-  echo "PASS   10/10 cases"; exit 0
+  echo "PASS   11/11 cases"; exit 0
 else
   echo "FAIL   $FAILURES case(s)"; exit 1
 fi

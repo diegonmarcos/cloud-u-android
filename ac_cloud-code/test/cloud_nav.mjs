@@ -58,3 +58,18 @@ out(toEditor.active === "editor" && toEditor.showPanel === null, "Editor hides e
 const toTerm = tabs.select(toBacklog, byId.myterminal, ["myterminal"]);
 out(toTerm.launch === "myterminal" && toTerm.active === "backlog", "MyTerminal launches out and keeps the current tab");
 out(new RegExp(`LAUNCH_VIEWS = \\[\\s*"myterminal"\\s*\\]`).test(index), "index.js treats myterminal as the launch view");
+
+// ONE source (#562): Backlog and Agents are two entry files of the same
+// backlog dist, rendered by the same function from the same folder. Read off
+// the real index.js: the function each renderer calls and the entry it passes.
+const renderer = /async function (\w+)\(panel, title, entry/.exec(index)?.[1];
+out(!!renderer, `index.js has one shared backlog renderer (${renderer})`);
+const entryOf = (fn) => new RegExp(`function ${fn}\\(panel\\) \\{[\\s\\S]*?${renderer}\\(panel, "[^"]+", (nav\\.\\w+\\.entry)`).exec(index)?.[1];
+out(entryOf("renderBacklog") === "nav.backlog.entry", `Backlog renders nav.backlog.entry through ${renderer} (got ${entryOf("renderBacklog")})`);
+out(entryOf("renderAgents") === "nav.agents.entry", `Agents renders nav.agents.entry through ${renderer} (got ${entryOf("renderAgents")})`);
+const dirReads = [...index.matchAll(/stored\("backlog\.dir"/g)].length;
+out(dirReads === 1 && !/nav\.agents\.source_dir|stored\("agents\./.test(index), `the backlog folder is read in one place (${dirReads}); Agents declares no second source`);
+for (const k of ["backlog", "agents"]) {
+	out(/^[\w-]+\.md$/.test(nav[k]?.entry || ""), `nav.${k}.entry is a markdown file of the backlog dist (${nav[k]?.entry})`);
+}
+out(nav.agents.entry !== nav.backlog.entry, "Agents opens a different view of that source than Backlog");

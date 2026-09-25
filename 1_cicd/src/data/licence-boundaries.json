@@ -59,6 +59,59 @@
                 ],
                 "_doc_prune_dirs": "Never descended into, for both the tree walk and the file scan. z_archive holds retired app trees and dist holds generated copies; a hit in either is noise that would train a reader to ignore the guard."
             }
+        },
+        "acode": {
+            "repo": "https://github.com/Acode-Foundation/Acode.git",
+            "pinned_revision": "b7dbe3d69dcf5165e19581fe3927f0838dce09f4",
+            "_doc": "cloud-code (#562): Acode vendored at ac_cloud-code/ as an owned tree. Acode is MIT except ONE plugin directory, which is not a licence text but a payload: src/plugins/proot ships prebuilt libproot*.so (GPL-2.0), libtalloc.so (LGPL-3.0) and three Alpine rootfs images, 21 MB of binaries with no corresponding source. Vendoring them into a public repository or signing them into an APK carries the GPL's source obligation, so #562 pruned the directory and dropped the plugin from package.json (devDependencies + cordova.plugins) and package-lock.json. This entry is what keeps that so: it is the fleet-level licence guard #239 requires of every vendored upstream, and it replaces the per-app tester ac_cloud-code/build.json used to point at, which was never written.",
+            "permissive_licence": "MIT",
+            "restricted_licence": "GPL-2.0 / LGPL-3.0 prebuilt binaries without source (proot plugin)",
+            "restricted_dirs": [
+                "src/plugins/proot"
+            ],
+            "_doc_restricted_dirs": "Upstream's own F-Droid flavour (utils/scripts/build.sh) removes exactly this plugin, which is the flavour cloud-code builds. Its presence in our tree is the prohibited copy whether or not the build wires it.",
+            "scan_files": [
+                "package.json",
+                "package-lock.json",
+                "config.xml"
+            ],
+            "_doc_scan_files": "The reach in a Cordova app is declared at the tree ROOT, not under a source directory: package.json carries the plugin both as a devDependency path (file:src/plugins/proot) and as a cordova.plugins key, and package-lock.json mirrors it. These sit in no scan root, so they are named as files. A declared file that is absent fails closed (exit 2), like a missing scan root.",
+            "scan_roots": [
+                "utils/scripts",
+                "codemirror-lsp-client",
+                "src/plugins/system"
+            ],
+            "_doc_scan_roots": "utils/scripts/ is the JS that runs at build time (upstream's own build scripts): a plugin re-added there would be a reach too. codemirror-lsp-client/ and src/plugins/system/ carry nothing about proot; they are here as DISCOVERY ANCHORS. The repo-mode walk treats every scan root and restricted dir as an anchor, and a tree is recognised when ANY one of them is present (deliberately, so a truncated checkout fails closed rather than vanishing), so each must be a path that exists in Acode's shape and NOWHERE ELSE in this repository. 'hooks' is not here for exactly that reason: it was tried, matched ac_cloud-chat/app, 0_git/src and six AFFiNE component dirs, and the guard then failed closed on all eight for missing siblings. The restricted dir itself is pruned, so it can never be the anchor that finds the tree.",
+            "markers": [
+                "rk.exec.proot",
+                "file:src/plugins/proot"
+            ],
+            "_doc_markers": "The two spellings of the reach at the pinned revision, verbatim from upstream package.json: the Cordova plugin id com.foxdebug.acode.rk.exec.proot (as a cordova.plugins key and a package-lock entry) and the path dependency file:src/plugins/proot. Deliberately NOT the bare directory tail plugins/proot: src/plugins/terminal/www/Terminal.js names /main/src/plugins/proot/libs/ as a runtime path string in the terminal's own JS, which is upstream's code about a plugin that is not installed, not a build reach, and a marker that hits it would train readers to ignore the guard.",
+            "scan_extensions": [
+                ".json",
+                ".js",
+                ".xml",
+                ".gradle"
+            ],
+            "_doc_scan_extensions": "Manifests and build-time JS only, as for affine. NOT .sh: utils/scripts/build.sh is upstream's own flavour script and names the plugin id in its `cordova plugin remove` branch, which is the opposite of a reach; scanning it would fail the clean tree on the line that removes the thing.",
+            "known_reaches": {
+                "_doc": "The reaches present in PRISTINE upstream at pinned_revision. cloud-code's tree must show ZERO: the plugin is pruned and both manifests drop it. Anything listed here re-appearing is a to-do, not an allowance.",
+                "package.json": "devDependencies['com.foxdebug.acode.rk.exec.proot'] = 'file:src/plugins/proot' and cordova.plugins['com.foxdebug.acode.rk.exec.proot'] — removed with the plugin",
+                "package-lock.json": "three lock entries for the plugin path — removed with the plugin"
+            },
+            "vendoring": {
+                "prune_dirs": [
+                    "node_modules",
+                    ".git",
+                    "build",
+                    "target",
+                    "dist",
+                    "platforms",
+                    "plugins",
+                    "z_archive"
+                ],
+                "_doc_prune_dirs": "As for affine, plus Cordova's two generated trees: platforms/ (the Android project `cordova platform add` writes) and plugins/ (installed plugin copies). Both are gitignored, both are regenerated from package.json, and a hit in either is the manifest's hit reported twice."
+            }
         }
     },
     "_doc_what_this_schema_cannot_express": "SOURCE COPYLEFT ONLY, AND CLOUD OFFICE NEEDS SOMETHING ELSE. Every field here describes a directory that must not be VENDORED or NAMED in a source tree. Collabora Online is uniformly MPL-2.0, so it has no such directory and an entry for it would be empty in every field — while the boundary that actually binds Cloud Office is trademark, inside the SIGNED APK: Collabora's logo assets under assets/dist/images, and the values Collabora Office / Collabora Productivity Limited at /org.openoffice.Setup/Product/{ooName,ooVendor} in assets/share/registry/main.xcd. Adding that to this schema would report vendored MPL source as a violation (it is not) and would never scan an artefact (which is the only place it lives). It needs a boundary_kind field and an APK reader first. Written down here rather than left out, because an absent entry and a considered omission look identical in a data file. See a0_docs/eng-specs/cloud-office-prebuilt-engine-reuse.md section 12.7."

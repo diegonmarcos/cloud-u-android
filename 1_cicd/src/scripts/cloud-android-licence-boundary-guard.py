@@ -45,6 +45,29 @@ def scan(tree, cfg):
     exts = tuple(cfg["scan_extensions"])
     skip = prune_dirs(cfg)
     hits = []
+
+    def scan_file(p):
+        try:
+            with open(p, encoding="utf-8", errors="replace") as fh:
+                lines = fh.readlines()
+        except OSError:
+            return
+        for i, line in enumerate(lines, 1):
+            for m in markers:
+                if m in line:
+                    hits.append((os.path.relpath(p, tree), i, m, line.strip()))
+
+    # Root-level manifests (package.json, config.xml …) are where a Cordova or
+    # npm upstream declares the reach — a path dependency on the restricted
+    # plugin directory. They sit in no scan root, so they are named directly.
+    # A declared file that is absent is the same false-green as a missing scan
+    # root: the tree is not the tree the policy describes.
+    for file_rel in cfg.get("scan_files", []):
+        p = os.path.join(tree, file_rel)
+        if not os.path.isfile(p):
+            raise FileNotFoundError(file_rel)
+        scan_file(p)
+
     for root_rel in cfg["scan_roots"]:
         root = os.path.join(tree, root_rel)
         if not os.path.isdir(root):
@@ -55,19 +78,8 @@ def scan(tree, cfg):
         for dirpath, dirnames, filenames in os.walk(root):
             dirnames[:] = [d for d in dirnames if d not in skip]
             for fn in filenames:
-                if not fn.endswith(exts):
-                    continue
-                p = os.path.join(dirpath, fn)
-                try:
-                    with open(p, encoding="utf-8", errors="replace") as fh:
-                        lines = fh.readlines()
-                except OSError:
-                    continue
-                for i, line in enumerate(lines, 1):
-                    for m in markers:
-                        if m in line:
-                            hits.append((os.path.relpath(p, tree), i, m,
-                                         line.strip()))
+                if fn.endswith(exts):
+                    scan_file(os.path.join(dirpath, fn))
     return hits
 
 
@@ -110,7 +122,7 @@ def report(tree, cfg, key, label):
     try:
         hits = scan(tree, cfg)
     except FileNotFoundError as e:
-        print(f"ERROR: scan root '{e}' missing under {label} — wrong tree, or an "
+        print(f"ERROR: scan root/file '{e}' missing under {label} — wrong tree, or an "
               f"incomplete checkout. Refusing to report a clean result.",
               file=sys.stderr)
         return 2

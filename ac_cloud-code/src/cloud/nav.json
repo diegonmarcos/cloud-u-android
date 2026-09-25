@@ -23,6 +23,10 @@
     "source_dir": "file:///storage/emulated/0/git/cloud-data-my-ai-memory/1.1.Product-Backlog/dist/",
     "entry": "P-Backlog-sts.md"
   },
+  "agents": {
+    "_doc": "The Agents tab reads the SAME source as Backlog (#562: 'they must read ONE source'): the backlog engine already derives task-effort, task-complexity and agent-model per task and curates agent-slot from assignments.json, and emits them as its own views — 'agent batches' (entry, below) and 'per agent-model', which the entry links to in its Views line. This tab renders `entry` through the very renderer Backlog uses, from backlog.source_dir; nothing about agents is derived here. SEAM: seams.js::listAgents is where the LIVE half (running status, token utilisation from the agent runner) plugs in; until then the tab shows its note under the view.",
+    "entry": "P-Backlog-bat.md"
+  },
   "repos": {
     "_doc": "Default on-device directory whose children are listed as repositories (a child holding .git). SEAM: seams.js::listRepos is the stub a real provider (gitea / cloud-myterminal's workspace broker) replaces.",
     "root": "file:///storage/emulated/0/git/"
