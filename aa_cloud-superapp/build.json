@@ -6230,7 +6230,7 @@
           {"id": "mail", "label": "Mail", "vault": ["mail"], "icon": "ic_mail"},
           {"id": "keyboard", "label": "Keyboard & Clipboards", "vault": ["autocomplete"], "icon": "ic_keyboard", "observed": false},
           {"id": "mesh", "label": "Mesh", "vault": ["mesh", "electronics"], "icon": "ic_wg"},
-          {"id": "drive", "label": "Drive (private repos)", "vault": ["git"], "icon": "ic_drive"},
+          {"id": "drive", "label": "Drive (private repos)", "vault": ["git"], "icon": "ic_code"},
           {"id": "ai", "label": "AI", "vault": ["ai"], "icon": "ic_ai_sparkle"},
           {"id": "apps", "label": "Apps", "vault": ["apps"], "icon": "ic_home_apps"}
         ],
