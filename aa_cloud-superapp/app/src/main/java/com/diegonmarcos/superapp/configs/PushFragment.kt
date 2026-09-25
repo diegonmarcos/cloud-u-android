@@ -146,7 +146,7 @@ class PushFragment : Fragment() {
             },
         )
         col.addView(TextView(ctx).apply {
-            text = "${b.label} · $stateLabel · ${st.reason}"
+            text = "$stateLabel · ${st.reason}"
             textSize = 12f
             setTextColor(stateColour)
         })
