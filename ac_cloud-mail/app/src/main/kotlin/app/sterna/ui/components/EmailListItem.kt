@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.CircularProgressIndicator
@@ -43,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import app.sterna.core.jmap.model.EmailBodyPart
+import app.sterna.ui.message.CopyCodeIcon
 import app.sterna.ui.message.ReadingGroupSeparator
 import app.sterna.ui.message.copyVerificationCodeOrSayNone
 import app.sterna.ui.message.receivedTextToolSource
@@ -613,7 +613,7 @@ private fun ListRowActions(
                 }
             },
         ) {
-            Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.message_copy_code))
+            CopyCodeIcon()
         }
         Box(Modifier.align(Alignment.CenterVertically)) { ReadingGroupSeparator() }
         if (onOpenAttachment != null && attachmentParts.isNotEmpty()) {

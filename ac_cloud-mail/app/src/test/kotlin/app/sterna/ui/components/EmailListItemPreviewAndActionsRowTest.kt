@@ -50,12 +50,12 @@ class EmailListItemPreviewAndActionsRowTest {
     fun `list row actions draw Resume, Copy Code, the bar, then chips - in that order`() {
         val body = listRowActionsBlock()
         val resume = body.indexOf("TextTool.RESUME")
-        val copyCode = body.indexOf("Icons.Filled.ContentCopy")
+        val copyCode = body.indexOf("CopyCodeIcon()")
         val bar = body.indexOf("ReadingGroupSeparator()")
         val chips = body.indexOf("AttachmentChips(")
         val positions = listOf(
             "TextTool.RESUME" to resume,
-            "Icons.Filled.ContentCopy" to copyCode,
+            "CopyCodeIcon()" to copyCode,
             "ReadingGroupSeparator()" to bar,
             "AttachmentChips(" to chips,
         )
@@ -63,6 +63,26 @@ class EmailListItemPreviewAndActionsRowTest {
         assertTrue(
             "expected order Resume < Copy Code < '|' < chips, got $positions",
             resume < copyCode && copyCode < bar && bar < chips,
+        )
+    }
+
+    /**
+     * #500: "both icons must resolve from the reading pane's ONE declaration". Resume does, through
+     * [app.sterna.ui.text.TextTool.RESUME]; Copy Code does through `CopyCodeIcon()`. A literal
+     * `Icons.Filled.ContentCopy` in the list adapter is the second declaration the ticket forbids.
+     */
+    @Test
+    fun `Copy Code icon is the reader's one declaration, not a second literal in the row`() {
+        val row = listRowActionsBlock()
+        assertTrue("ListRowActions must not re-spell the icon:\n$row", !row.contains("Icons.Filled.ContentCopy"))
+        val reader = File(SOURCE.parentFile.parentFile, "message/MessageScreen.kt").readText()
+        assertTrue(
+            "MessageScreen must declare internal fun CopyCodeIcon()",
+            reader.contains("internal fun CopyCodeIcon()"),
+        )
+        assertTrue(
+            "the reading row must draw CopyCodeIcon() too, so the two share it",
+            reader.contains("                    CopyCodeIcon()"),
         )
     }
 

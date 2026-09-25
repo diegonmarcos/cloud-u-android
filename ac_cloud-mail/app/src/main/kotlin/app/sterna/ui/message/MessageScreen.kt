@@ -758,6 +758,16 @@ internal fun copyVerificationCodeOrSayNone(clipboard: ClipboardManager, context:
 }
 
 /**
+ * The Copy Code ICON, declared once (#500): the reading row and the message-list row both draw this,
+ * so the glyph and its spoken label cannot drift apart the way a second `Icons.Filled.ContentCopy`
+ * literal in the list adapter would let them.
+ */
+@Composable
+internal fun CopyCodeIcon() {
+    Icon(Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.message_copy_code))
+}
+
+/**
  * The message a "Copy Code" tap hands the extractor: subject AND body, in both forms the extractor
  * reads — the flattened text, for line isolation and phrases, and the raw markup, for the
  * large-font-cell signal. Nothing is cached, flattened or sent anywhere.
@@ -1906,10 +1916,7 @@ private fun MessageContent(
                 }
                 ReadingGroupSeparator()
                 IconButton(onClick = { copyVerificationCodeOrSayNone(clipboard, context, readingEmail) }) {
-                    Icon(
-                        Icons.Filled.ContentCopy,
-                        contentDescription = stringResource(R.string.message_copy_code),
-                    )
+                    CopyCodeIcon()
                 }
             },
         ) { tool ->
