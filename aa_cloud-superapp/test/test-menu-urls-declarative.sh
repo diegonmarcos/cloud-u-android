@@ -61,8 +61,9 @@ for title in ("Actions", "Configs", "URLs"):
 ok("URL rows come from AppUrls.of") if "AppUrls.of(" in mc else bad("the menu does not call AppUrls.of")
 ok('an "Update" row exists') if 'makeMenuRow(ctx, "Update"' in mc else bad('no "Update" row')
 
-print("== T3: Update is the fleet's ONE install path — no second updater ==")
-ok("Update runs FleetInstall.run") if "FleetInstall.run(" in mc else bad("Update does not go through FleetInstall")
+print("== T3: Update is the ONE path per kind (fleet -> FleetInstall, else the #571 ladder) - no second updater ==")
+ok("Update runs FleetInstall.run for a fleet app") if "FleetInstall.run(" in mc else bad("Update does not go through FleetInstall")
+ok("Update runs ExternalInstall.run over SourceResolver for any other app") if ("ExternalInstall.run(" in mc and "SourceResolver.resolve(" in mc) else bad("Update does not go through the #571 resolver")
 second = [w for w in ("Updater.", "PackageInstaller.Session", "openSession", "createSession", "HttpURLConnection", "DownloadManager") if w in mc]
 ok("no second updater in the menu") if not second else bad("menu grew its own updater: %s" % second)
 

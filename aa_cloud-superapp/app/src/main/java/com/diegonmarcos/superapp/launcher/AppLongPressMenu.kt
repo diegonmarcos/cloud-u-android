@@ -1,8 +1,10 @@
 package com.diegonmarcos.superapp.launcher
 import com.diegonmarcos.superapp.App
 import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.appstore.ExternalInstall
 import com.diegonmarcos.superapp.appstore.FleetInstall
 import com.diegonmarcos.superapp.appstore.PhoneAppActions
+import com.diegonmarcos.superapp.appstore.SourceResolver
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.ui.SystemInfoPopup
 import com.diegonmarcos.superapp.apps.SuitePhoneAppsFragment
@@ -45,9 +47,9 @@ import kotlin.concurrent.thread
  *     tabs, etc.)
  *   • App info       — jumps to Settings → Apps → ThisApp.
  *   • Uninstall      — PackageInstaller.uninstall with the package.
- *   • Update         — a Cloud fleet app runs the fleet's ONE install path
- *                      (FleetInstall); any other app is drawn disabled with
- *                      the reason (#572).
+ *   • Update         — the ONE path per kind Store ▸ Phone Apps runs: a Cloud
+ *                      fleet app through FleetInstall, any other app down its
+ *                      declared source ladder (ExternalInstall, #571) (#572).
  *   • URLs           — public + private endpoints (our apps) or the website
  *                      (phone apps), all derived by [AppUrls] from build.json
  *                      declarations; no URL is written in this file (#572).
@@ -172,19 +174,22 @@ object AppLongPressMenu {
             requestUninstall(ctx, pkg)
         })
 
-        // Update — the fleet's ONE install path for a Cloud app.
-        // TODO(#571): the source resolver plugs in HERE for every other app
-        // (vendor / F-Droid / Play); it is not on main yet, so those rows are
-        // drawn disabled with the reason instead of a second updater growing.
+        // Update — the ONE path per kind, the same one Store ▸ Phone Apps runs:
+        // a fleet app through FleetInstall, any other app down the ladder its
+        // install-source map declares (#571 SourceResolver → ExternalInstall).
+        // A Play-only app has no direct rung: the row is dimmed and the tap
+        // says why (ExternalInstall.run returns that message).
+        val resolver = runCatching { PhoneAppActions.resolver(PhoneAppActions.sources(ctx)) }.getOrNull()
         val fleetApp = PhoneAppActions.fleetByPackage(Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64))[pkg]
+        val external = if (fleetApp == null && resolver != null) SourceResolver.resolve(resolver, pkg) else null
         menu.addView(makeMenuRow(ctx, "Update", "system") {
-            if (fleetApp == null) {
-                Toast.makeText(ctx, "No update source for this app yet", Toast.LENGTH_LONG).show()
+            if (fleetApp == null && resolver == null) {
+                Toast.makeText(ctx, "No update source for this app", Toast.LENGTH_LONG).show()
             } else {
                 dialog.dismiss()
-                requestUpdate(ctx, fleetApp, appLabel)
+                requestUpdate(ctx, fleetApp, resolver, pkg, appLabel)
             }
-        }.also { if (fleetApp == null) it.alpha = 0.4f })
+        }.also { if (fleetApp == null && (external == null || external.needsPlay)) it.alpha = 0.4f })
 
         // URLs — every row derived by AppUrls from build.json declarations.
         val links = AppUrls.of(ctx, pkg)
@@ -234,15 +239,18 @@ object AppLongPressMenu {
         }
     }
 
-    /** Run the fleet install for [app] off the main thread; FleetInstall
-     *  returns the failure message, or null on success / the user's own cancel. */
-    private fun requestUpdate(ctx: Context, app: Fleet.App, label: String) {
+    /** Update [pkg] off the main thread. Blocking installers return the failure
+     *  message, or null on success / the user's own cancel. */
+    private fun requestUpdate(ctx: Context, fleetApp: Fleet.App?, resolver: SourceResolver.Config?, pkg: String, label: String) {
+        val app = ctx.applicationContext
         val ui = Handler(Looper.getMainLooper())
-        Toast.makeText(ctx, "Updating $label…", Toast.LENGTH_SHORT).show()
-        thread(name = "menu-update-${app.id}") {
-            FleetInstall.run(ctx, app)?.let { msg ->
-                ui.post { Toast.makeText(ctx, "$label: $msg", Toast.LENGTH_LONG).show() }
-            }
+        Toast.makeText(app, "Updating $label…", Toast.LENGTH_SHORT).show()
+        thread(name = "menu-update-$pkg") {
+            // Not `fleetApp?.let { } ?: external`: a fleet install that SUCCEEDS
+            // returns null, and that elvis would go on to run the external path.
+            val msg = if (fleetApp != null) FleetInstall.run(app, fleetApp)
+                      else resolver?.let { ExternalInstall.run(app, it, SourceResolver.resolve(it, pkg)) }
+            if (msg != null) ui.post { Toast.makeText(app, "$label: $msg", Toast.LENGTH_LONG).show() }
         }
     }
 
