@@ -73,7 +73,7 @@
     <string name="store_phone_state_not_installed">◯ not installed  ·  installs via %1$s</string>
     <string name="store_phone_state_installed">✓ v%1$s (%2$d)</string>
     <string name="store_phone_state_update">⬆ update available  ·  v%1$s → %2$s  ·  via %3$s</string>
-    <string name="store_phone_state_unknown">? v%1$s  ·  %2$s</string>
+    <string name="store_phone_state_unknown">\? v%1$s  ·  %2$s</string>
     <string name="store_phone_note_no_feed">vendor publishes no version feed; Update re-fetches the current APK and the downgrade guard decides</string>
     <string name="store_phone_note_play">Play manages its updates</string>
     <string name="store_phone_note_undeclared">not in the store declaration; its origin store updates it</string>
