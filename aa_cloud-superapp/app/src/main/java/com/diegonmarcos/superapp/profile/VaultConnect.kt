@@ -6,7 +6,7 @@ import org.json.JSONObject
 
 /**
  * Configs → Profile → Connect → "Vault configs": fetch the consolidated vault
- * bundle (cloud-vault configs/, emitted by configs/emit.py) and turn it into
+ * bundle (cloud-vault E0_configs/, emitted by E0_configs/emit.py) and turn it into
  * rows for the Imported tab.
  *
  * TWO FACTORS, TWO CALLS. [start] proves the Authelia bearer and makes the
@@ -114,7 +114,7 @@ object VaultConnect {
     /**
      * Group a fetch response into sections.
      *
-     * The response is `{"schema": <configs/schema.json>, "bundle": {...}}`; a
+     * The response is `{"schema": <E0_configs/schema.json>, "bundle": {...}}`; a
      * bare bundle is accepted too. Section ORDER and LABELS come from
      * `schema.sections[]` — the vault declares them, so this app never has to
      * restate the six names. Without a schema the bundle's own top-level keys

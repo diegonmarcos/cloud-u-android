@@ -236,7 +236,7 @@ class VaultCockpitTest {
         assertEquals(mapOf("device_id" to "galaxy"), all)
     }
 
-    // ── fixture: the bundle shape configs/emit.py produces (schema v1 + apps) ──
+    // ── fixture: the bundle shape E0_configs/emit.py produces (schema v1 + apps) ──
 
     private val zeroKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
     private val peerA = "vV/phXUwnCjxACQ5Df11Uw47BzJaK4r85jPYMu2HmDc="

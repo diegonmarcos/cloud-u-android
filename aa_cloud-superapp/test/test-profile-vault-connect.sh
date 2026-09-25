@@ -96,12 +96,12 @@ while IFS= read -r l; do
     codeof "$PF" | grep -qF "\"$l\"" && bad "T3: section label '$l' is also a Kotlin literal" || ok "T3: label '$l' lives only in build.json"
 done <<< "$LABELS"
 VAULT_IDS=$(jq -r '.ui.vault_connect.cockpit.sections[].vault[]' "$BJ" | sort -u)
-SCHEMA="$APP/../../cloud-vault/configs/schema.json"
-[ -f "$SCHEMA" ] || SCHEMA="$(cd "$APP/../.." 2>/dev/null && pwd)/cloud-vault/configs/schema.json"
+SCHEMA="$APP/../../cloud-vault/E0_configs/schema.json"
+[ -f "$SCHEMA" ] || SCHEMA="$(cd "$APP/../.." 2>/dev/null && pwd)/cloud-vault/E0_configs/schema.json"
 if [ -f "$SCHEMA" ]; then
     for v in $VAULT_IDS; do
         if jq -e --arg v "$v" '.sections[] | select(.id == $v)' "$SCHEMA" >/dev/null; then ok "T3: vault section '$v' exists in cloud-vault schema.json"
-        elif [ "$v" = apps ]; then ok "T3: vault section 'apps' is staged (cloud-vault configs/apps, not yet in schema.json — #570 gap)"
+        elif [ "$v" = apps ]; then ok "T3: vault section 'apps' is staged (cloud-vault E0_configs/apps, not yet in schema.json — #570 gap)"
         else bad "T3: cockpit names vault section '$v', which cloud-vault schema.json does not declare"; fi
     done
 else
