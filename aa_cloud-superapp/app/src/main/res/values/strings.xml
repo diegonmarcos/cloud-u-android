@@ -86,15 +86,24 @@
 
     <!-- Import configs -->
     <string name="import_title">Import configs</string>
-    <string name="import_subtitle">Paste the JSON blob below — keys + URLs are stored encrypted at rest.</string>
+    <string name="import_subtitle">Paste the JSON blob below — keys + URLs are stored encrypted at rest. Or open the DECRYPTED vault export: it goes to Profile ▸ Fleet, never into this store.</string>
     <string name="import_input_hint">{ "wg": …, "mail": …, "ssh": …, "auth": … }</string>
     <string name="import_save">Save</string>
     <string name="import_clear">Clear</string>
     <string name="import_from_file">Open file…</string>
-    <string name="import_file_error">Could not read file: %1$s</string>
-    <string name="import_saved">Saved %1$d chars to encrypted prefs</string>
-    <string name="import_saved_snack">Import saved (encrypted)</string>
-    <string name="import_invalid">Invalid JSON: %1$s</string>
+    <string name="import_file_error">Could not read file: %1$s. Nothing stored.</string>
+    <string name="import_file_no_stream">Could not open %1$s: the picker returned no stream. Nothing read, nothing stored.</string>
+    <string name="import_file_empty">Read 0 bytes from %1$s — the picker handed over an empty file. Nothing stored. Pick it from local storage (Files ▸ Downloads), not from a cloud folder that has not synced.</string>
+    <string name="import_nothing">Nothing to save: the box is empty. Paste a JSON blob or open a file.</string>
+    <string name="import_invalid">Not JSON (%1$d chars, starts with “%2$s”): %3$s. Nothing stored.</string>
+    <!-- #585 The loud refusal of the sops-encrypted vault file. Says what was read, why it cannot be used, and both ways out. -->
+    <string name="import_encrypted">✗ This file is still sops-encrypted: %1$d values read as ENC[…] for %2$d age recipients (sections: %3$s). This phone holds no age key, so it can read none of them. Nothing stored. Either decrypt it where the key is — sops -d profile-secrets.json &gt; profile.json — and open THAT file, or use Connect ▸ Vault export: the server decrypts for you.</string>
+    <string name="import_unrecognised">✗ Nothing stored: this JSON has sections %1$s and this app knows none of them. It takes the decrypted vault export (root schema_version plus its sections) or the paste shape above (%2$s).</string>
+    <string name="import_bundle_read">Read the decrypted vault export: %1$d values in %2$d sections. Save puts it on Profile ▸ Fleet.</string>
+    <string name="import_bundle_landed">✓ Vault export loaded: %1$d values in %2$d sections. Nothing is applied yet — open Configs ▸ Profile ▸ Fleet and apply per section, exactly as after a server fetch.</string>
+    <string name="import_blob_read">Read a paste-shape blob: sections %1$s (ignored: %2$s). Save stores them and keeps what is already here.</string>
+    <string name="import_blob_stored">✓ Stored %1$d keys in sections %2$s (ignored: %3$s). Sections already stored were kept.</string>
+    <string name="import_blob_no_keys">✗ Sections %1$s are present but carry no keys — nothing stored.</string>
     <string name="import_cleared">Cleared all imported configs</string>
 
     <!-- C3 / Health (two tables — public + private) -->
@@ -586,6 +595,7 @@
     <string name="journey_vault_not_fetched">not fetched</string>
     <string name="journey_vault_header">Vault export</string>
     <string name="journey_vault_fetch_open">Fetch &amp; open Fleet</string>
+    <string name="journey_import_file_caption">From a file: the DECRYPTED vault export — what sops -d prints, the same document the server fetch returns. The encrypted file from the repo is refused, and says so: this phone holds no age key.</string>
     <string name="journey_import_file">Import from a file instead</string>
     <string name="journey_not_configured">%1$s · not configured in this build</string>
     <string name="journey_fetched">✓ Authenticated · %1$d bytes · your config is here — continue with step 2</string>

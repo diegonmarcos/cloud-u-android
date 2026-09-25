@@ -567,6 +567,9 @@ class ProfileFragment : Fragment() {
             body.addView(vaultStatus)
             body.addView(status)
         }
+        // #585: the file must be the DECRYPTED export. Said here, before the tap,
+        // because the encrypted repo file is what the owner has at hand.
+        body.addView(caption(ctx, getString(R.string.journey_import_file_caption)))
         body.addView(pickButton(ctx, getString(R.string.journey_import_file)) {
             (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)
                 ?.onTileClicked("action:import_configs")

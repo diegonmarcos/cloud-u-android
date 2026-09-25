@@ -148,6 +148,62 @@ applying"). Body:
 
 Done summary: "Applied <date> · vault <fetched|not fetched>".
 
+### File route (#585) — the file is the DECRYPTED export; the encrypted one is refused, loudly
+
+**The bug.** The owner picked cloud-vault `configs/profile-secrets.json` — the
+sops/age-encrypted document: every value `ENC[AES256_GCM,…]`, only
+`schema_version` and `_generated` in clear, recipients = the fleet master key
+and the c3-public-api server key. It is valid JSON, so `ImportConfigsFragment`
+accepted it, wrote all 1.3 MB into the paste store (`ConfigsPrefs.json`, a
+whole-blob overwrite that also erased the stored Authelia bearer), said
+"saved", and no consumer recognised a single key. Nothing changed anywhere.
+The silence-guard defect (#233's shape) in the import's costume.
+
+**Two designs were on the table.**
+(i) The file route accepts the ENCRYPTED file and decrypts on the phone with an
+age identity provisioned at peer enrolment. Rejected: the phone holds no age
+identity today and the APK must ship none; adding a per-peer recipient means
+re-encrypting the vault file with the fleet master key (which no agent host
+has — see #573); it needs an age + sops implementation in the app (X25519,
+ChaCha20-Poly1305, HKDF, sops' per-value AES-GCM with path AAD and the MAC),
+none of which is on the classpath; and the authenticated route that would carry
+the device's private half to the phone is the very route that already carries
+the DECRYPTED bundle (#569 `/profile/connect/fetch`). Same trust boundary,
+strictly more machinery.
+(ii) The file route accepts the DECRYPTED export — what `sops -d` prints, the
+same document the server's fetch returns — and lands it exactly where the fetch
+lands. **Chosen.** cloud-vault `configs/README.md` already documents this as
+"decrypt out of band, hand the phone the plaintext".
+
+**What the route does now** (`VaultFile.classify`, pure; `ImportConfigsFragment`):
+
+| what came in | verdict | what happens | sentence on screen |
+|---|---|---|---|
+| root `sops` block or any `ENC[` value | Encrypted | nothing written | N values ENC for M recipients, sections; decrypt where the key is, or use Connect ▸ Vault export |
+| root `schema_version` known | Bundle | `VaultConnect.Imported.{last,bundle}` — the Fleet cockpit, applied per section there | values / sections, "open Profile ▸ Fleet" |
+| root `schema_version` unknown | UnknownSchema | nothing written | schema N, this build knows … |
+| no `schema_version`, ≥1 section of `ui.import_schema` | Blob | merged SECTION BY SECTION via `ConfigsPrefs.putSecret` (a blob without `auth` keeps the bearer) | keys stored, sections, ignored |
+| valid JSON, no known section | Unrecognised | nothing written | sections read vs. sections expected |
+| not JSON / 0 bytes / no stream | NotJson / Empty | nothing written | size + head / "read 0 bytes from <name>" |
+
+The discriminator between the two accepted shapes is the root `schema_version`:
+`configs/schema.json` makes every export carry it and `emit.py check` refuses
+one without; the paste shape never has one. The file is described on pick,
+before Save, so the encrypted case is loud before anything could be stored.
+Both entry points (`loadFromUri`, `describe`) are listed in
+`1_cicd/src/data/silence-guard.json`: every `return` must go through
+`report(`, and every sentence must exist in `values` and `values-es` with the
+argument count the call passes. Step 4 captions the pill with what the file
+must be, before the tap.
+
+Tests: `VaultFileImportTest` drives the fragment on the REAL encrypted bytes
+(`app/src/test/resources/vault-bundle-sops-encrypted.json`, cut verbatim from the
+committed vault file: its `sops` block and two sections) through the content
+resolver and asserts the refusal sentence with independently counted values,
+an untouched store and an empty Fleet tab; the decrypted, unknown-schema, paste,
+unrecognised, not-JSON and zero-byte paths each on a fixture.
+`test/test-profile-file-import.sh` pins the wiring and proves its own mutations.
+
 ## 3. Data model — ONE declaration, zero literals in Kotlin
 
 ```
