@@ -391,9 +391,15 @@ if "val readingActions: @Composable () -> Unit = {" in content:
         ("viewModel::showImagesOnce", "...wired to the one-time show"),
         ("R.string.message_show_plain_text", "Show as plain text is an ICON in it"),
         ("viewModel.setPlainText(!plainText)", "...wired to the reading-mode toggle"),
-        ("contentDescription = stringResource(R.string.message_copy_code)", "Copy Code is an ICON in it (#438)"),
+        ("CopyCodeIcon()", "Copy Code is an ICON in it (#438), drawn from its one declaration (#500)"),
     ):
         ok(f"A2 {why}") if needle in row else bad(f"A2 {why} -- missing {needle!r}")
+    # #500: the list row draws the SAME icon, so the glyph and its spoken label live in ONE place.
+    decl = src[src.index("internal fun CopyCodeIcon()"):] if "internal fun CopyCodeIcon()" in src else ""
+    if "Icons.Filled.ContentCopy, contentDescription = stringResource(R.string.message_copy_code)" in decl[:200]:
+        ok("A2 CopyCodeIcon() carries the glyph and the spoken label")
+    else:
+        bad("A2 CopyCodeIcon() is missing, or no longer carries ContentCopy + message_copy_code")
     # The owner's row is "Translate Resume | Show images Show Plain Text | Copy Code" (#438): the
     # literal `|` is a group separator, drawn between the AI group and the display group and
     # between the display group and Copy Code -- exactly two, never a divider.
