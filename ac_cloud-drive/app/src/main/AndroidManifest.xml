@@ -52,23 +52,36 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- #458: cloud-drive IS a PDF reader, so "Open with" from any other app
-                 can hand a PDF here. MAIN/LAUNCHER above is untouched. singleTask
-                 makes a second hand-off land in the existing activity (onNewIntent)
-                 instead of stacking a second copy of the app. -->
+            <!-- Open an image from another app with the viewer (task #459/#460).
+                 PDFs no longer come here: they go straight to PdfReaderActivity below (#577). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
+        <!-- #458/#577: cloud-drive IS the fleet's PDF reader, and the ONE in-process PDF engine
+             (#463) lives behind this activity. Any app that hands over application/pdf — cloud-mail's
+             attachment chooser above all — reaches the engine through THIS filter and never carries
+             a renderer of its own: the way to add a consumer is the manifest, not a copy. The
+             Files tab opens its PDF rows here too (FilesBridge.openPdf). Exported for the chooser;
+             it takes only a data URI (content:// is the sender's grant, file:// is confined to
+             places the app already browses) and nothing else from the intent. configChanges keeps
+             a rotation from re-opening a large document: the view re-lays itself out on the same
+             page instead. -->
+        <activity
+            android:name=".PdfReaderActivity"
+            android:exported="true"
+            android:label="@string/open_in_cloud_drive"
+            android:theme="@style/Theme.CloudDrive"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter android:label="@string/open_in_cloud_drive">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:scheme="content" android:mimeType="application/pdf" />
                 <data android:scheme="file"    android:mimeType="application/pdf" />
-            </intent-filter>
-            <!-- Open an image from another app with the viewer (task #459/#460).
-                 Slot 458 adds application/pdf to the same activity; each filter
-                 stays separate so the two files merge without a rewrite. -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
 

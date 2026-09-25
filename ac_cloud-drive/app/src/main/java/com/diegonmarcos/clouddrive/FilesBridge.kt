@@ -1813,15 +1813,6 @@ class FilesBridge(
         }
     }
 
-/** The five bytes every PDF starts with: "%PDF-". */
-    private fun hasPdfMagic(bytes: ByteArray): Boolean =
-        bytes.size >= 5 &&
-            bytes[0] == 0x25.toByte() &&
-            bytes[1] == 0x50.toByte() &&
-            bytes[2] == 0x44.toByte() &&
-            bytes[3] == 0x46.toByte() &&
-            bytes[4] == 0x2D.toByte()
-
     /** The total bytes the selection would occupy at [destination] — every file, whole tree. */
     private fun measureTotalSize(pathsJson: String): Long? {
         var total = 0L
@@ -1859,97 +1850,68 @@ class FilesBridge(
     private fun okErr(ok: Boolean, error: String): String =
         JSONObject().put("ok", ok).put("error", error).toString()
 
-    // ── the PDF reader ────────────────────────────────────────────────────────
+    // ── the PDF reader (#577) ────────────────────────────────────────────────
 
     /**
-     * Hands the page a PDF's bytes as base64, the one carrier that works here.
-     * pdf.js must never be given a file:// URL: Chromium blocks fetch() on
-     * file:// origins by CORS policy (the fleet hit this in ac_cloud-nav and
-     * documented it), so the document travels as data and pdf.js opens it from
-     * a Uint8Array — no network layer is ever exercised.
+     * Opens a PDF from the Files tab in the native reader ([PdfReaderActivity]).
      *
-     * The ceiling exists for the same reason the editor has one: the string
-     * the bridge returns is held whole by the WebView's JavaScript engine, so
-     * a multi-hundred-megabyte scan would be an out-of-memory kill rather than
-     * a slow reader. 24 MB covers every document on a phone and stays far
-     * below the JS heap cliff.
+     * Nothing is read here and nothing crosses the bridge but a path: pdfium opens the file from
+     * a descriptor and reads what a page needs, so a 500 MB scan opens as fast as a one-page
+     * form. This replaced readPdf/takeIncomingPdf, which carried the whole file as one base64
+     * string into the WebView and needed a 24 MB ceiling to survive it. A PDF another app hands
+     * over ("Open with") no longer passes through here at all: the manifest routes it straight
+     * to the reader.
      */
     @JavascriptInterface
-    fun readPdf(path: String): String {
+    fun openPdf(path: String): String {
         val file = resolve(path) ?: return failure("that path is outside the storage roots")
         if (!file.isFile) return failure("not a file: " + file.name)
-        if (file.length() > PDF_READER_BYTE_CEILING)
-            return failure(file.name + " is too large to read here (over " +
-                (PDF_READER_BYTE_CEILING / 1024 / 1024) + " MB)")
         return try {
-            val bytes = file.readBytes()
-            // A file that does not start with the PDF magic is either an HTML
-            // error page saved with a .pdf name or a truncated download; pdf.js
-            // would produce its least useful failure (a blank canvas) for it.
-            if (!hasPdfMagic(bytes))
-                return failure(file.name + " does not look like a PDF")
-            JSONObject()
-                .put("ok", true)
-                .put("path", file.absolutePath)
-                .put("name", file.name)
-                .put("size", bytes.size)
-                .put("base64", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP))
-                .toString()
+            val intent = PdfReaderActivity.intent(ctx, file.absolutePath)
+            // Same rule as send(): the bridge is reachable from a plain Context.
+            if (ctx !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            ctx.startActivity(intent)
+            okErr(true, "")
         } catch (error: Exception) {
-            failure(error.message ?: "cannot read " + file.name)
+            failure(error.message ?: "cannot open " + file.name)
         }
     }
 
-    /** A PDF another app handed over through the open-with intent, null until set. */
-    private var incomingPdf: Uri? = null
-
     /**
-     * Receives the content:// (or legacy file://) URI from MainActivity's
-     * onNewIntent. The bridge holds it so the activity does not need to mint a
-     * path from it — a content:// URI can only ever be read through the
-     * ContentResolver, and turning it into a path is exactly the bug this
-     * method exists to keep out of the codebase.
-     */
-    fun setIncomingPdf(uri: Uri) {
-        incomingPdf = uri
-    }
-
-    /**
-     * The page drains the hand-off URI once, when it first loads or when a
-     * singleTask second launch lands on an already-running activity. Reading
-     * happens on demand so a tap that arrives before the page exists is not
-     * lost — the URI is stored, the page asks later.
+     * Converts a PDF to txt, md, html or csv beside it, and returns { ok, path, name } or
+     * { ok: false, error }. The text comes from the same pdfium engine the reader draws with
+     * ([PdfEngine.pageText]); the file goes out through [writeText], the editor's atomic save
+     * path, so conversion output has no second, looser writer. A scan (no text layer) is refused
+     * loudly instead of producing an empty file that looks like success.
+     *
+     * docx, xlsx and odt are not offered: that is layout reconstruction, which needs the fleet
+     * converter service, and the page lists them disabled with that reason.
      */
     @JavascriptInterface
-    fun takeIncomingPdf(): String {
-        val uri = incomingPdf ?: return failure("no incoming document")
-        incomingPdf = null
+    fun convertPdf(path: String, target: String): String {
+        if (target !in PdfConvert.TARGETS) return failure("unknown conversion target: $target")
+        val source = resolve(path) ?: return failure("that path is outside the storage roots")
+        if (!source.isFile) return failure("not a file: " + source.name)
+        val engine = try {
+            PdfEngine.open(ctx, Uri.fromFile(source), null)
+        } catch (locked: PdfEngine.PasswordRequired) {
+            return failure(source.name + " is password protected — open it in the reader and enter the password first")
+        } catch (error: Throwable) {
+            return failure("cannot convert this PDF: " + (error.message ?: error.javaClass.simpleName))
+        }
         return try {
-            val bytes = if (uri.scheme == "content") {
-                // The system grants the receiving app a read lease on the URI
-                // for the lifetime of the intent; ContentResolver is the only
-                // sanctioned way to exercise it.
-                ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                    ?: return failure("the shared PDF cannot be opened")
-            } else {
-                // A legacy file:// hand-off has no resolver entry — read the
-                // path the URI names (it is a content-less scheme by design).
-                java.io.File(uri.path ?: "").takeIf { it.isFile }?.readBytes()
-                    ?: return failure("the shared PDF cannot be opened")
-            }
-            if (bytes.size.toLong() > PDF_READER_BYTE_CEILING)
-                return failure("the shared PDF is too large to read here (over " +
-                    (PDF_READER_BYTE_CEILING / 1024 / 1024) + " MB)")
-            if (!hasPdfMagic(bytes))
-                return failure("the shared file does not look like a PDF")
-            JSONObject()
-                .put("ok", true)
-                .put("name", uri.lastPathSegment ?: "document.pdf")
-                .put("size", bytes.size)
-                .put("base64", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP))
-                .toString()
+            val pages = (0 until engine.pageCount).map { PdfConvert.cleanPage(engine.pageText(it)) }
+            if (PdfConvert.hasNoText(pages)) return failure(PdfConvert.NO_TEXT_LAYER_MESSAGE)
+            val directory = source.parentFile ?: return failure("no folder to save next to")
+            val name = PdfConvert.freeName(
+                directory.list()?.toSet() ?: emptySet(),
+                PdfConvert.preferredName(source.name, target)
+            )
+            writeText(File(directory, name).absolutePath, PdfConvert.build(pages, target, source.name))
         } catch (error: Exception) {
-            failure(error.message ?: "cannot read the shared PDF")
+            failure("cannot convert this PDF: " + (error.message ?: error.javaClass.simpleName))
+        } finally {
+            engine.close()
         }
     }
 
@@ -1968,13 +1930,6 @@ class FilesBridge(
          * above it is a log or a database that an editor has no business loading whole.
          */
         const val EDITABLE_BYTE_CEILING = 2L * 1024 * 1024
-
-        /**
-         * The largest PDF the reader will open. The page holds the document as
-         * one base64 string and one Uint8Array, so — exactly like the editor's
-         * ceiling — this is a JavaScript-heap ceiling, not a taste judgement.
-         */
-        const val PDF_READER_BYTE_CEILING = 24L * 1024 * 1024
 
         /** How deep [mirror] will walk. See the ponytail note in mirrorInto. */
         const val MIRROR_DEPTH_CEILING = 32

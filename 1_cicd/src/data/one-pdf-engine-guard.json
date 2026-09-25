@@ -1,8 +1,10 @@
 {
-    "_doc": "ONE-PDF-ENGINE policy. The fleet must have exactly one in-process PDF renderer, and it is vendored ONCE: pdf.min.js + pdf.worker.min.js in ac_cloud-drive/app/src/main/assets/vendor/ (also tailwind.js + a VENDORED.md, all read-only). Every other app reaches that engine through the Android manifest -- cloud-mail hands its attachments OUT via Intent.ACTION_VIEW + createChooser(FLAG_GRANT_READ_URI_PERMISSION), and #458 has already declared ac_cloud-drive as the PDF reader in that manifest, so the chooser cloud-mail raises ALREADY offers Cloud Drive. Consumed by 1_cicd/src/scripts/cloud-android-one-pdf-engine-guard.py; the guard hardcodes no app, no path and no renderer name. Adding a future renderer filename, a future in-process renderer code marker, or a future legitimate exclusion is a DATA edit here -- no script change.",
+    "_doc": "ONE-PDF-ENGINE policy. The fleet must have exactly one in-process PDF renderer, and it lives ONCE, inside ac_cloud-drive: pdfium, through the io.legere:pdfiumandroid binding (Apache-2.0) pinned in ac_cloud-drive/build.json::pdf.engine and touched only by PdfEngine.kt, behind PdfReaderActivity (#577 swapped the WebView pdf.js reader for it). Every other app reaches that engine through the Android manifest -- cloud-mail hands its attachments OUT via Intent.ACTION_VIEW + createChooser(FLAG_GRANT_READ_URI_PERMISSION), and #458 declared ac_cloud-drive as the PDF reader in that manifest (the VIEW application/pdf filter now sits on PdfReaderActivity), so the chooser cloud-mail raises ALREADY offers Cloud Drive. Consumed by 1_cicd/src/scripts/cloud-android-one-pdf-engine-guard.py; the guard hardcodes no app, no path, no renderer name and no description of the engine. Adding a future renderer filename, a future in-process renderer code marker, or a future legitimate exclusion is a DATA edit here -- no script change.",
     "_doc_why": "Ticket #463 re-scope. It was filed as 'pdf.js is copied per-app in cloud-drive AND cloud-mail -- extract a shared lib', and measured on origin/main that was FALSE: cloud-mail ships zero pdf assets and zero viewer, its only PDF code handing the attachment out via an ACTION_VIEW chooser. So today there is exactly one PDF engine and the fleet already reaches it by manifest -- the outcome the ticket wanted, already holding. That outcome is currently enforced by NO guard; it holds by luck. The re-scoped job is to make a second engine impossible to arrive silently: fail if any in-process renderer appears in any app tree other than ac_cloud-drive. Extracting pdf.js into ab_cloud-libs-shared was explicitly refused because it builds an abstraction with exactly one consumer; if you find yourself creating ab_cloud-libs-shared/libs/pdf you have misread the ticket.",
     "_rule": "one PDF engine in the fleet, reached by manifest; the way to add a consumer is the manifest, not a copy.",
     "allowed_owner": "ac_cloud-drive",
+    "engine": "pdfium (io.legere:pdfiumandroid, pinned in ac_cloud-drive/build.json::pdf.engine) behind ac_cloud-drive's PdfReaderActivity",
+    "_doc_engine": "What the failure message tells a reader the fleet's engine IS. Data, not script text: it said 'pdf.js vendored once' after #577 replaced pdf.js, because the sentence lived in the script and nothing tied it to the engine. Change the engine, change this line.",
     "app_prefixes": [
         "ac_cloud-",
         "ab_cloud-",
@@ -27,7 +29,7 @@
             "pdf.js",
             "pdf.worker.js"
         ],
-        "_doc_filenames": "The named PDF.js artefacts. Extending for a future engine (e.g. pdfjs renamed, or a .mjs build) is a data edit.",
+        "_doc_filenames": "The named PDF.js artefacts. pdf.js stopped being the fleet's engine in #577 but it stays BANNED outside ac_cloud-drive (indeed everywhere in the fleet's own trees): a returning pdf.js copy is exactly the second engine this guard exists to stop. Extending for a future engine (e.g. pdfjs renamed, or a .mjs build) is a data edit.",
         "dirnames": [
             "pdfium"
         ],
@@ -36,9 +38,13 @@
             "android.graphics.pdf.PdfRenderer",
             "io.github.barteksc.pdfviewer",
             "com.tom_roush.pdfium",
-            "com.artifex.mupdf"
+            "com.artifex.mupdf",
+            "io.legere.pdfiumandroid",
+            "io.legere:pdfiumandroid",
+            "androidx.pdf.viewer",
+            "androidx.pdf:pdf-viewer"
         ],
-        "_doc_code_markers": "In-process renderer is not always a copied .js file. android.graphics.pdf.PdfRenderer is the Android PLATFORM's pdfium-backed renderer (used by the vendored Element X app's mediaviewer). barteksc / tom_roush / artifacts.mupdf are the common standalone Java/Kotlin pdfium bindings. Any of these in a non-excluded app tree is a second engine and the guard must fail. Extending the set = a data edit.",
+        "_doc_code_markers": "In-process renderer is not always a copied .js file. android.graphics.pdf.PdfRenderer is the Android PLATFORM's pdfium-backed renderer (used by the vendored Element X app's mediaviewer). barteksc / tom_roush / artifex.mupdf are the common standalone Java/Kotlin pdfium/mupdf bindings. io.legere.pdfiumandroid is the binding ac_cloud-drive itself uses since #577 (both spellings: the Kotlin import and the Gradle coordinate) and androidx.pdf is Jetpack's viewer: in any NON-owner tree each is a second engine and the guard must fail. Inside ac_cloud-drive they are the one engine and are not scanned. Extending the set = a data edit.",
         "scan_extensions": [
             ".kt",
             ".java",
@@ -53,9 +59,10 @@
             ".mm",
             ".c",
             ".cpp",
-            ".rs"
+            ".rs",
+            ".toml"
         ],
-        "_doc_scan_extensions": "Files whose CONTENT is scanned for code_markers. A .js asset named exactly pdf.min.js is already caught by filenames; extension scanning is for markers that appear inside source. Keep it to code-ish extensions so prose/markdown can never trip a marker.",
+        "_doc_scan_extensions": "Files whose CONTENT is scanned for code_markers. A .js asset named exactly pdf.min.js is already caught by filenames; extension scanning is for markers that appear inside source. .toml because a Gradle version catalog (libs.versions.toml) is where a second app would declare the coordinate. Keep it to code-ish extensions so prose/markdown can never trip a marker.",
         "applies_to": "scan-roots-minus-owner-and-exclusions"
     },
     "exclusions": [

@@ -83,6 +83,18 @@ def rcloneJobsB64  = b64(rcloneJobsFile.exists()
 // The Git subpage's repository family — the same curated 8 the SuperApp's
 // GH Repos / Gitea Repos cards reuse — baked whole (instances + repos) so the
 // page renders both remotes from the one declaration. Task 457c.
+// #577 THE ONE PDF ENGINE. build.json::pdf.engine pins the pdfium binding; a missing or partial
+// declaration fails the build here rather than shipping an APK whose reader has no engine.
+def pdfEngine = buildJson.pdf?.engine ?: [:]
+['group', 'version'].each { key ->
+    if (!(pdfEngine[key] ?: '').toString().trim()) {
+        throw new GradleException("build.json::pdf.engine.${key} is required (the PDF reader's one engine, #577)")
+    }
+}
+if (!(pdfEngine.artifacts ?: [])) {
+    throw new GradleException("build.json::pdf.engine.artifacts is required (the PDF reader's one engine, #577)")
+}
+def pdfEngineCoordinates = pdfEngine.artifacts.collect { "${pdfEngine.group}:${it}:${pdfEngine.version}".toString() }
 // #575 THE ONE shared repo store. build.json::storage.shared_root, relative to
 // shared storage (never /storage/emulated/0 — that is one device's fact); the
 // runtime half is SharedStore.kt. A missing or absolute value fails the build
@@ -187,6 +199,8 @@ def depPattern = ~/\b(implementation|api|compileOnly|runtimeOnly)\s*[\(\s]\s*['"
         depPattern.matcher(text).each { m -> stackDeps.add(m[2]) }
     }
 }
+// The PDF engine's coordinates come from build.json, not a literal, so the scan above cannot see them.
+pdfEngineCoordinates.each { stackDeps.add(it) }
 def stackFrameworksB64 = b64(stackDeps.toList())
 def stackTreeB64 = "—".bytes.encodeBase64().toString()
 
@@ -351,6 +365,14 @@ dependencies {
     // user already granted. Kept so a later remote back end has somewhere to put a token
     // that is not SharedPreferences in the clear.
     implementation 'androidx.security:security-crypto:1.1.0'
+    // #577 the PDF reader's engine: pdfium through io.legere:pdfiumandroid, the ONLY in-process
+    // PDF renderer in the fleet (#463). The coordinate is build.json::pdf.engine, read above —
+    // and PdfEngine.kt is the only source file allowed to import it.
+    pdfEngineCoordinates.each { implementation it }
+
+    // The JVM unit phase (build.json::tests.unit) runs these on every ship: PdfConvertTest and
+    // PdfLayoutTest execute the converter and the page layout, which no shell tester can.
+    testImplementation 'junit:junit:4.13.2'
 
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

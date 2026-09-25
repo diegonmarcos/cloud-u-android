@@ -45,15 +45,22 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 # ── fixture: the fleet shape the policy expects to be green ──────────
-# ac_cloud-drive owns the engine (pdf.min.js/pdf.worker.min.js are ALLOWED
-# there and must NOT trip the guard); mail, libs and every other app are
+# ac_cloud-drive owns the engine (its PdfEngine.kt imports the pdfium binding
+# and its build.gradle names the coordinate; both are ALLOWED there and must
+# NOT trip the guard -- #577 replaced the pdf.js files that used to stand here);
+# mail, libs and every other app are
 # clean; the two vendored read-only renderers sit exactly under the policy's
 # exclusion paths.
 build_fixture() {
   local t="$1"
-  mkdir -p "$t/ac_cloud-drive/app/src/main/assets/vendor"
-  : > "$t/ac_cloud-drive/app/src/main/assets/vendor/pdf.min.js"
-  : > "$t/ac_cloud-drive/app/src/main/assets/vendor/pdf.worker.min.js"
+  mkdir -p "$t/ac_cloud-drive/app/src/main/java/com/diegonmarcos/clouddrive"
+  cat > "$t/ac_cloud-drive/app/src/main/java/com/diegonmarcos/clouddrive/PdfEngine.kt" <<'EOF'
+import io.legere.pdfiumandroid.PdfiumCore
+class PdfEngine { val core = PdfiumCore(null) }
+EOF
+  cat > "$t/ac_cloud-drive/app/build.gradle" <<'EOF'
+dependencies { implementation 'io.legere:pdfiumandroid:2.0.0' }
+EOF
   mkdir -p "$t/ac_cloud-mail/app/src/main"
   : > "$t/ac_cloud-mail/app/src/main/Attachment.kt"
   mkdir -p "$t/ac_cloud-libs-shared/app"
@@ -160,6 +167,51 @@ else
   ok "exclusion is per-path: a copy one tree away from the exclusion still fails"
 fi
 
+# ── case 9: the ENGINE ITSELF imported by another app → FAIL ───────────
+# #577 made pdfium (io.legere.pdfiumandroid) the fleet's one engine. The
+# realistic second engine is not a copied file: it is cloud-mail (or a shared
+# lib) importing the very binding cloud-drive uses. Reaching the engine is the
+# manifest's job; linking it is a second in-process renderer.
+T="$WORK/c9_engine_import"; build_fixture "$T"
+cat > "$T/ac_cloud-mail/app/src/main/Attachment.kt" <<'EOF'
+import io.legere.pdfiumandroid.PdfiumCore
+class Attachment { val core = PdfiumCore(null) }
+EOF
+OUT="$(run_guard "$T")"; RC=$?
+if [ "$RC" -ne 1 ]; then
+  fail "engine import in mail: expected exit 1, got $RC: $OUT"
+elif ! contains "$OUT" "io.legere.pdfiumandroid"; then
+  fail "engine import in mail: marker not reported: $OUT"
+elif ! contains "$OUT" "pdfium (io.legere:pdfiumandroid"; then
+  fail "engine import in mail: message did not say what the fleet's engine IS (it must come from the policy data, not the script): $OUT"
+else
+  ok "engine import in mail: exit 1, and the message names the real engine from policy data"
+fi
+
+# ── case 10: the ENGINE's Gradle coordinate in a shared lib → FAIL ─────
+# The same mistake in its build-system spelling, in a version catalog too:
+# a dependency is a linked renderer whether or not any .kt imports it yet.
+T="$WORK/c10_engine_coordinate"; build_fixture "$T"
+mkdir -p "$T/ab_cloud-libs-shared/libs/pdfview"
+cat > "$T/ab_cloud-libs-shared/libs/pdfview/build.gradle" <<'EOF'
+dependencies { implementation "io.legere:pdfiumandroid:2.0.0" }
+EOF
+OUT="$(run_guard "$T")"; RC=$?
+T2="$WORK/c10b_engine_catalog"; build_fixture "$T2"
+mkdir -p "$T2/ac_cloud-notes"
+cat > "$T2/ac_cloud-notes/libs.versions.toml" <<'EOF'
+[libraries]
+pdf = { module = "io.legere:pdfiumandroid", version = "2.0.0" }
+EOF
+OUT2="$(run_guard "$T2")"; RC2=$?
+if [ "$RC" -ne 1 ] || ! contains "$OUT" "io.legere:pdfiumandroid"; then
+  fail "engine coordinate in a shared lib's build.gradle: expected exit 1 naming it, got $RC: $OUT"
+elif [ "$RC2" -ne 1 ] || ! contains "$OUT2" "libs.versions.toml"; then
+  fail "engine coordinate in a version catalog: expected exit 1 naming the .toml, got $RC2: $OUT2"
+else
+  ok "engine coordinate: exit 1 in build.gradle and in a libs.versions.toml catalog"
+fi
+
 # ── case 6: clean fleet (the two vendored renderers under excl paths) → PASS
 # The state that must be green TODAY: drive owns the engine, mail+libs
 # clean, the two read-only vendored renderers under their written exclusions.
@@ -208,7 +260,7 @@ fi
 
 echo
 if [ "$FAILURES" -eq 0 ]; then
-  echo "PASS   8/8 cases"; exit 0
+  echo "PASS   10/10 cases"; exit 0
 else
   echo "FAIL   $FAILURES case(s)"; exit 1
 fi

@@ -41,6 +41,29 @@
       "require_unmetered_network": true
     }
   },
+  "pdf": {
+    "_doc": "#577 THE ONE PDF ENGINE declaration. cloud-drive is the fleet's PDF reader (#458) and its reader is the only in-process PDF renderer in the fleet (#463): every other app reaches it through the Android manifest (an ACTION_VIEW application/pdf chooser), never by carrying a renderer. app/build.gradle reads this block and adds the dependency, so the pin lives in data, not in a gradle string; test/test-drive-pdf-engine.sh holds the app's source to it (the only file that names the library is PdfEngine.kt).",
+    "engine": {
+      "group": "io.legere",
+      "artifacts": [
+        "pdfiumandroid",
+        "pdfiumandroid-core"
+      ],
+      "_doc_artifacts": "BOTH, on the compile classpath. The binding's Gradle metadata publishes pdfiumandroid-core (the JNI half, where the .so files live) as a RUNTIME-only dependency, but the public constructor PdfiumCore(context, config, coreInternal: PdfiumCoreU = ...) names a class from it, so the Kotlin compiler cannot compile a bare PdfiumCore(context) without it (found reading pdfiumandroid-2.0.0.module and PdfiumCore.kt, not by building: there is no build here). pdfiumandroid-api (models, FindFlags, PdfPasswordException) arrives transitively.",
+      "version": "2.0.0",
+      "_doc_version": "PINNED ON PURPOSE BELOW THE LATEST (2.0.3, 3.0.x-alpha). 2.0.1 and later publish against kotlin-stdlib 2.4, and this repo compiles with Kotlin 2.3.20 (root build.gradle): a Kotlin compiler reads class metadata one minor version ahead at most, so 2.0.1+ would fail to compile here. 2.0.0 is a stable release built with Kotlin 2.3.10, read from the sources jar and the AARs on Maven Central, not from memory. Raise it together with the root Kotlin plugin version, never alone.",
+      "licence": "Apache-2.0",
+      "_doc_licence": "The binding is Apache-2.0 (its LICENSE; the pom declares the same). The native engine inside it, PDFium, is BSD-3-Clause (pdfium.googlesource.com LICENSE). Both permissive: nothing copyleft reaches the APK and nothing is vendored into this repository, which is what 1_cicd/src/data/licence-boundaries.json guards (mixed-licence upstreams whose restricted directories must stay out). It is a Maven Central dependency, not a source tree.",
+      "upstream": "https://github.com/johngray1965/PdfiumAndroidKt",
+      "native_abis": [
+        "arm64-v8a",
+        "armeabi-v7a",
+        "x86",
+        "x86_64"
+      ],
+      "_doc_native_abis": "What the AAR ships (libpdfium.so + libpdfiumandroid.so per ABI, ~5 MB for arm64-v8a). android.abi_filters still decides which of them reach an APK."
+    }
+  },
   "signing": {
     "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: A0_keys/providers/android/release.jks (OU=Cloud Constellation) + A0_keys/providers/android/signing.secrets.yaml.",
     "vault_keystore": "A0_keys/providers/android/release.jks",
@@ -115,13 +138,12 @@
       "dir": "test",
       "requires": [
         "python3",
-        "grep",
-        "node"
+        "grep"
       ],
-      "_doc_requires": "A tester that shells out to a tool which is not installed does not fail — it returns a verdict from the tool's ABSENCE. Listing them here makes a missing one fatal at the engine's preflight instead of a green tick over assertions that never ran. node runs the pdf.js smoke harness (#458): it is the only way to prove the vendored engine really extracts text."
+      "_doc_requires": "A tester that shells out to a tool which is not installed does not fail — it returns a verdict from the tool's ABSENCE. Listing them here makes a missing one fatal at the engine's preflight instead of a green tick over assertions that never ran."
     },
     "unit": {
-      "_doc": "Runs gradle test (build.sh test — the app's documented 'gradle test (JVM unit tests)' step) on every ship. The module graph includes :libs:ml-l-image-mlkit, whose typed-payload parser suite lives in this app's unit phase on purpose: the CLI's unit step would otherwise print COVERAGE-GAP and never invoke gradle, leaving the new library's tests compiled-but-never-run.",
+      "_doc": "Runs gradle test (build.sh test — the app's documented 'gradle test (JVM unit tests)' step) on every ship. The module graph includes :libs:ml-l-image-mlkit, whose typed-payload parser suite lives in this app's unit phase on purpose: the CLI's unit step would otherwise print COVERAGE-GAP and never invoke gradle, leaving the new library's tests compiled-but-never-run. #577 adds app/src/test: PdfConvertTest and PdfLayoutTest run the PDF converter and the reader's page layout as real code on the CI runner.",
       "task": "test",
       "enabled": true
     }

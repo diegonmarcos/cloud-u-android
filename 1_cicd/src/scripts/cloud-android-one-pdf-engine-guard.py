@@ -215,11 +215,11 @@ def main(argv):
         print(f"FAIL   one-pdf-engine: a second in-process PDF renderer "
               f"outside {cfg['allowed_owner']}", file=sys.stderr)
         print(f"RULE   {RULE}", file=sys.stderr)
-        print(f"       The fleet's engine is pdf.js vendored once in "
-              f"{cfg['allowed_owner']} and reached by apps through the "
-              f"Android manifest (ACTION_VIEW + the declared PDF-reader "
-              f"chooser). A new consumer declares that engine in the "
-              f"manifest; it is NEVER copied in.", file=sys.stderr)
+        print(f"       The fleet's engine is {cfg['engine']}, "
+              f"reached by apps through the Android manifest "
+              f"(ACTION_VIEW + the declared PDF-reader chooser). A new "
+              f"consumer declares that engine in the manifest; it is "
+              f"NEVER copied in.", file=sys.stderr)
         for rel, tree, kind, marker in sorted(all_hits):
             print(f"  [{kind}] {rel}   ({marker})", file=sys.stderr)
         print(f"       {len(all_hits)} in-process renderer file(s) outside "

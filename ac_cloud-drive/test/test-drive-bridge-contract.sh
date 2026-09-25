@@ -656,72 +656,30 @@ PYTHON
 [ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
 
 echo
-echo "── A9 #458 the PDF reader is real, one mechanism, honest conversion ──"
-VENDOR="$APP/app/src/main/assets/vendor"
+echo "── A9 #458/#577 the PDF reader is native, reached by name, honest about conversion ──"
+# The reader itself (engine, gestures, search, night mode, share, print, the manifest routing) is
+# pinned by test-drive-pdf-engine.sh; this section keeps what belongs to the PAGE <-> BRIDGE contract.
 MANIFEST="$APP/app/src/main/AndroidManifest.xml"
-MAIN="$APP/app/src/main/java/com/diegonmarcos/clouddrive/MainActivity.kt"
 STRINGS="$APP/app/src/main/res/values/strings.xml"
-for required in "$VENDOR/pdf.min.js" "$VENDOR/pdf.worker.min.js" "$VENDOR/VENDORED.md" "$VENDOR/APACHE-LICENSE.txt" "$MANIFEST" "$MAIN" "$STRINGS" "$APP/test/test-pdf-reader-smoke.js"; do
+for required in "$MANIFEST" "$STRINGS"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required"; exit 1; }
 done
-if grep -q "2.16.105" "$VENDOR/VENDORED.md" && grep -qi "Apache-2.0\|Apache License" "$VENDOR/VENDORED.md"; then
-    pass "VENDORED.md pins pdf.js to 2.16.105 and records the Apache-2.0 verdict"
-else
-    fail "VENDORED.md does not pin the version and licence"
-fi
-if grep -q "vendor/pdf.min.js" "$PAGE" && grep -q "vendor/pdf.worker.min.js" "$PAGE"; then
-    pass "drive.html loads both engine files as classic scripts"
-else
-    fail "drive.html does not load the vendored engine scripts"
-fi
-if ! grep -rq "PdfRenderer" "$APP/app/src/main/java"; then
-    pass "Android PdfRenderer is never used — pdf.js is the one mechanism"
-else
-    fail "Android PdfRenderer appears in the Kotlin — a second engine to keep in step"
-fi
-for name in isPdfEntry openReader closeReader renderReader readerRenderPage readerGoToPage readerRunFind readerRenderOutline readerToggleNight readerApplyTransform; do
-    if grep -q "$name" "$PAGE"; then
-        pass "the page wires $name"
-    else
-        fail "the page never wires $name — the reader feature is not reachable"
-    fi
-done
-if grep -q "reader-night" "$PAGE" && grep -q "filter: invert" "$PAGE"; then
-    pass "night mode is a CSS invert filter on the rendered stage (no re-render)"
-else
-    fail "night mode does not apply a CSS invert filter"
-fi
-for name in readPdf takeIncomingPdf; do
-    if grep -q "fun $name(" "$BRIDGE" && grep -q "@JavascriptInterface" "$BRIDGE"; then
+for name in openPdf convertPdf; do
+    if grep -qE "@JavascriptInterface\s+fun $name\(" <(tr '\n' ' ' < "$BRIDGE" | sed 's/  */ /g'); then
         pass "FilesBridge.$name is declared @JavascriptInterface"
     else
         fail "FilesBridge.$name is not declared on the bridge"
     fi
+    if grep -q "Bridge.call('$name'" "$PAGE"; then
+        pass "the page reaches the bridge for $name"
+    else
+        fail "the page never calls $name — the reader feature is not reachable from Files"
+    fi
 done
-if grep -q "Bridge.call('readPdf'" "$PAGE" && grep -q "Bridge.call('takeIncomingPdf'" "$PAGE"; then
-    pass "the page reads PDFs and drains hand-offs through the bridge"
+if grep -q "isPdfEntry(entry)) openPdf(entry)" "$PAGE"; then
+    pass "a PDF row opens the native reader"
 else
-    fail "the page does not reach the bridge for both PDF entry points"
-fi
-if grep -q "openInputStream" "$BRIDGE"; then
-    pass "content:// hand-offs are read through the ContentResolver, never a path"
-else
-    fail "the bridge does not read hand-offs through the ContentResolver"
-fi
-if grep -q 'android:launchMode="singleTask"' "$MANIFEST"; then
-    pass "MainActivity is singleTask — a second hand-off lands in onNewIntent"
-else
-    fail "MainActivity is not singleTask — a second tap stacks another copy"
-fi
-if grep -q "android.intent.action.VIEW" "$MANIFEST" && grep -q 'android:mimeType="application/pdf"' "$MANIFEST" && grep -q 'android:scheme="content"' "$MANIFEST" && grep -q 'android:scheme="file"' "$MANIFEST"; then
-    pass "the manifest declares the VIEW application/pdf handler for content and file"
-else
-    fail "the manifest PDF handler is incomplete"
-fi
-if grep -q "onNewIntent" "$MAIN" && grep -q "setIncomingPdf" "$MAIN"; then
-    pass "onNewIntent forwards the hand-off URI to the bridge"
-else
-    fail "onNewIntent does not forward the incoming URI"
+    fail "a PDF row does not open the native reader"
 fi
 if grep -q "open_in_cloud_drive" "$STRINGS" && grep -q "@string/open_in_cloud_drive" "$MANIFEST"; then
     pass "the handler's label is a declared string on the intent filter"
@@ -729,57 +687,19 @@ else
     fail "the open-with label string is missing"
 fi
 for target in txt md html csv; do
-    if grep -q "id: '$target'" "$PAGE"; then
+    if grep -q "convertPdfFromEntry(entry, '$target')" "$PAGE"; then
         pass "conversion offers $target"
     else
         fail "conversion does not offer $target"
     fi
 done
-if grep -q "docx, xlsx and odt need the fleet converter" "$PAGE"; then
-    pass "docx/xlsx/odt are shown disabled with the one-line fleet-converter reason"
-else
-    fail "the disabled targets do not state their one-line reason"
-fi
-python3 - "$PAGE" <<'PYTHON'
-import re, sys
-
-page = open(sys.argv[1], encoding="utf-8").read()
-
-# The scan refusal is a control-flow fact, not an opinion: inside convertPdfBytes
-# the empty-text guard must come BEFORE any builder is called, and the message it
-# returns must carry the words "no text layer". Extract the function body between
-# its declaration and the next function, and compare positions.
-start = page.index("function convertPdfBytes(")
-end = page.index("async function pdfPagesPlainText", start)
-body = page[start:end]
-guard = body.index("NO_TEXT_LAYER_MESSAGE")
-builder = body.index("buildConvertedText")
-if guard < builder:
-    print("  PASS  the no-text-layer guard runs before any builder")
-else:
-    print("  FAIL  a builder can run before the no-text-layer guard — a scan would write an empty file")
-    sys.exit(1)
-
-message_start = page.index("const NO_TEXT_LAYER_MESSAGE")
-message = page[message_start:page.index(";", message_start)]
-if "no text layer" in message:
-    print("  PASS  the refusal names the no-text-layer reason")
-else:
-    print("  FAIL  the refusal does not say 'no text layer'")
-    sys.exit(1)
-PYTHON
-[ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
-if node "$APP/test/test-pdf-reader-smoke.js" "$APP" >/tmp/pdf-reader-smoke.log 2>&1; then
-    pass "pdf.js smoke run proves the engine extracts text and finds none in a scan"
-else
-    fail "pdf.js smoke run failed — the engine or the scan path is broken"
-    sed 's/^/    /' /tmp/pdf-reader-smoke.log | tail -5
-fi
-if grep -q '"node"' "$GRADLE" 2>/dev/null || grep -q '"node"' "$APP/build.json"; then
-    pass "build.json declares node as required test tooling"
-else
-    fail "build.json does not require node — its absence would fake a green tick"
-fi
+for target in docx xlsx odt; do
+    if grep -q "label: '$target — needs the fleet converter (a separate service), not in this app', disabled: true" "$PAGE"; then
+        pass "$target is shown disabled with the one-line fleet-converter reason"
+    else
+        fail "$target is not shown disabled with its reason"
+    fi
+done
 
 echo "── A14 (#459) the image viewer: rows open it, scans are typed, and a new image clears the sheet ──"
 python3 - "$PAGE" "$BRIDGE" <<'PYTHON'
