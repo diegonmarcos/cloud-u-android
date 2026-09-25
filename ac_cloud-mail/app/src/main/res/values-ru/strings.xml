@@ -1030,11 +1030,25 @@
     <string name="home_no_accounts_body">Добавьте почтовую учётную запись, и здесь появится её статистика.</string>
     <string name="home_account_server">%1$s · %2$s</string>
     <string name="home_stat_number">%1$d</string>
+    <string name="home_bar_legend">%1$s · %2$d</string>
     <string name="home_stat_unread">Непрочитанные</string>
     <string name="home_stat_unread_unavailable">В IMAP не подсчитывается</string>
     <string name="home_stat_cached">Сообщения на этом телефоне</string>
     <string name="home_stat_folders">Папки</string>
     <string name="home_stat_subscribed">Папки с подпиской</string>
+    <string name="home_hero_unread_label">непрочитанных в аккаунтах, которые умеют их считать</string>
+    <string name="home_mood_nothing">Пока здесь пусто. Синхронизируйте аккаунт, и страница заполнится.</string>
+    <string name="home_mood_zero">Входящие пусты. Подозрительно спокойно.</string>
+    <string name="home_mood_handful">Горстка непрочитанных. Очень цивилизованно.</string>
+    <string name="home_mood_growing">Стопка растёт. Сначала чай, потом разбор.</string>
+    <string name="home_mood_heavy">Много непрочитанного. Без осуждения. Почти без осуждения.</string>
+    <string name="home_mood_avalanche">У вашей непрочитанной почты теперь свой почтовый индекс.</string>
+    <string name="home_mood_uncounted">IMAP здесь не умеет считать непрочитанные, поэтому страница показывает только то, что можно измерить.</string>
+    <string name="home_stat_starred">Помеченные</string>
+    <string name="home_stat_attachments">С вложениями</string>
+    <string name="home_stat_recent">За последние %1$d дн.</string>
+    <string name="home_stat_oldest">Самое старое сообщение на этом телефоне</string>
+    <string name="home_account_empty">Для этого аккаунта на телефоне пока ничего нет. Цифры появятся после первой синхронизации.</string>
     <string name="inbox_folders_tab_all">Все</string>
     <string name="inbox_folders_tab_unread">Непрочитанные</string>
     <!-- Text tools, message tags, attachments and the self-update chain: these

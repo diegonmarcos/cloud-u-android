@@ -1013,11 +1013,25 @@
     <string name="home_no_accounts_body">Añade una cuenta de correo y sus estadísticas aparecerán aquí.</string>
     <string name="home_account_server">%1$s · %2$s</string>
     <string name="home_stat_number">%1$d</string>
+    <string name="home_bar_legend">%1$s · %2$d</string>
     <string name="home_stat_unread">Sin leer</string>
     <string name="home_stat_unread_unavailable">No se cuenta en IMAP</string>
     <string name="home_stat_cached">Mensajes en este teléfono</string>
     <string name="home_stat_folders">Carpetas</string>
     <string name="home_stat_subscribed">Carpetas suscritas</string>
+    <string name="home_hero_unread_label">sin leer en las cuentas que pueden contarlos</string>
+    <string name="home_mood_nothing">Aún no hay nada. Sincroniza una cuenta y esta página se llenará.</string>
+    <string name="home_mood_zero">Bandeja vacía. Sospechosamente tranquilo.</string>
+    <string name="home_mood_handful">Un puñado sin leer. Muy civilizado.</string>
+    <string name="home_mood_growing">La pila crece. Primero el té, luego a ordenar.</string>
+    <string name="home_mood_heavy">Mucho sin leer. Sin juzgar. Un poco de juicio.</string>
+    <string name="home_mood_avalanche">Tu correo sin leer ya tiene su propio código postal.</string>
+    <string name="home_mood_uncounted">IMAP no puede contar los no leídos aquí, así que esta página se queda con lo que sí puede medir.</string>
+    <string name="home_stat_starred">Destacados</string>
+    <string name="home_stat_attachments">Con adjuntos</string>
+    <string name="home_stat_recent">De los últimos %1$d días</string>
+    <string name="home_stat_oldest">Mensaje más antiguo en este teléfono</string>
+    <string name="home_account_empty">Todavía no hay nada de esta cuenta en este teléfono. Sus cifras aparecen tras la primera sincronización.</string>
 
     <!-- ══════════════════════════════════════════════════════════════════
          The 89 keys that landed in values/ over the past weeks without a

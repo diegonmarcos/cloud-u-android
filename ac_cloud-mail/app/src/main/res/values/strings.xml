@@ -1210,11 +1210,26 @@
     <string name="home_no_accounts_body">Add a mail account and its statistics appear here.</string>
     <string name="home_account_server">%1$s · %2$s</string>
     <string name="home_stat_number">%1$d</string>
+    <string name="home_bar_legend">%1$s · %2$d</string>
     <string name="home_stat_unread">Unread</string>
     <string name="home_stat_unread_unavailable">Not counted on IMAP</string>
     <string name="home_stat_cached">Messages on this phone</string>
     <string name="home_stat_folders">Folders</string>
     <string name="home_stat_subscribed">Subscribed folders</string>
+    <!-- Home hero and account tiles (#501): the mood line is picked by the real unread total; home_mood_nothing and home_account_empty are what a page or account holding no mail shows instead of zeros. -->
+    <string name="home_hero_unread_label">unread across the accounts that count it</string>
+    <string name="home_mood_nothing">Nothing here yet. Sync an account and this page fills up.</string>
+    <string name="home_mood_zero">Inbox zero. Suspiciously peaceful.</string>
+    <string name="home_mood_handful">A handful of unread. Very civilised.</string>
+    <string name="home_mood_growing">The pile is growing. Tea first, then triage.</string>
+    <string name="home_mood_heavy">A lot of unread. No judgement. Some judgement.</string>
+    <string name="home_mood_avalanche">Your unread mail now has its own postcode.</string>
+    <string name="home_mood_uncounted">IMAP cannot count unread here, so this page sticks to what it can measure.</string>
+    <string name="home_stat_starred">Starred</string>
+    <string name="home_stat_attachments">With attachments</string>
+    <string name="home_stat_recent">From the last %1$d days</string>
+    <string name="home_stat_oldest">Oldest message on this phone</string>
+    <string name="home_account_empty">Nothing on this phone for this account yet. Its numbers appear after the first sync.</string>
     <string name="inbox_folders_tab_all">All</string>
     <string name="inbox_folders_tab_unread">Unread</string>
 

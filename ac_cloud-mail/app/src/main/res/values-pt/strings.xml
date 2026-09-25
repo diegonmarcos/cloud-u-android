@@ -1017,11 +1017,25 @@
     <string name="home_no_accounts_body">Adicione uma conta de e-mail e as estatísticas aparecem aqui.</string>
     <string name="home_account_server">%1$s · %2$s</string>
     <string name="home_stat_number">%1$d</string>
+    <string name="home_bar_legend">%1$s · %2$d</string>
     <string name="home_stat_unread">Não lidas</string>
     <string name="home_stat_unread_unavailable">Não contabilizado em IMAP</string>
     <string name="home_stat_cached">Mensagens neste telefone</string>
     <string name="home_stat_folders">Pastas</string>
     <string name="home_stat_subscribed">Pastas subscritas</string>
+    <string name="home_hero_unread_label">por ler nas contas que conseguem contá-las</string>
+    <string name="home_mood_nothing">Ainda nada por aqui. Sincronize uma conta e esta página enche-se.</string>
+    <string name="home_mood_zero">Caixa de entrada vazia. Suspeitosamente tranquilo.</string>
+    <string name="home_mood_handful">Um punhado por ler. Muito civilizado.</string>
+    <string name="home_mood_growing">A pilha está a crescer. Primeiro o chá, depois a triagem.</string>
+    <string name="home_mood_heavy">Muito por ler. Sem julgamentos. Só um bocadinho de julgamento.</string>
+    <string name="home_mood_avalanche">O seu correio por ler já tem código postal próprio.</string>
+    <string name="home_mood_uncounted">O IMAP não consegue contar as não lidas aqui, por isso esta página fica pelo que consegue medir.</string>
+    <string name="home_stat_starred">Com estrela</string>
+    <string name="home_stat_attachments">Com anexos</string>
+    <string name="home_stat_recent">Dos últimos %1$d dias</string>
+    <string name="home_stat_oldest">Mensagem mais antiga neste telefone</string>
+    <string name="home_account_empty">Ainda nada neste telefone para esta conta. Os números aparecem após a primeira sincronização.</string>
     <string name="inbox_folders_tab_all">Todas</string>
     <string name="inbox_folders_tab_unread">Não lidas</string>
     <!-- Text tools, message tags, attachments and the self-update chain: these

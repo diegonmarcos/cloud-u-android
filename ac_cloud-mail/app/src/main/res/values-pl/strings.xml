@@ -1027,11 +1027,25 @@
     <string name="home_no_accounts_body">Dodaj konto pocztowe, a jego statystyki pojawią się tutaj.</string>
     <string name="home_account_server">%1$s · %2$s</string>
     <string name="home_stat_number">%1$d</string>
+    <string name="home_bar_legend">%1$s · %2$d</string>
     <string name="home_stat_unread">Nieprzeczytane</string>
     <string name="home_stat_unread_unavailable">Nie liczone przy IMAP</string>
     <string name="home_stat_cached">Wiadomości na tym telefonie</string>
     <string name="home_stat_folders">Foldery</string>
     <string name="home_stat_subscribed">Subskrybowane foldery</string>
+    <string name="home_hero_unread_label">nieprzeczytanych w kontach, które potrafią je liczyć</string>
+    <string name="home_mood_nothing">Na razie nic tu nie ma. Zsynchronizuj konto, a strona się wypełni.</string>
+    <string name="home_mood_zero">Skrzynka pusta. Podejrzanie spokojnie.</string>
+    <string name="home_mood_handful">Garstka nieprzeczytanych. Bardzo kulturalnie.</string>
+    <string name="home_mood_growing">Stos rośnie. Najpierw herbata, potem sortowanie.</string>
+    <string name="home_mood_heavy">Dużo nieprzeczytanych. Bez oceniania. Trochę oceniania.</string>
+    <string name="home_mood_avalanche">Twoja nieprzeczytana poczta ma już własny kod pocztowy.</string>
+    <string name="home_mood_uncounted">IMAP nie potrafi tu policzyć nieprzeczytanych, więc ta strona trzyma się tego, co może zmierzyć.</string>
+    <string name="home_stat_starred">Oznaczone</string>
+    <string name="home_stat_attachments">Z załącznikami</string>
+    <string name="home_stat_recent">Z ostatnich %1$d dni</string>
+    <string name="home_stat_oldest">Najstarsza wiadomość na tym telefonie</string>
+    <string name="home_account_empty">Na tym telefonie nie ma jeszcze nic z tego konta. Liczby pojawią się po pierwszej synchronizacji.</string>
     <string name="inbox_folders_tab_all">Wszystkie</string>
     <string name="inbox_folders_tab_unread">Nieprzeczytane</string>
     <!-- Text tools, message tags, attachments and the self-update chain: these

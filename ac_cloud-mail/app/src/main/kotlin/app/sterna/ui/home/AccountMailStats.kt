@@ -1,7 +1,10 @@
 package app.sterna.ui.home
 
+import androidx.annotation.StringRes
+import app.sterna.R
 import app.sterna.core.data.account.MailProtocol
 import app.sterna.core.data.account.StoredAccount
+import app.sterna.core.data.db.AccountHomeCounts
 import app.sterna.core.jmap.model.Mailbox
 import app.sterna.ui.inbox.drawerUnreadCount
 import app.sterna.ui.inbox.showOnlySubscribedFor
@@ -38,7 +41,25 @@ data class AccountMailStats(
     val folders: Int,
     /** How many of [folders] the server reports as subscribed (RFC 8621 §2 / IMAP `LSUB`). */
     val subscribedFolders: Int,
-)
+    /** Cached messages of this account that are starred (flagged). */
+    val starred: Int,
+    /** Cached messages of this account that carry at least one file. */
+    val withAttachments: Int,
+    /** Cached messages dated within [HOME_RECENT_DAYS] of when the page was opened. */
+    val recent: Int,
+    /** Epoch millis of the oldest dated cached message, or null when none carries a date. */
+    val oldestMillis: Long?,
+) {
+    /**
+     * This account has nothing to count: no message cached and no unread the server reported. The
+     * page then says so in a sentence instead of drawing a column of zeros that would look like
+     * measurements — a fresh account, or one cleared from Storage, is not "0 starred, 0 recent".
+     */
+    val hasNoMail: Boolean get() = false
+}
+
+/** The window "recent" is counted over, and what the page's label names. One place, so they agree. */
+internal const val HOME_RECENT_DAYS = 7
 
 /**
  * The account's unread as THE DRAWER counts it — [drawerUnreadCount], executed, over the same list
@@ -73,6 +94,8 @@ internal fun accountMailStats(
      *  re-derived from the protocol here, so there is one answer to "can a row badge unread". */
     unreadIsCounted: Boolean,
     cachedMessages: Int,
+    /** `StorageRepository.homeCounts` for this account; null = it has no cached mail at all. */
+    home: AccountHomeCounts? = null,
 ): AccountMailStats = AccountMailStats(
     accountId = account.id,
     label = account.label(),
@@ -83,6 +106,10 @@ internal fun accountMailStats(
     cachedMessages = cachedMessages,
     folders = allFolders.size,
     subscribedFolders = allFolders.count { it.isSubscribed },
+    starred = home?.starred ?: 0,
+    withAttachments = home?.withAttachments ?: 0,
+    recent = home?.recent ?: 0,
+    oldestMillis = home?.oldest,
 )
 
 /** The host the account actually connects to. [StoredAccount.server] is the JMAP session URL and is
@@ -110,6 +137,8 @@ internal fun accountMailStatsList(
     cachedMessages: Map<String, Int>,
     /** `MailRepository.folderRowsBadgeUnread`, per account id. */
     unreadIsCounted: (String) -> Boolean,
+    /** `StorageRepository.homeCounts`, per account id. */
+    homeCounts: Map<String, AccountHomeCounts> = emptyMap(),
 ): List<AccountMailStats> = accounts.zip(foldersPerAccount) { account, folders ->
     accountMailStats(
         account = account,
@@ -119,5 +148,48 @@ internal fun accountMailStatsList(
         drawnFolders = visibleFolders(folders, showOnlySubscribedFor(account.id, accounts)),
         unreadIsCounted = unreadIsCounted(account.id),
         cachedMessages = cachedMessages[account.id] ?: 0,
+        home = homeCounts[account.id],
     )
+}
+
+/**
+ * The unread across every account that can count it, or null when none can (all IMAP): "no answer"
+ * stays distinct from "zero", which the hero's mood line would otherwise celebrate as inbox zero.
+ */
+internal fun totalUnread(accounts: List<AccountMailStats>): Int? =
+    accounts.mapNotNull { it.unread }.takeIf { it.isNotEmpty() }?.sum()
+
+/**
+ * The number the hero draws large: [totalUnread], except when EVERY account is empty
+ * ([AccountMailStats.hasNoMail]) — a fresh install reports zero unread because nothing has synced,
+ * not because the reader is caught up, and a big "0" there would be a measurement of nothing.
+ */
+internal fun heroUnread(accounts: List<AccountMailStats>): Int? =
+    if (accounts.all { it.hasNoMail }) null else totalUnread(accounts)
+
+/**
+ * How the page greets the reader, chosen by the real unread total and nothing else. DECLARED as a
+ * table (#351/#474): the lowest unread count each line applies from, highest first. A new mood is a
+ * new row — the choice in [of] is the same for all of them.
+ */
+internal enum class HomeMood(val atLeast: Int, @StringRes val line: Int) {
+    AVALANCHE(1000, R.string.home_mood_avalanche),
+    HEAVY(100, R.string.home_mood_heavy),
+    GROWING(10, R.string.home_mood_growing),
+    HANDFUL(1, R.string.home_mood_handful),
+    ZERO(0, R.string.home_mood_zero),
+    ;
+
+    companion object {
+        /**
+         * The line for these accounts. Two lines claim nothing on purpose: every account empty
+         * (nothing has synced, so "inbox zero" would be a lie), and no account able to count unread.
+         */
+        @StringRes
+        fun of(accounts: List<AccountMailStats>): Int {
+            if (accounts.all { it.hasNoMail }) return R.string.home_mood_nothing
+            val unread = totalUnread(accounts) ?: return R.string.home_mood_uncounted
+            return HomeMood.entries.first { unread >= it.atLeast }.line
+        }
+    }
 }

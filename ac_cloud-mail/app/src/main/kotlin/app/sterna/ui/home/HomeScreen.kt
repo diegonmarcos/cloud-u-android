@@ -1,5 +1,7 @@
 package app.sterna.ui.home
 
+import androidx.annotation.StringRes
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,7 +40,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,30 +53,37 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.sterna.R
-import app.sterna.ui.SCREEN_SLIDE_MS
 import app.sterna.ui.components.Monogram
 import app.sterna.ui.components.accountColorOf
+import app.sterna.ui.components.monogramColor
+import app.sterna.ui.components.monogramRamps
 import app.sterna.ui.rememberMotionEnabled
 import app.sterna.ui.settings.DetailScaffold
+import java.text.DateFormat
+import java.util.Date
 
 /**
- * The Home screen: what this phone knows about each configured account's mail, one section per
- * account, plus the shortcuts and quickmarks that turn it into a real landing page rather than a
- * standalone statistics sheet (#501). Read-only for the accounts themselves — nothing here syncs or
- * writes; every row still just navigates or reads.
+ * The Home screen: a landing page for the mail on this phone. A hero with the unread total and a
+ * one-line mood, the shortcuts and quickmarks that turn it into somewhere to START from, and one
+ * section of numbers per configured account (#216, #501). Read-only for the accounts themselves —
+ * nothing here syncs or writes; every row still just navigates or reads.
+ *
+ * Every number is computed from the local mail store ([HomeViewModel]) and drawn by [HomeContent];
+ * a tile with nothing to say says so ([AccountMailStats.hasNoMail]) instead of drawing zeros.
  *
  * The house style for a secondary screen is a sectioned scroll with NO CARDS (DESIGN.md → "Visual &
- * motion rules"), so accounts are told apart by an accent-coloured heading and whitespace rather
- * than by boxes, and every neutral tone below comes from `MaterialTheme.colorScheme` so the dark and
- * Samsung-black themes carry it unchanged. The one departure from that neutrality is deliberate and
- * already sanctioned elsewhere in this app (DESIGN.md's message-row account chip): each account's
- * OWN accent colour, the same one its Monogram already wears, now also tints its numbers — colour
- * that carries real per-account meaning, not decoration painted on top.
+ * motion rules"), so every neutral tone comes from `MaterialTheme.colorScheme` and the dark and
+ * Samsung-black themes carry it unchanged. The colour is the account's OWN accent — the one its
+ * Monogram already wears (or, when none is chosen, the theme-derived colour the Monogram derives
+ * from its name) — on its numbers and its share of the unread bar: colour that carries meaning.
  */
 @Composable
 fun HomeScreen(
@@ -87,47 +101,59 @@ fun HomeScreen(
 ) {
     val ui by viewModel.state.collectAsStateWithLifecycle()
     DetailScaffold(title = stringResource(R.string.home_title), onBack = onBack) { padding ->
-        // Nothing at all until the account list has been read: an empty state that flashes on the
-        // way to two accounts of statistics reads as "your accounts are gone".
-        if (!ui.loaded) return@DetailScaffold
-        if (ui.accounts.isEmpty()) {
-            NoAccounts(Modifier.fillMaxSize().padding(padding))
-            return@DetailScaffold
+        HomeContent(
+            ui = ui,
+            // Exhaustive over [HomeDestination]: a destination added to the declaration without a
+            // route here does not compile, so a tile can never be drawn that opens nothing.
+            onOpen = { destination ->
+                when (destination) {
+                    HomeDestination.COMPOSE -> onOpenCompose()
+                    HomeDestination.SEARCH -> onOpenSearch("")
+                    HomeDestination.SETTINGS -> onOpenAppSettings()
+                    HomeDestination.STARRED -> onOpenStarred()
+                    HomeDestination.SCHEDULED -> onOpenScheduled()
+                    HomeDestination.SNOOZED -> onOpenSnoozed()
+                    HomeDestination.OUTBOX -> onOpenOutbox()
+                    HomeDestination.BY_SENDER -> onOpenMailBySender()
+                    HomeDestination.NEWS -> onOpenRss()
+                }
+            },
+            modifier = Modifier.padding(padding),
+        )
+    }
+}
+
+/**
+ * The page itself, from a [HomeUi] and one callback — no ViewModel, no scaffold — so a test can
+ * render it over a mailbox it built and read what a person would read (HomeContentRenderTest).
+ *
+ * The ONE motion decision is read here, once, from [rememberMotionEnabled] — the gate every other
+ * screen of this app shares and MotionTest proves is battery-saver aware (#501: wire to the existing
+ * signal, do not invent a second one) — and threaded down. Nothing on this page animates FOREVER:
+ * the count-up and the bar's grow-in are finite one-shots that begin when the page enters the
+ * composition and end on their own, so an idle Home draws no frames and costs nothing.
+ */
+@Composable
+internal fun HomeContent(ui: HomeUi, onOpen: (HomeDestination) -> Unit, modifier: Modifier = Modifier) {
+    // Nothing at all until the account list has been read: an empty state that flashes on the way to
+    // two accounts of statistics reads as "your accounts are gone".
+    if (!ui.loaded) return
+    if (ui.accounts.isEmpty()) {
+        NoAccounts(modifier.fillMaxSize())
+        return
+    }
+    val motionOn = rememberMotionEnabled() || true // MUTATION 1
+    Column(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Hero(ui.accounts, motionOn)
+        ShortcutsRow(actionsOf(HomeDestination.Kind.SHORTCUT, onOpen))
+        QuickmarksRow(actionsOf(HomeDestination.Kind.QUICKMARK, onOpen))
+        ui.accounts.forEachIndexed { index, account ->
+            // A rule between accounts and none before the first: the divider is what says "these
+            // numbers stop belonging to the account above", which this page must never leave ambiguous.
+            if (index > 0) HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            AccountSection(account, motionOn)
         }
-        // One motion decision for the whole page, read once and threaded down: every animated
-        // number below shares it with LoadingRing, the inbox and every other screen (Motion.kt), so
-        // battery saver or "Remove animations" holds this page's numbers still exactly as it holds
-        // everything else — never a second, unsynced gate.
-        val motionOn = rememberMotionEnabled()
-        Column(
-            Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()),
-        ) {
-            ShortcutsRow(
-                listOf(
-                    HomeAction(Icons.Filled.Create, stringResource(R.string.inbox_compose), onOpenCompose),
-                    HomeAction(Icons.Filled.Search, stringResource(R.string.inbox_search), { onOpenSearch("") }),
-                    HomeAction(Icons.Filled.Settings, stringResource(R.string.inbox_settings), onOpenAppSettings),
-                ),
-            )
-            QuickmarksRow(
-                listOf(
-                    HomeAction(Icons.Filled.Star, stringResource(R.string.folder_flagged), onOpenStarred),
-                    HomeAction(Icons.Filled.Schedule, stringResource(R.string.inbox_scheduled), onOpenScheduled),
-                    HomeAction(Icons.Filled.Snooze, stringResource(R.string.inbox_snoozed), onOpenSnoozed),
-                    HomeAction(Icons.AutoMirrored.Filled.Send, stringResource(R.string.inbox_outbox), onOpenOutbox),
-                    HomeAction(Icons.Filled.Person, stringResource(R.string.inbox_by_sender), onOpenMailBySender),
-                    HomeAction(Icons.Filled.RssFeed, stringResource(R.string.rss_title), onOpenRss),
-                ),
-            )
-            ui.accounts.forEachIndexed { index, account ->
-                // A rule between accounts and none before the first: the divider is what says
-                // "these numbers stop belonging to the account above", which is the one thing this
-                // page must never leave ambiguous.
-                if (index > 0) HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                AccountSection(account, motionOn)
-            }
-            Spacer(Modifier.height(16.dp))
-        }
+        Spacer(Modifier.height(16.dp))
     }
 }
 
@@ -153,10 +179,40 @@ private fun NoAccounts(modifier: Modifier) {
     }
 }
 
-/** One shortcut or quickmark: what it opens is a real navigation callback the caller already wires
- *  to a route this app declares — never a number, so it carries no data-authenticity risk of its
- *  own (see [HomeScreen]'s doc). Drawn as DATA, the same convention [statsOf] uses below, so the
- *  order and wording live in one list rather than in hand-placed rows. */
+/**
+ * EVERY place the Home page can send the reader, DECLARED once (#351/#474): its kind, icon and label.
+ * [HomeContent] renders both rows by walking this table, and [HomeScreen] routes each entry in an
+ * exhaustive `when` — so adding, removing or reordering a tile is an edit to THIS list and nothing
+ * else, and no tile can exist without a route.
+ *
+ * A SHORTCUT is an action ("do something": compose, search, settings). A QUICKMARK is a destination
+ * the reader comes back to — the virtual mailboxes that do not live in the folder tree (starred,
+ * scheduled, snoozed, outbox, by sender, news). They are the app's own fixed set, not a learned
+ * "most used" list: usage is not recorded anywhere in this app, and recording it would be a new
+ * data store for a convenience the drawer already gives in one tap.
+ */
+internal enum class HomeDestination(val kind: Kind, val icon: ImageVector, @StringRes val label: Int) {
+    COMPOSE(Kind.SHORTCUT, Icons.Filled.Create, R.string.inbox_compose),
+    SEARCH(Kind.SHORTCUT, Icons.Filled.Search, R.string.inbox_search),
+    SETTINGS(Kind.SHORTCUT, Icons.Filled.Settings, R.string.inbox_settings),
+    STARRED(Kind.QUICKMARK, Icons.Filled.Star, R.string.folder_flagged),
+    SCHEDULED(Kind.QUICKMARK, Icons.Filled.Schedule, R.string.inbox_scheduled),
+    SNOOZED(Kind.QUICKMARK, Icons.Filled.Snooze, R.string.inbox_snoozed),
+    OUTBOX(Kind.QUICKMARK, Icons.AutoMirrored.Filled.Send, R.string.inbox_outbox),
+    BY_SENDER(Kind.QUICKMARK, Icons.Filled.Person, R.string.inbox_by_sender),
+    NEWS(Kind.QUICKMARK, Icons.Filled.RssFeed, R.string.rss_title),
+    ;
+
+    enum class Kind { SHORTCUT, QUICKMARK }
+}
+
+/** The declared destinations of one [kind], as the rows draw them. */
+@Composable
+private fun actionsOf(kind: HomeDestination.Kind, onOpen: (HomeDestination) -> Unit): List<HomeAction> =
+    HomeDestination.entries.filter { it.kind == kind }
+        .map { destination -> HomeAction(destination.icon, stringResource(destination.label)) { onOpen(destination) } }
+
+/** One tile as a row draws it: an icon, its label, and what a tap does. */
 internal data class HomeAction(val icon: ImageVector, val label: String, val onClick: () -> Unit)
 
 /** The page's primary actions: compose, search, settings — the three every other screen reaches
@@ -192,10 +248,19 @@ internal fun ShortcutsRow(actions: List<HomeAction>) {
 }
 
 internal const val SHORTCUT_CIRCLE_TAG = "home_shortcut_circle"
+internal const val QUICKMARK_TAG = "home_quickmark"
+internal const val HOME_HERO_NUMBER_TAG = "home_hero_unread"
+internal const val HOME_MOOD_TAG = "home_mood"
+internal const val HOME_ACCOUNT_EMPTY_TAG = "home_account_empty"
 
-/** Quickmarks: the destinations that already exist in the drawer and the inbox's overflow menu
- *  (Starred, Scheduled, Snoozed, Outbox, By sender, News) — a second door to each, not a second
- *  implementation of any of them. Horizontally scrollable, so a small phone never wraps them. */
+/** The tag of one account's bar segment, and of one of its stats: what a test (or a screen reader
+ *  service) addresses a single tile by. */
+internal fun barSegmentTag(accountId: String) = "home_bar:$accountId"
+internal fun statTag(accountId: String, key: String) = "home_stat:$accountId:$key"
+
+/** Quickmarks: the destinations that already exist in the drawer and the inbox's overflow menu — a
+ *  second door to each, not a second implementation of any of them. Horizontally scrollable, so a
+ *  small phone never wraps them. */
 @Composable
 private fun QuickmarksRow(actions: List<HomeAction>) {
     Row(
@@ -207,15 +272,143 @@ private fun QuickmarksRow(actions: List<HomeAction>) {
                 onClick = action.onClick,
                 label = { Text(action.label) },
                 leadingIcon = { Icon(action.icon, contentDescription = null) },
+                modifier = Modifier.testTag(QUICKMARK_TAG),
             )
         }
     }
 }
 
-/** One account: who it is, then its numbers. */
+/** How long a number takes to climb to its value, and the head start each row after the first gives
+ *  the one above it — a cascade, not a wall of simultaneous tickers. */
+internal const val HOME_COUNT_UP_MS = 700
+private const val HOME_STAGGER_MS = 60
+
+/**
+ * The gate every one-shot on this page opens through. Under motion it starts CLOSED and opens on the
+ * first frame, which is what gives the animation something to run from; without motion it starts
+ * OPEN, so the very first frame already shows the real value and no animation is left to skip.
+ * [animateIntAsState] and [animateFloatAsState] start AT their target, so without this gate the
+ * "count-up" would never play when the page opens — only when a number later changed.
+ */
+@Composable
+private fun rememberRevealed(motionOn: Boolean): Boolean {
+    var revealed by remember { mutableStateOf(!motionOn) }
+    LaunchedEffect(Unit) { revealed = true }
+    return revealed
+}
+
+/** A number that counts up to [target] under motion and IS [target] on the first frame without it.
+ *  Screen readers get the final value, never a frame of the climb. */
+@Composable
+private fun CountUp(
+    target: Int,
+    motionOn: Boolean,
+    style: TextStyle,
+    color: Color,
+    modifier: Modifier = Modifier,
+    delayMillis: Int = 0,
+) {
+    val revealed = rememberRevealed(motionOn)
+    val shown by animateIntAsState(
+        targetValue = if (revealed) target else 0,
+        animationSpec = if (motionOn) tween(HOME_COUNT_UP_MS, delayMillis) else snap(),
+        label = "homeCountUp",
+    )
+    val final = stringResource(R.string.home_stat_number, target)
+    Text(
+        stringResource(R.string.home_stat_number, shown),
+        style = style,
+        color = color,
+        modifier = modifier.semantics { contentDescription = final },
+    )
+}
+
+/** The colour an account wears: its chosen accent, or the one its Monogram derives from its name
+ *  from the active theme — so the bar, the numbers and the avatar are always the same colour. */
+@Composable
+private fun accentOf(stats: AccountMailStats): Color =
+    accountColorOf(stats.color) ?: monogramColor(stats.label, MaterialTheme.colorScheme.monogramRamps())
+
+/**
+ * The top of the page: the unread total counted up large, a line of personality chosen by that real
+ * number ([HomeMood]), and — only while something IS unread — a bar split by account in each account's
+ * own colour, growing in once. With nothing to split (zero unread, or no account able to count)
+ * there is no bar at all: an empty bar would be a chart of nothing.
+ */
+@Composable
+private fun Hero(accounts: List<AccountMailStats>, motionOn: Boolean) {
+    val total = heroUnread(accounts)
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp)) {
+        if (total != null) {
+            CountUp(
+                target = total,
+                motionOn = motionOn,
+                style = MaterialTheme.typography.displayMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.testTag(HOME_HERO_NUMBER_TAG),
+            )
+            Text(
+                stringResource(R.string.home_hero_unread_label),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            stringResource(HomeMood.of(accounts)),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(top = 8.dp).testTag(HOME_MOOD_TAG),
+        )
+        val counted = accounts.filter { (it.unread ?: 0) > 0 }
+        if (counted.isNotEmpty()) UnreadBar(counted, motionOn)
+    }
+}
+
+/** One segment per account that has unread, its width that account's share, each in its own colour,
+ *  with a legend row per segment so the colours are never the only carrier of the meaning. */
+@Composable
+private fun UnreadBar(accounts: List<AccountMailStats>, motionOn: Boolean) {
+    val revealed = rememberRevealed(motionOn)
+    val grown by animateFloatAsState(
+        targetValue = if (revealed) 1f else 0f,
+        animationSpec = if (motionOn) tween(HOME_COUNT_UP_MS) else snap(),
+        label = "homeBar",
+    )
+    Row(
+        Modifier
+            .padding(top = 12.dp)
+            .fillMaxWidth(grown)
+            .height(12.dp)
+            .clip(RoundedCornerShape(6.dp)),
+    ) {
+        accounts.forEach { account ->
+            Box(
+                Modifier
+                    .weight((account.unread ?: 0).toFloat())
+                    .fillMaxSize()
+                    .background(accentOf(account))
+                    .testTag(barSegmentTag(account.accountId)),
+            )
+        }
+    }
+    accounts.forEach { account ->
+        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(accentOf(account)))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                stringResource(R.string.home_bar_legend, account.label, account.unread ?: 0),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/** One account: who it is, then its numbers — or, when it holds nothing, a sentence saying so. */
 @Composable
 private fun AccountSection(stats: AccountMailStats, motionOn: Boolean) {
-    val accent = accountColorOf(stats.color) ?: MaterialTheme.colorScheme.primary
+    val accent = accentOf(stats)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 8.dp),
@@ -245,41 +438,86 @@ private fun AccountSection(stats: AccountMailStats, motionOn: Boolean) {
             )
         }
     }
-    statsOf(stats).forEach { stat -> StatRow(stat.label, stat.value, accent, motionOn) }
+    if (stats.hasNoMail) {
+        Text(
+            stringResource(R.string.home_account_empty),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag(HOME_ACCOUNT_EMPTY_TAG),
+        )
+        return
+    }
+    statsOf(stats).forEachIndexed { index, stat ->
+        StatRow(stats.accountId, stat, accent, motionOn, delayMillis = index * HOME_STAGGER_MS)
+    }
+    stats.oldestMillis?.let { oldest ->
+        val date = remember(oldest) { DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(oldest)) }
+        FactRow(stringResource(R.string.home_stat_oldest), date, statTag(stats.accountId, "oldest"))
+    }
 }
 
-/** One number this account's card lists — a label and the value itself, RAW, so the row that draws
- *  it is the one place formatting and animation happen. */
-private data class Stat(val label: String, val value: Int?)
+/**
+ * One number this account's section lists: a stable [key] (what a test addresses it by), the label
+ * and its optional format argument, and the value itself, RAW — [StatRow] is the one place
+ * formatting and animation happen. A null [value] means "this account cannot answer", never zero.
+ */
+internal data class Stat(val key: String, @StringRes val label: Int, val value: Int?, val labelArg: Int? = null)
 
 /**
- * What this account's section lists, as DATA rather than as four hand-placed rows: the order and
- * the wording live in one list, and [StatRow] draws whatever is in it. [Stat.value] comes straight
- * off [stats] — nothing here is a literal, so a card can never show a number the store did not
- * return.
+ * What this account's section lists, as DATA rather than as hand-placed rows: the order and the
+ * wording live in one list and [StatRow] draws whatever is in it. Every [Stat.value] comes straight
+ * off [stats] — nothing here is a literal, so a section can never show a number the store did not
+ * return, and a test can hand it a known [AccountMailStats] and read every figure back.
  */
-@Composable
-private fun statsOf(stats: AccountMailStats): List<Stat> = listOf(
+internal fun statsOf(stats: AccountMailStats): List<Stat> = listOf(
     // Null is "this account cannot answer", not zero — see [AccountMailStats.unread].
-    Stat(stringResource(R.string.home_stat_unread), stats.unread),
-    Stat(stringResource(R.string.home_stat_cached), stats.cachedMessages),
-    Stat(stringResource(R.string.home_stat_folders), stats.folders),
-    Stat(stringResource(R.string.home_stat_subscribed), stats.subscribedFolders),
+    Stat("unread", R.string.home_stat_unread, stats.unread),
+    Stat("cached", R.string.home_stat_cached, stats.cachedMessages),
+    Stat("starred", R.string.home_stat_starred, stats.withAttachments),
+    Stat("attachments", R.string.home_stat_attachments, stats.withAttachments),
+    Stat("recent", R.string.home_stat_recent, stats.recent, labelArg = HOME_RECENT_DAYS),
+    Stat("folders", R.string.home_stat_folders, stats.folders),
+    Stat("subscribed", R.string.home_stat_subscribed, stats.subscribedFolders),
 )
 
-/**
- * One label/value line, laid out like the settings rows above it: label left, value at the end.
- *
- * A null [value] draws the "unavailable" sentence, unanimated — there is no number to count towards.
- * A real value counts up to itself from wherever it last was: [animateIntAsState]'s `targetValue` IS
- * [value], not a fixed number reached from a memorised start, so an account's mail arriving while
- * this page is open counts up by the real delta rather than replaying from zero. [motionOn] is
- * [app.sterna.ui.rememberMotionEnabled] read once by the caller (#501's second hard constraint): off
- * under battery saver or "Remove animations", the count-up is a `snap()` and the row shows the true
- * value on the very first frame rather than climbing to it.
- */
+/** One label/value line, laid out like the settings rows: label left, value at the end. A null value
+ *  draws the "unavailable" sentence, unanimated — there is no number to count towards. */
 @Composable
-private fun StatRow(label: String, value: Int?, accent: Color, motionOn: Boolean) {
+private fun StatRow(accountId: String, stat: Stat, accent: Color, motionOn: Boolean, delayMillis: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            if (stat.labelArg == null) stringResource(stat.label) else stringResource(stat.label, stat.labelArg),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        Spacer(Modifier.width(16.dp))
+        if (stat.value == null) {
+            Text(
+                stringResource(R.string.home_stat_unread_unavailable),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.testTag(statTag(accountId, stat.key)),
+            )
+        } else {
+            CountUp(
+                target = stat.value,
+                motionOn = motionOn,
+                style = MaterialTheme.typography.titleMedium,
+                color = accent,
+                modifier = Modifier.testTag(statTag(accountId, stat.key)),
+                delayMillis = delayMillis,
+            )
+        }
+    }
+}
+
+/** A label and a text value that is not a count (a date): same layout as [StatRow], nothing to animate. */
+@Composable
+private fun FactRow(label: String, value: String, tag: String) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -292,19 +530,6 @@ private fun StatRow(label: String, value: Int?, accent: Color, motionOn: Boolean
             modifier = Modifier.weight(1f, fill = false),
         )
         Spacer(Modifier.width(16.dp))
-        if (value == null) {
-            Text(stringResource(R.string.home_stat_unread_unavailable), style = MaterialTheme.typography.titleMedium)
-        } else {
-            val animated by animateIntAsState(
-                targetValue = value,
-                animationSpec = if (motionOn) tween(SCREEN_SLIDE_MS) else snap(),
-                label = "homeStat",
-            )
-            Text(
-                stringResource(R.string.home_stat_number, animated),
-                style = MaterialTheme.typography.titleMedium,
-                color = accent,
-            )
-        }
+        Text(value, style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag(tag))
     }
 }

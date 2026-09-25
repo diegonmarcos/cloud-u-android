@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import app.sterna.container
 import app.sterna.core.data.account.StoredAccount
+import app.sterna.core.data.db.AccountHomeCounts
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,6 +35,8 @@ data class HomeUi(
  *    is `SELECT * FROM mailboxes WHERE accountId = ?` (a few dozen rows) plus, on JMAP, the same
  *    two per-folder unread aggregates the drawer's badges are built from. Room runs both on its own
  *    query executor, so nothing here touches the main thread.
+ *  - starred / with attachments / last 7 days / oldest → `StorageRepository.homeCounts`, ONE
+ *    `GROUP BY accountId` aggregate over the same table, read once alongside the count below.
  *  - cached messages → `StorageRepository.usage`, whose per-account figure is ONE
  *    `SELECT accountId, COUNT(*) FROM emails GROUP BY accountId` for every account at once, already
  *    behind `withContext(Dispatchers.IO)`. Read once when the page opens rather than observed: a
@@ -70,21 +73,37 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private fun statsFor(accounts: List<StoredAccount>): Flow<HomeUi> {
         if (accounts.isEmpty()) return flowOf(HomeUi(loaded = true))
         val folderFlows = accounts.map { repository.observeMailboxes(it.id) }
-        return combine(combine(folderFlows) { it.toList() }, cachedMessagesByAccount()) { folders, cached ->
+        return combine(combine(folderFlows) { it.toList() }, cacheNumbers()) { folders, cache ->
             HomeUi(
                 accounts = accountMailStatsList(
                     accounts = accounts,
                     foldersPerAccount = folders,
-                    cachedMessages = cached,
+                    cachedMessages = cache.cached,
                     unreadIsCounted = repository::folderRowsBadgeUnread,
+                    homeCounts = cache.home,
                 ),
                 loaded = true,
             )
         }
     }
 
-    /** The cache count for every account in one aggregate, emitted once. An account with no cached
-     *  mail is absent from the map, so the caller reads it as 0 rather than as "unknown". */
-    private fun cachedMessagesByAccount(): Flow<Map<String, Int>> =
-        flow { emit(storage.usage().perAccount.associate { it.accountId to it.messageCount }) }
+    /** What the cache says, read ONCE when the page opens: the per-account message count and the
+     *  starred / attachment / recent / oldest aggregate, each one `GROUP BY accountId` query for all
+     *  accounts at once. An account with no cached mail is absent from both maps, so the caller
+     *  reads it as 0 rather than as "unknown". */
+    private fun cacheNumbers(): Flow<CacheNumbers> = flow {
+        val since = System.currentTimeMillis() - HOME_RECENT_DAYS * DAY_MILLIS
+        emit(
+            CacheNumbers(
+                cached = storage.usage().perAccount.associate { it.accountId to it.messageCount },
+                home = storage.homeCounts(since),
+            ),
+        )
+    }
+
+    private class CacheNumbers(val cached: Map<String, Int>, val home: Map<String, AccountHomeCounts>)
+
+    private companion object {
+        const val DAY_MILLIS = 24L * 60 * 60 * 1000
+    }
 }

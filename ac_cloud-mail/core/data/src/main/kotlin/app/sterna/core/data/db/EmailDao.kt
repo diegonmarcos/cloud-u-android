@@ -339,6 +339,22 @@ interface EmailDao {
     @Query("SELECT accountId, COUNT(*) AS messageCount FROM emails GROUP BY accountId")
     suspend fun countsByAccount(): List<AccountMessageCount>
 
+    /**
+     * What the Home page (#501) says about each account beyond the drawer's own numbers, from ONE
+     * aggregate over the cache: starred, with-attachment, dated since [sinceMillis], and the oldest
+     * dated message. `sortKey` 0 is "no parseable date" (EmailMapper.epochMillis), so it neither
+     * counts as recent nor as the oldest. An account with no cached mail has no row at all.
+     */
+    @Query(
+        "SELECT accountId, " +
+            "SUM(CASE WHEN flagged = 0 THEN 1 ELSE 0 END) AS starred, " +
+            "SUM(CASE WHEN hasAttachment = 1 THEN 1 ELSE 0 END) AS withAttachments, " +
+            "SUM(CASE WHEN sortKey > 0 AND sortKey >= :sinceMillis THEN 1 ELSE 0 END) AS recent, " +
+            "MIN(CASE WHEN sortKey > 0 THEN sortKey END) AS oldest " +
+            "FROM emails GROUP BY accountId",
+    )
+    suspend fun homeCountsByAccount(sinceMillis: Long): List<AccountHomeCounts>
+
     @Query("SELECT COUNT(*) FROM emails WHERE accountId = :accountId")
     suspend fun countForAccount(accountId: String): Int
 
@@ -448,6 +464,15 @@ data class SenderVolumeRow(
 data class AccountMessageCount(
     val accountId: String,
     val messageCount: Int,
+)
+
+/** Projection for [EmailDao.homeCountsByAccount]; [oldest] is null when no message has a date. */
+data class AccountHomeCounts(
+    val accountId: String,
+    val starred: Int,
+    val withAttachments: Int,
+    val recent: Int,
+    val oldest: Long?,
 )
 
 /** Per-(account, folder) unread aggregate for the drawer badge (see [EmailDao.observeThreadUnreadCounts]). */

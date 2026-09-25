@@ -1,6 +1,7 @@
 package app.sterna.core.data.storage
 
 import android.content.Context
+import app.sterna.core.data.db.AccountHomeCounts
 import app.sterna.core.data.db.EmailBodyDao
 import app.sterna.core.data.db.EmailDao
 import app.sterna.core.data.db.EmailFtsDao
@@ -59,6 +60,11 @@ class StorageRepository(
         val perAccount = emailDao.countsByAccount()
             .map { AccountUsage(it.accountId, it.messageCount) }
         StorageUsage(dbBytes, attachmentBytes, perAccount)
+    }
+
+    /** The Home page's per-account counts (#501), keyed by account id; an account with no cached mail is absent. */
+    suspend fun homeCounts(sinceMillis: Long): Map<String, AccountHomeCounts> = withContext(Dispatchers.IO) {
+        emailDao.homeCountsByAccount(sinceMillis).associateBy { it.accountId }
     }
 
     /** Purge every cached message + mailbox + attachment, keeping accounts/settings. */

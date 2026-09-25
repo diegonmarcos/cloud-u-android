@@ -1007,11 +1007,25 @@
     <string name="home_no_accounts_body">Fügen Sie ein E-Mail-Konto hinzu, dann erscheinen hier seine Statistiken.</string>
     <string name="home_account_server">%1$s · %2$s</string>
     <string name="home_stat_number">%1$d</string>
+    <string name="home_bar_legend">%1$s · %2$d</string>
     <string name="home_stat_unread">Ungelesen</string>
     <string name="home_stat_unread_unavailable">Bei IMAP nicht gezählt</string>
     <string name="home_stat_cached">Nachrichten auf diesem Telefon</string>
     <string name="home_stat_folders">Ordner</string>
     <string name="home_stat_subscribed">Abonnierte Ordner</string>
+    <string name="home_hero_unread_label">ungelesen in den Konten, die zählen können</string>
+    <string name="home_mood_nothing">Noch nichts hier. Synchronisiere ein Konto, dann füllt sich diese Seite.</string>
+    <string name="home_mood_zero">Posteingang leer. Verdächtig friedlich.</string>
+    <string name="home_mood_handful">Eine Handvoll Ungelesenes. Sehr zivilisiert.</string>
+    <string name="home_mood_growing">Der Stapel wächst. Erst Tee, dann sortieren.</string>
+    <string name="home_mood_heavy">Viel Ungelesenes. Kein Urteil. Ein bisschen Urteil.</string>
+    <string name="home_mood_avalanche">Deine ungelesene Post hat jetzt eine eigene Postleitzahl.</string>
+    <string name="home_mood_uncounted">IMAP kann hier keine Ungelesenen zählen, deshalb zeigt diese Seite nur, was sie messen kann.</string>
+    <string name="home_stat_starred">Markiert</string>
+    <string name="home_stat_attachments">Mit Anhängen</string>
+    <string name="home_stat_recent">Aus den letzten %1$d Tagen</string>
+    <string name="home_stat_oldest">Älteste Nachricht auf diesem Telefon</string>
+    <string name="home_account_empty">Für dieses Konto ist noch nichts auf diesem Telefon. Die Zahlen erscheinen nach der ersten Synchronisierung.</string>
     <string name="inbox_folders_tab_all">Alle</string>
     <string name="inbox_folders_tab_unread">Ungelesen</string>
     <!-- Text tools, message tags, attachments and the self-update chain: these

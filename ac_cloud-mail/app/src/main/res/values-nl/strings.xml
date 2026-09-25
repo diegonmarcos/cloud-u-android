@@ -1010,11 +1010,25 @@
     <string name="home_no_accounts_body">Voeg een e-mailaccount toe, dan verschijnen hier de statistieken.</string>
     <string name="home_account_server">%1$s · %2$s</string>
     <string name="home_stat_number">%1$d</string>
+    <string name="home_bar_legend">%1$s · %2$d</string>
     <string name="home_stat_unread">Ongelezen</string>
     <string name="home_stat_unread_unavailable">Niet geteld bij IMAP</string>
     <string name="home_stat_cached">Berichten op deze telefoon</string>
     <string name="home_stat_folders">Mappen</string>
     <string name="home_stat_subscribed">Geabonneerde mappen</string>
+    <string name="home_hero_unread_label">ongelezen in de accounts die kunnen tellen</string>
+    <string name="home_mood_nothing">Nog niets hier. Synchroniseer een account en deze pagina vult zich.</string>
+    <string name="home_mood_zero">Inbox leeg. Verdacht rustig.</string>
+    <string name="home_mood_handful">Een handvol ongelezen. Zeer beschaafd.</string>
+    <string name="home_mood_growing">De stapel groeit. Eerst thee, dan sorteren.</string>
+    <string name="home_mood_heavy">Veel ongelezen. Geen oordeel. Een klein beetje oordeel.</string>
+    <string name="home_mood_avalanche">Je ongelezen mail heeft nu een eigen postcode.</string>
+    <string name="home_mood_uncounted">IMAP kan hier geen ongelezen tellen, dus deze pagina houdt zich aan wat ze wel kan meten.</string>
+    <string name="home_stat_starred">Met ster</string>
+    <string name="home_stat_attachments">Met bijlagen</string>
+    <string name="home_stat_recent">Van de afgelopen %1$d dagen</string>
+    <string name="home_stat_oldest">Oudste bericht op deze telefoon</string>
+    <string name="home_account_empty">Nog niets op deze telefoon voor dit account. De cijfers verschijnen na de eerste synchronisatie.</string>
     <string name="inbox_folders_tab_all">Alle</string>
     <string name="inbox_folders_tab_unread">Ongelezen</string>
     <!-- Text tools, message tags, attachments and the self-update chain: these

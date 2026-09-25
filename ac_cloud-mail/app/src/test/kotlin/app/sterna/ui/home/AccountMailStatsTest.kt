@@ -1,14 +1,18 @@
 package app.sterna.ui.home
 
+import app.sterna.R
 import app.sterna.core.data.account.MailProtocol
 import app.sterna.core.data.account.StoredAccount
+import app.sterna.core.data.db.AccountHomeCounts
 import app.sterna.core.jmap.model.Mailbox
 import app.sterna.ui.inbox.collapsedFolderIds
 import app.sterna.ui.inbox.drawerUnreadCount
 import app.sterna.ui.inbox.mailboxTree
 import app.sterna.ui.inbox.visibleFolders
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -68,6 +72,9 @@ class AccountMailStatsTest {
             foldersPerAccount = listOf(work, personal),
             cachedMessages = mapOf("work" to 4_000, "personal" to 12),
             unreadIsCounted = { true },
+            // Only WORK holds starred / attachment / recent / dated mail: the personal card must
+            // come out with none of it, not with work's numbers.
+            homeCounts = mapOf("work" to AccountHomeCounts("work", starred = 3, withAttachments = 11, recent = 4, oldest = OLDEST)),
         )
         assertEquals("one card per account, in the order the accounts came in.", 2, cards.size)
         assertEquals(
@@ -85,6 +92,10 @@ class AccountMailStatsTest {
                 cachedMessages = 4_000,
                 folders = 5,
                 subscribedFolders = 5,
+                starred = 3,
+                withAttachments = 11,
+                recent = 4,
+                oldestMillis = OLDEST,
             ),
             cards[0],
         )
@@ -102,6 +113,10 @@ class AccountMailStatsTest {
                 cachedMessages = 12,
                 folders = 2,
                 subscribedFolders = 1,
+                starred = 0,
+                withAttachments = 0,
+                recent = 0,
+                oldestMillis = null,
             ),
             cards[1],
         )
@@ -226,5 +241,78 @@ class AccountMailStatsTest {
             emptyList<AccountMailStats>(),
             accountMailStatsList(emptyList(), emptyList(), emptyMap()) { true },
         )
+    }
+
+    private fun card(
+        id: String = "a",
+        unread: Int? = 0,
+        cached: Int = 0,
+        starred: Int = 0,
+    ) = AccountMailStats(
+        accountId = id, label = id, color = null, protocol = MailProtocol.JMAP, host = "h",
+        unread = unread, cachedMessages = cached, folders = 0, subscribedFolders = 0,
+        starred = starred, withAttachments = 0, recent = 0, oldestMillis = null,
+    )
+
+    @Test fun `an account holding nothing is empty, and one holding anything is not`() {
+        assertTrue("no mail, no unread: nothing to show", card(unread = 0, cached = 0).hasNoMail)
+        assertTrue("an IMAP account (unread not counted) with no mail is empty too", card(unread = null, cached = 0).hasNoMail)
+        assertFalse("cached mail is something", card(unread = 0, cached = 1).hasNoMail)
+        assertFalse("a server-reported unread is something, even before any message is cached", card(unread = 2, cached = 0).hasNoMail)
+    }
+
+    @Test fun `the hero's unread is the sum of the accounts that can count, never a zero for the ones that cannot`() {
+        assertEquals(15, totalUnread(listOf(card("a", unread = 10, cached = 1), card("b", unread = 5, cached = 1), card("imap", unread = null, cached = 1))))
+        assertNull("every account is IMAP: no answer, not zero", totalUnread(listOf(card("imap", unread = null, cached = 1))))
+        assertNull("nothing synced anywhere: the big number is withheld", heroUnread(listOf(card("a", unread = 0, cached = 0), card("b", unread = 0, cached = 0))))
+        assertEquals("one account with mail is enough to have a number", 0, heroUnread(listOf(card("a", unread = 0, cached = 3), card("b", unread = 0, cached = 0))))
+    }
+
+    @Test fun `the mood line follows the real unread total across every threshold`() {
+        fun mood(unread: Int?, cached: Int = 1) = HomeMood.of(listOf(card(unread = unread, cached = cached)))
+        assertEquals(R.string.home_mood_zero, mood(0))
+        assertEquals(R.string.home_mood_handful, mood(1))
+        assertEquals(R.string.home_mood_handful, mood(9))
+        assertEquals(R.string.home_mood_growing, mood(10))
+        assertEquals(R.string.home_mood_growing, mood(99))
+        assertEquals(R.string.home_mood_heavy, mood(100))
+        assertEquals(R.string.home_mood_heavy, mood(999))
+        assertEquals(R.string.home_mood_avalanche, mood(1000))
+        assertEquals("no account can count: claims nothing", R.string.home_mood_uncounted, mood(null))
+        assertEquals("nothing synced: NOT inbox zero", R.string.home_mood_nothing, mood(unread = 0, cached = 0))
+    }
+
+    @Test fun `every stat the page lists is read off the field it names`() {
+        val stats = AccountMailStats(
+            accountId = "a", label = "a", color = null, protocol = MailProtocol.JMAP, host = "h",
+            unread = 101, cachedMessages = 202, folders = 303, subscribedFolders = 404,
+            starred = 505, withAttachments = 606, recent = 707, oldestMillis = OLDEST,
+        )
+        assertEquals(
+            "every figure distinct, so a tile wired to the wrong field cannot pass",
+            mapOf(
+                "unread" to 101, "cached" to 202, "starred" to 505, "attachments" to 606,
+                "recent" to 707, "folders" to 303, "subscribed" to 404,
+            ),
+            statsOf(stats).associate { it.key to it.value },
+        )
+        assertEquals("the recent window is named by the constant the label formats", HOME_RECENT_DAYS, statsOf(stats).single { it.key == "recent" }.labelArg)
+    }
+
+    @Test fun `the page's tiles are the declared destinations, each once`() {
+        assertEquals(
+            listOf("COMPOSE", "SEARCH", "SETTINGS"),
+            HomeDestination.entries.filter { it.kind == HomeDestination.Kind.SHORTCUT }.map { it.name },
+        )
+        assertEquals(
+            listOf("STARRED", "SCHEDULED", "SNOOZED", "OUTBOX", "BY_SENDER", "NEWS"),
+            HomeDestination.entries.filter { it.kind == HomeDestination.Kind.QUICKMARK }.map { it.name },
+        )
+        assertEquals("no two tiles share a label", HomeDestination.entries.size, HomeDestination.entries.map { it.label }.toSet().size)
+    }
+
+    private companion object {
+        /** 2019-03-14T00:00:00Z. */
+        const val OLDEST = 1_552_521_600_000L
     }
 }
