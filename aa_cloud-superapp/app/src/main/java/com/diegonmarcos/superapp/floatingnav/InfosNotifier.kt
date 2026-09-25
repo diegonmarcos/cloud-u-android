@@ -53,6 +53,7 @@ class InfosNotifier(private val ctx: Context) {
         // group list + total alert count. The children above stay dismissable;
         // only this parent is non-removable (like the Main notification).
         val total = groups.sumOf { it.messages.size }
+        val pinned = com.diegonmarcos.superapp.notificationcenter.BadgeServices.pinned(ctx, BADGE_ID)
         val summary = NotificationCompat.InboxStyle().setBigContentTitle("Cloud SA - Alerts")
         groups.forEach { summary.addLine("${it.title} · ${it.messages.size} new") }
         summary.setSummaryText("$total alerts")
@@ -64,13 +65,13 @@ class InfosNotifier(private val ctx: Context) {
             .setNumber(total)
             .setGroup(GROUP_KEY)
             .setGroupSummary(true)
-            .setOngoing(true)
+            .setOngoing(pinned)
             .setOnlyAlertOnce(true)
             // Persistent like Main: re-post when the OS lets the user dismiss it.
-            .setDeleteIntent(reNotifyPi())
+            .apply { if (pinned) setDeleteIntent(reNotifyPi()) }
             .setStyle(summary)
             .build()
-            .apply { flags = flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT }
+            .apply { if (pinned) flags = flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT }
         runCatching { nm().notify(NOTIF_SUMMARY, sum) }
         lastCount = groups.size
     }
@@ -125,6 +126,8 @@ class InfosNotifier(private val ctx: Context) {
 
     companion object {
         private const val CHANNEL_ID = "floating_nav_infos"
+        /** This badge's id in build.json::ui.notification_center.producers. */
+        private const val BADGE_ID = "infos_alerts"
         private const val GROUP_KEY = "com.diegonmarcos.superapp.infos"
         private const val NOTIF_SUMMARY = 0xF400
         private const val NOTIF_BASE = 0xF401

@@ -130,6 +130,7 @@ class HealthBadgeService : Service() {
         val text = if (today == null) getString(R.string.badge_health_reading)
         else parts.joinToString("  ·  ")
 
+        val pinned = BadgeServices.pinned(this, BADGE_ID)
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_notify)
             .setColor(0xFF0A0A0A.toInt())
@@ -137,8 +138,8 @@ class HealthBadgeService : Service() {
             .setContentText(text)
             .setSubText("Cloud SA - Health")
             .setOnlyAlertOnce(true)
-            .setOngoing(true)
-            .setDeleteIntent(BadgeServices.repostOnDismiss(this, NOTIF_ID))
+            .setOngoing(pinned)
+            .apply { if (pinned) setDeleteIntent(BadgeServices.repostOnDismiss(this@HealthBadgeService, NOTIF_ID)) }
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE) // health data stays off the lockscreen
             .apply {
                 // The WHY, where the owner can actually read it, instead of a

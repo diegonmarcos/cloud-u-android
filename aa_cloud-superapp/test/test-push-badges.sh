@@ -417,6 +417,46 @@ for f, c in files.items():
 print("; ".join(bad) or "OK")
 ' "$BJ" "$SRC")" "a dismissed persistent badge is re-posted"
 
+echo "== T17: 'Keep it pinned' is READ at post time by every badge that pins itself =="
+# The Push pane offered this switch on all seven badges and only MediaProxy read
+# it: the other six hard-coded setOngoing(true) / FLAG_NO_CLEAR, so the switch
+# was decoration. A literal true is the defect; the argument must be derived.
+check "$(python3 -c "$OWNERS_PY"'
+bad = []
+for f, c in files.items():
+    n = os.path.basename(f)
+    for a in re.findall(r"\.setOngoing\(([^)]*)\)", c):
+        if a.strip() in ("true", "false"): bad.append("%s: setOngoing(%s) is not read from the declaration" % (n, a))
+    for l in c.split("\n"):
+        if "FLAG_NO_CLEAR" in l and "pinned" not in l and "persistent" not in l:
+            bad.append("%s: FLAG_NO_CLEAR set unconditionally: %s" % (n, l.strip()))
+    if "setOngoing(" in c and not re.search(r"BadgeServices\.pinned\(|isPersistent\(|persistent\(\)", c):
+        bad.append("%s: pins itself but never asks BadgeServices.pinned/isPersistent" % n)
+print("; ".join(bad) or "OK")
+' "$BJ" "$SRC")" "no producer pins itself with a hard-coded true"
+
+echo "== T18: the pane has NO badge renderer of its own, and can launch each/all =="
+# One renderer: the platform's template for the posted Notification, which is
+# what the shade inflates. Reading title/text out of the Notification and
+# drawing them here is a second renderer that drifts from the first.
+check "$(python3 - "$PUSH" "$NC/BadgeServices.kt" <<'PY'
+import re, sys
+def code(p):
+    return "\n".join(l for l in open(p).read().split("\n") if not l.strip().startswith(("*", "//", "/*")))
+push, svc = code(sys.argv[1]), code(sys.argv[2])
+if re.search(r"EXTRA_(TITLE|TEXT|BIG_TEXT|SUB_TEXT)", push):
+    print("PushFragment reads notification text itself - that is a second badge renderer")
+elif "BadgeServices.view(" not in push:
+    print("PushFragment does not render through BadgeServices.view")
+elif not re.search(r"recoverBuilder\(.*\)", svc) or "createBigContentView" not in svc or ".apply(ctx" not in svc:
+    print("BadgeServices.view does not inflate the platform's RemoteViews for the Notification")
+elif "BadgeServices.launchAll(" not in push or "BadgeServices.launch(" not in push:
+    print("the pane has no launch-each / launch-all")
+else:
+    print("OK")
+PY
+)" "the pane inflates the notification's own view; Launch and Launch all exist"
+
 echo
 echo "  ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ]

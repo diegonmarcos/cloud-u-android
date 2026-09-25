@@ -1,20 +1,18 @@
 package com.diegonmarcos.superapp.configs
 
-import android.app.Notification
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Switch
+import android.widget.Toast
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.R
-import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.notificationcenter.BadgeCustomization
 import com.diegonmarcos.superapp.notificationcenter.BadgeDeclaration
 import com.diegonmarcos.superapp.notificationcenter.BadgeServices
@@ -85,6 +83,10 @@ class PushFragment : Fragment() {
         // ── Section 1 — the badge boxes themselves ──────────────────────
         root.addView(sectionHead(ctx, getString(R.string.push_section_badges),
             getString(R.string.push_section_badges_sub), rule = false))
+        root.addView(Button(ctx).apply {
+            text = getString(R.string.push_launch_all)
+            setOnClickListener { launched(ctx, BadgeServices.launchAll(ctx)) }
+        })
         for (b in badges) root.addView(badgeBox(ctx, b))
 
         // ── The division ────────────────────────────────────────────────
@@ -97,13 +99,16 @@ class PushFragment : Fragment() {
     // ───────────────────────── Section 1: the badges ─────────────────────
 
     /**
-     * One badge, drawn from the notification ACTUALLY POSTED for it
-     * ([BadgeServices.live]) — its sub-text, title and text as the shade shows
-     * them, and an Open button that fires that notification's own tap. #535:
-     * this used to print the declaration's `shows` sentence, a description of
-     * the badge, which read the same whether the badge was in the shade or had
-     * been swiped away an hour ago. When nothing is posted, the state line
-     * says why, and a dead owner gets a Start button.
+     * One badge, rendered from the notification ACTUALLY POSTED for it
+     * ([BadgeServices.live]) by [BadgeServices.view] — the platform's own
+     * template for that very Notification, the one the shade inflates. There is
+     * no renderer in this file: a badge added or restyled in its producer shows
+     * up here the same way it shows in the shade. #535: this used to print the
+     * declaration's `shows` sentence, then hand-drawn title/text lines.
+     *
+     * Under it: the state line (why a badge is NOT in the shade), Open (the
+     * badge's own tap) and Launch (put it back — a swiped or cleared badge
+     * has nothing to render, so a dead badge is just its name and this button).
      */
     private fun badgeBox(ctx: Context, b: BadgeDeclaration.Badge): View {
         val p = LauncherPalette.of(ctx)
@@ -115,19 +120,14 @@ class PushFragment : Fragment() {
                 it.copy(state = BadgeServices.State.DEAD, reason = getString(R.string.push_not_posted, b.channel))
             else it
         }
-        val ex = live?.extras
-        val shown = listOfNotNull(
-            ex?.getCharSequence(Notification.EXTRA_SUB_TEXT),
-            ex?.getCharSequence(Notification.EXTRA_BIG_TEXT) ?: ex?.getCharSequence(Notification.EXTRA_TEXT),
-        ).joinToString("\n").takeIf { it.isNotBlank() }
-        val shownTitle = ex?.getCharSequence(Notification.EXTRA_TITLE)?.toString()
-
-        val icon = ImageView(ctx).apply {
-            setImageResource(Sections.iconResFor(ctx, b.icon))
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            layoutParams = LinearLayout.LayoutParams(dp(ICON_DP), dp(ICON_DP)).apply { marginEnd = dp(12) }
-            imageTintList = android.content.res.ColorStateList.valueOf(p.textPrimary)
+        val col = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(10), 0, dp(10))
         }
+        val real = live?.let { BadgeServices.view(ctx, it, col) }
+        if (real != null) col.addView(real) else col.addView(TextView(ctx).apply {
+            text = b.label; textSize = 16f; setTextColor(p.textPrimary)
+        })
 
         val stateColour = when (st.state) {
             BadgeServices.State.LIVE -> p.accent
@@ -145,51 +145,38 @@ class PushFragment : Fragment() {
                 BadgeServices.State.NO_SERVICE -> R.string.push_state_no_service
             },
         )
-
-        val texts = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            addView(TextView(ctx).apply {
-                text = shownTitle ?: b.label; textSize = 16f; setTextColor(p.textPrimary)
-            })
-            if (shown != null) addView(TextView(ctx).apply {
-                text = shown; textSize = 12f; setTextColor(p.textSecondary)
-            })
-            addView(TextView(ctx).apply {
-                text = "$stateLabel · ${st.reason}"
-                textSize = 12f
-                setTextColor(stateColour)
-            })
-        }
+        col.addView(TextView(ctx).apply {
+            text = "${b.label} · $stateLabel · ${st.reason}"
+            textSize = 12f
+            setTextColor(stateColour)
+        })
 
         val tap = live?.contentIntent
-        val launch = when {
-            tap != null -> Button(ctx).apply {
+        col.addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            if (tap != null) addView(Button(ctx).apply {
                 text = getString(R.string.push_open)
                 setOnClickListener { runCatching { tap.send() } }
-            }
-            st.state == BadgeServices.State.DEAD -> Button(ctx).apply {
-                text = getString(R.string.push_start)
-                setOnClickListener { applyLive(ctx) }
-            }
-            else -> null
-        }
+            })
+            addView(Button(ctx).apply {
+                text = getString(R.string.push_launch)
+                setOnClickListener { launched(ctx, mapOf(b to BadgeServices.launch(ctx, b))) }
+            })
+        })
+        return col
+    }
 
-        // ONE announcement per box — the icon and the three lines are one fact
-        // about one badge, not four things to tab through.
-        for (child in listOf<View>(icon, texts)) {
-            child.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        }
-
-        return LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(10), 0, dp(10))
-            isFocusable = true
-            contentDescription = "${shownTitle ?: b.label}. ${shown.orEmpty()} $stateLabel. ${st.reason}"
-            addView(icon)
-            addView(texts)
-            launch?.let { addView(it) }
-        }
+    /** Launch result → one toast (a refusal is never silent), then redraw once
+     *  the owner has had a moment to post. */
+    private fun launched(ctx: Context, results: Map<BadgeDeclaration.Badge, String?>) {
+        val refused = results.filterValues { it != null }
+        Toast.makeText(
+            ctx,
+            if (refused.isEmpty()) getString(R.string.push_launched, results.size)
+            else refused.entries.joinToString("\n") { "${it.key.label}: ${it.value}" },
+            Toast.LENGTH_LONG,
+        ).show()
+        root.postDelayed({ if (isAdded) rebuild() }, REBUILD_DELAY_MS)
     }
 
     // ──────────────────── Section 2: the customization ───────────────────
@@ -313,7 +300,7 @@ class PushFragment : Fragment() {
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     companion object {
-        private const val ICON_DP = 28
+        private const val REBUILD_DELAY_MS = 1200L
 
         fun newInstance(): PushFragment = PushFragment()
     }

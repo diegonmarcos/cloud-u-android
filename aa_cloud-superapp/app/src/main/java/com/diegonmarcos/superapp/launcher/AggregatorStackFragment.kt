@@ -1383,10 +1383,11 @@ class AggregatorStackFragment : Fragment(),
         // panel did: the launcher badge and this list must not disagree. Note
         // this DESTROYS system dismissal state rather than recording it, which
         // is why no "Dismissed" filter is offered anywhere on this page — it
-        // would read a field nothing writes.
+        // would read a field nothing writes. #535: NOT the declared badges — a
+        // bare cancelAll() removed Media and Alerts from the shade every time
+        // this page drew, and their producers never re-posted them.
         runCatching {
-            (ctx.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
-                as? android.app.NotificationManager)?.cancelAll()
+            com.diegonmarcos.superapp.notificationcenter.BadgeServices.clearNonBadges(ctx)
         }
 
         body.addView(shadeLabel(ctx, "IN-APP FEED"))

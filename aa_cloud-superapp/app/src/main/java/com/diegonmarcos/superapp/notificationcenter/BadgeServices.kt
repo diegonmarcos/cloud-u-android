@@ -10,6 +10,8 @@ import android.content.Intent
 import android.provider.Settings
 import android.util.Base64
 import android.util.Log
+import android.view.View
+import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.notificationcenter.BadgeDeclaration.Badge
@@ -107,6 +109,51 @@ object BadgeServices {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
+    /**
+     * #535 — "Keep it pinned (ongoing)", read where it matters: at POST time.
+     * The Push pane has always offered this switch on every badge, but only
+     * MediaProxy ever read it — the other six hard-coded `setOngoing(true)`, so
+     * the switch was decoration. Every producer now asks here. An id the
+     * declaration does not know stays pinned, which is what they all did before.
+     */
+    fun pinned(ctx: Context, badgeId: String): Boolean =
+        declared.firstOrNull { it.id == badgeId }?.let { BadgeCustomization.isPersistent(ctx, it) } ?: true
+
+    /**
+     * #535 — Launch: put this badge back in the shade. A bare start of the
+     * owning service lands in its onStartCommand, which re-posts (the same
+     * re-entry the delete intent uses). Returns why it did NOT launch, or null.
+     * A badge switched off, missing a grant or ownerless is refused with its
+     * status sentence rather than started against the owner's own switch.
+     */
+    fun launch(ctx: Context, b: Badge): String? {
+        val s = status(ctx, b)
+        return when (s.state) {
+            State.DISABLED, State.BLOCKED, State.NO_SERVICE -> s.reason
+            else -> if (start(ctx.applicationContext, b.service)) null
+                    else "Could not start ${simpleName(b.service)}."
+        }
+    }
+
+    /** Launch every declared badge; the map is badge -> refusal reason (null = launched). */
+    fun launchAll(ctx: Context): Map<Badge, String?> =
+        BadgeDeclaration.badges(declared).associateWith { launch(ctx, it) }
+
+    /**
+     * #535 — clear this app's notifications EXCEPT the declared badges. The
+     * in-app Cloud notifications page used to call `NotificationManager.cancelAll()`
+     * every time it drew, which wipes every non-foreground-service badge
+     * (Media and Alerts are posted with plain `notify`), and their producers
+     * never re-post because they dedupe against what they last posted.
+     */
+    fun clearNonBadges(ctx: Context) {
+        val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val keep = BadgeDeclaration.badges(declared).map { it.channel }.toSet()
+        for (sbn in nm.activeNotifications) {
+            if (sbn.notification.channelId !in keep) nm.cancel(sbn.tag, sbn.id)
+        }
+    }
+
     // ── What the Push pane shows ─────────────────────────────────────────
 
     /**
@@ -129,6 +176,19 @@ object BadgeServices {
         mine.firstOrNull { it.flags and Notification.FLAG_GROUP_SUMMARY != 0 } ?: mine.firstOrNull()
     }.getOrNull()
 
+
+    /**
+     * #535 — the badge's OWN view: the RemoteViews the platform builds from the
+     * posted notification, the same template the shade inflates from the same
+     * Notification. The pane has no renderer of its own, so it cannot drift
+     * from the shade; a producer's builder is the one declaration of what a
+     * badge looks like. The expanded layout, as that is what carries the
+     * action row. Null if the platform cannot build one.
+     */
+    fun view(ctx: Context, n: Notification, parent: ViewGroup): View? = runCatching {
+        val b = Notification.Builder.recoverBuilder(ctx, n)
+        (b.createBigContentView() ?: b.createContentView()).apply(ctx, parent)
+    }.getOrNull()
 
     fun statuses(ctx: Context): List<Status> =
         BadgeDeclaration.badges(declared).map { status(ctx, it) }

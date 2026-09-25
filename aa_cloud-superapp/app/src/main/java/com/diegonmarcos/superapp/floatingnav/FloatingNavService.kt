@@ -91,6 +91,18 @@ class FloatingNavService : Service() {
                 intent.getStringExtra(EXTRA_TARGET)?.let { dispatch(it, "") }
             }
             ACTION_RESET_POSITION -> main.post { resetPosition() }
+            // #535: a BARE start is BadgeServices.launch (or the platform's sticky
+            // restart) — put back every badge this service owns. Media and Alerts
+            // dedupe against what they last posted, so without this a badge that
+            // was removed from the shade is never re-posted while the service runs.
+            null -> main.post {
+                runCatching { media.repost() }
+                runCatching { infos.refresh() }
+                runCatching {
+                    (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
+                        .notify(NOTIF_ID, buildNotification())
+                }
+            }
             ACTION_RENOTIFY -> {
                 // User swiped the (supposedly persistent) notification away on
                 // Android 14+ — re-post it immediately.
@@ -508,6 +520,7 @@ class FloatingNavService : Service() {
                 ).apply { description = "Cloud SuperApp floating nav + quick actions."; setShowBadge(false) })
             }
         }
+        val pinned = com.diegonmarcos.superapp.notificationcenter.BadgeServices.pinned(this, QUICK_ACTIONS_BADGE_ID)
         val open = PendingIntent.getActivity(
             this, 0,
             (packageManager.getLaunchIntentForPackage(packageName) ?: Intent()).apply {
@@ -523,12 +536,12 @@ class FloatingNavService : Service() {
             .setColor(0xFF0A0A0A.toInt())
             .setContentTitle("Cloud SA - Quick Actions")
             .setContentText("Quick actions")
-            .setOngoing(true).setOnlyAlertOnce(true)
+            .setOngoing(pinned).setOnlyAlertOnce(true)
             .setContentIntent(open)
             // Android 14+ lets the user swipe-dismiss even an ongoing FGS
             // notification; re-post it immediately when that happens so it
             // stays effectively un-removable.
-            .setDeleteIntent(serviceAction(ACTION_RENOTIFY))
+            .apply { if (pinned) setDeleteIntent(serviceAction(ACTION_RENOTIFY)) }
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             // Own group so Android doesn't auto-bundle the NC notifications.
@@ -539,7 +552,7 @@ class FloatingNavService : Service() {
         b.setStyle(androidx.media.app.NotificationCompat.MediaStyle().setShowActionsInCompactView(*compact))
         return b.build().apply {
             // Persistent: blocks swipe-to-dismiss + "clear all".
-            flags = flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT
+            if (pinned) flags = flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT
         }
     }
 
@@ -575,6 +588,8 @@ class FloatingNavService : Service() {
     companion object {
         private const val CHANNEL_ID = "floating_nav"
         private const val NOTIF_ID = 0xF1
+        /** The Quick Actions badge's id in build.json::ui.notification_center.producers. */
+        private const val QUICK_ACTIONS_BADGE_ID = "floating_nav_quick_actions"
         const val ACTION_SHOW_MENU = "com.diegonmarcos.superapp.floatingnav.SHOW_MENU"
         internal const val ACTION_NAV = "com.diegonmarcos.superapp.floatingnav.NAV_ACTION"
         private const val ACTION_RENOTIFY = "com.diegonmarcos.superapp.floatingnav.RENOTIFY"

@@ -167,6 +167,7 @@ class MarketsBadgeService : Service() {
             reasons)
             .joinToString("\n")
 
+        val pinned = BadgeServices.pinned(this, BADGE_ID)
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_notify)
             .setColor(0xFF0A0A0A.toInt())
@@ -175,8 +176,8 @@ class MarketsBadgeService : Service() {
             .setSubText(getString(R.string.badge_markets_source))
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
-            .setOngoing(true)
-            .setDeleteIntent(BadgeServices.repostOnDismiss(this, NOTIF_ID))
+            .setOngoing(pinned)
+            .apply { if (pinned) setDeleteIntent(BadgeServices.repostOnDismiss(this@MarketsBadgeService, NOTIF_ID)) }
             .setGroup("nc_markets")
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)

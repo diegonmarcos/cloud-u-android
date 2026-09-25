@@ -190,6 +190,7 @@ class WeatherBadgeService : Service() {
             String.format(Locale.US, "%.0f", today.maxC),
             String.format(Locale.US, "%.0f", today.minC))
 
+        val pinned = BadgeServices.pinned(this, BADGE_ID)
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_notify)
             .setColor(0xFF0A0A0A.toInt())
@@ -197,8 +198,8 @@ class WeatherBadgeService : Service() {
             .setContentText(text)
             .setSubText("Cloud SA - Weather")
             .setOnlyAlertOnce(true)
-            .setOngoing(true)
-            .setDeleteIntent(BadgeServices.repostOnDismiss(this, NOTIF_ID))
+            .setOngoing(pinned)
+            .apply { if (pinned) setDeleteIntent(BadgeServices.repostOnDismiss(this@WeatherBadgeService, NOTIF_ID)) }
             // Weather is not sensitive — unlike the Health badge this one may
             // sit on the lockscreen, which is exactly where a forecast helps.
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

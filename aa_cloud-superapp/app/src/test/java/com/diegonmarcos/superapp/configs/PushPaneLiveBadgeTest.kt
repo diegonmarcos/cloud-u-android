@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.R
+import com.diegonmarcos.superapp.notificationcenter.BadgeCustomization
 import com.diegonmarcos.superapp.notificationcenter.BadgeDeclaration
 import com.diegonmarcos.superapp.notificationcenter.BadgeServices
 import org.junit.Assert.assertEquals
@@ -97,6 +98,12 @@ class PushPaneLiveBadgeTest {
         val title = n.extras.getCharSequence(Notification.EXTRA_TITLE).toString()
         val text = n.extras.getCharSequence(Notification.EXTRA_TEXT).toString()
         assertTrue("posted title '$title' not rendered; pane shows $texts", texts.contains(title))
+        // The platform template drew it, not a TextView this fragment made: only
+        // the template's title carries android.R.id.title.
+        assertTrue(
+            "title '$title' is not in the notification template's own title view — the pane drew it itself",
+            all(view).any { it.id == android.R.id.title && (it as? TextView)?.text?.toString() == title },
+        )
         assertTrue("posted text '$text' not rendered; pane shows $texts", texts.any { it.contains(text) })
         if (b.shows.isNotBlank())
             assertFalse("the pane still prints the declared description", texts.any { it.contains(b.shows) })
@@ -139,5 +146,30 @@ class PushPaneLiveBadgeTest {
         val texts = all(render()).filterIsInstance<TextView>().map { it.text.toString() }
         assertTrue("${b.id}: running and posted, not LIVE: $texts",
             stateRow(texts, b, R.string.push_state_live).isNotEmpty())
+    }
+
+    /** Launch all — the way back from a badge that was cleared: every declared
+     *  badge that may launch has its owning service started. */
+    @Test
+    fun `Launch all starts the owner of every launchable badge`() {
+        val b = badge()
+        val view = render()
+        val launchAll = all(view).filterIsInstance<Button>()
+            .firstOrNull { it.text == ctx.getString(R.string.push_launch_all) }
+        assertNotNull("no Launch all button", launchAll)
+        launchAll!!.performClick()
+        val app = shadowOf(ctx as Application)
+        val started = generateSequence { app.nextStartedService }.mapNotNull { it.component?.className }.toSet()
+        assertTrue("${b.id}: its owner ${b.service} was not started; started $started", b.service in started)
+    }
+
+    /** "Keep it pinned" is read at post time: on by default, and switching it
+     *  off is what a producer sees. It was decoration for six of seven badges. */
+    @Test
+    fun `pinned follows the Keep it pinned switch`() {
+        val b = badge()
+        assertTrue("${b.id} is declared persistent, so it pins by default", BadgeServices.pinned(ctx, b.id))
+        BadgeCustomization.set(ctx, b, BadgeCustomization.KEY_PERSISTENT, false)
+        assertFalse("${b.id}: switched off, still pinned", BadgeServices.pinned(ctx, b.id))
     }
 }

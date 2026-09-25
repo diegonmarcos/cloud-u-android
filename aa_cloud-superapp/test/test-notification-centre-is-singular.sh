@@ -194,14 +194,25 @@ else
     fi
 fi
 
-# T5 — cancelAll() destroys the system dismissal state for the whole app. Two
-# surfaces calling it was half of why #497 was a bug. One is the correct end
-# state; zero means the launcher badge stops clearing.
-n_cancel=$(grep -rh 'cancelAll()' --include='*.kt' "$SRC" | grep -c .)
-if [ "$n_cancel" -eq 1 ]; then
-    ok "T5 exactly one NotificationManager.cancelAll() in the app sources"
+# T5 — the app's dismissal state is cleared by exactly ONE caller, and that
+# caller must NOT be a bare NotificationManager.cancelAll(). A bare cancelAll()
+# destroys the whole app's dismissal state (two surfaces calling it was half of
+# why #497 was a bug) AND removes every declared badge that is not held by a
+# foreground service — Media and Alerts are plain notify(), so each render of
+# the Cloud page emptied them and their producers, deduping against what they
+# last posted, never re-posted (#535). The one clear is BadgeServices
+# .clearNonBadges, which spares every channel the declaration marks badge=true.
+# Comment lines are dropped first: prose about cancelAll() is not a call.
+CODE="$(grep -rh --include='*.kt' -E 'cancelAll\(\)|clearNonBadges\(' "$SRC" \
+        | grep -v -E '^[[:space:]]*(//|\*|/\*)')"
+n_bare=$(printf '%s\n' "$CODE" | grep -c 'cancelAll()')
+n_scoped=$(printf '%s\n' "$CODE" | grep 'clearNonBadges(' | grep -vc 'fun clearNonBadges')
+if [ "$n_bare" -ne 0 ]; then
+    bad "T5 $n_bare bare NotificationManager.cancelAll() call(s) — that wipes the declared badges that are not foreground-service notifications (Media, Alerts); use BadgeServices.clearNonBadges"
+elif [ "$n_scoped" -eq 1 ]; then
+    ok "T5 exactly one clear of the app's notifications, and it spares the declared badges (clearNonBadges)"
 else
-    bad "T5 $n_cancel call(s) to NotificationManager.cancelAll() — one is the whole app's dismissal state, so a second caller destroys what the first would have shown (zero means the badge never clears)"
+    bad "T5 $n_scoped caller(s) of clearNonBadges — one is the correct end state; a second destroys the dismissal state the first would have shown (zero means the launcher badge never clears)"
 fi
 
 # T6 — the deleted shade resolves to nothing, anywhere: no source file, no

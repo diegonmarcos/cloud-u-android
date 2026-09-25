@@ -222,7 +222,9 @@
     <string name="push_state_no_service">NO OWNER</string>
     <string name="push_not_posted">Its service is running but nothing is posted on channel %1$s — swiped away, or the channel is blocked.</string>
     <string name="push_open">Open</string>
-    <string name="push_start">Start</string>
+    <string name="push_launch">Launch</string>
+    <string name="push_launch_all">Launch all badges</string>
+    <string name="push_launched">Launched %1$d badge(s).</string>
 
     <!-- Badge faces. -->
     <string name="badge_media_idle_title">Nothing playing</string>

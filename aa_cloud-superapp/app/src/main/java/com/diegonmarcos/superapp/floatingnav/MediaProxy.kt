@@ -85,6 +85,10 @@ class MediaProxy(private val ctx: Context) {
     private fun showWhenIdle(): Boolean =
         decl?.let { BadgeCustomization.bool(ctx, it, "show_when_idle") } ?: false
 
+    /** Forget what was posted and re-post now — the badge was removed from the
+     *  shade behind the dedupe's back (Launch, or a stray cancel). */
+    fun repost() { lastKey = null; refresh() }
+
     /** (Re)post the media notification for the current session, or cancel it. */
     fun refresh() {
         val c = activeController()
@@ -155,7 +159,7 @@ class MediaProxy(private val ctx: Context) {
             .setContentText(ctx.getString(R.string.badge_media_idle_text))
             .setSubText("Cloud SA - Media")
             .setOnlyAlertOnce(true)
-            .setOngoing(true)
+            .setOngoing(persistent())
             .setDeleteIntent(pi(REPOST))
             .setGroup("nc_media")
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

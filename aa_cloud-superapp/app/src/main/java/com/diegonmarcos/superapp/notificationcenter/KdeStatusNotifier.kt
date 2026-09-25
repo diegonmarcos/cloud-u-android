@@ -26,8 +26,12 @@ import com.diegonmarcos.superapp.kdeconnect.KdePluginPrefs
 object KdeStatusNotifier {
     const val CHANNEL_ID = "kde_status"
 
+    /** This badge's id in build.json::ui.notification_center.producers. */
+    const val BADGE_ID = "kde_status"
+
     /** Build the current "Cloud SA - KDE" notification from live KDE state. */
     fun build(ctx: Context): Notification {
+        val pinned = BadgeServices.pinned(ctx, BADGE_ID)
         val cfg = KdeConnectConfig.get()
         val prefs = KdePluginPrefs(ctx)
         val on = cfg.plugins.count { prefs.isEnabled(it.id) }
@@ -69,8 +73,8 @@ object KdeStatusNotifier {
             .setContentText(line)
             .setSubText(sub)
             .setContentIntent(sharePi)
-            .setDeleteIntent(KdeStatusService.renotifyPi(ctx))
-            .setOngoing(true)
+            .apply { if (pinned) setDeleteIntent(KdeStatusService.renotifyPi(ctx)) }
+            .setOngoing(pinned)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setGroup("nc_kde")
@@ -90,7 +94,7 @@ object KdeStatusNotifier {
             .apply {
                 // Reinforce persistence (parity with FloatingNavService): block
                 // swipe-to-dismiss + "clear all".
-                flags = flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT
+                if (pinned) flags = flags or Notification.FLAG_NO_CLEAR or Notification.FLAG_ONGOING_EVENT
             }
     }
 
