@@ -1,14 +1,17 @@
 package com.diegonmarcos.superapp.ui
 
 import android.app.Application
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.diegonmarcos.superapp.bottomnav.BottomNavTags
 import com.diegonmarcos.superapp.launcher.Sections
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -37,6 +40,7 @@ import com.diegonmarcos.superapp.bottomnav.R as NavR
  *   M6 the end capsules are bottom_nav_end_inset from the island's ends, both sides
  *   M7 the island is bottom_nav_width_fraction of the shell's width, centred
  *   M8 selecting an item does not move any icon or label
+ *   M10 every label still fits its capsule at 80% width (no ellipsis, no overflow)
  *   M9 the shell pads for the system bars itself, so the island clears ONE dimen and
  *      not the bar a second time, even when a nav-bar inset arrives
  */
@@ -108,6 +112,33 @@ class BottomNavGeometryTest : ShellIslandHarness() {
         val isl = island()
         near("M7 island width", nav.width * fraction, isl.width)
         near("M7 island is centred", nav.width / 2f, isl.center.x)
+        // #536: 10% of the screen clear on each side, MEASURED and printed so the run log carries
+        // the numbers (#498), not just a green.
+        val d = res.displayMetrics.density
+        val clear = nav.width * (1 - fraction) / 2f
+        near("M7 clear space left of the island", clear, isl.left)
+        near("M7 clear space right of the island", clear, nav.width - isl.right)
+        println(
+            "#536 measured: screen ${nav.width}px = ${nav.width / d}dp (density $d); " +
+                "gap left ${isl.left}px = ${isl.left / d}dp, right ${nav.width - isl.right}px = " +
+                "${(nav.width - isl.right) / d}dp; bar ${isl.width}px = ${isl.width / d}dp " +
+                "(${isl.width / nav.width * 100}% of the screen)",
+        )
+    }
+
+    @Test
+    fun `M10 every shell label still fits its capsule in the 80 percent bar`() {
+        showShellNav(first)
+        for (id in ids) {
+            val out = mutableListOf<TextLayoutResult>()
+            compose.onNodeWithTag(BottomNavTags.label(id), useUnmergedTree = true).fetchSemanticsNode()
+                .config[SemanticsActions.GetTextLayoutResult].action!!.invoke(out)
+            val text = out.single()
+            val why = "label ${label(id).width}px in a ${cell(id).width}px capsule, text ${text.size.width}px"
+            println("#536 label $id: $why")
+            assertFalse("#536 label $id overflows: $why", text.hasVisualOverflow)
+            assertFalse("#536 label $id is ellipsized: $why", text.isLineEllipsized(0))
+        }
     }
 
     @Test
