@@ -155,7 +155,7 @@ public fun BottomNavIsland(
     Box(modifier.fillMaxWidth().padding(bottom = bottom), contentAlignment = Alignment.BottomCenter) {
         Row(
             Modifier
-                .fillMaxWidth(widthFraction / 2)
+                .fillMaxWidth(widthFraction)
                 .testTag(TAG_ISLAND)
                 .clip(bottomNavPillShape)
                 .background(colorResource(R.color.bottom_nav_island_fill))
