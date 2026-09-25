@@ -26,4 +26,16 @@
     <item name="section_pane_1"       type="id" />
     <item name="section_pane_2"       type="id" />
     <item name="section_pane_3"       type="id" />
+
+    <!-- #570 Configs ▸ Profile ▸ Fleet cockpit. Stable ids so a layout-tree
+         test (FleetCockpitViewTest) can find the hero, the per-section cards
+         and each card's shared StatusLight without knowing how they are built.
+         Every card carries cockpit_card with its section id as the tag. -->
+    <item name="cockpit_hero"         type="id" />
+    <item name="cockpit_device_orb"   type="id" />
+    <item name="cockpit_hero_light"   type="id" />
+    <item name="cockpit_card"         type="id" />
+    <item name="cockpit_card_badge"   type="id" />
+    <item name="cockpit_card_light"   type="id" />
+    <item name="cockpit_card_body"    type="id" />
 </resources>

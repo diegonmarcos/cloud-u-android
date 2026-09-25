@@ -413,6 +413,17 @@
     <string name="vault_cockpit_apps_export">Exportar la lista de apps de este dispositivo</string>
     <string name="vault_cockpit_apps_exported">✓ %1$d apps exportadas</string>
     <string name="vault_cockpit_raw">Todo lo demás (en bruto)</string>
+    <string name="vault_cockpit_hero_title_empty">Cabina de flota</string>
+    <string name="vault_cockpit_hero_empty">Conecta una vez y las secciones de abajo se encienden frente a este dispositivo.</string>
+    <string name="vault_cockpit_connect_cta">Conectar la bóveda</string>
+    <string name="vault_cockpit_hero_unpicked">¿Qué dispositivo es este?</string>
+    <string name="vault_cockpit_hero_identity">malla %1$s · %2$s · elegido de la bóveda, nada escrito</string>
+    <string name="vault_cockpit_hero_summary">%1$d de %2$d secciones configuradas en este dispositivo</string>
+    <string name="vault_cockpit_card_summary">%1$d coinciden · %2$d difieren · %3$d pendientes</string>
+    <string name="vault_cockpit_card_unobserved_summary">%1$d declaradas · el lado del dispositivo no se puede leer desde aquí</string>
+    <string name="vault_cockpit_card_absent_summary">no está en esta exportación de la bóveda</string>
+    <string name="vault_cockpit_card_raw_summary">solo lectura — nada comparado</string>
+    <string name="vault_cockpit_card_toggle">Mostrar u ocultar los detalles</string>
     <string name="vault_connect_browser">Iniciar sesión con el navegador (OWebAuth)</string>
     <string name="vault_connect_browser_caption">Inicia sesión en Authelia abajo. La cookie de sesión de %1$s se guarda en memoria para las dos llamadas a la bóveda y muere con la app; nada se escribe en disco. Vuelve a iniciar sesión para renovarla.</string>
     <string name="vault_connect_use_session">Usar esta sesión</string>

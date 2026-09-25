@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.network.WireGuardPrefs
+import com.diegonmarcos.superapp.profile.VaultCockpit.State as S
+import com.diegonmarcos.superapp.ui.StatusLight.State as L
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -171,6 +173,60 @@ class VaultCockpitTest {
         }
         assertEquals(layout.sections.size, layout.sections.map { it.id }.distinct().size)
         assertTrue(VaultCockpit.consumed(layout).containsAll(layout.sections.flatMap { it.vault }))
+    }
+
+    // ── #570 reopened: the cockpit's lights ──────────────────────────────
+
+    @Test fun `a card's light is the shared StatusLight state its rows justify`() {
+        fun row(s: S) = VaultCockpit.Row("r", "d", "v", s)
+        assertEquals(L.UNKNOWN, VaultCockpit.sectionLight(emptyList()))
+        assertEquals(L.ON, VaultCockpit.sectionLight(listOf(row(S.MATCH), row(S.MATCH))))
+        assertEquals(L.ON, VaultCockpit.sectionLight(listOf(row(S.MATCH), row(S.PENDING))))
+        assertEquals(L.UNKNOWN, VaultCockpit.sectionLight(listOf(row(S.PENDING))))
+        assertEquals(L.OFF, VaultCockpit.sectionLight(listOf(row(S.MATCH), row(S.DIFFERS))))
+        assertEquals(L.OFF, VaultCockpit.sectionLight(listOf(row(S.MATCH), row(S.ABSENT), row(S.PENDING))))
+        // A section this app cannot observe never earns a colour, whatever the rows say.
+        assertEquals(L.UNVERIFIABLE, VaultCockpit.sectionLight(listOf(row(S.MATCH)), observed = false))
+        assertEquals(L.UNVERIFIABLE, VaultCockpit.sectionLight(emptyList(), observed = false))
+        // The hero sums the cards: one red is red, all green is green, else nobody can say.
+        assertEquals(L.UNKNOWN, VaultCockpit.overallLight(emptyList()))
+        assertEquals(L.ON, VaultCockpit.overallLight(listOf(L.ON, L.ON)))
+        assertEquals(L.OFF, VaultCockpit.overallLight(listOf(L.ON, L.OFF, L.UNKNOWN)))
+        assertEquals(L.UNKNOWN, VaultCockpit.overallLight(listOf(L.ON, L.UNKNOWN)))
+        assertEquals(L.UNKNOWN, VaultCockpit.overallLight(listOf(L.ON, L.UNVERIFIABLE)))
+        val t = VaultCockpit.tally(listOf(row(S.MATCH), row(S.MATCH), row(S.DIFFERS), row(S.ABSENT), row(S.PENDING)))
+        assertEquals(VaultCockpit.Tally(2, 2, 1), t)
+    }
+
+    @Test fun `the layout carries a badge icon per section, the observed flag and the device icons`() {
+        val layout = VaultCockpit.parseLayout(JSONObject("""{
+            "sections":[{"id":"a","label":"A","vault":["x"],"icon":"ic_mail"},
+                        {"id":"b","label":"B","vault":["y"],"icon":"ic_keyboard","observed":false}],
+            "device_icons":{"phone":"ic_p","_default":"ic_d"}}"""))
+        assertEquals("ic_mail", layout.sections[0].icon)
+        assertTrue(layout.sections[0].observed)
+        assertTrue(!layout.sections[1].observed)
+        val b = bundle()
+        val galaxy = VaultCockpit.devices(b).first { it.id == "galaxy" }
+        val surface = VaultCockpit.devices(b).first { it.id == "surface" }
+        assertEquals("phone", galaxy.type)
+        assertEquals("ic_p", VaultCockpit.deviceIcon(layout, galaxy))
+        assertEquals("the notebook has no entry, so the default", "ic_d", VaultCockpit.deviceIcon(layout, surface))
+        assertEquals("nothing chosen yet is the default too", "ic_d", VaultCockpit.deviceIcon(layout, null))
+        assertEquals("", VaultCockpit.deviceIcon(VaultCockpit.Layout(emptyList(), emptyMap()), galaxy))
+        // The BAKED layout: every section has an icon, and it resolves to a real drawable — not the fallback.
+        val fallback = ctx.resources.getIdentifier("ic_link_tile", "drawable", ctx.packageName)
+        VaultCockpit.layout.sections.forEach { s ->
+            assertTrue("${s.id} has no icon", s.icon.isNotBlank())
+            val res = ctx.resources.getIdentifier(s.icon, "drawable", ctx.packageName)
+            assertTrue("${s.id}: icon ${s.icon} is not a drawable of this app", res != 0 && res != fallback)
+        }
+        assertTrue("the baked layout names a default device icon", VaultCockpit.layout.deviceIcons.containsKey("_default"))
+        VaultCockpit.layout.deviceIcons.values.forEach {
+            assertTrue("device icon $it is not a drawable", ctx.resources.getIdentifier(it, "drawable", ctx.packageName) != 0)
+        }
+        assertTrue("at least one section is declared unobservable (the keyboard owns its lists)",
+            VaultCockpit.layout.sections.any { !it.observed })
     }
 
     @Test fun `the chosen device is the only thing stored`() {

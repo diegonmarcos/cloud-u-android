@@ -6225,14 +6225,16 @@
       "known_schema_versions": [1],
       "cockpit": {
         "_doc": "#570 The Fleet tab: which cockpit sections exist, in what order, and which VAULT sections (configs/schema.json ids) feed each. Labels live here, not in Kotlin. A vault section listed under no cockpit section is still shown raw at the bottom of the tab, so a section added in the vault is visible before this list learns it. ai_tokens maps a vault `ai.tokens.<item>` to the DEVICE provider id it feeds (the keyboard's keyboard_ai registry, ab_cloud-libs-shared/build.json): the two OpenRouter tokens the vault holds are the same provider seen from two containers, so only one is mapped - mapping both would have the second overwrite the first on every apply. The device itself is CHOSEN from the vault's electronics section (every entry with a wg_peer), never typed.",
+        "_doc_cards": "#570 reopened: the Fleet tab is a COCKPIT - a hero card for the chosen device, then one card per section here, in this order. `icon` is the drawable each card's round badge shows (resolved by Sections.iconResFor, the same name->drawable lookup every declared tile uses; an unknown name falls back to ic_link_tile). `observed: false` marks a section whose DEVICE side this app cannot read (the keyboard owns its lists), so its light is the shared StatusLight's 'Not verifiable' instead of a green or red it could not justify. `device_icons` maps the vault's electronics `type` (notebook, phone, ...) to the hero orb's drawable; `_default` covers a type this list has not learnt and the empty state before any device is chosen.",
         "sections": [
-          {"id": "mail", "label": "Mail", "vault": ["mail"]},
-          {"id": "keyboard", "label": "Keyboard & Clipboards", "vault": ["autocomplete"]},
-          {"id": "mesh", "label": "Mesh", "vault": ["mesh", "electronics"]},
-          {"id": "drive", "label": "Drive (private repos)", "vault": ["git"]},
-          {"id": "ai", "label": "AI", "vault": ["ai"]},
-          {"id": "apps", "label": "Apps", "vault": ["apps"]}
+          {"id": "mail", "label": "Mail", "vault": ["mail"], "icon": "ic_mail"},
+          {"id": "keyboard", "label": "Keyboard & Clipboards", "vault": ["autocomplete"], "icon": "ic_keyboard", "observed": false},
+          {"id": "mesh", "label": "Mesh", "vault": ["mesh", "electronics"], "icon": "ic_wg"},
+          {"id": "drive", "label": "Drive (private repos)", "vault": ["git"], "icon": "ic_drive"},
+          {"id": "ai", "label": "AI", "vault": ["ai"], "icon": "ic_ai_sparkle"},
+          {"id": "apps", "label": "Apps", "vault": ["apps"], "icon": "ic_home_apps"}
         ],
+        "device_icons": {"notebook": "ic_device_desktop", "phone": "ic_ctl_mobile_data", "_default": "ic_device_desktop"},
         "ai_tokens": {"openrouter_my_ai_api": "openrouter"}
       }
     },

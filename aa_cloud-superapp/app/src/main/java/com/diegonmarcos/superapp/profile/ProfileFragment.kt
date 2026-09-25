@@ -14,7 +14,9 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.launcher.AppTabsStyle
+import com.diegonmarcos.superapp.launcher.Sections
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
+import com.diegonmarcos.superapp.ui.StatusLight
 import com.diegonmarcos.superapp.ui.snack
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
@@ -22,10 +24,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Configs → Profile — the contact card, bound to [ProfilePrefs]. Auto-saves on
- * every text change (no explicit Save button) — the drawer header reads from
- * the same prefs on every open, so changes are visible immediately next time
- * the drawer slides in.
+ * Configs → Profile — the FLEET COCKPIT first, the contact card behind it.
+ *
+ * The page opens on the Fleet tab (#570, reopened): a hero card for the device
+ * this phone is, then one card per cockpit section — Mail, Keyboard &
+ * Clipboards, Mesh, Drive, AI, Apps — each with the shared [StatusLight] and
+ * its own Apply. The chrome is [FleetCockpitView]; the comparisons and the
+ * applies are [VaultCockpit], unchanged from the first delivery. Connect (how
+ * the vault bundle gets here) and Infos (the contact card) are the other two
+ * columns of the same strip.
+ *
+ * The contact card is bound to [ProfilePrefs] and auto-saves on every text
+ * change (no explicit Save button) — the drawer header reads from the same
+ * prefs on every open, so changes are visible immediately next time the
+ * drawer slides in.
  *
  * MANDATORY NAME + EMAIL, enforced in three places that escalate rather than
  * block. The app stays completely usable if someone declines to fill them in;
@@ -52,12 +64,26 @@ class ProfileFragment : Fragment() {
      *  refresh it without rebuilding the form (which would drop focus). */
     private var statusBanner: TextView? = null
 
-    /** Which of the two tabs is showing. Held on the fragment so the many
-     *  detach/attach redraws below do not bounce the user back to Connect. */
-    private var selectedTab = 0
+    /** Which tab is showing. Held on the fragment so the many detach/attach
+     *  redraws below do not bounce the user off the tab they were on. Negative
+     *  until the strip is first built, at which point it becomes the Fleet
+     *  tab — the cockpit is what this page opens on. */
+    private var selectedTab = -1
 
-    /** Position of the Imported tab, read off the strip's own list. */
+    /** Position of the Fleet (imported) tab, read off the strip's own list. */
     private var importedTab = 0
+
+    /** Position of the Connect tab, for the cockpit's empty-state button. */
+    private var connectTab = 0
+
+    /** The strip itself, so the cockpit can send the owner to Connect. */
+    private var strip: TabLayout? = null
+
+    /** The cockpit hero, repainted whenever a card's light changes. */
+    private var heroViews: FleetCockpitView.Hero? = null
+
+    /** Every card's light by section id — what the hero's overall light sums. */
+    private val cardStates = linkedMapOf<String, StatusLight.State>()
 
     /** Gallery picker for the profile photo (round avatar). */
     private val picturePicker =
@@ -127,15 +153,18 @@ class ProfileFragment : Fragment() {
         }
         // A null column means a LINK, not a page — see [tabStrip]. WireGuard
         // and AI both already have a screen, and re-hosting either here would
-        // be a second copy to keep in step.
+        // be a second copy to keep in step. Fleet is FIRST and the default:
+        // the cockpit is the page, Connect is how it gets its data.
         val tabs = listOf(
+            Tab(getString(R.string.vault_tab_imported), imported),
             Tab("Connect", connect),
+            Tab("Infos", col),
             Tab("WireGuard", null, WG_ROUTE),
             Tab("AI", null, AI_ROUTE),
-            Tab("Infos", col),
-            Tab(getString(R.string.vault_tab_imported), imported),
         )
         importedTab = tabs.indexOfFirst { it.column === imported }
+        connectTab = tabs.indexOfFirst { it.column === connect }
+        if (selectedTab < 0) selectedTab = importedTab
         root.addView(tabStrip(ctx, tabs))
         root.addView(scroll)
 
@@ -374,6 +403,7 @@ class ProfileFragment : Fragment() {
         }
         show(selectedTab)
         return TabLayout(ctx).apply {
+            strip = this
             tabs.forEach { addTab(newTab().setText(it.title)) }
             tabMode = TabLayout.MODE_FIXED
             tabGravity = TabLayout.GRAVITY_FILL
@@ -642,45 +672,107 @@ class ProfileFragment : Fragment() {
     }
 
     /**
-     * The Fleet tab (#570): the device selector, then one block per cockpit
-     * section (build.json::ui.vault_connect.cockpit) comparing the vault with
-     * this device, each with its own Apply; then, raw, every vault section no
-     * cockpit section names. RENDERING WRITES NOTHING — every apply is a tap.
+     * The Fleet tab (#570, reopened): the COCKPIT.
+     *
+     * A hero card for the device this phone is — orb, name, mesh identity, the
+     * overall light and the device chooser — then one card per cockpit section
+     * (build.json::ui.vault_connect.cockpit) with the section's own light, a
+     * summary line, the comparison rows and its Apply; then one last card, raw,
+     * for every vault section no cockpit section names. The chrome is
+     * [FleetCockpitView]; the lights are the shared [StatusLight], summed per
+     * card by [VaultCockpit.sectionLight] and over the page by
+     * [VaultCockpit.overallLight]. RENDERING WRITES NOTHING — every apply is a tap.
      */
     private fun renderImported(ctx: android.content.Context, into: LinearLayout) {
         val sections = VaultConnect.Imported.last
         val bundle = VaultConnect.Imported.bundle
+        val layout = VaultCockpit.layout
+        cardStates.clear()
         if (sections == null || bundle == null) {
-            into.addView(caption(ctx, getString(R.string.vault_imported_empty)))
+            // Empty state: the same hero, saying what is missing and where to get it.
+            val hero = FleetCockpitView.hero(ctx,
+                getString(R.string.vault_cockpit_hero_title_empty),
+                getString(R.string.vault_imported_empty),
+                Sections.iconResFor(ctx, VaultCockpit.deviceIcon(layout, null)))
+            FleetCockpitView.paint(hero.light, StatusLight.State.UNKNOWN, hero.title.text.toString())
+            hero.summary.text = getString(R.string.vault_cockpit_hero_empty)
+            hero.slot.addView(pickButton(ctx, getString(R.string.vault_cockpit_connect_cta)) {
+                strip?.getTabAt(connectTab)?.select()
+            })
+            into.addView(hero.root)
             return
         }
+        val devices = VaultCockpit.devices(bundle)
+        val device = devices.firstOrNull { it.id == VaultCockpit.selectedDevice(ctx) }
+        val hero = FleetCockpitView.hero(ctx,
+            device?.label ?: getString(R.string.vault_cockpit_hero_unpicked),
+            device?.let { getString(R.string.vault_cockpit_hero_identity, it.wgIp, it.wgIpv6.ifBlank { "—" }) }
+                ?: getString(R.string.vault_cockpit_device_label),
+            Sections.iconResFor(ctx, VaultCockpit.deviceIcon(layout, device)))
+        heroViews = hero
+        into.addView(hero.root)
+        renderDeviceSelector(ctx, hero.slot, devices)
         into.addView(caption(ctx, getString(R.string.vault_cockpit_caption)))
-        val device = renderDeviceSelector(ctx, into, VaultCockpit.devices(bundle))
+
         for (section in VaultCockpit.layout.sections) {
-            into.addView(sectionHeader(ctx, section.label))
+            val card = FleetCockpitView.card(ctx, section.label, section.id,
+                Sections.iconResFor(ctx, section.icon), getString(R.string.vault_cockpit_card_toggle))
+            into.addView(card.root)
             if (section.vault.none { bundle.has(it) }) {
-                into.addView(caption(ctx, getString(R.string.vault_cockpit_section_absent, section.vault.joinToString(", "))))
+                card.body.addView(caption(ctx, getString(R.string.vault_cockpit_section_absent, section.vault.joinToString(", "))))
+                paintCard(card, emptyList(), section, getString(R.string.vault_cockpit_card_absent_summary))
                 continue
             }
             val status = TextView(ctx).apply { visibility = View.GONE; setTextIsSelectable(true) }
-            when (section.id) {
-                "mail"     -> renderMail(ctx, into, bundle, status)
-                "keyboard" -> renderRows(ctx, into, VaultCockpit.keyboardRows(bundle, getString(R.string.vault_cockpit_keyboard_device)))
-                "mesh"     -> renderMesh(ctx, into, bundle, device, status)
-                "drive"    -> renderDrive(ctx, into, bundle, status)
-                "ai"       -> renderAi(ctx, into, bundle, status)
-                "apps"     -> renderApps(ctx, into, bundle, device)
-                else       -> sections.filter { it.id in section.vault }.forEach { renderRaw(ctx, into, it) }
+            val rows: List<VaultCockpit.Row> = when (section.id) {
+                "mail"     -> renderMail(ctx, card.body, bundle, status)
+                "keyboard" -> VaultCockpit.keyboardRows(bundle, getString(R.string.vault_cockpit_keyboard_device)).also { renderRows(ctx, card.body, it) }
+                "mesh"     -> renderMesh(ctx, card.body, bundle, device, status)
+                "drive"    -> renderDrive(ctx, card.body, bundle, status)
+                "ai"       -> renderAi(ctx, card.body, bundle, status, card, section)
+                "apps"     -> renderApps(ctx, card.body, bundle, device)
+                else       -> { sections.filter { it.id in section.vault }.forEach { renderRaw(ctx, card.body, it) }; emptyList() }
             }
-            into.addView(status)
+            card.body.addView(status)
+            paintCard(card, rows, section)
         }
         val consumed = VaultCockpit.consumed(VaultCockpit.layout)
         val rest = sections.filter { it.id !in consumed }
         if (rest.isNotEmpty()) {
-            into.addView(sectionHeader(ctx, getString(R.string.vault_cockpit_raw)))
-            into.addView(caption(ctx, getString(R.string.vault_imported_caption, IMPORTED_PREVIEW_CHARS)))
-            rest.forEach { renderRaw(ctx, into, it) }
+            val raw = FleetCockpitView.card(ctx, getString(R.string.vault_cockpit_raw), RAW_CARD,
+                Sections.iconResFor(ctx, ""), getString(R.string.vault_cockpit_card_toggle))
+            FleetCockpitView.paint(raw.light, StatusLight.State.UNKNOWN, raw.label)
+            raw.summary.text = getString(R.string.vault_cockpit_card_raw_summary)
+            raw.body.addView(caption(ctx, getString(R.string.vault_imported_caption, IMPORTED_PREVIEW_CHARS)))
+            rest.forEach { renderRaw(ctx, raw.body, it) }
+            into.addView(raw.root)
         }
+    }
+
+    /**
+     * One card's light and summary from its rows, then the hero's from every
+     * card's. [summary] overrides the counted line for a card with nothing to
+     * count (a section absent from this export).
+     */
+    private fun paintCard(
+        card: FleetCockpitView.Card, rows: List<VaultCockpit.Row>,
+        section: VaultCockpit.Section, summary: String? = null,
+    ) {
+        val state = VaultCockpit.sectionLight(rows, section.observed)
+        FleetCockpitView.paint(card.light, state, card.label)
+        val t = VaultCockpit.tally(rows)
+        card.summary.text = summary
+            ?: if (section.observed) getString(R.string.vault_cockpit_card_summary, t.match, t.differ, t.pending)
+               else getString(R.string.vault_cockpit_card_unobserved_summary, rows.size)
+        cardStates[card.tag] = state
+        repaintHero()
+    }
+
+    private fun repaintHero() {
+        val hero = heroViews ?: return
+        FleetCockpitView.paint(hero.light, VaultCockpit.overallLight(cardStates.values), hero.title.text.toString())
+        hero.summary.text = getString(R.string.vault_cockpit_hero_summary,
+            cardStates.values.count { it == StatusLight.State.ON }, cardStates.size)
     }
 
     /** One vault section, every leaf, read-only — the #566 view, kept for what no cockpit section owns. */
@@ -693,17 +785,17 @@ class ProfileFragment : Fragment() {
     }
 
     /**
-     * WHICH machine this is: a pick among the vault's declared devices. Only
-     * the chosen id is stored; address, key and profiles derive from the
-     * declaration every time the tab draws.
+     * WHICH machine this is: a pick among the vault's declared devices, in the
+     * hero's slot. Only the chosen id is stored; address, key and profiles
+     * derive from the declaration every time the tab draws, and the hero's
+     * title and identity line are that declaration read back.
      */
     private fun renderDeviceSelector(
         ctx: android.content.Context, into: LinearLayout, devices: List<VaultCockpit.Device>,
-    ): VaultCockpit.Device? {
-        into.addView(label(ctx, getString(R.string.vault_cockpit_device_label)))
+    ) {
         if (devices.isEmpty()) {
             into.addView(caption(ctx, getString(R.string.vault_cockpit_no_devices)))
-            return null
+            return
         }
         val chosenId = VaultCockpit.selectedDevice(ctx)
         val chosen = devices.firstOrNull { it.id == chosenId }
@@ -722,11 +814,6 @@ class ProfileFragment : Fragment() {
             }
         }
         into.addView(spinner)
-        if (chosen != null) {
-            into.addView(caption(ctx, getString(R.string.vault_cockpit_device_identity,
-                chosen.label, chosen.wgIp, chosen.wgIpv6.ifBlank { "—" })))
-        }
-        return chosen
     }
 
     /** Declared vs device, one line each, with the state glyph. */
@@ -757,33 +844,39 @@ class ProfileFragment : Fragment() {
         parentFragmentManager.beginTransaction().attach(this).commitNow()
     }
 
-    private fun renderMail(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, status: TextView) {
+    // Every render* below returns the rows it drew, so the card's light is
+    // computed from exactly what is on screen and never from a second reading.
+
+    private fun renderMail(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, status: TextView): List<VaultCockpit.Row> {
         val email = ConfigsPrefs(ctx).autheliaEmail.ifBlank { prefs.email.trim() }
         val declared = VaultCockpit.mailDeclared(bundle, email)
         if (declared == null) {
             into.addView(caption(ctx, getString(R.string.vault_cockpit_mail_none, email.ifBlank { "—" })))
-            return
+            return emptyList()
         }
-        renderRows(ctx, into, VaultCockpit.mailRows(declared, com.diegonmarcos.superapp.mail.JmapPrefs(ctx)))
+        val rows = VaultCockpit.mailRows(declared, com.diegonmarcos.superapp.mail.JmapPrefs(ctx))
+        renderRows(ctx, into, rows)
         into.addView(applyButton(ctx, declared.email) {
             show(status, GREEN, VaultCockpit.applyMail(com.diegonmarcos.superapp.mail.JmapPrefs(ctx), declared))
             redraw()
         })
+        return rows
     }
 
     private fun renderMesh(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject,
-                           device: VaultCockpit.Device?, status: TextView) {
+                           device: VaultCockpit.Device?, status: TextView): List<VaultCockpit.Row> {
         if (device == null) {
             into.addView(caption(ctx, getString(R.string.vault_cockpit_pick_first)))
-            return
+            return emptyList()
         }
         val profiles = VaultCockpit.meshProfiles(bundle, device)
         if (profiles.isEmpty()) {
             into.addView(caption(ctx, getString(R.string.vault_cockpit_mesh_none, device.wgIp)))
-            return
+            return emptyList()
         }
         val wg = com.diegonmarcos.superapp.network.WgState.prefs(ctx)
-        renderRows(ctx, into, VaultCockpit.meshRows(bundle, device, VaultCockpit.tunnelState(wg)))
+        val rows = VaultCockpit.meshRows(bundle, device, VaultCockpit.tunnelState(wg))
+        renderRows(ctx, into, rows)
         for ((name, conf) in profiles) {
             into.addView(applyButton(ctx, name) {
                 com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
@@ -802,20 +895,28 @@ class ProfileFragment : Fragment() {
             (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)
                 ?.onTileClicked(WG_ROUTE)
         })
+        return rows
     }
 
-    private fun renderDrive(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, status: TextView) {
-        renderRows(ctx, into, VaultCockpit.driveRows(bundle, ConfigsPrefs(ctx)))
+    private fun renderDrive(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, status: TextView): List<VaultCockpit.Row> {
+        val rows = VaultCockpit.driveRows(bundle, ConfigsPrefs(ctx))
+        renderRows(ctx, into, rows)
         into.addView(applyButton(ctx, getString(R.string.vault_cockpit_drive_credentials)) {
             val line = VaultCockpit.applyDrive(bundle, ConfigsPrefs(ctx))
             show(status, if (line.startsWith("✓")) GREEN else RED, line)
             redraw()
         })
+        return rows
     }
 
-    /** The device column is what the serving app ANSWERS over the binder,
-     *  read on IO with a deadline — a wedged peer must not hang this tab. */
-    private fun renderAi(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, status: TextView) {
+    /**
+     * The device column is what the serving app ANSWERS over the binder, read
+     * on IO with a deadline — a wedged peer must not hang this tab. Until the
+     * answer lands the card's light is Unknown (no rows returned); the answer
+     * repaints the card, and through it the hero, once.
+     */
+    private fun renderAi(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, status: TextView,
+                         card: FleetCockpitView.Card, section: VaultCockpit.Section): List<VaultCockpit.Row> {
         val rowsView = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         into.addView(rowsView)
         val peerDown = getString(R.string.vault_cockpit_ai_peer_down)
@@ -828,7 +929,9 @@ class ProfileFragment : Fragment() {
                 withContext(Dispatchers.IO) { com.diegonmarcos.superapp.texttools.TextToolsClient(appCtx).aiRoutingSnapshot() }
             }
             rowsView.removeAllViews()
-            renderRows(ctx, rowsView, VaultCockpit.aiRows(bundle, layout, VaultCockpit.aiState(snapshot), peerDown, unmapped))
+            val rows = VaultCockpit.aiRows(bundle, layout, VaultCockpit.aiState(snapshot), peerDown, unmapped)
+            renderRows(ctx, rowsView, rows)
+            paintCard(card, rows, section)
         }
         into.addView(applyButton(ctx, getString(R.string.vault_cockpit_ai_tokens)) {
             viewLifecycleOwner.lifecycleScope.launch {
@@ -845,6 +948,7 @@ class ProfileFragment : Fragment() {
             (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)
                 ?.onTileClicked(AI_ROUTE)
         })
+        return emptyList()
     }
 
     /** #565's exporter writes the file; #565's plan + summary do the compare.
@@ -866,21 +970,23 @@ class ProfileFragment : Fragment() {
             }
         }
 
-    private fun renderApps(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, device: VaultCockpit.Device?) {
+    private fun renderApps(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, device: VaultCockpit.Device?): List<VaultCockpit.Row> {
         if (device == null) {
             into.addView(caption(ctx, getString(R.string.vault_cockpit_pick_first)))
-            return
+            return emptyList()
         }
         val fleet = com.diegonmarcos.superapp.appstore.AppInventory.fleetPackages()
         val declared = VaultCockpit.appsDeclared(bundle, device, fleet)
+        var rows: List<VaultCockpit.Row> = emptyList()
         if (declared.isEmpty()) {
             into.addView(caption(ctx, getString(R.string.vault_cockpit_apps_none, device.id)))
         } else {
             val pm = ctx.packageManager
             val installed = declared.count { runCatching { pm.getPackageInfo(it.pkg, 0) }.isSuccess }
-            renderRows(ctx, into, listOf(VaultCockpit.Row(
+            rows = listOf(VaultCockpit.Row(
                 getString(R.string.vault_cockpit_apps_row), "${declared.size} apps", "$installed installed",
-                if (installed == declared.size) VaultCockpit.State.MATCH else VaultCockpit.State.DIFFERS)))
+                if (installed == declared.size) VaultCockpit.State.MATCH else VaultCockpit.State.DIFFERS))
+            renderRows(ctx, into, rows)
             into.addView(pickButton(ctx, getString(R.string.vault_cockpit_apps_plan, declared.size)) {
                 val app = ctx.applicationContext
                 kotlin.concurrent.thread(name = "vault-apps-plan") {
@@ -895,6 +1001,7 @@ class ProfileFragment : Fragment() {
         into.addView(pickButton(ctx, getString(R.string.vault_cockpit_apps_export)) {
             appListExport.launch(APPS_EXPORT_NAME)
         })
+        return rows
     }
 
     /** One value, shortened past [IMPORTED_PREVIEW_CHARS]; a tap toggles full text. */
@@ -936,6 +1043,8 @@ class ProfileFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         statusBanner = null
+        strip = null
+        heroViews = null
         // The mailed code is never stored; it dies with the view that held it.
         mailCodeField = null
     }
@@ -1656,24 +1765,11 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    private fun pickButton(ctx: android.content.Context, currentLabel: String, onClick: () -> Unit): View {
-        val tv = android.widget.TextView(ctx).apply {
-            text = currentLabel
-            setTextColor(0xFFFFFFFF.toInt())
-            setBackgroundColor(0xFF7C3AED.toInt())
-            setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10))
-            isSingleLine = true
-            ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
-            isClickable = true; isFocusable = true
-            setOnClickListener { onClick() }
-        }
-        val lp = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-        ).apply { topMargin = dp(ctx, 4) }
-        tv.layoutParams = lp
-        return tv
-    }
+    /** Every action button on this page is the cockpit's pill — one shape, the
+     *  palette's accent, so Connect and Infos read as the same screen as Fleet
+     *  and a theme change restyles all three at once. */
+    private fun pickButton(ctx: android.content.Context, currentLabel: String, onClick: () -> Unit): View =
+        FleetCockpitView.pill(ctx, currentLabel, onClick)
 
     private fun sectionHeader(ctx: android.content.Context, text: String): TextView =
         TextView(ctx).apply {
@@ -1743,9 +1839,14 @@ class ProfileFragment : Fragment() {
         com.diegonmarcos.superapp.ui.StatusLight.colour(
             requireContext(), com.diegonmarcos.superapp.ui.StatusLight.State.OFF)
     }
+    /** "Nobody can currently say" — the shared light's own grey, not a literal
+     *  that used to sit here and could drift from it. */
+    private val NEUTRAL: Int by lazy {
+        com.diegonmarcos.superapp.ui.StatusLight.colour(
+            requireContext(), com.diegonmarcos.superapp.ui.StatusLight.State.UNKNOWN)
+    }
 
     companion object {
-        private val NEUTRAL = 0xFF9CA3AF.toInt()
 
         /**
          * The AI page's existing route. It is a LINK, not a copy: `config/ai`
@@ -1775,6 +1876,10 @@ class ProfileFragment : Fragment() {
 
         /** How long the Fleet tab waits for the AI serving app's binder. */
         private const val AI_PEER_DEADLINE_MS = 4_000L
+
+        /** Tag of the one card that compares nothing: the vault sections no
+         *  cockpit section names, shown raw. Not a cockpit section id. */
+        private const val RAW_CARD = "raw"
 
         /** Same file name Store ▸ Phone Apps exports, so the vault gets one shape. */
         private const val APPS_EXPORT_NAME = "cloud-sa-apps.json"

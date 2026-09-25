@@ -19,6 +19,12 @@
 #       address, key or hostname is a Kotlin literal on the mesh path
 #   T7  the Apps section reuses the #565 inventory, plan and summary — no
 #       second exporter, no second installer
+#   T8  (#570 reopened) the Fleet tab IS the cockpit: hero + one card per
+#       section through FleetCockpitView, the shared StatusLight and no private
+#       colour, badge icons declared as data and present as drawables, Fleet the
+#       default tab, no animation (Power-Saving-safe), and the OLD page's
+#       headline-per-section idiom gone from the render path; the layout-tree
+#       JVM test exists and reads the declared ids
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0; FAIL=0
@@ -163,6 +169,65 @@ NAME_PF=$(grep -oE 'APPS_EXPORT_NAME = "[^"]+"' "$PF" | cut -d'"' -f2)
 NAME_STORE=$(grep -oE 'EXPORT_NAME = "[^"]+"' "$APP/../ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StorePhoneFragment.kt" | cut -d'"' -f2)
 [ -n "$NAME_PF" ] && [ "$NAME_PF" = "$NAME_STORE" ] && ok "T7: same export file name as the Store ($NAME_PF)" \
                                                      || bad "T7: export file name differs from the Store's ($NAME_PF vs $NAME_STORE)"
+
+echo "== T8: the Fleet tab is the cockpit (#570 reopened) =="
+FV="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/FleetCockpitView.kt"
+FT="$APP/app/src/test/java/com/diegonmarcos/superapp/profile/FleetCockpitViewTest.kt"
+IDS="$RES/values/ids.xml"
+[ -f "$FV" ] && ok "T8: FleetCockpitView.kt exists" || bad "T8: no FleetCockpitView.kt — the chrome was not split out"
+# The render path builds the hero and one card per section through the chrome object.
+echo "$RENDER_FNS" | grep -q 'FleetCockpitView.hero(' && ok "T8: the Fleet tab draws a hero" || bad "T8: no hero on the Fleet tab"
+echo "$RENDER_FNS" | grep -q 'FleetCockpitView.card(ctx, section.label, section.id' \
+    && ok "T8: one card per declared section, labelled and tagged from the declaration" \
+    || bad "T8: the sections are not drawn as FleetCockpitView cards"
+# The OLD idiom — a bare headline per section — is gone from the render path.
+echo "$RENDER_FNS" | grep -q 'sectionHeader(ctx, section.label)' \
+    && bad "T8: the render path still draws the OLD headline-per-section page" \
+    || ok "T8: no headline-per-section on the render path"
+echo "$RENDER_FNS" | grep -q 'sectionHeader(ctx, getString(R.string.vault_cockpit_raw))' \
+    && bad "T8: the raw remainder is still the OLD headline, not a card" \
+    || ok "T8: the raw remainder is a card too"
+# Lights: the shared component, painted from the model's summing, never a literal.
+grep -q 'fun sectionLight(rows: List<Row>, observed: Boolean' "$CP" && grep -q 'fun overallLight(' "$CP" \
+    && ok "T8: the card and hero lights are summed in the model" || bad "T8: no sectionLight/overallLight in VaultCockpit"
+grep -q 'StatusLight.text(ctx, state)' "$FV" && grep -q 'StatusLight.colour(ctx, state)' "$FV" && grep -q 'StatusLight.description(ctx, rowLabel, state)' "$FV" \
+    && ok "T8: the chrome paints glyph, colour and spoken description from StatusLight" || bad "T8: the chrome does not paint from StatusLight"
+codeof "$FV" | grep -qE '0x[0-9A-Fa-f]{6,8}|Color\.parseColor|#[0-9A-Fa-f]{6}' \
+    && bad "T8: FleetCockpitView carries a colour literal — a private copy of a palette or light colour" \
+    || ok "T8: no colour literal in the chrome (palette + StatusLight only)"
+codeof "$PF" | grep -q 'private val NEUTRAL = 0x' && bad "T8: the fragment still owns a private grey" || ok "T8: the fragment's grey is StatusLight's Unknown"
+# Power-Saving-safe: drawn once, no animation, no ticker.
+codeof "$FV" | grep -qE 'animate\(\)|ObjectAnimator|ValueAnimator|postDelayed|Handler\(' \
+    && bad "T8: the chrome animates or ticks — not Power-Saving-safe" || ok "T8: the chrome draws once, no animation, no ticker"
+# The circle-icon language: OVAL badges, an orb on the hero.
+grep -q 'GradientDrawable.OVAL' "$FV" && ok "T8: badges are OVAL (the homescreen circle-icon language)" || bad "T8: no round badge in the chrome"
+# Badge icons are DATA: every cockpit section declares one and it is a drawable of this app.
+for id in $DECLARED; do
+    icon=$(jq -r --arg id "$id" '.ui.vault_connect.cockpit.sections[] | select(.id == $id) | .icon // ""' "$BJ")
+    [ -n "$icon" ] || { bad "T8: section '$id' declares no icon"; continue; }
+    [ -f "$RES/drawable/$icon.xml" ] && ok "T8: '$id' badge icon $icon is a drawable" || bad "T8: '$id' declares icon '$icon' but res/drawable has no $icon.xml"
+done
+jq -e '.ui.vault_connect.cockpit.device_icons._default' "$BJ" >/dev/null && ok "T8: a default device icon is declared" || bad "T8: no device_icons._default"
+for icon in $(jq -r '.ui.vault_connect.cockpit.device_icons[]' "$BJ"); do
+    [ -f "$RES/drawable/$icon.xml" ] && ok "T8: device icon $icon is a drawable" || bad "T8: device icon '$icon' has no drawable"
+done
+codeof "$FV" "$PF" | grep -qE '"ic_[a-z_]+"' && bad "T8: an icon name is a Kotlin literal on the cockpit" || ok "T8: icon names live only in build.json"
+jq -e '[.ui.vault_connect.cockpit.sections[] | select(.observed == false)] | length > 0' "$BJ" >/dev/null \
+    && ok "T8: an unobservable section is declared as data (its light is Not verifiable, not a guessed colour)" \
+    || bad "T8: no section declares observed:false — the keyboard's light would be a guess"
+# Fleet is the default tab.
+grep -q 'if (selectedTab < 0) selectedTab = importedTab' "$PF" && ok "T8: the page opens on the Fleet tab" || bad "T8: the page does not open on Fleet"
+# The layout-tree test exists and reads the declared ids, which exist.
+[ -f "$FT" ] && ok "T8: FleetCockpitViewTest.kt exists" || bad "T8: no layout-tree test"
+for id in cockpit_hero cockpit_device_orb cockpit_hero_light cockpit_card cockpit_card_badge cockpit_card_light cockpit_card_body; do
+    grep -q "name=\"$id\"" "$IDS" || bad "T8: ids.xml lacks $id"
+    grep -q "R.id.$id" "$FV" || bad "T8: the chrome never sets R.id.$id"
+    [ -f "$FT" ] && { grep -q "R.id.$id" "$FT" || bad "T8: the layout-tree test never reads R.id.$id"; }
+done
+ok "T8: the seven cockpit ids are declared, set by the chrome and read by the test"
+[ -f "$FT" ] && grep -q 'GradientDrawable.OVAL' "$FT" && grep -q 'StatusLight.text(ctx, state)' "$FT" \
+    && ok "T8: the test measures the orb shape and the shared light vocabulary" || bad "T8: the test does not measure shape and light"
+grep -q 'FleetCockpitViewTest\|VaultCockpitTest' "$GR" && bad "T8: a test class is named in gradle (should be found by the unit task, not listed)" || ok "T8: tests are discovered, not listed"
 
 echo
 echo "passed=$PASS failed=$FAIL"

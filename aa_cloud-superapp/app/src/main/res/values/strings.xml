@@ -515,6 +515,18 @@
     <string name="vault_cockpit_apps_export">Export this device\'s app list</string>
     <string name="vault_cockpit_apps_exported">✓ %1$d apps exported</string>
     <string name="vault_cockpit_raw">Everything else (raw)</string>
+    <!-- #570 reopened: the cockpit chrome — hero card + section cards. -->
+    <string name="vault_cockpit_hero_title_empty">Fleet cockpit</string>
+    <string name="vault_cockpit_hero_empty">Connect once and the sections below light up against this device.</string>
+    <string name="vault_cockpit_connect_cta">Connect the vault</string>
+    <string name="vault_cockpit_hero_unpicked">Which device is this?</string>
+    <string name="vault_cockpit_hero_identity">mesh %1$s · %2$s · chosen from the vault, nothing typed</string>
+    <string name="vault_cockpit_hero_summary">%1$d of %2$d sections configured on this device</string>
+    <string name="vault_cockpit_card_summary">%1$d match · %2$d differ · %3$d pending</string>
+    <string name="vault_cockpit_card_unobserved_summary">%1$d declared · the device side cannot be read from here</string>
+    <string name="vault_cockpit_card_absent_summary">not in this vault export</string>
+    <string name="vault_cockpit_card_raw_summary">display only — nothing compared</string>
+    <string name="vault_cockpit_card_toggle">Show or hide the details</string>
     <string name="vault_connect_browser">Sign in with browser (OWebAuth)</string>
     <string name="vault_connect_browser_caption">Sign in to Authelia below. The session cookie for %1$s is kept in memory for the two vault calls and dies with the app — nothing is written to disk. Sign in again to refresh it.</string>
     <string name="vault_connect_use_session">Use this session</string>

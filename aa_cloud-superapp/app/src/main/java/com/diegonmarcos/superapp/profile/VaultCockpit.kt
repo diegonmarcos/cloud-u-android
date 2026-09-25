@@ -8,6 +8,7 @@ import com.diegonmarcos.superapp.mail.JmapPrefs
 import com.diegonmarcos.superapp.network.WireGuardPrefs
 import com.diegonmarcos.superapp.settings.ConfigsPrefs
 import com.diegonmarcos.superapp.texttools.TextToolsClient
+import com.diegonmarcos.superapp.ui.StatusLight
 import com.wireguard.config.Config
 import org.json.JSONArray
 import org.json.JSONObject
@@ -38,21 +39,45 @@ object VaultCockpit {
 
     // ── layout: build.json::ui.vault_connect.cockpit ─────────────────────
 
-    data class Section(val id: String, val label: String, val vault: List<String>)
+    /**
+     * [icon]: the drawable name the card's round badge shows. [observed] false
+     * marks a section whose device side this app cannot read at all, so its
+     * light is [StatusLight.State.UNVERIFIABLE] rather than a colour it could
+     * not justify — see the `_doc_cards` note beside the declaration.
+     */
+    data class Section(
+        val id: String, val label: String, val vault: List<String>,
+        val icon: String = "", val observed: Boolean = true,
+    )
 
-    /** [aiTokens]: vault `ai.tokens.<item>` → the device provider id the token feeds. */
-    data class Layout(val sections: List<Section>, val aiTokens: Map<String, String>)
+    /** [aiTokens]: vault `ai.tokens.<item>` → the device provider id the token feeds.
+     *  [deviceIcons]: electronics `type` → the hero orb's drawable; `_default` for the rest. */
+    data class Layout(
+        val sections: List<Section>, val aiTokens: Map<String, String>,
+        val deviceIcons: Map<String, String> = emptyMap(),
+    )
 
     fun parseLayout(o: JSONObject): Layout {
         val arr = o.optJSONArray("sections") ?: JSONArray()
         val sections = (0 until arr.length()).map { i ->
             val s = arr.getJSONObject(i)
             val v = s.optJSONArray("vault") ?: JSONArray()
-            Section(s.getString("id"), s.getString("label"), (0 until v.length()).map { v.getString(it) })
+            Section(s.getString("id"), s.getString("label"), (0 until v.length()).map { v.getString(it) },
+                s.optString("icon"), s.optBoolean("observed", true))
         }
         val tokens = o.optJSONObject("ai_tokens") ?: JSONObject()
-        return Layout(sections, tokens.keys().asSequence().associateWith { tokens.getString(it) })
+        val icons = o.optJSONObject("device_icons") ?: JSONObject()
+        return Layout(
+            sections,
+            tokens.keys().asSequence().associateWith { tokens.getString(it) },
+            icons.keys().asSequence().associateWith { icons.getString(it) },
+        )
     }
+
+    /** The hero orb's drawable name for [device] (null = nothing chosen yet):
+     *  its declared type's entry, else `_default`, else blank (the icon lookup's own fallback). */
+    fun deviceIcon(layout: Layout, device: Device?): String =
+        layout.deviceIcons[device?.type.orEmpty()] ?: layout.deviceIcons[DEVICE_ICON_DEFAULT] ?: ""
 
     val layout: Layout by lazy {
         runCatching {
@@ -62,7 +87,8 @@ object VaultCockpit {
 
     // ── the device this phone is ─────────────────────────────────────────
 
-    data class Device(val id: String, val label: String, val wgIp: String, val wgIpv6: String)
+    /** [type]: the entry's declared kind (notebook, phone, …), as the vault spells it. */
+    data class Device(val id: String, val label: String, val wgIp: String, val wgIpv6: String, val type: String = "")
 
     /**
      * Every device the vault's `electronics` section declares with a `wg_peer`
@@ -76,11 +102,13 @@ object VaultCockpit {
         electronics.keys().forEach { group ->
             val g = electronics.optJSONObject(group) ?: return@forEach
             g.keys().forEach { id ->
-                val peer = g.optJSONObject(id)?.optJSONObject("wg_peer") ?: return@forEach
+                val entry = g.optJSONObject(id) ?: return@forEach
+                val peer = entry.optJSONObject("wg_peer") ?: return@forEach
                 if (peer.optBoolean("pending")) return@forEach
                 val ip = peer.optString("wg_ip")
                 if (ip.isBlank()) return@forEach
-                out += Device(id, peer.optString("name").ifBlank { id }, ip, peer.optString("wg_ipv6"))
+                out += Device(id, peer.optString("name").ifBlank { id }, ip, peer.optString("wg_ipv6"),
+                    (entry.opt("type") as? String).orEmpty())
             }
         }
         return out
@@ -98,6 +126,40 @@ object VaultCockpit {
 
     /** One comparison: what the vault declares against what the device holds. */
     data class Row(val label: String, val declared: String, val device: String, val state: State)
+
+    /**
+     * One card's light, from its rows, through the SHARED [StatusLight] states.
+     *
+     * A section this app cannot observe is UNVERIFIABLE whatever the rows say.
+     * Otherwise a single row that differs or is absent turns the card OFF — a
+     * card is configured only when everything on it is — a match with nothing
+     * against it is ON, and rows that are all pending in the vault are UNKNOWN,
+     * because nobody can currently say. No rows at all is UNKNOWN too.
+     */
+    fun sectionLight(rows: List<Row>, observed: Boolean = true): StatusLight.State = when {
+        !observed -> StatusLight.State.UNVERIFIABLE
+        rows.isEmpty() -> StatusLight.State.UNKNOWN
+        rows.any { it.state == State.DIFFERS || it.state == State.ABSENT } -> StatusLight.State.OFF
+        rows.any { it.state == State.MATCH } -> StatusLight.State.ON
+        else -> StatusLight.State.UNKNOWN
+    }
+
+    /** The hero's light over every card's: any OFF is OFF, all ON is ON, else nobody can say. */
+    fun overallLight(lights: Collection<StatusLight.State>): StatusLight.State = when {
+        lights.isEmpty() -> StatusLight.State.UNKNOWN
+        lights.any { it == StatusLight.State.OFF } -> StatusLight.State.OFF
+        lights.all { it == StatusLight.State.ON } -> StatusLight.State.ON
+        else -> StatusLight.State.UNKNOWN
+    }
+
+    /** Row counts for a card's summary line: matching, differing (absent counts as differing), pending. */
+    data class Tally(val match: Int, val differ: Int, val pending: Int)
+
+    fun tally(rows: List<Row>) = Tally(
+        rows.count { it.state == State.MATCH },
+        rows.count { it.state == State.DIFFERS || it.state == State.ABSENT },
+        rows.count { it.state == State.PENDING },
+    )
 
     private fun pending(v: Any?) = v is JSONObject && v.optBoolean("pending")
     private fun pendingText(v: JSONObject) = "pending · ${v.optString("source")} · ${v.optString("reason")}"
@@ -363,6 +425,7 @@ object VaultCockpit {
 
     private const val PREFS = "vault_cockpit"
     private const val K_DEVICE = "device_id"
+    private const val DEVICE_ICON_DEFAULT = "_default"
     const val SECTION_GIT = "git"
     const val K_GITHUB_TOKEN = "github_token"
     const val SECTION_SSH = "ssh"
