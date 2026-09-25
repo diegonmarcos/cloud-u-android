@@ -16,6 +16,7 @@ import "./cloud.scss";
 import fsOperation from "fileSystem";
 import toast from "components/toast";
 import openFolder from "lib/openFolder";
+import openFile from "lib/openFile";
 import browser from "plugins/browser";
 import markdownIt from "markdown-it";
 import DOMPurify from "dompurify";
@@ -51,24 +52,45 @@ function panelHeader(title, ...actions) {
 	return el("div", { className: "cloud-panel-header" }, el("h2", {}, title), ...actions);
 }
 
+// ── #575 THE ONE shared repo store ──────────────────────────────────────────
+// cloud-drive declares the root (its build.json::storage.shared_root); the build
+// copied it into targets.gen.json RELATIVE, and only the device knows where
+// shared storage is. Every on-device path this app touches is composed here.
+function sharedRoot() {
+	return `${cordova.file.externalRootDirectory}${targets.shared_root}/`;
+}
+
+function storePath(relative) {
+	return sharedRoot() + relative;
+}
+
 // ── Backlog: render the ONE existing source, as-is ─────────────────────────
 // Backlog and Agents are two entry files of the same backlog dist, read from
 // the same folder (one localStorage key), through this one renderer.
 async function renderBacklogView(panel, title, entry, ...extra) {
 	const md = markdownIt({ html: false, linkify: true });
-	let dir = stored("backlog.dir", nav.backlog.source_dir);
+	let dir = stored("backlog.dir", storePath(nav.backlog.source_dir));
+	let current = entry;
 	const body = el("div", { className: "cloud-md" });
 
 	async function load(file) {
 		body.textContent = `Loading ${file} …`;
+		current = file;
 		try {
 			const text = await fsOperation(dir, file).readFile("utf8");
 			body.innerHTML = DOMPurify.sanitize(md.render(text));
 		} catch (err) {
+			// #575 the store is shared storage: on Android 11+ this app reads it only
+			// with all-files access, which the system grants per app, on a toggle.
+			const grant = el("button", {
+				className: "cloud-row",
+				onclick: () => system.manageAllFiles(() => load(file), (e) => toast(String(e))),
+			}, el("span", { className: "icon folder_open" }), "Allow access to all files, then retry");
 			body.replaceChildren(
 				el("p", {}, `Cannot read ${dir}${file}`),
 				el("p", { className: "cloud-muted" }, String(err?.message || err)),
-				el("p", { className: "cloud-muted" }, "The backlog repository is private, so it is read from your clone on this device. Point this tab at its 1.1.Product-Backlog/dist/ folder."),
+				el("p", { className: "cloud-muted" }, "The backlog repository is private: clone it with Cloud Drive (Sync ▸ Git ▸ cloud-data-my-ai-memory ▸ Clone / open) and it appears here through the shared store. Or point this tab at another 1.1.Product-Backlog/dist/ folder."),
+				grant,
 			);
 		}
 	}
@@ -96,7 +118,27 @@ async function renderBacklogView(panel, title, entry, ...extra) {
 			load(entry);
 		},
 	});
-	panel.replaceChildren(panelHeader(title, change), body, ...extra);
+	// #575 WRITE goes through the same store: the file on screen opens in Acode's
+	// editor (saved back in place), and the whole repository opens as a folder in
+	// the sidebar. cloud-drive's git manager commits and pushes what is edited.
+	const repoName = nav.backlog.source_dir.split("/")[0];
+	const edit = el("button", {
+		className: "icon edit",
+		title: "Edit this file",
+		onclick: async () => {
+			await openFile(`${dir}${current}`, { render: true });
+			showTab("editor");
+		},
+	});
+	const repo = el("button", {
+		className: "icon git",
+		title: "Open the repository",
+		onclick: () => {
+			openFolder(storePath(repoName), { name: repoName });
+			showTab("editor");
+		},
+	});
+	panel.replaceChildren(panelHeader(title, edit, repo, change), body, ...extra);
 	await load(entry);
 }
 
@@ -106,7 +148,7 @@ function renderBacklog(panel) {
 
 // ── Repos: small engine behind the seam ────────────────────────────────────
 async function renderRepos(panel) {
-	const root = stored("repos.root", nav.repos.root);
+	const root = stored("repos.root", storePath(nav.repos.root));
 	const list = el("div", { className: "cloud-list" }, "Scanning …");
 	panel.replaceChildren(panelHeader("Repos"), el("p", { className: "cloud-muted" }, root), list);
 	try {

@@ -2,13 +2,48 @@
   "_doc": "THE ONE DECLARATION of cloud-code's bottom navigation (#562). tabs.js builds the bar from this list in this order and nothing else restates it: the tester (test/test-cloud-nav.sh) renders the bar through the same tabs.js and reads the order back off the rendered model. `view` selects the renderer in index.js::VIEWS; `icon` is a class of Acode's own icon font (src/res/icons/style.css) and the tester proves each one exists there. The Editor tab is Acode itself, untouched: selecting it hides every cloud panel and nothing else.",
   "default_tab": "editor",
   "tabs": [
-    { "id": "backlog",    "label": "Backlog",    "icon": "notes",           "view": "backlog" },
-    { "id": "editor",     "label": "Editor",     "icon": "code",            "view": "editor" },
-    { "id": "repos",      "label": "Repos",      "icon": "git",             "view": "repos" },
-    { "id": "home",       "label": "Home",       "icon": "home",            "view": "home" },
-    { "id": "agents",     "label": "Agents",     "icon": "brain",           "view": "agents" },
-    { "id": "browser",    "label": "Browser",    "icon": "public",          "view": "browser" },
-    { "id": "myterminal", "label": "MyTerminal", "icon": "square-terminal", "view": "myterminal" }
+    {
+      "id": "backlog",
+      "label": "Backlog",
+      "icon": "notes",
+      "view": "backlog"
+    },
+    {
+      "id": "editor",
+      "label": "Editor",
+      "icon": "code",
+      "view": "editor"
+    },
+    {
+      "id": "repos",
+      "label": "Repos",
+      "icon": "git",
+      "view": "repos"
+    },
+    {
+      "id": "home",
+      "label": "Home",
+      "icon": "home",
+      "view": "home"
+    },
+    {
+      "id": "agents",
+      "label": "Agents",
+      "icon": "brain",
+      "view": "agents"
+    },
+    {
+      "id": "browser",
+      "label": "Browser",
+      "icon": "public",
+      "view": "browser"
+    },
+    {
+      "id": "myterminal",
+      "label": "MyTerminal",
+      "icon": "square-terminal",
+      "view": "myterminal"
+    }
   ],
   "nav": {
     "_doc": "Measured fit (#562): seven tabs is more than any fleet nav. At 360 px CSS width (the narrowest phone the owner's fleet targets) a tab is 51.4 px wide, above the 48 px touch floor, but 'MyTerminal' at 10 px is wider than its tab. So the bar does not truncate: tabs.js::fitLabels measures every label against its own tab on the device, and if ANY label overflows the bar switches to compact mode (icons for all tabs, the label only under the active one). min_viewport_px is the width the tester holds the touch floor to.",
@@ -18,9 +53,13 @@
     "min_touch_target_px": 48,
     "min_viewport_px": 360
   },
+  "shared_store": {
+    "_doc": "#575 THE ONE on-phone repo store is cloud-drive's (ac_cloud-drive/build.json::storage.shared_root). `app` is that fleet application id (build.json::name), never a path: tools/resolve-targets.py reads the sibling app's declaration at build time and writes the root into src/cloud/targets.gen.json, and index.js composes every on-device path as <cordova externalRootDirectory>/<root>/<relative>. No device-absolute path is written here — the user id in it changes under a second profile — and this app clones NOTHING: the Backlog reads and writes the clone cloud-drive's git manager keeps there.",
+    "app": "cloud-drive"
+  },
   "backlog": {
-    "_doc": "Backlog reads the ONE existing source: the dist output of cloud-data-my-ai-memory/1.1.Product-Backlog (built by its own build.js). Nothing here re-derives it: `entry` is loaded and rendered as-is, and every other view is reached through the links that file itself carries ('Views: per project · per status …'). That repository is PRIVATE and this APK is PUBLIC, so the backlog is never baked into the bundle; it is read on the device from the owner's clone. source_dir is only the default; the tab lets the owner point it elsewhere (kept in localStorage).",
-    "source_dir": "file:///storage/emulated/0/git/cloud-data-my-ai-memory/1.1.Product-Backlog/dist/",
+    "_doc": "Backlog reads the ONE existing source: the dist output of cloud-data-my-ai-memory/1.1.Product-Backlog (built by its own build.js). Nothing here re-derives it: `entry` is loaded and rendered as-is, and every other view is reached through the links that file itself carries ('Views: per project · per status …'). That repository is PRIVATE and this APK is PUBLIC, so the backlog is never baked into the bundle; it is read on the device from the clone cloud-drive keeps in the shared store (#575): source_dir is RELATIVE to shared_store's root. The tab lets the owner point it elsewhere (kept in localStorage), and its edit / folder actions open the same files in Acode's editor, so a change is written back into that clone for cloud-drive to commit and push.",
+    "source_dir": "cloud-data-my-ai-memory/1.1.Product-Backlog/dist/",
     "entry": "P-Backlog-sts.md"
   },
   "agents": {
@@ -28,14 +67,20 @@
     "entry": "P-Backlog-bat.md"
   },
   "repos": {
-    "_doc": "Default on-device directory whose children are listed as repositories (a child holding .git). SEAM: seams.js::listRepos is the stub a real provider (gitea / cloud-myterminal's workspace broker) replaces.",
-    "root": "file:///storage/emulated/0/git/"
+    "_doc": "On-device directory whose children are listed as repositories (a child holding .git): the shared store's root itself (#575), so what cloud-drive cloned is what Repos lists. `root` is RELATIVE to shared_store's root ('' = the root). SEAM: seams.js::listRepos is the stub a real provider (gitea / cloud-myterminal's workspace broker) replaces.",
+    "root": ""
   },
   "browser": {
     "_doc": "The Browser tab opens LOCAL pages in Acode's own in-app browser plugin (src/plugins/browser, the one Acode's Run command uses). `presets` are local servers the owner runs on the phone.",
     "presets": [
-      { "label": "localhost:8080", "url": "http://localhost:8080/" },
-      { "label": "localhost:8765 (cloud-webserver)", "url": "http://localhost:8765/" }
+      {
+        "label": "localhost:8080",
+        "url": "http://localhost:8080/"
+      },
+      {
+        "label": "localhost:8765 (cloud-webserver)",
+        "url": "http://localhost:8765/"
+      }
     ]
   },
   "myterminal": {

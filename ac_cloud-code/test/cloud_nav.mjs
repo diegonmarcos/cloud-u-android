@@ -73,3 +73,26 @@ for (const k of ["backlog", "agents"]) {
 	out(/^[\w-]+\.md$/.test(nav[k]?.entry || ""), `nav.${k}.entry is a markdown file of the backlog dist (${nav[k]?.entry})`);
 }
 out(nav.agents.entry !== nav.backlog.entry, "Agents opens a different view of that source than Backlog");
+
+// ── #575 ONE shared repo store: cloud-drive declares it, this app only reads it ──
+// nav.json names the store app by fleet id; the resolver copies that app's
+// build.json::storage.shared_root (relative) into targets.gen.json; index.js
+// composes every on-device path from it. A second declaration — an absolute
+// /storage path anywhere under src/cloud — is the bug this pins.
+const navText = read("src/cloud/nav.json");
+out(!/\/storage\/emulated/.test(navText), "nav.json writes no device-absolute /storage path");
+out(typeof nav.shared_store?.app === "string" && nav.shared_store.app.length > 0, `nav.shared_store.app names the store app by fleet id (${nav.shared_store?.app})`);
+for (const [k, v] of [["backlog.source_dir", nav.backlog?.source_dir], ["repos.root", nav.repos?.root]]) {
+	out(typeof v === "string" && !v.startsWith("/") && !v.includes(".."), `nav.${k} is relative to the store (${JSON.stringify(v)})`);
+}
+out(nav.backlog?.source_dir?.startsWith("cloud-data-my-ai-memory/"), "Backlog reads cloud-data-my-ai-memory FROM the store (the #575 proof case)");
+const resolver = read("tools/resolve-targets.py");
+out(/def shared_root\(app_root, fleet_id\)/.test(resolver) && /"shared_root": shared_root\(app_root, nav\["shared_store"\]\["app"\]\)/.test(resolver), "resolve-targets.py emits shared_root from nav.shared_store.app");
+out(/\("storage"\) or \{\}\)\.get\("shared_root"\)/.test(resolver) && /root\.startswith\("\/"\)/.test(resolver), "the resolver reads build.json::storage.shared_root and refuses an absolute one");
+out(/function sharedRoot\(\) \{\s*return `\$\{cordova\.file\.externalRootDirectory\}\$\{targets\.shared_root\}\/`;/.test(index), "index.js composes the root from the device's externalRootDirectory + targets.shared_root");
+out(/stored\("backlog\.dir", storePath\(nav\.backlog\.source_dir\)\)/.test(index) && /stored\("repos\.root", storePath\(nav\.repos\.root\)\)/.test(index), "Backlog and Repos default to paths under the store");
+out(!/\/storage\/emulated/.test(index), "index.js writes no device-absolute /storage path");
+out(/openFile\(`\$\{dir\}\$\{current\}`/.test(index) && /openFolder\(storePath\(repoName\)/.test(index), "Backlog WRITES through the store: edit-in-place and open-repository actions go through Acode's editor");
+const configXml = read("config.xml");
+out(/<uses-permission android:name="android\.permission\.MANAGE_EXTERNAL_STORAGE" \/>/.test(configXml), "config.xml declares MANAGE_EXTERNAL_STORAGE — without it targetSdk 36 cannot read the store");
+out(/system\.manageAllFiles\(/.test(index), "the Backlog's cannot-read branch offers the all-files grant");
