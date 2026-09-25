@@ -55,7 +55,7 @@ data class AccountMailStats(
      * page then says so in a sentence instead of drawing a column of zeros that would look like
      * measurements — a fresh account, or one cleared from Storage, is not "0 starred, 0 recent".
      */
-    val hasNoMail: Boolean get() = false
+    val hasNoMail: Boolean get() = cachedMessages == 0 && (unread ?: 0) == 0
 }
 
 /** The window "recent" is counted over, and what the page's label names. One place, so they agree. */

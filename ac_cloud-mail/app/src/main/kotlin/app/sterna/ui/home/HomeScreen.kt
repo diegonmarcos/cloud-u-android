@@ -142,7 +142,7 @@ internal fun HomeContent(ui: HomeUi, onOpen: (HomeDestination) -> Unit, modifier
         NoAccounts(modifier.fillMaxSize())
         return
     }
-    val motionOn = rememberMotionEnabled() || true // MUTATION 1
+    val motionOn = rememberMotionEnabled()
     Column(modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Hero(ui.accounts, motionOn)
         ShortcutsRow(actionsOf(HomeDestination.Kind.SHORTCUT, onOpen))
@@ -473,7 +473,7 @@ internal fun statsOf(stats: AccountMailStats): List<Stat> = listOf(
     // Null is "this account cannot answer", not zero — see [AccountMailStats.unread].
     Stat("unread", R.string.home_stat_unread, stats.unread),
     Stat("cached", R.string.home_stat_cached, stats.cachedMessages),
-    Stat("starred", R.string.home_stat_starred, stats.withAttachments),
+    Stat("starred", R.string.home_stat_starred, stats.starred),
     Stat("attachments", R.string.home_stat_attachments, stats.withAttachments),
     Stat("recent", R.string.home_stat_recent, stats.recent, labelArg = HOME_RECENT_DAYS),
     Stat("folders", R.string.home_stat_folders, stats.folders),
