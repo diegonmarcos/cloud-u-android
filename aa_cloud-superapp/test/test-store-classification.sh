@@ -133,7 +133,9 @@ installers = [f for f, t in store_files.items() if re.search(r"\bFleet\.install\
 if installers == ["FleetInstall.kt"]: ok("Fleet.install is called from FleetInstall.kt alone - no second updater")
 else: bad("Fleet.install is called from %s - the store has more than one update path" % installers)
 for name, text in (("StoreCloudFragment", cloud), ("StorePhoneFragment", phone)):
-    if "FleetInstall.run(ctx, app)" in text: ok(name + " updates through FleetInstall.run")
+    # #571 moved Phone Apps' call into installOne(app, r) -> FleetInstall.run(app, fleetApp):
+    # the argument names changed, the one path did not. Match the call, not its locals.
+    if re.search(r"\bFleetInstall\.run\(", text): ok(name + " updates through FleetInstall.run")
     else: bad(name + " does not update through FleetInstall.run")
 assets = os.path.join(store_dir, "../../../../../assets/appstore-install-sources.json")
 src = json.loads(read(assets))
