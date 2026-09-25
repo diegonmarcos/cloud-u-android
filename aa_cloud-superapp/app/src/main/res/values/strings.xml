@@ -561,8 +561,8 @@
     <string name="journey_bearer_stored">Bearer stored for %1$s</string>
     <string name="journey_not_signed_in">Not signed in — pick a provider below.</string>
     <string name="journey_sign_in_caption">The fleet\'s own SSO is primary. A GitHub login also grants the private repos; Google proves an address only. Every route ends in the same place: your config, fetched once.</string>
-    <string name="journey_way_browser">%1$s · browser login</string>
-    <string name="journey_way_bearer">%1$s · paste a bearer</string>
+    <string name="journey_way_browser">%1$s · sign in at the portal</string>
+    <string name="journey_way_bearer">%1$s · paste a token</string>
     <string name="journey_way_code">%1$s · browser code</string>
     <string name="journey_way_ssh">%1$s · SSH key</string>
     <string name="journey_use_stored_bearer">Use the stored bearer (%1$s)</string>

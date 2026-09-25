@@ -310,9 +310,9 @@ class ProfileFragment : Fragment() {
     /** Steps whose last attempt reported an error — the card's red light. Memory only. */
     private val failedSteps = mutableSetOf<ProfileJourney.Step>()
 
-    /** The declared fleet SSO, if this build declares one. */
-    private fun autheliaProvider(): SignIn.Provider? =
-        SignIn.providers.firstOrNull { it.kind == SignIn.Kind.AUTHELIA }
+    /** The declared fleet-SSO way of this [kind], if this build declares one. */
+    private fun autheliaProvider(kind: SignIn.Kind): SignIn.Provider? =
+        SignIn.providers.firstOrNull { it.kind == kind }
 
     /** Everything the journey knows, gathered once per draw — see [ProfileJourney.State]. */
     private fun journeyState(ctx: android.content.Context): ProfileJourney.State {
@@ -462,9 +462,11 @@ class ProfileFragment : Fragment() {
         for (p in offered) {
             if (!p.configured) { body.addView(caption(ctx, getString(R.string.journey_not_configured, p.label))); continue }
             when (p.kind) {
-                SignIn.Kind.AUTHELIA -> {
+                SignIn.Kind.AUTHELIA_WEB ->
                     body.addView(pickButton(ctx, getString(R.string.journey_way_browser, p.label)) { showAutheliaWebAuthDialog() })
+                SignIn.Kind.AUTHELIA_BEARER -> {
                     body.addView(pickButton(ctx, getString(R.string.journey_way_bearer, p.label)) { showAutheliaBearerDialog() })
+                    buildStoredBearer(ctx, s, body, status)
                 }
                 SignIn.Kind.DEVICE_FLOW -> {
                     body.addView(pickButton(ctx, getString(R.string.journey_way_code, p.label)) { showDeviceFlowDialog(p) })
@@ -474,12 +476,19 @@ class ProfileFragment : Fragment() {
                 SignIn.Kind.UNKNOWN -> body.addView(caption(ctx, getString(R.string.journey_not_configured, p.label)))
             }
         }
+        body.addView(status)
+    }
+
+    /** The bearer way's own controls: the stored token (one tap, clearable), an
+     *  orphan one to link, and the mailed second factor. They live with the
+     *  bearer provider, so a policy that does not offer it does not show them. */
+    private fun buildStoredBearer(ctx: android.content.Context, s: ProfileJourney.State, body: LinearLayout, status: TextView) {
         val configs = ConfigsPrefs(ctx)
         if (s.storedBearerEmail.isNotBlank()) {
             body.addView(pickButton(ctx, getString(R.string.journey_use_stored_bearer, s.storedBearerEmail)) {
                 show(status, NEUTRAL, "…")
                 runFetch(status, { if (importedThisSession) { importedThisSession = false; redraw() } },
-                    via = autheliaProvider(), identity = s.storedBearerEmail) { fetchWithBearer(configs.autheliaToken) }
+                    via = autheliaProvider(SignIn.Kind.AUTHELIA_BEARER), identity = s.storedBearerEmail) { fetchWithBearer(configs.autheliaToken) }
             })
             body.addView(clearSecretButton(ctx, "Authelia bearer token") { configs.clearAutheliaCredential() })
         } else if (configs.hasOrphanToken()) {
@@ -490,7 +499,6 @@ class ProfileFragment : Fragment() {
             })
         }
         body.addView(pickButton(ctx, getString(R.string.journey_mail_code)) { showMailCodeDialog() })
-        body.addView(status)
     }
 
     /** Step 2: one selectable row per identity; the pick is stored as the address alone. */
@@ -1472,7 +1480,7 @@ class ProfileFragment : Fragment() {
                 } else {
                     go.isEnabled = false
                     show(status, NEUTRAL, "… authenticating and fetching $endpoint")
-                    runFetch(status, { go.isEnabled = true }, via = autheliaProvider(), storeBearer = token) { fetchWithBearer(token) }
+                    runFetch(status, { go.isEnabled = true }, via = autheliaProvider(SignIn.Kind.AUTHELIA_BEARER), storeBearer = token) { fetchWithBearer(token) }
                 }
             },
             onDismiss = { tokenField = null },
@@ -1658,7 +1666,7 @@ class ProfileFragment : Fragment() {
                     // one login, both fetches. Memory only, like vaultSession itself.
                     vaultSession = cookie
                     show(status, NEUTRAL, "… fetching $endpoint with the browser session")
-                    runFetch(status, { go.isEnabled = true }, via = autheliaProvider()) { fetchWithCookie(cookie) }
+                    runFetch(status, { go.isEnabled = true }, via = autheliaProvider(SignIn.Kind.AUTHELIA_WEB)) { fetchWithCookie(cookie) }
                 }
             },
             // Free the WebView before the shell's redraw tears the view down.

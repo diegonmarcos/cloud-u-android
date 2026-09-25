@@ -29,7 +29,9 @@ object SignIn {
 
     private const val TAG = ConfigSyncClient.TAG
 
-    enum class Kind { AUTHELIA, DEVICE_FLOW, UNKNOWN }
+    /** [AUTHELIA_BEARER] and [AUTHELIA_WEB] are the fleet SSO's two distinct ways in (#578):
+     *  a stored/pasted bearer, and the portal login in the embedded browser. */
+    enum class Kind { AUTHELIA_BEARER, AUTHELIA_WEB, DEVICE_FLOW, UNKNOWN }
 
     /** The grant vocabulary — what a sign-in through a provider can then fetch
      *  (build.json::ui.vault_connect.sign_in._doc_sign_in). Names the code
@@ -57,7 +59,8 @@ object SignIn {
         /** Whether a flow through this provider can start at all: the fleet SSO
          *  always can (its endpoints are the config source); a device grant
          *  needs a client id, and says so instead of failing halfway. */
-        val configured: Boolean get() = kind == Kind.AUTHELIA || (kind == Kind.DEVICE_FLOW && clientId.isNotBlank())
+        val configured: Boolean get() =
+            kind == Kind.AUTHELIA_BEARER || kind == Kind.AUTHELIA_WEB || (kind == Kind.DEVICE_FLOW && clientId.isNotBlank())
     }
 
     fun parseProviders(o: JSONObject): List<Provider> {
@@ -69,7 +72,8 @@ object SignIn {
                 id = p.getString("id"),
                 label = p.optString("label", p.getString("id")),
                 kind = when (p.optString("kind")) {
-                    "authelia" -> Kind.AUTHELIA
+                    "authelia_bearer" -> Kind.AUTHELIA_BEARER
+                    "authelia_web" -> Kind.AUTHELIA_WEB
                     "device_flow" -> Kind.DEVICE_FLOW
                     else -> Kind.UNKNOWN
                 },

@@ -6291,14 +6291,23 @@
       "connect_timeout_ms": 8000,
       "read_timeout_ms": 30000,
       "known_schema_versions": [1],
-      "_doc_sign_in": "#573 The Sign-in step of Configs > Profile > Connect: WHICH providers are offered, in order, and how each authenticates. The list is data; nothing in Kotlin names a provider, an endpoint or a client id. `kind` is the only thing the code dispatches on: `authelia` is the fleet SSO (the stored bearer or the browser login, both reaching the Caddy gate; endpoints are ui.config_source and this block's base_url); `device_flow` is the OAuth 2.0 device grant, ONE code path for GitHub and Google that differ only in these fields. `primary` marks the fleet's own SSO. `grants` says what a sign-in through this provider can then fetch: `config_artifact` = the per-user full config (/pub/superapp/config/<user>, which carries the User > Identity > Peer registry), `vault_bundle` = the #566 consolidated vault export (Authelia only: the server binds the mailed code to the bearer identity), `repo_artifact` = the same artifact read out of the private vault repo with the token (GitHub: a login also grants the repos), `identity` = the provider proves an address and nothing more (Google today: no server of the fleet accepts a Google token, so it is identity-only until one does - declared, not invented). GitHub: client_id is PUBLIC by design (the device grant needs no client secret); taken from the cloud front portal's OAuth App, the one that answers 'device_flow_disabled' rather than 'Not Found' - STILL ONE CLICK SHORT: 'Enable Device Flow' on that App at github.com/settings/developers. scope=repo because cloud-vault is private. Google: the device grant needs a client registered as 'TV and Limited Input' and its token exchange takes a client_secret that Google itself documents as not secret in this context; both are EMPTY until the owner registers one, and the app then says 'not configured' instead of starting a flow that cannot finish. verification_url/verification_uri are read as each provider spells them.",
+      "_doc_sign_in": "#573 The Sign-in step of Configs > Profile > Connect: WHICH providers are offered, in order, and how each authenticates. The list is data; nothing in Kotlin names a provider, an endpoint or a client id. `kind` is the only thing the code dispatches on. #578: the fleet SSO is offered as TWO distinct ways, one provider each - `authelia_bearer` (a stored or pasted bearer token, one tap; also the mailed-code second factor for the vault bundle) and `authelia_web` (the portal login in the embedded browser, whose session cookie is used for one request and dropped - #467's posture, no other login route); both reach the same Caddy gate (endpoints are ui.config_source and this block's base_url). The bearer keeps id `authelia` because cloud-infra's superapp-users.json auth_providers policy already names it, and an APK that predates the split must keep being offered it. `device_flow` is the OAuth 2.0 device grant, ONE code path for GitHub and Google that differ only in these fields. `primary` marks the fleet's own SSO (exactly one: the bearer way). `grants` says what a sign-in through this provider can then fetch: `config_artifact` = the per-user full config (/pub/superapp/config/<user>, which carries the User > Identity > Peer registry), `vault_bundle` = the #566 consolidated vault export (Authelia only: the server binds the mailed code to the bearer identity), `repo_artifact` = the same artifact read out of the private vault repo with the token (GitHub: a login also grants the repos), `identity` = the provider proves an address and nothing more (Google today: no server of the fleet accepts a Google token, so it is identity-only until one does - declared, not invented). GitHub: client_id is PUBLIC by design (the device grant needs no client secret); taken from the cloud front portal's OAuth App, the one that answers 'device_flow_disabled' rather than 'Not Found' - STILL ONE CLICK SHORT: 'Enable Device Flow' on that App at github.com/settings/developers. scope=repo because cloud-vault is private. Google: the device grant needs a client registered as 'TV and Limited Input' and its token exchange takes a client_secret that Google itself documents as not secret in this context; both are EMPTY until the owner registers one, and the app then says 'not configured' instead of starting a flow that cannot finish. verification_url/verification_uri are read as each provider spells them.",
       "sign_in": {
         "providers": [
           {
             "id": "authelia",
-            "label": "Authelia",
-            "kind": "authelia",
+            "label": "Authelia bearer",
+            "kind": "authelia_bearer",
             "primary": true,
+            "grants": [
+              "config_artifact",
+              "vault_bundle"
+            ]
+          },
+          {
+            "id": "authelia_web",
+            "label": "Authelia web-auth",
+            "kind": "authelia_web",
             "grants": [
               "config_artifact",
               "vault_bundle"

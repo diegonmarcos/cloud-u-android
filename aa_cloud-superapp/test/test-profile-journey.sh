@@ -7,8 +7,10 @@
 # ProfileJourneyTest, SignInTest, UserRegistryTest, AppTabsStyleTest. This file
 # pins what a JVM test cannot see:
 #   T1  the provider list is DATA: build.json::ui.vault_connect.sign_in declares
-#       ≥3 providers with unique ids, exactly ONE primary, kinds the code
-#       dispatches on, baked to ONE BuildConfig field; the GitHub-only fields are gone
+#       FOUR ways in (#578: Authelia bearer, Authelia web-auth, GitHub, Google),
+#       unique ids and labels, exactly ONE primary, kinds the code dispatches
+#       on, the two SSO ways of DISTINCT kinds, Google inert (empty client id —
+#       never invented), baked to ONE BuildConfig field; the GitHub-only fields are gone
 #   T2  nothing in Kotlin names a provider, an endpoint, a client id, a user, an
 #       address or a device — the seed lives in cloud-infra's superapp-users.json
 #   T3  every journey_* / sign_in_* string the Kotlin uses exists in EVERY locale,
@@ -30,6 +32,9 @@
 #       peer on a mesh
 #   T8  mutation: a scratch ProfileFragment whose Connect tab no longer builds the
 #       journey turns T4 RED
+#   T9  mutation (#578): the four-way check turns RED when the web-auth way is
+#       folded back into the bearer's kind, when the fragment sends the web pill
+#       to the bearer dialog, and when Google is given an invented client id
 set -uo pipefail
 APP="${SA_APP:-$(cd "$(dirname "$0")/.." && pwd)}"
 PASS=0; FAIL=0
@@ -56,7 +61,7 @@ codeof() { awk '{ l=$0; sub(/^[[:space:]]+/,"",l); if (l ~ /^\/\// || l ~ /^\*/ 
 
 echo "== T1: the provider list is data =="
 N=$(jq '.ui.vault_connect.sign_in.providers | length' "$BJ" 2>/dev/null || echo 0)
-[ "${N:-0}" -ge 3 ] && ok "T1: $N providers declared" || bad "T1: fewer than 3 providers declared ($N)"
+[ "${N:-0}" -ge 4 ] && ok "T1: $N providers declared" || bad "T1: fewer than 4 providers declared ($N)"
 IDS=$(jq -r '.ui.vault_connect.sign_in.providers[].id' "$BJ")
 [ "$(echo "$IDS" | sort | uniq -d | wc -l)" = 0 ] && ok "T1: provider ids are unique" || bad "T1: duplicate provider id"
 P=$(jq '[.ui.vault_connect.sign_in.providers[] | select(.primary == true)] | length' "$BJ")
@@ -72,6 +77,37 @@ grep -q '"UI_VAULT_CONNECT_SIGN_IN_B64"' "$GR" && grep -q 'BuildConfig.UI_VAULT_
     && ok "T1: one BuildConfig field, read by SignIn.kt" || bad "T1: the sign_in blob is not baked or not read"
 grep -qE 'UI_GH_OAUTH|github_oauth' "$GR" && bad "T1: gradle still bakes the GitHub-only OAuth fields" || ok "T1: no GitHub-only OAuth field in gradle"
 jq -e '.ui.config_source.github_oauth' "$BJ" >/dev/null 2>&1 && bad "T1: build.json still carries ui.config_source.github_oauth" || ok "T1: the OAuth client lives only in sign_in"
+
+# ── the four ways in (#578), as a function so T9 can run it on mutated copies ──
+# $1 = build.json, $2 = ProfileFragment.kt; prints the first broken rule, returns non-zero on one.
+fourways() {
+    local bj="$1" pf="$2" k
+    [ "$(jq '.ui.vault_connect.sign_in.providers | length' "$bj")" = 4 ] || { echo "not four providers"; return 1; }
+    [ "$(jq '[.ui.vault_connect.sign_in.providers[].label] | unique | length' "$bj")" = 4 ] || { echo "labels are not unique"; return 1; }
+    for k in authelia_bearer authelia_web; do
+        [ "$(jq --arg k "$k" '[.ui.vault_connect.sign_in.providers[] | select(.kind == $k)] | length' "$bj")" = 1 ] \
+            || { echo "kind $k is not declared exactly once"; return 1; }
+    done
+    [ "$(jq '[.ui.vault_connect.sign_in.providers[] | select(.kind == "device_flow")] | length' "$bj")" = 2 ] || { echo "not two device-flow providers"; return 1; }
+    # Google: declared, and inert until the owner mints a client id — never invented here.
+    [ "$(jq -r '[.ui.vault_connect.sign_in.providers[] | select(.kind == "device_flow" and (.client_id // "") == "")] | length' "$bj")" = 1 ] \
+        || { echo "exactly one device-flow provider (Google) must carry an empty client_id"; return 1; }
+    # The fragment gives each SSO way its own branch and its own dialog — no shared path.
+    local code; code=$(codeof "$pf")
+    echo "$code" | awk '/SignIn.Kind.AUTHELIA_WEB ->/{getline l; print l}' | grep -q 'showAutheliaWebAuthDialog()' \
+        || { echo "the web-auth pill does not open the web-auth dialog"; return 1; }
+    echo "$code" | awk '/SignIn.Kind.AUTHELIA_BEARER ->/{getline l; print l}' | grep -q 'showAutheliaBearerDialog()' \
+        || { echo "the bearer pill does not open the bearer dialog"; return 1; }
+    echo "$code" | grep -q 'via = autheliaProvider(SignIn.Kind.AUTHELIA_WEB)' \
+        || { echo "the web-auth session is not recorded against the web-auth provider"; return 1; }
+    return 0
+}
+echo "== T1b: FOUR ways in — Authelia bearer, Authelia web-auth, GitHub, Google =="
+msg=$(fourways "$BJ" "$PF") && ok "T1b: four ways, two distinct SSO kinds, Google inert, each SSO way has its own dialog" || bad "T1b: $msg"
+jq -e '.ui.vault_connect.sign_in.providers[] | select(.primary == true) | select(.kind == "authelia_bearer")' "$BJ" >/dev/null \
+    && ok "T1b: the primary is the bearer way" || bad "T1b: the primary provider is not the bearer way"
+grep -q '"authelia_bearer" -> Kind.AUTHELIA_BEARER' "$SI" && grep -q '"authelia_web" -> Kind.AUTHELIA_WEB' "$SI" \
+    && ok "T1b: SignIn.kt dispatches both SSO kinds" || bad "T1b: SignIn.kt does not map both SSO kinds"
 
 echo "== T2: no provider, endpoint, client id, user, address or device literal in Kotlin =="
 for id in $IDS; do
@@ -163,6 +199,10 @@ if [ -n "$USERS" ]; then
     for id in $(jq -r '.users[].auth_providers[]' "$USERS" | sort -u); do
         echo "$IDS" | grep -qx "$id" && ok "T7: policy provider '$id' is declared here" || bad "T7: superapp-users.json offers '$id', which build.json does not declare"
     done
+    for id in $IDS; do
+        jq -e --arg id "$id" '[.users[].auth_providers[]] | index($id)' "$USERS" >/dev/null \
+            && ok "T7: declared provider '$id' is offered by some user's policy" || bad "T7: '$id' is declared here but no user's auth_providers offers it — the pill would vanish once the artifact arrives"
+    done
     for slug in $(jq -r '.users | keys[]' "$USERS"); do
         pi=$(jq -r --arg s "$slug" '[.users[$s].identities[] | select(.primary == true)] | length' "$USERS")
         pp=$(jq -r --arg s "$slug" '[.users[$s].peers[] | select(.primary == true)] | length' "$USERS")
@@ -187,6 +227,18 @@ grep -v 'renderJourney(ctx, connect)' "$PF" > "$TMP/no-journey.kt"
 t4 "$TMP/no-journey.kt" && bad "T8: T4 passed a fragment whose Connect tab builds no journey" || ok "T8: no journey → T4 RED"
 sed 's/renderJourney(ctx, connect)/connect.addView(autheliaEmailEditor(ctx)); renderJourney(ctx, connect)/' "$PF" > "$TMP/old-box.kt"
 t4 "$TMP/old-box.kt" && bad "T8: T4 passed a fragment that put the account-email box back" || ok "T8: an old box back on the tab → T4 RED"
+
+echo "== T9: mutation — the four-way check turns red =="
+jq '.ui.vault_connect.sign_in.providers |= map(if .id == "authelia_web" then .kind = "authelia_bearer" else . end)' "$BJ" > "$TMP/folded.json"
+fourways "$TMP/folded.json" "$PF" >/dev/null && bad "T9: passed a build.json whose web-auth way is the bearer's kind" || ok "T9: web-auth folded into the bearer kind → RED"
+jq '.ui.vault_connect.sign_in.providers |= map(select(.id != "authelia_web"))' "$BJ" > "$TMP/three.json"
+fourways "$TMP/three.json" "$PF" >/dev/null && bad "T9: passed three providers" || ok "T9: one SSO way dropped → RED"
+jq '.ui.vault_connect.sign_in.providers |= map(if .id == "google" then .client_id = "invented.apps.googleusercontent.com" else . end)' "$BJ" > "$TMP/invented.json"
+fourways "$TMP/invented.json" "$PF" >/dev/null && bad "T9: passed an invented Google client id" || ok "T9: Google given a client id → RED"
+sed 's/{ showAutheliaWebAuthDialog() })$/{ showAutheliaBearerDialog() })/' "$PF" > "$TMP/web-to-bearer.kt"
+cmp -s "$PF" "$TMP/web-to-bearer.kt" && bad "T9: the mutation did not change the fragment (tester is stale)" \
+    || { fourways "$BJ" "$TMP/web-to-bearer.kt" >/dev/null && bad "T9: passed a web pill that opens the bearer dialog" || ok "T9: web pill → bearer dialog → RED"; }
+fourways "$BJ" "$PF" >/dev/null && ok "T9: the unmutated tree is still green" || bad "T9: the unmutated tree is red"
 
 echo
 echo "passed=$PASS failed=$FAIL"

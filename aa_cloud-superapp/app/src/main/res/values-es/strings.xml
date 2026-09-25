@@ -457,8 +457,8 @@
     <string name="journey_bearer_stored">Bearer guardado para %1$s</string>
     <string name="journey_not_signed_in">Sin sesión: elige un proveedor abajo.</string>
     <string name="journey_sign_in_caption">El SSO propio de la flota es el principal. Un inicio con GitHub también da acceso a los repos privados; Google solo demuestra una dirección. Todas las rutas acaban en el mismo sitio: tu configuración, descargada una vez.</string>
-    <string name="journey_way_browser">%1$s · inicio en el navegador</string>
-    <string name="journey_way_bearer">%1$s · pegar un bearer</string>
+    <string name="journey_way_browser">%1$s · iniciar sesión en el portal</string>
+    <string name="journey_way_bearer">%1$s · pegar un token</string>
     <string name="journey_way_code">%1$s · código en el navegador</string>
     <string name="journey_way_ssh">%1$s · clave SSH</string>
     <string name="journey_use_stored_bearer">Usar el bearer guardado (%1$s)</string>

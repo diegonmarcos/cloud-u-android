@@ -49,7 +49,31 @@ class SignInTest {
     @Test fun `exactly one primary, and it is the fleet SSO`() {
         val primaries = SignIn.providers.filter { it.primary }
         assertEquals(1, primaries.size)
-        assertEquals(SignIn.Kind.AUTHELIA, primaries.single().kind)
+        assertEquals(SignIn.Kind.AUTHELIA_BEARER, primaries.single().kind)
+    }
+
+    @Test fun `four ways in - the SSO's bearer and web-auth are two providers of distinct kinds (#578)`() {
+        assertEquals(4, SignIn.providers.size)
+        assertEquals(
+            listOf(SignIn.Kind.AUTHELIA_BEARER, SignIn.Kind.AUTHELIA_WEB, SignIn.Kind.DEVICE_FLOW, SignIn.Kind.DEVICE_FLOW),
+            SignIn.providers.map { it.kind },
+        )
+        assertEquals("ids are unique", 4, SignIn.providers.map { it.id }.toSet().size)
+        assertEquals("labels are unique - each pill says which way it is", 4, SignIn.providers.map { it.label }.toSet().size)
+        // Both SSO ways are startable and reach the same fetches; neither is the device grant.
+        val sso = SignIn.providers.filter { it.kind == SignIn.Kind.AUTHELIA_BEARER || it.kind == SignIn.Kind.AUTHELIA_WEB }
+        assertEquals(2, sso.size)
+        sso.forEach {
+            assertTrue(it.configured)
+            assertTrue(it.grants(SignIn.GRANT_CONFIG_ARTIFACT) && it.grants(SignIn.GRANT_VAULT_BUNDLE))
+        }
+    }
+
+    @Test fun `Google stays declared but inert until an owner-minted client id lands`() {
+        val google = SignIn.provider("google")!!
+        assertEquals(SignIn.Kind.DEVICE_FLOW, google.kind)
+        assertEquals("", google.clientId)
+        assertFalse("no invented client id - the UI says 'not configured'", google.configured)
     }
 
     @Test fun `every declared kind is one the code dispatches on`() {

@@ -75,12 +75,20 @@ in declared order, filtered by the artifact's `auth_providers` policy once one i
 known. The pill text is the provider's declared `label`; the flow it opens is
 dispatched on `kind` and `grants` only — no Kotlin names a provider:
 
-* `kind: authelia` → two pills: **`<label> · browser login`** (primary; the
-  existing WebView login, cookie kept in memory for the request) and
-  **`<label> · paste a bearer`** (the existing bearer dialog). A successful bearer
-  fetch STORES the bearer paired with the primary identity the artifact names
-  (`ConfigsPrefs.setAutheliaCredential`) — that is the durable sign-in the vault
-  route needs; the separate email box and token box are gone.
+* #578 — FOUR ways in, the fleet SSO being TWO of them, one declared provider
+  each, distinct kinds:
+  * `kind: authelia_bearer` (primary; id `authelia`, which the cloud-infra
+    `auth_providers` policy already names) → **`<label> · paste a token`** (the
+    bearer dialog) plus this way's own controls: the stored bearer's one-tap
+    pill and clear button, the orphan-token link, and the mailed-code pill. A
+    successful bearer fetch STORES the bearer paired with the primary identity
+    the artifact names (`ConfigsPrefs.setAutheliaCredential`) — the durable
+    sign-in the vault route needs.
+  * `kind: authelia_web` (id `authelia_web`) → **`<label> · sign in at the
+    portal`**: the WebView login against the same SSO (#467's posture — a Custom
+    Tab's cookie jar is the browser's, so only a WebView can hand the session
+    cookie back for ONE request; nothing persisted, no other login route). Its
+    session is recorded against this provider, not the bearer's.
 * `kind: device_flow` → **`<label> · browser code`** (RFC 8628 device grant,
   `SignIn.kt`, one dialog for every such provider). If the provider `grants
   repo_artifact` a second pill **`<label> · SSH key`** offers the existing
