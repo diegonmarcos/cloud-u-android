@@ -39,10 +39,17 @@ object ConfigAutoImport {
 
     private const val TAG = ConfigSyncClient.TAG
 
+    /** A WireGuard key as wg-quick accepts it: 32 bytes, base64, 44 chars. */
+    private val WG_KEY = Regex("^[A-Za-z0-9+/]{43}=$")
+
     /** Marker glyphs used in the report, so the UI stays dumb. */
     private const val OK = "✓"     // ✓ applied
     private const val SKIP = "–"   // – received, deliberately not applied
     private const val BAD = "✗"    // ✗ present but unusable
+
+    /** The artifact sections this apply understands, in apply order — what
+     *  step 4 of the journey lists (#573) and what [apply] plans. */
+    val SECTIONS: List<String> = listOf("profile", "wireguard", "mesh", "services", "configs")
 
     data class Report(val ok: Boolean, val lines: List<String>) {
         fun text(): String = lines.joinToString("\n")
@@ -74,13 +81,15 @@ object ConfigAutoImport {
 
         // ── plan each section ────────────────────────────────────────────
         lines += planProfile(context, root.optJSONObject("profile"), commits)
-        lines += planWireGuard(context, root.optJSONObject("wireguard"), commits)
+        lines += planWireGuard(context, root, root.optJSONObject("wireguard"), commits)
         lines += planBaked("mesh", root.opt("mesh"), "data/mesh.json")
         lines += planBaked("services", root.opt("services"), "data/services_*.json")
         lines += planConfigsBlob(context, root.optJSONObject("configs"), commits)
 
         // Anything the contract does not cover is REPORTED, never dropped.
-        val known = setOf("_meta", "_generated", "profile", "wireguard", "mesh", "services", "configs")
+        // #573: the artifact also carries the User → Identity → Peer registry
+        // (identities, peers, auth_providers) — read by UserRegistry, not written anywhere.
+        val known = setOf("_meta", "_generated", "_source", "identities", "peers", "auth_providers") + SECTIONS
         val unknown = root.keys().asSequence().filterNot { it in known }.toList()
         if (unknown.isNotEmpty()) lines += "$SKIP unknown sections ignored: ${unknown.joinToString(", ")}"
 
@@ -165,13 +174,24 @@ object ConfigAutoImport {
      * [WireGuardPrefs] stores exactly ONE tunnel, so the first is applied
      * and the rest are reported as skipped — never silently dropped.
      */
-    private fun planWireGuard(context: Context, o: JSONObject?, commits: MutableList<() -> Unit>): String {
+    private fun planWireGuard(context: Context, root: JSONObject, o: JSONObject?, commits: MutableList<() -> Unit>): String {
         if (o == null) return "$SKIP wireguard — not in artifact"
         val prefs = WireGuardPrefs(context)
         val storedKey = prefs.interfacePrivateKey
 
         // Normalise every shape into an ordered list of (name, conf-text).
         val tunnels = mutableListOf<Pair<String, String>>()
+        // Shape D (#573) — the deriver's own: `{<profile>: {name, config_text}}`,
+        // the PRIMARY peer's profiles at the root, or the CHOSEN peer's under
+        // `peers.<id>.wireguard` when the owner picked one in Profile ▸ Sign-in.
+        // The PrivateKey line carries a placeholder there; see hasKey below.
+        val peerId = UserRegistry.selectedPeer(context)
+        val chosen = if (peerId.isBlank()) null else UserRegistry.peerProfiles(root, peerId)
+        val profiles = chosen?.takeIf { it.isNotEmpty() }
+            ?: o.keys().asSequence().mapNotNull { k -> o.optJSONObject(k)?.let { p ->
+                p.optString("config_text").takeIf { it.isNotBlank() }?.let { p.optString("name", k) to it } } }
+                .sortedBy { it.first }.toMap()
+        for ((name, conf) in profiles) tunnels += name to conf
         o.optJSONArray("tunnels")?.let { arr ->
             for (i in 0 until arr.length()) {
                 val t = arr.optJSONObject(i) ?: continue
@@ -185,7 +205,14 @@ object ConfigAutoImport {
 
         if (tunnels.isNotEmpty()) {
             val (name, rawConf) = tunnels.first()
-            val hasKey = rawConf.lineSequence().any { it.trim().startsWith("PrivateKey", ignoreCase = true) }
+            // A PrivateKey line only counts when it carries a key: the public
+            // artifact ships `<PROVIDED_BY_DEVICE>` in its place (cloud-infra
+            // redacts at the source boundary), and that must read as "no key,
+            // splice the stored one", never reach the parser.
+            val hasKey = rawConf.lineSequence().any {
+                val v = it.trim()
+                v.startsWith("PrivateKey", ignoreCase = true) && WG_KEY.matches(v.substringAfter('=').trim())
+            }
             if (!hasKey && storedKey.isBlank()) {
                 return "$SKIP wireguard — tunnel \"$name\" carries no PrivateKey and none is stored locally. " +
                     "Key material must still come from a file import: Configs › WireGuard › Import .conf."
@@ -260,6 +287,9 @@ object ConfigAutoImport {
         val out = StringBuilder()
         var inserted = false
         conf.lineSequence().forEach { line ->
+            // A placeholder PrivateKey line (the public artifact's redaction) is
+            // dropped, or the parser would see two PrivateKey entries.
+            if (line.trim().startsWith("PrivateKey", ignoreCase = true)) return@forEach
             out.append(line).append('\n')
             if (!inserted && line.trim().equals("[Interface]", ignoreCase = true)) {
                 out.append("PrivateKey = ").append(privateKey).append('\n')

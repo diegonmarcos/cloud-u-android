@@ -6281,13 +6281,6 @@
         "repo": "diegonmarcos/cloud-vault",
         "path": "superapp-config.json",
         "ref": "main"
-      },
-      "_doc_github_oauth": "OAuth device flow for the 'Import GH OWebAuth' tile. client_id is PUBLIC by design — the device grant exists precisely so a native app needs no client secret — so it belongs here as data. Taken from the cloud front portal (front-diegonmarcos/a-Portals/cloud/src/cloud_control.html), which is the OAuth App that actually exists: probing GitHub's device-code endpoint, this id answers 'device_flow_disabled' while the id in that portal's maintained admin-actions.ts (Ov23liQPvqLvZgQQrI7C) answers 'Not Found' — GitHub distinguishes an app with the grant switched off from an app that is not there, so the TypeScript module points at a deleted App and the inline one is live. STILL ONE CLICK SHORT: Device Flow must be ticked on the App at github.com/settings/developers ('Enable Device Flow'). Until it is, the tile fails cleanly with GitHub's own words rather than hanging. scope=repo, not the portal's read:user, because cloud-vault is private — same App, wider consent screen, which is normal for a device grant.",
-      "github_oauth": {
-        "client_id": "Ov23liOg9JhezyYUCHmS",
-        "scope": "repo",
-        "device_code_url": "https://github.com/login/device/code",
-        "token_url": "https://github.com/login/oauth/access_token"
       }
     },
     "_doc_vault_connect": "Configs > Profile > Connect > Vault configs (#566/#569). Two calls, two factors: start_path with the stored Authelia bearer makes the server mail a one-time code to the account address; fetch_path with the same bearer plus {\"code\"} returns {\"schema\": cloud-vault configs/schema.json, \"bundle\": the decrypted cloud-vault configs/profile-secrets.json}. #570: the Fleet tab (ex Imported) is the fleet configurator - cockpit.sections compare each vault section with this device and apply it on a tap (see cockpit._doc); vault sections no cockpit section names render raw below them. known_schema_versions is the gate schema.json asks for: a bundle whose schema_version is not listed is refused, nothing shown. Auth is the stored Authelia bearer OR a browser session (WebView cookie, memory only) - both reach the same gate. base_url must be bearer-reachable OFF the mesh: c3-public-api (/pub) is wg_only:false, c3-infra-api is mesh-only.",
@@ -6298,6 +6291,50 @@
       "connect_timeout_ms": 8000,
       "read_timeout_ms": 30000,
       "known_schema_versions": [1],
+      "_doc_sign_in": "#573 The Sign-in step of Configs > Profile > Connect: WHICH providers are offered, in order, and how each authenticates. The list is data; nothing in Kotlin names a provider, an endpoint or a client id. `kind` is the only thing the code dispatches on: `authelia` is the fleet SSO (the stored bearer or the browser login, both reaching the Caddy gate; endpoints are ui.config_source and this block's base_url); `device_flow` is the OAuth 2.0 device grant, ONE code path for GitHub and Google that differ only in these fields. `primary` marks the fleet's own SSO. `grants` says what a sign-in through this provider can then fetch: `config_artifact` = the per-user full config (/pub/superapp/config/<user>, which carries the User > Identity > Peer registry), `vault_bundle` = the #566 consolidated vault export (Authelia only: the server binds the mailed code to the bearer identity), `repo_artifact` = the same artifact read out of the private vault repo with the token (GitHub: a login also grants the repos), `identity` = the provider proves an address and nothing more (Google today: no server of the fleet accepts a Google token, so it is identity-only until one does - declared, not invented). GitHub: client_id is PUBLIC by design (the device grant needs no client secret); taken from the cloud front portal's OAuth App, the one that answers 'device_flow_disabled' rather than 'Not Found' - STILL ONE CLICK SHORT: 'Enable Device Flow' on that App at github.com/settings/developers. scope=repo because cloud-vault is private. Google: the device grant needs a client registered as 'TV and Limited Input' and its token exchange takes a client_secret that Google itself documents as not secret in this context; both are EMPTY until the owner registers one, and the app then says 'not configured' instead of starting a flow that cannot finish. verification_url/verification_uri are read as each provider spells them.",
+      "sign_in": {
+        "providers": [
+          {
+            "id": "authelia",
+            "label": "Authelia",
+            "kind": "authelia",
+            "primary": true,
+            "grants": [
+              "config_artifact",
+              "vault_bundle"
+            ]
+          },
+          {
+            "id": "github",
+            "label": "GitHub",
+            "kind": "device_flow",
+            "device_code_url": "https://github.com/login/device/code",
+            "token_url": "https://github.com/login/oauth/access_token",
+            "userinfo_url": "https://api.github.com/user",
+            "client_id": "Ov23liOg9JhezyYUCHmS",
+            "client_secret": "",
+            "scope": "repo",
+            "grants": [
+              "identity",
+              "repo_artifact"
+            ]
+          },
+          {
+            "id": "google",
+            "label": "Google",
+            "kind": "device_flow",
+            "device_code_url": "https://oauth2.googleapis.com/device/code",
+            "token_url": "https://oauth2.googleapis.com/token",
+            "userinfo_url": "https://openidconnect.googleapis.com/v1/userinfo",
+            "client_id": "",
+            "client_secret": "",
+            "scope": "openid email",
+            "grants": [
+              "identity"
+            ]
+          }
+        ]
+      },
       "cockpit": {
         "_doc": "#570 The Fleet tab: which cockpit sections exist, in what order, and which VAULT sections (configs/schema.json ids) feed each. Labels live here, not in Kotlin. A vault section listed under no cockpit section is still shown raw at the bottom of the tab, so a section added in the vault is visible before this list learns it. ai_tokens maps a vault `ai.tokens.<item>` to the DEVICE provider id it feeds (the keyboard's keyboard_ai registry, ab_cloud-libs-shared/build.json): the two OpenRouter tokens the vault holds are the same provider seen from two containers, so only one is mapped - mapping both would have the second overwrite the first on every apply. The device itself is CHOSEN from the vault's electronics section (every entry with a wg_peer), never typed.",
         "_doc_cards": "#570 reopened: the Fleet tab is a COCKPIT - a hero card for the chosen device, then one card per section here, in this order. `icon` is the drawable each card's round badge shows (resolved by Sections.iconResFor, the same name->drawable lookup every declared tile uses; an unknown name falls back to ic_link_tile). `observed: false` marks a section whose DEVICE side this app cannot read (the keyboard owns its lists), so its light is the shared StatusLight's 'Not verifiable' instead of a green or red it could not justify. `device_icons` maps the vault's electronics `type` (notebook, phone, ...) to the hero orb's drawable; `_default` covers a type this list has not learnt and the empty state before any device is chosen.",
@@ -6310,6 +6347,8 @@
           {"id": "apps", "label": "Apps", "vault": ["apps"], "icon": "ic_home_apps"}
         ],
         "device_icons": {"notebook": "ic_device_desktop", "phone": "ic_ctl_mobile_data", "_default": "ic_device_desktop"},
+        "_doc_journey_icons": "#573 Configs > Profile > Connect is THE JOURNEY: four step cards in this cockpit's chrome (sign_in, who, device, get). The drawable each step's round badge shows, resolved by Sections.iconResFor like every icon here; the hero orb uses `who`. Design: a0_docs/eng-specs/superapp-auth-profile-peer-flow.md.",
+        "journey_icons": {"sign_in": "ic_lock", "who": "ic_p_identities", "device": "ic_ctl_mobile_data", "get": "ic_check_all"},
         "ai_tokens": {"openrouter_my_ai_api": "openrouter"}
       }
     },

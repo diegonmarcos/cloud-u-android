@@ -51,10 +51,12 @@ object VaultCockpit {
     )
 
     /** [aiTokens]: vault `ai.tokens.<item>` → the device provider id the token feeds.
-     *  [deviceIcons]: electronics `type` → the hero orb's drawable; `_default` for the rest. */
+     *  [deviceIcons]: electronics `type` → the hero orb's drawable; `_default` for the rest.
+     *  [journeyIcons]: the Connect journey's step (#573, `sign_in`/`who`/`device`/`get`) → its badge's drawable. */
     data class Layout(
         val sections: List<Section>, val aiTokens: Map<String, String>,
         val deviceIcons: Map<String, String> = emptyMap(),
+        val journeyIcons: Map<String, String> = emptyMap(),
     )
 
     fun parseLayout(o: JSONObject): Layout {
@@ -67,10 +69,12 @@ object VaultCockpit {
         }
         val tokens = o.optJSONObject("ai_tokens") ?: JSONObject()
         val icons = o.optJSONObject("device_icons") ?: JSONObject()
+        val journey = o.optJSONObject("journey_icons") ?: JSONObject()
         return Layout(
             sections,
             tokens.keys().asSequence().associateWith { tokens.getString(it) },
             icons.keys().asSequence().associateWith { icons.getString(it) },
+            journey.keys().asSequence().associateWith { journey.getString(it) },
         )
     }
 
@@ -98,8 +102,8 @@ object VaultCockpit {
      */
     fun devices(bundle: JSONObject): List<Device> {
         val out = mutableListOf<Device>()
-        val electronics = bundle.optJSONObject("electronics") ?: return out
-        electronics.keys().forEach { group ->
+        val electronics = bundle.optJSONObject("electronics")
+        electronics?.keys()?.forEach { group ->
             val g = electronics.optJSONObject(group) ?: return@forEach
             g.keys().forEach { id ->
                 val entry = g.optJSONObject(id) ?: return@forEach
@@ -110,6 +114,18 @@ object VaultCockpit {
                 out += Device(id, peer.optString("name").ifBlank { id }, ip, peer.optString("wg_ipv6"),
                     (entry.opt("type") as? String).orEmpty())
             }
+        }
+        // #573: the vault's peers section (`peers.<id>.wg0`, one entry per
+        // device of the ONE user declaration) declares devices the same way;
+        // an id already known from electronics is not listed twice.
+        val peers = bundle.optJSONObject("peers")
+        peers?.keys()?.forEach { id ->
+            val entry = peers.optJSONObject(id) ?: return@forEach
+            val wg0 = entry.optJSONObject("wg0") ?: return@forEach
+            if (wg0.optBoolean("pending")) return@forEach
+            val ip = wg0.optString("wg_ip")
+            if (ip.isBlank() || out.any { it.id == id }) return@forEach
+            out += Device(id, wg0.optString("name").ifBlank { id }, ip, wg0.optString("wg_ipv6"), "")
         }
         return out
     }
@@ -180,13 +196,20 @@ object VaultCockpit {
      * Ownership is derived from the two declarations, never from a file name.
      */
     fun meshProfiles(bundle: JSONObject, device: Device): Map<String, String> {
-        val profiles = bundle.optJSONObject("mesh")?.optJSONObject("profiles") ?: return emptyMap()
         val mine = setOf(device.wgIp, device.wgIpv6).filter { it.isNotBlank() }
-        return profiles.keys().asSequence()
-            .mapNotNull { name -> (profiles.opt(name) as? String)?.let { name to it } }
-            .filter { (_, conf) -> addressesOf(conf).any { it in mine } }
-            .sortedBy { it.first }
-            .toMap()
+        val candidates = mutableMapOf<String, String>()
+        bundle.optJSONObject("mesh")?.optJSONObject("profiles")?.let { profiles ->
+            profiles.keys().forEach { name -> (profiles.opt(name) as? String)?.let { candidates[name] = it } }
+        }
+        // #573: the peers section files each phone's profiles under its own id;
+        // the same rule applies — a profile is the device's by its Address line.
+        bundle.optJSONObject("peers")?.let { peers ->
+            peers.keys().forEach { id ->
+                val profiles = peers.optJSONObject(id)?.optJSONObject("profiles") ?: return@forEach
+                profiles.keys().forEach { name -> (profiles.opt(name) as? String)?.let { candidates.putIfAbsent("$id/$name", it) } }
+            }
+        }
+        return candidates.filter { (_, conf) -> addressesOf(conf).any { it in mine } }.toSortedMap()
     }
 
     /** What this device's tunnel is right now, for the comparison column. */

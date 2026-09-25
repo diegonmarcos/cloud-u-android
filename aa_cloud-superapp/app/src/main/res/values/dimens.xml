@@ -9,13 +9,22 @@
      library's tokens back and fails if the rendered island disagrees with them. -->
 
 <resources>
-    <!-- #477. The tab-strip's OWN top breathing room above the toolbar island
-         the app draws INTO the camera cutout. This is a base only: the real
-         clearance is added at runtime from the status-bar / display-cutout
-         inset (SectionTabsFragment reads it through an insets listener and
-         sets the strip's top margin to base + inset), because a fixed dp is
-         right at one cutout geometry and wrong at every other — the #407 rule
-         the launcher clock already follows. Declared here once so the base is
-         a single knob, never a literal in the code. -->
+    <!-- #477 / #573. EVERY tab strip's vertical geometry, declared ONCE and
+         applied by AppTabsStyle.apply — the section strips, Profile's,
+         Launcher's, the drawer's. Until #573 only SectionTabsFragment read the
+         top base, so a page's own strip sat higher than a section's.
+
+         tab_strip_top_inset is the strip's OWN top breathing room above the
+         toolbar island the app draws INTO the camera cutout. A base only: the
+         real clearance is added at runtime from the status-bar / display-cutout
+         inset (AppTabsStyle installs the insets listener and sets the strip's
+         top margin to base + inset), because a fixed dp is right at one cutout
+         geometry and wrong at every other — the #407 rule the launcher clock
+         already follows.
+
+         tab_strip_bottom_inset is the gap between the strip and the page below
+         it, the same on every page. The two are equal on purpose: the strip
+         breathes the same above and below. -->
     <dimen name="tab_strip_top_inset">10dp</dimen>
+    <dimen name="tab_strip_bottom_inset">10dp</dimen>
 </resources>

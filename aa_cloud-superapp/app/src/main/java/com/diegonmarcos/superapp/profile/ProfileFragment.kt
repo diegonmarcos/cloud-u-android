@@ -164,7 +164,13 @@ class ProfileFragment : Fragment() {
         )
         importedTab = tabs.indexOfFirst { it.column === imported }
         connectTab = tabs.indexOfFirst { it.column === connect }
-        if (selectedTab < 0) selectedTab = importedTab
+        // The page opens on the JOURNEY until it is walked once (#573): the
+        // cockpit has nothing to compare against before the vault is fetched,
+        // and the old landing — a hero saying "connect first" — was the
+        // reopen. Once walked, the cockpit is the page again.
+        if (selectedTab < 0) {
+            selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) connectTab else importedTab
+        }
         root.addView(tabStrip(ctx, tabs))
         root.addView(scroll)
 
@@ -271,53 +277,14 @@ class ProfileFragment : Fragment() {
             bannerPicker.launch("image/*")
         })
 
-        // ── Connect (tab 1) ──────────────────────────────────────────────
-        // Two stored fields and the code that confirms them, and nothing else.
-        // Everything on this tab is a way IN; none of it is ever synced.
-        connect.addView(sectionHeader(ctx, "Connect  (this device only)"))
-        connect.addView(caption(ctx, CONNECT_TEXT))
-
-        // ONE address for this section. It is the account the bearer belongs
-        // to AND the "user" the provider request asked for — those are the
-        // same identity, so a second box would only invite them to disagree.
-        connect.addView(label(ctx, "Account email"))
-        connect.addView(autheliaEmailEditor(ctx))
-
-        connect.addView(label(ctx, "Authelia bearer token"))
-        connect.addView(secretField(
-            ctx,
-            stored = { ConfigsPrefs(ctx).autheliaToken.isNotBlank() },
-            save = { saveAutheliaToken(it) },
-        ))
-        connect.addView(clearSecretButton(ctx, "Authelia bearer token") {
-            ConfigsPrefs(ctx).clearAutheliaCredential()
-        })
-        if (ConfigsPrefs(ctx).hasOrphanToken()) {
-            connect.addView(caption(ctx, ORPHAN_TOKEN_TEXT))
-            connect.addView(pickButton(ctx, "Link the stored token to this address") {
-                linkOrphanToken()
-            })
-        }
-
-        connect.addView(label(ctx, "Mail 2FA confirmation code"))
-        connect.addView(mailConfirmationField(ctx))
-        connect.addView(caption(ctx, MAIL_2FA_TEXT))
-        connect.addView(pickButton(ctx, "Confirm in Authelia") { confirmMailCode() })
-
-        // ── Vault configs (Connect → Imported) ───────────────────────────
-        connect.addView(sectionHeader(ctx, getString(R.string.vault_connect_header)))
-        connect.addView(caption(ctx, getString(R.string.vault_connect_caption)))
-        connect.addView(caption(ctx, getString(R.string.vault_connect_auth_state, vaultAuthText(ctx))))
-        connect.addView(pickButton(ctx, getString(R.string.vault_connect_browser)) { showVaultBrowserDialog() })
-        val vaultStatus = TextView(ctx).apply { visibility = View.GONE }
-        connect.addView(pickButton(ctx, getString(R.string.vault_connect_send_code)) {
-            vaultStart(vaultStatus)
-        })
-        connect.addView(vaultCodeField(ctx))
-        connect.addView(pickButton(ctx, getString(R.string.vault_connect_fetch)) {
-            vaultFetch(vaultStatus)
-        })
-        connect.addView(vaultStatus)
+        // ── Connect (tab 1): THE JOURNEY (#573) ─────────────────────────
+        // Four numbered steps in the cockpit's own chrome — sign in, who,
+        // which device, get everything — built by [renderJourney] from ONE
+        // state ([ProfileJourney.State]). Everything on this tab is a way IN;
+        // none of it is ever synced. The design is
+        // a0_docs/eng-specs/superapp-auth-profile-peer-flow.md, and nothing
+        // is on this tab that the design does not name.
+        renderJourney(ctx, connect)
 
         renderImported(ctx, imported)
 
@@ -332,45 +299,295 @@ class ProfileFragment : Fragment() {
             confirmErase()
         })
 
-        // ── Imports ──────────────────────────────────────────────────────
-        // All five entries live HERE. "Import Configs" used to be its own
-        // Configs-grid tile (build.json::ui.sections[config].pages[import],
-        // action:import_configs) — the tile is gone and the action route it
-        // used is reused verbatim below, so the launcher shortcut and the
-        // radial menu still reach the same screen.
-        col.addView(sectionHeader(ctx, "Imports"))
-        col.addView(caption(ctx, "One artifact, five ways in. The manual route is its own row; the four below differ only in how they prove who you are — Authelia by pasted token or by browser login, GitHub by login or by SSH key. All of them end in the same apply step, so whichever you use, the same sections are written."))
+        return root
+    }
 
-        // Row 1 — the manual route, alone and full width. It is the only entry
-        // that needs no credential, so grouping it with the four authenticated
-        // ones made it read as a fifth variant of the same thing.
-        val manualRow = importRow(ctx)
-        manualRow.addView(actionTile(ctx, "Import file · paste", 0xFF7C3AED.toInt()) {
-            // Same route MainActivity already owns, so chrome/back-stack
-            // behaviour is identical to the old Configs tile.
+    // ── Connect · THE JOURNEY (#573) ──────────────────────────────────────
+
+    /** The journey's views, so a tap inside a card can repaint the lights without a full redraw. */
+    private var journey: ProfileJourneyView.Journey? = null
+
+    /** Steps whose last attempt reported an error — the card's red light. Memory only. */
+    private val failedSteps = mutableSetOf<ProfileJourney.Step>()
+
+    /** The declared fleet SSO, if this build declares one. */
+    private fun autheliaProvider(): SignIn.Provider? =
+        SignIn.providers.firstOrNull { it.kind == SignIn.Kind.AUTHELIA }
+
+    /** Everything the journey knows, gathered once per draw — see [ProfileJourney.State]. */
+    private fun journeyState(ctx: android.content.Context): ProfileJourney.State {
+        val session = SignIn.Current.session
+        val provider = session?.let { SignIn.provider(it.provider) }
+        return ProfileJourney.State(
+            session = session,
+            storedBearerEmail = ConfigsPrefs(ctx).autheliaEmail,
+            identityOnly = provider != null &&
+                !provider.grants(SignIn.GRANT_CONFIG_ARTIFACT) && !provider.grants(SignIn.GRANT_REPO_ARTIFACT),
+            registry = UserRegistry.current(ctx),
+            artifactInMemory = UserRegistry.Current.artifact != null,
+            identity = UserRegistry.selectedIdentity(ctx),
+            peer = UserRegistry.selectedPeer(ctx),
+            appliedAt = UserRegistry.appliedAt(ctx),
+            vaultFetched = VaultConnect.Imported.bundle != null,
+            failed = failedSteps.toSet(),
+        )
+    }
+
+    private fun ask(step: ProfileJourney.Step): String = getString(when (step) {
+        ProfileJourney.Step.SIGN_IN -> R.string.journey_ask_sign_in
+        ProfileJourney.Step.WHO -> R.string.journey_ask_who
+        ProfileJourney.Step.DEVICE -> R.string.journey_ask_device
+        ProfileJourney.Step.GET -> R.string.journey_ask_get
+    })
+
+    private fun stepLabel(step: ProfileJourney.Step): String = getString(when (step) {
+        ProfileJourney.Step.SIGN_IN -> R.string.journey_step_sign_in
+        ProfileJourney.Step.WHO -> R.string.journey_step_who
+        ProfileJourney.Step.DEVICE -> R.string.journey_step_device
+        ProfileJourney.Step.GET -> R.string.journey_step_get
+    })
+
+    /** Why a step is locked, in words; null when it is not locked. */
+    private fun lockText(s: ProfileJourney.State, step: ProfileJourney.Step): String? {
+        if (ProfileJourney.phase(s, step) != ProfileJourney.Phase.LOCKED) return null
+        val provider = s.session?.let { SignIn.provider(it.provider) }
+        return when (ProfileJourney.lock(s, step)) {
+            ProfileJourney.Lock.SIGN_IN_FIRST -> getString(R.string.journey_lock_sign_in_first)
+            ProfileJourney.Lock.IDENTITY_ONLY -> getString(R.string.journey_lock_identity_only,
+                provider?.label ?: s.session?.provider.orEmpty(), s.session?.identity?.ifBlank { "—" } ?: "—")
+            ProfileJourney.Lock.NO_REGISTRY -> getString(R.string.journey_lock_no_registry)
+            ProfileJourney.Lock.PICK_IDENTITY -> getString(R.string.journey_lock_pick_identity)
+            ProfileJourney.Lock.PICK_PEER -> getString(R.string.journey_lock_pick_peer)
+            ProfileJourney.Lock.REFETCH -> getString(R.string.journey_lock_refetch)
+            null -> null
+        }
+    }
+
+    private fun profilesText(peer: UserRegistry.Peer): String =
+        if (peer.profiles.isEmpty()) getString(R.string.journey_profiles_pending)
+        else getString(R.string.journey_profiles_n, peer.profiles.size)
+
+    private fun identityTag(id: UserRegistry.Identity): String =
+        listOfNotNull(id.label.takeIf { it.isNotBlank() }, getString(R.string.journey_primary_tag).takeIf { id.primary })
+            .joinToString(" · ").ifBlank { "—" }
+
+    /** One line per step, worded from the state. */
+    private fun summaries(s: ProfileJourney.State): Map<ProfileJourney.Step, String> {
+        val provider = s.session?.let { SignIn.provider(it.provider) }
+        val signIn = when {
+            s.session != null && s.identityOnly ->
+                getString(R.string.journey_identity_only_done, provider?.label ?: s.session.provider, s.session.identity.ifBlank { "—" })
+            s.session != null ->
+                getString(R.string.journey_signed_in_as, s.session.identity.ifBlank { s.storedBearerEmail.ifBlank { "—" } }, provider?.label ?: s.session.provider)
+            s.storedBearerEmail.isNotBlank() -> getString(R.string.journey_bearer_stored, s.storedBearerEmail)
+            else -> getString(R.string.journey_not_signed_in)
+        }
+        val who = lockText(s, ProfileJourney.Step.WHO) ?: s.chosenIdentity?.let {
+            getString(R.string.journey_who_summary, it.email, identityTag(it))
+        } ?: ask(ProfileJourney.Step.WHO)
+        val device = lockText(s, ProfileJourney.Step.DEVICE) ?: s.chosenPeer?.let {
+            getString(R.string.journey_device_summary, it.label, it.wgIp.ifBlank { "—" }, profilesText(it))
+        } ?: ask(ProfileJourney.Step.DEVICE)
+        val get = lockText(s, ProfileJourney.Step.GET) ?: if (s.appliedAt.isNotBlank())
+            getString(R.string.journey_applied, s.appliedAt,
+                getString(if (s.vaultFetched) R.string.journey_vault_fetched else R.string.journey_vault_not_fetched))
+        else ask(ProfileJourney.Step.GET)
+        return mapOf(
+            ProfileJourney.Step.SIGN_IN to signIn, ProfileJourney.Step.WHO to who,
+            ProfileJourney.Step.DEVICE to device, ProfileJourney.Step.GET to get,
+        )
+    }
+
+    private fun heroSummary(s: ProfileJourney.State): String =
+        if (ProfileJourney.allDone(s)) getString(R.string.journey_hero_done)
+        else getString(R.string.journey_hero_step, ProfileJourney.stepNumber(s), ask(ProfileJourney.next(s)))
+
+    /** Repaint lights and summaries from a fresh state, without rebuilding the bodies. */
+    private fun paintJourney() {
+        val j = journey ?: return
+        val s = journeyState(requireContext())
+        ProfileJourneyView.paint(j, s, summaries(s), heroSummary(s))
+    }
+
+    /**
+     * THE JOURNEY. Built from one [ProfileJourney.State]; every body that has
+     * something to show is built (so a done card re-opens on its header) and
+     * [ProfileJourneyView.paint] decides which are open. Nothing here names a
+     * provider, a user, an address or a device: providers come from
+     * build.json, the rest from the artifact's registry, the step badges from
+     * the cockpit declaration's `journey_icons`.
+     */
+    private fun renderJourney(ctx: android.content.Context, into: LinearLayout) {
+        val s = journeyState(ctx)
+        val reg = s.registry
+        val layout = VaultCockpit.layout
+        val icons = ProfileJourney.Step.values().associateWith { step ->
+            Sections.iconResFor(ctx, layout.journeyIcons[step.name.lowercase()].orEmpty())
+        }
+        val chosen = s.chosenIdentity
+        val peer = s.chosenPeer
+        val j = ProfileJourneyView.build(
+            ctx,
+            heroTitle = reg?.name?.ifBlank { null } ?: getString(R.string.journey_hero_title_empty),
+            heroSubtitle = if (chosen != null && peer != null) getString(R.string.journey_hero_subtitle, chosen.email, peer.label)
+                           else getString(R.string.journey_hero_subtitle_empty),
+            heroIcon = icons.getValue(ProfileJourney.Step.WHO),
+            labels = ProfileJourney.Step.values().associateWith { stepLabel(it) },
+            icons = icons,
+            toggleAction = getString(R.string.journey_card_toggle),
+        )
+        journey = j
+        into.addView(j.root)
+
+        buildSignInStep(ctx, s, j.cards.getValue(ProfileJourney.Step.SIGN_IN).body)
+        if (reg != null) {
+            buildWhoStep(ctx, s, reg, j.cards.getValue(ProfileJourney.Step.WHO).body)
+            buildDeviceStep(ctx, s, reg, j.cards.getValue(ProfileJourney.Step.DEVICE).body)
+        }
+        buildGetStep(ctx, s, j.cards.getValue(ProfileJourney.Step.GET).body)
+        paintJourney()
+    }
+
+    /**
+     * Step 1: one pill per declared provider — in declared order, filtered by
+     * the artifact's `auth_providers` policy once one is known — dispatched on
+     * the provider's kind and grants only. A stored bearer is a sign-in that
+     * survives restarts, so it gets its own one-tap pill and its clear button.
+     */
+    private fun buildSignInStep(ctx: android.content.Context, s: ProfileJourney.State, body: LinearLayout) {
+        body.addView(caption(ctx, getString(R.string.journey_sign_in_caption)))
+        val policy = s.registry?.authProviders.orEmpty()
+        val offered = SignIn.providers.filter { policy.isEmpty() || it.id in policy }
+        val status = statusView(ctx)
+        for (p in offered) {
+            if (!p.configured) { body.addView(caption(ctx, getString(R.string.journey_not_configured, p.label))); continue }
+            when (p.kind) {
+                SignIn.Kind.AUTHELIA -> {
+                    body.addView(pickButton(ctx, getString(R.string.journey_way_browser, p.label)) { showAutheliaWebAuthDialog() })
+                    body.addView(pickButton(ctx, getString(R.string.journey_way_bearer, p.label)) { showAutheliaBearerDialog() })
+                }
+                SignIn.Kind.DEVICE_FLOW -> {
+                    body.addView(pickButton(ctx, getString(R.string.journey_way_code, p.label)) { showDeviceFlowDialog(p) })
+                    if (p.grants(SignIn.GRANT_REPO_ARTIFACT))
+                        body.addView(pickButton(ctx, getString(R.string.journey_way_ssh, p.label)) { showGithubSshDialog() })
+                }
+                SignIn.Kind.UNKNOWN -> body.addView(caption(ctx, getString(R.string.journey_not_configured, p.label)))
+            }
+        }
+        val configs = ConfigsPrefs(ctx)
+        if (s.storedBearerEmail.isNotBlank()) {
+            body.addView(pickButton(ctx, getString(R.string.journey_use_stored_bearer, s.storedBearerEmail)) {
+                show(status, NEUTRAL, "…")
+                runFetch(status, { if (importedThisSession) { importedThisSession = false; redraw() } },
+                    via = autheliaProvider(), identity = s.storedBearerEmail) { fetchWithBearer(configs.autheliaToken) }
+            })
+            body.addView(clearSecretButton(ctx, "Authelia bearer token") { configs.clearAutheliaCredential() })
+        } else if (configs.hasOrphanToken()) {
+            body.addView(caption(ctx, ORPHAN_TOKEN_TEXT))
+            body.addView(pickButton(ctx, "Link the stored token to ${prefs.email.trim()}") {
+                val error = configs.adoptOrphanToken(prefs.email.trim())
+                if (error != null) view?.snack(error) else { view?.snack("Stored token linked"); redraw() }
+            })
+        }
+        body.addView(pickButton(ctx, getString(R.string.journey_mail_code)) { showMailCodeDialog() })
+        body.addView(status)
+    }
+
+    /** Step 2: one selectable row per identity; the pick is stored as the address alone. */
+    private fun buildWhoStep(
+        ctx: android.content.Context, s: ProfileJourney.State, reg: UserRegistry.Registry, body: LinearLayout,
+    ) {
+        body.addView(caption(ctx, getString(R.string.journey_who_user_line, reg.name.ifBlank { reg.user }, reg.identities.size, reg.peers.size)))
+        body.addView(caption(ctx, getString(R.string.journey_who_caption)))
+        val highlight = s.chosenIdentity ?: ProfileJourney.defaultIdentity(s)
+        for (id in reg.identities) {
+            body.addView(ProfileJourneyView.choice(ctx, getString(R.string.journey_identity_row, id.email, identityTag(id)), id.email == highlight?.email) {
+                UserRegistry.selectIdentity(ctx, id.email)
+                redraw()
+            })
+        }
+    }
+
+    /** Step 3: one selectable row per peer; the pick also points the Fleet cockpit at the peer's vault device. */
+    private fun buildDeviceStep(
+        ctx: android.content.Context, s: ProfileJourney.State, reg: UserRegistry.Registry, body: LinearLayout,
+    ) {
+        body.addView(caption(ctx, getString(R.string.journey_device_caption)))
+        val highlight = s.chosenPeer ?: ProfileJourney.defaultPeer(s)
+        for (p in reg.peers) {
+            val text = getString(R.string.journey_device_row, p.label, p.kind.ifBlank { "—" }, p.wgIp.ifBlank { "—" }, profilesText(p))
+            body.addView(ProfileJourneyView.choice(ctx, text, p.id == highlight?.id) {
+                UserRegistry.selectPeer(ctx, p.id)
+                if (p.vaultDevice.isNotBlank()) VaultCockpit.selectDevice(ctx, p.vaultDevice)
+                redraw()
+            })
+        }
+    }
+
+    /**
+     * Step 4: what the artifact carries for the chosen peer and the ONE
+     * Apply (the chosen peer's profiles are what ConfigAutoImport writes);
+     * then the #566 vault export, whose fetch lands on the Fleet tab; and,
+     * last, the manual file route — the one entry that needs no credential.
+     */
+    private fun buildGetStep(ctx: android.content.Context, s: ProfileJourney.State, body: LinearLayout) {
+        val artifact = UserRegistry.Current.artifact
+        val peer = s.chosenPeer
+        if (artifact != null && peer != null) {
+            body.addView(caption(ctx, getString(R.string.journey_get_caption, peer.label)))
+            for (section in ConfigAutoImport.SECTIONS) {
+                if (section == "wireguard")
+                    body.addView(caption(ctx, getString(R.string.journey_get_wireguard, UserRegistry.peerProfiles(artifact, peer.id).size, peer.label)))
+                else
+                    body.addView(caption(ctx, getString(if (artifact.has(section)) R.string.journey_get_line_present else R.string.journey_get_line_absent, section)))
+            }
+            val status = statusView(ctx)
+            body.addView(pickButton(ctx, getString(R.string.journey_apply)) {
+                val report = ConfigAutoImport.apply(ctx.applicationContext, artifact)
+                if (report.ok) { failedSteps -= ProfileJourney.Step.GET; UserRegistry.markApplied(ctx, stamp()) }
+                else failedSteps += ProfileJourney.Step.GET
+                show(status, if (report.ok) GREEN else RED, report.text())
+                paintJourney()
+                body.visibility = View.VISIBLE   // the report was just asked for; it stays on screen
+            })
+            body.addView(label(ctx, getString(R.string.journey_vault_header)))
+            body.addView(caption(ctx, getString(R.string.vault_connect_auth_state, vaultAuthText(ctx))))
+            val vaultStatus = TextView(ctx).apply { visibility = View.GONE }
+            body.addView(pickButton(ctx, getString(R.string.vault_connect_send_code)) { vaultStart(vaultStatus) })
+            body.addView(vaultCodeField(ctx))
+            body.addView(pickButton(ctx, getString(R.string.journey_vault_fetch_open)) { vaultFetch(vaultStatus) })
+            body.addView(vaultStatus)
+            body.addView(status)
+        }
+        body.addView(pickButton(ctx, getString(R.string.journey_import_file)) {
             (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)
                 ?.onTileClicked("action:import_configs")
         })
-        col.addView(manualRow)
+    }
 
-        // Row 2 — the authenticated routes. Teal is Authelia, slate is GitHub,
-        // so the pair-of-pairs is legible before reading a word.
-        val authRow = importRow(ctx)
-        authRow.addView(actionTile(ctx, "Import\nAuthelia\nBearer", 0xFF0F766E.toInt()) {
-            showAutheliaBearerDialog()
-        })
-        authRow.addView(actionTile(ctx, "Import\nAuthelia\nOWebAuth", 0xFF0E7490.toInt()) {
-            showAutheliaWebAuthDialog()
-        })
-        authRow.addView(actionTile(ctx, "Import\nGh\nOWebAuth", 0xFF334155.toInt()) {
-            showGithubDeviceDialog()
-        })
-        authRow.addView(actionTile(ctx, "Import\nGH\nSSH", 0xFF1F2937.toInt()) {
-            showGithubSshDialog()
-        })
-        col.addView(authRow)
+    private fun statusView(ctx: android.content.Context): TextView = TextView(ctx).apply {
+        setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+        setTextIsSelectable(true)
+        visibility = View.GONE
+        setPadding(0, dp(ctx, 8), 0, 0)
+    }
 
-        return root
+    private fun stamp(): String =
+        java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date())
+
+    /** The Authelia mailed identity-validation code: one dialog, the same mechanics as before. */
+    private fun showMailCodeDialog() {
+        val ctx = requireContext()
+        importDialog(
+            title = getString(R.string.journey_mail_code_title),
+            positive = getString(R.string.journey_mail_code_go),
+            buildBody = { body, _ ->
+                body.addView(caption(ctx, MAIL_2FA_TEXT))
+                body.addView(mailConfirmationField(ctx))
+            },
+            onGo = { _, _ -> confirmMailCode() },
+            onDismiss = { mailCodeField = null },
+        ).show()
     }
 
     // ── tabs ─────────────────────────────────────────────────────────────
@@ -1045,6 +1262,7 @@ class ProfileFragment : Fragment() {
         statusBanner = null
         strip = null
         heroViews = null
+        journey = null
         // The mailed code is never stored; it dies with the view that held it.
         mailCodeField = null
     }
@@ -1116,50 +1334,6 @@ class ProfileFragment : Fragment() {
 
     // ── credentials ──────────────────────────────────────────────────────
 
-    /**
-     * A write-mostly box for one credential.
-     *
-     * WRITE-MOSTLY, not read-write, and that is the whole design. The stored
-     * value is NEVER put back into the view — the box starts empty and its
-     * hint says only whether something is on file. A masked EditText still
-     * holds the plaintext in the view hierarchy (recents screenshots,
-     * accessibility tree, a "show password" toggle), so the way to keep a
-     * bearer or a private key out of the UI is to not load it into the UI.
-     *
-     * Consequences that are intentional:
-     *  • blank does NOT clear — leaving the box untouched must not wipe a key
-     *    the user cannot see to retype. Clearing is the explicit button below.
-     *  • the value is saved on change, matching the rest of this auto-saving
-     *    screen, so there is no unsaved-state trap.
-     *  • nothing here is logged. The credential never becomes a string this
-     *    class hands to Log, and it is not in the profile sync document —
-     *    [ProfileSync] enumerates its keys and re-filters them through an
-     *    allowlist that contains neither of these.
-     */
-    private fun secretField(
-        ctx: android.content.Context,
-        stored: () -> Boolean,
-        save: (String) -> Unit,
-    ): EditText = EditText(ctx).apply {
-        hint = if (stored()) "•••••••• stored — type to replace" else "Paste to store on this device"
-        setSingleLine(false)
-        maxLines = 4
-        inputType = android.text.InputType.TYPE_CLASS_TEXT or
-            android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-        // Keep it out of the keyboard's learned-words store, and out of
-        // autofill's — both persist what is typed well beyond this screen.
-        imeOptions = android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-        importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
-        addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-            override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) = Unit
-            override fun afterTextChanged(s: Editable?) {
-                val typed = s?.toString()?.trim().orEmpty()
-                if (typed.isNotEmpty()) save(typed)
-            }
-        })
-    }
-
     /** The only way to remove a stored credential, since a blank box means
      *  "unchanged". Confirmed, because losing the WireGuard private key means
      *  the tunnel cannot be brought up again without re-importing it. */
@@ -1179,69 +1353,6 @@ class ProfileFragment : Fragment() {
                 parentFragmentManager.beginTransaction().attach(this).commitNow()
             }
             .show()
-    }
-
-    /** Live handle to the account-email box, so the token box (which saves on
-     *  every keystroke) can pair against whatever is currently typed there. */
-    private var autheliaEmailField: EditText? = null
-
-    /**
-     * The account the bearer belongs to.
-     *
-     * Seeded from the stored credential when there is one, otherwise from the
-     * profile email already on the device — a sensible default, not a
-     * decision: it stays editable because a user may hold a token for one of
-     * the other fleet accounts rather than their own.
-     *
-     * Editing it re-pairs an existing credential so the address follows the
-     * token. A blank or malformed address does NOT rewrite storage — the last
-     * good pairing is left intact and the error is shown instead, because
-     * destroying a working credential mid-keystroke is not a correction.
-     */
-    private fun autheliaEmailEditor(ctx: android.content.Context): EditText {
-        val configs = ConfigsPrefs(ctx)
-        val initial = configs.autheliaEmail.ifBlank { prefs.email.trim() }
-        return field(ctx, initial) { typed ->
-            val address = typed.trim()
-            if (configs.autheliaToken.isBlank()) return@field   // nothing to re-pair yet
-            val error = configs.setAutheliaCredential(address, configs.autheliaToken)
-            autheliaEmailField?.error = error
-        }.apply {
-            hint = "me@diegonmarcos.com"
-            inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
-            autheliaEmailField = this
-        }
-    }
-
-    /**
-     * Store the bearer WITH its address, or not at all.
-     *
-     * [ConfigsPrefs.setAutheliaCredential] is the only writer and refuses a
-     * partial write, so the refusal is reported on the field that can fix it
-     * rather than swallowed into a token that would read back as absent.
-     */
-    private fun saveAutheliaToken(token: String) {
-        val configs = ConfigsPrefs(requireContext())
-        val address = autheliaEmailField?.text?.toString()?.trim().orEmpty()
-        val error = configs.setAutheliaCredential(address, token)
-        autheliaEmailField?.error = error
-        if (error == null) view?.snack("Bearer stored for $address")
-    }
-
-    /** Attach an address to a token that predates the pairing rule. Explicit
-     *  and user-driven: the app does not get to decide whose token it is. */
-    private fun linkOrphanToken() {
-        val configs = ConfigsPrefs(requireContext())
-        val address = autheliaEmailField?.text?.toString()?.trim().orEmpty()
-        val error = configs.adoptOrphanToken(address)
-        if (error != null) {
-            autheliaEmailField?.error = error
-            return
-        }
-        view?.snack("Stored token linked to $address")
-        parentFragmentManager.beginTransaction().detach(this).commitNow()
-        parentFragmentManager.beginTransaction().attach(this).commitNow()
     }
 
     // ── erasure ──────────────────────────────────────────────────────────
@@ -1361,7 +1472,7 @@ class ProfileFragment : Fragment() {
                 } else {
                     go.isEnabled = false
                     show(status, NEUTRAL, "… authenticating and fetching $endpoint")
-                    runFetch(status, { go.isEnabled = true }) { fetchWithBearer(token) }
+                    runFetch(status, { go.isEnabled = true }, via = autheliaProvider(), storeBearer = token) { fetchWithBearer(token) }
                 }
             },
             onDismiss = { tokenField = null },
@@ -1381,24 +1492,39 @@ class ProfileFragment : Fragment() {
     private fun runFetch(
         status: TextView,
         done: () -> Unit,
+        via: SignIn.Provider? = null,
+        identity: String = "",
+        storeBearer: String = "",
         fetch: () -> com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome,
     ) {
         val appCtx = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
             val outcome = withContext(Dispatchers.IO) { fetch() }
             when (outcome) {
-                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed ->
+                is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed -> {
+                    failedSteps += ProfileJourney.Step.SIGN_IN
                     show(status, RED, "✗ ${outcome.kind}\n${outcome.message}")
+                }
 
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> {
-                    val report = ConfigAutoImport.apply(appCtx, outcome.body)
-                    val head = if (report.ok) "✓ Authenticated · ${outcome.bytes} bytes applied"
-                               else "✗ Authenticated, but nothing was applied"
-                    show(status, if (report.ok) GREEN else RED, "$head\n\n${report.text()}")
-                    if (report.ok) {
-                        view?.snack("Config imported")
-                        importedThisSession = true   // form redraws on dialog dismiss
+                    // #573: a fetch is STEP 1 of the journey. It remembers the
+                    // artifact (and caches its User → Identity → Peer registry)
+                    // and records who signed in; it does NOT apply. Applying is
+                    // step 4, for the peer picked in step 3 — an apply here
+                    // would write the wrong phone's profiles before the owner
+                    // had said which phone this is.
+                    UserRegistry.remember(appCtx, outcome.body)
+                    val who = identity.ifBlank { UserRegistry.Current.registry?.primaryIdentity?.email.orEmpty() }
+                    via?.let { SignIn.Current.session = SignIn.Session(it.id, who) }
+                    // A bearer that just proved itself is stored WITH the address
+                    // it proved — the durable sign-in the vault route needs.
+                    if (storeBearer.isNotBlank()) {
+                        ConfigsPrefs(appCtx).setAutheliaCredential(who, storeBearer)?.let { view?.snack(it) }
                     }
+                    failedSteps -= ProfileJourney.Step.SIGN_IN
+                    show(status, GREEN, getString(R.string.journey_fetched, outcome.bytes))
+                    view?.snack(getString(R.string.journey_fetched_snack))
+                    importedThisSession = true   // the journey redraws on dialog dismiss
                 }
             }
             done()
@@ -1528,8 +1654,11 @@ class ProfileFragment : Fragment() {
                     show(status, RED, "✗ No cookie for $endpoint yet — finish the login above first.")
                 } else {
                     go.isEnabled = false
+                    // The same Authelia session serves the vault route (#573):
+                    // one login, both fetches. Memory only, like vaultSession itself.
+                    vaultSession = cookie
                     show(status, NEUTRAL, "… fetching $endpoint with the browser session")
-                    runFetch(status, { go.isEnabled = true }) { fetchWithCookie(cookie) }
+                    runFetch(status, { go.isEnabled = true }, via = autheliaProvider()) { fetchWithCookie(cookie) }
                 }
             },
             // Free the WebView before the shell's redraw tears the view down.
@@ -1538,63 +1667,63 @@ class ProfileFragment : Fragment() {
         dialog.show()
     }
 
-    // ── GitHub · OAuth device flow ───────────────────────────────────────
+    // ── OAuth device grant · any declared provider (#573) ───────────────
 
     /**
-     * Approve a short code in a browser, then read the artifact out of the
-     * vault repo with the token GitHub hands back.
+     * Approve a short code in a browser, then either read the artifact out of
+     * the vault repo with the token (a provider that grants `repo_artifact`)
+     * or keep only the identity the token proves (every other provider).
      *
-     * The device grant is used rather than a redirect flow because it needs no
-     * client secret and no registered redirect URI — the app only ever holds
-     * the public client_id, which is why that id sits in build.json as data.
+     * ONE dialog for GitHub, Google and whatever else speaks RFC 8628: the
+     * provider is a [SignIn.Provider] read off build.json, and nothing here
+     * knows which one it is. The device grant is used rather than a redirect
+     * flow because it needs no client secret and no registered redirect URI —
+     * the app only ever holds the public client_id, which is why that id sits
+     * in build.json as data.
      */
-    private fun showGithubDeviceDialog() {
+    private fun showDeviceFlowDialog(p: SignIn.Provider) {
         val ctx = requireContext()
         var pollJob: kotlinx.coroutines.Job? = null
+        val readsRepo = p.grants(SignIn.GRANT_REPO_ARTIFACT)
 
         val dialog = importDialog(
-            title = "GitHub · browser login",
-            positive = "Start",
+            title = "${p.label} · browser login",
+            positive = getString(R.string.sign_in_start),
             buildBody = { body, _ ->
-                body.addView(caption(ctx,
-                    if (GithubImport.deviceFlowConfigured())
-                        "Press Start. GitHub will show a code to type at github.com/login/device; " +
-                        "once you approve it, the artifact is read from " +
-                        "${com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_GIT_REPO} " +
-                        "(${com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_GIT_PATH}) and applied."
-                    else
-                        "This build has no GitHub OAuth client_id, so the login cannot start.\n\n" +
-                        "Register an OAuth App at github.com/settings/developers with Device Flow " +
-                        "enabled, put its client_id in build.json under " +
-                        "ui.config_source.github_oauth.client_id, and rebuild."))
+                body.addView(caption(ctx, when {
+                    !p.configured -> getString(R.string.sign_in_not_configured, p.label)
+                    readsRepo -> getString(R.string.sign_in_device_caption_repo, p.label,
+                        com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_GIT_REPO,
+                        com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_GIT_PATH)
+                    else -> getString(R.string.sign_in_device_caption_identity, p.label)
+                }))
             },
             onGo = { go, status ->
-                if (!GithubImport.deviceFlowConfigured()) {
-                    show(status, RED, "✗ No client_id in this build — see above.")
+                if (!p.configured) {
+                    show(status, RED, "✗ " + getString(R.string.sign_in_not_configured, p.label))
                 } else {
                     go.isEnabled = false
-                    pollJob = startGithubDeviceFlow(status) { go.isEnabled = true }
+                    pollJob = startDeviceFlow(p, status) { go.isEnabled = true }
                 }
             },
-            // Stop polling GitHub the moment the user walks away.
+            // Stop polling the provider the moment the user walks away.
             onDismiss = { pollJob?.cancel() },
         )
         dialog.show()
     }
 
-    /** Request a code, show it, poll until approved, then fetch and apply. */
-    private fun startGithubDeviceFlow(status: TextView, done: () -> Unit): kotlinx.coroutines.Job =
+    /** Request a code, show it, poll until approved, then fetch-and-apply or
+     *  keep the identity — whichever the provider is declared to grant. */
+    private fun startDeviceFlow(p: SignIn.Provider, status: TextView, done: () -> Unit): kotlinx.coroutines.Job =
         viewLifecycleOwner.lifecycleScope.launch {
-            show(status, NEUTRAL, "… asking GitHub for a device code")
-            val code = withContext(Dispatchers.IO) { GithubImport.requestDeviceCode() }
+            show(status, NEUTRAL, getString(R.string.sign_in_asking, p.label))
+            val code = withContext(Dispatchers.IO) { SignIn.requestDeviceCode(p) }
                 .getOrElse {
                     show(status, RED, "✗ ${it.message}")
                     done(); return@launch
                 }
-
-            show(status, NEUTRAL,
-                "Enter this code at ${code.verificationUri}\n\n    ${code.userCode}\n\n" +
-                "Waiting for approval… (the code expires in ${code.expiresInSeconds / 60} min)")
+            val prompt = { tail: String -> getString(R.string.sign_in_code_prompt, code.verificationUri, code.userCode, tail) }
+            show(status, NEUTRAL, prompt(getString(R.string.sign_in_code_expiry, code.expiresInSeconds / 60)))
             // Open the page for them; if no browser handles it the code above is
             // still on screen and selectable, so the flow is not blocked on this.
             runCatching {
@@ -1608,26 +1737,33 @@ class ProfileFragment : Fragment() {
             var interval = code.intervalSeconds * 1000L
             while (System.currentTimeMillis() < deadline) {
                 kotlinx.coroutines.delay(interval)
-                when (val step = withContext(Dispatchers.IO) { GithubImport.pollForToken(code.deviceCode) }) {
-                    is GithubImport.Step.Token -> {
-                        show(status, NEUTRAL, "✓ Approved · reading ${com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_GIT_PATH}")
-                        runFetch(status, done) { GithubImport.fetchArtifact(step.accessToken) }
+                when (val step = withContext(Dispatchers.IO) { SignIn.pollForToken(p, code.deviceCode) }) {
+                    is SignIn.Step.Token -> {
+                        val who = withContext(Dispatchers.IO) { SignIn.identity(p, step.accessToken) }.orEmpty()
+                        show(status, NEUTRAL, getString(R.string.sign_in_approved, who.ifBlank { p.label }))
+                        if (p.grants(SignIn.GRANT_REPO_ARTIFACT)) {
+                            runFetch(status, done, via = p, identity = who) { GithubImport.fetchArtifact(step.accessToken) }
+                        } else {
+                            SignIn.Current.session = SignIn.Session(p.id, who)
+                            show(status, GREEN, getString(R.string.sign_in_identity_only, p.label, who.ifBlank { "—" }))
+                            importedThisSession = true   // the Sign-in section redraws with the session
+                            done()
+                        }
                         return@launch
                     }
-                    is GithubImport.Step.Failed -> {
+                    is SignIn.Step.Failed -> {
                         show(status, RED, "✗ ${step.message}")
                         done(); return@launch
                     }
-                    is GithubImport.Step.Pending -> {
-                        // slow_down means GitHub wants a longer gap, and ignoring
-                        // it gets the whole flow rate-limited.
-                        if (step.message.contains("slow down")) interval += 5_000L
-                        show(status, NEUTRAL,
-                            "Enter this code at ${code.verificationUri}\n\n    ${code.userCode}\n\n${step.message}")
+                    is SignIn.Step.Pending -> {
+                        // slow_down means the provider wants a longer gap, and
+                        // ignoring it gets the whole flow rate-limited.
+                        if (step.slowDown) interval += 5_000L
+                        show(status, NEUTRAL, prompt(step.message))
                     }
                 }
             }
-            show(status, RED, "✗ The code expired before it was approved.")
+            show(status, RED, getString(R.string.sign_in_code_expired))
             done()
         }
 
@@ -1913,21 +2049,6 @@ class ProfileFragment : Fragment() {
             return "$y-$mo-$d"
         }
 
-        private const val CONNECT_TEXT =
-            "None of this is part of your profile and none of it is ever uploaded — " +
-            "the sync document carries contact fields only.\n\n" +
-            "The Authelia bearer goes into the same encrypted store the config import " +
-            "writes (AES-256-GCM, key in the Android keystore), at the same " +
-            "auth.authelia_token path, so there is one bearer on this device rather " +
-            "than two that can disagree.\n\n" +
-            "The Authelia bearer is stored WITH the account email it belongs to, " +
-            "and cannot be stored without one. Authelia issues tokens per account " +
-            "and this fleet has several, so a token on its own cannot say whose " +
-            "access it carries — which is exactly what you need to know when a " +
-            "request comes back refused. A token with no address is treated as not " +
-            "stored at all.\n\n" +
-            "Stored values are never displayed again. An empty box means unchanged."
-
         /**
          * What the third box takes, stated in full because the wrong answer is
          * a permanently stored second factor.
@@ -1945,8 +2066,8 @@ class ProfileFragment : Fragment() {
 
         private const val ORPHAN_TOKEN_TEXT =
             "A bearer token is stored on this device with no account email, so it " +
-            "is not being used. Check the address above is the account the token " +
-            "belongs to, then link it. Nothing was changed or deleted."
+            "is not being used. If it belongs to the address on your profile, link " +
+            "it. Nothing was changed or deleted."
 
         private const val PRIVACY_TEXT =
             "Your name, email, phone, date of birth, location, company, website and " +

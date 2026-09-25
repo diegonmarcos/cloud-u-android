@@ -132,8 +132,10 @@ class AppDrawerSheetFragment : Fragment() {
             for (tab in tabs) addTab(newTab().setText(tab.label))
             // Pill-style chrome — matches the browser-tab chip strip below
             // and the broader glassmorphism + lavender language. Applies
-            // AFTER addTab so it can iterate the populated tab list.
-            AppTabsStyle.apply(this)
+            // AFTER addTab so it can iterate the populated tab list. Not under
+            // the toolbar island — this strip lives in a sheet — so it takes
+            // the shared top/bottom geometry without the live top inset.
+            AppTabsStyle.apply(this, underTopChrome = false)
         }
 
         val host = FrameLayout(ctx).apply {

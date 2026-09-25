@@ -5,8 +5,12 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import com.diegonmarcos.superapp.R
 import com.google.android.material.tabs.TabLayout
 
 /**
@@ -31,7 +35,14 @@ import com.google.android.material.tabs.TabLayout
  */
 object AppTabsStyle {
 
-    fun apply(tabLayout: TabLayout) {
+    /**
+     * @param underTopChrome true for a strip that sits under the toolbar
+     *   island (a section's, a page's): the live status-bar / display-cutout
+     *   inset is added to its top margin so it clears the island. False for a
+     *   strip inside a sheet, which is nowhere near the top of the window.
+     */
+    @JvmOverloads
+    fun apply(tabLayout: TabLayout, underTopChrome: Boolean = true) {
         val ctx = tabLayout.context
 
         // ── 1. Strip default Material chrome ─────────────────────
@@ -41,6 +52,7 @@ object AppTabsStyle {
         tabLayout.tabRippleColor = null
         val pad = dp(ctx, 4)
         tabLayout.setPadding(pad, pad, pad, pad)
+        inset(tabLayout, underTopChrome)
 
         // ── 2. Replace each tab's content with a pill custom view ─
         for (i in 0 until tabLayout.tabCount) {
@@ -223,6 +235,41 @@ object AppTabsStyle {
     private const val PILL_PAD_DP = 14f
     private const val PILL_MARGIN_DP = 3f
     private const val MIN_SP = 8f
+
+    /**
+     * The ONE vertical geometry of every strip (#573): top base + bottom gap
+     * from res/values/dimens.xml (tab_strip_top_inset, tab_strip_bottom_inset),
+     * and for a strip under the toolbar island the live status-bar /
+     * display-cutout inset on top of the base — #477's listener, which used
+     * to live in SectionTabsFragment alone, so a page's strip (Profile,
+     * Launcher) sat higher than a section's. The listener returns the insets
+     * UNCHANGED: consuming them would starve the toolbar island dispatched
+     * after it and ShellActivity's own shell listener.
+     *
+     * The margins are set on whatever MarginLayoutParams the caller gave the
+     * strip; every call site sets its layoutParams before styling, and a strip
+     * with none is left alone rather than handed a guess.
+     */
+    fun inset(tabLayout: TabLayout, underTopChrome: Boolean) {
+        val res = tabLayout.resources
+        val top = res.getDimensionPixelSize(R.dimen.tab_strip_top_inset)
+        val bottom = res.getDimensionPixelSize(R.dimen.tab_strip_bottom_inset)
+        fun margins(liveInset: Int) {
+            (tabLayout.layoutParams as? ViewGroup.MarginLayoutParams)?.apply {
+                topMargin = top + liveInset
+                bottomMargin = bottom
+                tabLayout.layoutParams = this
+            }
+        }
+        margins(0)
+        if (!underTopChrome) return
+        ViewCompat.setOnApplyWindowInsetsListener(tabLayout) { _, insets ->
+            val barTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
+            val cutoutTop = insets.getInsets(WindowInsetsCompat.Type.displayCutout()).top
+            margins(maxOf(barTop, cutoutTop))
+            insets
+        }
+    }
 
     /** Build a single pill — outer LinearLayout with a pill bg
      *  drawable + inner monospace caps TextView. */

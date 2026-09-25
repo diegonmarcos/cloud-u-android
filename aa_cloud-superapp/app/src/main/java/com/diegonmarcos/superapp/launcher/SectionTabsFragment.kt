@@ -7,8 +7,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import androidx.fragment.app.Fragment
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.diegonmarcos.superapp.ShellActivity
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.core.Collapsible
@@ -146,29 +144,12 @@ class SectionTabsFragment : Fragment(), Collapsible {
             tabGravity = TabLayout.GRAVITY_FILL
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            // #477. The strip's OWN top clearance, so its icon row clears the
-            // toolbar island menu that this app deliberately draws INTO the
-            // camera cutout. The clearance has to track the real inset, not a
-            // hardcoded dp: the island's bottom edge sits at (status/cutout
-            // inset + island chrome), and that inset differs per device and
-            // per launcher/Cloud chrome state — the #407 rule the launcher
-            // clock already follows. So the strip reserves its own base
-            // (tab_strip_top_inset) PLUS the status-bar / display-cutout top
-            // inset, read live through an insets listener. The listener
-            // returns the insets UNCHANGED — it must not consume them, or the
-            // toolbar island dispatched after it and ShellActivity's own shell
-            // listener would be starved (the same contract #407's strip holds).
-            ViewCompat.setOnApplyWindowInsetsListener(this) { v, insets ->
-                val barTop = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
-                val cutoutTop = insets.getInsets(WindowInsetsCompat.Type.displayCutout()).top
-                val inset = maxOf(barTop, cutoutTop)
-                val px = ctx.resources.getDimensionPixelSize(R.dimen.tab_strip_top_inset)
-                (v.layoutParams as? ViewGroup.MarginLayoutParams)?.apply {
-                    topMargin = px + inset
-                    v.layoutParams = this
-                }
-                insets
-            }
+            // #477 / #573. The strip's top clearance (its base above the toolbar
+            // island PLUS the live status-bar / display-cutout inset) and its
+            // gap to the pane below are AppTabsStyle's: one declaration in
+            // res/values/dimens.xml, applied to every strip in the app, so a
+            // page's strip and a section's can no longer sit at different
+            // heights. The listener used to be here alone.
             // Liquid-glass pill chrome — the same helper the strip used before,
             // so Suite / Infos / Labs still read as one consistent surface.
             AppTabsStyle.apply(this)

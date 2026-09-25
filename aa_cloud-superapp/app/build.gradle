@@ -411,19 +411,17 @@ def vaultReadMs        = ((vaultConnect.read_timeout_ms ?: 30000) as Number).int
 // layout (sections, labels, vault-section mapping, ai token targets) as one blob.
 def vaultSchemaVersions = ((vaultConnect.known_schema_versions ?: [1]) as List).join(',')
 def vaultCockpitB64     = groovy.json.JsonOutput.toJson(stripDocs(vaultConnect.cockpit ?: [:])).bytes.encodeBase64().toString()
+// #573 the Sign-in step: the provider list (kind, endpoints, client ids, grants) as one blob.
+def vaultSignInB64      = groovy.json.JsonOutput.toJson(stripDocs(vaultConnect.sign_in ?: [:])).bytes.encodeBase64().toString()
 // Configs → Profile → Config import, GitHub half. The vault repo coordinates and
-// the OAuth client_id are DATA (build.json::ui.config_source.git / .github_oauth)
+// the vault repo coordinates are DATA (build.json::ui.config_source.git); the OAuth
+// providers live in ui.vault_connect.sign_in (#573), baked below as one blob
 // for the same reason the Authelia endpoint is: repointing them must be a JSON
 // edit, never a Kotlin literal someone has to go find.
 def configGit          = configSource.git ?: [:]
 def configGitRepo      = (configGit.repo ?: '').toString()
 def configGitPath      = (configGit.path ?: '').toString()
 def configGitRef       = (configGit.ref  ?: 'main').toString()
-def ghOauth            = configSource.github_oauth ?: [:]
-def ghClientId         = (ghOauth.client_id ?: '').toString()
-def ghScope            = (ghOauth.scope ?: 'repo').toString()
-def ghDeviceUrl        = (ghOauth.device_code_url ?: 'https://github.com/login/device/code').toString()
-def ghTokenUrl         = (ghOauth.token_url ?: 'https://github.com/login/oauth/access_token').toString()
 def importSchemaJson = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(buildJson.ui.import_schema ?: [:]))
 def importSchemaB64  = importSchemaJson.bytes.encodeBase64().toString()
 // Linktree snapshot — drives Tools aggregator (Apps + Admin modes).
@@ -840,13 +838,10 @@ android {
         buildConfigField "int",    "UI_VAULT_CONNECT_READ_MS",    "${vaultReadMs}"
         buildConfigField "String", "UI_VAULT_CONNECT_SCHEMA_VERSIONS", "\"${vaultSchemaVersions}\""
         buildConfigField "String", "UI_VAULT_CONNECT_COCKPIT_B64", "\"${vaultCockpitB64}\""
+        buildConfigField "String", "UI_VAULT_CONNECT_SIGN_IN_B64", "\"${vaultSignInB64}\""
         buildConfigField "String", "UI_CONFIG_GIT_REPO",      "\"${configGitRepo}\""
         buildConfigField "String", "UI_CONFIG_GIT_PATH",      "\"${configGitPath}\""
         buildConfigField "String", "UI_CONFIG_GIT_REF",       "\"${configGitRef}\""
-        buildConfigField "String", "UI_GH_OAUTH_CLIENT_ID",   "\"${ghClientId}\""
-        buildConfigField "String", "UI_GH_OAUTH_SCOPE",       "\"${ghScope}\""
-        buildConfigField "String", "UI_GH_OAUTH_DEVICE_URL",  "\"${ghDeviceUrl}\""
-        buildConfigField "String", "UI_GH_OAUTH_TOKEN_URL",   "\"${ghTokenUrl}\""
         buildConfigField "String", "LINKTREE_JSON_B64",     "\"${linktreeB64}\""
         buildConfigField "String", "NEWS_FEEDS_B64",        "\"${newsFeedsB64}\""
 
