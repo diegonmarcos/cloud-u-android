@@ -2,7 +2,7 @@
 <!-- libs:appstore — Store ▸ Phone Apps (#564). English base (#298/#299);
      prefixed store_phone_ so nothing collides at the host's resource merge. -->
 <resources>
-    <string name="store_phone_caption">Every app on this phone. Cloud fleet apps update here; any other app\'s origin button opens the store that installed it. Stop needs the paired adb channel; Remove asks Android to confirm.</string>
+    <string name="store_phone_caption">Every app that belongs on this phone: installed, Cloud fleet, and the declared external apps. Install and Update go through this store — fleet release, the vendor\'s own APK, or the official F-Droid repo — and a row marked needs Play can only be opened on Play. Stop needs the paired adb channel; Remove asks Android to confirm.</string>
     <string name="store_phone_loading">Loading…</string>
     <string name="store_phone_count">%1$d apps</string>
     <string name="store_phone_list_failed">Could not list apps: %1$s</string>
@@ -63,5 +63,31 @@
     <string name="store_import_title">Import app list</string>
     <string name="store_off">OFF</string>
     <string name="store_on">ON</string>
-    <string name="store_phone_bar_disabled">Install all and Update all are off here: these apps belong to other stores, and installing or updating them needs a privileged channel (adb/Shizuku) that is not paired. Each app\'s own store updates it.</string>
+    <!-- #571 WE ARE THE STORE: the declared list, its state lines, batch verbs. -->
+    <string name="store_phone_install">Install</string>
+    <string name="store_phone_installing">Installing %1$s…</string>
+    <string name="store_phone_checking">checking…</string>
+    <string name="store_phone_count_missing">%1$d not installed, %2$d of them need Play</string>
+    <string name="store_phone_badge_needs_play">needs Play</string>
+    <string name="store_phone_state_needs_play">◯ not installed  ·  %1$s  ·  Google Play publishes no APK; the Play button is the official path</string>
+    <string name="store_phone_state_not_installed">◯ not installed  ·  installs via %1$s</string>
+    <string name="store_phone_state_installed">✓ v%1$s (%2$d)</string>
+    <string name="store_phone_state_update">⬆ update available  ·  v%1$s → %2$s  ·  via %3$s</string>
+    <string name="store_phone_state_unknown">? v%1$s  ·  %2$s</string>
+    <string name="store_phone_note_no_feed">vendor publishes no version feed; Update re-fetches the current APK and the downgrade guard decides</string>
+    <string name="store_phone_note_play">Play manages its updates</string>
+    <string name="store_phone_note_undeclared">not in the store declaration; its origin store updates it</string>
+    <string name="store_phone_note_not_comparable">remote version not comparable with the installed one</string>
+    <string name="store_phone_source_vendor">vendor APK</string>
+    <string name="store_phone_source_fdroid">F-Droid</string>
+    <string name="store_phone_source_play">Play</string>
+    <string name="store_phone_source_fleet">Cloud release</string>
+    <string name="store_phone_why_play_only">%1$s publishes no APK outside Google Play. Open its Play page — this store cannot download it.</string>
+    <string name="store_phone_install_all_start">Installing %1$d apps… %2$d need Play and are skipped.</string>
+    <string name="store_phone_batch_start">Updating %1$d apps…</string>
+    <string name="store_phone_batch_none">Nothing to install: every declared app is on the phone, or needs Play.</string>
+    <string name="store_phone_update_none">Nothing to update. Run Check all first — Update all acts on what it found.</string>
+    <string name="store_phone_batch_done">%1$d done · %2$d failed</string>
+    <string name="store_import_direct">Direct from vendor / F-Droid (%1$d)</string>
+    <string name="store_import_install_direct">Install %1$d directly</string>
 </resources>

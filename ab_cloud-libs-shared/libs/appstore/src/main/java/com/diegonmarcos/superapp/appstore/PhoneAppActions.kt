@@ -25,7 +25,7 @@ import org.json.JSONObject
  */
 object PhoneAppActions {
 
-    enum class Kind { UPDATE, OPEN, STOP, REMOVE, APP_INFO, ORIGIN }
+    enum class Kind { INSTALL, UPDATE, OPEN, STOP, REMOVE, APP_INFO, ORIGIN }
 
     /** [intent] null = an in-app verb the fragment runs (Update, Stop).
      *  [disabledReason] non-null = drawn disabled, and tapping shows why. */
@@ -35,6 +35,42 @@ object PhoneAppActions {
 
     fun sources(ctx: Context): JSONObject =
         ctx.assets.open(SOURCES_ASSET).use { JSONObject(it.readBytes().decodeToString()) }
+
+    /** #571 the external-app ladders, from the SAME asset: one map, one file. */
+    fun resolver(sources: JSONObject): SourceResolver.Config = SourceResolver.config(sources)
+
+    /**
+     * #571 the buttons a row offers for an app the phone does NOT have yet.
+     * A fleet app installs through the fleet path; an external app with a
+     * direct rung installs through [ExternalInstall]; a Play-only app gets
+     * Install disabled with the reason and its Play page as the origin — the
+     * deep-link is the official Play path, and nothing here pretends otherwise.
+     */
+    fun forMissing(ctx: Context, app: SourceResolver.External, fleetApp: Fleet.App?,
+                   sources: JSONObject, cfg: SourceResolver.Config): List<Action> {
+        fun s(id: Int) = ctx.getString(id)
+        val out = mutableListOf<Action>()
+        when {
+            fleetApp != null -> {
+                out += Action(Kind.INSTALL, s(R.string.store_phone_install), null,
+                    if (fleetApp.blocked) s(R.string.store_phone_why_unpublished) else null)
+                out += hostPage(ctx, sources)
+            }
+            !app.needsPlay -> {
+                out += Action(Kind.INSTALL, s(R.string.store_phone_install), null, null)
+                storePage(sources, cfg.playInstaller, app.pkg)?.takeIf { app.hasPlay }
+                    ?.let { (label, page) -> out += Action(Kind.ORIGIN, label, page, null) }
+            }
+            else -> {
+                out += Action(Kind.INSTALL, s(R.string.store_phone_install), null,
+                    ctx.getString(R.string.store_phone_why_play_only, app.label))
+                val (label, page) = storePage(sources, cfg.playInstaller, app.pkg)
+                    ?: error("the resolver's play installer is not in the sources map")
+                out += Action(Kind.ORIGIN, label, page, null)
+            }
+        }
+        return out
+    }
 
     /** The package that installed [pkg], as the platform recorded it. Null when
      *  nothing was recorded (adb, preinstalled) or the package is gone. */
@@ -87,17 +123,19 @@ object PhoneAppActions {
             Intent(Intent.ACTION_VIEW, Uri.parse(store.getString("deeplink").replace("{pkg}", pkg))).setPackage(installer)
     }
 
+    /** Ours -> the host's Store ▸ Cloud page, the same target the update notification opens. */
+    private fun hostPage(ctx: Context, sources: JSONObject): Action {
+        val label = sources.getJSONObject("ours").getString("label")
+        val target = AppStoreHost.launchActivity
+            ?: return Action(Kind.ORIGIN, label, null, ctx.getString(R.string.store_phone_why_no_host))
+        val open = Intent(ctx, target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        AppStoreHost.launchExtras.forEach { (k, v) -> open.putExtra(k, v) }
+        return Action(Kind.ORIGIN, label, open, null)
+    }
+
     private fun origin(ctx: Context, pkg: String, fleetMember: Boolean, sources: JSONObject): Action {
         val installer = installerOf(ctx, pkg)
-        if (isOurs(ctx, fleetMember, installer)) {
-            val label = sources.getJSONObject("ours").getString("label")
-            // The same page target the update notification opens.
-            val target = AppStoreHost.launchActivity
-                ?: return Action(Kind.ORIGIN, label, null, ctx.getString(R.string.store_phone_why_no_host))
-            val open = Intent(ctx, target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            AppStoreHost.launchExtras.forEach { (k, v) -> open.putExtra(k, v) }
-            return Action(Kind.ORIGIN, label, open, null)
-        }
+        if (isOurs(ctx, fleetMember, installer)) return hostPage(ctx, sources)
         val (label, page) = storePage(sources, installer, pkg)
             ?: return Action(Kind.ORIGIN, sources.getJSONObject("unknown").getString("label"), appInfo(pkg), null)
         return Action(Kind.ORIGIN, label, page, null)

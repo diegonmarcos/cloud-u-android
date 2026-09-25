@@ -14,8 +14,9 @@
 #    import CONSUME it through PhoneAppActions — the same installer read, the
 #    same ours rule, the same store lookup the row buttons use — and no other
 #    file in the store declares installers or deeplinks.
-# T4 EXPORT/IMPORT go through the system document pickers, and the only install
-#    the import can start is the fleet's own path.
+# T4 EXPORT/IMPORT go through the system document pickers, and the only installs
+#    the import can start are the fleet's own path and (#571) the resolver's
+#    declared direct ladder — never a foreign store's app through a store.
 set -u
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="$(cd "$APP/.." && pwd)"
@@ -51,10 +52,14 @@ for needle in ("AutoUpdatePrefs.setEnabled(", "AutoUpdatePrefs.setRequireUnmeter
     else: bad(needle + " is in %s — a second copy of the bar" % owners)
 phone = kt["StorePhoneFragment.kt"]
 m = re.search(r"StoreBar\.Verbs\((.*?)\)\)", phone, re.S)
-if m and re.search(r"installAll\s*=\s*null", m.group(1)) and re.search(r"updateAll\s*=\s*null", m.group(1)) \
-        and re.search(r"disabledReason\s*=\s*R\.string\.\w+", m.group(1)):
-    ok("Phone Apps passes Install all / Update all as disabled, with a reason")
-else: bad("Phone Apps offers install/update verbs it cannot complete, or disables them silently")
+# #571: the verbs are REAL on Phone Apps now — this store installs fleet apps
+# through the release path and external apps through their declared ladder —
+# so the bar must receive both lambdas and no disabled reason (test-store-resolver.sh
+# owns the rest of that contract).
+if m and re.search(r"installAll\s*=\s*\{", m.group(1)) and re.search(r"updateAll\s*=\s*\{", m.group(1)) \
+        and not re.search(r"disabledReason", m.group(1)):
+    ok("Phone Apps passes real Install all / Update all verbs through the shared bar")
+else: bad("Phone Apps disables or omits the batch verbs the #571 resolver makes real")
 
 print("== T2: every store string is a resource ==")
 en = os.path.join(lib, "res/values/strings.xml")
@@ -92,8 +97,11 @@ if "ActivityResultContracts.CreateDocument(" in phone and "ActivityResultContrac
     ok("export = ACTION_CREATE_DOCUMENT, import = ACTION_OPEN_DOCUMENT")
 else: bad("export/import do not go through the document pickers")
 imp = kt.get("StoreImport.kt", "")
-installs = re.findall(r"Fleet\.install\w*\(|PackageInstaller|ACTION_INSTALL_PACKAGE|ACTION_DELETE", imp)
-if installs == ["Fleet.installAll("] and "plan.ours" in imp: ok("the import's only install is Fleet.installAll over plan.ours")
+installs = re.findall(r"Fleet\.install\w*\(|ExternalInstall\.run\(|PackageInstaller|ACTION_INSTALL_PACKAGE|ACTION_DELETE", imp)
+# #571: two installs and only two — the fleet path over plan.ours, and the
+# resolver's ExternalInstall over plan.direct. Nothing installs a plan.store app.
+if sorted(installs) == ["ExternalInstall.run(", "Fleet.installAll("] and "plan.ours" in imp and "plan.direct" in imp:
+    ok("the import installs only through Fleet.installAll (plan.ours) and ExternalInstall (plan.direct)")
 else: bad("the import reaches install paths %s" % installs)
 
 print("RESULT: %d passed, %d failed" % (PASS, FAIL))

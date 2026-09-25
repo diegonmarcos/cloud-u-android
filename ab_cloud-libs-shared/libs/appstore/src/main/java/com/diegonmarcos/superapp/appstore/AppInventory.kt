@@ -93,6 +93,8 @@ object AppInventory {
         val installed: List<Entry>,
         /** Fleet members this phone lacks: installable by the Constellation path. */
         val ours: List<Entry>,
+        /** #571 Foreign apps this store can install itself, by their declared ladder (vendor / F-Droid). */
+        val direct: List<Entry>,
         /** Foreign apps whose installer is a declared store: the user is sent there. */
         val store: List<StoreLink>,
         /** Everything else — sideloads, unknown installers. Listed, never acted on. */
@@ -105,17 +107,21 @@ object AppInventory {
      * store link comes from the one map ([PhoneAppActions.storePage]).
      */
     fun plan(wanted: List<Entry>, installed: Set<String>, fleet: Set<String>, sources: JSONObject): Plan {
-        val have = ArrayList<Entry>(); val ours = ArrayList<Entry>()
+        val have = ArrayList<Entry>(); val ours = ArrayList<Entry>(); val direct = ArrayList<Entry>()
         val store = ArrayList<StoreLink>(); val manual = ArrayList<Entry>()
+        val cfg = PhoneAppActions.resolver(sources)
         for (e in wanted.distinctBy { it.pkg }.sortedBy { it.pkg }) {
             val page = PhoneAppActions.storePage(sources, e.origin, e.pkg)
             when {
                 e.pkg in installed -> have += e
                 e.pkg in fleet -> ours += e
+                // #571: a declared direct rung beats the store that installed it
+                // last time — that store is exactly what a fresh phone lacks.
+                !SourceResolver.resolve(cfg, e.pkg).needsPlay -> direct += e
                 page != null -> store += StoreLink(e, page.first, page.second)
                 else -> manual += e
             }
         }
-        return Plan(have, ours, store, manual)
+        return Plan(have, ours, direct, store, manual)
     }
 }

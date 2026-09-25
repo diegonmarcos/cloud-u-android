@@ -49,7 +49,10 @@ import java.util.concurrent.CancellationException
  * - **Progress from bytes actually written**, and `total = -1` when the server
  *   declined to say — never a hard zero that reads as stuck.
  */
-internal object Download {
+// #571: public, not internal — libs:appstore's SourceResolver fetches vendor and
+// F-Droid APKs through THIS downloader (resume, stall detection, cancel), so the
+// external-app path cannot grow a second one.
+object Download {
 
     private const val TAG = "Updater/Download"
 

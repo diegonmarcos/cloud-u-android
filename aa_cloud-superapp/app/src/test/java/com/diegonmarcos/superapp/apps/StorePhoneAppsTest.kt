@@ -34,8 +34,8 @@ import org.robolectric.annotation.Config
  * what the code RENDERS and RETURNS.
  *
  * Bar: both Store fragments are hosted and their bars read back by the tag
- * StoreBar puts on every control — same controls, same labels, and only the
- * two verbs a foreign app cannot do are disabled, on Phone Apps alone.
+ * StoreBar puts on every control — same controls, same labels, every verb
+ * enabled on both (#571 made Install all / Update all real on Phone Apps).
  *
  * Export: packages are installed into Robolectric's PackageManager with a real
  * install-source record, and every field of the exported JSON is compared to
@@ -80,7 +80,7 @@ class StorePhoneAppsTest {
     }
 
     @Test
-    fun `Phone Apps draws the Cloud tab's bar, with only the privileged verbs disabled and explained`() {
+    fun `Phone Apps draws the Cloud tab's bar, same controls, and since 571 every verb is real on both`() {
         val cloud = barOf(StoreCloudFragment())
         val phone = barOf(StorePhoneFragment())
         assertEquals("the Cloud bar lost controls", StoreBar.Item.values().toSet(), cloud.controls.keys)
@@ -89,13 +89,15 @@ class StorePhoneAppsTest {
             assertEquals("$item label differs between the tabs", view.text.toString(), phone.controls.getValue(item).text.toString())
         assertEquals("the Cloud tab has a disabled control", emptySet<StoreBar.Item>(),
             cloud.controls.filterValues { !it.isEnabled }.keys)
-        assertEquals("Phone Apps must disable exactly the verbs a foreign app cannot do",
-            setOf(StoreBar.Item.INSTALL, StoreBar.Item.UPDATE), phone.controls.filterValues { !it.isEnabled }.keys)
-        val reasons = phone.captions - cloud.captions
-        assertTrue("Phone Apps disables verbs without saying why: $reasons",
-            reasons.size == 1 && reasons.single().isNotBlank())
-        assertTrue("a disabled control still answers a tap",
-            phone.controls.filterValues { !it.isEnabled }.values.none { it.hasOnClickListeners() })
+        // #571: Install all / Update all are real on Phone Apps — this store installs
+        // fleet apps through the release path and external apps through their
+        // declared ladder — so nothing is disabled and no reason caption is drawn.
+        assertEquals("Phone Apps still disables a verb the resolver made real", emptySet<StoreBar.Item>(),
+            phone.controls.filterValues { !it.isEnabled }.keys)
+        assertEquals("Phone Apps draws a disabled-reason caption for verbs that are enabled",
+            emptySet<String>(), phone.captions - cloud.captions)
+        assertTrue("an enabled verb must answer a tap",
+            phone.controls.filterKeys { it == StoreBar.Item.INSTALL || it == StoreBar.Item.UPDATE }.values.all { it.hasOnClickListeners() })
     }
 
     private fun install(pkg: String, versionName: String, code: Long, installer: String?) {

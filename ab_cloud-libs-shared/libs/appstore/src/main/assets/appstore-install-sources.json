@@ -5,5 +5,65 @@
     "org.fdroid.fdroid": { "label": "F-Droid", "deeplink": "market://details?id={pkg}" }
   },
   "ours": { "label": "Cloud" },
-  "unknown": { "label": "APK" }
+  "unknown": { "label": "APK" },
+  "resolver": {
+    "_doc": "#571 WE ARE THE STORE. Per EXTERNAL app, the ORDERED install sources this store tries on a phone that has no other store: `vendor` = the vendor's own official direct-APK endpoint; `fdroid` = the official F-Droid repo (index-v1.jar, JAR-signed by the pinned `cert_sha256`, per-version sha256 in the index); `play` = the Google Play deep-link — Play publishes NO APK URL, so the deep-link IS the official Play path and the row carries a visible 'needs Play' badge. Read by SourceResolver through PhoneAppActions.sources; `order` is the only legal ranking and an app's `sources` must be a subsequence of it. A `play` source carries NOTHING but its kind: a URL on it would be a fake. An app absent from `apps` still resolves — to the Play deep-link alone — so every package the vault or an import names has a row. Fleet (Cloud) apps are NOT here: they install through the constellation manifest and the updater's release path, one downloader for the fleet. VENDOR FIELDS: `apk` = URL template ({version} from the feed, {asset} from `abis`); `abis` = ABI -> asset fragment, chosen by AbiUpdateTag over Build.SUPPORTED_ABIS; `feed` = official JSON version endpoint, `version_name`/`version_code`/`apk_key`/`sha256_key` = dot paths into it; `version_re` = one-group regex normalising the feed's version string; `sha256` = URL of a sidecar whose body is a bare hex or the sha256sum(1) form. A vendor source with no feed has no version probe: it re-fetches whatever the vendor serves today and the updater's downgrade guard decides. EVIDENCE 2026-09-25 from this container: every `feed`, `apk` and `sha256` below answered 200 with the declared shape; F-Droid's api answered 404 for telegram/bitwarden/firefox/brave/obsidian/signal/whatsapp, which is why they carry no `fdroid` source; download.mozilla.org's fennec-latest redirector serves Firefox 68 (2020) and is deliberately NOT declared.",
+    "order": ["vendor", "fdroid", "play"],
+    "fdroid": {
+      "repo": "https://f-droid.org/repo/",
+      "index": "index-v1.jar",
+      "index_entry": "index-v1.json",
+      "api": "https://f-droid.org/api/v1/packages/{pkg}",
+      "cert_sha256": "43238d512c1e5eb2d6569f4a3afbf5523418b82e0a3ed1552770abb9a9c9ccab"
+    },
+    "play": { "installer": "com.android.vending" },
+    "apps": {
+      "com.whatsapp": { "label": "WhatsApp", "sources": [
+        { "kind": "vendor", "apk": "https://www.whatsapp.com/android/current/WhatsApp.apk" },
+        { "kind": "play" } ] },
+      "org.thoughtcrime.securesms": { "label": "Signal", "sources": [
+        { "kind": "vendor", "feed": "https://updates.signal.org/android/latest.json",
+          "version_name": "versionName", "version_code": "versionCode", "apk_key": "url", "sha256_key": "sha256sum" },
+        { "kind": "play" } ] },
+      "org.mozilla.firefox": { "label": "Firefox", "sources": [
+        { "kind": "vendor", "feed": "https://product-details.mozilla.org/1.0/mobile_versions.json", "version_name": "version",
+          "apk": "https://archive.mozilla.org/pub/fenix/releases/{version}/android/fenix-{version}-android-{asset}/fenix-{version}.multi.android-{asset}.apk",
+          "abis": { "arm64-v8a": "arm64-v8a", "armeabi-v7a": "armeabi-v7a", "x86_64": "x86_64", "x86": "x86" } },
+        { "kind": "play" } ] },
+      "org.telegram.messenger": { "label": "Telegram", "sources": [
+        { "kind": "vendor", "apk": "https://telegram.org/dl/android/apk" },
+        { "kind": "play" } ] },
+      "com.x8bit.bitwarden": { "label": "Bitwarden", "sources": [
+        { "kind": "vendor", "feed": "https://api.github.com/repos/bitwarden/android/releases/latest", "version_name": "tag_name", "version_re": "^v?([0-9][0-9.]*)",
+          "apk": "https://github.com/bitwarden/android/releases/latest/download/com.x8bit.bitwarden.apk",
+          "sha256": "https://github.com/bitwarden/android/releases/latest/download/com.x8bit.bitwarden.apk-sha256.txt" },
+        { "kind": "play" } ] },
+      "com.brave.browser": { "label": "Brave", "sources": [
+        { "kind": "vendor", "feed": "https://api.github.com/repos/brave/brave-browser/releases/latest", "version_name": "tag_name", "version_re": "^v?([0-9][0-9.]*)",
+          "apk": "https://github.com/brave/brave-browser/releases/latest/download/{asset}",
+          "sha256": "https://github.com/brave/brave-browser/releases/latest/download/{asset}.sha256",
+          "abis": { "arm64-v8a": "BraveMonoarm64.apk", "armeabi-v7a": "BraveMonoarm.apk", "x86_64": "BraveMonox64.apk", "x86": "BraveMonox86.apk" } },
+        { "kind": "play" } ] },
+      "md.obsidian": { "label": "Obsidian", "sources": [
+        { "kind": "vendor", "feed": "https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest", "version_name": "tag_name", "version_re": "^v?([0-9][0-9.]*)",
+          "apk": "https://github.com/obsidianmd/obsidian-releases/releases/latest/download/Obsidian-{version}.apk" },
+        { "kind": "play" } ] },
+      "org.fdroid.fdroid": { "label": "F-Droid", "sources": [
+        { "kind": "vendor", "apk": "https://f-droid.org/F-Droid.apk" },
+        { "kind": "fdroid" } ] },
+      "org.kde.kdeconnect_tp": { "label": "KDE Connect", "sources": [
+        { "kind": "fdroid" },
+        { "kind": "play" } ] },
+      "net.sourceforge.opencamera": { "label": "Open Camera", "sources": [
+        { "kind": "fdroid" },
+        { "kind": "play" } ] },
+      "com.anthropic.claude": { "label": "Claude", "sources": [ { "kind": "play" } ] },
+      "com.google.android.apps.bard": { "label": "Gemini", "sources": [ { "kind": "play" } ] },
+      "com.google.android.apps.maps": { "label": "Google Maps", "sources": [ { "kind": "play" } ] },
+      "com.google.android.gm": { "label": "Gmail", "sources": [ { "kind": "play" } ] },
+      "com.google.android.apps.translate": { "label": "Google Translate", "sources": [ { "kind": "play" } ] },
+      "com.google.android.apps.nbu.files": { "label": "Files by Google", "sources": [ { "kind": "play" } ] },
+      "com.instagram.android": { "label": "Instagram", "sources": [ { "kind": "play" } ] }
+    }
+  }
 }

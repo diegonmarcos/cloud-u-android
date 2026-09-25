@@ -19,9 +19,11 @@ import kotlin.concurrent.thread
  *
  *   ours    → one button, the Constellation install path Install all uses
  *             (Fleet.installAll, MISSING), over exactly the missing fleet apps.
+ *   direct  → one button (#571): the apps whose declared ladder has a vendor
+ *             or F-Droid rung, installed by ExternalInstall — no other store.
  *   store   → one button per app that OPENS its origin store's page. A foreign
- *             app is never installed from here; its store does that, with the
- *             user in front of it.
+ *             app with no direct rung is never installed from here; its store
+ *             does that, with the user in front of it.
  *   manual  → listed with whatever origin the file recorded. Nothing to press.
  */
 object StoreImport {
@@ -44,6 +46,19 @@ object StoreImport {
                     .filter { it.pkg in want || (it.altId ?: "") in want }
                 Toast.makeText(ctx, ctx.getString(R.string.store_import_installing, apps.size), Toast.LENGTH_SHORT).show()
                 thread(name = "store-import-install") { Fleet.installAll(ctx, apps, Fleet.Mode.MISSING) }
+            })
+        }
+        if (plan.direct.isNotEmpty()) {
+            col.addView(heading(ctx, ctx.getString(R.string.store_import_direct, plan.direct.size)))
+            plan.direct.forEach { col.addView(text(ctx, it.pkg, 11f, mono = true)) }
+            col.addView(button(ctx, ctx.getString(R.string.store_import_install_direct, plan.direct.size)) {
+                val app = ctx.applicationContext
+                val cfg = PhoneAppActions.resolver(PhoneAppActions.sources(app))
+                Toast.makeText(ctx, ctx.getString(R.string.store_import_installing, plan.direct.size), Toast.LENGTH_SHORT).show()
+                // One at a time: each install may raise the system confirm sheet.
+                thread(name = "store-import-direct") {
+                    for (e in plan.direct) ExternalInstall.run(app, cfg, SourceResolver.resolve(cfg, e.pkg))
+                }
             })
         }
         if (plan.store.isNotEmpty()) {

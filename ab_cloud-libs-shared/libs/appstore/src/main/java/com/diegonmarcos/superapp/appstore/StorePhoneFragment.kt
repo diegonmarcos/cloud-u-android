@@ -19,32 +19,52 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
 import com.diegonmarcos.superapp.updater.Fleet
+import com.diegonmarcos.superapp.updater.UpdateProgress
 import kotlin.concurrent.thread
 
 /**
- * Store ▸ Phone Apps (#563, #564) — every launchable APK on the device,
- * grouped by the host's central classification exactly as
- * [StoreCloudFragment] groups the fleet.
+ * Store ▸ Phone Apps (#563, #564, #565, #571) — every app that BELONGS on this
+ * phone, grouped by the host's central classification exactly as
+ * [StoreCloudFragment] groups the fleet: what is installed, PLUS every fleet
+ * app the constellation manifest declares, PLUS every external app the
+ * install-source map declares. On a fresh phone the list is therefore full,
+ * with every row saying "not installed" and how it installs.
  *
- * Each row's buttons are [PhoneAppActions.of]: Update (Cloud fleet apps only,
- * through [FleetInstall], the Cloud tab's own path), Open, Stop, Remove,
- * App info, and the origin store read from the real installer. Which of them
- * work is decided there from the device's own answers; a button that cannot
- * work is drawn dimmed and says why when tapped.
+ * Each row carries a state line — installed version, update available, not
+ * installed, or the 'needs Play' badge — and its buttons: [PhoneAppActions.of]
+ * for an installed app (Update, Open, Stop, Remove, App info, origin) and
+ * [PhoneAppActions.forMissing] for one that is not (Install, origin). Install
+ * and Update route through the ONE path per kind: fleet → [FleetInstall],
+ * external → [ExternalInstall] over its declared ladder, Play-only → the Play
+ * page, never a download.
  *
- * Above the rows (#565): the Cloud tab's own top bar ([StoreBar] — one
- * declaration, two pages), then Export / Import of the installed-apps
- * inventory ([AppInventory]); an import shows its plan ([StoreImport]) before
- * anything acts.
+ * Above the rows: the Cloud tab's own top bar ([StoreBar]). Check all probes
+ * every row (fleet: [Fleet.status]; external: [SourceResolver.check]); Install
+ * all and Update all walk the rows that can be served without any other store,
+ * and say how many were skipped because they need Play. Then Export / Import
+ * of the app inventory ([AppInventory]); an import shows its plan
+ * ([StoreImport]) before anything acts.
  */
 class StorePhoneFragment : Fragment() {
 
     private class Row(val pkg: String, val label: String, val shelf: AppStoreHost.Shelf?,
-                      val fleetApp: Fleet.App?, val actions: List<PhoneAppActions.Action>)
+                      val fleetApp: Fleet.App?, val external: SourceResolver.External?,
+                      val installed: Boolean, val actions: List<PhoneAppActions.Action>) {
+        /** This store can put it on the phone by itself. */
+        val direct: Boolean get() = (fleetApp != null && !fleetApp.blocked) || (external?.needsPlay == false)
+    }
 
     private val cDim = 0x99FFFFFF.toInt()
     private val cHead = 0xFFED8936.toInt()
+    private val cUp = 0xFF48BB78.toInt()
+    private val cUpd = 0xFFF6AD55.toInt()
+    private val cMiss = 0xFF9F7AEA.toInt()
+    private val cBadge = 0xFFE53E3E.toInt()
     private var list: LinearLayout? = null
+    private var rows: List<Row> = emptyList()
+    private var cfg: SourceResolver.Config? = null
+    private val states = HashMap<String, SourceResolver.Check>()
+    private val stateViews = HashMap<String, TextView>()
 
     // #565 export / import. Registered at construction, as the Activity Result
     // API requires; the system picker owns where the file lives.
@@ -61,15 +81,13 @@ class StorePhoneFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             val p = dp(ctx, 14); setPadding(p, p, p, p)
         }
-        // The SAME bar the Cloud tab draws. Check all re-reads this phone;
-        // Install all and Update all would need a privileged channel no
-        // foreign package gives us (#225), so they are drawn disabled with the
-        // reason under them - per-app Update on a fleet row is the real path.
+        // The SAME bar the Cloud tab draws. #571: Install all and Update all are
+        // real verbs here now — they walk every row this store can serve itself
+        // (fleet path, vendor APK, F-Droid) and report the rows that need Play.
         col.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             StoreBar.render(this@StorePhoneFragment, this, StoreBar.Verbs(
-                checkAll = { reload() }, installAll = null, updateAll = null,
-                disabledReason = R.string.store_phone_bar_disabled))
+                checkAll = { checkAll() }, installAll = { installAll() }, updateAll = { updateAll() }))
         })
         col.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -90,7 +108,7 @@ class StorePhoneFragment : Fragment() {
         reload()
     }
 
-    private fun reload() {
+    private fun reload(then: (() -> Unit)? = null) {
         val ctx = requireContext()
         val into = list ?: return
         into.removeAllViews()
@@ -99,17 +117,17 @@ class StorePhoneFragment : Fragment() {
         // PackageManager IPC — off the main thread, the #261 lesson.
         val app = ctx.applicationContext
         thread(name = "store-phone-apps") {
-            val rows = runCatching { rows(app) }
+            val built = runCatching { rows(app) }
             into.post {
                 if (!isAdded) return@post
                 into.removeAllViews()
-                rows.onSuccess { render(ctx, into, it) }
+                built.onSuccess { rows = it; render(ctx, into, it); then?.invoke() }
                     .onFailure { into.addView(caption(ctx, ctx.getString(R.string.store_phone_list_failed, it.message))) }
             }
         }
     }
 
-    override fun onDestroyView() { list = null; super.onDestroyView() }
+    override fun onDestroyView() { list = null; stateViews.clear(); super.onDestroyView() }
 
     /** Every launchable app, fleet included, as [AppInventory] JSON. */
     private fun exportTo(uri: Uri) {
@@ -144,24 +162,46 @@ class StorePhoneFragment : Fragment() {
         }
     }
 
-    /** Launchable packages with their actions, classified and sorted: shelf
-     *  order, then label; unshelved last. */
+    /**
+     * The DECLARED list: installed launchable apps ∪ fleet apps (kind app) ∪
+     * the resolver's external apps, each with its actions and its local state.
+     * Sorted: shelf order, then label; unshelved last.
+     */
     private fun rows(ctx: Context): List<Row> {
         val pm = ctx.packageManager
-        val fleet = PhoneAppActions.fleetByPackage(Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64))
+        val fleetList = Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64)
+        val fleet = PhoneAppActions.fleetByPackage(fleetList)
         val sources = PhoneAppActions.sources(ctx)
+        val resolver = PhoneAppActions.resolver(sources).also { cfg = it }
         val shellReady = ShellChannels.active(ctx) != null
-        val labels = pm.queryIntentActivities(
-            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
-            .associate { it.activityInfo.packageName to it.loadLabel(pm).toString() }
-        val shelves = AppStoreHost.classify(ctx, labels)
-        return labels.map { (pkg, label) ->
-            Row(pkg, label, shelves[pkg], fleet[pkg], PhoneAppActions.of(ctx, pkg, fleet[pkg], shellReady, sources))
+        val declared = LinkedHashMap<String, String>()
+        declared.putAll(AppInventory.launchable(ctx))
+        fleetList.filter { it.kind == "app" }.forEach { declared.putIfAbsent(it.pkg, it.label) }
+        resolver.apps.values.forEach { declared.putIfAbsent(it.pkg, it.label) }
+        val shelves = AppStoreHost.classify(ctx, declared)
+        states.clear()
+        return declared.map { (pkg, label) ->
+            val installed = runCatching { pm.getPackageInfo(pkg, 0) }.isSuccess
+            val fa = fleet[pkg]
+            val ext = if (fa == null) SourceResolver.resolve(resolver, pkg) else null
+            val actions = if (installed) PhoneAppActions.of(ctx, pkg, fa, shellReady, sources)
+                          else PhoneAppActions.forMissing(ctx, ext ?: SourceResolver.resolve(resolver, pkg), fa, sources, resolver)
+            states[pkg] = when {
+                ext != null -> SourceResolver.local(ctx, ext)
+                installed -> SourceResolver.installed(ctx, pkg)?.let { SourceResolver.Check.Installed(it.first, it.second, null, SourceResolver.Note.NONE) }
+                    ?: SourceResolver.Check.Unknown(null, "")
+                else -> SourceResolver.Check.NotInstalled(SourceResolver.VIA_FLEET, needsPlay = false)
+            }
+            Row(pkg, label, shelves[pkg], fa, ext, installed, actions)
         }.sortedWith(compareBy({ it.shelf?.order ?: UNSHELVED }, { it.label.lowercase() }))
     }
 
     private fun render(ctx: Context, into: LinearLayout, rows: List<Row>) {
-        into.addView(caption(ctx, ctx.getString(R.string.store_phone_count, rows.size)))
+        stateViews.clear()
+        val missing = rows.count { !it.installed }
+        val play = rows.count { !it.installed && !it.direct }
+        into.addView(caption(ctx, ctx.getString(R.string.store_phone_count, rows.size) + "  ·  " +
+            ctx.getString(R.string.store_phone_count_missing, missing, play)))
         var heading: String? = null
         for (r in rows) {
             val here = r.shelf?.heading ?: if (heading != null) ctx.getString(R.string.store_phone_other) else null
@@ -188,6 +228,13 @@ class StorePhoneFragment : Fragment() {
             text = r.pkg; textSize = 11f; typeface = Typeface.MONOSPACE; setTextColor(cDim)
             maxLines = 1; ellipsize = TextUtils.TruncateAt.MIDDLE
         })
+        // The state line: version / update / not installed / needs Play. Tagged
+        // with the package so a test reads the rendered verdict, not this source.
+        addView(TextView(ctx).apply {
+            tag = STATE_TAG_PREFIX + r.pkg; textSize = 11f
+            stateViews[r.pkg] = this
+            paint(ctx, this, states[r.pkg] ?: SourceResolver.Check.Unknown(null, ""), r)
+        })
         val buttons = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(ctx, 4), 0, 0)
@@ -196,14 +243,109 @@ class StorePhoneFragment : Fragment() {
         addView(HorizontalScrollView(ctx).apply { isHorizontalScrollBarEnabled = false; addView(buttons) })
     }
 
+    /** One [SourceResolver.Check] → the row's state line and colour. */
+    private fun paint(ctx: Context, tv: TextView, s: SourceResolver.Check, r: Row) {
+        fun via(k: String?) = when (k) {
+            SourceResolver.KIND_VENDOR -> ctx.getString(R.string.store_phone_source_vendor)
+            SourceResolver.KIND_FDROID -> ctx.getString(R.string.store_phone_source_fdroid)
+            SourceResolver.KIND_PLAY -> ctx.getString(R.string.store_phone_source_play)
+            SourceResolver.VIA_FLEET -> ctx.getString(R.string.store_phone_source_fleet)
+            else -> ""
+        }
+        val ladder = r.external?.sources?.joinToString(" → ") { via(it.kind) } ?: via(SourceResolver.VIA_FLEET)
+        val (text, colour) = when (s) {
+            is SourceResolver.Check.NotInstalled ->
+                (if (s.needsPlay) ctx.getString(R.string.store_phone_state_needs_play, ctx.getString(R.string.store_phone_badge_needs_play))
+                 else ctx.getString(R.string.store_phone_state_not_installed, ladder)) to (if (s.needsPlay) cBadge else cMiss)
+            is SourceResolver.Check.Installed -> {
+                val note = when (s.note) {
+                    SourceResolver.Note.NONE -> if (s.via == null) "" else "  ·  " + via(s.via)
+                    SourceResolver.Note.NO_FEED -> "  ·  " + ctx.getString(R.string.store_phone_note_no_feed)
+                    SourceResolver.Note.PLAY_MANAGES -> "  ·  " + ctx.getString(R.string.store_phone_note_play)
+                    SourceResolver.Note.UNDECLARED -> "  ·  " + ctx.getString(R.string.store_phone_note_undeclared)
+                    SourceResolver.Note.NOT_COMPARABLE -> "  ·  " + ctx.getString(R.string.store_phone_note_not_comparable)
+                }
+                (ctx.getString(R.string.store_phone_state_installed, s.versionName, s.versionCode) + note) to cUp
+            }
+            is SourceResolver.Check.UpdateAvailable ->
+                ctx.getString(R.string.store_phone_state_update, s.versionName, s.remote, via(s.via)) to cUpd
+            is SourceResolver.Check.Unknown ->
+                ctx.getString(R.string.store_phone_state_unknown, s.versionName ?: "—", s.reason) to cDim
+        }
+        tv.text = text; tv.setTextColor(colour)
+    }
+
+    /** Check all: rebuild the rows, then probe every one off the main thread. */
+    private fun checkAll() = reload {
+        val ctx = requireContext(); val app = ctx.applicationContext
+        val resolver = cfg ?: return@reload
+        for (r in rows) {
+            stateViews[r.pkg]?.let { tv -> tv.text = ctx.getString(R.string.store_phone_checking); tv.setTextColor(cDim) }
+            thread(name = "store-phone-check-${r.pkg}") {
+                val s = runCatching {
+                    r.fleetApp?.let { SourceResolver.ofFleet(Fleet.status(app, it)) }
+                        ?: SourceResolver.check(app, resolver, r.external ?: SourceResolver.resolve(resolver, r.pkg))
+                }.getOrElse { SourceResolver.Check.Unknown(null, it.message ?: it.javaClass.simpleName) }
+                view?.post { if (isAdded) { states[r.pkg] = s; stateViews[r.pkg]?.let { paint(ctx, it, s, r) } } }
+            }
+        }
+    }
+
+    /** Install all: every declared app not on the phone that this store can serve itself. */
+    private fun installAll() {
+        val ctx = requireContext()
+        val targets = rows.filter { !it.installed && it.direct }
+        val play = rows.count { !it.installed && !it.direct }
+        if (targets.isEmpty()) { Toast.makeText(ctx, ctx.getString(R.string.store_phone_batch_none), Toast.LENGTH_LONG).show(); return }
+        Toast.makeText(ctx, ctx.getString(R.string.store_phone_install_all_start, targets.size, play), Toast.LENGTH_LONG).show()
+        batch(ctx, targets)
+    }
+
+    /** Update all: every row Check all found an update for. Never runs a probe itself. */
+    private fun updateAll() {
+        val ctx = requireContext()
+        val targets = rows.filter { states[it.pkg] is SourceResolver.Check.UpdateAvailable && it.direct }
+        if (targets.isEmpty()) { Toast.makeText(ctx, ctx.getString(R.string.store_phone_update_none), Toast.LENGTH_LONG).show(); return }
+        Toast.makeText(ctx, ctx.getString(R.string.store_phone_batch_start, targets.size), Toast.LENGTH_SHORT).show()
+        batch(ctx, targets)
+    }
+
+    /** Sequential — each install may raise the system confirm sheet. */
+    private fun batch(ctx: Context, targets: List<Row>) {
+        val app = ctx.applicationContext
+        thread(name = "store-phone-batch") {
+            var failed = 0
+            targets.forEachIndexed { i, r ->
+                UpdateProgress.beginBatch(r.label, i + 1, targets.size)
+                installOne(app, r)?.let { failed++; toastLater(app, app.getString(R.string.store_phone_failed, r.label, it)) }
+            }
+            UpdateProgress.endBatch()
+            toastLater(app, app.getString(R.string.store_phone_batch_done, targets.size - failed, failed))
+            view?.post { if (isAdded) reload() }
+        }
+    }
+
+    /** The ONE path per kind. Blocking. */
+    private fun installOne(app: Context, r: Row): String? {
+        val resolver = cfg ?: PhoneAppActions.resolver(PhoneAppActions.sources(app))
+        // Not `fleetApp?.let { } ?: external`: a fleet install that SUCCEEDS
+        // returns null, and that elvis would have gone on to run the external path.
+        val fleetApp = r.fleetApp
+        return if (fleetApp != null) FleetInstall.run(app, fleetApp)
+               else ExternalInstall.run(app, resolver, r.external ?: SourceResolver.resolve(resolver, r.pkg))
+    }
+
     private fun act(ctx: Context, r: Row, a: PhoneAppActions.Action) {
         a.disabledReason?.let { Toast.makeText(ctx, it, Toast.LENGTH_LONG).show(); return }
         when (a.kind) {
-            PhoneAppActions.Kind.UPDATE -> {
-                val app = r.fleetApp ?: return
-                Toast.makeText(ctx, ctx.getString(R.string.store_phone_updating, r.label), Toast.LENGTH_SHORT).show()
-                thread(name = "store-phone-update-${app.id}") {
-                    FleetInstall.run(ctx, app)?.let { msg -> toastLater(ctx, ctx.getString(R.string.store_phone_failed, r.label, msg)) }
+            PhoneAppActions.Kind.INSTALL, PhoneAppActions.Kind.UPDATE -> {
+                Toast.makeText(ctx, ctx.getString(
+                    if (a.kind == PhoneAppActions.Kind.INSTALL) R.string.store_phone_installing else R.string.store_phone_updating, r.label),
+                    Toast.LENGTH_SHORT).show()
+                val app = ctx.applicationContext
+                thread(name = "store-phone-install-${r.pkg}") {
+                    installOne(app, r)?.let { msg -> toastLater(app, app.getString(R.string.store_phone_failed, r.label, msg)) }
+                    view?.post { if (isAdded) reload() }
                 }
             }
             PhoneAppActions.Kind.STOP -> thread(name = "store-phone-stop") {
@@ -248,10 +390,12 @@ class StorePhoneFragment : Fragment() {
         isClickable = true; setOnClickListener { onClick() }
     }
 
-    private companion object {
-        const val UNSHELVED = "￿"
-        const val EXPORT_NAME = "cloud-sa-apps.json"
+    companion object {
+        /** The state line of a row is tagged [STATE_TAG_PREFIX] + package. */
+        const val STATE_TAG_PREFIX = "store-phone-state:"
+        private const val UNSHELVED = "￿"
+        private const val EXPORT_NAME = "cloud-sa-apps.json"
         // A .json picked from Downloads is as often octet-stream as json.
-        val IMPORT_TYPES = arrayOf("application/json", "application/octet-stream", "text/plain")
+        private val IMPORT_TYPES = arrayOf("application/json", "application/octet-stream", "text/plain")
     }
 }
