@@ -19,7 +19,7 @@
 #      remembering to report itself is wrong within a month.
 #   4. A SECOND DECLARATION OF THE CONFIGS ORDER. The Configs grid and the
 #      Canopus arc are fed by ONE list. If a Kotlin-side order ever appears
-#      beside it, "Panel before About" has to be fixed twice and will drift.
+#      beside it, "Home before About" has to be fixed twice and will drift.
 #
 # Static tester (no device, no build): build.json is read as data, the Kotlin
 # is checked for the contracts that data relies on.
@@ -142,7 +142,7 @@ grep -qF '.filter(isAlive)' "$RECENT" \
   && ok "an entry is checked against the live catalogue before it is drawn" \
   || bad "dead entries are drawn — a tap would navigate into nothing"
 grep -qF 'includeHidden = true' "$SHELL_KT" \
-  && ok "hidden pages count as alive (page:config/control is real, just untiled)" \
+  && ok "hidden pages count as alive (page:config/controls is real, just untiled)" \
   || bad "hidden pages would be judged dead the moment they are recorded"
 grep -qF 'R.string.recent_tabs_empty' "$SHELL_KT" \
   && ok "fresh install shows an empty-state entry, not a star that does nothing" \
@@ -174,7 +174,7 @@ grep -qF 'android:contentDescription="@string/star_recent_tabs_desc"' "$LAYOUT" 
   && ok "the new star's content description is a resource, not a literal" \
   || bad "the new star carries a hardcoded content description"
 
-echo "== T7: the Configs section order is declared ONCE, Panel immediately before About =="
+echo "== T7: the Configs section order is declared ONCE, Home immediately before About =="
 ORDER=$(python3 -c "
 import json
 d=json.load(open('$BJ'))
@@ -182,16 +182,16 @@ c=[s for s in d['ui']['sections'] if s['id']=='config'][0]
 print(' '.join(p['id'] for p in c['pages']))
 ")
 case " $ORDER " in
-  *" panel about "*) ok "Panel sits immediately before About in ui.sections[config].pages" ;;
-  *) bad "Panel is not immediately before About — order tail is: $(echo "$ORDER" | tr ' ' '\n' | tail -4 | tr '\n' ' ')" ;;
+  *" home about "*) ok "Home sits immediately before About in ui.sections[config].pages" ;;
+  *) bad "Home is not immediately before About — order tail is: $(echo "$ORDER" | tr ' ' '\n' | tail -4 | tr '\n' ' ')" ;;
 esac
 # Both surfaces read that one list. A Kotlin-side order would be a second truth.
 grep -qF 'SectionPages.pagesFor(section)' "$SHELL_KT" \
   && ok "the Canopus arc reads the same SectionPages list as the Configs grid" \
   || bad "the Canopus arc no longer reads SectionPages — a second order may exist"
-if grep -qE '"(panel|about)"[[:space:]]*,[[:space:]]*"(panel|about)"' \
+if grep -qE '"(home|about)"[[:space:]]*,[[:space:]]*"(home|about)"' \
      "$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/"*.kt 2>/dev/null; then
-  bad "a Kotlin-side Configs order appeared — Panel/About now has two declarations"
+  bad "a Kotlin-side Configs order appeared — Home/About now has two declarations"
 else
   ok "no Kotlin-side Configs order — build.json remains the single source of truth"
 fi

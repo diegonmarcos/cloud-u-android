@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Tester: Configs ▸ Panel — one page, three tabs (Control | Push | Notify) —
-# and the rules each tab exists to keep.
+# Tester: Configs ▸ Home (was Panel, #574) — one page, two tabs (Push | Notify) —
+# plus the device switch board (was its Control tab, now Configs ▸ Launcher ▸
+# Controls, hosted by LauncherConfigFragment) and the rules each exists to keep.
 #
 # WHY THIS EXISTS: this page has several ways to be wrong, and none of them
 # shows up as a crash or a failed build.
@@ -42,6 +43,7 @@ TABS="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragm
 CONTROLS="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/DeviceControls.kt"
 FRAGMENT="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/ControlFragment.kt"
 PUSH="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/PushFragment.kt"
+KT_LCF="$APP/app/src/main/java/com/diegonmarcos/superapp/settings/LauncherConfigFragment.kt"
 # #515 moved the READING of the declaration out of the pane and into one
 # resolver both the pane and the restart receiver share, so T28/T29 follow
 # the indirection rather than asserting the pane still parses JSON itself.
@@ -70,30 +72,33 @@ for f in "$BJ" "$GRADLE" "$SECTIONS" "$PAGES" "$NAV" "$TABS" "$CONTROLS" \
     echo "         is indistinguishable here from a contract being kept."; exit 2; }
 done
 
-echo "== T1: Configs ▸ Panel is a visible page declaring its three tabs in order =="
+echo "== T1: Configs ▸ Home is a visible page declaring its two tabs in order =="
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
 order = [p['id'] for p in pages]
-panel = next((p for p in pages if p['id'] == 'panel'), None)
-if panel is None:                    print('no `panel` page in config')
-elif panel.get('tabs') != ['control', 'push', 'notify']:
+panel = next((p for p in pages if p['id'] == 'home'), None)
+if panel is None:                    print('no `home` page in config')
+elif any(p['id'] in ('panel', 'control') for p in pages):
+                                     print('a retired id (panel/control) is still declared')
+elif panel.get('label') != 'Home':   print('label = %r' % (panel.get('label'),))
+elif panel.get('tabs') != ['push', 'notify']:
                                      print('tabs = %r' % (panel.get('tabs'),))
 elif panel.get('hidden'):            print('the strip itself must stay listed')
-# Panel is the page opened many times a day and About is the page opened once
+# Home (was Panel) is the page opened many times a day and About is the page opened once
 # ever. It used to LEAD this list for that reason; the owner moved it to sit
 # IMMEDIATELY BEFORE About instead, because the tail of the list is what the
 # thumb reaches first on the Canopus arc. Adjacency is a TIGHTER rule than the
 # old "somewhere ahead of About": an entry slipped between the two is caught
 # now, where before it passed.
 elif 'about' not in order:           print('no `about` page to order against')
-elif order.index('panel') + 1 != order.index('about'):
-                                     print('Panel is not immediately before About: %r'
+elif order.index('home') + 1 != order.index('about'):
+                                     print('Home is not immediately before About: %r'
                                            % order[max(0, order.index('about') - 2):])
 else:                                print('OK')
 PY
-)" "panel: tabs = [control, push, notify], visible, and immediately before About in the Configs grid"
+)" "home: label Home, tabs = [push, notify], visible, immediately before About; no panel/control page left"
 
 echo "== T2: both tabs are REAL hidden pages of the SAME section, never the owner =="
 # The strip contract established in 07964787e: a tab is a declared page, so
@@ -104,16 +109,16 @@ import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
 by_id = {p['id']: p for p in pages}
-panel = by_id['panel']
+panel = by_id['home']
 problems = []
 for tab in panel.get('tabs', []):
-    if tab == 'panel':            problems.append('panel lists itself (infinite render)')
+    if tab == 'home':             problems.append('home lists itself (infinite render)')
     elif tab not in by_id:        problems.append('tab %r has no page behind it' % tab)
     elif not by_id[tab].get('hidden'):
                                   problems.append('tab %r must be hidden' % tab)
 print('; '.join(problems) or 'OK')
 PY
-)" "control + push + notify are declared, hidden pages of the config section"
+)" "push + notify are declared, hidden pages of the config section"
 
 echo "== T3: Notify MIRRORS the ntfy page — it does not carry a copy of it =="
 check "$(python3 - "$BJ" <<'PY'
@@ -331,10 +336,18 @@ print('; '.join(problems) or 'OK')
 PY
 )" "one functional home per control; the derived view gathers by flag, invents nothing"
 
-echo "== T11: Control and Push are routed by id; Notify is NOT (it goes through the facet) =="
+echo "== T11: Push is routed by id, the switch board by the Launcher's Controls tab; Notify is NOT (facet) =="
 r_fail=""
-grep -q 'pageId == "control" ->' "$PAGES"        || r_fail="$r_fail control:not-routed"
-grep -q 'ControlFragment.newInstance()' "$PAGES" || r_fail="$r_fail control:no-fragment"
+# #574: the switch board has ONE producer. SectionPages no longer routes a
+# `control` page at all; `controls` is LauncherConfigFragment, which hosts
+# ControlFragment as an embedded child (so its ticker/lights/tap/hold are the
+# same class, asserted by every test below).
+grep -q 'pageId == "control" ' "$PAGES"          && r_fail="$r_fail control:old-route-still-there"
+grep -q 'configs.ControlFragment' "$PAGES"     && r_fail="$r_fail control:second-producer-in-SectionPages"
+grep -q 'pageId == "controls" -> LauncherConfigFragment.newInstance()' "$PAGES" \
+                                                 || r_fail="$r_fail controls:not-routed"
+grep -q 'ControlFragment.newInstance(embedded = true)' "$KT_LCF" \
+                                                 || r_fail="$r_fail controls:does-not-host-the-grid"
 grep -q 'pageId == "push" ->' "$PAGES"           || r_fail="$r_fail push:not-routed"
 grep -q 'PushFragment.newInstance()' "$PAGES"    || r_fail="$r_fail push:no-fragment"
 # A SectionPages branch for `notify` would bypass the mirror and hand back a
@@ -342,11 +355,11 @@ grep -q 'PushFragment.newInstance()' "$PAGES"    || r_fail="$r_fail push:no-frag
 # page while still opening something.
 grep -q 'pageId == "notify"' "$PAGES"            && r_fail="$r_fail notify:shadowed-by-factory"
 [ -z "$r_fail" ] \
-  && ok "config/control → ControlFragment; config/push → PushFragment; config/notify left to the mirror" \
+  && ok "config/controls → LauncherConfigFragment ⊃ ControlFragment; config/push → PushFragment; config/notify left to the mirror" \
   || bad "page routing wrong:$r_fail"
 
 echo "== T12: the tab a strip OPENS ON is the first declared tab, and nothing else =="
-# "Control is first" and "Panel opens on Control" are only the same statement
+# "Push is first" and "Home opens on Push" are only the same statement
 # while startIndex's fallback stays "the first tab with a fragment". If someone
 # adds a default_tab flag, the array and the flag become two answers to one
 # question and the reorder above silently stops deciding anything.

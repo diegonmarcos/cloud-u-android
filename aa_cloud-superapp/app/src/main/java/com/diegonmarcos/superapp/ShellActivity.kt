@@ -374,7 +374,7 @@ open class ShellActivity : AppCompatActivity(),
      * what keeps the star from navigating into nothing.
      *
      * `includeHidden` because a hidden page is still a real, routable
-     * destination — Configs' Control tab is reached as page:config/control and
+     * destination — Configs' Launcher ▸ Controls tab is reached as page:config/controls and
      * would otherwise be judged dead the moment it was recorded.
      */
     private fun recentTabStillExists(

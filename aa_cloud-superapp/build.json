@@ -4549,24 +4549,17 @@
         "label": "Configs",
         "icon": "ic_settings",
         "module": null,
-        "_doc_pages_order": "Order here is the single source of truth — drives both the Configs section page-grid AND (via home_groups tiles_from_section: 'config') the Home Apps Configs row. WireGuard appears in the row via an explicit `tiles` entry on the home_groups row with insert_after_id, since WG lives in its own section. `row_break: true` on a page starts a fresh grid row at that tile, which is how the grid keeps the shape Profile/WireGuard/KDE/AI/Permissions — Launcher — Constellation/Panel/About instead of reflowing at ui.tile_columns.",
+        "_doc_pages_order": "Order here is the single source of truth — drives both the Configs section page-grid AND (via home_groups tiles_from_section: 'config') the Home Apps Configs row. WireGuard appears in the row via an explicit `tiles` entry on the home_groups row with insert_after_id, since WG lives in its own section. `row_break: true` on a page starts a fresh grid row at that tile, which is how the grid keeps the shape Profile/WireGuard/KDE/AI/Permissions — Launcher — Constellation/Home/About instead of reflowing at ui.tile_columns.",
         "pages": [
           {
-            "_doc": "Tab 1 of Panel — the switch board, and the tab the page opens on (see _doc_tabs_order above). Which controls exist, how they are grouped and what they are called is declared in ui.control_panel below; the CAPABILITY behind each id (what reads its state, what writes it, what blocks it) lives in configs/DeviceControls.kt, next to the read-back that verifies it. hidden = it is reached through the Panel strip, not as its own Configs tile.",
-            "id": "control",
-            "label": "Control",
-            "icon": "ic_settings",
-            "hidden": true
-          },
-          {
-            "_doc": "Tab 2 of Panel — the full declaration of every notification-center / badge producer this app ships (KDE status, media now-playing, the grouped alerts notification, the phone-notification-listener access this app's own badges depend on, the recovery advisory, the floating-nav quick actions and screensaver channels, and the launcher icon badge count they all feed). Which producers exist, what surface each one is (system notification / in-app card / launcher badge), what channel backs it and whether it is declared enabled is ui.notification_center below — this page renders exactly that list and nothing it invents, per #497. Ownership stays split the same way Control/DeviceControls split it: build.json says WHAT exists, the producer's own Kotlin file (KdeStatusNotifier, MediaProxy, InfosNotifier, PhoneNotificationListenerService, RecoveryNotifier, FloatingNavService, ScreensaverService) says how it actually behaves.",
+            "_doc": "Tab 1 of Home — the full declaration of every notification-center / badge producer this app ships (KDE status, media now-playing, the grouped alerts notification, the phone-notification-listener access this app's own badges depend on, the recovery advisory, the floating-nav quick actions and screensaver channels, and the launcher icon badge count they all feed). Which producers exist, what surface each one is (system notification / in-app card / launcher badge), what channel backs it and whether it is declared enabled is ui.notification_center below — this page renders exactly that list and nothing it invents, per #497. Ownership stays split the same way Control/DeviceControls split it: build.json says WHAT exists, the producer's own Kotlin file (KdeStatusNotifier, MediaProxy, InfosNotifier, PhoneNotificationListenerService, RecoveryNotifier, FloatingNavService, ScreensaverService) says how it actually behaves.",
             "id": "push",
             "label": "Push",
             "icon": "ic_stat_notify",
             "hidden": true
           },
           {
-            "_doc": "Tab 3 of Panel — the EXISTING ntfy notification centre, not a copy of it. `mirror_page` names sections[communication].pages[my-rss] and LauncherNavController.aggregatorPage renders that page's own fragment, so the cards, the filter row and the stack_my-rss declaration all stay owned by the Notify section. mirror_page is the page-level twin of `mirror_section` (Cloud ▸ Configs / Cloud ▸ C3) and exists for the same reason those do: a tab that IS the other surface cannot drift from it, a second copy of it always does. Mirroring one PAGE rather than the section is what keeps this one tab instead of the Notify section's own six-tab strip nested inside ours.",
+            "_doc": "Tab 2 of Home — the EXISTING ntfy notification centre, not a copy of it. `mirror_page` names sections[communication].pages[my-rss] and LauncherNavController.aggregatorPage renders that page's own fragment, so the cards, the filter row and the stack_my-rss declaration all stay owned by the Notify section. mirror_page is the page-level twin of `mirror_section` (Cloud ▸ Configs / Cloud ▸ C3) and exists for the same reason those do: a tab that IS the other surface cannot drift from it, a second copy of it always does. Mirroring one PAGE rather than the section is what keeps this one tab instead of the Notify section's own six-tab strip nested inside ours.",
             "id": "notify",
             "label": "Notify",
             "icon": "ic_rss",
@@ -4593,8 +4586,8 @@
             "icon": "ic_kde"
           },
           {
-            "_doc": "AI is ONE page wearing FIVE tabs, declared the way Launcher and Panel declare theirs — `tabs` naming page ids of this same section, so SectionPages hands it the SAME SectionTabsFragment and this app still has one tab mechanism rather than a second one to restyle and re-fix in parallel.",
-            "_doc_tabs_order": "TAB ORDER IS THE LANDING RULE (see Panel's _doc_tabs_order), and this array is the owner's own order from the request, kept verbatim. That means a cold open lands on WebSearch, which is one of the three tabs whose agent DOES NOT EXIST YET and which says exactly that. It is deliberate rather than overlooked: the owner named the order and reordering their list to put the working tab first is not a decision to take on their behalf. Moving `tokens` to the front of this array is the whole of changing it, with no Kotlin edit.",
+            "_doc": "AI is ONE page wearing FIVE tabs, declared the way Launcher and Home declare theirs — `tabs` naming page ids of this same section, so SectionPages hands it the SAME SectionTabsFragment and this app still has one tab mechanism rather than a second one to restyle and re-fix in parallel.",
+            "_doc_tabs_order": "TAB ORDER IS THE LANDING RULE (see Home's _doc_tabs_order), and this array is the owner's own order from the request, kept verbatim. That means a cold open lands on WebSearch, which is one of the three tabs whose agent DOES NOT EXIST YET and which says exactly that. It is deliberate rather than overlooked: the owner named the order and reordering their list to put the working tab first is not a decision to take on their behalf. Moving `tokens` to the front of this array is the whole of changing it, with no Kotlin edit.",
             "_doc_what_is_real": "THREE OF THESE FIVE TABS HAVE NO AGENT BEHIND THEM. websearch, localsearch and library are where agents the owner described in the future tense (\"cloud-sa WILL HAVE agent for websearch\") get configured once they exist; each renders AiNotBuiltFragment, which states that the agent is not built and offers NO control at all, because a dead control reads as a broken feature rather than an absent one. textenhance and tokens are backed by things that exist today and are the only two that do anything.",
             "id": "ai",
             "label": "AI",
@@ -4648,28 +4641,28 @@
             "hidden": true
           },
           {
-            "_doc": "Launcher is ONE page wearing THREE tabs: Profiles, Modes and One-Hand. It wore two until the Mode tab had grown into one endless scroll holding three unrelated decisions — which profile you are in, which mode paints the launcher, and how you reach it one-handed. Profiles came out first because it is the only one of the three that changes what the OTHER two mean. `tabs` lists PAGE IDS of this same section, in strip order: SectionPages hands a page that declares them to the SAME SectionTabsFragment a tabbed section wears, so there is one tab mechanism in this app, not two. All three tab ids stay real declared pages (hidden below), which is what keeps `page:config/onehand` alive as a target — see LauncherNavController.openSectionPage, which resolves a tab id to its owner page and lands on that tab.",
+            "_doc": "Launcher is ONE page wearing THREE tabs: Presets, Controls and One-Hand. Presets is what you PICK (a sandbox, a UI theme, a mode — three groups declared in ui.launcher_presets); Controls is what you FLIP (the device/fleet switchboard from the old Panel ▸ Control, then the launcher's own switches, sliders and screensaver); One-Hand is how you reach it. `tabs` lists PAGE IDS of this same section, in strip order: SectionPages hands a page that declares them to the SAME SectionTabsFragment a tabbed section wears, so there is one tab mechanism in this app, not two. All three tab ids stay real declared pages (hidden below), which is what keeps `page:config/onehand` alive as a target — see LauncherNavController.openSectionPage, which resolves a tab id to its owner page and lands on that tab. A stored destination naming a retired id (profiles, theme, control, panel) is judged dead by ShellActivity.recentTabStillExists rather than navigated into nothing.",
             "id": "launcher",
             "label": "Launcher",
             "icon": "ic_home",
             "tabs": [
-              "profiles",
-              "theme",
+              "presets",
+              "controls",
               "onehand"
             ],
             "row_break": true
           },
           {
-            "_doc": "Tab 1 of Launcher — the launcher PROFILES, split out of the Mode tab. Its id is `profiles`, not `profile`, because `profile` is already this section's own top-level page (the owner's identity: name, email, WireGuard export) and a section cannot hold two pages under one id. Nothing persisted moves with the split: LauncherProfilePrefs keys off the fixed store name 'launcher_profile', never off the page id. hidden = it is reached through the strip, not as its own Configs tile.",
-            "id": "profiles",
-            "label": "Profiles",
+            "_doc": "Tab 1 of Launcher — the PRESETS: things you pick in one tap. Three groups, declared in ui.launcher_presets (order, names and which declaration feeds each group): Sandboxes (ui.launcher_profiles — Work · Personal · Guest), Themes (ui.launcher_themes — Cloud Purple · Cloud Minimalistic) and Modes (ui.launcher_modes — Power · Focus · Saving Energy). LauncherPresetsFragment draws them and owns no name of its own. Its id is `presets`, not `profile`, because `profile` is already this section's own top-level page (the owner's identity) and a section cannot hold two pages under one id. Nothing persisted moves with the rename: LauncherProfilePrefs/LauncherThemePrefs/LauncherModePrefs key off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
+            "id": "presets",
+            "label": "Presets",
             "icon": "ic_p_sol_personal",
             "hidden": true
           },
           {
-            "_doc": "Tab 1 of Launcher — everything the standalone Launcher page used to show (profiles, theme picker, screensaver + toggles, set-as-default-launcher). Its OWN id had to be new, because `launcher` is now the strip that CONTAINS it and a page cannot be a tab of itself. Nothing persisted moves with it: LauncherThemePrefs/LauncherProfilePrefs/LauncherSettingsPrefs key off fixed store names ('launcher_theme'/'launcher_profile'/'launcher_settings'), never off the page id. hidden = it is reached through the strip, not as its own Configs tile.",
-            "id": "theme",
-            "label": "Modes",
+            "_doc": "Tab 2 of Launcher — the CONTROLS (#574): ONE producer, LauncherConfigFragment, drawing the device/fleet switchboard (the Samsung-style icon grid declared in ui.control_panel and implemented in configs/DeviceControls.kt, formerly Configs ▸ Panel ▸ Control) followed by the launcher's own screensaver, switches, sliders and set-as-default-launcher. The theme picker that used to open this tab moved to Presets ▸ Themes — the SAME LauncherThemes.apply, not a copy. Nothing persisted moves with it: LauncherSettingsPrefs keys off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
+            "id": "controls",
+            "label": "Controls",
             "icon": "ic_home",
             "hidden": true
           },
@@ -4705,7 +4698,7 @@
             "is_action": true
           },
           {
-            "_doc": "#563 THE STORE — the one declaration of its identity (id `store`) and its display title (label). It was 'Constellation', an action page (action:constellation) with its own branch in ShellActivity; it is now an ordinary tabbed page, so every way in is a page: target resolved by the same strip Panel/Launcher/AI use. Tab 1 is the fleet (every constellation APK: install/update/uninstall/open, per-app versions and digests); tab 2 is every launchable APK on the phone, each row with Update (fleet apps only, through the fleet's own install path) / Open / Stop / Remove / App info / its origin store read from the real installer (#564; map in libs/appstore assets/appstore-install-sources.json). Both tabs group by the central classification (ui.phone_folders + ui.phone_sections, through PhoneTaxonomy) — the store holds no taxonomy of its own. test-store-identity.sh guards that nothing routes here by the old name and that every tile pointing here carries this label.",
+            "_doc": "#563 THE STORE — the one declaration of its identity (id `store`) and its display title (label). It was 'Constellation', an action page (action:constellation) with its own branch in ShellActivity; it is now an ordinary tabbed page, so every way in is a page: target resolved by the same strip Home/Launcher/AI use. Tab 1 is the fleet (every constellation APK: install/update/uninstall/open, per-app versions and digests); tab 2 is every launchable APK on the phone, each row with Update (fleet apps only, through the fleet's own install path) / Open / Stop / Remove / App info / its origin store read from the real installer (#564; map in libs/appstore assets/appstore-install-sources.json). Both tabs group by the central classification (ui.phone_folders + ui.phone_sections, through PhoneTaxonomy) — the store holds no taxonomy of its own. test-store-identity.sh guards that nothing routes here by the old name and that every tile pointing here carries this label.",
             "_doc_tabs_order": "Cloud first: the fleet is what the store exists to manage, and it is the tab the Update-All action, the update notification and a lib tile all land on (page:config/store-cloud).",
             "id": "store",
             "label": "Store",
@@ -4731,13 +4724,12 @@
             "hidden": true
           },
           {
-            "_doc": "Panel is the page you open to FLIP something, not to configure it — the three things the owner touches many times a day, sitting behind one strip: the device/fleet switches, the notification-center/badge declaration, and the ntfy notification centre. It sits immediately before About at the owner's request, so the page touched many times a day is the one nearest the thumb on the Canopus arc; every other entry here is opened to change a setting once. `tabs` lists page ids of this same section in strip order, so it wears the SectionTabsFragment strip Launcher established in 07964787e — no second tab widget in this app.",
-            "_doc_tabs_order": "TAB ORDER IS THE LANDING RULE, so Control leading this array is the whole of 'Panel opens on Control' and there is nothing else to declare. SectionTabsFragment.startIndex falls back to the FIRST tab with a fragment behind it, so a `default_tab` flag would be a second answer to a question this array already answers, and the two could disagree. Control leads because flipping a switch is the errand that brings the owner here — Notify is the thing that ALREADY interrupted them, and it is one tap away plus reachable directly as page:config/notify. Push sits BETWEEN the two (#497): it answers neither of the errands that bookend it, so it goes where it interrupts neither — after the thing you came to flip, before the thing that already interrupted you. The first-tab rule is only the FALLBACK, though: a strip already visited in this process is restored to the tab the user left (LauncherNavController.activeTabBySection, an in-memory map on the controller, so it survives navigation and dies with the process). Cold open lands on Control; for the rest of that process the owner gets the tab they left. That is how EVERY strip in this app behaves and Panel deliberately is not the exception — a page that forgot where you were while its siblings remembered would read as a bug, not as a policy.",
-            "id": "panel",
-            "label": "Panel",
+            "_doc": "Home is the page you open to be told something, not to configure it — the two notification surfaces behind one strip: the notification-center / badge declaration (Push) and the ntfy notification centre (Notify). It was 'Panel' with Control as its first tab; Control MOVED to Configs ▸ Launcher ▸ Controls (#574) so the switch board and the launcher's own switches have one home. It sits immediately before About so the page touched many times a day is the one nearest the thumb on the Canopus arc. `tabs` lists page ids of this same section in strip order, so it wears the SectionTabsFragment strip Launcher established — no second tab widget in this app.",
+            "_doc_tabs_order": "TAB ORDER IS THE LANDING RULE: SectionTabsFragment.startIndex falls back to the FIRST tab with a fragment behind it, so Push leading this array is the whole of 'Home opens on Push' and there is nothing else to declare (a `default_tab` flag would be a second answer to a question this array already answers). The first-tab rule is only the FALLBACK: a strip already visited in this process is restored to the tab the user left (LauncherNavController.activeTabBySection), which is how EVERY strip in this app behaves.",
+            "id": "home",
+            "label": "Home",
             "icon": "ic_settings",
             "tabs": [
-              "control",
               "push",
               "notify"
             ]
@@ -4861,10 +4853,9 @@
     "_doc_launcher_profiles": "Profiles the user can pick in Configs → Launcher → Profiles. The chosen profile is persisted via LauncherProfilePrefs. Unlike themes (which control UI/chrome/features), profiles control APP ISOLATION + DATA SAFETY — which apps the user can reach and which subsystems get neutered (e.g. Guest disables WireGuard so the guest can't see private infra). The `behavior` map is the declarative contract Push C reads. Personal = full access (passthrough). Work = same as Personal for now; tag-based filtering wires in once apps carry app_tags. Guest = hands-off lockdown.",
     "launcher_profiles": [
       {
-        "id": "personal",
-        "label": "Personal",
-        "subtitle": "Your default everyday profile — every installed app and folder visible.",
-        "default": true,
+        "id": "work",
+        "label": "Work",
+        "subtitle": "Same as Personal for now — tag-based hide rules ship once each app/tile carries an app_tags list (e.g. work / personal / finance).",
         "behavior": {
           "app_filter": "all",
           "wireguard": "on",
@@ -4872,9 +4863,10 @@
         }
       },
       {
-        "id": "work",
-        "label": "Work",
-        "subtitle": "Same as Personal for now — tag-based hide rules ship once each app/tile carries an app_tags list (e.g. work / personal / finance).",
+        "id": "personal",
+        "label": "Personal",
+        "subtitle": "Your default everyday profile — every installed app and folder visible.",
+        "default": true,
         "behavior": {
           "app_filter": "all",
           "wireguard": "on",
@@ -4897,6 +4889,89 @@
         }
       }
     ],
+    "_doc_launcher_modes": "Launcher MODES (Configs ▸ Launcher ▸ Presets ▸ Modes, #574): named bundles of the launcher's own switches — no chrome, no palette. `toggles` names ids from ui.launcher_settings.toggles and is applied by the SAME engine a theme's `toggles` go through (LauncherThemes.applyToggles), including the parse-time drop of `user_owned` ids; a switch a mode does not name keeps its value. The selected mode is persisted by LauncherModePrefs; 'modified' is DERIVED by comparing the device to this map, exactly as a theme's is. NOT the reverse of #435: that deleted power-saving theme was a theme with its own home pane, design vocabulary and system-lever engine — a mode here has none of those, only switches that already exist.",
+    "launcher_modes": [
+      {
+        "id": "power",
+        "label": "Power Mode",
+        "subtitle": "Everything on — every animation, live stats, the 3D home, background polls. Full experience, full battery cost.",
+        "toggles": {
+          "all_anim": true,
+          "pets_anim": true,
+          "cube_anim": true,
+          "island_anim": true,
+          "stars_anim": true,
+          "star_twinkle": true,
+          "status_live": true,
+          "home_3d": true,
+          "dynamic_island": true,
+          "apps_warmup": true,
+          "fleet_check": true,
+          "ntfy_poll": true,
+          "background_pause": false,
+          "oled_black": false
+        }
+      },
+      {
+        "id": "focus",
+        "label": "Focus Mode",
+        "subtitle": "Quiet launcher — decorative animation, the dynamic island and message polling off, so nothing moves or interrupts.",
+        "toggles": {
+          "pets_anim": false,
+          "cube_anim": false,
+          "island_anim": false,
+          "stars_anim": false,
+          "star_twinkle": false,
+          "dynamic_island": false,
+          "ntfy_poll": false
+        }
+      },
+      {
+        "id": "saving_energy",
+        "label": "Saving Energy Mode",
+        "subtitle": "Leanest launcher — animations, live stats and 3D home off, background work paused, pure-black OLED window, usage uploads batched.",
+        "toggles": {
+          "all_anim": false,
+          "pets_anim": false,
+          "cube_anim": false,
+          "island_anim": false,
+          "stars_anim": false,
+          "star_twinkle": false,
+          "status_live": false,
+          "home_3d": false,
+          "dynamic_island": false,
+          "apps_warmup": false,
+          "maps_tracker": false,
+          "fleet_check": false,
+          "background_pause": true,
+          "oled_black": true,
+          "analytics_batch": true
+        }
+      }
+    ],
+    "_doc_launcher_presets": "Configs ▸ Launcher ▸ Presets — the ONE declaration of what the tab shows: which groups, in what order, under what name, and which declaration feeds each. `kind` selects the renderer (profile → ui.launcher_profiles, theme → ui.launcher_themes, mode → ui.launcher_modes); the tiles' own names and order come from those arrays, so no caption is written in Kotlin and no id is ever displayed as a caption.",
+    "launcher_presets": {
+      "groups": [
+        {
+          "id": "sandboxes",
+          "kind": "profile",
+          "label": "Sandboxes",
+          "subtitle": "Which apps and subsystems this launcher lets through. One at a time."
+        },
+        {
+          "id": "themes",
+          "kind": "theme",
+          "label": "Themes",
+          "subtitle": "The launcher's whole UI. Picking one rewrites the design and sets the switches it declares, together."
+        },
+        {
+          "id": "modes",
+          "kind": "mode",
+          "label": "Modes",
+          "subtitle": "A bundle of switches for what you are doing. Sets only the switches it names; the rest keep their value."
+        }
+      ]
+    },
     "_doc_myfin_mock_tombstone": "myfin_mock is GONE from the SuperApp, with the MyFin section and the libs:fin dependency that read it. The block now lives ONLY in ac_cloud-me/build.json::ui.myfin_mock, which is what libs:fin bakes into UI_MYFIN_MOCK_B64 for Cloud-Me's Buro > Fin. Two copies of the same mock in two repos is how they drift; the app that still draws it keeps it.",
     "_doc_dynamic_island_action": "What happens when the user taps the dynamic-island pill in the toolbar. The supported forms are DECLARED in `_vocab_dynamic_island_action` \u2014 the SCHEMES, spelled without the colon so no other reader of this file mistakes the vocabulary for an `app:<packageName>` target of its own \u2014 and validated by app/build.gradle at configuration time: an absent key, a blank one, or a scheme that is not in that list FAILS THE BUILD. There is deliberately no fallback. `app:<packageName>` opens that app's launcher activity; `shortcut:<id>` fires one of the shell's shortcut intents. An uninstalled target falls back to a silent Toast, never to another surface, so the user's explicit binding stays the source of truth. #515 removed the `notifications` form: it opened the launcher's own drop-down shade, which was a second notification centre drawn from the same store as the Notify page, and that shade is deleted. The notification centre is the Notify page — ui.sections[communication].stack_my-rss, panel kind `notification_center`.",
     "_vocab_dynamic_island_action": [
@@ -7565,7 +7640,7 @@
       "toggle_groups": [
         {
           "id": "battery",
-          "label": "Battery Hungers",
+          "label": "Launcher Battery Hungers",
           "subtitle": "Continuous motion, the 3D home pane, live stats and background work — the effects that actually drain the cell. Off = leaner.",
           "master": true,
           "master_label": "All battery-hungry effects",
@@ -7734,7 +7809,7 @@
         "note": "Shizuku's own discovery provider, published by this app. It is how Shizuku finds us, not how we find Shizuku."
       }
     ],
-    "_doc_control_panel": "Configs ▸ Panel ▸ Control — the switch board, DECLARED here and implemented in configs/DeviceControls.kt. This file owns PRESENTATION ONLY: which controls appear, in which group, in what order, under what wording, and how many tiles fit across. It owns nothing about what a control can do.\n\nTHE GROUPS ANSWER 'WHAT AM I LOOKING FOR', NOT 'WHAT WOULD THIS BREAK'. They used to be Phone / Cloud / System, a blast-radius taxonomy: what does flipping this change — the handset, the fleet, or this app. That is a good way to think about consequences and a poor way to FIND something, and finding is the entire errand that brings anybody to a quick-settings grid. Under blast radius the radios were split across two groups (Wi-Fi, mobile data, Bluetooth and airplane mode under Phone; the mesh tunnel and the per-app firewall under Cloud), so 'turn the network off' meant visiting two of the three groups and knowing in advance which half lived where. Device / Network / Tools / UI groups by the thing the owner has in mind when they reach for the page. Every control still lands in exactly one of them; nothing needed an Others.\n\nBATTERY HUNGERS IS A SECOND VIEW, NOT A FIFTH HOME. A group that declares `derive` owns no `controls` array of its own — its rows are every control in the groups above carrying that flag, in declared order. So a battery-hungry control is drawn TWICE, once in its functional group and once here, and both tiles are the same control id, which is the only thing either of them holds. There is no second copy of the state to drift: DeviceControls.byId maps one id to one Control, one read and one write, and ControlFragment repaints EVERY tile bearing an id when that id's reading lands. Adding a control to Battery Hungers is `\"battery_hungry\": true` on the control and nothing else — no Kotlin, no second list of ids to fall out of step with the first. Removing the whole group is deleting one entry from `groups`. A second derived view (privacy, say) is another entry with another flag and still no Kotlin.\n\nWHAT COUNTS AS BATTERY-HUNGRY is a judgement about mechanism, and it is recorded per control so it can be argued with: a radio that must stay associated (mobile data, Bluetooth), an always-on VpnService (the mesh tunnel, the per-app firewall), a foreground service that polls (the floating menu reads the foreground package once a second), a background sync (fleet auto-update), a continuously animated surface (the shader backdrops behind All animations), the adbd the privileged plane keeps alive (wireless debugging), and the flash unit itself (torch). Auto-brightness is deliberately NOT here — it spends less than a screen pinned bright.\n\nGROUP WORDING IS A STRING RESOURCE, not the text in this file. `label_res` and `subtitle_res` name keys in res/values/strings.xml, resolved at render time, so the group headings reach the owner in Spanish like the rest of the page; `label` and `subtitle` remain as the English fallback and as the documentation of what the key is supposed to say. (The per-CONTROL labels and subtitles below are still raw English text in this file and are NOT translated — a pre-existing gap, 34 strings wide, untouched here.)\n\nNEVER RENDER A SWITCH THAT LIES. Adding an id here does NOT create a control: DeviceControls decides, per control, which of three things it is — (1) really toggleable in-process, so a tile whose state is re-read from the system after every write; (2) toggleable only through a special permission this app holds, so a tile that is DISABLED with the missing permission named on it; (3) not toggleable at all, so a tile that does not switch but opens the exact Settings panel for it and shows the live state read-only. An id declared here with no capability behind it is dropped rather than drawn, because a control that does nothing is the same lie as a switch that does nothing.",
+    "_doc_control_panel": "Configs ▸ Launcher ▸ Controls (was Panel ▸ Control, #574) — the switch board, DECLARED here and implemented in configs/DeviceControls.kt. This file owns PRESENTATION ONLY: which controls appear, in which group, in what order, under what wording, and how many tiles fit across. It owns nothing about what a control can do.\n\nTHE GROUPS ANSWER 'WHAT AM I LOOKING FOR', NOT 'WHAT WOULD THIS BREAK'. They used to be Phone / Cloud / System, a blast-radius taxonomy: what does flipping this change — the handset, the fleet, or this app. That is a good way to think about consequences and a poor way to FIND something, and finding is the entire errand that brings anybody to a quick-settings grid. Under blast radius the radios were split across two groups (Wi-Fi, mobile data, Bluetooth and airplane mode under Phone; the mesh tunnel and the per-app firewall under Cloud), so 'turn the network off' meant visiting two of the three groups and knowing in advance which half lived where. Device / Network / Tools / UI groups by the thing the owner has in mind when they reach for the page. Every control still lands in exactly one of them; nothing needed an Others.\n\nBATTERY HUNGERS IS A SECOND VIEW, NOT A FIFTH HOME. A group that declares `derive` owns no `controls` array of its own — its rows are every control in the groups above carrying that flag, in declared order. So a battery-hungry control is drawn TWICE, once in its functional group and once here, and both tiles are the same control id, which is the only thing either of them holds. There is no second copy of the state to drift: DeviceControls.byId maps one id to one Control, one read and one write, and ControlFragment repaints EVERY tile bearing an id when that id's reading lands. Adding a control to Battery Hungers is `\"battery_hungry\": true` on the control and nothing else — no Kotlin, no second list of ids to fall out of step with the first. Removing the whole group is deleting one entry from `groups`. A second derived view (privacy, say) is another entry with another flag and still no Kotlin.\n\nWHAT COUNTS AS BATTERY-HUNGRY is a judgement about mechanism, and it is recorded per control so it can be argued with: a radio that must stay associated (mobile data, Bluetooth), an always-on VpnService (the mesh tunnel, the per-app firewall), a foreground service that polls (the floating menu reads the foreground package once a second), a background sync (fleet auto-update), a continuously animated surface (the shader backdrops behind All animations), the adbd the privileged plane keeps alive (wireless debugging), and the flash unit itself (torch). Auto-brightness is deliberately NOT here — it spends less than a screen pinned bright.\n\nGROUP WORDING IS A STRING RESOURCE, not the text in this file. `label_res` and `subtitle_res` name keys in res/values/strings.xml, resolved at render time, so the group headings reach the owner in Spanish like the rest of the page; `label` and `subtitle` remain as the English fallback and as the documentation of what the key is supposed to say. (The per-CONTROL labels and subtitles below are still raw English text in this file and are NOT translated — a pre-existing gap, 34 strings wide, untouched here.)\n\nNEVER RENDER A SWITCH THAT LIES. Adding an id here does NOT create a control: DeviceControls decides, per control, which of three things it is — (1) really toggleable in-process, so a tile whose state is re-read from the system after every write; (2) toggleable only through a special permission this app holds, so a tile that is DISABLED with the missing permission named on it; (3) not toggleable at all, so a tile that does not switch but opens the exact Settings panel for it and shows the live state read-only. An id declared here with no capability behind it is dropped rather than drawn, because a control that does nothing is the same lie as a switch that does nothing.",
     "control_panel": {
       "_doc_columns": "Tiles across the grid. Data because tile density is the thing the owner re-litigates, and because a column count compiled into Kotlin is a rebuild to argue with. Four is Samsung's own quick-settings width and it is what keeps a tile wide enough to hit: at four columns a 360dp-wide phone gives roughly 80dp of tile, comfortably past the 48dp minimum touch target. Raising this past five starts trading that away.",
       "columns": 4,
@@ -7899,9 +7974,9 @@
         }
       ]
     },
-    "_doc_notification_center": "Configs ▸ Panel ▸ Push (#497) — the ONE declaration of every notification-center / badge producer this app ships, and the source the Push tab renders verbatim: nothing it lists is invented in Kotlin, and nothing this app draws as a badge or a notification is missing from it. Diego asked for 'the kde badge, the music badge, the quickmarks badge….' and trailed off on purpose — that trailing off is what makes this a declaration instead of his list of three: PushFragment iterates `producers` and draws whatever is here, so adding or dropping an entry changes the tab with no Kotlin edit, the same contract configs/DeviceControls.kt keeps for Control.\n\nSplit exactly like Control/DeviceControls: this file owns PRESENTATION — which producers exist, what each one IS (label/subtitle/icon), which surface it occupies (`surface`: a system notification, an in-app card, or a launcher-icon badge count) and whether it is declared on. The CAPABILITY — the actual channel, the actual notify()/cancel() calls, the actual read of NotificationListenerService — stays owned by that producer's own Kotlin file, named in `owner` below, exactly where DeviceControls keeps a control's read/set next to the declaration that names it.\n\n`enabled` is declared, not necessarily live-wired: `infos_alerts` is the one producer whose Kotlin already branches on it (InfosNotifier reads ui.notification_infos.enabled, see below) — every other `enabled` here is what this build ships with and is read-only from the Push tab today, same honesty rule Control's `observed` flag states explicitly rather than implying. A producer with no capability behind it — an id with no file in `owner` implementing it — is exactly the DeviceControls failure mode (a row that draws and means nothing), which is why the tester for this page checks `owner` resolves to a real file, not just that the JSON parses.\n\nQUICKMARKS: swept for an actual unread-count badge on Phone ▸ Apps ▸ Quickmarks tiles and found none — AppIconTile draws a 'Not installed' placeholder glyph, not a notification count. What IS real and what an owner would call 'the quickmarks badge' is the system launcher-icon badge every tile can carry, driven by whichever channels below have `shows_badge: true` and cleared when a notification surface calls cancelAll() — declared here as `launcher_icon_badge`, coupled to `phone_notification_listener` rather than invented as a fourth independent mechanism.",
+    "_doc_notification_center": "Configs ▸ Home ▸ Push (#497) — the ONE declaration of every notification-center / badge producer this app ships, and the source the Push tab renders verbatim: nothing it lists is invented in Kotlin, and nothing this app draws as a badge or a notification is missing from it. Diego asked for 'the kde badge, the music badge, the quickmarks badge….' and trailed off on purpose — that trailing off is what makes this a declaration instead of his list of three: PushFragment iterates `producers` and draws whatever is here, so adding or dropping an entry changes the tab with no Kotlin edit, the same contract configs/DeviceControls.kt keeps for Control.\n\nSplit exactly like Control/DeviceControls: this file owns PRESENTATION — which producers exist, what each one IS (label/subtitle/icon), which surface it occupies (`surface`: a system notification, an in-app card, or a launcher-icon badge count) and whether it is declared on. The CAPABILITY — the actual channel, the actual notify()/cancel() calls, the actual read of NotificationListenerService — stays owned by that producer's own Kotlin file, named in `owner` below, exactly where DeviceControls keeps a control's read/set next to the declaration that names it.\n\n`enabled` is declared, not necessarily live-wired: `infos_alerts` is the one producer whose Kotlin already branches on it (InfosNotifier reads ui.notification_infos.enabled, see below) — every other `enabled` here is what this build ships with and is read-only from the Push tab today, same honesty rule Control's `observed` flag states explicitly rather than implying. A producer with no capability behind it — an id with no file in `owner` implementing it — is exactly the DeviceControls failure mode (a row that draws and means nothing), which is why the tester for this page checks `owner` resolves to a real file, not just that the JSON parses.\n\nQUICKMARKS: swept for an actual unread-count badge on Phone ▸ Apps ▸ Quickmarks tiles and found none — AppIconTile draws a 'Not installed' placeholder glyph, not a notification count. What IS real and what an owner would call 'the quickmarks badge' is the system launcher-icon badge every tile can carry, driven by whichever channels below have `shows_badge: true` and cleared when a notification surface calls cancelAll() — declared here as `launcher_icon_badge`, coupled to `phone_notification_listener` rather than invented as a fourth independent mechanism.",
     "notification_center": {
-      "_doc": "One entry per PRODUCER. `badge` is what splits a shade badge from the rest of the channel inventory: true means this producer puts a PERSISTENT entry in the notification centre, and Configs > Panel > Push renders exactly those — one box in section 1, one customization menu in section 2, derived, never a hand-kept name list. `persistent` means it must survive an app update and a reboot: BadgeRestartReceiver re-ensures every persistent producer's `service` on MY_PACKAGE_REPLACED / BOOT_COMPLETED. Before that existed, only KdeStatusService restarted itself (App.kt) and everything owned by FloatingNavService — Quickmarks, Media, Alerts — stayed dead after an update. `requires` names the grants a badge needs so a dead badge can say WHY instead of reading absent. Adding a badge means adding an entry HERE and nothing else.",
+      "_doc": "One entry per PRODUCER. `badge` is what splits a shade badge from the rest of the channel inventory: true means this producer puts a PERSISTENT entry in the notification centre, and Configs > Home > Push renders exactly those — one box in section 1, one customization menu in section 2, derived, never a hand-kept name list. `persistent` means it must survive an app update and a reboot: BadgeRestartReceiver re-ensures every persistent producer's `service` on MY_PACKAGE_REPLACED / BOOT_COMPLETED. Before that existed, only KdeStatusService restarted itself (App.kt) and everything owned by FloatingNavService — Quickmarks, Media, Alerts — stayed dead after an update. `requires` names the grants a badge needs so a dead badge can say WHY instead of reading absent. Adding a badge means adding an entry HERE and nothing else.",
       "producers": [
         {
           "id": "kde_status",

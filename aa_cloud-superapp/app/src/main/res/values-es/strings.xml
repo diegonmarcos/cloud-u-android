@@ -186,7 +186,7 @@
          supplies the "all". -->
     <string name="notif_mark_group_read">Marcar leídas</string>
 
-    <!-- ── Configs ▸ Panel ▸ Control ──────────────────────────────────── -->
+    <!-- ── Configs ▸ Launcher ▸ Controls ──────────────────────────────────── -->
     <string name="status_light_on">Activado</string>
     <string name="status_light_off">Desactivado</string>
     <string name="status_light_unknown">Desconocido</string>
@@ -206,7 +206,7 @@
     <string name="push_producer_off">Declarado inactivo</string>
     <string name="control_write_refused">%1$s: no cambió — %2$s</string>
 
-    <!-- Configs ▸ Panel ▸ Control — encabezados de grupo. Los nombra
+    <!-- Configs ▸ Launcher ▸ Controls — encabezados de grupo. Los nombra
          build.json::ui.control_panel.groups[].label_res / subtitle_res. -->
     <string name="control_group_device">Dispositivo</string>
     <string name="control_group_device_sub">El hardware del propio teléfono y lo que reclama tu atención.</string>

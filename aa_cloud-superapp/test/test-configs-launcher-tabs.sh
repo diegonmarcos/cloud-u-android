@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Tester: Configs ▸ Launcher is ONE page with three tabs (Profiles | Modes |
-# One-Hand), and neither merging the old One-Hand page into it nor splitting
-# Profiles back out of Modes broke its stored settings or the targets that
-# still name it.
+# Tester: Configs ▸ Launcher is ONE page with three tabs (Presets | Controls |
+# One-Hand), and neither merging the old One-Hand page into it nor the #574
+# renames (Profiles → Presets, Modes → Controls) broke its stored settings or
+# the targets that still name it.
 #
 # WHY THIS EXISTS: the merge touches the two things a page move silently
 # destroys.
 #   1. SETTINGS — a preference store keyed off a page id would have moved when
 #      the page did, wiping every toggle the user had set. This asserts the
 #      launcher/one-hand stores are named literally, so the id could change
-#      (`launcher` → `theme`) without taking the data with it.
+#      (`launcher` → `controls`) without taking the data with it.
 #   2. TARGETS — `page:config/onehand` is spoken by launcher shortcuts, edge
 #      gestures, the radial menus and the App-Tabs history already on the
 #      device. The page stays DECLARED (hidden) and openSectionPage resolves it
@@ -38,12 +38,12 @@ pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
 launcher = next((p for p in pages if p['id'] == 'launcher'), None)
 if launcher is None:                       print('no `launcher` page in config')
-elif launcher.get('tabs') != ['profiles', 'theme', 'onehand']:
+elif launcher.get('tabs') != ['presets', 'controls', 'onehand']:
                                            print('tabs = %r' % (launcher.get('tabs'),))
 elif launcher.get('hidden'):               print('the strip itself must stay listed')
 else:                                      print('OK')
 PY
-)" "launcher: tabs = [profiles, theme, onehand], still a visible Configs entry"
+)" "launcher: tabs = [presets, controls, onehand], still a visible Configs entry"
 
 echo "== T2: every tab is a REAL declared page, hidden, and not the owner itself =="
 check "$(python3 - "$BJ" <<'PY'
@@ -62,7 +62,7 @@ for owner in pages:
             problems.append('tab %r is still a standalone Configs entry' % tab)
 print('; '.join(problems) or 'OK')
 PY
-)" "profiles + theme + onehand are declared, hidden pages of the same section"
+)" "presets + controls + onehand are declared, hidden pages of the same section"
 
 echo "== T3: the One-Hand id SURVIVES (page:config/onehand must still resolve) =="
 check "$(python3 - "$BJ" <<'PY'
@@ -104,9 +104,9 @@ grep -qF 'forPage(sectionId: String, pageId: String): SectionTabsFragment' "$STR
   && ok "SectionTabsFragment.forPage is the page-strip entry point" \
   || bad "SectionTabsFragment.forPage missing"
 
-echo "== T6: both tabs still route to the fragments they always used =="
-grep -qF 'pageId == "theme" -> LauncherConfigFragment.newInstance()' "$PAGES" \
-  && ok "Theme tab → LauncherConfigFragment" || bad "Theme tab lost its fragment"
+echo "== T6: every tab routes to its fragment =="
+grep -qF 'pageId == "controls" -> LauncherConfigFragment.newInstance()' "$PAGES" \
+  && ok "Controls tab → LauncherConfigFragment (the ONE producer)" || bad "Controls tab lost its fragment"
 grep -qF 'pageId == "onehand" ->' "$PAGES" \
   && ok "One-Hand tab → OneHandFragment" || bad "One-Hand tab lost its fragment"
 
@@ -130,12 +130,13 @@ grep -qF 'if (ownerPageId.isBlank()) sectionId else pageTabKey(sectionId, ownerP
   || bad "page and section strips share one key — Configs would inherit Launcher's tab"
 
 echo "== T9: NO preference store is keyed off a page id (settings must not move) =="
-# This is the invariant that let `launcher` become `theme` for free. If a store
+# This is the invariant that let `launcher` become `controls` for free. If a store
 # name ever gets built from a page id, moving a control between pages silently
 # resets it — which is exactly what this merge must never do.
 sp_fail=""
 for f in "$APP/app/src/main/java/com/diegonmarcos/superapp/settings/LauncherThemePrefs.kt" \
          "$APP/app/src/main/java/com/diegonmarcos/superapp/settings/LauncherProfilePrefs.kt" \
+         "$APP/app/src/main/java/com/diegonmarcos/superapp/settings/LauncherModes.kt" \
          "$APP/app/src/main/java/com/diegonmarcos/superapp/settings/LauncherSettingsPrefs.kt" \
          "$APP/app/src/main/java/com/diegonmarcos/superapp/settings/HomeSwipePrefs.kt"; do
   [ -f "$f" ] || { sp_fail="$sp_fail $(basename "$f"):missing"; continue; }
@@ -148,7 +149,7 @@ done
   && ok "launcher + one-hand stores are named literally, so no key moved with the page" \
   || bad "preference store name built from a variable:$sp_fail"
 
-echo "== T10: the Profiles tab is 'profiles', never 'profile' (#339) =="
+echo "== T10: the Presets tab is 'presets', never 'profile' (#339, #574) =="
 # `profile` is the Configs section's OWN top-level page — the owner's identity:
 # name, email, WireGuard export. One section cannot hold two pages under one
 # id, so the Launcher tab had to take a second name. Naming them apart is the
@@ -159,20 +160,20 @@ section = next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['i
 pages   = {p['id']: p for p in section['pages']}
 if 'profile' not in pages:
     print("the owner's identity page 'profile' is GONE — Configs lost its own tile")
-elif 'profiles' not in pages:
-    print("no 'profiles' page — the Launcher tab has nothing to render")
+elif 'presets' not in pages:
+    print("no 'presets' page — the Launcher tab has nothing to render")
 elif pages['profile'].get('hidden'):
     print("'profile' went hidden — the owner's identity tile vanished from Configs")
-elif not pages['profiles'].get('hidden'):
-    print("'profiles' is visible — the tab would also stand as its own Configs tile")
+elif not pages['presets'].get('hidden'):
+    print("'presets' is visible — the tab would also stand as its own Configs tile")
 else:
     print('OK')
 PY
-)" "profile (identity, visible) and profiles (Launcher tab, hidden) are two pages"
+)" "profile (identity, visible) and presets (Launcher tab, hidden) are two pages"
 
-grep -qF 'pageId == "profiles" -> LauncherProfilesFragment.newInstance()' "$PAGES" \
-  && ok "the profiles tab routes to its own fragment" \
-  || bad "profiles has no route — the tab would fall through to the generic page"
+grep -qF 'pageId == "presets" -> LauncherPresetsFragment.newInstance()' "$PAGES" \
+  && ok "the presets tab routes to its own fragment" \
+  || bad "presets has no route — the tab would fall through to the generic page"
 
 grep -qF 'pageId == "profile"   -> ProfileFragment.newInstance()' "$PAGES" \
   && ok "the identity page still routes to ProfileFragment" \

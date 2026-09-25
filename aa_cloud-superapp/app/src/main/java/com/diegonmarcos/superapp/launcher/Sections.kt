@@ -391,7 +391,7 @@ object Sections {
          *  exists for the same reason: a tab that IS the other surface cannot
          *  drift from it, a second copy of it always does.
          *
-         *  Configs ▸ Panel ▸ Notify is the case. [mirrorSection] could not
+         *  Configs ▸ Home ▸ Notify is the case. [mirrorSection] could not
          *  serve it — Notify is a six-page section, so mirroring the SECTION
          *  puts its own tab strip inside ours, and the ask was for the one
          *  ntfy page. Mirroring the PAGE hands back exactly the fragment

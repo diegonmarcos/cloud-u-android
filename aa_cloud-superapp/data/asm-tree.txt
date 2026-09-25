@@ -243,9 +243,13 @@ DRAWER SECTIONS  (not in bottom nav)
     WireGuard        → action:section:wg  (navigates to [WG] section; Back returns here)
     KDE              ← KdeConnectFragment  (clean-room KDE Connect over wg_ip:1716)
     AI               ← AiFragment
-    Launcher         ← LauncherConfigFragment
-      ├─ Themes:  Cloud Theme (default) │ Cloud Minimalist Black
-      └─ Profiles: Personal │ Work │ Guest (locked-down, WG off)
+    Launcher         ← SectionTabsFragment  (tabs: Presets │ Controls │ One-Hand)
+      ├─ Presets:  LauncherPresetsFragment  (groups from ui.launcher_presets)
+      │    ├─ Sandboxes: Work │ Personal │ Guest (locked-down, WG off)
+      │    ├─ Themes:    Cloud Purple │ Cloud Minimalistic
+      │    └─ Modes:     Power │ Focus │ Saving Energy
+      └─ Controls: LauncherConfigFragment  (device switch board + launcher switches)
+    Home             ← SectionTabsFragment  (tabs: Push │ Notify)
     Import           → action:import_configs  (ImportConfigsFragment)
     Update           → action:check_updates   (UpdateOverlayFragment via libs:updater)
     About / Dev      ← DevControlFragment

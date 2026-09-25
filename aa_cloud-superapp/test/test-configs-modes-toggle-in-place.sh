@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# #349 — Configs ▸ Launcher ▸ Modes: tapping a toggle reloaded the page AND
-# landed on a different tab.
+# #349 — Configs ▸ Launcher ▸ Controls (then called Modes; #574 renamed it and
+# moved the theme picker to Presets ▸ Themes): tapping a toggle reloaded the
+# page AND landed on a different tab.
 #
 # That is two defects wearing one coat, and this file asserts BOTH, because
 # either one alone leaves the report half true:
@@ -25,8 +26,10 @@
 #   T2  onToggleChanged does NOT reach that hook, and DOES call the two things
 #       it always said it called: the idempotent public chrome re-apply and the
 #       live push for the shell-owned views
-#   T3  only the MODE tile may reach the recreate hook — it has to, a Material3
-#       style is resolved once per Activity at inflate time
+#   T3  only the THEME tile may reach the recreate hook — it has to, a Material3
+#       style is resolved once per Activity at inflate time. Since #574 that
+#       tile lives on Presets, so the Controls page must hold NONE and the
+#       Presets page exactly one
 #   T4  no control on the Modes page answers a flip with rerenderPage
 #   T5  a toggle tile paints ITSELF from the store: there is a repaint registry,
 #       the tile registers in it, and it takes the prefs rather than a boolean
@@ -43,6 +46,7 @@ set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 KT="$APP/app/src/main/java/com/diegonmarcos/superapp"
 CFG="$KT/settings/LauncherConfigFragment.kt"
+PRESETS="$KT/settings/LauncherPresetsFragment.kt"
 UI="$KT/settings/LauncherSettingsUi.kt"
 STYLE="$KT/ui/LauncherStyle.kt"
 SHELL_KT="$KT/ShellActivity.kt"
@@ -52,7 +56,7 @@ PASS=0; FAIL=0
 ok()  { PASS=$((PASS+1)); echo "  ok: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
-for f in "$CFG" "$UI" "$STYLE" "$SHELL_KT" "$TABS" "$NAV"; do
+for f in "$CFG" "$PRESETS" "$UI" "$STYLE" "$SHELL_KT" "$TABS" "$NAV"; do
   [ -f "$f" ] || { bad "missing source: $f"; echo "PASS=$PASS FAIL=$FAIL"; exit 1; }
 done
 
@@ -109,12 +113,26 @@ grep -q 'internal fun applyShellLiveToggles' "$UI" \
   || bad "T2: applyShellLiveToggles is not in LauncherSettingsUi.kt (#228: no second copy)"
 
 # ── T3 ────────────────────────────────────────────────────────────────────────
-# A mode MUST recreate. Exactly one call site, and it is the mode tile.
+# A THEME must recreate. Exactly one call site, and it is the theme tile — on
+# Presets. The Controls page (every switch) may hold none.
 HOOK_CALLS="$(grep -c 'notifyLauncherThemeChanged()' "$CFG")"
-if [ "$HOOK_CALLS" = "1" ]; then
-  ok "T3: exactly one call to the recreate hook on this page — the mode tile"
+if [ "$HOOK_CALLS" = "0" ]; then
+  ok "T3: no call to the recreate hook on the Controls page"
 else
-  bad "T3: $HOOK_CALLS calls to notifyLauncherThemeChanged in the Modes page (want exactly 1)"
+  bad "T3: $HOOK_CALLS calls to notifyLauncherThemeChanged in the Controls page (want 0)"
+fi
+PRESET_CALLS="$(grep -c 'notifyLauncherThemeChanged()' "$PRESETS")"
+if [ "$PRESET_CALLS" = "1" ]; then
+  ok "T3: exactly one call to the recreate hook on Presets — the theme tile"
+else
+  bad "T3: $PRESET_CALLS calls to notifyLauncherThemeChanged in the Presets page (want exactly 1)"
+fi
+# A sandbox or a mode names no style; either reaching the hook would recreate
+# the Activity for nothing. The one call must sit inside fillThemes.
+if body "$PRESETS" "    " "private fun fillThemes(" | grep -q 'notifyLauncherThemeChanged'; then
+  ok "T3: that call is inside fillThemes, not fillSandboxes/fillModes"
+else
+  bad "T3: the recreate hook is not in fillThemes — a theme pick no longer recreates"
 fi
 
 # ── T4 ────────────────────────────────────────────────────────────────────────
@@ -145,7 +163,7 @@ RERENDERS="$(grep -c 'rerenderPage()' "$CFG")"
 if [ "$RERENDERS" -le 1 ]; then
   ok "T4: $RERENDERS rerenderPage call left in the page (the slot dialog; #340's surface)"
 else
-  bad "T4: $RERENDERS rerenderPage calls in the Modes page — a flip handler is rebuilding again"
+  bad "T4: $RERENDERS rerenderPage calls in the Controls page — a flip handler is rebuilding again"
 fi
 if grep -q 'repaintFromStore()' "$CFG"; then
   ok "T4: flips go through repaintFromStore instead"
@@ -158,7 +176,7 @@ echo "== a row repaints itself, from the store, in place =="
 # ── T5 ────────────────────────────────────────────────────────────────────────
 grep -q 'private val repaints = mutableListOf<() -> Unit>()' "$CFG" \
   && ok "T5: the page has a repaint registry" \
-  || bad "T5: no repaint registry on the Modes page"
+  || bad "T5: no repaint registry on the Controls page"
 grep -q 'repaints.clear()' "$CFG" \
   && ok "T5: the registry is emptied by onCreateView, so it cannot hold dead views" \
   || bad "T5: the registry is never cleared — a rebuilt page would repaint detached views"

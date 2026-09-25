@@ -34,24 +34,19 @@ import androidx.fragment.app.Fragment
 import org.json.JSONArray
 
 /**
- * Configs → Launcher → Modes (tab 2 of three: Profiles · Modes · One-Hand) —
- * mode picker for the SuperApp's Home / Launcher.
+ * Configs → Launcher → Controls (tab 2 of three: Presets · Controls · One-Hand).
  *
- * It used to be tab 1 and it used to open on the profile picker, which made it
- * one endless scroll holding two unrelated decisions. Profiles is now
- * [LauncherProfilesFragment] on its own tab, and it leads, because the picked
- * profile is the foundation the mode sits on rather than a header halfway down
- * the mode's page.
+ * The ONE producer of the Controls tab (#574). It draws, top to bottom: the
+ * device/fleet switch board — [com.diegonmarcos.superapp.configs.ControlFragment],
+ * the Samsung-style icon grid that used to be Configs ▸ Panel ▸ Control, hosted
+ * here as a child fragment so its ticker, lights and tap/hold are untouched —
+ * then the launcher's own screensaver, switches, sliders and the
+ * set-as-default-launcher call-to-action.
  *
- * The themes list is data-driven from
- * build.json::ui.launcher_themes (baked into BuildConfig as a base64
- * JSON blob). Tapping a theme persists it via [LauncherThemePrefs] and
- * MainActivity re-reads on next render to apply the new theme's
- * chrome.
- *
- * Below the picker there's a "Set as default launcher" call-to-action
- * that fires the system Home settings intent — Android handles the
- * actual chooser; we just navigate the user there.
+ * What used to open this page — the theme picker — is Presets ▸ Themes now
+ * ([LauncherPresetsFragment]); it calls the same [LauncherThemes.apply], so the
+ * engine was moved, not copied. The tab was called "Modes" back when a theme
+ * was called a mode; the name Modes now belongs to Presets ▸ Modes.
  */
 class LauncherConfigFragment : Fragment() {
 
@@ -79,7 +74,6 @@ class LauncherConfigFragment : Fragment() {
         // at views that are about to be thrown away.
         repaints.clear()
         val palette = LauncherPalette.of(ctx)
-        val themePrefs = LauncherThemePrefs(ctx)
 
         val scroll = ScrollView(ctx).apply {
             isFillViewport = true
@@ -94,78 +88,25 @@ class LauncherConfigFragment : Fragment() {
         }
         scroll.addView(root)
 
-        // Profiles used to open this page. They are their own tab now
-        // (LauncherProfilesFragment) — see the `launcher` page in build.json,
-        // whose `tabs` array is the whole of that move.
-
-        // ── Theme section ──────────────────────────────────────────
-        root.addView(TextView(ctx).apply {
-            text = "Launcher theme"
-            setTextColor(palette.textPrimary)
-            setTextAppearance(android.R.style.TextAppearance_Material_Headline)
-            setPadding(0, 0, 0, dp(ctx, 8))
-        })
-        root.addView(TextView(ctx).apply {
-            text = "Pick the look the home screen uses when the SuperApp " +
-                "is set as the Android default launcher."
-            setTextColor(palette.textSecondary)
-            setTextAppearance(android.R.style.TextAppearance_Material_Body2)
-            setPadding(0, 0, 0, dp(ctx, 16))
-        })
-
-        // A theme IS a mode, and the screen has to say so before the tiles.
-        // Calling these "themes" taught the wrong thing: a theme is a colour
-        // scheme you can try on, and picking one here instead rewrites the
-        // launcher's whole design and flips the service toggles below. The
-        // word and the subtitle are the only warning the user gets before
-        // tapping.
-        root.addView(sectionHeader(ctx, "Mode",
-            "A mode is not a colour scheme. It owns this launcher's design and " +
-                "the service toggles below. Switching mode changes all of them " +
-                "together."))
-
-        // Mode tiles — data-driven from BuildConfig.
-        val themes = LauncherThemes.loadFromBuildConfig()
-        val current = themePrefs.theme
-        // The tiles live in their own box because their label is DERIVED: a
-        // hand-flip below can move the selected mode into "· modified", so this
-        // box is refilled when a toggle changes. Twelve tiles rebuilt inside an
-        // existing page, not a page torn down and rebuilt around them — the
-        // scroll position, and everything else on the screen, stays put.
-        val modesBox = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        root.addView(modesBox)
-        fun fillModes() {
-            modesBox.removeAllViews()
-            // Re-read, never captured: "· modified" is the whole reason this
-            // function exists, and a captured value is exactly the stale one.
-            // See LauncherThemes.isModified for why the honest label beats the
-            // flattering one.
-            val modified = LauncherThemes.isModified(ctx, current)
-            for (themeRow in themes) {
-                val isCurrent = themeRow.id == current.id
-                modesBox.addView(genericTile(
-                    ctx,
-                    label    = themeRow.label + if (isCurrent && modified) "  ·  modified" else "",
-                    subtitle = if (isCurrent && modified)
-                        "You changed a switch by hand, so this is no longer exactly " +
-                            "${themeRow.label}. Tap to re-apply it."
-                    else themeRow.subtitle,
-                    isSelected = isCurrent,
-                ) {
-                    // ONE action, both effects: chrome + every toggle the theme declares.
-                    LauncherThemes.apply(ctx, LauncherTheme.fromId(themeRow.id))
-                    // A MODE is the one change on this page that legitimately
-                    // recreates the Activity — Android resolves a Material3
-                    // style once, at inflate time. SectionTabsFragment now
-                    // brings the strip back on this tab afterwards.
-                    (activity as? ShellActivity)?.notifyLauncherThemeChanged()
-                    com.diegonmarcos.superapp.appstore.ConstellationWorker.start(requireContext())
-                })
-                modesBox.addView(spacer(ctx, dp(ctx, 8)))
-            }
+        // The device switch board leads. ControlFragment is embedded, not
+        // re-implemented: one implementation of every tile, one place its
+        // behaviour is asserted. It is committed only when nothing is already
+        // attached at the host — on a restore the FragmentManager re-binds the
+        // existing child to the same stable id and must not be overwritten.
+        val gridHost = FrameLayout(ctx).apply {
+            id = R.id.controls_grid_host
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            )
         }
-        fillModes()
-        repaints += { fillModes() }
+        root.addView(gridHost)
+        if (childFragmentManager.findFragmentById(R.id.controls_grid_host) == null) {
+            childFragmentManager.beginTransaction()
+                .replace(R.id.controls_grid_host,
+                    com.diegonmarcos.superapp.configs.ControlFragment.newInstance(embedded = true))
+                .commit()
+        }
 
         // ── Screensaver section ────────────────────────────────────
         val settingsPrefs = LauncherSettingsPrefs(ctx)
@@ -801,7 +742,15 @@ object LauncherThemes {
     fun togglesFor(theme: LauncherTheme): Map<String, Boolean> = togglesFor(theme.id)
 
     private fun parseToggles(): Map<String, Map<String, Boolean>> = runCatching {
-        val arr = JSONArray(String(Base64.decode(BuildConfig.UI_LAUNCHER_THEMES_B64, Base64.NO_WRAP)))
+        parseTogglesFrom(JSONArray(String(Base64.decode(BuildConfig.UI_LAUNCHER_THEMES_B64, Base64.NO_WRAP))))
+    }.getOrDefault(emptyMap())
+
+    /**
+     * `id → toggles` for any declaration array whose entries carry a `toggles`
+     * object — the themes, and (#574) the modes. ONE parser, so the `user_owned`
+     * drop below cannot be missing from one of the two.
+     */
+    fun parseTogglesFrom(arr: JSONArray): Map<String, Map<String, Boolean>> {
         // Read ONCE, here, and drop the ids no theme may write. Filtering at the
         // source means no caller can forget to: an `edge_menus` key mistakenly
         // added to a theme record simply does not survive parsing. Doing it at
@@ -821,8 +770,8 @@ object LauncherThemes {
             }
             out[id] = map
         }
-        out
-    }.getOrDefault(emptyMap())
+        return out
+    }
 
     /**
      * CHOOSING A THEME SETS THE TOGGLES AND APPLIES THE UI TOGETHER — one call,
@@ -831,9 +780,18 @@ object LauncherThemes {
      */
     fun apply(ctx: android.content.Context, theme: LauncherTheme) {
         LauncherThemePrefs(ctx).theme = theme
+        applyToggles(ctx, togglesFor(theme))
+    }
+
+    /**
+     * The device-state half of [apply], shared with the modes (#574): write each
+     * named switch through its declared Item. One engine, two callers — a mode
+     * is a theme without the chrome, not a second implementation of it.
+     */
+    fun applyToggles(ctx: android.content.Context, toggles: Map<String, Boolean>) {
         val settings = LauncherSettingsPrefs(ctx)
         val byId = LauncherSettingsPrefs.Config.toggles.associateBy { it.id }
-        for ((id, want) in togglesFor(theme)) {
+        for ((id, want) in toggles) {
             // Route through the Item so a switch backed by another subsystem's
             // store is written where that subsystem reads it. An unknown id is
             // skipped rather than written blind: it would create a preference
@@ -857,10 +815,14 @@ object LauncherThemes {
      * than no label: the user came to this screen precisely to find out what is
      * on, and the honest answer is "Cloud Minimalist Black, except you changed something".
      */
-    fun isModified(ctx: android.content.Context, theme: LauncherTheme): Boolean {
+    fun isModified(ctx: android.content.Context, theme: LauncherTheme): Boolean =
+        differs(ctx, togglesFor(theme))
+
+    /** [isModified]'s comparison for any toggle map — the modes use it too. */
+    fun differs(ctx: android.content.Context, toggles: Map<String, Boolean>): Boolean {
         val settings = LauncherSettingsPrefs(ctx)
         val byId = LauncherSettingsPrefs.Config.toggles.associateBy { it.id }
-        return togglesFor(theme).any { (id, want) ->
+        return toggles.any { (id, want) ->
             val item = byId[id] ?: return@any false
             settings.toggle(item) != want
         }

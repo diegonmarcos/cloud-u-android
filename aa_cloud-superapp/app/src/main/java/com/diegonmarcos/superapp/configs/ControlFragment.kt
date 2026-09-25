@@ -28,8 +28,12 @@ import com.diegonmarcos.superapp.ui.snack
 import java.util.concurrent.Executors
 
 /**
- * Configs ▸ Panel ▸ Control — the switch board, as a Samsung-style grid of
- * quick-settings tiles.
+ * Configs ▸ Launcher ▸ Controls — the switch board, as a Samsung-style grid of
+ * quick-settings tiles. It was Configs ▸ Panel ▸ Control until #574 merged it
+ * into the Launcher's Controls tab: [settings.LauncherConfigFragment] is the ONE
+ * producer of that tab and hosts this fragment as a child ([newInstance] with
+ * `embedded = true`), so every behaviour below — the ticker, the lights, tap and
+ * hold — is this class's, unchanged, and the page around it owns none of it.
  *
  * Every group and every tile is declared in `build.json::ui.control_panel` and
  * implemented in [DeviceControls]. This file draws them and nothing else: it
@@ -248,7 +252,10 @@ class ControlFragment : Fragment() {
         // render an empty page that reads as "nothing is controllable here".
         if (rows.isEmpty()) root.addView(caption(ctx, getString(R.string.control_none_declared)))
 
-        return ScrollView(ctx).apply { addView(root) }
+        // Embedded, the host page is the scroller: a ScrollView inside a
+        // ScrollView would fight it for every vertical drag.
+        return if (arguments?.getBoolean(ARG_EMBEDDED) == true) root
+        else ScrollView(ctx).apply { addView(root) }
     }
 
     override fun onResume() {
@@ -680,6 +687,11 @@ class ControlFragment : Fragment() {
          *  tiles below it is a grid that gets mis-tapped. */
         private const val TOUCH_TARGET_DP = 48
 
-        fun newInstance(): ControlFragment = ControlFragment()
+        private const val ARG_EMBEDDED = "embedded"
+
+        /** [embedded]: drawn inside another page's scroll view instead of
+         *  wearing its own. */
+        fun newInstance(embedded: Boolean = false): ControlFragment =
+            ControlFragment().apply { arguments = Bundle().apply { putBoolean(ARG_EMBEDDED, embedded) } }
     }
 }

@@ -1,7 +1,7 @@
 package com.diegonmarcos.superapp.launcher
 import com.diegonmarcos.superapp.rss.RssFeedFragment
 import com.diegonmarcos.superapp.settings.LauncherConfigFragment
-import com.diegonmarcos.superapp.settings.LauncherProfilesFragment
+import com.diegonmarcos.superapp.settings.LauncherPresetsFragment
 import com.diegonmarcos.superapp.cloud.C3MeshFragment
 import com.diegonmarcos.superapp.cloud.C3HealthFragment
 import com.diegonmarcos.superapp.cloud.CalendarMonthFragment
@@ -93,14 +93,18 @@ object SectionPages {
         // Launcher's three tabs. The `launcher` id names the strip
         // (build.json::ui.sections[config].pages[launcher].tabs), so each screen
         // needed an id of its own — nothing any of them stores moved with the
-        // split, LauncherProfilePrefs / LauncherThemePrefs and friends key off
-        // fixed store names, never off a page id.
+        // split, LauncherProfilePrefs / LauncherThemePrefs / LauncherModePrefs and
+        // friends key off fixed store names, never off a page id.
         //
-        // `profiles`, not `profile`: `profile` is already this section's own
+        // `presets`, not `profile`: `profile` is already this section's own
         // top-level page (the owner's identity — name, email, WireGuard export)
         // and one section cannot hold two pages under one id.
-        sectionId == "config" && pageId == "profiles" -> LauncherProfilesFragment.newInstance()
-        sectionId == "config" && pageId == "theme" -> LauncherConfigFragment.newInstance()
+        //
+        // `controls` (#574) is the ONE producer of the switch board: the old
+        // Panel ▸ Control grid is hosted inside it as a child fragment, so there
+        // is no `control` branch below any more.
+        sectionId == "config" && pageId == "presets" -> LauncherPresetsFragment.newInstance()
+        sectionId == "config" && pageId == "controls" -> LauncherConfigFragment.newInstance()
         sectionId == "config" && pageId == "kde"            -> com.diegonmarcos.superapp.kdeconnect.KdeConnectFragment.newInstance()
         // Store's two tabs (#563). The `store` page itself declares `tabs`, so
         // the strip branch at the top already answered it.
@@ -121,12 +125,7 @@ object SectionPages {
         sectionId == "wg"     && pageId == "config"         -> WireGuardFragment.newInstance()
         sectionId == "config" && pageId == "onehand" ->
             com.diegonmarcos.superapp.configs.OneHandFragment.newInstance()
-        // Panel's Control tab. Its sibling tab `notify` is NOT here: it is a
-        // facet declaring `mirror_page`, so it is answered before this map is
-        // ever consulted — see LauncherNavController.pageFragment.
-        sectionId == "config" && pageId == "control" ->
-            com.diegonmarcos.superapp.configs.ControlFragment.newInstance()
-        // Panel's Push tab (#497) — the notification-center / badge
+        // Home's Push tab (#497) — the notification-center / badge
         // declaration, rendered by PushFragment from ui.notification_center.
         sectionId == "config" && pageId == "push" ->
             com.diegonmarcos.superapp.configs.PushFragment.newInstance()
