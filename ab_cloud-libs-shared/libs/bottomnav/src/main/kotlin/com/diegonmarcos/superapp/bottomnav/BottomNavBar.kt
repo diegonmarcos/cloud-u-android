@@ -148,7 +148,7 @@ public fun BottomNavIsland(
     val motion = rememberBarMotion(collapsed)
     val labelShown by animateFloatAsState(
         targetValue = if (collapsed) 0f else 1f,
-        animationSpec = snap(),
+        animationSpec = if (motion) tween(integerResource(R.integer.bottom_nav_collapse_ms)) else snap(),
         label = "bottomnav_label_shown",
     )
 
