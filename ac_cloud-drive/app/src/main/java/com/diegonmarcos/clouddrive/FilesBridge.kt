@@ -52,7 +52,11 @@ class FilesBridge(
     /** The Activity-owned launcher behind the SAF tree grant, injected so the bridge can fire
      *  ACTION_OPEN_DOCUMENT_TREE without owning an Activity. The Activity's result callback
      *  hands the chosen tree URI back through [persistTreeGrant]. */
-    private val launchTreeGrant: () -> Unit = { }
+    private val launchTreeGrant: () -> Unit = { },
+    /** The Activity-owned launcher behind the four engines (#567 push 5): the page names an
+     *  engine id and a target, the Activity starts EngineActivity for a result, and the
+     *  engine's "open this file" hand-off comes back through the page's revealPath(). */
+    private val launchEngine: (engine: String, target: String) -> Unit = { _, _ -> }
 ) {
     /** Where the persisted SAF tree grant lives. SharedPreferences rather than a file because
      *  the system stores the persistable permission itself; this is only the remembered URI and
@@ -1267,6 +1271,20 @@ class FilesBridge(
     // ── the typed scan actions (task #459/#460) ─────────────────────────────
 
     /** The browser for a decoded URL. Refuses anything that is not http(s). */
+    /**
+     * #567: hand the page over to one of the four engine libraries. `engine` is one of
+     * EngineActivity's ids (git, editor, rclone, mounts) and `target` is what that engine
+     * understands — a path, a job id, a mount uri, or "". The libraries are Compose; the
+     * page is a WebView; this is the seam between them, and the only one.
+     */
+    @JavascriptInterface
+    fun openEngine(engine: String, target: String): String {
+        val known = listOf(EngineActivity.ENGINE_GIT, EngineActivity.ENGINE_EDITOR, EngineActivity.ENGINE_RCLONE, EngineActivity.ENGINE_MOUNTS)
+        if (engine !in known) return failure("unknown engine '$engine' — one of ${known.joinToString()}")
+        launchEngine(engine, target)
+        return okErr(true, "")
+    }
+
     @JavascriptInterface
     fun openUrl(url: String): String {
         val parsed = try {

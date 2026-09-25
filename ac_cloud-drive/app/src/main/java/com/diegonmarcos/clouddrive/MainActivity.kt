@@ -46,6 +46,19 @@ class MainActivity : AppCompatActivity() {
     /** The WebView, kept for [onNewIntent]'s nudge to an already-loaded page. */
     private lateinit var webView: WebView
 
+    /**
+     * #567 push 5: the engines run in EngineActivity (Compose) and come back here. When an
+     * engine hands a file over — the editor's "reveal", a download from a mount or a remote —
+     * the page is told to reveal it, through the one JS entry point drive.html exports for it.
+     */
+    private val engineLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val path = result.data?.getStringExtra(EngineActivity.RESULT_PATH) ?: return@registerForActivityResult
+        val quoted = org.json.JSONObject.quote(path)
+        webView.evaluateJavascript("window.revealPath && window.revealPath($quoted)", null)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -65,7 +78,11 @@ class MainActivity : AppCompatActivity() {
             isAppearanceLightNavigationBars = false
         }
 
-        filesBridge = FilesBridge(this) { openTreeLauncher.launch(null) }
+        filesBridge = FilesBridge(
+            this,
+            launchTreeGrant = { openTreeLauncher.launch(null) },
+            launchEngine = { engine, target -> engineLauncher.launch(EngineActivity.intent(this, engine, target)) },
+        )
 
         webView = WebView(this)
         setContentView(webView)

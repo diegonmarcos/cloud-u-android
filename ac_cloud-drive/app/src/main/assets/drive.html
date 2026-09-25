@@ -599,6 +599,9 @@ function showEntryMenu(entry) {
         { icon: isPdf ? '📕' : '📂', label: isPdf ? 'Read in Cloud Drive' : 'Open',
           onPick: () => { if (isPdf) openReader(entry); else reportFailure(Bridge.call('open', entry.path)); } },
         { icon: '✏️', label: 'Edit as text', onPick: () => openEditor(entry) },
+        // #567: the full editor is libs:file-editor (undo/redo, find/replace, syntax colours,
+        // encodings); the textarea above stays for the quick edit.
+        { icon: '📝', label: 'Edit in the full editor', onPick: () => openEngine('editor', entry.path) },
         { icon: '📄', label: 'Properties', onPick: () => openPropertiesPanel(entry) },
         { icon: '🗜️', label: 'Archive to this folder',
           onPick: () => archiveSelection([entry.path]) },
@@ -978,6 +981,37 @@ function reportFailure(result) {
     if (result && result.ok === false && result.error) alert(result.error);
 }
 
+/* ── the four engines (#567 push 5) ─────────────────────────────────────────────
+   The main APK is chrome; each tooling is its own Compose library, hosted by
+   EngineActivity. The page names an ENGINE ID and a target and the bridge does the
+   rest. The ids here are the one vocabulary the bridge and the activity share —
+   test/test-drive-engine-wiring.sh derives the set from these calls and checks the
+   activity routes every one of them. */
+function openEngine(engine, target) {
+    reportFailure(Bridge.call('openEngine', engine, target || ''));
+}
+
+function engineButton(engine, target, label) {
+    return '<button class="engine-open px-3 py-1.5 rounded bg-blue-600 text-white text-xs" ' +
+        'data-engine="' + engine + '" data-target="' + escapeHtml(target || '') + '">' + escapeHtml(label) + '</button>';
+}
+
+/** Wire every engine button the current panel holds. Called by the renderers that draw one. */
+function bindEngineButtons() {
+    panel.querySelectorAll('.engine-open').forEach(button => {
+        button.onclick = () => openEngine(button.dataset.engine, button.dataset.target);
+    });
+}
+
+/** An engine handed a file back (download, reveal): show its folder in Files. */
+window.revealPath = function (path) {
+    if (!path) return;
+    const parent = path.slice(0, path.lastIndexOf('/')) || '/';
+    state.editor = null; state.reader = null;
+    showTab('files');
+    openDirectory(parent);
+};
+
 function renderHeaderActions() {
     if (state.tab !== 'files') { headerActions.innerHTML = ''; return; }
     if (state.reader) {
@@ -989,8 +1023,14 @@ function renderHeaderActions() {
     }
     if (state.editor) {
         headerActions.innerHTML =
+            '<button id="editor-full" class="text-sm" title="Open in the full editor">📝</button>' +
             '<button id="editor-save" class="text-sm font-medium text-blue-400">Save</button>' +
             '<button id="editor-close" class="text-sm">Close</button>';
+        document.getElementById('editor-full').onclick = () => {
+            if (editorIsDirty() && !confirm('Save first? The full editor reads the file from disk.')) return;
+            if (editorIsDirty()) saveEditor();
+            openEngine('editor', state.editor.path);
+        };
         document.getElementById('editor-save').onclick = saveEditor;
         document.getElementById('editor-close').onclick = closeEditor;
         return;
@@ -1129,6 +1169,7 @@ function renderSync() {
         : state.syncSub === 'mounted' ? renderMountedSubpage()
         : renderRcloneSubpage();
     panel.innerHTML = syncSubHeader() + sub;
+    bindEngineButtons();
     panel.querySelectorAll('.sync-choice').forEach(button => {
         button.onclick = () => {
             state.syncSub = button.dataset.sub;
@@ -1194,11 +1235,14 @@ function renderRcloneSubpage() {
         (jobs.length
             ? jobs.map(rcloneJobCard).join('')
             : card('Nothing here', 'No rclone jobs are declared in this build.')) +
-        card('Fleet-side only',
-            'This APK has no rclone binary: the remotes and jobs above are the fleet\'s ' +
-            'declared state, read from data files baked in at build time. Running them ' +
-            'from the phone needs a native rclone library, which is a build-system ' +
-            'change in the GitHub Actions workflow — not something this app can download.') +
+        '<div class="mx-4 my-2 p-4 rounded-lg border border-blue-900">' +
+        '<div class="text-sm font-medium">rclone engine</div>' +
+        '<div class="mt-1 text-xs text-gray-400">#567: this APK carries a pinned static rclone ' +
+        '(libs:rclone). Remotes you add there are yours, with obscured secrets in this app\'s ' +
+        'private files; the declared jobs above whose kind is an rclone verb are pre-listed in ' +
+        'its Jobs tab, ready to run with live progress.</div>' +
+        '<div class="mt-3 flex gap-2">' + engineButton('rclone', 'remotes', 'Remotes') +
+        engineButton('rclone', 'jobs', 'Jobs') + engineButton('rclone', 'browse', 'Browse') + '</div></div>' +
         '<div class="h-4"></div>';
 }
 
@@ -1249,6 +1293,13 @@ function renderMountedSubpage() {
         (mounts.length
             ? mounts.map(connectionCard).join('')
             : card('Nothing here', 'No fleet connections are declared in this build.')) +
+        '<div class="mx-4 my-2 p-4 rounded-lg border border-blue-900">' +
+        '<div class="text-sm font-medium">mounts engine</div>' +
+        '<div class="mt-1 text-xs text-gray-400">#567: browse-through over sftp / ssh / ftp / ftps / ' +
+        'webdav (libs:mounts) — navigate, download-and-open, upload, rename, delete, and on ssh run ' +
+        'a command. A catalogue entry above that carries a uri this engine speaks is pre-listed ' +
+        'there; add your own with the password kept encrypted in this app.</div>' +
+        '<div class="mt-3">' + engineButton('mounts', '', 'Open mounts') + '</div></div>' +
         '<div class="px-4 py-2 text-xs text-gray-500">' +
         (Bridge.available
             ? 'Every entry above is data/drive-connections.json — the ONE fleet declaration, ' +
@@ -1293,16 +1344,13 @@ function renderGitSubpage() {
         heading('Repositories') +
         (repos.length ? '<div class="mx-4 my-2 rounded-lg border border-gray-700">' + repoLines + '</div>'
             : card('Nothing here', 'No git repositories are declared in this build.')) +
-        card('Cannot list live yet',
-            'The GitSync sync engine is vendored as a library at ' +
-            'ab_cloud-libs-shared/libs/gitsync (GPL-3.0, pinned upstream revision ' +
-            '0f4902fc, see VENDORED.md), but its Flutter interface is not embedded in ' +
-            'this tab, so it cannot clone, list or push. The repositories above are the ' +
-            'declared family (data/drive-git-repos.json) — the same curated 8 the ' +
-            'SuperApp\'s GH Repos / Gitea Repos cards reuse, so the two remotes read as ' +
-            'one set. Live feeds come from the mesh-only Gitea API at 10.0.0.6:3002; ' +
-            'off WireGuard that API answers nothing. Private repositories need a GitHub ' +
-            'token this app does not store.') +
+        '<div class="mx-4 my-2 p-4 rounded-lg border border-blue-900">' +
+        '<div class="text-sm font-medium">git manager</div>' +
+        '<div class="mt-1 text-xs text-gray-400">#567: the native git manager (libs:git-sync, over JGit) — ' +
+        'GitSync\'s UX: repositories with one-tap sync, and per repository status, stage / unstage, ' +
+        'commit, push / pull, branches (read-only), log, diff, remotes and conflict resolution. ' +
+        'Clone any of the repositories above into a folder, or add a folder that already is one.</div>' +
+        '<div class="mt-3">' + engineButton('git', '', 'Open git manager') + '</div></div>' +
         '<div class="h-4"></div>';
 }
 

@@ -1,6 +1,8 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    // #567 push 5: EngineActivity hosts the four engine libraries' @Composable screens.
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 def gradleScriptStartMs = System.currentTimeMillis()
@@ -255,7 +257,11 @@ android {
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
     }
 
-    buildFeatures { buildConfig = true }
+    buildFeatures {
+        buildConfig = true
+        // The Compose host (EngineActivity) — the page stays a WebView.
+        compose = true
+    }
 
     // ONE shared Cloud-constellation key — same key as SuperApp/Nav/Comms/Wallet/IDE.
     signingConfigs {
@@ -315,6 +321,11 @@ dependencies {
     implementation project(':libs:file-editor')
     implementation project(':libs:rclone')
     implementation project(':libs:mounts')
+    // #567 push 5: the Compose host for the engines. Same BOM the libraries pin,
+    // so app and libraries compose against one toolchain.
+    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.activity:activity-compose:1.9.3'
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
     implementation 'com.google.android.material:material:1.12.0'

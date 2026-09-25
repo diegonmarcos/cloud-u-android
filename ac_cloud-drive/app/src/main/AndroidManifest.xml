@@ -72,6 +72,16 @@
             </intent-filter>
         </activity>
 
+        <!-- #567 push 5: the Compose host for the four engine libraries (git manager, full
+             editor, rclone, mounts). Started by FilesBridge.openEngine for a result; never
+             exported — the page is its only caller. adjustResize so the editor's keyboard
+             does not cover the line being typed. -->
+        <activity
+            android:name=".EngineActivity"
+            android:exported="false"
+            android:theme="@style/Theme.CloudDrive"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Open-with and Share hand a file to another app, and a file:// URI has been illegal
              to send across that boundary since Android 7. Everything leaves through here. -->
         <provider
