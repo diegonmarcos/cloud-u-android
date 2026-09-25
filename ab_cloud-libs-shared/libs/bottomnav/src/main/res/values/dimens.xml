@@ -23,6 +23,9 @@
     <!-- #473. Icon-to-label distance, opened up from Material's 4dp so the label has room. -->
     <dimen name="bottom_nav_icon_label_gap">8dp</dimen>
 
+    <!-- #532. How long the scroll-collapse takes, milliseconds. Zero-length under Power Saving. -->
+    <integer name="bottom_nav_collapse_ms">220</integer>
+
     <dimen name="bottom_nav_icon_size">24dp</dimen>
     <dimen name="bottom_nav_label_text_size">12sp</dimen>
 

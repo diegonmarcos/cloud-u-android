@@ -1,6 +1,8 @@
 package com.diegonmarcos.superapp.bottomnav
 
 import android.content.ComponentName
+import android.content.Context
+import android.os.PowerManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.view.View
@@ -342,6 +344,92 @@ class BottomNavIslandTest {
         compose.onNodeWithTag(LIST, useUnmergedTree = true).performTouchInput { swipeDown(startY = top, endY = centerY) }
         compose.waitForIdle()
         near("#532 scrolling back up restores the labels", expanded, bounds(TAG_ISLAND).height)
+    }
+
+    // ── #532 the collapse is animated, and its only edge is the oval ───────────────────────
+
+    private var driven by mutableStateOf(false)
+
+    /** The island with `collapsed` driven straight from [driven], so a frame-by-frame test owns
+     *  the clock instead of a swipe that runs it. Selection is null: no capsule is lit, so any
+     *  colour below a capsule's edge can only be a label. */
+    private fun showDriven() {
+        driven = false
+        compose.setContent {
+            hostView = LocalView.current
+            Box(Modifier.fillMaxSize().background(page).testTag(ROOT)) {
+                BottomNavIsland(mailEntries(), null, {}, Modifier.align(Alignment.BottomCenter), driven, WindowInsets(0, 0, 0, 0))
+            }
+        }
+        compose.waitForIdle()
+    }
+
+    private fun iconsOnlyHeight() =
+        2 * px(R.dimen.bottom_nav_pill_inset) + 2 * px(R.dimen.bottom_nav_item_vertical_pad) + px(R.dimen.bottom_nav_icon_size)
+
+    /** Collapse from a paused clock and return the island height at every 16ms frame. While it
+     *  goes, checks the two things a stale rectangular bound would break: each capsule's edges sit
+     *  pillInset inside the island's at every frame, and below a capsule's bottom edge, inside the
+     *  island, there is only island fill, i.e. no label ink survives past the capsule's own edge.
+     *  [frames] is how many frames to run. */
+    private fun collapseFrames(frames: Int): List<Float> {
+        val inset = px(R.dimen.bottom_nav_pill_inset)
+        val heights = mutableListOf<Float>()
+        compose.mainClock.autoAdvance = false
+        compose.runOnUiThread { driven = true }
+        repeat(frames) { frame ->
+            compose.mainClock.advanceTimeBy(16)
+            val island = bounds(TAG_ISLAND)
+            heights += island.height
+            val mid = bounds(itemTag(ids[ids.size / 2]))
+            near("#532 frame $frame: capsule top sits pillInset below the island top", island.top + inset, mid.top)
+            near("#532 frame $frame: capsule bottom sits pillInset above the island bottom", island.bottom - inset, mid.bottom)
+            val px = pixels(TAG_ISLAND)
+            val below = (mid.bottom - island.top).roundToInt() + 1 until px.height - 1
+            val xs = (mid.left - island.left).roundToInt() + 1 until (mid.right - island.left).roundToInt() - 1
+            for (y in below) for (x in xs) {
+                sameColour("#532 frame $frame: label ink below the capsule's own edge at ($x,$y)", fill, px[x, y])
+            }
+        }
+        return heights
+    }
+
+    @Test
+    fun `532 the collapse is animated, the capsule tracks the island edge, the label leaves through it`() {
+        showDriven()
+        val expanded = bounds(TAG_ISLAND).height
+        val iconsOnly = iconsOnlyHeight()
+        val ms = res.getInteger(R.integer.bottom_nav_collapse_ms)
+        val heights = collapseFrames(ms / 16 + 4)
+        println("#532 MEASURED expanded=${expanded}px iconsOnly=${iconsOnly}px collapse=${ms}ms frames=$heights")
+        assertTrue("#532 collapsing started from the expanded bar", heights.first() <= expanded && heights.first() > iconsOnly + 1f)
+        assertTrue("#532 the bar passes through in-between heights (it animates, it does not jump)",
+            heights.any { it > iconsOnly + 1f && it < expanded - 1f })
+        assertEquals("#532 the height never grows while collapsing", heights.sortedDescending(), heights)
+        near("#532 it ends on exactly the icon stack", iconsOnly, heights.last())
+        compose.mainClock.autoAdvance = true
+        compose.runOnUiThread { driven = false }
+        compose.waitForIdle()
+        near("#532 and expands back to the labelled bar", expanded, bounds(TAG_ISLAND).height)
+    }
+
+    @Test
+    fun `532 under Power Saving the collapse snaps instead of animating`() {
+        val power = compose.activity.getSystemService(Context.POWER_SERVICE) as PowerManager
+        shadowOf(power).setIsPowerSaveMode(true)
+        showDriven()
+        val ms = res.getInteger(R.integer.bottom_nav_collapse_ms)
+        val heights = collapseFrames(3)
+        assertTrue("the snap has to be measured well inside the ${ms}ms an animation would take", 3 * 16 < ms)
+        near("#532 Power Saving: the bar is already icons-only 48ms into a ${ms}ms collapse", iconsOnlyHeight(), heights.last())
+    }
+
+    @Test
+    fun `532 motion is held still by Power Saving or by removed animations, and by nothing else`() {
+        assertTrue(barMotionEnabled(animatorDurationScale = 1f, powerSaveMode = false))
+        assertFalse("battery saver alone", barMotionEnabled(animatorDurationScale = 1f, powerSaveMode = true))
+        assertFalse("remove-animations alone", barMotionEnabled(animatorDurationScale = 0f, powerSaveMode = false))
+        assertFalse(barMotionEnabled(animatorDurationScale = 0f, powerSaveMode = true))
     }
 
     @Test

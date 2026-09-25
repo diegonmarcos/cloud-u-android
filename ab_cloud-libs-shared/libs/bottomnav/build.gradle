@@ -49,7 +49,7 @@ android {
             // exception class and line, and the measured numbers are the whole point of the test.
             all {
                 testLogging {
-                    events 'failed'
+                    events 'failed', 'standardOut'
                     exceptionFormat 'full'
                 }
             }

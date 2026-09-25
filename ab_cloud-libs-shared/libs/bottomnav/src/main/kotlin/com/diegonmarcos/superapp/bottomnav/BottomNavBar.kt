@@ -1,6 +1,12 @@
 package com.diegonmarcos.superapp.bottomnav
 
+import android.content.Context
+import android.os.PowerManager
+import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,23 +44,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.dimensionResource
+import androidx.compose.ui.res.integerResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavController
+import kotlin.math.roundToInt
 
 /**
  * THE bottom nav of the fleet: one Compose declaration that every app renders (#565).
@@ -77,7 +87,11 @@ import androidx.navigation.NavController
  *    consumeWindowInsets, so nothing else in the window loses it.
  *  - #532 [collapsed] drops the labels and leaves an icons-only bar ([BottomNavCollapse] derives
  *    it from scrolling). The island is fill only, with no stroke layer, so the visible edge IS
- *    the fill's edge.
+ *    the fill's edge. The collapse is ANIMATED by one progress value that shrinks each label's
+ *    layout slot, so the bar shrinks with it, and the label carries no clip of its own: the
+ *    only thing that hides it is the capsule's pill clip, so the hide line IS the oval edge and
+ *    there is no second, rectangular bound for it to vanish at. Under Power Saving or with
+ *    animations removed it snaps instead ([barMotionEnabled]).
  *  - #536 the island is bottom_nav_width_fraction (80%) of the width it is given, and it is
  *    centred, so 10% stays clear on each side.
  *
@@ -129,6 +143,14 @@ public fun BottomNavIsland(
     // An sp dimen comes back in px with the font scale applied. px -> sp undoes exactly that.
     val labelStyle = TextStyle(fontSize = with(density) { res.getDimension(R.dimen.bottom_nav_label_text_size).toSp() })
     val scheme = MaterialTheme.colorScheme
+    // #532 the collapse animates. remember(collapsed) re-reads Power Saving at every transition, so
+    // a battery saver switched on while the shell is open holds the very next collapse still.
+    val motion = rememberBarMotion(collapsed)
+    val labelShown by animateFloatAsState(
+        targetValue = if (collapsed) 0f else 1f,
+        animationSpec = if (motion) tween(integerResource(R.integer.bottom_nav_collapse_ms)) else snap(),
+        label = "bottomnav_label_shown",
+    )
 
     Box(modifier.fillMaxWidth().padding(bottom = bottom), contentAlignment = Alignment.BottomCenter) {
         Row(
@@ -163,15 +185,28 @@ public fun BottomNavIsland(
                         tint = ink,
                         modifier = Modifier.size(iconSize).testTag(iconTag(entry.id)),
                     )
-                    // ponytail: no expand/collapse animation. Add animateContentSize if it jars.
-                    if (!collapsed) {
+                    if (labelShown > 0f) {
                         // Laid out across the whole capsule and centred, not at its own
                         // intrinsic width. A one-line ellipsized paragraph exactly as wide as its
                         // text can round itself into an ellipsis: 'Mail' at 23px came out
                         // ellipsized in a 56px capsule in CI run 36024784089.
+                        // The slot (gap + text) shrinks with labelShown and the text is placed at
+                        // its top, so the capsule loses height and the label leaves through the
+                        // capsule's own pill clip. No clipToBounds here: that would be a
+                        // rectangle inside the oval.
                         Text(
                             entry.label,
-                            modifier = Modifier.padding(top = gap).fillMaxWidth().testTag(labelTag(entry.id)),
+                            modifier = Modifier
+                                .layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints)
+                                    layout(placeable.width, (placeable.height * labelShown).roundToInt()) {
+                                        placeable.place(0, 0)
+                                    }
+                                }
+                                .graphicsLayer { alpha = labelShown }
+                                .padding(top = gap)
+                                .fillMaxWidth()
+                                .testTag(labelTag(entry.id)),
                             color = ink,
                             style = labelStyle,
                             textAlign = TextAlign.Center,
@@ -182,6 +217,27 @@ public fun BottomNavIsland(
                 }
             }
         }
+    }
+}
+
+/**
+ * Whether the collapse may animate: off when the reader removed animations (animator duration
+ * scale 0) or the device is in the system's battery saver (#501 precedent: animation respects
+ * Power Saving). Either alone holds the bar still, and it then snaps between its two shapes.
+ */
+internal fun barMotionEnabled(animatorDurationScale: Float, powerSaveMode: Boolean): Boolean =
+    animatorDurationScale != 0f && !powerSaveMode
+
+@Composable
+private fun rememberBarMotion(key: Any?): Boolean {
+    val context = LocalContext.current
+    return remember(key) {
+        barMotionEnabled(
+            Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f),
+            runCatching {
+                (context.getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isPowerSaveMode == true
+            }.getOrDefault(false),
+        )
     }
 }
 
