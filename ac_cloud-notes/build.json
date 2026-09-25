@@ -94,6 +94,13 @@
       "entrypoint": "packages/frontend/apps/android/src/app.tsx",
       "native_plugin": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro/plugin/ExternalFilePlugin.kt",
       "converter": "blocksuite/affine/widgets/linked-doc/src/transformers/html.ts"
+    },
+    "file_explorer": {
+      "_doc": "Read by test/test-file-explorer.sh (#547). entrypoint is where the explorer renders and picks a file; plugin_ts is the web-side plugin type; native_plugin is the Kotlin class that must implement every method that type declares; activity is where the FAB dispatches the event the explorer listens for. Method and event names are DERIVED from these files, never written in the tester.",
+      "entrypoint": "packages/frontend/apps/android/src/app.tsx",
+      "plugin_ts": "packages/frontend/apps/android/src/plugins/external-file.ts",
+      "native_plugin": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro/plugin/ExternalFilePlugin.kt",
+      "activity": "packages/frontend/apps/android/App/app/src/main/java/app/affine/pro/MainActivity.kt"
     }
   }
 }

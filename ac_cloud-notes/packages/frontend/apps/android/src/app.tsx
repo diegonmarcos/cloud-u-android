@@ -62,7 +62,7 @@ import {
 import { OpClient } from '@toeverything/infra/op';
 import { AsyncCall } from 'async-call-rpc';
 import { useTheme } from 'next-themes';
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { RouterProvider } from 'react-router-dom';
 
 import { AffineTheme } from './plugins/affine-theme';
@@ -70,7 +70,9 @@ import { AIButton } from './plugins/ai-button';
 import { Auth } from './plugins/auth';
 import {
   EXTERNAL_FILE_ERRORS,
+  EXTERNAL_FILE_ROOT,
   ExternalFile,
+  type ExternalDirListing,
   type ExternalFileReadResult,
 } from './plugins/external-file';
 import { HashCash } from './plugins/hashcash';
@@ -483,9 +485,9 @@ const AndroidBackAdapter = () => {
 
 
 // #469 — the ONE feature over upstream: open a file from emulated storage.
-// The native FAB dispatches 'cloud-notes:open-file'; here we ask for a path,
-// read it through ExternalFilePlugin (every failure carries its own visible
-// message) and import the markdown into the local workspace via AFFiNE's own
+// The native FAB dispatches 'cloud-notes:open-file'; the explorer below picks
+// a file, and openExternalFile reads it through ExternalFilePlugin (every
+// failure carries its own visible message) and import the markdown into the local workspace via AFFiNE's own
 // Obsidian importer, so the vault docs land in the app's document store.
 //
 // #513 — this used to be `useService(ImportService)` in the component body, and
@@ -520,30 +522,29 @@ const HTML_EXTENSIONS = new Set(['html', 'htm']);
 const isHtmlFile = (name: string) =>
   HTML_EXTENSIONS.has(name.split('.').pop()?.toLowerCase() ?? '');
 
-const openExternalFile = async () => {
-  const path = window.prompt(
-    'Open file from device storage (path under /storage/emulated/0/, e.g. Documents/Obsidian/note.md):'
-  );
-  if (!path) return;
+// Every native failure carries its own code + message (#469): show it, and for
+// a permission problem offer the jump to Settings once — never a silent retry.
+const reportExternalFileError = (err: unknown, title: string) => {
+  const code = (err as { code?: string })?.code ?? 'UNKNOWN';
+  const fallback = EXTERNAL_FILE_ERRORS[code] ?? 'Cannot open the file.';
+  notify.error({
+    title,
+    message: err instanceof Error && err.message ? err.message : fallback,
+  });
+  if (
+    code === 'PERMISSION_DENIED' &&
+    window.confirm('Open Settings to grant storage access?')
+  ) {
+    ExternalFile.openSettings().catch(console.error);
+  }
+};
 
+const openExternalFile = async (path: string) => {
   let file: ExternalFileReadResult;
   try {
     file = await ExternalFile.readFile({ path });
   } catch (err: unknown) {
-    const code = (err as { code?: string })?.code ?? 'UNKNOWN';
-    const fallback = EXTERNAL_FILE_ERRORS[code] ?? 'Cannot open the file.';
-    notify.error({
-      title: 'Cannot open file',
-      message: err instanceof Error && err.message ? err.message : fallback,
-    });
-    // Permission problems are fixed in Settings, never in a retry of the
-    // same call — offer the jump once.
-    if (
-      code === 'PERMISSION_DENIED' &&
-      window.confirm('Open Settings to grant storage access?')
-    ) {
-      ExternalFile.openSettings().catch(console.error);
-    }
+    reportExternalFileError(err, 'Cannot open file');
     return;
   }
 
@@ -593,18 +594,97 @@ const openExternalFile = async () => {
   }
 };
 
+// #547 — the file explorer: the FAB's event opens this browser over the
+// device's visible storage instead of asking for a typed path. It lists one
+// folder at a time through ExternalFilePlugin.listDir (the native side offers
+// only folders and the extensions readFile accepts) and hands the tapped file
+// to openExternalFile. Plain elements, no upstream component: it renders on the
+// ROOT provider, where a service lookup is exactly what #513 forbade.
 const ExternalFileOpener = () => {
+  const [listing, setListing] = useState<ExternalDirListing | null>(null);
+
+  const browse = (path: string) => {
+    ExternalFile.listDir({ path })
+      .then(setListing)
+      .catch((err: unknown) => {
+        reportExternalFileError(err, 'Cannot open folder');
+        setListing(null);
+      });
+  };
+
   useEffect(() => {
-    const listener = () => {
-      openExternalFile().catch(console.error);
-    };
+    const listener = () => browse(EXTERNAL_FILE_ROOT);
     window.addEventListener('cloud-notes:open-file', listener);
     return () => {
       window.removeEventListener('cloud-notes:open-file', listener);
     };
   }, []);
 
-  return null;
+  if (!listing) return null;
+
+  const parent = listing.parent;
+  const row = {
+    display: 'block',
+    width: '100%',
+    padding: '14px 16px',
+    textAlign: 'left',
+    border: 0,
+    borderBottom: '1px solid rgba(128,128,128,0.25)',
+    background: 'transparent',
+    color: 'inherit',
+    font: 'inherit',
+  } as const;
+
+  return (
+    <div
+      role="dialog"
+      aria-label="Open file"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 10000,
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--affine-background-primary-color, #fff)',
+        color: 'var(--affine-text-primary-color, #000)',
+      }}
+    >
+      <div style={{ ...row, display: 'flex', gap: 12, fontWeight: 600 }}>
+        <span style={{ flex: 1, overflowWrap: 'anywhere' }}>{listing.path}</span>
+        <button type="button" onClick={() => setListing(null)}>
+          Close
+        </button>
+      </div>
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {parent ? (
+          <button type="button" style={row} onClick={() => browse(parent)}>
+            ..
+          </button>
+        ) : null}
+        {listing.entries.map(entry => (
+          <button
+            key={entry.name}
+            type="button"
+            style={row}
+            onClick={() => {
+              const path = listing.path + entry.name;
+              if (entry.isDir) {
+                browse(path);
+              } else {
+                setListing(null);
+                openExternalFile(path).catch(console.error);
+              }
+            }}
+          >
+            {entry.isDir ? `${entry.name}/` : entry.name}
+          </button>
+        ))}
+        {listing.entries.length === 0 ? (
+          <div style={row}>No folders or supported files here.</div>
+        ) : null}
+      </div>
+    </div>
+  );
 };
 
 export function App() {

@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.Settings
 import androidx.core.content.ContextCompat
+import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
 import com.getcapacitor.Plugin
 import com.getcapacitor.PluginCall
@@ -38,6 +39,7 @@ import java.io.FileInputStream
 class ExternalFilePlugin : Plugin() {
 
     companion object {
+        private const val ROOT = "/storage/emulated/0/"
         private const val MAX_BYTES = 10L * 1024 * 1024 // 10 MiB import cap (markdown vaults)
         private val SUPPORTED = setOf(
             "md", "markdown", "txt", "text", "json", "yaml", "yml", "html", "htm", "csv"
@@ -53,38 +55,63 @@ class ExternalFilePlugin : Plugin() {
             ) == PackageManager.PERMISSION_GRANTED
         }
 
-    @PluginMethod
-    fun readFile(call: PluginCall) {
-        val path = call.getString("path")?.trim().orEmpty()
-
+    /**
+     * Shared gate for readFile and listDir: rejects the call (returning null)
+     * unless [path] is inside the owner's visible storage AND access is
+     * granted. The prefix test alone is not enough — "/storage/emulated/0/../"
+     * passes it and walks out — so the canonical path is checked as well.
+     */
+    private fun guardedFile(call: PluginCall, path: String): File? {
         if (path.isEmpty()) {
             call.reject("No path was given.", "NO_PATH")
-            return
+            return null
         }
         // Only the owner's visible storage is in scope; anything else is a
         // prompt the app cannot explain, so it fails with its own message.
-        if (!path.startsWith("/storage/emulated/0/")) {
+        if (!path.startsWith(ROOT)) {
             call.reject(
                 "Path must start with /storage/emulated/0/ (your phone's visible storage).",
                 "OUTSIDE_EMULATED_STORAGE"
             )
-            return
+            return null
+        }
+        val file = File(path)
+        // Both sides canonicalised: on ROMs where /storage/emulated/0 is itself
+        // a symlink, comparing against the literal prefix would reject every path.
+        val canonical = try {
+            file.canonicalPath
+        } catch (e: Exception) {
+            call.reject("Cannot resolve $path (${e.message ?: "unknown error"})", "READ_ERROR")
+            return null
+        }
+        val canonicalRoot = File(ROOT).canonicalPath.trimEnd('/') + "/"
+        if (!"$canonical/".startsWith(canonicalRoot)) {
+            call.reject(
+                "Path must stay inside /storage/emulated/0/ (your phone's visible storage).",
+                "OUTSIDE_EMULATED_STORAGE"
+            )
+            return null
         }
         if (!hasExternalStorageAccess()) {
             call.reject(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     "All-files access is not granted. Open Settings → Apps → " +
-                        "Cloud AFFiNE → All files access → Allow, then try again."
+                        "Cloud Notes → All files access → Allow, then try again."
                 } else {
                     "Storage permission is not granted. Open Settings → Apps → " +
-                        "Cloud AFFiNE → Permissions → Files and media → Allow, then try again."
+                        "Cloud Notes → Permissions → Files and media → Allow, then try again."
                 },
                 "PERMISSION_DENIED"
             )
-            return
+            return null
         }
+        return file
+    }
 
-        val file = File(path)
+    @PluginMethod
+    fun readFile(call: PluginCall) {
+        val path = call.getString("path")?.trim().orEmpty()
+        val file = guardedFile(call, path) ?: return
         if (!file.exists()) {
             call.reject("File not found at $path", "NOT_FOUND")
             return
@@ -121,6 +148,53 @@ class ExternalFilePlugin : Plugin() {
                 "READ_ERROR"
             )
         }
+    }
+
+    /**
+     * One folder level for the in-app file explorer (#547): sub-folders plus
+     * the files readFile would accept (same SUPPORTED set, so the explorer can
+     * never offer a file the opener then refuses). Dot-entries are hidden;
+     * folders first, then files, each A→Z case-insensitively.
+     */
+    @PluginMethod
+    fun listDir(call: PluginCall) {
+        val path = call.getString("path")?.trim().orEmpty()
+        val dir = guardedFile(call, path) ?: return
+        if (!dir.exists()) {
+            call.reject("Folder not found at $path", "NOT_FOUND")
+            return
+        }
+        if (!dir.isDirectory) {
+            call.reject("This is a file, not a folder: $path", "NOT_A_DIRECTORY")
+            return
+        }
+        val children = dir.listFiles()
+        if (children == null) {
+            call.reject("Cannot read the folder $path", "READ_ERROR")
+            return
+        }
+        val entries = JSArray()
+        children
+            .filter { !it.name.startsWith(".") && (it.isDirectory || it.extension.lowercase() in SUPPORTED) }
+            .sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
+            .forEach {
+                entries.put(
+                    JSObject()
+                        .put("name", it.name)
+                        .put("isDir", it.isDirectory)
+                        .put("size", if (it.isDirectory) 0L else it.length())
+                )
+            }
+        // Report the path in the /storage/emulated/0/ namespace the caller
+        // typed, not the canonical one, so navigation stays in that namespace.
+        val shown = path.trimEnd('/') + "/"
+        val atRoot = dir.canonicalPath.trimEnd('/') == File(ROOT).canonicalPath.trimEnd('/')
+        call.resolve(
+            JSObject()
+                .put("path", shown)
+                .put("parent", if (atRoot) null else File(shown).parentFile?.path?.plus("/"))
+                .put("entries", entries)
+        )
     }
 
     @PluginMethod
