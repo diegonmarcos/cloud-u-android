@@ -53,10 +53,16 @@ class VaultCockpitTest {
         val surface = VaultCockpit.meshProfiles(b, devices.getValue("surface"))
         assertEquals(setOf("config-v4-split", "config-v6-full"), galaxy.keys)
         assertTrue("the surface has no profile in this export", surface.isEmpty())
-        // Ownership came from the Address line, not the file name.
-        galaxy.values.forEach { conf ->
-            assertTrue(conf.lineSequence().any { it.startsWith("Address") && it.contains(devices.getValue("galaxy").wgIp) })
+        // Ownership came from the Address line, not the file name: each owned
+        // profile carries the device's v4 OR v6 address there (the v6-only
+        // profile is the device's by fd0c:1d00::9 alone).
+        val g = devices.getValue("galaxy")
+        galaxy.forEach { (name, conf) ->
+            val address = conf.lineSequence().first { it.startsWith("Address") }
+            assertTrue("$name: $address", address.contains(g.wgIp) || address.contains(g.wgIpv6))
         }
+        assertTrue("the v6-only profile is owned by the v6 address alone",
+            !galaxy.getValue("config-v6-full").lineSequence().first { it.startsWith("Address") }.contains(g.wgIp))
     }
 
     @Test fun `applying a profile writes the tunnel through the WireGuard parser, and then it matches`() {
