@@ -60,6 +60,24 @@ print('; '.join(p) or 'OK')
 PY
 )" "WalletBottomNavTest renders the real bar and tests.unit runs it"
 
+echo "== T4: the shared bar's scroll-collapse (#532) is wired from the content into the bar =="
+check "$(python3 - "$LIB/src/main/java/com/diegonmarcos/superapp/wallet" <<'PY'
+import os, re, sys
+d = sys.argv[1]
+frag = open(os.path.join(d, 'WalletFragment.kt')).read()
+ui = open(os.path.join(d, 'WalletTabsUi.kt')).read()
+p = []
+if not re.search(r'weight\(1f\)\.nestedScroll\(collapse\)', frag):
+    p.append('the content box does not hang nestedScroll(collapse) - scrolling never reaches the bar')
+if not re.search(r'WalletBottomNav\((?:(?!\n {16}\)).)*collapsed\s*=\s*collapse\.collapsed', frag, re.S):
+    p.append('WalletScreen does not pass collapse.collapsed to WalletBottomNav')
+nav = ui[ui.find('fun WalletBottomNav('):]
+if not re.search(r'BottomNavIsland\((?:(?!\n {8}\)).)*collapsed\s*=\s*collapsed', nav, re.S):
+    p.append('WalletBottomNav does not forward collapsed to BottomNavIsland')
+print('; '.join(p) or 'OK')
+PY
+)" "content scroll -> BottomNavCollapse -> WalletBottomNav -> BottomNavIsland"
+
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="
 [ "$FAIL" -eq 0 ]

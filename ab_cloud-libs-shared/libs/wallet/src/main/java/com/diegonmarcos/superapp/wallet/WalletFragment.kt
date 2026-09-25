@@ -39,6 +39,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.diegonmarcos.superapp.bottomnav.BottomNavCollapse
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontFamily
@@ -196,6 +198,9 @@ private fun WalletScreen(modeState: MutableState<WalletMode>) {
     }
 
     val hideChrome = mode is WalletMode.Full || mode is WalletMode.Config
+    // #532 the shared bar's scroll-collapse, hung on the content it sits under. Keyed on where you
+    // are so a new tab starts with the labels back, not collapsed by the last tab's scroll.
+    val collapse = remember(tab, ticketsSub) { BottomNavCollapse() }
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0B0414))) {
         Column(modifier = Modifier.fillMaxSize()) {
             if (!hideChrome) {
@@ -213,7 +218,7 @@ private fun WalletScreen(modeState: MutableState<WalletMode>) {
                     )
                 }
             }
-            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            Box(modifier = Modifier.fillMaxWidth().weight(1f).nestedScroll(collapse)) {
                 when (val m = mode) {
                     is WalletMode.Full -> {
                         cardOrIdle(m.cardId)?.let { card ->
@@ -315,6 +320,7 @@ private fun WalletScreen(modeState: MutableState<WalletMode>) {
             if (!hideChrome) {
                 WalletBottomNav(
                     selected = tab,
+                    collapsed = collapse.collapsed,
                     onOpenMe = onOpenMe,
                     onSelect = { next ->
                         if (next != tab) {

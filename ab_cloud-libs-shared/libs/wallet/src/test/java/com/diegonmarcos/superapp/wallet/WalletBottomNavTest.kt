@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -70,6 +71,7 @@ class WalletBottomNavTest {
     }).around(compose)
 
     private var tab by mutableStateOf(WalletTab.Pay)
+    private var collapsed by mutableStateOf(false)
     private val picked = mutableListOf<WalletTab>()
     private var meLaunches = 0
     private lateinit var host: View
@@ -85,6 +87,7 @@ class WalletBottomNavTest {
                     selected = tab,
                     onSelect = { picked += it; tab = it },
                     onOpenMe = { meLaunches++ },
+                    collapsed = collapsed,
                     modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
                 )
             }
@@ -178,6 +181,19 @@ class WalletBottomNavTest {
         compose.onAllNodes(isSelected()).assertCountEquals(1)
         assertEquals("the lit item is not IDs' capsule", cell(of(WalletTab.IDs)),
             compose.onAllNodes(isSelected())[0].fetchSemanticsNode().boundsInRoot)
+    }
+
+    @Test
+    fun `collapsing the bar drops every label and shrinks the island (#532 reaches the wallet)`() {
+        show(WalletTab.Pay)
+        val expanded = bounds(BottomNavTags.ISLAND).height
+        compose.runOnUiThread { collapsed = true }
+        compose.waitForIdle()
+        for (item in WalletNavItem.entries) {
+            compose.onAllNodesWithTag(BottomNavTags.label(item.name), useUnmergedTree = true).assertCountEquals(0)
+        }
+        val icons = bounds(BottomNavTags.ISLAND).height
+        assertTrue("collapsing did not shrink the island: $expanded px expanded, $icons px collapsed", icons < expanded - 1f)
     }
 
     private companion object { const val ROOT = "wallet_root" }

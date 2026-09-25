@@ -105,6 +105,7 @@ internal fun WalletBottomNav(
     onSelect: (WalletTab) -> Unit,
     onOpenMe: () -> Unit,
     modifier: Modifier = Modifier,
+    collapsed: Boolean = false,
 ) {
     val entries = WalletNavItem.entries.map { BottomNavEntry(it.name, it.label, painterResource(it.icon)) }
     MaterialTheme(colorScheme = walletNavScheme) {
@@ -113,6 +114,7 @@ internal fun WalletBottomNav(
             selectedId = WalletNavItem.entries.firstOrNull { it.tab == selected }?.name,
             onSelect = { entry -> WalletNavItem.valueOf(entry.id).tab?.let(onSelect) ?: onOpenMe() },
             modifier = modifier,
+            collapsed = collapsed,
             // Cloud Wallet's fragment_container (fitsSystemWindows) already pads for the system
             // bars, and the island sits inside it. Reading the live inset again would lift the bar
             // twice (#477).
