@@ -40,6 +40,7 @@ import com.diegonmarcos.clouddrive.ui.IconCatalog
 import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -55,13 +56,12 @@ fun SyncScreen(git: GitSyncCoordinator, rclone: RcloneCoordinator, prefs: DriveP
     var page by rememberSaveable { mutableStateOf(pages.firstOrNull()?.id ?: "") }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val prefsSnap by prefs.snapshot.collectAsState()
     var nextRun by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(Unit) {
         // WorkManager's own word on when the base period fires next; null when it will not say.
         nextRun = withContext(Dispatchers.IO) {
             runCatching {
-                val infos = WorkManager.getInstance(ctx).getWorkInfosForUniqueWork(GitSyncWorker.WORK_NAME).get()
+                val infos = WorkManager.getInstance(ctx).getWorkInfosForUniqueWorkFlow(GitSyncWorker.WORK_NAME).first()
                 val next = infos.firstOrNull { it.state == WorkInfo.State.ENQUEUED }?.nextScheduleTimeMillis
                 SyncSchedule.minutesUntilNext(next, System.currentTimeMillis())
             }.getOrNull()
@@ -77,8 +77,8 @@ fun SyncScreen(git: GitSyncCoordinator, rclone: RcloneCoordinator, prefs: DriveP
         AnimatedContent(targetState = page, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "sync_page", modifier = Modifier.weight(1f)) { id ->
             when (id) {
                 "git" -> GitReposScreen(git, actions, nextRun)
-                "rclone" -> RcloneSyncScreen(rclone, prefsSnap, actions, ::say)
-                "mounts" -> MountsSyncScreen(rclone, prefsSnap, actions, ::say)
+                "rclone" -> RcloneSyncScreen(rclone, prefs, actions, ::say)
+                "mounts" -> MountsSyncScreen(rclone, prefs, actions, ::say)
                 else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "")
             }
         }

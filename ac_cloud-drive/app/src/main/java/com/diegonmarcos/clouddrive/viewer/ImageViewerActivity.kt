@@ -81,7 +81,7 @@ import kotlinx.coroutines.withContext
  * as a pager, pinch/double-tap zoom, and one action row — Rotate (EXIF tag, pixels
  * untouched), Scan (the shared engine's typed barcode payload → open / join / add /
  * dial / mail / map / copy), Text (OCR → copy / share / save beside), Info (EXIF),
- * Share, Delete. Also the fleet's "Open with" target for image/*.
+ * Share, Delete. Also the fleet's "Open with" target for every image MIME type.
  */
 class ImageViewerActivity : ComponentActivity() {
 
@@ -119,18 +119,18 @@ class ImageViewerActivity : ComponentActivity() {
             ToolbarIsland(
                 title = current?.substringAfterLast('/') ?: "",
                 subtitle = stringResource(R.string.viewer_counter, pager.currentPage + 1, paths.size),
-                leading = { IslandAction(Icons.Filled.Close, stringResource(R.string.chrome_close), { finish() }) },
+                leading = { IslandAction(Icons.Filled.Close, stringResource(R.string.chrome_close)) { finish() } },
             )
             HorizontalPager(state = pager, modifier = Modifier.weight(1f).fillMaxWidth(), key = { paths[it] }) { page ->
                 ZoomableImage(paths[page], version)
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                IslandAction(Icons.Filled.Rotate90DegreesCw, stringResource(R.string.viewer_rotate), { current?.let { rotate(File(it)); version++ } }, tint = Color.White)
-                IslandAction(Icons.Filled.QrCodeScanner, stringResource(R.string.viewer_scan), { sheet = Sheet.SCAN }, tint = Color.White)
-                IslandAction(Icons.Filled.DocumentScanner, stringResource(R.string.viewer_ocr), { sheet = Sheet.OCR }, tint = Color.White)
-                IslandAction(Icons.Filled.Info, stringResource(R.string.viewer_info), { sheet = Sheet.INFO }, tint = Color.White)
-                IslandAction(Icons.Filled.Share, stringResource(R.string.viewer_share), { current?.let { share(File(it)) } }, tint = Color.White)
-                IslandAction(Icons.Filled.Delete, stringResource(R.string.viewer_delete), { confirmDelete = true }, tint = Color.White)
+                IslandAction(Icons.Filled.Rotate90DegreesCw, stringResource(R.string.viewer_rotate), tint = Color.White) { current?.let { rotate(File(it)); version++ } }
+                IslandAction(Icons.Filled.QrCodeScanner, stringResource(R.string.viewer_scan), tint = Color.White) { sheet = Sheet.SCAN }
+                IslandAction(Icons.Filled.DocumentScanner, stringResource(R.string.viewer_ocr), tint = Color.White) { sheet = Sheet.OCR }
+                IslandAction(Icons.Filled.Info, stringResource(R.string.viewer_info), tint = Color.White) { sheet = Sheet.INFO }
+                IslandAction(Icons.Filled.Share, stringResource(R.string.viewer_share), tint = Color.White) { current?.let { share(File(it)) } }
+                IslandAction(Icons.Filled.Delete, stringResource(R.string.viewer_delete), tint = Color.White) { confirmDelete = true }
             }
             SnackbarHost(snackbar)
         }

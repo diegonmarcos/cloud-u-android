@@ -18,6 +18,8 @@ sealed class Location {
     abstract val name: String
     /** A stable key for selection sets, listings and tree nodes. */
     abstract val key: String
+    /** The location one level below this one, named [childName]. */
+    abstract fun child(childName: String): Location
 
     @Serializable
     data class Local(val path: String) : Location() {
@@ -28,7 +30,7 @@ sealed class Location {
             val i = t.lastIndexOf('/')
             return if (i <= 0) null else Local(t.substring(0, i))
         }
-        fun child(childName: String): Local = Local(path.trimEnd('/') + "/" + childName)
+        override fun child(childName: String): Local = Local(path.trimEnd('/') + "/" + childName)
     }
 
     /** [inner] is "" at the archive root, otherwise "a/b" with no leading or trailing slash. */
@@ -37,7 +39,7 @@ sealed class Location {
         override val name: String get() = if (inner.isEmpty()) zipPath.substringAfterLast('/') else inner.substringAfterLast('/')
         override val key: String get() = "A:$zipPath!/$inner"
         val isRoot: Boolean get() = inner.isEmpty()
-        fun child(childName: String): Archive = Archive(zipPath, if (inner.isEmpty()) childName else "$inner/$childName")
+        override fun child(childName: String): Archive = Archive(zipPath, if (inner.isEmpty()) childName else "$inner/$childName")
         /** Up inside the archive, or out to the folder holding the zip. */
         fun parent(): Location = when {
             inner.isEmpty() -> Local(zipPath).parent() ?: Local(zipPath)
@@ -51,8 +53,6 @@ sealed class Location {
     val isArchive: Boolean get() = this is Archive
 
     fun parentOrNull(): Location? = when (this) { is Local -> parent(); is Archive -> parent() }
-
-    fun child(childName: String): Location = when (this) { is Local -> child(childName); is Archive -> child(childName) }
 
     /** The crumbs from the volume root down: the local segments, then the archive's inner segments. */
     fun crumbs(): List<Location> = when (this) {

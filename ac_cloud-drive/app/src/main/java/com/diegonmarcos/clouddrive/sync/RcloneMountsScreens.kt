@@ -57,7 +57,9 @@ import java.util.Date
  * with their declared status. The engines' own screens are one tap away.
  */
 @Composable
-fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs.Snapshot, actions: DriveActions, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
+fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions: DriveActions, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
+    // Read so a stored Test result re-lights the card; the value itself is read per card through prefs.lastTest.
+    @Suppress("UNUSED_VARIABLE") val prefsTick by prefs.snapshot.collectAsState()
     val version by coordinator.version.collectAsState()
     val remotes by coordinator.remotes.collectAsState()
     val jobs by coordinator.jobs.collectAsState()
@@ -155,7 +157,8 @@ fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs.Snapshot,
 }
 
 @Composable
-fun MountsSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs.Snapshot, actions: DriveActions, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
+fun MountsSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions: DriveActions, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
+    @Suppress("UNUSED_VARIABLE") val prefsTick by prefs.snapshot.collectAsState()
     val mounts by coordinator.mounts.collectAsState()
     val testing by coordinator.testing.collectAsState()
     val results by coordinator.testResults.collectAsState()

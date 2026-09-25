@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.diegonmarcos.clouddrive.files
 
 import androidx.activity.compose.BackHandler
@@ -541,7 +543,7 @@ private fun EntryRow(
         Box {
             IconButton(onClick = { menu = true }, Modifier.size(36.dp)) { Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.chrome_more), Modifier.size(18.dp)) }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                fun item(label: Int, action: EntryAction) = DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = { menu = false; onMenu(action) })
+                @Composable fun item(label: Int, action: EntryAction) = DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = { menu = false; onMenu(action) })
                 if (local != null && !entry.isDirectory) item(R.string.files_open_with, EntryAction.OPEN_WITH)
                 if (local != null && !entry.isDirectory && (entry.mime.startsWith("text/") || entry.extension in Declarations.files.textExtensions)) item(R.string.files_edit, EntryAction.EDIT)
                 if (local != null && isArchive) item(R.string.files_unzip_here, EntryAction.EXTRACT_HERE)

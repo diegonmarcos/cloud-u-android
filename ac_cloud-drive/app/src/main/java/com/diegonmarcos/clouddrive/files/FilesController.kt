@@ -232,7 +232,7 @@ class FilesController(
         val dest = FileOps.uniqueIn(zip.parentFile ?: return, zip.nameWithoutExtension).apply { mkdirs() }
         val title = ctx.getString(R.string.files_job_extract, zip.name)
         startJob(title) { job, set ->
-            val n = FileOps.extract(zip, dest, progressOf(job, set)) { job.cancelRequested.get() }
+            val n = FileOps.extract(zip, dest, progressOf(job, set), cancelled = { job.cancelRequested.get() })
             refreshShowing(Location.Local(zip.parentFile!!.absolutePath))
             true to ctx.getString(R.string.files_job_done, "$title · $n")
         }

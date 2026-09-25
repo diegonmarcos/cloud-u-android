@@ -152,7 +152,7 @@ fun ToolbarIsland(
 
 /** An icon action inside an island, a card or a bar. */
 @Composable
-fun IslandAction(icon: ImageVector, description: String, onClick: () -> Unit, enabled: Boolean = true, tint: Color = MaterialTheme.colorScheme.onSurface) {
+fun IslandAction(icon: ImageVector, description: String, enabled: Boolean = true, tint: Color = MaterialTheme.colorScheme.onSurface, onClick: () -> Unit) {
     IconButton(onClick = onClick, enabled = enabled) { Icon(icon, contentDescription = description, tint = if (enabled) tint else tint.copy(alpha = 0.4f)) }
 }
 
