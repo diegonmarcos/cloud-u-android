@@ -653,8 +653,8 @@
               "item": 2
             },
             {
-              "label": "MyTerminal",
-              "url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/ac_cloud-myterminal",
+              "label": "IDE",
+              "url": "https://github.com/diegonmarcos/cloud-u-android/tree/main/aa_cloud-ide",
               "icon": "code.svg",
               "item": 3
             },
