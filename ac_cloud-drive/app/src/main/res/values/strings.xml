@@ -1,8 +1,294 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- #579 EVERY caption the chrome prints. Kotlin screens hold no user-facing literal
+     (test-drive-shell.sh): a caption is either a declaration (build.json::ui labels) or a
+     string here. The launcher label itself comes from build.gradle (resValue app_name). -->
 <resources>
-    <!-- Label of the PDF-handler intent filter (#458): shown by the system "Open
-         with" chooser when another app hands cloud-drive an application/pdf.
-         The launcher label itself comes from build.gradle (resValue app_name),
-         so this file holds only what build.gradle does not generate. -->
+    <!-- Label of the PDF-handler intent filter (#458): shown by the system "Open with" chooser. -->
     <string name="open_in_cloud_drive">Open in Cloud Drive</string>
+
+    <!-- The StatusLight vocabulary — SAME names and words as the superapp's (#570/#573). -->
+    <string name="status_light_on">On</string>
+    <string name="status_light_off">Off</string>
+    <string name="status_light_unknown">Unknown</string>
+    <string name="status_light_unverifiable">Not verifiable</string>
+    <string name="status_light_description">%1$s: %2$s</string>
+
+    <!-- Chrome -->
+    <string name="chrome_close">Close</string>
+    <string name="chrome_more">More</string>
+    <string name="chrome_cancel">Cancel</string>
+    <string name="chrome_retry">Retry</string>
+    <string name="chrome_save">Save</string>
+    <string name="chrome_delete">Delete</string>
+    <string name="chrome_keep">Keep</string>
+    <string name="chrome_ok">OK</string>
+    <string name="chrome_declared">declared</string>
+    <string name="chrome_private">private</string>
+    <string name="chrome_not_installed">%1$s is not installed</string>
+    <string name="chrome_unknown_tab">Nothing is declared for this tab</string>
+
+    <!-- Files -->
+    <string name="files_title">Files</string>
+    <string name="files_dual_pane">Two panes</string>
+    <string name="files_single_pane">One pane</string>
+    <string name="files_search">Search</string>
+    <string name="files_search_hint">Search names, or names and text</string>
+    <string name="files_search_text_too">Search inside text files</string>
+    <string name="files_search_none">No match for “%1$s”</string>
+    <string name="files_search_none_hint">Try a shorter name, or search inside text files</string>
+    <string name="files_search_truncated">Stopped at %1$d results</string>
+    <string name="files_search_match_text">text</string>
+    <string name="files_places">Go to</string>
+    <string name="files_places_section">Places</string>
+    <string name="files_bookmarks_section">Bookmarks</string>
+    <string name="files_bookmarks_none">Long-press a tab or tap ★ to bookmark a folder</string>
+    <string name="files_store_hint">The one folder every fleet app reads and writes</string>
+    <string name="files_place_app_files">%1$s — app files</string>
+    <string name="files_place_removable">Removable storage</string>
+    <string name="files_place_sd_card">SD card</string>
+    <string name="files_place_usb">USB drive</string>
+    <string name="files_place_granted">%1$s (granted)</string>
+    <string name="files_place_connect">Connect a storage drive…</string>
+    <string name="files_new_tab">New tab</string>
+    <string name="files_close_tab">Close tab</string>
+    <string name="files_bookmark_add">Bookmark this folder</string>
+    <string name="files_bookmark_remove">Remove bookmark</string>
+    <string name="files_view_list">List</string>
+    <string name="files_view_tree">Tree</string>
+    <string name="files_sort_name">Name</string>
+    <string name="files_sort_size">Size</string>
+    <string name="files_sort_modified">Modified</string>
+    <string name="files_sort_type">Type</string>
+    <string name="files_sort_ascending">Ascending</string>
+    <string name="files_sort_descending">Descending</string>
+    <string name="files_filter">Filter</string>
+    <string name="files_hidden_show">Show hidden</string>
+    <string name="files_hidden_hide">Hide hidden</string>
+    <string name="files_storage_bar">%1$s free of %2$s</string>
+    <string name="files_items">%1$d items</string>
+    <string name="files_item_one">1 item</string>
+    <string name="files_folder">folder</string>
+    <string name="files_compressed">%1$s · %2$s zipped</string>
+    <string name="files_empty_title">Nothing here yet</string>
+    <string name="files_empty_hint">Paste, create or move something into this folder</string>
+    <string name="files_empty_archive_title">Empty archive</string>
+    <string name="files_no_access_title">Cloud Drive needs all-files access</string>
+    <string name="files_no_access_hint">Android 11+ keeps shared storage behind a special grant. Cloud Drive is a file manager: without it there is nothing to show.</string>
+    <string name="files_grant_access">Grant access</string>
+    <string name="files_selected">%1$d selected</string>
+    <string name="files_selected_readonly">%1$d selected · read-only inside archive</string>
+    <string name="files_copy_to_other">Copy → other pane</string>
+    <string name="files_move_to_other">Move → other pane</string>
+    <string name="files_copy_to">Copy to…</string>
+    <string name="files_move_to">Move to…</string>
+    <string name="files_extract_to_other">Extract → other pane</string>
+    <string name="files_rename">Rename</string>
+    <string name="files_rename_pattern">Rename by pattern</string>
+    <string name="files_rename_pattern_hint">{name} {n} {ext} {date}</string>
+    <string name="files_zip">Zip</string>
+    <string name="files_unzip_here">Extract here</string>
+    <string name="files_convert_pdf">Convert PDF to…</string>
+    <string name="files_convert_pdf_not_offered">docx, xlsx and odt need the fleet converter service and are not produced on the phone</string>
+    <string name="files_convert_saved">Saved %1$s next to the original</string>
+    <string name="files_share">Share</string>
+    <string name="files_open_with">Open with…</string>
+    <string name="files_edit">Edit in the editor</string>
+    <string name="files_properties">Properties</string>
+    <string name="files_select_all">Select all</string>
+    <string name="files_invert">Invert selection</string>
+    <string name="files_clear_selection">Clear selection</string>
+    <string name="files_new_folder">New folder</string>
+    <string name="files_new_file">New file</string>
+    <string name="files_name">Name</string>
+    <string name="files_create">Create</string>
+    <string name="files_delete_title">Delete %1$d item(s)?</string>
+    <string name="files_delete_body">Folders are deleted with everything in them. This cannot be undone.</string>
+    <string name="files_zip_name">Archive name</string>
+    <string name="files_duplicates">Find duplicates</string>
+    <string name="files_duplicates_none">No duplicate files under this folder</string>
+    <string name="files_duplicates_group">%1$d copies · %2$s each</string>
+    <string name="files_up">Up</string>
+    <string name="files_pane_activate">Switch to this pane</string>
+    <string name="files_job_copy">Copying %1$d item(s)</string>
+    <string name="files_job_move">Moving %1$d item(s)</string>
+    <string name="files_job_delete">Deleting %1$d item(s)</string>
+    <string name="files_job_zip">Zipping %1$d item(s)</string>
+    <string name="files_job_extract">Extracting %1$s</string>
+    <string name="files_job_done">%1$s · done</string>
+    <string name="files_job_failed">%1$s · %2$d failed</string>
+    <string name="files_job_cancelled">%1$s · cancelled</string>
+    <string name="files_job_not_enough_space">Not enough space: needs %1$s, only %2$s free</string>
+    <string name="files_props_size">Size</string>
+    <string name="files_props_contents">Contents</string>
+    <string name="files_props_contents_value">%1$d files · %2$d folders</string>
+    <string name="files_props_modified">Modified</string>
+    <string name="files_props_permissions">Permissions</string>
+    <string name="files_props_md5">MD5</string>
+    <string name="files_props_sha256">SHA-256</string>
+    <string name="files_props_path">Path</string>
+    <string name="files_props_hashing">hashing…</string>
+    <string name="files_rename_preview">%1$s → %2$s</string>
+    <string name="files_rename_apply">Rename %1$d</string>
+    <string name="files_rename_blocked">The preview found conflicts; fix the pattern</string>
+
+    <!-- Apps -->
+    <string name="apps_title">Apps</string>
+    <string name="apps_hint">The fleet's data apps, from the constellation manifest</string>
+
+    <!-- Sync -->
+    <string name="sync_title">Sync</string>
+    <string name="sync_store">Store</string>
+    <string name="sync_repos_count">%1$d repositories</string>
+    <string name="sync_schedule">every %1$d min · %2$s</string>
+    <string name="sync_network_unmetered">Wi-Fi only</string>
+    <string name="sync_network_any">any network</string>
+    <string name="sync_next_run">next in %1$d min</string>
+    <string name="sync_next_run_unknown">on schedule</string>
+    <string name="sync_add_repo">Add repository</string>
+    <string name="sync_empty_title">No repositories yet</string>
+    <string name="sync_empty_hint">Clone a declared one below, or add a folder</string>
+    <string name="sync_now">Sync now</string>
+    <string name="sync_open">Open</string>
+    <string name="sync_history">History</string>
+    <string name="sync_settings">Settings</string>
+    <string name="sync_resolve_conflicts">Resolve %1$d conflict(s)</string>
+    <string name="sync_glance_reading">reading…</string>
+    <string name="sync_glance_unreadable">cannot read: %1$s</string>
+    <string name="sync_glance_gone">folder is gone</string>
+    <string name="sync_no_branch">(no branch)</string>
+    <string name="sync_clean">clean</string>
+    <string name="sync_changed">%1$d changed</string>
+    <string name="sync_conflicts">%1$d CONFLICTS</string>
+    <string name="sync_last">last sync %1$s · %2$s</string>
+    <string name="sync_never">never synced</string>
+    <string name="sync_auto">⟳ auto · %1$d min · %2$s</string>
+    <string name="sync_manual">manual</string>
+    <string name="sync_step_staging">staging</string>
+    <string name="sync_step_committing">committing</string>
+    <string name="sync_step_pulling">pulling</string>
+    <string name="sync_step_pushing">pushing</string>
+    <string name="sync_step_uninterruptible">cannot be interrupted while pushing</string>
+    <string name="sync_declared_section">Declared, not cloned</string>
+    <string name="sync_clone_into_store">Clone into store</string>
+    <string name="sync_history_section">History</string>
+    <string name="sync_history_empty">No sync has run yet</string>
+    <string name="sync_trigger_manual">manual</string>
+    <string name="sync_trigger_scheduled">scheduled</string>
+    <string name="sync_settings_auto">Sync on a schedule</string>
+    <string name="sync_settings_period">Period</string>
+    <string name="sync_settings_minutes">%1$d min</string>
+    <string name="sync_settings_network">Network</string>
+    <string name="sync_settings_auth">Authentication</string>
+    <string name="sync_auth_none">None</string>
+    <string name="sync_auth_https">HTTPS token</string>
+    <string name="sync_auth_ssh">SSH key</string>
+    <string name="sync_auth_username">Username</string>
+    <string name="sync_auth_token">Token / password</string>
+    <string name="sync_auth_token_stored">Token (stored — leave empty to keep)</string>
+    <string name="sync_auth_key_path">Private key file path</string>
+    <string name="sync_auth_passphrase">Passphrase (optional)</string>
+    <string name="sync_settings_author">Author</string>
+    <string name="sync_settings_author_name">Name</string>
+    <string name="sync_settings_author_email">Email</string>
+    <string name="sync_settings_rebase">Pull with rebase</string>
+    <string name="sync_settings_message">Sync commit message</string>
+    <string name="sync_settings_remove">Remove from list</string>
+    <string name="sync_settings_remove_body">The folder and its .git stay on disk; only this list forgets it and its stored credential.</string>
+
+    <string name="rclone_binary_present">rclone %1$s</string>
+    <string name="rclone_binary_missing">rclone binary missing</string>
+    <string name="rclone_remotes_count">%1$d remotes</string>
+    <string name="rclone_remotes_section">Remotes</string>
+    <string name="rclone_jobs_section">Jobs</string>
+    <string name="rclone_test">Test</string>
+    <string name="rclone_browse">Browse</string>
+    <string name="rclone_edit">Edit</string>
+    <string name="rclone_run">Run</string>
+    <string name="rclone_stop">Stop</string>
+    <string name="rclone_new_job">New job</string>
+    <string name="rclone_open">Open rclone</string>
+    <string name="rclone_remotes_empty">No remotes on this phone yet</string>
+    <string name="rclone_remotes_empty_hint">Declared remotes land here as skeletons; add the key on the device</string>
+    <string name="rclone_jobs_empty">No jobs</string>
+    <string name="rclone_jobs_empty_hint">Declared jobs come from the fleet; your own are created in the engine</string>
+    <string name="rclone_reachable">reachable · %1$d entries at root</string>
+    <string name="rclone_untested">untested</string>
+    <string name="rclone_last_run">last run %1$s · %2$s</string>
+    <string name="rclone_never_run">never run</string>
+    <string name="rclone_progress">%1$s / %2$s · %3$s/s · ETA %4$s · %5$d/%6$d files · %7$d errors</string>
+    <string name="rclone_exit_ok">ok</string>
+    <string name="rclone_exit_cancelled">cancelled</string>
+    <string name="rclone_exit_code">exit %1$d</string>
+    <string name="rclone_fleet_side">fleet-side</string>
+
+    <string name="mounts_section">Mounts</string>
+    <string name="mounts_fleet_section">Fleet connections</string>
+    <string name="mounts_empty">No mounts yet</string>
+    <string name="mounts_empty_hint">Add an sftp / ssh / ftp / webdav connection in the engine</string>
+    <string name="mounts_add">Add mount</string>
+    <string name="mounts_open">Open mounts</string>
+    <string name="mounts_key_auth">key auth</string>
+    <string name="mounts_password_stored">password stored</string>
+    <string name="mounts_no_credential">no credential</string>
+    <string name="mounts_reachable">reachable · %1$d entries</string>
+
+    <!-- Backups -->
+    <string name="backups_title">Backups</string>
+    <string name="backups_mirrors_section">On-device mirrors</string>
+    <string name="backups_fleet_section">Fleet repositories</string>
+    <string name="backups_run">Run</string>
+    <string name="backups_delete_badge">--delete</string>
+    <string name="backups_never_run">never run</string>
+    <string name="backups_last_run">last run %1$s · %2$s</string>
+    <string name="backups_result">%1$d copied · %2$d skipped · %3$d deleted · %4$d failed</string>
+    <string name="backups_scanning">%1$d scanned · %2$s</string>
+    <string name="backups_empty">No mirror jobs declared</string>
+    <string name="backups_empty_hint">Declare one in data/drive-mirror-jobs.json</string>
+
+    <!-- Configs -->
+    <string name="configs_title">Configs</string>
+    <string name="configs_storage_access">Storage access</string>
+    <string name="configs_storage_access_body">All-files access is what lets Cloud Drive list shared storage</string>
+    <string name="configs_files">Files</string>
+    <string name="configs_default_sort">Default sort</string>
+    <string name="configs_show_hidden">Show hidden files</string>
+    <string name="configs_dual_pane">Two panes by default</string>
+    <string name="configs_thumbnails">Image thumbnails</string>
+    <string name="configs_sync_schedule">Sync schedule</string>
+    <string name="configs_sync_schedule_body">Declared in build.json::storage.git_sync; per-repository periods sit on each repo card</string>
+    <string name="configs_removable">Removable storage</string>
+    <string name="configs_removable_none">No storage drive granted</string>
+    <string name="configs_forget_grant">Forget</string>
+    <string name="configs_grant_tree">Grant a drive…</string>
+    <string name="configs_about">About</string>
+    <string name="configs_version">Version</string>
+    <string name="configs_built">Built</string>
+    <string name="configs_engines">Engines</string>
+    <string name="configs_engines_value">git-sync (JGit) · file-editor · rclone %1$s · mounts</string>
+
+    <!-- Viewer -->
+    <string name="viewer_rotate">Rotate</string>
+    <string name="viewer_scan">Scan</string>
+    <string name="viewer_ocr">Text</string>
+    <string name="viewer_info">Info</string>
+    <string name="viewer_share">Share</string>
+    <string name="viewer_delete">Delete</string>
+    <string name="viewer_counter">%1$d / %2$d</string>
+    <string name="viewer_no_barcode">No barcode found in this image</string>
+    <string name="viewer_no_text">No text recognised</string>
+    <string name="viewer_open_url">Open link</string>
+    <string name="viewer_join_wifi">Join Wi-Fi</string>
+    <string name="viewer_add_contact">Add contact</string>
+    <string name="viewer_add_event">Add event</string>
+    <string name="viewer_dial">Call</string>
+    <string name="viewer_email">Email</string>
+    <string name="viewer_map">Map</string>
+    <string name="viewer_copy">Copy</string>
+    <string name="viewer_save_txt">Save .txt beside</string>
+    <string name="viewer_save_md">Save .md beside</string>
+    <string name="viewer_info_size">%1$d × %2$d · %3$s</string>
+    <string name="viewer_info_camera">%1$s %2$s</string>
+    <string name="viewer_info_location">%1$.5f, %2$.5f</string>
+    <string name="viewer_delete_title">Delete %1$s?</string>
+    <string name="viewer_saved">Saved %1$s</string>
 </resources>

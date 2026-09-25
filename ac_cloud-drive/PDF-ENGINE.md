@@ -66,7 +66,7 @@ to; `cloud-android-licence-boundary-guard.py --repo .` still passes on the tree.
 | `PdfReaderActivity.kt` | toolbar, search bar, outline, go-to-page, share, print, convert; the manifest's PDF handler |
 | `PdfLayout.kt` | page geometry for both modes (pure — JVM-tested) |
 | `PdfConvert.kt` | txt/md/html/csv builders, name picking, word selection (pure — JVM-tested) |
-| `FilesBridge.openPdf / convertPdf` | the Files tab's two calls; the bridge carries a path and a result, never the document |
+| `DriveActions.openPdf (#579) / convertPdf` | the Files tab's two calls; the bridge carries a path and a result, never the document |
 
 ## Tests
 

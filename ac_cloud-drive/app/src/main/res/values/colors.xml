@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #579 THE palette of the chrome, one declaration each (a0_docs/eng-specs/cloud-drive-redesign.md §1).
+     Every value is either the fleet's (superapp colors.xml, libs:bottomnav colors.xml) or derived
+     from one, so cloud-drive reads as the same product as the superapp. DriveTheme.kt reads these
+     into the Material scheme; no Kotlin file names a colour literal (test-drive-shell.sh). -->
+<resources>
+    <!-- Window: the black end of superapp's black→purple gradient, one step lighter than the
+         island fill so the islands read as boxes standing on the page. -->
+    <color name="drive_background">#FF07040F</color>
+    <!-- Card / sheet surface = the island fill libs:bottomnav declares (bottom_nav_island_fill). -->
+    <color name="drive_surface">#FF140B26</color>
+    <!-- Toolbar island, selected row, pressed chip. -->
+    <color name="drive_surface_raised">#FF1F1238</color>
+    <!-- Hairline = superapp glass_border. -->
+    <color name="drive_outline">#33A78BFA</color>
+    <!-- Accent = superapp island_accent: the lit pill, the storage bar fill, the hero border. -->
+    <color name="drive_accent">#FFB794F4</color>
+    <!-- Accent ON A CARD = superapp theme_cloud_accent, the variant that clears 4.5:1 over a
+         13%-white card as well as over black (superapp colors.xml documents the measurement). -->
+    <color name="drive_accent_on_card">#FFC7AEFB</color>
+    <!-- Ink on an accent surface (the selected pill's label) = superapp tile_ink. -->
+    <color name="drive_on_accent">#FF14082B</color>
+    <color name="drive_text">#FFFFFFFF</color>
+    <color name="drive_text_secondary">#AAFFFFFF</color>
+
+    <!-- The StatusLight, SAME names and SAME values as aa_cloud-superapp/app/src/main/res/values/colors.xml
+         (#570/#573): a status light makes a promise, and two greens that differ are one of them lying.
+         WCAG AA against both pure black and the purple band; the superapp tester recomputes the ratios.
+         test-drive-shell.sh compares these three against the superapp's when the sibling is present. -->
+    <color name="status_light_on">#FF3DDC84</color>
+    <color name="status_light_off">#FFF87171</color>
+    <color name="status_light_unknown">#FFB0B8C4</color>
+</resources>

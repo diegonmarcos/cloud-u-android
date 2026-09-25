@@ -19,10 +19,11 @@
 #   S2  SharedStore resolves it at runtime from Environment.getExternalStorageDirectory()
 #       and NOTHING in this app or the four engine libraries spells out
 #       /storage/emulated/0 (the user id in it changes under a second profile).
-#   S3  the git engine opens ON the store when the page names no target, the page
-#       reads the root through the bridge (sharedRoot) and the Git subpage hands
-#       every declared repository a Clone/open button carrying <root>/<name> and
-#       the upstream URL; the bridge overload and the activity extra carry it.
+#   S3  the git engine opens ON the store when the chrome names no target; the
+#       Sync ▸ Git cards (#579) hand every declared-not-cloned repository a
+#       "Clone into store" pill carrying <root>/<name> and the upstream URL
+#       (composed ONCE by Declarations.cloneUrl); DriveActions.openEngine and the
+#       activity extra carry it; the store is the hero of the Files Places sheet.
 #   S4  scheduled sync: a WorkManager worker exists, is enqueued from MainActivity
 #       with the interval and network rule build.json declares (baked, not literal),
 #       syncs only opted-in repositories, and the library's model + Settings tab
@@ -44,11 +45,12 @@ BUILD_JSON="$APP/build.json"
 GRADLE="$APP/app/build.gradle"
 SRC="$APP/app/src/main/java/com/diegonmarcos/clouddrive"
 STORE="$SRC/SharedStore.kt"
-BRIDGE="$SRC/FilesBridge.kt"
+CARDS="$SRC/sync/GitReposScreen.kt"
+DECL="$SRC/Declarations.kt"
+PLACES="$SRC/files/Places.kt"
 MAIN="$SRC/MainActivity.kt"
 HOST="$SRC/EngineActivity.kt"
 WORKER="$SRC/GitSyncWorker.kt"
-PAGE="$APP/app/src/main/assets/drive.html"
 GIT_MOD="$(python3 -c 'import json,os,sys; b=json.load(open(sys.argv[1])); print(os.path.normpath(os.path.join(sys.argv[2], b["modules"]["libs:git-sync"]["dir"])))' "$BUILD_JSON" "$APP")"
 RCLONE_MOD="$(python3 -c 'import json,os,sys; b=json.load(open(sys.argv[1])); print(os.path.normpath(os.path.join(sys.argv[2], b["modules"]["libs:rclone"]["dir"])))' "$BUILD_JSON" "$APP")"
 GIT_SCREEN="$GIT_MOD/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitSyncScreen.kt"
@@ -60,7 +62,7 @@ FAILURES=0
 pass() { echo "  PASS  $*"; }
 fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 
-for required in "$BUILD_JSON" "$GRADLE" "$STORE" "$BRIDGE" "$MAIN" "$HOST" "$WORKER" "$PAGE" "$GIT_SCREEN" "$GIT_MODELS" "$RCLONE_CONFIG" "$RCLONE_TEST"; do
+for required in "$BUILD_JSON" "$GRADLE" "$STORE" "$CARDS" "$DECL" "$PLACES" "$MAIN" "$HOST" "$WORKER" "$GIT_SCREEN" "$GIT_MODELS" "$RCLONE_CONFIG" "$RCLONE_TEST"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required"; exit 1; }
 done
 
@@ -87,20 +89,19 @@ ABS="$(grep -rnE "/storage/emulated/0" "$APP/app/src" "$APP/data" "$GIT_MOD/src/
 if [ -z "$ABS" ]; then pass "no /storage/emulated/0 literal in app or engine sources"; else fail "a device-absolute path is written down:"; printf '%s\n' "$ABS" | sed 's/^/        /'; fi
 
 echo "── S3 the git manager lands in the store ──"
-if grep -qE 'if \(engine == ENGINE_GIT\) SharedStore\.root\(\)\.absolutePath else null' "$HOST"; then pass "EngineActivity opens the git engine on the store when the page names no target"; else fail "EngineActivity does not default the git target to SharedStore.root()"; fi
-if grep -B1 -E "fun sharedRoot\(\): String = SharedStore\.root\(\)\.absolutePath" "$BRIDGE" | grep -q "@JavascriptInterface"; then pass "FilesBridge.sharedRoot() exposes the resolved root"; else fail "FilesBridge lacks @JavascriptInterface sharedRoot()"; fi
-if grep -qE "Bridge\.raw\('sharedRoot'\)" "$PAGE"; then pass "the page reads the root through the bridge"; else fail "drive.html never reads sharedRoot"; fi
-if grep -qE "\"Cloud Drive\" to SharedStore\.root\(\)" "$BRIDGE"; then pass "the store is a Files-tab place"; else fail "places() does not offer the store"; fi
-if grep -qE "fun openEngine\(engine: String, target: String, url: String\): String" "$BRIDGE" && grep -qE "const val EXTRA_URL" "$HOST" && grep -qE "GitSyncScreen\(target, onOpenFile, onClose, cloneUrl = cloneUrl\)" "$HOST"; then pass "the clone URL travels bridge → activity → GitSyncScreen(cloneUrl)"; else fail "the clone-url seam is broken somewhere between openEngine(engine, target, url), EXTRA_URL and GitSyncScreen(cloneUrl)"; fi
+if grep -qE 'if \(engine == ENGINE_GIT\) SharedStore\.root\(\)\.absolutePath else null' "$HOST"; then pass "EngineActivity opens the git engine on the store when the chrome names no target"; else fail "EngineActivity does not default the git target to SharedStore.root()"; fi
+if grep -qE 'val root = remember \{ SharedStore\.root\(\)\.absolutePath \}' "$CARDS"; then pass "the Sync ▸ Git cards read the store root from SharedStore"; else fail "GitReposScreen does not read SharedStore.root()"; fi
+if grep -qE '"shared_root" -> SharedStore\.root\(\)' "$PLACES" && grep -qE 'hero = p\.hero' "$PLACES"; then pass "the store is a Files place (the hero of the Places sheet)"; else fail "Places does not offer the store"; fi
+if grep -qE 'fun openEngine\(engine: String, target: String, url: String = ""\)' "$SRC/DriveActions.kt" && grep -qE 'const val EXTRA_URL' "$HOST" && grep -qE 'GitSyncScreen\(target, onOpenFile, onClose, cloneUrl = cloneUrl\)' "$HOST"; then pass "the clone URL travels DriveActions → activity → GitSyncScreen(cloneUrl)"; else fail "the clone-url seam is broken somewhere between openEngine(engine, target, url), EXTRA_URL and GitSyncScreen(cloneUrl)"; fi
 if grep -qE "cloneUrl: String\? = null" "$GIT_SCREEN" && grep -qE "prefillUrl" "$GIT_SCREEN"; then pass "libs:git-sync accepts a clone URL and prefills the Add dialog"; else fail "GitSyncScreen has no cloneUrl / prefillUrl"; fi
-if grep -qE "engineButton\('git', target, 'Clone / open', url\)" "$PAGE" && grep -qE "root \+ '/' \+ repo\.name" "$PAGE" && grep -qE "'https://' \+ upstream\.host \+ '/' \+ repo\.github_owner \+ '/' \+ repo\.name \+ '\.git'" "$PAGE"; then pass "every declared repository gets Clone/open → <root>/<name> from the upstream instance"; else fail "the Git subpage does not compose <root>/<name> + upstream URL per declared repository"; fi
+if grep -qE 'fun cloneUrl\(repo: GitRepoDecl\): String\? = upstream\?\.let \{ "https://\$\{it\.host\}/\$\{repo\.githubOwner\}/\$\{repo\.name\}\.git" \}' "$DECL" && grep -qE 'actions\.openEngine\(EngineActivity\.ENGINE_GIT, File\(root, d\.name\)\.absolutePath, url\)' "$CARDS" && grep -qE 'val url = family\.cloneUrl\(d\) \?: ""' "$CARDS"; then pass "every declared-not-cloned repository gets Clone into store → <root>/<name> from the upstream instance"; else fail "the Git cards do not compose <root>/<name> + upstream URL per declared repository"; fi
 
 echo "── S4 scheduled sync ──"
 if grep -qE "class GitSyncWorker\(context: Context, params: WorkerParameters\) : Worker\(" "$WORKER"; then pass "GitSyncWorker is a WorkManager Worker"; else fail "GitSyncWorker is not a Worker"; fi
 if grep -qE "PeriodicWorkRequestBuilder<GitSyncWorker>\(BuildConfig\.GIT_SYNC_INTERVAL_MINUTES, TimeUnit\.MINUTES\)" "$WORKER" && grep -qE "BuildConfig\.GIT_SYNC_REQUIRE_UNMETERED" "$WORKER" && grep -qE "ExistingPeriodicWorkPolicy\.UPDATE" "$WORKER"; then pass "the period and the network rule come from the baked declaration; UPDATE policy"; else fail "the worker's schedule is not the baked declaration (or not UPDATE)"; fi
 if grep -qE "^\s*GitSyncWorker\.schedule\(this\)" "$MAIN"; then pass "MainActivity enqueues the scheduler"; else fail "nothing enqueues GitSyncWorker (a commented-out call does not count)"; fi
 if grep -qE "\.filter \{ it\.autoSync \}" "$WORKER" && grep -qE "\.sync\(" "$WORKER" && grep -qE "credentials\.authFor\(repo\)" "$WORKER"; then pass "the worker syncs opted-in repositories with their stored credential"; else fail "the worker does not filter on autoSync / call sync() with authFor()"; fi
-if grep -qE "val autoSync: Boolean = false" "$GIT_MODELS" && grep -qE "Switch\(checked = autoSync" "$GIT_SCREEN" && grep -qE "autoSync = autoSync\)" "$GIT_SCREEN"; then pass "ManagedRepo.autoSync exists, defaults off, and the Settings tab saves it"; else fail "the per-repo opt-in is missing from the model or the Settings tab"; fi
+if grep -qE "val autoSync: Boolean = false" "$GIT_MODELS" && grep -qE "Switch\(checked = autoSync" "$GIT_SCREEN" && grep -qE "autoSync = autoSync," "$GIT_SCREEN"; then pass "ManagedRepo.autoSync exists, defaults off, and the Settings tab saves it"; else fail "the per-repo opt-in is missing from the model or the Settings tab"; fi
 if grep -qE "androidx\.work:work-runtime" "$GRADLE"; then pass "WorkManager linked in the app"; else fail "app/build.gradle does not link androidx.work"; fi
 if grep -qE "const val REGISTRY_FILE = \"git-sync/repos\.json\"" "$WORKER" && grep -qE "RepoRegistry\(File\(context\.filesDir, \"git-sync/repos\.json\"\)\)" "$GIT_SCREEN"; then pass "worker and screen read the SAME registry file"; else fail "the worker's registry path differs from the screen's"; fi
 

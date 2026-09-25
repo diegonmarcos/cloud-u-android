@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Dark is the fleet-wide default (#336, #337). Forced DARK, not DayNight:
-         the WebView page paints its own dark surfaces, so a system light-mode
-         switch would recolour only the system chrome and leave the content dark.
-         The declaration lives here, in the theme parent; the page CSS carries its
-         own half. -->
+    <!-- Dark is the fleet-wide default (#336, #337). Forced DARK, not DayNight: the Compose
+         chrome (DriveTheme) paints its own dark surfaces from colors.xml, so a system
+         light-mode switch would recolour only the system chrome and leave the content dark.
+         The declaration lives here, in the theme parent; DriveTheme carries the Compose half. -->
     <style name="Theme.CloudDrive" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@color/drive_background</item>
         <item name="android:statusBarColor" tools:targetApi="lollipop">@android:color/transparent</item>
         <item name="android:navigationBarColor" tools:targetApi="lollipop">@android:color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds" tools:targetApi="lollipop">true</item>

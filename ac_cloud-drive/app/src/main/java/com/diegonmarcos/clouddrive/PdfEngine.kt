@@ -19,7 +19,7 @@ import java.io.IOException
  * pdfium — the engine inside Chrome — through io.legere:pdfiumandroid (Apache-2.0, pinned in
  * build.json::pdf.engine), reached by every other app through the manifest, never copied in.
  * This is the only file that names the library; PdfReaderView, PdfReaderActivity and
- * FilesBridge.convertPdf all go through it, so swapping the engine again is a one-file change
+ * PdfConversion.convertPdf all go through it, so swapping the engine again is a one-file change
  * and one-pdf-engine-guard has exactly one place to look.
  *
  * It replaced pdf.js-in-a-WebView, which cost a base64 copy of the whole file over the bridge

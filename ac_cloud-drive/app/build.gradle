@@ -1,8 +1,13 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    // #567 push 5: EngineActivity hosts the four engine libraries' @Composable screens.
+    // #567 push 5 / #579: the whole chrome is Compose (DriveShell in MainActivity) and
+    // EngineActivity hosts the four engine libraries' @Composable screens.
     id 'org.jetbrains.kotlin.plugin.compose'
+    // #579 FilesUiState (pane tabs, selection, view mode) is saved across process death and
+    // SyncHistory is persisted as JSON: kotlinx-serialization, like the engine libraries,
+    // so the JVM suite exercises the real (de)serialisation.
+    id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
 def gradleScriptStartMs = System.currentTimeMillis()
@@ -144,6 +149,25 @@ if (driveAppsFile.exists()) {
     }
 }
 def driveAppsB64  = b64(resolvedDriveApps)
+// #579 THE STRUCTURE OF THE CHROME: build.json::ui declares the tabs, the Sync
+// pages, the Files places/filters/sort keys and the icon default. Baked whole on
+// the same carrier as every other list here and decoded ONCE by Declarations.kt.
+// A missing block is a hard error: a shell with no tabs is not an APK worth shipping.
+def uiDecl = buildJson.ui ?: [:]
+if (!(uiDecl.tabs instanceof List) || uiDecl.tabs.isEmpty()) {
+    throw new GradleException("build.json::ui.tabs must declare the shell's tabs (#579)")
+}
+if (!(uiDecl.sync?.pages instanceof List) || uiDecl.sync.pages.isEmpty()) {
+    throw new GradleException("build.json::ui.sync.pages must declare the Sync strip (#579)")
+}
+if (!(uiDecl.files?.places instanceof List) || uiDecl.files.places.isEmpty()) {
+    throw new GradleException("build.json::ui.files.places must declare the Places sheet (#579)")
+}
+def uiTabsB64     = b64(uiDecl.tabs)
+def uiDefaultTab  = (uiDecl.default_tab ?: uiDecl.tabs[0].id).toString()
+def uiSyncB64     = b64(uiDecl.sync.findAll { k, v -> !k.startsWith('_') })
+def uiFilesB64    = b64(uiDecl.files.findAll { k, v -> !k.startsWith('_') })
+def uiIconDefault = (uiDecl.icons?._default ?: 'circle').toString()
 def uiPermissionsRuntimeB64 = b64(buildJson.ui?.permissions?.runtime ?: [])
 def uiPermissionsRolesB64   = b64(buildJson.ui?.permissions?.roles   ?: [])
 def profileDefault   = buildJson.ui?.profile_default ?: [:]
@@ -265,6 +289,11 @@ android {
         buildConfigField "long",    "GIT_SYNC_INTERVAL_MINUTES", "${gitSyncMinutes}L"
         buildConfigField "boolean", "GIT_SYNC_REQUIRE_UNMETERED", "${gitSyncUnmetered}"
         buildConfigField "String", "UI_APPS_B64",     "\"${driveAppsB64}\""
+        buildConfigField "String", "UI_TABS_B64",     "\"${uiTabsB64}\""
+        buildConfigField "String", "UI_DEFAULT_TAB",  "\"${uiDefaultTab}\""
+        buildConfigField "String", "UI_SYNC_B64",     "\"${uiSyncB64}\""
+        buildConfigField "String", "UI_FILES_B64",    "\"${uiFilesB64}\""
+        buildConfigField "String", "UI_ICON_DEFAULT", "\"${uiIconDefault}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64",   "\"${uiPermissionsRolesB64}\""
         buildConfigField "String", "UI_PROFILE_NAME",      "\"${profileName}\""
@@ -288,8 +317,23 @@ android {
 
     buildFeatures {
         buildConfig = true
-        // The Compose host (EngineActivity) — the page stays a WebView.
+        // #579 the whole chrome is Compose; EngineActivity hosts the engines' screens.
         compose = true
+    }
+
+    testOptions {
+        unitTests {
+            // #579 DriveShellTest is a Robolectric Compose layout-tree test: it renders
+            // the shell and the Files pane against the app's real resources (the
+            // libs:bottomnav precedent, BottomNavIslandTest).
+            includeAndroidResources = true
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
     }
 
     // ONE shared Cloud-constellation key — same key as SuperApp/Nav/Comms/Wallet/IDE.
@@ -350,17 +394,25 @@ dependencies {
     implementation project(':libs:file-editor')
     implementation project(':libs:rclone')
     implementation project(':libs:mounts')
-    // #567 push 5: the Compose host for the engines. Same BOM the libraries pin,
-    // so app and libraries compose against one toolchain.
+    // #579 the fleet's bottom-nav island: the five tabs are the same Compose pill
+    // superapp, mail, wallet and me draw.
+    implementation project(':libs:bottomnav')
+    // #567 push 5 / #579: the Compose toolchain of the WHOLE chrome. Same BOM the
+    // libraries pin, so app and libraries compose against one toolchain.
     implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.animation:animation'
     implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material:material-icons-extended'
     implementation 'androidx.activity:activity-compose:1.9.3'
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose:2.8.7'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+    implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
     // #575 the scheduled git sync (GitSyncWorker) — the same WorkManager libs:updater
     // already schedules its own periodic check with, same version.
     implementation 'androidx.work:work-runtime-ktx:2.9.1'
-    implementation 'androidx.core:core-ktx:1.13.1'
-    implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.core:core-ktx:1.15.0'
     // Nothing in Drive is a secret today: FilesBridge only touches shared storage the
     // user already granted. Kept so a later remote back end has somewhere to put a token
     // that is not SharedPreferences in the clear.
@@ -376,4 +428,11 @@ dependencies {
 
     androidTestImplementation 'androidx.test:runner:1.6.1'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+
+    // #579 the app's own JVM suite (state reducers, plans, guards, history, schedule)
+    // and the Robolectric Compose layout-tree test — the libs:bottomnav test stack.
+    // (junit itself is declared once above, with #577's PDF tests.)
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+    testImplementation platform('androidx.compose:compose-bom:2025.01.00')
+    testImplementation 'androidx.compose.ui:ui-test-junit4'
 }

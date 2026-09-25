@@ -1,0 +1,87 @@
+package com.diegonmarcos.clouddrive
+
+import android.content.Context
+import android.content.SharedPreferences
+import android.net.Uri
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * #579 the app's own settings and small persisted facts: Files defaults, bookmarks,
+ * the persisted SAF tree grant, the last result of each mirror job. Plain
+ * SharedPreferences — nothing here is a secret (secrets live in the engines'
+ * keystore-backed stores). Observed as a StateFlow so a Configs toggle re-renders
+ * the Files pane it governs without a restart.
+ */
+class DrivePrefs(context: Context) {
+    private val prefs: SharedPreferences = context.getSharedPreferences("cloud-drive-prefs", Context.MODE_PRIVATE)
+    private val grants: SharedPreferences = context.getSharedPreferences("cloud-drive-storage-grants", Context.MODE_PRIVATE)
+
+    data class Snapshot(
+        val defaultSort: String,
+        val showHidden: Boolean,
+        val dualPane: Boolean,
+        val thumbnails: Boolean,
+        val bookmarks: List<String>,
+        val treeGrantUri: String?,
+        val treeGrantName: String?,
+    )
+
+    private val _snapshot = MutableStateFlow(read())
+    val snapshot: StateFlow<Snapshot> get() = _snapshot
+
+    private fun read(): Snapshot = Snapshot(
+        defaultSort = prefs.getString(KEY_SORT, null) ?: Declarations.files.defaultSort,
+        showHidden = prefs.getBoolean(KEY_HIDDEN, false),
+        dualPane = prefs.getBoolean(KEY_DUAL, Declarations.files.defaultDualPane),
+        thumbnails = prefs.getBoolean(KEY_THUMBS, true),
+        bookmarks = (prefs.getString(KEY_BOOKMARKS, "") ?: "").split('\n').filter { it.isNotBlank() },
+        treeGrantUri = grants.getString(KEY_TREE_GRANT_URI, null),
+        treeGrantName = grants.getString(KEY_TREE_GRANT_NAME, null),
+    )
+
+    private fun edit(block: SharedPreferences.Editor.() -> Unit) { prefs.edit().apply(block).apply(); _snapshot.value = read() }
+
+    fun setDefaultSort(key: String) = edit { putString(KEY_SORT, key) }
+    fun setShowHidden(on: Boolean) = edit { putBoolean(KEY_HIDDEN, on) }
+    fun setDualPane(on: Boolean) = edit { putBoolean(KEY_DUAL, on) }
+    fun setThumbnails(on: Boolean) = edit { putBoolean(KEY_THUMBS, on) }
+
+    fun isBookmarked(path: String): Boolean = path in _snapshot.value.bookmarks
+    fun toggleBookmark(path: String) {
+        val next = if (isBookmarked(path)) _snapshot.value.bookmarks - path else _snapshot.value.bookmarks + path
+        edit { putString(KEY_BOOKMARKS, next.joinToString("\n")) }
+    }
+    fun removeBookmark(path: String) = edit { putString(KEY_BOOKMARKS, (_snapshot.value.bookmarks - path).joinToString("\n")) }
+
+    /** The remembered SAF grant (the OS keeps the permission itself; this is the URI and its display name). */
+    fun rememberTreeGrant(uri: Uri, name: String) { grants.edit().putString(KEY_TREE_GRANT_URI, uri.toString()).putString(KEY_TREE_GRANT_NAME, name).apply(); _snapshot.value = read() }
+    fun forgetTreeGrant() { grants.edit().clear().apply(); _snapshot.value = read() }
+
+    /** The last mirror result per declared job name: "<epoch seconds>|<summary>|<ok>". */
+    fun mirrorResult(job: String): Triple<Long, String, Boolean>? {
+        val raw = prefs.getString(KEY_MIRROR_PREFIX + job, null) ?: return null
+        val parts = raw.split('|', limit = 3)
+        if (parts.size < 3) return null
+        return Triple(parts[0].toLongOrNull() ?: 0L, parts[1], parts[2] == "1")
+    }
+    fun setMirrorResult(job: String, epochSeconds: Long, summary: String, ok: Boolean) =
+        edit { putString(KEY_MIRROR_PREFIX + job, "$epochSeconds|${summary.replace('|', '/')}|${if (ok) 1 else 0}") }
+
+    /** The last remote / mount test per id: true reachable, false failed, null untested. */
+    fun lastTest(id: String): Boolean? = if (!prefs.contains(KEY_TEST_PREFIX + id)) null else prefs.getBoolean(KEY_TEST_PREFIX + id, false)
+    fun setLastTest(id: String, ok: Boolean) = edit { putBoolean(KEY_TEST_PREFIX + id, ok) }
+
+    private companion object {
+        const val KEY_SORT = "files.sort"
+        const val KEY_HIDDEN = "files.hidden"
+        const val KEY_DUAL = "files.dual"
+        const val KEY_THUMBS = "files.thumbnails"
+        const val KEY_BOOKMARKS = "files.bookmarks"
+        const val KEY_MIRROR_PREFIX = "mirror.result."
+        const val KEY_TEST_PREFIX = "sync.test."
+        // The same keys the pre-#579 bridge wrote, so an existing grant survives the redesign.
+        const val KEY_TREE_GRANT_URI = "saf_tree_grant_uri"
+        const val KEY_TREE_GRANT_NAME = "saf_tree_grant_name"
+    }
+}

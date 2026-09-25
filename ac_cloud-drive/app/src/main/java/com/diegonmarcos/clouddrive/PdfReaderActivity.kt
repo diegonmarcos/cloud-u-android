@@ -37,7 +37,6 @@ import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -48,7 +47,7 @@ import java.util.concurrent.Executors
  * [PdfEngine], replacing the pdf.js page that used to live inside drive.html.
  *
  * It is what the manifest offers other apps for application/pdf (cloud-mail's attachment chooser
- * lands here, #458/#463) and what the Files tab opens for a PDF row (FilesBridge.openPdf).
+ * lands here, #458/#463) and what the Files tab opens for a PDF row (DriveActions.openPdf, #579).
  * Continuous and paged scrolling, pinch zoom, search with highlights, outline, night mode, share,
  * print and the four PDF→text conversions are all reached from this one toolbar.
  *
@@ -351,15 +350,12 @@ internal class PdfReaderActivity : AppCompatActivity(), PdfReaderView.Host {
         val path = sourceFile?.absolutePath ?: return
         toast("Converting…")
         io.execute {
-            val outcome = try {
-                JSONObject(FilesBridge(applicationContext).convertPdf(path, target))
-            } catch (error: Exception) {
-                JSONObject().put("ok", false).put("error", error.message ?: "conversion failed")
-            }
+            // #579 the ONE conversion path, shared with the Files tab's row action.
+            val outcome = PdfConversion.convertPdf(applicationContext, File(path), target)
             runOnUiThread {
                 if (isDestroyed) return@runOnUiThread
-                if (outcome.optBoolean("ok")) toast("Saved as " + outcome.optString("name") + " next to the original.")
-                else AlertDialog.Builder(this).setMessage(outcome.optString("error")).setPositiveButton("OK", null).show()
+                outcome.onSuccess { toast("Saved as " + it.name + " next to the original.") }
+                    .onFailure { AlertDialog.Builder(this).setMessage(it.message ?: "conversion failed").setPositiveButton("OK", null).show() }
             }
         }
     }

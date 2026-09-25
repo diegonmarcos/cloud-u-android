@@ -105,6 +105,15 @@ data class ManagedRepo(
     val syncMessage: String = "sync from cloud-drive",
     /** #575 opted in to the host's scheduled background sync (GitSync's scheduler). */
     val autoSync: Boolean = false,
+    /**
+     * #579 this repository's own period, in minutes; 0 = the host's base period. The host's
+     * scheduler ticks at its base period and skips a repository whose own period has not
+     * elapsed since [lastSyncEpochSeconds] — so a repository may sync less often than the
+     * base, never more often (WorkManager's floor is the base).
+     */
+    val syncIntervalMinutes: Long = 0,
+    /** #579 this repository's network rule: only on an unmetered network (Wi-Fi), or on any. */
+    val syncRequireUnmetered: Boolean = true,
     val lastSyncEpochSeconds: Long = 0,
     val lastSyncSummary: String = "",
 )

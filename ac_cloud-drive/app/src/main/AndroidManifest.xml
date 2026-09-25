@@ -9,7 +9,7 @@
     <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
 
     <!-- The Files tab is a real file manager, so it needs the whole of shared storage. On
-         Android 11+ that is the special all-files access FilesBridge.requestStorageAccess()
+         Android 11+ that is the special all-files access MainActivity.requestStorageAccess()
          sends the user to; below it the legacy pair is granted at install time. maxSdkVersion
          keeps the legacy ones from being requested where they no longer mean anything. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
@@ -42,6 +42,7 @@
         android:theme="@style/Theme.CloudDrive"
         tools:targetApi="31">
 
+        <!-- #579 the Compose chrome: DriveShell over the fleet's bottom-nav island. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -52,22 +53,15 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Open an image from another app with the viewer (task #459/#460).
-                 PDFs no longer come here: they go straight to PdfReaderActivity below (#577). -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="image/*" />
-            </intent-filter>
         </activity>
 
         <!-- #458/#577: cloud-drive IS the fleet's PDF reader, and the ONE in-process PDF engine
              (#463) lives behind this activity. Any app that hands over application/pdf — cloud-mail's
              attachment chooser above all — reaches the engine through THIS filter and never carries
              a renderer of its own: the way to add a consumer is the manifest, not a copy. The
-             Files tab opens its PDF rows here too (FilesBridge.openPdf). Exported for the chooser;
-             it takes only a data URI (content:// is the sender's grant, file:// is confined to
-             places the app already browses) and nothing else from the intent. configChanges keeps
+             Files tab opens its PDF rows here too (DriveActions.openPdf, #579). Exported for the
+             chooser; it takes only a data URI (content:// is the sender's grant, file:// is confined
+             to places the app already browses) and nothing else from the intent. configChanges keeps
              a rotation from re-opening a large document: the view re-lays itself out on the same
              page instead. -->
         <activity
@@ -85,10 +79,21 @@
             </intent-filter>
         </activity>
 
+        <!-- #459/#460 / #579: the image viewer, also the "Open with" target for image/*. -->
+        <activity
+            android:name=".viewer.ImageViewerActivity"
+            android:exported="true"
+            android:theme="@style/Theme.CloudDrive">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+            </intent-filter>
+        </activity>
+
         <!-- #567 push 5: the Compose host for the four engine libraries (git manager, full
-             editor, rclone, mounts). Started by FilesBridge.openEngine for a result; never
-             exported — the page is its only caller. adjustResize so the editor's keyboard
-             does not cover the line being typed. -->
+             editor, rclone, mounts). Started by MainActivity.openEngine for a result; never
+             exported. adjustResize so the editor's keyboard does not cover the line being typed. -->
         <activity
             android:name=".EngineActivity"
             android:exported="false"

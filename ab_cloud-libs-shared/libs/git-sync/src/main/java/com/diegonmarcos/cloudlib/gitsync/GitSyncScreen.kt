@@ -648,6 +648,8 @@ private fun SettingsTab(repo: ManagedRepo, credentials: GitCredentialStore, onSa
     var rebase by remember { mutableStateOf(repo.pullRebase) }
     var syncMessage by remember { mutableStateOf(repo.syncMessage) }
     var autoSync by remember { mutableStateOf(repo.autoSync) }
+    var intervalText by remember { mutableStateOf(if (repo.syncIntervalMinutes > 0) repo.syncIntervalMinutes.toString() else "") }
+    var unmetered by remember { mutableStateOf(repo.syncRequireUnmetered) }
     var confirmRemove by remember { mutableStateOf(false) }
     val hasSecret = remember(repo.id) { credentials.hasSecret(repo.id) }
 
@@ -683,6 +685,9 @@ private fun SettingsTab(repo: ManagedRepo, credentials: GitCredentialStore, onSa
         Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = rebase, onCheckedChange = { rebase = it }); Spacer(Modifier.width(8.dp)); Text("Pull with rebase") }
         // #575 GitSync's scheduler: the host runs Sync for opted-in repositories in the background.
         Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = autoSync, onCheckedChange = { autoSync = it }); Spacer(Modifier.width(8.dp)); Text("Sync on a schedule (background)") }
+        // #579 per-repository period and network rule; the host's scheduler reads both.
+        OutlinedTextField(intervalText, { intervalText = it.filter { c -> c.isDigit() } }, label = { Text("Period in minutes (empty = the app's base period)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = unmetered, onCheckedChange = { unmetered = it }); Spacer(Modifier.width(8.dp)); Text("Only on Wi-Fi (unmetered network)") }
         OutlinedTextField(syncMessage, { syncMessage = it }, label = { Text("Sync commit message") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
@@ -692,7 +697,8 @@ private fun SettingsTab(repo: ManagedRepo, credentials: GitCredentialStore, onSa
                 if (authKind == "none") credentials.clear(repo.id)
                 onSave(repo.copy(name = name.trim().ifBlank { repo.name }, authorName = authorName.trim(), authorEmail = authorEmail.trim(),
                     authKind = authKind, authUsername = username.trim(), sshKeyPath = keyPath.trim(), pullRebase = rebase,
-                    syncMessage = syncMessage.trim().ifBlank { repo.syncMessage }, autoSync = autoSync))
+                    syncMessage = syncMessage.trim().ifBlank { repo.syncMessage }, autoSync = autoSync,
+                    syncIntervalMinutes = intervalText.toLongOrNull() ?: 0L, syncRequireUnmetered = unmetered))
                 secret = ""
             }) { Text("Save") }
         }

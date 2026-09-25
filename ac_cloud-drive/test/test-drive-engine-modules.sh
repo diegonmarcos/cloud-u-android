@@ -70,24 +70,26 @@ for required in "$BUILD_JSON" "$ROOT_GRADLE" "$APP_GRADLE" "$SHIP_SRC"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required"; exit 1; }
 done
 
-# ── discovery: engine = module with a dir whose build.gradle is Compose ──
-# One python pass emits `name|absolute-dir|namespace` per engine; every section
-# below reads that. The namespace is read out of the module's own build.gradle
-# so E3/E6 look for the screen where the module says it lives.
+# ── discovery: engine = module build.json::modules DECLARES with `engine: true` ──
+# (#579) Until the redesign every Compose library this app linked was an engine, so
+# the set was inferred as "Compose library"; libs:bottomnav — the fleet's nav island,
+# chrome not tooling — is the first Compose library here that is not one, so the role
+# is declared in build.json (modules._doc_engine_flag) and read here. E3 still holds
+# every declared engine to being Compose. One python pass emits
+# `name|absolute-dir|namespace` per engine; every section below reads that. The
+# namespace is read out of the module's own build.gradle so E3/E6 look for the
+# screen where the module says it lives. A declared engine whose dir or gradle is
+# missing is emitted with an empty namespace so E3 fails on it instead of skipping.
 ENGINES="$(python3 - "$BUILD_JSON" "$APP" <<'PYTHON'
 import json, os, re, sys
 build_json, app = sys.argv[1], sys.argv[2]
 modules = json.load(open(build_json, encoding="utf-8"))["modules"]
 for name, spec in modules.items():
-    if name.startswith("_") or not isinstance(spec, dict) or not spec.get("dir"):
+    if name.startswith("_") or not isinstance(spec, dict) or spec.get("engine") is not True:
         continue
-    mod_dir = os.path.normpath(os.path.join(app, spec["dir"]))
+    mod_dir = os.path.normpath(os.path.join(app, spec.get("dir") or name.replace(":", "/")))
     gradle = os.path.join(mod_dir, "build.gradle")
-    if not os.path.isfile(gradle):
-        continue
-    text = open(gradle, encoding="utf-8").read()
-    if not re.search(r"id\s+'org\.jetbrains\.kotlin\.plugin\.compose'", text):
-        continue
+    text = open(gradle, encoding="utf-8").read() if os.path.isfile(gradle) else ""
     ns = re.search(r"namespace\s+'([^']+)'", text)
     print("%s|%s|%s" % (name, mod_dir, ns.group(1) if ns else ""))
 PYTHON

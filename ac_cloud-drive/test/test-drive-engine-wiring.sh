@@ -1,50 +1,63 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║ #567 push 5 — the chrome reaches every engine: the page's engine ids are ║
-# ║ exactly the ids the host activity routes, each to its own library's     ║
-# ║ screen, and the hand-off comes back into the page                        ║
+# ║ #567 push 5 / #579 — the chrome reaches every engine: the ids the Compose ║
+# ║ screens ask for are exactly the ids the host activity routes, each to   ║
+# ║ its own library's screen, and the hand-off comes back into Files         ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 #
-# WHAT IT PINS — the engine-id vocabulary is DERIVED from the page (every
-# openEngine('<id>' / engineButton('<id>' call), never written here:
+# WHAT IT PINS — the engine-id vocabulary is DERIVED from the chrome (every
+# openEngine(EngineActivity.ENGINE_X / openEngine("id" call in a screen), never
+# written here:
 #
-#   W1  every id the page uses is routed by EngineActivity's `when`, and every
-#       id the activity routes is used by the page (no dead door either way).
-#   W2  each routed id calls the matching library screen — GitSyncScreen for
-#       git, FileEditorScreen for editor, RcloneScreen for rclone, MountsScreen
-#       for mounts — with the host contract (target, onOpenFile, onClose).
-#   W3  the seam exists at both ends: FilesBridge declares @JavascriptInterface
-#       openEngine and refuses an unknown id; MainActivity constructs the bridge
-#       with the engine launcher and starts EngineActivity for a result.
-#   W4  the hand-off comes back: EngineActivity returns RESULT_PATH, MainActivity
-#       evaluates window.revealPath, and the page defines it.
+#   W1  every id a screen asks for is routed by EngineActivity's `when`, and every
+#       id the activity routes is asked for by a screen (no dead door either way).
+#   W2  each routed id calls the matching library screen — GitSyncScreen for git,
+#       FileEditorScreen for editor, RcloneScreen for rclone, MountsScreen for
+#       mounts — with the host contract (target, onOpenFile, onClose).
+#   W3  the seam: DriveActions.openEngine is the ONE way a screen reaches an
+#       engine; MainActivity implements it by starting EngineActivity for a result.
+#   W4  the hand-off comes back: EngineActivity returns RESULT_PATH and MainActivity
+#       reveals it in the active Files pane.
 #   W5  the activity is in the manifest (not exported) and the app applies the
-#       Compose compiler and links activity-compose — the host cannot setContent
-#       without them.
-#   W6  build-time declarations reach the engines: EngineActivity calls the
-#       rclone job store's and the mount store's declare() from the baked data.
+#       Compose compiler and links activity-compose.
+#   W6  build-time declarations reach the engines: EngineActivity calls the rclone
+#       job store's and the mount store's declare() from the baked data, and the
+#       chrome calls declareFromBuild at launch.
 #
 # OWN-SOURCE ONLY. python3 and grep only.
 set -uo pipefail
 
 ROOT="${CLOUD_ANDROID_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && while [ "$PWD" != "/" ] && [ ! -e "$PWD/.git" ]; do cd ..; done; printf '%s' "$PWD")}"
 APP="$ROOT/ac_cloud-drive"
-PAGE="$APP/app/src/main/assets/drive.html"
-BRIDGE="$APP/app/src/main/java/com/diegonmarcos/clouddrive/FilesBridge.kt"
-MAIN="$APP/app/src/main/java/com/diegonmarcos/clouddrive/MainActivity.kt"
-HOST="$APP/app/src/main/java/com/diegonmarcos/clouddrive/EngineActivity.kt"
+SRC="$APP/app/src/main/java/com/diegonmarcos/clouddrive"
+MAIN="$SRC/MainActivity.kt"
+HOST="$SRC/EngineActivity.kt"
+ACTIONS="$SRC/DriveActions.kt"
 MANIFEST="$APP/app/src/main/AndroidManifest.xml"
 GRADLE="$APP/app/build.gradle"
 
 FAILURES=0
 pass() { echo "  PASS  $*"; }
 fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
-for required in "$PAGE" "$BRIDGE" "$MAIN" "$HOST" "$MANIFEST" "$GRADLE"; do
+for required in "$MAIN" "$HOST" "$ACTIONS" "$MANIFEST" "$GRADLE"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required"; exit 1; }
 done
 
-echo "── W1 the engine-id vocabulary, derived from the page, matches the host's routes ──"
-PAGE_IDS="$(grep -oE "(openEngine|engineButton)\('[a-z]+'" "$PAGE" | sed -E "s/.*\('//; s/'//" | sort -u | tr '\n' ' ')"
+echo "── W1 the engine-id vocabulary, derived from the screens, matches the host's routes ──"
+SCREEN_IDS="$(python3 - "$SRC" "$HOST" <<'PYTHON'
+import os, re, sys
+src, host = sys.argv[1], sys.argv[2]
+consts = dict(re.findall(r'const val (ENGINE_\w+) = "([a-z]+)"', open(host, encoding="utf-8").read()))
+ids = set()
+for d, _, fs in os.walk(src):
+    for f in fs:
+        if not f.endswith(".kt") or f == "EngineActivity.kt": continue
+        t = open(os.path.join(d, f), encoding="utf-8").read()
+        ids |= {consts[c] for c in re.findall(r'openEngine\(EngineActivity\.(ENGINE_\w+)', t) if c in consts}
+        ids |= set(re.findall(r'openEngine\("([a-z]+)"', t))
+print(" ".join(sorted(ids)))
+PYTHON
+)"
 HOST_IDS="$(python3 - "$HOST" <<'PYTHON'
 import re, sys
 text = open(sys.argv[1], encoding="utf-8").read()
@@ -54,12 +67,12 @@ used = re.findall(r"^\s*(ENGINE_\w+) -> (\w+Screen)\(target, onOpenFile, onClose
 print(" ".join(sorted(consts[c] for c, _ in used if c in consts)))
 PYTHON
 )"
-[ -n "$PAGE_IDS" ] && pass "page uses: $PAGE_IDS" || fail "the page calls no engine"
+[ -n "$SCREEN_IDS" ] && pass "screens ask for: $SCREEN_IDS" || fail "no screen asks for an engine"
 [ -n "$HOST_IDS" ] && pass "host routes: $HOST_IDS" || fail "EngineActivity routes no engine"
-if [ "$(printf '%s\n' $PAGE_IDS | sort -u | tr '\n' ' ')" = "$(printf '%s\n' $HOST_IDS | sort -u | tr '\n' ' ')" ]; then
-    pass "page ids == host routes"
+if [ "$(printf '%s\n' $SCREEN_IDS | sort -u | tr '\n' ' ')" = "$(printf '%s\n' $HOST_IDS | sort -u | tr '\n' ' ')" ]; then
+    pass "screen ids == host routes"
 else
-    fail "page ids ($PAGE_IDS) differ from host routes ($HOST_IDS)"
+    fail "screen ids ($SCREEN_IDS) differ from host routes ($HOST_IDS)"
 fi
 
 echo "── W2 each route lands on its own library's screen ──"
@@ -79,16 +92,15 @@ for c, screen in re.findall(r"^\s*(ENGINE_\w+) -> (\w+Screen)\(target, onOpenFil
 sys.exit(1 if bad else 0)
 PYTHON
 
-echo "── W3 the seam at both ends ──"
-if grep -qE "@JavascriptInterface" "$BRIDGE" && grep -qE "fun openEngine\(engine: String, target: String\): String" "$BRIDGE"; then pass "bridge declares openEngine"; else fail "bridge lacks @JavascriptInterface openEngine(engine, target)"; fi
-if grep -qE "if \(engine !in known\) return failure\(" "$BRIDGE"; then pass "bridge refuses an unknown engine id"; else fail "bridge does not refuse an unknown engine id"; fi
-if grep -qE "launchEngine\(engine, target, url\)" "$BRIDGE"; then pass "bridge hands off to the Activity-owned launcher (engine, target, url — #575)"; else fail "openEngine does not call launchEngine(engine, target, url)"; fi
-if grep -qE "launchEngine = \{ engine, target, url -> engineLauncher\.launch\(EngineActivity\.intent\(this, engine, target, url\)\) \}" "$MAIN"; then pass "MainActivity starts EngineActivity for a result"; else fail "MainActivity does not construct the bridge with the engine launcher"; fi
+echo "── W3 the seam ──"
+if grep -qE 'fun openEngine\(engine: String, target: String, url: String = ""\)' "$ACTIONS"; then pass "DriveActions.openEngine(engine, target, url) is the one door"; else fail "DriveActions lacks openEngine(engine, target, url)"; fi
+if grep -qE 'override fun openEngine\(engine: String, target: String, url: String\)' "$MAIN" && grep -qE 'engineLauncher\.launch\(EngineActivity\.intent\(this, engine, target, url\)\)' "$MAIN"; then pass "MainActivity starts EngineActivity for a result with (engine, target, url)"; else fail "MainActivity does not start EngineActivity through the launcher"; fi
+OTHER="$(grep -rlE 'EngineActivity::class\.java|EngineActivity\.intent\(' "$SRC" | grep -vE 'MainActivity\.kt|EngineActivity\.kt' || true)"
+if [ -z "$OTHER" ]; then pass "no screen starts EngineActivity itself"; else fail "a screen bypasses DriveActions: $OTHER"; fi
 
-echo "── W4 the hand-off comes back into the page ──"
+echo "── W4 the hand-off comes back into Files ──"
 if grep -qE "putExtra\(RESULT_PATH, path\)" "$HOST"; then pass "EngineActivity returns RESULT_PATH"; else fail "EngineActivity does not return the opened path"; fi
-if grep -qE "window\.revealPath && window\.revealPath\(" "$MAIN"; then pass "MainActivity evaluates window.revealPath"; else fail "MainActivity does not call the page's revealPath"; fi
-if grep -qE "^window\.revealPath = function" "$PAGE"; then pass "page defines window.revealPath"; else fail "page does not define window.revealPath"; fi
+if grep -qE 'getStringExtra\(EngineActivity\.RESULT_PATH\)' "$MAIN" && grep -qE 'filesController\?\.reveal\(path\)' "$MAIN" && grep -qE 'fun reveal\(path: String\)' "$SRC/files/FilesController.kt"; then pass "MainActivity reveals the returned path in the active Files pane"; else fail "the returned path is not revealed"; fi
 
 echo "── W5 manifest and toolchain ──"
 python3 - "$MANIFEST" <<'PYTHON' && pass "EngineActivity declared, not exported" || fail "EngineActivity not declared (or exported) in the manifest"
@@ -104,6 +116,7 @@ if grep -qE "androidx\.activity:activity-compose" "$GRADLE"; then pass "activity
 echo "── W6 build-time declarations reach the engines ──"
 if grep -qE "RcloneJobStore\(.*\)\.declare\(" "$HOST" && grep -qE "BuildConfig\.RCLONE_JOBS_B64" "$HOST"; then pass "declared rclone jobs from RCLONE_JOBS_B64"; else fail "EngineActivity does not declare rclone jobs from the baked data"; fi
 if grep -qE "MountStore\(.*\)\.declare\(" "$HOST" && grep -qE "BuildConfig\.CONNECTIONS_B64" "$HOST"; then pass "declared mounts from CONNECTIONS_B64"; else fail "EngineActivity does not declare mounts from the baked data"; fi
+if grep -qE '^\s*EngineActivity\.declareFromBuild\(this\)' "$MAIN"; then pass "the chrome declares at launch, so the Sync cards see the declared remotes and mounts before any engine opens"; else fail "MainActivity does not call declareFromBuild"; fi
 
 echo
 if [ "$FAILURES" -eq 0 ]; then echo "test-drive-engine-wiring: all checks passed"; else echo "test-drive-engine-wiring: $FAILURES check(s) FAILED"; exit 1; fi

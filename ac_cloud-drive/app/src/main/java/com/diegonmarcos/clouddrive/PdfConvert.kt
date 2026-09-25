@@ -5,7 +5,7 @@ package com.diegonmarcos.clouddrive
  * onto the pdfium engine in #577). No Android type appears here on purpose: the JVM unit test
  * (PdfConvertTest) runs these on the CI runner, so what the converter writes is executed, not
  * argued. Text extraction is the engine's job ([PdfEngine.pageText]); writing the file is
- * FilesBridge's ([FilesBridge.convertPdf], through the editor's atomic save path).
+ * [PdfConversion]'s (through FileOps.writeText, the atomic save path; #579).
  *
  * docx / xlsx / odt are NOT here and are not pretended: producing them is layout reconstruction,
  * a different feature that needs the fleet converter service. The Files tab lists them disabled,

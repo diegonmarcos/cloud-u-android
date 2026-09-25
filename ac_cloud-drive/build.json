@@ -1,6 +1,6 @@
 {
   "name": "cloud-drive",
-  "description": "Diego's Cloud Drive — standalone Android storage app, lifted out of the SuperApp's Cloud▸Apps▸Drive pages so the phone's storage surface is its own icon. WebView UI with a five-tab shell (Files, Apps, Sync, Backups, Configs): Files is a FULL native local file manager over shared storage (browse, sort, rename, move, copy, delete, share, open-with) plus a real text EDITOR that reads a file, edits it and writes it back through FilesBridge.writeText; Apps is a grid of icon links out to the fleet's data apps, resolved from the constellation fleet manifest (task #437); Sync hosts the transfer surfaces — three subpages driven entirely by build-time data (task #457c): Rclone (the fleet's rclone remotes and declared rclone operations, from data/drive-remotes.json and data/drive-rclone-jobs.json), Mounted (the fleet mesh mounts — the whole drive-connections.json catalogue rendered as one declaration, no second mounts list to keep in step) and Git (the curated repository family from data/drive-git-repos.json, each one cloned into and opened from the ONE shared repo store by the native libs:git-sync manager, #567/#575); Backups covers on-device backup sets — the declared mirror (rsync) jobs it can run, above the fleet repositories that receive them; Configs holds the app's own settings, persisted. Dark is the default theme, set at the declaration (#336, #337). Build via Nix devShell, one APK out.",
+  "description": "Diego's Cloud Drive — standalone Android storage app, lifted out of the SuperApp's Cloud▸Apps▸Drive pages so the phone's storage surface is its own icon. #579 NATIVE COMPOSE CHROME (the WebView page and its string-named bridge are gone): a five-tab shell drawn by the fleet's bottom-nav island (libs:bottomnav) — Files, Apps, Sync, Backups, Configs — every tab, sub-page, place, filter and icon name declared in ui.* below and baked through BuildConfig. Files is a FULL X-plore-class manager over shared storage: two real panes with their own tabs, collapsible tree view, archives browsed as folders, copy/move between panes with live progress, multi-select action bar, bookmarks, breadcrumbs, sort/filter, storage bar, the shared store (storage.shared_root) first. Sync ▸ Git is GitSync-class: one card per managed repository with live branch / ahead-behind / dirty / conflicts and the last sync, one-tap sync with stepped progress, per-repo period / network rule / auth, a persisted sync history, conflicts surfaced. Sync ▸ Rclone and ▸ Mounts use the same card language over libs:rclone and libs:mounts; Apps is a grid of the fleet's data apps (data/drive-apps.json resolved against the constellation manifest, #437); Backups runs the declared mirror (rsync) jobs with cancellable progress; Configs holds the app's settings. The four engine libraries (#567) and the ONE shared store (#575) are unchanged underneath. Dark is the default theme, set at the declaration (#336, #337). Design: a0_docs/eng-specs/cloud-drive-redesign.md. The PDF reader is the #577 native pdfium engine (build.json::pdf), the fleet's one in-process renderer, opened from the Files tab and from any app's Open-with. Build via Nix devShell, one APK out.",
   "_doc_rsync": "TASK #330 named Rsync without naming a home. It lives INSIDE the Backups tab, because a one-way folder copy with rsync's size-plus-mtime quick check IS the 'on-device backup set' that tab was already declared to hold, and a fifth tab for one list of jobs would have split the same subject across two screens. The jobs are declared in data/drive-mirror-jobs.json and executed by FilesBridge.mirror(). EVERY DESTINATION IS ON-DEVICE and no fleet host is addressed: see that file's _doc_fleet_destination for why (an APK cannot hold the credential), and rep-N2.md for what that defers.",
   "category": "android",
   "build": {
@@ -39,6 +39,232 @@
       "_doc": "Scheduled background sync of the repositories the user opted in (ManagedRepo.autoSync), the GitSync app's scheduler realised over WorkManager (GitSyncWorker.kt). interval_minutes is the period (WorkManager's floor is 15); require_unmetered_network keeps a push off mobile data. Same shape and same reason as release.auto_update: a build.json edit reaches installed phones through ExistingPeriodicWorkPolicy.UPDATE on the next launch.",
       "interval_minutes": 60,
       "require_unmetered_network": true
+    }
+  },
+  "ui": {
+    "_doc": "#579 THE STRUCTURE OF THE CHROME, declared. Kotlin holds no tab list, no caption, no place list and no icon name: DriveShell renders ui.tabs, SyncScreen renders ui.sync.pages, the Files Places sheet renders ui.files.places, the Files filter pills render ui.files.filters. Every `icon` here is a name IconCatalog.kt resolves to a Material glyph; a name it does not know renders ui.icons._default and test/test-drive-shell.sh fails the build. Baked by app/build.gradle as UI_TABS_B64 / UI_SYNC_B64 / UI_FILES_B64 / UI_ICON_DEFAULT and decoded ONCE by Declarations.kt.",
+    "tabs": [
+      {
+        "id": "files",
+        "label": "Files",
+        "icon": "folder"
+      },
+      {
+        "id": "apps",
+        "label": "Apps",
+        "icon": "apps"
+      },
+      {
+        "id": "sync",
+        "label": "Sync",
+        "icon": "sync"
+      },
+      {
+        "id": "backups",
+        "label": "Backups",
+        "icon": "backup"
+      },
+      {
+        "id": "configs",
+        "label": "Configs",
+        "icon": "settings"
+      }
+    ],
+    "default_tab": "files",
+    "sync": {
+      "_doc": "The strip inside the Sync island. git_periods_minutes are the per-repository period choices the repo Settings sheet offers (ManagedRepo.syncIntervalMinutes); 0 is never offered here because 0 means 'the base period storage.git_sync.interval_minutes'. Every value is at or above WorkManager's 15-minute floor.",
+      "pages": [
+        {
+          "id": "git",
+          "label": "Git",
+          "icon": "commit"
+        },
+        {
+          "id": "rclone",
+          "label": "Rclone",
+          "icon": "cloud_sync"
+        },
+        {
+          "id": "mounts",
+          "label": "Mounts",
+          "icon": "lan"
+        }
+      ],
+      "git_periods_minutes": [
+        15,
+        30,
+        60,
+        180,
+        360
+      ]
+    },
+    "files": {
+      "_doc_places": "The Places sheet, in order. kind: shared_root = storage.shared_root under shared storage (ALWAYS first, hero); external_root = shared storage itself; public_dir = Environment.DIRECTORY_<dir> under it; external_path = a relative path under it. A place whose folder does not exist on the device is not offered. Removable volumes, the app's slice on them and the SAF grant are discovered at runtime, not declared.",
+      "places": [
+        {
+          "id": "store",
+          "label": "Cloud Drive",
+          "icon": "cloud",
+          "kind": "shared_root",
+          "hero": true
+        },
+        {
+          "id": "internal",
+          "label": "Internal storage",
+          "icon": "smartphone",
+          "kind": "external_root"
+        },
+        {
+          "id": "downloads",
+          "label": "Downloads",
+          "icon": "download",
+          "kind": "public_dir",
+          "dir": "DOWNLOADS"
+        },
+        {
+          "id": "documents",
+          "label": "Documents",
+          "icon": "description",
+          "kind": "public_dir",
+          "dir": "DOCUMENTS"
+        },
+        {
+          "id": "pictures",
+          "label": "Pictures",
+          "icon": "image",
+          "kind": "public_dir",
+          "dir": "PICTURES"
+        },
+        {
+          "id": "camera",
+          "label": "Camera",
+          "icon": "photo_camera",
+          "kind": "external_path",
+          "path": "DCIM/Camera"
+        },
+        {
+          "id": "movies",
+          "label": "Movies",
+          "icon": "movie",
+          "kind": "public_dir",
+          "dir": "MOVIES"
+        },
+        {
+          "id": "music",
+          "label": "Music",
+          "icon": "music_note",
+          "kind": "public_dir",
+          "dir": "MUSIC"
+        }
+      ],
+      "sort_keys": [
+        "name",
+        "size",
+        "modified",
+        "type"
+      ],
+      "default_sort": "name",
+      "_doc_filters": "The filter pills of a pane. An entry matches by mime (exact), mime_prefix, or extensions (lower-case, no dot); `all` has no rule and matches everything. Folders always pass a filter so the tree stays walkable.",
+      "filters": [
+        {
+          "id": "all",
+          "label": "All",
+          "icon": "list"
+        },
+        {
+          "id": "folders",
+          "label": "Folders",
+          "icon": "folder",
+          "mime": "inode/directory"
+        },
+        {
+          "id": "images",
+          "label": "Images",
+          "icon": "image",
+          "mime_prefix": "image/"
+        },
+        {
+          "id": "video",
+          "label": "Video",
+          "icon": "movie",
+          "mime_prefix": "video/"
+        },
+        {
+          "id": "audio",
+          "label": "Audio",
+          "icon": "music_note",
+          "mime_prefix": "audio/"
+        },
+        {
+          "id": "documents",
+          "label": "Docs",
+          "icon": "description",
+          "extensions": [
+            "pdf",
+            "txt",
+            "md",
+            "doc",
+            "docx",
+            "xls",
+            "xlsx",
+            "odt",
+            "ods",
+            "odp",
+            "csv",
+            "json",
+            "xml",
+            "yaml",
+            "yml",
+            "rtf",
+            "epub"
+          ]
+        },
+        {
+          "id": "archives",
+          "label": "Archives",
+          "icon": "archive",
+          "extensions": [
+            "zip"
+          ]
+        }
+      ],
+      "archive_extensions": [
+        "zip"
+      ],
+      "text_extensions": [
+        "txt",
+        "md",
+        "json",
+        "xml",
+        "yaml",
+        "yml",
+        "sh",
+        "kt",
+        "java",
+        "py",
+        "js",
+        "ts",
+        "css",
+        "html",
+        "htm",
+        "csv",
+        "ini",
+        "conf",
+        "cfg",
+        "toml",
+        "gradle",
+        "properties",
+        "nix",
+        "log",
+        "gitignore",
+        "env"
+      ],
+      "default_dual_pane": true,
+      "tabs_per_pane_max": 6
+    },
+    "icons": {
+      "_doc": "The glyph an unknown icon name renders. IconCatalog knows this name too.",
+      "_default": "circle"
     }
   },
   "pdf": {
@@ -84,7 +310,8 @@
         "libs:git-sync",
         "libs:file-editor",
         "libs:rclone",
-        "libs:mounts"
+        "libs:mounts",
+        "libs:bottomnav"
       ]
     },
     "libs:core": {
@@ -113,24 +340,34 @@
     "_doc_engines": "#567 THE FOUR ENGINE LIBRARIES. The owner's vision for this application: the main APK is CHROME, and every tooling is a full engine in its OWN library — libs:file-editor (the full text editor), libs:git-sync (the native git manager that finishes the #437/#448 GitSync story: status, stage/unstage, commit, push/pull, branch list, log, diff, remotes, conflicts — GitSync's UX, over JGit), libs:rclone (remotes config + declared/ad-hoc sync jobs with progress + remote browsing, over a sha256-pinned static rclone binary) and libs:mounts (ftp/sftp/ssh/webdav connections with browse-through). Each lives on the shared shelf and is shared BY REFERENCE like every other module here, so lib-apks also ships each one as cloud-lib-{name}. THE MODULE BOUNDARY IS LAW: a library imports nothing from any application (test/test-drive-engine-modules.sh fails on the first lib -> app import). Compose only (#565): each exports ONE @Composable screen that this app's EngineActivity hosts (push 5). Landed as independently green pushes — (1) skeletons + declarations, (2) git-sync, (3) file-editor, (4) rclone + mounts, (5) drive wiring — so a module on main is never half-wired: until its engine push lands, a skeleton renders its own title and nothing else, and the app does not route to it.",
     "libs:git-sync": {
       "_doc_dir": "Engine library #567 push 2: the native git manager. Lives on the shelf beside the vendored Flutter GitSync tree (libs/gitsync, GPL-3.0) whose UI could not be embedded; this module is the Kotlin/Compose realisation of that UX over JGit.",
+      "engine": true,
       "dir": "../ab_cloud-libs-shared/libs/git-sync",
       "type": "library"
     },
     "libs:file-editor": {
       "_doc_dir": "Engine library #567 push 3: the full text editor that replaces the in-page textarea editor of #302 for anything beyond a quick edit.",
+      "engine": true,
       "dir": "../ab_cloud-libs-shared/libs/file-editor",
       "type": "library"
     },
     "libs:rclone": {
       "_doc_dir": "Engine library #567 push 4: rclone remotes + jobs + progress. The declared jobs stay in this app's data/drive-rclone-jobs.json and data/drive-remotes.json; the library receives them as models, never reads them itself.",
+      "engine": true,
       "dir": "../ab_cloud-libs-shared/libs/rclone",
       "type": "library"
     },
     "libs:mounts": {
       "_doc_dir": "Engine library #567 push 4: ftp / sftp / ssh / webdav mounts with browse-through. Declared fleet connections stay in data/drive-connections.json; the library receives them as models.",
+      "engine": true,
       "dir": "../ab_cloud-libs-shared/libs/mounts",
       "type": "library"
-    }
+    },
+    "libs:bottomnav": {
+      "_doc_dir": "#579 THE fleet bottom-nav island (#565): the five tabs are drawn by the same Compose declaration superapp, mail, wallet and me render — one geometry, one pill, one collapse rule. Shared BY REFERENCE like every other module here.",
+      "dir": "../ab_cloud-libs-shared/libs/bottomnav",
+      "type": "library"
+    },
+    "_doc_engine_flag": "#579 `engine: true` marks a module as one of the FOUR ENGINE LIBRARIES (the host contract: one @Composable <X>Screen(target, onOpenFile, onClose), a title string, the module boundary). Until #579 every Compose library this app linked WAS an engine, so test-drive-engine-modules.sh discovered engines as 'Compose library'; libs:bottomnav (the fleet's nav island, chrome not tooling) is the first Compose library here that is not one, so the role is now declared, not inferred."
   },
   "tests": {
     "_doc": "Read by 1_cicd/dist/scripts/cloud-android-test-engine.sh, which the ship workflow runs before it builds. Until #330 this block was absent and test/ did not exist, so the shell phase printed COVERAGE-GAP and exited 0: the only question this application's pipeline asked was whether Gradle exited 0, and Gradle cannot see a WebView calling a Kotlin class by string name.",
@@ -143,7 +380,7 @@
       "_doc_requires": "A tester that shells out to a tool which is not installed does not fail — it returns a verdict from the tool's ABSENCE. Listing them here makes a missing one fatal at the engine's preflight instead of a green tick over assertions that never ran."
     },
     "unit": {
-      "_doc": "Runs gradle test (build.sh test — the app's documented 'gradle test (JVM unit tests)' step) on every ship. The module graph includes :libs:ml-l-image-mlkit, whose typed-payload parser suite lives in this app's unit phase on purpose: the CLI's unit step would otherwise print COVERAGE-GAP and never invoke gradle, leaving the new library's tests compiled-but-never-run. #577 adds app/src/test: PdfConvertTest and PdfLayoutTest run the PDF converter and the reader's page layout as real code on the CI runner.",
+      "_doc": "Runs gradle test (build.sh test — the app's documented 'gradle test (JVM unit tests)' step) on every ship. #579 the app module now carries its own JVM suite (app/src/test: the Files state reducers, the archive path model, the transfer/rename plans, the Zip-Slip guard, the sync history and the per-repo schedule decision, the declarations, and a Robolectric Compose layout-tree test of the shell and the Files pane). The module graph also includes :libs:ml-l-image-mlkit, whose typed-payload parser suite lives in this app's unit phase on purpose, and the four engine libraries' suites. #577 adds PdfConvertTest and PdfLayoutTest, which run the PDF converter and the reader's page layout as real code on the CI runner.",
       "task": "test",
       "enabled": true
     }

@@ -33,18 +33,20 @@ VIEW="$SRC/PdfReaderView.kt"
 ACTIVITY="$SRC/PdfReaderActivity.kt"
 CONVERT="$SRC/PdfConvert.kt"
 LAYOUT="$SRC/PdfLayout.kt"
-BRIDGE="$SRC/FilesBridge.kt"
+CONVERSION="$SRC/PdfConversion.kt"
+FILES="$SRC/files/FilesScreen.kt"
+MAIN="$SRC/MainActivity.kt"
 MANIFEST="$APP/app/src/main/AndroidManifest.xml"
 GRADLE="$APP/app/build.gradle"
 BUILD_JSON="$APP/build.json"
-PAGE="$APP/app/src/main/assets/drive.html"
+ASSETS="$APP/app/src/main/assets"
 VENDOR="$APP/app/src/main/assets/vendor"
 
 FAILURES=0
 pass() { printf '  PASS  %s\n' "$1"; }
 fail() { printf '  FAIL  %s\n' "$1"; FAILURES=$((FAILURES + 1)); }
 
-for required in "$ENGINE" "$VIEW" "$ACTIVITY" "$CONVERT" "$LAYOUT" "$BRIDGE" "$MANIFEST" "$GRADLE" "$BUILD_JSON" "$PAGE" \
+for required in "$ENGINE" "$VIEW" "$ACTIVITY" "$CONVERT" "$LAYOUT" "$CONVERSION" "$FILES" "$MAIN" "$MANIFEST" "$GRADLE" "$BUILD_JSON" \
                 "$TESTSRC/PdfConvertTest.kt" "$TESTSRC/PdfLayoutTest.kt"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required"; exit 1; }
 done
@@ -94,11 +96,9 @@ fi
 for old in pdf.min.js pdf.worker.min.js VENDORED.md APACHE-LICENSE.txt; do
     if [ -e "$VENDOR/$old" ]; then fail "the old pdf.js reader's $old is still in assets/vendor"; else pass "assets/vendor/$old is gone (pdf.js no longer rides in the APK)"; fi
 done
-lacks "$PAGE" "pdfjsLib" "drive.html no longer references pdf.js"
-lacks "$PAGE" "vendor/pdf" "drive.html loads no vendored PDF script"
-lacks "$BRIDGE" "PDF_READER_BYTE_CEILING" "the 24 MB base64 ceiling is gone — nothing crosses the bridge but a path"
-lacks "$BRIDGE" "fun readPdf(" "FilesBridge no longer carries a PDF as base64 (readPdf removed)"
-lacks "$BRIDGE" "fun takeIncomingPdf(" "FilesBridge no longer parks hand-offs for the page (takeIncomingPdf removed)"
+# #579: the WebView page is gone altogether; no asset and no Kotlin may bring pdf.js or a base64 carrier back.
+if [ -d "$ASSETS" ] && grep -rqE 'pdfjsLib|vendor/pdf' "$ASSETS"; then fail "an asset references pdf.js again"; else pass "no asset references pdf.js (the WebView page is gone, #579)"; fi
+if grep -rqE 'PDF_READER_BYTE_CEILING|fun readPdf\(|fun takeIncomingPdf\(' "$SRC"; then fail "a base64 PDF carrier is back in the Kotlin"; else pass "no base64 PDF carrier anywhere in the Kotlin — a PDF is a path or a URI, never a string"; fi
 
 echo "── P3 fast open on large files: a descriptor, never the file in memory ──"
 has "$ENGINE" "core.newDocument(pfd, password)" "the engine opens the document from a file descriptor"
@@ -177,17 +177,18 @@ has "$ACTIVITY" "getSystemService(Context.PRINT_SERVICE)" "the print service is 
 has "$ACTIVITY" "callback?.onWriteFinished" "print writes the original PDF bytes"
 
 echo "── P9 conversion still works against the new engine ──"
-has "$BRIDGE" "fun convertPdf(" "FilesBridge.convertPdf exists"
-has "$BRIDGE" "engine.pageText(" "conversion reads its text from the SAME engine as the reader"
-has "$BRIDGE" "writeText(File(directory, name)" "conversion writes through the editor's atomic save path (no second writer)"
-has "$ACTIVITY" "convertPdf(path, target)" "the reader's Convert menu calls the same function the Files tab does"
-has "$PAGE" "Bridge.call('convertPdf'" "the Files tab converts through the bridge"
-python3 - "$BRIDGE" "$CONVERT" <<'PYTHON'
+has "$CONVERSION" "fun convertPdf(" "PdfConversion.convertPdf exists — the ONE conversion path (#579)"
+has "$CONVERSION" "engine.pageText(" "conversion reads its text from the SAME engine as the reader"
+has "$CONVERSION" "writeText(File(directory, name)" "conversion writes through the core's atomic save path (no second writer)"
+has "$ACTIVITY" "PdfConversion.convertPdf(" "the reader's Convert menu calls the same function the Files tab does"
+has "$FILES" "EntryAction.CONVERT_PDF" "the Files tab offers Convert on a PDF row"
+has "$SRC/files/FilesController.kt" "PdfConversion.convertPdf(" "the Files tab converts through the same path"
+python3 - "$CONVERSION" "$CONVERT" <<'PYTHON'
 import re, sys
 bridge = open(sys.argv[1], encoding="utf-8").read()
 convert = open(sys.argv[2], encoding="utf-8").read()
 start = bridge.index("fun convertPdf(")
-body = bridge[start:bridge.index("private companion object", start)]
+body = bridge[start:]
 # The scan refusal is control flow, not opinion: the no-text guard must run before any builder or writer.
 guard = body.index("hasNoText(pages)")
 build = body.index("PdfConvert.build(")
@@ -249,8 +250,8 @@ sys.exit(1 if failed else 0)
 PYTHON
 [ $? -eq 0 ] || FAILURES=$((FAILURES + 1))
 has "$ACTIVITY" "isReadablePlace" "a file:// hand-off is confined to places the app already browses"
-has "$BRIDGE" "PdfReaderActivity.intent(" "the Files tab opens a PDF row in the same reader"
-has "$PAGE" "Bridge.call('openPdf'" "the page asks the bridge to open it"
+has "$MAIN" "PdfReaderActivity.intent(" "the chrome opens a PDF row in the same reader (DriveActions.openPdf)"
+has "$FILES" "actions.openPdf(" "the Files tab asks for the reader on a PDF row"
 
 echo "── P11 the executable tests exist and are wired ──"
 python3 - "$TESTSRC" "$BUILD_JSON" <<'PYTHON'

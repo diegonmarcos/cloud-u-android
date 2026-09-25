@@ -1,133 +1,192 @@
 package com.diegonmarcos.clouddrive
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.graphics.Insets
-import androidx.core.view.ViewCompat
+import android.provider.DocumentsContract
+import android.provider.Settings
+import android.webkit.MimeTypeMap
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.core.content.FileProvider
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.diegonmarcos.clouddrive.apps.AppsScreen
+import com.diegonmarcos.clouddrive.backups.BackupsScreen
+import com.diegonmarcos.clouddrive.backups.MirrorRunner
+import com.diegonmarcos.clouddrive.configs.ConfigsScreen
+import com.diegonmarcos.clouddrive.files.FilesController
+import com.diegonmarcos.clouddrive.files.FilesScreen
+import com.diegonmarcos.clouddrive.files.FilesUiState
+import com.diegonmarcos.clouddrive.files.Places
+import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
+import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
+import com.diegonmarcos.clouddrive.sync.SyncScreen
+import com.diegonmarcos.clouddrive.ui.DriveShell
+import com.diegonmarcos.clouddrive.ui.DriveTheme
+import com.diegonmarcos.clouddrive.ui.EmptyState
+import com.diegonmarcos.clouddrive.ui.IconCatalog
+import com.diegonmarcos.clouddrive.viewer.ImageViewerActivity
 import com.diegonmarcos.superapp.updater.Updater
+import java.io.File
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalContext
 
-class MainActivity : AppCompatActivity() {
+/**
+ * #579 the chrome's host: a Compose activity that renders [DriveShell] and implements
+ * [DriveActions] for the screens — the result launchers (SAF tree grant, engines), the
+ * FileProvider hand-offs, the system intents. Nothing here draws; nothing in a screen
+ * builds an Intent.
+ */
+class MainActivity : ComponentActivity(), DriveActions {
 
-    /**
-     * The last measured inset script. Kept because the window hands us insets
-     * before the page exists, so the same script has to be replayed once
-     * drive.html has finished loading.
-     */
-    private var insetScript = ""
+    private lateinit var prefs: DrivePrefs
+    private var filesController: FilesController? = null
 
-    /**
-     * The bridge the page talks to. Kept as a field rather than constructed inline
-     * because the SAF tree-grant result arrives OUTSIDE the WebView, on the Activity's
-     * result channel (#457a), and has to reach the SAME instance the page holds.
-     */
-    private lateinit var filesBridge: FilesBridge
+    private val openTreeLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri: Uri? -> persistTreeGrant(uri) }
 
-    /**
-     * The SAF "open a document tree" launcher. The system picker returns a content://
-     * tree URI when the user grants a whole volume; persisting that grant (and the
-     * permission Android ties to it) is what makes an SD card reachable enough to be a
-     * place on the next launch. The result contract needs an Activity, so it lives here
-     * and the callback hands the URI to the bridge instance above.
-     */
-    private val openTreeLauncher = registerForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
-    ) { uri: android.net.Uri? ->
-        filesBridge.persistTreeGrant(uri)
-    }
-
-    /** The WebView, kept for the engine hand-back below. */
-    private lateinit var webView: WebView
-
-    /**
-     * #567 push 5: the engines run in EngineActivity (Compose) and come back here. When an
-     * engine hands a file over — the editor's "reveal", a download from a mount or a remote —
-     * the page is told to reveal it, through the one JS entry point drive.html exports for it.
-     */
-    private val engineLauncher = registerForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
-    ) { result ->
+    /** The engines come back with a path to reveal in the active Files pane (#567 push 5). */
+    private val engineLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val path = result.data?.getStringExtra(EngineActivity.RESULT_PATH) ?: return@registerForActivityResult
-        val quoted = org.json.JSONObject.quote(path)
-        webView.evaluateJavascript("window.revealPath && window.revealPath($quoted)", null)
+        filesController?.reveal(path)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // drive.html paints a full-bleed shell and reserves room for the system
-        // bars through the --sat/--sab/--sal/--sar custom properties. Chromium on
-        // Android only ever reports the display cutout through
-        // env(safe-area-inset-*), never the status bar, so those properties
-        // resolved to 0 and the sticky panel header drew underneath the clock and
-        // the battery icon. Measure the real insets here and publish them as the
-        // very properties the stylesheet already reads.
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowCompat.getInsetsController(window, window.decorView).apply {
-            // The page background is dark top and bottom (the fleet-wide default,
-            // set in values/themes.xml and drive.html), so the system bar glyphs
-            // have to be drawn light or they vanish into it.
+            // Dark page top and bottom (Theme.CloudDrive, #336/#337) → light system-bar glyphs.
             isAppearanceLightStatusBars = false
             isAppearanceLightNavigationBars = false
         }
-
-        filesBridge = FilesBridge(
-            this,
-            launchTreeGrant = { openTreeLauncher.launch(null) },
-            launchEngine = { engine, target, url -> engineLauncher.launch(EngineActivity.intent(this, engine, target, url)) },
-        )
-
-        webView = WebView(this)
-        setContentView(webView)
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView, url: String) {
-                publishInsets(view)
-            }
-        }
-        webView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            cacheMode = WebSettings.LOAD_DEFAULT
-            // The image viewer renders <img src="file:///storage/..."> inside a
-            // page that itself came from file:///android_asset. Chromium forbids
-            // that cross-file read by default; the page is our own shipped HTML
-            // and every path it renders was resolved by FilesBridge, so the
-            // setting is safe and the viewer is impossible without it.
-            allowFileAccessFromFileURLs = true
-            allowFileAccess = true
-        }
-        ViewCompat.setOnApplyWindowInsetsListener(webView) { view, windowInsets ->
-            insetScript = insetScriptFor(
-                windowInsets.getInsets(
-                    WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
-                )
-            )
-            publishInsets(view as WebView)
-            windowInsets
-        }
-        webView.addJavascriptInterface(filesBridge, "FilesBridge")
-        webView.loadUrl("file:///android_asset/drive.html")
+        prefs = DrivePrefs(this)
+        EngineActivity.declareFromBuild(this)
+        setContent { DriveTheme { Root() } }
         Updater.start(this)
         // #575 the GitSync scheduler: repositories that opted in sync in the background.
         GitSyncWorker.schedule(this)
     }
 
-    /** Android insets arrive in device pixels; CSS wants density-independent ones. */
-    private fun insetScriptFor(insets: Insets): String {
-        val density = resources.displayMetrics.density
-        fun cssPixels(devicePixels: Int) = (devicePixels / density).toInt()
-        return "var s = document.documentElement.style;" +
-            "s.setProperty('--sat', '" + cssPixels(insets.top) + "px');" +
-            "s.setProperty('--sab', '" + cssPixels(insets.bottom) + "px');" +
-            "s.setProperty('--sal', '" + cssPixels(insets.left) + "px');" +
-            "s.setProperty('--sar', '" + cssPixels(insets.right) + "px');"
+    @Composable
+    private fun Root() {
+        val scope = rememberCoroutineScope()
+        val ctx = LocalContext.current
+        var hasAccess by remember { mutableStateOf(Places.hasAllFilesAccess(ctx)) }
+        // Re-read the grant when the user comes back from the system settings screen.
+        val lifecycle = LocalLifecycleOwner.current.lifecycle
+        DisposableEffect(lifecycle) {
+            val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) hasAccess = Places.hasAllFilesAccess(ctx) }
+            lifecycle.addObserver(observer)
+            onDispose { lifecycle.removeObserver(observer) }
+        }
+        val saved = rememberSaveable { mutableStateOf("") }
+        val files = remember {
+            val snap = prefs.snapshot.value
+            val (store, external) = Places.initialLocations()
+            val initial = FilesUiState.decode(saved.value) ?: FilesUiState.initial(store, external, snap.defaultSort, snap.showHidden, snap.dualPane)
+            FilesController(applicationContext, initial, scope, prefs).also { filesController = it }
+        }
+        val filesState by files.state.collectAsState()
+        LaunchedEffect(filesState) { saved.value = filesState.encode() }
+        val git = remember { GitSyncCoordinator(applicationContext, scope) }
+        val rclone = remember { RcloneCoordinator(applicationContext, scope, prefs) }
+        val mirrors = remember { MirrorRunner(scope, prefs) }
+        val rcloneVersion by rclone.version.collectAsState()
+
+        DriveShell { tabId, _ ->
+            when (tabId) {
+                "files" -> FilesScreen(files, this, hasAccess)
+                "apps" -> AppsScreen(this)
+                "sync" -> SyncScreen(git, rclone, prefs, this)
+                "backups" -> BackupsScreen(mirrors, prefs)
+                "configs" -> ConfigsScreen(prefs, this, hasAccess, rcloneVersion)
+                else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "", Modifier)
+            }
+        }
     }
 
-    private fun publishInsets(webView: WebView) {
-        if (insetScript.isNotEmpty()) webView.evaluateJavascript(insetScript, null)
+    // ── DriveActions ────────────────────────────────────────────────────────
+
+    override fun requestStorageAccess() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        runCatching { startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:$packageName"))) }
     }
+
+    override fun requestTreeGrant() { runCatching { openTreeLauncher.launch(null) } }
+
+    private fun persistTreeGrant(uri: Uri?) {
+        if (uri == null) return
+        runCatching { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
+        val name = runCatching { DocumentsContract.getTreeDocumentId(uri).substringBeforeLast(':') }.getOrNull() ?: uri.lastPathSegment ?: getString(R.string.files_place_sd_card)
+        prefs.rememberTreeGrant(uri, name)
+    }
+
+    override fun openEngine(engine: String, target: String, url: String) {
+        engineLauncher.launch(EngineActivity.intent(this, engine, target, url))
+    }
+
+    override fun openImage(path: String, siblings: List<String>) { startActivity(ImageViewerActivity.intent(this, path, siblings)) }
+
+    /** #577 the fleet's ONE PDF reader (native pdfium); the Files tab's PDF rows open there. */
+    override fun openPdf(path: String) { startActivity(PdfReaderActivity.intent(this, path)) }
+
+    override fun openWith(path: String) {
+        val file = File(path)
+        runCatching {
+            val uri = FileProvider.getUriForFile(this, "$packageName.files", file)
+            startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, mimeOf(file)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION))
+        }
+    }
+
+    override fun share(paths: List<String>) {
+        val files = paths.map(::File).filter { it.isFile }
+        if (files.isEmpty()) return
+        runCatching {
+            val uris = files.map { FileProvider.getUriForFile(this, "$packageName.files", it) }
+            val intent = if (uris.size == 1) Intent(Intent.ACTION_SEND).setType(mimeOf(files.first())).putExtra(Intent.EXTRA_STREAM, uris.first())
+            else Intent(Intent.ACTION_SEND_MULTIPLE).setType("*/*").putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
+            startActivity(Intent.createChooser(intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION), null))
+        }
+    }
+
+    override fun shareText(title: String, text: String) {
+        runCatching { startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, title).putExtra(Intent.EXTRA_TEXT, text), null)) }
+    }
+
+    override fun copyText(text: String) {
+        (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("cloud-drive", text))
+    }
+
+    override fun openUrl(url: String) {
+        val parsed = Uri.parse(url.trim())
+        if (parsed.scheme != "http" && parsed.scheme != "https") return
+        runCatching { startActivity(Intent(Intent.ACTION_VIEW, parsed)) }
+    }
+
+    override fun launchApp(packageName: String, fallbackUrl: String): Boolean {
+        val launch = if (packageName.isBlank()) null else runCatching { packageManager.getLaunchIntentForPackage(packageName) }.getOrNull()
+        if (launch != null) return runCatching { startActivity(launch) }.isSuccess
+        if (fallbackUrl.isNotBlank()) return runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(fallbackUrl))) }.isSuccess
+        return false
+    }
+
+    private fun mimeOf(file: File): String = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase()) ?: "application/octet-stream"
 }
