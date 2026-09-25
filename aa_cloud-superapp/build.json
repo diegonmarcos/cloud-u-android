@@ -6266,23 +6266,10 @@
     "_doc_home_groups": "Home master view is organised into themed groups (Home / Cloud / Labs / Configs). The first group 'Home' is a meta-row whose tiles deep-link to the OTHER groups' parents — call it a master index. Each tile's `id` is 'section:<X>' (switch section) or 'page:<section>/<page>' (deep-link), rendered tile_columns-per-row by HomeGroupedFragment. Cloud pulls sections[cloud].tiles_shared (5 category icons); Labs pulls sections[cloud].tiles_labs (6 Lab icons, each opening page:cloud/<lab-id>) via the section/page form tiles_from_section='cloud/labs'. Single source of truth — change this to reshape the Home page, nothing else.",
     "home_groups": [
       {
+        "_doc": "The master index. tiles_from_bottom_nav derives one section tile per ui.bottom_nav section (order, label and icon all from ui.sections) so this row can never name a destination differently from the bar or miss one the bar gained (#521: it still said 'Inboxes' and had no Phone after the bar became Notify/Projects/Home/Cloud/Phone). Only destinations that are NOT in the bar are listed explicitly below.",
         "title": "Home",
+        "tiles_from_bottom_nav": true,
         "tiles": [
-          {
-            "id": "section:communication",
-            "label": "Inboxes",
-            "icon": "ic_p_inbox"
-          },
-          {
-            "id": "section:infos",
-            "label": "Projects",
-            "icon": "ic_pm_boards"
-          },
-          {
-            "id": "section:cloud",
-            "label": "Cloud",
-            "icon": "ic_suite"
-          },
           {
             "id": "page:cloud/lnktree",
             "label": "Labs",

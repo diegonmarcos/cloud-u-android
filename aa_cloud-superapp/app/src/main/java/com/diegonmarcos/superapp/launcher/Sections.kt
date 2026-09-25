@@ -1328,6 +1328,22 @@ object Sections {
             }
 
             val derivedTiles = mutableListOf<HomeTile>()
+            // `tiles_from_bottom_nav: true` — one `section:<id>` tile per
+            // bottom-nav section, in bottom-nav order (the master-index Home
+            // itself is skipped: this IS its pane). Label and icon come from
+            // the section, so the main-menu can never name a destination
+            // differently from the bar or omit one the bar gained (#521).
+            if (o.optBoolean("tiles_from_bottom_nav", false)) {
+                bottomNav().filterNot { it.isMasterIndex }.forEach { sec ->
+                    derivedTiles += HomeTile(
+                        id        = "section:${sec.id}",
+                        label     = sec.label,
+                        iconName  = sec.iconName,
+                        iconApps  = sec.iconApps,
+                        iconAdmin = sec.iconAdmin,
+                    )
+                }
+            }
             if (referenced != null) {
                 when {
                     // "<section>/<page>" — the page's own tiles_<page> list.

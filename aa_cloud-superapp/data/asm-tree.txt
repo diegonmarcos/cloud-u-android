@@ -260,7 +260,7 @@ GLOBAL CHROME & SERVICES
 Drawer (← swipe) ── HomeDrawerFragment
   [Home] → master index
   + main-menu entries (ui.main_menu) — incl. Search ML, Search CGC below the Profile badge
-  All sections listed with 2-level expand
+  Bottom-nav sections (ui.bottom_nav order, label+icon from ui.sections) + Labs + Configs, each with 2-level expand
 
 Dynamic Island pill ── toolbar
   Tap → opens Termux (com.termux.nix) per ui.dynamic_island_action
