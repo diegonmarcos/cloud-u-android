@@ -174,24 +174,31 @@ grep -qF 'android:contentDescription="@string/star_recent_tabs_desc"' "$LAYOUT" 
   && ok "the new star's content description is a resource, not a literal" \
   || bad "the new star carries a hardcoded content description"
 
-echo "== T7: the Configs section order is declared ONCE, Home immediately before About =="
+echo "== T7: the Configs section order is declared ONCE, About last and no Home page (#580) =="
 ORDER=$(python3 -c "
 import json
 d=json.load(open('$BJ'))
 c=[s for s in d['ui']['sections'] if s['id']=='config'][0]
 print(' '.join(p['id'] for p in c['pages']))
 ")
-case " $ORDER " in
-  *" home about "*) ok "Home sits immediately before About in ui.sections[config].pages" ;;
-  *) bad "Home is not immediately before About — order tail is: $(echo "$ORDER" | tr ' ' '\n' | tail -4 | tr '\n' ' ')" ;;
-esac
+# #580 deleted Configs ▸ Home (its two tabs merged into Launcher ▸ Notify), so
+# the page that used to sit immediately before About is gone. What is left to
+# pin is the other half of the old rule: About is opened once ever and stays the
+# LAST entry, and no `home` page creeps back into the list.
+if case " $ORDER " in *" home "*) true ;; *) false ;; esac; then
+  bad "a Configs page named home is declared again — #580 deleted it; its tabs live in Launcher"
+elif [ "${ORDER##* }" = "about" ]; then
+  ok "no Home page in ui.sections[config].pages, and About is its last entry"
+else
+  bad "About is not the last Configs entry — order tail is: $(echo "$ORDER" | tr ' ' '\n' | tail -4 | tr '\n' ' ')"
+fi
 # Both surfaces read that one list. A Kotlin-side order would be a second truth.
 grep -qF 'SectionPages.pagesFor(section)' "$SHELL_KT" \
   && ok "the Canopus arc reads the same SectionPages list as the Configs grid" \
   || bad "the Canopus arc no longer reads SectionPages — a second order may exist"
 if grep -qE '"(home|about)"[[:space:]]*,[[:space:]]*"(home|about)"' \
      "$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/"*.kt 2>/dev/null; then
-  bad "a Kotlin-side Configs order appeared — Home/About now has two declarations"
+  bad "a Kotlin-side Configs order appeared — the page order now has two declarations"
 else
   ok "no Kotlin-side Configs order — build.json remains the single source of truth"
 fi

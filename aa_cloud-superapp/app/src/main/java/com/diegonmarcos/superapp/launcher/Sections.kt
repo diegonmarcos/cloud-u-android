@@ -203,6 +203,11 @@ object Sections {
          *  not "show nothing" — a panel that forgets to declare it must
          *  still render. */
         val limit: Int = 0,
+        /** Draw this panel ABOVE the page's filter row instead of below it.
+         *  Notify's persistent-badges box is the case (#580): the badges are
+         *  the first thing on the page, the Filters that narrow the cards
+         *  come after them. Absent means below, which is every other panel. */
+        val aboveFilters: Boolean = false,
     )
 
     /** One declared in-panel anchor: the [id] tiles point at, plus the header
@@ -862,6 +867,7 @@ object Sections {
                         source          = p.optString("source", ""),
                         classId         = p.optString("class", ""),
                         limit           = p.optInt("limit", 0),
+                        aboveFilters    = p.optBoolean("above_filters", false),
                     ))
                 }
                 return out

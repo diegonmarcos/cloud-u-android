@@ -125,10 +125,6 @@ object SectionPages {
         sectionId == "wg"     && pageId == "config"         -> WireGuardFragment.newInstance()
         sectionId == "config" && pageId == "onehand" ->
             com.diegonmarcos.superapp.configs.OneHandFragment.newInstance()
-        // Home's Push tab (#497) — the notification-center / badge
-        // declaration, rendered by PushFragment from ui.notification_center.
-        sectionId == "config" && pageId == "push" ->
-            com.diegonmarcos.superapp.configs.PushFragment.newInstance()
         sectionId == "config" && pageId == "perms" ->
             com.diegonmarcos.superapp.configs.PermissionsFragment.newInstance()
         sectionId == "config" && (pageId == "about" || pageId == "dev") ->

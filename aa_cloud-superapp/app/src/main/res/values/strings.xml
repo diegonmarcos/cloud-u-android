@@ -199,20 +199,17 @@
     <string name="control_caption">The things flipped often enough to deserve one screen, laid out as a grid of tiles and grouped by WHAT YOU CAME LOOKING FOR: the handset, the network, the tooling, the interface.\n\nTAP a tile to switch it. HOLD it to open the settings screen behind it — and every tile answers a hold, including the ones with nowhere to go, which say so instead of doing nothing.\n\nA lit tile is inverted: it fills with the theme\'s foreground colour and draws its icon in the background one, so on and off are the same two colours swapped and neither can become invisible under a theme. Only what can really move switches on a tap. A tile Android will not let this app flip opens the system screen that owns it instead, and a tile waiting on a grant says which grant on its label.\n\nBattery Hungers is not a fifth category — it is the SAME tiles again, gathered so everything draining the battery can be switched off in one place. A tile flipped there is flipped in its own group at the same instant, because there is only one of it.\n\nThe light under a tile is what the DEVICE answered just now, never what the tile is set to: %1$s, %2$s, or %3$s when it would not say or has not been asked yet. %4$s marks the tiles where nothing but this app\'s own stored preference can be read. Lights refresh every %5$d seconds while this page is open and stop entirely when it is not, so they go unknown before they go stale.</string>
     <string name="control_none_declared">No controls are declared — build.json::ui.control_panel is empty or did not reach this build.</string>
 
-    <!-- ── Configs ▸ Home ▸ Push (#497) ─────────────────────────────────
-         Page chrome for the notification-center / badge declaration. Per-
+    <!-- ── Configs ▸ Launcher ▸ Notify ▸ persistent badges (#497, #580) ─
+         Chrome for the notification-center / badge declaration. Per-
          producer label/subtitle text stays raw English in build.json, same
-         gap the comment above documents for Control's per-control text. -->
-    <string name="push_title">Push</string>
-    <string name="push_caption">Every badge that goes in the notification centre, whatever build.json::ui.notification_center declares with badge=true — the boxes themselves first, then a menu for each. A badge that is not in the shade says so here, and why.</string>
-    <string name="push_none_declared">No producers are declared — build.json::ui.notification_center is empty or did not reach this build.</string>
-    <string name="push_producer_on">Declared on</string>
+         gap the comment above documents for Control's per-control text.
+         The two card titles are named by stack_my-rss title_res. -->
+    <string name="notify_badges_title">Persistent badges</string>
+    <string name="notify_configs_title">Configs</string>
     <string name="push_producer_off">Declared off</string>
 
-    <!-- #515/#518 Configs ▸ Home ▸ Push — the two sections. -->
-    <string name="push_section_badges">Badges</string>
+    <!-- #515/#518 the two views: the badge boxes, and their customization. -->
     <string name="push_section_badges_sub">One box per badge that goes in the notification centre, as it appears there. A badge that is not in the shade says why here.</string>
-    <string name="push_section_custom">Customization</string>
     <string name="push_section_custom_sub">One menu per badge above, same order. Changes take effect on the live badge.</string>
     <string name="push_none_badges">No badges are declared — build.json::ui.notification_center has no producer with badge=true.</string>
     <string name="push_state_live">LIVE</string>

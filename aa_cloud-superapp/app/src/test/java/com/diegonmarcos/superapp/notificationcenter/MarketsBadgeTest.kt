@@ -23,7 +23,7 @@ import org.robolectric.annotation.Config
  *
  * So the first half of this file asserts against [BadgeServices.declared] —
  * `BuildConfig.UI_NOTIFICATION_CENTER_B64`, the same bytes the APK carries and
- * the same resolution path `BadgeRestartReceiver` and `PushFragment` run.
+ * the same resolution path `BadgeRestartReceiver` and `BadgePanes` run.
  * Delete the producer from build.json and these go red.
  *
  * The second half is the honesty rule: a fetch that failed must never render

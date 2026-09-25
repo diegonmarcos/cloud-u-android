@@ -32,10 +32,11 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
 /**
- * #535 — Configs ▸ Panel ▸ Push renders the badge AS POSTED, not a sentence
- * about it, and gives it a button that does what the badge's own tap does.
+ * #535 — the persistent-badges view of Configs ▸ Launcher ▸ Notify (#580; the
+ * Push tab before it) renders the badge AS POSTED, not a sentence about it, and
+ * gives it a button that does what the badge's own tap does.
  *
- * Driven through the real fragment against the SHIPPED declaration
+ * Driven through the real view ([BadgePanes.badges]) against the SHIPPED declaration
  * ([BadgeServices.declared]): a notification is posted on a declared badge
  * channel exactly as its producer would, and the assertions read the rendered
  * view tree. Expected strings are read back off the posted Notification, so
@@ -43,19 +44,15 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
-class PushPaneLiveBadgeTest {
+class BadgePanesLiveBadgeTest {
 
     private val ctx: Context = ApplicationProvider.getApplicationContext()
 
     private fun all(v: View): List<View> =
         listOf(v) + if (v is ViewGroup) (0 until v.childCount).flatMap { all(v.getChildAt(it)) } else emptyList()
 
-    private fun render(): View {
-        val act = Robolectric.buildActivity(FragmentActivity::class.java).setup().get()
-        val f = PushFragment.newInstance()
-        act.supportFragmentManager.beginTransaction().add(android.R.id.content, f).commitNow()
-        return f.requireView()
-    }
+    private fun render(): View =
+        BadgePanes.badges(Robolectric.buildActivity(FragmentActivity::class.java).setup().get()) {}
 
     /** A badge that needs no grant, so its state is decided by its service and
      *  its notification alone — the two things these tests control. */

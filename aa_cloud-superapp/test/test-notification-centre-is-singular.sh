@@ -252,7 +252,8 @@ echo
 echo "== the KDE badge did not go down with the shade =="
 
 # T8 — the shade was the only surface drawing the live "Cloud SA - KDE" status.
-# Deleting it is only safe because Configs ▸ Panel ▸ Push renders it, and Push
+# Deleting it is only safe because the persistent-badge pane on Configs ▸
+# Launcher ▸ Notify (was the Push tab until #580) renders it, and that pane
 # renders exactly the producers declared with badge=true. Resolved end to end:
 # the producer is declared, its owner file exists, and the renderer that filters
 # on badge=true is present — so this fails if the badge is dropped from the
@@ -269,7 +270,7 @@ if not kde:
     sys.exit(1)
 p = kde[0]
 if not p.get("badge"):
-    print("  FAIL: T8 the kde_status producer is declared with badge=false — Configs > Panel > Push "
+    print("  FAIL: T8 the kde_status producer is declared with badge=false — the badge pane "
           "renders only badge=true producers, so the KDE status has no surface at all")
     sys.exit(1)
 owner = os.path.join(app, "app/src/main/java/com/diegonmarcos/superapp", p.get("owner", ""))
@@ -282,9 +283,30 @@ print("  PASS: T8 kde_status is declared badge=true, surface %r, owner %s resolv
 PY
 [ $? -eq 0 ] && PASS=$((PASS+1)) || FAIL=$((FAIL+1))
 if [ -n "$PUSH_RENDERER" ]; then
-    ok "T8 Configs > Panel > Push derives its boxes from the declaration ($(basename "$PUSH_RENDERER" | head -1))"
+    ok "T8 the badge pane (Launcher > Notify) derives its boxes from the declaration ($(basename "$PUSH_RENDERER" | head -1))"
 else
-    bad "T8 nothing calls BadgeDeclaration.badges() — Push no longer derives from ui.notification_center, so a badge declared there reaches no screen"
+    bad "T8 nothing calls BadgeDeclaration.badges() — the badge pane no longer derives from ui.notification_center, so a badge declared there reaches no screen"
+fi
+
+echo
+echo "== the Push tab did not survive as a second producer (#580) =="
+
+# T9 — Push was a tab of its own on Configs ▸ Home, drawing the badge list with
+# its own fragment. #580 merged it into Notify as two stack_my-rss panels drawn
+# by the ONE stack fragment. The ban names the retired page and class on purpose
+# (like T6): T4/T5 count the shape, this stops the old surface reappearing next
+# to the new one, which would be two windows on the centre that can disagree.
+PUSH_LEFT="$(grep -rn 'PushFragment' --include='*.kt' --include='*.xml' --include='*.gradle' "$APP")"
+PUSH_PAGE="$(jq -r '[.ui.sections[]? | .pages[]? | select(.id == "push" or (.tabs // [] | index("push")))] | length' "$BJ")"
+BADGE_DRAWERS="$(grep -rl 'BadgePanes\.badges(' --include='*.kt' "$SRC" | wc -l)"
+if [ -n "$PUSH_LEFT" ]; then
+    bad "T9 PushFragment still has references: $(printf '%s' "$PUSH_LEFT" | head -3)"
+elif [ "$PUSH_PAGE" != "0" ]; then
+    bad "T9 build.json still declares a push page or lists push as a tab ($PUSH_PAGE)"
+elif [ "$BADGE_DRAWERS" -ne 1 ]; then
+    bad "T9 $BADGE_DRAWERS file(s) draw the badge boxes — one stack fragment draws them, a second drawer is a second window that can disagree"
+else
+    ok "T9 no Push page or fragment; the badge boxes are drawn from exactly one place"
 fi
 
 echo

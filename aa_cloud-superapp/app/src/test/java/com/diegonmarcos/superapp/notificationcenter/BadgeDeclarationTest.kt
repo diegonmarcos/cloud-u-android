@@ -20,7 +20,7 @@ import org.robolectric.annotation.Config
  *
  * So each test here hands [BadgeDeclaration] a declaration of its own making
  * and asserts what the resolver PRODUCES from it — which is the same code
- * path `BadgeRestartReceiver` and `PushFragment` run in the app.
+ * path `BadgeRestartReceiver` and `BadgePanes` run in the app.
  *
  * Robolectric because [BadgeDeclaration] parses with `org.json`, which is a
  * stub that throws on a bare JVM unit test.

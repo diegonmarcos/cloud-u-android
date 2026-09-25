@@ -7,7 +7,7 @@
 # owner asked for is pinned here, read from the ONE declaration (build.json),
 # and the Kotlin is checked to draw from it rather than carry a copy:
 #
-#   T1  the Launcher strip wears Presets · Controls · One-Hand, by label
+#   T1  the Launcher strip wears Presets · Controls · One-Hand · Notify, by label
 #   T2  Presets declares exactly Sandboxes · Themes · Modes, in that order
 #   T3  each group's rows are the owner's, in the owner's order, and no row's
 #       caption is its own id (#380: an identity string is not a caption)
@@ -36,17 +36,17 @@ for f in "$BJ" "$KT/settings/LauncherPresetsFragment.kt" "$KT/settings/LauncherM
   [ -f "$f" ] || { echo "  ABORT: no such file: $f"; exit 2; }
 done
 
-echo "== T1: the Launcher strip is Presets | Controls | One-Hand =="
+echo "== T1: the Launcher strip is Presets | Controls | One-Hand | Notify (#580) =="
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = {p['id']: p for p in next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
                                   if s['id'] == 'config')['pages']}
 tabs = pages['launcher'].get('tabs')
 labels = [pages.get(t, {}).get('label') for t in tabs or []]
-print('OK' if labels == ['Presets', 'Controls', 'One-Hand']
+print('OK' if labels == ['Presets', 'Controls', 'One-Hand', 'Notify']
       else 'tab labels = %r (tabs %r)' % (labels, tabs))
 PY
-)" "launcher tabs, by label, are Presets · Controls · One-Hand"
+)" "launcher tabs, by label, are Presets · Controls · One-Hand · Notify"
 
 echo "== T2: Presets declares Sandboxes · Themes · Modes, in order =="
 check "$(python3 - "$BJ" <<'PY'
@@ -94,22 +94,23 @@ print('; '.join(problems) or 'OK')
 PY
 )" "every mode toggle id is a declared, non-user-owned launcher switch"
 
-echo "== T5: Panel is Home; no retired name survives at page level =="
+echo "== T5: Panel was Home (#574) and Home is now deleted (#580); no retired name survives at page level =="
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
 by_id = {p['id']: p for p in pages}
 problems = []
-if by_id.get('home', {}).get('label') != 'Home': problems.append('no page `home` labelled Home')
-for retired in ('panel', 'control', 'profiles', 'theme'):
+# #580: Home's two tabs (Push, Notify) merged into Launcher ▸ Notify, so the
+# page is gone rather than renamed again.
+for retired in ('panel', 'control', 'profiles', 'theme', 'home', 'push'):
     if retired in by_id: problems.append('page %r is still declared' % retired)
 for p in pages:
     if p['label'] in ('Panel', 'Profiles', 'Modes'):
         problems.append('page %s is still labelled %s' % (p['id'], p['label']))
 print('; '.join(problems) or 'OK')
 PY
-)" "home/Home exists; panel, control, profiles, theme are gone; no page label is Panel/Profiles/Modes"
+)" "panel, control, profiles, theme, home, push are gone; no page label is Panel/Profiles/Modes"
 
 echo "== T6: Presets draws the declaration and owns no engine =="
 PRE="$KT/settings/LauncherPresetsFragment.kt"

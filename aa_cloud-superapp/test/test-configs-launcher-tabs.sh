@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Tester: Configs ▸ Launcher is ONE page with three tabs (Presets | Controls |
-# One-Hand), and neither merging the old One-Hand page into it nor the #574
-# renames (Profiles → Presets, Modes → Controls) broke its stored settings or
-# the targets that still name it.
+# Tester: Configs ▸ Launcher is ONE page with four tabs (Presets | Controls |
+# One-Hand | Notify), and neither merging the old One-Hand page into it, the #574
+# renames (Profiles → Presets, Modes → Controls) nor #580 moving Notify in (and
+# deleting the emptied Configs ▸ Home) broke its stored settings or the targets
+# that still name it.
 #
 # WHY THIS EXISTS: the merge touches the two things a page move silently
 # destroys.
@@ -31,19 +32,19 @@ PAGES="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt
 STRIP="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
 NAV="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherNavController.kt"
 
-echo "== T1: Configs ▸ Launcher declares its three tabs as page ids, in order =="
+echo "== T1: Configs ▸ Launcher declares its four tabs as page ids, in order (Notify AFTER One-Hand, #580) =="
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
 launcher = next((p for p in pages if p['id'] == 'launcher'), None)
 if launcher is None:                       print('no `launcher` page in config')
-elif launcher.get('tabs') != ['presets', 'controls', 'onehand']:
+elif launcher.get('tabs') != ['presets', 'controls', 'onehand', 'notify']:
                                            print('tabs = %r' % (launcher.get('tabs'),))
 elif launcher.get('hidden'):               print('the strip itself must stay listed')
 else:                                      print('OK')
 PY
-)" "launcher: tabs = [presets, controls, onehand], still a visible Configs entry"
+)" "launcher: tabs = [presets, controls, onehand, notify], still a visible Configs entry"
 
 echo "== T2: every tab is a REAL declared page, hidden, and not the owner itself =="
 check "$(python3 - "$BJ" <<'PY'
@@ -62,7 +63,7 @@ for owner in pages:
             problems.append('tab %r is still a standalone Configs entry' % tab)
 print('; '.join(problems) or 'OK')
 PY
-)" "presets + controls + onehand are declared, hidden pages of the same section"
+)" "presets + controls + onehand + notify are declared, hidden pages of the same section"
 
 echo "== T3: the One-Hand id SURVIVES (page:config/onehand must still resolve) =="
 check "$(python3 - "$BJ" <<'PY'
@@ -75,6 +76,34 @@ elif oh['label'] != 'One-Hand': print('label = %r' % oh['label'])
 else:                     print('OK')
 PY
 )" "onehand still declared, so its target resolves through Section.allPages"
+
+echo "== T3b: Notify keeps its id and mirrors the ntfy page; Home and Push are GONE (#580) =="
+# Configs ▸ Home had two tabs, Push and Notify. Push was merged INTO Notify and
+# Notify moved to Launcher, which left Home with nothing — so it is deleted, not
+# hidden. A page kept "just in case" is a tile that opens an empty strip. Every
+# declaration that could still point at either id is checked here: a page, a tab
+# list, and a `page:config/...` target anywhere in build.json.
+check "$(python3 - "$BJ" <<'PY'
+import json, re, sys
+raw = open(sys.argv[1]).read()
+ui = json.loads(raw)['ui']
+pages = next(s for s in ui['sections'] if s['id'] == 'config')['pages']
+by_id = {p['id']: p for p in pages}
+problems = []
+for gone in ('home', 'push'):
+    if gone in by_id: problems.append('page %r is still declared' % gone)
+n = by_id.get('notify')
+if n is None:                                   problems.append('notify page was deleted — its target dead-ends')
+elif n.get('mirror_page') != 'communication/my-rss':
+                                                problems.append('notify no longer mirrors communication/my-rss: %r' % n.get('mirror_page'))
+for p in pages:
+    for t in p.get('tabs', []):
+        if t in ('home', 'push'): problems.append('%s lists retired tab %r' % (p['id'], t))
+for m in re.findall(r'page:config/(home|push)\b', raw):
+    problems.append('a target still names page:config/%s' % m)
+print('; '.join(problems) or 'OK')
+PY
+)" "notify declared + mirroring; no home/push page, tab or page: target survives"
 
 echo "== T4: Sections parses the page tabs list and can answer who owns a tab =="
 grep -qF 'tabs     = po.optJSONArray("tabs")' "$SECTIONS" \

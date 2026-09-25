@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Tester: Configs ▸ Home (was Panel, #574) — one page, two tabs (Push | Notify) —
-# plus the device switch board (was its Control tab, now Configs ▸ Launcher ▸
-# Controls, hosted by LauncherConfigFragment) and the rules each exists to keep.
+# Tester: the notification centre's badges + the ntfy page (Configs ▸ Launcher ▸
+# Notify since #580; it was Configs ▸ Home's two tabs, Push | Notify, and Home
+# is deleted) — plus the device switch board (was Panel ▸ Control, now Configs ▸
+# Launcher ▸ Controls, hosted by LauncherConfigFragment) and the rules each
+# exists to keep.
 #
 # WHY THIS EXISTS: this page has several ways to be wrong, and none of them
 # shows up as a crash or a failed build.
@@ -17,10 +19,11 @@
 #      page, not clone it. It is a `mirror_page` facet, so it renders the very
 #      fragment `page:communication/my-rss` opens; a second stack_ declaration
 #      here would be the copy that drifts.
-#   3. A DECORATIVE PUSH TAB (#497). Push renders build.json::ui.notification_
-#      center — every notification-center / badge producer this app ships —
-#      and it has to actually be DRIVEN by that array, not by a hardcoded list
-#      of three PushFragment invented on its own. A tab that renders the same
+#   3. A DECORATIVE BADGE PANE (#497). The badge panes (Push until #580 merged
+#      it into Notify) render build.json::ui.notification_center — every
+#      notification-center / badge producer this app ships — and they have to
+#      actually be DRIVEN by that array, not by a hardcoded list of three
+#      BadgePanes invented on its own. A pane that renders the same
 #      whatever the declaration says would be decorative, so T28 below proves
 #      the render follows an edit to the declaration, the same way T22 proves
 #      it for Battery Hungers.
@@ -42,7 +45,8 @@ NAV="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherNavContro
 TABS="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
 CONTROLS="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/DeviceControls.kt"
 FRAGMENT="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/ControlFragment.kt"
-PUSH="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/PushFragment.kt"
+PUSH="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/BadgePanes.kt"   # #580: was PushFragment.kt
+AGG="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/AggregatorStackFragment.kt"
 KT_LCF="$APP/app/src/main/java/com/diegonmarcos/superapp/settings/LauncherConfigFragment.kt"
 # #515 moved the READING of the declaration out of the pane and into one
 # resolver both the pane and the restart receiver share, so T28/T29 follow
@@ -72,53 +76,42 @@ for f in "$BJ" "$GRADLE" "$SECTIONS" "$PAGES" "$NAV" "$TABS" "$CONTROLS" \
     echo "         is indistinguishable here from a contract being kept."; exit 2; }
 done
 
-echo "== T1: Configs ▸ Home is a visible page declaring its two tabs in order =="
+echo "== T1: Configs ▸ Home is DELETED; Launcher carries Notify as its 4th tab, after One-Hand (#580) =="
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
-order = [p['id'] for p in pages]
-panel = next((p for p in pages if p['id'] == 'home'), None)
-if panel is None:                    print('no `home` page in config')
-elif any(p['id'] in ('panel', 'control') for p in pages):
-                                     print('a retired id (panel/control) is still declared')
-elif panel.get('label') != 'Home':   print('label = %r' % (panel.get('label'),))
-elif panel.get('tabs') != ['push', 'notify']:
-                                     print('tabs = %r' % (panel.get('tabs'),))
-elif panel.get('hidden'):            print('the strip itself must stay listed')
-# Home (was Panel) is the page opened many times a day and About is the page opened once
-# ever. It used to LEAD this list for that reason; the owner moved it to sit
-# IMMEDIATELY BEFORE About instead, because the tail of the list is what the
-# thumb reaches first on the Canopus arc. Adjacency is a TIGHTER rule than the
-# old "somewhere ahead of About": an entry slipped between the two is caught
-# now, where before it passed.
-elif 'about' not in order:           print('no `about` page to order against')
-elif order.index('home') + 1 != order.index('about'):
-                                     print('Home is not immediately before About: %r'
-                                           % order[max(0, order.index('about') - 2):])
+ids = [p['id'] for p in pages]
+launcher = next((p for p in pages if p['id'] == 'launcher'), None)
+gone = [i for i in ('home', 'push', 'panel', 'control') if i in ids]
+if gone:                             print('retired page(s) still declared: %r' % gone)
+elif launcher is None:               print('no `launcher` page in config')
+elif launcher.get('tabs', [])[-2:] != ['onehand', 'notify']:
+                                     print('Notify is not the tab right after One-Hand: %r' % (launcher.get('tabs'),))
+elif 'about' not in ids:             print('no `about` page')
 else:                                print('OK')
 PY
-)" "home: label Home, tabs = [push, notify], visible, immediately before About; no panel/control page left"
+)" "no home/push/panel/control page; launcher tabs end ..., onehand, notify"
 
-echo "== T2: both tabs are REAL hidden pages of the SAME section, never the owner =="
+echo "== T2: the Notify tab is a REAL hidden page of the SAME section, never the owner =="
 # The strip contract established in 07964787e: a tab is a declared page, so
-# page:config/<tab> stays a live target. Panel must not be the page that breaks
-# it by inventing an inline tab.
+# page:config/<tab> stays a live target. Notify must not be the tab that breaks
+# it by being declared inline.
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
 by_id = {p['id']: p for p in pages}
-panel = by_id['home']
+owner = by_id['launcher']
 problems = []
-for tab in panel.get('tabs', []):
-    if tab == 'home':             problems.append('home lists itself (infinite render)')
+for tab in owner.get('tabs', []):
+    if tab == 'launcher':         problems.append('launcher lists itself (infinite render)')
     elif tab not in by_id:        problems.append('tab %r has no page behind it' % tab)
     elif not by_id[tab].get('hidden'):
                                   problems.append('tab %r must be hidden' % tab)
 print('; '.join(problems) or 'OK')
 PY
-)" "push + notify are declared, hidden pages of the config section"
+)" "every Launcher tab, Notify included, is a declared, hidden page of the config section"
 
 echo "== T3: Notify MIRRORS the ntfy page — it does not carry a copy of it =="
 check "$(python3 - "$BJ" <<'PY'
@@ -336,7 +329,7 @@ print('; '.join(problems) or 'OK')
 PY
 )" "one functional home per control; the derived view gathers by flag, invents nothing"
 
-echo "== T11: Push is routed by id, the switch board by the Launcher's Controls tab; Notify is NOT (facet) =="
+echo "== T11: the switch board is routed by the Launcher's Controls tab; Push has NO route and NO fragment; Notify is NOT routed (facet) =="
 r_fail=""
 # #574: the switch board has ONE producer. SectionPages no longer routes a
 # `control` page at all; `controls` is LauncherConfigFragment, which hosts
@@ -348,18 +341,20 @@ grep -q 'pageId == "controls" -> LauncherConfigFragment.newInstance()' "$PAGES" 
                                                  || r_fail="$r_fail controls:not-routed"
 grep -q 'ControlFragment.newInstance(embedded = true)' "$KT_LCF" \
                                                  || r_fail="$r_fail controls:does-not-host-the-grid"
-grep -q 'pageId == "push" ->' "$PAGES"           || r_fail="$r_fail push:not-routed"
-grep -q 'PushFragment.newInstance()' "$PAGES"    || r_fail="$r_fail push:no-fragment"
+# #580: Push stopped being a page. A route or a fragment class for it is a
+# second producer of the badge view — the panes are stack_my-rss panels now.
+grep -q 'pageId == "push"' "$PAGES"              && r_fail="$r_fail push:route-still-there"
+grep -rq 'PushFragment' "$APP/app/src/main/java" && r_fail="$r_fail push:fragment-still-there"
 # A SectionPages branch for `notify` would bypass the mirror and hand back a
 # generic placeholder, which is how the tab would quietly stop being the ntfy
 # page while still opening something.
 grep -q 'pageId == "notify"' "$PAGES"            && r_fail="$r_fail notify:shadowed-by-factory"
 [ -z "$r_fail" ] \
-  && ok "config/controls → LauncherConfigFragment ⊃ ControlFragment; config/push → PushFragment; config/notify left to the mirror" \
+  && ok "config/controls → LauncherConfigFragment ⊃ ControlFragment; no config/push route or PushFragment; config/notify left to the mirror" \
   || bad "page routing wrong:$r_fail"
 
 echo "== T12: the tab a strip OPENS ON is the first declared tab, and nothing else =="
-# "Push is first" and "Home opens on Push" are only the same statement
+# "Presets is first" and "Launcher opens on Presets" are only the same statement
 # while startIndex's fallback stays "the first tab with a fragment". If someone
 # adds a default_tab flag, the array and the flag become two answers to one
 # question and the reorder above silently stops deciding anything.
@@ -1180,12 +1175,12 @@ grep -q 'BuildConfig.UI_NOTIFICATION_CENTER_B64' "$BADGESVC"  || np_fail="$np_fa
 grep -q 'BadgeDeclaration.parse' "$BADGESVC"                  || np_fail="$np_fail kotlin:not-parsed"
 grep -q 'BadgeServices.declared' "$PUSH"                      || np_fail="$np_fail kotlin:pane-not-fed"
 [ -z "$np_fail" ] \
-  && ok "build.json → uiNotificationCenterB64 → BuildConfig.UI_NOTIFICATION_CENTER_B64 → BadgeServices → PushFragment" \
+  && ok "build.json → uiNotificationCenterB64 → BuildConfig.UI_NOTIFICATION_CENTER_B64 → BadgeServices → BadgePanes" \
   || bad "the declaration cannot reach the UI:$np_fail"
 
-echo "== T29: Push renders the DECLARATION, not a hardcoded list of three =="
+echo "== T29: the badge panes render the DECLARATION, not a hardcoded list of three =="
 # THE DECORATIVE-TAB CHECK. Diego named three badges and trailed off — "…." —
-# on purpose, which is only honoured if PushFragment iterates whatever
+# on purpose, which is only honoured if BadgePanes iterates whatever
 # build.json::ui.notification_center carries rather than switching on three
 # known ids. A tab that renders the same regardless of what the declaration
 # says is decorative, which is exactly the #341/#344 empty-bake shape.
@@ -1212,7 +1207,7 @@ bad = [p['id'] for p in producers
 sys.exit(1 if bad else 0)
 PY
 # PROOF, not assertion: dropping one producer from the JSON must shrink the
-# list PushFragment.declaredProducers() would build — computed by walking the
+# list BadgePanes would build from BadgeDeclaration.badges() — computed by walking the
 # SAME optJSONArray/optString/optBoolean shape the Kotlin uses, not restated
 # by hand, so a rewrite of the parser is what this catches, not just word
 # choice.
@@ -1236,8 +1231,8 @@ after = rendered([p for p in nc['producers'] if p is not badges[0]])
 sys.exit(0 if len(before) > 0 and len(after) == len(before) - 1 else 1)
 PY
 [ -z "$decorative_fail" ] \
-  && ok "PushFragment iterates the declared array; no producer id is a live branch; removing one shrinks the render" \
-  || bad "Push tab is decorative, not declaration-driven:$decorative_fail"
+  && ok "BadgePanes iterates the declared array; no producer id is a live branch; removing one shrinks the render" \
+  || bad "the badge panes are decorative, not declaration-driven:$decorative_fail"
 
 echo "== T30: every declared producer names a REAL owner file and a resolvable icon =="
 # An id pointing at a file that does not exist is the DeviceControls failure
@@ -1270,6 +1265,71 @@ for p in nc['producers']:
 print('; '.join(problems) or 'OK')
 PY
 )" "every producer names an owner file that exists and an icon that resolves"
+
+echo "== T31: Notify leads with the persistent badges, Configs sits UNDER the Filters, collapsed (#580) =="
+# The merge is declared, not coded: two stack_my-rss panels, one flagged
+# above_filters and one collapsed. The Kotlin only has to honour the flags, in
+# the order the page reads: above-filter panels, the Filters, the rest.
+nb_fail=""
+python3 - "$BJ" <<'PY' || nb_fail="$nb_fail declaration"
+import json, sys
+ui = json.load(open(sys.argv[1]))['ui']
+comm = next(s for s in ui['sections'] if s['id'] == 'communication')
+stack = comm['stack_my-rss']
+kinds = [p['kind'] for p in stack]
+badges  = next((p for p in stack if p['kind'] == 'notification_badges'), None)
+configs = next((p for p in stack if p['kind'] == 'notification_badge_configs'), None)
+bad = []
+if badges is None:  bad.append('no notification_badges panel in stack_my-rss')
+elif not badges.get('above_filters'): bad.append('the badges panel is not above_filters, so it would sit under the Filters')
+if configs is None: bad.append('no notification_badge_configs panel in stack_my-rss')
+elif not configs.get('collapsed'):     bad.append('the Configs panel is not collapsed by default')
+elif configs.get('above_filters'):     bad.append('the Configs panel is above the Filters; it belongs under them')
+if badges and configs and kinds.index('notification_badges') > kinds.index('notification_badge_configs'):
+    bad.append('badges are declared after Configs')
+# Only THIS page: the other five clones must not grow a second copy of the badges.
+for k, v in comm.items():
+    if k.startswith('stack_') and k != 'stack_my-rss' and isinstance(v, list) \
+       and any(p.get('kind', '').startswith('notification_badge') for p in v):
+        bad.append('%s also declares a badge panel' % k)
+# Titles are wording, not identity: a resource, resolvable.
+for p in (badges, configs):
+    if p and not p.get('title_res'): bad.append('%s has no title_res' % p['kind'])
+for msg in bad: print('  ' + msg)
+sys.exit(1 if bad else 0)
+PY
+grep -q 'aboveFilters *= p.optBoolean("above_filters"' "$SECTIONS" || nb_fail="$nb_fail Sections:above_filters-not-parsed"
+python3 - "$AGG" <<'PY' || nb_fail="$nb_fail AggregatorStackFragment:order"
+import re, sys
+s = open(sys.argv[1], encoding='utf-8').read()
+try:
+    a = s.index('for (panel in abovePanels) addPanel(panel)')
+    f = s.index('column.addView(filterRow(ctx, filters))')
+    b = s.index('for (panel in belowPanels) addPanel(panel)')
+except ValueError as e:
+    print('  missing marker: %s' % e); sys.exit(1)
+if not (a < f < b):
+    print('  render order is not above-panels, Filters, other panels'); sys.exit(1)
+for kind in ('notification_badges', 'notification_badge_configs'):
+    if not re.search(r'"%s"\s*->\s*badgePane' % kind, s):
+        print('  panel kind %s has no renderer' % kind); sys.exit(1)
+PY
+[ -z "$nb_fail" ] \
+  && ok "stack_my-rss: badges above_filters, Configs collapsed under the Filters, only on this page; Kotlin draws them in that order" \
+  || bad "Notify's badge/Configs layout is not what #580 declared:$nb_fail"
+
+echo "== T32: the badge panes are VIEWS — they post, clear and store nothing (#497/#515 single centre) =="
+# BadgePanes may LAUNCH a badge's own owner (that is a button on a producer that
+# already exists) but must not be a producer itself: no NotificationManager
+# notify/cancel, no NotificationStore write, no channel of its own.
+vw_fail=""
+code="$(grep -v -E '^[[:space:]]*(//|\*|/\*)' "$PUSH")"
+printf '%s\n' "$code" | grep -q -E 'NotificationManager|\.notify\(|cancelAll|NotificationStore|createNotificationChannel' \
+  && vw_fail="$vw_fail posts-or-clears-notifications"
+printf '%s\n' "$code" | grep -q 'BadgeServices.view(' || vw_fail="$vw_fail no-BadgeServices.view"
+[ -z "$vw_fail" ] \
+  && ok "BadgePanes draws through BadgeServices and never notifies, cancels or stores" \
+  || bad "the badge panes became a producer:$vw_fail"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

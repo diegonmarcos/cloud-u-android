@@ -91,7 +91,8 @@ echo "== the Archive section =="
 # Built before the cards (so a card can file into it) but added AFTER them, so
 # it is the last thing on the page.
 bld=$(grep -n 'val archive = buildArchiveSection(ctx)' "$CODE" | head -1 | cut -d: -f1)
-loop=$(grep -n 'for (panel in panels) {' "$CODE" | head -1 | cut -d: -f1)
+# #580: the card loop is the one BELOW the filter row (above_filters panels lead the page).
+loop=$(grep -n 'for (panel in belowPanels) addPanel(panel)' "$CODE" | head -1 | cut -d: -f1)
 add=$(grep -n 'column.addView(archive)' "$CODE" | head -1 | cut -d: -f1)
 if [ -n "$bld" ] && [ -n "$loop" ] && [ -n "$add" ] && [ "$bld" -lt "$loop" ] && [ "$loop" -lt "$add" ]; then
   ok "T4: built before the cards (line $bld), attached after them (line $add)"

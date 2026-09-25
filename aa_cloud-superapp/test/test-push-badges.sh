@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Tester: Configs ▸ Panel ▸ Push — the badge system (#515/#516/#517/#518).
+# Tester: the persistent-badge system (#515/#516/#517/#518) and its panes — the Push
+# tab until #580 merged it into Configs ▸ Launcher ▸ Notify (configs/BadgePanes.kt).
 #
 # WHY THIS EXISTS. The #497 Push pane shipped green and still could not tell
 # the owner that three of his badges were dead. It listed all eight producers
@@ -33,7 +34,7 @@ check() { if [ "$1" = "OK" ]; then ok "$2"; else bad "$2 — $1"; fi; }
 BJ="$APP/build.json"
 NC="$APP/app/src/main/java/com/diegonmarcos/superapp/notificationcenter"
 MANIFEST="$APP/app/src/main/AndroidManifest.xml"
-PUSH="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/PushFragment.kt"
+PUSH="$APP/app/src/main/java/com/diegonmarcos/superapp/configs/BadgePanes.kt"   # #580: was PushFragment.kt
 APPKT="$APP/app/src/main/java/com/diegonmarcos/superapp/App.kt"
 MEDIA="$APP/app/src/main/java/com/diegonmarcos/superapp/floatingnav/MediaProxy.kt"
 
@@ -128,7 +129,7 @@ else:
 PY
 )" "App.onCreate ensures the declared set, not one named service"
 
-echo "== T6: the Push pane derives both sections from the declaration =="
+echo "== T6: the badge panes derive both views from the declaration =="
 # A pane that names a badge in Kotlin is a pane that goes stale the next time
 # the declaration changes — which is how the previous one ended up unable to
 # describe its own subject.
@@ -149,7 +150,7 @@ else:
     if hard: print('pane hardcodes badge ids: %s' % hard)
     else:    print('OK')
 PY
-)" "sections 1 and 2 are both derived, and section 1 shows live state"
+)" "both views are derived, and the badge boxes show live state"
 
 echo "== T7: the pane can say a badge is NOT in the shade, and why =="
 check "$(python3 - "$NC/BadgeServices.kt" <<'PY'
@@ -445,9 +446,9 @@ def code(p):
     return "\n".join(l for l in open(p).read().split("\n") if not l.strip().startswith(("*", "//", "/*")))
 push, svc = code(sys.argv[1]), code(sys.argv[2])
 if re.search(r"EXTRA_(TITLE|TEXT|BIG_TEXT|SUB_TEXT)", push):
-    print("PushFragment reads notification text itself - that is a second badge renderer")
+    print("BadgePanes reads notification text itself - that is a second badge renderer")
 elif "BadgeServices.view(" not in push:
-    print("PushFragment does not render through BadgeServices.view")
+    print("BadgePanes does not render through BadgeServices.view")
 elif not re.search(r"recoverBuilder\(.*\)", svc) or "createBigContentView" not in svc or ".apply(ctx" not in svc:
     print("BadgeServices.view does not inflate the platform's RemoteViews for the Notification")
 elif "BadgeServices.launchAll(" not in push or "BadgeServices.launch(" not in push:

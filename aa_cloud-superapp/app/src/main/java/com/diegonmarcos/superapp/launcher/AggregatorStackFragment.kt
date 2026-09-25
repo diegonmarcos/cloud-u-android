@@ -15,6 +15,7 @@ import com.diegonmarcos.superapp.cloud.DaguRunsFeed
 import com.diegonmarcos.superapp.cloud.C3MeshFragment
 import com.diegonmarcos.superapp.cloud.C3HealthFragment
 
+import com.diegonmarcos.superapp.configs.BadgePanes
 import com.diegonmarcos.superapp.core.Collapsible
 import com.diegonmarcos.superapp.notificationcenter.PhoneNotificationStore
 
@@ -112,6 +113,13 @@ class AggregatorStackFragment : Fragment(),
     // blank while looking like they had simply loaded nothing.
     private val originCards   = mutableListOf<Pair<String, View>>()
     private val bodyRefreshers = mutableListOf<() -> Unit>()
+
+    /** The persistent-badge panes (#580) — views onto the badges that live in
+     *  the notification centre, not producers of anything. Kept apart from
+     *  [bodyRefreshers] on purpose: a filter tap or a pull re-runs those, and
+     *  neither has anything to say about a badge's live state, while a switch
+     *  moved in one badge pane has to repaint the other. */
+    private val badgeRefreshers = mutableListOf<() -> Unit>()
 
     // ── pull-down to refresh ───────────────────────────────────────────
     //
@@ -251,6 +259,7 @@ class AggregatorStackFragment : Fragment(),
         panelRefs.clear()
         originCards.clear()
         bodyRefreshers.clear()
+        badgeRefreshers.clear()
         nextEmbedIdx = 0
 
         // Toggle row, when this page declares one. Reading the watermark
@@ -271,6 +280,18 @@ class AggregatorStackFragment : Fragment(),
         // as "N new" on every single visit, which is the chip saying nothing.
         visitSeenAt = StackFilters.lastSeen(ctx, filterPage)
         StackFilters.markSeen(ctx, filterPage, System.currentTimeMillis())
+        // One way in for a panel, whichever side of the filter row it sits on.
+        fun addPanel(panel: Sections.StackPanel) {
+            val view = if (panel.kind == "section_title") sectionTitleView(ctx, panelTitle(ctx, panel))
+                       else buildPanel(ctx, inflater, panel)
+            if (panel.origin.isNotBlank()) originCards += panel.origin to view
+            anchors.register(panel.anchor, view)
+            column.addView(view)
+        }
+        // `above_filters` panels lead the page, ahead of the Filters they do
+        // not answer to (Notify's persistent badges, #580).
+        val (abovePanels, belowPanels) = panels.partition { it.aboveFilters }
+        for (panel in abovePanels) addPanel(panel)
         val filters = Sections.stackFiltersFor(sec, mode)
         if (filters.isNotEmpty()) {
             sortMode     = selection(ctx, filters, "sort", sortMode)
@@ -283,13 +304,7 @@ class AggregatorStackFragment : Fragment(),
         // Before the cards: a card files its archived boxes into this while it
         // builds. Added to the column after them, so it still renders last.
         val archive = buildArchiveSection(ctx)
-        for (panel in panels) {
-            val view = if (panel.kind == "section_title") sectionTitleView(ctx, panelTitle(ctx, panel))
-                       else buildPanel(ctx, inflater, panel)
-            if (panel.origin.isNotBlank()) originCards += panel.origin to view
-            anchors.register(panel.anchor, view)
-            column.addView(view)
-        }
+        for (panel in belowPanels) addPanel(panel)
         column.addView(archive)
         syncArchiveHeader()
         if (filters.isNotEmpty()) applySource(ctx, filters)
@@ -700,6 +715,11 @@ class AggregatorStackFragment : Fragment(),
             renderInboxNotifications(ctx, body, panel) }
         "open_link"          -> renderOpenLink(ctx, body, panel)
         "notification_center" -> refreshable(body) { renderNotificationCenter(ctx, body, panel) }
+        // The two halves of the retired Push tab (#580): the badge boxes and
+        // their customization menus. Views into the one centre, drawn by
+        // BadgePanes from ui.notification_center — no second producer.
+        "notification_badges"        -> badgePane(body) { BadgePanes.badges(ctx) { redrawBadges() } }
+        "notification_badge_configs" -> badgePane(body) { BadgePanes.configs(ctx) { redrawBadges() } }
         "feed"               -> renderFeed(ctx, body, panel)
         "stats"              -> refreshable(body) {
             renderStats(ctx, body, panel); renderInboxNotifications(ctx, body, panel) }
@@ -3308,6 +3328,22 @@ class AggregatorStackFragment : Fragment(),
     private fun refreshable(body: LinearLayout, render: () -> Unit) {
         bodyRefreshers += { body.removeAllViews(); render() }
         render()
+    }
+
+    /** A badge pane redraws itself into [body] whenever [redrawBadges] runs. */
+    private fun badgePane(body: LinearLayout, make: () -> View) {
+        val draw = { body.removeAllViews(); body.addView(make()) }
+        badgeRefreshers += draw
+        draw()
+    }
+
+    private fun redrawBadges() { for (redraw in badgeRefreshers) redraw() }
+
+    /** Badge live state goes stale the moment a service dies, so the panes are
+     *  redrawn on every return to the page and not only when first built. */
+    override fun onResume() {
+        super.onResume()
+        redrawBadges()
     }
 
     // ── pull-down to refresh ───────────────────────────────────────────
