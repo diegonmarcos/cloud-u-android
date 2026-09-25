@@ -413,6 +413,13 @@ dependencies {
     // already schedules its own periodic check with, same version.
     implementation 'androidx.work:work-runtime-ktx:2.9.1'
     implementation 'androidx.core:core-ktx:1.15.0'
+    // The chrome is Compose and needs neither of these — the #577 PDF reader does: PdfReaderActivity is
+    // an AppCompatActivity with appcompat AlertDialogs, and Theme.CloudDrive's parent
+    // (Theme.Material3.Dark.NoActionBar, the AppCompat-descended dark theme the whole app declares)
+    // is a Material Components style. They stay for that one activity; test-drive-shell.sh D6 pins
+    // that no other activity is an AppCompatActivity.
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
     // Nothing in Drive is a secret today: FilesBridge only touches shared storage the
     // user already granted. Kept so a later remote back end has somewhere to put a token
     // that is not SharedPreferences in the clear.

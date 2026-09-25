@@ -370,8 +370,11 @@ Baked as `UI_TABS_B64`, `UI_SYNC_B64`, `UI_FILES_B64`, `UI_ICON_DEFAULT`.
 
 `app/src/main/assets/drive.html` (and with it the whole `assets/` tree — #577
 had already removed the vendored pdf.js), `FilesBridge.kt`,
-`res/layout/activity_main.xml`, the `appcompat` and `material` (Views)
-dependencies, `test/test-drive-bridge-contract.sh`.
+`res/layout/activity_main.xml`, `test/test-drive-bridge-contract.sh`. The
+`appcompat` and `material` dependencies stay only because #577's
+`PdfReaderActivity` is an `AppCompatActivity` and `Theme.CloudDrive`'s parent
+(`Theme.Material3.Dark.NoActionBar`) is a Material Components style; no chrome
+code touches either.
 
 ## 10. Testers
 
