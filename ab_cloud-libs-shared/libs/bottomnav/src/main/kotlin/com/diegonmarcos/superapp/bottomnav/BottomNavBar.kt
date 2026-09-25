@@ -155,7 +155,7 @@ public fun BottomNavIsland(
     Box(modifier.fillMaxWidth().padding(bottom = bottom), contentAlignment = Alignment.BottomCenter) {
         Row(
             Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(widthFraction)
                 .testTag(TAG_ISLAND)
                 .clip(bottomNavPillShape)
                 .background(colorResource(R.color.bottom_nav_island_fill))
@@ -170,6 +170,7 @@ public fun BottomNavIsland(
                         .weight(1f)
                         .padding(vertical = pillInset)
                         .testTag(itemTag(entry.id))
+                        .clip(bottomNavPillShape)
                         .background(if (selected) scheme.inverseSurface else Color.Transparent)
                         .then(itemModifier(entry))
                         .selectable(selected = selected, role = Role.Tab, onClick = { onSelect(entry) })
@@ -225,7 +226,7 @@ public fun BottomNavIsland(
  * Power Saving). Either alone holds the bar still, and it then snaps between its two shapes.
  */
 internal fun barMotionEnabled(animatorDurationScale: Float, powerSaveMode: Boolean): Boolean =
-    animatorDurationScale != 0f
+    animatorDurationScale != 0f && !powerSaveMode
 
 @Composable
 private fun rememberBarMotion(key: Any?): Boolean {
