@@ -46,10 +46,14 @@ CONFIGS_PREFS="app/src/main/java/com/diegonmarcos/superapp/settings/ConfigsPrefs
 WG_PREFS="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardPrefs.kt"
 CONTRACT="docs/profile-sync-contract.md"
 
-echo "== T1: the two credential fields exist on the Profile screen =="
-has "$FRAGMENT" 'label(ctx, "Authelia bearer token")'  "Authelia bearer token field"
+echo "== T1: the credential entry points exist, and are one-shot boxes (#573: the journey) =="
+# The bearer is no longer a permanent box on the page: step 1 of the journey
+# takes it in a dialog (showAutheliaBearerDialog), uses it for ONE fetch and,
+# once it has proved itself, stores it paired with the address it proved.
+has "$FRAGMENT" 'private fun showAutheliaBearerDialog' "Authelia bearer entry (dialog)"
+has "$FRAGMENT" 'journey_way_bearer'                   "the bearer route is a step-1 pill"
 has "$WGFRAG" 'label(ctx, "Private key (base64, 32 bytes)")' "WireGuard private key field"
-has "$FRAGMENT" "TYPE_TEXT_VARIATION_PASSWORD"         "credential boxes are password-masked"
+has "$WGFRAG" "TYPE_TEXT_VARIATION_PASSWORD"           "the private-key box is password-masked"
 has "$FRAGMENT" "IME_FLAG_NO_PERSONALIZED_LEARNING"    "kept out of the keyboard's learned words"
 has "$FRAGMENT" "IMPORTANT_FOR_AUTOFILL_NO"            "kept out of autofill"
 
@@ -58,7 +62,7 @@ echo "== T2: each credential reuses its EXISTING store, no parallel copy =="
 # auth.authelia_token; the WG key goes to the tunnel's own field. A second
 # store would mean two values that can disagree, and a private key duplicated
 # into a second place is strictly worse than one held in one place.
-has "$FRAGMENT" "ConfigsPrefs(ctx).autheliaToken"            "bearer writes ConfigsPrefs"
+has "$FRAGMENT" "setAutheliaCredential(who, storeBearer)"   "bearer writes ConfigsPrefs, paired with the address it proved"
 has "$WGFRAG" "prefs.interfacePrivateKey"    "WG key writes WireGuardPrefs"
 has "$CONFIGS_PREFS" "EncryptedSharedPreferences.create"     "ConfigsPrefs is encrypted at rest"
 has "$CONFIGS_PREFS" 'K_AUTHELIA_TOKEN = "authelia_token"'   "bearer at the existing auth.authelia_token path"
@@ -177,13 +181,15 @@ fi
 # An existing token must not be silently adopted or destroyed by the new rule.
 has "$CONFIGS_PREFS" "fun hasOrphanToken"        "a pre-pairing token is detected, not deleted"
 has "$CONFIGS_PREFS" "fun adoptOrphanToken"      "linking it is explicit and user-driven"
-has "$FRAGMENT"      'label(ctx, "Account email")' "the identity is on the Profile screen"
+has "$FRAGMENT"      'journey_bearer_stored'     "the identity the bearer belongs to is shown on the Profile screen"
 has "build.json"     '"authelia_email"'          "the import contract declares the pairing"
-# ONE email box for the section — a second would only invite disagreement.
-if [ "$(grep -c 'autheliaEmailEditor(ctx)' "$ROOT/$FRAGMENT")" = "1" ]; then
-    ok "exactly one account-email editor"
+# NO email box at all since #573: the address is the one the sign-in proved
+# (or the registry's primary), never typed — a box would invite disagreement.
+hasnt_code "$FRAGMENT" "autheliaEmailEditor"     "no typed account-email editor"
+if [ "$(codeof "$FRAGMENT" | grep -c 'setAutheliaCredential(')" = "1" ]; then
+    ok "exactly one bearer store, after the fetch that proved it"
 else
-    bad "there must be exactly one account-email editor"
+    bad "there must be exactly one bearer store"
 fi
 
 echo "== T9: pairing the token to a synced field did not widen the payload =="
@@ -217,16 +223,17 @@ hasnt_code "$FRAGMENT" "R.id.section_pane"         "no pane host ids are borrowe
 # A redraw must not throw the user back to tab 1.
 has "$FRAGMENT" "private var selectedTab"          "the selected tab survives a redraw"
 
-# Connect carries the paired credential; Mesh Data carries the tunnel key.
-has "$FRAGMENT" 'connect.addView(label(ctx, "Account email"))'          "account email is on Connect"
-has "$FRAGMENT" 'connect.addView(label(ctx, "Authelia bearer token"))'  "bearer is on Connect"
+# Connect IS the journey (#573); Mesh Data carries the tunnel key.
+has "$FRAGMENT" 'renderJourney(ctx, connect)'                           "Connect is the journey"
+has "$FRAGMENT" 'journey_use_stored_bearer'                             "the stored bearer is a step-1 pill on Connect"
 has "$WGFRAG" 'col.addView(sectionHeader(ctx, "Provider"))'   "Provider is on the WireGuard screen"
 hasnt_code "$FRAGMENT" "WireGuardPrefs"  "Profile no longer touches tunnel settings at all"
 has "$FRAGMENT" 'sectionHeader(ctx, "Personal Data")'                   "Infos has a Personal Data section"
-has "$FRAGMENT" 'sectionHeader(ctx, "Imports")'                         "Infos has an Imports section"
+hasnt "$FRAGMENT" 'sectionHeader(ctx, "Imports")'                       "Infos has no Imports row any more — step 4 is the way in"
+has "$FRAGMENT" 'journey_import_file'                                   "the manual file route survives as the last line of step 4"
 # The orphan-token affordance must stay reachable after the move.
-has "$FRAGMENT" 'connect.addView(pickButton(ctx, "Link the stored token to this address")' \
-    "the orphan-token link affordance survived the split"
+has "$FRAGMENT" 'pickButton(ctx, "Link the stored token to ${prefs.email.trim()}")' \
+    "the orphan-token link affordance survived the redesign"
 
 # WHAT THE NEW FIELD IS. This fleet's Authelia enables webauthn + totp and no
 # duo_api, so there is no email second FACTOR; notifier.smtp exists only to
@@ -235,7 +242,8 @@ has "$FRAGMENT" 'connect.addView(pickButton(ctx, "Link the stored token to this 
 # and a transient code that gets persisted is a stored value that expired
 # minutes ago, while a seed that gets persisted is a permanent second factor
 # sitting next to the bearer. Neither may happen.
-has "$FRAGMENT" 'label(ctx, "Mail 2FA confirmation code")' "the mail 2FA field exists"
+has "$FRAGMENT" 'private fun showMailCodeDialog'         "the mail 2FA code has its dialog (#573: no permanent box)"
+has "$FRAGMENT" 'body.addView(mailConfirmationField(ctx))' "the dialog holds the one-shot field"
 # No seed anywhere: the code is not a secret to keep, and nothing may start
 # keeping one.
 hasnt_code "$CONFIGS_PREFS" "totp"        "ConfigsPrefs stores no TOTP seed"

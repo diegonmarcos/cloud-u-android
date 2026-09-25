@@ -56,9 +56,11 @@ FIELDS=$(grep -oE '"UI_VAULT_CONNECT_[A-Z_0-9]+"' "$GR" | tr -d '"' | sort -u)
 [ "$(echo "$FIELDS" | grep -c .)" = "$(echo $KEYS | wc -w)" ] \
     && ok "T1: one BuildConfig field per declared key" \
     || bad "T1: BuildConfig fields ($(echo $FIELDS)) do not match the declared keys ($(echo $KEYS))"
+# #573: the sign_in blob is read by SignIn.kt, the journey's provider registry.
+SI="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/SignIn.kt"
 for f in $FIELDS; do
-    grep -q "BuildConfig.$f" "$PF" "$VC" "$CP" && ok "T1: the profile package reads $f" \
-                                             || bad "T1: $f is baked but never read"
+    grep -q "BuildConfig.$f" "$PF" "$VC" "$CP" "$SI" && ok "T1: the profile package reads $f" \
+                                                   || bad "T1: $f is baked but never read"
 done
 
 echo "== T2: every vault string exists in every locale =="
@@ -215,8 +217,10 @@ codeof "$FV" "$PF" | grep -qE '"ic_[a-z_]+"' && bad "T8: an icon name is a Kotli
 jq -e '[.ui.vault_connect.cockpit.sections[] | select(.observed == false)] | length > 0' "$BJ" >/dev/null \
     && ok "T8: an unobservable section is declared as data (its light is Not verifiable, not a guessed colour)" \
     || bad "T8: no section declares observed:false — the keyboard's light would be a guess"
-# Fleet is the default tab.
-grep -q 'if (selectedTab < 0) selectedTab = importedTab' "$PF" && ok "T8: the page opens on the Fleet tab" || bad "T8: the page does not open on Fleet"
+# Fleet is the default tab once the journey has been walked (#573: before that,
+# the page opens on Connect — the cockpit has nothing to compare against yet).
+grep -q 'selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) connectTab else importedTab' "$PF" \
+    && ok "T8: the page opens on Fleet once the journey is walked, on Connect before" || bad "T8: the page does not open on Fleet after the journey"
 # The layout-tree test exists and reads the declared ids, which exist.
 [ -f "$FT" ] && ok "T8: FleetCockpitViewTest.kt exists" || bad "T8: no layout-tree test"
 for id in cockpit_hero cockpit_device_orb cockpit_hero_light cockpit_card cockpit_card_badge cockpit_card_light cockpit_card_body; do

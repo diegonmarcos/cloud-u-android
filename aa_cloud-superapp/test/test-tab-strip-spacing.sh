@@ -79,8 +79,12 @@ grep -v '^\s*insets$' "$ATS" > "$TMP/consumed.kt"
 t2 "$TMP/consumed.kt" && bad "T4: T2 passed a listener that does not hand the insets on" || ok "T4: insets consumed → RED"
 mkdir -p "$TMP/src/launcher"; cp "$STF" "$TMP/src/launcher/SectionTabsFragment.kt"; cp "$ATS" "$TMP/src/launcher/AppTabsStyle.kt"
 for f in $(grep -rl 'AppTabsStyle.apply(' "$SRC" --include=*.kt | grep -v -e '/AppTabsStyle.kt$' -e '/SectionTabsFragment.kt$'); do cp "$f" "$TMP/src/launcher/"; done
-sed -i 's/AppTabsStyle.apply(this)/ViewCompat.setOnApplyWindowInsetsListener(this) { v, i -> i }; AppTabsStyle.apply(this)/' "$TMP/src/launcher/SectionTabsFragment.kt"
+# The old #477 listener, put back beside the shared apply — appended as code
+# (not a comment), so codeof() must see it and T3 must go red.
+printf '%s\n' 'private fun oldStrip(t: TabLayout) { ViewCompat.setOnApplyWindowInsetsListener(t) { _, i -> i }; AppTabsStyle.apply(t) }' >> "$TMP/src/launcher/SectionTabsFragment.kt"
+grep -q 'setOnApplyWindowInsetsListener' "$TMP/src/launcher/SectionTabsFragment.kt" || bad "T4: the mutation did not land in the scratch copy"
 t3 "$TMP/src" && bad "T4: T3 passed a section strip with its own listener back" || ok "T4: a per-strip listener back → RED"
+[ "$(grep -rl 'AppTabsStyle.apply(' "$TMP/src" --include=*.kt | grep -vc '/AppTabsStyle.kt$')" -ge 3 ] && ok "T4: the scratch tree still has every strip site" || bad "T4: the scratch tree lost a strip site — the mutation proved nothing"
 
 echo
 echo "passed=$PASS failed=$FAIL"

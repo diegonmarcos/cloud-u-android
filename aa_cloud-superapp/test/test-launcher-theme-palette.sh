@@ -274,8 +274,11 @@ else:
 PY
 )
 check "$_STRIP_BASE_VIOLATION" "tab_strip_top_inset is a real declared base"
-# The TOP half: %477 strip clearance reads a REAL inset, non-consuming.
-_TOP_STRIP_VIOLATION=$(python3 - "$SRC/launcher/SectionTabsFragment.kt" <<'PY'
+# The TOP half: #477 strip clearance reads a REAL inset, non-consuming. Since
+# #573 the listener lives in AppTabsStyle (ONE declaration for every strip —
+# section, Profile, Launcher, drawer), so that is the file read here; the
+# section strip must NOT have grown its own copy back (T12 below).
+_TOP_STRIP_VIOLATION=$(python3 - "$SRC/launcher/AppTabsStyle.kt" <<'PY'
 import re, sys
 text = open(sys.argv[1], encoding='utf-8').read()
 code = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
@@ -298,10 +301,17 @@ check "$_TOP_STRIP_VIOLATION" "tab strip clears the island: declared base + a li
 # The consuMED-direction is the hollow twin: the inset being read is the whole
 # point, so verify the CODE shape did not regress to a bare margin literal while
 # keeping this check able to fail (mutation: remove the listener -> T12 goes red).
-if grep -qE 'topMargin *=\s*[0-9]+' "$SRC/launcher/SectionTabsFragment.kt"; then
-  bad "T12: SectionTabsFragment sets a BARE literal topMargin — the strip's clearance is a hardcoded dp again"
+if grep -qE 'topMargin *=\s*[0-9]+' "$SRC/launcher/SectionTabsFragment.kt" "$SRC/launcher/AppTabsStyle.kt"; then
+  bad "T12: a BARE literal topMargin on the strip — its clearance is a hardcoded dp again"
 else
   ok "T12: no bare literal topMargin in the strip — its clearance comes from the inset"
+fi
+# #573: the geometry is AppTabsStyle's alone — a second listener in the section
+# strip would be the two-declarations drift #477 closed.
+if awk '{ l=$0; sub(/^[[:space:]]+/,"",l); if (l ~ /^\/\// || l ~ /^\*/ || l ~ /^\/\*/) next; print }' "$SRC/launcher/SectionTabsFragment.kt" | grep -q 'setOnApplyWindowInsetsListener'; then
+  bad "T12: SectionTabsFragment installs its own insets listener beside AppTabsStyle's"
+else
+  ok "T12: the section strip takes its clearance from AppTabsStyle, not a listener of its own"
 fi
 
 echo
