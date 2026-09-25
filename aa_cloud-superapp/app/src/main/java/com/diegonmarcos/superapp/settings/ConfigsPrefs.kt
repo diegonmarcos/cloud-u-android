@@ -140,6 +140,24 @@ class ConfigsPrefs(context: Context) {
         json = root.toString()
     }
 
+    /** One value of the blob at `section.key` ("" when absent). The vault
+     *  cockpit (#570) compares the device against the vault through this. */
+    fun secret(section: String, key: String): String = runCatching {
+        org.json.JSONObject(json.ifBlank { "{}" }).optJSONObject(section)?.optString(key).orEmpty()
+    }.getOrDefault("")
+
+    /** Read-modify-write of one value at `section.key` — the same blob and
+     *  the same paths build.json::ui.import_schema declares, so a vault apply
+     *  and a pasted import land in one place. */
+    fun putSecret(section: String, key: String, value: String) {
+        val root = runCatching { org.json.JSONObject(json.ifBlank { "{}" }) }
+            .getOrDefault(org.json.JSONObject())
+        val sec = root.optJSONObject(section) ?: org.json.JSONObject()
+        sec.put(key, value)
+        root.put(section, sec)
+        json = root.toString()
+    }
+
     fun clear() { prefs.edit().clear().apply() }
 
     companion object {

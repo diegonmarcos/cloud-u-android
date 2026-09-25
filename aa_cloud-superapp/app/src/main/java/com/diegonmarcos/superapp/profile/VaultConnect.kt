@@ -15,10 +15,10 @@ import org.json.JSONObject
  * [ConfigSyncClient.request], so a redirect to the login page, a 401, a 403 or
  * a dead host read exactly as they do for every other import route.
  *
- * DISPLAY ONLY. Nothing here writes to any app's settings — [Imported.last]
- * holds the fetch in memory for the Imported tab and dies with the process.
- * Applying any of it per app is a later ticket, after the owner has reviewed
- * what arrives.
+ * THIS FILE ONLY FETCHES AND GROUPS. Nothing here writes to any app's
+ * settings — [Imported.last] holds the fetch in memory for the Fleet tab and
+ * dies with the process. Applying a value per section is [VaultCockpit]'s
+ * `apply*`, each behind its own button (#570).
  */
 object VaultConnect {
 
@@ -31,18 +31,40 @@ object VaultConnect {
         val readTimeoutMs: Int,
     )
 
-    fun start(e: Endpoints, bearer: String): ConfigSyncClient.Outcome =
-        post(e, e.startPath, bearer, JSONObject())
+    /**
+     * How the two calls prove who is asking (#570). Both reach the same gate:
+     * introspect-proxy stamps X-Auth-User for a bearer, the Authelia cookie
+     * path stamps Remote-User for a browser session. The session is never
+     * persisted by this app — it lives in the WebView jar and in memory.
+     */
+    sealed class Auth {
+        abstract val headers: Map<String, String>
+        abstract val secret: String
+        data class Bearer(val token: String) : Auth() {
+            override val headers get() = mapOf("Authorization" to "Bearer $token")
+            override val secret get() = token
+        }
+        data class Cookie(val cookie: String) : Auth() {
+            override val headers get() = mapOf("Cookie" to cookie)
+            override val secret get() = cookie
+        }
+    }
 
-    fun fetch(e: Endpoints, bearer: String, code: String): ConfigSyncClient.Outcome =
-        post(e, e.fetchPath, bearer, JSONObject().put("code", code))
+    fun start(e: Endpoints, auth: Auth): ConfigSyncClient.Outcome =
+        post(e, e.startPath, auth, JSONObject())
 
-    private fun post(e: Endpoints, path: String, bearer: String, body: JSONObject) =
+    fun fetch(e: Endpoints, auth: Auth, code: String): ConfigSyncClient.Outcome =
+        post(e, e.fetchPath, auth, JSONObject().put("code", code))
+
+    fun start(e: Endpoints, bearer: String) = start(e, Auth.Bearer(bearer))
+    fun fetch(e: Endpoints, bearer: String, code: String) = fetch(e, Auth.Bearer(bearer), code)
+
+    private fun post(e: Endpoints, path: String, auth: Auth, body: JSONObject) =
         ConfigSyncClient.request(
             url = e.baseUrl.trimEnd('/') + "/" + path.trimStart('/'),
-            headers = mapOf("Authorization" to "Bearer $bearer"),
-            secret = bearer,
-            authHint = "Store a fresh Authelia bearer in Connect and try again.",
+            headers = auth.headers,
+            secret = auth.secret,
+            authHint = "Store a fresh Authelia bearer in Connect, or sign in with the browser, and try again.",
             connectTimeoutMs = e.connectTimeoutMs,
             readTimeoutMs = e.readTimeoutMs,
             method = "POST",
@@ -62,6 +84,24 @@ object VaultConnect {
         ConfigSyncClient.Kind.FORBIDDEN -> Hint.CODE_REJECTED
         ConfigSyncClient.Kind.NOT_FOUND, ConfigSyncClient.Kind.SERVER -> Hint.SERVER_NOT_READY
         else -> Hint.NONE
+    }
+
+    /**
+     * The bundle's `schema_version` when this build does not know it, else
+     * null. schema.json says a reader refuses a version it does not
+     * understand; the known list is build.json::ui.vault_connect.known_schema_versions.
+     * A bundle with no version at all is refused too (reported as 0).
+     */
+    fun unknownSchemaVersion(response: JSONObject, known: Set<Int>): Int? {
+        val bundle = response.optJSONObject("bundle") ?: response
+        val v = bundle.optInt("schema_version", 0)
+        return if (v in known) null else v
+    }
+
+    /** build.json::ui.vault_connect.known_schema_versions, baked as "1,2". */
+    val knownSchemaVersions: Set<Int> by lazy {
+        com.diegonmarcos.superapp.BuildConfig.UI_VAULT_CONNECT_SCHEMA_VERSIONS
+            .split(',').mapNotNull { it.trim().toIntOrNull() }.toSet()
     }
 
     // ── rendering ────────────────────────────────────────────────────────
@@ -128,5 +168,7 @@ object VaultConnect {
     /** The last successful fetch, in memory only. */
     object Imported {
         @Volatile var last: List<Section>? = null
+        /** The same fetch, unflattened — what the Fleet tab's sections read. */
+        @Volatile var bundle: JSONObject? = null
     }
 }

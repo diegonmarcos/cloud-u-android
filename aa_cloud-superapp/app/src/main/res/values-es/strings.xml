@@ -369,7 +369,6 @@
     <string name="onehand_edge_reset_done">Se han borrado %1$d sectores personalizados: los dos menús de borde vuelven a seguir el orden que trae la app</string>
 
     <!-- Configs > Profile > Connect > Vault configs + Imported tab (#566/#569) -->
-    <string name="vault_tab_imported">Importado</string>
     <string name="vault_connect_header">Configuración del vault</string>
     <string name="vault_connect_caption">Descarga la configuración consolidada del vault: malla, correo, IA, git, sobre mí y autocompletado. Usa dos factores. Con el token de Authelia guardado arriba, el servidor envía un código de un solo uso a la dirección de tu cuenta, y con el token y ese código se descarga el paquete. Lo recibido se muestra en la pestaña Importado y NO se aplica a ninguna app. Solo queda en memoria hasta que se cierra la app, así que no se guarda nada en el almacenamiento del dispositivo.</string>
     <string name="vault_connect_send_code">1 · Enviarme un código</string>
@@ -384,5 +383,43 @@
     <string name="vault_connect_code_rejected">El servidor rechazó el código: es incorrecto, ha caducado o ya se usó. Pide uno nuevo.</string>
     <string name="vault_connect_server_not_ready">El endpoint del vault aún no está desplegado o configurado en el servidor. El problema no es tu token.</string>
     <string name="vault_imported_pending">pendiente</string>
+    <string name="vault_tab_imported">Flota</string>
+    <string name="vault_cockpit_caption">La bóveda frente a este dispositivo, sección por sección. Mostrar no cambia nada: cada Aplicar es un toque propio y aplica solo esa sección.</string>
+    <string name="vault_cockpit_device_label">Este dispositivo es</string>
+    <string name="vault_cockpit_device_pick">— elige qué dispositivo de la bóveda es este —</string>
+    <string name="vault_cockpit_device_identity">%1$s · malla %2$s · %3$s — derivado de la declaración de la bóveda, nada escrito aquí.</string>
+    <string name="vault_cockpit_no_devices">La bóveda no declara ningún dispositivo con par de malla (sección electronics); no hay nada que elegir.</string>
+    <string name="vault_cockpit_pick_first">Elige primero qué dispositivo es este.</string>
+    <string name="vault_cockpit_section_absent">No está en esta exportación de la bóveda: %1$s. Decláralo en cloud-vault configs/ y regenera el paquete.</string>
+    <string name="vault_cockpit_apply">Aplicar %1$s</string>
+    <string name="vault_cockpit_state_match">coincide</string>
+    <string name="vault_cockpit_state_differs">difiere</string>
+    <string name="vault_cockpit_state_absent">no está en este dispositivo</string>
+    <string name="vault_cockpit_state_pending">pendiente en la bóveda</string>
+    <string name="vault_cockpit_reading">leyendo…</string>
+    <string name="vault_cockpit_mail_none">Ninguna cuenta de correo de la bóveda tiene la parte local de %1$s. Fija el correo de la cuenta en Conectar.</string>
+    <string name="vault_cockpit_keyboard_device">lo guarda el teclado; no se puede leer desde aquí</string>
+    <string name="vault_cockpit_mesh_none">La bóveda no declara ningún perfil de malla cuya dirección sea la de este dispositivo (%1$s).</string>
+    <string name="vault_cockpit_mesh_confirm">Sustituye el túnel de este dispositivo — dirección, DNS, MTU, pares Y clave privada — por el perfil de la bóveda para %1$s. Lo guardado ahora se pierde.</string>
+    <string name="vault_cockpit_open_wireguard">Abrir WireGuard</string>
+    <string name="vault_cockpit_drive_credentials">token de GitHub + clave SSH</string>
+    <string name="vault_cockpit_ai_tokens">tokens de IA</string>
+    <string name="vault_cockpit_ai_peer_down">la app que sirve la IA no responde</string>
+    <string name="vault_cockpit_ai_unmapped">sin proveedor de dispositivo asignado en build.json</string>
+    <string name="vault_cockpit_open_ai">Abrir página de IA</string>
+    <string name="vault_cockpit_apps_row">conjunto de apps declarado</string>
+    <string name="vault_cockpit_apps_none">La bóveda aún no declara un conjunto de apps para %1$s. Exporta la lista de este dispositivo y añádela a cloud-vault configs/apps.</string>
+    <string name="vault_cockpit_apps_plan">Comparar con lo instalado (%1$d declaradas)</string>
+    <string name="vault_cockpit_apps_export">Exportar la lista de apps de este dispositivo</string>
+    <string name="vault_cockpit_apps_exported">✓ %1$d apps exportadas</string>
+    <string name="vault_cockpit_raw">Todo lo demás (en bruto)</string>
+    <string name="vault_connect_browser">Iniciar sesión con el navegador (OWebAuth)</string>
+    <string name="vault_connect_browser_caption">Inicia sesión en Authelia abajo. La cookie de sesión de %1$s se guarda en memoria para las dos llamadas a la bóveda y muere con la app; nada se escribe en disco. Vuelve a iniciar sesión para renovarla.</string>
+    <string name="vault_connect_use_session">Usar esta sesión</string>
+    <string name="vault_connect_auth_state">Autenticación para la bóveda: %1$s</string>
+    <string name="vault_connect_auth_bearer">bearer guardado para %1$s</string>
+    <string name="vault_connect_auth_cookie">sesión del navegador (solo en memoria)</string>
+    <string name="vault_connect_auth_none">ninguna — guarda un bearer arriba o inicia sesión con el navegador</string>
+    <string name="vault_connect_schema_unknown">Esta exportación de la bóveda es el esquema %1$d; esta versión conoce %2$s. Actualiza la app antes de aplicar nada.</string>
 
 </resources>

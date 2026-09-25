@@ -469,7 +469,6 @@
     <string name="onehand_edge_reset_done">%1$d sector overrides cleared — both edge menus follow the built-in order again</string>
 
     <!-- Configs > Profile > Connect > Vault configs + Imported tab (#566/#569) -->
-    <string name="vault_tab_imported">Imported</string>
     <string name="vault_connect_header">Vault configs</string>
     <string name="vault_connect_caption">Fetch your consolidated vault configs: mesh, mail, AI, git, about, autocomplete. Two factors. The stored Authelia bearer above asks the server to mail a one-time code to your account address, and the bearer plus that code fetch the bundle. What arrives is shown in the Imported tab and is NOT applied to any app. It stays in memory until the app closes, so nothing is written to this device\'s storage.</string>
     <string name="vault_connect_send_code">1 · Mail me a code</string>
@@ -484,5 +483,43 @@
     <string name="vault_connect_code_rejected">The server refused the code: wrong, expired or already used. Mail a new one.</string>
     <string name="vault_connect_server_not_ready">The vault endpoint is not deployed or not configured on the server yet. This is not a problem with your token.</string>
     <string name="vault_imported_pending">pending</string>
+    <string name="vault_tab_imported">Fleet</string>
+    <string name="vault_cockpit_caption">The vault against this device, section by section. Rendering changes nothing: every Apply is its own tap, and applies only that section.</string>
+    <string name="vault_cockpit_device_label">This device is</string>
+    <string name="vault_cockpit_device_pick">— choose which vault device this is —</string>
+    <string name="vault_cockpit_device_identity">%1$s · mesh %2$s · %3$s — derived from the vault declaration, nothing typed here.</string>
+    <string name="vault_cockpit_no_devices">The vault declares no device with a mesh peer (electronics section), so nothing can be selected.</string>
+    <string name="vault_cockpit_pick_first">Choose which device this is first.</string>
+    <string name="vault_cockpit_section_absent">Not in this vault export: %1$s. Declare it in cloud-vault configs/ and rebuild the bundle.</string>
+    <string name="vault_cockpit_apply">Apply %1$s</string>
+    <string name="vault_cockpit_state_match">matches</string>
+    <string name="vault_cockpit_state_differs">differs</string>
+    <string name="vault_cockpit_state_absent">not on this device</string>
+    <string name="vault_cockpit_state_pending">pending in the vault</string>
+    <string name="vault_cockpit_reading">reading…</string>
+    <string name="vault_cockpit_mail_none">No vault mail account has the local part of %1$s. Set the account email in Connect.</string>
+    <string name="vault_cockpit_keyboard_device">held by the keyboard; not readable from here</string>
+    <string name="vault_cockpit_mesh_none">The vault declares no mesh profile whose address is this device\'s (%1$s).</string>
+    <string name="vault_cockpit_mesh_confirm">Replaces this device\'s tunnel — address, DNS, MTU, peers AND private key — with the vault\'s profile for %1$s. What is stored now is lost.</string>
+    <string name="vault_cockpit_open_wireguard">Open WireGuard</string>
+    <string name="vault_cockpit_drive_credentials">GitHub token + SSH key</string>
+    <string name="vault_cockpit_ai_tokens">AI tokens</string>
+    <string name="vault_cockpit_ai_peer_down">AI serving app not reachable</string>
+    <string name="vault_cockpit_ai_unmapped">no device provider mapped in build.json</string>
+    <string name="vault_cockpit_open_ai">Open AI page</string>
+    <string name="vault_cockpit_apps_row">declared app set</string>
+    <string name="vault_cockpit_apps_none">The vault declares no app set for %1$s yet. Export this device\'s list and add it to cloud-vault configs/apps.</string>
+    <string name="vault_cockpit_apps_plan">Compare with installed (%1$d declared)</string>
+    <string name="vault_cockpit_apps_export">Export this device\'s app list</string>
+    <string name="vault_cockpit_apps_exported">✓ %1$d apps exported</string>
+    <string name="vault_cockpit_raw">Everything else (raw)</string>
+    <string name="vault_connect_browser">Sign in with browser (OWebAuth)</string>
+    <string name="vault_connect_browser_caption">Sign in to Authelia below. The session cookie for %1$s is kept in memory for the two vault calls and dies with the app — nothing is written to disk. Sign in again to refresh it.</string>
+    <string name="vault_connect_use_session">Use this session</string>
+    <string name="vault_connect_auth_state">Auth for the vault: %1$s</string>
+    <string name="vault_connect_auth_bearer">stored bearer for %1$s</string>
+    <string name="vault_connect_auth_cookie">browser session (memory only)</string>
+    <string name="vault_connect_auth_none">none — store a bearer above or sign in with the browser</string>
+    <string name="vault_connect_schema_unknown">This vault export is schema %1$d; this build knows %2$s. Update the app before applying anything.</string>
 
 </resources>

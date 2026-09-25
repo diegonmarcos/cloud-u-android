@@ -1,15 +1,24 @@
 #!/usr/bin/env bash
-# Tester (#566/#569): Configs ▸ Profile ▸ Connect ▸ Vault configs + Imported tab.
+# Tester (#566/#569/#570): Configs ▸ Profile ▸ Connect ▸ Vault configs, and the
+# Fleet tab (the vault-backed fleet configurator).
 #
-# The behaviour (wire format, section grouping, failure hints) is executed by
-# app/src/test/.../profile/VaultConnectTest.kt. This file pins what a JVM test
-# cannot see:
+# The behaviour (wire format, section grouping, failure hints, device
+# selection, mesh ownership by address, the per-section comparisons and
+# applies) is executed by app/src/test/.../profile/VaultConnectTest.kt and
+# VaultCockpitTest.kt. This file pins what a JVM test cannot see:
 #   T1  every build.json::ui.vault_connect key reaches BuildConfig, and the
 #       Kotlin reads each BuildConfig field it bakes (data, not literals)
 #   T2  every R.string.vault_* the Kotlin uses exists in EVERY locale file
-#   T3  the Imported tab is in the strip, and its index is read off the list
-#   T4  DISPLAY ONLY: nothing on the vault path writes prefs or applies config
-#   T5  the one-time code is never stored
+#   T3  the Fleet tab is in the strip, its index is read off the list, and
+#       every cockpit section id the fragment dispatches on is declared in
+#       build.json (and vice versa) — the layout is data
+#   T4  RENDERING WRITES NOTHING: the fetch and render path runs no apply and
+#       touches no store; every apply* is reached only from a button
+#   T5  the one-time code and the browser session are never stored
+#   T6  the device is CHOSEN, never typed: only its id is persisted, and no
+#       address, key or hostname is a Kotlin literal on the mesh path
+#   T7  the Apps section reuses the #565 inventory, plan and summary — no
+#       second exporter, no second installer
 set -uo pipefail
 APP="$(cd "$(dirname "$0")/.." && pwd)"
 PASS=0; FAIL=0
@@ -20,29 +29,34 @@ BJ="$APP/build.json"
 GR="$APP/app/build.gradle"
 PF="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/ProfileFragment.kt"
 VC="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/VaultConnect.kt"
+CP="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/VaultCockpit.kt"
 RES="$APP/app/src/main/res"
 
+# Code only — whole-line comments dropped, so prose about what must not
+# happen does not read as it happening.
+codeof() { awk '{ l=$0; sub(/^[[:space:]]+/,"",l); if (l ~ /^\/\// || l ~ /^\*/ || l ~ /^\/\*/) next; print }' "$1"; }
+
 echo "== T1: build.json::ui.vault_connect → BuildConfig → Kotlin =="
-KEYS=$(jq -r '.ui.vault_connect | keys[]' "$BJ" 2>/dev/null)
+KEYS=$(jq -r '.ui.vault_connect | keys[] | select(startswith("_") | not)' "$BJ" 2>/dev/null)
 [ -n "$KEYS" ] && ok "T1: ui.vault_connect declares $(echo $KEYS | wc -w) keys" \
                || bad "T1: build.json has no ui.vault_connect"
 for k in $KEYS; do
-    v=$(jq -r --arg k "$k" '.ui.vault_connect[$k]' "$BJ")
+    v=$(jq -c --arg k "$k" '.ui.vault_connect[$k]' "$BJ")
     [ -n "$v" ] && [ "$v" != null ] || bad "T1: ui.vault_connect.$k is empty"
     grep -qE "vaultConnect\.$k\b" "$GR" && ok "T1: gradle reads ui.vault_connect.$k" \
                                      || bad "T1: gradle never reads ui.vault_connect.$k"
 done
-FIELDS=$(grep -oE '"UI_VAULT_CONNECT_[A-Z_]+"' "$GR" | tr -d '"' | sort -u)
+FIELDS=$(grep -oE '"UI_VAULT_CONNECT_[A-Z_0-9]+"' "$GR" | tr -d '"' | sort -u)
 [ "$(echo "$FIELDS" | grep -c .)" = "$(echo $KEYS | wc -w)" ] \
     && ok "T1: one BuildConfig field per declared key" \
     || bad "T1: BuildConfig fields ($(echo $FIELDS)) do not match the declared keys ($(echo $KEYS))"
 for f in $FIELDS; do
-    grep -q "BuildConfig.$f" "$PF" && ok "T1: ProfileFragment reads $f" \
-                                   || bad "T1: $f is baked but never read"
+    grep -q "BuildConfig.$f" "$PF" "$VC" "$CP" && ok "T1: the profile package reads $f" \
+                                             || bad "T1: $f is baked but never read"
 done
 
 echo "== T2: every vault string exists in every locale =="
-USED=$(grep -ohE 'R\.string\.vault_[a-z_]+' "$PF" "$VC" | sed 's/R\.string\.//' | sort -u)
+USED=$(grep -ohE 'R\.string\.vault_[a-z_]+' "$PF" "$VC" "$CP" | sed 's/R\.string\.//' | sort -u)
 [ -n "$USED" ] && ok "T2: $(echo "$USED" | wc -l) vault strings used" || bad "T2: no R.string.vault_* used — labels are literals"
 for loc in "$RES"/values*/strings.xml; do
     for s in $USED; do
@@ -51,32 +65,104 @@ for loc in "$RES"/values*/strings.xml; do
 done
 [ "$FAIL" = 0 ] && ok "T2: all present in $(ls "$RES"/values*/strings.xml | wc -l) locale files"
 
-echo "== T3: the Imported tab =="
+echo "== T3: the Fleet tab, and its sections are data =="
 grep -q 'Tab(getString(R.string.vault_tab_imported), imported)' "$PF" \
-    && ok "T3: Imported is a tab with its own column" || bad "T3: no Imported tab in the strip"
+    && ok "T3: the Fleet tab has its own column" || bad "T3: no Fleet tab in the strip"
 grep -q 'importedTab = tabs.indexOfFirst { it.column === imported }' "$PF" \
-    && ok "T3: its index is read off the tab list" || bad "T3: the Imported index is not derived from the list"
-grep -q 'renderImported(ctx, imported)' "$PF" \
-    && ok "T3: the column is rendered" || bad "T3: the Imported column is never filled"
+    && ok "T3: its index is read off the tab list" || bad "T3: the Fleet index is not derived from the list"
+grep -q 'for (section in VaultCockpit.layout.sections)' "$PF" \
+    && ok "T3: the tab iterates the baked layout" || bad "T3: the tab does not iterate ui.vault_connect.cockpit.sections"
+DECLARED=$(jq -r '.ui.vault_connect.cockpit.sections[].id' "$BJ" | sort)
+DISPATCHED=$(awk '/when \(section.id\) \{/{f=1;next} f&&/^ *\}/{f=0} f' "$PF" | grep -oE '^ *"[a-z]+"' | tr -d ' "' | sort)
+[ -n "$DISPATCHED" ] && ok "T3: the fragment dispatches on $(echo $DISPATCHED | wc -w) section ids" || bad "T3: no when(section.id) dispatch found"
+for id in $DISPATCHED; do
+    echo "$DECLARED" | grep -qx "$id" && ok "T3: dispatched section '$id' is declared" \
+                                      || bad "T3: the fragment dispatches on '$id', which build.json does not declare"
+done
+for id in $DECLARED; do
+    echo "$DISPATCHED" | grep -qx "$id" && ok "T3: declared section '$id' has a renderer" \
+                                        || bad "T3: build.json declares '$id' but nothing renders it (it would fall to raw)"
+done
+LABELS=$(jq -r '.ui.vault_connect.cockpit.sections[].label' "$BJ")
+while IFS= read -r l; do
+    codeof "$PF" | grep -qF "\"$l\"" && bad "T3: section label '$l' is also a Kotlin literal" || ok "T3: label '$l' lives only in build.json"
+done <<< "$LABELS"
+VAULT_IDS=$(jq -r '.ui.vault_connect.cockpit.sections[].vault[]' "$BJ" | sort -u)
+SCHEMA="$APP/../../cloud-vault/configs/schema.json"
+[ -f "$SCHEMA" ] || SCHEMA="$(cd "$APP/../.." 2>/dev/null && pwd)/cloud-vault/configs/schema.json"
+if [ -f "$SCHEMA" ]; then
+    for v in $VAULT_IDS; do
+        if jq -e --arg v "$v" '.sections[] | select(.id == $v)' "$SCHEMA" >/dev/null; then ok "T3: vault section '$v' exists in cloud-vault schema.json"
+        elif [ "$v" = apps ]; then ok "T3: vault section 'apps' is staged (cloud-vault configs/apps, not yet in schema.json — #570 gap)"
+        else bad "T3: cockpit names vault section '$v', which cloud-vault schema.json does not declare"; fi
+    done
+else
+    ok "T3: (cloud-vault checkout not beside this repo — vault section ids not cross-checked here)"
+fi
 
-echo "== T4: display only =="
-# The vault path is VaultConnect.kt plus the vault* / renderImported / importedValue
-# functions in the fragment. None may write prefs or run the config apply step.
-VAULT_FNS=$(awk '/private fun (vault[A-Za-z]*|showVaultFailure|renderImported|importedValue)\(/{f=1} f{print} /^    }$/{f=0}' "$PF")
-[ -n "$VAULT_FNS" ] && ok "T4: found the vault functions" || bad "T4: vault functions not found"
-for pat in 'ConfigAutoImport' '.edit()' 'putString' 'setAutheliaCredential' 'ProfilePrefs' 'writeText'; do
-    if grep -qF "$pat" "$VC" || echo "$VAULT_FNS" | grep -qF "$pat"; then
-        bad "T4: the vault path touches $pat — it must only display"
+echo "== T4: rendering writes nothing; every apply is a tap =="
+# The fetch + render path: VaultConnect.kt, the vault* functions and every
+# render* function in the fragment. None may write a store or run an apply.
+RENDER_FNS=$(awk '/private fun (vault[A-Za-z]*|showVaultFailure|render[A-Za-z]*|importedValue)\(/{f=1} f{print} /^    }$/{f=0}' "$PF")
+[ -n "$RENDER_FNS" ] && ok "T4: found the fetch + render functions" || bad "T4: render functions not found"
+for pat in 'ConfigAutoImport' '.edit()' 'putString' 'putSecret' 'setAutheliaCredential' 'writeText' 'hydrateFromConfig' 'setAiRouting'; do
+    if grep -qF "$pat" "$VC" || echo "$RENDER_FNS" | grep -v 'VaultCockpit.apply' | grep -qF "$pat"; then
+        bad "T4: the fetch/render path touches $pat"
     else
-        ok "T4: no $pat on the vault path"
+        ok "T4: no $pat on the fetch/render path"
     fi
 done
+# Every VaultCockpit.apply* call in the fragment sits inside a click lambda —
+# an applyButton / pickButton / dialog button — never at render level.
+APPLIES=$(grep -n 'VaultCockpit.apply' "$PF" | cut -d: -f1)
+[ -n "$APPLIES" ] && ok "T4: $(echo "$APPLIES" | wc -l) apply call sites" || bad "T4: no VaultCockpit.apply* call in the fragment"
+for ln in $APPLIES; do
+    ctx=$(sed -n "$((ln-8)),${ln}p" "$PF")
+    echo "$ctx" | grep -qE 'applyButton\(|setPositiveButton\(' && ok "T4: apply at line $ln is behind a button" \
+                                                               || bad "T4: apply at line $ln is not behind a button"
+done
+grep -q 'fun applyMesh' "$CP" && grep -q 'Config.parse' "$CP" \
+    && ok "T4: the mesh apply goes through the WireGuard parser" || bad "T4: mesh apply does not parse"
 
-echo "== T5: the code is not stored =="
-echo "$VAULT_FNS" | grep -q 'box.setText("")' && ok "T5: the code box is emptied once sent" \
+echo "== T5: the code and the browser session are never stored =="
+echo "$RENDER_FNS" | grep -q 'box.setText("")' && ok "T5: the code box is emptied once sent" \
                                                || bad "T5: the code stays on screen after use"
-echo "$VAULT_FNS" | grep -qE 'Prefs\(.*\)\.[a-z]+ *= *code' && bad "T5: the code is written to prefs" \
+echo "$RENDER_FNS" | grep -qE 'Prefs\(.*\)\.[a-z]+ *= *code' && bad "T5: the code is written to prefs" \
                                                           || ok "T5: the code is never assigned into prefs"
+grep -q 'private var vaultSession: String? = null' "$PF" && ok "T5: the browser session is a fragment field" \
+                                                          || bad "T5: no in-memory session field"
+codeof "$PF" | grep -E 'vaultSession' | grep -qE 'Prefs|edit\(|putString' && bad "T5: the session reaches a store" \
+                                                                          || ok "T5: the session never reaches a store"
+grep -q 'class Cookie' "$VC" && grep -q '"Cookie" to cookie' "$VC" \
+    && ok "T5: the session travels as a Cookie header (same gate, Remote-User)" || bad "T5: no cookie auth on the vault route"
+
+echo "== T6: the device is chosen, never typed =="
+grep -q 'fun selectDevice(ctx: Context, id: String)' "$CP" && ok "T6: only an id is stored for the device" \
+                                                            || bad "T6: device selection API changed"
+grep -q 'fun devices(bundle: JSONObject)' "$CP" && grep -q '"wg_peer"' "$CP" \
+    && ok "T6: devices come from the bundle's electronics wg_peer entries" || bad "T6: devices are not derived from the vault"
+grep -q 'addressesOf(conf).any { it in mine }' "$CP" \
+    && ok "T6: a profile is the device's when its Address line carries the declared address" || bad "T6: mesh ownership is not by address"
+if codeof "$CP" | grep -qE '10\.0\.0\.[0-9]+|fd0c:1d0[01]::|termux|galaxy|surface'; then
+    bad "T6: an address, hostname or device name is a Kotlin literal in VaultCockpit"
+else
+    ok "T6: no address, hostname or device name literal in VaultCockpit"
+fi
+grep -q 'android.widget.Spinner' "$PF" && ok "T6: the selector is a pick, not a text field" || bad "T6: no device spinner"
+
+echo "== T7: Apps reuses #565 =="
+grep -q 'AppInventory.entriesFor' "$PF" && grep -q 'AppInventory.toJson' "$PF" \
+    && ok "T7: the export is AppInventory's" || bad "T7: a second exporter"
+grep -q 'AppInventory.plan(' "$PF" && grep -q 'StoreImport.show(this, plan)' "$PF" \
+    && ok "T7: the compare is AppInventory.plan + StoreImport.show" || bad "T7: a second plan/summary"
+grep -q 'AppInventory.parse(' "$CP" && grep -q 'AppInventory.KIND' "$CP" \
+    && ok "T7: an inventory in the vault is read by the one parser" || bad "T7: a second inventory parser"
+codeof "$PF" | grep -qE 'ACTION_INSTALL_PACKAGE|installPackage\(' && bad "T7: the profile installs on its own" \
+                                                                   || ok "T7: no installer in the profile"
+NAME_PF=$(grep -oE 'APPS_EXPORT_NAME = "[^"]+"' "$PF" | cut -d'"' -f2)
+NAME_STORE=$(grep -oE 'EXPORT_NAME = "[^"]+"' "$APP/../ab_cloud-libs-shared/libs/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StorePhoneFragment.kt" | cut -d'"' -f2)
+[ -n "$NAME_PF" ] && [ "$NAME_PF" = "$NAME_STORE" ] && ok "T7: same export file name as the Store ($NAME_PF)" \
+                                                     || bad "T7: export file name differs from the Store's ($NAME_PF vs $NAME_STORE)"
 
 echo
 echo "passed=$PASS failed=$FAIL"

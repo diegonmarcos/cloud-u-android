@@ -278,6 +278,8 @@ class ProfileFragment : Fragment() {
         // ── Vault configs (Connect → Imported) ───────────────────────────
         connect.addView(sectionHeader(ctx, getString(R.string.vault_connect_header)))
         connect.addView(caption(ctx, getString(R.string.vault_connect_caption)))
+        connect.addView(caption(ctx, getString(R.string.vault_connect_auth_state, vaultAuthText(ctx))))
+        connect.addView(pickButton(ctx, getString(R.string.vault_connect_browser)) { showVaultBrowserDialog() })
         val vaultStatus = TextView(ctx).apply { visibility = View.GONE }
         connect.addView(pickButton(ctx, getString(R.string.vault_connect_send_code)) {
             vaultStart(vaultStatus)
@@ -514,19 +516,77 @@ class ProfileFragment : Fragment() {
             vaultCodeBox = this
         }
 
-    /** The stored bearer, or null with the reason already on screen. */
-    private fun vaultBearer(status: TextView): String? {
+    /**
+     * A browser session for the vault route, memory only (#570). Set by
+     * [showVaultBrowserDialog], dropped with the process; never written to
+     * prefs, never shown. When present it wins over the stored bearer, because
+     * it is the fresher of the two — "refresh" is signing in again.
+     */
+    private var vaultSession: String? = null
+
+    /** The credential the vault calls will carry, or null with the reason on screen. */
+    private fun vaultAuth(status: TextView): VaultConnect.Auth? {
+        vaultSession?.let { return VaultConnect.Auth.Cookie(it) }
         val token = ConfigsPrefs(requireContext()).autheliaToken
-        if (token.isNotBlank()) return token
+        if (token.isNotBlank()) return VaultConnect.Auth.Bearer(token)
         show(status, RED, "✗ " + getString(R.string.vault_connect_no_bearer))
         return null
     }
 
+    private fun vaultAuthText(ctx: android.content.Context): String = when {
+        vaultSession != null -> getString(R.string.vault_connect_auth_cookie)
+        ConfigsPrefs(ctx).autheliaToken.isNotBlank() ->
+            getString(R.string.vault_connect_auth_bearer, ConfigsPrefs(ctx).autheliaEmail)
+        else -> getString(R.string.vault_connect_auth_none)
+    }
+
+    /**
+     * OWebAuth for the vault route: the same WebView login the config import
+     * uses, pointed at the vault base URL, and the cookie it earns is kept in
+     * [vaultSession] for this process only.
+     */
+    private fun showVaultBrowserDialog() {
+        val ctx = requireContext()
+        val e = vaultEndpoints()
+        val landing = e.baseUrl.trimEnd('/') + "/" + e.startPath.trimStart('/')
+        var web: android.webkit.WebView? = null
+        importDialog(
+            title = getString(R.string.vault_connect_browser),
+            positive = getString(R.string.vault_connect_use_session),
+            buildBody = { body, _ ->
+                body.addView(caption(ctx, getString(R.string.vault_connect_browser_caption, e.baseUrl)))
+                val view = android.webkit.WebView(ctx).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 380),
+                    ).apply { topMargin = dp(ctx, 10) }
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    webViewClient = android.webkit.WebViewClient()
+                }
+                android.webkit.CookieManager.getInstance().setAcceptCookie(true)
+                view.loadUrl(landing)
+                web = view
+                body.addView(view)
+            },
+            onGo = { _, status ->
+                val cookie = android.webkit.CookieManager.getInstance().getCookie(e.baseUrl).orEmpty()
+                if (cookie.isBlank()) {
+                    show(status, RED, "✗ No cookie for ${e.baseUrl} yet — finish the login above first.")
+                } else {
+                    vaultSession = cookie
+                    importedThisSession = true   // redraw: the auth line changes
+                    show(status, GREEN, "✓ " + getString(R.string.vault_connect_auth_cookie))
+                }
+            },
+            onDismiss = { web?.destroy(); web = null },
+        ).show()
+    }
+
     private fun vaultStart(status: TextView) {
-        val bearer = vaultBearer(status) ?: return
+        val auth = vaultAuth(status) ?: return
         val e = vaultEndpoints()
         viewLifecycleOwner.lifecycleScope.launch {
-            when (val o = withContext(Dispatchers.IO) { VaultConnect.start(e, bearer) }) {
+            when (val o = withContext(Dispatchers.IO) { VaultConnect.start(e, auth) }) {
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed ->
                     showVaultFailure(status, o)
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok ->
@@ -536,7 +596,7 @@ class ProfileFragment : Fragment() {
     }
 
     private fun vaultFetch(status: TextView) {
-        val bearer = vaultBearer(status) ?: return
+        val auth = vaultAuth(status) ?: return
         val box = vaultCodeBox ?: return
         val code = box.text?.toString()?.trim().orEmpty()
         if (code.isEmpty()) {
@@ -546,12 +606,19 @@ class ProfileFragment : Fragment() {
         box.setText("")
         val e = vaultEndpoints()
         viewLifecycleOwner.lifecycleScope.launch {
-            when (val o = withContext(Dispatchers.IO) { VaultConnect.fetch(e, bearer, code) }) {
+            when (val o = withContext(Dispatchers.IO) { VaultConnect.fetch(e, auth, code) }) {
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed ->
                     showVaultFailure(status, o)
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> {
+                    // The gate schema.json asks for: an unknown version is refused whole.
+                    VaultConnect.unknownSchemaVersion(o.body, VaultConnect.knownSchemaVersions)?.let { v ->
+                        show(status, RED, "✗ " + getString(R.string.vault_connect_schema_unknown, v,
+                            VaultConnect.knownSchemaVersions.sorted().joinToString(", ")))
+                        return@launch
+                    }
                     val sections = VaultConnect.sections(o.body)
                     VaultConnect.Imported.last = sections
+                    VaultConnect.Imported.bundle = o.body.optJSONObject("bundle") ?: o.body
                     show(status, GREEN, getString(
                         R.string.vault_connect_fetched, sections.sumOf { it.rows.size }, sections.size))
                     selectedTab = importedTab
@@ -575,23 +642,259 @@ class ProfileFragment : Fragment() {
     }
 
     /**
-     * The Imported tab: every leaf of the last fetch, grouped by the vault's
-     * own section list. Read-only text — no field here writes anywhere.
+     * The Fleet tab (#570): the device selector, then one block per cockpit
+     * section (build.json::ui.vault_connect.cockpit) comparing the vault with
+     * this device, each with its own Apply; then, raw, every vault section no
+     * cockpit section names. RENDERING WRITES NOTHING — every apply is a tap.
      */
     private fun renderImported(ctx: android.content.Context, into: LinearLayout) {
         val sections = VaultConnect.Imported.last
-        if (sections == null) {
+        val bundle = VaultConnect.Imported.bundle
+        if (sections == null || bundle == null) {
             into.addView(caption(ctx, getString(R.string.vault_imported_empty)))
             return
         }
-        into.addView(caption(ctx, getString(R.string.vault_imported_caption, IMPORTED_PREVIEW_CHARS)))
-        for (section in sections) {
-            into.addView(sectionHeader(ctx, "${section.label}  (${section.rows.size})"))
-            for (row in section.rows) {
-                into.addView(label(ctx, row.path))
-                into.addView(importedValue(ctx, row))
+        into.addView(caption(ctx, getString(R.string.vault_cockpit_caption)))
+        val device = renderDeviceSelector(ctx, into, VaultCockpit.devices(bundle))
+        for (section in VaultCockpit.layout.sections) {
+            into.addView(sectionHeader(ctx, section.label))
+            if (section.vault.none { bundle.has(it) }) {
+                into.addView(caption(ctx, getString(R.string.vault_cockpit_section_absent, section.vault.joinToString(", "))))
+                continue
+            }
+            val status = TextView(ctx).apply { visibility = View.GONE; setTextIsSelectable(true) }
+            when (section.id) {
+                "mail"     -> renderMail(ctx, into, bundle, status)
+                "keyboard" -> renderRows(ctx, into, VaultCockpit.keyboardRows(bundle, getString(R.string.vault_cockpit_keyboard_device)))
+                "mesh"     -> renderMesh(ctx, into, bundle, device, status)
+                "drive"    -> renderDrive(ctx, into, bundle, status)
+                "ai"       -> renderAi(ctx, into, bundle, status)
+                "apps"     -> renderApps(ctx, into, bundle, device)
+                else       -> sections.filter { it.id in section.vault }.forEach { renderRaw(ctx, into, it) }
+            }
+            into.addView(status)
+        }
+        val consumed = VaultCockpit.consumed(VaultCockpit.layout)
+        val rest = sections.filter { it.id !in consumed }
+        if (rest.isNotEmpty()) {
+            into.addView(sectionHeader(ctx, getString(R.string.vault_cockpit_raw)))
+            into.addView(caption(ctx, getString(R.string.vault_imported_caption, IMPORTED_PREVIEW_CHARS)))
+            rest.forEach { renderRaw(ctx, into, it) }
+        }
+    }
+
+    /** One vault section, every leaf, read-only — the #566 view, kept for what no cockpit section owns. */
+    private fun renderRaw(ctx: android.content.Context, into: LinearLayout, section: VaultConnect.Section) {
+        into.addView(label(ctx, "${section.label}  (${section.rows.size})"))
+        for (row in section.rows) {
+            into.addView(label(ctx, row.path))
+            into.addView(importedValue(ctx, row))
+        }
+    }
+
+    /**
+     * WHICH machine this is: a pick among the vault's declared devices. Only
+     * the chosen id is stored; address, key and profiles derive from the
+     * declaration every time the tab draws.
+     */
+    private fun renderDeviceSelector(
+        ctx: android.content.Context, into: LinearLayout, devices: List<VaultCockpit.Device>,
+    ): VaultCockpit.Device? {
+        into.addView(label(ctx, getString(R.string.vault_cockpit_device_label)))
+        if (devices.isEmpty()) {
+            into.addView(caption(ctx, getString(R.string.vault_cockpit_no_devices)))
+            return null
+        }
+        val chosenId = VaultCockpit.selectedDevice(ctx)
+        val chosen = devices.firstOrNull { it.id == chosenId }
+        val labels = listOf(getString(R.string.vault_cockpit_device_pick)) + devices.map { "${it.label} (${it.id})" }
+        val spinner = android.widget.Spinner(ctx).apply {
+            adapter = android.widget.ArrayAdapter(ctx, android.R.layout.simple_spinner_dropdown_item, labels)
+            setSelection(if (chosen == null) 0 else devices.indexOf(chosen) + 1)
+            onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) = Unit
+                override fun onItemSelected(parent: android.widget.AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                    val picked = devices.getOrNull(pos - 1)?.id ?: ""
+                    if (picked == VaultCockpit.selectedDevice(ctx)) return
+                    VaultCockpit.selectDevice(ctx, picked)
+                    redraw()
+                }
             }
         }
+        into.addView(spinner)
+        if (chosen != null) {
+            into.addView(caption(ctx, getString(R.string.vault_cockpit_device_identity,
+                chosen.label, chosen.wgIp, chosen.wgIpv6.ifBlank { "—" })))
+        }
+        return chosen
+    }
+
+    /** Declared vs device, one line each, with the state glyph. */
+    private fun renderRows(ctx: android.content.Context, into: LinearLayout, rows: List<VaultCockpit.Row>) {
+        for (row in rows) {
+            into.addView(label(ctx, row.label))
+            into.addView(TextView(ctx).apply {
+                typeface = android.graphics.Typeface.MONOSPACE
+                setTextIsSelectable(true)
+                val (glyph, colour) = when (row.state) {
+                    VaultCockpit.State.MATCH   -> "✓ " + getString(R.string.vault_cockpit_state_match) to GREEN
+                    VaultCockpit.State.DIFFERS -> "≠ " + getString(R.string.vault_cockpit_state_differs) to RED
+                    VaultCockpit.State.ABSENT  -> "– " + getString(R.string.vault_cockpit_state_absent) to RED
+                    VaultCockpit.State.PENDING -> "… " + getString(R.string.vault_cockpit_state_pending) to NEUTRAL
+                }
+                setTextColor(colour)
+                text = "$glyph\n  vault:  ${row.declared}\n  device: ${row.device}"
+            })
+        }
+    }
+
+    private fun applyButton(ctx: android.content.Context, what: String, onApply: () -> Unit): View =
+        pickButton(ctx, getString(R.string.vault_cockpit_apply, what)) { onApply() }
+
+    private fun redraw() {
+        if (!isAdded) return
+        parentFragmentManager.beginTransaction().detach(this).commitNow()
+        parentFragmentManager.beginTransaction().attach(this).commitNow()
+    }
+
+    private fun renderMail(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, status: TextView) {
+        val email = ConfigsPrefs(ctx).autheliaEmail.ifBlank { prefs.email.trim() }
+        val declared = VaultCockpit.mailDeclared(bundle, email)
+        if (declared == null) {
+            into.addView(caption(ctx, getString(R.string.vault_cockpit_mail_none, email.ifBlank { "—" })))
+            return
+        }
+        renderRows(ctx, into, VaultCockpit.mailRows(declared, com.diegonmarcos.superapp.mail.JmapPrefs(ctx)))
+        into.addView(applyButton(ctx, declared.email) {
+            show(status, GREEN, VaultCockpit.applyMail(com.diegonmarcos.superapp.mail.JmapPrefs(ctx), declared))
+            redraw()
+        })
+    }
+
+    private fun renderMesh(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject,
+                           device: VaultCockpit.Device?, status: TextView) {
+        if (device == null) {
+            into.addView(caption(ctx, getString(R.string.vault_cockpit_pick_first)))
+            return
+        }
+        val profiles = VaultCockpit.meshProfiles(bundle, device)
+        if (profiles.isEmpty()) {
+            into.addView(caption(ctx, getString(R.string.vault_cockpit_mesh_none, device.wgIp)))
+            return
+        }
+        val wg = com.diegonmarcos.superapp.network.WgState.prefs(ctx)
+        renderRows(ctx, into, VaultCockpit.meshRows(bundle, device, VaultCockpit.tunnelState(wg)))
+        for ((name, conf) in profiles) {
+            into.addView(applyButton(ctx, name) {
+                com.google.android.material.dialog.MaterialAlertDialogBuilder(ctx)
+                    .setTitle(getString(R.string.vault_cockpit_apply, name))
+                    .setMessage(getString(R.string.vault_cockpit_mesh_confirm, device.label))
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton(getString(R.string.vault_cockpit_apply, name)) { _, _ ->
+                        val line = VaultCockpit.applyMesh(wg, name, conf)
+                        show(status, if (line.startsWith("✓")) GREEN else RED, line)
+                        redraw()
+                    }
+                    .show()
+            })
+        }
+        into.addView(pickButton(ctx, getString(R.string.vault_cockpit_open_wireguard)) {
+            (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)
+                ?.onTileClicked(WG_ROUTE)
+        })
+    }
+
+    private fun renderDrive(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, status: TextView) {
+        renderRows(ctx, into, VaultCockpit.driveRows(bundle, ConfigsPrefs(ctx)))
+        into.addView(applyButton(ctx, getString(R.string.vault_cockpit_drive_credentials)) {
+            val line = VaultCockpit.applyDrive(bundle, ConfigsPrefs(ctx))
+            show(status, if (line.startsWith("✓")) GREEN else RED, line)
+            redraw()
+        })
+    }
+
+    /** The device column is what the serving app ANSWERS over the binder,
+     *  read on IO with a deadline — a wedged peer must not hang this tab. */
+    private fun renderAi(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, status: TextView) {
+        val rowsView = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        into.addView(rowsView)
+        val peerDown = getString(R.string.vault_cockpit_ai_peer_down)
+        val unmapped = getString(R.string.vault_cockpit_ai_unmapped)
+        val layout = VaultCockpit.layout
+        renderRows(ctx, rowsView, VaultCockpit.aiRows(bundle, layout, null, getString(R.string.vault_cockpit_reading), unmapped))
+        val appCtx = ctx.applicationContext
+        viewLifecycleOwner.lifecycleScope.launch {
+            val snapshot = kotlinx.coroutines.withTimeoutOrNull(AI_PEER_DEADLINE_MS) {
+                withContext(Dispatchers.IO) { com.diegonmarcos.superapp.texttools.TextToolsClient(appCtx).aiRoutingSnapshot() }
+            }
+            rowsView.removeAllViews()
+            renderRows(ctx, rowsView, VaultCockpit.aiRows(bundle, layout, VaultCockpit.aiState(snapshot), peerDown, unmapped))
+        }
+        into.addView(applyButton(ctx, getString(R.string.vault_cockpit_ai_tokens)) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val line = kotlinx.coroutines.withTimeoutOrNull(AI_PEER_DEADLINE_MS) {
+                    withContext(Dispatchers.IO) {
+                        VaultCockpit.applyAi(bundle, layout, com.diegonmarcos.superapp.texttools.TextToolsClient(appCtx))
+                    }
+                } ?: ("✗ " + peerDown)
+                show(status, if (line.startsWith("✓")) GREEN else RED, line)
+                redraw()
+            }
+        })
+        into.addView(pickButton(ctx, getString(R.string.vault_cockpit_open_ai)) {
+            (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)
+                ?.onTileClicked(AI_ROUTE)
+        })
+    }
+
+    /** #565's exporter writes the file; #565's plan + summary do the compare.
+     *  This tab adds no second inventory format and no second installer. */
+    private val appListExport =
+        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            uri ?: return@registerForActivityResult
+            val app = requireContext().applicationContext
+            kotlin.concurrent.thread(name = "vault-apps-export") {
+                val result = runCatching {
+                    val entries = com.diegonmarcos.superapp.appstore.AppInventory.entriesFor(
+                        app, com.diegonmarcos.superapp.appstore.AppInventory.launchable(app))
+                    app.contentResolver.openOutputStream(uri, "wt")!!.use {
+                        it.write(com.diegonmarcos.superapp.appstore.AppInventory.toJson(entries).toByteArray())
+                    }
+                    entries.size
+                }
+                view?.post { view?.snack(result.fold({ getString(R.string.vault_cockpit_apps_exported, it) }, { "✗ ${it.message}" })) }
+            }
+        }
+
+    private fun renderApps(ctx: android.content.Context, into: LinearLayout, bundle: org.json.JSONObject, device: VaultCockpit.Device?) {
+        if (device == null) {
+            into.addView(caption(ctx, getString(R.string.vault_cockpit_pick_first)))
+            return
+        }
+        val fleet = com.diegonmarcos.superapp.appstore.AppInventory.fleetPackages()
+        val declared = VaultCockpit.appsDeclared(bundle, device, fleet)
+        if (declared.isEmpty()) {
+            into.addView(caption(ctx, getString(R.string.vault_cockpit_apps_none, device.id)))
+        } else {
+            val pm = ctx.packageManager
+            val installed = declared.count { runCatching { pm.getPackageInfo(it.pkg, 0) }.isSuccess }
+            renderRows(ctx, into, listOf(VaultCockpit.Row(
+                getString(R.string.vault_cockpit_apps_row), "${declared.size} apps", "$installed installed",
+                if (installed == declared.size) VaultCockpit.State.MATCH else VaultCockpit.State.DIFFERS)))
+            into.addView(pickButton(ctx, getString(R.string.vault_cockpit_apps_plan, declared.size)) {
+                val app = ctx.applicationContext
+                kotlin.concurrent.thread(name = "vault-apps-plan") {
+                    val have = declared.map { it.pkg }
+                        .filter { runCatching { app.packageManager.getPackageInfo(it, 0) }.isSuccess }.toSet()
+                    val plan = com.diegonmarcos.superapp.appstore.AppInventory.plan(
+                        declared, have, fleet, com.diegonmarcos.superapp.appstore.PhoneAppActions.sources(app))
+                    view?.post { if (isAdded) com.diegonmarcos.superapp.appstore.StoreImport.show(this, plan) }
+                }
+            })
+        }
+        into.addView(pickButton(ctx, getString(R.string.vault_cockpit_apps_export)) {
+            appListExport.launch(APPS_EXPORT_NAME)
+        })
     }
 
     /** One value, shortened past [IMPORTED_PREVIEW_CHARS]; a tap toggles full text. */
@@ -1469,6 +1772,12 @@ class ProfileFragment : Fragment() {
 
         /** Imported values longer than this are shortened until tapped. */
         private const val IMPORTED_PREVIEW_CHARS = 400
+
+        /** How long the Fleet tab waits for the AI serving app's binder. */
+        private const val AI_PEER_DEADLINE_MS = 4_000L
+
+        /** Same file name Store ▸ Phone Apps exports, so the vault gets one shape. */
+        private const val APPS_EXPORT_NAME = "cloud-sa-apps.json"
 
         /** Advisory shape check for the birth field. Range/real-calendar
          *  validity is deliberately not checked — the field is optional and a

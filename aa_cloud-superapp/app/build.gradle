@@ -397,6 +397,10 @@ def vaultStartPath     = (vaultConnect.start_path ?: '').toString()
 def vaultFetchPath     = (vaultConnect.fetch_path ?: '').toString()
 def vaultConnectMs     = ((vaultConnect.connect_timeout_ms ?: 8000) as Number).intValue()
 def vaultReadMs        = ((vaultConnect.read_timeout_ms ?: 30000) as Number).intValue()
+// #570 the Fleet tab: the schema versions this build accepts, and the cockpit
+// layout (sections, labels, vault-section mapping, ai token targets) as one blob.
+def vaultSchemaVersions = ((vaultConnect.known_schema_versions ?: [1]) as List).join(',')
+def vaultCockpitB64     = groovy.json.JsonOutput.toJson(stripDocs(vaultConnect.cockpit ?: [:])).bytes.encodeBase64().toString()
 // Configs → Profile → Config import, GitHub half. The vault repo coordinates and
 // the OAuth client_id are DATA (build.json::ui.config_source.git / .github_oauth)
 // for the same reason the Authelia endpoint is: repointing them must be a JSON
@@ -821,6 +825,8 @@ android {
         buildConfigField "String", "UI_VAULT_CONNECT_FETCH_PATH", "\"${vaultFetchPath}\""
         buildConfigField "int",    "UI_VAULT_CONNECT_CONNECT_MS", "${vaultConnectMs}"
         buildConfigField "int",    "UI_VAULT_CONNECT_READ_MS",    "${vaultReadMs}"
+        buildConfigField "String", "UI_VAULT_CONNECT_SCHEMA_VERSIONS", "\"${vaultSchemaVersions}\""
+        buildConfigField "String", "UI_VAULT_CONNECT_COCKPIT_B64", "\"${vaultCockpitB64}\""
         buildConfigField "String", "UI_CONFIG_GIT_REPO",      "\"${configGitRepo}\""
         buildConfigField "String", "UI_CONFIG_GIT_PATH",      "\"${configGitPath}\""
         buildConfigField "String", "UI_CONFIG_GIT_REF",       "\"${configGitRef}\""
