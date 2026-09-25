@@ -205,6 +205,10 @@ def uiAppMeshB64       = uiAppMeshJson.bytes.encodeBase64().toString()
 // build.json::ui.home_apps_tabs.
 def uiHomeAppsTabsJson = groovy.json.JsonOutput.toJson(buildJson.ui.home_apps_tabs ?: [])
 def uiHomeAppsTabsB64  = uiHomeAppsTabsJson.bytes.encodeBase64().toString()
+// Long-press menu URLs section (#572): build.json::ui.app_urls — schemes, the
+// manifest meta-data keys and the installer → store-page map AppUrls derives from.
+def uiAppUrlsJson      = groovy.json.JsonOutput.toJson(buildJson.ui.app_urls ?: [:])
+def uiAppUrlsB64       = uiAppUrlsJson.bytes.encodeBase64().toString()
 // Page registry — reverse index of named destinations (target → metadata).
 // Source of truth: build.json::ui.pages. Consumed by AppTabPrefs.recordPage
 // to label and icon-ify entries in the App Tabs recents shelf.
@@ -785,6 +789,7 @@ android {
         buildConfigField "String", "UI_APP_MESH_B64",         "\"${uiAppMeshB64}\""
         buildConfigField "String", "UI_HOME_APPS_TABS_B64",   "\"${uiHomeAppsTabsB64}\""
         buildConfigField "String", "UI_PAGES_B64",            "\"${uiPagesB64}\""
+        buildConfigField "String", "UI_APP_URLS_B64",         "\"${uiAppUrlsB64}\""
         buildConfigField "int",    "UI_APP_TABS_CAP",         "${uiAppTabsCap}"
         buildConfigField "int",    "UI_APP_TABS_STAR_CAP",    "${uiAppTabsStarCap}"
         buildConfigField "String", "UI_SWIPE_WALK_B64",       "\"${uiSwipeWalkB64}\""

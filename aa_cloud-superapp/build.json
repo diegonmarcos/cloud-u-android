@@ -7043,6 +7043,17 @@
         }
       ]
     },
+    "_doc_app_urls": "#572 THE ONE DECLARATION behind the long-press menu's URLs section (AppUrls.kt derives, AppLongPressMenu.kt draws; neither holds a URL). OUR apps: an external_apps entry names the backend service it talks to in `service` — a `name` in data/services_public.json (public_url + private_dns) or data/services_private.json (private_dns only) — and the menu shows that row's public URL and private (mesh) URL, read from the snapshot regen.sh already keeps. The endpoints are never restated here, so they cannot drift from the infra; an app with no `service` (or one the snapshot no longer lists) gets no URL rows. `public_scheme` / `private_scheme` prefix the two: the snapshot stores hosts without a scheme, and the mesh's Caddy upstreams are plain HTTP on the WireGuard interface. PHONE apps: ONE derivation, first hit wins — (1) the app's own manifest <meta-data>, the first of `website_meta_keys` it declares that holds an http(s) URL; (2) the page of the store that really installed it (getInstallSourceInfo), from `installer_pages` — {pkg} is substituted, and its `label` names the row so a store page is never passed off as the vendor's website. Nothing found = the row is not drawn, never guessed. Not derived: F-Droid's index `homepage` (needs the repo index, which is a network fetch per long-press) — its store page in (2) links to it. test-menu-urls-declarative.sh fails on any literal http(s) URL in the menu code and on a `service` that names no snapshot row.",
+    "app_urls": {
+      "public_scheme": "https://",
+      "private_scheme": "http://",
+      "website_meta_keys": ["website", "homepage"],
+      "installer_pages": {
+        "com.android.vending": { "label": "Play page", "url": "https://play.google.com/store/apps/details?id={pkg}" },
+        "org.fdroid.fdroid": { "label": "F-Droid page", "url": "https://f-droid.org/packages/{pkg}" },
+        "com.sec.android.app.samsungapps": { "label": "Galaxy Store page", "url": "https://galaxystore.samsung.com/detail/{pkg}" }
+      }
+    },
     "_doc_external_apps": "Companion Android apps the SuperApp launches instead of rendering an in-app fragment. A tile target of `extapp:<id>` (see ui.sections[communication]) resolves here: MainActivity.launchExternalApp tries the app's package (hub_package); if not installed it snacks '<label> not installed' (install via Configs ▸ Constellation, which pulls the APK from GHCR). Fully data-driven: package ids live ONLY here, never in Kotlin. The ex-Cloud-Comms forks are now STANDALONE constellation apps (ea_cloud-{dialer,chat,mail,matrix}, each its own ship-cloud-<id>.yml CI); the cloud-comms hub is decommissioned (archived). They keep their com.diegonmarcos.comms.<fork> package ids. install_apk_url points at the shared rolling 'latest' GitHub release asset cloud-comms-<fork>.apk (uploaded by build.sh gh-release-fork per each fork's build.json::release.gh_release), mirroring how the other standalone apps use /releases/download/latest/. forkless (forks:{}), so extapp:<id> resolves straight to hub_package. `folder` names the ui.phone_folders id this app classifies into, and it is the ONLY place that fact is written: PhoneFolders.loadFromBuildConfig derives a `pkg:` keyword for hub_package, alt_package, install_package and every fork from it. Our own apps used to be listed twice — identity here, an identical `pkg:` keyword there — with nothing tying the copies together, which is how an app could be installable and sectionless at the same time. Adding a constellation app is now one entry here and no second edit; omitting `folder` leaves the app in the sink, so test-app-identity-resolves.sh requires it.",
     "external_apps": [
       {
@@ -7056,6 +7067,7 @@
       {
         "_doc": "Cloud Contacts — standalone NATIVE multi-channel people hub (ac_cloud-contacts, WebView/Tailwind, cloud-news pattern — NOT a Fossify fork). Merges device (local + Gmail) contacts with LinkedIn/Instagram imports; the person screen is a channel switchboard (WhatsApp/Telegram/Matrix/Cloud Chat/Cloud Mail/SMS/Cloud Dialer/LinkedIn/Instagram) driven by build.json::channels — no default call action. install_apk_url mirrors ac_cloud-contacts/build.json::release.gh_release (asset Cloud-Contacts.apk, published by ship-cloud-contacts.yml). Signs with the shared constellation key.",
         "id": "cloud-contacts",
+        "service": "contacts-radicale",
         "folder": "prod_phone",
         "hub_package": "com.diegonmarcos.cloudcontacts",
         "install_package": "com.diegonmarcos.cloudcontacts",
@@ -7064,6 +7076,7 @@
       },
       {
         "id": "cloud-chat",
+        "service": "mattermost",
         "folder": "prod_chat",
         "hub_package": "com.diegonmarcos.comms.chat",
         "install_package": "com.diegonmarcos.comms.chat",
@@ -7073,6 +7086,7 @@
       {
         "_doc": "Cloud Mail — since 2026-09-09 a CLONE of Sterna Mail (ac_cloud-mail, commits 8b7ca107d/e7274372f), no longer the FairEmail fork the label used to name. The package ids below did NOT move: applicationId stays com.diegonmarcos.comms.mail so the replacement installs over what is in the field, and app.sterna is only the clone's R/BuildConfig namespace, never a package on any device. That is the whole reason every lookup in this file keys on package and not on this label.",
         "id": "cloud-mail",
+        "service": "stalwart",
         "folder": "prod_mail",
         "hub_package": "com.diegonmarcos.comms.mail",
         "install_package": "com.diegonmarcos.comms.mail",
@@ -7081,6 +7095,7 @@
       },
       {
         "id": "cloud-matrix",
+        "service": "continuwuity",
         "folder": "prod_chat",
         "hub_package": "com.diegonmarcos.comms.matrix",
         "_doc_alt_package": "The store ships a resigned STOCK Element X, so the installed applicationId is io.element.android.x, not hub_package (same fact the fleet records as alt_id). Without this the Suite/Comms tile can't see the installed app and offers a fresh install of something already on the phone. Remove once the matrix fork is repackaged to hub_package.",
@@ -7113,6 +7128,7 @@
       {
         "_doc": "#571. cloud-code (ac_cloud-code, our Acode build, applicationId com.diegonmarcos.code) — the AGI IDE tile. folder prod_terminals because the owner put upstream Acode (pkg:com.foxdebug.acode) in Terminals himself, and this is the same editor under our id.",
         "id": "cloud-code",
+        "service": "code-server",
         "folder": "prod_terminals",
         "hub_package": "com.diegonmarcos.code",
         "install_package": "com.diegonmarcos.code",
@@ -7130,6 +7146,7 @@
       },
       {
         "id": "cloud-agenda",
+        "service": "calendar-radicale",
         "folder": "prod_plan",
         "hub_package": "com.diegonmarcos.cloudagenda",
         "install_package": "com.diegonmarcos.cloudagenda",
@@ -7183,6 +7200,7 @@
       {
         "_doc": "Cloud-Vault — standalone Vaultwarden client app (ac_cloud-vault). Hosts vault.diegonmarcos.com (self-hosted Vaultwarden) in a dedicated BrowserHostFragment APK; the Cloud 'Vault' tile (target extapp:cloud-vault) opens it if installed, else downloads + installs install_apk_url. install_apk_url mirrors ac_cloud-vault/build.json::release.gh_release (asset Cloud-Vault.apk, published by ship-cloud-vault.yml). Signs with the shared constellation key.",
         "id": "cloud-vault",
+        "service": "vaultwarden",
         "folder": "sys_security",
         "hub_package": "com.diegonmarcos.cloudvault",
         "install_package": "com.diegonmarcos.cloudvault",
@@ -7220,6 +7238,7 @@
       {
         "_doc": "Cloud Media Center — standalone gallery app (ac_cloud-media-center), a Google-Photos/Samsung-Gallery replacement: on-device MediaStore gallery + PhotoPrism cloud library (WebDAV) + camera-roll auto-backup, plus YouTube (NewPipeExtractor) and mirrored-Instagram profiles. Single-app fork (forkless), so extapp:cloud-media-center resolves straight to hub_package. NOT YET SHIPPED: ac_cloud-media-center has no build engine/CI wired yet (ship-cloud-media-center.yml EXISTS at 1_cicd/src/cicd/ but is not yet regenerated into .github/workflows/, and no build.sh engine exists for the app yet, so nothing builds; no release published), so install_apk_url below is the intended rolling-latest location mirrored from release.gh_release.asset_name but currently 404s until CI produces an artifact. Do not treat this URL as live.",
         "id": "cloud-media-center",
+        "service": "photoprism_app",
         "folder": "media_video",
         "hub_package": "com.diegonmarcos.mediacenter",
         "install_package": "com.diegonmarcos.mediacenter",

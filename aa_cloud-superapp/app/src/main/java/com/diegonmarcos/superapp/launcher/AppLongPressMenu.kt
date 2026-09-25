@@ -1,5 +1,9 @@
 package com.diegonmarcos.superapp.launcher
 import com.diegonmarcos.superapp.App
+import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.superapp.appstore.FleetInstall
+import com.diegonmarcos.superapp.appstore.PhoneAppActions
+import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.ui.SystemInfoPopup
 import com.diegonmarcos.superapp.apps.SuitePhoneAppsFragment
 import com.diegonmarcos.superapp.apps.PhoneAppsFragment
@@ -15,6 +19,8 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.Process
 import android.os.UserHandle
 import android.provider.Settings
@@ -25,6 +31,8 @@ import android.view.Window
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
+import kotlin.concurrent.thread
 
 /**
  * Stock-Android-style "long-press an app icon" context menu —
@@ -36,7 +44,16 @@ import android.widget.TextView
  *     calendar shows "New event", browsers show "New tab" + recent
  *     tabs, etc.)
  *   • App info       — jumps to Settings → Apps → ThisApp.
- *   • Uninstall      — fires ACTION_DELETE with the package URI.
+ *   • Uninstall      — PackageInstaller.uninstall with the package.
+ *   • Update         — a Cloud fleet app runs the fleet's ONE install path
+ *                      (FleetInstall); any other app is drawn disabled with
+ *                      the reason (#572).
+ *   • URLs           — public + private endpoints (our apps) or the website
+ *                      (phone apps), all derived by [AppUrls] from build.json
+ *                      declarations; no URL is written in this file (#572).
+ *
+ * Sections: Actions (the app's shortcuts) · Configs · URLs. A section with no
+ * rows is not drawn.
  *
  * The menu is a vertically-stacked Dialog (Theme_Translucent_NoTitleBar)
  * with a dark-glass rounded container, mirroring the visual language
@@ -121,6 +138,7 @@ object AppLongPressMenu {
         // App shortcuts (dynamic + manifest). API 25+. Fails silently
         // when not the default launcher — see KDoc above.
         val shortcuts = queryShortcuts(launcher, pkg, me)
+        if (shortcuts.isNotEmpty()) menu.addView(sectionHeader(ctx, "Actions", d))
         for (s in shortcuts) {
             menu.addView(makeMenuRow(ctx, s.shortLabel?.toString() ?: s.id, "shortcut") {
                 dialog.dismiss()
@@ -130,6 +148,8 @@ object AppLongPressMenu {
             })
         }
         if (shortcuts.isNotEmpty()) menu.addView(divider(ctx, d))
+
+        menu.addView(sectionHeader(ctx, "Configs", d))
 
         // App info — Settings → Apps → ThisApp.
         menu.addView(makeMenuRow(ctx, "App info", "system") {
@@ -151,6 +171,33 @@ object AppLongPressMenu {
             dialog.dismiss()
             requestUninstall(ctx, pkg)
         })
+
+        // Update — the fleet's ONE install path for a Cloud app.
+        // TODO(#571): the source resolver plugs in HERE for every other app
+        // (vendor / F-Droid / Play); it is not on main yet, so those rows are
+        // drawn disabled with the reason instead of a second updater growing.
+        val fleetApp = PhoneAppActions.fleetByPackage(Fleet.parse(BuildConfig.CONSTELLATION_FLEET_B64))[pkg]
+        menu.addView(makeMenuRow(ctx, "Update", "system") {
+            if (fleetApp == null) {
+                Toast.makeText(ctx, "No update source for this app yet", Toast.LENGTH_LONG).show()
+            } else {
+                dialog.dismiss()
+                requestUpdate(ctx, fleetApp, appLabel)
+            }
+        }.also { if (fleetApp == null) it.alpha = 0.4f })
+
+        // URLs — every row derived by AppUrls from build.json declarations.
+        val links = AppUrls.of(ctx, pkg)
+        if (links.isNotEmpty()) {
+            menu.addView(divider(ctx, d))
+            menu.addView(sectionHeader(ctx, "URLs", d))
+            for (l in links) menu.addView(makeMenuRow(ctx, "${l.label} · ${l.url.substringAfter("//")}", "system") {
+                dialog.dismiss()
+                runCatching {
+                    ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(l.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+            })
+        }
 
         backdrop.addView(menu)
         dialog.setContentView(backdrop)
@@ -184,6 +231,18 @@ object AppLongPressMenu {
             installer.uninstall(pkg, pending.intentSender)
         }.onFailure {
             android.widget.Toast.makeText(ctx, "Can't uninstall: ${it.message}", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** Run the fleet install for [app] off the main thread; FleetInstall
+     *  returns the failure message, or null on success / the user's own cancel. */
+    private fun requestUpdate(ctx: Context, app: Fleet.App, label: String) {
+        val ui = Handler(Looper.getMainLooper())
+        Toast.makeText(ctx, "Updating $label…", Toast.LENGTH_SHORT).show()
+        thread(name = "menu-update-${app.id}") {
+            FleetInstall.run(ctx, app)?.let { msg ->
+                ui.post { Toast.makeText(ctx, "$label: $msg", Toast.LENGTH_LONG).show() }
+            }
         }
     }
 
@@ -225,6 +284,14 @@ object AppLongPressMenu {
             row.setPadding((20 * d).toInt(), (10 * d).toInt(), (12 * d).toInt(), (10 * d).toInt())
         }
         return row
+    }
+
+    private fun sectionHeader(ctx: Context, title: String, d: Float) = TextView(ctx).apply {
+        text = title.uppercase()
+        setTextColor(0x99E9D8FD.toInt())
+        textSize = 11f
+        typeface = Typeface.DEFAULT_BOLD
+        setPadding((12 * d).toInt(), (6 * d).toInt(), 0, (2 * d).toInt())
     }
 
     private fun divider(ctx: Context, d: Float) = View(ctx).apply {
