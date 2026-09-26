@@ -24,6 +24,15 @@
  ],
  "repos": [
   {
+   "name": "cloud",
+   "label": "cloud",
+   "github_owner": "diegonmarcos",
+   "gitea_owner": "diego",
+   "public": true,
+   "seed": true,
+   "notes": "The fleet hub repository (repos.json, clone.sh)"
+  },
+  {
    "name": "cloud-infra",
    "label": "cloud-infra",
    "github_owner": "diegonmarcos",
@@ -74,8 +83,7 @@
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
-   "seed": true,
-   "notes": "Static assets"
+   "notes": "Static assets — not in the seeded 6, stays declared-not-cloned"
   },
   {
    "name": "front-data",
@@ -91,8 +99,7 @@
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
-   "seed": true,
-   "notes": "The public site"
+   "notes": "The public site — not in the seeded 6, stays declared-not-cloned"
   },
   {
    "name": "cloud-data-my-ai-memory",
@@ -105,5 +112,5 @@
  ],
  "_doc_clone": "#575 Every repository here is cloned INTO THE ONE SHARED STORE (ac_cloud-drive/build.json::storage.shared_root) as <root>/<name>, by the page's Clone/Open button: the target folder and the upstream URL (https://<github host>/<github_owner>/<name>.git, composed from the github instance above) are handed to the native git manager (libs:git-sync), which asks only for a token when the repository is private. A folder that already holds the clone opens instead of cloning. Nothing here is a path: the root lives in build.json and the page reads it through FilesBridge.sharedRoot().",
  "_doc_private": "private: true marks a repository the anonymous read cannot fetch: the git manager stores the HTTPS token the user types in its keystore-backed credential store (GitCredentialStore), never in this file and never in .git/config.",
- "_doc_seed": "#603 SEEDING THE SHARED STORE. `seed: true` marks a repository the store is populated with on FIRST RUN (build.json::storage.seed): StoreSeed registers it in libs:git-sync's RepoRegistry as <shared_root>/<name> and clones it SHALLOW (depth 1) through GitEngine.clone — no second git, and no clone bytes inside the APK, which could not carry them and would ship them stale. PUBLIC REPOSITORIES ONLY, and that is not a preference: an anonymous clone of a private repository fails every time, so seeding one would bake a permanent red. `public: true` states the fact the flag rests on. Every repository marked `private: true` here (cloud-data-my-ai-memory, front-data) carries NO seed flag and stays declared-not-cloned on the Git sub-page, where the user can type the HTTPS token the credential store then holds."
+ "_doc_seed": "#603 SEEDING THE SHARED STORE. `seed: true` marks one of the SIX repositories (cloud, cloud-u-android, cloud-infra, cloud-infra-desktop, cloud-u-containers, cloud-u-linux) the store is populated with on FIRST RUN (build.json::storage.seed): StoreSeed registers it in libs:git-sync's RepoRegistry as <shared_root>/<name> and clones it SHALLOW (depth 1) through GitEngine.clone — no second git, and no clone bytes inside the APK, which could not carry them and would ship them stale. PUBLIC REPOSITORIES ONLY, and that is not a preference: an anonymous clone of a private repository fails every time, so seeding one would bake a permanent red. `public: true` states the fact the flag rests on. front-assets-cdn and diegonmarcos.github.io are public but deliberately NOT in the seeded six; every repository marked `private: true` here (cloud-data-my-ai-memory, front-data) carries NO seed flag; all four stay declared-not-cloned on the Git sub-page, where the user can type the HTTPS token the credential store then holds for the private ones."
 }
