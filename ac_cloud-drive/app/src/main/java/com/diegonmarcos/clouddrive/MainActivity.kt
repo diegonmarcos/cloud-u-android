@@ -29,7 +29,6 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.diegonmarcos.clouddrive.apps.AppsScreen
 import com.diegonmarcos.clouddrive.backups.MirrorRunner
 import com.diegonmarcos.clouddrive.configs.ConfigsScreen
 import com.diegonmarcos.clouddrive.files.FilesController
@@ -39,6 +38,7 @@ import com.diegonmarcos.clouddrive.files.Places
 import com.diegonmarcos.clouddrive.home.HomeScreen
 import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
 import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
+import com.diegonmarcos.clouddrive.sync.SyncScreen
 import com.diegonmarcos.clouddrive.ui.DriveShell
 import com.diegonmarcos.clouddrive.ui.DriveTheme
 import com.diegonmarcos.clouddrive.ui.EmptyState
@@ -119,9 +119,9 @@ class MainActivity : ComponentActivity(), DriveActions {
         val rclone = remember { RcloneCoordinator(applicationContext, scope, prefs) }
         val mirrors = remember { MirrorRunner(scope, prefs) }
         val rcloneVersion by rclone.version.collectAsState()
-        // #603 a screen may ask for another tab (an Apps tile's route, a Home quick action):
-        // the request is a tab id and, optionally, a Configs sub-page id, applied once by the
-        // shell and by ConfigsScreen and then cleared.
+        // #603/#609 a screen may ask for another tab (an Apps tile's route, a Home quick action):
+        // the request is a tab id and, optionally, a Sync or Configs sub-page id, applied once
+        // by the shell and by SyncScreen/ConfigsScreen and then cleared.
         var jumpTab by remember { mutableStateOf<String?>(null) }
         var jumpPage by remember { mutableStateOf<String?>(null) }
         val jump: (String, String) -> Unit = { tab, page -> jumpPage = page.ifBlank { null }; jumpTab = tab }
@@ -132,9 +132,9 @@ class MainActivity : ComponentActivity(), DriveActions {
             when (tabId) {
                 "files" -> FilesScreen(files, this, hasAccess)
                 "volumes" -> VolumesScreen(rclone, prefs, this, openPath)
-                "home" -> HomeScreen(git, prefs, onOpenFiles = { jumpTab = "files" }, onOpenVolumes = { jumpTab = "volumes" }, onOpenConfigs = { jumpTab = "configs" }, onSyncAll = syncAll)
-                "apps" -> AppsScreen(this, jump)
-                "configs" -> ConfigsScreen(git, rclone, mirrors, prefs, this, hasAccess, rcloneVersion, jumpPage, onPageConsumed = { jumpPage = null })
+                "home" -> HomeScreen(git, this, onOpenFiles = { jumpTab = "files" }, onOpenVolumes = { jumpTab = "volumes" }, onOpenSync = { jumpTab = "sync" }, onRoute = jump, onSyncAll = syncAll)
+                "sync" -> SyncScreen(git, rclone, prefs, this, jumpPage, onPageConsumed = { jumpPage = null })
+                "configs" -> ConfigsScreen(mirrors, prefs, this, hasAccess, rcloneVersion, jumpPage, onPageConsumed = { jumpPage = null })
                 else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "", Modifier)
             }
         }

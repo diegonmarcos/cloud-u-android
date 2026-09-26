@@ -5,6 +5,7 @@ import android.os.StatFs
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,74 +17,82 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.Declarations
-import com.diegonmarcos.clouddrive.DrivePrefs
+import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.SharedStore
+import com.diegonmarcos.clouddrive.apps.AppsGrid
 import com.diegonmarcos.clouddrive.files.FileOps
-import com.diegonmarcos.clouddrive.files.Places
 import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
-import com.diegonmarcos.clouddrive.sync.SyncEvent
 import com.diegonmarcos.clouddrive.ui.DriveCard
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.PillRow
 import com.diegonmarcos.clouddrive.ui.SectionHeader
 import com.diegonmarcos.clouddrive.ui.StatusLight
-import com.diegonmarcos.clouddrive.ui.StatusLightRow
 import com.diegonmarcos.clouddrive.ui.StorageBar
 import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import java.io.File
-import java.text.DateFormat
-import java.util.Date
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * #603 HOME — the drive's overview, made only of primitives that already exist: the two
- * DECLARED Files sections (ui.files.sections) as cards with a live [StorageBar], the
- * volumes/mesh glance as [StatusLightRow]s over the declared connections, the most recent
- * sync events the git engine already persisted (SyncHistory), and quick actions as [Pill]s.
- * Nothing here is a new mechanism and nothing here is a second source of a number.
- *
- * Every caption is a string resource and every card's name comes from the declaration, so
- * this page has no list of its own to drift. The quick actions are CALLBACKS: the tab ids
- * they select live in MainActivity's dispatch, the one place Kotlin names them.
+ * #609 HOME — REDESIGNED into two sections, both read from state that already exists
+ * (never a second source of a number): APPS is the fleet's data-app grid, the very
+ * [AppsGrid] the old Apps tab drew, now embedded here since that tab is gone; VOLUMES
+ * is a snapshot/resume of everything the Volumes and Sync tabs hold — the two DECLARED
+ * Files sections (ui.files.sections) with a live [StorageBar], the four declared volume
+ * classes (ui.volumes.classes) as a fleet-apps/containers/machines/remotes count, the
+ * seeded git repositories' clean/dirty/ahead-behind glance (GitSyncCoordinator, the same
+ * one Sync ▸ Git reads), and the container mesh's declared status (data/drive-connections.json).
+ * Every card's quick action is a CALLBACK: the tab ids it selects live in MainActivity's
+ * dispatch, the one place Kotlin names them.
  */
 @Composable
 fun HomeScreen(
     git: GitSyncCoordinator,
-    prefs: DrivePrefs,
+    actions: DriveActions,
     onOpenFiles: () -> Unit,
     onOpenVolumes: () -> Unit,
-    onOpenConfigs: () -> Unit,
+    onOpenSync: () -> Unit,
+    onRoute: (tab: String, page: String) -> Unit,
     onSyncAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val ctx = LocalContext.current
-    val snap by prefs.snapshot.collectAsState()
     val sections = Declarations.files.sections
     val connections = Declarations.connections
-    val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
-    var events by remember { mutableStateOf(emptyList<SyncEvent>()) }
+    val containerConnections = remember(connections) { connections.filter { it.machine == Declarations.MACHINE_CONTAINER } }
+    val machineConnections = remember(connections) { connections.filter { it.machine in Declarations.volumes.machineKinds } }
+    val s3Remotes = remember { Declarations.remotes.filter { it.type in Declarations.volumes.s3RemoteTypes } }
     var usage by remember { mutableStateOf(emptyMap<String, Pair<Long, Long>>()) }
     LaunchedEffect(Unit) {
-        // Both are disk reads: never on the frame's thread.
-        events = withContext(Dispatchers.IO) { runCatching { git.history.load() }.getOrDefault(emptyList()) }
-        usage = withContext(Dispatchers.IO) {
-            sections.mapNotNull { s -> statOf(dirOf(s.id))?.let { s.id to it } }.toMap()
-        }
+        // The same coordinator Sync ▸ Git reads; a second read here never re-implements the glance.
+        git.refresh()
+        usage = withContext(Dispatchers.IO) { sections.mapNotNull { s -> statOf(dirOf(s.id))?.let { s.id to it } }.toMap() }
     }
-    val volumes = remember(snap) { Places.discovered(ctx, snap, Places.hasAllFilesAccess(ctx)).filter { it.kind == Places.Kind.PATH } }
+    val repos by git.repos.collectAsState()
+    val glances by git.glances.collectAsState()
+    val dirty = repos.count { r -> val g = glances[r.id]; g != null && (g.changed > 0 || g.conflicts > 0) }
+    val ahead = repos.sumOf { r -> glances[r.id]?.ahead ?: 0 }
+    val behind = repos.sumOf { r -> glances[r.id]?.behind ?: 0 }
+    val reachableContainers = containerConnections.count { it.status == "ok" }
 
     Column(modifier.fillMaxSize()) {
         ToolbarIsland(title = stringResource(R.string.home_title), subtitle = stringResource(R.string.home_hint))
         LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-            item { SectionHeader(stringResource(R.string.home_stores_section), count = sections.size) }
+            item { SectionHeader(stringResource(R.string.home_apps_section), count = Declarations.apps.size) }
+            item {
+                Text(
+                    stringResource(R.string.home_apps_hint), Modifier.padding(horizontal = DriveMetrics.gutter + 4.dp),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            item { AppsGrid(actions, onRoute) }
+
+            item { SectionHeader(stringResource(R.string.home_volumes_section)) }
             items(sections.size) { i ->
                 val s = sections[i]
                 val dir = dirOf(s.id)
@@ -94,42 +103,41 @@ fun HomeScreen(
                     PillRow { Pill(stringResource(R.string.home_open_files), onOpenFiles, filled = true) }
                 }
             }
-            item { SectionHeader(stringResource(R.string.home_volumes_section), count = volumes.size + connections.size) }
             item {
-                DriveCard(stringResource(R.string.home_volumes_card), summary = stringResource(R.string.home_volumes_summary, volumes.size, connections.size), tag = DriveTags.HOME_CARD) {
-                    connections.take(HOME_GLANCE_ROWS).forEach { c ->
-                        // The declared status is the fleet's word about the fleet, not a look from this phone: honest grey.
-                        StatusLightRow(if (c.status == "ok") StatusLight.State.UNVERIFIABLE else StatusLight.State.OFF, c.name)
-                        Text(c.name + " · " + c.kind, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
+                DriveCard(
+                    stringResource(R.string.home_classes_card),
+                    summary = stringResource(R.string.home_classes_summary, Declarations.constellation.size, containerConnections.size, machineConnections.size, s3Remotes.size),
+                    tag = DriveTags.HOME_CARD,
+                ) {
                     PillRow { Pill(stringResource(R.string.home_open_volumes), onOpenVolumes, filled = true) }
                 }
             }
-            item { SectionHeader(stringResource(R.string.home_history_section), count = events.size) }
             item {
-                DriveCard(stringResource(R.string.home_history_card), light = if (events.isEmpty()) StatusLight.State.UNKNOWN else StatusLight.of(events.first().ok), tag = DriveTags.HOME_CARD) {
-                    if (events.isEmpty()) {
-                        Text(stringResource(R.string.sync_never), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    } else {
-                        events.take(HOME_GLANCE_ROWS).forEach { e ->
-                            Text(
-                                fmt.format(Date(e.epochSeconds * 1000)) + " · " + e.repoName + " · " + e.summary,
-                                style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
+                DriveCard(
+                    stringResource(R.string.home_git_card),
+                    light = if (repos.isEmpty()) StatusLight.State.UNKNOWN else StatusLight.of(dirty == 0),
+                    summary = stringResource(R.string.home_git_summary, repos.size, dirty, ahead, behind),
+                    tag = DriveTags.HOME_CARD,
+                ) {
                     PillRow {
                         Pill(stringResource(R.string.home_sync_now), onSyncAll, filled = true)
-                        Pill(stringResource(R.string.home_open_configs), onOpenConfigs)
+                        Pill(stringResource(R.string.home_open_sync), onOpenSync)
                     }
+                }
+            }
+            item {
+                DriveCard(
+                    stringResource(R.string.home_containers_card),
+                    light = if (containerConnections.isEmpty()) StatusLight.State.UNKNOWN else StatusLight.State.UNVERIFIABLE,
+                    summary = stringResource(R.string.home_containers_summary, containerConnections.size, reachableContainers),
+                    tag = DriveTags.HOME_CARD,
+                ) {
+                    PillRow { Pill(stringResource(R.string.home_open_volumes), onOpenVolumes) }
                 }
             }
         }
     }
 }
-
-private const val HOME_GLANCE_ROWS = 3
 
 /** The folder a declared Files section stands for; null when this device has no such folder. */
 private fun dirOf(sectionId: String): File? {

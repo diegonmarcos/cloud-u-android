@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -29,7 +28,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,7 +38,6 @@ import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.StatusLight
-import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import com.diegonmarcos.superapp.bottomnav.bottomNavPillShape
 import kotlinx.coroutines.launch
 
@@ -51,12 +48,16 @@ import kotlinx.coroutines.launch
  * is not on this device carries the ○ badge and says so on tap.
  *
  * #603 a tile that declares a `route` (GitSync, RSync) does not leave the app: it hands
- * [onRoute] the DECLARED tab and sub-page ids and the shell selects them. Those two are
- * shortcuts into Configs ▸ Git and Configs ▸ Backups, the screens #567 and #330 built —
- * never a second copy, and never a package this device cannot have.
+ * [onRoute] the DECLARED tab and sub-page ids and the shell selects them. #609 those two
+ * targets moved from Configs to the new Sync tab — never a second copy, and never a
+ * package this device cannot have.
+ *
+ * #609 this used to be its own tab (AppsScreen, with a [ToolbarIsland][com.diegonmarcos.clouddrive.ui.ToolbarIsland]);
+ * the tab is gone and [AppsGrid] is now embedded in the Home tab's Apps section, so it
+ * draws only the grid — its host supplies the title.
  */
 @Composable
-fun AppsScreen(actions: DriveActions, onRoute: (tab: String, page: String) -> Unit, modifier: Modifier = Modifier) {
+fun AppsGrid(actions: DriveActions, onRoute: (tab: String, page: String) -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -64,14 +65,15 @@ fun AppsScreen(actions: DriveActions, onRoute: (tab: String, page: String) -> Un
     val installed = remember(apps) {
         apps.associate { a -> a.label to (a.routeTab.isNotBlank() || (a.packageName.isNotBlank() && runCatching { ctx.packageManager.getLaunchIntentForPackage(a.packageName) }.getOrNull() != null)) }
     }
-    Column(modifier.fillMaxSize()) {
-        ToolbarIsland(title = stringResource(R.string.apps_title), subtitle = stringResource(R.string.apps_hint))
+    val rows = apps.size / 3 + if (apps.size % 3 == 0) 0 else 1
+    Column(modifier.fillMaxWidth()) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
-            modifier = Modifier.weight(1f).fillMaxWidth().testTag(DriveTags.APPS_GRID),
+            modifier = Modifier.fillMaxWidth().height(96.dp * rows).testTag(DriveTags.APPS_GRID),
             contentPadding = PaddingValues(DriveMetrics.gutter),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
+            userScrollEnabled = false,
         ) {
             items(apps, key = { it.label }) { app ->
                 val present = installed[app.label] == true

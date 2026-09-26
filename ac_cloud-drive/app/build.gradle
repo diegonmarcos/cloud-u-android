@@ -195,6 +195,9 @@ if (!(uiDecl.tabs instanceof List) || uiDecl.tabs.isEmpty()) {
 if (!(uiDecl.configs?.pages instanceof List) || uiDecl.configs.pages.isEmpty()) {
     throw new GradleException("build.json::ui.configs.pages must declare the Configs strip (#603)")
 }
+if (!(uiDecl.sync?.pages instanceof List) || uiDecl.sync.pages.isEmpty()) {
+    throw new GradleException("build.json::ui.sync.pages must declare the Sync strip (#609)")
+}
 if (!(uiDecl.files?.places instanceof List) || uiDecl.files.places.isEmpty()) {
     throw new GradleException("build.json::ui.files.places must declare the Places sheet (#579)")
 }
@@ -207,6 +210,7 @@ if (!(uiDecl.volumes?.classes instanceof List) || uiDecl.volumes.classes.isEmpty
 def uiTabsB64     = b64(uiDecl.tabs)
 def uiDefaultTab  = (uiDecl.default_tab ?: uiDecl.tabs[0].id).toString()
 def uiConfigsB64  = b64(uiDecl.configs.findAll { k, v -> !k.startsWith('_') })
+def uiSyncB64     = b64(uiDecl.sync.findAll { k, v -> !k.startsWith('_') })
 def uiFilesB64    = b64(uiDecl.files.findAll { k, v -> !k.startsWith('_') })
 def uiVolumesB64  = b64(uiDecl.volumes.findAll { k, v -> !k.startsWith('_') })
 def uiIconDefault = (uiDecl.icons?._default ?: 'circle').toString()
@@ -342,6 +346,7 @@ android {
         buildConfigField "String", "UI_TABS_B64",     "\"${uiTabsB64}\""
         buildConfigField "String", "UI_DEFAULT_TAB",  "\"${uiDefaultTab}\""
         buildConfigField "String", "UI_CONFIGS_B64",  "\"${uiConfigsB64}\""
+        buildConfigField "String", "UI_SYNC_B64",     "\"${uiSyncB64}\""
         buildConfigField "String", "UI_FILES_B64",    "\"${uiFilesB64}\""
         buildConfigField "String", "UI_VOLUMES_B64",  "\"${uiVolumesB64}\""
         buildConfigField "String", "UI_CONSTELLATION_B64", "\"${constellationB64}\""

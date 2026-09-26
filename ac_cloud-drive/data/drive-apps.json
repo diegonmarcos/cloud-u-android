@@ -1,5 +1,5 @@
 {
-  "_doc": "Which applications the Apps tab links out to, and how each tile looks. Task #437: the Apps tab used to list storage back ends; those moved to Sync > Rclone, and Apps is now a grid of icon links matching the SuperApp's Data Apps row (Calendar - Contacts - Notes - Office - Media Center - Music - Vault). Only the `apps` array crosses into the APK: the _doc_* keys are there for whoever edits this file and would otherwise ship to a phone that cannot read them.",
+  "_doc": "Which applications the fleet's data-app grid links out to, and how each tile looks. Task #437: the Apps tab used to list storage back ends; those moved to Sync > Rclone, and the grid is a set of icon links matching the SuperApp's Data Apps row (Calendar - Contacts - Notes - Office - Media Center - Music - Vault). #609 moved the grid itself off its own tab into the Home tab's Apps section (ui.tabs no longer declares `apps`); this file is unchanged, only its renderer moved. Only the `apps` array crosses into the APK: the _doc_* keys are there for whoever edits this file and would otherwise ship to a phone that cannot read them.",
   "_doc_identity": "This file declares the SELECTION and the presentation (icon glyph + display label). Every fleet entry resolves its package identity from data/constellation-fleet.json at build time (ac_cloud-drive/app/build.gradle) — there is no second list of packages here, which is the #170/#380/#381 defect shape. Tidal ('Music') is the one entry the fleet manifest cannot carry: it is not a cloud-* app, so its package and fallback URL are declared here directly, exactly as the SuperApp declares its Music tile.",
   "_doc_fleet_ids": "Calendar is cloud-agenda (renamed by #315): the fleet id is 'agenda' so the resolved package follows the app that exists, never the old name.",
   "apps": [
@@ -43,7 +43,7 @@
       "label": "GitSync",
       "icon": "🔀",
       "route": {
-        "tab": "configs",
+        "tab": "sync",
         "page": "git"
       }
     },
@@ -51,10 +51,10 @@
       "label": "RSync",
       "icon": "🔁",
       "route": {
-        "tab": "configs",
+        "tab": "sync",
         "page": "rclone"
       }
     }
   ],
-  "_doc_routes": "#603 A tile with a `route` does not leave the app: it selects a declared tab and, inside it, a declared sub-page (ui.tabs / ui.configs.pages ids — the ONE declaration, not a second list). GitSync is Configs ▸ Git, the native git manager's own page; RSync is Configs ▸ Rsync — the page whose id stays 'rclone' and whose label #604 changed to Rsync, where the declared folder↔folder sync rules live (data/drive-sync-rules.json, build.json::_doc_rsync). It used to route to Backups, which is the ON-DEVICE mirror set and a different subject. Neither tile is a new screen: #330, #567 and #604 built all of it, and a tile that re-implemented either would be a second surface for one subject."
+  "_doc_routes": "#603 A tile with a `route` does not leave the app: it selects a declared tab and, inside it, a declared sub-page (ui.tabs / ui.sync.pages ids — the ONE declaration, not a second list). #609 moved both targets from Configs to the new Sync tab. GitSync is Sync ▸ Git, the native git manager's own page; RSync is Sync ▸ Rsync — the page whose id stays 'rclone' and whose label #604 changed to Rsync, where the declared folder↔folder sync rules live (data/drive-sync-rules.json, build.json::_doc_rsync). It used to route to Backups, which is the ON-DEVICE mirror set and a different subject. Neither tile is a new screen: #330, #567, #604 and #609 built all of it, and a tile that re-implemented either would be a second surface for one subject."
 }

@@ -32,8 +32,8 @@ class DeclarationsTest {
 
     @Test fun tabsDeclareTheFiveKnownShellTabs() {
         val tabs = Declarations.parseTabs(section("tabs"))
-        // #603 Sync and Backups are no longer tabs: they are Configs sub-pages.
-        assertEquals(listOf("files", "volumes", "home", "apps", "configs"), tabs.map { it.id })
+        // #609 Sync is a tab again (Apps is not: its grid moved into Home); Backups stays a Configs sub-page.
+        assertEquals(listOf("files", "volumes", "home", "sync", "configs"), tabs.map { it.id })
         assertTrue(tabs.all { it.label.isNotBlank() && it.icon.isNotBlank() })
         assertTrue(tabs.map { it.id }.contains(ui["default_tab"].toString().trim('"')))
     }
@@ -43,7 +43,8 @@ class DeclarationsTest {
         val configs = Declarations.parseConfigs(section("configs"))
         val files = Declarations.parseFiles(section("files"))
         val volumes = Declarations.parseVolumes(section("volumes"))
-        val names = Declarations.iconNames(tabs, configs, files, volumes)
+        val sync = Declarations.parseSync(section("sync"))
+        val names = Declarations.iconNames(tabs, configs, files, volumes, sync)
         assertTrue(names.size >= 10)
         val unknown = names.filterNot { IconCatalog.knows(it) }
         assertEquals("icons declared but unknown to IconCatalog: $unknown", emptyList<String>(), unknown)
@@ -51,15 +52,22 @@ class DeclarationsTest {
         assertFalse(IconCatalog.knows("no-such-glyph"))
     }
 
-    @Test fun configsPagesAndPeriods() {
+    @Test fun configsPages() {
         val configs = Declarations.parseConfigs(section("configs"))
-        // #603 the six sub-pages, in declared order: Git/Rclone/Mounts came from the old Sync
-        // tab, Backups from its own tab, General is #579's Configs page and Others is new.
-        assertEquals(listOf("git", "rclone", "mounts", "backups", "general", "others"), configs.pages.map { it.id })
+        // #609 three sub-pages: Git/Rclone/Mounts moved OUT to ui.sync.pages. Backups came from
+        // its own tab at #603, General is #579's Configs page and Others is new.
+        assertEquals(listOf("backups", "general", "others"), configs.pages.map { it.id })
         assertTrue(configs.pages.all { it.label.isNotBlank() && it.icon.isNotBlank() })
-        assertTrue(configs.gitPeriodsMinutes.isNotEmpty())
-        assertTrue("every period is at or above WorkManager's floor", configs.gitPeriodsMinutes.all { it >= 15 })
-        assertEquals(configs.gitPeriodsMinutes.sorted(), configs.gitPeriodsMinutes)
+    }
+
+    @Test fun syncPagesAndPeriods() {
+        val sync = Declarations.parseSync(section("sync"))
+        // #609 the three sub-pages moved back out of Configs, in declared order.
+        assertEquals(listOf("git", "rclone", "mounts"), sync.pages.map { it.id })
+        assertTrue(sync.pages.all { it.label.isNotBlank() && it.icon.isNotBlank() })
+        assertTrue(sync.gitPeriodsMinutes.isNotEmpty())
+        assertTrue("every period is at or above WorkManager's floor", sync.gitPeriodsMinutes.all { it >= 15 })
+        assertEquals(sync.gitPeriodsMinutes.sorted(), sync.gitPeriodsMinutes)
     }
 
     @Test fun volumesDeclaresTheFourClassesAndTheirRules() {
@@ -163,13 +171,13 @@ class DeclarationsTest {
         val data = File(root, "data")
         val apps = Declarations.parseApps(Json.parseToJsonElement(File(data, "drive-apps.json").readText()).jsonObject["apps"].toString())
         assertTrue(apps.size >= 5); assertTrue(apps.all { it.label.isNotBlank() && it.icon.isNotBlank() })
-        // #603 GitSync and RSync are IN-APP routes into declared Configs sub-pages, never packages.
-        val configs = Declarations.parseConfigs(section("configs"))
-        val pageIds = configs.pages.map { it.id }
+        // #609 GitSync and RSync are IN-APP routes into declared Sync sub-pages, never packages.
+        val sync = Declarations.parseSync(section("sync"))
+        val pageIds = sync.pages.map { it.id }
         listOf("GitSync", "RSync").forEach { label ->
             val tile = apps.single { it.label == label }
             assertEquals("a routed tile carries no package", "", tile.packageName)
-            assertEquals("configs", tile.routeTab)
+            assertEquals("sync", tile.routeTab)
             assertTrue("$label routes to a declared sub-page (${tile.routePage})", tile.routePage in pageIds)
         }
         assertTrue("an ordinary tile has no route", apps.filter { it.routeTab.isBlank() }.size >= 5)
@@ -198,6 +206,7 @@ class DeclarationsTest {
         assertTrue(Declarations.parseTabs("").isEmpty())
         assertTrue(Declarations.parseTabs("{not json").isEmpty())
         assertTrue(Declarations.parseConfigs("").pages.isEmpty())
+        assertTrue(Declarations.parseSync("").pages.isEmpty())
         assertTrue(Declarations.parseFiles("").sections.isEmpty())
         assertEquals("name", Declarations.parseFiles("").defaultSort)
         assertEquals("", Declarations.decode(""))

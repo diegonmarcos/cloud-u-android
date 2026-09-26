@@ -25,8 +25,10 @@ object Declarations {
 
     data class TabDecl(val id: String, val label: String, val icon: String)
     data class PageDecl(val id: String, val label: String, val icon: String)
-    /** #603 the Configs strip: the six sub-pages and the per-repository period choices the Git page offers. */
-    data class ConfigsDecl(val pages: List<PageDecl>, val gitPeriodsMinutes: List<Int>)
+    /** #609 the Configs strip: three sub-pages (Git/Rclone/Mounts moved out to ui.sync.pages). */
+    data class ConfigsDecl(val pages: List<PageDecl>)
+    /** #609 the Sync strip: Git/Rclone/Mounts, moved back out of Configs, plus the per-repository period choices the Git page offers. */
+    data class SyncDecl(val pages: List<PageDecl>, val gitPeriodsMinutes: List<Int>)
 
     /** #604 one of the four classes of volume; VolumesScreen dispatches on [id]. */
     data class VolumeClassDecl(val id: String, val label: String, val icon: String)
@@ -117,6 +119,7 @@ object Declarations {
     val tabs: List<TabDecl> by lazy { parseTabs(decode(BuildConfig.UI_TABS_B64)) }
     val defaultTab: String get() = BuildConfig.UI_DEFAULT_TAB
     val configs: ConfigsDecl by lazy { parseConfigs(decode(BuildConfig.UI_CONFIGS_B64)) }
+    val sync: SyncDecl by lazy { parseSync(decode(BuildConfig.UI_SYNC_B64)) }
     val files: FilesDecl by lazy { parseFiles(decode(BuildConfig.UI_FILES_B64)) }
     val volumes: VolumesDecl by lazy { parseVolumes(decode(BuildConfig.UI_VOLUMES_B64)) }
     val constellation: List<ConstellationAppDecl> by lazy { parseConstellation(decode(BuildConfig.UI_CONSTELLATION_B64)) }
@@ -150,10 +153,17 @@ object Declarations {
     }
 
     fun parseConfigs(text: String): ConfigsDecl {
-        val o = element(text) as? JsonObject ?: return ConfigsDecl(emptyList(), emptyList())
+        val o = element(text) as? JsonObject ?: return ConfigsDecl(emptyList())
+        val pages = objects(o["pages"]).mapNotNull { p -> val id = p.str("id"); if (id.isBlank()) null else PageDecl(id, p.str("label", id), p.str("icon")) }
+        return ConfigsDecl(pages)
+    }
+
+    /** #609 the Sync strip: Git/Rclone/Mounts, the mirror of parseConfigs. */
+    fun parseSync(text: String): SyncDecl {
+        val o = element(text) as? JsonObject ?: return SyncDecl(emptyList(), emptyList())
         val pages = objects(o["pages"]).mapNotNull { p -> val id = p.str("id"); if (id.isBlank()) null else PageDecl(id, p.str("label", id), p.str("icon")) }
         val periods = (o["git_periods_minutes"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.intOrNull }?.filter { it >= 15 } ?: emptyList()
-        return ConfigsDecl(pages, periods)
+        return SyncDecl(pages, periods)
     }
 
     fun parseFiles(text: String): FilesDecl {
@@ -248,9 +258,9 @@ object Declarations {
     }
 
     /** Every icon name the declarations use — what test-drive-shell.sh and DeclarationsTest hold IconCatalog to. */
-    fun iconNames(tabs: List<TabDecl>, configs: ConfigsDecl, files: FilesDecl, volumes: VolumesDecl? = null): Set<String> =
+    fun iconNames(tabs: List<TabDecl>, configs: ConfigsDecl, files: FilesDecl, volumes: VolumesDecl? = null, sync: SyncDecl? = null): Set<String> =
         (tabs.map { it.icon } + configs.pages.map { it.icon } + files.sections.map { it.icon } + files.places.map { it.icon } + files.filters.map { it.icon } +
-            (volumes?.classes?.map { it.icon } ?: emptyList())).filter { it.isNotBlank() }.toSet()
+            (volumes?.classes?.map { it.icon } ?: emptyList()) + (sync?.pages?.map { it.icon } ?: emptyList())).filter { it.isNotBlank() }.toSet()
 
     /** #604 the machine class a connection without a declared `machine` belongs to: the container mesh. */
     const val MACHINE_CONTAINER = "container"

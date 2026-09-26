@@ -129,7 +129,7 @@ class DriveShellTest {
 
     @Test
     fun `every declared icon renders through the catalog`() {
-        val names = Declarations.iconNames(Declarations.tabs, Declarations.configs, Declarations.files, Declarations.volumes)
+        val names = Declarations.iconNames(Declarations.tabs, Declarations.configs, Declarations.files, Declarations.volumes, Declarations.sync)
         assertTrue(names.all { IconCatalog.knows(it) })
     }
 }
