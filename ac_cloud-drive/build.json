@@ -79,7 +79,7 @@
     ],
     "default_tab": "files",
     "files": {
-      "_doc_sections": "#603 THE TWO SECTIONS of the Files navigator, in order, each a header in the Places sheet with the declared places that name it. `emulated` is Android shared storage itself (/storage/emulated/0); `cloud-drive-storage` is the ONE shared store of #575 (storage.shared_root), a top-level section of its own and not one place among many, because every fleet app holding all-files access reads and writes it and it is seeded by default with the PUBLIC cloud repositories (storage.seed). Removable volumes and mesh mounts are NOT here: they are the Volumes tab.",
+      "_doc_sections": "#603 THE TWO SECTIONS of the Files navigator, in order, each a header in the Places sheet with the declared places that name it. `emulated` is Android shared storage itself (/storage/emulated/0); `cloud-drive-storage` is the ONE shared store of #575 (storage.shared_root), a top-level section of its own and not one place among many, because every fleet app holding all-files access reads and writes it and it is seeded by default with the PUBLIC cloud repositories (storage.seed). Removable volumes and mesh mounts are NOT here: they are the Volumes tab. The label is 'Drive store', NOT 'Cloud-Drive-Storage': the fleet's app-names guard (aa_cloud-superapp/test/test-app-names-pattern.sh T5) refuses any label that spells an application's name outside the sanctioned pattern, and 'Cloud-Drive-Storage' normalises to a prefix of cloud-drive. The section's ID still reads cloud-drive-storage, which is what this file's description names; ids are not user-facing text.",
       "sections": [
         {
           "id": "emulated",
@@ -88,7 +88,7 @@
         },
         {
           "id": "cloud-drive-storage",
-          "label": "Cloud-Drive-Storage",
+          "label": "Drive store",
           "icon": "cloud"
         }
       ],
