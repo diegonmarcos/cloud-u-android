@@ -70,6 +70,7 @@ object DriveTags {
     const val STATUS_LIGHT = "drive_status_light"
     const val CARD = "drive_card"
     const val PROGRESS = "drive_progress_card"
+    const val CONFIGS_SIGN_IN_REPORT = "drive_configs_sign_in_report"
     const val EMPTY = "drive_empty_state"
     const val ERROR = "drive_error_state"
     const val LOADING = "drive_loading_state"

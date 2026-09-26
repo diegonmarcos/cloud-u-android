@@ -1,0 +1,97 @@
+// libs:auth — THE sign-in of the fleet, shared by reference (#587).
+//
+// Lifted out of aa_cloud-superapp's profile package (#573/#578/#585) so that cloud-superapp
+// (Configs ▸ Profile ▸ Connect) and cloud-drive (Configs ▸ Sign in) offer the SAME four ways in —
+// Authelia bearer, Authelia web-auth, GitHub device grant, Google device grant — from ONE
+// declaration and ONE code path, the way libs:bottomnav is the one bottom nav. Nothing here is
+// copied into an app: an app hosts SignInWays (Compose) and receives what the sign-in fetched.
+//
+// THE DECLARATION IS THE SHARED ONE, ALWAYS. This module reads ab_cloud-libs-shared/build.json::auth
+// (../../build.json from here) and never the consuming app's build.json: two apps reading two
+// files is two provider lists, which is exactly the drift #587 removes. The block is baked whole
+// into this module's own BuildConfig, decoded once by AuthDeclaration.
+//
+// Deliberately sparse on the independent-version axis (text-tools / core / bottomnav precedent):
+// it builds under whichever AGP the app that pulls it in uses.
+//
+// TESTED where it builds: src/test/ (JVM + Robolectric) runs as :libs:auth:test inside each
+// consuming app's own unit phase (build.json::tests.unit) and in lib-apks.
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    // SignInUi.kt is @Composable; the compose compiler is resolved from the consuming app's root
+    // build (every consumer declares it `apply false` there, like libs:bottomnav's).
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+def sharedJson = new groovy.json.JsonSlurper().parse(file("${projectDir}/../../build.json"))
+def authDecl = sharedJson.auth
+if (!(authDecl instanceof Map) || !(authDecl.sign_in?.providers instanceof List) || authDecl.sign_in.providers.isEmpty()) {
+    throw new GradleException("ab_cloud-libs-shared/build.json::auth.sign_in.providers must declare the fleet's sign-in providers (#587)")
+}
+// `_doc*` keys are prose for the reader of the JSON, not data the phone needs.
+def stripDocs
+stripDocs = { obj ->
+    if (obj instanceof Map) return obj.findAll { k, v -> !(k instanceof String && k.startsWith('_doc')) }.collectEntries { k, v -> [(k): stripDocs(v)] }
+    if (obj instanceof List) return obj.collect { stripDocs(it) }
+    return obj
+}
+def authB64 = groovy.json.JsonOutput.toJson(stripDocs(authDecl)).bytes.encodeBase64().toString()
+
+android {
+    namespace 'com.diegonmarcos.cloudlib.auth'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        buildConfigField "String", "AUTH_B64", "\"${authB64}\""
+    }
+
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+            all {
+                testLogging {
+                    events 'failed', 'standardOut'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    // ConfigSyncClient: the one HTTP client with the named-failure taxonomy every route shares.
+    // `api` because a host receives ConfigSyncClient.Outcome through SignInHost.
+    api project(':libs:core')
+
+    implementation platform('androidx.compose:compose-bom:2025.01.00')
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    // rememberLauncherForActivityResult: "Import token from file…" in the bearer dialog.
+    implementation 'androidx.activity:activity-compose:1.9.3'
+    implementation 'androidx.core:core-ktx:1.15.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'androidx.test:core:1.6.1'
+    testImplementation 'org.robolectric:robolectric:4.16.1'
+}

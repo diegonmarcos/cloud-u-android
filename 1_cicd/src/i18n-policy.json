@@ -75,6 +75,9 @@
     "ab_cloud-libs-shared/libs/bottomnav": {
       "base_language": "host"
     },
+    "ab_cloud-libs-shared/libs/auth": {
+      "base_language": "host"
+    },
     "ab_cloud-libs-shared/libs/appstore": {
       "base_language": "host"
     },

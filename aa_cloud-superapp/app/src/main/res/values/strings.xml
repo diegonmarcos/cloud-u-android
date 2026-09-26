@@ -567,9 +567,6 @@
     <string name="journey_bearer_stored">Bearer stored for %1$s</string>
     <string name="journey_not_signed_in">Not signed in — pick a provider below.</string>
     <string name="journey_sign_in_caption">The fleet\'s own SSO is primary. A GitHub login also grants the private repos; Google proves an address only. Every route ends in the same place: your config, fetched once.</string>
-    <string name="journey_way_browser">%1$s · sign in at the portal</string>
-    <string name="journey_way_bearer">%1$s · paste a token</string>
-    <string name="journey_way_code">%1$s · browser code</string>
     <string name="journey_way_ssh">%1$s · SSH key</string>
     <string name="journey_use_stored_bearer">Use the stored bearer (%1$s)</string>
     <string name="journey_mail_code">Authelia mailed you a code?</string>
@@ -597,19 +594,8 @@
     <string name="journey_vault_fetch_open">Fetch &amp; open Fleet</string>
     <string name="journey_import_file_caption">From a file: the DECRYPTED vault export — what sops -d prints, the same document the server fetch returns. The encrypted file from the repo is refused, and says so: this phone holds no age key.</string>
     <string name="journey_import_file">Import from a file instead</string>
-    <string name="journey_not_configured">%1$s · not configured in this build</string>
     <string name="journey_fetched">✓ Authenticated · %1$d bytes · your config is here — continue with step 2</string>
     <string name="journey_fetched_snack">Config fetched</string>
     <string name="journey_identity_only_done">%1$s proved %2$s</string>
     <!-- the device-grant dialog, one for every provider that speaks RFC 8628 -->
-    <string name="sign_in_start">Start</string>
-    <string name="sign_in_code_prompt">Enter this code at %1$s\n\n    %2$s\n\n%3$s</string>
-    <string name="sign_in_code_expiry">Waiting for approval… (the code expires in %1$d min)</string>
-    <string name="sign_in_code_expired">✗ The code expired before it was approved.</string>
-    <string name="sign_in_asking">… asking %1$s for a device code</string>
-    <string name="sign_in_approved">✓ Approved · %1$s</string>
-    <string name="sign_in_not_configured">%1$s · not configured in this build</string>
-    <string name="sign_in_identity_only">✓ %1$s proved %2$s. That provider grants an identity only: fetch the config with the fleet SSO or GitHub.</string>
-    <string name="sign_in_device_caption_repo">Press Start. %1$s will show a code to approve in the browser; once approved, the artifact is read from %2$s (%3$s) and applied.</string>
-    <string name="sign_in_device_caption_identity">Press Start. %1$s will show a code to approve in the browser; once approved, the address it proves is your identity here — nothing is fetched.</string>
 </resources>

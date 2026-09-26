@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.profile
 import android.app.Application
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.diegonmarcos.cloudlib.auth.VaultConnect
 import com.diegonmarcos.superapp.network.WireGuardPrefs
 import com.diegonmarcos.superapp.profile.VaultCockpit.State as S
 import com.diegonmarcos.superapp.ui.StatusLight.State as L

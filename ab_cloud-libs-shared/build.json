@@ -3545,5 +3545,86 @@
       "\u25aa "
     ],
     "summary_not_bullets_note": "[Asked for bullet points, the model answered in prose. Its reply is above, unchanged.]"
+  },
+  "auth": {
+    "_doc": "#587 THE ONE authentication declaration of the fleet, read by libs:auth (ab_cloud-libs-shared/libs/auth) and by nothing else: the module bakes this block into its own BuildConfig, so cloud-superapp (Configs > Profile > Connect) and cloud-drive (Configs > Sign in) offer the SAME providers against the SAME endpoints from ONE file. It used to be aa_cloud-superapp/build.json::ui.{config_source,vault_connect.sign_in} - a per-app home for a fleet-wide list, which is the copy-then-drift shape the shared shelf exists to remove. The superapp keeps only what is its own: ui.config_source.format_version (the artifact contract ConfigAutoImport checks) and ui.vault_connect.cockpit (the Fleet tab's layout).",
+    "config_source": {
+      "_doc": "The per-user config artifact (/pub/superapp/config/<user>, emitted by cloud-infra from superapp-users.json): where it is, who it is for, and how long a fetch may take. Every sign-in that grants config_artifact fetches exactly this.",
+      "base_url": "https://api.diegonmarcos.com",
+      "path_template": "/pub/superapp/config/{user}",
+      "user": "diego",
+      "connect_timeout_ms": 8000,
+      "read_timeout_ms": 20000,
+      "_doc_git": "Where the two GitHub import tiles read the artifact from. SAME BYTES as the Authelia route serves — one artifact contract, four ways to authenticate for it, so ConfigAutoImport.apply is reached identically no matter which tile was pressed. The token tile GETs exactly this one path over the contents API; the SSH tile must clone the repo because GitHub speaks only the git protocol over SSH, which is also why the token tile is the cheaper of the two.",
+      "git": {
+        "repo": "diegonmarcos/cloud-vault",
+        "path": "superapp-config.json",
+        "ref": "main"
+      }
+    },
+    "vault_connect": {
+      "_doc": "The #566/#569 consolidated vault export route: start mails a one-time code to the bearer's address, fetch returns the decrypted bundle. known_schema_versions is what this build accepts (configs/schema.json refuses an unknown one).",
+      "base_url": "https://api.diegonmarcos.com/pub",
+      "start_path": "/profile/connect/start",
+      "fetch_path": "/profile/connect/fetch",
+      "connect_timeout_ms": 8000,
+      "read_timeout_ms": 30000,
+      "known_schema_versions": [
+        1
+      ]
+    },
+    "_doc_sign_in": "#573 The Sign-in step of Configs > Profile > Connect: WHICH providers are offered, in order, and how each authenticates. The list is data; nothing in Kotlin names a provider, an endpoint or a client id. `kind` is the only thing the code dispatches on. #578: the fleet SSO is offered as TWO distinct ways, one provider each - `authelia_bearer` (a stored or pasted bearer token, one tap; also the mailed-code second factor for the vault bundle) and `authelia_web` (the portal login in the embedded browser, whose session cookie is used for one request and dropped - #467's posture, no other login route); both reach the same Caddy gate (endpoints are config_source and vault_connect above). The bearer keeps id `authelia` because cloud-infra's superapp-users.json auth_providers policy already names it, and an APK that predates the split must keep being offered it. `device_flow` is the OAuth 2.0 device grant, ONE code path for GitHub and Google that differ only in these fields. `primary` marks the fleet's own SSO (exactly one: the bearer way). `grants` says what a sign-in through this provider can then fetch: `config_artifact` = the per-user full config (/pub/superapp/config/<user>, which carries the User > Identity > Peer registry), `vault_bundle` = the #566 consolidated vault export (Authelia only: the server binds the mailed code to the bearer identity), `repo_artifact` = the same artifact read out of the private vault repo with the token (GitHub: a login also grants the repos), `identity` = the provider proves an address and nothing more (Google today: no server of the fleet accepts a Google token, so it is identity-only until one does - declared, not invented). GitHub: client_id is PUBLIC by design (the device grant needs no client secret); taken from the cloud front portal's OAuth App, the one that answers 'device_flow_disabled' rather than 'Not Found' - STILL ONE CLICK SHORT: 'Enable Device Flow' on that App at github.com/settings/developers. scope=repo because cloud-vault is private. Google: the device grant needs a client registered as 'TV and Limited Input' and its token exchange takes a client_secret that Google itself documents as not secret in this context; both are EMPTY until the owner registers one, and the app then says 'not configured' instead of starting a flow that cannot finish. verification_url/verification_uri are read as each provider spells them.",
+    "sign_in": {
+      "providers": [
+        {
+          "id": "authelia",
+          "label": "Authelia bearer",
+          "kind": "authelia_bearer",
+          "primary": true,
+          "grants": [
+            "config_artifact",
+            "vault_bundle"
+          ]
+        },
+        {
+          "id": "authelia_web",
+          "label": "Authelia web-auth",
+          "kind": "authelia_web",
+          "grants": [
+            "config_artifact",
+            "vault_bundle"
+          ]
+        },
+        {
+          "id": "github",
+          "label": "GitHub",
+          "kind": "device_flow",
+          "device_code_url": "https://github.com/login/device/code",
+          "token_url": "https://github.com/login/oauth/access_token",
+          "userinfo_url": "https://api.github.com/user",
+          "client_id": "Ov23liOg9JhezyYUCHmS",
+          "client_secret": "",
+          "scope": "repo",
+          "grants": [
+            "identity",
+            "repo_artifact"
+          ]
+        },
+        {
+          "id": "google",
+          "label": "Google",
+          "kind": "device_flow",
+          "device_code_url": "https://oauth2.googleapis.com/device/code",
+          "token_url": "https://oauth2.googleapis.com/token",
+          "userinfo_url": "https://openidconnect.googleapis.com/v1/userinfo",
+          "client_id": "",
+          "client_secret": "",
+          "scope": "openid email",
+          "grants": [
+            "identity"
+          ]
+        }
+      ]
+    }
   }
 }

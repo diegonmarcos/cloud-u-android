@@ -6,11 +6,13 @@
 # device-grant steps, the registry walk, the strip geometry) runs on the JVM:
 # ProfileJourneyTest, SignInTest, UserRegistryTest, AppTabsStyleTest. This file
 # pins what a JVM test cannot see:
-#   T1  the provider list is DATA: build.json::ui.vault_connect.sign_in declares
+#   T1  the provider list is DATA, and ONE: ab_cloud-libs-shared/build.json::auth.sign_in
+#       (#587 — the fleet's shared libs:auth, the SAME module cloud-drive links) declares
 #       FOUR ways in (#578: Authelia bearer, Authelia web-auth, GitHub, Google),
 #       unique ids and labels, exactly ONE primary, kinds the code dispatches
 #       on, the two SSO ways of DISTINCT kinds, Google inert (empty client id —
-#       never invented), baked to ONE BuildConfig field; the GitHub-only fields are gone
+#       never invented), baked to ONE BuildConfig field of the LIB; this app's
+#       build.json and gradle carry no provider, endpoint or GitHub-only field
 #   T2  nothing in Kotlin names a provider, an endpoint, a client id, a user, an
 #       address or a device — the seed lives in cloud-infra's superapp-users.json
 #   T3  every journey_* / sign_in_* string the Kotlin uses exists in EVERY locale,
@@ -45,86 +47,122 @@ BJ="$APP/build.json"
 GR="$APP/app/build.gradle"
 PKG="$APP/app/src/main/java/com/diegonmarcos/superapp/profile"
 PF="$PKG/ProfileFragment.kt"
-PJ="$PKG/ProfileJourney.kt"
 PV="$PKG/ProfileJourneyView.kt"
-SI="$PKG/SignIn.kt"
-UR="$PKG/UserRegistry.kt"
 CA="$PKG/ConfigAutoImport.kt"
 RES="$APP/app/src/main/res"
-for f in "$BJ" "$GR" "$PF" "$PJ" "$PV" "$SI" "$UR" "$CA"; do
+# #587 the journey's engine and the sign-in surface are the fleet's libs:auth; the
+# providers are the ONE shared declaration. Both live beside this app.
+SHARED="$APP/../ab_cloud-libs-shared/build.json"
+LIB="$APP/../ab_cloud-libs-shared/libs/auth"
+LGR="$LIB/build.gradle"
+LSRC="$LIB/src/main/java/com/diegonmarcos/cloudlib/auth"
+PJ="$LSRC/ProfileJourney.kt"
+SI="$LSRC/SignIn.kt"
+UR="$LSRC/UserRegistry.kt"
+UI="$LSRC/SignInUi.kt"
+AD="$LSRC/AuthDeclaration.kt"
+CFA="$LSRC/ConfigArtifact.kt"
+DG="$LSRC/DeviceGrant.kt"
+LRES="$LIB/src/main/res"
+for f in "$BJ" "$GR" "$PF" "$PJ" "$PV" "$SI" "$UR" "$CA" "$SHARED" "$LGR" "$UI" "$AD" "$CFA" "$DG"; do
     [ -f "$f" ] || { echo "FAIL: $f missing — this tester is unrun, not passing"; exit 1; }
 done
 
 # Code only — whole-line comments dropped, so prose about what must not
-# happen does not read as it happening.
+# happen does not read as it happening. Grep captured text through here-strings,
+# never `echo "$big" | grep -q` (#585b): under pipefail grep -q quits on the first
+# match and the echo dies of SIGPIPE, turning a green tree red on the runner.
 codeof() { awk '{ l=$0; sub(/^[[:space:]]+/,"",l); if (l ~ /^\/\// || l ~ /^\*/ || l ~ /^\/\*/) next; print }' "$@"; }
 
-echo "== T1: the provider list is data =="
-N=$(jq '.ui.vault_connect.sign_in.providers | length' "$BJ" 2>/dev/null || echo 0)
-[ "${N:-0}" -ge 4 ] && ok "T1: $N providers declared" || bad "T1: fewer than 4 providers declared ($N)"
-IDS=$(jq -r '.ui.vault_connect.sign_in.providers[].id' "$BJ")
+echo "== T1: the provider list is data, in the ONE shared declaration =="
+SIGNIN='.auth.sign_in'
+N=$(jq "$SIGNIN.providers | length" "$SHARED" 2>/dev/null || echo 0)
+[ "${N:-0}" -ge 4 ] && ok "T1: $N providers declared in ab_cloud-libs-shared/build.json::auth" || bad "T1: fewer than 4 providers declared ($N)"
+IDS=$(jq -r "$SIGNIN.providers[].id" "$SHARED")
 [ "$(echo "$IDS" | sort | uniq -d | wc -l)" = 0 ] && ok "T1: provider ids are unique" || bad "T1: duplicate provider id"
-P=$(jq '[.ui.vault_connect.sign_in.providers[] | select(.primary == true)] | length' "$BJ")
+P=$(jq "[$SIGNIN.providers[] | select(.primary == true)] | length" "$SHARED")
 [ "$P" = 1 ] && ok "T1: exactly one primary provider" || bad "T1: $P primary providers"
-for k in $(jq -r '.ui.vault_connect.sign_in.providers[].kind' "$BJ" | sort -u); do
+for k in $(jq -r "$SIGNIN.providers[].kind" "$SHARED" | sort -u); do
     grep -q "\"$k\" -> Kind\." "$SI" && ok "T1: kind '$k' is dispatched by SignIn.kt" || bad "T1: kind '$k' is declared but SignIn.kt does not dispatch on it"
 done
 for id in $IDS; do
-    g=$(jq -r --arg id "$id" '.ui.vault_connect.sign_in.providers[] | select(.id == $id) | .grants | length' "$BJ")
+    g=$(jq -r --arg id "$id" "$SIGNIN.providers[] | select(.id == \$id) | .grants | length" "$SHARED")
     [ "${g:-0}" -ge 1 ] && ok "T1: '$id' grants something" || bad "T1: '$id' grants nothing"
 done
-grep -q '"UI_VAULT_CONNECT_SIGN_IN_B64"' "$GR" && grep -q 'BuildConfig.UI_VAULT_CONNECT_SIGN_IN_B64' "$SI" \
-    && ok "T1: one BuildConfig field, read by SignIn.kt" || bad "T1: the sign_in blob is not baked or not read"
-grep -qE 'UI_GH_OAUTH|github_oauth' "$GR" && bad "T1: gradle still bakes the GitHub-only OAuth fields" || ok "T1: no GitHub-only OAuth field in gradle"
+grep -q 'buildConfigField "String", "AUTH_B64"' "$LGR" && grep -q 'BuildConfig.AUTH_B64' "$AD" && grep -q 'AuthDeclaration.current.signIn' "$SI" \
+    && ok "T1: one BuildConfig field (the lib's), decoded once, read by SignIn.kt" || bad "T1: the auth blob is not baked by the lib or not read"
+grep -q 'file("${projectDir}/../../build.json")' "$LGR" && ok "T1: the lib bakes the SHARED file, never a consuming app's" || bad "T1: libs:auth/build.gradle does not read ../../build.json"
+jq -e '.ui.vault_connect.sign_in' "$BJ" >/dev/null 2>&1 && bad "T1: this app's build.json STILL carries ui.vault_connect.sign_in — two declarations" || ok "T1: this app declares no provider of its own"
+jq -e '.ui.config_source.base_url' "$BJ" >/dev/null 2>&1 && bad "T1: this app's build.json still carries the config endpoint — two declarations" || ok "T1: the config endpoint lives only in the shared declaration"
+grep -qE 'UI_VAULT_CONNECT_SIGN_IN_B64|UI_CONFIG_SOURCE_BASE_URL|UI_CONFIG_GIT_REPO|UI_GH_OAUTH|github_oauth' "$GR" && bad "T1: gradle still bakes a sign-in / endpoint / GitHub-only field" || ok "T1: no sign-in, endpoint or GitHub-only field in this app's gradle"
 jq -e '.ui.config_source.github_oauth' "$BJ" >/dev/null 2>&1 && bad "T1: build.json still carries ui.config_source.github_oauth" || ok "T1: the OAuth client lives only in sign_in"
+grep -q "implementation project(':libs:auth')" "$GR" && jq -e '.modules["libs:auth"].dir' "$BJ" >/dev/null && ok "T1: libs:auth linked by reference (build.json::modules dir + gradle)" || bad "T1: libs:auth is not linked by reference"
 
 # ── the four ways in (#578), as a function so T9 can run it on mutated copies ──
-# $1 = build.json, $2 = ProfileFragment.kt; prints the first broken rule, returns non-zero on one.
+# $1 = the shared build.json, $2 = the lib's SignInUi.kt; prints the first broken rule, returns non-zero on one.
 fourways() {
-    local bj="$1" pf="$2" k
-    [ "$(jq '.ui.vault_connect.sign_in.providers | length' "$bj")" = 4 ] || { echo "not four providers"; return 1; }
-    [ "$(jq '[.ui.vault_connect.sign_in.providers[].label] | unique | length' "$bj")" = 4 ] || { echo "labels are not unique"; return 1; }
+    local bj="$1" ui="$2" k
+    [ "$(jq '.auth.sign_in.providers | length' "$bj")" = 4 ] || { echo "not four providers"; return 1; }
+    [ "$(jq '[.auth.sign_in.providers[].label] | unique | length' "$bj")" = 4 ] || { echo "labels are not unique"; return 1; }
     for k in authelia_bearer authelia_web; do
-        [ "$(jq --arg k "$k" '[.ui.vault_connect.sign_in.providers[] | select(.kind == $k)] | length' "$bj")" = 1 ] \
+        [ "$(jq --arg k "$k" '[.auth.sign_in.providers[] | select(.kind == $k)] | length' "$bj")" = 1 ] \
             || { echo "kind $k is not declared exactly once"; return 1; }
     done
-    [ "$(jq '[.ui.vault_connect.sign_in.providers[] | select(.kind == "device_flow")] | length' "$bj")" = 2 ] || { echo "not two device-flow providers"; return 1; }
+    [ "$(jq '[.auth.sign_in.providers[] | select(.kind == "device_flow")] | length' "$bj")" = 2 ] || { echo "not two device-flow providers"; return 1; }
     # Google: declared, and inert until the owner mints a client id — never invented here.
-    [ "$(jq -r '[.ui.vault_connect.sign_in.providers[] | select(.kind == "device_flow" and (.client_id // "") == "")] | length' "$bj")" = 1 ] \
+    [ "$(jq -r '[.auth.sign_in.providers[] | select(.kind == "device_flow" and (.client_id // "") == "")] | length' "$bj")" = 1 ] \
         || { echo "exactly one device-flow provider (Google) must carry an empty client_id"; return 1; }
-    # The fragment gives each SSO way its own branch and its own dialog — no shared path.
-    local code; code=$(codeof "$pf")
-    echo "$code" | awk '/SignIn.Kind.AUTHELIA_WEB ->/{getline l; print l}' | grep -q 'showAutheliaWebAuthDialog()' \
+    # The surface gives each SSO way its own branch and its own dialog — no shared path.
+    local code; code=$(codeof "$ui")
+    grep -qE 'SignIn\.Kind\.AUTHELIA_WEB ->.*open = Open\.Web\(p\)' <<<"$code" \
         || { echo "the web-auth pill does not open the web-auth dialog"; return 1; }
-    echo "$code" | awk '/SignIn.Kind.AUTHELIA_BEARER ->/{getline l; print l}' | grep -q 'showAutheliaBearerDialog()' \
+    grep -qE 'SignIn\.Kind\.AUTHELIA_BEARER ->.*open = Open\.Bearer\(p\)' <<<"$code" \
         || { echo "the bearer pill does not open the bearer dialog"; return 1; }
-    grep -q 'via = autheliaProvider(SignIn.Kind.AUTHELIA_WEB)' <<<"$code" \
-        || { echo "the web-auth session is not recorded against the web-auth provider"; return 1; }
+    grep -q 'is Open.Web -> WebAuthDialog(' <<<"$code" && grep -q 'is Open.Bearer -> BearerDialog(' <<<"$code" \
+        || { echo "the two SSO dialogs are not distinct"; return 1; }
+    grep -q 'host.onWebSession(cookie)' <<<"$code" \
+        || { echo "the web-auth session is not handed to the host"; return 1; }
     return 0
 }
 echo "== T1b: FOUR ways in — Authelia bearer, Authelia web-auth, GitHub, Google =="
-msg=$(fourways "$BJ" "$PF") && ok "T1b: four ways, two distinct SSO kinds, Google inert, each SSO way has its own dialog" || bad "T1b: $msg"
-jq -e '.ui.vault_connect.sign_in.providers[] | select(.primary == true) | select(.kind == "authelia_bearer")' "$BJ" >/dev/null \
+msg=$(fourways "$SHARED" "$UI") && ok "T1b: four ways, two distinct SSO kinds, Google inert, each SSO way has its own dialog" || bad "T1b: $msg"
+grep -q 'via = SignIn.byKind(SignIn.Kind.AUTHELIA_BEARER)' "$PF" && ok "T1b: the stored bearer's one tap is recorded against the bearer way" || bad "T1b: the stored bearer's fetch names no provider"
+grep -q 'override fun onWebSession(cookie: String) { vaultSession = cookie }' "$PF" && ok "T1b: the browser session reaches the vault route (one login, both fetches)" || bad "T1b: the fragment drops the web-auth session"
+jq -e '.auth.sign_in.providers[] | select(.primary == true) | select(.kind == "authelia_bearer")' "$SHARED" >/dev/null \
     && ok "T1b: the primary is the bearer way" || bad "T1b: the primary provider is not the bearer way"
 grep -q '"authelia_bearer" -> Kind.AUTHELIA_BEARER' "$SI" && grep -q '"authelia_web" -> Kind.AUTHELIA_WEB' "$SI" \
     && ok "T1b: SignIn.kt dispatches both SSO kinds" || bad "T1b: SignIn.kt does not map both SSO kinds"
 
-echo "== T2: no provider, endpoint, client id, user, address or device literal in Kotlin =="
+echo "== T2: no provider, endpoint, client id, user, address or device literal in Kotlin (app AND lib) =="
+KT=("$SI" "$UI" "$AD" "$CFA" "$DG" "$PF" "$PJ" "$PV" "$UR" "$CA")
 for id in $IDS; do
-    codeof "$SI" "$PF" "$PJ" "$PV" "$UR" "$CA" | grep -v -- '-> Kind\.' | grep -qE "\"$id\"" && bad "T2: provider id '$id' is a Kotlin literal" || ok "T2: '$id' is not a Kotlin literal"
+    grep -v -- '-> Kind\.' <<<"$(codeof "${KT[@]}")" | grep -qE "\"$id\"" && bad "T2: provider id '$id' is a Kotlin literal" || ok "T2: '$id' is not a Kotlin literal"
 done
-for u in $(jq -r '.ui.vault_connect.sign_in.providers[] | .device_code_url // empty, .token_url // empty, .userinfo_url // empty, (.client_id | select(. != "" and . != null))' "$BJ"); do
-    codeof "$SI" "$PF" "$PJ" "$PV" | grep -qF "$u" && bad "T2: '$u' is a Kotlin literal" || ok "T2: '$u' lives only in build.json"
+for u in $(jq -r '.auth.sign_in.providers[] | .device_code_url // empty, .token_url // empty, .userinfo_url // empty, (.client_id | select(. != "" and . != null))' "$SHARED"); do
+    grep -qF "$u" <<<"$(codeof "${KT[@]}")" && bad "T2: '$u' is a Kotlin literal" || ok "T2: '$u' lives only in the shared build.json"
 done
-if codeof "$SI" "$PF" "$PJ" "$PV" "$UR" "$CA" | grep -qiE '@diegonmarcos\.com|diego coelho|samsung|surface|galaxy|termux|10\.0\.0\.[0-9]+|fd0c:1d0'; then
-    bad "T2: a user, address or device name is a Kotlin literal in the profile package"
+for u in $(jq -r '.auth.config_source.base_url, .auth.config_source.user, .auth.vault_connect.base_url, .auth.config_source.git.repo' "$SHARED"); do
+    grep -qF "\"$u\"" <<<"$(codeof "${KT[@]}")" && bad "T2: endpoint/user/repo '$u' is a Kotlin literal" || ok "T2: '$u' lives only in the shared build.json"
+done
+# Device names as WORDS: Compose's colour roles (onSurfaceVariant) are not the Surface laptop.
+# (The old `codeof | grep -q` form passed here only because awk died of SIGPIPE — #585b.)
+if grep -qiE '@diegonmarcos\.com|diego coelho|\bsamsung\b|\bsurface\b|\bgalaxy\b|\btermux\b|10\.0\.0\.[0-9]+|fd0c:1d0' <<<"$(codeof "${KT[@]}")"; then
+    bad "T2: a user, address or device name is a Kotlin literal in the profile package or the lib"
 else
-    ok "T2: no user, address or device literal in the profile package"
+    ok "T2: no user, address or device literal in the profile package or the lib"
 fi
 
-echo "== T3: every journey string exists in every locale, none is dead =="
-USED=$(grep -ohE 'R\.string\.(journey|sign_in)_[a-z_]+' "$PF" "$PJ" "$PV" "$SI" | sed 's/R\.string\.//' | sort -u)
+echo "== T3: every journey string exists in every locale, none is dead (app), and the lib's likewise =="
+USED=$(grep -ohE 'R\.string\.(journey|sign_in)_[a-z_]+' "$PF" "$PV" | sed 's/R\.string\.//' | sort -u)
 [ "$(echo "$USED" | grep -c .)" -ge 40 ] && ok "T3: $(echo "$USED" | grep -c .) journey strings used" || bad "T3: too few journey strings used — labels are literals"
+grep -q 'name="sign_in_' "$RES/values/strings.xml" && bad "T3: this app still declares sign_in_* strings — the surface's words are the lib's" || ok "T3: the sign-in words live in the lib alone"
+LUSED=$(grep -ohE 'R\.string\.auth_[a-z_]+' "$UI" | sed 's/R\.string\.//' | sort -u)
+[ "$(echo "$LUSED" | grep -c .)" -ge 20 ] && ok "T3: the lib names $(echo "$LUSED" | grep -c .) auth_* strings" || bad "T3: the lib's surface types its captions"
+for loc in "$LRES"/values*/strings.xml; do
+    for s in $LUSED; do grep -q "name=\"$s\"" "$loc" || bad "T3: lib string $s missing from ${loc#$LIB/}"; done
+done
+LDEAD=$(grep -oE 'name="auth_[a-z_]+"' "$LRES/values/strings.xml" | sed 's/name="//; s/"//' | sort -u | comm -23 - <(echo "$LUSED"))
+[ -z "$LDEAD" ] && ok "T3: no dead lib string; present in $(ls "$LRES"/values*/strings.xml | wc -l) locale files" || bad "T3: lib declares but never uses: $(echo "$LDEAD" | tr '\n' ' ')"
 for loc in "$RES"/values*/strings.xml; do
     for s in $USED; do
         grep -q "name=\"$s\"" "$loc" || bad "T3: $s missing from ${loc#$APP/}"
@@ -163,14 +201,18 @@ for step in $(echo "$STEPS" | tr 'A-Z' 'a-z'); do
         && ok "T4: badge for step '$step' is declared in build.json" || bad "T4: cockpit.journey_icons has no '$step'"
 done
 grep -q 'journeyIcons\[step.name.lowercase()\]' "$PF" && ok "T4: the fragment reads the badges off the declaration" || bad "T4: step badges are not read from cockpit.journey_icons"
+grep -q 'SignInWays(host = signInHost, policy = policy' "$PF" && ok "T4: step 1 hosts the shared surface, narrowed by the artifact's policy" || bad "T4: step 1 does not host SignInWays"
+grep -q 'FleetCockpitView.pill(c, label, onClick)' "$PF" && ok "T4: the shared ways are drawn with the cockpit's pill" || bad "T4: the shared ways are not drawn with FleetCockpitView.pill"
+grep -qE 'private fun (showAutheliaBearerDialog|showAutheliaWebAuthDialog|showDeviceFlowDialog|startDeviceFlow)\(' "$PF" && bad "T4: the fragment still carries a sign-in dialog of its own — a copy of the lib's" || ok "T4: no private sign-in dialog left in the fragment"
 grep -q 'selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone' "$PF" \
     && ok "T4: the page opens on the journey until it has been walked" || bad "T4: the page does not land on the journey"
 
 echo "== T5: the token and the session never reach a store =="
-codeof "$SI" | grep -qE 'SharedPreferences|\.edit\(\)|putString|ConfigsPrefs|writeText' && bad "T5: SignIn.kt writes a store" || ok "T5: SignIn.kt touches no store"
+grep -qE 'SharedPreferences|\.edit\(\)|putString|ConfigsPrefs|writeText' <<<"$(codeof "$SI" "$UI" "$DG" "$CFA" "$AD")" && bad "T5: the lib writes a store" || ok "T5: the lib (SignIn, the surface, the grant, the fetches) touches no store"
 grep -q 'data class Session(val provider: String, val identity: String)' "$SI" && ok "T5: the session holds provider + identity, no credential" \
                                                                               || bad "T5: the session carries more than provider + identity"
-codeof "$PF" | grep -E 'accessToken' | grep -qE 'Prefs|edit\(|putString' && bad "T5: the device-grant token reaches a store" || ok "T5: the token is used once and dropped"
+grep -E 'accessToken' <<<"$(codeof "$PF" "$UI" "$DG")" | grep -qE 'Prefs|edit\(|putString' && bad "T5: the device-grant token reaches a store" || ok "T5: the token is used once and dropped"
+grep -q 'accessToken' <<<"$(codeof "$PF")" && bad "T5: the device-grant token reaches the fragment at all" || ok "T5: the fragment never sees a device-grant token"
 grep -q 'secret = token' "$SI" && ok "T5: the userinfo call redacts the token from echoed bodies" || bad "T5: userinfo does not pass the token as the redacted secret"
 STORES=$(codeof "$PF" | grep -c 'setAutheliaCredential(')
 [ "$STORES" = 1 ] && grep -q 'if (storeBearer.isNotBlank())' "$PF" && ok "T5: the bearer is stored once, only after it proved itself" \
@@ -182,9 +224,10 @@ grep -q 'fun selectPeer(ctx: Context, id: String)' "$UR" && grep -q 'fun selectI
 grep -q 'fun current(ctx: Context): Registry?' "$UR" && grep -q 'fun remember(ctx: Context, root: JSONObject)' "$UR" \
     && ok "T6: the registry is cached so steps 2–3 survive a restart" || bad "T6: no registry cache"
 grep -q 'VaultCockpit.selectDevice(ctx, p.vaultDevice)' "$PF" && ok "T6: the peer pick selects the cockpit device" || bad "T6: the peer pick does not select the cockpit device"
-RF=$(codeof "$PF" | awk '/private fun runFetch\(/{f=1} f{print} f&&/^    }$/{exit}')
-grep -q 'UserRegistry.remember(appCtx, outcome.body)' <<<"$RF" && ok "T6: every fetch route remembers and caches the registry" || bad "T6: runFetch does not remember the artifact"
+RF=$(codeof "$PF" | awk '/private fun landed\(/{f=1} f{print} f&&/^    }$/{exit}')
+grep -q 'UserRegistry.remember(appCtx, artifact)' <<<"$RF" && ok "T6: every way in lands in ONE place that remembers and caches the registry" || bad "T6: landed() does not remember the artifact"
 grep -q 'ConfigAutoImport.apply' <<<"$RF" && bad "T6: a fetch still applies — step 4 is the only apply" || ok "T6: a fetch never applies"
+[ "$(codeof "$PF" | grep -c 'landed(')" -ge 3 ] && ok "T6: the lib's host, the stored bearer and the SSH clone all land through landed()" || bad "T6: not every way in lands through landed()"
 [ "$(codeof "$PF" | grep -c 'ConfigAutoImport.apply(')" = 1 ] && ok "T6: exactly one Apply on the page" || bad "T6: ConfigAutoImport.apply is called more than once on the page"
 grep -q 'UserRegistry.selectedPeer(context)' "$CA" && grep -q 'UserRegistry.peerProfiles(root, peerId)' "$CA" \
     && ok "T6: the apply step writes the chosen peer's profiles" || bad "T6: ConfigAutoImport ignores the chosen peer"
@@ -229,16 +272,16 @@ sed 's/renderJourney(ctx, connect)/connect.addView(autheliaEmailEditor(ctx)); re
 t4 "$TMP/old-box.kt" && bad "T8: T4 passed a fragment that put the account-email box back" || ok "T8: an old box back on the tab → T4 RED"
 
 echo "== T9: mutation — the four-way check turns red =="
-jq '.ui.vault_connect.sign_in.providers |= map(if .id == "authelia_web" then .kind = "authelia_bearer" else . end)' "$BJ" > "$TMP/folded.json"
-fourways "$TMP/folded.json" "$PF" >/dev/null && bad "T9: passed a build.json whose web-auth way is the bearer's kind" || ok "T9: web-auth folded into the bearer kind → RED"
-jq '.ui.vault_connect.sign_in.providers |= map(select(.id != "authelia_web"))' "$BJ" > "$TMP/three.json"
-fourways "$TMP/three.json" "$PF" >/dev/null && bad "T9: passed three providers" || ok "T9: one SSO way dropped → RED"
-jq '.ui.vault_connect.sign_in.providers |= map(if .id == "google" then .client_id = "invented.apps.googleusercontent.com" else . end)' "$BJ" > "$TMP/invented.json"
-fourways "$TMP/invented.json" "$PF" >/dev/null && bad "T9: passed an invented Google client id" || ok "T9: Google given a client id → RED"
-sed 's/{ showAutheliaWebAuthDialog() })$/{ showAutheliaBearerDialog() })/' "$PF" > "$TMP/web-to-bearer.kt"
-cmp -s "$PF" "$TMP/web-to-bearer.kt" && bad "T9: the mutation did not change the fragment (tester is stale)" \
-    || { fourways "$BJ" "$TMP/web-to-bearer.kt" >/dev/null && bad "T9: passed a web pill that opens the bearer dialog" || ok "T9: web pill → bearer dialog → RED"; }
-fourways "$BJ" "$PF" >/dev/null && ok "T9: the unmutated tree is still green" || bad "T9: the unmutated tree is red"
+jq '.auth.sign_in.providers |= map(if .id == "authelia_web" then .kind = "authelia_bearer" else . end)' "$SHARED" > "$TMP/folded.json"
+fourways "$TMP/folded.json" "$UI" >/dev/null && bad "T9: passed a declaration whose web-auth way is the bearer's kind" || ok "T9: web-auth folded into the bearer kind → RED"
+jq '.auth.sign_in.providers |= map(select(.id != "authelia_web"))' "$SHARED" > "$TMP/three.json"
+fourways "$TMP/three.json" "$UI" >/dev/null && bad "T9: passed three providers" || ok "T9: one SSO way dropped → RED"
+jq '.auth.sign_in.providers |= map(if .id == "google" then .client_id = "invented.apps.googleusercontent.com" else . end)' "$SHARED" > "$TMP/invented.json"
+fourways "$TMP/invented.json" "$UI" >/dev/null && bad "T9: passed an invented Google client id" || ok "T9: Google given a client id → RED"
+sed 's/{ open = Open.Web(p) }/{ open = Open.Bearer(p) }/' "$UI" > "$TMP/web-to-bearer.kt"
+cmp -s "$UI" "$TMP/web-to-bearer.kt" && bad "T9: the mutation did not change the surface (tester is stale)" \
+    || { fourways "$SHARED" "$TMP/web-to-bearer.kt" >/dev/null && bad "T9: passed a web pill that opens the bearer dialog" || ok "T9: web pill → bearer dialog → RED"; }
+fourways "$SHARED" "$UI" >/dev/null && ok "T9: the unmutated tree is still green" || bad "T9: the unmutated tree is red"
 
 echo
 echo "passed=$PASS failed=$FAIL"

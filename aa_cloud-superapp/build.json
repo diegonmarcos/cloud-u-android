@@ -243,9 +243,18 @@
         "libs:datamanager",
         "libs:launcher-onehand",
         "libs:launcher-zoomies",
-        "libs:bottomnav"
+        "libs:bottomnav",
+        "libs:auth"
       ],
       "comment": "Launcher / shell. Hosts navigation to each feature module."
+    },
+    "libs:auth": {
+      "dir": "../ab_cloud-libs-shared/libs/auth",
+      "type": "library",
+      "depends_on": [
+        "libs:core"
+      ],
+      "comment": "#587 THE sign-in of the fleet, shared BY REFERENCE with cloud-drive: the four declared ways in (Authelia bearer, Authelia web-auth, GitHub and Google device grant), the artifact fetches, the vault route, the registry and the journey state machine, plus the Compose surface Profile > Connect hosts for step 1. Reads ONE declaration: ab_cloud-libs-shared/build.json::auth."
     },
     "libs:bottomnav": {
       "dir": "../ab_cloud-libs-shared/libs/bottomnav",
@@ -6265,95 +6274,82 @@
     ],
     "_doc_config_source": "Where Configs → Profile → 'OWebAuth Authelia · Auto Import Configs' pulls the whole config from. DATA-DRIVEN ON PURPOSE: nothing here appears as a Kotlin literal — app/build.gradle bakes these into BuildConfig.UI_CONFIG_SOURCE_* and ConfigSyncClient/ProfileFragment read only those, so repointing the endpoint or changing the user slug is a JSON edit + rebuild, never a code change. AUTH: the user pastes an Authelia token which is sent verbatim as `Authorization: Bearer <token>`; it is validated server-side by the existing introspect-proxy / @bearer gate in front of the route. There is deliberately NO in-app OAuth dance and no client secret to keep in sync. The token is never persisted, logged, or exported. FORMAT_VERSION is the artifact contract version: ConfigAutoImport refuses the whole artifact (applying nothing) unless _meta.format_version matches this major version. base_url + path_template are joined with {user} substituted. ROUTE: this is one more member of c3-infra-api's /cloud-data/* family (siblings: /cloud-data/configs, /cloud-data/caddy-routes, /cloud-data/cloudflare-dns, /cloud-data/authelia-acl). If the cloud side lands on a different final spelling, edit path_template here — no Kotlin changes.",
     "config_source": {
-      "base_url": "https://api.diegonmarcos.com",
-      "path_template": "/pub/superapp/config/{user}",
-      "user": "diego",
-      "format_version": 1,
-      "connect_timeout_ms": 8000,
-      "read_timeout_ms": 20000,
-      "_doc_git": "Where the two GitHub import tiles read the artifact from. SAME BYTES as the Authelia route serves — one artifact contract, four ways to authenticate for it, so ConfigAutoImport.apply is reached identically no matter which tile was pressed. The token tile GETs exactly this one path over the contents API; the SSH tile must clone the repo because GitHub speaks only the git protocol over SSH, which is also why the token tile is the cheaper of the two.",
-      "git": {
-        "repo": "diegonmarcos/cloud-vault",
-        "path": "superapp-config.json",
-        "ref": "main"
-      }
+      "_doc": "#587 The endpoint, user slug, timeouts and vault-repo coordinates moved to ab_cloud-libs-shared/build.json::auth.config_source - ONE declaration for every app that signs in (libs:auth). What stays here is the superapp's own contract with the artifact: the format_version ConfigAutoImport.apply refuses to mismatch.",
+      "format_version": 1
     },
     "_doc_vault_connect": "Configs > Profile > Connect > Vault configs (#566/#569). Two calls, two factors: start_path with the stored Authelia bearer makes the server mail a one-time code to the account address; fetch_path with the same bearer plus {\"code\"} returns {\"schema\": cloud-vault E0_configs/schema.json, \"bundle\": the decrypted cloud-vault E0_configs/profile-secrets.json}. #570: the Fleet tab (ex Imported) is the fleet configurator - cockpit.sections compare each vault section with this device and apply it on a tap (see cockpit._doc); vault sections no cockpit section names render raw below them. known_schema_versions is the gate schema.json asks for: a bundle whose schema_version is not listed is refused, nothing shown. Auth is the stored Authelia bearer OR a browser session (WebView cookie, memory only) - both reach the same gate. base_url must be bearer-reachable OFF the mesh: c3-public-api (/pub) is wg_only:false, c3-infra-api is mesh-only.",
     "vault_connect": {
-      "base_url": "https://api.diegonmarcos.com/pub",
-      "start_path": "/profile/connect/start",
-      "fetch_path": "/profile/connect/fetch",
-      "connect_timeout_ms": 8000,
-      "read_timeout_ms": 30000,
-      "known_schema_versions": [1],
-      "_doc_sign_in": "#573 The Sign-in step of Configs > Profile > Connect: WHICH providers are offered, in order, and how each authenticates. The list is data; nothing in Kotlin names a provider, an endpoint or a client id. `kind` is the only thing the code dispatches on. #578: the fleet SSO is offered as TWO distinct ways, one provider each - `authelia_bearer` (a stored or pasted bearer token, one tap; also the mailed-code second factor for the vault bundle) and `authelia_web` (the portal login in the embedded browser, whose session cookie is used for one request and dropped - #467's posture, no other login route); both reach the same Caddy gate (endpoints are ui.config_source and this block's base_url). The bearer keeps id `authelia` because cloud-infra's superapp-users.json auth_providers policy already names it, and an APK that predates the split must keep being offered it. `device_flow` is the OAuth 2.0 device grant, ONE code path for GitHub and Google that differ only in these fields. `primary` marks the fleet's own SSO (exactly one: the bearer way). `grants` says what a sign-in through this provider can then fetch: `config_artifact` = the per-user full config (/pub/superapp/config/<user>, which carries the User > Identity > Peer registry), `vault_bundle` = the #566 consolidated vault export (Authelia only: the server binds the mailed code to the bearer identity), `repo_artifact` = the same artifact read out of the private vault repo with the token (GitHub: a login also grants the repos), `identity` = the provider proves an address and nothing more (Google today: no server of the fleet accepts a Google token, so it is identity-only until one does - declared, not invented). GitHub: client_id is PUBLIC by design (the device grant needs no client secret); taken from the cloud front portal's OAuth App, the one that answers 'device_flow_disabled' rather than 'Not Found' - STILL ONE CLICK SHORT: 'Enable Device Flow' on that App at github.com/settings/developers. scope=repo because cloud-vault is private. Google: the device grant needs a client registered as 'TV and Limited Input' and its token exchange takes a client_secret that Google itself documents as not secret in this context; both are EMPTY until the owner registers one, and the app then says 'not configured' instead of starting a flow that cannot finish. verification_url/verification_uri are read as each provider spells them.",
-      "sign_in": {
-        "providers": [
-          {
-            "id": "authelia",
-            "label": "Authelia bearer",
-            "kind": "authelia_bearer",
-            "primary": true,
-            "grants": [
-              "config_artifact",
-              "vault_bundle"
-            ]
-          },
-          {
-            "id": "authelia_web",
-            "label": "Authelia web-auth",
-            "kind": "authelia_web",
-            "grants": [
-              "config_artifact",
-              "vault_bundle"
-            ]
-          },
-          {
-            "id": "github",
-            "label": "GitHub",
-            "kind": "device_flow",
-            "device_code_url": "https://github.com/login/device/code",
-            "token_url": "https://github.com/login/oauth/access_token",
-            "userinfo_url": "https://api.github.com/user",
-            "client_id": "Ov23liOg9JhezyYUCHmS",
-            "client_secret": "",
-            "scope": "repo",
-            "grants": [
-              "identity",
-              "repo_artifact"
-            ]
-          },
-          {
-            "id": "google",
-            "label": "Google",
-            "kind": "device_flow",
-            "device_code_url": "https://oauth2.googleapis.com/device/code",
-            "token_url": "https://oauth2.googleapis.com/token",
-            "userinfo_url": "https://openidconnect.googleapis.com/v1/userinfo",
-            "client_id": "",
-            "client_secret": "",
-            "scope": "openid email",
-            "grants": [
-              "identity"
-            ]
-          }
-        ]
-      },
+      "_doc": "#587 The vault route's endpoints, the schema versions and the sign-in providers moved to ab_cloud-libs-shared/build.json::auth (libs:auth). What stays here is the Fleet tab's own layout: cockpit.",
       "cockpit": {
         "_doc": "#570 The Fleet tab: which cockpit sections exist, in what order, and which VAULT sections (E0_configs/schema.json ids) feed each. Labels live here, not in Kotlin. A vault section listed under no cockpit section is still shown raw at the bottom of the tab, so a section added in the vault is visible before this list learns it. ai_tokens maps a vault `ai.tokens.<item>` to the DEVICE provider id it feeds (the keyboard's keyboard_ai registry, ab_cloud-libs-shared/build.json): the two OpenRouter tokens the vault holds are the same provider seen from two containers, so only one is mapped - mapping both would have the second overwrite the first on every apply. The device itself is CHOSEN from the vault's electronics section (every entry with a wg_peer), never typed.",
         "_doc_cards": "#570 reopened: the Fleet tab is a COCKPIT - a hero card for the chosen device, then one card per section here, in this order. `icon` is the drawable each card's round badge shows (resolved by Sections.iconResFor, the same name->drawable lookup every declared tile uses; an unknown name falls back to ic_link_tile). `observed: false` marks a section whose DEVICE side this app cannot read (the keyboard owns its lists), so its light is the shared StatusLight's 'Not verifiable' instead of a green or red it could not justify. `device_icons` maps the vault's electronics `type` (notebook, phone, ...) to the hero orb's drawable; `_default` covers a type this list has not learnt and the empty state before any device is chosen.",
         "sections": [
-          {"id": "mail", "label": "Mail", "vault": ["mail"], "icon": "ic_mail"},
-          {"id": "keyboard", "label": "Keyboard & Clipboards", "vault": ["autocomplete"], "icon": "ic_keyboard", "observed": false},
-          {"id": "mesh", "label": "Mesh", "vault": ["mesh", "electronics"], "icon": "ic_wg"},
-          {"id": "drive", "label": "Drive (private repos)", "vault": ["git"], "icon": "ic_code"},
-          {"id": "ai", "label": "AI", "vault": ["ai"], "icon": "ic_ai_sparkle"},
-          {"id": "apps", "label": "Apps", "vault": ["apps"], "icon": "ic_home_apps"}
+          {
+            "id": "mail",
+            "label": "Mail",
+            "vault": [
+              "mail"
+            ],
+            "icon": "ic_mail"
+          },
+          {
+            "id": "keyboard",
+            "label": "Keyboard & Clipboards",
+            "vault": [
+              "autocomplete"
+            ],
+            "icon": "ic_keyboard",
+            "observed": false
+          },
+          {
+            "id": "mesh",
+            "label": "Mesh",
+            "vault": [
+              "mesh",
+              "electronics"
+            ],
+            "icon": "ic_wg"
+          },
+          {
+            "id": "drive",
+            "label": "Drive (private repos)",
+            "vault": [
+              "git"
+            ],
+            "icon": "ic_code"
+          },
+          {
+            "id": "ai",
+            "label": "AI",
+            "vault": [
+              "ai"
+            ],
+            "icon": "ic_ai_sparkle"
+          },
+          {
+            "id": "apps",
+            "label": "Apps",
+            "vault": [
+              "apps"
+            ],
+            "icon": "ic_home_apps"
+          }
         ],
-        "device_icons": {"notebook": "ic_device_desktop", "phone": "ic_ctl_mobile_data", "_default": "ic_device_desktop"},
+        "device_icons": {
+          "notebook": "ic_device_desktop",
+          "phone": "ic_ctl_mobile_data",
+          "_default": "ic_device_desktop"
+        },
         "_doc_journey_icons": "#573 Configs > Profile > Connect is THE JOURNEY: four step cards in this cockpit's chrome (sign_in, who, device, get). The drawable each step's round badge shows, resolved by Sections.iconResFor like every icon here; the hero orb uses `who`. Design: a0_docs/eng-specs/superapp-auth-profile-peer-flow.md.",
-        "journey_icons": {"sign_in": "ic_lock", "who": "ic_p_identities", "device": "ic_ctl_mobile_data", "get": "ic_check_all"},
-        "ai_tokens": {"openrouter_my_ai_api": "openrouter"}
+        "journey_icons": {
+          "sign_in": "ic_lock",
+          "who": "ic_p_identities",
+          "device": "ic_ctl_mobile_data",
+          "get": "ic_check_all"
+        },
+        "ai_tokens": {
+          "openrouter_my_ai_api": "openrouter"
+        }
       }
     },
     "_doc_import_schema": "Schema shown in ImportConfigsFragment as the placeholder text. Users paste a JSON conforming to this shape; ConfigsPrefs persists the whole blob into EncryptedSharedPreferences (AES-256-GCM, key in Android Keystore). Per-field consumers (JmapPrefs, WireGuard libs:net, ssh-agent for vault clone) pull what they need lazily.",

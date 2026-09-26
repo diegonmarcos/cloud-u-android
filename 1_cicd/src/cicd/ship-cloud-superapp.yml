@@ -92,6 +92,7 @@ on:
       - "ab_cloud-libs-shared/build.json"
       - "ab_cloud-libs-shared/libs/analytics/**"
       - "ab_cloud-libs-shared/libs/appstore/**"
+      - "ab_cloud-libs-shared/libs/auth/**"
       - "ab_cloud-libs-shared/libs/battery/**"
       - "ab_cloud-libs-shared/libs/bottomnav/**"
       - "ab_cloud-libs-shared/libs/chat/**"

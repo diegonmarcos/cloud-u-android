@@ -463,9 +463,6 @@
     <string name="journey_bearer_stored">Bearer guardado para %1$s</string>
     <string name="journey_not_signed_in">Sin sesión: elige un proveedor abajo.</string>
     <string name="journey_sign_in_caption">El SSO propio de la flota es el principal. Un inicio con GitHub también da acceso a los repos privados; Google solo demuestra una dirección. Todas las rutas acaban en el mismo sitio: tu configuración, descargada una vez.</string>
-    <string name="journey_way_browser">%1$s · iniciar sesión en el portal</string>
-    <string name="journey_way_bearer">%1$s · pegar un token</string>
-    <string name="journey_way_code">%1$s · código en el navegador</string>
     <string name="journey_way_ssh">%1$s · clave SSH</string>
     <string name="journey_use_stored_bearer">Usar el bearer guardado (%1$s)</string>
     <string name="journey_mail_code">¿Authelia te envió un código por correo?</string>
@@ -493,18 +490,7 @@
     <string name="journey_vault_fetch_open">Descargar y abrir Flota</string>
     <string name="journey_import_file_caption">Desde un archivo: la exportación DESCIFRADA de la bóveda — lo que imprime sops -d, el mismo documento que devuelve la descarga del servidor. El archivo cifrado del repositorio se rechaza, y lo dice: este teléfono no tiene clave age.</string>
     <string name="journey_import_file">Importar desde un archivo</string>
-    <string name="journey_not_configured">%1$s · no configurado en esta compilación</string>
     <string name="journey_fetched">✓ Autenticado · %1$d bytes · tu configuración está aquí; sigue con el paso 2</string>
     <string name="journey_fetched_snack">Configuración descargada</string>
     <string name="journey_identity_only_done">%1$s demostró %2$s</string>
-    <string name="sign_in_start">Empezar</string>
-    <string name="sign_in_code_prompt">Introduce este código en %1$s\n\n    %2$s\n\n%3$s</string>
-    <string name="sign_in_code_expiry">Esperando la aprobación… (el código caduca en %1$d min)</string>
-    <string name="sign_in_code_expired">✗ El código caducó antes de aprobarse.</string>
-    <string name="sign_in_asking">… pidiendo a %1$s un código de dispositivo</string>
-    <string name="sign_in_approved">✓ Aprobado · %1$s</string>
-    <string name="sign_in_not_configured">%1$s · no configurado en esta compilación</string>
-    <string name="sign_in_identity_only">✓ %1$s demostró %2$s. Ese proveedor solo da una identidad: descarga la configuración con el SSO de la flota o con GitHub.</string>
-    <string name="sign_in_device_caption_repo">Pulsa Empezar. %1$s mostrará un código para aprobar en el navegador; una vez aprobado, el artefacto se lee de %2$s (%3$s) y se aplica.</string>
-    <string name="sign_in_device_caption_identity">Pulsa Empezar. %1$s mostrará un código para aprobar en el navegador; una vez aprobado, la dirección que demuestra es tu identidad aquí; no se descarga nada.</string>
 </resources>

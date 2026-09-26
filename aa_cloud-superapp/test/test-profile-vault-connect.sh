@@ -34,7 +34,10 @@ bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 BJ="$APP/build.json"
 GR="$APP/app/build.gradle"
 PF="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/ProfileFragment.kt"
-VC="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/VaultConnect.kt"
+# #587 the vault route and the sign-in live in the fleet's libs:auth; the endpoints in the ONE shared declaration.
+LIB="$APP/../ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth"
+SHARED="$APP/../ab_cloud-libs-shared/build.json"
+VC="$LIB/VaultConnect.kt"
 CP="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/VaultCockpit.kt"
 RES="$APP/app/src/main/res"
 
@@ -56,12 +59,22 @@ FIELDS=$(grep -oE '"UI_VAULT_CONNECT_[A-Z_0-9]+"' "$GR" | tr -d '"' | sort -u)
 [ "$(echo "$FIELDS" | grep -c .)" = "$(echo $KEYS | wc -w)" ] \
     && ok "T1: one BuildConfig field per declared key" \
     || bad "T1: BuildConfig fields ($(echo $FIELDS)) do not match the declared keys ($(echo $KEYS))"
-# #573: the sign_in blob is read by SignIn.kt, the journey's provider registry.
-SI="$APP/app/src/main/java/com/diegonmarcos/superapp/profile/SignIn.kt"
 for f in $FIELDS; do
-    grep -q "BuildConfig.$f" "$PF" "$VC" "$CP" "$SI" && ok "T1: the profile package reads $f" \
-                                                   || bad "T1: $f is baked but never read"
+    grep -q "BuildConfig.$f" "$PF" "$CP" && ok "T1: the profile package reads $f" \
+                                         || bad "T1: $f is baked but never read"
 done
+# #587: the route's endpoints, timeouts and schema versions are the fleet's ONE
+# declaration (ab_cloud-libs-shared/build.json::auth.vault_connect), read through
+# libs:auth's AuthDeclaration — never a second copy in this app.
+for k in base_url start_path fetch_path connect_timeout_ms read_timeout_ms known_schema_versions; do
+    jq -e --arg k "$k" '.auth.vault_connect[$k] | select(. != null and . != "")' "$SHARED" >/dev/null \
+        && ok "T1: shared auth.vault_connect.$k declared" || bad "T1: shared build.json lacks auth.vault_connect.$k"
+    jq -e --arg k "$k" '.ui.vault_connect[$k]' "$BJ" >/dev/null 2>&1 \
+        && bad "T1: ui.vault_connect.$k is ALSO declared in this app — two declarations" || ok "T1: $k lives only in the shared declaration"
+done
+grep -q 'private fun vaultEndpoints() = AuthDeclaration.vault' "$PF" && ok "T1: the fragment reads the endpoints off AuthDeclaration" \
+                                                                    || bad "T1: the fragment does not read AuthDeclaration.vault"
+grep -q 'AuthDeclaration.knownSchemaVersions' "$VC" && ok "T1: the schema gate reads the shared declaration" || bad "T1: VaultConnect does not read the shared schema versions"
 
 echo "== T2: every vault string exists in every locale =="
 USED=$(grep -ohE 'R\.string\.vault_[a-z_]+' "$PF" "$VC" "$CP" | sed 's/R\.string\.//' | sort -u)

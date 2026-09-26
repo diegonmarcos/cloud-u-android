@@ -1,7 +1,6 @@
-package com.diegonmarcos.superapp.profile
+package com.diegonmarcos.cloudlib.auth
 
 import android.app.Application
-import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.core.ConfigSyncClient
 import org.json.JSONArray
 import org.json.JSONObject
@@ -21,9 +20,9 @@ import kotlin.concurrent.thread
  * #566/#569 — Configs ▸ Profile ▸ Connect ▸ Vault configs, and the Imported tab.
  *
  * The client runs against a real local HTTP server, so what is asserted is what
- * went over the wire. The paths come from BuildConfig, which is baked from
- * build.json::ui.vault_connect, so a path edited in the data but not in the
- * server contract shows up here. Every expectation about the rendered rows is
+ * went over the wire. The paths come from AuthDeclaration, which is baked from
+ * ab_cloud-libs-shared/build.json::auth.vault_connect (#587), so a path edited
+ * in the data but not in the server contract shows up here. Every expectation about the rendered rows is
  * computed from the fixture by an independent walk, not typed in.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -94,17 +93,17 @@ class VaultConnectTest {
 
     private fun endpoints() = VaultConnect.Endpoints(
         baseUrl = "http://127.0.0.1:${server.localPort}/pub",
-        startPath = BuildConfig.UI_VAULT_CONNECT_START_PATH,
-        fetchPath = BuildConfig.UI_VAULT_CONNECT_FETCH_PATH,
-        connectTimeoutMs = BuildConfig.UI_VAULT_CONNECT_CONNECT_MS,
-        readTimeoutMs = BuildConfig.UI_VAULT_CONNECT_READ_MS,
+        startPath = AuthDeclaration.vault.startPath,
+        fetchPath = AuthDeclaration.vault.fetchPath,
+        connectTimeoutMs = AuthDeclaration.vault.connectTimeoutMs,
+        readTimeoutMs = AuthDeclaration.vault.readTimeoutMs,
     )
 
     @Test fun `build json declares both endpoints`() {
-        assertTrue("base_url", BuildConfig.UI_VAULT_CONNECT_BASE_URL.startsWith("https://"))
-        assertTrue("start_path", BuildConfig.UI_VAULT_CONNECT_START_PATH.startsWith("/"))
-        assertTrue("fetch_path", BuildConfig.UI_VAULT_CONNECT_FETCH_PATH.startsWith("/"))
-        assertTrue("distinct", BuildConfig.UI_VAULT_CONNECT_START_PATH != BuildConfig.UI_VAULT_CONNECT_FETCH_PATH)
+        assertTrue("base_url", AuthDeclaration.vault.baseUrl.startsWith("https://"))
+        assertTrue("start_path", AuthDeclaration.vault.startPath.startsWith("/"))
+        assertTrue("fetch_path", AuthDeclaration.vault.fetchPath.startsWith("/"))
+        assertTrue("distinct", AuthDeclaration.vault.startPath != AuthDeclaration.vault.fetchPath)
     }
 
     @Test fun `start POSTs the bearer to the declared start path`() {
@@ -113,7 +112,7 @@ class VaultConnectTest {
         assertTrue(o.toString(), o is ConfigSyncClient.Outcome.Ok)
         val (method, path, _) = seen.single()
         assertEquals("POST", method)
-        assertEquals("/pub" + BuildConfig.UI_VAULT_CONNECT_START_PATH, path)
+        assertEquals("/pub" + AuthDeclaration.vault.startPath, path)
         assertEquals("Bearer tok-A", seenAuth.single())
     }
 
@@ -124,7 +123,7 @@ class VaultConnectTest {
         assertTrue(o.toString(), o is ConfigSyncClient.Outcome.Ok)
         val (method, path, body) = seen.single()
         assertEquals("POST", method)
-        assertEquals("/pub" + BuildConfig.UI_VAULT_CONNECT_FETCH_PATH, path)
+        assertEquals("/pub" + AuthDeclaration.vault.fetchPath, path)
         assertEquals(code, JSONObject(body).getString("code"))
         assertEquals("Bearer tok-B", seenAuth.single())
     }

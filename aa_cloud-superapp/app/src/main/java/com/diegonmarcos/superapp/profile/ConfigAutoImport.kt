@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.profile
 
 import android.content.Context
 import android.util.Log
+import com.diegonmarcos.cloudlib.auth.UserRegistry
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.core.ConfigSyncClient
 import com.diegonmarcos.superapp.network.WireGuardPrefs

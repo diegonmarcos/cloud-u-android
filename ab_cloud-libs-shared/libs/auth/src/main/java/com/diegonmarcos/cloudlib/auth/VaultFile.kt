@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.profile
+package com.diegonmarcos.cloudlib.auth
 
 import org.json.JSONArray
 import org.json.JSONObject

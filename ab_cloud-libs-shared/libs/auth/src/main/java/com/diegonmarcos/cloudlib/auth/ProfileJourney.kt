@@ -1,14 +1,14 @@
-package com.diegonmarcos.superapp.profile
-
-import com.diegonmarcos.superapp.ui.StatusLight
+package com.diegonmarcos.cloudlib.auth
 
 /**
  * Configs ▸ Profile ▸ Connect — THE JOURNEY (#573): sign in → who → which
  * device → get everything. This object is the one rule that decides, from
  * what the page knows, which of the four steps is done, which is next, which
- * is locked and why. It is pure — no Android, no I/O, no strings — so the
- * screen is a rendering of a [State] and the state machine is testable on the
- * JVM without a view.
+ * is locked and why. It is pure — no Android, no I/O, no strings, no light
+ * (the host maps a [Phase] to its own status light) — so the screen is a
+ * rendering of a [State] and the state machine is testable on the JVM
+ * without a view. Shared through libs:auth (#587): cloud-drive's sign-in
+ * reads the same rule for step 1.
  *
  * See a0_docs/eng-specs/superapp-auth-profile-peer-flow.md, section 2.
  */
@@ -105,18 +105,6 @@ object ProfileJourney {
     fun stepNumber(s: State): Int = Step.values().indexOf(next(s)) + 1
 
     fun allDone(s: State): Boolean = Step.values().all { done(s, it) }
-
-    /** The card's light for a phase — the shared component, no private colour. */
-    fun light(phase: Phase): StatusLight.State = when (phase) {
-        Phase.DONE -> StatusLight.State.ON
-        Phase.ACTIVE -> StatusLight.State.UNKNOWN
-        Phase.LOCKED -> StatusLight.State.UNVERIFIABLE
-        Phase.FAILED -> StatusLight.State.OFF
-    }
-
-    /** The hero's light: on only when the whole journey is. */
-    fun overall(s: State): StatusLight.State =
-        if (allDone(s)) StatusLight.State.ON else StatusLight.State.UNKNOWN
 
     /** A done card is closed, the active (or failed) one open, a locked one closed. */
     fun bodyOpen(phase: Phase): Boolean = phase == Phase.ACTIVE || phase == Phase.FAILED

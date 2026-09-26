@@ -300,6 +300,19 @@
     "log_sink_url": "https://api.diegonmarcos.com/pub/analytics/openobserve",
     "log_sink_stream": "cloud-drive"
   },
+  "auth": {
+    "_doc": "#587 What a sign-in through Configs > Sign in (libs:auth, the fleet's ONE sign-in module) yields for THIS app. The artifact is the same consolidated document the superapp fetches (/pub/superapp/config/<user>, or the vault bundle); this app applies only the sections named here, and says so per section instead of writing a blob. `git.github_token` is the credential the shared store's clone/push needs: it is stored in libs:git-sync's keystore-backed GitCredentialStore for every managed repository whose auth is https, and repointed on every later sign-in. `rclone.remotes` are rclone.conf sections (name -> type + options) merged through RcloneConfig.upsert - declared here because a remote's secret is what a drive sign-in should bring; the artifact does not carry the section yet (no host emits it), and the apply reports that absence instead of pretending. Nothing else in the artifact (WireGuard keys, mail passwords, AI tokens) is this app's to write.",
+    "applies": {
+      "git": {
+        "key": "github_token",
+        "into": "git-sync credential store, every managed https repository"
+      },
+      "rclone": {
+        "key": "remotes",
+        "into": "rclone.conf (RcloneConfig.upsert)"
+      }
+    }
+  },
   "modules": {
     "_doc": "Single source of truth for the Gradle module graph. settings.gradle iterates this list.",
     "app": {
@@ -311,7 +324,8 @@
         "libs:file-editor",
         "libs:rclone",
         "libs:mounts",
-        "libs:bottomnav"
+        "libs:bottomnav",
+        "libs:auth"
       ]
     },
     "libs:core": {
@@ -360,6 +374,11 @@
       "_doc_dir": "Engine library #567 push 4: ftp / sftp / ssh / webdav mounts with browse-through. Declared fleet connections stay in data/drive-connections.json; the library receives them as models.",
       "engine": true,
       "dir": "../ab_cloud-libs-shared/libs/mounts",
+      "type": "library"
+    },
+    "libs:auth": {
+      "_doc_dir": "#587 THE sign-in of the fleet, the SAME module cloud-superapp's Profile > Connect hosts, shared BY REFERENCE like every module here: Configs > Sign in offers the four declared ways (Authelia bearer, Authelia web-auth, GitHub, Google) from ONE declaration (ab_cloud-libs-shared/build.json::auth) and hands this app the consolidated artifact; DriveAuthApply then writes only the DRIVE-relevant sections (auth.applies below).",
+      "dir": "../ab_cloud-libs-shared/libs/auth",
       "type": "library"
     },
     "libs:bottomnav": {

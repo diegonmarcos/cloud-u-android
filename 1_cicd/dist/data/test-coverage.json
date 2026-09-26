@@ -17,7 +17,7 @@
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
-      "unit_test_sources": 20,
+      "unit_test_sources": 17,
       "workflow": "ship-cloud-superapp.yml"
     },
     "ab_cloud-libs-shared/keyboard-engines": {
@@ -130,11 +130,11 @@
     },
     "ac_cloud-drive": {
       "first_test": "#579 REDESIGN. Has 12 shell testers, executed, and \u2014 for the first time \u2014 its own JVM suite (app/src/test: FilesStateTest, FileOpsTest, SyncHistoryTest/SyncScheduleTest, DeclarationsTest, DriveShellTest \u2014 a Robolectric Compose layout-tree test \u2014 plus #577's PdfConvertTest and PdfLayoutTest, 19 tests that execute the PDF converter and the reader's page layout). The WebView page and its string-named FilesBridge are gone, so the old bridge-contract tester is gone with them; what replaced it: test-drive-shell.sh pins the chrome as DECLARED (build.json::ui tabs/pages/places/filters/icons \u2194 the Kotlin dispatch and IconCatalog in both directions, baked once, no caption or colour literal in Kotlin, every R.string alive, libs:bottomnav linked, StatusLight colours equal to the superapp's, forced dark, no WebView and no JavascriptInterface left anywhere; mutation-proved), test-drive-files-screen.sh pins the X-plore replacement (the pane's layout tree IN ORDER \u2014 tab strip, crumbs, toolbar, storage bar, list \u2014 dual pane, tree view, archives as folders through the Zip-Slip guard BEFORE any write, the selection bar's verbs with progress from controller.jobs, bookmarks, declared sort/filter, the store as the Places hero, cancellable search, a pure JVM-tested IO core; mutation-proved), test-drive-sync-screen.sh pins the GitSync-class cards (the glance is GitEngine.status() and no JGit in the app, conflicts in the off colour with Resolve, stepped one-tap sync through the engine's verbs, per-repo period/network/auth from the declared periods, an app-owned capped history written by both the card and the worker, SyncSchedule.isDue per repository, Rclone/Mounts cards whose lights are a LOOK and whose fleet status is UNVERIFIABLE never green; mutation-proved), and #577's test-drive-pdf-engine.sh \u2014 repointed at the Kotlin chrome \u2014 keeps the ONE native pdfium engine honest (PdfEngine.kt the only file naming the library, no pdf.js left, PdfReaderActivity the manifest's PDF handler, the Files tab and the reader converting through the one PdfConversion, every promised reader feature wired). test-drive-engine-wiring.sh and test-drive-shared-store.sh were repointed at the Kotlin chrome. STILL NOT COVERED: the Files pane against a device's real permission state, a real cross-volume move, an actual clone's readability by cloud-code, whether the Compose gestures (drag range-select, pinch zoom) feel right, and the reader's drawing and native calls \u2014 all need a device.",
-      "shell_testers": 12,
+      "shell_testers": 13,
       "ship_has_published_nothing_guard": true,
       "ship_runs_testers": true,
       "unit_task_declared": true,
-      "unit_test_sources": 7,
+      "unit_test_sources": 8,
       "workflow": "ship-cloud-drive.yml"
     },
     "ac_cloud-keyboard": {

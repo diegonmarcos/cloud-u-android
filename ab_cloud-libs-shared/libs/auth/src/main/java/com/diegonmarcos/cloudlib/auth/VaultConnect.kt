@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.profile
+package com.diegonmarcos.cloudlib.auth
 
 import com.diegonmarcos.superapp.core.ConfigSyncClient
 import org.json.JSONArray
@@ -22,7 +22,7 @@ import org.json.JSONObject
  */
 object VaultConnect {
 
-    /** Endpoint data, all of it from build.json::ui.vault_connect via BuildConfig. */
+    /** Endpoint data, all of it from ab_cloud-libs-shared/build.json::auth.vault_connect ([AuthDeclaration.vault]). */
     data class Endpoints(
         val baseUrl: String,
         val startPath: String,
@@ -89,7 +89,7 @@ object VaultConnect {
     /**
      * The bundle's `schema_version` when this build does not know it, else
      * null. schema.json says a reader refuses a version it does not
-     * understand; the known list is build.json::ui.vault_connect.known_schema_versions.
+     * understand; the known list is auth.vault_connect.known_schema_versions.
      * A bundle with no version at all is refused too (reported as 0).
      */
     fun unknownSchemaVersion(response: JSONObject, known: Set<Int>): Int? {
@@ -98,11 +98,8 @@ object VaultConnect {
         return if (v in known) null else v
     }
 
-    /** build.json::ui.vault_connect.known_schema_versions, baked as "1,2". */
-    val knownSchemaVersions: Set<Int> by lazy {
-        com.diegonmarcos.superapp.BuildConfig.UI_VAULT_CONNECT_SCHEMA_VERSIONS
-            .split(',').mapNotNull { it.trim().toIntOrNull() }.toSet()
-    }
+    /** auth.vault_connect.known_schema_versions, off the ONE declaration. */
+    val knownSchemaVersions: Set<Int> get() = AuthDeclaration.knownSchemaVersions
 
     // ── rendering ────────────────────────────────────────────────────────
 

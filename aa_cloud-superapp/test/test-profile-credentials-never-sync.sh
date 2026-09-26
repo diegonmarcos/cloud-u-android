@@ -40,6 +40,8 @@ SYNC="$PROFILE_DIR/ProfileSync.kt"
 WGFRAG="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardFragment.kt"
 TABSTYLE="app/src/main/java/com/diegonmarcos/superapp/launcher/AppTabsStyle.kt"
 SECTABS="app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
+# #587 the sign-in surface (the bearer dialog among it) is the fleet's shared libs:auth.
+AUTH_UI="../ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/SignInUi.kt"
 PREFS="$PROFILE_DIR/ProfilePrefs.kt"
 IMPORT="$PROFILE_DIR/ConfigAutoImport.kt"
 CONFIGS_PREFS="app/src/main/java/com/diegonmarcos/superapp/settings/ConfigsPrefs.kt"
@@ -48,10 +50,13 @@ CONTRACT="docs/profile-sync-contract.md"
 
 echo "== T1: the credential entry points exist, and are one-shot boxes (#573: the journey) =="
 # The bearer is no longer a permanent box on the page: step 1 of the journey
-# takes it in a dialog (showAutheliaBearerDialog), uses it for ONE fetch and,
-# once it has proved itself, stores it paired with the address it proved.
-has "$FRAGMENT" 'private fun showAutheliaBearerDialog' "Authelia bearer entry (dialog)"
-has "$FRAGMENT" 'journey_way_bearer'                   "the bearer route is a step-1 pill"
+# takes it in a dialog (libs:auth's BearerDialog, #587 — the same one cloud-drive
+# opens), uses it for ONE fetch and, once it has proved itself, THIS fragment
+# stores it paired with the address it proved.
+has "$AUTH_UI"  'private fun BearerDialog'              "Authelia bearer entry (the shared dialog)"
+has "$AUTH_UI"  'auth_way_bearer'                       "the bearer route is a step-1 pill"
+has "$FRAGMENT" 'SignInWays(host = signInHost'          "step 1 hosts the shared surface"
+has "$AUTH_UI"  'autoCorrectEnabled = false'            "the token box is kept out of the keyboard's learned words"
 has "$WGFRAG" 'label(ctx, "Private key (base64, 32 bytes)")' "WireGuard private key field"
 has "$WGFRAG" "TYPE_TEXT_VARIATION_PASSWORD"           "the private-key box is password-masked"
 has "$FRAGMENT" "IME_FLAG_NO_PERSONALIZED_LEARNING"    "kept out of the keyboard's learned words"

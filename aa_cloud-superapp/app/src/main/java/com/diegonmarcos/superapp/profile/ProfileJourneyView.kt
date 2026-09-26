@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.diegonmarcos.cloudlib.auth.ProfileJourney
 import com.diegonmarcos.superapp.ui.LauncherPalette
 import com.diegonmarcos.superapp.ui.StatusLight
 
@@ -21,6 +22,19 @@ import com.diegonmarcos.superapp.ui.StatusLight
  * here; a theme change restyles Connect and Fleet together.
  */
 object ProfileJourneyView {
+
+    /** The card's light for a phase — the shared component, no private colour.
+     *  Here and not in the (shared, light-less) state machine: the light is this app's. */
+    fun light(phase: ProfileJourney.Phase): StatusLight.State = when (phase) {
+        ProfileJourney.Phase.DONE -> StatusLight.State.ON
+        ProfileJourney.Phase.ACTIVE -> StatusLight.State.UNKNOWN
+        ProfileJourney.Phase.LOCKED -> StatusLight.State.UNVERIFIABLE
+        ProfileJourney.Phase.FAILED -> StatusLight.State.OFF
+    }
+
+    /** The hero's light: on only when the whole journey is. */
+    fun overall(s: ProfileJourney.State): StatusLight.State =
+        if (ProfileJourney.allDone(s)) StatusLight.State.ON else StatusLight.State.UNKNOWN
 
     class Journey(
         val root: LinearLayout,
@@ -83,12 +97,12 @@ object ProfileJourneyView {
         summaries: Map<ProfileJourney.Step, String>,
         heroSummary: String,
     ) {
-        FleetCockpitView.paint(j.hero.light, ProfileJourney.overall(state), j.hero.title.text.toString())
+        FleetCockpitView.paint(j.hero.light, overall(state), j.hero.title.text.toString())
         j.hero.summary.text = heroSummary
         val rail = StringBuilder()
         for ((step, card) in j.cards) {
             val phase = ProfileJourney.phase(state, step)
-            val light = ProfileJourney.light(phase)
+            val light = light(phase)
             FleetCockpitView.paint(card.light, light, card.label)
             card.summary.text = summaries[step].orEmpty()
             card.body.visibility = if (ProfileJourney.bodyOpen(phase)) View.VISIBLE else View.GONE

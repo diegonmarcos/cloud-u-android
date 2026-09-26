@@ -78,6 +78,8 @@ object Declarations {
     val mirrorJobs: List<MirrorJobDecl> by lazy { parseMirrorJobs(decode(BuildConfig.MIRROR_JOBS_B64)) }
     val remotes: List<RemoteDecl> by lazy { parseRemotes(decode(BuildConfig.RCLONE_REMOTES_B64)) }
     val rcloneJobs: List<RcloneJobDecl> by lazy { parseRcloneJobs(decode(BuildConfig.RCLONE_JOBS_B64)) }
+    /** #587 build.json::auth.applies → artifact section id → the key inside it that a drive sign-in applies. */
+    val authApplies: Map<String, String> by lazy { parseAuthApplies(decode(BuildConfig.AUTH_APPLIES_B64)) }
 
     fun decode(b64: String): String = if (b64.isBlank()) "" else runCatching { String(Base64.getDecoder().decode(b64), Charsets.UTF_8) }.getOrDefault("")
 
@@ -163,6 +165,13 @@ object Declarations {
     fun parseRcloneJobs(text: String): List<RcloneJobDecl> = objects(element(text)).mapNotNull { j ->
         val name = j.str("name"); if (name.isBlank()) return@mapNotNull null
         RcloneJobDecl(name, j.str("kind"), j.str("source"), j.str("destination"), j.str("schedule"), j.str("notes"))
+    }
+
+    fun parseAuthApplies(text: String): Map<String, String> {
+        val o = element(text) as? JsonObject ?: return emptyMap()
+        return o.entries.asSequence().filterNot { it.key.startsWith("_") }
+            .mapNotNull { (id, v) -> (v as? JsonObject)?.str("key")?.takeIf { it.isNotBlank() }?.let { id to it } }
+            .toMap()
     }
 
     /** Every icon name the declarations use — what test-drive-shell.sh and DeclarationsTest hold IconCatalog to. */

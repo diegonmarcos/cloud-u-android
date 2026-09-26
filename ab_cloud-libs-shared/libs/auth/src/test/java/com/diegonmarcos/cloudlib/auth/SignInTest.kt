@@ -1,8 +1,6 @@
-package com.diegonmarcos.superapp.profile
+package com.diegonmarcos.cloudlib.auth
 
 import android.app.Application
-import android.util.Base64
-import com.diegonmarcos.superapp.BuildConfig
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,22 +16,23 @@ import java.io.File
  * #573 — Configs ▸ Profile ▸ Connect ▸ Sign in: the provider list is data,
  * and the one device-grant code path reads what each provider answers.
  *
- * The providers are read off BuildConfig, which is baked from
- * build.json::ui.vault_connect.sign_in — so every expectation about the list
- * is computed from build.json itself by an independent walk (the file is
- * found relative to the module, as gradle runs the suite from `app/`), never
- * typed in. The wire-shape tests feed the parser what GitHub and Google
+ * The providers are read off this module's BuildConfig, which is baked from
+ * ab_cloud-libs-shared/build.json::auth.sign_in (#587, THE ONE declaration) —
+ * so every expectation about the list is computed from that file itself by an
+ * independent walk (found relative to the module, as gradle runs the suite
+ * from `libs/auth/`), never typed in. The wire-shape tests feed the parser what GitHub and Google
  * document and assert the step the caller would branch on.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class SignInTest {
 
-    /** build.json's own sign_in block, walked independently of the code. */
+    /** The shared build.json's own auth.sign_in block, walked independently of the code. */
     private fun declared(): JSONObject {
-        val f = listOf("../build.json", "build.json").map { File(it) }.firstOrNull { it.isFile }
-            ?: error("build.json not found beside the module — the expectations cannot be derived")
-        return JSONObject(f.readText()).getJSONObject("ui").getJSONObject("vault_connect").getJSONObject("sign_in")
+        val f = listOf("../../build.json", "../build.json", "build.json").map { File(it) }
+            .firstOrNull { it.isFile && JSONObject(it.readText()).has("auth") }
+            ?: error("ab_cloud-libs-shared/build.json not found above the module — the expectations cannot be derived")
+        return JSONObject(f.readText()).getJSONObject("auth").getJSONObject("sign_in")
     }
 
     @Test fun `the baked providers are exactly build json's, in order`() {
@@ -42,7 +41,7 @@ class SignInTest {
         assertTrue("build.json declares no provider", ids.isNotEmpty())
         assertEquals(ids, SignIn.providers.map { it.id })
         // The baked blob decodes to the same document, so no field was lost in the bake.
-        val baked = JSONObject(String(Base64.decode(BuildConfig.UI_VAULT_CONNECT_SIGN_IN_B64, Base64.DEFAULT)))
+        val baked = AuthDeclaration.parse(AuthDeclaration.decode(BuildConfig.AUTH_B64)).signIn
         assertEquals(arr.length(), baked.getJSONArray("providers").length())
     }
 
@@ -105,6 +104,31 @@ class SignInTest {
                 ?.getString("id")
         }
         assertEquals(declaredWithRepo, SignIn.providerGranting(SignIn.GRANT_REPO_ARTIFACT)?.id)
+    }
+
+    @Test fun `the endpoints and the vault route come off the same declaration`() {
+        val d = AuthDeclaration.current
+        assertTrue("config_source.base_url", d.configSource.baseUrl.startsWith("https://"))
+        assertTrue("config_source.user", d.configSource.user.isNotBlank())
+        assertTrue("config_source.git.repo", d.configSource.gitRepo.contains('/'))
+        assertTrue("vault_connect.base_url", d.vault.baseUrl.startsWith("https://"))
+        assertTrue("known_schema_versions", d.knownSchemaVersions.isNotEmpty())
+        assertEquals(d.knownSchemaVersions, VaultConnect.knownSchemaVersions)
+        assertTrue(ConfigArtifact.endpoint().startsWith(d.configSource.baseUrl))
+        assertFalse("{user} is substituted", ConfigArtifact.endpoint().contains("{user}"))
+    }
+
+    @Test fun `a blank bake is an empty declaration, never an invented route`() {
+        val d = AuthDeclaration.parse("")
+        assertEquals("", d.configSource.baseUrl)
+        assertTrue(d.knownSchemaVersions.isEmpty())
+        assertTrue(SignIn.parseProviders(d.signIn).isEmpty())
+    }
+
+    @Test fun `a pasted export yields its bearer, a bare token passes through`() {
+        assertEquals("tok", SignIn.extractToken("  tok \n"))
+        assertEquals("ey1", SignIn.extractToken("""{"auth":{"authelia_token":"ey1","authelia_email":"a@b.c"}}"""))
+        assertEquals("ey2", SignIn.extractToken("""{"token":"ey2"}"""))
     }
 
     @Test fun `an unconfigured provider refuses to start without touching the network`() {

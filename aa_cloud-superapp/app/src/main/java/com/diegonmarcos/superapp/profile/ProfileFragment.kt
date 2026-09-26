@@ -10,8 +10,20 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.diegonmarcos.cloudlib.auth.AuthDeclaration
+import com.diegonmarcos.cloudlib.auth.ConfigArtifact
+import com.diegonmarcos.cloudlib.auth.ProfileJourney
+import com.diegonmarcos.cloudlib.auth.SignIn
+import com.diegonmarcos.cloudlib.auth.SignInHost
+import com.diegonmarcos.cloudlib.auth.SignInResult
+import com.diegonmarcos.cloudlib.auth.SignInWays
+import com.diegonmarcos.cloudlib.auth.UserRegistry
+import com.diegonmarcos.cloudlib.auth.VaultConnect
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.launcher.AppTabsStyle
 import com.diegonmarcos.superapp.launcher.Sections
@@ -310,10 +322,6 @@ class ProfileFragment : Fragment() {
     /** Steps whose last attempt reported an error — the card's red light. Memory only. */
     private val failedSteps = mutableSetOf<ProfileJourney.Step>()
 
-    /** The declared fleet-SSO way of this [kind], if this build declares one. */
-    private fun autheliaProvider(kind: SignIn.Kind): SignIn.Provider? =
-        SignIn.providers.firstOrNull { it.kind == kind }
-
     /** Everything the journey knows, gathered once per draw — see [ProfileJourney.State]. */
     private fun journeyState(ctx: android.content.Context): ProfileJourney.State {
         val session = SignIn.Current.session
@@ -457,24 +465,25 @@ class ProfileFragment : Fragment() {
     private fun buildSignInStep(ctx: android.content.Context, s: ProfileJourney.State, body: LinearLayout) {
         body.addView(caption(ctx, getString(R.string.journey_sign_in_caption)))
         val policy = s.registry?.authProviders.orEmpty()
-        val offered = SignIn.providers.filter { policy.isEmpty() || it.id in policy }
+        val offered = SignIn.offered(policy)
         val status = statusView(ctx)
-        for (p in offered) {
-            if (!p.configured) { body.addView(caption(ctx, getString(R.string.journey_not_configured, p.label))); continue }
-            when (p.kind) {
-                SignIn.Kind.AUTHELIA_WEB ->
-                    body.addView(pickButton(ctx, getString(R.string.journey_way_browser, p.label)) { showAutheliaWebAuthDialog() })
-                SignIn.Kind.AUTHELIA_BEARER -> {
-                    body.addView(pickButton(ctx, getString(R.string.journey_way_bearer, p.label)) { showAutheliaBearerDialog() })
-                    buildStoredBearer(ctx, s, body, status)
-                }
-                SignIn.Kind.DEVICE_FLOW -> {
-                    body.addView(pickButton(ctx, getString(R.string.journey_way_code, p.label)) { showDeviceFlowDialog(p) })
-                    if (p.grants(SignIn.GRANT_REPO_ARTIFACT))
-                        body.addView(pickButton(ctx, getString(R.string.journey_way_ssh, p.label)) { showGithubSshDialog() })
-                }
-                SignIn.Kind.UNKNOWN -> body.addView(caption(ctx, getString(R.string.journey_not_configured, p.label)))
+        // THE shared sign-in surface (libs:auth, #587): one pill per declared way,
+        // the three dialogs and the fetches live there and are the same ones
+        // cloud-drive hosts. Drawn in the cockpit's pill so it reads as this page.
+        body.addView(ComposeView(ctx).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                SignInWays(host = signInHost, policy = policy, pill = { label, tag, onClick ->
+                    AndroidView(factory = { c -> FleetCockpitView.pill(c, label, onClick).apply { this.tag = tag } })
+                })
             }
+        })
+        // The bearer way's own controls stay with the bearer provider, so a
+        // policy that does not offer it does not show them.
+        if (offered.any { it.kind == SignIn.Kind.AUTHELIA_BEARER }) buildStoredBearer(ctx, s, body, status)
+        // The SSH clone is this app's own way (JGit) beside the provider that grants the repo.
+        offered.firstOrNull { it.grants(SignIn.GRANT_REPO_ARTIFACT) }?.let { p ->
+            body.addView(pickButton(ctx, getString(R.string.journey_way_ssh, p.label)) { showGithubSshDialog() })
         }
         body.addView(status)
     }
@@ -488,7 +497,7 @@ class ProfileFragment : Fragment() {
             body.addView(pickButton(ctx, getString(R.string.journey_use_stored_bearer, s.storedBearerEmail)) {
                 show(status, NEUTRAL, "…")
                 runFetch(status, { if (importedThisSession) { importedThisSession = false; redraw() } },
-                    via = autheliaProvider(SignIn.Kind.AUTHELIA_BEARER), identity = s.storedBearerEmail) { fetchWithBearer(configs.autheliaToken) }
+                    via = SignIn.byKind(SignIn.Kind.AUTHELIA_BEARER), identity = s.storedBearerEmail) { ConfigArtifact.fetchWithBearer(configs.autheliaToken) }
             })
             body.addView(clearSecretButton(ctx, "Authelia bearer token") { configs.clearAutheliaCredential() })
         } else if (configs.hasOrphanToken()) {
@@ -747,19 +756,16 @@ class ProfileFragment : Fragment() {
         clip.setPrimaryClip(item)
         field.setText("")
         field.error = null
-        showAutheliaWebAuthDialog()
+        // The portal login lives in the shared surface now (#587); the vault
+        // route's own browser dialog is the same Authelia portal, so the
+        // confirmation page opens there.
+        showVaultBrowserDialog()
         view?.snack("Code copied — paste it into the Authelia page")
     }
 
     // ── vault configs ────────────────────────────────────────────────────
 
-    private fun vaultEndpoints() = VaultConnect.Endpoints(
-        baseUrl          = com.diegonmarcos.superapp.BuildConfig.UI_VAULT_CONNECT_BASE_URL,
-        startPath        = com.diegonmarcos.superapp.BuildConfig.UI_VAULT_CONNECT_START_PATH,
-        fetchPath        = com.diegonmarcos.superapp.BuildConfig.UI_VAULT_CONNECT_FETCH_PATH,
-        connectTimeoutMs = com.diegonmarcos.superapp.BuildConfig.UI_VAULT_CONNECT_CONNECT_MS,
-        readTimeoutMs    = com.diegonmarcos.superapp.BuildConfig.UI_VAULT_CONNECT_READ_MS,
-    )
+    private fun vaultEndpoints() = AuthDeclaration.vault
 
     /** The vault code box. Like [mailConfirmationField] it is never stored:
      *  a one-use code with minutes of life, cleared once it has been sent. */
@@ -1406,99 +1412,53 @@ class ProfileFragment : Fragment() {
             .show()
     }
 
-    // ── OWebAuth · Authelia auto-import ──────────────────────────────────
+    // ── THE sign-in (libs:auth, #587) ────────────────────────────────────
 
-    /** Live handle to the dialog's token field, so the file picker (which
-     *  must be registered on the Fragment, not the dialog) can fill it. */
-    private var tokenField: EditText? = null
-
-    /** Set when an auto-import wrote something, so the form above is
+    /** Set when a sign-in or an import wrote something, so the form above is
      *  redrawn with the new values once the dialog is dismissed. */
     private var importedThisSession = false
 
-    /** "Import from file" inside the dialog — the file holds either the raw
-     *  token or a JSON blob with `auth.authelia_token` (the shape already
-     *  declared in build.json::ui.import_schema). */
-    private val tokenFilePicker =
-        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
-            uri ?: return@registerForActivityResult
-            val field = tokenField ?: return@registerForActivityResult
-            runCatching {
-                val text = requireContext().contentResolver.openInputStream(uri)
-                    ?.bufferedReader()?.use { it.readText() }.orEmpty()
-                field.setText(extractToken(text))
-            }.onFailure {
-                field.error = "Could not read that file: ${it.message}"
-            }
+    /**
+     * What the shared surface hands back. Every way in — the bearer paste, the
+     * portal login, a device grant — ends in [landed]; the browser session is
+     * also kept for the vault route (one login, both fetches), memory only.
+     */
+    private val signInHost = object : SignInHost {
+        override fun onSignedIn(result: SignInResult) {
+            landed(result.provider, result.identity, result.artifact, result.bytes, result.bearer)
+            // The lib's dialog has already closed; the journey redraws with the session.
+            view?.post { if (importedThisSession) { importedThisSession = false; redraw() } }
         }
-
-    /** Raw token, or `auth.authelia_token` / `authelia_token` / `token` out
-     *  of a JSON file. Falls back to the trimmed file contents. */
-    private fun extractToken(text: String): String {
-        val trimmed = text.trim()
-        if (!trimmed.startsWith("{")) return trimmed
-        return runCatching {
-            val o = org.json.JSONObject(trimmed)
-            o.optJSONObject("auth")?.optString("authelia_token").orEmpty()
-                .ifBlank { o.optString("authelia_token") }
-                .ifBlank { o.optString("token") }
-                .ifBlank { trimmed }
-        }.getOrDefault(trimmed)
-    }
-
-    private fun showAutheliaBearerDialog() {
-        val ctx = requireContext()
-        val endpoint = com.diegonmarcos.superapp.core.ConfigSyncClient.endpoint(
-            com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_BASE_URL,
-            com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_PATH,
-            com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_USER,
-        )
-        var input: EditText? = null
-
-        importDialog(
-            title = "Authelia · Bearer token",
-            positive = "Authenticate & Import",
-            buildBody = { body, _ ->
-                body.addView(caption(ctx, "Paste your Authelia bearer token. It is sent once as an Authorization header to:\n$endpoint\n\nThe token is never written to disk, to a log, or to any export — it is used for this one request and then dropped."))
-                val field = EditText(ctx).apply {
-                    hint = "eyJhbGciOi…"
-                    setSingleLine(false)
-                    maxLines = 4
-                    inputType = android.text.InputType.TYPE_CLASS_TEXT or
-                        android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
-                    // Keep the token off the keyboard's learned-words / suggestion store.
-                    imeOptions = android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-                }
-                tokenField = field
-                input = field
-                body.addView(field)
-                body.addView(pickButton(ctx, "Import token from file…") {
-                    tokenFilePicker.launch("*/*")
-                })
-            },
-            onGo = { go, status ->
-                val token = input?.text?.toString()?.trim().orEmpty()
-                if (token.isEmpty()) {
-                    show(status, RED, "✗ Paste a token first.")
-                } else {
-                    go.isEnabled = false
-                    show(status, NEUTRAL, "… authenticating and fetching $endpoint")
-                    runFetch(status, { go.isEnabled = true }, via = autheliaProvider(SignIn.Kind.AUTHELIA_BEARER), storeBearer = token) { fetchWithBearer(token) }
-                }
-            },
-            onDismiss = { tokenField = null },
-        ).show()
+        override fun onWebSession(cookie: String) { vaultSession = cookie }
     }
 
     /**
-     * Fetch on IO, apply on the main thread, report either way.
-     *
-     * Every authenticated tile ends here. The four routes differ only in the
-     * [fetch] lambda — a bearer header, a session cookie, a GitHub token or a
-     * clone — and share the apply step, the success/failure wording and the
-     * redraw. That is the whole reason the transports were made to return one
-     * [ConfigSyncClient.Outcome] type: four import buttons, one place where
-     * config is actually written.
+     * A sign-in landed (#573): this is STEP 1 of the journey. It remembers the
+     * artifact (and caches its User → Identity → Peer registry) and records who
+     * signed in; it does NOT apply. Applying is step 4, for the peer picked in
+     * step 3 — an apply here would write the wrong phone's profiles before the
+     * owner had said which phone this is. A bearer that just proved itself is
+     * stored WITH the address it proved — the durable sign-in the vault route
+     * needs. ONE place, whichever way was taken (the lib's three, the stored
+     * bearer, the SSH clone).
+     */
+    private fun landed(via: SignIn.Provider?, identity: String, artifact: org.json.JSONObject?, bytes: Int, storeBearer: String) {
+        val appCtx = requireContext().applicationContext
+        if (artifact != null) UserRegistry.remember(appCtx, artifact)
+        val who = identity.ifBlank { UserRegistry.Current.registry?.primaryIdentity?.email.orEmpty() }
+        via?.let { SignIn.Current.session = SignIn.Session(it.id, who) }
+        if (storeBearer.isNotBlank()) {
+            ConfigsPrefs(appCtx).setAutheliaCredential(who, storeBearer)?.let { view?.snack(it) }
+        }
+        failedSteps -= ProfileJourney.Step.SIGN_IN
+        if (artifact != null) view?.snack(getString(R.string.journey_fetched_snack))
+        importedThisSession = true   // the journey redraws on dialog dismiss
+    }
+
+    /**
+     * Fetch on IO, land on the main thread, report either way — the two ways
+     * this fragment still drives itself (the stored bearer's one tap and the
+     * SSH clone); the lib's ways land through [signInHost].
      */
     private fun runFetch(
         status: TextView,
@@ -1508,61 +1468,20 @@ class ProfileFragment : Fragment() {
         storeBearer: String = "",
         fetch: () -> com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome,
     ) {
-        val appCtx = requireContext().applicationContext
         viewLifecycleOwner.lifecycleScope.launch {
-            val outcome = withContext(Dispatchers.IO) { fetch() }
-            when (outcome) {
+            when (val outcome = withContext(Dispatchers.IO) { fetch() }) {
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Failed -> {
                     failedSteps += ProfileJourney.Step.SIGN_IN
                     show(status, RED, "✗ ${outcome.kind}\n${outcome.message}")
                 }
-
                 is com.diegonmarcos.superapp.core.ConfigSyncClient.Outcome.Ok -> {
-                    // #573: a fetch is STEP 1 of the journey. It remembers the
-                    // artifact (and caches its User → Identity → Peer registry)
-                    // and records who signed in; it does NOT apply. Applying is
-                    // step 4, for the peer picked in step 3 — an apply here
-                    // would write the wrong phone's profiles before the owner
-                    // had said which phone this is.
-                    UserRegistry.remember(appCtx, outcome.body)
-                    val who = identity.ifBlank { UserRegistry.Current.registry?.primaryIdentity?.email.orEmpty() }
-                    via?.let { SignIn.Current.session = SignIn.Session(it.id, who) }
-                    // A bearer that just proved itself is stored WITH the address
-                    // it proved — the durable sign-in the vault route needs.
-                    if (storeBearer.isNotBlank()) {
-                        ConfigsPrefs(appCtx).setAutheliaCredential(who, storeBearer)?.let { view?.snack(it) }
-                    }
-                    failedSteps -= ProfileJourney.Step.SIGN_IN
+                    landed(via, identity, outcome.body, outcome.bytes, storeBearer)
                     show(status, GREEN, getString(R.string.journey_fetched, outcome.bytes))
-                    view?.snack(getString(R.string.journey_fetched_snack))
-                    importedThisSession = true   // the journey redraws on dialog dismiss
                 }
             }
             done()
         }
     }
-
-    /** The config route, authenticated by a pasted bearer. */
-    private fun fetchWithBearer(token: String) =
-        com.diegonmarcos.superapp.core.ConfigSyncClient.fetch(
-            baseUrl          = com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_BASE_URL,
-            pathTemplate     = com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_PATH,
-            user             = com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_USER,
-            bearer           = token,
-            connectTimeoutMs = com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_CONNECT_MS,
-            readTimeoutMs    = com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_READ_MS,
-        )
-
-    /** The same route, authenticated by the cookie a browser login left behind. */
-    private fun fetchWithCookie(cookie: String) =
-        com.diegonmarcos.superapp.core.ConfigSyncClient.fetchWithCookie(
-            baseUrl          = com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_BASE_URL,
-            pathTemplate     = com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_PATH,
-            user             = com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_USER,
-            cookie           = cookie,
-            connectTimeoutMs = com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_CONNECT_MS,
-            readTimeoutMs    = com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_READ_MS,
-        )
 
     // ── shared dialog shell ──────────────────────────────────────────────
 
@@ -1618,166 +1537,6 @@ class ProfileFragment : Fragment() {
         return dialog
     }
 
-    // ── Authelia · browser login ─────────────────────────────────────────
-
-    /**
-     * Sign in to Authelia in an embedded WebView, then reuse that session's
-     * cookie for the config request.
-     *
-     * Why a WebView and not a Custom Tab: the whole point is to get the cookie
-     * back, and a Custom Tab's cookie jar belongs to the browser, not to this
-     * app. The WebView's jar is readable through [CookieManager], which is the
-     * only reason this flow can hand a credential to [fetchWithCookie].
-     *
-     * The cookie is never persisted by us — it lives in the WebView jar for as
-     * long as the app keeps it and is dropped from memory after the request.
-     */
-    private fun showAutheliaWebAuthDialog() {
-        val ctx = requireContext()
-        val endpoint = com.diegonmarcos.superapp.core.ConfigSyncClient.endpoint(
-            com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_BASE_URL,
-            com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_PATH,
-            com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_SOURCE_USER,
-        )
-        var web: android.webkit.WebView? = null
-
-        val dialog = importDialog(
-            title = "Authelia · browser login",
-            positive = "Import with this session",
-            buildBody = { body, _ ->
-                body.addView(caption(ctx, "Sign in below. Authelia will redirect back to:\n$endpoint\n\nWhen you are through the login, press Import — the session cookie the browser just earned is used for one request and then dropped. Nothing is written to disk."))
-                val view = android.webkit.WebView(ctx).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 380),
-                    ).apply { topMargin = dp(ctx, 10) }
-                    settings.javaScriptEnabled = true      // Authelia's portal is a JS app
-                    settings.domStorageEnabled = true      // and keeps its state in DOM storage
-                    webViewClient = android.webkit.WebViewClient()
-                }
-                android.webkit.CookieManager.getInstance().setAcceptCookie(true)
-                view.loadUrl(endpoint)
-                web = view
-                body.addView(view)
-            },
-            onGo = { go, status ->
-                val cookie = android.webkit.CookieManager.getInstance().getCookie(endpoint).orEmpty()
-                if (cookie.isBlank()) {
-                    show(status, RED, "✗ No cookie for $endpoint yet — finish the login above first.")
-                } else {
-                    go.isEnabled = false
-                    // The same Authelia session serves the vault route (#573):
-                    // one login, both fetches. Memory only, like vaultSession itself.
-                    vaultSession = cookie
-                    show(status, NEUTRAL, "… fetching $endpoint with the browser session")
-                    runFetch(status, { go.isEnabled = true }, via = autheliaProvider(SignIn.Kind.AUTHELIA_WEB)) { fetchWithCookie(cookie) }
-                }
-            },
-            // Free the WebView before the shell's redraw tears the view down.
-            onDismiss = { web?.destroy(); web = null },
-        )
-        dialog.show()
-    }
-
-    // ── OAuth device grant · any declared provider (#573) ───────────────
-
-    /**
-     * Approve a short code in a browser, then either read the artifact out of
-     * the vault repo with the token (a provider that grants `repo_artifact`)
-     * or keep only the identity the token proves (every other provider).
-     *
-     * ONE dialog for GitHub, Google and whatever else speaks RFC 8628: the
-     * provider is a [SignIn.Provider] read off build.json, and nothing here
-     * knows which one it is. The device grant is used rather than a redirect
-     * flow because it needs no client secret and no registered redirect URI —
-     * the app only ever holds the public client_id, which is why that id sits
-     * in build.json as data.
-     */
-    private fun showDeviceFlowDialog(p: SignIn.Provider) {
-        val ctx = requireContext()
-        var pollJob: kotlinx.coroutines.Job? = null
-        val readsRepo = p.grants(SignIn.GRANT_REPO_ARTIFACT)
-
-        val dialog = importDialog(
-            title = "${p.label} · browser login",
-            positive = getString(R.string.sign_in_start),
-            buildBody = { body, _ ->
-                body.addView(caption(ctx, when {
-                    !p.configured -> getString(R.string.sign_in_not_configured, p.label)
-                    readsRepo -> getString(R.string.sign_in_device_caption_repo, p.label,
-                        com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_GIT_REPO,
-                        com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_GIT_PATH)
-                    else -> getString(R.string.sign_in_device_caption_identity, p.label)
-                }))
-            },
-            onGo = { go, status ->
-                if (!p.configured) {
-                    show(status, RED, "✗ " + getString(R.string.sign_in_not_configured, p.label))
-                } else {
-                    go.isEnabled = false
-                    pollJob = startDeviceFlow(p, status) { go.isEnabled = true }
-                }
-            },
-            // Stop polling the provider the moment the user walks away.
-            onDismiss = { pollJob?.cancel() },
-        )
-        dialog.show()
-    }
-
-    /** Request a code, show it, poll until approved, then fetch-and-apply or
-     *  keep the identity — whichever the provider is declared to grant. */
-    private fun startDeviceFlow(p: SignIn.Provider, status: TextView, done: () -> Unit): kotlinx.coroutines.Job =
-        viewLifecycleOwner.lifecycleScope.launch {
-            show(status, NEUTRAL, getString(R.string.sign_in_asking, p.label))
-            val code = withContext(Dispatchers.IO) { SignIn.requestDeviceCode(p) }
-                .getOrElse {
-                    show(status, RED, "✗ ${it.message}")
-                    done(); return@launch
-                }
-            val prompt = { tail: String -> getString(R.string.sign_in_code_prompt, code.verificationUri, code.userCode, tail) }
-            show(status, NEUTRAL, prompt(getString(R.string.sign_in_code_expiry, code.expiresInSeconds / 60)))
-            // Open the page for them; if no browser handles it the code above is
-            // still on screen and selectable, so the flow is not blocked on this.
-            runCatching {
-                startActivity(android.content.Intent(
-                    android.content.Intent.ACTION_VIEW,
-                    android.net.Uri.parse(code.verificationUri),
-                ))
-            }
-
-            val deadline = System.currentTimeMillis() + code.expiresInSeconds * 1000L
-            var interval = code.intervalSeconds * 1000L
-            while (System.currentTimeMillis() < deadline) {
-                kotlinx.coroutines.delay(interval)
-                when (val step = withContext(Dispatchers.IO) { SignIn.pollForToken(p, code.deviceCode) }) {
-                    is SignIn.Step.Token -> {
-                        val who = withContext(Dispatchers.IO) { SignIn.identity(p, step.accessToken) }.orEmpty()
-                        show(status, NEUTRAL, getString(R.string.sign_in_approved, who.ifBlank { p.label }))
-                        if (p.grants(SignIn.GRANT_REPO_ARTIFACT)) {
-                            runFetch(status, done, via = p, identity = who) { GithubImport.fetchArtifact(step.accessToken) }
-                        } else {
-                            SignIn.Current.session = SignIn.Session(p.id, who)
-                            show(status, GREEN, getString(R.string.sign_in_identity_only, p.label, who.ifBlank { "—" }))
-                            importedThisSession = true   // the Sign-in section redraws with the session
-                            done()
-                        }
-                        return@launch
-                    }
-                    is SignIn.Step.Failed -> {
-                        show(status, RED, "✗ ${step.message}")
-                        done(); return@launch
-                    }
-                    is SignIn.Step.Pending -> {
-                        // slow_down means the provider wants a longer gap, and
-                        // ignoring it gets the whole flow rate-limited.
-                        if (step.slowDown) interval += 5_000L
-                        show(status, NEUTRAL, prompt(step.message))
-                    }
-                }
-            }
-            show(status, RED, getString(R.string.sign_in_code_expired))
-            done()
-        }
-
     // ── GitHub · SSH key ─────────────────────────────────────────────────
 
     /** Live handle to the SSH key field, so the file picker can fill it. */
@@ -1812,8 +1571,8 @@ class ProfileFragment : Fragment() {
 
     private fun showGithubSshDialog() {
         val ctx = requireContext()
-        val repo = com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_GIT_REPO
-        val path = com.diegonmarcos.superapp.BuildConfig.UI_CONFIG_GIT_PATH
+        val repo = AuthDeclaration.configSource.gitRepo
+        val path = AuthDeclaration.configSource.gitPath
         var passField: EditText? = null
 
         val dialog = importDialog(

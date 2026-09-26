@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- libs:auth (#587) — the words of THE sign-in surface, shared by cloud-superapp and cloud-drive.
+     Provider names are never here: every %1$s is the declared label. -->
+<resources>
+    <string name="auth_way_bearer">%1$s · paste a token</string>
+    <string name="auth_way_browser">%1$s · sign in at the portal</string>
+    <string name="auth_way_code">%1$s · browser code</string>
+    <string name="auth_not_configured">%1$s · not configured in this build</string>
+    <string name="auth_close">Close</string>
+    <string name="auth_fetching">… fetching %1$s</string>
+    <string name="auth_file_unreadable">Could not read that file: %1$s</string>
+
+    <string name="auth_bearer_title">%1$s · bearer token</string>
+    <string name="auth_bearer_caption">Paste your %1$s bearer token. It is sent once as an Authorization header to:\n%2$s\n\nThe token is kept only with the address it proves — never logged, never exported.</string>
+    <string name="auth_bearer_hint">eyJhbGciOi…</string>
+    <string name="auth_bearer_from_file">Import token from file…</string>
+    <string name="auth_bearer_empty">✗ Paste a token first.</string>
+    <string name="auth_bearer_go">Authenticate &amp; fetch</string>
+
+    <string name="auth_web_title">%1$s · browser login</string>
+    <string name="auth_web_caption">Sign in below. The portal will redirect back to:\n%1$s\n\nWhen you are through the login, press Fetch — the session cookie the browser just earned is used for one request and then dropped. Nothing is written to disk.</string>
+    <string name="auth_web_go">Fetch with this session</string>
+    <string name="auth_web_no_cookie">✗ No cookie for %1$s yet — finish the login above first.</string>
+
+    <string name="auth_device_title">%1$s · browser login</string>
+    <string name="auth_device_caption_repo">Press Start. %1$s will show a code to approve in the browser; once approved, the artifact is read from %2$s (%3$s).</string>
+    <string name="auth_device_caption_identity">Press Start. %1$s will show a code to approve in the browser; once approved, the address it proves is your identity here — nothing is fetched.</string>
+    <string name="auth_start">Start</string>
+    <string name="auth_asking">… asking %1$s for a device code</string>
+    <string name="auth_code_prompt">Enter this code at %1$s\n\n    %2$s\n\n%3$s</string>
+    <string name="auth_code_expiry">Waiting for approval… (the code expires in %1$d min)</string>
+    <string name="auth_code_expired">✗ The code expired before it was approved.</string>
+    <string name="auth_approved">✓ Approved · %1$s</string>
+    <string name="auth_identity_only">✓ %1$s proved %2$s. That provider grants an identity only — fetch your config with a way that grants it.</string>
+</resources>

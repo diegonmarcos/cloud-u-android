@@ -1,7 +1,7 @@
 package com.diegonmarcos.superapp.profile
 
 import android.util.Log
-import com.diegonmarcos.superapp.BuildConfig
+import com.diegonmarcos.cloudlib.auth.AuthDeclaration
 import com.diegonmarcos.superapp.core.ConfigSyncClient
 import com.jcraft.jsch.JSch
 import com.jcraft.jsch.Session
@@ -57,16 +57,16 @@ object GitSshVault {
     private const val TAG = "ConfigSync"
 
     /**
-     * Clone, read [BuildConfig.UI_CONFIG_GIT_PATH], return it as the same
+     * Clone, read [AuthDeclaration.ConfigSource.gitPath], return it as the same
      * [ConfigSyncClient.Outcome] every other import route produces — so the
      * caller's apply-and-report path is identical for all four tiles.
      *
      * Blocking; call from a background dispatcher.
      */
     fun fetchArtifact(cacheDir: File, privateKeyPem: String, passphrase: String): ConfigSyncClient.Outcome {
-        val repo = BuildConfig.UI_CONFIG_GIT_REPO
-        val path = BuildConfig.UI_CONFIG_GIT_PATH
-        val ref = BuildConfig.UI_CONFIG_GIT_REF
+        val repo = AuthDeclaration.configSource.gitRepo
+        val path = AuthDeclaration.configSource.gitPath
+        val ref = AuthDeclaration.configSource.gitRef
         if (repo.isBlank() || path.isBlank()) {
             return failed(
                 ConfigSyncClient.Kind.MALFORMED,
@@ -130,7 +130,7 @@ object GitSshVault {
             val walker = TreeWalk.forPath(repository, path, tree)
                 ?: return failed(
                     ConfigSyncClient.Kind.NOT_FOUND,
-                    "Cloned ${BuildConfig.UI_CONFIG_GIT_REPO}@$ref, but it has no file at '$path'. " +
+                    "Cloned $repo@$ref, but it has no file at '$path'. " +
                         "Check build.json::ui.config_source.git.path.",
                 )
             val bytes = walker.use { repository.open(it.getObjectId(0)).bytes }
@@ -194,8 +194,8 @@ object GitSshVault {
         return try {
             conn = (URL("https://api.github.com/meta").openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
-                connectTimeout = BuildConfig.UI_CONFIG_SOURCE_CONNECT_MS
-                readTimeout = BuildConfig.UI_CONFIG_SOURCE_READ_MS
+                connectTimeout = AuthDeclaration.configSource.connectTimeoutMs
+                readTimeout = AuthDeclaration.configSource.readTimeoutMs
                 setRequestProperty("Accept", "application/vnd.github+json")
                 setRequestProperty("User-Agent", "Cloud-SuperApp-ConfigSync/1")
             }

@@ -1,29 +1,29 @@
-package com.diegonmarcos.superapp.profile
+package com.diegonmarcos.cloudlib.auth
 
-import android.util.Base64
 import android.util.Log
-import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.core.ConfigSyncClient
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Configs ▸ Profile ▸ Connect ▸ Sign in (#573): the providers, and the ONE
- * OAuth device-grant code path that GitHub and Google share.
+ * THE sign-in of the fleet (#573, shared as libs:auth by #587): the providers,
+ * and the ONE OAuth device-grant code path that GitHub and Google share.
+ * cloud-superapp's Profile ▸ Connect and cloud-drive's Configs ▸ Sign in both
+ * read this object; neither carries a provider of its own.
  *
  * THE LIST IS DATA. Every provider — its kind, endpoints, client id, scope and
- * what a login through it grants — is `build.json::ui.vault_connect.sign_in`,
- * baked to [BuildConfig.UI_VAULT_CONNECT_SIGN_IN_B64]. Nothing here names a
- * provider: the code dispatches on [Provider.kind] only, so a fourth provider
- * that speaks the device grant is a JSON entry, not a Kotlin change.
+ * what a login through it grants — is `ab_cloud-libs-shared/build.json::auth.sign_in`,
+ * baked through [AuthDeclaration]. Nothing here names a provider: the code
+ * dispatches on [Provider.kind] only, so a fourth provider that speaks the
+ * device grant is a JSON entry, not a Kotlin change.
  *
  * WHAT A SIGN-IN IS. A [Session]: which provider proved which identity, with
  * the credential it handed back, in memory only. It is never written to prefs,
  * never logged, and given to [ConfigSyncClient.request] as the `secret` so it
  * is redacted out of any echoed body. The Authelia bearer keeps its own store
- * ([com.diegonmarcos.superapp.settings.ConfigsPrefs]) because the vault route
- * needs it across restarts; the device-grant tokens do not outlive the process.
+ * (the HOST app's keystore-backed prefs, through [SignInHost]) because the vault
+ * route needs it across restarts; the device-grant tokens do not outlive the process.
  */
 object SignIn {
 
@@ -90,9 +90,29 @@ object SignIn {
     }
 
     val providers: List<Provider> by lazy {
-        runCatching {
-            parseProviders(JSONObject(String(Base64.decode(BuildConfig.UI_VAULT_CONNECT_SIGN_IN_B64, Base64.DEFAULT))))
-        }.getOrDefault(emptyList())
+        runCatching { parseProviders(AuthDeclaration.current.signIn) }.getOrDefault(emptyList())
+    }
+
+    /** The declared fleet-SSO way of this [kind], if the declaration carries one. */
+    fun byKind(kind: Kind): Provider? = providers.firstOrNull { it.kind == kind }
+
+    /** Those of [providers] a user's policy offers: `auth_providers` off the
+     *  artifact narrows the list; no policy yet means every declared way. */
+    fun offered(policy: List<String>): List<Provider> =
+        providers.filter { policy.isEmpty() || it.id in policy }
+
+    /** A pasted bearer, or the `auth.authelia_token` out of an exported blob
+     *  (the paste shape), so a previously exported config can sign in again. */
+    fun extractToken(text: String): String {
+        val trimmed = text.trim()
+        if (!trimmed.startsWith("{")) return trimmed
+        return runCatching {
+            val o = JSONObject(trimmed)
+            o.optJSONObject("auth")?.optString("authelia_token").orEmpty()
+                .ifBlank { o.optString("authelia_token") }
+                .ifBlank { o.optString("token") }
+                .ifBlank { trimmed }
+        }.getOrDefault(trimmed)
     }
 
     fun provider(id: String): Provider? = providers.firstOrNull { it.id == id }
@@ -166,8 +186,8 @@ object SignIn {
     fun requestDeviceCode(p: Provider): Result<DeviceCode> {
         if (!p.configured) {
             return Result.failure(IllegalStateException(
-                "No client_id for ${p.label} in this build. Set it in build.json under " +
-                    "ui.vault_connect.sign_in.providers[id=${p.id}].client_id and rebuild."))
+                "No client_id for ${p.label} in this build. Set it in ab_cloud-libs-shared/build.json under " +
+                    "auth.sign_in.providers[id=${p.id}].client_id and rebuild."))
         }
         return postForm(p.deviceCodeUrl, mapOf("client_id" to p.clientId, "scope" to p.scope))
             .mapCatching { parseDeviceCode(it) }
@@ -203,8 +223,8 @@ object SignIn {
             headers = mapOf("Authorization" to "Bearer $token"),
             secret = token,
             authHint = "The ${p.label} token was not accepted by ${p.userinfoUrl}.",
-            connectTimeoutMs = BuildConfig.UI_CONFIG_SOURCE_CONNECT_MS,
-            readTimeoutMs = BuildConfig.UI_CONFIG_SOURCE_READ_MS,
+            connectTimeoutMs = AuthDeclaration.configSource.connectTimeoutMs,
+            readTimeoutMs = AuthDeclaration.configSource.readTimeoutMs,
         )
         return (o as? ConfigSyncClient.Outcome.Ok)?.let { parseIdentity(it.body) }
     }
@@ -221,8 +241,8 @@ object SignIn {
             conn = (URL(url).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 doOutput = true
-                connectTimeout = BuildConfig.UI_CONFIG_SOURCE_CONNECT_MS
-                readTimeout = BuildConfig.UI_CONFIG_SOURCE_READ_MS
+                connectTimeout = AuthDeclaration.configSource.connectTimeoutMs
+                readTimeout = AuthDeclaration.configSource.readTimeoutMs
                 setRequestProperty("Accept", "application/json")
                 setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
                 setRequestProperty("User-Agent", "Cloud-SuperApp-ConfigSync/1")

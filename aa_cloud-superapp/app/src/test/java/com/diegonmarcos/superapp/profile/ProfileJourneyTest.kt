@@ -7,10 +7,13 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import com.diegonmarcos.superapp.R
-import com.diegonmarcos.superapp.profile.ProfileJourney.Lock
-import com.diegonmarcos.superapp.profile.ProfileJourney.Phase
-import com.diegonmarcos.superapp.profile.ProfileJourney.State
-import com.diegonmarcos.superapp.profile.ProfileJourney.Step
+import com.diegonmarcos.cloudlib.auth.ProfileJourney
+import com.diegonmarcos.cloudlib.auth.ProfileJourney.Lock
+import com.diegonmarcos.cloudlib.auth.ProfileJourney.Phase
+import com.diegonmarcos.cloudlib.auth.ProfileJourney.State
+import com.diegonmarcos.cloudlib.auth.ProfileJourney.Step
+import com.diegonmarcos.cloudlib.auth.SignIn
+import com.diegonmarcos.cloudlib.auth.UserRegistry
 import com.diegonmarcos.superapp.ui.StatusLight
 import org.json.JSONArray
 import org.json.JSONObject
@@ -78,7 +81,7 @@ class ProfileJourneyTest {
         }
         assertEquals(Step.SIGN_IN, ProfileJourney.next(s))
         assertEquals(1, ProfileJourney.stepNumber(s))
-        assertEquals(StatusLight.State.UNKNOWN, ProfileJourney.overall(s))
+        assertEquals(StatusLight.State.UNKNOWN, ProfileJourneyView.overall(s))
     }
 
     @Test fun `a stored bearer is a sign-in, but without a registry step 2 says the config was not fetched`() {
@@ -124,7 +127,7 @@ class ProfileJourneyTest {
         assertEquals(4, ProfileJourney.stepNumber(device))
         val applied = device.copy(appliedAt = "2026-09-25 18:00")
         assertTrue(ProfileJourney.allDone(applied))
-        assertEquals(StatusLight.State.ON, ProfileJourney.overall(applied))
+        assertEquals(StatusLight.State.ON, ProfileJourneyView.overall(applied))
         assertEquals(Phase.DONE, ProfileJourney.phase(applied, Step.GET))
     }
 
@@ -141,15 +144,15 @@ class ProfileJourneyTest {
         assertEquals(Phase.LOCKED, ProfileJourney.phase(s, Step.GET))
         val failed = s.copy(artifactInMemory = true, failed = setOf(Step.GET))
         assertEquals(Phase.FAILED, ProfileJourney.phase(failed, Step.GET))
-        assertEquals(StatusLight.State.OFF, ProfileJourney.light(Phase.FAILED))
+        assertEquals(StatusLight.State.OFF, ProfileJourneyView.light(Phase.FAILED))
         assertTrue(ProfileJourney.bodyOpen(Phase.FAILED))
     }
 
     @Test fun `every phase maps to a distinct shared light and only active or failed bodies are open`() {
-        val lights = Phase.values().map { ProfileJourney.light(it) }
+        val lights = Phase.values().map { ProfileJourneyView.light(it) }
         assertEquals(Phase.values().size, lights.toSet().size)
-        assertEquals(StatusLight.State.ON, ProfileJourney.light(Phase.DONE))
-        assertEquals(StatusLight.State.UNVERIFIABLE, ProfileJourney.light(Phase.LOCKED))
+        assertEquals(StatusLight.State.ON, ProfileJourneyView.light(Phase.DONE))
+        assertEquals(StatusLight.State.UNVERIFIABLE, ProfileJourneyView.light(Phase.LOCKED))
         assertEquals(setOf(Phase.ACTIVE, Phase.FAILED), Phase.values().filter { ProfileJourney.bodyOpen(it) }.toSet())
     }
 
@@ -190,7 +193,7 @@ class ProfileJourneyTest {
         for (step in Step.values()) {
             val card = j.cards.getValue(step)
             val phase = ProfileJourney.phase(s, step)
-            val light = ProfileJourney.light(phase)
+            val light = ProfileJourneyView.light(phase)
             assertEquals(step.name, StatusLight.text(ctx, light), card.light.text.toString())
             assertEquals(step.name, StatusLight.colour(ctx, light), card.light.currentTextColor)
             assertEquals(step.name, if (ProfileJourney.bodyOpen(phase)) View.VISIBLE else View.GONE, card.body.visibility)

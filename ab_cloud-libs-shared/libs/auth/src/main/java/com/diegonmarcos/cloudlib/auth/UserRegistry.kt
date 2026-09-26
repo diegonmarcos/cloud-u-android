@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.profile
+package com.diegonmarcos.cloudlib.auth
 
 import android.content.Context
 import org.json.JSONObject

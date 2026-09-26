@@ -168,6 +168,12 @@ def uiDefaultTab  = (uiDecl.default_tab ?: uiDecl.tabs[0].id).toString()
 def uiSyncB64     = b64(uiDecl.sync.findAll { k, v -> !k.startsWith('_') })
 def uiFilesB64    = b64(uiDecl.files.findAll { k, v -> !k.startsWith('_') })
 def uiIconDefault = (uiDecl.icons?._default ?: 'circle').toString()
+// #587 which artifact sections a sign-in applies here (build.json::auth.applies), baked whole.
+def authApplies = buildJson.auth?.applies ?: [:]
+if (!(authApplies instanceof Map) || authApplies.isEmpty()) {
+    throw new GradleException("build.json::auth.applies must declare the artifact sections Configs ▸ Sign in applies (#587)")
+}
+def authAppliesB64 = b64(authApplies)
 def uiPermissionsRuntimeB64 = b64(buildJson.ui?.permissions?.runtime ?: [])
 def uiPermissionsRolesB64   = b64(buildJson.ui?.permissions?.roles   ?: [])
 def profileDefault   = buildJson.ui?.profile_default ?: [:]
@@ -294,6 +300,7 @@ android {
         buildConfigField "String", "UI_SYNC_B64",     "\"${uiSyncB64}\""
         buildConfigField "String", "UI_FILES_B64",    "\"${uiFilesB64}\""
         buildConfigField "String", "UI_ICON_DEFAULT", "\"${uiIconDefault}\""
+        buildConfigField "String", "AUTH_APPLIES_B64", "\"${authAppliesB64}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64",   "\"${uiPermissionsRolesB64}\""
         buildConfigField "String", "UI_PROFILE_NAME",      "\"${profileName}\""
@@ -397,6 +404,9 @@ dependencies {
     // #579 the fleet's bottom-nav island: the five tabs are the same Compose pill
     // superapp, mail, wallet and me draw.
     implementation project(':libs:bottomnav')
+    // #587 THE sign-in of the fleet: Configs ▸ Sign in hosts libs:auth's Compose surface
+    // (the same one superapp's Profile ▸ Connect hosts) and applies the drive sections.
+    implementation project(':libs:auth')
     // #567 push 5 / #579: the Compose toolchain of the WHOLE chrome. Same BOM the
     // libraries pin, so app and libraries compose against one toolchain.
     implementation platform('androidx.compose:compose-bom:2025.01.00')

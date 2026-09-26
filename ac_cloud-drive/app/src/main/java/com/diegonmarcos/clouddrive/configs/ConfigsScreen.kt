@@ -36,7 +36,8 @@ import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 
 /**
  * #579 CONFIGS (cloud-drive-redesign.md §6): cards — storage access (a StatusLight
- * that is a LOOK at the grant, with the Grant pill), Files defaults, the declared sync
+ * that is a LOOK at the grant, with the Grant pill), Sign in (#587, the fleet's shared
+ * libs:auth surface, applied by DriveAuthApply), Files defaults, the declared sync
  * schedule (read-only, it is build.json's), removable storage (the SAF grant), About.
  */
 @Composable
@@ -51,6 +52,8 @@ fun ConfigsScreen(prefs: DrivePrefs, actions: DriveActions, hasAccess: Boolean, 
                     if (!hasAccess) PillRow { Pill(stringResource(R.string.files_grant_access), { actions.requestStorageAccess() }, filled = true) }
                 }
             }
+            // #587 THE fleet sign-in (libs:auth), in this app's card: what it yields is applied by DriveAuthApply.
+            item { SignInCard() }
             item {
                 DriveCard(stringResource(R.string.configs_files), tag = DriveTags.CONFIGS_CARD) {
                     Text(stringResource(R.string.configs_default_sort), Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)

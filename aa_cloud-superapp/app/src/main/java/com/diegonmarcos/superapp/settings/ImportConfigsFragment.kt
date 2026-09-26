@@ -11,8 +11,8 @@ import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
-import com.diegonmarcos.superapp.profile.VaultConnect
-import com.diegonmarcos.superapp.profile.VaultFile
+import com.diegonmarcos.cloudlib.auth.VaultConnect
+import com.diegonmarcos.cloudlib.auth.VaultFile
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 

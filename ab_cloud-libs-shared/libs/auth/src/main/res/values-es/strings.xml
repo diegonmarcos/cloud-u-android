@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="auth_way_bearer">%1$s · pegar un token</string>
+    <string name="auth_way_browser">%1$s · iniciar sesión en el portal</string>
+    <string name="auth_way_code">%1$s · código en el navegador</string>
+    <string name="auth_not_configured">%1$s · no configurado en esta compilación</string>
+    <string name="auth_close">Cerrar</string>
+    <string name="auth_fetching">… descargando %1$s</string>
+    <string name="auth_file_unreadable">No se pudo leer ese archivo: %1$s</string>
+
+    <string name="auth_bearer_title">%1$s · token bearer</string>
+    <string name="auth_bearer_caption">Pega tu token bearer de %1$s. Se envía una sola vez como cabecera Authorization a:\n%2$s\n\nEl token se guarda solo junto a la dirección que demuestra; nunca se registra ni se exporta.</string>
+    <string name="auth_bearer_hint">eyJhbGciOi…</string>
+    <string name="auth_bearer_from_file">Importar token desde archivo…</string>
+    <string name="auth_bearer_empty">✗ Pega un token primero.</string>
+    <string name="auth_bearer_go">Autenticar y descargar</string>
+
+    <string name="auth_web_title">%1$s · inicio de sesión en el navegador</string>
+    <string name="auth_web_caption">Inicia sesión abajo. El portal redirigirá de vuelta a:\n%1$s\n\nCuando hayas pasado el inicio de sesión, pulsa Descargar: la cookie de sesión que el navegador acaba de obtener se usa para una sola petición y luego se descarta. No se escribe nada en disco.</string>
+    <string name="auth_web_go">Descargar con esta sesión</string>
+    <string name="auth_web_no_cookie">✗ Aún no hay cookie para %1$s: termina primero el inicio de sesión de arriba.</string>
+
+    <string name="auth_device_title">%1$s · inicio de sesión en el navegador</string>
+    <string name="auth_device_caption_repo">Pulsa Empezar. %1$s mostrará un código para aprobar en el navegador; una vez aprobado, el artefacto se lee de %2$s (%3$s).</string>
+    <string name="auth_device_caption_identity">Pulsa Empezar. %1$s mostrará un código para aprobar en el navegador; una vez aprobado, la dirección que demuestra es tu identidad aquí; no se descarga nada.</string>
+    <string name="auth_start">Empezar</string>
+    <string name="auth_asking">… pidiendo a %1$s un código de dispositivo</string>
+    <string name="auth_code_prompt">Introduce este código en %1$s\n\n    %2$s\n\n%3$s</string>
+    <string name="auth_code_expiry">Esperando la aprobación… (el código caduca en %1$d min)</string>
+    <string name="auth_code_expired">✗ El código caducó antes de aprobarse.</string>
+    <string name="auth_approved">✓ Aprobado · %1$s</string>
+    <string name="auth_identity_only">✓ %1$s demostró %2$s. Ese proveedor solo da una identidad: descarga tu configuración con una vía que la conceda.</string>
+</resources>

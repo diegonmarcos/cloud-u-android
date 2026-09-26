@@ -5,6 +5,8 @@ import android.net.Uri
 import android.util.Base64
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
+import com.diegonmarcos.cloudlib.auth.VaultConnect
+import com.diegonmarcos.cloudlib.auth.VaultFile
 import com.diegonmarcos.superapp.BuildConfig
 import com.diegonmarcos.superapp.R
 import com.diegonmarcos.superapp.settings.ImportConfigsFragment

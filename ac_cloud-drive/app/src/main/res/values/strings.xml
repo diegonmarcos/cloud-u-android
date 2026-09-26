@@ -249,6 +249,11 @@
     <string name="configs_title">Configs</string>
     <string name="configs_storage_access">Storage access</string>
     <string name="configs_storage_access_body">All-files access is what lets Cloud Drive list shared storage</string>
+    <string name="configs_sign_in">Sign in</string>
+    <string name="configs_sign_in_body">The fleet\'s sign-in: a successful one fetches your config and applies what Drive needs from it</string>
+    <string name="configs_sign_in_as">Signed in as %1$s</string>
+    <string name="configs_sign_in_applies">Applied here: %1$s</string>
+    <string name="configs_sign_in_identity_only">%1$s proved an identity only — nothing was fetched, so nothing to apply</string>
     <string name="configs_files">Files</string>
     <string name="configs_default_sort">Default sort</string>
     <string name="configs_show_hidden">Show hidden files</string>

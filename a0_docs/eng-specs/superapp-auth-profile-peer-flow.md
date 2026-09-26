@@ -70,9 +70,12 @@ cockpit's own header toggle, so "change" is the same gesture on every step.
 
 ### Step 1 · Sign in
 
-Body: one pill per provider in `build.json::ui.vault_connect.sign_in.providers`,
+Body (#587): THE fleet's shared sign-in surface, `libs:auth`'s `SignInWays`,
+hosted in the card through a `ComposeView` and drawn with the cockpit's own
+pill — one pill per provider in `ab_cloud-libs-shared/build.json::auth.sign_in.providers`,
 in declared order, filtered by the artifact's `auth_providers` policy once one is
-known. The pill text is the provider's declared `label`; the flow it opens is
+known. cloud-drive's Configs ▸ Sign in hosts the SAME composable; neither app
+carries a provider, a dialog or a fetch of its own. The pill text is the provider's declared `label`; the flow it opens is
 dispatched on `kind` and `grants` only — no Kotlin names a provider:
 
 * #578 — FOUR ways in, the fleet SSO being TWO of them, one declared provider
@@ -225,8 +228,11 @@ through `wg_client`, never restated. `regen-superapp-wireguard-profiles.js`
 publishes the redacted profiles PER PEER for every peer that declares
 `vault_wg_dir`.
 
-The app reads: providers from `build.json::ui.vault_connect.sign_in` (baked
-`UI_VAULT_CONNECT_SIGN_IN_B64`); the registry from the artifact
+The app reads: providers, endpoints, timeouts, the vault route, the schema
+versions and the vault-repo coordinates from `ab_cloud-libs-shared/build.json::auth`
+(#587 — baked by `libs:auth` into its own `AUTH_B64`, decoded once by
+`AuthDeclaration`; this app bakes only `ui.config_source.format_version` and
+`ui.vault_connect.cockpit`); the registry from the artifact
 (`UserRegistry.parse`); device icons from `ui.vault_connect.cockpit.device_icons`.
 `test/test-profile-journey.sh` T2 fails the build on any user, address, device
 or provider literal in the profile package.
@@ -291,3 +297,33 @@ the four `UI_GH_OAUTH_*` BuildConfig fields, the first-pass `buildSignIn` /
   under their own peer.
 * cloud-vault `A0_keys/providers/wireguard/test-phone-profiles.sh` — derived
   profiles are the deriver's, pending peers have none.
+
+## 8. Shared with cloud-drive (#587)
+
+The sign-in journey is not the superapp's: it is `ab_cloud-libs-shared/libs/auth`,
+shared BY REFERENCE (the `libs:bottomnav` / nav-lib precedent), and both
+cloud-superapp (Configs ▸ Profile ▸ Connect, step 1) and cloud-drive
+(Configs ▸ Sign in) consume the one directory. What lives there:
+
+* the ONE declaration's reader (`AuthDeclaration` ← `build.json::auth`), the
+  providers and the device grant (`SignIn`, `DeviceGrant`), the three artifact
+  fetches (`ConfigArtifact`: bearer, cookie, vault-repo token), the vault route
+  (`VaultConnect`), the registry (`UserRegistry`), the file classifier
+  (`VaultFile`) and the journey state machine (`ProfileJourney`, now light-less:
+  each host maps a phase to its own StatusLight);
+* the Compose surface `SignInWays(host, policy, pill)`: the pills, the bearer /
+  web-auth / device-grant dialogs and their fetches. Every way ends in
+  `SignInHost.onSignedIn(SignInResult)`; the browser cookie also reaches
+  `onWebSession` so one login serves the vault route.
+
+What each host keeps: the superapp's `landed()` (remember the artifact, record
+the session, store the proven bearer in `ConfigsPrefs`, never apply) plus its
+own extra ways (the stored bearer's one tap, the mail code, the SSH clone);
+cloud-drive's `DriveAuthApply` (write ONLY the sections `build.json::auth.applies`
+names — `git.github_token` into libs:git-sync's credential store for every
+managed https repository, `rclone.remotes` into rclone.conf — and report the
+rest as absent rather than pretend). Testers: `libs/auth/src/test`
+(`SignInTest`, `UserRegistryTest`, `VaultConnectTest`), superapp's
+`test-profile-journey.sh` repointed at the lib and the shared declaration,
+drive's `test-drive-configs-sign-in.sh` and `DriveAuthApplyTest`.
+

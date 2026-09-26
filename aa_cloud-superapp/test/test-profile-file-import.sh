@@ -31,7 +31,8 @@ ok()  { PASS=$((PASS+1)); echo "  PASS: $1"; }
 bad() { FAIL=$((FAIL+1)); echo "  FAIL: $1"; }
 
 FRAGMENT="app/src/main/java/com/diegonmarcos/superapp/settings/ImportConfigsFragment.kt"
-CLASSIFIER="app/src/main/java/com/diegonmarcos/superapp/profile/VaultFile.kt"
+# #587 the classifier is the fleet's (libs:auth); reached from the app root like every other path here.
+CLASSIFIER="../ab_cloud-libs-shared/libs/auth/src/main/java/com/diegonmarcos/cloudlib/auth/VaultFile.kt"
 JOURNEY="app/src/main/java/com/diegonmarcos/superapp/profile/ProfileFragment.kt"
 TEST="app/src/test/java/com/diegonmarcos/superapp/profile/VaultFileImportTest.kt"
 FIXTURE="app/src/test/resources/vault-bundle-sops-encrypted.json"
@@ -51,8 +52,8 @@ checks() {
   echo "== T1: classified before written; no whole-blob overwrite =="
   codeof "$app/$FRAGMENT" | grep -qF 'VaultFile.classify(' && p "the fragment classifies through VaultFile" || x "the fragment no longer classifies the text"
   codeof "$app/$FRAGMENT" | grep -qE 'prefs\.json = |\.json = raw' && x "the whole-blob overwrite is back (it erased the stored bearer)" || p "no whole-blob overwrite of the paste store"
-  codeof "$app/$CLASSIFIER" | grep -qF 'ENC_MARKER' && p "the classifier knows sops' ENC[ marker" || x "the classifier lost the ENC[ marker"
-  codeof "$app/$CLASSIFIER" | grep -qF 'Verdict.Encrypted(' && p "an encrypted file has its own verdict" || x "the Encrypted verdict is gone"
+  codeof "$ROOT/$CLASSIFIER" | grep -qF 'ENC_MARKER' && p "the classifier knows sops' ENC[ marker" || x "the classifier lost the ENC[ marker"
+  codeof "$ROOT/$CLASSIFIER" | grep -qF 'Verdict.Encrypted(' && p "an encrypted file has its own verdict" || x "the Encrypted verdict is gone"
 
   echo "== T2: the decrypted export lands where the fetch lands =="
   codeof "$app/$FRAGMENT" | grep -qF 'VaultConnect.Imported.bundle = v.bundle' && p "the bundle lands in VaultConnect.Imported" || x "the bundle no longer reaches the Fleet tab"
@@ -93,7 +94,7 @@ checks "$ROOT"; n=$?
 scratch() {  # scratch <label> <python mutation over $S (scratch app)>
   local label="$1" py="$2" S
   S="$(mktemp -d)"
-  for f in "$FRAGMENT" "$CLASSIFIER" "$JOURNEY" "$TEST" "$FIXTURE" "$EN" "$ES"; do mkdir -p "$S/$(dirname "$f")"; cp "$ROOT/$f" "$S/$f"; done
+  for f in "$FRAGMENT" "$JOURNEY" "$TEST" "$FIXTURE" "$EN" "$ES"; do mkdir -p "$S/$(dirname "$f")"; cp "$ROOT/$f" "$S/$f"; done
   S="$S" python3 -c "$py"
   if checks "$S" >/dev/null; then bad "mutation not caught: $label"; else ok "mutation caught: $label"; fi
   rm -rf "$S"

@@ -1,4 +1,4 @@
-package com.diegonmarcos.superapp.profile
+package com.diegonmarcos.cloudlib.auth
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
@@ -104,7 +104,7 @@ class UserRegistryTest {
     }
 
     @Test fun `the real emitted artifact, when checked out beside this repo, holds the same invariants`() {
-        val f = listOf("../../../cloud-infra", "../../cloud-infra", "../cloud-infra")
+        val f = listOf("../../../../cloud-infra", "../../../cloud-infra", "../../cloud-infra", "../cloud-infra")
             .map { File(it, "1_cloud-configs/dist/build-cloud-superapp-diego.json") }.firstOrNull { it.isFile }
         if (f == null) { println("UNVERIFIABLE here: cloud-infra is not checked out beside this repository"); return }
         val root = JSONObject(f.readText())
