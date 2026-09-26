@@ -242,6 +242,29 @@ const Tabs = {
     return tabId;
   },
 
+  // ── Store tab: unix package manager for the terminal environment
+  // (Termux `pkg` / `nix profile`), no visible PTY (store.js drives its own
+  // hidden one).
+  openStoreTab(profile = this.activeProfile) {
+    const tabId = "T" + ++this.seq;
+    const rootEl = document.createElement("div");
+    rootEl.className = "tab-root";
+    rootEl.dataset.id = tabId;
+    document.getElementById("terms").appendChild(rootEl);
+    Store.mount(rootEl);
+
+    const tabEl = document.createElement("div");
+    tabEl.className = "tab"; tabEl.dataset.id = tabId;
+    tabEl.innerHTML = `<span class="tab-icon">📦</span><span class="tab-title">Store</span><span class="tab-close">✕</span>`;
+    this._wireTabEl(tabEl, tabId);
+    document.getElementById("tabstrip").insertBefore(tabEl, document.getElementById("btn-newtab"));
+
+    this.tabs.set(tabId, { rootEl, tabEl, profile, isStore: true, icon: "📦", group: null });
+    this.order.push(tabId);
+    this.activate(tabId);
+    return tabId;
+  },
+
   // ── File editor tab: plain textarea editor, no PTY. ponytail: syntax
   // highlighting later — this is deliberately just a <textarea>, no
   // CodeMirror/Monaco dependency.
@@ -317,6 +340,7 @@ const Tabs = {
     if (p.browser) this.openBrowserTab((window.Configs && Configs.get(Configs.KEYS.browserUrl)) || p.url, name);
     else if (p.filebrowser) this.openFileBrowserTab((window.Configs && Configs.get(Configs.KEYS.fbPath)) || p.start_path || "~", name);
     else if (p.fileeditor) this.openFileEditorTab((window.Configs && Configs.get(Configs.KEYS.fePath)) || null, name);
+    else if (p.store) this.openStoreTab(name);
     else this.newTab(name);
   },
 
@@ -349,6 +373,7 @@ const Tabs = {
       if (t.isBrowser) return { profile: t.profile, kind: "browser", url: t.rootEl.querySelector(".browser-addr-input")?.value };
       if (t.isFileBrowser) return { profile: t.profile, kind: "filebrowser", startPath: t.rootEl.querySelector(".fb-addr-input")?.value };
       if (t.isFileEditor) return { profile: t.profile, kind: "fileeditor", path: t.rootEl.querySelector(".editor-path-input")?.value };
+      if (t.isStore) return { profile: t.profile, kind: "store" };
       return { profile: t.profile, kind: "shell" };
     });
     localStorage.setItem("myk-session", JSON.stringify(snap));
@@ -362,6 +387,7 @@ const Tabs = {
       if (t.kind === "browser") this.openBrowserTab(t.url, t.profile);
       else if (t.kind === "filebrowser") this.openFileBrowserTab(t.startPath || "~", t.profile);
       else if (t.kind === "fileeditor") this.openFileEditorTab(t.path || null, t.profile);
+      else if (t.kind === "store") this.openStoreTab(t.profile);
       else await this.newTab(t.profile);
     }
   },

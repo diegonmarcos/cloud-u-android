@@ -122,13 +122,14 @@
   document.getElementById("about-close").addEventListener("click", () => { document.getElementById("about").hidden = true; });
 
   // Row 1 (Home): File Browser / Browser / Agentic are PROFILES (own left-side
-  // commands + own independent tab group via switchProfile). File Editor is a
-  // plain action (there is no file-editor profile).
+  // commands + own independent tab group via switchProfile). File Editor and
+  // Store are plain actions (there is no file-editor or store profile).
   const goProfile = (name, el) => { const p = profiles.find((x) => x.name === name); if (p) selectProfile(p, el); };
   document.getElementById("btn-home-filebrowser").addEventListener("click", (e) => goProfile("file-browser", e.currentTarget));
   document.getElementById("btn-home-fileeditor").addEventListener("click", (e) => selectProfile({ name: "file-editor", display_name: "File Editor", fileeditor: true }, e.currentTarget));
   document.getElementById("btn-home-browser").addEventListener("click", (e) => goProfile("web-browser", e.currentTarget));
   document.getElementById("btn-home-agentic").addEventListener("click", (e) => goProfile("agentic", e.currentTarget));
+  document.getElementById("btn-home-store").addEventListener("click", (e) => selectProfile({ name: "store", display_name: "Store", store: true }, e.currentTarget));
   // About lives in the Configs (⋮ → menu-about) dropdown now — no standalone button.
 
   // Sidebar view switcher: Commands (search + per-profile items) | Tabs (vertical, grouped)

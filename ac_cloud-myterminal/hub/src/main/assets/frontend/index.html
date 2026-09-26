@@ -17,6 +17,7 @@
         <button class="home-btn" id="btn-home-fileeditor">File Editor</button>
         <button class="home-btn" id="btn-home-browser">Browser</button>
         <button class="home-btn" id="btn-home-agentic">Agentic</button>
+        <button class="home-btn" id="btn-home-store">Store</button>
       </div>
       <div id="menu-wrap">
         <button id="btn-menu" title="Configs">Configs ▾</button>
@@ -106,6 +107,10 @@
           <div class="cfg-hint">Runs as a shell profile — its commands appear in the left sidebar when selected.</div>
         </section>
         <section class="cfg-section">
+          <div class="cfg-section-title">Store</div>
+          <div class="cfg-hint">Package manager for the terminal environment (Termux `pkg` or `nix profile`, auto-detected).</div>
+        </section>
+        <section class="cfg-section">
           <div class="cfg-section-title">Dev Control</div>
           <div class="cfg-hint">Logcat viewer, copy, export, and a local dev API.</div>
           <button id="cfg-dev-open" class="cfg-btn">Open Dev Control</button>
@@ -119,6 +124,7 @@
   <script src="js/transport.js"></script>
   <script src="js/term.js"></script>
   <script src="js/filebrowser.js"></script>
+  <script src="js/store.js"></script>
   <script src="js/tabs.js"></script>
   <script src="js/palette.js"></script>
   <script>
