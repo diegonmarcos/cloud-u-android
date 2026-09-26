@@ -41,8 +41,8 @@ android {
     defaultConfig {
         applicationId "cld.termux"
         applicationIdSuffix ".nix"
-        versionCode 188037
-        versionName "0.118.0_v0.3.7_nix"
+        versionCode 188038
+        versionName "0.118.0_v0.3.8_nix"
         // fdroid checkupdates looks for literal versionCode/versionName,
         // can't get fancy with these and use string interpolation and similar
         ndk {
@@ -370,15 +370,38 @@ task bakeBootstrap() {
         def patcher = new File(projectDir, "src/main/cpp/patch_bootstrap_ids.py")
         if (!patcher.exists())
             throw new GradleException("missing " + patcher + " (the app-id rewrite gate)")
-        def baked = new File(bootstrapAssetsDir, spec.asset_name)
+        def idPatched = new File(bootstrapAssetsDir, spec.asset_name + ".idpatched")
         def result = exec {
-            commandLine "python3", patcher.absolutePath, downloaded.absolutePath, baked.absolutePath,
+            commandLine "python3", patcher.absolutePath, downloaded.absolutePath, idPatched.absolutePath,
                     rewrite.from + "=" + rewrite.to
             ignoreExitValue = true
         }
         if (result.exitValue != 0)
             throw new GradleException("patch_bootstrap_ids.py failed for " + downloaded
                     + " (exit " + result.exitValue + "); see log above")
+
+        // #595 -- agent tooling (git, node, claude), baked into the same store
+        // this bootstrap already carries, so the terminal opens ready-to-use
+        // instead of needing upstream's interactive, networked setup wizard.
+        def tooling = spec.default_packages
+        def baked = new File(bootstrapAssetsDir, spec.asset_name)
+        if (tooling == null) {
+            idPatched.renameTo(baked)
+        } else {
+            def toolingBaker = new File(projectDir, "src/main/cpp/bake_default_packages.py")
+            if (!toolingBaker.exists())
+                throw new GradleException("missing " + toolingBaker + " (the default-tooling bake gate)")
+            def toolingResult = exec {
+                commandLine "python3", toolingBaker.absolutePath, idPatched.absolutePath, baked.absolutePath,
+                        tooling.nixpkgs_pin, tooling.attrs.join(","), tooling.profile_link,
+                        tooling.fallback_init_script, rewrite.to
+                ignoreExitValue = true
+            }
+            idPatched.delete()
+            if (toolingResult.exitValue != 0)
+                throw new GradleException("bake_default_packages.py failed (exit " + toolingResult.exitValue
+                        + "); see log above")
+        }
 
         logger.quiet("bakeBootstrap: " + abi + " -> assets/" + spec.asset_name
                 + " (" + baked.length() + " B, from " + downloaded.length() + " B)")

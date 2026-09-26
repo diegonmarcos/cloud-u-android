@@ -125,6 +125,19 @@ jobs:
           sudo chmod +x /usr/local/bin/sops
           sops --version
 
+      # #595 -- bakeBootstrap (invoked by the gradle build below) shells out to
+      # bake_default_packages.py, which realizes git/nodejs_22/claude-code from
+      # nixpkgs via `nix profile install`. Nothing else in this job uses Nix
+      # (BYPASS_NIX=1 below is unrelated: it only tells the fork engine not to
+      # materialize the ANDROID build through Nix), so this is the one step
+      # that needs it, and only for that one gradle task.
+      - name: Install Nix (for baking default agent tooling into the bootstrap)
+        if: steps.gate.outputs.skip != 'true'
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          extra-conf: |
+            access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
       # Vendored in-repo: the tree is committed and has no .git, so the engine
       # reads it straight from here and never clones.
       - name: Materialize fork (vendored in-repo tree)

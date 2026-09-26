@@ -133,5 +133,57 @@ else
     bad "app/src/main/cpp/patch_bootstrap_ids.py is missing or dangling — the bake step would fail, or worse, bake an unpatched rootfs"
 fi
 
+
+# ── #595 — agent tooling (git, node, claude) baked into the same store ─────
+PIN="$(q forks.nixdroid.bootstrap.default_packages.nixpkgs_pin)"
+PROFILE_LINK="$(q forks.nixdroid.bootstrap.default_packages.profile_link)"
+FALLBACK="$(q forks.nixdroid.bootstrap.default_packages.fallback_init_script)"
+ATTRS="$(python3 -c "
+import json
+attrs = json.load(open('$BUILD_JSON'))['forks']['nixdroid']['bootstrap']['default_packages']['attrs']
+print(' '.join(attrs))
+" 2>/dev/null)"
+if [ -n "$PIN" ] && [ -n "$PROFILE_LINK" ] && [ -n "$FALLBACK" ] && [ -n "$ATTRS" ]; then
+    ok "build.json declares default_packages (pin $(echo "$PIN" | cut -c1-12)..., attrs: $ATTRS)"
+else
+    bad "build.json has no complete forks.nixdroid.bootstrap.default_packages block — a fresh install would ship Nix and nothing else"
+fi
+
+# B2 — for every declared attr's binaries, something declares what to expect on PATH.
+if python3 -c "
+import json, sys
+d = json.load(open('$BUILD_JSON'))['forks']['nixdroid']['bootstrap']['default_packages']
+attrs, provides, binaries = set(d.get('attrs', [])), d.get('provides', {}), set(d.get('binaries', []))
+missing_provides = attrs - set(provides)
+provided = {b for bins in provides.values() for b in bins}
+sys.exit(0 if not missing_provides and provided <= binaries else 1)
+" 2>/dev/null; then
+    ok "every declared attr has a provides[] entry, and binaries[] covers all of them"
+else
+    bad "default_packages.provides/binaries are incomplete for the declared attrs"
+fi
+
+# B3 — the bake script this all runs through is reachable.
+if [ -r "$DIR/app/src/main/cpp/bake_default_packages.py" ]; then
+    ok "bake_default_packages.py is reachable from this app"
+else
+    bad "app/src/main/cpp/bake_default_packages.py is missing or dangling — bakeBootstrap would fail as soon as default_packages is declared"
+fi
+
+# B4 — bakeBootstrap actually wires the tooling bake step in after the id rewrite.
+if grep -q 'bake_default_packages.py' "$GRADLE" && grep -q 'tooling.nixpkgs_pin' "$GRADLE"; then
+    ok "app/build.gradle chains bake_default_packages.py after patch_bootstrap_ids.py"
+else
+    bad "app/build.gradle does not invoke bake_default_packages.py with the build.json declaration"
+fi
+
+# B5 — the CI workflow that runs bakeBootstrap installs Nix to run it with.
+WORKFLOW="$(cd "$DIR/.." && pwd)/.github/workflows/ship-cloud-nix-on-droid.yml"
+if [ -r "$WORKFLOW" ] && grep -qi 'nix-installer-action\|install-nix-action' "$WORKFLOW"; then
+    ok "ship-cloud-nix-on-droid.yml installs Nix before the gradle build that bakes it in"
+else
+    bad "ship-cloud-nix-on-droid.yml ($WORKFLOW) does not install Nix — bake_default_packages.py would fail with 'nix: command not found'"
+fi
+
 echo "── $fails failed ──"
 [ "$fails" -eq 0 ]

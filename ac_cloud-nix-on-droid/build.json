@@ -56,7 +56,25 @@
             "size": 39291055
           }
         },
-        "_doc_archs": "Keyed by the Android ABI in release.variants[].abis, valued with the arch token upstream names the zip after and the pin for it. size is the unpatched download; the patched copy is slightly larger because re-deflating is not byte-identical (aarch64 37,671,948 -> 37,841,339; x86_64 39,291,055 -> 39,515,852), which is why only sha256 is enforced and size is documentation."
+        "_doc_archs": "Keyed by the Android ABI in release.variants[].abis, valued with the arch token upstream names the zip after and the pin for it. size is the unpatched download; the patched copy is slightly larger because re-deflating is not byte-identical (aarch64 37,671,948 -> 37,841,339; x86_64 39,291,055 -> 39,515,852), which is why only sha256 is enforced and size is documentation.",
+        "default_packages": {
+          "_doc": "#595 -- agent tooling BAKED into the store this terminal ships, same 'no first-run install' rule #348 applied to the runtime itself. Without this block a fresh install has Nix and nothing else: upstream's own first login (usr/lib/login-inner) is an INTERACTIVE, NETWORKED wizard -- it prompts 'set up with flakes? (y/N)' on stdin and only then fetches/builds a config -- so 'open the terminal, run claude' would otherwise need a Y/N answer and a build before any tool exists. bakeBootstrap realizes these attrs as a real Nix profile generation on the CI runner (native: the runner's CPU already matches system, no proot/qemu needed for the BUILD, only the shipped rootfs needs proot to RUN on Android) and bake_default_packages.py copies that generation's whole closure into the same nix/store/ the id-rewrite already produced, points nix/var/nix/profiles/per-user/nix-on-droid/profile at it, drops etc/UNINTIALISED so the wizard is skipped, and patches usr/lib/login-inner's one unconditional session-init line to fall back to a baked PATH script when $HOME/.nix-profile (which the wizard would have created) does not exist.",
+          "nixpkgs_pin": "e94cb152ed51bd6e24eb4a41f1460252beb52cd2",
+          "_doc_nixpkgs_pin": "nixos-unstable HEAD as of 2026-09-25, read via github:NixOS/nixpkgs/<pin>#<attr> flake refs so the CI-built closure is reproducible. All three attrs below are stdenv-built nixpkgs packages (not raw npm/apt), so their ELF interpreters are already patched to /nix/store paths -- the same mechanism every other binary already in this bootstrap relies on to run under the shipped proot with no generic /lib.",
+          "attrs": [
+            "git",
+            "nodejs_22",
+            "claude-code"
+          ],
+          "provides": {
+            "git": ["git"],
+            "nodejs_22": ["node", "npm", "npx"],
+            "claude-code": ["claude"]
+          },
+          "profile_link": "nix/var/nix/profiles/per-user/nix-on-droid/profile",
+          "fallback_init_script": "usr/lib/cloud-agent-tools-init.sh",
+          "binaries": ["git", "node", "npm", "npx", "claude"]
+        }
       }
     }
   },
