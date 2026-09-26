@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,15 +40,23 @@ import com.diegonmarcos.superapp.bottomnav.rememberBottomNavCollapse
  *
  * The dispatch on a tab id is the ONE place Kotlin names the ids; test-drive-shell.sh
  * diffs it against the declaration in both directions.
+ *
+ * #603 [select] is a DECLARED tab id a screen asked for (an Apps tile's route): the
+ * shell selects it once and calls [onSelected] so the request is not re-applied on
+ * every recomposition. An id that is not declared is ignored, never a blank shell.
  */
 @Composable
-fun DriveShell(content: @Composable (tabId: String, reselectTick: Int) -> Unit) {
+fun DriveShell(select: String? = null, onSelected: () -> Unit = {}, content: @Composable (tabId: String, reselectTick: Int) -> Unit) {
     val tabs = Declarations.tabs
     var selected by rememberSaveable { mutableStateOf(Declarations.defaultTab.takeIf { d -> tabs.any { it.id == d } } ?: tabs.firstOrNull()?.id ?: "") }
     var reselectTick by rememberSaveable { mutableStateOf(0) }
     val collapse = rememberBottomNavCollapse()
     val insets = bottomNavInsets()
     val entries = tabs.map { BottomNavEntry(it.id, it.label, IconCatalog.painter(it.icon)) }
+    LaunchedEffect(select) {
+        if (select != null && tabs.any { it.id == select }) selected = select
+        if (select != null) onSelected()
+    }
 
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag(DriveTags.SHELL)) {
         Box(

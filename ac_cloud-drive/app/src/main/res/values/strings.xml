@@ -131,12 +131,33 @@
     <string name="files_rename_apply">Rename %1$d</string>
     <string name="files_rename_blocked">The preview found conflicts; fix the pattern</string>
 
+    <!-- Volumes (#603) -->
+    <string name="volumes_title">Volumes</string>
+    <string name="volumes_hint">This device\'s removable volumes and the fleet\'s mesh mounts</string>
+    <string name="volumes_device_section">Device volumes</string>
+    <string name="volumes_device_none">No removable volume</string>
+    <string name="volumes_device_none_hint">Nothing is attached, and no drive has been granted through the system picker</string>
+    <string name="volumes_open">Open in Files</string>
+
+    <!-- Home (#603) -->
+    <string name="home_title">Home</string>
+    <string name="home_hint">The drive at a glance</string>
+    <string name="home_stores_section">Stores</string>
+    <string name="home_open_files">Open in Files</string>
+    <string name="home_volumes_section">Volumes and mesh</string>
+    <string name="home_volumes_card">Volumes</string>
+    <string name="home_volumes_summary">%1$d device volume(s) · %2$d declared connection(s)</string>
+    <string name="home_open_volumes">Open Volumes</string>
+    <string name="home_history_section">Recent sync</string>
+    <string name="home_history_card">Sync history</string>
+    <string name="home_sync_now">Sync now</string>
+    <string name="home_open_configs">Open Configs</string>
+
     <!-- Apps -->
     <string name="apps_title">Apps</string>
     <string name="apps_hint">The fleet\'s data apps, from the constellation manifest</string>
 
     <!-- Sync -->
-    <string name="sync_title">Sync</string>
     <string name="sync_store">Store</string>
     <string name="sync_repos_count">%1$d repositories</string>
     <string name="sync_schedule">every %1$d min · %2$s</string>
@@ -233,7 +254,6 @@
     <string name="mounts_reachable">reachable · %1$d entries</string>
 
     <!-- Backups -->
-    <string name="backups_title">Backups</string>
     <string name="backups_mirrors_section">On-device mirrors</string>
     <string name="backups_fleet_section">Fleet repositories</string>
     <string name="backups_run">Run</string>
@@ -263,6 +283,7 @@
     <string name="configs_sync_schedule_body">Declared in build.json::storage.git_sync; per-repository periods sit on each repo card</string>
     <string name="configs_removable">Removable storage</string>
     <string name="configs_removable_none">No storage drive granted</string>
+    <string name="configs_removable_volumes">%1$d removable volume(s) visible to this app</string>
     <string name="configs_forget_grant">Forget</string>
     <string name="configs_grant_tree">Grant a drive…</string>
     <string name="configs_about">About</string>

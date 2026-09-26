@@ -28,6 +28,8 @@
    "label": "cloud-infra",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
+   "public": true,
+   "seed": true,
    "notes": "Infrastructure declarations, keys, CI"
   },
   {
@@ -35,6 +37,8 @@
    "label": "cloud-infra-desktop",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
+   "public": true,
+   "seed": true,
    "notes": "Desktop-NixOS twin of the cloud"
   },
   {
@@ -42,6 +46,8 @@
    "label": "cloud-u-android",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
+   "public": true,
+   "seed": true,
    "notes": "This app's own repository"
   },
   {
@@ -49,6 +55,8 @@
    "label": "cloud-u-containers",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
+   "public": true,
+   "seed": true,
    "notes": "Container compose declarations"
   },
   {
@@ -56,6 +64,8 @@
    "label": "cloud-u-linux",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
+   "public": true,
+   "seed": true,
    "notes": "Linux fleet configs"
   },
   {
@@ -63,6 +73,8 @@
    "label": "front-assets-cdn",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
+   "public": true,
+   "seed": true,
    "notes": "Static assets"
   },
   {
@@ -70,6 +82,7 @@
    "label": "front-data",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
+   "private": true,
    "notes": "Front-end data feeds"
   },
   {
@@ -77,6 +90,8 @@
    "label": "front · site",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
+   "public": true,
+   "seed": true,
    "notes": "The public site"
   },
   {
@@ -89,5 +104,6 @@
   }
  ],
  "_doc_clone": "#575 Every repository here is cloned INTO THE ONE SHARED STORE (ac_cloud-drive/build.json::storage.shared_root) as <root>/<name>, by the page's Clone/Open button: the target folder and the upstream URL (https://<github host>/<github_owner>/<name>.git, composed from the github instance above) are handed to the native git manager (libs:git-sync), which asks only for a token when the repository is private. A folder that already holds the clone opens instead of cloning. Nothing here is a path: the root lives in build.json and the page reads it through FilesBridge.sharedRoot().",
- "_doc_private": "private: true marks a repository the anonymous read cannot fetch: the git manager stores the HTTPS token the user types in its keystore-backed credential store (GitCredentialStore), never in this file and never in .git/config."
+ "_doc_private": "private: true marks a repository the anonymous read cannot fetch: the git manager stores the HTTPS token the user types in its keystore-backed credential store (GitCredentialStore), never in this file and never in .git/config.",
+ "_doc_seed": "#603 SEEDING THE SHARED STORE. `seed: true` marks a repository the store is populated with on FIRST RUN (build.json::storage.seed): StoreSeed registers it in libs:git-sync's RepoRegistry as <shared_root>/<name> and clones it SHALLOW (depth 1) through GitEngine.clone — no second git, and no clone bytes inside the APK, which could not carry them and would ship them stale. PUBLIC REPOSITORIES ONLY, and that is not a preference: an anonymous clone of a private repository fails every time, so seeding one would bake a permanent red. `public: true` states the fact the flag rests on. Every repository marked `private: true` here (cloud-data-my-ai-memory, front-data) carries NO seed flag and stays declared-not-cloned on the Git sub-page, where the user can type the HTTPS token the credential store then holds."
 }

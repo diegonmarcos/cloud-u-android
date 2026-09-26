@@ -30,21 +30,21 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.diegonmarcos.clouddrive.apps.AppsScreen
-import com.diegonmarcos.clouddrive.backups.BackupsScreen
 import com.diegonmarcos.clouddrive.backups.MirrorRunner
 import com.diegonmarcos.clouddrive.configs.ConfigsScreen
 import com.diegonmarcos.clouddrive.files.FilesController
 import com.diegonmarcos.clouddrive.files.FilesScreen
 import com.diegonmarcos.clouddrive.files.FilesUiState
 import com.diegonmarcos.clouddrive.files.Places
+import com.diegonmarcos.clouddrive.home.HomeScreen
 import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
 import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
-import com.diegonmarcos.clouddrive.sync.SyncScreen
 import com.diegonmarcos.clouddrive.ui.DriveShell
 import com.diegonmarcos.clouddrive.ui.DriveTheme
 import com.diegonmarcos.clouddrive.ui.EmptyState
 import com.diegonmarcos.clouddrive.ui.IconCatalog
 import com.diegonmarcos.clouddrive.viewer.ImageViewerActivity
+import com.diegonmarcos.clouddrive.volumes.VolumesScreen
 import com.diegonmarcos.superapp.updater.Updater
 import java.io.File
 import androidx.compose.ui.res.stringResource
@@ -78,11 +78,20 @@ class MainActivity : ComponentActivity(), DriveActions {
             isAppearanceLightNavigationBars = false
         }
         prefs = DrivePrefs(this)
+        // #603 the Files tab is a manager over ALL of shared storage, so all-files access is
+        // asked for AT STARTUP rather than waited for: the same request ac_cloud-code makes
+        // (System.java manageAllFiles → ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, guarded
+        // by Environment.isExternalStorageManager), through this app's own helper so nothing is
+        // duplicated. A grant already held asks nothing; below Android 11 there is no such screen.
+        if (!Places.hasAllFilesAccess(this)) requestStorageAccess()
         EngineActivity.declareFromBuild(this)
         setContent { DriveTheme { Root() } }
         Updater.start(this)
         // #575 the GitSync scheduler: repositories that opted in sync in the background.
         GitSyncWorker.schedule(this)
+        // #603 the shared store's first-run seed (build.json::storage.seed): the declared PUBLIC
+        // repositories, cloned shallow into the store the first time it does not hold them.
+        StoreSeedWorker.schedule(this)
     }
 
     @Composable
@@ -110,14 +119,22 @@ class MainActivity : ComponentActivity(), DriveActions {
         val rclone = remember { RcloneCoordinator(applicationContext, scope, prefs) }
         val mirrors = remember { MirrorRunner(scope, prefs) }
         val rcloneVersion by rclone.version.collectAsState()
+        // #603 a screen may ask for another tab (an Apps tile's route, a Home quick action):
+        // the request is a tab id and, optionally, a Configs sub-page id, applied once by the
+        // shell and by ConfigsScreen and then cleared.
+        var jumpTab by remember { mutableStateOf<String?>(null) }
+        var jumpPage by remember { mutableStateOf<String?>(null) }
+        val jump: (String, String) -> Unit = { tab, page -> jumpPage = page.ifBlank { null }; jumpTab = tab }
+        val openPath: (String) -> Unit = { path -> filesController?.reveal(path); jumpTab = "files" }
+        val syncAll: () -> Unit = { git.repos.value.filter { it.autoSync }.forEach { git.syncNow(it) } }
 
-        DriveShell { tabId, _ ->
+        DriveShell(select = jumpTab, onSelected = { jumpTab = null }) { tabId, _ ->
             when (tabId) {
                 "files" -> FilesScreen(files, this, hasAccess)
-                "apps" -> AppsScreen(this)
-                "sync" -> SyncScreen(git, rclone, prefs, this)
-                "backups" -> BackupsScreen(mirrors, prefs)
-                "configs" -> ConfigsScreen(prefs, this, hasAccess, rcloneVersion)
+                "volumes" -> VolumesScreen(rclone, prefs, this, openPath)
+                "home" -> HomeScreen(git, prefs, onOpenFiles = { jumpTab = "files" }, onOpenVolumes = { jumpTab = "volumes" }, onOpenConfigs = { jumpTab = "configs" }, onSyncAll = syncAll)
+                "apps" -> AppsScreen(this, jump)
+                "configs" -> ConfigsScreen(git, rclone, mirrors, prefs, this, hasAccess, rcloneVersion, jumpPage, onPageConsumed = { jumpPage = null })
                 else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "", Modifier)
             }
         }

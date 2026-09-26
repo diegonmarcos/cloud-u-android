@@ -39,7 +39,6 @@ import com.diegonmarcos.clouddrive.ui.ProgressCard
 import com.diegonmarcos.clouddrive.ui.SectionHeader
 import com.diegonmarcos.clouddrive.ui.StatusLight
 import com.diegonmarcos.clouddrive.ui.StatusLightRow
-import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -95,50 +94,49 @@ fun BackupsScreen(runner: MirrorRunner, prefs: DrivePrefs, modifier: Modifier = 
     val jobs = Declarations.mirrorJobs
     val fleet = Declarations.connections.filter { it.kind == "borg" || it.kind == "bup" }
     val fmt = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
-    Column(modifier.fillMaxSize()) {
-        ToolbarIsland(title = stringResource(R.string.backups_title))
-        LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-            item { SectionHeader(stringResource(R.string.backups_mirrors_section), count = jobs.size) }
-            if (jobs.isEmpty()) item { EmptyState(Icons.Filled.Backup, stringResource(R.string.backups_empty), stringResource(R.string.backups_empty_hint)) }
-            items(jobs, key = { it.name }) { job ->
-                // snap is read so a finished run's stored result re-renders the card.
-                @Suppress("UNUSED_VARIABLE") val tick = snap
-                val last = prefs.mirrorResult(job.name)
-                val run = runs[job.name]
-                val running = run != null && !run.done
-                val light = when {
-                    last == null -> StatusLight.State.UNKNOWN
-                    last.third -> StatusLight.State.ON
-                    else -> StatusLight.State.OFF
-                }
-                DriveCard(job.name, badge = if (job.delete) stringResource(R.string.backups_delete_badge) else null, light = light, summary = "${job.source}  →  ${job.destination}", summaryMonospace = true, tag = DriveTags.BACKUPS_MIRROR_CARD) {
-                    if (job.notes.isNotBlank()) Text(job.notes, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        if (last != null) stringResource(R.string.backups_last_run, fmt.format(Date(last.first * 1000)), last.second) else stringResource(R.string.backups_never_run),
-                        Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis,
+    // #603 a Configs SUB-PAGE, not a tab: the island and the page's name are drawn once
+    // by ConfigsScreen from ui.configs.pages, so this screen is its card list and nothing else.
+    LazyColumn(modifier.fillMaxSize()) {
+        item { SectionHeader(stringResource(R.string.backups_mirrors_section), count = jobs.size) }
+        if (jobs.isEmpty()) item { EmptyState(Icons.Filled.Backup, stringResource(R.string.backups_empty), stringResource(R.string.backups_empty_hint)) }
+        items(jobs, key = { it.name }) { job ->
+            // snap is read so a finished run's stored result re-renders the card.
+            @Suppress("UNUSED_VARIABLE") val tick = snap
+            val last = prefs.mirrorResult(job.name)
+            val run = runs[job.name]
+            val running = run != null && !run.done
+            val light = when {
+                last == null -> StatusLight.State.UNKNOWN
+                last.third -> StatusLight.State.ON
+                else -> StatusLight.State.OFF
+            }
+            DriveCard(job.name, badge = if (job.delete) stringResource(R.string.backups_delete_badge) else null, light = light, summary = "${job.source}  →  ${job.destination}", summaryMonospace = true, tag = DriveTags.BACKUPS_MIRROR_CARD) {
+                if (job.notes.isNotBlank()) Text(job.notes, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    if (last != null) stringResource(R.string.backups_last_run, fmt.format(Date(last.first * 1000)), last.second) else stringResource(R.string.backups_never_run),
+                    Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                )
+                if (running && run != null) {
+                    ProgressCard(
+                        title = job.name,
+                        detail = stringResource(R.string.backups_scanning, run.tally.scanned, run.current) + "\n" + stringResource(R.string.backups_result, run.tally.copied, run.tally.skipped, run.tally.deleted, run.tally.failed),
+                        onCancel = { runner.cancel(job) },
                     )
-                    if (running && run != null) {
-                        ProgressCard(
-                            title = job.name,
-                            detail = stringResource(R.string.backups_scanning, run.tally.scanned, run.current) + "\n" + stringResource(R.string.backups_result, run.tally.copied, run.tally.skipped, run.tally.deleted, run.tally.failed),
-                            onCancel = { runner.cancel(job) },
-                        )
-                    }
-                    PillRow { Pill(stringResource(R.string.backups_run), { runner.run(job) }, icon = Icons.Filled.PlayArrow, filled = true, enabled = !running) }
                 }
+                PillRow { Pill(stringResource(R.string.backups_run), { runner.run(job) }, icon = Icons.Filled.PlayArrow, filled = true, enabled = !running) }
             }
-            item { SectionHeader(stringResource(R.string.backups_fleet_section), count = fleet.size) }
-            items(fleet, key = { "fleet-" + it.name }) { c ->
-                Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(c.name, style = MaterialTheme.typography.titleSmall)
-                        Text("${c.kind} · ${c.endpoint} · ${c.auth}", style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        if (c.notes.isNotBlank()) Text(c.notes, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    }
-                    StatusLightRow(if (c.status == "ok") StatusLight.State.UNVERIFIABLE else StatusLight.State.OFF, c.name)
+        }
+        item { SectionHeader(stringResource(R.string.backups_fleet_section), count = fleet.size) }
+        items(fleet, key = { "fleet-" + it.name }) { c ->
+            Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(c.name, style = MaterialTheme.typography.titleSmall)
+                    Text("${c.kind} · ${c.endpoint} · ${c.auth}", style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (c.notes.isNotBlank()) Text(c.notes, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
-                Hairline(Modifier.padding(horizontal = DriveMetrics.gutter))
+                StatusLightRow(if (c.status == "ok") StatusLight.State.UNVERIFIABLE else StatusLight.State.OFF, c.name)
             }
+            Hairline(Modifier.padding(horizontal = DriveMetrics.gutter))
         }
     }
 }

@@ -49,15 +49,20 @@ import kotlinx.coroutines.launch
  * from data/drive-apps.json resolved against the constellation manifest at build time.
  * A tile is the declared glyph in a raised disc plus its label; a tile whose package
  * is not on this device carries the ○ badge and says so on tap.
+ *
+ * #603 a tile that declares a `route` (GitSync, RSync) does not leave the app: it hands
+ * [onRoute] the DECLARED tab and sub-page ids and the shell selects them. Those two are
+ * shortcuts into Configs ▸ Git and Configs ▸ Backups, the screens #567 and #330 built —
+ * never a second copy, and never a package this device cannot have.
  */
 @Composable
-fun AppsScreen(actions: DriveActions, modifier: Modifier = Modifier) {
+fun AppsScreen(actions: DriveActions, onRoute: (tab: String, page: String) -> Unit, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val apps = Declarations.apps
     val installed = remember(apps) {
-        apps.associate { a -> a.label to (a.packageName.isNotBlank() && runCatching { ctx.packageManager.getLaunchIntentForPackage(a.packageName) }.getOrNull() != null) }
+        apps.associate { a -> a.label to (a.routeTab.isNotBlank() || (a.packageName.isNotBlank() && runCatching { ctx.packageManager.getLaunchIntentForPackage(a.packageName) }.getOrNull() != null)) }
     }
     Column(modifier.fillMaxSize()) {
         ToolbarIsland(title = stringResource(R.string.apps_title), subtitle = stringResource(R.string.apps_hint))
@@ -73,8 +78,12 @@ fun AppsScreen(actions: DriveActions, modifier: Modifier = Modifier) {
                 Column(
                     Modifier.clip(RoundedCornerShape(DriveMetrics.cardRadius)).background(MaterialTheme.colorScheme.surface)
                         .clickable {
-                            val ok = actions.launchApp(app.packageName, app.fallbackUrl)
-                            if (!ok) scope.launch { snackbar.showSnackbar(ctx.getString(R.string.chrome_not_installed, app.label)) }
+                            if (app.routeTab.isNotBlank()) {
+                                onRoute(app.routeTab, app.routePage)
+                            } else {
+                                val ok = actions.launchApp(app.packageName, app.fallbackUrl)
+                                if (!ok) scope.launch { snackbar.showSnackbar(ctx.getString(R.string.chrome_not_installed, app.label)) }
+                            }
                         }
                         .padding(vertical = 14.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,

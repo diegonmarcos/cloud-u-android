@@ -259,7 +259,7 @@ check, read/write text atomically, thumbnails, EXIF, rotate-by-tag.
 * **Open** opens the engine's full manager on the repository (changes, log,
   branches, remotes, settings). **History** expands the repository's own
   entries of the log inline. **Settings** opens a sheet: auto-sync on/off,
-  period (chips: 15 · 30 · 60 · 180 · 360 min, from `ui.sync.git_periods_minutes`),
+  period (chips: 15 · 30 · 60 · 180 · 360 min, from `ui.configs.git_periods_minutes`),
   network rule (any / unmetered only), auth kind (none / HTTPS token / SSH
   key: username, token/passphrase, key path — secrets in `GitCredentialStore`),
   author, pull-rebase, sync message, remove-from-list. It writes the
@@ -350,10 +350,13 @@ holds the one engine and both doors to it.
 
 ```
 ui.tabs[]                 {id,label,icon}     the five tabs, in order
+                                              (#603: files · volumes · home · apps · configs)
 ui.default_tab            "files"
-ui.sync.pages[]           {id,label,icon}     git · rclone · mounts
-ui.sync.git_periods_minutes [15,30,60,180,360]
-ui.files.places[]         {id,label,icon,kind,dir?|path?,hero?}
+ui.configs.pages[]        {id,label,icon}     #603 git · rclone · mounts ·
+                                              backups · general · others
+ui.configs.git_periods_minutes [15,30,60,180,360]
+ui.files.sections[]       {id,label,icon}     #603 emulated · cloud-drive-storage
+ui.files.places[]         {id,label,icon,kind,section,dir?|path?,hero?}
 ui.files.sort_keys[]      name size modified type
 ui.files.default_sort     name
 ui.files.filters[]        {id,label,icon,mime_prefix?|mime?|extensions?}
@@ -362,8 +365,10 @@ ui.files.default_dual_pane true
 ui.files.tabs_per_pane_max 6
 ui.files.text_extensions[] (what opens in the editor besides text/*)
 ui.icons._default          "circle"
+storage.seed              {enabled,manifest,depth,public_only}  #603 first-run store seed
 ```
-Baked as `UI_TABS_B64`, `UI_SYNC_B64`, `UI_FILES_B64`, `UI_ICON_DEFAULT`.
+Baked as `UI_TABS_B64`, `UI_CONFIGS_B64`, `UI_FILES_B64`, `UI_ICON_DEFAULT`,
+`SEED_ENABLED`, `SEED_DEPTH`.
 `Declarations.kt` decodes them once; nothing else reads BuildConfig blobs.
 
 ## 9. What is deleted

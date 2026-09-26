@@ -99,6 +99,10 @@ object DriveTags {
     const val SYNC_MOUNT_CARD = "sync_mount_card"
     const val SYNC_CONNECTION_ROW = "sync_connection_row"
 
+    const val CONFIGS_STRIP = "configs_strip"
+    const val VOLUMES_CARD = "volumes_card"
+    const val HOME_CARD = "home_card"
+    const val HOME_STORAGE_BAR = "home_storage_bar"
     const val APPS_GRID = "apps_grid"
     const val BACKUPS_MIRROR_CARD = "backups_mirror_card"
     const val CONFIGS_CARD = "configs_card"
@@ -274,6 +278,23 @@ fun ProgressCard(title: String, detail: String, fraction: Float? = null, onCance
         if (fraction != null) LinearProgressIndicator(progress = { fraction.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
         else LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
         Text(detail, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
+ * #603 THE storage bar of the chrome, one declaration: the used fraction as a pill-shaped
+ * indicator over "<free> free of <total>". Was private to the Files pane until Home needed
+ * the same bar for the same two stores; two bars drawn from one number is how they drift.
+ *
+ * @param usage available bytes to total bytes, as StatFs reports them.
+ */
+@Composable
+fun StorageBar(usage: Pair<Long, Long>, label: String, modifier: Modifier = Modifier, tag: String = DriveTags.FILES_STORAGE_BAR) {
+    val (free, total) = usage
+    val used = if (total > 0) ((total - free).toDouble() / total).toFloat().coerceIn(0f, 1f) else 0f
+    Column(modifier.fillMaxWidth().testTag(tag).padding(horizontal = 12.dp, vertical = 4.dp)) {
+        LinearProgressIndicator(progress = { used }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(bottomNavPillShape))
+        Text(label, Modifier.padding(top = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

@@ -256,7 +256,7 @@ private fun RepoSettingsSheet(repo: ManagedRepo, coordinator: GitSyncCoordinator
     var message by remember { mutableStateOf(repo.syncMessage) }
     var confirmRemove by remember { mutableStateOf(false) }
     val hasSecret = remember(repo.id) { coordinator.hasSecret(repo) }
-    val periods = Declarations.sync.gitPeriodsMinutes
+    val periods = Declarations.configs.gitPeriodsMinutes
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 32.dp)) {

@@ -12,8 +12,8 @@ import kotlinx.serialization.json.intOrNull
 
 /**
  * #579 THE ONE reader of the build-time declarations. app/build.gradle bakes every
- * declarative list this app renders — build.json::ui (tabs, sync pages, files
- * places/filters), data/drive-*.json — into BuildConfig as base64 JSON; this file
+ * declarative list this app renders — build.json::ui (tabs, configs pages, files
+ * sections/places/filters), data/drive-*.json — into BuildConfig as base64 JSON; this file
  * decodes each ONCE into typed models and nothing else touches a BuildConfig blob.
  *
  * The parse functions take the JSON text, not BuildConfig, so the JVM suite
@@ -25,10 +25,14 @@ object Declarations {
 
     data class TabDecl(val id: String, val label: String, val icon: String)
     data class PageDecl(val id: String, val label: String, val icon: String)
-    data class SyncDecl(val pages: List<PageDecl>, val gitPeriodsMinutes: List<Int>)
+    /** #603 the Configs strip: the six sub-pages and the per-repository period choices the Git page offers. */
+    data class ConfigsDecl(val pages: List<PageDecl>, val gitPeriodsMinutes: List<Int>)
+
+    /** #603 a section header of the Files navigator; [PlaceDecl.section] names one of these. */
+    data class SectionDecl(val id: String, val label: String, val icon: String)
 
     /** kind: shared_root | external_root | public_dir (dir = Environment.DIRECTORY_<dir>) | external_path (path relative to shared storage). */
-    data class PlaceDecl(val id: String, val label: String, val icon: String, val kind: String, val dir: String, val path: String, val hero: Boolean)
+    data class PlaceDecl(val id: String, val label: String, val icon: String, val kind: String, val section: String, val dir: String, val path: String, val hero: Boolean)
 
     data class FilterDecl(val id: String, val label: String, val icon: String, val mime: String?, val mimePrefix: String?, val extensions: Set<String>) {
         /** Folders always pass so the tree stays walkable; `all` (no rule) passes everything. */
@@ -42,6 +46,7 @@ object Declarations {
     }
 
     data class FilesDecl(
+        val sections: List<SectionDecl>,
         val places: List<PlaceDecl>,
         val sortKeys: List<String>,
         val defaultSort: String,
@@ -52,10 +57,11 @@ object Declarations {
         val tabsPerPaneMax: Int,
     )
 
-    data class AppTileDecl(val label: String, val icon: String, val packageName: String, val fallbackUrl: String)
+    /** #603 [routeTab]/[routePage] non-blank ⇒ the tile stays in the app and selects that declared tab and sub-page. */
+    data class AppTileDecl(val label: String, val icon: String, val packageName: String, val fallbackUrl: String, val routeTab: String, val routePage: String)
     data class ConnectionDecl(val name: String, val kind: String, val endpoint: String, val auth: String, val vm: String, val status: String, val scope: String, val notes: String, val reason: String, val uri: String)
     data class GitInstanceDecl(val name: String, val kind: String, val org: String, val host: String, val port: Int?, val reachable: Boolean, val reach: String)
-    data class GitRepoDecl(val name: String, val label: String, val githubOwner: String, val giteaOwner: String, val private: Boolean, val notes: String)
+    data class GitRepoDecl(val name: String, val label: String, val githubOwner: String, val giteaOwner: String, val private: Boolean, val seed: Boolean, val notes: String)
     data class GitFamilyDecl(val instances: List<GitInstanceDecl>, val repos: List<GitRepoDecl>) {
         val upstream: GitInstanceDecl? get() = instances.firstOrNull { it.kind == "upstream" && it.host.isNotBlank() }
         /** `https://<upstream host>/<github_owner>/<name>.git` — the #575 composition, once. */
@@ -69,7 +75,7 @@ object Declarations {
 
     val tabs: List<TabDecl> by lazy { parseTabs(decode(BuildConfig.UI_TABS_B64)) }
     val defaultTab: String get() = BuildConfig.UI_DEFAULT_TAB
-    val sync: SyncDecl by lazy { parseSync(decode(BuildConfig.UI_SYNC_B64)) }
+    val configs: ConfigsDecl by lazy { parseConfigs(decode(BuildConfig.UI_CONFIGS_B64)) }
     val files: FilesDecl by lazy { parseFiles(decode(BuildConfig.UI_FILES_B64)) }
     val iconDefault: String get() = BuildConfig.UI_ICON_DEFAULT
     val apps: List<AppTileDecl> by lazy { parseApps(decode(BuildConfig.UI_APPS_B64)) }
@@ -99,18 +105,21 @@ object Declarations {
         TabDecl(id, o.str("label", id), o.str("icon"))
     }
 
-    fun parseSync(text: String): SyncDecl {
-        val o = element(text) as? JsonObject ?: return SyncDecl(emptyList(), emptyList())
+    fun parseConfigs(text: String): ConfigsDecl {
+        val o = element(text) as? JsonObject ?: return ConfigsDecl(emptyList(), emptyList())
         val pages = objects(o["pages"]).mapNotNull { p -> val id = p.str("id"); if (id.isBlank()) null else PageDecl(id, p.str("label", id), p.str("icon")) }
         val periods = (o["git_periods_minutes"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.intOrNull }?.filter { it >= 15 } ?: emptyList()
-        return SyncDecl(pages, periods)
+        return ConfigsDecl(pages, periods)
     }
 
     fun parseFiles(text: String): FilesDecl {
-        val o = element(text) as? JsonObject ?: return FilesDecl(emptyList(), listOf("name"), "name", emptyList(), emptySet(), emptySet(), true, 6)
+        val o = element(text) as? JsonObject ?: return FilesDecl(emptyList(), emptyList(), listOf("name"), "name", emptyList(), emptySet(), emptySet(), true, 6)
+        val sections = objects(o["sections"]).mapNotNull { s ->
+            val id = s.str("id"); if (id.isBlank()) null else SectionDecl(id, s.str("label", id), s.str("icon"))
+        }
         val places = objects(o["places"]).mapNotNull { p ->
             val id = p.str("id"); if (id.isBlank()) return@mapNotNull null
-            PlaceDecl(id, p.str("label", id), p.str("icon"), p.str("kind"), p.str("dir"), p.str("path"), p.bool("hero"))
+            PlaceDecl(id, p.str("label", id), p.str("icon"), p.str("kind"), p.str("section"), p.str("dir"), p.str("path"), p.bool("hero"))
         }
         val filters = objects(o["filters"]).mapNotNull { f ->
             val id = f.str("id"); if (id.isBlank()) return@mapNotNull null
@@ -118,6 +127,7 @@ object Declarations {
         }
         val sortKeys = o.strings("sort_keys").ifEmpty { listOf("name") }
         return FilesDecl(
+            sections = sections,
             places = places,
             sortKeys = sortKeys,
             defaultSort = o.str("default_sort", sortKeys.first()),
@@ -131,7 +141,8 @@ object Declarations {
 
     fun parseApps(text: String): List<AppTileDecl> = objects(element(text)).mapNotNull { a ->
         val label = a.str("label"); if (label.isBlank()) return@mapNotNull null
-        AppTileDecl(label, a.str("icon"), a.str("package"), a.str("fallback_url"))
+        val route = a["route"] as? JsonObject
+        AppTileDecl(label, a.str("icon"), a.str("package"), a.str("fallback_url"), route?.str("tab") ?: "", route?.str("page") ?: "")
     }
 
     fun parseConnections(text: String): List<ConnectionDecl> = objects(element(text)).mapNotNull { c ->
@@ -147,7 +158,7 @@ object Declarations {
         }
         val repos = objects(o["repos"]).mapNotNull { r ->
             val name = r.str("name"); if (name.isBlank()) return@mapNotNull null
-            GitRepoDecl(name, r.str("label", name), r.str("github_owner"), r.str("gitea_owner"), r.bool("private"), r.str("notes"))
+            GitRepoDecl(name, r.str("label", name), r.str("github_owner"), r.str("gitea_owner"), r.bool("private"), r.bool("seed"), r.str("notes"))
         }
         return GitFamilyDecl(instances, repos)
     }
@@ -175,6 +186,9 @@ object Declarations {
     }
 
     /** Every icon name the declarations use — what test-drive-shell.sh and DeclarationsTest hold IconCatalog to. */
-    fun iconNames(tabs: List<TabDecl>, sync: SyncDecl, files: FilesDecl): Set<String> =
-        (tabs.map { it.icon } + sync.pages.map { it.icon } + files.places.map { it.icon } + files.filters.map { it.icon }).filter { it.isNotBlank() }.toSet()
+    fun iconNames(tabs: List<TabDecl>, configs: ConfigsDecl, files: FilesDecl): Set<String> =
+        (tabs.map { it.icon } + configs.pages.map { it.icon } + files.sections.map { it.icon } + files.places.map { it.icon } + files.filters.map { it.icon }).filter { it.isNotBlank() }.toSet()
+
+    /** #603 the seed set of the shared store: the PUBLIC repositories marked `seed` in the manifest. */
+    val seedRepos: List<GitRepoDecl> get() = gitFamily.repos.filter { it.seed && !it.private }
 }

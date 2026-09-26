@@ -1,8 +1,10 @@
 package com.diegonmarcos.clouddrive.ui
 
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.res.colorResource
 import com.diegonmarcos.clouddrive.R
 
@@ -15,6 +17,17 @@ import com.diegonmarcos.clouddrive.R
  * The roles the fleet island (libs:bottomnav) reads are set on purpose: the
  * selected pill is `inverseSurface` with `inverseOnSurface` ink — here the accent
  * and the page's ink — and the unselected items are `onSurfaceVariant`.
+ *
+ * #603 THE DARK-THEME BLACK-FONT FIX, at the declaration. `MaterialTheme` provides the
+ * colour SCHEME but NOT `LocalContentColor`, whose material3 default is `Color.Black`;
+ * only a `Surface` (or a Card, which is one) provides it. This chrome's cards are
+ * `Modifier.background(...)` on a Column, not Surfaces — chosen for the hairline border
+ * and the hero ring — so every `Text()` that did not name a colour inherited that BLACK
+ * default and printed black ink on a #07040F page: the DriveCard header, the EmptyState
+ * and ErrorState titles, the ProgressCard title, the file rows. Providing it once here
+ * fixes all of them and every future one, which is why the fix is not per widget: a
+ * widget-by-widget `color =` would have to be remembered on every new Text ever added.
+ * The View half of the same promise is Theme.CloudDrive's android:textColorPrimary.
  */
 @Composable
 fun DriveTheme(content: @Composable () -> Unit) {
@@ -58,5 +71,7 @@ fun DriveTheme(content: @Composable () -> Unit) {
         errorContainer = raised,
         onErrorContainer = off,
     )
-    MaterialTheme(colorScheme = scheme, content = content)
+    MaterialTheme(colorScheme = scheme) {
+        CompositionLocalProvider(LocalContentColor provides text, content = content)
+    }
 }

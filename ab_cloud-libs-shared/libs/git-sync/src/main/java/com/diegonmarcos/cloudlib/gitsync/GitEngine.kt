@@ -356,8 +356,14 @@ class GitEngine(val workTree: File) : AutoCloseable {
             return GitEngine(dir)
         }
 
-        fun clone(url: String, dir: File, auth: GitAuth = GitAuth.None): GitEngine {
+        /**
+         * @param depth above 0 clones SHALLOW to that many commits (JGit's CloneCommand.setDepth).
+         *   #603 the host seeds its store with depth 1: a working tree is what the user wants and
+         *   the full history is megabytes it never asked for. 0 keeps the complete clone.
+         */
+        fun clone(url: String, dir: File, auth: GitAuth = GitAuth.None, depth: Int = 0): GitEngine {
             val cmd = Git.cloneRepository().setURI(url).setDirectory(dir)
+            if (depth > 0) cmd.setDepth(depth)
             when (auth) {
                 is GitAuth.None -> Unit
                 is GitAuth.Https -> cmd.setCredentialsProvider(UsernamePasswordCredentialsProvider(auth.username, auth.secret))

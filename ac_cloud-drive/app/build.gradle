@@ -112,6 +112,11 @@ if (!sharedRoot || sharedRoot.startsWith('/') || sharedRoot.contains('..')) {
 def gitSyncDecl      = storageDecl.git_sync ?: [:]
 def gitSyncMinutes   = (gitSyncDecl.interval_minutes ?: 60) as long
 def gitSyncUnmetered = gitSyncDecl.require_unmetered_network == null ? true : gitSyncDecl.require_unmetered_network
+// #603 build.json::storage.seed — whether the shared store is populated on first run
+// and how deep each clone is. Data, not a Kotlin constant: StoreSeed reads only this.
+def seedDecl      = storageDecl.seed ?: [:]
+def seedEnabled   = seedDecl.enabled == null ? false : seedDecl.enabled
+def seedDepth     = (seedDecl.depth ?: 1) as int
 def gitReposFile = file('../data/drive-git-repos.json')
 def gitReposB64  = b64(gitReposFile.exists()
     ? new groovy.json.JsonSlurper().parse(gitReposFile) : [:])
@@ -132,6 +137,10 @@ def resolvedDriveApps = []
 if (driveAppsFile.exists()) {
     new groovy.json.JsonSlurper().parse(driveAppsFile).apps.each { entry ->
         def out = [label: entry.label, icon: entry.icon]
+        // #603 an in-app tile: `route` names a declared tab and sub-page (ui.tabs /
+        // ui.configs.pages), so GitSync and RSync are shortcuts into the screens #567
+        // and #330 already built, not a second copy of either.
+        if (entry.route) { out.route = [tab: (entry.route.tab ?: ''), page: (entry.route.page ?: '')] }
         if (entry.fleet) {
             def fleetEntry = fleetById[entry.fleet]
             if (fleetEntry == null) {
@@ -157,15 +166,18 @@ def uiDecl = buildJson.ui ?: [:]
 if (!(uiDecl.tabs instanceof List) || uiDecl.tabs.isEmpty()) {
     throw new GradleException("build.json::ui.tabs must declare the shell's tabs (#579)")
 }
-if (!(uiDecl.sync?.pages instanceof List) || uiDecl.sync.pages.isEmpty()) {
-    throw new GradleException("build.json::ui.sync.pages must declare the Sync strip (#579)")
+if (!(uiDecl.configs?.pages instanceof List) || uiDecl.configs.pages.isEmpty()) {
+    throw new GradleException("build.json::ui.configs.pages must declare the Configs strip (#603)")
 }
 if (!(uiDecl.files?.places instanceof List) || uiDecl.files.places.isEmpty()) {
     throw new GradleException("build.json::ui.files.places must declare the Places sheet (#579)")
 }
+if (!(uiDecl.files?.sections instanceof List) || uiDecl.files.sections.isEmpty()) {
+    throw new GradleException("build.json::ui.files.sections must declare the Files navigator's sections (#603)")
+}
 def uiTabsB64     = b64(uiDecl.tabs)
 def uiDefaultTab  = (uiDecl.default_tab ?: uiDecl.tabs[0].id).toString()
-def uiSyncB64     = b64(uiDecl.sync.findAll { k, v -> !k.startsWith('_') })
+def uiConfigsB64  = b64(uiDecl.configs.findAll { k, v -> !k.startsWith('_') })
 def uiFilesB64    = b64(uiDecl.files.findAll { k, v -> !k.startsWith('_') })
 def uiIconDefault = (uiDecl.icons?._default ?: 'circle').toString()
 // #587 which artifact sections a sign-in applies here (build.json::auth.applies), baked whole.
@@ -291,13 +303,15 @@ android {
         buildConfigField "String", "RCLONE_REMOTES_B64", "\"${rcloneRemotesB64}\""
         buildConfigField "String", "RCLONE_JOBS_B64",    "\"${rcloneJobsB64}\""
         buildConfigField "String", "GIT_REPOS_B64",      "\"${gitReposB64}\""
+        buildConfigField "boolean", "SEED_ENABLED",       "${seedEnabled}"
+        buildConfigField "int",     "SEED_DEPTH",         "${seedDepth}"
         buildConfigField "String",  "SHARED_ROOT",               "\"${sharedRoot}\""
         buildConfigField "long",    "GIT_SYNC_INTERVAL_MINUTES", "${gitSyncMinutes}L"
         buildConfigField "boolean", "GIT_SYNC_REQUIRE_UNMETERED", "${gitSyncUnmetered}"
         buildConfigField "String", "UI_APPS_B64",     "\"${driveAppsB64}\""
         buildConfigField "String", "UI_TABS_B64",     "\"${uiTabsB64}\""
         buildConfigField "String", "UI_DEFAULT_TAB",  "\"${uiDefaultTab}\""
-        buildConfigField "String", "UI_SYNC_B64",     "\"${uiSyncB64}\""
+        buildConfigField "String", "UI_CONFIGS_B64",  "\"${uiConfigsB64}\""
         buildConfigField "String", "UI_FILES_B64",    "\"${uiFilesB64}\""
         buildConfigField "String", "UI_ICON_DEFAULT", "\"${uiIconDefault}\""
         buildConfigField "String", "AUTH_APPLIES_B64", "\"${authAppliesB64}\""

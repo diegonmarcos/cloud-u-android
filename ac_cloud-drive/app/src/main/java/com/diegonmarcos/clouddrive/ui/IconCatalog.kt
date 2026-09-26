@@ -15,7 +15,9 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.Lan
@@ -56,6 +58,8 @@ object IconCatalog {
         "sync" -> Icons.Filled.Sync
         "backup" -> Icons.Filled.Backup
         "settings" -> Icons.Filled.Settings
+        "home" -> Icons.Filled.Home
+        "help_outline" -> Icons.Filled.HelpOutline
         "commit" -> Icons.Filled.Commit
         "cloud_sync" -> Icons.Filled.CloudSync
         "lan" -> Icons.Filled.Lan

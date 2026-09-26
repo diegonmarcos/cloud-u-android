@@ -6,6 +6,17 @@
          The declaration lives here, in the theme parent; DriveTheme carries the Compose half. -->
     <style name="Theme.CloudDrive" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:windowBackground">@color/drive_background</item>
+        <!-- #603 the View half of "no black font on the dark page". Theme.Material3.Dark
+             already resolves light text for its OWN attributes, but an inflated widget or a
+             platform dialog that reads android:textColor* must land on THIS palette and not
+             on a framework default, so the three ink roles are named here once. The Compose
+             half is DriveTheme's LocalContentColor. -->
+        <item name="android:textColorPrimary">@color/drive_text</item>
+        <item name="android:textColorSecondary">@color/drive_text_secondary</item>
+        <item name="android:textColorTertiary">@color/drive_text_secondary</item>
+        <item name="android:textColorHint">@color/drive_text_secondary</item>
+        <item name="colorOnBackground">@color/drive_text</item>
+        <item name="colorOnSurface">@color/drive_text</item>
         <item name="android:statusBarColor" tools:targetApi="lollipop">@android:color/transparent</item>
         <item name="android:navigationBarColor" tools:targetApi="lollipop">@android:color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds" tools:targetApi="lollipop">true</item>

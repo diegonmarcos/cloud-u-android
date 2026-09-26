@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║ #579 — SYNC ▸ GIT is GitSync-class: one card per repository with the     ║
+# ║ #603 — CONFIGS ▸ GIT is GitSync-class: one card per repository with the     ║
 # ║ live glance (branch, upstream, ahead/behind, dirty, CONFLICTS, state),   ║
 # ║ the last sync, stepped one-tap sync, per-repo period / network / auth,   ║
 # ║ a persisted history, conflicts surfaced not swallowed; Rclone and Mounts ║
@@ -16,7 +16,7 @@
 #       the engine's own verbs; pushing says it cannot be interrupted.
 #   G4  per-repo settings: the library model carries syncIntervalMinutes and
 #       syncRequireUnmetered; the sheet offers the DECLARED periods
-#       (ui.sync.git_periods_minutes), the network rule and the auth kinds, and
+#       (ui.configs.git_periods_minutes), the network rule and the auth kinds, and
 #       writes the ManagedRepo the engine reads; secrets go to GitCredentialStore.
 #   G5  history: SyncHistory is app-owned, capped, written by BOTH the card's sync
 #       and the worker (trigger manual / scheduled) and rendered.
@@ -85,8 +85,8 @@ if grep -qE 'GitSyncCoordinator\.Step\.values\(\)\.forEach' "$CARDS" && grep -qE
 echo "── G4 per-repo settings ──"
 if grep -qE 'val syncIntervalMinutes: Long = 0' "$MODELS" && grep -qE 'val syncRequireUnmetered: Boolean = true' "$MODELS"; then pass "ManagedRepo carries the per-repo period and network rule"; else fail "the library model lacks the per-repo fields"; fi
 if grep -qE 'syncIntervalMinutes = intervalText\.toLongOrNull\(\) \?: 0L, syncRequireUnmetered = unmetered' "$LIB_SCREEN"; then pass "the engine's own Settings tab saves them too"; else fail "the library SettingsTab does not save the new fields"; fi
-if grep -qE 'val periods = Declarations\.sync\.gitPeriodsMinutes' "$CARDS" && grep -qE 'autoSync = autoSync, syncIntervalMinutes = interval, syncRequireUnmetered = unmetered' "$CARDS" && grep -qE 'coordinator\.setSecret\(repo, secret\)' "$CARDS"; then pass "the sheet offers the declared periods, the rule and auth; writes the ManagedRepo; secrets to the credential store"; else fail "RepoSettingsSheet incomplete"; fi
-if python3 -c 'import json,sys; p=json.load(open(sys.argv[1]))["ui"]["sync"]["git_periods_minutes"]; sys.exit(0 if p and all(x>=15 for x in p) and 0 not in p else 1)' "$BJ"; then pass "declared periods ≥ 15 and never 0 (0 means the base)"; else fail "ui.sync.git_periods_minutes invalid"; fi
+if grep -qE 'val periods = Declarations\.configs\.gitPeriodsMinutes' "$CARDS" && grep -qE 'autoSync = autoSync, syncIntervalMinutes = interval, syncRequireUnmetered = unmetered' "$CARDS" && grep -qE 'coordinator\.setSecret\(repo, secret\)' "$CARDS"; then pass "the sheet offers the declared periods, the rule and auth; writes the ManagedRepo; secrets to the credential store"; else fail "RepoSettingsSheet incomplete"; fi
+if python3 -c 'import json,sys; p=json.load(open(sys.argv[1]))["ui"]["configs"]["git_periods_minutes"]; sys.exit(0 if p and all(x>=15 for x in p) and 0 not in p else 1)' "$BJ"; then pass "declared periods ≥ 15 and never 0 (0 means the base)"; else fail "ui.configs.git_periods_minutes invalid"; fi
 if grep -qE 'listOf\("none" to R\.string\.sync_auth_none, "https" to R\.string\.sync_auth_https, "ssh" to R\.string\.sync_auth_ssh\)' "$CARDS"; then pass "auth kinds: none / HTTPS token / SSH key"; else fail "auth kinds missing"; fi
 
 echo "── G5 history ──"

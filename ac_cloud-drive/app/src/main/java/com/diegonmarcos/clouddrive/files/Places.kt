@@ -20,7 +20,8 @@ object Places {
 
     enum class Kind { PATH, TREE, CONNECT, BOOKMARK }
 
-    data class Place(val id: String, val label: String, val icon: String, val kind: Kind, val location: Location.Local?, val hero: Boolean = false, val hint: String = "")
+    /** [section] is the declared ui.files.sections id this place sits under; blank for a discovered one. */
+    data class Place(val id: String, val label: String, val icon: String, val kind: Kind, val location: Location.Local?, val hero: Boolean = false, val hint: String = "", val section: String = "")
 
     fun declared(ctx: Context): List<Place> {
         val external = Environment.getExternalStorageDirectory()
@@ -35,7 +36,7 @@ object Places {
             // A place that does not exist is not offered: a tap leading to "folder not found"
             // is worse than the entry simply not being there.
             if (dir == null || !dir.isDirectory) return@mapNotNull null
-            Place(p.id, p.label, p.icon, Kind.PATH, Location.Local(dir.absolutePath), hero = p.hero, hint = if (p.kind == "shared_root") ctx.getString(R.string.files_store_hint) else "")
+            Place(p.id, p.label, p.icon, Kind.PATH, Location.Local(dir.absolutePath), hero = p.hero, hint = if (p.kind == "shared_root") ctx.getString(R.string.files_store_hint) else "", section = p.section)
         }
     }
 

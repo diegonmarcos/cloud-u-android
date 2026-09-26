@@ -1,6 +1,6 @@
 {
   "name": "cloud-drive",
-  "description": "Diego's Cloud Drive — standalone Android storage app, lifted out of the SuperApp's Cloud▸Apps▸Drive pages so the phone's storage surface is its own icon. #579 NATIVE COMPOSE CHROME (the WebView page and its string-named bridge are gone): a five-tab shell drawn by the fleet's bottom-nav island (libs:bottomnav) — Files, Apps, Sync, Backups, Configs — every tab, sub-page, place, filter and icon name declared in ui.* below and baked through BuildConfig. Files is a FULL X-plore-class manager over shared storage: two real panes with their own tabs, collapsible tree view, archives browsed as folders, copy/move between panes with live progress, multi-select action bar, bookmarks, breadcrumbs, sort/filter, storage bar, the shared store (storage.shared_root) first. Sync ▸ Git is GitSync-class: one card per managed repository with live branch / ahead-behind / dirty / conflicts and the last sync, one-tap sync with stepped progress, per-repo period / network rule / auth, a persisted sync history, conflicts surfaced. Sync ▸ Rclone and ▸ Mounts use the same card language over libs:rclone and libs:mounts; Apps is a grid of the fleet's data apps (data/drive-apps.json resolved against the constellation manifest, #437); Backups runs the declared mirror (rsync) jobs with cancellable progress; Configs holds the app's settings. The four engine libraries (#567) and the ONE shared store (#575) are unchanged underneath. Dark is the default theme, set at the declaration (#336, #337). Design: a0_docs/eng-specs/cloud-drive-redesign.md. The PDF reader is the #577 native pdfium engine (build.json::pdf), the fleet's one in-process renderer, opened from the Files tab and from any app's Open-with. Build via Nix devShell, one APK out.",
+  "description": "Diego's Cloud Drive — standalone Android storage app, lifted out of the SuperApp's Cloud▸Apps▸Drive pages so the phone's storage surface is its own icon. #603 REDESIGN over the #579 native Compose chrome: a five-tab shell drawn by the fleet's bottom-nav island (libs:bottomnav) — Files, Volumes, Home, Apps, Configs — every tab, sub-page, place, section, filter and icon name declared in ui.* below and baked through BuildConfig. Files is a FULL X-plore-class manager over shared storage with TWO declared sections (ui.files.sections): Emulated (shared storage itself, /storage/emulated/0) and cloud-drive-storage (the ONE shared store of #575, storage.shared_root, exposed to every fleet app that holds all-files access — plain shared storage, so NO webserver is needed and libs:webserver stays deliberately unlinked); the store is seeded by DEFAULT with the public cloud repositories (storage.seed + data/drive-git-repos.json seed flags — a baked manifest with a first-run SHALLOW fetch, because an APK cannot carry a working clone). Volumes consolidates the FULL FLEET: the device's removable volumes plus every mesh mount (libs:mounts) and declared fleet connection, browse-through one tap away. Home is the drive's overview: the two stores with live usage, the volumes/mesh glance, the recent sync history and quick actions. Apps is a grid of the fleet's data apps (data/drive-apps.json resolved against the constellation manifest, #437) plus GitSync and RSync. Configs holds six sub-pages from ONE declaration (ui.configs.pages): Git, Rclone and Mounts (moved in from the old Sync tab), Backups (moved in from its old tab — the declared mirror/rsync jobs with cancellable progress), General (the app's settings, sign-in, storage access) and Others (removable storage, about). The four engine libraries (#567) and the ONE shared store (#575) are unchanged underneath. Dark is the default theme, set at the declaration (#336, #337). Design: a0_docs/eng-specs/cloud-drive-redesign.md. The PDF reader is the #577 native pdfium engine (build.json::pdf), the fleet's one in-process renderer, opened from the Files tab and from any app's Open-with. Build via Nix devShell, one APK out.",
   "_doc_rsync": "TASK #330 named Rsync without naming a home. It lives INSIDE the Backups tab, because a one-way folder copy with rsync's size-plus-mtime quick check IS the 'on-device backup set' that tab was already declared to hold, and a fifth tab for one list of jobs would have split the same subject across two screens. The jobs are declared in data/drive-mirror-jobs.json and executed by FilesBridge.mirror(). EVERY DESTINATION IS ON-DEVICE and no fleet host is addressed: see that file's _doc_fleet_destination for why (an APK cannot hold the credential), and rep-N2.md for what that defers.",
   "category": "android",
   "build": {
@@ -12,7 +12,7 @@
     "compile_sdk": 36,
     "min_sdk": 26,
     "target_sdk": 35,
-    "version_code": 4,
+    "version_code": 5,
     "version_name": "0.5.0-dev",
     "abi_filters": [
       "arm64-v8a"
@@ -39,10 +39,17 @@
       "_doc": "Scheduled background sync of the repositories the user opted in (ManagedRepo.autoSync), the GitSync app's scheduler realised over WorkManager (GitSyncWorker.kt). interval_minutes is the period (WorkManager's floor is 15); require_unmetered_network keeps a push off mobile data. Same shape and same reason as release.auto_update: a build.json edit reaches installed phones through ExistingPeriodicWorkPolicy.UPDATE on the next launch.",
       "interval_minutes": 60,
       "require_unmetered_network": true
+    },
+    "seed": {
+      "_doc": "#603 THE ONE seed declaration of the shared store. An APK cannot carry a working clone (a .git of the fleet's repositories is hundreds of megabytes and would be stale the day it shipped), so the store is seeded on FIRST RUN instead: when <shared storage>/<shared_root>/<name> does not exist for a repository data/drive-git-repos.json marks `seed: true`, StoreSeed registers it in libs:git-sync's own RepoRegistry and clones it SHALLOW (depth below) through the engine's GitEngine.clone — the same mechanism the Git sub-page's Clone button uses, never a second git. PUBLIC REPOSITORIES ONLY: a private repository needs a token this APK does not hold, so seeding one would be a clone that always fails; those stay declared-not-cloned on the Git sub-page, where the user can type a token. The manifest is the file below and nothing here restates a repository name.",
+      "enabled": true,
+      "manifest": "data/drive-git-repos.json",
+      "depth": 1,
+      "public_only": true
     }
   },
   "ui": {
-    "_doc": "#579 THE STRUCTURE OF THE CHROME, declared. Kotlin holds no tab list, no caption, no place list and no icon name: DriveShell renders ui.tabs, SyncScreen renders ui.sync.pages, the Files Places sheet renders ui.files.places, the Files filter pills render ui.files.filters. Every `icon` here is a name IconCatalog.kt resolves to a Material glyph; a name it does not know renders ui.icons._default and test/test-drive-shell.sh fails the build. Baked by app/build.gradle as UI_TABS_B64 / UI_SYNC_B64 / UI_FILES_B64 / UI_ICON_DEFAULT and decoded ONCE by Declarations.kt.",
+    "_doc": "#603 THE STRUCTURE OF THE CHROME, declared. Kotlin holds no tab list, no caption, no page list, no section list, no place list and no icon name: DriveShell renders ui.tabs, ConfigsScreen renders ui.configs.pages, the Files Places sheet renders ui.files.sections and ui.files.places, the Files filter pills render ui.files.filters. Every `icon` here is a name IconCatalog.kt resolves to a Material glyph; a name it does not know renders ui.icons._default and test/test-drive-shell.sh fails the build. Baked by app/build.gradle as UI_TABS_B64 / UI_CONFIGS_B64 / UI_FILES_B64 / UI_ICON_DEFAULT and decoded ONCE by Declarations.kt. #603 replaced #579's five tabs (files/apps/sync/backups/configs): Sync is gone as a tab and its three pages moved into Configs, Backups moved in beside them, and Volumes and Home took the freed slots.",
     "tabs": [
       {
         "id": "files",
@@ -50,19 +57,19 @@
         "icon": "folder"
       },
       {
+        "id": "volumes",
+        "label": "Volumes",
+        "icon": "storage"
+      },
+      {
+        "id": "home",
+        "label": "Home",
+        "icon": "home"
+      },
+      {
         "id": "apps",
         "label": "Apps",
         "icon": "apps"
-      },
-      {
-        "id": "sync",
-        "label": "Sync",
-        "icon": "sync"
-      },
-      {
-        "id": "backups",
-        "label": "Backups",
-        "icon": "backup"
       },
       {
         "id": "configs",
@@ -71,54 +78,43 @@
       }
     ],
     "default_tab": "files",
-    "sync": {
-      "_doc": "The strip inside the Sync island. git_periods_minutes are the per-repository period choices the repo Settings sheet offers (ManagedRepo.syncIntervalMinutes); 0 is never offered here because 0 means 'the base period storage.git_sync.interval_minutes'. Every value is at or above WorkManager's 15-minute floor.",
-      "pages": [
+    "files": {
+      "_doc_sections": "#603 THE TWO SECTIONS of the Files navigator, in order, each a header in the Places sheet with the declared places that name it. `emulated` is Android shared storage itself (/storage/emulated/0); `cloud-drive-storage` is the ONE shared store of #575 (storage.shared_root), a top-level section of its own and not one place among many, because every fleet app holding all-files access reads and writes it and it is seeded by default with the PUBLIC cloud repositories (storage.seed). Removable volumes and mesh mounts are NOT here: they are the Volumes tab.",
+      "sections": [
         {
-          "id": "git",
-          "label": "Git",
-          "icon": "commit"
+          "id": "emulated",
+          "label": "Emulated",
+          "icon": "smartphone"
         },
         {
-          "id": "rclone",
-          "label": "Rclone",
-          "icon": "cloud_sync"
-        },
-        {
-          "id": "mounts",
-          "label": "Mounts",
-          "icon": "lan"
+          "id": "cloud-drive-storage",
+          "label": "Cloud-Drive-Storage",
+          "icon": "cloud"
         }
       ],
-      "git_periods_minutes": [
-        15,
-        30,
-        60,
-        180,
-        360
-      ]
-    },
-    "files": {
-      "_doc_places": "The Places sheet, in order. kind: shared_root = storage.shared_root under shared storage (ALWAYS first, hero); external_root = shared storage itself; public_dir = Environment.DIRECTORY_<dir> under it; external_path = a relative path under it. A place whose folder does not exist on the device is not offered. Removable volumes, the app's slice on them and the SAF grant are discovered at runtime, not declared. The store's label is 'Shared store', never the application's name: the fleet's app-names guard (aa_cloud-superapp/test/test-app-names-pattern.sh T5) refuses any label that spells an app name the old way.",
+      "_doc_places": "The Places sheet, in order. kind: shared_root = storage.shared_root under shared storage (ALWAYS first, hero); external_root = shared storage itself; public_dir = Environment.DIRECTORY_<dir> under it; external_path = a relative path under it. A place whose folder does not exist on the device is not offered. Removable volumes, the app's slice on them and the SAF grant are discovered at runtime, not declared. The store's label is 'Shared store', never the application's name: the fleet's app-names guard (aa_cloud-superapp/test/test-app-names-pattern.sh T5) refuses any label that spells an app name the old way. #603 `section` names the ui.files.sections entry the place sits under; the sheet renders one header per declared section, in declared order.",
       "places": [
         {
           "id": "store",
           "label": "Shared store",
           "icon": "cloud",
           "kind": "shared_root",
+          "section": "cloud-drive-storage",
           "hero": true
         },
         {
           "id": "internal",
           "label": "Internal storage",
           "icon": "smartphone",
-          "kind": "external_root"
+          "kind": "external_root",
+          "section": "emulated"
         },
         {
           "id": "downloads",
           "label": "Downloads",
           "icon": "download",
           "kind": "public_dir",
+          "section": "emulated",
           "dir": "DOWNLOADS"
         },
         {
@@ -126,6 +122,7 @@
           "label": "Documents",
           "icon": "description",
           "kind": "public_dir",
+          "section": "emulated",
           "dir": "DOCUMENTS"
         },
         {
@@ -133,6 +130,7 @@
           "label": "Pictures",
           "icon": "image",
           "kind": "public_dir",
+          "section": "emulated",
           "dir": "PICTURES"
         },
         {
@@ -140,6 +138,7 @@
           "label": "Camera",
           "icon": "photo_camera",
           "kind": "external_path",
+          "section": "emulated",
           "path": "DCIM/Camera"
         },
         {
@@ -147,6 +146,7 @@
           "label": "Movies",
           "icon": "movie",
           "kind": "public_dir",
+          "section": "emulated",
           "dir": "MOVIES"
         },
         {
@@ -154,6 +154,7 @@
           "label": "Music",
           "icon": "music_note",
           "kind": "public_dir",
+          "section": "emulated",
           "dir": "MUSIC"
         }
       ],
@@ -265,6 +266,48 @@
     "icons": {
       "_doc": "The glyph an unknown icon name renders. IconCatalog knows this name too.",
       "_default": "circle"
+    },
+    "configs": {
+      "_doc": "#603 the strip inside the Configs island — ONE declaration, six sub-pages, in this order. Git, Rclone and Mounts came from the old ui.sync.pages and Backups from its own top-level tab: all four are CONFIGURATION of an engine, and a tab each spread one subject over four screens. General is #579's Configs page (storage access, sign-in, Files defaults, the declared schedule); Others is the removable-storage grant and About. git_periods_minutes are the per-repository period choices the repo Settings sheet offers (ManagedRepo.syncIntervalMinutes); 0 is never offered here because 0 means 'the base period storage.git_sync.interval_minutes'. Every value is at or above WorkManager's 15-minute floor.",
+      "pages": [
+        {
+          "id": "git",
+          "label": "Git",
+          "icon": "commit"
+        },
+        {
+          "id": "rclone",
+          "label": "Rclone",
+          "icon": "cloud_sync"
+        },
+        {
+          "id": "mounts",
+          "label": "Mounts",
+          "icon": "lan"
+        },
+        {
+          "id": "backups",
+          "label": "Backups",
+          "icon": "backup"
+        },
+        {
+          "id": "general",
+          "label": "General",
+          "icon": "settings"
+        },
+        {
+          "id": "others",
+          "label": "Others",
+          "icon": "help_outline"
+        }
+      ],
+      "git_periods_minutes": [
+        15,
+        30,
+        60,
+        180,
+        360
+      ]
     }
   },
   "pdf": {

@@ -58,7 +58,10 @@ order = ["TabStrip(", "Breadcrumbs(", "PaneToolbar(", "StorageBar(", "LoadingSta
 pos = [body.find(o) for o in order]
 if any(p < 0 for p in pos): print("    missing in Pane: %s" % [o for o, p in zip(order, pos) if p < 0]); sys.exit(1)
 if pos != sorted(pos): print("    Pane composes out of order: %s" % list(zip(order, pos))); sys.exit(1)
-tags = ["FILES_PANE_A", "FILES_PANE_B", "FILES_TAB_STRIP", "FILES_BREADCRUMBS", "FILES_TOOLBAR", "FILES_STORAGE_BAR", "FILES_LIST", "FILES_ROW", "FILES_SELECTION_BAR", "FILES_PLACES_SHEET", "FILES_SEARCH_BAR", "FILES_PANE_HEADER"]
+# #603 FILES_STORAGE_BAR is applied by the chrome's shared StorageBar (ui/Chrome.kt), which
+# Home draws too; the pane's own StorageBar delegates to it, and the delegation is asserted
+# in F6. Every other tag is still this screen's to apply.
+tags = ["FILES_PANE_A", "FILES_PANE_B", "FILES_TAB_STRIP", "FILES_BREADCRUMBS", "FILES_TOOLBAR", "FILES_LIST", "FILES_ROW", "FILES_SELECTION_BAR", "FILES_PLACES_SHEET", "FILES_SEARCH_BAR", "FILES_PANE_HEADER"]
 missing = [t for t in tags if ("DriveTags.%s" % t) not in src]
 if missing: print("    tags never applied: %s" % missing); sys.exit(1)
 PYTHON
@@ -114,7 +117,12 @@ if grep -qE 'controller\.prefs\.toggleBookmark' "$SCREEN" && grep -qE 'fun toggl
 if grep -qE 'fun crumbs\(\): List<Location>' "$STATE" && grep -qE 'Places\.rootLabel\(ctx, it\.path\)' "$SCREEN"; then pass "breadcrumbs from Location.crumbs, volume roots named by their place"; else fail "breadcrumbs incomplete"; fi
 if grep -qE 'Declarations\.files\.sortKeys\.forEach' "$SCREEN" && grep -qE 'Declarations\.files\.filters\.forEach' "$SCREEN" && grep -qE 'fun visibleEntries\(pane: PaneState, entries: List<FileOps\.Entry>, filters: List<Declarations\.FilterDecl>\)' "$CTRL"; then pass "sort keys and filters are the declared ones, applied by one pure function"; else fail "sort/filter not from the declaration"; fi
 if grep -qE 'private fun StorageBar\(usage: Pair<Long, Long>\)' "$SCREEN" && grep -qE 'if \(listing\?\.usage != null && rootLabel != null\) StorageBar\(listing\.usage\)' "$SCREEN"; then pass "the storage bar shows at a volume or store root only"; else fail "storage bar rule missing"; fi
-if grep -qE '"shared_root" -> SharedStore\.root\(\)' "$PLACES" && grep -qE 'declared\.filter \{ it\.hero \}\.forEach \{ hero ->' "$SCREEN" && grep -qE 'hero = true' "$SCREEN"; then pass "the shared store is the hero of the Places sheet"; else fail "the store is not the first, hero place"; fi
+# #603 ONE storage bar in the fleet's chrome, drawn by both the pane and Home: the pane's
+# private wrapper only supplies this pane's caption, and the tag lives with the component.
+if grep -qE 'com\.diegonmarcos\.clouddrive\.ui\.StorageBar\(' "$SCREEN" && grep -qE 'fun StorageBar\(usage: Pair<Long, Long>, label: String' "$CHROME" && grep -qE 'tag: String = DriveTags\.FILES_STORAGE_BAR' "$CHROME"; then pass "the pane delegates to the chrome's ONE StorageBar, which carries the tag"; else fail "the storage bar is not the chrome's shared component"; fi
+# #603 the sheet is sectioned (ui.files.sections): one header per declared section, and the
+# store is still the HERO card — now under its own Cloud-Drive-Storage header.
+if grep -qE '"shared_root" -> SharedStore\.root\(\)' "$PLACES" && grep -qE 'Declarations\.files\.sections\.forEach \{ section ->' "$SCREEN" && grep -qE 'declared\.filter \{ it\.section == section\.id \}' "$SCREEN" && grep -qE 'if \(p\.hero\) item \{ DriveCard\(' "$SCREEN" && grep -qE 'hero = true' "$SCREEN"; then pass "the Places sheet is one header per declared section, with the shared store as its hero"; else fail "the sectioned Places sheet is not built from ui.files.sections"; fi
 if grep -qE 'fun startSearch\(root: Location\.Local, query: String, contentToo: Boolean\)' "$CTRL" && grep -qE 'fun cancelSearch\(\)' "$CTRL" && grep -qE 'SEARCH_RESULT_CEILING = 300' "$OPS"; then pass "search is cancellable and capped"; else fail "search incomplete"; fi
 if grep -qE 'Pane\(id, ui, controller, listings, prefs, isActive' "$SCREEN" && grep -qE 'controller\.activate\(id\)' "$SCREEN"; then pass "tapping a pane activates it"; else fail "pane activation missing"; fi
 

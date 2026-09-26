@@ -39,7 +39,9 @@ APP="$ROOT/ac_cloud-drive"
 BJ="$APP/build.json"
 GRADLE="$APP/app/build.gradle"
 SRC="$APP/app/src/main/java/com/diegonmarcos/clouddrive"
-CONFIGS="$SRC/configs/ConfigsScreen.kt"
+# #603 Configs became six declared sub-pages: the card lives on ▸ General, the page that
+# inherited #579's Configs cards. The assertion is unchanged, the file it reads moved.
+CONFIGS="$SRC/configs/GeneralPage.kt"
 CARD="$SRC/configs/SignInCard.kt"
 APPLY="$SRC/configs/DriveAuthApply.kt"
 STRINGS="$APP/app/src/main/res/values/strings.xml"
@@ -130,7 +132,7 @@ grep -q 'buildConfigField "String", "AUTH_B64"' "$LIB_GRADLE" && grep -q 'BuildC
 grep -q 'sign_in\|vault_connect' "$GRADLE" && fail "app/build.gradle bakes a sign-in or vault block of its own" || pass "app/build.gradle bakes no sign-in block"
 
 echo "── S3 Configs hosts the card; the card hosts the lib's surface in this app's pill ──"
-grep -q 'item { SignInCard() }' "$CONFIGS" && pass "ConfigsScreen composes SignInCard" || fail "ConfigsScreen does not compose SignInCard"
+grep -q 'item { SignInCard() }' "$CONFIGS" && pass "Configs ▸ General composes SignInCard" || fail "Configs ▸ General does not compose SignInCard"
 grep -q 'SignInWays(host = host' "$CARD" && pass "SignInCard composes the lib's SignInWays" || fail "SignInCard does not compose SignInWays"
 grep -qE 'pill = \{ label, tag, onClick ->' "$CARD" && grep -q 'Pill(label, onClick' "$CARD" && pass "the ways are drawn with this app's Pill" || fail "the card does not draw the ways with Pill"
 grep -q 'DriveAuthApply.apply(app, artifact)' "$CARD" && pass "a landed artifact goes to DriveAuthApply" || fail "the host does not apply through DriveAuthApply"

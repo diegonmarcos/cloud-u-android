@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ╔══════════════════════════════════════════════════════════════════════════╗
-# ║ #579 — the chrome is DECLARED and NATIVE: tabs, pages, places, filters   ║
+# ║ #603 — the chrome is DECLARED and NATIVE: tabs, pages, sections, places, ║
 # ║ and icons come from build.json::ui; the shell is Compose over the fleet  ║
 # ║ island; StatusLight is the superapp's idiom; no caption, colour or tab   ║
 # ║ id lives in Kotlin; the WebView page and its string-named bridge are gone ║
@@ -15,8 +15,8 @@
 #
 #   D1  ui.tabs declared, unique, default_tab among them; the ids Kotlin dispatches
 #       (MainActivity `when (tabId)`) equal the declared ids in both directions.
-#   D2  ui.sync.pages ↔ SyncScreen's `when (id)`, both directions.
-#   D3  every declared icon name (tabs, pages, places, filters, icons._default) is
+#   D2  ui.configs.pages ↔ ConfigsScreen's `when (id)`, both directions.
+#   D3  every declared icon name (tabs, pages, sections, places, filters, default) is
 #       a name in IconCatalog's `when`; the catalog has no dead name either.
 #   D4  the declarations are BAKED (build.gradle → UI_*_B64 from buildJson.ui with
 #       a hard error on a missing block) and decoded once (Declarations.kt).
@@ -32,8 +32,17 @@
 #       tree is present (UNVERIFIABLE when it is not, never a silent pass).
 #   D9  dark is the default: Theme.Material3.Dark parent + DriveTheme darkColorScheme.
 #   D10 the JVM suite and the Robolectric layout-tree test exist and name the tags.
+#   D11 #603 THE STRUCTURE THIS REDESIGN IS: exactly five tabs in the order
+#       Files · Volumes · Home · Apps · Configs, no `sync` and no `backups` TAB;
+#       Configs' six sub-pages in the order Git · Rclone · Mounts · Backups ·
+#       General · Others; the Files navigator's two declared sections with the
+#       store in its own one; the store's seed set is PUBLIC repositories only,
+#       cloned shallow through libs:git-sync; the Apps grid carries GitSync and
+#       RSync as in-app routes into declared pages; and the dark theme provides
+#       LocalContentColor so no Text() inherits material3's Color.Black default.
 #   M   mutation-proof: a tab dropped from the declaration and a glyph dropped from
-#       the catalog both turn D1 / D3 red; the unmutated tree stays green.
+#       the catalog both turn D1 / D3 red; a private repository marked for seeding
+#       turns D11 red; the unmutated tree stays green.
 #
 # OWN-SOURCE ONLY except D8's cross-app comparison, which reports UNVERIFIABLE
 # when aa_cloud-superapp is not beside this app. python3 and grep only.
@@ -46,7 +55,7 @@ GRADLE="$APP/app/build.gradle"
 SRC="$APP/app/src/main/java/com/diegonmarcos/clouddrive"
 MAIN="$SRC/MainActivity.kt"
 SHELL_KT="$SRC/ui/DriveShell.kt"
-SYNC="$SRC/sync/SyncScreen.kt"
+CONFIGS="$SRC/configs/ConfigsScreen.kt"
 CATALOG="$SRC/ui/IconCatalog.kt"
 DECL="$SRC/Declarations.kt"
 LIGHT="$SRC/ui/StatusLight.kt"
@@ -55,11 +64,14 @@ COLORS="$APP/app/src/main/res/values/colors.xml"
 STRINGS="$APP/app/src/main/res/values/strings.xml"
 THEMES="$APP/app/src/main/res/values/themes.xml"
 TESTS="$APP/app/src/test/java/com/diegonmarcos/clouddrive"
+REPOS="$APP/data/drive-git-repos.json"
+APPS_JSON="$APP/data/drive-apps.json"
+SEED="$SRC/StoreSeed.kt"
 
 FAILURES=0
 pass() { echo "  PASS  $*"; }
 fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
-for required in "$BJ" "$GRADLE" "$MAIN" "$SHELL_KT" "$SYNC" "$CATALOG" "$DECL" "$LIGHT" "$THEME" "$COLORS" "$STRINGS" "$THEMES"; do
+for required in "$BJ" "$GRADLE" "$MAIN" "$SHELL_KT" "$CONFIGS" "$CATALOG" "$DECL" "$LIGHT" "$THEME" "$COLORS" "$STRINGS" "$THEMES" "$REPOS" "$APPS_JSON" "$SEED"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
 done
 
@@ -83,17 +95,17 @@ if sorted(dispatched) != sorted(ids):
 PYTHON
 }
 
-# d2 <build.json> <SyncScreen.kt>
+# d2 <build.json> <ConfigsScreen.kt>
 d2() {
     python3 - "$1" "$2" <<'PYTHON'
 import json, re, sys
 bj = json.load(open(sys.argv[1])); src = open(sys.argv[2], encoding="utf-8").read()
-ids = [p.get("id") for p in bj["ui"]["sync"]["pages"]]
+ids = [p.get("id") for p in bj["ui"]["configs"]["pages"]]
 m = re.search(r"when \(id\) \{(.*?)\n\s*\}", src, re.S)
-if not m: print("    SyncScreen has no `when (id)` dispatch"); sys.exit(1)
+if not m: print("    ConfigsScreen has no `when (id)` dispatch"); sys.exit(1)
 dispatched = re.findall(r'^\s*"([a-z_]+)" ->', m.group(1), re.M)
 if sorted(dispatched) != sorted(ids): print("    declared %s vs dispatched %s" % (ids, dispatched)); sys.exit(1)
-periods = bj["ui"]["sync"].get("git_periods_minutes", [])
+periods = bj["ui"]["configs"].get("git_periods_minutes", [])
 if not periods or any(p < 15 for p in periods): print("    git_periods_minutes missing or below WorkManager's 15-minute floor"); sys.exit(1)
 PYTHON
 }
@@ -104,7 +116,7 @@ d3() {
 import json, re, sys
 bj = json.load(open(sys.argv[1])); cat = open(sys.argv[2], encoding="utf-8").read()
 ui = bj["ui"]
-declared = set(t["icon"] for t in ui["tabs"]) | set(p["icon"] for p in ui["sync"]["pages"]) | set(p["icon"] for p in ui["files"]["places"]) | set(f["icon"] for f in ui["files"]["filters"]) | {ui["icons"]["_default"]}
+declared = set(t["icon"] for t in ui["tabs"]) | set(p["icon"] for p in ui["configs"]["pages"]) | set(x["icon"] for x in ui["files"]["sections"]) | set(p["icon"] for p in ui["files"]["places"]) | set(f["icon"] for f in ui["files"]["filters"]) | {ui["icons"]["_default"]}
 block = re.search(r"fun vector\(name: String\): ImageVector\? = when \(name\) \{(.*?)\n    \}", cat, re.S)
 if not block: print("    IconCatalog.vector has no `when (name)`"); sys.exit(1)
 known = set(re.findall(r'^\s*"([a-z_]+)" -> Icons\.', block.group(1), re.M))
@@ -118,16 +130,16 @@ echo "── D1 tabs: declared ↔ dispatched ──"
 d1 "$BJ" "$MAIN" && pass "ui.tabs are unique, labelled, iconed; MainActivity dispatches exactly them" || fail "tabs: declaration and dispatch disagree"
 if grep -qE 'BuildConfig\.UI_DEFAULT_TAB' "$DECL" && grep -qE 'Declarations\.defaultTab' "$SHELL_KT"; then pass "the default tab is the declared one"; else fail "default tab not read from the declaration"; fi
 
-echo "── D2 sync pages: declared ↔ dispatched ──"
-d2 "$BJ" "$SYNC" && pass "ui.sync.pages dispatch matches; periods at or above the floor" || fail "sync pages: declaration and dispatch disagree"
+echo "── D2 configs pages: declared ↔ dispatched ──"
+d2 "$BJ" "$CONFIGS" && pass "ui.configs.pages dispatch matches; periods at or above the floor" || fail "configs pages: declaration and dispatch disagree"
 
 echo "── D3 icons from declarations ──"
 d3 "$BJ" "$CATALOG" && pass "every declared icon name is in IconCatalog's vocabulary" || fail "an icon is declared that the catalog does not know"
-if grep -qE 'IconCatalog\.painter\(it\.icon\)' "$SHELL_KT" && grep -qE 'IconCatalog\.vectorOrDefault\(p\.icon\)' "$SYNC"; then pass "the shell and the strip render the declared icon names through the catalog"; else fail "a screen does not resolve its icons through IconCatalog"; fi
+if grep -qE 'IconCatalog\.painter\(it\.icon\)' "$SHELL_KT" && grep -qE 'IconCatalog\.vectorOrDefault\(p\.icon\)' "$CONFIGS"; then pass "the shell and the strip render the declared icon names through the catalog"; else fail "a screen does not resolve its icons through IconCatalog"; fi
 if grep -rqE '"ic_[a-z_]+"' "$SRC"; then fail "a drawable name is typed in Kotlin"; else pass "no drawable-name literal in Kotlin"; fi
 
 echo "── D4 baked once, decoded once ──"
-for f in UI_TABS_B64 UI_SYNC_B64 UI_FILES_B64 UI_ICON_DEFAULT UI_DEFAULT_TAB; do
+for f in UI_TABS_B64 UI_CONFIGS_B64 UI_FILES_B64 UI_ICON_DEFAULT UI_DEFAULT_TAB; do
     if grep -qE "buildConfigField \"String\", *\"$f\"" "$GRADLE" && grep -qE "BuildConfig\.$f" "$DECL"; then pass "$f baked and decoded"; else fail "$f not baked in build.gradle or not read in Declarations.kt"; fi
 done
 if grep -qE 'throw new GradleException\("build\.json::ui\.tabs must declare' "$GRADLE"; then pass "a missing ui.tabs fails the build"; else fail "build.gradle does not refuse a missing ui.tabs"; fi
@@ -203,17 +215,86 @@ if grep -qE 'RobolectricTestRunner' "$TESTS/ui/DriveShellTest.kt" && grep -qE 'B
 if grep -qE 'includeAndroidResources = true' "$GRADLE" && grep -qE "testImplementation 'org\.robolectric:robolectric" "$GRADLE" && grep -qE "testImplementation 'junit:junit" "$GRADLE"; then pass "the test stack is linked"; else fail "app/build.gradle lacks junit / robolectric / includeAndroidResources"; fi
 if grep -qE 'IconCatalog\.knows\(' "$TESTS/DeclarationsTest.kt"; then pass "DeclarationsTest holds every declared icon to the catalog"; else fail "DeclarationsTest does not check the icons"; fi
 
-echo "── M mutation-proof ──"
+echo "── D11 the #603 structure ──"
+d11_structure() {
+    python3 - "$1" <<'PYTHON'
+import json, sys
+ui = json.load(open(sys.argv[1]))["ui"]
+bad = 0
+tabs = [t["id"] for t in ui["tabs"]]
+if tabs != ["files", "volumes", "home", "apps", "configs"]:
+    print("    ui.tabs is %s, not the #603 order files/volumes/home/apps/configs" % tabs); bad = 1
+if "sync" in ui or "backups" in ui:
+    print("    ui still carries a top-level sync/backups block: both moved into ui.configs"); bad = 1
+pages = [p["id"] for p in ui["configs"]["pages"]]
+if pages != ["git", "rclone", "mounts", "backups", "general", "others"]:
+    print("    ui.configs.pages is %s, not git/rclone/mounts/backups/general/others" % pages); bad = 1
+if any(not p.get("label") or not p.get("icon") for p in ui["configs"]["pages"]):
+    print("    a Configs sub-page lacks a label or an icon"); bad = 1
+sections = [x["id"] for x in ui["files"]["sections"]]
+if len(sections) != 2 or "emulated" not in sections:
+    print("    ui.files.sections is %s: #603 declares Emulated and the store's own section" % sections); bad = 1
+store = [p for p in ui["files"]["places"] if p["kind"] == "shared_root"]
+if len(store) != 1 or store[0].get("section") == "emulated":
+    print("    the shared store is not a section of its own"); bad = 1
+unknown = [p["id"] for p in ui["files"]["places"] if p.get("section") not in sections]
+if unknown:
+    print("    places naming an undeclared section: %s" % unknown); bad = 1
+sys.exit(bad)
+PYTHON
+}
+# d11_seed <drive-git-repos.json> : the seed set is PUBLIC repositories only
+d11_seed() {
+    python3 - "$1" <<'PYTHON'
+import json, sys
+repos = json.load(open(sys.argv[1]))["repos"]
+seeded = [r for r in repos if r.get("seed")]
+if not seeded: print("    no repository is marked seed: the store would start empty"); sys.exit(1)
+private = [r["name"] for r in seeded if r.get("private")]
+if private: print("    PRIVATE repositories marked for seeding: %s (an anonymous clone of one fails every time)" % private); sys.exit(1)
+if any(not r.get("public") for r in seeded): print("    a seeded repository does not state public: true"); sys.exit(1)
+sys.exit(0)
+PYTHON
+}
+d11_structure "$BJ" && pass "five tabs in the #603 order; six Configs sub-pages in order; two Files sections with the store in its own" || fail "the #603 structure is not what build.json declares"
+d11_seed "$REPOS" && pass "the store's seed set is public repositories only" || fail "the seed set is not public-only"
+if grep -qE 'buildConfigField "boolean", "SEED_ENABLED"' "$GRADLE" && grep -qE 'buildConfigField "int", +"SEED_DEPTH"' "$GRADLE" && grep -qE 'GitEngine\.clone\(url, dir, depth = BuildConfig\.SEED_DEPTH\)' "$SEED"; then pass "the seed is declared (storage.seed -> SEED_ENABLED/SEED_DEPTH) and cloned SHALLOW through the engine"; else fail "the first-run seed is not wired to the declaration"; fi
+if grep -qE 'GitEngine\.isRepository\(dir\)' "$SEED" && grep -qE 'RepoRegistry\(File\(applicationContext\.filesDir, GitSyncWorker\.REGISTRY_FILE\)\)' "$SEED"; then pass "seeding skips a clone that exists and registers into the SAME registry the Git page reads"; else fail "the seed does not reuse the one registry"; fi
+if grep -qE 'org\.eclipse\.jgit' "$SEED"; then fail "the seed talks to JGit directly - libs:git-sync is the engine"; else pass "the seed goes through libs:git-sync, never a second git"; fi
+python3 - "$APPS_JSON" "$BJ" <<'PYTHON' && pass "the Apps grid carries GitSync and RSync as in-app routes into declared pages" || fail "the Apps grid does not route GitSync / RSync into Configs"
+import json, sys
+apps = json.load(open(sys.argv[1]))["apps"]
+ui = json.load(open(sys.argv[2]))["ui"]
+tabs = [t["id"] for t in ui["tabs"]]; pages = [p["id"] for p in ui["configs"]["pages"]]
+bad = 0
+for want in ("GitSync", "RSync"):
+    tile = next((a for a in apps if a.get("label") == want), None)
+    if tile is None: print("    no %s tile" % want); bad = 1; continue
+    route = tile.get("route") or {}
+    if route.get("tab") not in tabs: print("    %s routes to tab %r, which ui.tabs does not declare" % (want, route.get("tab"))); bad = 1
+    if route.get("page") not in pages: print("    %s routes to page %r, which ui.configs.pages does not declare" % (want, route.get("page"))); bad = 1
+    if tile.get("package"): print("    %s declares a package: it is an in-app route, not an installed app" % want); bad = 1
+sys.exit(bad)
+PYTHON
+if grep -qE 'CompositionLocalProvider\(LocalContentColor provides text, content = content\)' "$THEME"; then pass "the dark theme provides LocalContentColor: no Text() inherits material3's Color.Black on the dark page"; else fail "DriveTheme does not provide LocalContentColor - every Text() without an explicit colour prints BLACK on the dark page"; fi
+for a in android:textColorPrimary android:textColorSecondary colorOnSurface; do
+    grep -qE "<item name=\"$a\">@color/drive_text" "$THEMES" && pass "Theme.CloudDrive names $a" || fail "Theme.CloudDrive does not override $a - an inflated View falls back to a framework ink"
+done
+
+echo "== M mutation-proof =="
+
 TMP="$(mktemp -d)"; trap 'rm -rf "${TMP:?}"' EXIT
 python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["tabs"]=b["ui"]["tabs"][1:]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-files.json"
 d1 "$TMP/no-files.json" "$MAIN" >/dev/null && fail "D1 passed a declaration that dropped a tab (tester is vacuous)" || pass "a tab dropped from ui.tabs → D1 RED"
 grep -v '"folder" -> Icons.Filled.Folder' "$CATALOG" > "$TMP/no-folder.kt"
 cmp -s "$CATALOG" "$TMP/no-folder.kt" && fail "the catalog mutation changed nothing (tester is stale)"
 d3 "$BJ" "$TMP/no-folder.kt" >/dev/null && fail "D3 passed a catalog without the folder glyph (tester is vacuous)" || pass "a glyph dropped from IconCatalog → D3 RED"
-sed 's/"git" -> GitReposScreen/"gits" -> GitReposScreen/' "$SYNC" > "$TMP/sync.kt"
-cmp -s "$SYNC" "$TMP/sync.kt" && fail "the sync mutation changed nothing (tester is stale)"
-d2 "$BJ" "$TMP/sync.kt" >/dev/null && fail "D2 passed a misdispatched page (tester is vacuous)" || pass "a page id misspelt in SyncScreen → D2 RED"
-d1 "$BJ" "$MAIN" >/dev/null && d2 "$BJ" "$SYNC" >/dev/null && d3 "$BJ" "$CATALOG" >/dev/null && pass "unmutated tree is still green" || fail "the unmutated tree is red"
+sed 's/"git" -> GitReposScreen/"gits" -> GitReposScreen/' "$CONFIGS" > "$TMP/configs.kt"
+cmp -s "$CONFIGS" "$TMP/configs.kt" && fail "the configs mutation changed nothing (tester is stale)"
+d2 "$BJ" "$TMP/configs.kt" >/dev/null && fail "D2 passed a misdispatched page (tester is vacuous)" || pass "a page id misspelt in ConfigsScreen → D2 RED"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); [r.update(seed=True) for r in d["repos"] if r.get("private")]; json.dump(d,open(sys.argv[2],"w"))' "$REPOS" "$TMP/seed-private.json"
+d11_seed "$TMP/seed-private.json" >/dev/null && fail "D11 passed a PRIVATE repository marked for seeding (tester is vacuous)" || pass "a private repository marked seed → D11 RED"
+d1 "$BJ" "$MAIN" >/dev/null && d2 "$BJ" "$CONFIGS" >/dev/null && d3 "$BJ" "$CATALOG" >/dev/null && d11_seed "$REPOS" >/dev/null && pass "unmutated tree is still green" || fail "the unmutated tree is red"
 
 echo
 if [ "$FAILURES" -eq 0 ]; then echo "test-drive-shell: all checks passed"; else echo "test-drive-shell: $FAILURES check(s) FAILED"; exit 1; fi

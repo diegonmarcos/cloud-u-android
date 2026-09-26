@@ -1,120 +1,124 @@
 package com.diegonmarcos.clouddrive.configs
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import com.diegonmarcos.clouddrive.BuildConfig
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
+import com.diegonmarcos.clouddrive.GitSyncWorker
 import com.diegonmarcos.clouddrive.R
-import com.diegonmarcos.clouddrive.files.Places
-import com.diegonmarcos.clouddrive.ui.DriveCard
+import com.diegonmarcos.clouddrive.backups.BackupsScreen
+import com.diegonmarcos.clouddrive.backups.MirrorRunner
+import com.diegonmarcos.clouddrive.sync.GitReposScreen
+import com.diegonmarcos.clouddrive.sync.GitSyncCoordinator
+import com.diegonmarcos.clouddrive.sync.MountsSyncScreen
+import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
+import com.diegonmarcos.clouddrive.sync.RcloneSyncScreen
+import com.diegonmarcos.clouddrive.sync.SyncSchedule
 import com.diegonmarcos.clouddrive.ui.DriveTags
+import com.diegonmarcos.clouddrive.ui.EmptyState
+import com.diegonmarcos.clouddrive.ui.IconCatalog
 import com.diegonmarcos.clouddrive.ui.Pill
-import com.diegonmarcos.clouddrive.ui.PillRow
-import com.diegonmarcos.clouddrive.ui.StatusLight
 import com.diegonmarcos.clouddrive.ui.ToolbarIsland
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
- * #579 CONFIGS (cloud-drive-redesign.md §6): cards — storage access (a StatusLight
- * that is a LOOK at the grant, with the Grant pill), Sign in (#587, the fleet's shared
- * libs:auth surface, applied by DriveAuthApply), Files defaults, the declared sync
- * schedule (read-only, it is build.json's), removable storage (the SAF grant), About.
+ * #603 CONFIGS: ONE island whose strip is build.json::ui.configs.pages — Git · Rclone ·
+ * Mounts (moved in from the old Sync tab), Backups (moved in from its own tab), General
+ * (#579's Configs cards) and Others. The strip is tabs inside the tab, not a stack — back
+ * leaves the app. Every one of the six is a screen that already existed: this file routes,
+ * it does not draw a card.
+ *
+ * The dispatch on a page id is the ONE place Kotlin names them; test-drive-shell.sh diffs
+ * it against the declaration in both directions.
+ *
+ * [page] is a DECLARED page id another screen asked for (an Apps tile's route); it is
+ * applied once and [onPageConsumed] clears the request.
  */
 @Composable
-fun ConfigsScreen(prefs: DrivePrefs, actions: DriveActions, hasAccess: Boolean, rcloneVersion: String?, modifier: Modifier = Modifier) {
+fun ConfigsScreen(
+    git: GitSyncCoordinator,
+    rclone: RcloneCoordinator,
+    mirrors: MirrorRunner,
+    prefs: DrivePrefs,
+    actions: DriveActions,
+    hasAccess: Boolean,
+    rcloneVersion: String?,
+    page: String? = null,
+    onPageConsumed: () -> Unit = {},
+    modifier: Modifier = Modifier,
+) {
     val ctx = LocalContext.current
-    val snap by prefs.snapshot.collectAsState()
-    Column(modifier.fillMaxSize()) {
-        ToolbarIsland(title = stringResource(R.string.configs_title), subtitle = BuildConfig.APPLICATION_ID)
-        LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-            item {
-                DriveCard(stringResource(R.string.configs_storage_access), light = StatusLight.of(hasAccess), summary = stringResource(R.string.configs_storage_access_body), tag = DriveTags.CONFIGS_CARD) {
-                    if (!hasAccess) PillRow { Pill(stringResource(R.string.files_grant_access), { actions.requestStorageAccess() }, filled = true) }
-                }
-            }
-            // #587 THE fleet sign-in (libs:auth), in this app's card: what it yields is applied by DriveAuthApply.
-            item { SignInCard() }
-            item {
-                DriveCard(stringResource(R.string.configs_files), tag = DriveTags.CONFIGS_CARD) {
-                    Text(stringResource(R.string.configs_default_sort), Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
-                    Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Declarations.files.sortKeys.forEach { key -> Pill(sortLabel(key), { prefs.setDefaultSort(key) }, filled = snap.defaultSort == key) }
-                    }
-                    ToggleRow(stringResource(R.string.configs_show_hidden), snap.showHidden) { prefs.setShowHidden(it) }
-                    ToggleRow(stringResource(R.string.configs_dual_pane), snap.dualPane) { prefs.setDualPane(it) }
-                    ToggleRow(stringResource(R.string.configs_thumbnails), snap.thumbnails) { prefs.setThumbnails(it) }
-                }
-            }
-            item {
-                DriveCard(
-                    stringResource(R.string.configs_sync_schedule), light = StatusLight.State.UNVERIFIABLE,
-                    summary = stringResource(R.string.sync_schedule, BuildConfig.GIT_SYNC_INTERVAL_MINUTES, stringResource(if (BuildConfig.GIT_SYNC_REQUIRE_UNMETERED) R.string.sync_network_unmetered else R.string.sync_network_any)),
-                    tag = DriveTags.CONFIGS_CARD,
-                ) { Text(stringResource(R.string.configs_sync_schedule_body), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            }
-            item {
-                val granted = snap.treeGrantUri != null
-                DriveCard(stringResource(R.string.configs_removable), light = StatusLight.of(granted, observed = false), summary = if (granted) stringResource(R.string.files_place_granted, snap.treeGrantName ?: "") else stringResource(R.string.configs_removable_none), tag = DriveTags.CONFIGS_CARD) {
-                    PillRow {
-                        Pill(stringResource(R.string.configs_grant_tree), { actions.requestTreeGrant() }, filled = !granted)
-                        if (granted) Pill(stringResource(R.string.configs_forget_grant), { prefs.forgetTreeGrant() })
-                    }
-                }
-            }
-            item {
-                DriveCard(stringResource(R.string.configs_about), summary = BuildConfig.VERSION_NAME, tag = DriveTags.CONFIGS_CARD) {
-                    AboutRow(stringResource(R.string.configs_version), BuildConfig.VERSION_NAME + " · " + BuildConfig.VERSION_CODE)
-                    AboutRow(stringResource(R.string.configs_built), BuildConfig.BUILD_TIMESTAMP + " · sha-" + BuildConfig.GIT_SHORT_SHA)
-                    AboutRow(stringResource(R.string.configs_engines), stringResource(R.string.configs_engines_value, rcloneVersion ?: "?"))
-                    AboutRow(stringResource(R.string.sync_store), Places.initialLocations().first.path)
-                }
-            }
+    val pages = Declarations.configs.pages
+    var current by rememberSaveable { mutableStateOf(pages.firstOrNull()?.id ?: "") }
+    LaunchedEffect(page) {
+        if (page != null && pages.any { it.id == page }) current = page
+        if (page != null) onPageConsumed()
+    }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var nextRun by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(Unit) {
+        // WorkManager's own word on when the base period fires next; null when it will not say.
+        nextRun = withContext(Dispatchers.IO) {
+            runCatching {
+                val infos = WorkManager.getInstance(ctx).getWorkInfosForUniqueWorkFlow(GitSyncWorker.WORK_NAME).first()
+                val next = infos.firstOrNull { it.state == WorkInfo.State.ENQUEUED }?.nextScheduleTimeMillis
+                SyncSchedule.minutesUntilNext(next, System.currentTimeMillis())
+            }.getOrNull()
         }
     }
-    @Suppress("UNUSED_VARIABLE") val unused = ctx
-}
+    fun say(msg: String) { scope.launch { snackbar.showSnackbar(msg) } }
 
-@Composable
-private fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-        Switch(checked = checked, onCheckedChange = onChange)
+    Column(modifier.fillMaxSize()) {
+        ToolbarIsland(title = stringResource(R.string.configs_title), subtitle = pages.firstOrNull { it.id == current }?.label)
+        Row(
+            Modifier.fillMaxWidth().testTag(DriveTags.CONFIGS_STRIP).horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            pages.forEach { p -> Pill(p.label, { current = p.id }, icon = IconCatalog.vectorOrDefault(p.icon), filled = current == p.id) }
+        }
+        AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "configs_page", modifier = Modifier.weight(1f)) { id ->
+            when (id) {
+                "git" -> GitReposScreen(git, actions, nextRun)
+                "rclone" -> RcloneSyncScreen(rclone, prefs, actions, ::say)
+                "mounts" -> MountsSyncScreen(rclone, prefs, actions, ::say)
+                "backups" -> BackupsScreen(mirrors, prefs)
+                "general" -> GeneralPage(prefs, actions, hasAccess)
+                "others" -> OthersPage(prefs, actions, rcloneVersion)
+                else -> EmptyState(IconCatalog.vectorOrDefault(Declarations.iconDefault), stringResource(R.string.chrome_unknown_tab), "")
+            }
+        }
+        SnackbarHost(snackbar)
     }
-}
-
-@Composable
-private fun AboutRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.width(12.dp))
-        Text(value, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
-    }
-}
-
-@Composable
-private fun sortLabel(key: String): String = when (key) {
-    "size" -> stringResource(R.string.files_sort_size)
-    "modified" -> stringResource(R.string.files_sort_modified)
-    "type" -> stringResource(R.string.files_sort_type)
-    else -> stringResource(R.string.files_sort_name)
 }

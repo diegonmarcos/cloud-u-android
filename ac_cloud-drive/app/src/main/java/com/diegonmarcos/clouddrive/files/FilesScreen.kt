@@ -460,14 +460,13 @@ private fun sortLabel(key: String): String = when (key) {
     else -> stringResource(R.string.files_sort_name)
 }
 
+/** #603 the pane's bar is the chrome's ONE StorageBar (ui/Chrome.kt) with this pane's caption. */
 @Composable
 private fun StorageBar(usage: Pair<Long, Long>) {
-    val (free, total) = usage
-    val used = if (total > 0) ((total - free).toDouble() / total).toFloat().coerceIn(0f, 1f) else 0f
-    Column(Modifier.fillMaxWidth().testTag(DriveTags.FILES_STORAGE_BAR).padding(horizontal = 12.dp, vertical = 4.dp)) {
-        LinearProgressIndicator(progress = { used }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(bottomNavPillShape))
-        Text(stringResource(R.string.files_storage_bar, FileOps.humanBytes(free), FileOps.humanBytes(total)), Modifier.padding(top = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
+    com.diegonmarcos.clouddrive.ui.StorageBar(
+        usage,
+        stringResource(R.string.files_storage_bar, FileOps.humanBytes(usage.first), FileOps.humanBytes(usage.second)),
+    )
 }
 
 @Composable
@@ -640,11 +639,19 @@ private fun PlacesSheet(d: FilesDialog.Places, ui: FilesUiState, controller: Fil
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = Modifier.testTag(DriveTags.FILES_PLACES_SHEET)) {
         LazyColumn(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             item { SectionHeader(stringResource(if (d.pickDestination) (if (d.move) R.string.files_move_to else R.string.files_copy_to) else R.string.files_places)) }
-            declared.filter { it.hero }.forEach { hero ->
-                item { DriveCard(hero.label, summary = hero.location?.path, summaryMonospace = true, hero = true, onClick = { go(hero) }) { Text(hero.hint, Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer) } }
+            // #603 ONE HEADER PER DECLARED SECTION (ui.files.sections), in declared order, each
+            // holding the places that name it: Emulated (shared storage) and Cloud-Drive-Storage
+            // (the #575 shared store, a section of its own because every fleet app reads it).
+            // Removable volumes stay under Places: they are discovered, never declared.
+            Declarations.files.sections.forEach { section ->
+                item { SectionHeader(section.label) }
+                declared.filter { it.section == section.id }.forEach { p ->
+                    if (p.hero) item { DriveCard(p.label, summary = p.location?.path, summaryMonospace = true, hero = true, onClick = { go(p) }) { Text(p.hint, Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer) } }
+                    else item(key = p.id) { PlaceRow(p) { go(p) } }
+                }
             }
             item { SectionHeader(stringResource(R.string.files_places_section)) }
-            items(declared.filter { !it.hero } + discovered, key = { it.id }) { p -> PlaceRow(p) { go(p) } }
+            items(discovered, key = { it.id }) { p -> PlaceRow(p) { go(p) } }
             item { SectionHeader(stringResource(R.string.files_bookmarks_section), count = bookmarks.size) }
             if (bookmarks.isEmpty()) item { Text(stringResource(R.string.files_bookmarks_none), Modifier.padding(horizontal = 16.dp, vertical = 6.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             items(bookmarks, key = { it.id }) { b -> PlaceRow(b, onRemove = { controller.prefs.removeBookmark(b.location!!.path) }) { go(b) } }

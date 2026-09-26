@@ -32,16 +32,17 @@ class DeclarationsTest {
 
     @Test fun tabsDeclareTheFiveKnownShellTabs() {
         val tabs = Declarations.parseTabs(section("tabs"))
-        assertEquals(listOf("files", "apps", "sync", "backups", "configs"), tabs.map { it.id })
+        // #603 Sync and Backups are no longer tabs: they are Configs sub-pages.
+        assertEquals(listOf("files", "volumes", "home", "apps", "configs"), tabs.map { it.id })
         assertTrue(tabs.all { it.label.isNotBlank() && it.icon.isNotBlank() })
         assertTrue(tabs.map { it.id }.contains(ui["default_tab"].toString().trim('"')))
     }
 
     @Test fun everyDeclaredIconIsInTheCatalog() {
         val tabs = Declarations.parseTabs(section("tabs"))
-        val sync = Declarations.parseSync(section("sync"))
+        val configs = Declarations.parseConfigs(section("configs"))
         val files = Declarations.parseFiles(section("files"))
-        val names = Declarations.iconNames(tabs, sync, files)
+        val names = Declarations.iconNames(tabs, configs, files)
         assertTrue(names.size >= 10)
         val unknown = names.filterNot { IconCatalog.knows(it) }
         assertEquals("icons declared but unknown to IconCatalog: $unknown", emptyList<String>(), unknown)
@@ -49,12 +50,28 @@ class DeclarationsTest {
         assertFalse(IconCatalog.knows("no-such-glyph"))
     }
 
-    @Test fun syncPagesAndPeriods() {
-        val sync = Declarations.parseSync(section("sync"))
-        assertEquals(listOf("git", "rclone", "mounts"), sync.pages.map { it.id })
-        assertTrue(sync.gitPeriodsMinutes.isNotEmpty())
-        assertTrue("every period is at or above WorkManager's floor", sync.gitPeriodsMinutes.all { it >= 15 })
-        assertEquals(sync.gitPeriodsMinutes.sorted(), sync.gitPeriodsMinutes)
+    @Test fun configsPagesAndPeriods() {
+        val configs = Declarations.parseConfigs(section("configs"))
+        // #603 the six sub-pages, in declared order: Git/Rclone/Mounts came from the old Sync
+        // tab, Backups from its own tab, General is #579's Configs page and Others is new.
+        assertEquals(listOf("git", "rclone", "mounts", "backups", "general", "others"), configs.pages.map { it.id })
+        assertTrue(configs.pages.all { it.label.isNotBlank() && it.icon.isNotBlank() })
+        assertTrue(configs.gitPeriodsMinutes.isNotEmpty())
+        assertTrue("every period is at or above WorkManager's floor", configs.gitPeriodsMinutes.all { it >= 15 })
+        assertEquals(configs.gitPeriodsMinutes.sorted(), configs.gitPeriodsMinutes)
+    }
+
+    @Test fun filesDeclaresTwoSectionsAndEveryPlaceNamesOne() {
+        val files = Declarations.parseFiles(section("files"))
+        assertEquals(2, files.sections.size)
+        assertTrue("Emulated is a declared section", files.sections.any { it.id == "emulated" })
+        assertTrue(files.sections.all { it.label.isNotBlank() && it.icon.isNotBlank() })
+        val ids = files.sections.map { it.id }.toSet()
+        assertTrue("every place names a declared section", files.places.all { it.section in ids })
+        // The #575 shared store is a section of its own, not one place among the emulated ones.
+        val store = files.places.single { it.kind == "shared_root" }
+        assertTrue(store.section != "emulated" && store.section in ids)
+        assertEquals(1, files.places.count { it.section == store.section })
     }
 
     @Test fun filesPlacesFiltersAndSort() {
@@ -103,11 +120,27 @@ class DeclarationsTest {
         val data = File(root, "data")
         val apps = Declarations.parseApps(Json.parseToJsonElement(File(data, "drive-apps.json").readText()).jsonObject["apps"].toString())
         assertTrue(apps.size >= 5); assertTrue(apps.all { it.label.isNotBlank() && it.icon.isNotBlank() })
+        // #603 GitSync and RSync are IN-APP routes into declared Configs sub-pages, never packages.
+        val configs = Declarations.parseConfigs(section("configs"))
+        val pageIds = configs.pages.map { it.id }
+        listOf("GitSync", "RSync").forEach { label ->
+            val tile = apps.single { it.label == label }
+            assertEquals("a routed tile carries no package", "", tile.packageName)
+            assertEquals("configs", tile.routeTab)
+            assertTrue("$label routes to a declared sub-page (${tile.routePage})", tile.routePage in pageIds)
+        }
+        assertTrue("an ordinary tile has no route", apps.filter { it.routeTab.isBlank() }.size >= 5)
         val connections = Declarations.parseConnections(File(data, "drive-connections.json").readText())
         assertTrue(connections.size >= 10); assertTrue(connections.all { it.status.isNotBlank() })
         val family = Declarations.parseGitFamily(File(data, "drive-git-repos.json").readText())
         assertNotNull(family.upstream)
         assertTrue(family.repos.any { it.name == "cloud-data-my-ai-memory" && it.private })
+        // #603 the store's first-run seed set: marked, public, and never a private repository —
+        // an anonymous clone of one fails every time, so seeding it would bake a permanent red.
+        val seeded = family.repos.filter { it.seed }
+        assertTrue("the store would start empty", seeded.isNotEmpty())
+        assertEquals("private repositories must never be seeded", emptyList<String>(), seeded.filter { it.private }.map { it.name })
+        assertTrue(family.repos.filter { it.private }.none { it.seed })
         assertEquals("https://github.com/diegonmarcos/cloud-infra.git", family.cloneUrl(family.repos.first { it.name == "cloud-infra" }))
         val mirrors = Declarations.parseMirrorJobs(Json.parseToJsonElement(File(data, "drive-mirror-jobs.json").readText()).jsonObject["jobs"].toString())
         assertTrue(mirrors.isNotEmpty()); assertTrue("declared mirror paths are relative", mirrors.all { !it.source.startsWith("/") && !it.destination.startsWith("/") })
@@ -121,7 +154,8 @@ class DeclarationsTest {
     @Test fun blankAndBrokenInputParseToEmpty() {
         assertTrue(Declarations.parseTabs("").isEmpty())
         assertTrue(Declarations.parseTabs("{not json").isEmpty())
-        assertTrue(Declarations.parseSync("").pages.isEmpty())
+        assertTrue(Declarations.parseConfigs("").pages.isEmpty())
+        assertTrue(Declarations.parseFiles("").sections.isEmpty())
         assertEquals("name", Declarations.parseFiles("").defaultSort)
         assertEquals("", Declarations.decode(""))
         assertEquals("[1]", Declarations.decode(java.util.Base64.getEncoder().encodeToString("[1]".toByteArray())))
