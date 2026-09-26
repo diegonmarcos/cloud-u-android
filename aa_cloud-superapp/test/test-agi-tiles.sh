@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tester (#571): Cloud ▸ Apps ▸ AGI is exactly SuperApp | Terminal | MyTerminal |
-# IDE | B-LLM | S-LLM, and each launching tile LANDS on the app it is named for.
+# Code | B-LLM | S-LLM, and each launching tile LANDS on the app it is named for.
 #
 # THE FAILURE THIS EXISTS FOR. #499 pinned the Terminal tile's CAPTION and
 # nothing pinned where the tap went: it was app://com.termux.nix with a Play
@@ -13,10 +13,10 @@
 # build) says that app directory ships. Nothing here names a package id.
 #
 #   T1  the group's tiles, in order, are the six the owner asked for
-#   T2  Terminal/MyTerminal/IDE resolve to ac_cloud-nix-on-droid / ac_cloud-myterminal
+#   T2  Terminal/MyTerminal/Code resolve to ac_cloud-nix-on-droid / ac_cloud-myterminal
 #       / ac_cloud-code's own package, and install from that app's release_url
 #       (#563 follow-up: Terminal moved from ac_cloud-termux to ac_cloud-nix-on-droid)
-#   T3  the IDE glyph is cloud-code's launcher foreground, byte for byte
+#   T3  the Code glyph is cloud-code's launcher foreground, byte for byte
 #   T4  a not-installed extapp tile draws the #249 placeholder, with strings in
 #       every locale, and the install snack is a string resource
 #
@@ -60,7 +60,7 @@ tiles = agi[0]["tiles"]
 
 print("== T1: the AGI row is the six tiles the owner asked for, in order ==")
 got = [t.get("label") for t in tiles]
-want = ["SuperApp", "Terminal", "MyTerminal", "IDE", "B-LLM", "S-LLM"]
+want = ["SuperApp", "Terminal", "MyTerminal", "Code", "B-LLM", "S-LLM"]
 check(got == want, "AGI captions are %s (want %s)" % (got, want))
 by = {t.get("label"): t for t in tiles}
 
@@ -78,7 +78,7 @@ def fleet_for(directory):
             and a.get("repo_url", "").rstrip("/").endswith("/" + directory)]
     return hits[0] if len(hits) == 1 else None
 for label, directory in (("Terminal", "ac_cloud-nix-on-droid"), ("MyTerminal", "ac_cloud-myterminal"),
-                         ("IDE", "ac_cloud-code")):
+                         ("Code", "ac_cloud-code")):
     tile, entry = by.get(label), fleet_for(directory)
     check(entry is not None, "fleet manifest has exactly one app built from %s" % directory)
     if tile is None or entry is None: continue
@@ -89,8 +89,8 @@ for label, directory in (("Terminal", "ac_cloud-nix-on-droid"), ("MyTerminal", "
           and e.get("install_apk_url") == entry["release_url"],
           "%s installs %s from the fleet's release_url %s" % (label, entry["package"], entry["release_url"]))
 
-print("== T3: the IDE glyph is cloud-code's own launcher foreground ==")
-ide_icon = (by.get("IDE") or {}).get("icon", "")
+print("== T3: the Code glyph is cloud-code's own launcher foreground ==")
+ide_icon = (by.get("Code") or {}).get("icon", "")
 mine = os.path.join(app, "app/src/main/res/drawable", ide_icon + ".xml")
 theirs = os.path.join(root, "ac_cloud-code/res/android/drawable/ic_launcher_foreground.xml")
 check(bool(ide_icon) and os.path.isfile(mine) and os.path.isfile(theirs) and read(mine) == read(theirs),

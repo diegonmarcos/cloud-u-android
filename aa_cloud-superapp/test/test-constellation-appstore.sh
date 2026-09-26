@@ -21,7 +21,7 @@ if [ -f "$FLEET" ]; then
   # Every standalone ac_cloud-<id> self-registers: the top-level apps +
   # the 4 promoted ex-comms fork-apps (dialer/chat/mail/matrix), each now its
   # OWN dir + ship-cloud-<id>.yml CI. Fleet ids = the dir basenames.
-  for id in superapp nav ide browser vault wallet dialer chat mail matrix; do
+  for id in superapp nav code browser vault wallet dialer chat mail matrix; do
     jq -e --arg i "$id" '.apps[] | select(.id==$i) | .package and .image and .registry' "$FLEET" >/dev/null 2>&1 \
       && ok "fleet entry $id has package+image" || bad "fleet entry $id missing/incomplete"
   done

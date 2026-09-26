@@ -2637,9 +2637,9 @@
                 "target": "extapp:cloud-myterminal"
               },
               {
-                "_doc": "#571. IDE opens cloud-code (ac_cloud-code, applicationId com.diegonmarcos.code, our Acode build) through ui.external_apps[cloud-code]. The APK is often not installed yet, so GroupedTilesFragment draws this tile as the #249 placeholder (ic_app_not_installed + 'Not installed') and the tap installs it from the constellation Store's own release asset. icon ic_ide is cloud-code's launcher foreground copied verbatim from ac_cloud-code/res/android/drawable/ic_launcher_foreground.xml, the same way Writer/Camera/Drive carry theirs.",
-                "id": "ide",
-                "label": "IDE",
+                "_doc": "#599 follow-up to #571/#562: last surviving 'IDE' identity string in this file, renamed to match cloud-code (ac_cloud-code, applicationId com.diegonmarcos.code, our Acode build) opened through ui.external_apps[cloud-code]. The APK is often not installed yet, so GroupedTilesFragment draws this tile as the #249 placeholder (ic_app_not_installed + 'Not installed') and the tap installs it from the constellation Store's own release asset. icon ic_ide is kept as the resource filename (cloud-code's launcher foreground copied verbatim from ac_cloud-code/res/android/drawable/ic_launcher_foreground.xml, the same way Writer/Camera/Drive carry theirs) — ic_code is already taken by the MyTerminal tile above, so only the id/label rebrand here, not the drawable filename.",
+                "id": "code",
+                "label": "Code",
                 "icon": "ic_ide",
                 "target": "extapp:cloud-code"
               },

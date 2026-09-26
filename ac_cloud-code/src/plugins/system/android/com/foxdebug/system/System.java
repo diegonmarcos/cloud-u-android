@@ -334,6 +334,7 @@ public class System extends CordovaPlugin {
         callbackContext.success(arch);
         return true;
       case "requestStorageManager":
+      case "manage-all-files": // #599: alias — plugin.js's system.manageAllFiles used this action name, unimplemented until now
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
           try {
             Intent intent = new Intent(
@@ -357,6 +358,7 @@ public class System extends CordovaPlugin {
         }
         return true;
       case "hasGrantedStorageManager":
+      case "is-external-storage-manager": // #599: alias — plugin.js's system.isExternalStorageManager used this action name, unimplemented until now
         boolean granted;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
           granted = Environment.isExternalStorageManager();

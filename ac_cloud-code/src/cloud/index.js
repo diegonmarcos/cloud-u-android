@@ -150,7 +150,18 @@ function renderBacklog(panel) {
 async function renderRepos(panel) {
 	const root = stored("repos.root", storePath(nav.repos.root));
 	const list = el("div", { className: "cloud-list" }, "Scanning …");
-	panel.replaceChildren(panelHeader("Repos"), el("p", { className: "cloud-muted" }, root), list);
+	const change = el("button", {
+		className: "icon folder_open",
+		title: "Repos root folder",
+		onclick: async () => {
+			const { default: prompt } = await import("dialogs/prompt");
+			const next = await prompt("Repos root folder (URL)", root, "text");
+			if (!next) return;
+			store("repos.root", next.endsWith("/") ? next : `${next}/`);
+			renderRepos(panel);
+		},
+	});
+	panel.replaceChildren(panelHeader("Repos", change), el("p", { className: "cloud-muted" }, root), list);
 	try {
 		const { items } = await listRepos(root);
 		list.replaceChildren(
@@ -167,7 +178,11 @@ async function renderRepos(panel) {
 				: [el("p", { className: "cloud-muted" }, "No git repositories under this folder.")]),
 		);
 	} catch (err) {
-		list.replaceChildren(el("p", {}, `Cannot list ${root}: ${err?.message || err}`));
+		const grant = el("button", {
+			className: "cloud-row",
+			onclick: () => system.manageAllFiles(() => renderRepos(panel), (e) => toast(String(e))),
+		}, el("span", { className: "icon folder_open" }), "Allow access to all files, then retry");
+		list.replaceChildren(el("p", {}, `Cannot list ${root}: ${err?.message || err}`), grant);
 	}
 }
 
@@ -182,7 +197,26 @@ async function renderAgents(panel) {
 	await renderBacklogView(panel, "Agents", nav.agents.entry, live);
 }
 
-// ── Home: one card per other tab, plus whatever the seam reports ───────────
+// ── Home: one card per other tab, a Configs card, plus whatever the seam reports ──
+// #575 Backlog and Repos both read the shared store, which on Android 11+ needs
+// all-files access granted per app: the Configs card is the one place to check
+// and grant it, rather than only stumbling into the grant button on a read error.
+function configsCard() {
+	const status = el("span", { className: "cloud-muted" }, "Checking …");
+	const card = el("button", {
+		className: "cloud-card",
+		onclick: () => system.manageAllFiles(() => refresh(), (e) => toast(String(e))),
+	}, el("span", { className: "icon settings" }), el("span", {}, "Configs"), status);
+	function refresh() {
+		system.isExternalStorageManager(
+			(granted) => { status.textContent = granted ? "Storage access granted" : "Grant storage access"; },
+			() => { status.textContent = "Grant storage access"; },
+		);
+	}
+	refresh();
+	return card;
+}
+
 async function renderHome(panel) {
 	const { cards } = await homeStatus();
 	const tiles = tabs
@@ -195,7 +229,7 @@ async function renderHome(panel) {
 		);
 	panel.replaceChildren(
 		panelHeader("Home"),
-		el("div", { className: "cloud-grid" }, tiles, cards.map((c) => el("div", { className: "cloud-card" }, c.title))),
+		el("div", { className: "cloud-grid" }, tiles, configsCard(), cards.map((c) => el("div", { className: "cloud-card" }, c.title))),
 	);
 }
 
