@@ -3557,7 +3557,7 @@
       "read_timeout_ms": 20000,
       "_doc_git": "Where the two GitHub import tiles read the artifact from. SAME BYTES as the Authelia route serves — one artifact contract, four ways to authenticate for it, so ConfigAutoImport.apply is reached identically no matter which tile was pressed. The token tile GETs exactly this one path over the contents API; the SSH tile must clone the repo because GitHub speaks only the git protocol over SSH, which is also why the token tile is the cheaper of the two.",
       "git": {
-        "repo": "diegonmarcos/cloud-vault",
+        "repo": "diegonmarcos/cloud-me_vault",
         "path": "superapp-config.json",
         "ref": "main"
       }

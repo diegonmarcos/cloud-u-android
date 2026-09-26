@@ -2181,7 +2181,7 @@
         },
         {
           "label": "vault",
-          "url": "https://github.com/diegonmarcos/cloud-vault"
+          "url": "https://github.com/diegonmarcos/cloud-me_vault"
         }
       ],
       "consolidated_config": "cloud/2_configs/dist/_cloud-data-consolidated.json → baked into the app as data/mesh.json (BuildConfig.MESH_JSON_B64), the full wg-mesh/v1 node + peer + transport snapshot"

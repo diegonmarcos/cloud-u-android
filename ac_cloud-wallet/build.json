@@ -98,7 +98,7 @@
         },
         {
           "label": "vault",
-          "url": "https://github.com/diegonmarcos/cloud-vault"
+          "url": "https://github.com/diegonmarcos/cloud-me_vault"
         }
       ],
       "consolidated_config": "cloud/2_configs/dist/_cloud-data-consolidated.json"

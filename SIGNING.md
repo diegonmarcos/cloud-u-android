@@ -50,7 +50,7 @@ rg -l vault_keystore --glob 'a[abc]_*/build.json'
 
 Each `ship-cloud-*.yml` checks out the private vault and decrypts the key:
 
-- secret **`ANDROID_SIGNING_VAULT_TOKEN`** — fine-grained PAT, read access to `diegonmarcos/cloud-vault`.
+- secret **`ANDROID_SIGNING_VAULT_TOKEN`** — fine-grained PAT, read access to `diegonmarcos/cloud-me_vault`.
 - secret **`SOPS_AGE_KEY`** — age key to decrypt `signing.secrets.yaml`.
 
 No keystore is cached or generated in CI. Missing either secret → the build fails
@@ -69,7 +69,7 @@ No keystore is cached or generated in CI. Missing either secret → the build fa
 > read the right secret name:
 >
 > 1. Mint at `github.com/settings/personal-access-tokens/new` — owner
->    `diegonmarcos`, repository access **only** `diegonmarcos/cloud-vault`,
+>    `diegonmarcos`, repository access **only** `diegonmarcos/cloud-me_vault`,
 >    permission **Contents: Read**.
 > 2. `gh secret set ANDROID_SIGNING_VAULT_TOKEN -R diegonmarcos/cloud-u-android`
 > 3. Re-run any ship workflow to confirm.
