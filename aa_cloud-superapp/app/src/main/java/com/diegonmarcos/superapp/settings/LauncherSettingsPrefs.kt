@@ -71,8 +71,9 @@ class LauncherSettingsPrefs(context: Context) {
     /** Whole-UI size over the DECLARED range (build.json::ui.launcher_settings
      *  .scale, 0..10 since #384). A phone that has never touched the row reads
      *  the SHIPPED preset — 3 since #408, factor 0.85 — and that number lives
-     *  only in build.json. Stored here; written to the device by
-     *  SystemDisplay.applyScale, which owns both halves of it. */
+     *  only in build.json. Stored here; applied IN-PROCESS by
+     *  SystemDisplay.wrap (#601) — no device-wide write, no shell channel,
+     *  so the shipped value is what a fresh install actually looks like. */
     var scale: Int
         get() = sp.getInt("scale", Config.scale.default)
         set(v) { sp.edit().putInt("scale", v).apply() }

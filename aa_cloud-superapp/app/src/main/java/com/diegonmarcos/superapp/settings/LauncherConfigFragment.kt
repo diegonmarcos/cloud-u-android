@@ -216,11 +216,11 @@ class LauncherConfigFragment : Fragment() {
                 // with — Slider.default IS the shipped preset's value.
                 root.addView(sliderRow(ctx, sc.label, sc.subtitle, sc.min, sc.max, settingsPrefs.scale,
                     ticks = sc.ticks, presets = sc.presets) { v ->
+                    // #601: SystemDisplay.wrap applies this in-process, so the
+                    // change needs no shell channel — just a re-read, which
+                    // recreate() gets by re-running attachBaseContext.
                     settingsPrefs.scale = v
-                    if (!SystemDisplay.hasChannel(ctx)) Toast.makeText(
-                        ctx, "Scale needs the shell channel — turn on wireless debugging first.",
-                        Toast.LENGTH_LONG).show()
-                    else Thread({ SystemDisplay.applyScale(ctx, v) }, "ui-scale").start()
+                    SystemDisplay.applyScale(ctx)
                 })
                 root.addView(spacer(ctx, dp(ctx, 8)))
             }

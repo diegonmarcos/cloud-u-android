@@ -9,16 +9,44 @@ import com.diegonmarcos.superapp.settings.LauncherSettingsPrefs
  * The display levers Samsung keeps outside any app's reach: system-wide
  * dark mode, and the Screen zoom / Font size pair.
  *
- * All three are device-wide settings, so none of them can be done from inside
- * the process. `AppCompatDelegate.setDefaultNightMode` would repaint THIS app
- * and leave the rest of the phone light, which is not what "dark mode" means
- * on the settings screen it is drawn on. Everything here therefore goes
- * through the same privileged shell channel the Battery Hunger levers use, and
- * reports honestly when there is no channel rather than pretending it worked.
+ * Dark mode is a genuine device-wide setting — `AppCompatDelegate
+ * .setDefaultNightMode` would repaint THIS app and leave the rest of the
+ * phone light, which is not what "dark mode" means on the settings screen
+ * it is drawn on — so [setNight] goes through the same privileged shell
+ * channel the Battery Hunger levers use, and reports honestly when there is
+ * no channel rather than pretending it worked. Call off the main thread —
+ * that write is a shell round-trip.
  *
- * Call off the main thread — every write is a shell round-trip.
+ * Scale is NOT device-wide any more (#601): [wrap] applies it in-process, so
+ * it needs no channel and never touches a system setting at all.
  */
 object SystemDisplay {
+
+    /**
+     * In-process size override — #601. Until this, the scale slider was
+     * pixels on paper unless the privileged shell channel could write
+     * `wm density` + `settings put system font_scale`, both of which need
+     * wireless debugging switched on. A fresh install has no channel, so it
+     * rendered at the bare device size no matter what build.json shipped as
+     * the "default" step — the slider promised 0.85 and nothing on screen
+     * ever moved.
+     *
+     * [wrap] applies the SAME [factor] this class always used, but through
+     * `createConfigurationContext` instead of a shell command: an
+     * Activity-scoped Configuration override needs no permission, no ADB,
+     * and no channel, because it never touches a device-wide setting — it
+     * only tells THIS process what size to draw itself at. Call from
+     * `attachBaseContext`; the shipped default (currently 3 → 0.85, see
+     * build.json::ui.launcher_settings.scale) is what a fresh install now
+     * looks like from the very first frame, with nothing left to grant.
+     */
+    fun wrap(base: Context): Context {
+        val factor = factor(LauncherSettingsPrefs(base).scale).toFloat()
+        val config = Configuration(base.resources.configuration)
+        config.fontScale = factor
+        config.densityDpi = Math.round(base.resources.displayMetrics.densityDpi * factor)
+        return base.createConfigurationContext(config)
+    }
 
     private fun exec(ctx: Context): ((String) -> String?)? {
         val channel = ShellChannels.active(ctx) ?: return null
@@ -45,14 +73,18 @@ object SystemDisplay {
     // ── Scale (Screen zoom + Font size, as one knob) ─────────────────────
 
     /**
-     * Samsung splits this in two — Screen zoom (`wm density`) and Font size
-     * (`settings put system font_scale`) — and the two drift apart the moment
-     * anything writes one and not the other. They take the SAME factor here.
+     * Samsung splits this in two on the SYSTEM equivalent — Screen zoom
+     * (`wm density`) and Font size (`settings put system font_scale`) — and
+     * the two drift apart the moment anything writes one and not the other.
+     * [wrap] takes the SAME factor for both, in-process, so they can't drift
+     * relative to each other even though (since #601) neither is a
+     * device-wide setting any more.
      *
      * Each step is 0.05, anchored so scale 6 is exactly 1.00: the phone's own
-     * size, changing nothing. That is why the default is 6 and not the bottom
-     * step. Defaulting to the bottom would shrink the whole UI on first install,
-     * which is the mirror image of the complaint that produced this setting.
+     * size, changing nothing. That is why 6 is labelled "Normal" rather than
+     * the shipped default — the shipped default is 3 (0.85), baked as the
+     * app's own baseline since #601 so a fresh install renders it with no
+     * channel and no grant.
      *
      * The band is CLAMPED TO THE DECLARED RANGE, never to a pair of literals.
      * It used to read coerceIn(1, 10), which was the declared range written a
@@ -67,33 +99,26 @@ object SystemDisplay {
     }
 
     /**
-     * Write both levers. Factor 1.00 RESETS them instead of pinning them to
-     * the value they already have: an override that happens to equal the
-     * physical number still counts as an override, and leaving one behind is
-     * how a later `reset` elsewhere produces a surprise.
+     * Apply a new slider value — #601. This used to shell out `wm density`
+     * + `settings put system font_scale`, a device-wide write that needed
+     * the privileged channel (wireless debugging) to exist at all. Neither
+     * command runs any more: the size is drawn by THIS process through
+     * [wrap], so all a change needs is to be re-read — recreate() tears the
+     * Activity down and rebuilds it, which calls attachBaseContext again
+     * and picks up the value [LauncherSettingsPrefs.scale] was just set to.
      *
-     * @return false when there is no privileged channel — the caller must say
-     *         so out loud rather than leave a slider that moves and does nothing.
+     * @return false when [ctx] is not an Activity — the caller must say so
+     *         rather than leave a slider that moves and does nothing.
      */
-    fun applyScale(ctx: Context, scale: Int): Boolean {
-        val exec = exec(ctx) ?: return false
-        val factor = factor(scale)
-        if (factor == 1.0) {
-            exec("wm density reset")
-            exec("settings delete system font_scale")
-            return true
-        }
-        val physical = physicalDensity(exec)
-        if (physical != null) exec("wm density ${Math.round(physical * factor)}")
-        // font_scale is absolute, unlike density which multiplies the panel's
-        // own number — so the same factor goes in raw.
-        exec("settings put system font_scale $factor")
+    fun applyScale(ctx: Context): Boolean {
+        // ctx may arrive wrapped (a Fragment's inflater context, a themed
+        // wrapper) rather than the raw Activity, so unwrap ContextWrapper
+        // the same way AppCompatActivity's own helpers do rather than
+        // trusting a single `as?` to see through it.
+        var c: Context? = ctx
+        while (c is android.content.ContextWrapper && c !is android.app.Activity) c = c.baseContext
+        val activity = c as? android.app.Activity ?: return false
+        activity.recreate()
         return true
     }
-
-    /** The panel's own density, ignoring any override already in place. */
-    private fun physicalDensity(exec: (String) -> String?): Int? =
-        exec("wm density")?.lineSequence()
-            ?.firstOrNull { it.contains("Physical density") }
-            ?.substringAfter(':')?.trim()?.toIntOrNull()
 }

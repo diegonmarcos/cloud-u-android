@@ -462,6 +462,22 @@ open class ShellActivity : AppCompatActivity(),
     private lateinit var modePrefs: ModePrefs
     private val currentMode: String get() = modePrefs.mode
 
+    /**
+     * #601: bake the Scale slider's size in-process, before any layout is
+     * inflated. This used to be a no-op — the slider's factor only ever
+     * reached the screen through `wm density` / `settings put system
+     * font_scale`, both device-wide writes gated on wireless debugging — so
+     * a fresh install rendered at the bare phone size no matter what
+     * build.json shipped as the default step. Wrapping the base Context
+     * here needs no channel and no grant: [SystemDisplay.wrap] reads the
+     * stored scale (default 3 → 0.85, LauncherSettingsPrefs.Config.scale)
+     * and returns a Configuration-overridden Context this Activity — and
+     * every Fragment it hosts — inflates from instead.
+     */
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.diegonmarcos.superapp.system.SystemDisplay.wrap(base))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         Trace.i(TAG, "onCreate enter")
         // BEFORE super.onCreate: this is the only moment Android lets a theme
