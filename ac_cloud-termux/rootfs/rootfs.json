@@ -13,9 +13,10 @@
   "apt_packages": [
     "git",
     "fish",
+    "zsh",
     "python3-venv"
   ],
-  "_doc_apt_packages": "Terminal-only additions, installed together with the shared apt_packages. git: the shared list counts it as a base-image binary of the AI containers, and debian slim does not carry it. fish: the default shell. python3-venv: hermes is installed into its own virtual environment (pip_venvs below).",
+  "_doc_apt_packages": "Terminal-only additions, installed together with the shared apt_packages. git: the shared list counts it as a base-image binary of the AI containers, and debian slim does not carry it. fish: the default shell. zsh: baked and available, NOT the default (#470 follow-up). python3-venv: hermes is installed into its own virtual environment (pip_venvs below).",
   "tarballs": {
     "node": {
       "_doc": "Node 22 LTS from nodejs.org rather than Debian's nodejs 18 + ~300 node-* packages. Carries npm and npx, which claude's MCP servers are launched with.",
@@ -75,6 +76,7 @@
   },
   "binaries": [
     "fish",
+    "zsh",
     "node",
     "npm",
     "npx",
@@ -102,6 +104,10 @@
     ],
     "fish": [
       "fish",
+      "--version"
+    ],
+    "zsh": [
+      "zsh",
       "--version"
     ],
     "git": [
