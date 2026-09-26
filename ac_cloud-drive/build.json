@@ -1,7 +1,8 @@
 {
   "name": "cloud-drive",
   "description": "Diego's Cloud Drive — standalone Android storage app, lifted out of the SuperApp's Cloud▸Apps▸Drive pages so the phone's storage surface is its own icon. #603 REDESIGN over the #579 native Compose chrome: a five-tab shell drawn by the fleet's bottom-nav island (libs:bottomnav) — Files, Volumes, Home, Apps, Configs — every tab, sub-page, place, section, filter and icon name declared in ui.* below and baked through BuildConfig. Files is a FULL X-plore-class manager over shared storage with TWO declared sections (ui.files.sections): Emulated (shared storage itself, /storage/emulated/0) and cloud-drive-storage (the ONE shared store of #575, storage.shared_root, exposed to every fleet app that holds all-files access — plain shared storage, so NO webserver is needed and libs:webserver stays deliberately unlinked); the store is seeded by DEFAULT with the public cloud repositories (storage.seed + data/drive-git-repos.json seed flags — a baked manifest with a first-run SHALLOW fetch, because an APK cannot carry a working clone). Volumes consolidates the FULL FLEET: the device's removable volumes plus every mesh mount (libs:mounts) and declared fleet connection, browse-through one tap away. Home is the drive's overview: the two stores with live usage, the volumes/mesh glance, the recent sync history and quick actions. Apps is a grid of the fleet's data apps (data/drive-apps.json resolved against the constellation manifest, #437) plus GitSync and RSync. Configs holds six sub-pages from ONE declaration (ui.configs.pages): Git, Rclone and Mounts (moved in from the old Sync tab), Backups (moved in from its old tab — the declared mirror/rsync jobs with cancellable progress), General (the app's settings, sign-in, storage access) and Others (removable storage, about). The four engine libraries (#567) and the ONE shared store (#575) are unchanged underneath. Dark is the default theme, set at the declaration (#336, #337). Design: a0_docs/eng-specs/cloud-drive-redesign.md. The PDF reader is the #577 native pdfium engine (build.json::pdf), the fleet's one in-process renderer, opened from the Files tab and from any app's Open-with. Build via Nix devShell, one APK out.",
-  "_doc_rsync": "TASK #330 named Rsync without naming a home. It lives INSIDE the Backups tab, because a one-way folder copy with rsync's size-plus-mtime quick check IS the 'on-device backup set' that tab was already declared to hold, and a fifth tab for one list of jobs would have split the same subject across two screens. The jobs are declared in data/drive-mirror-jobs.json and executed by FilesBridge.mirror(). EVERY DESTINATION IS ON-DEVICE and no fleet host is addressed: see that file's _doc_fleet_destination for why (an APK cannot hold the credential), and rep-N2.md for what that defers.",
+  "_doc_rsync": "TASK #330 named Rsync without naming a home; #604 GAVE IT ONE. Rsync IS the folder↔folder sync page: ui.configs.pages 'rclone' is LABELLED Rsync (the id stays 'rclone' because the engine underneath is libs:rclone and a renamed id would be a second name for one dispatch), and the Apps grid's RSync tile routes THERE — {tab: configs, page: rclone} — not to Backups any more. The rules are declared in data/drive-sync-rules.json (see _doc_sync_rules) and run by libs:rclone. Backups keeps what it always was: the ON-DEVICE mirror set of data/drive-mirror-jobs.json, executed by FilesBridge.mirror(), every destination on this phone and no fleet host addressed (see that file's _doc_fleet_destination for why an APK cannot hold the credential, and rep-N2.md for what that defers). One subject, one page, and the tile no longer points at the other one.",
+  "_doc_sync_rules": "#604 THE FOLDER↔FOLDER SYNC RULES, declared in data/drive-sync-rules.json and baked whole (SYNC_RULES_B64 → Declarations.syncRules). A rule is local_path + remote_name:remote_path + direction, and SyncRules.job() maps it onto ONE RcloneJob — bidirectional → the bisync verb, upload → copy local→remote, download → copy remote→local — so the rules page runs the SAME engine, job store and live-progress path as every other rclone job and adds no second transfer mechanism. SCOPE CALL: schedule_minutes is DECLARATIVE ONLY. It is rendered on the card and nothing enforces it, because enforcing it means a WorkManager periodic worker per rule and that is a scheduling subsystem, not a label; RcloneJob is left untouched for the same reason. The enable toggle IS live (DrivePrefs.setRuleEnabled) and defaults to the declared `enabled`: a rule the user switched off keeps its declaration and loses its Run.",
   "category": "android",
   "build": {
     "type": "gradle",
@@ -12,7 +13,7 @@
     "compile_sdk": 36,
     "min_sdk": 26,
     "target_sdk": 35,
-    "version_code": 5,
+    "version_code": 6,
     "version_name": "0.5.0-dev",
     "abi_filters": [
       "arm64-v8a"
@@ -267,6 +268,44 @@
       "_doc": "The glyph an unknown icon name renders. IconCatalog knows this name too.",
       "_default": "circle"
     },
+    "volumes": {
+      "_doc": "#604 THE FOUR CLASSES OF VOLUME, declared, in this order. The Volumes tab used to be one list with the mesh mounts at the bottom; a volume of the fleet is one of exactly four things, so the tab is now a strip of four classes over one body — the SAME idiom as ui.configs.pages (a strip inside the tab, not a stack) and the same dispatch contract: VolumesScreen's `when (classId)` is diffed against these ids in both directions by test/test-drive-shell.sh. Cloud-Constellation is the on-device mesh between OUR same-signature fleet apps (data/drive-constellation.json); Cloud-Containers is the fleet's container volume mounts, which is exactly what MountsSyncScreen already drew (data/drive-connections.json entries with machine=container); Cloud-Machines is the same declaration filtered to the HOST-level entries, grouped by machine_kinds; S3 is the rclone remotes whose type is in s3_remote_types, browsed through `rclone lsjson`. The device's own removable volumes stay a header ABOVE the strip: they are discovered at runtime (Places.discovered), never declared, and #603's capability is not lost.",
+      "classes": [
+        {
+          "id": "constellation",
+          "label": "Cloud-Constellation",
+          "icon": "apps"
+        },
+        {
+          "id": "containers",
+          "label": "Cloud-Containers",
+          "icon": "dns"
+        },
+        {
+          "id": "machines",
+          "label": "Cloud-Machines",
+          "icon": "computer"
+        },
+        {
+          "id": "s3",
+          "label": "S3",
+          "icon": "cloud"
+        }
+      ],
+      "_doc_machine_kinds": "The host classes Cloud-Machines groups by, in render order; a declared connection's `machine` field names one of these or `container` (the default, which belongs to Cloud-Containers instead). A kind with no connection renders an honest empty group, never a hidden one.",
+      "machine_kinds": [
+        "vm",
+        "pc",
+        "phone"
+      ],
+      "_doc_s3_remote_types": "The data/drive-remotes.json `type` values Cloud-Constellation's sibling S3 class owns: Oracle Object Storage buckets (s3) and Google Drive / Workspace (google-drive). The spelling is the one that file uses, not rclone's own internal type, because this filters the DECLARATION.",
+      "s3_remote_types": [
+        "s3",
+        "google-drive"
+      ],
+      "_doc_constellation_path": "Where one fleet app's files are readable from another. `<package>` is substituted with the resolved package id; the result is SHARED external storage, the same access model the Files tab's device browsing already uses, so a fleet app's folder opens through the existing onOpenPath navigator and no new storage-access code exists. A fleet app's PRIVATE data dir is deliberately NOT addressed: sharedUserId cannot be declared fresh past API 32 and there is no other route, so promising it would be a row that never opens.",
+      "constellation_path": "/storage/emulated/0/Android/data/<package>/files"
+    },
     "configs": {
       "_doc": "#603 the strip inside the Configs island — ONE declaration, six sub-pages, in this order. Git, Rclone and Mounts came from the old ui.sync.pages and Backups from its own top-level tab: all four are CONFIGURATION of an engine, and a tab each spread one subject over four screens. General is #579's Configs page (storage access, sign-in, Files defaults, the declared schedule); Others is the removable-storage grant and About. git_periods_minutes are the per-repository period choices the repo Settings sheet offers (ManagedRepo.syncIntervalMinutes); 0 is never offered here because 0 means 'the base period storage.git_sync.interval_minutes'. Every value is at or above WorkManager's 15-minute floor.",
       "pages": [
@@ -277,8 +316,8 @@
         },
         {
           "id": "rclone",
-          "label": "Rclone",
-          "icon": "cloud_sync"
+          "label": "Rsync",
+          "icon": "sync"
         },
         {
           "id": "mounts",

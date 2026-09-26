@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Lan
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -81,6 +83,42 @@ fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions:
                 StatusLightRow(StatusLight.of(available), stringResource(R.string.rclone_remotes_section))
                 Spacer(Modifier.width(8.dp))
                 Pill(stringResource(R.string.rclone_open), { actions.openEngine(EngineActivity.ENGINE_RCLONE, "remotes") })
+            }
+        }
+        // #604 THE HEADLINE of the renamed Rsync page: the declared folder↔folder rules, above
+        // the remotes and jobs that serve them. Each rule runs as ONE RcloneJob (SyncRules.job).
+        item { SectionHeader(stringResource(R.string.rsync_rules_section), count = Declarations.syncRules.size) }
+        if (Declarations.syncRules.isEmpty()) item { EmptyState(Icons.Filled.Sync, stringResource(R.string.rsync_rules_empty), stringResource(R.string.rsync_rules_empty_hint)) }
+        items(Declarations.syncRules, key = { "rule-" + it.id }) { rule ->
+            val job = remember(rule) { SyncRules.job(rule) }
+            val run = runs[job.id]
+            val on = prefs.ruleEnabled(rule.id, rule.enabled)
+            val declaredRemote = declared[rule.remoteName]
+            DriveCard(
+                rule.id,
+                badge = stringResource(R.string.chrome_declared),
+                light = if (on) StatusLight.of(prefs.lastTest("remote:" + rule.remoteName)) else StatusLight.State.OFF,
+                summary = "${rule.localPath}  ${SyncRules.arrow(rule.direction)}  ${rule.remoteLeg}",
+                summaryMonospace = true,
+                tag = DriveTags.RSYNC_RULE_CARD,
+            ) {
+                Text(
+                    stringResource(R.string.rsync_rule_meta, job.op, rule.scheduleMinutes?.let { stringResource(R.string.rsync_rule_every, it) } ?: stringResource(R.string.rsync_rule_manual)),
+                    Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (declaredRemote?.status == "unreachable" && declaredRemote.reason.isNotBlank()) {
+                    Text(declaredRemote.reason, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                }
+                val s = run?.stats
+                if (run != null && s != null) {
+                    if (run.exit == null) LinearProgressIndicator(progress = { s.fraction }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    Text(stringResource(R.string.rclone_progress, RcloneOutput.humanBytes(s.bytes), RcloneOutput.humanBytes(s.totalBytes), RcloneOutput.humanBytes(s.speedBytesPerSecond.toLong()), RcloneOutput.humanEta(s.etaSeconds), s.transfers, s.totalTransfers, s.errors), style = MaterialTheme.typography.labelSmall)
+                }
+                PillRow {
+                    Pill(stringResource(if (on) R.string.rsync_rule_on else R.string.rsync_rule_off), { prefs.setRuleEnabled(rule.id, !on) }, filled = on)
+                    if (run != null && run.exit == null) Pill(stringResource(R.string.rclone_stop), { coordinator.cancel(job) }, icon = Icons.Filled.Stop)
+                    else Pill(stringResource(R.string.rsync_rule_run), { coordinator.run(job) }, icon = Icons.Filled.PlayArrow, filled = true, enabled = available && on)
+                }
             }
         }
         item { SectionHeader(stringResource(R.string.rclone_remotes_section), count = remotes.size) }
@@ -157,14 +195,24 @@ fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions:
 }
 
 @Composable
-fun MountsSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions: DriveActions, onMessage: (String) -> Unit, modifier: Modifier = Modifier) {
+fun MountsSyncScreen(
+    coordinator: RcloneCoordinator,
+    prefs: DrivePrefs,
+    actions: DriveActions,
+    onMessage: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    // #604 WHICH declared connections this instance draws. Configs ▸ Mounts draws them all;
+    // Volumes ▸ Cloud-Containers passes the container ones, because Cloud-Machines draws
+    // the host-level rest. One screen, one declaration, two scopes — never a second list.
+    connections: List<Declarations.ConnectionDecl> = Declarations.connections,
+) {
     @Suppress("UNUSED_VARIABLE") val prefsTick by prefs.snapshot.collectAsState()
     val mounts by coordinator.mounts.collectAsState()
     val testing by coordinator.testing.collectAsState()
     val results by coordinator.testResults.collectAsState()
     LaunchedEffect(Unit) { coordinator.refresh() }
-    val mountable = Declarations.connections.filter { it.uri.isNotBlank() && MountType.fromScheme(it.uri.substringBefore("://")) != null }.map { it.name }.toSet()
-    val fleet = Declarations.connections.filter { it.name !in mountable }
+    val mountable = connections.filter { it.uri.isNotBlank() && MountType.fromScheme(it.uri.substringBefore("://")) != null }.map { it.name }.toSet()
+    val fleet = connections.filter { it.name !in mountable }
 
     LazyColumn(modifier.fillMaxSize()) {
         item { SectionHeader(stringResource(R.string.mounts_section), count = mounts.size, action = stringResource(R.string.mounts_add)) { actions.openEngine(EngineActivity.ENGINE_MOUNTS, "") } }
@@ -182,18 +230,25 @@ fun MountsSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions:
             }
         }
         item { SectionHeader(stringResource(R.string.mounts_fleet_section), count = fleet.size) }
-        items(fleet, key = { "conn-" + it.name }) { c ->
-            Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_CONNECTION_ROW).padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(c.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("${c.kind} · ${c.endpoint}", style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    val note = if (c.status == "unreachable") c.reason.ifBlank { c.notes } else c.notes
-                    if (note.isNotBlank()) Text(note, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-                // The declared status is the fleet's word about the fleet, not a look from this phone: honest grey.
-                StatusLightRow(if (c.status == "ok") StatusLight.State.UNVERIFIABLE else StatusLight.State.OFF, c.name)
-            }
-            Hairline(Modifier.padding(horizontal = DriveMetrics.gutter))
-        }
+        items(fleet, key = { "conn-" + it.name }) { c -> ConnectionRow(c) }
     }
+}
+
+/**
+ * #604 ONE declared connection as a row. Extracted so Volumes ▸ Cloud-Machines draws the
+ * host-level connections in the SAME language as Configs ▸ Mounts draws the container ones.
+ */
+@Composable
+fun ConnectionRow(c: Declarations.ConnectionDecl) {
+    Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_CONNECTION_ROW).padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(c.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("${c.kind} · ${c.endpoint}", style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val note = if (c.status == "unreachable") c.reason.ifBlank { c.notes } else c.notes
+            if (note.isNotBlank()) Text(note, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        // The declared status is the fleet's word about the fleet, not a look from this phone: honest grey.
+        StatusLightRow(if (c.status == "ok") StatusLight.State.UNVERIFIABLE else StatusLight.State.OFF, c.name)
+    }
+    Hairline(Modifier.padding(horizontal = DriveMetrics.gutter))
 }

@@ -133,11 +133,22 @@
 
     <!-- Volumes (#603) -->
     <string name="volumes_title">Volumes</string>
-    <string name="volumes_hint">This device\'s removable volumes and the fleet\'s mesh mounts</string>
     <string name="volumes_device_section">Device volumes</string>
     <string name="volumes_device_none">No removable volume</string>
     <string name="volumes_device_none_hint">Nothing is attached, and no drive has been granted through the system picker</string>
     <string name="volumes_open">Open in Files</string>
+    <!-- Volumes, the four declared classes (#604) -->
+    <string name="volumes_constellation_section">Fleet apps</string>
+    <string name="volumes_constellation_hint">Declared in data/drive-constellation.json; a row opens that app\'s shared files folder</string>
+    <string name="volumes_machines_hint">No host of this kind is declared yet</string>
+    <string name="volumes_machines_other">Other hosts</string>
+    <string name="volumes_s3_section">Buckets and drives</string>
+    <string name="volumes_s3_hint">Declared in data/drive-remotes.json; the S3 and Google Drive remotes land here</string>
+    <string name="volumes_class_empty">Nothing declared</string>
+    <string name="volumes_close">Close</string>
+    <string name="volumes_up">Up</string>
+    <string name="volumes_loading">listing…</string>
+    <string name="volumes_folder_empty">empty folder</string>
 
     <!-- Home (#603) -->
     <string name="home_title">Home</string>
@@ -241,6 +252,16 @@
     <string name="rclone_exit_cancelled">cancelled</string>
     <string name="rclone_exit_code">exit %1$d</string>
     <string name="rclone_fleet_side">fleet-side</string>
+    <!-- Rsync, the declared folder-to-folder rules (#604) -->
+    <string name="rsync_rules_section">Sync rules</string>
+    <string name="rsync_rules_empty">No sync rule declared</string>
+    <string name="rsync_rules_empty_hint">Rules are declared in data/drive-sync-rules.json and run on the rclone engine</string>
+    <string name="rsync_rule_meta">%1$s · %2$s</string>
+    <string name="rsync_rule_every">every %1$d min (declared, not scheduled)</string>
+    <string name="rsync_rule_manual">manual</string>
+    <string name="rsync_rule_on">Enabled</string>
+    <string name="rsync_rule_off">Disabled</string>
+    <string name="rsync_rule_run">Run now</string>
 
     <string name="mounts_section">Mounts</string>
     <string name="mounts_fleet_section">Fleet connections</string>

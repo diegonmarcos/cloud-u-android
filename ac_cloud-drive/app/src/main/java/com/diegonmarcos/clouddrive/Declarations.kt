@@ -28,6 +28,46 @@ object Declarations {
     /** #603 the Configs strip: the six sub-pages and the per-repository period choices the Git page offers. */
     data class ConfigsDecl(val pages: List<PageDecl>, val gitPeriodsMinutes: List<Int>)
 
+    /** #604 one of the four classes of volume; VolumesScreen dispatches on [id]. */
+    data class VolumeClassDecl(val id: String, val label: String, val icon: String)
+
+    /**
+     * #604 the Volumes tab: the four classes, the host kinds Cloud-Machines groups by,
+     * the data/drive-remotes.json types the S3 class owns, and where one fleet app's
+     * shared folder lives ([constellationPath] carries a `<package>` placeholder).
+     */
+    data class VolumesDecl(
+        val classes: List<VolumeClassDecl>,
+        val machineKinds: List<String>,
+        val s3RemoteTypes: Set<String>,
+        val constellationPath: String,
+    ) {
+        /** The shared external files folder of [packageName], or blank when nothing is declared. */
+        fun constellationPathOf(packageName: String): String =
+            if (constellationPath.isBlank() || packageName.isBlank()) "" else constellationPath.replace("<package>", packageName)
+    }
+
+    /** #604 a fleet app Volumes ▸ Cloud-Constellation lists; the package is resolved at build time. */
+    data class ConstellationAppDecl(val label: String, val icon: String, val packageName: String)
+
+    /**
+     * #604 a folder↔folder sync rule. [direction] is upload | download | bidirectional;
+     * [scheduleMinutes] is declarative only (build.json::_doc_sync_rules says why).
+     */
+    data class SyncRuleDecl(
+        val id: String,
+        val localPath: String,
+        val remoteName: String,
+        val remotePath: String,
+        val direction: String,
+        val scheduleMinutes: Int?,
+        val enabled: Boolean,
+        val notes: String,
+    ) {
+        /** `remote:path` — the rclone side of the rule, composed once. */
+        val remoteLeg: String get() = "$remoteName:$remotePath"
+    }
+
     /** #603 a section header of the Files navigator; [PlaceDecl.section] names one of these. */
     data class SectionDecl(val id: String, val label: String, val icon: String)
 
@@ -59,7 +99,8 @@ object Declarations {
 
     /** #603 [routeTab]/[routePage] non-blank ⇒ the tile stays in the app and selects that declared tab and sub-page. */
     data class AppTileDecl(val label: String, val icon: String, val packageName: String, val fallbackUrl: String, val routeTab: String, val routePage: String)
-    data class ConnectionDecl(val name: String, val kind: String, val endpoint: String, val auth: String, val vm: String, val status: String, val scope: String, val notes: String, val reason: String, val uri: String)
+    /** [machine] is #604's host class — vm | pc | phone, or `container` (the default) for the container mesh. */
+    data class ConnectionDecl(val name: String, val kind: String, val endpoint: String, val auth: String, val vm: String, val status: String, val scope: String, val notes: String, val reason: String, val uri: String, val machine: String)
     data class GitInstanceDecl(val name: String, val kind: String, val org: String, val host: String, val port: Int?, val reachable: Boolean, val reach: String)
     data class GitRepoDecl(val name: String, val label: String, val githubOwner: String, val giteaOwner: String, val private: Boolean, val seed: Boolean, val notes: String)
     data class GitFamilyDecl(val instances: List<GitInstanceDecl>, val repos: List<GitRepoDecl>) {
@@ -77,6 +118,9 @@ object Declarations {
     val defaultTab: String get() = BuildConfig.UI_DEFAULT_TAB
     val configs: ConfigsDecl by lazy { parseConfigs(decode(BuildConfig.UI_CONFIGS_B64)) }
     val files: FilesDecl by lazy { parseFiles(decode(BuildConfig.UI_FILES_B64)) }
+    val volumes: VolumesDecl by lazy { parseVolumes(decode(BuildConfig.UI_VOLUMES_B64)) }
+    val constellation: List<ConstellationAppDecl> by lazy { parseConstellation(decode(BuildConfig.UI_CONSTELLATION_B64)) }
+    val syncRules: List<SyncRuleDecl> by lazy { parseSyncRules(decode(BuildConfig.SYNC_RULES_B64)) }
     val iconDefault: String get() = BuildConfig.UI_ICON_DEFAULT
     val apps: List<AppTileDecl> by lazy { parseApps(decode(BuildConfig.UI_APPS_B64)) }
     val connections: List<ConnectionDecl> by lazy { parseConnections(decode(BuildConfig.CONNECTIONS_B64)) }
@@ -139,6 +183,24 @@ object Declarations {
         )
     }
 
+    fun parseVolumes(text: String): VolumesDecl {
+        val o = element(text) as? JsonObject ?: return VolumesDecl(emptyList(), emptyList(), emptySet(), "")
+        val classes = objects(o["classes"]).mapNotNull { c ->
+            val id = c.str("id"); if (id.isBlank()) null else VolumeClassDecl(id, c.str("label", id), c.str("icon"))
+        }
+        return VolumesDecl(classes, o.strings("machine_kinds"), o.strings("s3_remote_types").toSet(), o.str("constellation_path"))
+    }
+
+    fun parseConstellation(text: String): List<ConstellationAppDecl> = objects(element(text)).mapNotNull { a ->
+        val label = a.str("label"); if (label.isBlank()) return@mapNotNull null
+        ConstellationAppDecl(label, a.str("icon"), a.str("package"))
+    }
+
+    fun parseSyncRules(text: String): List<SyncRuleDecl> = objects(element(text)).mapNotNull { r ->
+        val id = r.str("id"); if (id.isBlank()) return@mapNotNull null
+        SyncRuleDecl(id, r.str("local_path"), r.str("remote_name"), r.str("remote_path"), r.str("direction", DIRECTION_BIDIRECTIONAL), r.int("schedule_minutes"), r.bool("enabled", true), r.str("notes"))
+    }
+
     fun parseApps(text: String): List<AppTileDecl> = objects(element(text)).mapNotNull { a ->
         val label = a.str("label"); if (label.isBlank()) return@mapNotNull null
         val route = a["route"] as? JsonObject
@@ -147,7 +209,7 @@ object Declarations {
 
     fun parseConnections(text: String): List<ConnectionDecl> = objects(element(text)).mapNotNull { c ->
         val name = c.str("name"); if (name.isBlank()) return@mapNotNull null
-        ConnectionDecl(name, c.str("kind"), c.str("endpoint"), c.str("auth"), c.str("vm"), c.str("status"), c.str("scope"), c.str("notes"), c.str("reason"), c.str("uri"))
+        ConnectionDecl(name, c.str("kind"), c.str("endpoint"), c.str("auth"), c.str("vm"), c.str("status"), c.str("scope"), c.str("notes"), c.str("reason"), c.str("uri"), c.str("machine", MACHINE_CONTAINER))
     }
 
     fun parseGitFamily(text: String): GitFamilyDecl {
@@ -186,8 +248,15 @@ object Declarations {
     }
 
     /** Every icon name the declarations use — what test-drive-shell.sh and DeclarationsTest hold IconCatalog to. */
-    fun iconNames(tabs: List<TabDecl>, configs: ConfigsDecl, files: FilesDecl): Set<String> =
-        (tabs.map { it.icon } + configs.pages.map { it.icon } + files.sections.map { it.icon } + files.places.map { it.icon } + files.filters.map { it.icon }).filter { it.isNotBlank() }.toSet()
+    fun iconNames(tabs: List<TabDecl>, configs: ConfigsDecl, files: FilesDecl, volumes: VolumesDecl? = null): Set<String> =
+        (tabs.map { it.icon } + configs.pages.map { it.icon } + files.sections.map { it.icon } + files.places.map { it.icon } + files.filters.map { it.icon } +
+            (volumes?.classes?.map { it.icon } ?: emptyList())).filter { it.isNotBlank() }.toSet()
+
+    /** #604 the machine class a connection without a declared `machine` belongs to: the container mesh. */
+    const val MACHINE_CONTAINER = "container"
+    const val DIRECTION_UPLOAD = "upload"
+    const val DIRECTION_DOWNLOAD = "download"
+    const val DIRECTION_BIDIRECTIONAL = "bidirectional"
 
     /** #603 the seed set of the shared store: the PUBLIC repositories marked `seed` in the manifest. */
     val seedRepos: List<GitRepoDecl> get() = gitFamily.repos.filter { it.seed && !it.private }

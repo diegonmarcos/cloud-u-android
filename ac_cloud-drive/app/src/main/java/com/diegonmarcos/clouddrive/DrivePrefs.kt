@@ -72,6 +72,10 @@ class DrivePrefs(context: Context) {
     fun lastTest(id: String): Boolean? = if (!prefs.contains(KEY_TEST_PREFIX + id)) null else prefs.getBoolean(KEY_TEST_PREFIX + id, false)
     fun setLastTest(id: String, ok: Boolean) = edit { putBoolean(KEY_TEST_PREFIX + id, ok) }
 
+    /** #604 whether a declared folder↔folder sync rule is on; [declared] is the declaration's own word until the user overrides it. */
+    fun ruleEnabled(id: String, declared: Boolean): Boolean = prefs.getBoolean(KEY_RULE_PREFIX + id, declared)
+    fun setRuleEnabled(id: String, on: Boolean) = edit { putBoolean(KEY_RULE_PREFIX + id, on) }
+
     private companion object {
         const val KEY_SORT = "files.sort"
         const val KEY_HIDDEN = "files.hidden"
@@ -80,6 +84,7 @@ class DrivePrefs(context: Context) {
         const val KEY_BOOKMARKS = "files.bookmarks"
         const val KEY_MIRROR_PREFIX = "mirror.result."
         const val KEY_TEST_PREFIX = "sync.test."
+        const val KEY_RULE_PREFIX = "sync.rule.enabled."
         // The same keys the pre-#579 bridge wrote, so an existing grant survives the redesign.
         const val KEY_TREE_GRANT_URI = "saf_tree_grant_uri"
         const val KEY_TREE_GRANT_NAME = "saf_tree_grant_name"

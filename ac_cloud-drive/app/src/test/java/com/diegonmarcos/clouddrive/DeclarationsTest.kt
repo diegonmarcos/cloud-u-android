@@ -42,7 +42,8 @@ class DeclarationsTest {
         val tabs = Declarations.parseTabs(section("tabs"))
         val configs = Declarations.parseConfigs(section("configs"))
         val files = Declarations.parseFiles(section("files"))
-        val names = Declarations.iconNames(tabs, configs, files)
+        val volumes = Declarations.parseVolumes(section("volumes"))
+        val names = Declarations.iconNames(tabs, configs, files, volumes)
         assertTrue(names.size >= 10)
         val unknown = names.filterNot { IconCatalog.knows(it) }
         assertEquals("icons declared but unknown to IconCatalog: $unknown", emptyList<String>(), unknown)
@@ -59,6 +60,48 @@ class DeclarationsTest {
         assertTrue(configs.gitPeriodsMinutes.isNotEmpty())
         assertTrue("every period is at or above WorkManager's floor", configs.gitPeriodsMinutes.all { it >= 15 })
         assertEquals(configs.gitPeriodsMinutes.sorted(), configs.gitPeriodsMinutes)
+    }
+
+    @Test fun volumesDeclaresTheFourClassesAndTheirRules() {
+        val volumes = Declarations.parseVolumes(section("volumes"))
+        // #604 the four classes of volume, in declared order.
+        assertEquals(listOf("constellation", "containers", "machines", "s3"), volumes.classes.map { it.id })
+        assertTrue(volumes.classes.all { it.label.isNotBlank() && it.icon.isNotBlank() })
+        assertTrue(volumes.machineKinds.isNotEmpty())
+        assertFalse("container is the default, not a machine kind", Declarations.MACHINE_CONTAINER in volumes.machineKinds)
+        assertTrue(volumes.s3RemoteTypes.isNotEmpty())
+        assertTrue("the fleet-app path carries the package placeholder", volumes.constellationPath.contains("<package>"))
+        // The path itself is the declaration's, never restated here (test-drive-shared-store.sh
+        // fails the build on a device-absolute path written down in a source file).
+        val resolved = volumes.constellationPathOf("com.x")
+        assertFalse("the placeholder is substituted", resolved.contains("<package>"))
+        assertTrue("the package lands in the path", resolved.contains("com.x"))
+        assertEquals("", volumes.constellationPathOf(""))
+    }
+
+    @Test fun syncRulesMapOntoOneRcloneJob() {
+        val data = File(root, "data")
+        val rules = Declarations.parseSyncRules(Json.parseToJsonElement(File(data, "drive-sync-rules.json").readText()).jsonObject["rules"].toString())
+        assertTrue(rules.isNotEmpty())
+        assertTrue(rules.all { it.localPath.isNotBlank() && it.remoteName.isNotBlank() && it.direction.isNotBlank() })
+        // #604 the default rule: the A37 mount kept level with Google Drive, both ways, by hand.
+        val first = rules.first()
+        assertEquals("/ya_mnt_sync-a37", first.localPath)
+        assertEquals(Declarations.DIRECTION_BIDIRECTIONAL, first.direction)
+        assertEquals(null, first.scheduleMinutes)
+        assertEquals("gdrive:cloud-drive-sync", first.remoteLeg)
+        // every rule names a DECLARED remote — a rule pointing at nothing could never run.
+        val remoteNames = Declarations.parseRemotes(Json.parseToJsonElement(File(data, "drive-remotes.json").readText()).jsonObject["remotes"].toString()).map { it.name }
+        assertTrue("every rule names a declared remote", rules.all { it.remoteName in remoteNames })
+        // the direction → verb mapping, both one-way legs and the two-way one.
+        assertEquals("bisync", com.diegonmarcos.clouddrive.sync.SyncRules.job(first).op)
+        val up = first.copy(direction = Declarations.DIRECTION_UPLOAD)
+        assertEquals("copy", com.diegonmarcos.clouddrive.sync.SyncRules.job(up).op)
+        assertEquals(first.localPath, com.diegonmarcos.clouddrive.sync.SyncRules.job(up).source)
+        assertEquals(first.remoteLeg, com.diegonmarcos.clouddrive.sync.SyncRules.job(up).destination)
+        val down = first.copy(direction = Declarations.DIRECTION_DOWNLOAD)
+        assertEquals(first.remoteLeg, com.diegonmarcos.clouddrive.sync.SyncRules.job(down).source)
+        assertEquals(first.localPath, com.diegonmarcos.clouddrive.sync.SyncRules.job(down).destination)
     }
 
     @Test fun filesDeclaresTwoSectionsAndEveryPlaceNamesOne() {

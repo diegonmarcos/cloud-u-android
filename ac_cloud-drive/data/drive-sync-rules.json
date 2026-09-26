@@ -1,0 +1,17 @@
+{
+  "_doc": "#604 THE FOLDER↔FOLDER SYNC RULES the Configs ▸ Rsync page renders. A rule is a local folder, a declared remote (data/drive-remotes.json `name`) and a folder inside it, plus a direction; SyncRules.job() maps each one onto ONE libs:rclone RcloneJob, so nothing here is a second transfer engine. Only the `rules` array crosses into the APK. See build.json::_doc_sync_rules for the direction→verb mapping and for why schedule_minutes is declarative only.",
+  "_doc_auth": "Same rule as every other file in data/: no password, no token and no key ever appears here. `remote_name` names a remote whose credential the user adds on the device (Configs ▸ Rsync ▸ Remotes ▸ Edit); a rule whose remote is unreachable renders its declared reason, it does not silently fail.",
+  "_doc_direction": "upload = local → remote (rclone copy), download = remote → local (rclone copy), bidirectional = rclone bisync. copy never deletes; bisync needs a --resync on its very first run, which the engine screen offers as a flag.",
+  "rules": [
+    {
+      "id": "a37-gdrive",
+      "local_path": "/ya_mnt_sync-a37",
+      "remote_name": "gdrive",
+      "remote_path": "cloud-drive-sync",
+      "direction": "bidirectional",
+      "schedule_minutes": null,
+      "enabled": true,
+      "notes": "The default rule: the Samsung A37's own sync mount kept level with the personal Google Drive folder of the same name. Manual by default — schedule_minutes is null, so it runs when the user taps Run."
+    }
+  ]
+}

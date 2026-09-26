@@ -158,6 +158,32 @@ if (driveAppsFile.exists()) {
     }
 }
 def driveAppsB64  = b64(resolvedDriveApps)
+// #604 Volumes ▸ Cloud-Constellation: the fleet apps whose shared external folder the
+// class lists. Resolved against the SAME fleet manifest as the Apps grid above — one
+// list of packages for the whole app, and a fleet id the manifest does not carry is a
+// hard error here rather than a row that can never open anything.
+def constellationFile = file('../data/drive-constellation.json')
+def resolvedConstellation = []
+if (constellationFile.exists()) {
+    new groovy.json.JsonSlurper().parse(constellationFile).apps.each { entry ->
+        def fleetEntry = fleetById[entry.fleet]
+        if (fleetEntry == null) {
+            throw new GradleException(
+                "data/drive-constellation.json names fleet app '${entry.fleet}' which the " +
+                "constellation fleet manifest does not contain ($fleetAppsFile). " +
+                "Rename or remove the entry.")
+        }
+        resolvedConstellation << [label: entry.label, icon: entry.icon, package: fleetEntry.package]
+    }
+}
+def constellationB64 = b64(resolvedConstellation)
+// #604 the folder↔folder sync rules the Rsync sub-page renders, on the same carrier.
+// Only the `rules` array crosses into the APK: the file's _doc_* keys are for whoever
+// edits it. An empty declaration is NOT an error — a phone with no rule yet is a valid
+// phone — but the default rule is pinned by test/test-drive-shell.sh.
+def syncRulesFile = file('../data/drive-sync-rules.json')
+def syncRulesB64  = b64(syncRulesFile.exists()
+    ? (new groovy.json.JsonSlurper().parse(syncRulesFile).rules ?: []) : [])
 // #579 THE STRUCTURE OF THE CHROME: build.json::ui declares the tabs, the Sync
 // pages, the Files places/filters/sort keys and the icon default. Baked whole on
 // the same carrier as every other list here and decoded ONCE by Declarations.kt.
@@ -175,10 +201,14 @@ if (!(uiDecl.files?.places instanceof List) || uiDecl.files.places.isEmpty()) {
 if (!(uiDecl.files?.sections instanceof List) || uiDecl.files.sections.isEmpty()) {
     throw new GradleException("build.json::ui.files.sections must declare the Files navigator's sections (#603)")
 }
+if (!(uiDecl.volumes?.classes instanceof List) || uiDecl.volumes.classes.isEmpty()) {
+    throw new GradleException("build.json::ui.volumes.classes must declare the Volumes tab's classes (#604)")
+}
 def uiTabsB64     = b64(uiDecl.tabs)
 def uiDefaultTab  = (uiDecl.default_tab ?: uiDecl.tabs[0].id).toString()
 def uiConfigsB64  = b64(uiDecl.configs.findAll { k, v -> !k.startsWith('_') })
 def uiFilesB64    = b64(uiDecl.files.findAll { k, v -> !k.startsWith('_') })
+def uiVolumesB64  = b64(uiDecl.volumes.findAll { k, v -> !k.startsWith('_') })
 def uiIconDefault = (uiDecl.icons?._default ?: 'circle').toString()
 // #587 which artifact sections a sign-in applies here (build.json::auth.applies), baked whole.
 def authApplies = buildJson.auth?.applies ?: [:]
@@ -313,6 +343,9 @@ android {
         buildConfigField "String", "UI_DEFAULT_TAB",  "\"${uiDefaultTab}\""
         buildConfigField "String", "UI_CONFIGS_B64",  "\"${uiConfigsB64}\""
         buildConfigField "String", "UI_FILES_B64",    "\"${uiFilesB64}\""
+        buildConfigField "String", "UI_VOLUMES_B64",  "\"${uiVolumesB64}\""
+        buildConfigField "String", "UI_CONSTELLATION_B64", "\"${constellationB64}\""
+        buildConfigField "String", "SYNC_RULES_B64",  "\"${syncRulesB64}\""
         buildConfigField "String", "UI_ICON_DEFAULT", "\"${uiIconDefault}\""
         buildConfigField "String", "AUTH_APPLIES_B64", "\"${authAppliesB64}\""
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""

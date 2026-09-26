@@ -1,0 +1,27 @@
+{
+  "_doc": "#604 CLOUD-CONSTELLATION — the on-device mesh between OUR same-signature fleet apps, as the Volumes tab's first class. One row per app, and the row opens that app's SHARED external-storage files folder (build.json::ui.volumes.constellation_path) through the navigator the device volumes already use. Only the `apps` array crosses into the APK: the _doc_* keys are for whoever edits this file.",
+  "_doc_identity": "Same contract as data/drive-apps.json: this file declares the SELECTION and the presentation, and every entry resolves its package from data/constellation-fleet.json at build time (ac_cloud-drive/app/build.gradle). There is no second list of packages here — that is the #170/#380/#381 defect shape — and a fleet id the manifest does not carry is a hard build error.",
+  "_doc_private_storage": "A fleet app's PRIVATE data dir (/data/data/<package>) is NOT addressed and cannot be: sharedUserId may not be declared fresh past API 32, and no other route exists between two installed apps' sandboxes. What IS readable with all-files access is the shared external folder above, so that is the only thing a row promises.",
+  "apps": [
+    {
+      "fleet": "drive",
+      "label": "Cloud Drive",
+      "icon": "folder"
+    },
+    {
+      "fleet": "aa_cloud-superapp",
+      "label": "Cloud SuperApp",
+      "icon": "apps"
+    },
+    {
+      "fleet": "code",
+      "label": "Cloud Code",
+      "icon": "code"
+    },
+    {
+      "fleet": "notes",
+      "label": "Cloud Notes",
+      "icon": "description"
+    }
+  ]
+}

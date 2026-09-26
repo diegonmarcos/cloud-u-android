@@ -40,9 +40,20 @@
 #       cloned shallow through libs:git-sync; the Apps grid carries GitSync and
 #       RSync as in-app routes into declared pages; and the dark theme provides
 #       LocalContentColor so no Text() inherits material3's Color.Black default.
+#   D12 #604 THE VOLUMES TAB IS FOUR DECLARED CLASSES and Rclone IS Rsync: exactly
+#       four ui.volumes.classes in the order Cloud-Constellation · Cloud-Containers ·
+#       Cloud-Machines · S3, dispatched by VolumesScreen in both directions, with the
+#       filters each class uses (machine_kinds, s3_remote_types, constellation_path)
+#       declared too; the Configs sub-page keeps the id `rclone` and is LABELLED Rsync;
+#       the Apps grid's RSync tile routes to {configs, rclone}, not Backups; every
+#       declared folder↔folder rule maps onto a libs:rclone job and the DEFAULT one is
+#       /ya_mnt_sync-a37 ⇄ a declared Google-Drive remote, manual; and no declared
+#       connection falls between Cloud-Containers and Cloud-Machines.
 #   M   mutation-proof: a tab dropped from the declaration and a glyph dropped from
 #       the catalog both turn D1 / D3 red; a private repository marked for seeding
-#       turns D11 red; the unmutated tree stays green.
+#       turns D11 red; a dropped volume class, an RSync tile routed back to Backups, a
+#       default rule that lost its folder and a connection with an unrendered machine
+#       kind each turn D12 red; the unmutated tree stays green.
 #
 # OWN-SOURCE ONLY except D8's cross-app comparison, which reports UNVERIFIABLE
 # when aa_cloud-superapp is not beside this app. python3 and grep only.
@@ -281,6 +292,121 @@ for a in android:textColorPrimary android:textColorSecondary colorOnSurface; do
     grep -qE "<item name=\"$a\">@color/drive_text" "$THEMES" && pass "Theme.CloudDrive names $a" || fail "Theme.CloudDrive does not override $a - an inflated View falls back to a framework ink"
 done
 
+echo "── D12 the #604 structure: four volume classes, and Rsync ──"
+# d12_classes <build.json> <VolumesScreen.kt> : the four declared classes, in order, dispatched
+d12_classes() {
+    python3 - "$1" "$2" <<'PYTHON'
+import json, re, sys
+ui = json.load(open(sys.argv[1]))["ui"]; src = open(sys.argv[2], encoding="utf-8").read()
+bad = 0
+vol = ui.get("volumes") or {}
+classes = vol.get("classes") or []
+ids = [c.get("id") for c in classes]
+if ids != ["constellation", "containers", "machines", "s3"]:
+    print("    ui.volumes.classes is %s, not the #604 order constellation/containers/machines/s3" % ids); bad = 1
+if any(not c.get("label") or not c.get("icon") for c in classes):
+    print("    a volume class lacks a label or an icon"); bad = 1
+m = re.search(r"when \(id\) \{(.*?)\n\s*\}", src, re.S)
+if not m:
+    print("    VolumesScreen has no `when (id)` dispatch"); sys.exit(1)
+dispatched = re.findall(r'^\s*"([a-z0-9_]+)" ->', m.group(1), re.M)
+if sorted(dispatched) != sorted(i for i in ids if i):
+    print("    declared %s vs dispatched %s" % (ids, dispatched)); bad = 1
+# the rules the classes are filtered by are declared too, never typed into Kotlin
+if not vol.get("machine_kinds") or "container" in vol["machine_kinds"]:
+    print("    ui.volumes.machine_kinds missing, or carries `container` (which is the default, not a host kind)"); bad = 1
+if not vol.get("s3_remote_types"):
+    print("    ui.volumes.s3_remote_types is empty: the S3 class would list nothing"); bad = 1
+if "<package>" not in (vol.get("constellation_path") or ""):
+    print("    ui.volumes.constellation_path does not carry the <package> placeholder"); bad = 1
+sys.exit(bad)
+PYTHON
+}
+# d12_rsync <build.json> <drive-apps.json> : the rclone page is LABELLED Rsync and the tile routes there
+d12_rsync() {
+    python3 - "$1" "$2" <<'PYTHON'
+import json, sys
+ui = json.load(open(sys.argv[1]))["ui"]; apps = json.load(open(sys.argv[2]))["apps"]
+bad = 0
+page = next((p for p in ui["configs"]["pages"] if p.get("id") == "rclone"), None)
+if page is None:
+    print("    ui.configs.pages has no `rclone` page: the id is the dispatch and must not change"); sys.exit(1)
+if page.get("label") != "Rsync":
+    print("    the rclone sub-page is labelled %r, not 'Rsync' (#604)" % page.get("label")); bad = 1
+tile = next((a for a in apps if a.get("label") == "RSync"), None)
+if tile is None:
+    print("    no RSync tile in the Apps grid"); sys.exit(1)
+route = tile.get("route") or {}
+if (route.get("tab"), route.get("page")) != ("configs", "rclone"):
+    print("    Apps ▸ RSync routes to %r, not {configs, rclone} (#604 moved it off Backups)" % route); bad = 1
+sys.exit(bad)
+PYTHON
+}
+# d12_rules <drive-sync-rules.json> <drive-remotes.json> : the declared folder↔folder rules
+d12_rules() {
+    python3 - "$1" "$2" <<'PYTHON'
+import json, sys
+rules = json.load(open(sys.argv[1]))["rules"]
+remotes = [r["name"] for r in json.load(open(sys.argv[2]))["remotes"]]
+bad = 0
+if not rules:
+    print("    no sync rule declared: the Rsync page would be its own empty state"); sys.exit(1)
+ids = [r.get("id") for r in rules]
+if len(set(ids)) != len(ids) or any(not i for i in ids):
+    print("    rule ids missing or not unique: %s" % ids); bad = 1
+for r in rules:
+    if r.get("direction") not in ("upload", "download", "bidirectional"):
+        print("    rule %r declares direction %r, which SyncRules cannot map" % (r.get("id"), r.get("direction"))); bad = 1
+    if r.get("remote_name") not in remotes:
+        print("    rule %r names remote %r, which data/drive-remotes.json does not declare" % (r.get("id"), r.get("remote_name"))); bad = 1
+    if not (r.get("local_path") or "").startswith("/"):
+        print("    rule %r local_path %r is not an absolute device path" % (r.get("id"), r.get("local_path"))); bad = 1
+    if "enabled" not in r:
+        print("    rule %r does not state enabled" % r.get("id")); bad = 1
+# THE DEFAULT RULE #604 asked for: the A37 mount kept level with Google Drive, both ways, by hand.
+first = rules[0]
+if first.get("local_path") != "/ya_mnt_sync-a37":
+    print("    the first rule's local_path is %r, not /ya_mnt_sync-a37" % first.get("local_path")); bad = 1
+if first.get("direction") != "bidirectional":
+    print("    the default rule is %r, not bidirectional" % first.get("direction")); bad = 1
+if first.get("schedule_minutes") is not None:
+    print("    the default rule declares a schedule (%r): #604 keeps it manual, and nothing enforces a schedule" % first.get("schedule_minutes")); bad = 1
+sys.exit(bad)
+PYTHON
+}
+# d12_machines <build.json> <drive-connections.json> : every connection's machine is a declared kind
+d12_machines() {
+    python3 - "$1" "$2" <<'PYTHON'
+import json, sys
+vol = json.load(open(sys.argv[1]))["ui"]["volumes"]
+conns = json.load(open(sys.argv[2]))
+allowed = set(vol.get("machine_kinds") or []) | {"container"}
+strays = sorted({c.get("machine", "container") for c in conns} - allowed)
+if strays:
+    print("    connections declare machine kinds no class renders: %s" % strays); sys.exit(1)
+if not any(c.get("machine", "container") == "container" for c in conns):
+    print("    no connection belongs to Cloud-Containers: the class that already existed would be empty"); sys.exit(1)
+sys.exit(0)
+PYTHON
+}
+VOLUMES_KT="$SRC/volumes/VolumesScreen.kt"
+RULES_JSON="$APP/data/drive-sync-rules.json"
+REMOTES_JSON="$APP/data/drive-remotes.json"
+CONN_JSON="$APP/data/drive-connections.json"
+for required in "$VOLUMES_KT" "$RULES_JSON" "$REMOTES_JSON" "$CONN_JSON"; do
+    [ -f "$required" ] || { echo "ERROR missing source: $required — this tester is unrun, not passing"; exit 1; }
+done
+d12_classes "$BJ" "$VOLUMES_KT" && pass "four volume classes in the #604 order, dispatched by VolumesScreen; their filters are declared too" || fail "the #604 volume classes are not what build.json declares"
+d12_rsync "$BJ" "$APPS_JSON" && pass "Configs ▸ Rsync keeps the id 'rclone' and the Apps tile routes there" || fail "the Rclone→Rsync rename or the RSync route is not done"
+d12_rules "$RULES_JSON" "$REMOTES_JSON" && pass "the declared sync rules are mappable, and the default one is /ya_mnt_sync-a37 ⇄ Google Drive, manual" || fail "the declared sync rules are not what #604 asked for"
+d12_machines "$BJ" "$CONN_JSON" && pass "every connection's machine kind is a class that renders it" || fail "a connection would vanish between Cloud-Containers and Cloud-Machines"
+for f in UI_VOLUMES_B64 UI_CONSTELLATION_B64 SYNC_RULES_B64; do
+    if grep -qE "buildConfigField \"String\", *\"$f\"" "$GRADLE" && grep -qE "BuildConfig\.$f" "$DECL"; then pass "$f baked and decoded"; else fail "$f not baked in build.gradle or not read in Declarations.kt"; fi
+done
+if grep -qE 'throw new GradleException\("build\.json::ui\.volumes\.classes must declare' "$GRADLE"; then pass "a missing ui.volumes.classes fails the build"; else fail "build.gradle does not refuse a missing ui.volumes.classes"; fi
+if grep -qE 'connections: List<Declarations\.ConnectionDecl> = Declarations\.connections' "$SRC/sync/RcloneMountsScreens.kt"; then pass "Cloud-Containers is the SAME MountsSyncScreen, scoped — not a second mounts screen"; else fail "MountsSyncScreen is not scopeable: Volumes must reuse it, never copy it"; fi
+if grep -qE 'fun job\(rule: Declarations\.SyncRuleDecl\): RcloneJob' "$SRC/sync/SyncRules.kt" && ! grep -qE 'ProcessBuilder|exec\(' "$SRC/sync/SyncRules.kt"; then pass "a sync rule runs as ONE RcloneJob on the existing engine, never its own process"; else fail "SyncRules does not map a rule onto libs:rclone's job model"; fi
+
 echo "== M mutation-proof =="
 
 TMP="$(mktemp -d)"; trap 'rm -rf "${TMP:?}"' EXIT
@@ -294,7 +420,17 @@ cmp -s "$CONFIGS" "$TMP/configs.kt" && fail "the configs mutation changed nothin
 d2 "$BJ" "$TMP/configs.kt" >/dev/null && fail "D2 passed a misdispatched page (tester is vacuous)" || pass "a page id misspelt in ConfigsScreen → D2 RED"
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); [r.update(seed=True) for r in d["repos"] if r.get("private")]; json.dump(d,open(sys.argv[2],"w"))' "$REPOS" "$TMP/seed-private.json"
 d11_seed "$TMP/seed-private.json" >/dev/null && fail "D11 passed a PRIVATE repository marked for seeding (tester is vacuous)" || pass "a private repository marked seed → D11 RED"
-d1 "$BJ" "$MAIN" >/dev/null && d2 "$BJ" "$CONFIGS" >/dev/null && d3 "$BJ" "$CATALOG" >/dev/null && d11_seed "$REPOS" >/dev/null && pass "unmutated tree is still green" || fail "the unmutated tree is red"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["volumes"]["classes"]=b["ui"]["volumes"]["classes"][1:]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/no-constellation.json"
+d12_classes "$TMP/no-constellation.json" "$VOLUMES_KT" >/dev/null && fail "D12 passed a declaration that dropped a volume class (tester is vacuous)" || pass "a class dropped from ui.volumes.classes → D12 RED"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); [a["route"].update(page="backups") for a in d["apps"] if a.get("label")=="RSync"]; json.dump(d,open(sys.argv[2],"w"))' "$APPS_JSON" "$TMP/rsync-backups.json"
+d12_rsync "$BJ" "$TMP/rsync-backups.json" >/dev/null && fail "D12 passed an RSync tile still routing to Backups (tester is vacuous)" || pass "Apps ▸ RSync routed back to Backups → D12 RED"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["rules"][0]["local_path"]="/somewhere-else"; json.dump(d,open(sys.argv[2],"w"))' "$RULES_JSON" "$TMP/rule-moved.json"
+d12_rules "$TMP/rule-moved.json" "$REMOTES_JSON" >/dev/null && fail "D12 passed a default rule that lost /ya_mnt_sync-a37 (tester is vacuous)" || pass "the default rule's local folder changed → D12 RED"
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d[0]["machine"]="laptop"; json.dump(d,open(sys.argv[2],"w"))' "$CONN_JSON" "$TMP/conn-stray.json"
+d12_machines "$BJ" "$TMP/conn-stray.json" >/dev/null && fail "D12 passed a connection whose machine kind no class renders (tester is vacuous)" || pass "a connection with an undeclared machine kind → D12 RED"
+d1 "$BJ" "$MAIN" >/dev/null && d2 "$BJ" "$CONFIGS" >/dev/null && d3 "$BJ" "$CATALOG" >/dev/null && d11_seed "$REPOS" >/dev/null \
+    && d12_classes "$BJ" "$VOLUMES_KT" >/dev/null && d12_rsync "$BJ" "$APPS_JSON" >/dev/null && d12_rules "$RULES_JSON" "$REMOTES_JSON" >/dev/null && d12_machines "$BJ" "$CONN_JSON" >/dev/null \
+    && pass "unmutated tree is still green" || fail "the unmutated tree is red"
 
 echo
 if [ "$FAILURES" -eq 0 ]; then echo "test-drive-shell: all checks passed"; else echo "test-drive-shell: $FAILURES check(s) FAILED"; exit 1; fi

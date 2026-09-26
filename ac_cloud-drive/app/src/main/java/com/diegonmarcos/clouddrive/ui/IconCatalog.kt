@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Commit
+import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Download
@@ -86,6 +87,7 @@ object IconCatalog {
         "tree" -> Icons.Filled.AccountTree
         "history" -> Icons.Filled.History
         "dns" -> Icons.Filled.Dns
+        "computer" -> Icons.Filled.Computer
         "terminal" -> Icons.Filled.Terminal
         else -> null
     }

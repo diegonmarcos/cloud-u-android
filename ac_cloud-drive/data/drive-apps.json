@@ -52,9 +52,9 @@
       "icon": "🔁",
       "route": {
         "tab": "configs",
-        "page": "backups"
+        "page": "rclone"
       }
     }
   ],
-  "_doc_routes": "#603 A tile with a `route` does not leave the app: it selects a declared tab and, inside it, a declared sub-page (ui.tabs / ui.configs.pages ids — the ONE declaration, not a second list). GitSync is Configs ▸ Git, the native git manager's own page; RSync is Configs ▸ Backups, where the declared rsync mirror jobs live (build.json::_doc_rsync). Neither is a new screen: #330 and #567 already built both, and a tile that re-implemented either would be a second surface for one subject."
+  "_doc_routes": "#603 A tile with a `route` does not leave the app: it selects a declared tab and, inside it, a declared sub-page (ui.tabs / ui.configs.pages ids — the ONE declaration, not a second list). GitSync is Configs ▸ Git, the native git manager's own page; RSync is Configs ▸ Rsync — the page whose id stays 'rclone' and whose label #604 changed to Rsync, where the declared folder↔folder sync rules live (data/drive-sync-rules.json, build.json::_doc_rsync). It used to route to Backups, which is the ON-DEVICE mirror set and a different subject. Neither tile is a new screen: #330, #567 and #604 built all of it, and a tile that re-implemented either would be a second surface for one subject."
 }
