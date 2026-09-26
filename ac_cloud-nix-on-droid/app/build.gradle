@@ -391,10 +391,18 @@ task bakeBootstrap() {
             def toolingBaker = new File(projectDir, "src/main/cpp/bake_default_packages.py")
             if (!toolingBaker.exists())
                 throw new GradleException("missing " + toolingBaker + " (the default-tooling bake gate)")
+            // The CI runner is x86_64 for every ABI matrix job -- only the
+            // DOWNLOADED bootstrap differs per ABI. Without forcing --system
+            // here, a plain `nix profile install` targets the runner's own
+            // arch, so the arm64 job would bake x86_64-linux binaries into an
+            // aarch64 rootfs. cache.nixos.org already carries pre-built
+            // aarch64-linux substitutes for git/nodejs_22/claude-code, so this
+            // needs no qemu -- it just fetches the right arch's binaries.
+            def nixSystem = pin.arch == "aarch64" ? "aarch64-linux" : "x86_64-linux"
             def toolingResult = exec {
                 commandLine "python3", toolingBaker.absolutePath, idPatched.absolutePath, baked.absolutePath,
                         tooling.nixpkgs_pin, tooling.attrs.join(","), tooling.profile_link,
-                        tooling.fallback_init_script, rewrite.to
+                        tooling.fallback_init_script, rewrite.to, nixSystem
                 ignoreExitValue = true
             }
             idPatched.delete()

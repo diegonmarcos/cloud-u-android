@@ -20,7 +20,8 @@ binary nothing ever chmods +x.
 
 Usage:
     bake_default_packages.py <input.zip> <output.zip> <nixpkgs_pin> \
-        <comma-separated attrs> <profile_link> <fallback_init_script> <app_id>
+        <comma-separated attrs> <profile_link> <fallback_init_script> <app_id> \
+        <nix_system, e.g. aarch64-linux>
 """
 import os
 import stat
@@ -53,15 +54,15 @@ def capture(cmd):
 
 
 def main() -> int:
-    if len(sys.argv) != 8:
+    if len(sys.argv) != 9:
         print(
             "usage: bake_default_packages.py <input.zip> <output.zip> "
-            "<nixpkgs_pin> <attrs csv> <profile_link> <fallback_init_script> <app_id>",
+            "<nixpkgs_pin> <attrs csv> <profile_link> <fallback_init_script> <app_id> <nix_system>",
             file=sys.stderr,
         )
         return 2
 
-    input_zip, output_zip, pin, attrs_csv, profile_link, fallback_script, app_id = sys.argv[1:8]
+    input_zip, output_zip, pin, attrs_csv, profile_link, fallback_script, app_id, nix_system = sys.argv[1:9]
     attrs = [a for a in attrs_csv.split(",") if a]
     if not attrs:
         print("no attrs given", file=sys.stderr)
@@ -69,7 +70,12 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory() as work:
         profile = os.path.join(work, "profile")
-        refs = [f"github:NixOS/nixpkgs/{pin}#{a}" for a in attrs]
+        # The CI runner is always x86_64-linux; legacyPackages.<system> (rather
+        # than the plain #attr shorthand, which resolves against the CALLER's
+        # system) is what lets one runner bake either ABI's binaries, pulling
+        # pre-built substitutes for the foreign arch from cache.nixos.org
+        # instead of needing to cross-compile or emulate.
+        refs = [f"github:NixOS/nixpkgs/{pin}#legacyPackages.{nix_system}.{a}" for a in attrs]
         run(["nix", "profile", "install", "--profile", profile, *refs, "--impure",
              "--extra-experimental-features", "nix-command flakes"])
 
