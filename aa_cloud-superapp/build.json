@@ -2623,11 +2623,11 @@
                 "target": "app://com.diegonmarcos.superapp"
               },
               {
-                "_doc": "#571. Terminal opens cloud-terminal-termux (ac_cloud-termux, applicationId cld.termux) through ui.external_apps[cloud-terminal-termux]. Until #571 this tile was app://com.termux.nix with a Play Store fallback: com.termux.nix is the UPSTREAM Nix-on-Droid id, which no fleet build installs (our fork is cld.termux.nix), so on the owner's phone the tap walked straight to a Play page for somebody else's app. #499 guarded the caption; test-agi-tiles.sh guards where the tap lands.",
+                "_doc": "#563/#571 follow-up. Terminal now opens cloud-terminal-nix (ac_cloud-nix-on-droid, applicationId cld.termux.nix) through ui.external_apps[cloud-terminal-nix], relinked from cloud-terminal-termux (cld.termux). Prior history: until #571 this tile was app://com.termux.nix with a Play Store fallback — the UPSTREAM Nix-on-Droid id, which no fleet build installs — so the tap walked straight to a Play page for somebody else's app; #571 fixed that by pointing it at our Termux fork instead. #499 guarded the caption; test-agi-tiles.sh guards where the tap lands.",
                 "id": "ai-tmx",
                 "label": "Terminal",
                 "icon": "ic_terminal",
-                "target": "extapp:cloud-terminal-termux"
+                "target": "extapp:cloud-terminal-nix"
               },
               {
                 "_doc": "#571. MyTerminal opens cloud-myterminal's own applicationId (com.diegonmarcos.ide, kept by the #561 rename so installs survive). The forkless extapp:cloud-myterminal resolves to hub_package; it used to name the '/files' fork, a separate APK the rename did not make the app.",
@@ -7231,12 +7231,21 @@
         }
       },
       {
-        "_doc": "#571. cloud-terminal-termux (ac_cloud-termux, our Termux fork, applicationId cld.termux) — the app the Cloud ▸ Apps ▸ AGI Terminal tile launches. install_apk_url is the fleet's release_url for it; ShellActivity.launchExternalApp swaps in the x86_64 asset from data/constellation-fleet.json on an x86_64 phone. folder prod_terminals is where the exact pkg:cld.termux keyword used to classify it, so the app lands in the same folder as before.",
+        "_doc": "#571. cloud-terminal-termux (ac_cloud-termux, our Termux fork, applicationId cld.termux). No longer the AGI Terminal tile's target as of the #563 follow-up (moved to cloud-terminal-nix below); entry kept for prod_terminals folder classification (see the pkg:cld.termux keyword in ui._doc_phone_folders' Terminals block). install_apk_url is the fleet's release_url for it; ShellActivity.launchExternalApp swaps in the x86_64 asset from data/constellation-fleet.json on an x86_64 phone.",
         "id": "cloud-terminal-termux",
         "folder": "prod_terminals",
         "hub_package": "cld.termux",
         "install_package": "cld.termux",
         "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-terminal.apk",
+        "forks": {}
+      },
+      {
+        "_doc": "#563 follow-up. cloud-terminal-nix (ac_cloud-nix-on-droid, our Nix-on-Droid fork, applicationId cld.termux.nix) — the app the Cloud ▸ Apps ▸ AGI Terminal tile now launches, relinked from cloud-terminal-termux. install_apk_url/install_package mirror ac_cloud-nix-on-droid/build.json::release.gh_release (asset cloud-nixdroid.apk) and data/constellation-fleet.json's nix-on-droid entry; ShellActivity.launchExternalApp swaps in the x86_64 asset from data/constellation-fleet.json on an x86_64 phone. folder prod_terminals matches the sibling cloud-terminal-termux entry.",
+        "id": "cloud-terminal-nix",
+        "folder": "prod_terminals",
+        "hub_package": "cld.termux.nix",
+        "install_package": "cld.termux.nix",
+        "install_apk_url": "https://github.com/diegonmarcos/cloud-u-android/releases/download/latest/cloud-nixdroid.apk",
         "forks": {}
       },
       {

@@ -13,8 +13,9 @@
 # build) says that app directory ships. Nothing here names a package id.
 #
 #   T1  the group's tiles, in order, are the six the owner asked for
-#   T2  Terminal/MyTerminal/IDE resolve to ac_cloud-termux / ac_cloud-myterminal
+#   T2  Terminal/MyTerminal/IDE resolve to ac_cloud-nix-on-droid / ac_cloud-myterminal
 #       / ac_cloud-code's own package, and install from that app's release_url
+#       (#563 follow-up: Terminal moved from ac_cloud-termux to ac_cloud-nix-on-droid)
 #   T3  the IDE glyph is cloud-code's launcher foreground, byte for byte
 #   T4  a not-installed extapp tile draws the #249 placeholder, with strings in
 #       every locale, and the install snack is a string resource
@@ -76,7 +77,7 @@ def fleet_for(directory):
     hits = [a for a in fleet if a.get("kind") == "app"
             and a.get("repo_url", "").rstrip("/").endswith("/" + directory)]
     return hits[0] if len(hits) == 1 else None
-for label, directory in (("Terminal", "ac_cloud-termux"), ("MyTerminal", "ac_cloud-myterminal"),
+for label, directory in (("Terminal", "ac_cloud-nix-on-droid"), ("MyTerminal", "ac_cloud-myterminal"),
                          ("IDE", "ac_cloud-code")):
     tile, entry = by.get(label), fleet_for(directory)
     check(entry is not None, "fleet manifest has exactly one app built from %s" % directory)
