@@ -17,6 +17,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import timber.log.Timber
+import java.util.concurrent.TimeUnit
 
 /**
  * Primary implementation of [Retrofits].
@@ -105,7 +106,16 @@ internal class RetrofitsImpl(
             }
     }
 
+    // Explicit fast-fail timeouts: the pre-provisioned self-hosted server is only
+    // reachable on the WireGuard mesh, and an unreachable mesh black-holes packets
+    // (no RST), so connects hang at the kernel TCP level far past OkHttp's nominal
+    // defaults. Short budgets make those requests error quickly so the existing
+    // cached/NoNetwork fallback paths surface the vault offline.
     private val baseOkHttpClient: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(5, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .writeTimeout(15, TimeUnit.SECONDS)
+        .callTimeout(20, TimeUnit.SECONDS)
         .addInterceptor(headersInterceptor)
         .addNetworkInterceptor(cookieInterceptor)
         .configureSsl(certificateProvider = certificateProvider)
@@ -115,6 +125,10 @@ internal class RetrofitsImpl(
     // it treats all 302s as Bitwarden load-balancer auth redirects, which is only correct for
     // Bitwarden's own infrastructure.
     private val externalOkHttpClient: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(5, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .writeTimeout(15, TimeUnit.SECONDS)
+        .callTimeout(20, TimeUnit.SECONDS)
         .addInterceptor(headersInterceptor)
         .configureSsl(certificateProvider = certificateProvider)
         .build()
@@ -122,6 +136,10 @@ internal class RetrofitsImpl(
     private val authenticatedOkHttpClient: OkHttpClient by lazy {
         baseOkHttpClient
             .newBuilder()
+            .connectTimeout(5, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            .callTimeout(20, TimeUnit.SECONDS)
             .addInterceptor(authTokenManager)
             .authenticator(authTokenManager)
             .build()
