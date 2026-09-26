@@ -381,12 +381,15 @@ class ProfileFragment : Fragment() {
 
     /** One line per step, worded from the state. */
     private fun summaries(s: ProfileJourney.State): Map<ProfileJourney.Step, String> {
-        val provider = s.session?.let { SignIn.provider(it.provider) }
+        // A local: State lives in libs:auth now, and Kotlin will not smart-cast a
+        // property declared in another module.
+        val session = s.session
+        val provider = session?.let { SignIn.provider(it.provider) }
         val signIn = when {
-            s.session != null && s.identityOnly ->
-                getString(R.string.journey_identity_only_done, provider?.label ?: s.session.provider, s.session.identity.ifBlank { "—" })
-            s.session != null ->
-                getString(R.string.journey_signed_in_as, s.session.identity.ifBlank { s.storedBearerEmail.ifBlank { "—" } }, provider?.label ?: s.session.provider)
+            session != null && s.identityOnly ->
+                getString(R.string.journey_identity_only_done, provider?.label ?: session.provider, session.identity.ifBlank { "—" })
+            session != null ->
+                getString(R.string.journey_signed_in_as, session.identity.ifBlank { s.storedBearerEmail.ifBlank { "—" } }, provider?.label ?: session.provider)
             s.storedBearerEmail.isNotBlank() -> getString(R.string.journey_bearer_stored, s.storedBearerEmail)
             else -> getString(R.string.journey_not_signed_in)
         }

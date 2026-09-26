@@ -130,8 +130,8 @@ object GitSshVault {
             val walker = TreeWalk.forPath(repository, path, tree)
                 ?: return failed(
                     ConfigSyncClient.Kind.NOT_FOUND,
-                    "Cloned $repo@$ref, but it has no file at '$path'. " +
-                        "Check build.json::ui.config_source.git.path.",
+                    "Cloned ${AuthDeclaration.configSource.gitRepo}@$ref, but it has no file at '$path'. " +
+                        "Check ab_cloud-libs-shared/build.json::auth.config_source.git.path.",
                 )
             val bytes = walker.use { repository.open(it.getObjectId(0)).bytes }
             val body = String(bytes, Charsets.UTF_8)
