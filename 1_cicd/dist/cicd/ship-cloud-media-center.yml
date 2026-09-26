@@ -169,7 +169,7 @@ jobs:
       # ALL constellation apps sign with the SAME key so cross-app
       # signature-IPC + the in-app fleet updater never hit a signature
       # mismatch. The raw keystore + its sops-encrypted passwords live ONLY in
-      # the private vault repo (A0_keys/providers/android/release.jks +
+      # the private vault repo (A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks +
       # signing.secrets.yaml). build.sh::_resolve_signing reads $VAULT_DIR +
       # sops-decrypts (SOPS_AGE_KEY) and exports ANDROID_KEYSTORE_* for gradle.
       # NO fallback: if the key is unavailable build.sh exits 1 (desired).

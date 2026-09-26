@@ -171,8 +171,8 @@ jobs:
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
         run: |
           set -euo pipefail
-          KS="$VAULT_DIR/A0_keys/providers/android/release.jks"
-          SEC="$VAULT_DIR/A0_keys/providers/android/signing.secrets.yaml"
+          KS="$VAULT_DIR/A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks"
+          SEC="$VAULT_DIR/A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
           [ -f "$KS" ] || { echo "FATAL: shared keystore missing at $KS"; exit 1; }
 
           STORE_PW="$(sops --config /dev/null -d --extract '["keystore_password"]' "$SEC")"

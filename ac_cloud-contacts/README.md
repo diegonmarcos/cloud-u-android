@@ -43,4 +43,4 @@ many, not the app's identity.
 CI: `1_cicd/src/cicd/ship-cloud-contacts.yml` → `ghcr.io/diegonmarcos/cloud-contacts`
 + rolling `releases/latest/download/Cloud-Contacts.apk` (consumed by
 `aa_cloud-superapp ui.external_apps[cloud-contacts]`). Same shared
-constellation signing key (`cloud-vault A0_keys/providers/android/`).
+constellation signing key (`cloud-vault A_A0-Providers/D_TOOLS-DEVICES/d2-android/`).

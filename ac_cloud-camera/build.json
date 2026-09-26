@@ -39,9 +39,9 @@
   },
   "_doc_abi_filters": "EMPTY ON PURPOSE. GrapheneOS Camera has no native code (no externalNativeBuild, no JNI) so it produces ONE universal APK that runs on every ABI — unlike ac_cloud-media-center, which needs an ABI build matrix because ReFra compiles libheif/libde265.",
   "signing": {
-    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: A0_keys/providers/android/release.jks (OU=Cloud Constellation) + A0_keys/providers/android/signing.secrets.yaml.",
-    "vault_keystore": "A0_keys/providers/android/release.jks",
-    "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
+    "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. KEY LOCATION: A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks (OU=Cloud Constellation) + A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml.",
+    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
   },
   "forks": {
     "camera": {

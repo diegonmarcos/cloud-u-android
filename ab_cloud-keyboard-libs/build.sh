@@ -83,7 +83,7 @@ _resolve_signing() {
   sec_rel="$(_bj "['signing']['vault_secrets']")"
   if [ -z "$ks_rel" ] || [ -z "$sec_rel" ]; then
     errlog "FATAL signing: build.json::signing.vault_keystore/.vault_secrets are empty."
-    errlog "  ALL constellation apps MUST sign with the ONE shared key (vault/A0_keys/providers/android/release.jks)."
+    errlog "  ALL constellation apps MUST sign with the ONE shared key (vault/A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks)."
     exit 1
   fi
   vault="${VAULT_DIR:-$HOME/git/cloud-vault}"

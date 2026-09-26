@@ -70,7 +70,7 @@ android {
     signingConfigs {
         // Shared Cloud-constellation signing key (vault). build.sh::_resolve_signing
         // exports ANDROID_KEYSTORE_FILE/PASS/ALIAS/KEY_PASS after sops-decrypting
-        // .vault/A0_keys/providers/android/signing.secrets.yaml.
+        // .vault/A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml.
         release {
             storeFile     = System.getenv("ANDROID_KEYSTORE_FILE") ? file(System.getenv("ANDROID_KEYSTORE_FILE")) : null
             storePassword = System.getenv("ANDROID_KEYSTORE_PASS") ?: ""

@@ -92,7 +92,7 @@ fi
 # invoked with an absolute path from .mcp.json and the cwd is not guaranteed.
 SELF_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(dirname -- "$SELF_DIR")
-REL="A0_keys/providers/authelia/signed-bearer_jwt/tokens/claude-admin.json"
+REL="A_A0-Providers/B_SERVICES-CLOUD/b12-authelia/signed-bearer_jwt/tokens/claude-admin.json"
 
 # The order matters:
 #   a) $AUTHELIA_OIDC_TOKENS_DIR — explicit, wins over any guess. Exported by

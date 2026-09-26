@@ -62,8 +62,8 @@
   },
   "signing": {
     "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. build.sh::_resolve_signing resolves $VAULT_DIR + sops-decrypts the passwords. NO fallback.",
-    "vault_keystore": "A0_keys/providers/android/release.jks",
-    "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
+    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
   },
   "release": {
     "_doc_kind": "'lib' = a companion APK that ships engines/behaviour rather than UI. data/regen.sh files these under the SuperApp Constellation page's Libs tab instead of Apps. This repo produces MANY of them, so regen.sh expands lib_apks into one fleet entry per module.",

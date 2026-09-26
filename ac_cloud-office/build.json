@@ -216,8 +216,8 @@
   },
   "signing": {
     "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. Cloud Office MUST be inside that set and this is not optional here: Text Enhance crosses an application boundary to the Cloud Keyboard over ITextTools, which is guarded by com.diegonmarcos.cloud.permission.CONSTELLATION_DATA at protectionLevel=signature. Signed with anything else, the platform refuses the bind and Text Enhance cannot work at all — it would fail with 'Text tools need the Cloud Keyboard app' on a phone where the keyboard is plainly installed. build.sh::_resolve_signing resolves the key from $VAULT_DIR + sops and FAILS LOUD if it cannot; there is no fallback and no generated key. See SIGNING.md.",
-    "vault_keystore": "A0_keys/providers/android/release.jks",
-    "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
+    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
   },
   "build": {
     "_doc": "BUILT ON A STANDARD HOSTED RUNNER, BECAUSE NOTHING NATIVE IS COMPILED. The megabuild this key used to describe is not needed: patches/0002 packages both native libraries from the pinned released APK, so what runs is a Node build of browser/ and a Gradle build of android/. `mode` selects the generated workflow (1_cicd/src/templates/ship-<mode>.yml.in); `host` is its runs-on.",

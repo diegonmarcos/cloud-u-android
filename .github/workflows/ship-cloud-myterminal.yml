@@ -168,7 +168,7 @@ jobs:
       # Cloud-Nav) must share ONE signature: the IPC permission is
       # protectionLevel=signature, and the in-app updater rejects updates signed
       # by a different key. The raw keystore + its sops-encrypted passwords live
-      # ONLY in the private vault repo (A0_keys/providers/android/release.jks +
+      # ONLY in the private vault repo (A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks +
       # signing.secrets.yaml). build.sh::_resolve_signing reads $VAULT_DIR +
       # sops-decrypts (SOPS_AGE_KEY) and exports ANDROID_KEYSTORE_* for gradle.
       # NO fallback: if the key is unavailable build.sh exits 1 (desired).

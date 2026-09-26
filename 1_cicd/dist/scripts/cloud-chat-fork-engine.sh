@@ -210,7 +210,7 @@ _resolve_signing() {
   if [ -z "$ks_rel" ] || [ -z "$sec_rel" ]; then
     errlog "FATAL signing: .signing.vault_keystore/.vault_secrets are empty in build.json."
     errlog "  ALL constellation apps MUST sign with the ONE shared key:"
-    errlog "    vault/A0_keys/providers/android/release.jks (OU=Cloud Constellation)"
+    errlog "    vault/A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks (OU=Cloud Constellation)"
     errlog "  Set both paths in build.json::signing. Refusing to build with any other key."
     exit 1
   fi
@@ -496,7 +496,7 @@ step_materialize_fork() {
 #                 root from the ONE shared constellation key so the upstream's
 #                 own signingConfigs.release picks it up (no signing patch needed).
 # Keystore resolution: _resolve_signing exports the vault key env
-# (ANDROID_KEYSTORE_*) from vault/A0_keys/providers/android/release.jks — the
+# (ANDROID_KEYSTORE_*) from vault/A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks — the
 # SAME key every constellation APK signs with (signature IPC + updater install
 # chain). NO legacy/random fallback: _resolve_signing fails loud if absent.
 step_build_fork() {

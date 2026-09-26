@@ -7,7 +7,7 @@ WHAT IS DECLARED WHERE, AND WHY THIS GUARD EXISTS.
 The four phone tunnel profiles (wg-v4-{split,full}, wg-v6-{split,full}) are
 declared twice, and for a long time nothing derived one from the other:
 
-  1. cloud-vault/A0_keys/providers/wireguard/termux-public/config-v{4,6}-*
+  1. cloud-vault/A_A0-Providers/C_TOOLS-INFRA/c0-wireguard/termux-public/config-v{4,6}-*
      is the _source. cloud-infra regenerates
      1_cloud-configs/src/inputs/superapp-wireguard-profiles.json and then
      1_cloud-configs/dist/build-cloud-superapp-diego.json from it. That chain

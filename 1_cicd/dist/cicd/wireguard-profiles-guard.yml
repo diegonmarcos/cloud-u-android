@@ -5,7 +5,7 @@ name: "wireguard profiles guard — the APK's export block cannot drift from the
 # The four phone tunnel profiles are declared TWICE with nothing deriving one
 # from the other:
 #
-#   1. cloud-vault/A0_keys/providers/wireguard/termux-public/config-v{4,6}-* is
+#   1. cloud-vault/A_A0-Providers/C_TOOLS-INFRA/c0-wireguard/termux-public/config-v{4,6}-* is
 #      the _source. cloud-infra derives
 #      1_cloud-configs/dist/build-cloud-superapp-diego.json from it, and that
 #      dist is public.

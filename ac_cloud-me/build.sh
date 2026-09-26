@@ -158,7 +158,7 @@ _resolve_signing() {
   if [ -z "$ks_rel" ] || [ -z "$sec_rel" ]; then
     errlog "FATAL signing: .signing.vault_keystore/.vault_secrets are empty in build.json."
     errlog "  ALL constellation apps MUST sign with the ONE shared key:"
-    errlog "    vault/A0_keys/providers/android/release.jks (OU=Cloud Constellation)"
+    errlog "    vault/A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks (OU=Cloud Constellation)"
     errlog "  Set both paths in build.json::signing. Refusing to build with any other key."
     exit 1
   fi

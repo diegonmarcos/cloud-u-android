@@ -25,8 +25,8 @@
     "_doc": "Full clone vendored as owned code (no .git, no upstream remote). MIT except packages/backend + packages/common/native \u2014 BOTH PRUNED (EE licence forbids copying/distributing). Proven at the Cargo level in ac_cloud-notes/VENDORING-LICENCE.md and enforced by the licence-boundary-guard on every push."
   },
   "signing": {
-    "vault_keystore": "A0_keys/providers/android/release.jks",
-    "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
+    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
   },
   "release": {
     "artifact": {

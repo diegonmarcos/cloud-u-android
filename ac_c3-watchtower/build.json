@@ -58,8 +58,8 @@
   },
   "signing": {
     "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps. The SAME key signs every app so cross-app signature-IPC and the in-app fleet updater never hit a signature mismatch. The raw keystore and its sops-encrypted passwords live ONLY in the private vault repo. build.sh::_resolve_signing reads $VAULT_DIR and sops-decrypts (SOPS_AGE_KEY), exporting ANDROID_KEYSTORE_* for gradle. THERE IS NO FALLBACK: without the key the build fails loud rather than shipping an app signed by a random key.",
-    "vault_keystore": "A0_keys/providers/android/release.jks",
-    "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
+    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
   },
   "release": {
     "_doc": "Per-APK distribution, the same data-driven block every app here has. build.sh oras-push and gh-release read it; the workflow hardcodes no registry, tag or artifact name. This block is ALSO what makes the app discoverable: aa_cloud-superapp/data/regen.sh admits a sibling on .android.application_id + .release.ghcr, so registering in the constellation is a property of this file rather than a list to edit by hand. {sha} -> git short sha, {version_name} -> android.version_name.",

@@ -38,7 +38,7 @@ shows *"No GIF API key configured"*; stickers + emoji are unaffected.
 
 Put the key(s) in the vault, sops-encrypted, at the path named by
 `build.json::keyboard_media.vault_secrets`
-(`A0_keys/providers/keyboard-media/secrets.yaml`):
+(`A_A0-Providers/D_TOOLS-DEVICES/d3-keyboard-media/secrets.yaml`):
 
 ```yaml
 # decrypted shape (encrypt with the vault's age key via sops before committing)

@@ -7,8 +7,8 @@ No exceptions, no per-app keys, no random fallback — ever.
 
 | | |
 |---|---|
-| **Keystore** | `vault/A0_keys/providers/android/release.jks` (PKCS12, RSA-4096) |
-| **Passwords** | `vault/A0_keys/providers/android/signing.secrets.yaml` (sops/age) — keys: `keystore_password`, `key_password`, `key_alias` |
+| **Keystore** | `vault/A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks` (PKCS12, RSA-4096) |
+| **Passwords** | `vault/A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml` (sops/age) — keys: `keystore_password`, `key_password`, `key_alias` |
 | **Alias** | `cloud-constellation` |
 | **Subject** | `CN=Diego Coelho Marcos, OU=Cloud SuperApp, O=diegonmarcos.com, L=Berlin, ST=Berlin, C=DE` |
 | **SAN** | `email:me@diegonmarcos.com`, `URI:https://linktree.diegonmarcos.com` |

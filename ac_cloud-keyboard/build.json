@@ -60,7 +60,7 @@
   },
   "keyboard_media": {
     "_doc": "Same block as aa_cloud-superapp — shared vault secret. build.sh sops-decrypts vault_secrets → TENOR_API_KEY/GIPHY_API_KEY env vars → Gradle BuildConfig → MediaRuntime.configure().",
-    "vault_secrets": "A0_keys/providers/keyboard-media/secrets.yaml",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d3-keyboard-media/secrets.yaml",
     "enabled": true,
     "sticker": {
       "enabled": true
@@ -113,8 +113,8 @@
   ],
   "signing": {
     "_doc": "ONE shared Cloud-constellation signing key for ALL Android apps — the SAME key that signs the superapp, so the in-app fleet updater never hits INSTALL_FAILED_UPDATE_INCOMPATIBLE. build.sh::_resolve_signing resolves $VAULT_DIR (default ~/git/cloud-vault) + sops-decrypts the passwords, and _enforce_signature re-signs the built APK with it. NO fallback: if the key is unavailable the build FAILS LOUD — it never signs with the ephemeral android debug keystore.",
-    "vault_keystore": "A0_keys/providers/android/release.jks",
-    "vault_secrets": "A0_keys/providers/android/signing.secrets.yaml"
+    "vault_keystore": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/release.jks",
+    "vault_secrets": "A_A0-Providers/D_TOOLS-DEVICES/d2-android/signing.secrets.yaml"
   },
   "release": {
     "artifact": {
