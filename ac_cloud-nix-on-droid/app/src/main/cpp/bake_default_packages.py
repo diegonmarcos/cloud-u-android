@@ -37,13 +37,19 @@ SESSION_INIT_TEMPLATE = (
 DROPPED_ENTRY = "etc/static/UNINTIALISED"
 
 
+# claude-code carries an unfree license in nixpkgs (Anthropic's own terms,
+# not a nixpkgs restriction) -- nix's eval refuses it unless this is set, the
+# same override `nixos-rebuild`/`nix-env` users are told to add for it.
+NIX_ENV = {**os.environ, "NIXPKGS_ALLOW_UNFREE": "1"}
+
+
 def run(cmd):
     print("+ " + " ".join(cmd), file=sys.stderr)
-    return subprocess.run(cmd, check=True)
+    return subprocess.run(cmd, check=True, env=NIX_ENV)
 
 
 def capture(cmd):
-    return subprocess.run(cmd, check=True, capture_output=True, text=True).stdout
+    return subprocess.run(cmd, check=True, capture_output=True, text=True, env=NIX_ENV).stdout
 
 
 def main() -> int:
@@ -64,7 +70,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as work:
         profile = os.path.join(work, "profile")
         refs = [f"github:NixOS/nixpkgs/{pin}#{a}" for a in attrs]
-        run(["nix", "profile", "install", "--profile", profile, *refs,
+        run(["nix", "profile", "install", "--profile", profile, *refs, "--impure",
              "--extra-experimental-features", "nix-command flakes"])
 
         generation = capture(["readlink", "-f", profile]).strip()
