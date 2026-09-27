@@ -23,7 +23,7 @@ object GitRepoScan {
             .sorted()
     }
 
-    /** The workflows GitHub would run: `.github/workflows/*.yml` and `*.yaml`. */
+    /** The workflows GitHub would run: the .yml and .yaml files of `.github/workflows`. */
     fun workflows(repo: File): List<String> {
         val dir = File(repo, ".github/workflows")
         if (!dir.isDirectory) return emptyList()

@@ -99,8 +99,8 @@ import kotlinx.coroutines.withContext
  * through libs:git-sync's GitEngine and never a second git.
  *
  * TWO SECTIONS (ui.sync.git.sections):
- *  · public   — the declared set of the owner's PUBLIC cloud*/front* repositories. No
- *               login: they clone over plain HTTPS.
+ *  · public   — the declared set of the owner's PUBLIC repositories in the cloud and
+ *               front name families. No login: they clone over plain HTTPS.
  *  · personal — the fleet sign-in (libs:auth's device grant against the declared GitHub
  *               provider, whose scope is already `repo`) or the user's existing SSH key.
  *               After a GitHub sign-in the account's own listing is fetched with the
