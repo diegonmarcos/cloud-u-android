@@ -10,8 +10,9 @@
 #       (#587 — the fleet's shared libs:auth, the SAME module cloud-drive links) declares
 #       FOUR ways in (#578: Authelia bearer, Authelia web-auth, GitHub, Google),
 #       unique ids and labels, exactly ONE primary, kinds the code dispatches
-#       on, the two SSO ways of DISTINCT kinds, Google inert (empty client id —
-#       never invented), baked to ONE BuildConfig field of the LIB; this app's
+#       on, the two SSO ways of DISTINCT kinds, both device-flow providers carrying
+#       a PUBLIC client_id and NO committed client_secret (#611: Google's secret is
+#       baked from the private vault), baked to ONE BuildConfig field of the LIB; this app's
 #       build.json and gradle carry no provider, endpoint or GitHub-only field
 #   T2  nothing in Kotlin names a provider, an endpoint, a client id, a user, an
 #       address or a device — the seed lives in cloud-infra's superapp-users.json
@@ -36,7 +37,7 @@
 #       journey turns T4 RED
 #   T9  mutation (#578): the four-way check turns RED when the web-auth way is
 #       folded back into the bearer's kind, when the fragment sends the web pill
-#       to the bearer dialog, and when Google is given an invented client id
+#       to the bearer dialog, and when a Google client_secret is committed to build.json
 set -uo pipefail
 APP="${SA_APP:-$(cd "$(dirname "$0")/.." && pwd)}"
 PASS=0; FAIL=0
@@ -109,9 +110,13 @@ fourways() {
             || { echo "kind $k is not declared exactly once"; return 1; }
     done
     [ "$(jq '[.auth.sign_in.providers[] | select(.kind == "device_flow")] | length' "$bj")" = 2 ] || { echo "not two device-flow providers"; return 1; }
-    # Google: declared, and inert until the owner mints a client id — never invented here.
-    [ "$(jq -r '[.auth.sign_in.providers[] | select(.kind == "device_flow" and (.client_id // "") == "")] | length' "$bj")" = 1 ] \
-        || { echo "exactly one device-flow provider (Google) must carry an empty client_id"; return 1; }
+    # #611: both device-flow providers (GitHub, Google) carry a PUBLIC client_id, and
+    # NEITHER carries a client_secret in this public declaration — Google's is baked from
+    # the private vault at build time (libs:auth build.gradle), never committed here.
+    [ "$(jq -r '[.auth.sign_in.providers[] | select(.kind == "device_flow" and ((.client_id // "") == ""))] | length' "$bj")" = 0 ] \
+        || { echo "every device-flow provider must carry a client_id"; return 1; }
+    [ "$(jq -r '[.auth.sign_in.providers[] | select(.kind == "device_flow" and ((.client_secret // "") != ""))] | length' "$bj")" = 0 ] \
+        || { echo "no device-flow provider may carry a committed client_secret (this is a public repo)"; return 1; }
     # The surface gives each SSO way its own branch and its own dialog — no shared path.
     local code; code=$(codeof "$ui")
     grep -qE 'SignIn\.Kind\.AUTHELIA_WEB ->.*open = Open\.Web\(p\)' <<<"$code" \
@@ -125,7 +130,7 @@ fourways() {
     return 0
 }
 echo "== T1b: FOUR ways in — Authelia bearer, Authelia web-auth, GitHub, Google =="
-msg=$(fourways "$SHARED" "$UI") && ok "T1b: four ways, two distinct SSO kinds, Google inert, each SSO way has its own dialog" || bad "T1b: $msg"
+msg=$(fourways "$SHARED" "$UI") && ok "T1b: four ways, two distinct SSO kinds, both device-flow client_ids public with no committed secret, each SSO way has its own dialog" || bad "T1b: $msg"
 grep -q 'via = SignIn.byKind(SignIn.Kind.AUTHELIA_BEARER)' "$PF" && ok "T1b: the stored bearer's one tap is recorded against the bearer way" || bad "T1b: the stored bearer's fetch names no provider"
 grep -q 'override fun onWebSession(cookie: String) { vaultSession = cookie }' "$PF" && ok "T1b: the browser session reaches the vault route (one login, both fetches)" || bad "T1b: the fragment drops the web-auth session"
 jq -e '.auth.sign_in.providers[] | select(.primary == true) | select(.kind == "authelia_bearer")' "$SHARED" >/dev/null \
@@ -276,8 +281,8 @@ jq '.auth.sign_in.providers |= map(if .id == "authelia_web" then .kind = "authel
 fourways "$TMP/folded.json" "$UI" >/dev/null && bad "T9: passed a declaration whose web-auth way is the bearer's kind" || ok "T9: web-auth folded into the bearer kind → RED"
 jq '.auth.sign_in.providers |= map(select(.id != "authelia_web"))' "$SHARED" > "$TMP/three.json"
 fourways "$TMP/three.json" "$UI" >/dev/null && bad "T9: passed three providers" || ok "T9: one SSO way dropped → RED"
-jq '.auth.sign_in.providers |= map(if .id == "google" then .client_id = "invented.apps.googleusercontent.com" else . end)' "$SHARED" > "$TMP/invented.json"
-fourways "$TMP/invented.json" "$UI" >/dev/null && bad "T9: passed an invented Google client id" || ok "T9: Google given a client id → RED"
+jq '.auth.sign_in.providers |= map(if .id == "google" then .client_secret = "leaked-secret" else . end)' "$SHARED" > "$TMP/leaked.json"
+fourways "$TMP/leaked.json" "$UI" >/dev/null && bad "T9: passed a Google client_secret committed to the public build.json" || ok "T9: a client_secret committed to the public build.json → RED"
 sed 's/{ open = Open.Web(p) }/{ open = Open.Bearer(p) }/' "$UI" > "$TMP/web-to-bearer.kt"
 cmp -s "$UI" "$TMP/web-to-bearer.kt" && bad "T9: the mutation did not change the surface (tester is stale)" \
     || { fourways "$SHARED" "$TMP/web-to-bearer.kt" >/dev/null && bad "T9: passed a web pill that opens the bearer dialog" || ok "T9: web pill → bearer dialog → RED"; }
