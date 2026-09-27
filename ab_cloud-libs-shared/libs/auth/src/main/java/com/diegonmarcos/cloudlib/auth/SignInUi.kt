@@ -74,6 +74,17 @@ data class SignInResult(
     /** The bearer that just proved itself, for the host to store WITH the address
      *  it proved; "" for every other way. */
     val bearer: String = "",
+    /**
+     * #608 the DEVICE-GRANT access token, for a host that needs the provider's own
+     * API afterwards — cloud-drive's Sync ▸ Git lists and clones the signed-in
+     * owner's repositories with it (the GitHub provider's declared scope is already
+     * `repo`, so the same approval covers a private clone). "" for every other way,
+     * and DEFAULTED so a host that does not want it — cloud-superapp's Profile ▸
+     * Connect — keeps its existing behaviour byte for byte: nothing is stored here,
+     * nothing is logged, and the token dies with the host's process exactly as the
+     * artifact-only flow always did.
+     */
+    val accessToken: String = "",
 )
 
 object SignInTags {
@@ -326,7 +337,7 @@ private fun DeviceFlowDialog(p: SignIn.Provider, onDismiss: () -> Unit, onLanded
                     if (approval == null) { busy = false; return@launch }
                     if (!readsRepo) {
                         busy = false
-                        onLanded(SignInResult(p, approval.identity, null, 0))
+                        onLanded(SignInResult(p, approval.identity, null, 0, accessToken = approval.accessToken))
                         return@launch
                     }
                     status = ctx.getString(R.string.auth_fetching, cs.gitRepo)
@@ -334,7 +345,7 @@ private fun DeviceFlowDialog(p: SignIn.Provider, onDismiss: () -> Unit, onLanded
                     busy = false
                     when (outcome) {
                         is ConfigSyncClient.Outcome.Failed -> { failed = true; status = "✗ ${outcome.kind}\n${outcome.message}" }
-                        is ConfigSyncClient.Outcome.Ok -> onLanded(SignInResult(p, approval.identity.ifBlank { identityOf(outcome.body) }, outcome.body, outcome.bytes))
+                        is ConfigSyncClient.Outcome.Ok -> onLanded(SignInResult(p, approval.identity.ifBlank { identityOf(outcome.body) }, outcome.body, outcome.bytes, accessToken = approval.accessToken))
                     }
                 }
             }) { Text(stringResource(R.string.auth_start)) }

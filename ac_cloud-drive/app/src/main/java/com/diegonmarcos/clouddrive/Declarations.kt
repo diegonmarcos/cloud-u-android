@@ -27,8 +27,69 @@ object Declarations {
     data class PageDecl(val id: String, val label: String, val icon: String)
     /** #609 the Configs strip: three sub-pages (Git/Rclone/Mounts moved out to ui.sync.pages). */
     data class ConfigsDecl(val pages: List<PageDecl>)
-    /** #609 the Sync strip: Git/Rclone/Mounts, moved back out of Configs, plus the per-repository period choices the Git page offers. */
-    data class SyncDecl(val pages: List<PageDecl>, val gitPeriodsMinutes: List<Int>)
+    /** #609 the Sync strip: Git/Rclone/Mounts, moved back out of Configs, plus the per-repository period choices the Git page offers, plus #608's Git page itself. */
+    data class SyncDecl(val pages: List<PageDecl>, val gitPeriodsMinutes: List<Int>, val git: GitPageDecl)
+
+    // ── #608 THE SYNC ▸ GIT PAGE, declared (build.json::ui.sync.git) ────────
+
+    /** One of the page's two sections. [loginRequired] = nothing to show before a sign-in. */
+    data class GitSectionDecl(val id: String, val label: String, val icon: String, val loginRequired: Boolean)
+
+    /** How the authenticated listing is split — Public, then Private. */
+    data class GitGroupDecl(val id: String, val label: String, val icon: String)
+
+    /**
+     * A way into the personal section. [kind] is the ONLY thing the code dispatches on:
+     * [KIND_WEBAUTH] drives libs:auth's device grant against [provider] (its declared
+     * scope is [scope]) and [lists] says the token can then enumerate the account;
+     * [KIND_SSH_KEY] reuses the key libs:git-sync already holds and cannot list.
+     */
+    data class GitLoginWayDecl(val id: String, val label: String, val icon: String, val kind: String, val provider: String, val scope: String, val lists: Boolean)
+
+    /** One per-repository operation. [destructive] ⇒ the row asks before running it. */
+    data class GitOpDecl(val id: String, val label: String, val icon: String, val destructive: Boolean)
+
+    /** What `origin` can be switched to. [readOnly] ⇒ the page refuses push / force push. */
+    data class GitRemoteModeDecl(val id: String, val label: String, val icon: String, val url: String, val readOnly: Boolean) {
+        /** The declared URL shape with the owner and the repository substituted, once. */
+        fun urlFor(owner: String, name: String): String = url.replace("{owner}", owner).replace("{name}", name)
+    }
+
+    /** Where the authenticated listing comes from, and the row's web link. */
+    data class GitApiDecl(val baseUrl: String, val reposPath: String, val maxPages: Int, val webUrl: String) {
+        /** Page [page] (1-based) of the declared list route; the separator follows the declared query. */
+        fun reposUrl(page: Int): String =
+            baseUrl + reposPath + (if (reposPath.contains('?')) "&" else "?") + "page=" + page.coerceAtLeast(1)
+        fun webUrlFor(owner: String, name: String): String = webUrl.replace("{owner}", owner).replace("{name}", name)
+    }
+
+    /** One repository of the declared public set. */
+    data class GitPublicRepoDecl(val name: String, val label: String)
+
+    data class GitPageDecl(
+        val dense: Boolean,
+        val owner: String,
+        val sections: List<GitSectionDecl>,
+        val personalGroups: List<GitGroupDecl>,
+        val loginWays: List<GitLoginWayDecl>,
+        val api: GitApiDecl,
+        val remoteModes: List<GitRemoteModeDecl>,
+        val ops: List<GitOpDecl>,
+        val historyMax: Int,
+        val nameFamilies: List<String>,
+        val publicRepos: List<GitPublicRepoDecl>,
+    ) {
+        fun op(id: String): GitOpDecl? = ops.firstOrNull { it.id == id }
+        fun remoteMode(id: String): GitRemoteModeDecl? = remoteModes.firstOrNull { it.id == id }
+        /** The declared HTTPS clone URL of [name] under the declared owner — the default for every clone. */
+        fun cloneUrl(name: String, mode: String = REMOTE_HTTPS): String =
+            remoteMode(mode)?.urlFor(owner, name) ?: ""
+        fun webUrl(name: String): String = api.webUrlFor(owner, name)
+        /** Whether [name] belongs to one of the declared name families — the rule the public set was derived from. */
+        fun inNameFamilies(name: String): Boolean = nameFamilies.any { it.isNotBlank() && name.startsWith(it) }
+        val webauthWay: GitLoginWayDecl? get() = loginWays.firstOrNull { it.kind == KIND_WEBAUTH }
+        val sshWay: GitLoginWayDecl? get() = loginWays.firstOrNull { it.kind == KIND_SSH_KEY }
+    }
 
     /** #604 one of the four classes of volume; VolumesScreen dispatches on [id]. */
     data class VolumeClassDecl(val id: String, val label: String, val icon: String)
@@ -158,12 +219,45 @@ object Declarations {
         return ConfigsDecl(pages)
     }
 
-    /** #609 the Sync strip: Git/Rclone/Mounts, the mirror of parseConfigs. */
+    /** #609 the Sync strip: Git/Rclone/Mounts, the mirror of parseConfigs. #608 carries the Git page too. */
     fun parseSync(text: String): SyncDecl {
-        val o = element(text) as? JsonObject ?: return SyncDecl(emptyList(), emptyList())
+        val o = element(text) as? JsonObject ?: return SyncDecl(emptyList(), emptyList(), EMPTY_GIT_PAGE)
         val pages = objects(o["pages"]).mapNotNull { p -> val id = p.str("id"); if (id.isBlank()) null else PageDecl(id, p.str("label", id), p.str("icon")) }
         val periods = (o["git_periods_minutes"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.intOrNull }?.filter { it >= 15 } ?: emptyList()
-        return SyncDecl(pages, periods)
+        return SyncDecl(pages, periods, parseGitPage(o["git"]))
+    }
+
+    /** #608 the Git page's own declaration. A missing block yields the EMPTY page — the
+     *  screen then renders its honest "nothing declared" state instead of inventing a verb. */
+    fun parseGitPage(e: JsonElement?): GitPageDecl {
+        val o = e as? JsonObject ?: return EMPTY_GIT_PAGE
+        val api = (o["api"] as? JsonObject) ?: JsonObject(emptyMap())
+        return GitPageDecl(
+            dense = o.bool("dense", true),
+            owner = o.str("owner"),
+            sections = objects(o["sections"]).mapNotNull { s ->
+                val id = s.str("id"); if (id.isBlank()) null else GitSectionDecl(id, s.str("label", id), s.str("icon"), s.bool("login_required"))
+            },
+            personalGroups = objects(o["personal_groups"]).mapNotNull { g ->
+                val id = g.str("id"); if (id.isBlank()) null else GitGroupDecl(id, g.str("label", id), g.str("icon"))
+            },
+            loginWays = objects(o["login_ways"]).mapNotNull { w ->
+                val id = w.str("id"); if (id.isBlank()) null
+                else GitLoginWayDecl(id, w.str("label", id), w.str("icon"), w.str("kind"), w.str("provider"), w.str("scope"), w.bool("lists"))
+            },
+            api = GitApiDecl(api.str("base_url"), api.str("repos_path"), (api.int("max_pages") ?: 1).coerceAtLeast(1), api.str("web_url")),
+            remoteModes = objects(o["remote_modes"]).mapNotNull { m ->
+                val id = m.str("id"); if (id.isBlank()) null else GitRemoteModeDecl(id, m.str("label", id), m.str("icon"), m.str("url"), m.bool("read_only"))
+            },
+            ops = objects(o["ops"]).mapNotNull { p ->
+                val id = p.str("id"); if (id.isBlank()) null else GitOpDecl(id, p.str("label", id), p.str("icon"), p.bool("destructive"))
+            },
+            historyMax = (o.int("history_max") ?: 30).coerceAtLeast(1),
+            nameFamilies = o.strings("name_families"),
+            publicRepos = objects(o["public_repos"]).mapNotNull { r ->
+                val name = r.str("name"); if (name.isBlank()) null else GitPublicRepoDecl(name, r.str("label", name))
+            },
+        )
     }
 
     fun parseFiles(text: String): FilesDecl {
@@ -260,7 +354,27 @@ object Declarations {
     /** Every icon name the declarations use — what test-drive-shell.sh and DeclarationsTest hold IconCatalog to. */
     fun iconNames(tabs: List<TabDecl>, configs: ConfigsDecl, files: FilesDecl, volumes: VolumesDecl? = null, sync: SyncDecl? = null): Set<String> =
         (tabs.map { it.icon } + configs.pages.map { it.icon } + files.sections.map { it.icon } + files.places.map { it.icon } + files.filters.map { it.icon } +
-            (volumes?.classes?.map { it.icon } ?: emptyList()) + (sync?.pages?.map { it.icon } ?: emptyList())).filter { it.isNotBlank() }.toSet()
+            (volumes?.classes?.map { it.icon } ?: emptyList()) + (sync?.pages?.map { it.icon } ?: emptyList()) +
+            (sync?.git?.let { g -> g.sections.map { it.icon } + g.personalGroups.map { it.icon } + g.loginWays.map { it.icon } + g.remoteModes.map { it.icon } + g.ops.map { it.icon } } ?: emptyList())
+            ).filter { it.isNotBlank() }.toSet()
+
+    /** #608 the page with nothing declared: every list empty, so the screen says so. */
+    val EMPTY_GIT_PAGE = GitPageDecl(true, "", emptyList(), emptyList(), emptyList(), GitApiDecl("", "", 1, ""), emptyList(), emptyList(), 30, emptyList(), emptyList())
+
+    /** #608 the login kinds the Git page dispatches on — the ONLY provider vocabulary in Kotlin. */
+    const val KIND_WEBAUTH = "webauth"
+    const val KIND_SSH_KEY = "ssh_key"
+
+    /** #608 the declared remote modes, by id. */
+    const val REMOTE_HTTPS = "https"
+    const val REMOTE_SSH = "ssh"
+    const val REMOTE_READONLY = "readonly"
+
+    /** #608 the Git page's two sections and the personal section's two groups, by id. */
+    const val GIT_SECTION_PUBLIC = "public"
+    const val GIT_SECTION_PERSONAL = "personal"
+    const val GIT_GROUP_PUBLIC = "public"
+    const val GIT_GROUP_PRIVATE = "private"
 
     /** #604 the machine class a connection without a declared `machine` belongs to: the container mesh. */
     const val MACHINE_CONTAINER = "container"

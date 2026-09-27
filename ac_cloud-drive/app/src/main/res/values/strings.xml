@@ -202,7 +202,6 @@
     <string name="sync_step_pulling">pulling</string>
     <string name="sync_step_pushing">pushing</string>
     <string name="sync_step_uninterruptible">cannot be interrupted while pushing</string>
-    <string name="sync_declared_section">Declared, not cloned</string>
     <string name="sync_clone_into_store">Clone into store</string>
     <string name="sync_history_section">History</string>
     <string name="sync_history_empty">No sync has run yet</string>
@@ -227,6 +226,45 @@
     <string name="sync_settings_rebase">Pull with rebase</string>
     <string name="sync_settings_message">Sync commit message</string>
     <string name="sync_settings_remove">Remove from list</string>
+    <!-- #608 SYNC ▸ GIT, the redesigned page. The section titles, the operation labels and
+         the repository names are DECLARATIONS (build.json::ui.sync.git), never strings: what
+         lives here is only the wording the page itself owns. -->
+    <string name="git_section_other">Other clones in the store</string>
+    <string name="git_login_title">Personal repositories</string>
+    <string name="git_login_hint">Sign in to list this account\'s repositories, private ones included</string>
+    <string name="git_login_as">signed in as %1$s · scope %2$s</string>
+    <string name="git_login_ssh_active">cloning with your SSH key</string>
+    <string name="git_login_ssh_cannot_list">An SSH key clones but cannot list an account: sign in above for the list.</string>
+    <string name="git_listing_loading">listing repositories…</string>
+    <string name="git_listing_failed">listing failed: %1$s</string>
+    <string name="git_listing_truncated">listing stopped at the declared %1$d pages — it may be incomplete</string>
+    <string name="git_listing_empty">This account owns no repositories</string>
+    <string name="git_fork">fork</string>
+    <string name="git_cloning">cloning…</string>
+    <string name="git_not_cloned">not cloned</string>
+    <string name="git_expand">Show operations</string>
+    <string name="git_collapse">Hide operations</string>
+    <string name="git_readonly_blocked">read-only remote: push and force push are refused</string>
+    <string name="git_commit_message">Commit message</string>
+    <string name="git_meta_path">path %1$s</string>
+    <string name="git_meta_branch">branch %1$s → %2$s</string>
+    <string name="git_meta_no_upstream">(no upstream)</string>
+    <string name="git_meta_no_remote">(no remote)</string>
+    <string name="git_meta_auth">auth %1$s · %2$s</string>
+    <string name="git_meta_author">author %1$s &lt;%2$s&gt;</string>
+    <string name="git_meta_remote">remote %1$s · fetch %2$s · push %3$s</string>
+    <string name="git_meta_branches">branches %1$d local · %2$d remote</string>
+    <string name="git_stats_state">%1$s · ↑%2$d ↓%3$d · %4$d conflicts</string>
+    <string name="git_stats_commits">%1$d commits · %2$d hooks · %3$d workflows</string>
+    <string name="git_history_empty">No commit yet</string>
+    <string name="git_commit_line">%1$s %2$s %3$s %4$s</string>
+    <string name="git_remote_switch">Switch origin to</string>
+    <string name="git_remote_mode_line">%1$s %2$s</string>
+    <string name="git_hooks_none">No hook installed</string>
+    <string name="git_actions_none">No workflow in .github/workflows</string>
+    <string name="git_size_line">%1$s · %2$d files · %3$d folders · .git %4$s</string>
+    <string name="git_confirm_force_push">Force push overwrites the REMOTE branch of %1$s with this phone\'s. Commits only on the remote are lost.</string>
+    <string name="git_confirm_force_pull">Force pull overwrites the LOCAL clone of %1$s with the remote branch. Local commits and uncommitted edits are lost.</string>
     <string name="sync_settings_remove_body">The folder and its .git stay on disk; only this list forgets it and its stored credential.</string>
 
     <string name="rclone_binary_present">rclone %1$s</string>

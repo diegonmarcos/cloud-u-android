@@ -82,6 +82,26 @@ object StatusLight {
         ctx.getString(R.string.status_light_description, rowLabel, label(ctx, state))
 }
 
+/**
+ * #608 the light in ONE character, for a DENSE row where the word would not fit: the glyph
+ * in the state's colour, with the same word the card prints carried in the screen-reader
+ * description — so the row is never colour-only, which is the rule [StatusLightRow] keeps
+ * by printing the word outright.
+ */
+@Composable
+fun StatusDot(state: StatusLight.State, rowLabel: String, modifier: Modifier = Modifier) {
+    val ctx = LocalContext.current
+    val description = StatusLight.description(ctx, rowLabel, state)
+    Text(
+        StatusLight.glyph(state),
+        modifier.testTag(DriveTags.STATUS_LIGHT).semantics { contentDescription = description },
+        color = colorResource(StatusLight.colourRes(state)),
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.Bold,
+        maxLines = 1,
+    )
+}
+
 /** The light as a card prints it: glyph + word in the state's colour, described for TalkBack. */
 @Composable
 fun StatusLightRow(state: StatusLight.State, rowLabel: String, modifier: Modifier = Modifier) {

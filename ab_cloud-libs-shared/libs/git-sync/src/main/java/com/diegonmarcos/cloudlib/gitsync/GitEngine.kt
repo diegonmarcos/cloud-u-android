@@ -35,7 +35,8 @@ import org.eclipse.jgit.util.FS
  * on ONE repository. Blocking — callers run it on an IO dispatcher.
  *
  * Verbs, in the order the brief names them: status, stage/unstage, commit,
- * push/pull, branch list (READ-ONLY — the fleet rule is that agents never
+ * push/pull (#608 adds the two FORCE variants, each destructive on exactly one
+ * side and named so the caller cannot mistake which), branch list (READ-ONLY — the fleet rule is that agents never
  * create branches, and a manager may display them but this engine has no
  * verb that creates, deletes or checks out one), log, diff, remotes, conflicts.
  *
@@ -202,6 +203,50 @@ class GitEngine(val workTree: File) : AutoCloseable {
         val why = r.mergeResult?.mergeStatus?.let { if (it == MergeResult.MergeStatus.CONFLICTING) "conflicts" else it.name.lowercase() }
             ?: r.rebaseResult?.status?.name?.lowercase() ?: "failed"
         return GitOpResult(false, "pull $why: ${conflicts.size} file(s)", conflicts.joinToString("\n"))
+    }
+
+    /**
+     * #608 FORCE PUSH: the local branch overwrites the remote one. The refspec is
+     * named explicitly and `setForce` takes the fast-forward check off, so a
+     * rewritten history (an amend, a rebase) lands instead of being rejected as
+     * non-fast-forward. DESTRUCTIVE ON THE REMOTE — the caller confirms first; the
+     * engine does not guess.
+     */
+    fun forcePush(remote: String = "origin", auth: GitAuth = GitAuth.None): GitOpResult {
+        val branch = repo.branch ?: return GitOpResult(false, "no current branch")
+        val results = git.push().setRemote(remote).setForce(true)
+            .setRefSpecs(RefSpec(Constants.R_HEADS + branch + ":" + Constants.R_HEADS + branch))
+            .withAuth(auth).call()
+        val updates = results.flatMap { it.remoteUpdates }
+        val bad = updates.filter { it.status != RemoteRefUpdate.Status.OK && it.status != RemoteRefUpdate.Status.UP_TO_DATE }
+        if (bad.isNotEmpty()) {
+            return GitOpResult(false, "force push rejected: " + bad.joinToString { "${it.remoteName} ${it.status}" },
+                bad.joinToString("\n") { it.message ?: "" } + results.joinToString("\n") { it.messages })
+        }
+        val cfg = repo.config
+        if (cfg.getString("branch", branch, "remote") == null) {
+            cfg.setString("branch", branch, "remote", remote)
+            cfg.setString("branch", branch, "merge", Constants.R_HEADS + branch)
+            cfg.save()
+        }
+        return GitOpResult(true, "force-pushed $branch to $remote")
+    }
+
+    /**
+     * #608 FORCE PULL: the remote branch overwrites the local one. Fetch, then
+     * `reset --hard` onto `<remote>/<branch>` — so a divergence that [pull] would
+     * report as a conflict is resolved by throwing the local side away. DESTRUCTIVE
+     * LOCALLY (local commits AND worktree edits are discarded); the caller confirms.
+     * A remote that has no such branch yet is said so, not reset to nothing.
+     */
+    fun forcePull(remote: String = "origin", auth: GitAuth = GitAuth.None): GitOpResult {
+        val branch = repo.branch ?: return GitOpResult(false, "no current branch")
+        val fetched = fetch(remote, auth)
+        if (!fetched.ok) return GitOpResult(false, "force pull: ${fetched.summary}", fetched.details)
+        val ref = repo.findRef(Constants.R_REMOTES + remote + "/" + branch)
+            ?: return GitOpResult(false, "remote $remote has no $branch — nothing to reset onto")
+        git.reset().setMode(ResetCommand.ResetType.HARD).setRef(ref.name).call()
+        return GitOpResult(true, "force-pulled $remote/$branch: reset to " + (ref.objectId?.name?.take(8) ?: "?"))
     }
 
     /** GitSync's one-tap sync: stage everything, commit if anything changed, pull, push. */

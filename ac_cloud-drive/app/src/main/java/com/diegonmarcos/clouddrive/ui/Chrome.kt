@@ -93,6 +93,11 @@ object DriveTags {
     const val SYNC_HERO = "sync_hero"
     const val SYNC_REPO_CARD = "sync_repo_card"
     const val SYNC_DECLARED_CARD = "sync_declared_card"
+    /** #608 the Sync ▸ Git page: a dense repository row, its collapsed operations rail, the login control. */
+    const val SYNC_GIT_SECTION = "sync_git_section"
+    const val SYNC_GIT_ROW = "sync_git_row"
+    const val SYNC_GIT_OPS = "sync_git_ops"
+    const val SYNC_GIT_LOGIN = "sync_git_login"
     const val SYNC_HISTORY = "sync_history"
     const val SYNC_REMOTE_CARD = "sync_remote_card"
     const val SYNC_JOB_ROW = "sync_job_row"

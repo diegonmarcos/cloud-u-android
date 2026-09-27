@@ -109,6 +109,14 @@ def sharedRoot  = (storageDecl.shared_root ?: '').toString().trim()
 if (!sharedRoot || sharedRoot.startsWith('/') || sharedRoot.contains('..')) {
     throw new GradleException("build.json::storage.shared_root must be a relative folder name under shared storage (got '${sharedRoot}')")
 }
+// #606/#608 the ONE folder of the store that holds clones: build.json::storage.git_subdir.
+// ONE path segment, relative, never absolute — SharedStore.gitRoot() is the runtime half and
+// both clone paths (the first-run seed and the Git page's Clone) resolve through it. Same
+// guard shape as shared_root above: an APK whose clones land outside the store is the bug.
+def gitSubdir = (storageDecl.git_subdir ?: '').toString().trim()
+if (!gitSubdir || gitSubdir.startsWith('/') || gitSubdir.contains('/') || gitSubdir.contains('..')) {
+    throw new GradleException("build.json::storage.git_subdir must be a single relative folder name inside the store (got '${gitSubdir}')")
+}
 def gitSyncDecl      = storageDecl.git_sync ?: [:]
 def gitSyncMinutes   = (gitSyncDecl.interval_minutes ?: 60) as long
 def gitSyncUnmetered = gitSyncDecl.require_unmetered_network == null ? true : gitSyncDecl.require_unmetered_network
@@ -197,6 +205,18 @@ if (!(uiDecl.configs?.pages instanceof List) || uiDecl.configs.pages.isEmpty()) 
 }
 if (!(uiDecl.sync?.pages instanceof List) || uiDecl.sync.pages.isEmpty()) {
     throw new GradleException("build.json::ui.sync.pages must declare the Sync strip (#609)")
+}
+// #608 the Sync ▸ Git page is declared whole (ui.sync.git): its two sections, the personal
+// split, the login ways, the GitHub endpoint, the remote modes, the per-repository operations
+// and the declared PUBLIC set. A page with no operation list or no section list would render
+// a screen with no verbs, so a missing block is a hard error here, not an empty page later.
+['sections', 'personal_groups', 'login_ways', 'remote_modes', 'ops', 'public_repos'].each { key ->
+    if (!(uiDecl.sync?.git?.get(key) instanceof List) || uiDecl.sync.git[key].isEmpty()) {
+        throw new GradleException("build.json::ui.sync.git.${key} must declare the Sync ▸ Git page (#608)")
+    }
+}
+if (!(uiDecl.sync.git.api?.base_url ?: '').toString().startsWith('https://')) {
+    throw new GradleException("build.json::ui.sync.git.api.base_url must be an https endpoint (#608)")
 }
 if (!(uiDecl.files?.places instanceof List) || uiDecl.files.places.isEmpty()) {
     throw new GradleException("build.json::ui.files.places must declare the Places sheet (#579)")
@@ -340,6 +360,7 @@ android {
         buildConfigField "boolean", "SEED_ENABLED",       "${seedEnabled}"
         buildConfigField "int",     "SEED_DEPTH",         "${seedDepth}"
         buildConfigField "String",  "SHARED_ROOT",               "\"${sharedRoot}\""
+        buildConfigField "String",  "GIT_SUBDIR",                "\"${gitSubdir}\""
         buildConfigField "long",    "GIT_SYNC_INTERVAL_MINUTES", "${gitSyncMinutes}L"
         buildConfigField "boolean", "GIT_SYNC_REQUIRE_UNMETERED", "${gitSyncUnmetered}"
         buildConfigField "String", "UI_APPS_B64",     "\"${driveAppsB64}\""

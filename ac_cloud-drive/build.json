@@ -13,7 +13,7 @@
     "compile_sdk": 36,
     "min_sdk": 26,
     "target_sdk": 35,
-    "version_code": 7,
+    "version_code": 8,
     "version_name": "0.5.0-dev",
     "abi_filters": [
       "arm64-v8a"
@@ -36,6 +36,8 @@
   "storage": {
     "_doc": "#575 THE ONE DECLARATION of the on-phone repo store. cloud-drive is THE store: every clone the git manager makes and every phone-side leg of an rclone job lives under <shared storage>/<shared_root>/<name>, in plain shared storage, so every fleet app that holds all-files access reads AND writes it the way it reads /storage/emulated/0 — no per-app clone, no Android/data sandbox. RELATIVE TO SHARED STORAGE on purpose: the absolute form (/storage/emulated/0/...) is a fact about one device — the user id in it changes under a second profile (drive-mirror-jobs.json _doc_paths states the same rule). Consumers: app/build.gradle bakes it into BuildConfig.SHARED_ROOT (SharedStore.kt resolves it at runtime); ac_cloud-code/tools/resolve-targets.py READS it from this file at build time so cloud-code's Backlog and Repos tabs point at the same folder without restating it. test/test-drive-shared-store.sh fails the build on a second copy of the value or an absolute path anywhere.",
     "shared_root": "CloudDrive",
+    "_doc_git_subdir": "#606/#608 THE ONE folder of the store that holds clones: <shared storage>/<shared_root>/<git_subdir>/<name>. Declared, relative, and a single path segment — baked as BuildConfig.GIT_SUBDIR and resolved ONCE by SharedStore.gitRoot(), which SharedStore.repoDir() and therefore BOTH clone paths (the first-run seed and the Sync ▸ Git page's own Clone) go through. It exists because the store is plain shared storage shared with every fleet app: repositories mixed in at the root of it are indistinguishable from the user's own folders, and #608's page addresses `<root>/git` explicitly. NOT a separate exec volume and not an app-private dir — the whole point of the store is that any fleet app holding all-files access reads it.",
+    "git_subdir": "git",
     "git_sync": {
       "_doc": "Scheduled background sync of the repositories the user opted in (ManagedRepo.autoSync), the GitSync app's scheduler realised over WorkManager (GitSyncWorker.kt). interval_minutes is the period (WorkManager's floor is 15); require_unmetered_network keeps a push off mobile data. Same shape and same reason as release.auto_update: a build.json edit reaches installed phones through ExistingPeriodicWorkPolicy.UPDATE on the next launch.",
       "interval_minutes": 60,
@@ -50,7 +52,7 @@
     }
   },
   "ui": {
-    "_doc": "#603/#609 THE STRUCTURE OF THE CHROME, declared. Kotlin holds no tab list, no caption, no page list, no section list, no place list and no icon name: DriveShell renders ui.tabs, SyncScreen renders ui.sync.pages, ConfigsScreen renders ui.configs.pages, the Files Places sheet renders ui.files.sections and ui.files.places, the Files filter pills render ui.files.filters. Every `icon` here is a name IconCatalog.kt resolves to a Material glyph; a name it does not know renders ui.icons._default and test/test-drive-shell.sh fails the build. Baked by app/build.gradle as UI_TABS_B64 / UI_SYNC_B64 / UI_CONFIGS_B64 / UI_FILES_B64 / UI_ICON_DEFAULT and decoded ONCE by Declarations.kt. #603 replaced #579's five tabs (files/apps/sync/backups/configs) with files/volumes/home/apps/configs, moving Sync's three pages and Backups into Configs. #609 REVERSED HALF OF THAT: Apps stopped being a tab (its grid moved into Home, ui.home below) and the freed slot is now Sync, carrying Git/Rclone/Mounts back out of Configs into their own tab — the five tabs are now files/volumes/home/sync/configs.",
+    "_doc": "#603/#609 THE STRUCTURE OF THE CHROME, declared. Kotlin holds no tab list, no caption, no page list, no section list, no place list and no icon name: DriveShell renders ui.tabs, SyncScreen renders ui.sync.pages, ConfigsScreen renders ui.configs.pages, the Files Places sheet renders ui.files.sections and ui.files.places, the Files filter pills render ui.files.filters. Every `icon` here is a name IconCatalog.kt resolves to a Material glyph; a name it does not know renders ui.icons._default and test/test-drive-shell.sh fails the build. Baked by app/build.gradle as UI_TABS_B64 / UI_SYNC_B64 / UI_CONFIGS_B64 / UI_FILES_B64 / UI_ICON_DEFAULT and decoded ONCE by Declarations.kt. #603 replaced #579's five tabs (files/apps/sync/backups/configs) with files/volumes/home/apps/configs, moving Sync's three pages and Backups into Configs. #609 REVERSED HALF OF THAT: Apps stopped being a tab (its grid moved into Home, ui.home below) and the freed slot is now Sync, carrying Git/Rclone/Mounts back out of Configs into their own tab — the five tabs are now files/volumes/home/sync/configs. #608 REDESIGNED THE SYNC ▸ GIT SUB-PAGE and declared it whole in ui.sync.git below: two sections (the owner's PUBLIC cloud*/front* set, which needs no login, and Personal, which signs in through libs:auth for the `repo` scope and splits the account's own listing into Public and Private), one DENSE row per repository, and fourteen per-repository operations collapsed behind each row's disclosure — every one of them a verb of libs:git-sync, force push and force pull included.",
     "tabs": [
       {
         "id": "files",
@@ -331,7 +333,207 @@
         60,
         180,
         360
-      ]
+      ],
+      "_doc_git": "#608 THE SYNC ▸ GIT PAGE, declared whole. Kotlin holds no section title, no repository name, no owner, no GitHub endpoint, no operation label and no remote-URL shape: GitReposScreen renders THIS block and libs:git-sync performs every verb it names. The page is DATA-DENSE on purpose — one compact row per repository so a long list is scannable, with the per-repository operations collapsed behind the row's own disclosure (ops below) instead of a large box each. TWO SECTIONS, in `sections` order. `public` needs NO login: it is the declared set of the owner's PUBLIC repositories in the `name_families` name families, cloned over plain HTTPS, and `public_repos` below is that set. `personal` shows `login_ways` until a sign-in lands and then splits the AUTHENTICATED listing into `personal_groups` (Public, then Private), each alphabetical by name — nothing of the owner's account is declared here, because a private repository list is not a fact a build can hold. Every clone lands in storage.shared_root's git folder (storage.git_subdir), never an app-private or exec volume.",
+      "git": {
+        "dense": true,
+        "owner": "diegonmarcos",
+        "_doc_sections": "The two sections of the page, in render order. `login_required` says whether the section has anything to show before a sign-in: the public set is declared and always rendered, the personal section renders its login control and nothing else until one lands. GitReposScreen's `when (section.id)` is diffed against these ids in both directions by test/test-drive-git-page.sh.",
+        "sections": [
+          {
+            "id": "public",
+            "label": "Cloud & Front — Public",
+            "icon": "public",
+            "login_required": false
+          },
+          {
+            "id": "personal",
+            "label": "Personal",
+            "icon": "person",
+            "login_required": true
+          }
+        ],
+        "_doc_personal_groups": "How the authenticated listing is split, in render order. The group a repository falls into is the API's own `private` flag, never a guess and never a declaration: a repository that goes private between two builds moves group by itself.",
+        "personal_groups": [
+          {
+            "id": "public",
+            "label": "Public",
+            "icon": "public"
+          },
+          {
+            "id": "private",
+            "label": "Private",
+            "icon": "lock"
+          }
+        ],
+        "_doc_login_ways": "The two ways into the personal section, in order. `webauth` is the fleet's ONE sign-in (libs:auth, the shared shelf's ONE auth declaration) driven through the OAuth 2.0 device grant against the provider named here — GitHub, whose declared scope is already `repo`, which is exactly what listing AND cloning a private repository needs; the approval's access token is what the listing and the HTTPS clone then use, in memory only (libs:auth carries it on SignInResult.accessToken and stores it nowhere). `ssh_key` is the user's EXISTING key: the path and passphrase libs:git-sync's ManagedRepo/GitCredentialStore already hold (sync_auth_key_path on the per-repo sheet), used as GitAuth.Ssh — no second key mechanism is built here, and SSH cannot list an account, so that way clones only.",
+        "login_ways": [
+          {
+            "id": "github",
+            "label": "GitHub sign-in",
+            "icon": "login",
+            "kind": "webauth",
+            "provider": "github",
+            "scope": "repo",
+            "lists": true
+          },
+          {
+            "id": "ssh",
+            "label": "SSH key",
+            "icon": "vpn_key",
+            "kind": "ssh_key",
+            "lists": false
+          }
+        ],
+        "_doc_api": "Where the authenticated listing comes from. `repos_path` is the affiliation=owner page of the REST list-your-repositories route, paged to `max_pages` × per_page so a large account is not silently truncated to its first page; `web_url` is the row's open-on-web link. `{owner}` and `{name}` are the only placeholders, substituted once by Declarations.",
+        "api": {
+          "base_url": "https://api.github.com",
+          "repos_path": "/user/repos?per_page=100&affiliation=owner&sort=full_name",
+          "max_pages": 4,
+          "web_url": "https://github.com/{owner}/{name}"
+        },
+        "_doc_remote_modes": "What a row's Remote operation can switch `origin` to, in order. One URL shape each, declared, so the page never composes a remote by hand: HTTPS (what a token authenticates), SSH (what the user's key authenticates) and read-only, which is the same HTTPS URL with `read_only` set — the page then refuses push and force push on that repository rather than offering a button that always fails.",
+        "remote_modes": [
+          {
+            "id": "https",
+            "label": "HTTPS",
+            "icon": "cloud",
+            "url": "https://github.com/{owner}/{name}.git"
+          },
+          {
+            "id": "ssh",
+            "label": "SSH",
+            "icon": "vpn_key",
+            "url": "git@github.com:{owner}/{name}.git"
+          },
+          {
+            "id": "readonly",
+            "label": "Read-only",
+            "icon": "lock",
+            "url": "https://github.com/{owner}/{name}.git",
+            "read_only": true
+          }
+        ],
+        "_doc_ops": "THE OPERATIONS of one cloned repository, in the order the row's disclosure lays them out. Every id is a verb of libs:git-sync's GitEngine or a read of the clone on disk — fetch/pull/commit/push/force_push/force_pull/history/remote go through the engine (force_push and force_pull are #608's additions to it, each destructive on exactly ONE side, which is why both carry `destructive` and the row asks first), while metadata/stats/hooks/actions/size are reads of the working tree. GitReposScreen's `when (opId)` is diffed against these ids in both directions, so an operation declared without a handler — or a handler with no declared operation — fails test/test-drive-git-page.sh.",
+        "ops": [
+          {
+            "id": "fetch",
+            "label": "Fetch",
+            "icon": "sync"
+          },
+          {
+            "id": "pull",
+            "label": "Pull",
+            "icon": "download"
+          },
+          {
+            "id": "commit",
+            "label": "Stage & commit",
+            "icon": "commit"
+          },
+          {
+            "id": "push",
+            "label": "Push",
+            "icon": "cloud_upload"
+          },
+          {
+            "id": "force_push",
+            "label": "Force push",
+            "icon": "publish",
+            "destructive": true
+          },
+          {
+            "id": "force_pull",
+            "label": "Force pull",
+            "icon": "restore",
+            "destructive": true
+          },
+          {
+            "id": "metadata",
+            "label": "Metadata",
+            "icon": "info"
+          },
+          {
+            "id": "web",
+            "label": "Open on web",
+            "icon": "link"
+          },
+          {
+            "id": "stats",
+            "label": "Stats",
+            "icon": "bar_chart"
+          },
+          {
+            "id": "history",
+            "label": "History",
+            "icon": "history"
+          },
+          {
+            "id": "remote",
+            "label": "Remote",
+            "icon": "swap"
+          },
+          {
+            "id": "hooks",
+            "label": "Hooks",
+            "icon": "extension"
+          },
+          {
+            "id": "actions",
+            "label": "Actions",
+            "icon": "play_arrow"
+          },
+          {
+            "id": "size",
+            "label": "Size",
+            "icon": "storage"
+          }
+        ],
+        "history_max": 30,
+        "_doc_public_repos": "#608 THE DECLARED PUBLIC SET of the `public` section, alphabetical by name. DERIVED, not hand-picked: every repository of `owner` whose name begins with one of `name_families` AND whose GitHub `private` flag is false, enumerated once over the REST list route and verified one by one (an unauthenticated GET of /repos/<owner>/<name> answering 200 IS the proof of public). cloud-u-android — this repository — is in the set; it was missing from data/drive-git-repos.json's curated family's intent and is named here explicitly for that reason. front-data is HERE and PUBLIC: drive-git-repos.json marked it private, which the live API contradicts, and that file is corrected in the same change. There is no repository called `front`: the front-end tree of this fleet is `ffront`, which the `front` family does not match and which is therefore deliberately absent rather than silently renamed. NOT in the set, on purpose: diegonmarcos.github.io and git-repos-master (public, but outside both name families) and every cloud*/front* repository whose flag is private (cloud-data, cloud-data-lfs, cloud-data-my-ai-memory, cloud-me, cloud-me_configs, cloud-me_data-private, cloud-me_vault, cloud-notes, front-galaxy-gaia, front-unity) — those reach the page through the personal section's authenticated listing, which is where a private repository belongs.",
+        "name_families": [
+          "cloud",
+          "front"
+        ],
+        "public_repos": [
+          {
+            "name": "cloud",
+            "label": "cloud"
+          },
+          {
+            "name": "cloud-infra",
+            "label": "cloud-infra"
+          },
+          {
+            "name": "cloud-infra-desktop",
+            "label": "cloud-infra-desktop"
+          },
+          {
+            "name": "cloud-me_data-pub",
+            "label": "cloud-me_data-pub"
+          },
+          {
+            "name": "cloud-u-android",
+            "label": "cloud-u-android"
+          },
+          {
+            "name": "cloud-u-containers",
+            "label": "cloud-u-containers"
+          },
+          {
+            "name": "cloud-u-linux",
+            "label": "cloud-u-linux"
+          },
+          {
+            "name": "front-assets-cdn",
+            "label": "front-assets-cdn"
+          },
+          {
+            "name": "front-data",
+            "label": "front-data"
+          }
+        ]
+      }
     },
     "configs": {
       "_doc": "#603 the strip inside the Configs island — ONE declaration. #609 moved Git, Rclone and Mounts OUT into ui.sync.pages above, leaving three sub-pages: Backups (moved in from its own top-level tab at #603 — the declared mirror/rsync jobs with cancellable progress), General (#579's Configs page: storage access, sign-in, Files defaults, the declared schedule) and Others (removable storage, about).",

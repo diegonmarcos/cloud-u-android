@@ -2,9 +2,13 @@ package com.diegonmarcos.clouddrive.sync
 
 import android.content.Context
 import com.diegonmarcos.clouddrive.GitSyncWorker
+import com.diegonmarcos.clouddrive.SharedStore
+import com.diegonmarcos.cloudlib.gitsync.GitBranchInfo
+import com.diegonmarcos.cloudlib.gitsync.GitCommitInfo
 import com.diegonmarcos.cloudlib.gitsync.GitCredentialStore
 import com.diegonmarcos.cloudlib.gitsync.GitEngine
 import com.diegonmarcos.cloudlib.gitsync.GitOpResult
+import com.diegonmarcos.cloudlib.gitsync.GitRemoteInfo
 import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
 import com.diegonmarcos.cloudlib.gitsync.RepoRegistry
 import java.io.File
@@ -122,8 +126,191 @@ class GitSyncCoordinator(private val ctx: Context, private val scope: CoroutineS
         }
     }
 
+    // ── #608 the Sync ▸ Git page's per-repository operations ────────────────
+
+    /**
+     * Everything the row's disclosure shows about ONE clone, read in one pass when it is
+     * expanded: the remotes and branches and commits from [GitEngine], the hooks, the
+     * workflows and the size from [GitRepoScan]. Loaded lazily on purpose — walking every
+     * clone of a long list on every recomposition is how a dense page becomes unusable.
+     */
+    data class Details(
+        val loading: Boolean = true,
+        val remotes: List<GitRemoteInfo> = emptyList(),
+        val branches: List<GitBranchInfo> = emptyList(),
+        val commits: List<GitCommitInfo> = emptyList(),
+        val hooks: List<String> = emptyList(),
+        val workflows: List<String> = emptyList(),
+        val size: GitRepoScan.Size = GitRepoScan.Size(0, 0, 0, 0),
+        val error: String? = null,
+    )
+
+    val details = MutableStateFlow<Map<String, Details>>(emptyMap())
+
+    /** The last outcome of an operation, per repository, in the engine's own words. */
+    val opResults = MutableStateFlow<Map<String, GitOpResult>>(emptyMap())
+
+    /** A clone in flight, keyed by the repository name the store will hold it under. */
+    val cloning = MutableStateFlow<Set<String>>(emptySet())
+
+    fun loadDetails(repo: ManagedRepo, historyMax: Int) {
+        details.update { it + (repo.id to Details(loading = true)) }
+        scope.launch {
+            val read = withContext(Dispatchers.IO) {
+                val dir = File(repo.path)
+                if (!dir.isDirectory) return@withContext Details(loading = false, error = "gone")
+                runCatching {
+                    GitEngine(dir).use { e ->
+                        Details(
+                            loading = false,
+                            remotes = e.remotes(),
+                            branches = e.branches(),
+                            commits = e.log(max = historyMax),
+                            hooks = GitRepoScan.hooks(dir),
+                            workflows = GitRepoScan.workflows(dir),
+                            size = GitRepoScan.size(dir),
+                        )
+                    }
+                }.getOrElse { Details(loading = false, error = it.message ?: it.toString()) }
+            }
+            details.update { it + (repo.id to read) }
+        }
+    }
+
+    /**
+     * ONE declared operation on ONE repository, every verb the engine's own (#608 added
+     * forcePush/forcePull to it for exactly this page). The outcome lands in [opResults]
+     * and in the shared history — a force push that rewrote a remote is not something the
+     * page should be able to forget — and the glance is re-read afterwards.
+     *
+     * The two destructive ids are NOT special-cased here: the row confirms before it calls.
+     */
+    fun runOp(repo: ManagedRepo, opId: String, message: String = "") {
+        if (running.value.containsKey(repo.id)) return
+        val step = when (opId) {
+            OP_COMMIT -> Step.COMMITTING
+            OP_PULL, OP_FORCE_PULL, OP_FETCH -> Step.PULLING
+            else -> Step.PUSHING
+        }
+        running.update { it + (repo.id to Running(repo.id, step)) }
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    GitEngine(File(repo.path)).use { e ->
+                        val auth = credentials.authFor(repo)
+                        when (opId) {
+                            OP_FETCH -> e.fetch(auth = auth)
+                            OP_PULL -> e.pull(rebase = repo.pullRebase, auth = auth)
+                            OP_COMMIT -> {
+                                e.stageAll()
+                                if (e.status().staged.isEmpty()) GitOpResult(true, "nothing to commit")
+                                else {
+                                    val c = e.commit(
+                                        message.ifBlank { repo.syncMessage },
+                                        repo.authorName.ifBlank { DEFAULT_AUTHOR },
+                                        repo.authorEmail.ifBlank { DEFAULT_EMAIL },
+                                    )
+                                    GitOpResult(true, "committed ${c.shortSha}")
+                                }
+                            }
+                            OP_PUSH -> e.push(auth = auth)
+                            OP_FORCE_PUSH -> e.forcePush(auth = auth)
+                            OP_FORCE_PULL -> e.forcePull(auth = auth)
+                            else -> GitOpResult(false, "no such operation: $opId")
+                        }
+                    }
+                }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }
+            }
+            val now = System.currentTimeMillis() / 1000
+            withContext(Dispatchers.IO) {
+                registry.upsert(repo.copy(lastSyncEpochSeconds = now, lastSyncSummary = "$opId: ${result.summary}"))
+                history.append(SyncEvent(now, repo.id, repo.name, SyncHistory.TRIGGER_MANUAL, result.ok, "$opId: ${result.summary}", result.details))
+            }
+            opResults.update { it + (repo.id to result) }
+            running.update { it - repo.id }
+            refresh()
+        }
+    }
+
+    /**
+     * Point `origin` at the URL a DECLARED remote mode composes, and record which shape
+     * the repository now speaks so the credential store hands the engine the matching
+     * [com.diegonmarcos.cloudlib.gitsync.GitAuth]. A read-only mode keeps the HTTPS URL
+     * and drops the auth kind to none: the page then refuses push and force push on it
+     * rather than offering a button that always fails.
+     */
+    fun setRemote(repo: ManagedRepo, mode: com.diegonmarcos.clouddrive.Declarations.GitRemoteModeDecl, owner: String, name: String) {
+        val url = mode.urlFor(owner, name)
+        if (url.isBlank()) return
+        scope.launch {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    GitEngine(File(repo.path)).use { e ->
+                        if (e.remotes().none { r -> r.name == ORIGIN }) e.addRemote(ORIGIN, url)
+                        else { e.setRemoteUrl(ORIGIN, url); e.setRemoteUrl(ORIGIN, url, push = true) }
+                    }
+                    GitOpResult(true, "origin → $url")
+                }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }
+            }
+            if (result.ok) {
+                val kind = when {
+                    mode.readOnly -> AUTH_NONE
+                    mode.id == com.diegonmarcos.clouddrive.Declarations.REMOTE_SSH -> AUTH_SSH
+                    else -> AUTH_HTTPS
+                }
+                withContext(Dispatchers.IO) { registry.upsert(repo.copy(remoteUrl = url, authKind = kind)) }
+            }
+            opResults.update { it + (repo.id to result) }
+            refresh()
+        }
+    }
+
+    /**
+     * Clone [url] into the store's git folder as [name] and register it — the SAME engine,
+     * the SAME registry and the SAME folder the first-run seed uses, so a repository cloned
+     * from the page and one seeded on first run are indistinguishable afterwards.
+     *
+     * [token] is the sign-in's access token for an https clone (blank for a public one) and
+     * is handed to the engine and to the credential store, never written here.
+     */
+    fun cloneInto(name: String, url: String, authKind: String, username: String, token: String, sshKeyPath: String = "") {
+        if (name.isBlank() || url.isBlank() || cloning.value.contains(name)) return
+        cloning.update { it + name }
+        scope.launch {
+            val dir = SharedStore.repoDir(name)
+            val result = withContext(Dispatchers.IO) {
+                val id = RepoRegistry.idFor(dir.absolutePath)
+                val managed = ManagedRepo(id = id, name = name, path = dir.absolutePath, remoteUrl = url, authKind = authKind, authUsername = username, sshKeyPath = sshKeyPath)
+                if (token.isNotBlank()) credentials.setSecret(id, token)
+                runCatching {
+                    if (GitEngine.isRepository(dir)) GitOpResult(true, "already cloned")
+                    else { GitEngine.clone(url, dir, auth = credentials.authFor(managed)).close(); GitOpResult(true, "cloned into ${dir.name}") }
+                }.getOrElse { GitOpResult(false, it.message ?: it.toString()) }
+                    .also { if (it.ok) registry.upsert(managed) }
+            }
+            val now = System.currentTimeMillis() / 1000
+            withContext(Dispatchers.IO) {
+                history.append(SyncEvent(now, RepoRegistry.idFor(dir.absolutePath), name, SyncHistory.TRIGGER_MANUAL, result.ok, "clone: ${result.summary}", result.details))
+            }
+            opResults.update { it + (RepoRegistry.idFor(dir.absolutePath) to result) }
+            cloning.update { it - name }
+            refresh()
+        }
+    }
+
     companion object {
         const val DEFAULT_AUTHOR = "cloud-drive"
         const val DEFAULT_EMAIL = "cloud-drive@localhost"
+        const val ORIGIN = "origin"
+        const val AUTH_NONE = "none"
+        const val AUTH_HTTPS = "https"
+        const val AUTH_SSH = "ssh"
+        /** The declared op ids this coordinator performs; the page's own dispatch covers the read-only rest. */
+        const val OP_FETCH = "fetch"
+        const val OP_PULL = "pull"
+        const val OP_COMMIT = "commit"
+        const val OP_PUSH = "push"
+        const val OP_FORCE_PUSH = "force_push"
+        const val OP_FORCE_PULL = "force_pull"
     }
 }

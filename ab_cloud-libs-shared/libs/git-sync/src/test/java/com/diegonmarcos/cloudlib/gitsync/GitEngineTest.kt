@@ -278,6 +278,61 @@ class GitEngineTest {
         }
     }
 
+    /**
+     * #608 the two force verbs, each proven to do what a plain push/pull CANNOT:
+     * the same divergence is driven twice, once resolved by overwriting the remote
+     * and once by overwriting the local side, and the plain verb is shown to refuse
+     * it first — otherwise the test would pass on an engine where `forcePush` is a
+     * synonym for `push`.
+     */
+    @Test fun forcePushOverwritesTheRemoteAndForcePullOverwritesTheLocalSide() {
+        GitEngine.init(work).use { e ->
+            write(work, "f.txt", "base\n"); e.stageAll(); e.commit("base", "T", "t@x")
+            e.addRemote("origin", bareUrl)
+            assertTrue(e.push("origin").ok)
+        }
+        val other = File(root, "other")
+        GitEngine.clone(bareUrl, other).use { o ->
+            write(other, "f.txt", "theirs\n"); o.stageAll(); o.commit("theirs", "O", "o@x")
+            assertTrue(o.push("origin").ok)
+        }
+        // work rewrites its own tip: a plain push is a non-fast-forward and must be REJECTED.
+        GitEngine(work).use { e ->
+            write(work, "f.txt", "ours\n"); e.stageAll(); e.commit("ours", "T", "t@x")
+            val plain = e.push("origin")
+            assertFalse("a diverged push must be rejected: ${plain.summary}", plain.ok)
+            val forced = e.forcePush("origin")
+            assertTrue(forced.summary, forced.ok)
+            assertTrue(forced.summary, forced.summary.contains("force-pushed"))
+            assertEquals(0, e.status().ahead)
+        }
+        // other is now on a history the remote no longer has: a plain pull conflicts,
+        // a force pull throws the local side away and lands exactly on the remote tip.
+        GitEngine(other).use { o ->
+            write(other, "f.txt", "mine again\n"); o.stageAll(); o.commit("again", "O", "o@x")
+            assertFalse("a diverged pull must not report success", o.pull("origin", rebase = false).ok)
+            o.abortMerge()
+            val forced = o.forcePull("origin")
+            assertTrue(forced.summary, forced.ok)
+            assertTrue(forced.summary, forced.summary.contains("force-pulled"))
+            assertEquals("ours\n", File(other, "f.txt").readText())
+            assertTrue(o.status().isClean)
+            assertEquals(0, o.status().ahead)
+            assertEquals(0, o.status().behind)
+        }
+        // A force pull against a remote that has no such branch says so; it does not reset onto nothing.
+        val fresh = File(root, "fresh")
+        val empty = File(root, "empty.git")
+        org.eclipse.jgit.api.Git.init().setBare(true).setDirectory(empty).call().close()
+        GitEngine.init(fresh).use { f ->
+            write(fresh, "x", "1"); f.stageAll(); f.commit("only", "T", "t@x")
+            f.addRemote("origin", "file://" + empty.absolutePath)
+            val r = f.forcePull("origin")
+            assertFalse(r.summary, r.ok)
+            assertTrue(r.summary, r.summary.contains("nothing to reset onto"))
+        }
+    }
+
     @Test fun branchesAreReadOnlyByConstruction() {
         // The fleet rule: a manager may display branches, never create them. The
         // engine's public surface has no verb that does — checked by name so a

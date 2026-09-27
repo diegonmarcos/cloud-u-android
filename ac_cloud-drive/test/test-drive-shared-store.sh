@@ -19,10 +19,13 @@
 #   S2  SharedStore resolves it at runtime from Environment.getExternalStorageDirectory()
 #       and NOTHING in this app or the four engine libraries spells out
 #       /storage/emulated/0 (the user id in it changes under a second profile).
-#   S3  the git engine opens ON the store when the chrome names no target; the
-#       Sync ▸ Git cards (#579) hand every declared-not-cloned repository a
-#       "Clone into store" pill carrying <root>/<name> and the upstream URL
-#       (composed ONCE by Declarations.cloneUrl); DriveActions.openEngine and the
+#   S3  the git engine opens ON the store when the chrome names no target; #606/#608
+#       the store's GIT FOLDER is declared (storage.git_subdir), baked, and the ONE
+#       place a clone lands — SharedStore.repoDir goes through gitRoot(), so the
+#       first-run seed and the Sync ▸ Git page's own Clone cannot disagree; each row's
+#       Clone hands the DECLARED remote-mode URL (ui.sync.git.remote_modes, substituted
+#       once) to that one clone path, while the seed keeps composing the manifest's
+#       upstream URL through Declarations.cloneUrl; DriveActions.openEngine and the
 #       activity extra carry it; the store is the hero of the Files Places sheet.
 #   S4  scheduled sync: a WorkManager worker exists, is enqueued from MainActivity
 #       with the interval and network rule build.json declares (baked, not literal),
@@ -51,6 +54,7 @@ PLACES="$SRC/files/Places.kt"
 MAIN="$SRC/MainActivity.kt"
 HOST="$SRC/EngineActivity.kt"
 WORKER="$SRC/GitSyncWorker.kt"
+COORD_KT="$SRC/sync/GitSyncCoordinator.kt"
 GIT_MOD="$(python3 -c 'import json,os,sys; b=json.load(open(sys.argv[1])); print(os.path.normpath(os.path.join(sys.argv[2], b["modules"]["libs:git-sync"]["dir"])))' "$BUILD_JSON" "$APP")"
 RCLONE_MOD="$(python3 -c 'import json,os,sys; b=json.load(open(sys.argv[1])); print(os.path.normpath(os.path.join(sys.argv[2], b["modules"]["libs:rclone"]["dir"])))' "$BUILD_JSON" "$APP")"
 GIT_SCREEN="$GIT_MOD/src/main/java/com/diegonmarcos/cloudlib/gitsync/GitSyncScreen.kt"
@@ -62,7 +66,7 @@ FAILURES=0
 pass() { echo "  PASS  $*"; }
 fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 
-for required in "$BUILD_JSON" "$GRADLE" "$STORE" "$CARDS" "$DECL" "$PLACES" "$MAIN" "$HOST" "$WORKER" "$GIT_SCREEN" "$GIT_MODELS" "$RCLONE_CONFIG" "$RCLONE_TEST"; do
+for required in "$BUILD_JSON" "$GRADLE" "$STORE" "$CARDS" "$DECL" "$PLACES" "$MAIN" "$HOST" "$WORKER" "$COORD_KT" "$GIT_SCREEN" "$GIT_MODELS" "$RCLONE_CONFIG" "$RCLONE_TEST"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required"; exit 1; }
 done
 
@@ -90,11 +94,33 @@ if [ -z "$ABS" ]; then pass "no /storage/emulated/0 literal in app or engine sou
 
 echo "── S3 the git manager lands in the store ──"
 if grep -qE 'if \(engine == ENGINE_GIT\) SharedStore\.root\(\)\.absolutePath else null' "$HOST"; then pass "EngineActivity opens the git engine on the store when the chrome names no target"; else fail "EngineActivity does not default the git target to SharedStore.root()"; fi
-if grep -qE 'val root = remember \{ SharedStore\.root\(\)\.absolutePath \}' "$CARDS"; then pass "the Sync ▸ Git cards read the store root from SharedStore"; else fail "GitReposScreen does not read SharedStore.root()"; fi
+if grep -qE 'val root = remember \{ SharedStore\.gitRoot\(\)\.absolutePath \}' "$CARDS"; then pass "the Sync ▸ Git page reads the store's git folder from SharedStore"; else fail "GitReposScreen does not read SharedStore.gitRoot()"; fi
+# #606/#608 the git folder of the store is DECLARED (storage.git_subdir), baked, and the ONE
+# place a clone lands: SharedStore.repoDir goes through it, so the first-run seed and the
+# page's own Clone cannot disagree about where a repository is.
+GIT_SUBDIR="$(python3 -c 'import json,sys; print((json.load(open(sys.argv[1])).get("storage") or {}).get("git_subdir") or "")' "$BUILD_JSON")"
+case "$GIT_SUBDIR" in
+    "") fail "build.json::storage.git_subdir is missing — the page would clone into the store's root" ;;
+    /*|*/*|*..*) fail "storage.git_subdir must be ONE relative folder name, not '$GIT_SUBDIR'" ;;
+    *) pass "build.json::storage.git_subdir = '$GIT_SUBDIR' (one relative segment)" ;;
+esac
+if grep -qE 'buildConfigField "String", +"GIT_SUBDIR"' "$GRADLE" && grep -qE "gitSubdir\.startsWith\('/'\)" "$GRADLE" && grep -qE 'throw new GradleException\("build\.json::storage\.git_subdir' "$GRADLE"; then pass "GIT_SUBDIR is baked from the declaration and an absolute/nested value fails the build"; else fail "GIT_SUBDIR is not baked (or build.gradle does not refuse a bad git_subdir)"; fi
+if grep -qE 'fun gitRoot\(\): File = File\(root\(\), BuildConfig\.GIT_SUBDIR\)' "$STORE" && grep -qE 'fun repoDir\(name: String\): File = File\(gitRoot\(\), name\)' "$STORE"; then pass "SharedStore.gitRoot() = root()/GIT_SUBDIR and every repoDir goes through it"; else fail "SharedStore does not resolve the git folder from BuildConfig.GIT_SUBDIR (or repoDir bypasses it)"; fi
 if grep -qE '"shared_root" -> SharedStore\.root\(\)' "$PLACES" && grep -qE 'hero = p\.hero' "$PLACES"; then pass "the store is a Files place (the hero of the Places sheet)"; else fail "Places does not offer the store"; fi
 if grep -qE 'fun openEngine\(engine: String, target: String, url: String = ""\)' "$SRC/DriveActions.kt" && grep -qE 'const val EXTRA_URL' "$HOST" && grep -qE 'GitSyncScreen\(target, onOpenFile, onClose, cloneUrl = cloneUrl\)' "$HOST"; then pass "the clone URL travels DriveActions → activity → GitSyncScreen(cloneUrl)"; else fail "the clone-url seam is broken somewhere between openEngine(engine, target, url), EXTRA_URL and GitSyncScreen(cloneUrl)"; fi
 if grep -qE "cloneUrl: String\? = null" "$GIT_SCREEN" && grep -qE "prefillUrl" "$GIT_SCREEN"; then pass "libs:git-sync accepts a clone URL and prefills the Add dialog"; else fail "GitSyncScreen has no cloneUrl / prefillUrl"; fi
-if grep -qE 'fun cloneUrl\(repo: GitRepoDecl\): String\? = upstream\?\.let \{ "https://\$\{it\.host\}/\$\{repo\.githubOwner\}/\$\{repo\.name\}\.git" \}' "$DECL" && grep -qE 'actions\.openEngine\(EngineActivity\.ENGINE_GIT, File\(root, d\.name\)\.absolutePath, url\)' "$CARDS" && grep -qE 'val url = family\.cloneUrl\(d\) \?: ""' "$CARDS"; then pass "every declared-not-cloned repository gets Clone into store → <root>/<name> from the upstream instance"; else fail "the Git cards do not compose <root>/<name> + upstream URL per declared repository"; fi
+# The SEED's composition (#575/#603) is unchanged: the manifest's upstream instance, once.
+if grep -qE 'fun cloneUrl\(repo: GitRepoDecl\): String\? = upstream\?\.let \{ "https://\$\{it\.host\}/\$\{repo\.githubOwner\}/\$\{repo\.name\}\.git" \}' "$DECL"; then pass "the seed manifest's clone URL is composed once by Declarations.cloneUrl"; else fail "Declarations.cloneUrl no longer composes the seeded repository's upstream URL"; fi
+# #608 THE PAGE's composition: the DECLARED remote-mode URL shape (ui.sync.git.remote_modes),
+# substituted once, and a clone that lands in SharedStore.repoDir — the same folder as the seed.
+if grep -qE 'fun urlFor\(owner: String, name: String\): String = url\.replace\("\{owner\}", owner\)\.replace\("\{name\}", name\)' "$DECL" \
+   && grep -qE 'fun cloneUrl\(name: String, mode: String = REMOTE_HTTPS\): String' "$DECL"; then
+    pass "the page's clone URL is the declared remote-mode shape, substituted once"
+else
+    fail "Declarations.GitPageDecl does not compose the clone URL from the declared remote modes"
+fi
+if grep -qE 'url = page\.cloneUrl\(name, mode\)' "$CARDS" && grep -qE 'coordinator\.cloneInto\(' "$CARDS"; then pass "every row's Clone hands the declared URL to the one clone path"; else fail "the Git page does not clone through the declared URL / the coordinator"; fi
+if grep -qE 'val dir = SharedStore\.repoDir\(name\)' "$COORD_KT" && grep -qE 'GitEngine\.clone\(url, dir, auth = credentials\.authFor\(managed\)\)' "$COORD_KT" && grep -qE 'registry\.upsert\(managed\)' "$COORD_KT"; then pass "the page's clone lands in the store's git folder, through the engine, into the ONE registry"; else fail "the page's clone does not go through SharedStore.repoDir + GitEngine.clone + the registry"; fi
 
 echo "── S4 scheduled sync ──"
 if grep -qE "class GitSyncWorker\(context: Context, params: WorkerParameters\) : Worker\(" "$WORKER"; then pass "GitSyncWorker is a WorkManager Worker"; else fail "GitSyncWorker is not a Worker"; fi

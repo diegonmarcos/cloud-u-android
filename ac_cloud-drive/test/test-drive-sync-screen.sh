@@ -56,7 +56,7 @@ done
 # g2 <GitReposScreen.kt> : the card prints the conflict count in the off colour and offers Resolve
 g2() {
     grep -qE 'stringResource\(R\.string\.sync_conflicts, glance\.conflicts\), color = off' "$1" &&
-    grep -qE 'Pill\(stringResource\(R\.string\.sync_resolve_conflicts, glance\.conflicts\), onOpen, filled = true\)' "$1" &&
+    grep -qE 'Pill\(stringResource\(R\.string\.sync_resolve_conflicts, glance\.conflicts\), \{ actions\.openEngine\(EngineActivity\.ENGINE_GIT, repo\.path\) \}, filled = true\)' "$1" &&
     grep -qE 'glance\.conflicts > 0 -> StatusLight\.State\.OFF' "$1"
 }
 # g6 <GitSyncWorker.kt> : the worker decides per repository through SyncSchedule.isDue with the repo's own period and rule
@@ -76,7 +76,7 @@ for s in sync_now sync_open sync_history sync_settings sync_last sync_never sync
     grep -qE "R\.string\.$s\b" "$CARDS" && pass "card prints $s" || fail "card lacks $s"
 done
 if grep -qE 'StatusLightRow|light = light' "$CARDS" && grep -qE 'tag = DriveTags\.SYNC_REPO_CARD' "$CARDS"; then pass "the card is a DriveCard with a StatusLight and its tag"; else fail "the repo card is not the shared card"; fi
-if grep -qE 'append\(" → "\)\.append\(it\)' "$CARDS" && grep -qE 'append\(" *↑"\)\.append\(glance\.ahead\)\.append\(" ↓"\)\.append\(glance\.behind\)' "$CARDS" && grep -qE 'if \(glance\.repositoryState != "SAFE"\)' "$CARDS"; then pass "the glance line: branch → upstream ↑ahead ↓behind, state when not SAFE"; else fail "the glance line is incomplete"; fi
+if grep -qE 'append\(" *↑"\)\.append\(glance\.ahead\)\.append\(" ↓"\)\.append\(glance\.behind\)' "$CARDS" && grep -qE 'if \(glance\.repositoryState != "SAFE"\)' "$CARDS" && grep -qE 'R\.string\.git_meta_branch, glance\?\.branch' "$CARDS"; then pass "the dense row's glance: branch ↑ahead ↓behind clean/changed, state when not SAFE; the upstream is in the Metadata panel (#608)"; else fail "the glance line is incomplete"; fi
 
 echo "── G3 stepped one-tap sync ──"
 if grep -qE 'enum class Step \{ STAGING, COMMITTING, PULLING, PUSHING \}' "$COORD" && grep -qE 'e\.stageAll\(\)' "$COORD" && grep -qE 'e\.commit\(repo\.syncMessage' "$COORD" && grep -qE 'e\.pull\(rebase = repo\.pullRebase, auth = credentials\.authFor\(repo\)\)' "$COORD" && grep -qE 'e\.push\(auth = credentials\.authFor\(repo\)\)' "$COORD"; then pass "stage → commit → pull → push through the engine's verbs, step published"; else fail "the stepped sync is not the engine's four verbs"; fi
@@ -100,9 +100,12 @@ if grep -qE 'fun isDue\(' "$HIST" && grep -qE 'val period = if \(repoIntervalMin
 if grep -qE 'return Result\.success\(\)' "$WORKER" && grep -qE 'NET_CAPABILITY_NOT_METERED' "$WORKER"; then pass "conflicts are not retried; the network is read from the platform"; else fail "worker outcome/network rules missing"; fi
 if [ -f "$TESTS/sync/SyncHistoryTest.kt" ] && grep -qE 'class SyncScheduleTest' "$TESTS/sync/SyncHistoryTest.kt" && grep -qE 'ownPeriodOverridesTheBase' "$TESTS/sync/SyncHistoryTest.kt" && grep -qE 'capDropsTheOldest' "$TESTS/sync/SyncHistoryTest.kt"; then pass "the JVM suite proves the decision and the cap"; else fail "no JVM proof of SyncSchedule / SyncHistory"; fi
 
-echo "── G7 declared, not cloned ──"
-if grep -qE 'fun cloneUrl\(repo: GitRepoDecl\): String\? = upstream\?\.let \{ "https://\$\{it\.host\}/\$\{repo\.githubOwner\}/\$\{repo\.name\}\.git" \}' "$SRC/Declarations.kt" && grep -qE 'actions\.openEngine\(EngineActivity\.ENGINE_GIT, File\(root, d\.name\)\.absolutePath, url\)' "$CARDS"; then pass "<root>/<name> + upstream URL composed once and handed to the engine"; else fail "clone-into-store composition missing"; fi
-if grep -qE 'tag = DriveTags\.SYNC_DECLARED_CARD' "$CARDS" && grep -qE 'badge = if \(d\.private\) stringResource\(R\.string\.chrome_private\) else null' "$CARDS"; then pass "declared cards carry the private badge"; else fail "declared cards incomplete"; fi
+echo "── G7 declared, not cloned (#608: a DENSE ROW, not a card) ──"
+# The declared public set is rendered as a compact row that offers Clone into store; the
+# URL is the DECLARED remote-mode shape substituted once (ui.sync.git.remote_modes), and
+# the private/fork facts ride the row as badges. test-drive-git-page.sh owns the rest.
+if grep -qE 'url = page\.cloneUrl\(name, mode\)' "$CARDS" && grep -qE 'Pill\(stringResource\(R\.string\.sync_clone_into_store\), onClone, filled = true\)' "$CARDS"; then pass "a not-cloned row offers Clone into store with the declared URL, composed once"; else fail "clone-into-store composition missing"; fi
+if grep -qE 'testTag\(DriveTags\.SYNC_GIT_ROW\)' "$CARDS" && grep -qE 'if \(private\) CapsuleBadge\(stringResource\(R\.string\.chrome_private\)\)' "$CARDS"; then pass "the dense row is tagged and carries the private badge"; else fail "declared cards incomplete"; fi
 
 echo "── G8 Rclone and Mounts, same language ──"
 if grep -qE 'tag = DriveTags\.SYNC_REMOTE_CARD' "$RC" && grep -qE 'tag = DriveTags\.SYNC_MOUNT_CARD' "$RC" && grep -qE 'testTag\(DriveTags\.SYNC_JOB_ROW\)' "$RC" && grep -qE 'testTag\(DriveTags\.SYNC_CONNECTION_ROW\)' "$RC"; then pass "remote cards, mount cards, job rows, connection rows are tagged"; else fail "rclone/mounts tree not tagged"; fi
