@@ -6102,7 +6102,11 @@
       ],
       "consolidated_config": "cloud/2_configs/dist/_cloud-data-consolidated.json → baked into the app as data/mesh.json (BuildConfig.MESH_JSON_B64), the full wg-mesh/v1 node + peer + transport snapshot"
     },
-    "_doc_wireguard_profiles": "The four EXPORTABLE tunnel profiles, mirrored from vault/A_A0-Providers/C_TOOLS-INFRA/c0-wireguard/termux-public/config-v{4,6}-{split,full}. SEPARATE FROM wireguard_default ON PURPOSE: wireguard_default seeds the in-app form and is what matchesCloudPreset() compares against, so folding these values into it would make every existing install read as drifted and prompt to replace a config the user may have hand-built. Nothing here is ever written to WireGuardPrefs; it is render-only, consumed by WireGuardProfiles.kt to emit wg-quick text for export. The phone is a SINGLE-TUNNEL mesh spoke (Android allows one active WG profile), so each profile is ONE merged config carrying BOTH meshes as two peers - there are 4 files, not 8. Both v6 prefixes appear on every Address line and they are NOT interchangeable: fd0c:1d00::9 is the wg0 identity and fd0c:1d01::9 is the wg-public identity. Sending fd0c:1d00:: traffic to oci-analytics is cryptokey-dropped there (its allowed source for this phone is fd0c:1d01::9), which is the 14-30s happy-eyeballs stall. MTU is 1380 and the gcp-proxy endpoint is udp/443 (redirected to 51820) because port filtering eats 51820; DNS is mesh-only. No private key is present or permitted here - the export omits it by design.",
+    "_doc_profile": "#614. The Configs → Profile tab strip, in RENDER ORDER. Fully data-driven: ProfileFragment builds one tab per id here (baked as UI_PROFILE_TABS_B64), mapping each id to its column (a page) or its link route — nothing about the strip's membership or order is spelled out in Kotlin. Connect is FIRST and the landing tab. Ids: connect (the sign-in journey hosting libs:auth SignInWays + the WebOAuth/token/mail-code lines), vault (the VaultConnect fetch surface), fleet (the #570 cockpit — hero + status-lit section cards), repos (the owner's repos, from profile_default.repos), infos (the contact card), wireguard (a LINK to section:wg). Reorder or drop an id here and the strip follows; the tab testers pin this array so a dropped or reordered tab goes red.",
+    "profile": {
+      "tabs": ["connect", "vault", "fleet", "repos", "infos", "wireguard"]
+    },
+    "_doc_wireguard_profiles": "The four EXPORTABLE tunnel profiles, mirrored from vault/A_A0-Providers/C_TOOLS-INFRA/c0-wireguard/termux-public/config-v{4,6}-{split,full}. SEPARATE FROM wireguard_default ON PURPOSE: wireguard_default seeds the in-app form and is what matchesCloudPreset() compares against, so folding these values into it would make every existing install read as drifted and prompt to replace a config the user may have hand-built. Nothing here is ever written to WireGuardPrefs; it is render-only, consumed by WireGuardProfiles.kt to emit wg-quick text for export. The phone is a SINGLE-TUNNEL mesh spoke (Android allows one active WG profile), so each profile is ONE merged config carrying BOTH meshes as two peers - there are 4 files, not 8. Both v6 prefixes appear on every Address line and they are NOT interchangeable: fd0c:1d00::9 is the wg0 identity and fd0c:1d01::9 is the wg-public identity. Sending fd0c:1d00:: traffic to oci-analytics is cryptokey-dropped there (its allowed source for this phone is fd0c:1d01::9), which is the 14-30s happy-eyeballs stall. MTU is 1380 and the gcp-proxy endpoint is udp/443 (redirected to 51820) because port filtering eats 51820; DNS is mesh-only. No private key is present or permitted here - the export omits it by design. The two PUBLIC-VPN profiles (Cloudflare WARP, Proton VPN, #614) are declared SEPARATELY in ui.wireguard_external_profiles so this vault-locked block stays exactly the guard's four. SEPARATE FROM wireguard_default ON PURPOSE: wireguard_default seeds the in-app form and is what matchesCloudPreset() compares against, so folding these values into it would make every existing install read as drifted and prompt to replace a config the user may have hand-built. Nothing here is ever written to WireGuardPrefs; it is render-only, consumed by WireGuardProfiles.kt to emit wg-quick text for export. The phone is a SINGLE-TUNNEL mesh spoke (Android allows one active WG profile), so each profile is ONE merged config carrying BOTH meshes as two peers - there are 4 files, not 8. Both v6 prefixes appear on every Address line and they are NOT interchangeable: fd0c:1d00::9 is the wg0 identity and fd0c:1d01::9 is the wg-public identity. Sending fd0c:1d00:: traffic to oci-analytics is cryptokey-dropped there (its allowed source for this phone is fd0c:1d01::9), which is the 14-30s happy-eyeballs stall. MTU is 1380 and the gcp-proxy endpoint is udp/443 (redirected to 51820) because port filtering eats 51820; DNS is mesh-only. No private key is present or permitted here - the export omits it by design.",
     "wireguard_profiles": {
       "interface_mtu": "1380",
       "profiles": [
@@ -6213,6 +6217,47 @@
             }
           ],
           "address": "10.1.0.9/24, 10.0.0.9/24, fd0c:1d01::9/64, fd0c:1d00::9/64"
+        }
+      ]
+    },
+    "_doc_wireguard_external_profiles": "#614. PUBLIC-VPN profiles the phone can also run — Cloudflare WARP and Proton VPN — kept in a SEPARATE block from wireguard_profiles ON PURPOSE: wireguard_profiles is derived from and guard-locked to the cloud-infra vault dist (cloud-android-wireguard-profiles-guard.py compares it profile-for-profile), and these two are NOT in the vault — they are the user's own commercial-VPN accounts. Same shape as a mesh profile so WireGuardProfiles.kt renders them identically, but declared as IMPORT-TEMPLATES: empty public_key/endpoint/Address and an empty PrivateKey (per-account credentials are never baked into the app), filled by the WireGuard screen's Import .conf affordance. Data-driven: add an entry here and it becomes a selectable, exportable profile with no Kotlin change.",
+    "wireguard_external_profiles": {
+      "profiles": [
+        {
+          "id": "cloudflare-warp",
+          "label": "Cloudflare WARP",
+          "comment": "wg-cloudflare-warp - PUBLIC commercial VPN, NOT the mesh. Import-template: keys + endpoint are filled by importing your own WARP .conf (Import .conf).",
+          "dns": "1.1.1.1, 2606:4700:4700::1111",
+          "peers": [
+            {
+              "name": "cloudflare-warp",
+              "mesh": "external",
+              "comment": "Cloudflare WARP - endpoint + public key are filled on import (Import .conf).",
+              "public_key": "",
+              "endpoint": "",
+              "allowed_ips": "0.0.0.0/0, ::/0",
+              "persistent_keepalive": "25"
+            }
+          ],
+          "address": ""
+        },
+        {
+          "id": "proton-vpn",
+          "label": "Proton VPN",
+          "comment": "wg-proton-vpn - PUBLIC commercial VPN, NOT the mesh. Import-template: keys + endpoint are filled by importing your own Proton VPN WireGuard .conf (Import .conf).",
+          "dns": "10.2.0.1",
+          "peers": [
+            {
+              "name": "proton-vpn",
+              "mesh": "external",
+              "comment": "Proton VPN - endpoint + public key are filled on import (Import .conf).",
+              "public_key": "",
+              "endpoint": "",
+              "allowed_ips": "0.0.0.0/0, ::/0",
+              "persistent_keepalive": "25"
+            }
+          ],
+          "address": ""
         }
       ]
     },

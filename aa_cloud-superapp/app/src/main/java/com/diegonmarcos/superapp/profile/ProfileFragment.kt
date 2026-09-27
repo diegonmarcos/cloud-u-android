@@ -146,15 +146,20 @@ class ProfileFragment : Fragment() {
         }
         scroll.addView(page)
 
-        // TWO content columns; `col` keeps its name so every field that is only
-        // MOVING between tabs keeps its existing call site. WireGuard and AI
-        // have no column at all — see [tabStrip].
+        // Content columns; `col` keeps its name so every field that is only
+        // MOVING between tabs keeps its existing call site. WireGuard has no
+        // column at all — it is a LINK to the screen that already exists (see
+        // [tabStrip]).
         val connect = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val vault = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val imported = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val repos = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         page.addView(connect)
-        page.addView(col)
+        page.addView(vault)
         page.addView(imported)
+        page.addView(repos)
+        page.addView(col)
 
         val root = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -163,17 +168,22 @@ class ProfileFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
         }
-        // A null column means a LINK, not a page — see [tabStrip]. WireGuard
-        // and AI both already have a screen, and re-hosting either here would
-        // be a second copy to keep in step. Fleet is FIRST and the default:
-        // the cockpit is the page, Connect is how it gets its data.
-        val tabs = listOf(
-            Tab(getString(R.string.vault_tab_imported), imported),
-            Tab("Connect", connect),
-            Tab("Infos", col),
-            Tab("WireGuard", null, WG_ROUTE),
-            Tab("AI", null, AI_ROUTE),
+        // THE STRIP IS DATA (#614): build.json::ui.profile.tabs
+        // (UI_PROFILE_TABS_B64) lists one id per tab in render order. Each id
+        // maps to its column (a page) or, with a null column, a LINK to a
+        // screen that already exists — WireGuard is `section:wg`, and
+        // re-hosting it here would be a second copy to keep in step. Reorder or
+        // drop an id in build.json and the strip follows; nothing about the
+        // strip's membership or order is spelled out here. Connect is first.
+        val byId = mapOf(
+            "connect" to Tab("Connect", connect),
+            "vault" to Tab("Vault", vault),
+            "fleet" to Tab(getString(R.string.vault_tab_imported), imported),
+            "repos" to Tab("Repos", repos),
+            "infos" to Tab("Infos", col),
+            "wireguard" to Tab("WireGuard", null, WG_ROUTE),
         )
+        val tabs = profileTabOrder().mapNotNull { byId[it] }
         importedTab = tabs.indexOfFirst { it.column === imported }
         connectTab = tabs.indexOfFirst { it.column === connect }
         // The page opens on the JOURNEY until it is walked once (#573): the
@@ -299,6 +309,10 @@ class ProfileFragment : Fragment() {
         renderJourney(ctx, connect)
 
         renderImported(ctx, imported)
+
+        renderVault(ctx, vault)
+
+        renderRepos(ctx, repos)
 
         // ── Privacy ──────────────────────────────────────────────────────
         // Disclosure lives on the collecting screen on purpose: "what is held
@@ -481,8 +495,13 @@ class ProfileFragment : Fragment() {
                 })
             }
         })
-        // The bearer way's own controls stay with the bearer provider, so a
-        // policy that does not offer it does not show them.
+        // #614: the three explicit ways beside the declared pills.
+        //  • WebOAuth — the browser (OWebAuth) portal login, the same shared
+        //    dialog the vault route uses (one login, both fetches), not a copy.
+        body.addView(pickButton(ctx, getString(R.string.vault_connect_browser)) { showVaultBrowserDialog() })
+        //  • token + mail-code — the bearer way's own controls (a pasted/stored
+        //    token, and the Authelia mailed code), which stay with the bearer
+        //    provider, so a policy that does not offer it does not show them.
         if (offered.any { it.kind == SignIn.Kind.AUTHELIA_BEARER }) buildStoredBearer(ctx, s, body, status)
         // The SSH clone is this app's own way (JGit) beside the provider that grants the repo.
         offered.firstOrNull { it.grants(SignIn.GRANT_REPO_ARTIFACT) }?.let { p ->
@@ -570,13 +589,7 @@ class ProfileFragment : Fragment() {
                 paintJourney()
                 body.visibility = View.VISIBLE   // the report was just asked for; it stays on screen
             })
-            body.addView(label(ctx, getString(R.string.journey_vault_header)))
-            body.addView(caption(ctx, getString(R.string.vault_connect_auth_state, vaultAuthText(ctx))))
-            val vaultStatus = TextView(ctx).apply { visibility = View.GONE }
-            body.addView(pickButton(ctx, getString(R.string.vault_connect_send_code)) { vaultStart(vaultStatus) })
-            body.addView(vaultCodeField(ctx))
-            body.addView(pickButton(ctx, getString(R.string.journey_vault_fetch_open)) { vaultFetch(vaultStatus) })
-            body.addView(vaultStatus)
+            body.addView(caption(ctx, getString(R.string.journey_vault_on_tab)))
             body.addView(status)
         }
         // #585: the file must be the DECRYPTED export. Said here, before the tap,
@@ -587,6 +600,71 @@ class ProfileFragment : Fragment() {
                 ?.onTileClicked("action:import_configs")
         })
     }
+
+    // ── Vault (tab) · the VaultConnect fetch surface (#614) ───────────────
+
+    /**
+     * The VAULT tab: the VaultConnect fetch surface on its own tab. The
+     * credential is the durable bearer or the in-memory browser session; the
+     * WebOAuth browser login earns the session, the code box takes the mailed
+     * one-time code, and a successful fetch lands on the Fleet cockpit. Reuses
+     * the same [vaultStart]/[vaultFetch]/[VaultConnect] the journey used — no
+     * second client. RENDERING WRITES NOTHING; every call is behind a button.
+     */
+    private fun renderVault(ctx: android.content.Context, into: LinearLayout) {
+        into.addView(sectionHeader(ctx, getString(R.string.journey_vault_header)))
+        into.addView(caption(ctx, getString(R.string.vault_connect_auth_state, vaultAuthText(ctx))))
+        val status = TextView(ctx).apply { visibility = View.GONE; setTextIsSelectable(true) }
+        into.addView(pickButton(ctx, getString(R.string.vault_connect_browser)) { showVaultBrowserDialog() })
+        into.addView(pickButton(ctx, getString(R.string.vault_connect_send_code)) { vaultStart(status) })
+        into.addView(vaultCodeField(ctx))
+        into.addView(pickButton(ctx, getString(R.string.journey_vault_fetch_open)) { vaultFetch(status) })
+        into.addView(status)
+    }
+
+    // ── Repos (tab) · the owner's repositories (#614) ─────────────────────
+
+    /**
+     * The REPOS tab: the owner's repositories, DATA-DRIVEN from
+     * build.json::ui.profile_default.repos (UI_PROFILE_REPOS_B64) — the same
+     * declared set Configs ▸ About surfaces. The signed-in GitHub grant (scope
+     * `repo`) is what a live listing would reuse, but the declared set is the
+     * source of truth and needs no network to show. Each row opens the repo.
+     */
+    private fun renderRepos(ctx: android.content.Context, into: LinearLayout) {
+        into.addView(sectionHeader(ctx, getString(R.string.profile_repos_header)))
+        into.addView(caption(ctx, getString(R.string.profile_repos_caption)))
+        val repos = profileRepos()
+        if (repos.isEmpty()) { into.addView(caption(ctx, getString(R.string.profile_repos_empty))); return }
+        for ((name, url) in repos) {
+            into.addView(label(ctx, name))
+            into.addView(pickButton(ctx, url) {
+                runCatching {
+                    startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                }.onFailure { view?.snack("Could not open $url") }
+            })
+        }
+    }
+
+    /** Repo {label,url} list — data-driven from build.json::ui.profile_default.repos. */
+    private fun profileRepos(): List<Pair<String, String>> = runCatching {
+        val json = String(android.util.Base64.decode(
+            com.diegonmarcos.superapp.BuildConfig.UI_PROFILE_REPOS_B64, android.util.Base64.NO_WRAP))
+        val arr = org.json.JSONArray(json)
+        (0 until arr.length()).map {
+            val o = arr.getJSONObject(it); o.optString("label").ifBlank { "repo" } to o.optString("url")
+        }
+    }.getOrDefault(emptyList())
+
+    /** #614 the tab strip is data: build.json::ui.profile.tabs (UI_PROFILE_TABS_B64),
+     *  one id per tab in render order. An unparseable blob yields the empty list, so
+     *  a broken bake shows no strip rather than an invented one. */
+    private fun profileTabOrder(): List<String> = runCatching {
+        val json = String(android.util.Base64.decode(
+            com.diegonmarcos.superapp.BuildConfig.UI_PROFILE_TABS_B64, android.util.Base64.NO_WRAP))
+        val arr = org.json.JSONArray(json)
+        (0 until arr.length()).map { arr.getString(it) }
+    }.getOrDefault(emptyList())
 
     private fun statusView(ctx: android.content.Context): TextView = TextView(ctx).apply {
         setTextAppearance(android.R.style.TextAppearance_Material_Caption)

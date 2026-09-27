@@ -284,28 +284,90 @@ hasnt_code "$SYNC" "mailCode"     "ProfileSync never reads the mailed code"
 hasnt_code "$SYNC" "confirmation" "ProfileSync carries no confirmation field"
 hasnt_code "$IMPORT" "mail_code"  "the auto-import writes no 2FA code"
 
-echo "== T11: four tabs; AI is a link; the export carries no private key =="
+echo "== T11: SIX tabs, declarative order in build.json; AI is not a tab; the export carries no private key (#614) =="
 WG_PROFILES="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardProfiles.kt"
-has "$FRAGMENT" 'Tab("Connect", connect)'          "tab 1 is Connect"
-has "$FRAGMENT" 'Tab("WireGuard", null, WG_ROUTE)' "tab 2 links to the WireGuard screen"
-has "$FRAGMENT" 'Tab("AI", null, AI_ROUTE)'        "tab 3 links to the AI page"
-has "$FRAGMENT" 'Tab("Infos", col)'                "tab 4 is Infos"
+# The six tab literals live in the id→Tab map; the STRIP's order + membership
+# come from build.json::ui.profile.tabs (data), not this map's declaration order.
+has "$FRAGMENT" 'Tab("Connect", connect)'                               "Connect tab present"
+has "$FRAGMENT" 'Tab("Vault", vault)'                                   "Vault tab present"
+has "$FRAGMENT" 'Tab(getString(R.string.vault_tab_imported), imported)' "Fleet tab present"
+has "$FRAGMENT" 'Tab("Repos", repos)'                                   "Repos tab present"
+has "$FRAGMENT" 'Tab("Infos", col)'                                     "Infos tab present"
+has "$FRAGMENT" 'Tab("WireGuard", null, WG_ROUTE)'                      "WireGuard tab links to the WireGuard screen"
+# The strip is DATA: order + membership come from the baked build.json array.
+has "$FRAGMENT" "profileTabOrder()"                "the strip is built from the declared tab order"
+has "$FRAGMENT" "UI_PROFILE_TABS_B64"              "the order comes from the baked build.json blob"
+has "app/build.gradle" "UI_PROFILE_TABS_B64"       "the blob is baked"
+# AI is no longer a TAB (not in the declared six); the AI cockpit card still
+# links to the page that already exists, so the const stays but the tab does not.
+hasnt_code "$FRAGMENT" 'Tab("AI"'               "AI is not a top-level Profile tab"
+has   "$FRAGMENT" 'AI_ROUTE = "page:config/ai"' "the AI page route still exists for the cockpit card"
+hasnt_code "$FRAGMENT" "AiFragment"             "the AI page is not re-hosted here"
 # The route must be the one the DATA declares, not a plausible-looking string.
 has "$FRAGMENT" 'WG_ROUTE = "section:wg"'          "WireGuard tab uses the declared section target"
 hasnt_code "$FRAGMENT" "page:config/wg"            "not the page target, which only rewrites to section:wg"
 hasnt_code "$FRAGMENT" "page:wg/config"            "not the double-push target"
-# AI must be a LINK to the page that already exists, not a second copy of it.
-has   "$FRAGMENT" 'AI_ROUTE = "page:config/ai"' "AI points at the existing page route"
-hasnt_code "$FRAGMENT" "AiFragment"             "the AI page is not re-hosted here"
-# Still no child fragments and no borrowed launcher machinery, at 4 tabs.
-hasnt_code "$FRAGMENT" "childFragmentManager"   "four tabs still use no child fragments"
-hasnt_code "$FRAGMENT" "SectionTabsFragment"    "four tabs still avoid the section mechanism"
+# Still no child fragments and no borrowed launcher machinery, at six tabs.
+hasnt_code "$FRAGMENT" "childFragmentManager"   "six tabs still use no child fragments"
+hasnt_code "$FRAGMENT" "SectionTabsFragment"    "six tabs still avoid the section mechanism"
+
+echo "-- T11-order: the strip is EXACTLY [connect, vault, fleet, repos, infos, wireguard], in order --"
+tab_order_ok() {   # $1 = build.json path; returns 0 iff the declared order matches
+    python3 - "$1" <<'PY'
+import json, sys
+want = ["connect", "vault", "fleet", "repos", "infos", "wireguard"]
+got = (json.load(open(sys.argv[1]))["ui"].get("profile") or {}).get("tabs")
+sys.exit(0 if got == want else 1)
+PY
+}
+wg_has_externals() {   # $1 = build.json path; returns 0 iff warp+proton are declared
+    python3 - "$1" <<'PY'
+import json, sys
+ext = (json.load(open(sys.argv[1]))["ui"].get("wireguard_external_profiles") or {}).get("profiles", [])
+ids = {p["id"] for p in ext}
+sys.exit(0 if {"cloudflare-warp", "proton-vpn"} <= ids else 1)
+PY
+}
+if tab_order_ok "$ROOT/build.json"; then ok "T11-order: build.json declares the six tabs in the required order"
+else bad "T11-order: build.json tab order is wrong"; fi
+
+echo "-- T11-mutation: a dropped tab, a reordered tab, and a missing WG profile each go red --"
+SCRATCH="$(mktemp -d)"; trap 'rm -rf "$SCRATCH"' EXIT
+cp "$ROOT/build.json" "$SCRATCH/build.json"
+tab_order_ok "$SCRATCH/build.json" && wg_has_externals "$SCRATCH/build.json" \
+    && ok "T11-mutation: the unmutated tree passes both gates" \
+    || bad "T11-mutation: the unmutated tree should pass both gates"
+# (1) dropped tab
+python3 - "$SCRATCH/build.json" <<'PY'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p)); d["ui"]["profile"]["tabs"]=[t for t in d["ui"]["profile"]["tabs"] if t!="repos"]; json.dump(d,open(p,"w"))
+PY
+tab_order_ok "$SCRATCH/build.json" && bad "T11-mutation: a dropped tab was NOT caught" || ok "T11-mutation: a dropped tab is caught"
+cp "$ROOT/build.json" "$SCRATCH/build.json"
+# (2) wrong order (swap the first two)
+python3 - "$SCRATCH/build.json" <<'PY'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p)); t=d["ui"]["profile"]["tabs"]; t[0],t[1]=t[1],t[0]; json.dump(d,open(p,"w"))
+PY
+tab_order_ok "$SCRATCH/build.json" && bad "T11-mutation: a reordered tab was NOT caught" || ok "T11-mutation: a reordered tab is caught"
+cp "$ROOT/build.json" "$SCRATCH/build.json"
+# (3) missing WG profile (from the external block warp+proton live in)
+python3 - "$SCRATCH/build.json" <<'PY'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p)); w=d["ui"]["wireguard_external_profiles"]; w["profiles"]=[x for x in w["profiles"] if x["id"]!="proton-vpn"]; json.dump(d,open(p,"w"))
+PY
+wg_has_externals "$SCRATCH/build.json" && bad "T11-mutation: a missing WG profile was NOT caught" || ok "T11-mutation: a missing WG profile is caught"
+rm -rf "$SCRATCH"; trap - EXIT
 
 echo "-- T11a: the profile matrix is DATA in build.json, not literals in Kotlin --"
 has "$WG_PROFILES" "BuildConfig.UI_WG_PROFILES_JSON_B64" "profiles come from baked build.json data"
-has "$WGFRAG" "WireGuardProfiles.all"  "the WireGuard screen owns the 4-profile export"
+has "$WGFRAG" "WireGuardProfiles.all"  "the WireGuard screen owns the profile export"
 has "app/build.gradle" "UI_WG_PROFILES_JSON_B64"         "the blob is baked"
 has "build.json" '"wireguard_profiles"'                  "build.json declares the matrix"
+# #614 the public-VPN profiles ride a SEPARATE baked blob, merged into .all.
+has "$WG_PROFILES" "BuildConfig.UI_WG_EXTERNAL_PROFILES_JSON_B64" "the externals come from their own baked blob"
+has "app/build.gradle" "UI_WG_EXTERNAL_PROFILES_JSON_B64" "the external blob is baked"
+has "build.json" '"wireguard_external_profiles"'         "build.json declares the external profiles separately"
 # No fleet literal may be spelled out in the renderer — it must follow the
 # fleet the way applyCloudPreset() does, not rot when the hub moves.
 hasnt_code "$WG_PROFILES" "35.226.147.64"  "no hub endpoint literal in the renderer"
@@ -337,24 +399,26 @@ MATRIX=$(python3 - "$ROOT/build.json" <<'PY'
 import json, sys
 ui = json.load(open(sys.argv[1]))["ui"]
 blk = ui["wireguard_profiles"]
+ext = ui.get("wireguard_external_profiles", {}) or {}
 P, F = [], []
 def chk(c, m): (P if c else F).append(m)
 
 profiles = blk["profiles"]
-chk(len(profiles) == 4, "exactly 4 profiles (one merged tunnel each, not 8)")
-chk({p["id"] for p in profiles} == {"v4-split", "v4-full", "v6-split", "v6-full"},
-    "the four ids are v{4,6}-{split,full}")
-# #522: Address is PER PROFILE (its IPv4 order is the source Android uses), and
-# every one carries BOTH v6 identities.
+MESH = {"v4-split", "v4-full", "v6-split", "v6-full"}
+# The mesh block is guard-locked to the cloud-infra vault dist, so it stays
+# EXACTLY four (cloud-android-wireguard-profiles-guard.py compares it).
+chk(len(profiles) == 4, "exactly 4 mesh profiles (one merged tunnel each, not 8)")
+chk({p["id"] for p in profiles} == MESH, "the four mesh ids are v{4,6}-{split,full}")
 chk("interface_address" not in blk, "no shared interface_address overrides the per-profile order")
-for p in profiles:
-    addr = p.get("address", "")
-    chk("fd0c:1d00::9/64" in addr, f"{p['id']}: Address carries the wg0 identity fd0c:1d00::9")
-    chk("fd0c:1d01::9/64" in addr, f"{p['id']}: Address carries the wg-public identity fd0c:1d01::9")
 chk(blk["interface_mtu"] == "1380", "MTU is 1380, not the in-app form's 1280")
+byid = {p["id"]: p for p in profiles}
 
-for p in profiles:
-    i = p["id"]
+# ── the four MESH profiles carry both meshes + both v6 identities (#522) ──
+for i in sorted(MESH):
+    p = byid[i]
+    addr = p.get("address", "")
+    chk("fd0c:1d00::9/64" in addr, f"{i}: Address carries the wg0 identity fd0c:1d00::9")
+    chk("fd0c:1d01::9/64" in addr, f"{i}: Address carries the wg-public identity fd0c:1d01::9")
     peers = {q["name"]: q for q in p["peers"]}
     chk(set(peers) == {"gcp-proxy", "oci-analytics"}, f"{i}: both meshes present as two peers")
     g, o = peers["gcp-proxy"], peers["oci-analytics"]
@@ -363,14 +427,30 @@ for p in profiles:
     chk("fd0c:1d00::/64" in g["allowed_ips"], f"{i}: fd0c:1d00::/64 routes to gcp-proxy")
     chk("fd0c:1d00" not in o["allowed_ips"], f"{i}: fd0c:1d00 is NOT handed to oci-analytics")
     chk("1.1.1.1" not in p["dns"] and "1.0.0.1" not in p["dns"], f"{i}: DNS is mesh-only")
-    blob = json.dumps(p)
-    chk("private_key" not in blob and "privkey" not in blob, f"{i}: carries no private key")
 
 # split vs full must actually differ, or the matrix is decoration.
-byid = {p["id"]: p for p in profiles}
 for fam in ("v4", "v6"):
     chk("0.0.0.0/0" not in json.dumps(byid[f"{fam}-split"]), f"{fam}-split routes no default v4")
     chk("0.0.0.0/0" in json.dumps(byid[f"{fam}-full"]), f"{fam}-full routes the default v4")
+
+# ── #614 the two PUBLIC-VPN import-templates, in the SEPARATE (unguarded)
+#    block so the vault-locked mesh block above stays exactly the guard's four ──
+EXTERNAL = {"cloudflare-warp", "proton-vpn"}
+exts = ext.get("profiles", []) or []
+extid = {p["id"]: p for p in exts}
+chk(set(extid) == EXTERNAL, "the two external profiles are cloudflare-warp + proton-vpn")
+for i in sorted(EXTERNAL):
+    p = extid.get(i, {})
+    chk(p.get("address", "") == "", f"{i}: external template carries no baked Address")
+    for q in p.get("peers", []):
+        chk(q.get("public_key", "x") == "" and q.get("endpoint", "x") == "",
+            f"{i}: external peer has no baked key/endpoint (filled on import)")
+
+# NO profile, mesh or external, carries a private key.
+for p in profiles + exts:
+    blob = json.dumps(p)
+    chk("private_key" not in blob and "privkey" not in blob, f"{p['id']}: carries no private key")
+
 # The separation that protects matchesCloudPreset().
 chk("fd0c" not in json.dumps(ui["wireguard_default"]),
     "wireguard_default is untouched (still v4-only), so no install reads as drifted")

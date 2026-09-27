@@ -72,14 +72,27 @@ object WireGuardProfiles {
         }.getOrDefault(JSONObject())
     }
 
+    /** #614 the public-VPN profiles (Cloudflare WARP, Proton VPN) — a SEPARATE
+     *  baked blob because the mesh block is guard-locked to the cloud-infra
+     *  vault dist and these two are the user's own commercial-VPN accounts. */
+    private val externalRoot: JSONObject by lazy {
+        runCatching {
+            JSONObject(String(android.util.Base64.decode(
+                BuildConfig.UI_WG_EXTERNAL_PROFILES_JSON_B64, android.util.Base64.DEFAULT)))
+        }.getOrDefault(JSONObject())
+    }
+
     val interfaceMtu: String get() = root.optString("interface_mtu")
 
-    /** The four profiles, in build.json order. Empty if the blob is missing or
-     *  malformed — the caller shows "no profiles in this build" rather than
-     *  exporting something half-formed. */
-    val all: List<Profile> by lazy {
-        val array = root.optJSONArray("profiles") ?: return@lazy emptyList()
-        (0 until array.length()).mapNotNull { i ->
+    /** Every exportable profile, in build.json order: the four fleet-mesh
+     *  profiles (vault-derived) followed by the public-VPN import-templates.
+     *  Empty if the blobs are missing or malformed — the caller shows "no
+     *  profiles in this build" rather than exporting something half-formed. */
+    val all: List<Profile> by lazy { parseProfiles(root) + parseProfiles(externalRoot) }
+
+    private fun parseProfiles(from: JSONObject): List<Profile> {
+        val array = from.optJSONArray("profiles") ?: return emptyList()
+        return (0 until array.length()).mapNotNull { i ->
             val o = array.optJSONObject(i) ?: return@mapNotNull null
             val peers = o.optJSONArray("peers")
             Profile(

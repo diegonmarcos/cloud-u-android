@@ -592,6 +592,11 @@
     <string name="journey_vault_not_fetched">not fetched</string>
     <string name="journey_vault_header">Vault export</string>
     <string name="journey_vault_fetch_open">Fetch &amp; open Fleet</string>
+    <string name="journey_vault_on_tab">Fetch your vault from the Vault tab — it lands here on Fleet.</string>
+    <!-- #614 Repos tab -->
+    <string name="profile_repos_header">Repos</string>
+    <string name="profile_repos_caption">Your repositories, from the fleet declaration. Tap one to open it.</string>
+    <string name="profile_repos_empty">No repositories are declared for this build.</string>
     <string name="journey_import_file_caption">From a file: the DECRYPTED vault export — what sops -d prints, the same document the server fetch returns. The encrypted file from the repo is refused, and says so: this phone holds no age key.</string>
     <string name="journey_import_file">Import from a file instead</string>
     <string name="journey_fetched">✓ Authenticated · %1$d bytes · your config is here — continue with step 2</string>

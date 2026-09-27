@@ -178,7 +178,7 @@ class WireGuardFragment : Fragment() {
             .joinToString("\n") { "• ${it.fileName} — ${it.label}" }
             .ifBlank { "This build carries no profiles — nothing to export." }))
         col.addView(rowOfButtons(ctx,
-            "Export 4 profiles…" to {
+            "Export ${WireGuardProfiles.all.size} profiles…" to {
                 if (WireGuardProfiles.all.isEmpty()) toast("No profiles in this build")
                 else profileFolderPicker.launch(null)
             },
@@ -779,11 +779,13 @@ class WireGuardFragment : Fragment() {
          * and why it is not the "Export .conf" button above.
          */
         private const val EXPORT_TEXT =
-            "Four ready-made tunnel profiles for the fleet — the two axes that " +
-            "actually change on a phone: which address family the wifi gives you, " +
-            "and how much of your traffic goes inside the tunnel. Each file is ONE " +
-            "config carrying BOTH meshes as two peers, because Android runs one " +
-            "tunnel at a time.\n\n" +
+            "Ready-made tunnel profiles — the four fleet-mesh profiles across the " +
+            "two axes that actually change on a phone (which address family the " +
+            "wifi gives you, and how much of your traffic goes inside the tunnel), " +
+            "plus two public-VPN import-templates (Cloudflare WARP, Proton VPN). " +
+            "Each mesh file is ONE config carrying BOTH meshes as two peers, " +
+            "because Android runs one tunnel at a time; the two externals are " +
+            "empty slots you fill by importing your own account .conf.\n\n" +
             "YOUR PRIVATE KEY IS NOT INCLUDED, which is what makes this different " +
             "from \"Export .conf\" above: that one serialises the tunnel you already " +
             "have, key and all, to move it somewhere. These are templates. Each file " +

@@ -488,6 +488,11 @@
     <string name="journey_vault_not_fetched">no descargada</string>
     <string name="journey_vault_header">Exportación de la bóveda</string>
     <string name="journey_vault_fetch_open">Descargar y abrir Flota</string>
+    <string name="journey_vault_on_tab">Descarga tu bóveda desde la pestaña Bóveda — aparece aquí en Flota.</string>
+    <!-- #614 pestaña Repos -->
+    <string name="profile_repos_header">Repos</string>
+    <string name="profile_repos_caption">Tus repositorios, desde la declaración de la flota. Toca uno para abrirlo.</string>
+    <string name="profile_repos_empty">No hay repositorios declarados para esta compilación.</string>
     <string name="journey_import_file_caption">Desde un archivo: la exportación DESCIFRADA de la bóveda — lo que imprime sops -d, el mismo documento que devuelve la descarga del servidor. El archivo cifrado del repositorio se rechaza, y lo dice: este teléfono no tiene clave age.</string>
     <string name="journey_import_file">Importar desde un archivo</string>
     <string name="journey_fetched">✓ Autenticado · %1$d bytes · tu configuración está aquí; sigue con el paso 2</string>
