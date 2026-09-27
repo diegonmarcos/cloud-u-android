@@ -75,6 +75,17 @@ if [ ! -r /proc/uptime ]; then
 fi
 [ ! -d /storage/emulated/0 ] || binds="$binds -b /storage/emulated/0:/sdcard"
 
+# #612: auto-mount shared storage and the cloud-drive shared store into $HOME
+# (bound as /root below), so both survive a rootfs update like the rest of
+# $HOME does. CloudDrive is ac_cloud-drive/build.json::storage.shared_root, THE
+# ONE declaration (SharedStore.kt resolves it under
+# Environment.getExternalStorageDirectory()) -- keep this literal in sync with
+# that value, not a copy of it.
+mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store"
+[ ! -d /storage/emulated/0 ] || binds="$binds -b /storage/emulated/0:$HOME/emulated"
+mkdir -p /storage/emulated/0/CloudDrive 2>/dev/null || true
+[ ! -d /storage/emulated/0/CloudDrive ] || binds="$binds -b /storage/emulated/0/CloudDrive:$HOME/cloud-drive-shared-store"
+
 # $HOME is bound as /root, so credentials, git config and work survive a
 # rootfs update (which replaces the tree above) and stay visible to Termux.
 # shellcheck disable=SC2086 # $binds is a list of flags

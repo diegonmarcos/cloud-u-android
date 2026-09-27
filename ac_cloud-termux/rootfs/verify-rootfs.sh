@@ -70,6 +70,16 @@ for name in $(resolved smoke | python3 -c 'import json,sys; print(" ".join(k for
     fi
 done
 
+echo "── #612: shared storage + cloud-drive shared-store mountpoints exist in \$HOME ──"
+enter -c true >/dev/null 2>&1 || true
+for d in emulated cloud-drive-shared-store; do
+    if [ -d "$W/home/$d" ]; then
+        echo "ok   \$HOME/$d (bind mountpoint for #612) was created"
+    else
+        echo "FAIL \$HOME/$d was not created by enter.sh"; fail=1
+    fi
+done
+
 echo "── sizes ──"
 echo "   tarball $(wc -c < "$ART/rootfs.tar.zst") bytes, unpacked $(du -sk "$STAGE/rootfs" | cut -f1) KiB"
 exit "$fail"

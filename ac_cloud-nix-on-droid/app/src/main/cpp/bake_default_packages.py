@@ -21,7 +21,11 @@ binary nothing ever chmods +x.
 Usage:
     bake_default_packages.py <input.zip> <output.zip> <nixpkgs_pin> \
         <comma-separated attrs> <profile_link> <fallback_init_script> <app_id> \
-        <nix_system, e.g. aarch64-linux>
+        <nix_system, e.g. aarch64-linux> <shared_root_name>
+
+#612 also patches bin/login here (not a separate script): it is the same
+"add text to a generated file" job as the login-inner patch above, on a zip
+this function already has open.
 """
 import os
 import stat
@@ -54,15 +58,17 @@ def capture(cmd):
 
 
 def main() -> int:
-    if len(sys.argv) != 9:
+    if len(sys.argv) != 10:
         print(
             "usage: bake_default_packages.py <input.zip> <output.zip> "
-            "<nixpkgs_pin> <attrs csv> <profile_link> <fallback_init_script> <app_id> <nix_system>",
+            "<nixpkgs_pin> <attrs csv> <profile_link> <fallback_init_script> <app_id> <nix_system> "
+            "<shared_root_name>",
             file=sys.stderr,
         )
         return 2
 
-    input_zip, output_zip, pin, attrs_csv, profile_link, fallback_script, app_id, nix_system = sys.argv[1:9]
+    (input_zip, output_zip, pin, attrs_csv, profile_link, fallback_script, app_id, nix_system,
+     shared_root_name) = sys.argv[1:10]
     attrs = [a for a in attrs_csv.split(",") if a]
     if not attrs:
         print("no attrs given", file=sys.stderr)
@@ -93,8 +99,43 @@ def main() -> int:
         with zipfile.ZipFile(input_zip) as zin:
             existing = set(zin.namelist())
             login_inner = zin.read("usr/lib/login-inner").decode()
+            bin_login = zin.read("bin/login").decode()
             symlinks_txt = zin.read("SYMLINKS.txt").decode()
             executables_txt = zin.read("EXECUTABLES.txt").decode()
+
+            # ── #612: auto-mount shared storage + the cloud-drive shared
+            # store into $HOME, the same generated-text-injection technique
+            # as the session-init patch below. bin/login runs with no -r (it
+            # binds individual dirs onto the real Android root, it does not
+            # chroot), so $HOME here is already the real on-device path and
+            # these two mountpoints just need to exist under it before the
+            # exec, guarded like the fakeProcStat/fakeProcUptime binds above
+            # them so a missing source (e.g. cloud-drive never opened yet)
+            # degrades to no bind instead of a failed one.
+            exec_line = f"exec /data/data/{app_id}/files/usr/bin/proot-static \\"
+            if bin_login.count(exec_line) != 1:
+                print(f"FAIL: expected exactly one proot-static exec line in bin/login:\n  {exec_line}",
+                      file=sys.stderr)
+                return 1
+            mount_setup = (
+                'mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store" 2>/dev/null || true\n'
+                'if [ -d /storage/emulated/0 ]; then\n'
+                '  BIND_HOME_EMULATED="-b /storage/emulated/0:$HOME/emulated"\n'
+                'else\n'
+                '  BIND_HOME_EMULATED=""\n'
+                'fi\n\n'
+                f'mkdir -p "/storage/emulated/0/{shared_root_name}" 2>/dev/null || true\n'
+                f'if [ -d "/storage/emulated/0/{shared_root_name}" ]; then\n'
+                f'  BIND_HOME_SHARED_STORE="-b /storage/emulated/0/{shared_root_name}:$HOME/cloud-drive-shared-store"\n'
+                'else\n'
+                '  BIND_HOME_SHARED_STORE=""\n'
+                'fi\n\n'
+            )
+            bin_login = bin_login.replace(
+                exec_line,
+                mount_setup + exec_line + "\n  $BIND_HOME_EMULATED \\\n  $BIND_HOME_SHARED_STORE \\",
+                1,
+            )
 
             # ── patch login-inner's one unconditional session-init line ───
             want = SESSION_INIT_TEMPLATE.format(app_id=app_id)
@@ -166,6 +207,8 @@ def main() -> int:
                         continue
                     if name == "usr/lib/login-inner":
                         zout.writestr(info, login_inner)
+                    elif name == "bin/login":
+                        zout.writestr(info, bin_login)
                     elif name == "SYMLINKS.txt":
                         zout.writestr(info, symlinks_txt)
                     elif name == "EXECUTABLES.txt":

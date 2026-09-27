@@ -41,7 +41,7 @@ android {
     defaultConfig {
         applicationId "cld.termux"
         applicationIdSuffix ".nix"
-        versionCode 188038
+        versionCode 188039
         versionName "0.118.0_v0.3.8_nix"
         // fdroid checkupdates looks for literal versionCode/versionName,
         // can't get fancy with these and use string interpolation and similar
@@ -323,6 +323,19 @@ def bootstrapAbi() {
     return abi
 }
 
+// #612 -- the ONE declaration of the cloud-drive shared store, read from the
+// sibling app so this app never keeps its own copy of the value to drift out
+// of sync with. ac_cloud-drive/build.json::storage.shared_root.
+def sharedRootName() {
+    def declaration = new File(projectDir.parentFile.parentFile, "ac_cloud-drive/build.json")
+    if (!declaration.exists())
+        throw new GradleException("missing " + declaration + " -- #612's shared-store mount needs storage.shared_root from there")
+    def sharedRoot = new groovy.json.JsonSlurper().parseText(declaration.getText("UTF-8"))?.storage?.shared_root
+    if (!sharedRoot)
+        throw new GradleException(declaration.toString() + " has no storage.shared_root")
+    return sharedRoot
+}
+
 def bootstrapAssetsDir = new File(buildDir, "generated/bootstrap/assets")
 
 task bakeBootstrap() {
@@ -402,7 +415,7 @@ task bakeBootstrap() {
             def toolingResult = exec {
                 commandLine "python3", toolingBaker.absolutePath, idPatched.absolutePath, baked.absolutePath,
                         tooling.nixpkgs_pin, tooling.attrs.join(","), tooling.profile_link,
-                        tooling.fallback_init_script, rewrite.to, nixSystem
+                        tooling.fallback_init_script, rewrite.to, nixSystem, sharedRootName()
                 ignoreExitValue = true
             }
             idPatched.delete()

@@ -185,5 +185,31 @@ else
     bad "ship-cloud-nix-on-droid.yml ($WORKFLOW) does not install Nix — bake_default_packages.py would fail with 'nix: command not found'"
 fi
 
+# ── #612 — shared storage and the cloud-drive shared store auto-mount into $HOME ──
+DRIVE_BUILD_JSON="$(cd "$DIR/.." && pwd)/ac_cloud-drive/build.json"
+SHARED_ROOT="$(python3 -c "
+import json
+print(json.load(open('$DRIVE_BUILD_JSON'))['storage']['shared_root'])
+" 2>/dev/null)"
+if [ -n "$SHARED_ROOT" ]; then
+    ok "ac_cloud-drive/build.json declares storage.shared_root ($SHARED_ROOT), the value #612 mounts"
+else
+    bad "ac_cloud-drive/build.json has no storage.shared_root — #612's shared-store mount has nothing to read"
+fi
+
+if grep -q 'sharedRootName()' "$GRADLE" && grep -q 'bake_default_packages.py failed' "$GRADLE"; then
+    ok "app/build.gradle reads storage.shared_root from ac_cloud-drive/build.json and passes it to bake_default_packages.py"
+else
+    bad "app/build.gradle does not wire sharedRootName() into the bake_default_packages.py call"
+fi
+
+BAKE_PY="$DIR/app/src/main/cpp/bake_default_packages.py"
+if grep -q 'BIND_HOME_EMULATED' "$BAKE_PY" && grep -q 'BIND_HOME_SHARED_STORE' "$BAKE_PY" \
+   && grep -q '\$HOME/emulated' "$BAKE_PY" && grep -q '\$HOME/cloud-drive-shared-store' "$BAKE_PY"; then
+    ok "bake_default_packages.py patches bin/login with both #612 auto-mount binds"
+else
+    bad "bake_default_packages.py is missing the #612 bin/login mount patch (\$HOME/emulated, \$HOME/cloud-drive-shared-store)"
+fi
+
 echo "── $fails failed ──"
 [ "$fails" -eq 0 ]
