@@ -79,11 +79,28 @@ def main() -> int:
         # The CI runner is always x86_64-linux; legacyPackages.<system> (rather
         # than the plain #attr shorthand, which resolves against the CALLER's
         # system) is what lets one runner bake either ABI's binaries, pulling
-        # pre-built substitutes for the foreign arch from cache.nixos.org
-        # instead of needing to cross-compile or emulate.
+        # pre-built substitutes for the foreign arch from cache.nixos.org for
+        # most attrs. That assumption held for git/nodejs_22 but not for
+        # claude-code: cache.nixos.org does not carry an aarch64-linux
+        # substitute for every claude-code release, so an arm64 job with no
+        # foreign builder registered hard-fails with "platform mismatch"
+        # instead of falling back to a (slower, but working) build. Registering
+        # binfmt_misc for the foreign arch -- one-time, host-wide, via the
+        # already-present docker daemon -- and telling nix that arch is locally
+        # buildable turns that hard-fail into a QEMU-emulated build instead.
+        host_arch = capture(["uname", "-m"]).strip()
+        foreign_arch = nix_system.split("-")[0]
+        nix_arch_of_host = {"x86_64": "x86_64", "aarch64": "aarch64", "arm64": "aarch64"}.get(host_arch, host_arch)
+        extra_platform_args = []
+        if foreign_arch != nix_arch_of_host:
+            print(f"host is {host_arch}, baking for {nix_system}: registering QEMU emulation "
+                  f"so nix can build (not just substitute) {foreign_arch} derivations", file=sys.stderr)
+            run(["docker", "run", "--rm", "--privileged", "tonistiigi/binfmt", "--install", "all"])
+            extra_platform_args = ["--extra-platforms", nix_system]
+
         refs = [f"github:NixOS/nixpkgs/{pin}#legacyPackages.{nix_system}.{a}" for a in attrs]
         run(["nix", "profile", "install", "--profile", profile, *refs, "--impure",
-             "--extra-experimental-features", "nix-command flakes"])
+             "--extra-experimental-features", "nix-command flakes", *extra_platform_args])
 
         generation = capture(["readlink", "-f", profile]).strip()
         if not os.path.exists(generation):
