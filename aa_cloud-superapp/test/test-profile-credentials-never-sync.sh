@@ -525,6 +525,40 @@ fi
 has "$WGFRAG" "toWgQuickString"  "the single-config export still exists"
 has "$WGFRAG" "no private key included" "the profile export says it withheld the key"
 
+echo "== T13: the Google OAuth client is wired, and its client_secret is NEVER in this public repo (#611) =="
+# The provider list is the shared libs:auth declaration, not the superapp's build.json.
+SHARED_BUILD="../ab_cloud-libs-shared/build.json"
+# client_id is PUBLIC (Google documents it as not-secret for a 'TV and Limited Input'
+# client) and lives in that declaration; the client_secret must be EMPTY there — it is
+# baked from the private vault at build time (libs:auth build.gradle), never committed.
+if python3 - "$ROOT/$SHARED_BUILD" <<'PY'
+import json, sys
+provs = json.load(open(sys.argv[1]))["auth"]["sign_in"]["providers"]
+g = next((p for p in provs if p.get("id") == "google"), None)
+ok = (g is not None
+      and g.get("client_id", "").endswith(".apps.googleusercontent.com")
+      and g.get("client_secret", "") == "")
+sys.exit(0 if ok else 1)
+PY
+then ok "google provider carries a client_id and an EMPTY client_secret in the public repo"
+else bad "google provider must carry client_id + empty client_secret in ab_cloud-libs-shared/build.json"; fi
+# No client-secret literal (Google's client-secret prefix) may appear in any TRACKED
+# file of this PUBLIC repository. The needle is assembled from pieces so this guard never
+# matches its own source; git grep scopes the sweep to tracked files.
+REPO="$(cd "$ROOT/.." && pwd)"
+NEEDLE="GOCSPX""-"
+sweep() { git -C "$1" grep -I -l -e "$NEEDLE" -- . 2>/dev/null; }
+LEAK="$(sweep "$REPO")"
+if [ -z "$LEAK" ]; then ok "no client-secret literal is committed anywhere in the public repo"
+else bad "a Google client-secret literal is committed: $(echo "$LEAK" | tr '\n' ' ')"; fi
+# Mutation: the sweep MUST catch a planted secret, or its silence proves nothing.
+SCRATCH="$(mktemp -d)"; git -C "$SCRATCH" init -q
+printf 'GOOGLE_CLIENT_SECRET=%sPLANTED123\n' "$NEEDLE" > "$SCRATCH/leak.env"
+git -C "$SCRATCH" add -A 2>/dev/null
+if [ -n "$(sweep "$SCRATCH")" ]; then ok "T13-mutation: a planted client-secret is caught"
+else bad "T13-mutation: the sweep failed to catch a planted client-secret"; fi
+rm -rf "$SCRATCH"
+
 echo
 echo "PASS=$PASS FAIL=$FAIL"
 [ "$FAIL" -eq 0 ] || exit 1

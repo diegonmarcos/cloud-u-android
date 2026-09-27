@@ -37,7 +37,28 @@ stripDocs = { obj ->
     if (obj instanceof List) return obj.collect { stripDocs(it) }
     return obj
 }
-def authB64 = groovy.json.JsonOutput.toJson(stripDocs(authDecl)).bytes.encodeBase64().toString()
+def authTree = stripDocs(authDecl)
+
+// Google's device-grant token exchange takes a client_secret (#611). Google itself
+// documents it as NOT secret for a 'TV and Limited Input' client, but cloud-u-android
+// is a PUBLIC repository so it is never committed to build.json (the google provider's
+// client_secret stays ""). It is baked in here at build time from the PRIVATE vault —
+// exactly how libs:media bakes its GIF-provider keys — with the env winning over the
+// vault (GitHub-secret delivery), then the vault checkout ($VAULT_DIR, present in every
+// ship build for the shared signing key), else empty. An empty secret still builds: the
+// client_id is present, so the flow starts and only the token exchange fails.
+def googleSecret = (System.getenv('GOOGLE_DEVICE_CLIENT_SECRET') ?: '').trim()
+if (!googleSecret) {
+    def vaultDir = System.getenv('VAULT_DIR')
+    if (vaultDir) {
+        def sf = file("${vaultDir}/A_A0-Providers/B_SERVICES-CLOUD/b15-google-oauth/device_client_secret")
+        if (sf.exists()) googleSecret = sf.text.trim()
+    }
+}
+if (googleSecret) {
+    authTree.sign_in?.providers?.each { p -> if (p.id == 'google') p.client_secret = googleSecret }
+}
+def authB64 = groovy.json.JsonOutput.toJson(authTree).bytes.encodeBase64().toString()
 
 android {
     namespace 'com.diegonmarcos.cloudlib.auth'

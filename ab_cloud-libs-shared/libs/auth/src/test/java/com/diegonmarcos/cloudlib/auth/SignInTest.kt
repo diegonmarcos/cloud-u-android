@@ -68,11 +68,19 @@ class SignInTest {
         }
     }
 
-    @Test fun `Google stays declared but inert until an owner-minted client id lands`() {
+    @Test fun `Google's owner-minted client id has landed, and the secret is never in the public repo (#611)`() {
+        val declaredGoogle = declared().getJSONArray("providers").let { arr ->
+            (0 until arr.length()).map { arr.getJSONObject(it) }.first { it.getString("id") == "google" }
+        }
         val google = SignIn.provider("google")!!
         assertEquals(SignIn.Kind.DEVICE_FLOW, google.kind)
-        assertEquals("", google.clientId)
-        assertFalse("no invented client id - the UI says 'not configured'", google.configured)
+        // client_id is PUBLIC (Google documents it so) and lives in the shared build.json.
+        assertTrue("the client id has landed", declaredGoogle.getString("client_id").endsWith(".apps.googleusercontent.com"))
+        assertEquals(declaredGoogle.getString("client_id"), google.clientId)
+        assertTrue("a device grant with a client id is startable", google.configured)
+        // The client_secret is NEVER committed to this public repo — it is baked from the
+        // private vault at build time (libs:auth build.gradle), so the declaration is empty.
+        assertEquals("", declaredGoogle.optString("client_secret"))
     }
 
     @Test fun `every declared kind is one the code dispatches on`() {
