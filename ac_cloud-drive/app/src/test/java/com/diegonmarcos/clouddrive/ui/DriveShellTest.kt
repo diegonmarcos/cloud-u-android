@@ -78,6 +78,7 @@ class DriveShellTest {
         override fun copyText(text: String) {}
         override fun openUrl(url: String) {}
         override fun launchApp(packageName: String, fallbackUrl: String): Boolean = false
+        override fun openAuthProfile(pkg: String, target: String, extra: String): Boolean = false
     }
 
     @Test

@@ -8,6 +8,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -46,12 +47,20 @@ import com.diegonmarcos.clouddrive.ui.ToolbarIsland
 import kotlinx.coroutines.launch
 
 /**
- * #604 VOLUMES — FOUR DECLARED CLASSES over one body: build.json::ui.volumes.classes names
- * Cloud-Constellation (our same-signature fleet apps), Cloud-Containers (the fleet's container
- * mounts), Cloud-Machines (VMs, PCs, phones) and S3 (OCI buckets and Google Drive). The strip is
- * the SAME idiom as the Configs strip — classes inside the tab, not a stack — and the `when`
- * below is the ONE place Kotlin names a class id; test/test-drive-shell.sh diffs it against the
- * declaration in both directions.
+ * #604/#613 VOLUMES — FOUR DECLARED CLASSES over one body, regrouped into TWO SECTIONS.
+ * build.json::ui.volumes.classes names Cloud-Constellation (our same-signature fleet apps),
+ * Cloud-Containers (the fleet's container mounts), Cloud-Machines (VMs, PCs, phones) and S3 (OCI
+ * buckets and Google Drive); #613's ui.volumes.sections reparents those four class pills under
+ * two headers — Cloud Constellation (the mesh/cloud side) and Personal Mounts (Machines,
+ * Containers, S3, carrying a sign-in affordance) — and a class no section claims falls under an
+ * 'Others' header rather than vanishing (the #292 rule). The regroup is a pure reparent of the
+ * strip: the `when` below is still the ONE place Kotlin names a class id, unchanged, and
+ * test/test-drive-shell.sh diffs it against the declaration in both directions.
+ *
+ * The Personal Mounts sign-in is a LINK, not an auth surface: it deep-links to cloud-sa's
+ * Profile ▸ Connect (libs:auth, the fleet's ONE sign-in that holds the SSH keys and the Authelia
+ * web-auth flow) via [DriveActions.openAuthProfile]. build.json::ui.volumes.personal_auth
+ * declares the target; nothing here reimplements auth.
  *
  * The device's own removable volumes stay a header ABOVE the strip: they are DISCOVERED
  * (Places.discovered), never declared, and #603's capability is not lost by the redesign.
@@ -85,11 +94,19 @@ fun VolumesScreen(rclone: RcloneCoordinator, prefs: DrivePrefs, actions: DriveAc
                 PillRow { Pill(stringResource(R.string.volumes_open), { v.location?.let { onOpenPath(it.path) } }, filled = true) }
             }
         }
-        Row(
-            Modifier.fillMaxWidth().testTag(DriveTags.VOLUMES_STRIP).horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            classes.forEach { c -> Pill(c.label, { current = c.id }, icon = IconCatalog.vectorOrDefault(c.icon), filled = current == c.id) }
+        val auth = Declarations.volumes.personalAuth
+        Column(Modifier.fillMaxWidth().testTag(DriveTags.VOLUMES_STRIP)) {
+            Declarations.volumes.sections.forEach { sec ->
+                ClassStrip(sec.label, sec.classIds.mapNotNull { id -> classes.firstOrNull { it.id == id } }, current, { current = it }) {
+                    if (sec.auth && auth != null) Pill(
+                        stringResource(R.string.volumes_personal_auth),
+                        { if (!actions.openAuthProfile(auth.pkg, auth.target, auth.extra)) say(ctx.getString(R.string.volumes_personal_auth_unavailable)) },
+                        icon = IconCatalog.vectorOrDefault(auth.icon),
+                    )
+                }
+            }
+            val others = Declarations.volumes.unsectioned()
+            if (others.isNotEmpty()) ClassStrip(stringResource(R.string.volumes_others), others, current, { current = it })
         }
         AnimatedContent(targetState = current, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "volumes_class", modifier = Modifier.weight(1f)) { id ->
             when (id) {
@@ -101,5 +118,28 @@ fun VolumesScreen(rclone: RcloneCoordinator, prefs: DrivePrefs, actions: DriveAc
             }
         }
         SnackbarHost(snackbar)
+    }
+}
+
+/**
+ * #613 one section's header and the horizontally-scrolling row of its class pills, plus any
+ * [trailing] affordance (the Personal Mounts sign-in). The pill idiom is unchanged from #604;
+ * only which pills sit under which header moved.
+ */
+@Composable
+private fun ClassStrip(
+    label: String,
+    classes: List<Declarations.VolumeClassDecl>,
+    current: String,
+    onPick: (String) -> Unit,
+    trailing: @Composable RowScope.() -> Unit = {},
+) {
+    SectionHeader(label, count = classes.size)
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        classes.forEach { c -> Pill(c.label, { onPick(c.id) }, icon = IconCatalog.vectorOrDefault(c.icon), filled = current == c.id) }
+        trailing()
     }
 }

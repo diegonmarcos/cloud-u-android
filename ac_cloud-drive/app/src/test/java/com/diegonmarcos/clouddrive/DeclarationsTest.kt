@@ -85,6 +85,12 @@ class DeclarationsTest {
         assertFalse("the placeholder is substituted", resolved.contains("<package>"))
         assertTrue("the package lands in the path", resolved.contains("com.x"))
         assertEquals("", volumes.constellationPathOf(""))
+        // #613 the four classes regroup into two sections, in declared order, nothing lost.
+        assertEquals(listOf("constellation", "personal"), volumes.sections.map { it.id })
+        assertTrue("Personal Mounts carries the auth affordance", volumes.sections.first { it.id == "personal" }.auth)
+        assertFalse("Cloud Constellation carries no auth affordance", volumes.sections.first { it.id == "constellation" }.auth)
+        assertEquals(volumes.classes.map { it.id }.toSet(), volumes.sections.flatMap { it.classIds }.toSet())
+        assertTrue("every declared class is claimed by a section", volumes.unsectioned().isEmpty())
     }
 
     @Test fun syncRulesMapOntoOneRcloneJob() {

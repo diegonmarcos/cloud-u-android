@@ -232,7 +232,21 @@ def uiDefaultTab  = (uiDecl.default_tab ?: uiDecl.tabs[0].id).toString()
 def uiConfigsB64  = b64(uiDecl.configs.findAll { k, v -> !k.startsWith('_') })
 def uiSyncB64     = b64(uiDecl.sync.findAll { k, v -> !k.startsWith('_') })
 def uiFilesB64    = b64(uiDecl.files.findAll { k, v -> !k.startsWith('_') })
-def uiVolumesB64  = b64(uiDecl.volumes.findAll { k, v -> !k.startsWith('_') })
+def uiVolumesDecl = uiDecl.volumes.findAll { k, v -> !k.startsWith('_') }
+// #613 Personal Mounts' auth affordance deep-links to the fleet's auth Profile (cloud-sa);
+// resolve its package from the SAME constellation manifest the Apps grid uses — one package list,
+// never a second (the #170/#380/#381 defect shape). A fleet id the manifest lacks is a hard error.
+if (uiVolumesDecl.personal_auth?.fleet) {
+    def authFleet = fleetById[uiVolumesDecl.personal_auth.fleet]
+    if (authFleet == null) {
+        throw new GradleException(
+            "build.json::ui.volumes.personal_auth.fleet '${uiVolumesDecl.personal_auth.fleet}' is not in " +
+            "the constellation fleet manifest ($fleetAppsFile). Rename or remove it.")
+    }
+    uiVolumesDecl.personal_auth.package = authFleet.package
+    uiVolumesDecl.personal_auth.remove('fleet')
+}
+def uiVolumesB64  = b64(uiVolumesDecl)
 def uiIconDefault = (uiDecl.icons?._default ?: 'circle').toString()
 // #587 which artifact sections a sign-in applies here (build.json::auth.applies), baked whole.
 def authApplies = buildJson.auth?.applies ?: [:]

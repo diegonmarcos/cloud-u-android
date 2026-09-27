@@ -205,5 +205,12 @@ class MainActivity : ComponentActivity(), DriveActions {
         return false
     }
 
+    override fun openAuthProfile(pkg: String, target: String, extra: String): Boolean {
+        if (pkg.isBlank()) return false
+        val launch = runCatching { packageManager.getLaunchIntentForPackage(pkg) }.getOrNull() ?: return false
+        if (extra.isNotBlank() && target.isNotBlank()) launch.putExtra(extra, target)
+        return runCatching { startActivity(launch) }.isSuccess
+    }
+
     private fun mimeOf(file: File): String = MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase()) ?: "application/octet-stream"
 }

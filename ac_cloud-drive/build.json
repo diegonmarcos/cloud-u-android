@@ -271,7 +271,7 @@
       "_default": "circle"
     },
     "volumes": {
-      "_doc": "#604 THE FOUR CLASSES OF VOLUME, declared, in this order. The Volumes tab used to be one list with the mesh mounts at the bottom; a volume of the fleet is one of exactly four things, so the tab is now a strip of four classes over one body — the SAME idiom as ui.configs.pages (a strip inside the tab, not a stack) and the same dispatch contract: VolumesScreen's `when (classId)` is diffed against these ids in both directions by test/test-drive-shell.sh. Cloud-Constellation is the on-device mesh between OUR same-signature fleet apps (data/drive-constellation.json); Cloud-Containers is the fleet's container volume mounts, which is exactly what MountsSyncScreen already drew (data/drive-connections.json entries with machine=container); Cloud-Machines is the same declaration filtered to the HOST-level entries, grouped by machine_kinds; S3 is the rclone remotes whose type is in s3_remote_types, browsed through `rclone lsjson`. The device's own removable volumes stay a header ABOVE the strip: they are discovered at runtime (Places.discovered), never declared, and #603's capability is not lost.",
+      "_doc": "#604 THE FOUR CLASSES OF VOLUME, declared, in this order. The Volumes tab used to be one list with the mesh mounts at the bottom; a volume of the fleet is one of exactly four things, so the tab is now a strip of four classes over one body — the SAME idiom as ui.configs.pages (a strip inside the tab, not a stack) and the same dispatch contract: VolumesScreen's `when (classId)` is diffed against these ids in both directions by test/test-drive-shell.sh. Cloud-Constellation is the on-device mesh between OUR same-signature fleet apps (data/drive-constellation.json); Cloud-Containers is the fleet's container volume mounts, which is exactly what MountsSyncScreen already drew (data/drive-connections.json entries with machine=container); Cloud-Machines is the same declaration filtered to the HOST-level entries, grouped by machine_kinds; S3 is the rclone remotes whose type is in s3_remote_types, browsed through `rclone lsjson`. The device's own removable volumes stay a header ABOVE the strip: they are discovered at runtime (Places.discovered), never declared, and #603's capability is not lost. #613 REGROUPS the four classes into TWO sections declared in `sections` below — Cloud Constellation (the mesh/cloud side, the fleet's own volumes) and Personal Mounts (Machines, Containers, S3, carrying a sign-in affordance that deep-links to cloud-sa's Profile) — a pure reparent: the classes, their dispatch and their filters are unchanged.",
       "classes": [
         {
           "id": "constellation",
@@ -294,6 +294,27 @@
           "icon": "cloud"
         }
       ],
+      "_doc_sections": "#613 THE TWO SECTIONS the four classes regroup into, in render order. `classes` names the ui.volumes.classes ids each section owns; the class rendering is UNCHANGED (VolumesScreen still dispatches its body on the class id) — a section only reparents which class pills sit under which header. `auth: true` gives the section the Personal-Mounts sign-in affordance below (personal_auth), a deep-link to the fleet's auth Profile; Cloud Constellation is the mesh/cloud side and carries none. A class no section names is NOT lost: VolumesScreen renders it under an 'Others' header (the #292 rule — never lose a row). The union of every section's `classes` must cover ui.volumes.classes; test/test-drive-shell.sh D13 holds it so.",
+      "sections": [
+        {
+          "id": "constellation",
+          "label": "Cloud Constellation",
+          "classes": [ "constellation" ]
+        },
+        {
+          "id": "personal",
+          "label": "Personal Mounts",
+          "auth": true,
+          "classes": [ "machines", "containers", "s3" ]
+        }
+      ],
+      "_doc_personal_auth": "#613 THE AUTH AFFORDANCE of the Personal Mounts section — a LINK, not a second auth surface. The sign-in that holds the SSH keys and the Authelia web-auth flow is the fleet's ONE auth (libs:auth), hosted by cloud-sa's Profile ▸ Connect; this deep-links there rather than reimplementing it here. `fleet` resolves to a package at build time from the SAME constellation manifest the Apps grid uses (no second package list); the launch intent carries `target` as the string extra named by `extra`, which is the fleet's launcher-shortcut deep-link contract (cloud-sa ShellActivity.handleShortcutIntent → onTileClicked resolves page:config/profile), so the tap lands on Profile ▸ Connect. If cloud-sa is not installed the affordance reports it and does nothing else.",
+      "personal_auth": {
+        "fleet": "aa_cloud-superapp",
+        "target": "page:config/profile",
+        "extra": "shortcut_action",
+        "icon": "login"
+      },
       "_doc_machine_kinds": "The host classes Cloud-Machines groups by, in render order; a declared connection's `machine` field names one of these or `container` (the default, which belongs to Cloud-Containers instead). A kind with no connection renders an honest empty group, never a hidden one.",
       "machine_kinds": [
         "vm",

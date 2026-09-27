@@ -433,6 +433,48 @@ if grep -qE 'throw new GradleException\("build\.json::ui\.volumes\.classes must 
 if grep -qE 'connections: List<Declarations\.ConnectionDecl> = Declarations\.connections' "$SRC/sync/RcloneMountsScreens.kt"; then pass "Cloud-Containers is the SAME MountsSyncScreen, scoped — not a second mounts screen"; else fail "MountsSyncScreen is not scopeable: Volumes must reuse it, never copy it"; fi
 if grep -qE 'fun job\(rule: Declarations\.SyncRuleDecl\): RcloneJob' "$SRC/sync/SyncRules.kt" && ! grep -qE 'ProcessBuilder|exec\(' "$SRC/sync/SyncRules.kt"; then pass "a sync rule runs as ONE RcloneJob on the existing engine, never its own process"; else fail "SyncRules does not map a rule onto libs:rclone's job model"; fi
 
+echo "── D13 the #613 regroup: two sections, three Personal subgroups, one auth deep-link ──"
+# d13_sections <build.json> : the two sections regroup the four classes, nothing lost, Personal carries the auth
+d13_sections() {
+    python3 - "$1" <<'PYTHON'
+import json, sys
+vol = json.load(open(sys.argv[1]))["ui"]["volumes"]
+bad = 0
+classes = [c.get("id") for c in (vol.get("classes") or [])]
+sections = vol.get("sections") or []
+ids = [s.get("id") for s in sections]
+if ids != ["constellation", "personal"]:
+    print("    ui.volumes.sections is %s, not the #613 order constellation/personal" % ids); bad = 1
+if any(not s.get("label") for s in sections):
+    print("    a section lacks a label"); bad = 1
+by = {s.get("id"): s for s in sections}
+if (by.get("constellation") or {}).get("classes") != ["constellation"]:
+    print("    Cloud Constellation must own exactly the constellation class"); bad = 1
+if (by.get("personal") or {}).get("classes") != ["machines", "containers", "s3"]:
+    print("    Personal Mounts must own the three subgroups machines/containers/s3, in order"); bad = 1
+if not (by.get("personal") or {}).get("auth"):
+    print("    Personal Mounts must carry auth: true (its sign-in affordance)"); bad = 1
+if (by.get("constellation") or {}).get("auth"):
+    print("    Cloud Constellation is the mesh side and must carry no auth affordance"); bad = 1
+# NOTHING LOST: every declared class is claimed by exactly one section.
+claimed = [c for s in sections for c in (s.get("classes") or [])]
+if sorted(claimed) != sorted(classes):
+    print("    the sections' classes %s do not cover ui.volumes.classes %s (a class would be lost or double-listed)" % (sorted(claimed), sorted(classes))); bad = 1
+# the auth deep-link is declared: a fleet id (resolved to a package at build time) or a package, plus a target and the extra it travels as.
+pa = vol.get("personal_auth") or {}
+if not (pa.get("fleet") or pa.get("package")):
+    print("    ui.volumes.personal_auth names neither a fleet id nor a package: the sign-in has nothing to launch"); bad = 1
+if not pa.get("target") or not pa.get("extra"):
+    print("    ui.volumes.personal_auth lacks target or extra: the deep-link cannot say where to land"); bad = 1
+sys.exit(bad)
+PYTHON
+}
+d13_sections "$BJ" && pass "two sections in the #613 order; Personal owns machines/containers/s3 and the auth, Constellation owns constellation and none; nothing lost" || fail "the #613 two-section regroup is not what build.json declares"
+if grep -qE 'Declarations\.volumes\.sections\.forEach' "$VOLUMES_KT" && grep -qE 'Declarations\.volumes\.unsectioned\(\)' "$VOLUMES_KT"; then pass "VolumesScreen renders the declared sections and buckets an unclaimed class under Others"; else fail "VolumesScreen does not render ui.volumes.sections (the regroup is declared but not drawn)"; fi
+if grep -qE 'actions\.openAuthProfile\(auth\.pkg, auth\.target, auth\.extra\)' "$VOLUMES_KT" \
+    && grep -qE 'fun openAuthProfile\(pkg: String, target: String, extra: String\): Boolean' "$SRC/DriveActions.kt" \
+    && grep -qE 'override fun openAuthProfile\(' "$MAIN"; then pass "the Personal Mounts sign-in deep-links through DriveActions.openAuthProfile, implemented on the Activity — libs:auth is not reimplemented here"; else fail "the auth affordance is not wired to a cross-app deep-link (DriveActions.openAuthProfile / MainActivity)"; fi
+
 echo "== M mutation-proof =="
 
 TMP="$(mktemp -d)"; trap 'rm -rf "${TMP:?}"' EXIT
@@ -457,8 +499,16 @@ python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["rules"][0]["loca
 d12_rules "$TMP/rule-moved.json" "$REMOTES_JSON" >/dev/null && fail "D12 passed a default rule that lost /ya_mnt_sync-a37 (tester is vacuous)" || pass "the default rule's local folder changed → D12 RED"
 python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d[0]["machine"]="laptop"; json.dump(d,open(sys.argv[2],"w"))' "$CONN_JSON" "$TMP/conn-stray.json"
 d12_machines "$BJ" "$TMP/conn-stray.json" >/dev/null && fail "D12 passed a connection whose machine kind no class renders (tester is vacuous)" || pass "a connection with an undeclared machine kind → D12 RED"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); [s["classes"].pop() for s in b["ui"]["volumes"]["sections"] if s["id"]=="personal"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/section-lost-class.json"
+d13_sections "$TMP/section-lost-class.json" >/dev/null && fail "D13 passed sections that dropped a class (a volume would be lost — tester is vacuous)" || pass "a class dropped from a section's list (S3 lost) → D13 RED"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); [s.update(auth=False) for s in b["ui"]["volumes"]["sections"] if s["id"]=="personal"]; json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/section-no-auth.json"
+d13_sections "$TMP/section-no-auth.json" >/dev/null && fail "D13 passed a Personal Mounts section with no auth (tester is vacuous)" || pass "Personal Mounts stripped of auth:true → D13 RED"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["volumes"]["sections"].reverse(); json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/section-swapped.json"
+d13_sections "$TMP/section-swapped.json" >/dev/null && fail "D13 passed the sections out of order (tester is vacuous)" || pass "the two sections reordered → D13 RED"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["volumes"]["personal_auth"].pop("target",None); json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/auth-no-target.json"
+d13_sections "$TMP/auth-no-target.json" >/dev/null && fail "D13 passed a personal_auth with no deep-link target (tester is vacuous)" || pass "personal_auth stripped of its target → D13 RED"
 d1 "$BJ" "$MAIN" >/dev/null && d2 "$BJ" "$CONFIGS" >/dev/null && d2s "$BJ" "$SYNC_KT" >/dev/null && d3 "$BJ" "$CATALOG" >/dev/null && d11_seed "$REPOS" >/dev/null \
-    && d12_classes "$BJ" "$VOLUMES_KT" >/dev/null && d12_rsync "$BJ" "$APPS_JSON" >/dev/null && d12_rules "$RULES_JSON" "$REMOTES_JSON" >/dev/null && d12_machines "$BJ" "$CONN_JSON" >/dev/null \
+    && d12_classes "$BJ" "$VOLUMES_KT" >/dev/null && d12_rsync "$BJ" "$APPS_JSON" >/dev/null && d12_rules "$RULES_JSON" "$REMOTES_JSON" >/dev/null && d12_machines "$BJ" "$CONN_JSON" >/dev/null && d13_sections "$BJ" >/dev/null \
     && pass "unmutated tree is still green" || fail "the unmutated tree is red"
 
 echo

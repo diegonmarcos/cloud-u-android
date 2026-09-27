@@ -95,19 +95,43 @@ object Declarations {
     data class VolumeClassDecl(val id: String, val label: String, val icon: String)
 
     /**
-     * #604 the Volumes tab: the four classes, the host kinds Cloud-Machines groups by,
-     * the data/drive-remotes.json types the S3 class owns, and where one fleet app's
-     * shared folder lives ([constellationPath] carries a `<package>` placeholder).
+     * #613 one of the two sections the classes regroup into. [classIds] are the
+     * ui.volumes.classes ids this section owns; [auth] gives it the Personal-Mounts
+     * sign-in affordance (a deep-link to cloud-sa's Profile). A pure reparent — the
+     * class rendering and the VolumesScreen dispatch are unchanged.
+     */
+    data class VolumeSectionDecl(val id: String, val label: String, val auth: Boolean, val classIds: List<String>)
+
+    /**
+     * #613 the Personal Mounts sign-in affordance — a LINK to the fleet's auth Profile,
+     * never a second auth surface. [pkg] is resolved from the fleet manifest at build time;
+     * the launch intent carries [target] as the string extra [extra] (cloud-sa's
+     * launcher-shortcut deep-link contract), so the tap lands on Profile ▸ Connect.
+     */
+    data class PersonalAuthDecl(val pkg: String, val target: String, val extra: String, val icon: String)
+
+    /**
+     * #604/#613 the Volumes tab: the four classes, the two sections that regroup them
+     * (#613), the host kinds Cloud-Machines groups by, the data/drive-remotes.json types
+     * the S3 class owns, where one fleet app's shared folder lives ([constellationPath]
+     * carries a `<package>` placeholder), and Personal Mounts' auth deep-link.
      */
     data class VolumesDecl(
         val classes: List<VolumeClassDecl>,
+        val sections: List<VolumeSectionDecl>,
         val machineKinds: List<String>,
         val s3RemoteTypes: Set<String>,
         val constellationPath: String,
+        val personalAuth: PersonalAuthDecl?,
     ) {
         /** The shared external files folder of [packageName], or blank when nothing is declared. */
         fun constellationPathOf(packageName: String): String =
             if (constellationPath.isBlank() || packageName.isBlank()) "" else constellationPath.replace("<package>", packageName)
+        /** The class ids no section claims — VolumesScreen renders them under 'Others' (#292: never lose a row). */
+        fun unsectioned(): List<VolumeClassDecl> {
+            val claimed = sections.flatMap { it.classIds }.toSet()
+            return classes.filter { it.id !in claimed }
+        }
     }
 
     /** #604 a fleet app Volumes ▸ Cloud-Constellation lists; the package is resolved at build time. */
@@ -291,11 +315,17 @@ object Declarations {
     }
 
     fun parseVolumes(text: String): VolumesDecl {
-        val o = element(text) as? JsonObject ?: return VolumesDecl(emptyList(), emptyList(), emptySet(), "")
+        val o = element(text) as? JsonObject ?: return VolumesDecl(emptyList(), emptyList(), emptyList(), emptySet(), "", null)
         val classes = objects(o["classes"]).mapNotNull { c ->
             val id = c.str("id"); if (id.isBlank()) null else VolumeClassDecl(id, c.str("label", id), c.str("icon"))
         }
-        return VolumesDecl(classes, o.strings("machine_kinds"), o.strings("s3_remote_types").toSet(), o.str("constellation_path"))
+        val sections = objects(o["sections"]).mapNotNull { s ->
+            val id = s.str("id"); if (id.isBlank()) null else VolumeSectionDecl(id, s.str("label", id), s.bool("auth"), s.strings("classes"))
+        }
+        val personalAuth = (o["personal_auth"] as? JsonObject)?.let {
+            val pkg = it.str("package"); if (pkg.isBlank()) null else PersonalAuthDecl(pkg, it.str("target"), it.str("extra"), it.str("icon"))
+        }
+        return VolumesDecl(classes, sections, o.strings("machine_kinds"), o.strings("s3_remote_types").toSet(), o.str("constellation_path"), personalAuth)
     }
 
     fun parseConstellation(text: String): List<ConstellationAppDecl> = objects(element(text)).mapNotNull { a ->

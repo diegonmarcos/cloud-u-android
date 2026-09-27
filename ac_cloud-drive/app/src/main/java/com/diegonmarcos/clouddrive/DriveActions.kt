@@ -21,4 +21,6 @@ interface DriveActions {
     fun openUrl(url: String)
     /** Launch an installed package, or its fallback URL; false when neither is possible. */
     fun launchApp(packageName: String, fallbackUrl: String): Boolean
+    /** #613 deep-link to the fleet's auth Profile (cloud-sa): launch [pkg] carrying [target] as the [extra]. False when it is not installed. */
+    fun openAuthProfile(pkg: String, target: String, extra: String): Boolean
 }

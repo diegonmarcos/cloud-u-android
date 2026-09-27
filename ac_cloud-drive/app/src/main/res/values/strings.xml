@@ -142,6 +142,9 @@
     <string name="volumes_constellation_hint">Declared in data/drive-constellation.json; a row opens that app\'s shared files folder</string>
     <string name="volumes_machines_hint">No host of this kind is declared yet</string>
     <string name="volumes_machines_other">Other hosts</string>
+    <string name="volumes_personal_auth">Sign in</string>
+    <string name="volumes_personal_auth_unavailable">Cloud SuperApp is not installed — sign in there to authorise these mounts</string>
+    <string name="volumes_others">Others</string>
     <string name="volumes_s3_section">Buckets and drives</string>
     <string name="volumes_s3_hint">Declared in data/drive-remotes.json; the S3 and Google Drive remotes land here</string>
     <string name="volumes_class_empty">Nothing declared</string>
