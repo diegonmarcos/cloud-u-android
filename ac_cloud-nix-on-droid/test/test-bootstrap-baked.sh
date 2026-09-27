@@ -211,5 +211,75 @@ else
     bad "bake_default_packages.py is missing the #612 bin/login mount patch (\$HOME/emulated, \$HOME/cloud-drive-shared-store)"
 fi
 
+# ── #605 — bin/login's proot-static exec must resolve to THIS app's own
+#           prefix, never the different (and not-installed) com.termux.nix
+#           app whose path was baked into the upstream bootstrap zip. Runs the
+#           REAL patch_bootstrap_ids.py against a synthetic fixture shaped
+#           exactly like the real bin/login (same "exec .../proot-static \"
+#           literal), entirely offline -- no network, no real bootstrap zip.
+C1_WORKDIR="$(mktemp -d)"
+trap 'rm -rf "$C1_WORKDIR"' EXIT
+C1_RESULT="$(python3 -c "
+import sys, zipfile
+sys.path.insert(0, '$DIR/app/src/main/cpp')
+
+frm, to = '$FROM', '$TO'
+work = '$C1_WORKDIR'
+src = work + '/fixture.zip'
+out = work + '/patched.zip'
+
+login = (
+    'export HOME=\"/data/data/' + frm + '/files/home\"\n'
+    'exec /data/data/' + frm + '/files/usr/bin/proot-static \\\\\n'
+    '  -b /data/data/' + frm + '/files/usr/nix:/nix \\\\\n'
+    '  /data/data/' + frm + '/files/usr/bin/sh /data/data/' + frm + '/files/usr/usr/lib/login-inner \"\$@\"\n'
+)
+with zipfile.ZipFile(src, 'w') as z:
+    z.writestr('bin/login', login)
+    z.writestr('usr/lib/login-inner', 'placeholder, unused by this fixture\n')
+    z.writestr('SYMLINKS.txt', '')
+    z.writestr('EXECUTABLES.txt', 'bin/login\n')
+
+import patch_bootstrap_ids
+sys.argv = ['patch_bootstrap_ids.py', src, out, frm + '=' + to]
+try:
+    rc = patch_bootstrap_ids.main()
+except SystemExit as e:
+    rc = e.code
+
+with zipfile.ZipFile(out) as z:
+    patched_login = z.read('bin/login').decode()
+
+expected_exec = 'exec /data/data/' + to + '/files/usr/bin/proot-static \\\\'
+ok = (rc == 0
+      and frm not in patched_login
+      and expected_exec in patched_login)
+print('RESULT:' + ('OK' if ok else 'FAIL rc=' + str(rc) + ' exec_present=' + str(expected_exec in patched_login) + ' old_id_gone=' + str(frm not in patched_login)))
+" 2>/dev/null | sed -n 's/^RESULT://p')"
+case "$C1_RESULT" in
+    OK) ok "patch_bootstrap_ids.py rewrites bin/login's proot-static exec to $TO (never leaves $FROM behind)" ;;
+    *)  bad "patch_bootstrap_ids.py did not produce a clean $TO proot-static exec: $C1_RESULT" ;;
+esac
+
+# ── #605 — an APK update alone does not fix an already-extracted rootfs
+#           unless something re-extracts it: TermuxInstaller must gate its
+#           "prefix already exists, do nothing" shortcut on comparing the
+#           baked bootstrap's version against what was actually installed.
+BOOTSTRAP_VERSION_ASSET="$(sed -n 's/.*BOOTSTRAP_VERSION_ASSET_NAME = "\([^"]*\)".*/\1/p' "$INSTALLER" | head -1)"
+if [ "$BOOTSTRAP_VERSION_ASSET" = "${ASSET}.sha256" ] \
+   && grep -q 'readBakedBootstrapVersion' "$INSTALLER" \
+   && grep -q 'readInstalledBootstrapVersion' "$INSTALLER" \
+   && grep -q 'bootstrapUpToDate' "$INSTALLER"; then
+    ok "TermuxInstaller gates its 'prefix already exists' shortcut on the baked bootstrap version, not just non-emptiness"
+else
+    bad "TermuxInstaller has no bootstrap-version gate — an APK update that fixes bootstrap.zip would never reach a phone with an already-extracted, stale \$PREFIX"
+fi
+
+if grep -q "spec.asset_name + \".sha256\"" "$GRADLE" && grep -q 'sha256Of(baked)' "$GRADLE"; then
+    ok "app/build.gradle bakes ${ASSET}.sha256 alongside $ASSET for the installer to compare against"
+else
+    bad "app/build.gradle does not write ${ASSET}.sha256 — the installer's version gate has nothing to read"
+fi
+
 echo "── $fails failed ──"
 [ "$fails" -eq 0 ]

@@ -24,15 +24,20 @@ import com.termux.shared.termux.TermuxUtils;
 import com.termux.shared.termux.shell.command.environment.TermuxShellEnvironment;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import static com.termux.shared.termux.TermuxConstants.TERMUX_FILES_DIR_PATH;
 import static com.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR;
 import static com.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR_PATH;
 import static com.termux.shared.termux.TermuxConstants.TERMUX_STAGING_PREFIX_DIR;
@@ -82,6 +87,54 @@ final class TermuxInstaller {
      */
     static final String BOOTSTRAP_ASSET_NAME = "bootstrap.zip";
 
+    /**
+     * #605 -- the sha256 of {@link #BOOTSTRAP_ASSET_NAME}, baked alongside it by
+     * app/build.gradle::bakeBootstrap so this app can tell "already installed"
+     * apart from "already installed an OLDER, possibly broken, bootstrap".
+     * <p/>
+     * Below, {@link #setupBootstrapIfNeeded} used to treat any non-empty
+     * {@code $PREFIX} as done, forever -- an APK update that fixes the baked
+     * bootstrap (e.g. the id-rewrite that keeps bin/login's proot-static exec
+     * pointed at THIS app's own /data/data/<id>/files, not a different app's)
+     * never reached a phone that had already extracted the broken one: nothing
+     * ever re-extracted it. Comparing this file against a marker written next
+     * to $PREFIX after each successful extraction (outside it, so deleting/
+     * recreating $PREFIX doesn't erase the record) is what lets a fixed
+     * bootstrap.zip actually replace a stale, already-installed rootfs.
+     */
+    static final String BOOTSTRAP_VERSION_ASSET_NAME = "bootstrap.zip.sha256";
+
+    /** Where the version of the currently-extracted $PREFIX is recorded. See {@link #BOOTSTRAP_VERSION_ASSET_NAME}. */
+    static final File INSTALLED_BOOTSTRAP_VERSION_FILE = new File(TERMUX_FILES_DIR_PATH, ".bootstrap_version");
+
+    /** Reads {@link #BOOTSTRAP_VERSION_ASSET_NAME} from assets, or null if it is missing. */
+    private static String readBakedBootstrapVersion(Activity activity) {
+        try (InputStream in = activity.getAssets().open(BOOTSTRAP_VERSION_ASSET_NAME)) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[256];
+            int read;
+            while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+            return new String(out.toByteArray(), StandardCharsets.UTF_8).trim();
+        } catch (Exception e) {
+            Logger.logWarn(LOG_TAG, "Could not read " + BOOTSTRAP_VERSION_ASSET_NAME + " from assets: " + e);
+            return null;
+        }
+    }
+
+    /** Reads the marker left by the last successful extraction, or null if there was none. */
+    private static String readInstalledBootstrapVersion() {
+        if (!INSTALLED_BOOTSTRAP_VERSION_FILE.isFile()) return null;
+        try (InputStream in = new FileInputStream(INSTALLED_BOOTSTRAP_VERSION_FILE)) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[256];
+            int read;
+            while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+            return new String(out.toByteArray(), StandardCharsets.UTF_8).trim();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /** Performs bootstrap setup if necessary. */
     static void setupBootstrapIfNeeded(final Activity activity, final Runnable whenDone) {
         String bootstrapErrorMessage;
@@ -123,13 +176,23 @@ final class TermuxInstaller {
             return;
         }
 
+        // #605 -- an APK update can ship a FIXED bootstrap.zip, but that fix
+        // never reaches a phone whose $PREFIX was already extracted from an
+        // older, possibly-broken one, unless the version actually installed
+        // is compared against the version this build carries.
+        String bakedBootstrapVersion = readBakedBootstrapVersion(activity);
+        boolean bootstrapUpToDate = bakedBootstrapVersion == null
+            || bakedBootstrapVersion.equals(readInstalledBootstrapVersion());
+
         // If prefix directory exists, even if its a symlink to a valid directory and symlink is not broken/dangling
         if (FileUtils.directoryFileExists(TERMUX_PREFIX_DIR_PATH, true)) {
             if (TermuxFileUtils.isTermuxPrefixDirectoryEmpty()) {
                 Logger.logInfo(LOG_TAG, "The termux prefix directory \"" + TERMUX_PREFIX_DIR_PATH + "\" exists but is empty or only contains specific unimportant files.");
-            } else {
+            } else if (bootstrapUpToDate) {
                 whenDone.run();
                 return;
+            } else {
+                Logger.logInfo(LOG_TAG, "The termux prefix directory \"" + TERMUX_PREFIX_DIR_PATH + "\" was extracted from an older bootstrap (installed=" + readInstalledBootstrapVersion() + ", baked=" + bakedBootstrapVersion + "); re-extracting.");
             }
         } else if (FileUtils.fileExists(TERMUX_PREFIX_DIR_PATH, false)) {
             Logger.logInfo(LOG_TAG, "The termux prefix directory \"" + TERMUX_PREFIX_DIR_PATH + "\" does not exist but another file exists at its destination.");
@@ -137,10 +200,10 @@ final class TermuxInstaller {
 
         // The bootstrap ships inside the APK, so there is nothing to ask the
         // user and nothing to fetch: install it.
-        restOfSetupIfNeeded(activity, whenDone);
+        restOfSetupIfNeeded(activity, whenDone, bakedBootstrapVersion);
     }
 
-    static void restOfSetupIfNeeded(final Activity activity, final Runnable whenDone) {
+    static void restOfSetupIfNeeded(final Activity activity, final Runnable whenDone, final String bakedBootstrapVersion) {
 
         final ProgressDialog progress = ProgressDialog.show(activity, null, activity.getString(R.string.bootstrap_installer_body), true, false);
         new Thread() {
@@ -265,6 +328,17 @@ final class TermuxInstaller {
                     }
 
                     Logger.logInfo(LOG_TAG, "Bootstrap packages installed successfully.");
+
+                    // #605 -- record what was actually extracted, outside $PREFIX
+                    // (which the next update may wipe and re-extract), so a future
+                    // launch can tell this bootstrap apart from a newer, fixed one.
+                    if (bakedBootstrapVersion != null) {
+                        try (FileOutputStream versionOut = new FileOutputStream(INSTALLED_BOOTSTRAP_VERSION_FILE)) {
+                            versionOut.write(bakedBootstrapVersion.getBytes(StandardCharsets.UTF_8));
+                        } catch (Exception e) {
+                            Logger.logWarn(LOG_TAG, "Could not record installed bootstrap version: " + e);
+                        }
+                    }
 
                     // Recreate env file since termux prefix was wiped earlier
                     TermuxShellEnvironment.writeEnvironmentToFile(activity);

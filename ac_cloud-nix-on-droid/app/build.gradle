@@ -41,7 +41,7 @@ android {
     defaultConfig {
         applicationId "cld.termux"
         applicationIdSuffix ".nix"
-        versionCode 188039
+        versionCode 188040
         versionName "0.118.0_v0.3.8_nix"
         // fdroid checkupdates looks for literal versionCode/versionName,
         // can't get fancy with these and use string interpolation and similar
@@ -423,6 +423,12 @@ task bakeBootstrap() {
                 throw new GradleException("bake_default_packages.py failed (exit " + toolingResult.exitValue
                         + "); see log above")
         }
+
+        // #605 -- stamp the sha256 of the FINAL (id-patched, tooling-baked) zip
+        // as its own asset, so TermuxInstaller can tell "already installed"
+        // apart from "already installed an OLDER bootstrap" and re-extract a
+        // fix instead of leaving a stale, already-extracted rootfs in place.
+        new File(bootstrapAssetsDir, spec.asset_name + ".sha256").text = sha256Of(baked)
 
         logger.quiet("bakeBootstrap: " + abi + " -> assets/" + spec.asset_name
                 + " (" + baked.length() + " B, from " + downloaded.length() + " B)")
