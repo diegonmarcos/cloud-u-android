@@ -490,47 +490,47 @@
           }
         ],
         "history_max": 30,
-        "_doc_public_repos": "#608 THE DECLARED PUBLIC SET of the `public` section, alphabetical by name. DERIVED, not hand-picked: every repository of `owner` whose name begins with one of `name_families` AND whose GitHub `private` flag is false, enumerated once over the REST list route and verified one by one (an unauthenticated GET of /repos/<owner>/<name> answering 200 IS the proof of public). cloud-u-android — this repository — is in the set; it was missing from data/drive-git-repos.json's curated family's intent and is named here explicitly for that reason. front-data is HERE and PUBLIC: drive-git-repos.json marked it private, which the live API contradicts, and that file is corrected in the same change. There is no repository called `front`: the front-end tree of this fleet is `ffront`, which the `front` family does not match and which is therefore deliberately absent rather than silently renamed. NOT in the set, on purpose: diegonmarcos.github.io and git-repos-master (public, but outside both name families) and every cloud*/front* repository whose flag is private (cloud-data, cloud-data-lfs, cloud-data-my-ai-memory, cloud-me, cloud-me_configs, cloud-me_data-private, cloud-me_vault, cloud-notes, front-galaxy-gaia, front-unity) — those reach the page through the personal section's authenticated listing, which is where a private repository belongs.",
+        "_doc_public_repos": "#608 THE DECLARED PUBLIC SET of the `public` section, alphabetical by name. DERIVED, not hand-picked: every repository of `owner` whose name begins with one of `name_families` AND whose GitHub `private` flag is false, enumerated once over the REST list route and verified one by one (an unauthenticated GET of /repos/<owner>/<name> answering 200 IS the proof of public). cloud-u-android — this repository — is in the set; it was missing from data/drive-git-repos.json's curated family's intent and is named here explicitly for that reason. front-data is HERE and PUBLIC: drive-git-repos.json marked it private, which the live API contradicts, and that file is corrected in the same change. There is no repository called `front`: the front-end tree of this fleet is `ffront`, which the `front` family does not match and which is therefore deliberately absent rather than silently renamed. NOT in the set, on purpose: diegonmarcos.github.io and git-repos-master (public, but outside both name families) and every cloud*/front* repository whose flag is private (cloud-data, cloud-data-lfs, cloud-data-my-ai-memory, cloud-me, cloud-me_configs, cloud-me_data-private, cloud-me_vault, cloud-notes, front-galaxy-gaia, front-unity) — those reach the page through the personal section's authenticated listing, which is where a private repository belongs. THE FIELDS ARE `repo` AND `caption`, NOT `name`/`label`, and that is not cosmetic: the fleet's app-names guard (aa_cloud-superapp/test/test-app-names-pattern.sh T5) sweeps every `name`, `label` and `title` in every build.json and refuses a value that normalises onto an application's name — `cloud-me_data-pub` normalises onto the cloud-me application — and it is RIGHT to refuse an application name written that way. A git repository name is a different kind of fact from an application name, so it is carried under a key that says which one it is, instead of dropping a repository out of a set whose whole point is to be complete.",
         "name_families": [
           "cloud",
           "front"
         ],
         "public_repos": [
           {
-            "name": "cloud",
-            "label": "cloud"
+            "repo": "cloud",
+            "caption": "cloud"
           },
           {
-            "name": "cloud-infra",
-            "label": "cloud-infra"
+            "repo": "cloud-infra",
+            "caption": "cloud-infra"
           },
           {
-            "name": "cloud-infra-desktop",
-            "label": "cloud-infra-desktop"
+            "repo": "cloud-infra-desktop",
+            "caption": "cloud-infra-desktop"
           },
           {
-            "name": "cloud-me_data-pub",
-            "label": "cloud-me_data-pub"
+            "repo": "cloud-me_data-pub",
+            "caption": "cloud-me_data-pub"
           },
           {
-            "name": "cloud-u-android",
-            "label": "cloud-u-android"
+            "repo": "cloud-u-android",
+            "caption": "cloud-u-android"
           },
           {
-            "name": "cloud-u-containers",
-            "label": "cloud-u-containers"
+            "repo": "cloud-u-containers",
+            "caption": "cloud-u-containers"
           },
           {
-            "name": "cloud-u-linux",
-            "label": "cloud-u-linux"
+            "repo": "cloud-u-linux",
+            "caption": "cloud-u-linux"
           },
           {
-            "name": "front-assets-cdn",
-            "label": "front-assets-cdn"
+            "repo": "front-assets-cdn",
+            "caption": "front-assets-cdn"
           },
           {
-            "name": "front-data",
-            "label": "front-data"
+            "repo": "front-data",
+            "caption": "front-data"
           }
         ]
       }

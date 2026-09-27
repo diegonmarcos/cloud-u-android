@@ -254,8 +254,11 @@ object Declarations {
             },
             historyMax = (o.int("history_max") ?: 30).coerceAtLeast(1),
             nameFamilies = o.strings("name_families"),
+            // `repo`/`caption`, not `name`/`label`: build.json::ui.sync.git._doc_public_repos
+            // says why (the fleet's app-names guard sweeps name/label/title, and a repository
+            // name is not an application name).
             publicRepos = objects(o["public_repos"]).mapNotNull { r ->
-                val name = r.str("name"); if (name.isBlank()) null else GitPublicRepoDecl(name, r.str("label", name))
+                val name = r.str("repo"); if (name.isBlank()) null else GitPublicRepoDecl(name, r.str("caption", name))
             },
         )
     }

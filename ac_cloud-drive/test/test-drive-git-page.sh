@@ -144,7 +144,7 @@ import json, sys
 g = json.load(open(sys.argv[1]))["ui"]["sync"]["git"]
 manifest = json.load(open(sys.argv[2]))["repos"]
 families = tuple(g["name_families"])
-names = [r["name"] for r in g["public_repos"]]
+names = [r["repo"] for r in g["public_repos"]]
 bad = 0
 strays = [n for n in names if not n.startswith(families)]
 if strays:
@@ -153,8 +153,8 @@ if len(set(names)) != len(names):
     print("    public_repos has duplicates"); bad = 1
 if names != sorted(names):
     print("    public_repos is not alphabetical by name: %s" % names); bad = 1
-if any(not r.get("label") for r in g["public_repos"]):
-    print("    a public_repos entry has no label"); bad = 1
+if any(not r.get("caption") for r in g["public_repos"]):
+    print("    a public_repos entry has no caption"); bad = 1
 if "cloud-u-android" not in names:
     print("    cloud-u-android is missing from the declared public set (#608 names it explicitly)"); bad = 1
 by_name = {r["name"]: r for r in manifest}
@@ -296,7 +296,7 @@ p1 "$TMP/no-size-op.json" >/dev/null && fail "P1 passed a thirteen-operation dec
 sed 's/"personal" -> {/"personnal" -> {/' "$PAGE" > "$TMP/page.kt"
 cmp -s "$PAGE" "$TMP/page.kt" && fail "the section mutation changed nothing (tester is stale)"
 p3 "$BJ" "$TMP/page.kt" >/dev/null && fail "P3 passed a misspelt section dispatch (tester is vacuous)" || pass "a section id misspelt in the screen → P3 RED"
-python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["sync"]["git"]["public_repos"].append({"name":"cloud-data-my-ai-memory","label":"x"}); b["ui"]["sync"]["git"]["public_repos"].sort(key=lambda r:r["name"]); json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/private-in-public.json"
+python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); b["ui"]["sync"]["git"]["public_repos"].append({"repo":"cloud-data-my-ai-memory","caption":"x"}); b["ui"]["sync"]["git"]["public_repos"].sort(key=lambda r:r["repo"]); json.dump(b,open(sys.argv[2],"w"))' "$BJ" "$TMP/private-in-public.json"
 p2 "$TMP/private-in-public.json" "$REPOS" >/dev/null && fail "P2 passed a PRIVATE repository in the public set (tester is vacuous)" || pass "a private repository added to the public set → P2 RED"
 grep -v '    fun forcePush(' "$ENGINE" > "$TMP/engine.kt"
 cmp -s "$ENGINE" "$TMP/engine.kt" && fail "the engine mutation changed nothing (tester is stale)"

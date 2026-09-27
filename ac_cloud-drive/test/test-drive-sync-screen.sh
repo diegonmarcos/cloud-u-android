@@ -105,7 +105,7 @@ echo "── G7 declared, not cloned (#608: a DENSE ROW, not a card) ──"
 # URL is the DECLARED remote-mode shape substituted once (ui.sync.git.remote_modes), and
 # the private/fork facts ride the row as badges. test-drive-git-page.sh owns the rest.
 if grep -qE 'url = page\.cloneUrl\(name, mode\)' "$CARDS" && grep -qE 'Pill\(stringResource\(R\.string\.sync_clone_into_store\), onClone, filled = true\)' "$CARDS"; then pass "a not-cloned row offers Clone into store with the declared URL, composed once"; else fail "clone-into-store composition missing"; fi
-if grep -qE 'testTag\(DriveTags\.SYNC_GIT_ROW\)' "$CARDS" && grep -qE 'if \(private\) CapsuleBadge\(stringResource\(R\.string\.chrome_private\)\)' "$CARDS"; then pass "the dense row is tagged and carries the private badge"; else fail "declared cards incomplete"; fi
+if grep -qE 'testTag\(DriveTags\.SYNC_GIT_ROW\)' "$CARDS" && grep -qE 'if \(isPrivate\) CapsuleBadge\(stringResource\(R\.string\.chrome_private\)\)' "$CARDS"; then pass "the dense row is tagged and carries the private badge"; else fail "declared cards incomplete"; fi
 
 echo "── G8 Rclone and Mounts, same language ──"
 if grep -qE 'tag = DriveTags\.SYNC_REMOTE_CARD' "$RC" && grep -qE 'tag = DriveTags\.SYNC_MOUNT_CARD' "$RC" && grep -qE 'testTag\(DriveTags\.SYNC_JOB_ROW\)' "$RC" && grep -qE 'testTag\(DriveTags\.SYNC_CONNECTION_ROW\)' "$RC"; then pass "remote cards, mount cards, job rows, connection rows are tagged"; else fail "rclone/mounts tree not tagged"; fi
