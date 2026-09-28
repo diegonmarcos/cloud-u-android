@@ -483,31 +483,41 @@ _enforce_signature() {
 # Source-built forks pass app_id; upstream-APK forks pass upstream_apk.package when set.
 # The package ids an APK actually declares.
 #
-# EXACT READER FIRST, `strings` only as a fallback (#628). This used to be one
-# line inside _assert_apk_identity:
+# WHY THIS IS NOT ONE LINE OF `strings` (#628).  It used to be, inside
+# _assert_apk_identity:
 #
-#   unzip -p "$apk" AndroidManifest.xml | LC_ALL=C strings -e l
+#     unzip -p "$apk" AndroidManifest.xml | LC_ALL=C strings -e l
 #
-# and `-e l` reads ONLY 16-bit little-endian. Every APK it had ever been pointed
-# at was an application, whose binary manifest carries a UTF-16 string pool, so
-# it always worked. The first payload-only library APK it was pointed at
-# (#628's cloud-lib-rootfs-*) yielded NOTHING — and in a `grep -Fqx`, nothing is
-# indistinguishable from the WRONG package. So a library whose package id was
-# exactly right was refused as an identity mismatch, with an empty list of
-# "package-shaped strings found" printed underneath as the evidence. The guard
-# was fail-closed, which was right; its VERDICT was wrong, which is worse than
-# either, because it named a defect that did not exist and hid the one that did.
+# and it refused #628's rootfs library APKs, whose applicationId was exactly
+# right, printing an EMPTY list of "package-shaped strings found" as its
+# evidence. The cause is not the encoding. In a binary-XML string pool each
+# string is stored with a 16-bit LENGTH PREFIX immediately before its characters,
+# and `strings` cannot know that: when the length byte happens to be PRINTABLE it
+# is glued onto the front of the string it precedes. Measured on the published
+# APK:
 #
-# aapt/aapt2 parse the manifest chunk properly and do not care how its string
-# pool is encoded. cloud-code-engine.sh has read the package that way all along;
-# this brings the fork engines to the same reader.
+#     (com.diegonmarcos.cloudlib.rootfsnixdroid     <- 40 chars, 0x28 == '('
+#     &com.diegonmarcos.cloudlib.rootfstermux       <- 38 chars, 0x26 == '&'
 #
-# The `||` on the old line was also on the PIPELINE, so its status was
-# `strings`', never `unzip`'s: a failed extraction could not reach its own error
-# message. Extraction is checked on its own here.
+# `grep -Fqx` is a whole-line match, so neither matched, and the anchored
+# package-shaped filter rejected both - hence the empty evidence list.
+#
+# So the rule the old reader really had was: it worked only while every
+# applicationId it was pointed at was SHORTER THAN 32 CHARACTERS, where the
+# length prefix is a control byte and `strings` starts a fresh string at the
+# package name. cld.termux (10), com.diegonmarcos.superapp (25) and
+# com.diegonmarcos.cloudlib.cal (29) all cleared that bar; the two rootfs
+# libraries (38, 40) did not. com.diegonmarcos.cloudlib.shizukuadbdebugtools (46)
+# would not either - a trap that was already loaded, for an id that exists today.
+#
+# THE FIX IS TO STOP GUESSING AT BYTES.  aapt/aapt2 parse the chunk, so no length
+# prefix, pool encoding or string length can confuse them; cloud-code-engine.sh
+# has read the package that way all along. `strings` survives only as a fallback
+# for a machine with no SDK, and there it extracts package-shaped SUBSTRINGS
+# rather than whole lines, which is what discards a glued prefix.
 _apk_declared_packages() {
   local apk="$1" out="" bt tool manifest
-  bt="$(ls -d "${ANDROID_HOME:-/nonexistent}"/build-tools/* 2>/dev/null | sort -V | tail -1)"
+  bt="$(ls -d "${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/nonexistent}}"/build-tools/* 2>/dev/null | sort -V | tail -1)"
   for tool in "$bt/aapt2" "$bt/aapt" aapt2 aapt; do
     command -v "$tool" >/dev/null 2>&1 || [ -x "$tool" ] || continue
     case "$tool" in
@@ -517,12 +527,28 @@ _apk_declared_packages() {
     esac
     if [ -n "$out" ]; then printf '%s\n' "$out"; return 0; fi
   done
-  # No SDK on this machine (a local checkout). Read the pool BOTH ways rather
-  # than betting on one encoding: -e l is UTF-16LE, -e S is single-byte/UTF-8,
-  # and which of the two a manifest uses is aapt2's choice, not ours.
+  # No SDK (a local checkout). Best effort, and explicitly weaker than the above.
+  #
+  # `grep -oE` with NO anchors is the whole point: it takes the package-shaped run
+  # out of the middle of whatever `strings` produced, so a printable length prefix
+  # is dropped instead of being matched against. The pattern is GREEDY, so
+  # `com.foo.bar.baz` is emitted whole and can never be mistaken for a shorter
+  # `com.foo.bar` that is not in the APK.
+  #
+  # Both encodings, because which one a pool uses is aapt2's choice: -e l is
+  # UTF-16LE, -e S single-byte/UTF-8.
+  #
+  # RESIDUAL, stated because it is real: if an applicationId is 97-122 characters
+  # long its length prefix is itself a lowercase letter, and the run then starts at
+  # the prefix. The second `print` covers exactly that by also emitting the token
+  # with its first character removed. Nothing here is authoritative - install the
+  # SDK and the exact reader above answers instead.
   manifest="$(mktemp)"
   if unzip -p "$apk" AndroidManifest.xml > "$manifest" 2>/dev/null && [ -s "$manifest" ]; then
-    { LC_ALL=C strings -e l "$manifest"; LC_ALL=C strings -e S "$manifest"; } 2>/dev/null
+    { LC_ALL=C strings -e l "$manifest"; LC_ALL=C strings -e S "$manifest"; } 2>/dev/null \
+      | grep -oE '[a-z][a-z0-9_]*(\.[a-z0-9_]+)+' \
+      | awk '{ print; if (length($0) > 1) { s = $0; sub(/^./, "", s); print s } }' \
+      | sort -u || true
   fi
   rm -f "$manifest"
   return 0

@@ -5,25 +5,42 @@
 #
 #     unzip -p "$apk" AndroidManifest.xml | LC_ALL=C strings -e l
 #
-# `-e l` reads ONLY 16-bit little-endian. Every APK the assert had ever been
-# pointed at was an APPLICATION, whose binary manifest carries a UTF-16 string
-# pool, so it always worked and was never suspected. The first payload-only
-# LIBRARY APK it was pointed at — #628's cloud-lib-rootfs-termux — yielded
-# nothing at all, and in a `grep -Fqx` nothing is indistinguishable from the
-# WRONG thing. So a library whose applicationId was exactly correct was refused
-# as an identity mismatch, and the evidence printed underneath it was an empty
-# list: "Package-shaped strings found: ".
+# and it refused the two rootfs library APKs whose applicationId was exactly
+# right, printing an EMPTY list of "package-shaped strings found" as the evidence.
+#
+# THE CAUSE IS THE LENGTH PREFIX, NOT THE ENCODING.  A binary-XML string pool
+# stores every string with a 16-bit length immediately before its characters, and
+# `strings` cannot know that: when the length byte is PRINTABLE it gets glued onto
+# the front of the string it precedes. Measured on the published APK:
+#
+#     (com.diegonmarcos.cloudlib.rootfsnixdroid     <- 40 chars, 0x28 == '('
+#     &com.diegonmarcos.cloudlib.rootfstermux       <- 38 chars, 0x26 == '&'
+#
+# `grep -Fqx` is a whole-line match, so neither matched. The rule the old reader
+# really had was "works only for an applicationId SHORTER THAN 32 CHARACTERS",
+# where the prefix is a control byte and `strings` starts a fresh string at the
+# package name. cld.termux (10), com.diegonmarcos.superapp (25) and
+# com.diegonmarcos.cloudlib.cal (29) all cleared that bar, which is why this stood
+# for as long as it did; the two rootfs libraries (38, 40) did not, and
+# com.diegonmarcos.cloudlib.shizukuadbdebugtools (46) would not either - a trap
+# already loaded for an id that exists today.
 #
 # The guard was fail-closed, which was right. Its VERDICT was wrong, which is
 # worse than either: it named a defect that did not exist and hid the one that
 # did, across two applications and four CI jobs.
 #
-# WHY THIS FILE EXISTS.  The fix widens what the assert can read, and widening a
+# WHY THIS FILE EXISTS.  The fix reads the package with aapt/aapt2 instead of
+# guessing at bytes, and keeps `strings` only as a no-SDK fallback. Widening a
 # fail-closed guard is exactly how a fail-closed guard becomes a fail-OPEN one
-# (#452 — this fleet's most repeated defect). So the cases below hold BOTH ends:
-# every encoding a real manifest can use must be READ, and a genuinely wrong id
-# and an unreadable manifest must both still be REFUSED — and refused with
-# different messages, because conflating them is the original sin.
+# (#452 - this fleet's most repeated defect), so the cases below hold BOTH ends:
+# an id of every length must be READ, and a genuinely wrong id and an unreadable
+# manifest must both still be REFUSED - with different messages, because
+# conflating those two is the original sin.
+#
+# THE FIXTURES CARRY A REAL LENGTH PREFIX, and that is the whole point of them.
+# The first version of this tester wrote bare strings with no prefix, so every
+# case passed against the UNFIXED reader too: it was a tester that agreed with
+# whatever it was given, which is the same fail-open shape one level up.
 #
 # No SDK, no gradle, no device, no network: the fixtures are zips built here with
 # python, and the engines are sourced for their pure helpers only.
@@ -52,21 +69,25 @@ pass=0
 fail=0
 
 # ── fixtures ────────────────────────────────────────────────────────────
-# A zip holding an "AndroidManifest.xml" whose bytes carry $2 in the encoding
-# $3 (utf16 | utf8 | none), which is all the reader under test looks at. Not a
-# real binary manifest: a real one would need aapt2, and what is under test is
-# how the bytes of the string POOL are decoded, not chunk parsing.
+# A zip holding an "AndroidManifest.xml" whose bytes carry $2 the way a real
+# binary-XML string pool does: a 16-bit LENGTH, then the characters, then a
+# terminator. That prefix is the defect under test, so a fixture without one
+# would test nothing.
 mkapk() {
   python3 - "$1" "$2" "$3" <<'PY'
-import sys, zipfile, os
+import sys, zipfile, os, struct
 out, pkg, enc = sys.argv[1], sys.argv[2], sys.argv[3]
 head = b'\x03\x00\x08\x00'          # RES_XML_TYPE, as a real manifest starts
-if enc == 'utf16':
-    body = head + b'\x00\x00' + pkg.encode('utf-16-le') + b'\x00\x00'
-elif enc == 'utf8':
-    body = head + b'\x00\x00' + pkg.encode('utf-8') + b'\x00'
+def pooled(s, utf16):
+    # <u16 char-count><chars><u16 0> — exactly what glues a printable length
+    # byte onto the front of the name when `strings` is pointed at it.
+    if utf16:
+        return struct.pack('<H', len(s)) + s.encode('utf-16-le') + b'\x00\x00'
+    return struct.pack('<H', len(s)) + s.encode('utf-8') + b'\x00'
+if enc in ('utf16', 'utf8'):
+    body = head + pooled('application', enc == 'utf16') + pooled(pkg, enc == 'utf16')
 elif enc == 'none':
-    body = head + b'\x00\x00' + b'\x01\x02\x03\x04no-dots-here\x00'
+    body = head + b'\x01\x02\x03\x04no-dots-here\x00'
 elif enc == 'missing':
     body = None
 else:
@@ -116,49 +137,72 @@ case_is() {
   pass=$((pass+1))
 }
 
-mkapk "$WORK/utf16.apk"   "cld.termux"                                utf16
-mkapk "$WORK/utf8.apk"    "com.diegonmarcos.cloudlib.rootfstermux"    utf8
-mkapk "$WORK/nopkg.apk"   "unused"                                    none
-mkapk "$WORK/nomanifest.apk" "unused"                                 missing
+# Ids chosen for their LENGTH, which is the variable that decides whether the old
+# reader worked. 10 -> 0x0A control byte; 38/40/46 -> '&', '(', '.' — printable.
+SHORT_ID="cld.termux"                                              # 10 chars
+LIB_ID="com.diegonmarcos.cloudlib.rootfsnixdroid"                  # 40 chars, '('
+LONG_ID="com.diegonmarcos.cloudlib.shizukuadbdebugtools"           # 46 chars, '.'
+mkapk "$WORK/short.apk"  "$SHORT_ID" utf16
+mkapk "$WORK/lib.apk"    "$LIB_ID"   utf16
+mkapk "$WORK/long.apk"   "$LONG_ID"  utf16
+mkapk "$WORK/utf8.apk"   "$LIB_ID"   utf8
+mkapk "$WORK/nopkg.apk"      unused  none
+mkapk "$WORK/nomanifest.apk" unused  missing
 
 for ENGINE in "${ENGINES[@]}"; do
   echo "== $(basename "$ENGINE") =="
 
-  # (1) REGRESSION LOCK. Every application APK this assert has ever guarded has
-  #     a UTF-16 pool. Widening the reader must not stop reading them.
-  case_is "a UTF-16 manifest still resolves (every app APK)" 0 \
-    "$WORK/utf16.apk" "cld.termux" "package cld.termux confirmed"
+  # (1) REGRESSION LOCK. Every application APK this assert has ever guarded has a
+  #     SHORT id, where the length prefix is a control byte and the old reader
+  #     worked. Widening the reader must not stop reading them.
+  case_is "a short applicationId still resolves (every app APK)" 0 \
+    "$WORK/short.apk" "$SHORT_ID" "package $SHORT_ID confirmed"
 
-  # (2) THE #628 CASE. Red against the previous revision: the reader saw nothing
-  #     and the assert called a correct applicationId a mismatch.
-  case_is "a UTF-8 manifest resolves too (#628's library APK)" 0 \
-    "$WORK/utf8.apk" "com.diegonmarcos.cloudlib.rootfstermux" "confirmed"
+  # (2) THE #628 CASE. 40 characters, so the pool's length prefix is '(' and the
+  #     old reader emitted "(com.diegonmarcos..." — never matching, and filtered
+  #     out of its own evidence list.
+  case_is "a 40-char id resolves despite its printable length prefix (#628)" 0 \
+    "$WORK/lib.apk" "$LIB_ID" "confirmed"
 
-  # (3) ANTI-#452. The whole risk of widening a fail-closed guard is turning it
+  # (3) THE TRAP THAT WAS ALREADY LOADED: 46 characters, prefix '.'. This id
+  #     exists in the fleet today and would have failed the same way.
+  case_is "a 46-char id resolves too (shizukuadbdebugtools)" 0 \
+    "$WORK/long.apk" "$LONG_ID" "confirmed"
+
+  # (4) Pool encoding is aapt2's choice, so read either.
+  case_is "a UTF-8 string pool resolves as well as a UTF-16 one" 0 \
+    "$WORK/utf8.apk" "$LIB_ID" "confirmed"
+
+  # (5) ANTI-#452. The whole risk of widening a fail-closed guard is turning it
   #     fail-open. A genuinely wrong id must still be refused.
   case_is "a GENUINELY wrong package id is still REFUSED" 1 \
-    "$WORK/utf16.apk" "cld.somebody.else" "APK package !="
+    "$WORK/lib.apk" "com.diegonmarcos.cloudlib.nope" "APK package !="
 
-  # (4) …and the wrong-id message must carry the ids it actually read, which is
+  # (6) A greedy match cannot be fooled by a PREFIX of a real id, which is the
+  #     false-positive an unanchored extraction could otherwise introduce.
+  case_is "an id that is only a PREFIX of the real one is REFUSED" 1 \
+    "$WORK/lib.apk" "com.diegonmarcos.cloudlib" "APK package !="
+
+  # (7) …and the wrong-id message must carry the ids it actually read, which is
   #     the evidence that was EMPTY for a whole afternoon.
-  r="$(assert_identity "$ENGINE" "$WORK/utf16.apk" "cld.somebody.else")"
+  r="$(assert_identity "$ENGINE" "$WORK/lib.apk" "com.diegonmarcos.cloudlib.nope")"
   case "${r#*|}" in
-    *"read from the APK: cld.termux"*)
+    *"read from the APK: "*"$LIB_ID"*)
       printf '  [PASS] %s\n' "the mismatch names the id it DID read (not an empty list)"; pass=$((pass+1)) ;;
     *)
       printf '  [FAIL] %s\n' "the mismatch printed no id it read — that empty evidence list IS the #628 defect"
       printf '%s\n' "${r#*|}" | sed 's/^/          /'; fail=$((fail+1)) ;;
   esac
 
-  # (5) UNREADABLE IS ITS OWN FAILURE. Still fail-closed, but it must NOT be
+  # (8) UNREADABLE IS ITS OWN FAILURE. Still fail-closed, but it must NOT be
   #     reported as a package mismatch — conflating the two is the original sin.
   case_is "a manifest with no package id is REFUSED as UNREADABLE" 1 \
-    "$WORK/nopkg.apk" "cld.termux" "could not read ANY package id"
+    "$WORK/nopkg.apk" "$SHORT_ID" "could not read ANY package id"
   case_is "an APK with no manifest at all is REFUSED as UNREADABLE" 1 \
-    "$WORK/nomanifest.apk" "cld.termux" "could not read ANY package id"
+    "$WORK/nomanifest.apk" "$SHORT_ID" "could not read ANY package id"
 
-  # (6) …and never as a mismatch.
-  r="$(assert_identity "$ENGINE" "$WORK/nopkg.apk" "cld.termux")"
+  # (9) …and never as a mismatch.
+  r="$(assert_identity "$ENGINE" "$WORK/nopkg.apk" "$SHORT_ID")"
   case "${r#*|}" in
     *"APK package !="*)
       printf '  [FAIL] %s\n' "an unreadable manifest is STILL reported as a package mismatch (#628)"; fail=$((fail+1)) ;;
