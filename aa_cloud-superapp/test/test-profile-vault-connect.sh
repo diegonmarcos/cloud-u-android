@@ -86,11 +86,22 @@ for loc in "$RES"/values*/strings.xml; do
 done
 [ "$FAIL" = 0 ] && ok "T2: all present in $(ls "$RES"/values*/strings.xml | wc -l) locale files"
 
-echo "== T3: the Fleet tab, and its sections are data =="
-grep -q 'Tab(getString(R.string.vault_tab_imported), imported)' "$PF" \
-    && ok "T3: the Fleet tab has its own column" || bad "T3: no Fleet tab in the strip"
-grep -q 'importedTab = tabs.indexOfFirst { it.column === imported }' "$PF" \
-    && ok "T3: its index is read off the tab list" || bad "T3: the Fleet index is not derived from the list"
+echo "== T3: the Fleet COCKPIT (an Infos section since #626), and its sections are data =="
+# #626 collapsed the eight-tab strip to Setup | Infos. The cockpit was NOT
+# deleted with its tab: it moved whole into the declared `fleet` Infos section,
+# so this check follows it there — the only way "moved, not dropped" is provable.
+grep -q '"fleet"  -> renderImported(ctx, group)' "$PF" \
+    && ok "T3: the cockpit renders as the declared fleet Infos section" || bad "T3: nothing renders the cockpit any more"
+python3 - "$BJ" <<'PYFLEET'
+import json, sys
+secs = json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["sections"]
+f = [s for s in secs if s["id"] == "fleet"]
+sys.exit(0 if f and f[0]["mode"] == "render" else 1)
+PYFLEET
+[ $? = 0 ] && ok "T3: build.json declares the fleet section, and it RENDERS (not a link)" \
+           || bad "T3: ui.profile.infos.sections declares no rendering fleet section"
+grep -q 'infosTab = tabs.indexOfFirst { it.column === col }' "$PF" \
+    && ok "T3: the Infos index is read off the tab list" || bad "T3: the Infos index is not derived from the list"
 grep -q 'for (section in VaultCockpit.layout.sections)' "$PF" \
     && ok "T3: the tab iterates the baked layout" || bad "T3: the tab does not iterate ui.vault_connect.cockpit.sections"
 DECLARED=$(jq -r '.ui.vault_connect.cockpit.sections[].id' "$BJ" | sort)
@@ -230,10 +241,11 @@ codeof "$FV" "$PF" | grep -qE '"ic_[a-z_]+"' && bad "T8: an icon name is a Kotli
 jq -e '[.ui.vault_connect.cockpit.sections[] | select(.observed == false)] | length > 0' "$BJ" >/dev/null \
     && ok "T8: an unobservable section is declared as data (its light is Not verifiable, not a guessed colour)" \
     || bad "T8: no section declares observed:false — the keyboard's light would be a guess"
-# Fleet is the default tab once the journey has been walked (#573: before that,
-# the page opens on Connect — the cockpit has nothing to compare against yet).
-grep -q 'selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) connectTab else importedTab' "$PF" \
-    && ok "T8: the page opens on Fleet once the journey is walked, on Connect before" || bad "T8: the page does not open on Fleet after the journey"
+# Infos (which now holds the cockpit) is the default tab once the journey has been
+# walked (#573: before that, the page opens on Setup — where the sign-in and the
+# fetch live, and the cockpit has nothing to compare against yet).
+grep -q 'selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) setupTab else infosTab' "$PF" \
+    && ok "T8: the page opens on Infos once the journey is walked, on Setup before" || bad "T8: the page does not open on Infos after the journey"
 # The layout-tree test exists and reads the declared ids, which exist.
 [ -f "$FT" ] && ok "T8: FleetCockpitViewTest.kt exists" || bad "T8: no layout-tree test"
 for id in cockpit_hero cockpit_device_orb cockpit_hero_light cockpit_card cockpit_card_badge cockpit_card_light cockpit_card_body; do

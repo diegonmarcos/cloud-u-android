@@ -229,11 +229,14 @@ hasnt_code "$FRAGMENT" "R.id.section_pane"         "no pane host ids are borrowe
 has "$FRAGMENT" "private var selectedTab"          "the selected tab survives a redraw"
 
 # Connect IS the journey (#573); Mesh Data carries the tunnel key.
-has "$FRAGMENT" 'renderJourney(ctx, connect)'                           "Connect is the journey"
+has "$FRAGMENT" 'renderJourney(ctx, setup)'                             "the journey is the top of Setup (#626)"
 has "$FRAGMENT" 'journey_use_stored_bearer'                             "the stored bearer is a step-1 pill on Connect"
 has "$WGFRAG" 'col.addView(sectionHeader(ctx, "Provider"))'   "Provider is on the WireGuard screen"
 hasnt_code "$FRAGMENT" "WireGuardPrefs"  "Profile no longer touches tunnel settings at all"
-has "$FRAGMENT" 'sectionHeader(ctx, "Personal Data")'                   "Infos has a Personal Data section"
+# #626 the section HEADER is the declaration's label now, not a Kotlin literal:
+# the contact card is the declared `person` section, drawn by renderPerson.
+has "$FRAGMENT" 'private fun renderPerson('                             "Infos has a person (contact card) section"
+hasnt_code "$FRAGMENT" 'sectionHeader(ctx, "Personal Data")'            "its header is the declared label, not a literal"
 hasnt "$FRAGMENT" 'sectionHeader(ctx, "Imports")'                       "Infos has no Imports row any more — step 4 is the way in"
 has "$FRAGMENT" 'journey_import_file'                                   "the manual file route survives as the last line of step 4"
 # The orphan-token affordance must stay reachable after the move.
@@ -284,38 +287,59 @@ hasnt_code "$SYNC" "mailCode"     "ProfileSync never reads the mailed code"
 hasnt_code "$SYNC" "confirmation" "ProfileSync carries no confirmation field"
 hasnt_code "$IMPORT" "mail_code"  "the auto-import writes no 2FA code"
 
-echo "== T11: EIGHT tabs, declarative order in build.json; AI is not a tab; the export carries no private key (#614) =="
+echo "== T11: TWO tabs (#626 — Setup | Infos), declarative order in build.json; the export carries no private key =="
 WG_PROFILES="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardProfiles.kt"
-# The six tab literals live in the id→Tab map; the STRIP's order + membership
+# The two tab literals live in the id→Tab map; the STRIP's order + membership
 # come from build.json::ui.profile.tabs (data), not this map's declaration order.
-has "$FRAGMENT" 'Tab("Connect", connect)'                               "Connect tab present"
-has "$FRAGMENT" 'Tab("Vault", vault)'                                   "Vault tab present"
-has "$FRAGMENT" 'Tab(getString(R.string.vault_tab_imported), imported)' "Fleet tab present"
-has "$FRAGMENT" 'Tab("Repos", repos)'                                   "Repos tab present"
-has "$FRAGMENT" 'Tab("Infos", col)'                                     "Infos tab present"
-has "$FRAGMENT" 'Tab("WireGuard", null, WG_ROUTE)'                      "WireGuard tab links to the WireGuard screen"
+has "$FRAGMENT" 'Tab("Setup", setup)'  "Setup tab present"
+has "$FRAGMENT" 'Tab("Infos", col)'    "Infos tab present"
+# #626 the six tabs that were COLLAPSED are gone as tabs — Connect and Vault
+# merged INTO Setup, the other four became Infos sections. A surviving literal
+# here would be a ninth column nobody renders, or a tab the declaration cannot
+# reach; both look exactly like the collapse having landed.
+for gone in 'Tab("Connect"' 'Tab("Vault"' 'Tab("Repos"' 'Tab("Store"' 'Tab("WireGuard"' 'Tab(getString(R.string.vault_tab_imported)'; do
+    hasnt_code "$FRAGMENT" "$gone" "the collapsed tab literal $gone is gone"
+done
+# Connect MERGED, not deleted: the journey and the vault fetch render on Setup.
+has "$FRAGMENT" 'renderJourney(ctx, setup)' "the sign-in journey renders on Setup"
+has "$FRAGMENT" 'renderVault(ctx, setup)'   "the vault fetch renders on Setup (was its own tab)"
+has "$FRAGMENT" 'renderWizard(ctx, setup)'  "the wizard renders on Setup, below them"
+# And every tab now HAS a column: #614's null-column launch tabs are Infos links.
+hasnt_code "$FRAGMENT" 'val column: View?' "no null-column launch tab survives — a deep-link is an Infos section"
 # The strip is DATA: order + membership come from the baked build.json array.
 has "$FRAGMENT" "profileTabOrder()"                "the strip is built from the declared tab order"
 has "$FRAGMENT" "UI_PROFILE_TABS_B64"              "the order comes from the baked build.json blob"
 has "app/build.gradle" "UI_PROFILE_TABS_B64"       "the blob is baked"
-# AI is no longer a TAB (not in the declared six); the AI cockpit card still
-# links to the page that already exists, so the const stays but the tab does not.
-hasnt_code "$FRAGMENT" 'Tab("AI"'               "AI is not a top-level Profile tab"
+# AI is not a tab; the AI cockpit card still links to the page that already exists.
+hasnt_code "$FRAGMENT" 'Tab("AI"'               "AI is not a top-level Account tab"
 has   "$FRAGMENT" 'AI_ROUTE = "page:config/ai"' "the AI page route still exists for the cockpit card"
 hasnt_code "$FRAGMENT" "AiFragment"             "the AI page is not re-hosted here"
 # The route must be the one the DATA declares, not a plausible-looking string.
-has "$FRAGMENT" 'WG_ROUTE = "section:wg"'          "WireGuard tab uses the declared section target"
+has "$FRAGMENT" 'WG_ROUTE = "section:wg"'          "the cockpit's WireGuard link uses the declared section target"
 hasnt_code "$FRAGMENT" "page:config/wg"            "not the page target, which only rewrites to section:wg"
 hasnt_code "$FRAGMENT" "page:wg/config"            "not the double-push target"
-# Still no child fragments and no borrowed launcher machinery, at seven tabs.
-hasnt_code "$FRAGMENT" "childFragmentManager"   "eight tabs still use no child fragments"
-hasnt_code "$FRAGMENT" "SectionTabsFragment"    "eight tabs still avoid the section mechanism"
+# Still no child fragments and no borrowed launcher machinery, at two tabs.
+hasnt_code "$FRAGMENT" "childFragmentManager"   "two tabs still use no child fragments"
+hasnt_code "$FRAGMENT" "SectionTabsFragment"    "two tabs still avoid the section mechanism"
+# #626 the page is called ACCOUNT now, and the words live in ONE declaration.
+name_is_account() {   # $1 = build.json; 0 iff the Configs identity page reads "Account"
+    python3 - "$1" <<'PYNAME'
+import json, sys
+pages = [s for s in json.load(open(sys.argv[1]))["ui"]["sections"] if s["id"] == "config"][0]["pages"]
+page = [p for p in pages if p["id"] == "profile"][0]
+# The label is the rename. The id is the page's IDENTITY (routes, the
+# cross-app deep link) and must NOT be a user-visible label (#380/#381/#499).
+sys.exit(0 if page["label"] == "Account" else 1)
+PYNAME
+}
+name_is_account "$ROOT/build.json" && ok "T11-name: Configs ▸ Account — the tile/page label is the ONE declaration" \
+                                   || bad "T11-name: the Configs identity page is not labelled Account"
 
-echo "-- T11-order: the strip is EXACTLY [setup, connect, vault, fleet, store, repos, infos, wireguard], in order (#617 store after fleet; #622 setup first) --"
+echo "-- T11-order: the strip is EXACTLY [setup, infos], in that order (#626) --"
 tab_order_ok() {   # $1 = build.json path; returns 0 iff the declared order matches
     python3 - "$1" <<'PY'
 import json, sys
-want = ["setup", "connect", "vault", "fleet", "store", "repos", "infos", "wireguard"]
+want = ["setup", "infos"]
 got = (json.load(open(sys.argv[1]))["ui"].get("profile") or {}).get("tabs")
 sys.exit(0 if got == want else 1)
 PY
@@ -328,10 +352,10 @@ ids = {p["id"] for p in ext}
 sys.exit(0 if {"cloudflare-warp", "proton-vpn"} <= ids else 1)
 PY
 }
-if tab_order_ok "$ROOT/build.json"; then ok "T11-order: build.json declares the eight tabs in the required order"
+if tab_order_ok "$ROOT/build.json"; then ok "T11-order: build.json declares the two tabs in the required order"
 else bad "T11-order: build.json tab order is wrong"; fi
 
-echo "-- T11-mutation: a dropped tab, a reordered tab, and a missing WG profile each go red --"
+echo "-- T11-mutation: a THIRD tab, a dropped tab, a reordered tab, and a missing WG profile each go red --"
 SCRATCH="$(mktemp -d)"; trap 'rm -rf "$SCRATCH"' EXIT
 cp "$ROOT/build.json" "$SCRATCH/build.json"
 tab_order_ok "$SCRATCH/build.json" && wg_has_externals "$SCRATCH/build.json" \
@@ -340,9 +364,16 @@ tab_order_ok "$SCRATCH/build.json" && wg_has_externals "$SCRATCH/build.json" \
 # (1) dropped tab
 python3 - "$SCRATCH/build.json" <<'PY'
 import json,sys
-p=sys.argv[1]; d=json.load(open(p)); d["ui"]["profile"]["tabs"]=[t for t in d["ui"]["profile"]["tabs"] if t!="repos"]; json.dump(d,open(p,"w"))
+p=sys.argv[1]; d=json.load(open(p)); d["ui"]["profile"]["tabs"]=[t for t in d["ui"]["profile"]["tabs"] if t!="infos"]; json.dump(d,open(p,"w"))
 PY
 tab_order_ok "$SCRATCH/build.json" && bad "T11-mutation: a dropped tab was NOT caught" || ok "T11-mutation: a dropped tab is caught"
+cp "$ROOT/build.json" "$SCRATCH/build.json"
+# (1b) #626 a THIRD tab — the collapse is two tabs, so re-growing the strip goes red
+python3 - "$SCRATCH/build.json" <<'PY'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p)); d["ui"]["profile"]["tabs"].append("vault"); json.dump(d,open(p,"w"))
+PY
+tab_order_ok "$SCRATCH/build.json" && bad "T11-mutation: a THIRD tab was NOT caught" || ok "T11-mutation: a third tab is caught"
 cp "$ROOT/build.json" "$SCRATCH/build.json"
 # (2) wrong order (swap the first two)
 python3 - "$SCRATCH/build.json" <<'PY'
@@ -359,27 +390,109 @@ PY
 wg_has_externals "$SCRATCH/build.json" && bad "T11-mutation: a missing WG profile was NOT caught" || ok "T11-mutation: a missing WG profile is caught"
 rm -rf "$SCRATCH"; trap - EXIT
 
-echo "-- T11-store: the Store tab (#617) is a LAUNCH tab that deep-links to Store ▸ Phone, NOT a re-listed column --"
-# The Store tab has a NULL column and a route (the wireguard idiom), so it is a
-# launcher into the page that ALREADY lists the declared apps — never a second
-# copy of that list rendered inside Profile.
-has "$FRAGMENT" 'Tab("Store", null, STORE_ROUTE)'          "T11-store: the Store tab is a null-column launch tab"
-has "$FRAGMENT" 'STORE_ROUTE = "page:config/store-phone"'  "T11-store: it deep-links to Store ▸ Phone (page:config/store-phone)"
-hasnt_code "$FRAGMENT" "renderStore"                       "T11-store: Profile does NOT re-render a Store list"
-hasnt_code "$FRAGMENT" "CONSTELLATION_FLEET_B64"           "T11-store: Profile holds no copy of the declared fleet list — the page owns it"
+echo "-- T11-infos: the Infos read-out is DATA (#626) — every section, its order and its mode come from build.json --"
+# The whole point of the collapse: five tabs became SECTIONS of one page, and the
+# section list is a declaration. A hardcoded section is the defect this catches —
+# it would render for nobody who reads build.json and would survive every edit to it.
+has "$FRAGMENT" "UI_PROFILE_INFOS_B64"        "T11-infos: the fragment reads the baked section list"
+has "app/build.gradle" "UI_PROFILE_INFOS_B64" "T11-infos: the blob is baked"
+has "build.json" '"infos"'                    "T11-infos: build.json declares ui.profile.infos"
+has "$FRAGMENT" "for (s in sections)"         "T11-infos: renderInfos iterates the declared sections"
+has "$FRAGMENT" 'profileInfoSections()'       "T11-infos: …read off the declaration, not a literal list"
+# ACTIONS ARE NOT HERE: the read-out never re-implements an install, a clone or an import.
+hasnt_code "$FRAGMENT" "renderStore"             "T11-infos: no Store list is re-rendered here"
+hasnt_code "$FRAGMENT" "CONSTELLATION_FLEET_B64" "T11-infos: no copy of the declared fleet list — the Store page owns it"
+# NOTHING LOST: every datum the collapsed tabs showed has a home here.
+for absorbed in 'renderPerson(ctx, group)' 'renderTokens(ctx, group)' 'renderRepos(ctx, group)' 'renderImported(ctx, group)'; do
+    has "$FRAGMENT" "$absorbed" "T11-infos: $absorbed is wired into a section"
+done
+# PRESENCE, never the value: the credential read-out must not print a secret.
+if awk '/private fun renderTokens/,/^    }$/' "$ROOT/$FRAGMENT" \
+     | grep -qE 'autheliaToken\)|infoRow\(ctx, "[^"]*", *configs\.autheliaToken'; then
+    bad "T11-infos: renderTokens prints a token value"
+else
+    ok "T11-infos: renderTokens reports presence, never a credential value"
+fi
+# The section LABELS are the declaration's words — not Kotlin literals.
+while IFS= read -r l; do
+    [ -n "$l" ] || continue
+    codeof "$FRAGMENT" | grep -qF "\"$l\"" && bad "T11-infos: section label '$l' is also a Kotlin literal" \
+                                             || ok "T11-infos: label '$l' lives only in build.json"
+done <<< "$(python3 -c 'import json,sys; print("\n".join(s["label"] for s in json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["sections"]))' "$ROOT/build.json")"
 
-echo "-- T11-store-mutation: a wrong Store route, or a re-listed column, goes red --"
-route_to_store_phone() {   # $1 = ProfileFragment.kt; 0 iff the Store tab routes to store-phone
-    grep -qF 'STORE_ROUTE = "page:config/store-phone"' "$1" && grep -qF 'Tab("Store", null, STORE_ROUTE)' "$1"
+echo "-- T11-infos-shape: every declared section is well-formed, and declared == dispatched --"
+# The set the fragment DISPATCHES on is read out of the when(s.id) block, so the
+# comparison is between two real lists rather than between a list and a belief.
+infos_ok() {   # $1 = build.json, $2 = ProfileFragment.kt; prints the first broken rule
+    local bj="$1" pf="$2" declared dispatched
+    python3 - "$bj" <<'PYSHAPE' || return 1
+import json, sys
+secs = json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["sections"]
+ids = [s["id"] for s in secs]
+assert len(secs) >= 7, "fewer than seven sections"
+assert len(set(ids)) == len(ids), "duplicate section id"
+for s in secs:
+    assert s.get("label"), "%s has no label" % s["id"]
+    assert s.get("mode") in ("render", "link"), "%s has no render/link mode" % s["id"]
+    if s["mode"] == "link":
+        assert s.get("route"), "link section %s has no route" % s["id"]
+PYSHAPE
+    declared=$(python3 -c 'import json,sys; print("\n".join(sorted(s["id"] for s in json.load(open(sys.argv[1]))["ui"]["profile"]["infos"]["sections"] if s["mode"]=="render")))' "$bj")
+    dispatched=$(awk '/when \(s\.id\) \{/{f=1;next} f&&/^ *\}/{f=0} f' "$pf" | grep -oE '^ *"[a-z]+"' | tr -d ' "' | sort)
+    [ "$declared" = "$dispatched" ] || { echo "declared render sections [$(echo $declared)] != dispatched [$(echo $dispatched)]"; return 1; }
+    return 0
 }
+msg=$(infos_ok "$ROOT/build.json" "$ROOT/$FRAGMENT") \
+    && ok "T11-infos-shape: the sections are well-formed and every rendered id has a renderer" \
+    || bad "T11-infos-shape: $msg"
+
+echo "-- T11-infos-mutation: a hardcoded section, a dropped section and a reordered list each go red --"
 SCRATCH2="$(mktemp -d)"; trap 'rm -rf "$SCRATCH2"' EXIT
-route_to_store_phone "$ROOT/$FRAGMENT" || bad "T11-store-mutation: the unmutated tree should pass"
-# (1) the route aimed at the wrong page
-sed 's#page:config/store-phone#page:config/store-cloud#' "$ROOT/$FRAGMENT" > "$SCRATCH2/mut.kt"
-route_to_store_phone "$SCRATCH2/mut.kt" && bad "T11-store-mutation: a wrong Store route was NOT caught" || ok "T11-store-mutation: a wrong Store route is caught"
-# (2) the launch tab turned back into a rendered column
-sed 's/Tab("Store", null, STORE_ROUTE)/Tab("Store", store)/' "$ROOT/$FRAGMENT" > "$SCRATCH2/mut.kt"
-route_to_store_phone "$SCRATCH2/mut.kt" && bad "T11-store-mutation: a re-listed Store column was NOT caught" || ok "T11-store-mutation: a re-listed Store column is caught"
+# (1) a section that exists ONLY in Kotlin — the hardcode this gate is for
+cp "$ROOT/build.json" "$SCRATCH2/build.json"
+python3 - "$SCRATCH2/build.json" <<'PY'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p))
+s=d["ui"]["profile"]["infos"]["sections"]
+d["ui"]["profile"]["infos"]["sections"]=[x for x in s if x["id"]!="repos"]
+json.dump(d,open(p,"w"))
+PY
+infos_ok "$SCRATCH2/build.json" "$ROOT/$FRAGMENT" >/dev/null \
+    && bad "T11-infos-mutation: a section rendered but NOT declared was NOT caught" \
+    || ok "T11-infos-mutation: a hardcoded (dispatched, undeclared) section is caught"
+# (2) a section declared with no renderer — the mirror defect
+cp "$ROOT/build.json" "$SCRATCH2/build.json"
+python3 - "$SCRATCH2/build.json" <<'PY'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p))
+d["ui"]["profile"]["infos"]["sections"].append({"id":"health","label":"Health","mode":"render","route":""})
+json.dump(d,open(p,"w"))
+PY
+infos_ok "$SCRATCH2/build.json" "$ROOT/$FRAGMENT" >/dev/null \
+    && bad "T11-infos-mutation: a declared section with no renderer was NOT caught" \
+    || ok "T11-infos-mutation: a declared section with no renderer is caught"
+# (3) a link section with no route — a deep-link that goes nowhere
+cp "$ROOT/build.json" "$SCRATCH2/build.json"
+python3 - "$SCRATCH2/build.json" <<'PY'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p))
+for x in d["ui"]["profile"]["infos"]["sections"]:
+    if x["mode"]=="link": x["route"]=""
+json.dump(d,open(p,"w"))
+PY
+infos_ok "$SCRATCH2/build.json" "$ROOT/$FRAGMENT" >/dev/null \
+    && bad "T11-infos-mutation: a routeless link section was NOT caught" \
+    || ok "T11-infos-mutation: a routeless link section is caught"
+# (4) the fragment stops reading the declaration and iterates a literal list
+sed 's/val sections = profileInfoSections()/val sections = listOf(InfoSection("person", "Person details", MODE_RENDER, ""))/' \
+    "$ROOT/$FRAGMENT" > "$SCRATCH2/mut.kt"
+if cmp -s "$ROOT/$FRAGMENT" "$SCRATCH2/mut.kt"; then
+    bad "T11-infos-mutation: the hardcode mutation did not apply (tester stale)"
+else
+    grep -qF 'val sections = profileInfoSections()' "$SCRATCH2/mut.kt" \
+        && bad "T11-infos-mutation: a hardcoded section list was NOT caught" \
+        || ok "T11-infos-mutation: a hardcoded section list is caught"
+fi
 rm -rf "$SCRATCH2"; trap - EXIT
 
 echo "-- T11a: the profile matrix is DATA in build.json, not literals in Kotlin --"

@@ -18,13 +18,16 @@
 #       address or a device — the seed lives in cloud-infra's superapp-users.json
 #   T3  every journey_* / sign_in_* string the Kotlin uses exists in EVERY locale,
 #       and no declared one is dead
-#   T4  the Connect tab IS the journey: the tab builds renderJourney and nothing
-#       else; the four steps of ProfileJourney, in order; every card tagged step:*;
-#       the step badges are data (cockpit.journey_icons names every step); the
-#       chrome is the cockpit's (no colour literal); and the OLD surface is GONE —
-#       the account-email box, the bearer box, the permanent mail-code box, the
-#       Vault configs header, the Imports row, the GitHub-only dialog, the
-#       first-pass spinners
+#   T4  the SETUP tab IS the journey first (#626: Connect was merged into Setup,
+#       so the strip is Setup | Infos and the journey renders at the TOP of the
+#       Setup page, above the vault fetch and above the wizard rows): the page
+#       builds renderJourney/renderVault/renderWizard and nothing else of its
+#       own, the journey is FIRST; the four steps of ProfileJourney, in order;
+#       every card tagged step:*; the step badges are data (cockpit.journey_icons
+#       names every step); the chrome is the cockpit's (no colour literal); and
+#       the OLD surface is GONE — the account-email box, the bearer box, the
+#       permanent mail-code box, the Vault configs header, the Imports row, the
+#       GitHub-only dialog, the first-pass spinners
 #   T5  the device-grant token and the session never reach a store; a bearer is
 #       stored only through ConfigsPrefs.setAutheliaCredential after it proved itself
 #   T6  the picks persist ids only; the peer pick selects the cockpit device; a
@@ -33,8 +36,8 @@
 #   T7  (cross-repo, when cloud-infra sits beside) every auth_providers id is a
 #       declared provider here; one primary identity, one primary peer; every
 #       peer on a mesh
-#   T8  mutation: a scratch ProfileFragment whose Connect tab no longer builds the
-#       journey turns T4 RED
+#   T8  mutation: a scratch ProfileFragment whose Setup tab no longer builds the
+#       journey, or that puts an old box back on it, turns T4 RED
 #   T9  mutation (#578): the four-way check turns RED when the web-auth way is
 #       folded back into the bearer's kind, when the fragment sends the web pill
 #       to the bearer dialog, and when a Google client_secret is committed to build.json
@@ -178,13 +181,20 @@ DEAD=$(grep -oE 'name="(journey|sign_in)_[a-z_]+"' "$RES/values/strings.xml" | s
 [ "$FAIL" = 0 ] && ok "T3: all present in $(ls "$RES"/values*/strings.xml | wc -l) locale files"
 
 # ── T4 as a function, so T8 can run it on a mutated copy ──
-t4() {   # $1 = ProfileFragment path; prints nothing, returns 0 when the tab is the journey
-    local pf="$1"
-    grep -q 'renderJourney(ctx, connect)' "$pf" || return 1
-    # Between the Connect marker and the Fleet render, the tab builds the journey and nothing else.
+t4() {   # $1 = ProfileFragment path; prints nothing, returns 0 when Setup opens with the journey
+    local pf="$1" j w
+    grep -q 'renderJourney(ctx, setup)' "$pf" || return 1
+    # #626 THE ORDER IS THE MERGE: the journey renders at the TOP of the Setup
+    # page and the wizard BELOW it. Asserting membership alone would pass a page
+    # that put the sign-in under eight wizard rows, which is not the merge asked for.
+    j=$(grep -n 'renderJourney(ctx, setup)' "$pf" | head -1 | cut -d: -f1)
+    w=$(grep -n 'renderWizard(ctx, setup)' "$pf" | head -1 | cut -d: -f1)
+    [ -n "$j" ] && [ -n "$w" ] && [ "$j" -lt "$w" ] || return 1
+    # Between the SETUP marker and the Infos render, the page builds those three
+    # renderers and nothing else of its own — no box, header, caption or pill.
     local block
     # The markers are comment lines, so slice the raw file first, then drop comments.
-    block=$(awk '/Connect \(tab 1\)/{f=1} f{print} f&&/renderImported\(ctx, imported\)/{exit}' "$pf" | codeof)
+    block=$(awk '/── SETUP: the connect surfaces/{f=1} f{print} f&&/renderInfos\(ctx, col\)/{exit}' "$pf" | codeof)
     [ -n "$block" ] || return 1
     grep -qE 'addView|sectionHeader|label\(|caption\(|pickButton' <<<"$block" && return 1
     for old in autheliaEmailEditor 'secretField(' '"Mail 2FA confirmation code"' vault_connect_header '"Imports"' showGithubDeviceDialog 'buildSignIn(' 'buildRegistry(' registry_peer_pick; do
@@ -192,8 +202,8 @@ t4() {   # $1 = ProfileFragment path; prints nothing, returns 0 when the tab is 
     done
     return 0
 }
-echo "== T4: the Connect tab IS the journey, and the old surface is gone =="
-t4 "$PF" && ok "T4: Connect builds renderJourney and nothing else; the old boxes and tiles are gone" || bad "T4: the Connect tab is not (only) the journey, or an old control survives"
+echo "== T4: the Setup tab opens with the journey, then the fetch, then the wizard; the old surface is gone =="
+t4 "$PF" && ok "T4: Setup builds the journey FIRST, then the vault fetch and the wizard, and nothing else of its own; the old boxes and tiles are gone" || bad "T4: the Setup tab is not the journey-then-wizard page, or an old control survives"
 STEPS=$(grep -oE 'enum class Step \{ [A-Z_, ]+ \}' "$PJ" | sed 's/.*{ //; s/ }//; s/,//g')
 [ "$(echo $STEPS | wc -w)" = 4 ] && ok "T4: four steps: $STEPS" || bad "T4: ProfileJourney.Step is not four steps ($STEPS)"
 grep -q '^SIGN_IN WHO DEVICE GET$' <<<"$STEPS" && ok "T4: in order sign in → who → device → get" || bad "T4: step order is $STEPS"
@@ -210,7 +220,9 @@ grep -q 'SignInWays(host = signInHost, policy = policy' "$PF" && ok "T4: step 1 
 grep -q 'FleetCockpitView.pill(c, label, onClick)' "$PF" && ok "T4: the shared ways are drawn with the cockpit's pill" || bad "T4: the shared ways are not drawn with FleetCockpitView.pill"
 grep -qE 'private fun (showAutheliaBearerDialog|showAutheliaWebAuthDialog|showDeviceFlowDialog|startDeviceFlow)\(' "$PF" && bad "T4: the fragment still carries a sign-in dialog of its own — a copy of the lib's" || ok "T4: no private sign-in dialog left in the fragment"
 grep -q 'selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone' "$PF" \
-    && ok "T4: the page opens on the journey until it has been walked" || bad "T4: the page does not land on the journey"
+    && ok "T4: the page opens on the journey (Setup) until it has been walked" || bad "T4: the page does not land on the journey"
+grep -q 'selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) setupTab else infosTab' "$PF" \
+    && ok "T4: and lands on the Infos read-out once it has been" || bad "T4: the landing does not name setupTab/infosTab (#626)"
 
 echo "== T5: the token and the session never reach a store =="
 grep -qE 'SharedPreferences|\.edit\(\)|putString|ConfigsPrefs|writeText' <<<"$(codeof "$SI" "$UI" "$DG" "$CFA" "$AD")" && bad "T5: the lib writes a store" || ok "T5: the lib (SignIn, the surface, the grant, the fetches) touches no store"
@@ -269,12 +281,15 @@ else
     echo "  UNVERIFIABLE: cloud-infra is not checked out beside this repository — the cross-repo checks did not run (T1–T6 above did)"
 fi
 
-echo "== T8: mutation — a Connect tab that is not the journey turns T4 red =="
+echo "== T8: mutation — a Setup tab that is not the journey-first page turns T4 red =="
 TMP="$(mktemp -d)"; trap 'rm -rf "${TMP:?}"' EXIT
-grep -v 'renderJourney(ctx, connect)' "$PF" > "$TMP/no-journey.kt"
-t4 "$TMP/no-journey.kt" && bad "T8: T4 passed a fragment whose Connect tab builds no journey" || ok "T8: no journey → T4 RED"
-sed 's/renderJourney(ctx, connect)/connect.addView(autheliaEmailEditor(ctx)); renderJourney(ctx, connect)/' "$PF" > "$TMP/old-box.kt"
+grep -v 'renderJourney(ctx, setup)' "$PF" > "$TMP/no-journey.kt"
+t4 "$TMP/no-journey.kt" && bad "T8: T4 passed a fragment whose Setup tab builds no journey" || ok "T8: no journey → T4 RED"
+sed 's/renderJourney(ctx, setup)/setup.addView(autheliaEmailEditor(ctx)); renderJourney(ctx, setup)/' "$PF" > "$TMP/old-box.kt"
 t4 "$TMP/old-box.kt" && bad "T8: T4 passed a fragment that put the account-email box back" || ok "T8: an old box back on the tab → T4 RED"
+# #626: the journey UNDER the wizard is not the merge that was asked for.
+awk '/renderJourney\(ctx, setup\)/{next} /renderWizard\(ctx, setup\)/{print "        renderWizard(ctx, setup)"; print "        renderJourney(ctx, setup)"; next} {print}' "$PF" > "$TMP/journey-last.kt"
+t4 "$TMP/journey-last.kt" && bad "T8: T4 passed a Setup page that renders the wizard ABOVE the sign-in" || ok "T8: journey below the wizard → T4 RED"
 
 echo "== T9: mutation — the four-way check turns red =="
 jq '.auth.sign_in.providers |= map(if .id == "authelia_web" then .kind = "authelia_bearer" else . end)' "$SHARED" > "$TMP/folded.json"
@@ -317,6 +332,21 @@ apps_measured "$WIZ" && ok "T10-real: the apps step measures installed packages,
 grep -qE 'getBoolean\("?wizard|putBoolean\("?wizard|wizard_done|stepDone' "$WIZ" \
     && bad "T10-real: the wizard remembers a done flag (#452)" || ok "T10-real: no stored done flag — every check re-measures"
 
+# #626 THE ROUTES MUST LAND. The strip is two tabs now, so a step still pointing
+# at tab:connect / tab:vault / tab:repos / tab:fleet would be a row that silently
+# does nothing when tapped — the exact defect shape a two-tab collapse invites.
+routes_land() {   # $1 = build.json; 0 iff every tab: route names a DECLARED tab
+    python3 - "$1" <<'PYROUTES'
+import json, sys
+ui = json.load(open(sys.argv[1]))["ui"]["profile"]
+tabs = set(ui.get("tabs") or [])
+bad = [s["id"] for s in (ui.get("wizard") or {}).get("steps", [])
+       if s.get("route", "").startswith("tab:") and s["route"][4:] not in tabs]
+sys.exit(1 if bad else 0)
+PYROUTES
+}
+routes_land "$BJ" && ok "T10: every wizard step's tab: route names a declared tab" || bad "T10: a wizard step routes to a tab that is not in ui.profile.tabs"
+
 echo "== T10-mutation: a reordered step, or a faked (remembered) done-check, turns red =="
 SC="$(mktemp -d)"; trap 'rm -rf "$SC"' EXIT
 cp "$BJ" "$SC/build.json"
@@ -330,6 +360,14 @@ PY
 sed 's/"apps" -> declaredApps().*/"apps" -> true/' "$WIZ" > "$SC/Wizard.kt"
 if grep -q '"apps" -> declaredApps' "$SC/Wizard.kt"; then bad "T10-mutation: the apps mutation did not apply (tester stale)"
 else apps_measured "$SC/Wizard.kt" && bad "T10-mutation: a faked apps done-check (true) was NOT caught" || ok "T10-mutation: a faked apps done-check is caught"; fi
+cp "$BJ" "$SC/build.json"
+python3 - "$SC/build.json" <<'PYDEAD'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p))
+d["ui"]["profile"]["wizard"]["steps"][0]["route"]="tab:connect"   # a tab #626 removed
+json.dump(d,open(p,"w"))
+PYDEAD
+routes_land "$SC/build.json" && bad "T10-mutation: a step routing to a removed tab was NOT caught" || ok "T10-mutation: a step routing to a removed tab is caught"
 rm -rf "$SC"; trap - EXIT
 
 echo

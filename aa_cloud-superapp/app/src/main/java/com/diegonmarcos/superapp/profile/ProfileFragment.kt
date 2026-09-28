@@ -36,15 +36,28 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Configs → Profile — the FLEET COCKPIT first, the contact card behind it.
+ * Configs → ACCOUNT (#626) — TWO tabs, both declared in build.json::ui.profile.
  *
- * The page opens on the Fleet tab (#570, reopened): a hero card for the device
- * this phone is, then one card per cockpit section — Mail, Keyboard &
- * Clipboards, Mesh, Drive, AI, Apps — each with the shared [StatusLight] and
- * its own Apply. The chrome is [FleetCockpitView]; the comparisons and the
- * applies are [VaultCockpit], unchanged from the first delivery. Connect (how
- * the vault bundle gets here) and Infos (the contact card) are the other two
- * columns of the same strip.
+ * The eight-tab strip of #614/#617/#622 collapsed to two, and the collapse is a
+ * DATA edit plus the renderers it names — nothing about membership, order or
+ * section list is spelled out here:
+ *
+ *  • SETUP is the account page. The shared libs:auth sign-in journey
+ *    ([renderJourney]) and the VaultConnect fetch surface ([renderVault]) — what
+ *    used to be the Connect and Vault tabs — render at the TOP, and the fleet
+ *    wizard's ordered steps ([renderWizard], build.json::ui.profile.wizard)
+ *    render BELOW them on the same page. Connect is no longer its own tab.
+ *  • INFOS is the read-out ([renderInfos], build.json::ui.profile.infos.sections):
+ *    one section per declared entry, each either RENDERING its data (person,
+ *    tokens, repos, fleet) or DEEP-LINKING to the surface that already owns it
+ *    (vault → back to Setup, wireguard → section:wg, store → Store ▸ Phone).
+ *    The five tabs #626 removed lost no datum: the Fleet cockpit moved here
+ *    whole, Repos verbatim, the Vault tab's credential read-out became `tokens`,
+ *    and the two link-only tabs (Store, WireGuard) stayed links.
+ *
+ * ACTIONS ARE THE WIZARD'S. Sign-in, vault fetch, install-all, clone and WG
+ * import are wizard steps delegating to their existing engines exactly as #622
+ * wired them; Infos adds no second control for any of them.
  *
  * The contact card is bound to [ProfilePrefs] and auto-saves on every text
  * change (no explicit Save button) — the drawer header reads from the same
@@ -78,15 +91,14 @@ class ProfileFragment : Fragment() {
 
     /** Which tab is showing. Held on the fragment so the many detach/attach
      *  redraws below do not bounce the user off the tab they were on. Negative
-     *  until the strip is first built, at which point it becomes the Fleet
-     *  tab — the cockpit is what this page opens on. */
+     *  until the strip is first built. */
     private var selectedTab = -1
 
-    /** Position of the Fleet (imported) tab, read off the strip's own list. */
-    private var importedTab = 0
+    /** Position of the Infos tab, read off the strip's own list. */
+    private var infosTab = 0
 
-    /** Position of the Connect tab, for the cockpit's empty-state button. */
-    private var connectTab = 0
+    /** Position of the Setup tab — where the sign-in and the fetch now live. */
+    private var setupTab = 0
 
     /** The strip itself, so the cockpit can send the owner to Connect. */
     private var strip: TabLayout? = null
@@ -146,21 +158,14 @@ class ProfileFragment : Fragment() {
         }
         scroll.addView(page)
 
-        // Content columns; `col` keeps its name so every field that is only
-        // MOVING between tabs keeps its existing call site. WireGuard has no
-        // column at all — it is a LINK to the screen that already exists (see
-        // [tabStrip]).
+        // TWO content columns (#626), one per declared tab; `col` keeps its name
+        // so every field that only MOVED into an Infos section keeps its call
+        // site. There is no third column: the surfaces the removed tabs hosted
+        // are either on Setup (the sign-in journey, the vault fetch) or an Infos
+        // SECTION, and the two that were pure links stayed links.
         val setup = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val connect = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val vault = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val imported = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val repos = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         page.addView(setup)
-        page.addView(connect)
-        page.addView(vault)
-        page.addView(imported)
-        page.addView(repos)
         page.addView(col)
 
         val root = LinearLayout(ctx).apply {
@@ -170,37 +175,47 @@ class ProfileFragment : Fragment() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
             )
         }
-        // THE STRIP IS DATA (#614): build.json::ui.profile.tabs
-        // (UI_PROFILE_TABS_B64) lists one id per tab in render order. Each id
-        // maps to its column (a page) or, with a null column, a LINK to a
-        // screen that already exists — WireGuard is `section:wg`, and
-        // re-hosting it here would be a second copy to keep in step. Reorder or
-        // drop an id in build.json and the strip follows; nothing about the
-        // strip's membership or order is spelled out here. Connect is first.
+        // THE STRIP IS DATA (#614, two tabs since #626): build.json::ui.profile.tabs
+        // (UI_PROFILE_TABS_B64) lists one id per tab in render order, and this map
+        // is only the id → column lookup. Reorder, add or drop an id in build.json
+        // and the strip follows; nothing about the strip's membership or order is
+        // spelled out here.
         val byId = mapOf(
             "setup" to Tab("Setup", setup),
-            "connect" to Tab("Connect", connect),
-            "vault" to Tab("Vault", vault),
-            "fleet" to Tab(getString(R.string.vault_tab_imported), imported),
-            "store" to Tab("Store", null, STORE_ROUTE),
-            "repos" to Tab("Repos", repos),
             "infos" to Tab("Infos", col),
-            "wireguard" to Tab("WireGuard", null, WG_ROUTE),
         )
         val tabs = profileTabOrder().mapNotNull { byId[it] }
-        importedTab = tabs.indexOfFirst { it.column === imported }
-        connectTab = tabs.indexOfFirst { it.column === connect }
-        // The page opens on the JOURNEY until it is walked once (#573): the
-        // cockpit has nothing to compare against before the vault is fetched,
-        // and the old landing — a hero saying "connect first" — was the
-        // reopen. Once walked, the cockpit is the page again.
+        infosTab = tabs.indexOfFirst { it.column === col }
+        setupTab = tabs.indexOfFirst { it.column === setup }
+        // The page opens on SETUP until the journey is walked once (#573): the
+        // cockpit (now an Infos section) has nothing to compare against before
+        // the vault is fetched. Once walked, the read-out is the page again.
         if (selectedTab < 0) {
-            selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) connectTab else importedTab
+            selectedTab = if (VaultConnect.Imported.bundle == null && !ProfileJourney.allDone(journeyState(ctx))) setupTab else infosTab
         }
         root.addView(tabStrip(ctx, tabs))
         root.addView(scroll)
 
-        col.addView(sectionHeader(ctx, "Personal Data"))
+        // ── SETUP: the connect surfaces at the TOP, the wizard BELOW ──────
+        // Sign-in first (the shared libs:auth journey), then the vault fetch that
+        // journey earns the credential for, then the ordered steps that measure
+        // and delegate. One page, in that order.
+        renderJourney(ctx, setup)
+        renderVault(ctx, setup)
+        renderWizard(ctx, setup)
+
+        // ── INFOS: the declared sections, in declared order ───────────────
+        renderInfos(ctx, col)
+
+        return root
+    }
+
+    /**
+     * The `person` Infos section: the contact card, its photos, the privacy
+     * disclosure and the erase action — what the old Infos tab was, unchanged,
+     * now one section among the declared list.
+     */
+    private fun renderPerson(ctx: android.content.Context, col: LinearLayout) {
         col.addView(caption(ctx, "Edit your contact card — auto-saved on change. Your initials in the drawer are derived from your name; the rest powers the Virtual Business Card."))
 
         // Persistent completeness banner — enforcement step 2. Added first so
@@ -303,23 +318,6 @@ class ProfileFragment : Fragment() {
             bannerPicker.launch("image/*")
         })
 
-        // ── Connect (tab 1): THE JOURNEY (#573) ─────────────────────────
-        // Four numbered steps in the cockpit's own chrome — sign in, who,
-        // which device, get everything — built by [renderJourney] from ONE
-        // state ([ProfileJourney.State]). Everything on this tab is a way IN;
-        // none of it is ever synced. The design is
-        // a0_docs/eng-specs/superapp-auth-profile-peer-flow.md, and nothing
-        // is on this tab that the design does not name.
-        renderJourney(ctx, connect)
-
-        renderImported(ctx, imported)
-
-        renderVault(ctx, vault)
-
-        renderRepos(ctx, repos)
-
-        renderWizard(ctx, setup)
-
         // ── Privacy ──────────────────────────────────────────────────────
         // Disclosure lives on the collecting screen on purpose: "what is held
         // about me and how do I get rid of it" should not require finding a
@@ -330,9 +328,101 @@ class ProfileFragment : Fragment() {
         col.addView(actionTile(ctx, "Erase my profile (device + server)", 0xFFB91C1C.toInt()) {
             confirmErase()
         })
-
-        return root
     }
+
+    // ── Infos · THE SECTIONED READ-OUT (#626) ─────────────────────────────
+
+    /** One declared Infos section. [mode] is `render` (this page draws the data)
+     *  or `link` (a deep-link to the surface that already owns it, dispatched
+     *  through [openWizardRoute] — never a second copy of its control). */
+    private data class InfoSection(val id: String, val label: String, val mode: String, val route: String)
+
+    /** The declared sections, in order — build.json::ui.profile.infos.sections
+     *  (UI_PROFILE_INFOS_B64). An unparseable blob yields the empty list, so a
+     *  broken bake shows no read-out rather than an invented one. */
+    private fun profileInfoSections(): List<InfoSection> = runCatching {
+        val json = String(android.util.Base64.decode(
+            com.diegonmarcos.superapp.BuildConfig.UI_PROFILE_INFOS_B64, android.util.Base64.NO_WRAP))
+        val arr = org.json.JSONObject(json).optJSONArray("sections") ?: return emptyList()
+        (0 until arr.length()).map {
+            val o = arr.getJSONObject(it)
+            InfoSection(o.getString("id"), o.optString("label", o.getString("id")),
+                o.optString("mode", MODE_RENDER), o.optString("route", ""))
+        }
+    }.getOrDefault(emptyList())
+
+    /**
+     * THE READ-OUT. One section per DECLARED entry, in declared order, each
+     * tagged `infos:<id>`. Nothing about which sections exist, what they are
+     * called or which of them are links is written here: the list is data, and
+     * an id with no renderer says so instead of silently drawing nothing.
+     *
+     * DENSE by intent (#621): this is a data page, so the rows are the caption
+     * scale and the headers carry the grouping — no card per datum.
+     */
+    private fun renderInfos(ctx: android.content.Context, into: LinearLayout) {
+        val sections = profileInfoSections()
+        if (sections.isEmpty()) return
+        for (s in sections) {
+            val group = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                tag = "infos:${s.id}"
+            }
+            into.addView(group)
+            group.addView(sectionHeader(ctx, s.label))
+            if (s.mode == MODE_LINK) {
+                // Action-only surfaces keep ONE home. The section says where it
+                // is and goes there; it does not re-host the control.
+                group.addView(caption(ctx, INFOS_LINK_TEXT))
+                group.addView(pickButton(ctx, s.label) { openWizardRoute(s.route) })
+                continue
+            }
+            when (s.id) {
+                "person" -> renderPerson(ctx, group)
+                "tokens" -> renderTokens(ctx, group)
+                "repos"  -> renderRepos(ctx, group)
+                "fleet"  -> renderImported(ctx, group)
+                else     -> group.addView(caption(ctx, INFOS_NO_RENDERER))
+            }
+        }
+    }
+
+    /**
+     * The `tokens` section: WHICH credential is in play, read live — the one
+     * datum the Vault tab displayed (its auth line) plus the stored identity,
+     * the GitHub token the repo clone needs and the vault's applied stamp.
+     *
+     * READ-OUT ONLY, and presence rather than value: no token, key or cookie is
+     * ever printed here, and no control clears one — the clear buttons stay with
+     * the surface that stores each credential.
+     */
+    private fun renderTokens(ctx: android.content.Context, into: LinearLayout) {
+        val configs = ConfigsPrefs(ctx)
+        val session = SignIn.Current.session
+        into.addView(caption(ctx, TOKENS_TEXT))
+        into.addView(infoRow(ctx, "Session", session?.let {
+            "${SignIn.provider(it.provider)?.label ?: it.provider} · ${it.identity.ifBlank { "—" }}"
+        } ?: "—"))
+        into.addView(infoRow(ctx, "Vault credential", vaultAuthText(ctx)))
+        into.addView(infoRow(ctx, "Authelia address", configs.autheliaEmail.ifBlank { "—" }))
+        into.addView(infoRow(ctx, "Authelia bearer", held(configs.autheliaToken.isNotBlank())))
+        into.addView(infoRow(ctx, "GitHub token",
+            held(configs.secret(VaultCockpit.SECTION_GIT, VaultCockpit.K_GITHUB_TOKEN).isNotBlank())))
+        into.addView(infoRow(ctx, "Vault applied", UserRegistry.appliedAt(ctx).ifBlank { "—" }))
+        into.addView(infoRow(ctx, "Vault bundle in memory", held(VaultConnect.Imported.bundle != null)))
+    }
+
+    /** Presence, never the value. */
+    private fun held(present: Boolean): String = if (present) "stored" else "—"
+
+    /** One dense read-out row: key, value, caption scale, selectable. */
+    private fun infoRow(ctx: android.content.Context, key: String, value: String): TextView =
+        TextView(ctx).apply {
+            text = "$key  ·  $value"
+            setTextAppearance(android.R.style.TextAppearance_Material_Caption)
+            setTextIsSelectable(true)
+            setPadding(0, dp(ctx, 2), 0, dp(ctx, 2))
+        }
 
     // ── Connect · THE JOURNEY (#573) ──────────────────────────────────────
 
@@ -607,10 +697,12 @@ class ProfileFragment : Fragment() {
         })
     }
 
-    // ── Vault (tab) · the VaultConnect fetch surface (#614) ───────────────
+    // ── Setup · the VaultConnect fetch surface (#614, on Setup since #626) ─
 
     /**
-     * The VAULT tab: the VaultConnect fetch surface on its own tab. The
+     * The VaultConnect fetch surface. It sat on its own Vault TAB until #626
+     * merged Connect and Vault into Setup; it now renders directly below the
+     * sign-in journey, which is what earns the credential it spends. The
      * credential is the durable bearer or the in-memory browser session; the
      * WebOAuth browser login earns the session, the code box takes the mailed
      * one-time code, and a successful fetch lands on the Fleet cockpit. Reuses
@@ -628,17 +720,17 @@ class ProfileFragment : Fragment() {
         into.addView(status)
     }
 
-    // ── Repos (tab) · the owner's repositories (#614) ─────────────────────
+    // ── Infos ▸ repos · the owner's repositories (#614) ───────────────────
 
     /**
-     * The REPOS tab: the owner's repositories, DATA-DRIVEN from
+     * The `repos` Infos SECTION (the Repos tab until #626, verbatim): the
+     * owner's repositories, DATA-DRIVEN from
      * build.json::ui.profile_default.repos (UI_PROFILE_REPOS_B64) — the same
      * declared set Configs ▸ About surfaces. The signed-in GitHub grant (scope
      * `repo`) is what a live listing would reuse, but the declared set is the
      * source of truth and needs no network to show. Each row opens the repo.
      */
     private fun renderRepos(ctx: android.content.Context, into: LinearLayout) {
-        into.addView(sectionHeader(ctx, getString(R.string.profile_repos_header)))
         into.addView(caption(ctx, getString(R.string.profile_repos_caption)))
         val repos = profileRepos()
         if (repos.isEmpty()) { into.addView(caption(ctx, getString(R.string.profile_repos_empty))); return }
@@ -652,11 +744,12 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // ── Setup (tab) · THE FLEET WIZARD (#622) ─────────────────────────────
+    // ── Setup · THE FLEET WIZARD (#622) ───────────────────────────────────
 
     /**
-     * The SETUP tab: the ordered, resumable fleet-configuration wizard AND the
-     * account center. The steps, their order and each step's done-check + route
+     * The wizard, rendered BELOW the connect surfaces on the Setup tab (#626):
+     * the ordered, resumable fleet-configuration flow that is also the account
+     * centre. The steps, their order and each step's done-check + route
      * are DATA ([Wizard.steps], from build.json::ui.profile.wizard). Each row
      * shows a REAL, live-measured done light ([Wizard.done] — never a stored
      * flag, #452) and, tapped, DELEGATES to the surface that step configures
@@ -691,8 +784,11 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    /** Delegate a wizard step to its declared surface: a `tab:<id>` selects that
-     *  tab of this strip; anything else is a launcher route handed to the host. */
+    /** Delegate a DECLARED route to its surface: a `tab:<id>` selects that tab of
+     *  this strip; anything else is a launcher route handed to the host. Used by
+     *  the wizard's steps and, since #626, by the Infos link sections — one
+     *  dispatcher, so a `tab:`/`page:`/`section:` target means the same thing
+     *  wherever it is declared. */
     private fun openWizardRoute(route: String) {
         if (route.startsWith("tab:")) {
             val idx = profileTabOrder().indexOf(route.removePrefix("tab:"))
@@ -751,21 +847,25 @@ class ProfileFragment : Fragment() {
     // ── tabs ─────────────────────────────────────────────────────────────
 
     /**
-     * The Connect | Info strip.
+     * The Setup | Infos strip (#626).
      *
      * Two plain columns swapped by visibility — no child fragments, no pane
      * host ids, no build.json pages (see the note in [onCreateView]). It reuses
      * [AppTabsStyle] so the pills read exactly like the launcher's section
      * strips, which is the whole of what that idiom is worth here.
      *
+     * EVERY TAB HAS A COLUMN. #614's strip also carried "launch tabs" — a tab
+     * with no column that navigated away and handed the selection straight back
+     * (Store, WireGuard). #626 removed both: a deep-link is an Infos SECTION
+     * now, which is a link that looks like a link instead of a tab that refuses
+     * to stay selected.
+     *
      * The selection is held on the FRAGMENT, not the view, because this screen
      * redraws itself with detach/attach — which destroys the view and keeps the
-     * instance. Without that the user would be thrown back to Connect every
-     * time they picked a photo from the Info tab.
+     * instance. Without that the user would be thrown back to Setup every time
+     * they picked a photo from the Infos tab.
      */
-    /** One tab. A null [column] makes it a LINK: selecting it dispatches
-     *  [route] and hands the selection straight back. */
-    private data class Tab(val title: String, val column: View?, val route: String = "")
+    private data class Tab(val title: String, val column: View)
 
     private fun tabStrip(
         ctx: android.content.Context,
@@ -773,7 +873,7 @@ class ProfileFragment : Fragment() {
     ): TabLayout {
         fun show(index: Int) {
             tabs.forEachIndexed { i, tab ->
-                tab.column?.visibility = if (i == index) View.VISIBLE else View.GONE
+                tab.column.visibility = if (i == index) View.VISIBLE else View.GONE
             }
         }
         show(selectedTab)
@@ -788,24 +888,7 @@ class ProfileFragment : Fragment() {
             )
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab) {
-                    // A tab with NO column is a LAUNCH tab — a button wearing a
-                    // tab, the idiom [SectionTabsFragment] already uses for
-                    // C3's Watchdog and Morpheus. AI is one because the AI page
-                    // ALREADY EXISTS at page:config/ai; re-hosting it here would
-                    // be a second copy to keep in step. So the tab navigates
-                    // and hands the selection straight back — leaving for
-                    // another page must not also leave this strip parked on a
-                    // tab with nothing behind it, which is what the user would
-                    // return to.
-                    val picked = tabs.getOrNull(tab.position) ?: return
-                    if (picked.column == null) {
-                        (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)
-                            ?.onTileClicked(picked.route)
-                        getTabAt(selectedTab)
-                            ?.takeIf { it != tab }
-                            ?.let { back -> post { back.select() } }
-                        return
-                    }
+                    tabs.getOrNull(tab.position) ?: return
                     selectedTab = tab.position
                     show(tab.position)
                 }
@@ -1023,7 +1106,7 @@ class ProfileFragment : Fragment() {
                     VaultConnect.Imported.bundle = o.body.optJSONObject("bundle") ?: o.body
                     show(status, GREEN, getString(
                         R.string.vault_connect_fetched, sections.sumOf { it.rows.size }, sections.size))
-                    selectedTab = importedTab
+                    selectedTab = infosTab
                     parentFragmentManager.beginTransaction().detach(this@ProfileFragment).commitNow()
                     parentFragmentManager.beginTransaction().attach(this@ProfileFragment).commitNow()
                 }
@@ -1044,7 +1127,7 @@ class ProfileFragment : Fragment() {
     }
 
     /**
-     * The Fleet tab (#570, reopened): the COCKPIT.
+     * The `fleet` Infos SECTION (the Fleet tab until #626, moved whole): the COCKPIT.
      *
      * A hero card for the device this phone is — orb, name, mesh identity, the
      * overall light and the device chooser — then one card per cockpit section
@@ -1069,7 +1152,7 @@ class ProfileFragment : Fragment() {
             FleetCockpitView.paint(hero.light, StatusLight.State.UNKNOWN, hero.title.text.toString())
             hero.summary.text = getString(R.string.vault_cockpit_hero_empty)
             hero.slot.addView(pickButton(ctx, getString(R.string.vault_cockpit_connect_cta)) {
-                strip?.getTabAt(connectTab)?.select()
+                strip?.getTabAt(setupTab)?.select()
             })
             into.addView(hero.root)
             return
@@ -1915,17 +1998,34 @@ class ProfileFragment : Fragment() {
          */
         private const val WG_ROUTE = "section:wg"
 
-        /**
-         * The Store tab (#617) is a LAUNCH tab, not a re-listed column: it
-         * deep-links to Store ▸ Phone Apps — the page that ALREADY lists every
-         * declared phone app (installed ∪ fleet ∪ external) and, since #619,
-         * carries the Declared / Installed filter. Store ▸ Phone opens in
-         * Declared mode by default, so this link lands the user on the full
-         * declared set with no argument to pass. `page:config/store-phone` is
-         * the same page: target the Store strip and the update notification
-         * use; naming the page and not a class keeps ONE source of the list.
-         */
-        private const val STORE_ROUTE = "page:config/store-phone"
+        /** A `render` Infos section draws its own data here; a `link` one is a
+         *  deep-link to the surface that owns it. Both words are the
+         *  declaration's vocabulary (build.json::ui.profile.infos.sections[].mode),
+         *  named once so a typo in the blob is a missing section and not a
+         *  silently mis-rendered one. */
+        private const val MODE_RENDER = "render"
+        private const val MODE_LINK = "link"
+
+        /** Said on every link section, because "why is there no control here"
+         *  is the question a deep-link invites. The Store's declared-app list and
+         *  the WireGuard import each have ONE home; #617's Store tab and #614's
+         *  WireGuard tab were already links for exactly this reason. */
+        private const val INFOS_LINK_TEXT =
+            "This lives on the screen that owns it — opening it there keeps one copy " +
+            "of the list and one copy of the controls, instead of a second set here " +
+            "that can disagree with it."
+
+        /** A declared section with no renderer says so. An id can only arrive
+         *  here from the declaration, so the honest answer is "not wired yet",
+         *  never an empty space that reads as "nothing to report". */
+        private const val INFOS_NO_RENDERER =
+            "Declared in build.json::ui.profile.infos.sections, but no read-out is wired for it yet."
+
+        private const val TOKENS_TEXT =
+            "Which credential is in play, re-read every time this page draws. " +
+            "PRESENCE ONLY — no token, key or cookie is ever printed here, and " +
+            "nothing on this page clears one: each credential is cleared where it " +
+            "is stored, on Setup."
 
         /** Imported values longer than this are shortened until tapped. */
         private const val IMPORTED_PREVIEW_CHARS = 400
