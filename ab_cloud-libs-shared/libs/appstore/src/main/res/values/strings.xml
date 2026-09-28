@@ -80,6 +80,7 @@
     <string name="store_phone_checking">checking…</string>
     <string name="store_phone_count_missing">%1$d not installed, %2$d of them need Play</string>
     <string name="store_phone_badge_needs_play">needs Play</string>
+    <string name="store_phone_state_needs_store">\u25cb not installed  \u00b7  %1$s publishes no APK we can fetch; its own page is the official path</string>
     <string name="store_phone_state_needs_play">◯ not installed  ·  %1$s  ·  Google Play publishes no APK; the Play button is the official path</string>
     <string name="store_phone_state_not_installed">◯ not installed  ·  installs via %1$s</string>
     <string name="store_phone_state_installed">✓ v%1$s (%2$d)</string>
@@ -89,10 +90,13 @@
     <string name="store_phone_note_play">Play manages its updates</string>
     <string name="store_phone_note_undeclared">not in the store declaration; its origin store updates it</string>
     <string name="store_phone_note_not_comparable">remote version not comparable with the installed one</string>
-    <string name="store_phone_source_vendor">vendor APK</string>
-    <string name="store_phone_source_fdroid">F-Droid</string>
-    <string name="store_phone_source_play">Play</string>
     <string name="store_phone_source_fleet">Cloud release</string>
+    <!-- #627 the source tab strip. "All" is the absence of a source filter, not
+         a source; every other tab's label comes from resolver.kinds in
+         appstore-install-sources.json, so there is no list of stores here. -->
+    <string name="store_phone_source_all">All</string>
+    <string name="store_phone_note_store">%1$s manages this update</string>
+    <string name="store_phone_why_store_only">%1$s is published on %2$s and nowhere this store can fetch from. Open its %2$s page — this store cannot download it.</string>
     <string name="store_phone_why_play_only">%1$s publishes no APK outside Google Play. Open its Play page — this store cannot download it.</string>
     <string name="store_phone_install_all_start">Installing %1$d apps… %2$d need Play and are skipped.</string>
     <string name="store_phone_batch_start">Updating %1$d apps…</string>

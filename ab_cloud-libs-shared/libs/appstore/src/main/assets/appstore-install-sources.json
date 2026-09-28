@@ -1,14 +1,68 @@
 {
   "_doc": "#564 THE ONE MAP from an app's REAL installer (PackageManager.getInstallSourceInfo().installingPackageName) to the Store ▸ Phone Apps origin button. Read by PhoneAppActions; nothing else in the store names an installer package. Foreign store -> the button opens that store's own page for the app ({pkg} is substituted, and the intent is aimed at the installer so market:// lands in the store that installed it, not whichever handler wins). `ours` is a Cloud fleet member (by the fleet manifest, or installed by this app) -> the host's Store ▸ Cloud page, where we update it. `unknown` is anything else (sideloaded APK, adb, no installer recorded) -> the system App info screen. Adding a store = one entry under `sources`.",
   "sources": {
-    "com.android.vending": { "label": "Play", "deeplink": "market://details?id={pkg}" },
-    "org.fdroid.fdroid": { "label": "F-Droid", "deeplink": "market://details?id={pkg}" }
+    "com.android.vending": {
+      "label": "Play",
+      "deeplink": "market://details?id={pkg}"
+    },
+    "org.fdroid.fdroid": {
+      "label": "F-Droid",
+      "deeplink": "market://details?id={pkg}"
+    },
+    "com.sec.android.app.samsungapps": {
+      "label": "Samsung",
+      "deeplink": "samsungapps://ProductDetail/{pkg}"
+    },
+    "com.aurora.store": {
+      "label": "Aurora",
+      "deeplink": "market://details?id={pkg}"
+    }
   },
-  "ours": { "label": "Cloud" },
-  "unknown": { "label": "APK" },
+  "ours": {
+    "label": "Cloud"
+  },
+  "unknown": {
+    "label": "APK"
+  },
   "resolver": {
-    "_doc": "#571 WE ARE THE STORE. Per EXTERNAL app, the ORDERED install sources this store tries on a phone that has no other store: `vendor` = the vendor's own official direct-APK endpoint; `fdroid` = the official F-Droid repo (index-v1.jar, JAR-signed by the pinned `cert_sha256`, per-version sha256 in the index); `play` = the Google Play deep-link — Play publishes NO APK URL, so the deep-link IS the official Play path and the row carries a visible 'needs Play' badge. Read by SourceResolver through PhoneAppActions.sources; `order` is the only legal ranking and an app's `sources` must be a subsequence of it. A `play` source carries NOTHING but its kind: a URL on it would be a fake. An app absent from `apps` still resolves — to the Play deep-link alone — so every package the vault or an import names has a row. Fleet (Cloud) apps are NOT here: they install through the constellation manifest and the updater's release path, one downloader for the fleet. VENDOR FIELDS: `apk` = URL template ({version} from the feed, {asset} from `abis`); `abis` = ABI -> asset fragment, chosen by AbiUpdateTag over Build.SUPPORTED_ABIS; `feed` = official JSON version endpoint, `version_name`/`version_code`/`apk_key`/`sha256_key` = dot paths into it; `version_re` = one-group regex normalising the feed's version string; `sha256` = URL of a sidecar whose body is a bare hex or the sha256sum(1) form. A vendor source with no feed has no version probe: it re-fetches whatever the vendor serves today and the updater's downgrade guard decides. EVIDENCE 2026-09-25 from this container: every `feed`, `apk` and `sha256` below answered 200 with the declared shape; F-Droid's api answered 404 for telegram/bitwarden/firefox/brave/obsidian/signal/whatsapp, which is why they carry no `fdroid` source; download.mozilla.org's fennec-latest redirector serves Firefox 68 (2020) and is deliberately NOT declared.",
-    "order": ["vendor", "fdroid", "play"],
+    "_doc": "#571 WE ARE THE STORE. Per EXTERNAL app, the ORDERED install sources this store tries on a phone that has no other store: `vendor` = the vendor's own official direct-APK endpoint; `fdroid` = the official F-Droid repo (index-v1.jar, JAR-signed by the pinned `cert_sha256`, per-version sha256 in the index); `play` = the Google Play deep-link — Play publishes NO APK URL, so the deep-link IS the official Play path and the row carries a visible 'needs Play' badge. Read by SourceResolver through PhoneAppActions.sources; `order` is the only legal ranking and an app's `sources` must be a subsequence of it. A `play` source carries NOTHING but its kind: a URL on it would be a fake. An app absent from `apps` still resolves — to the Play deep-link alone — so every package the vault or an import names has a row. Fleet (Cloud) apps are NOT here: they install through the constellation manifest and the updater's release path, one downloader for the fleet. VENDOR FIELDS: `apk` = URL template ({version} from the feed, {asset} from `abis`); `abis` = ABI -> asset fragment, chosen by AbiUpdateTag over Build.SUPPORTED_ABIS; `feed` = official JSON version endpoint, `version_name`/`version_code`/`apk_key`/`sha256_key` = dot paths into it; `version_re` = one-group regex normalising the feed's version string; `sha256` = URL of a sidecar whose body is a bare hex or the sha256sum(1) form. A vendor source with no feed has no version probe: it re-fetches whatever the vendor serves today and the updater's downgrade guard decides. EVIDENCE 2026-09-25 from this container: every `feed`, `apk` and `sha256` below answered 200 with the declared shape; F-Droid's api answered 404 for telegram/bitwarden/firefox/brave/obsidian/signal/whatsapp, which is why they carry no `fdroid` source; download.mozilla.org's fennec-latest redirector serves Firefox 68 (2020) and is deliberately NOT declared. #627 KINDS ARE DECLARED, AND THE PAGE'S SOURCE TABS ARE THAT DECLARATION. `kinds` carries one entry per kind named in `order`, and Store ▸ Phone draws one tab per entry, in `order`, labelled from `label`. Adding a kind here yields a tab with no Kotlin change; a kind in `order` with no `kinds` entry (or the reverse) fails to parse. `fetches` is the honest half: true = this store hands us bytes we can verify and version-compare ourselves (vendor, fdroid); false = it is a HAND-OFF, the row deep-links into that store's own page and there is no automated version compare, which the row says rather than implying one. `installer` is the store app the hand-off is aimed at, looked up in the top-level `sources` map — never named in code. `catalogue` says this kind is a different CLIENT for another kind's catalogue, not a catalogue of its own: Aurora Store serves Google Play's index, so `aurora` aliases `play` and its tab is every app with a `play` rung. Samsung's Galaxy Store is a genuinely separate catalogue, so `samsung` aliases nothing and its tab is exactly the apps that declare it.",
+    "order": [
+      "vendor",
+      "fdroid",
+      "samsung",
+      "aurora",
+      "play"
+    ],
+    "kinds": {
+      "vendor": {
+        "label": "Direct",
+        "_doc": "The publisher's OWN endpoint. This is the ticket's 'Direct' tab: the vendor rung IS installing straight from the people who built the app, so a separate Direct tab would have exactly the same membership as this one. One kind, one tab, labelled for what the user is choosing.",
+        "fetches": true
+      },
+      "fdroid": {
+        "label": "F-Droid",
+        "installer": "org.fdroid.fdroid",
+        "fetches": true
+      },
+      "samsung": {
+        "label": "Samsung",
+        "_doc": "Galaxy Store: a real, separate catalogue, and one with NO public APK endpoint and no public version API — its store API is device-authenticated and app-internal. So this rung is a hand-off: the row deep-links into the Galaxy Store page and says plainly that there is no automated version compare for it. Declaring it as a fetching source would be a claim about bytes we cannot get.",
+        "installer": "com.sec.android.app.samsungapps",
+        "fetches": false
+      },
+      "aurora": {
+        "label": "Aurora",
+        "_doc": "Aurora Store is a CLIENT for Google Play's catalogue, not an index of its own — so 'install via Aurora' is a different route to the SAME app set, and `catalogue: play` says exactly that. Its tab is therefore every app with a `play` rung, derived, rather than a per-app duplicate of the Play ladder. Aurora can install what Play can; it is not another catalogue and this file does not pretend it is.",
+        "installer": "com.aurora.store",
+        "catalogue": "play",
+        "fetches": false
+      },
+      "play": {
+        "label": "Google Play",
+        "installer": "com.android.vending",
+        "fetches": false
+      }
+    },
     "fdroid": {
       "repo": "https://f-droid.org/repo/",
       "index": "index-v1.jar",
@@ -16,54 +70,213 @@
       "api": "https://f-droid.org/api/v1/packages/{pkg}",
       "cert_sha256": "43238d512c1e5eb2d6569f4a3afbf5523418b82e0a3ed1552770abb9a9c9ccab"
     },
-    "play": { "installer": "com.android.vending" },
+    "play": {
+      "installer": "com.android.vending"
+    },
     "apps": {
-      "com.whatsapp": { "label": "WhatsApp", "sources": [
-        { "kind": "vendor", "apk": "https://www.whatsapp.com/android/current/WhatsApp.apk" },
-        { "kind": "play" } ] },
-      "org.thoughtcrime.securesms": { "label": "Signal", "sources": [
-        { "kind": "vendor", "feed": "https://updates.signal.org/android/latest.json",
-          "version_name": "versionName", "version_code": "versionCode", "apk_key": "url", "sha256_key": "sha256sum" },
-        { "kind": "play" } ] },
-      "org.mozilla.firefox": { "label": "Firefox", "sources": [
-        { "kind": "vendor", "feed": "https://product-details.mozilla.org/1.0/mobile_versions.json", "version_name": "version",
-          "apk": "https://archive.mozilla.org/pub/fenix/releases/{version}/android/fenix-{version}-android-{asset}/fenix-{version}.multi.android-{asset}.apk",
-          "abis": { "arm64-v8a": "arm64-v8a", "armeabi-v7a": "armeabi-v7a", "x86_64": "x86_64", "x86": "x86" } },
-        { "kind": "play" } ] },
-      "org.telegram.messenger": { "label": "Telegram", "sources": [
-        { "kind": "vendor", "apk": "https://telegram.org/dl/android/apk" },
-        { "kind": "play" } ] },
-      "com.x8bit.bitwarden": { "label": "Bitwarden", "sources": [
-        { "kind": "vendor", "feed": "https://api.github.com/repos/bitwarden/android/releases/latest", "version_name": "tag_name", "version_re": "^v?([0-9][0-9.]*)",
-          "apk": "https://github.com/bitwarden/android/releases/latest/download/com.x8bit.bitwarden.apk",
-          "sha256": "https://github.com/bitwarden/android/releases/latest/download/com.x8bit.bitwarden.apk-sha256.txt" },
-        { "kind": "play" } ] },
-      "com.brave.browser": { "label": "Brave", "sources": [
-        { "kind": "vendor", "feed": "https://api.github.com/repos/brave/brave-browser/releases/latest", "version_name": "tag_name", "version_re": "^v?([0-9][0-9.]*)",
-          "apk": "https://github.com/brave/brave-browser/releases/latest/download/{asset}",
-          "sha256": "https://github.com/brave/brave-browser/releases/latest/download/{asset}.sha256",
-          "abis": { "arm64-v8a": "BraveMonoarm64.apk", "armeabi-v7a": "BraveMonoarm.apk", "x86_64": "BraveMonox64.apk", "x86": "BraveMonox86.apk" } },
-        { "kind": "play" } ] },
-      "md.obsidian": { "label": "Obsidian", "sources": [
-        { "kind": "vendor", "feed": "https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest", "version_name": "tag_name", "version_re": "^v?([0-9][0-9.]*)",
-          "apk": "https://github.com/obsidianmd/obsidian-releases/releases/latest/download/Obsidian-{version}.apk" },
-        { "kind": "play" } ] },
-      "org.fdroid.fdroid": { "label": "F-Droid", "sources": [
-        { "kind": "vendor", "apk": "https://f-droid.org/F-Droid.apk" },
-        { "kind": "fdroid" } ] },
-      "org.kde.kdeconnect_tp": { "label": "KDE Connect", "sources": [
-        { "kind": "fdroid" },
-        { "kind": "play" } ] },
-      "net.sourceforge.opencamera": { "label": "Open Camera", "sources": [
-        { "kind": "fdroid" },
-        { "kind": "play" } ] },
-      "com.anthropic.claude": { "label": "Claude", "sources": [ { "kind": "play" } ] },
-      "com.google.android.apps.bard": { "label": "Gemini", "sources": [ { "kind": "play" } ] },
-      "com.google.android.apps.maps": { "label": "Google Maps", "sources": [ { "kind": "play" } ] },
-      "com.google.android.gm": { "label": "Gmail", "sources": [ { "kind": "play" } ] },
-      "com.google.android.apps.translate": { "label": "Google Translate", "sources": [ { "kind": "play" } ] },
-      "com.google.android.apps.nbu.files": { "label": "Files by Google", "sources": [ { "kind": "play" } ] },
-      "com.instagram.android": { "label": "Instagram", "sources": [ { "kind": "play" } ] }
+      "com.whatsapp": {
+        "label": "WhatsApp",
+        "sources": [
+          {
+            "kind": "vendor",
+            "apk": "https://www.whatsapp.com/android/current/WhatsApp.apk"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "org.thoughtcrime.securesms": {
+        "label": "Signal",
+        "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://updates.signal.org/android/latest.json",
+            "version_name": "versionName",
+            "version_code": "versionCode",
+            "apk_key": "url",
+            "sha256_key": "sha256sum"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "org.mozilla.firefox": {
+        "label": "Firefox",
+        "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://product-details.mozilla.org/1.0/mobile_versions.json",
+            "version_name": "version",
+            "apk": "https://archive.mozilla.org/pub/fenix/releases/{version}/android/fenix-{version}-android-{asset}/fenix-{version}.multi.android-{asset}.apk",
+            "abis": {
+              "arm64-v8a": "arm64-v8a",
+              "armeabi-v7a": "armeabi-v7a",
+              "x86_64": "x86_64",
+              "x86": "x86"
+            }
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "org.telegram.messenger": {
+        "label": "Telegram",
+        "sources": [
+          {
+            "kind": "vendor",
+            "apk": "https://telegram.org/dl/android/apk"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.x8bit.bitwarden": {
+        "label": "Bitwarden",
+        "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://api.github.com/repos/bitwarden/android/releases/latest",
+            "version_name": "tag_name",
+            "version_re": "^v?([0-9][0-9.]*)",
+            "apk": "https://github.com/bitwarden/android/releases/latest/download/com.x8bit.bitwarden.apk",
+            "sha256": "https://github.com/bitwarden/android/releases/latest/download/com.x8bit.bitwarden.apk-sha256.txt"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.brave.browser": {
+        "label": "Brave",
+        "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://api.github.com/repos/brave/brave-browser/releases/latest",
+            "version_name": "tag_name",
+            "version_re": "^v?([0-9][0-9.]*)",
+            "apk": "https://github.com/brave/brave-browser/releases/latest/download/{asset}",
+            "sha256": "https://github.com/brave/brave-browser/releases/latest/download/{asset}.sha256",
+            "abis": {
+              "arm64-v8a": "BraveMonoarm64.apk",
+              "armeabi-v7a": "BraveMonoarm.apk",
+              "x86_64": "BraveMonox64.apk",
+              "x86": "BraveMonox86.apk"
+            }
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "md.obsidian": {
+        "label": "Obsidian",
+        "sources": [
+          {
+            "kind": "vendor",
+            "feed": "https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest",
+            "version_name": "tag_name",
+            "version_re": "^v?([0-9][0-9.]*)",
+            "apk": "https://github.com/obsidianmd/obsidian-releases/releases/latest/download/Obsidian-{version}.apk"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "org.fdroid.fdroid": {
+        "label": "F-Droid",
+        "sources": [
+          {
+            "kind": "vendor",
+            "apk": "https://f-droid.org/F-Droid.apk"
+          },
+          {
+            "kind": "fdroid"
+          }
+        ]
+      },
+      "org.kde.kdeconnect_tp": {
+        "label": "KDE Connect",
+        "sources": [
+          {
+            "kind": "fdroid"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "net.sourceforge.opencamera": {
+        "label": "Open Camera",
+        "sources": [
+          {
+            "kind": "fdroid"
+          },
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.anthropic.claude": {
+        "label": "Claude",
+        "sources": [
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.bard": {
+        "label": "Gemini",
+        "sources": [
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.maps": {
+        "label": "Google Maps",
+        "sources": [
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.gm": {
+        "label": "Gmail",
+        "sources": [
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.translate": {
+        "label": "Google Translate",
+        "sources": [
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.google.android.apps.nbu.files": {
+        "label": "Files by Google",
+        "sources": [
+          {
+            "kind": "play"
+          }
+        ]
+      },
+      "com.instagram.android": {
+        "label": "Instagram",
+        "sources": [
+          {
+            "kind": "play"
+          }
+        ]
+      }
     }
   }
 }

@@ -62,7 +62,13 @@ class StoreResolverTest {
     @Test
     fun `the declaration is honest - ladders follow the order, Play carries nothing, vendor is https`() {
         val c = cfg
-        assertEquals(listOf(SourceResolver.KIND_VENDOR, SourceResolver.KIND_FDROID, SourceResolver.KIND_PLAY), c.order)
+        // #627 the order is DERIVED alongside the declared kinds, so this asserts
+        // the two halves agree rather than restating a fixed triple that a newly
+        // declared store would silently fall outside of.
+        assertEquals("order and kinds must name the same kinds, in the same order",
+            c.order, c.kinds.map { it.id })
+        assertTrue("the three kinds with behaviour in the resolver must stay declared",
+            c.order.containsAll(listOf(SourceResolver.KIND_VENDOR, SourceResolver.KIND_FDROID, SourceResolver.KIND_PLAY)))
         assertTrue("no external apps declared", c.apps.isNotEmpty())
         assertTrue("the declaration must hold at least one Play-only app to keep the badge honest", c.apps.values.any { it.needsPlay })
         assertTrue("the declaration must hold at least one app this store can install itself", c.apps.values.any { !it.needsPlay })

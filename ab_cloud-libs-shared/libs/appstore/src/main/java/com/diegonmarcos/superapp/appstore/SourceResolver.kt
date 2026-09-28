@@ -37,12 +37,49 @@ import java.net.URL
  */
 object SourceResolver {
 
+    // The three kinds with BEHAVIOUR in this file. Every other declared kind is
+    // a hand-off ([Source.Store]) and needs no constant here — #627's whole
+    // point is that adding a store is an entry in the asset, not a line of
+    // Kotlin. These three are named because the parser and the fetcher branch
+    // on them, not because they are a list of the stores that exist.
     const val KIND_VENDOR = "vendor"
     const val KIND_FDROID = "fdroid"
     const val KIND_PLAY = "play"
 
+    /**
+     * #627 ONE DECLARED KIND. Read from `resolver.kinds`, one per entry in
+     * `resolver.order`, and THE source of the page's tab strip: one tab per
+     * [Kind], in declared order, labelled [label]. There is no list of stores in
+     * Kotlin to disagree with this one.
+     *
+     * [fetches] false = a HAND-OFF: that store publishes no APK we can fetch, so
+     * the row deep-links into [installer]'s own page and says there is no
+     * automated version compare rather than implying one.
+     *
+     * [catalogue] names the kind whose catalogue this kind is a CLIENT for.
+     * Aurora Store serves Google Play's index, so `aurora` aliases `play`: its
+     * tab is every app with a play rung, because that is genuinely the same app
+     * set reached through a different client. A kind that aliases nothing has a
+     * catalogue of its own and its tab is exactly the apps that declare it.
+     */
+    class Kind(
+        val id: String,
+        val label: String,
+        val installer: String?,
+        val catalogue: String?,
+        val fetches: Boolean,
+    ) {
+        /** Which declared kind an app must carry to appear under this tab. */
+        val member: String get() = catalogue ?: id
+    }
+
     /** One rung of an app's ladder. */
     sealed class Source(val kind: String) {
+        /** True when this rung cannot hand us bytes — the row deep-links into
+         *  somebody else's store instead of downloading. [External.direct] is
+         *  defined by this, so a new hand-off kind is excluded from "we can
+         *  install it ourselves" by construction rather than by being listed. */
+        open val handoff: Boolean get() = false
         class Vendor(
             /** URL template — `{version}` from the feed, `{asset}` from [abis]. Null when [apkKey] names it. */
             val apk: String?,
@@ -57,15 +94,31 @@ object SourceResolver {
             val versionRe: Regex?,
         ) : Source(KIND_VENDOR)
         object FDroid : Source(KIND_FDROID)
-        object Play : Source(KIND_PLAY)
+        object Play : Source(KIND_PLAY) {
+            override val handoff: Boolean get() = true
+        }
+        /** #627 any other declared kind with `fetches: false` — Galaxy Store,
+         *  Aurora. It carries nothing but its identity and the store app it
+         *  hands off to, because that is all such a source HAS. */
+        class Store(kind: String, val installer: String) : Source(kind) {
+            override val handoff: Boolean get() = true
+        }
     }
 
     class External(val pkg: String, val label: String, val sources: List<Source>, val declared: Boolean) {
         /** The rungs this store can download from itself. */
-        val direct: List<Source> get() = sources.filter { it !is Source.Play }
-        /** Nothing but Play: the badge, and no Install of our own. */
+        val direct: List<Source> get() = sources.filter { !it.handoff }
+        /** No rung we can serve: the badge, and no Install of our own. */
         val needsPlay: Boolean get() = direct.isEmpty()
         val hasPlay: Boolean get() = sources.any { it is Source.Play }
+        /** #627 does this app's ladder put it under the tab for [kind]? */
+        fun inTab(kind: Kind): Boolean = sources.any { it.kind == kind.member }
+        /** #627 the store this app must be installed FROM when no rung here can
+         *  serve it. The first hand-off in the declared ladder — Play for most,
+         *  Galaxy Store for an app only Samsung publishes. Was hardcoded to Play,
+         *  which would have told the user "needs Play" about an app that needs
+         *  Samsung and sent them to the wrong store. */
+        val handoff: Source? get() = sources.firstOrNull { it.handoff }
 
         /** The shape [Fleet.commit] takes, so an external APK goes through the
          *  fleet's install channels — the ONE installer — and nothing else. */
@@ -78,27 +131,58 @@ object SourceResolver {
 
     class Config(
         val order: List<String>,
+        /** #627 the declared kinds, in [order]. The tab strip IS this list. */
+        val kinds: List<Kind>,
         val fdroid: JSONObject,
         /** The installer package whose store page is the Play rung — looked up in the #564 map, never named in code. */
         val playInstaller: String,
         val apps: Map<String, External>,
-    )
+    ) {
+        /** #627 one declared kind by id, for a label or an installer. */
+        fun kind(id: String?): Kind? = kinds.firstOrNull { it.id == id }
+    }
 
     fun config(sources: JSONObject): Config {
         val r = sources.getJSONObject("resolver")
         val order = r.getJSONArray("order").let { a -> (0 until a.length()).map { a.getString(it) } }
+        // #627 CLOSED AT BOTH ENDS. A kind ranked in `order` with no `kinds`
+        // entry would be a source with no tab and no label; a `kinds` entry
+        // missing from `order` would be a tab with no rank. Either is a
+        // declaration that only half exists, and half a declaration is how a
+        // store ends up invisible on the page that is supposed to list it.
+        val declared = r.getJSONObject("kinds")
+        val named = declared.keys().asSequence().toSet()
+        require(named == order.toSet()) {
+            "resolver.order $order and resolver.kinds $named must name the SAME kinds — " +
+                "a kind in one and not the other is a store with no tab, or a tab with no rank"
+        }
+        val kinds = order.map { id ->
+            val k = declared.getJSONObject(id)
+            val catalogue = k.optString("catalogue").ifEmpty { null }
+            require(catalogue == null || catalogue in named) {
+                "$id declares catalogue '$catalogue', which is not a declared kind"
+            }
+            Kind(
+                id = id,
+                label = k.getString("label"),
+                installer = k.optString("installer").ifEmpty { null },
+                catalogue = catalogue,
+                fetches = k.getBoolean("fetches"),
+            )
+        }
+        val byId = kinds.associateBy { it.id }
         val apps = r.getJSONObject("apps")
-        val parsed = apps.keys().asSequence().sorted().associateWith { pkg -> external(pkg, apps.getJSONObject(pkg), order) }
-        return Config(order, r.getJSONObject("fdroid"), r.getJSONObject("play").getString("installer"), parsed)
+        val parsed = apps.keys().asSequence().sorted().associateWith { pkg -> external(pkg, apps.getJSONObject(pkg), order, byId) }
+        return Config(order, kinds, r.getJSONObject("fdroid"), r.getJSONObject("play").getString("installer"), parsed)
     }
 
     /** The declared ladder, or the Play rung alone for a package the map does not know. */
     fun resolve(cfg: Config, pkg: String): External =
         cfg.apps[pkg] ?: External(pkg, pkg, listOf(Source.Play), declared = false)
 
-    private fun external(pkg: String, o: JSONObject, order: List<String>): External {
+    private fun external(pkg: String, o: JSONObject, order: List<String>, kinds: Map<String, Kind>): External {
         val arr = o.getJSONArray("sources")
-        val list = (0 until arr.length()).map { i -> source(arr.getJSONObject(i)) }
+        val list = (0 until arr.length()).map { i -> source(arr.getJSONObject(i), kinds) }
         // The ladder must be a subsequence of `order`: a Play rung ABOVE a
         // direct one would send the user to a store this store replaces.
         val ranks = list.map { order.indexOf(it.kind) }
@@ -108,7 +192,7 @@ object SourceResolver {
         return External(pkg, o.optString("label").ifEmpty { pkg }, list, declared = true)
     }
 
-    private fun source(o: JSONObject): Source = when (val kind = o.getString("kind")) {
+    private fun source(o: JSONObject, kinds: Map<String, Kind>): Source = when (val kind = o.getString("kind")) {
         KIND_FDROID -> Source.FDroid
         KIND_PLAY -> {
             // Google Play has no public APK URL. A Play rung that names one is
@@ -134,12 +218,28 @@ object SourceResolver {
                 versionRe = o.optString("version_re").ifEmpty { null }?.let { Regex(it) },
             )
         }
-        else -> error("unknown source kind $kind")
+        // #627 every other DECLARED kind is a hand-off, and it parses without a
+        // branch of its own. An UNdeclared kind still fails — the asset is the
+        // authority on what exists, not this when.
+        else -> {
+            val k = kinds[kind] ?: error("unknown source kind $kind")
+            require(!k.fetches) {
+                "$kind declares fetches:true but this file has no fetcher for it — a kind that " +
+                    "claims to serve bytes must have code that can get them"
+            }
+            val installer = k.installer
+                ?: error("$kind is a hand-off and must declare the installer package it hands off to")
+            require(o.length() == 1) { "a $kind source carries nothing but its kind: $o" }
+            Source.Store(kind, installer)
+        }
     }
 
     // ── version probe ────────────────────────────────────────────────────
 
-    enum class Note { NONE, NO_FEED, PLAY_MANAGES, UNDECLARED, NOT_COMPARABLE }
+    /** #627 STORE_MANAGES is PLAY_MANAGES for every other hand-off store: that
+     *  store owns the update and we have no feed to compare against, said as a
+     *  fact rather than rounded to "up to date". */
+    enum class Note { NONE, NO_FEED, PLAY_MANAGES, STORE_MANAGES, UNDECLARED, NOT_COMPARABLE }
 
     /** What a row shows. [via] is the rung that answered (a [Source.kind], or "fleet"). */
     sealed class Check(val via: String?) {
@@ -182,6 +282,7 @@ object SourceResolver {
         if (!app.declared) return Check.Installed(name, code, null, Note.UNDECLARED)
         for (src in app.sources) {
             if (src is Source.Play) return Check.Installed(name, code, src.kind, Note.PLAY_MANAGES)
+            if (src is Source.Store) return Check.Installed(name, code, src.kind, Note.STORE_MANAGES)
             val probed = try { remoteVersion(cfg, app, src) } catch (t: Throwable) {
                 return Check.Unknown(name, "${src.kind}: ${t.message ?: t.javaClass.simpleName}")
             }
@@ -230,6 +331,11 @@ object SourceResolver {
         is Source.FDroid -> FDroidIndex.suggested(cfg.fdroid, app.pkg)?.let { Remote(it.first, it.second) }
             ?: error("${app.pkg} is not in the F-Droid api")
         is Source.Play -> null
+        // No public version endpoint exists for these — Galaxy Store's API is
+        // device-authenticated and app-internal, and Aurora reads Play's index
+        // through a client we are not. Null is "this rung has no feed", which
+        // the caller turns into a visible note.
+        is Source.Store -> null
     }
 
     private fun normalise(src: Source.Vendor, raw: String): String =
@@ -250,6 +356,8 @@ object SourceResolver {
         is Source.Vendor -> fetchVendor(ctx, app, src)
         is Source.FDroid -> identity(ctx, app.pkg, FDroidIndex.fetch(ctx, cfg.fdroid, app.pkg))
         is Source.Play -> error("${app.label} publishes no APK outside Google Play")
+        is Source.Store -> error("${app.label} publishes no APK outside ${src.kind} — that store " +
+            "hands out no URL we can fetch, so the row deep-links into it instead")
     // #625 the external half of the ONE record point ([Fleet.download] is the
     // fleet half): the sha256 + identity that retention is gated on, written the
     // moment the bytes verified, plus the bounded cache's eviction pass. An

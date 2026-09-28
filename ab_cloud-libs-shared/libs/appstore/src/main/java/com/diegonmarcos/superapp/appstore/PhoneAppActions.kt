@@ -62,10 +62,21 @@ object PhoneAppActions {
                     ?.let { (label, page) -> out += Action(Kind.ORIGIN, label, page, null) }
             }
             else -> {
+                // #627 HAND OFF TO THE STORE THIS APP ACTUALLY NEEDS. This used
+                // to be Play unconditionally, so an app published only on the
+                // Galaxy Store would have been described as "needs Play" and its
+                // origin button would have opened a Play page that does not have
+                // it. The rung says which store; the declaration says which
+                // package that store is.
+                val handoff = app.handoff
+                val installer = (handoff as? SourceResolver.Source.Store)?.installer
+                    ?: cfg.playInstaller
+                val (label, page) = storePage(sources, installer, app.pkg)
+                    ?: error("$installer is a declared hand-off but is not in the sources map")
                 out += Action(Kind.INSTALL, s(R.string.store_phone_install), null,
-                    ctx.getString(R.string.store_phone_why_play_only, app.label))
-                val (label, page) = storePage(sources, cfg.playInstaller, app.pkg)
-                    ?: error("the resolver's play installer is not in the sources map")
+                    if (handoff is SourceResolver.Source.Store)
+                        ctx.getString(R.string.store_phone_why_store_only, app.label, label)
+                    else ctx.getString(R.string.store_phone_why_play_only, app.label))
                 out += Action(Kind.ORIGIN, label, page, null)
             }
         }

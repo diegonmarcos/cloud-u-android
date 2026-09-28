@@ -7,7 +7,8 @@
 # RED on each — a validator that passes a fake Play URL is no validator.
 #
 # T1 DECLARATION HONESTY (validator + 4 mutations). One `resolver` block inside
-#    the ONE #564 map; `order` = vendor, fdroid, play; every app's ladder a
+#    the ONE #564 map; `order` and `kinds` name the SAME kinds in the same
+#    order (#627, so the page's source tabs are the declaration); every app's ladder a
 #    strict subsequence of it; a `play` rung carries nothing but its kind
 #    (Google Play publishes no APK URL); every vendor `apk`/`feed`/`sha256`
 #    is https; no URL anywhere points at play.google.com; the F-Droid signer
@@ -50,7 +51,28 @@ def validate(doc):
     r = doc.get("resolver")
     if not isinstance(r, dict): return ["no resolver block"]
     order = r.get("order")
-    if order != ["vendor", "fdroid", "play"]: v.append("order is %r" % (order,))
+    # #627 the ranking is no longer a fixed triple — new stores are declared, not
+    # coded — so the rule is that the two halves of the declaration agree. A kind
+    # ranked with no `kinds` entry is a source with no tab and no label; a `kinds`
+    # entry with no rank is a tab with no place in the ladder.
+    kinds = r.get("kinds")
+    if not isinstance(order, list) or not order: v.append("order is %r" % (order,))
+    elif not isinstance(kinds, dict): v.append("kinds is %r" % (kinds,))
+    elif list(kinds.keys()) != order: v.append("kinds %r does not match order %r" % (list(kinds.keys()), order))
+    else:
+        for k, spec in kinds.items():
+            if not str(spec.get("label", "")).strip(): v.append("kind %s has no label" % k)
+            if not isinstance(spec.get("fetches"), bool): v.append("kind %s does not declare fetches" % k)
+            # A hand-off has no bytes for us, so it must name the store app it
+            # hands off to, and that package must be in the #564 map.
+            if spec.get("fetches") is False:
+                inst = spec.get("installer")
+                if inst not in doc.get("sources", {}):
+                    v.append("hand-off kind %s names installer %r, absent from the #564 sources map" % (k, inst))
+            cat = spec.get("catalogue")
+            if cat is not None and cat not in kinds: v.append("kind %s aliases undeclared catalogue %r" % (k, cat))
+    for req in ("vendor", "fdroid", "play"):
+        if order and req not in order: v.append("the resolver branches on %s but it is not declared" % req)
     fd = r.get("fdroid", {})
     if not re.fullmatch(r"[0-9a-f]{64}", str(fd.get("cert_sha256", ""))): v.append("fdroid cert_sha256 is not a sha256 hex")
     for k in ("repo", "index", "index_entry", "api"):
@@ -104,6 +126,19 @@ for name, mut in mutations.items():
     m = copy.deepcopy(doc); mut(m)
     if validate(m): ok("mutation goes RED: " + name)
     else: bad("mutation stayed GREEN — the validator does not see: " + name)
+
+# #627 MUTATIONS: the declaration must be closed at both ends.
+for name, mut in (
+    ("a kind ranked in `order` with no `kinds` entry",
+     lambda d: d["resolver"]["kinds"].pop(d["resolver"]["order"][-1])),
+    ("a `kinds` entry that is not ranked in `order`",
+     lambda d: d["resolver"]["kinds"].__setitem__("invented", {"label": "Invented", "fetches": True})),
+    ("a hand-off kind that names no installer",
+     lambda d: d["resolver"]["kinds"]["play"].pop("installer", None)),
+):
+    m = copy.deepcopy(doc); mut(m)
+    if validate(m): ok("mutation goes RED: " + name)
+    else: bad("mutation stayed GREEN - the validator does not see: " + name)
 
 print("== T2: one installer, one downloader ==")
 kt_dir = os.path.join(lib, "java/com/diegonmarcos/superapp/appstore")
@@ -159,6 +194,33 @@ else: bad("the parser accepts a Play rung with extra fields")
 if "Fleet.candidateIdentity(ctx, apk.file)" in sr and "id.pkg != pkg" in sr: ok("a downloaded APK must be the package asked for")
 else: bad("SourceResolver installs bytes without checking their package")
 
+print("== T6 (#627): the source tabs derive from the declaration ==")
+# EVERY kind's user-visible label lives in the asset. It used to live in a `when`
+# over three KIND_* constants mapping to three string resources — a second list
+# of the stores that exist, which is why declaring Samsung or Aurora would have
+# rendered them as the empty string on a row's ladder.
+labels = [k["label"] for k in doc["resolver"]["kinds"].values()]
+# Scoped to the files that RESOLVE or RENDER a kind: StoreCloudFragment's own
+# "Direct" button is the fleet's BootstrapInstall hand-off, a different thing
+# that happens to share a word with the vendor kind's label, and folding it in
+# would make this assertion about vocabulary instead of about derivation.
+renders = ("SourceResolver.kt", "StorePhoneFragment.kt", "StoreSourceTabs.kt", "PhoneAppActions.kt")
+leaked = ["%s: %s" % (f, l) for f in renders for l in labels if '"%s"' % l in kt.get(f, "")]
+if not leaked: ok("no declared kind label is written into the store's code (%s)" % ", ".join(labels))
+else: bad("a kind label is hardcoded in Kotlin: %s" % leaked)
+tabs = kt.get("StoreSourceTabs.kt", "")
+if not tabs: bad("StoreSourceTabs.kt missing - the tab strip has nowhere derived to come from")
+elif re.search(r"listOf\s*\(\s*\"", tabs): bad("StoreSourceTabs builds a literal list of tabs")
+elif "kinds.map { it.label }" in tabs: ok("the strip is one pill per declared kind, labelled from the declaration")
+else: bad("StoreSourceTabs does not derive its pills from the declared kinds")
+page = kt["StorePhoneFragment.kt"]
+if "StoreSourceTabs.render(" in page and "cfg?.kinds" in page:
+    ok("Store > Phone draws the strip from the resolved kinds")
+else: bad("Store > Phone does not draw the strip from the resolved kinds")
+if "it.external?.inTab(tab)" in page and "!installedOnly || it.installed" in page:
+    ok("the source tab COMPOSES with the #619 Declared/Installed filter over the same rows")
+else: bad("the source tab replaces the #619 filter instead of composing with it")
+
 print("== T5: registration ==")
 jvm = os.path.join(app, "app/src/test/java/com/diegonmarcos/superapp/apps/StoreResolverTest.kt")
 if os.path.exists(jvm):
@@ -168,6 +230,14 @@ if os.path.exists(jvm):
         if needle in t: ok("JVM test covers: " + needle)
         else: bad("JVM test lacks: " + needle)
 else: bad("StoreResolverTest.kt missing")
+tabs_jvm = os.path.join(app, "app/src/test/java/com/diegonmarcos/superapp/apps/StoreSourceTabsTest.kt")
+if os.path.exists(tabs_jvm):
+    t = read(tabs_jvm)
+    for needle in ("renders one tab per declared kind", "Samsung is a separate catalogue",
+                   "a tab holds only apps whose declared ladder names that source"):
+        if needle in t: ok("JVM test covers: " + needle)
+        else: bad("JVM test lacks: " + needle)
+else: bad("StoreSourceTabsTest.kt missing - the #627 derivation is unproven")
 
 print("RESULT: %d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)

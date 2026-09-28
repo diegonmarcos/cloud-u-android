@@ -70,6 +70,12 @@ class StorePhoneFragment : Fragment() {
     // through PackageManager. redraw() re-renders the SAME rows, so flipping the
     // toggle never re-probes or re-enumerates.
     private var installedOnly = false
+    // #627 which declared store source the page is showing, or null for All.
+    // COMPOSES with [installedOnly] rather than replacing it: the tab chooses the
+    // store, the pill chooses declared-vs-installed, and render() applies both to
+    // the SAME rows() output — so every view is a subset of Declared, by
+    // construction, exactly as #619 required.
+    private var sourceTab: SourceResolver.Kind? = null
     private var declaredPill: TextView? = null
     private var installedPill: TextView? = null
     private var cfg: SourceResolver.Config? = null
@@ -230,7 +236,21 @@ class StorePhoneFragment : Fragment() {
         // #619 Declared shows every row rows() built; Installed keeps only the
         // ones on the device. The declared set is never rebuilt here — it is
         // filtered, so Installed is by construction a subset of Declared.
-        val shown = if (installedOnly) rows.filter { it.installed } else rows
+        // #627 the tab strip is drawn from the DECLARED kinds, rebuilt on every
+        // render so a change in the asset is a change on the screen with nothing
+        // in between. Rows with no external ladder (fleet members) belong to no
+        // store tab — they come from the constellation, not from a store, and
+        // pretending otherwise would put them under whichever tab was listed
+        // first.
+        val kinds = cfg?.kinds.orEmpty()
+        if (kinds.isNotEmpty()) into.addView(
+            StoreSourceTabs.render(ctx, kinds, sourceTab) { k ->
+                if (sourceTab?.id != k?.id) { sourceTab = k; redraw() }
+            })
+        val tab = sourceTab
+        val shown = rows
+            .filter { tab == null || it.external?.inTab(tab) == true }
+            .filter { !installedOnly || it.installed }
         val missing = shown.count { !it.installed }
         val play = shown.count { !it.installed && !it.direct }
         into.addView(caption(ctx, ctx.getString(R.string.store_phone_count, shown.size) + "  ·  " +
@@ -326,23 +346,44 @@ class StorePhoneFragment : Fragment() {
 
     /** One [SourceResolver.Check] → the row's state line and colour. */
     private fun paint(ctx: Context, tv: TextView, s: SourceResolver.Check, r: Row) {
+        // #627 A KIND'S NAME COMES FROM THE DECLARATION, ONCE. This was a
+        // `when` over three KIND_* constants mapping to three string resources —
+        // a second list of the stores that exist, three lines long, and adding
+        // Samsung or Aurora to the asset would have shown them on the row's
+        // ladder as the empty string. The fleet is not a declared store kind, so
+        // it keeps its own label; everything else is looked up.
         fun via(k: String?) = when (k) {
-            SourceResolver.KIND_VENDOR -> ctx.getString(R.string.store_phone_source_vendor)
-            SourceResolver.KIND_FDROID -> ctx.getString(R.string.store_phone_source_fdroid)
-            SourceResolver.KIND_PLAY -> ctx.getString(R.string.store_phone_source_play)
+            null -> ""
             SourceResolver.VIA_FLEET -> ctx.getString(R.string.store_phone_source_fleet)
-            else -> ""
+            else -> cfg?.kinds?.firstOrNull { it.id == k }?.label ?: k
         }
         val ladder = r.external?.sources?.joinToString(" → ") { via(it.kind) } ?: via(SourceResolver.VIA_FLEET)
         val (text, colour) = when (s) {
-            is SourceResolver.Check.NotInstalled ->
-                (if (s.needsPlay) ctx.getString(R.string.store_phone_state_needs_play, ctx.getString(R.string.store_phone_badge_needs_play))
-                 else ctx.getString(R.string.store_phone_state_not_installed, ladder)) to (if (s.needsPlay) cBadge else cMiss)
+            is SourceResolver.Check.NotInstalled -> {
+                // #627 NAME THE STORE THAT ACTUALLY HAS IT. "needs Play" is the
+                // right sentence for a Play hand-off and the wrong one for an app
+                // only the Galaxy Store publishes, so the store comes from the
+                // app's own first hand-off rung rather than from a constant.
+                val handoff = r.external?.handoff
+                val text = when {
+                    !s.needsPlay -> ctx.getString(R.string.store_phone_state_not_installed, ladder)
+                    handoff is SourceResolver.Source.Store ->
+                        ctx.getString(R.string.store_phone_state_needs_store, via(handoff.kind))
+                    else -> ctx.getString(R.string.store_phone_state_needs_play,
+                        ctx.getString(R.string.store_phone_badge_needs_play))
+                }
+                text to (if (s.needsPlay) cBadge else cMiss)
+            }
             is SourceResolver.Check.Installed -> {
                 val note = when (s.note) {
                     SourceResolver.Note.NONE -> if (s.via == null) "" else "  ·  " + via(s.via)
                     SourceResolver.Note.NO_FEED -> "  ·  " + ctx.getString(R.string.store_phone_note_no_feed)
                     SourceResolver.Note.PLAY_MANAGES -> "  ·  " + ctx.getString(R.string.store_phone_note_play)
+                    // #627 the same honesty for every other hand-off store: it
+                    // owns the update and we have no feed, said rather than
+                    // rounded to "up to date".
+                    SourceResolver.Note.STORE_MANAGES -> "  ·  " +
+                        ctx.getString(R.string.store_phone_note_store, via(s.via))
                     SourceResolver.Note.UNDECLARED -> "  ·  " + ctx.getString(R.string.store_phone_note_undeclared)
                     SourceResolver.Note.NOT_COMPARABLE -> "  ·  " + ctx.getString(R.string.store_phone_note_not_comparable)
                 }

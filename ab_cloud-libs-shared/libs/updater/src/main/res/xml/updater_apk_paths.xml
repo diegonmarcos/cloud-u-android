@@ -6,10 +6,21 @@
   app has, and this provider is granted read access to the package installer on
   every direct install.
 
-  ApkSource writes fleet-<id>-*.apk straight into cacheDir, and the
-  BootstrapInstall.uriFor fallback copies under cacheDir/bootstrap, so one
-  cache root covers both.
+  BootstrapInstall.uriFor's fallback copies under cacheDir/bootstrap, so the
+  cache root still has to be here.
+
+  #625 moved the APK cache OFF cacheDir — the OS reclaims cacheDir, which is why
+  downloads kept vanishing — and onto no_backup/updater/<declared>. FileProvider
+  has no tag for no_backup, so it is reached through the files root; the path
+  resolves to exactly that one directory and exports nothing else. It names the
+  MODULE segment, not the declared cache name, so build.json::release.apk_cache
+  stays the only place the cache directory is named.
+
+  Without this entry Direct install still worked — uriFor would copy the APK
+  into cacheDir/bootstrap first — but that is a second 267 MB write for the
+  biggest app in the fleet, so the entry is worth one line.
 -->
 <paths>
     <cache-path name="updater_cache" path="." />
+    <files-path name="updater_apk_cache" path="../no_backup/updater/" />
 </paths>
