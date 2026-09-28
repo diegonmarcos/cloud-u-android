@@ -81,13 +81,18 @@ object DriveAuthApply {
      * What a sign-in would write, per declared section, given the repositories
      * this phone manages. Pure: no store is touched.
      */
-    fun plan(artifact: JSONObject, applies: Map<String, String>, repos: List<ManagedRepo>): Report {
+    fun plan(
+        artifact: JSONObject,
+        applies: Map<String, String>,
+        repos: List<ManagedRepo>,
+        credentials: Map<String, String> = credentialIds,
+    ): Report {
         val steps = applies.map { (id, key) ->
             when (id) {
                 "git" -> {
                     val (token, why) = gitToken(artifact, key)
                     val targets = repos.filter { it.authKind == "https" }
-                    val credential = credentialIds[id].orEmpty()
+                    val credential = credentials[id].orEmpty()
                     when {
                         token == null -> Step(id, false, "git: $why")
                         // #629 A TOKEN WITH NO CLONE IS STILL A WIN. This used to report NOT-ok and
@@ -99,7 +104,7 @@ object DriveAuthApply {
                         targets.isEmpty() && credential.isNotBlank() ->
                             Step(id, true, "git: $why → the vault credential ($credential); no repository is cloned yet, so nothing else needs it")
                         targets.isEmpty() ->
-                            Step(id, false, "git: $why found, but auth.applies.git declares no credential_id and no managed repository uses https auth yet")
+                            Step(id, false, "git: $why found, but auth.applies.git declares no credential_id and no managed repository uses https auth yet — clone into the store first, then sign in again")
                         else -> Step(id, true, "git: $why → ${targets.size} repositor${if (targets.size == 1) "y" else "ies"} (${targets.joinToString { it.name }})" + (if (credential.isBlank()) "" else " + the vault credential ($credential)"))
                     }
                 }

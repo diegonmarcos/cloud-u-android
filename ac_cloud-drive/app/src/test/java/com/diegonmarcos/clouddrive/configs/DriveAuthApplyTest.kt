@@ -29,6 +29,8 @@ class DriveAuthApplyTest {
     private val appliesText: String = Json { ignoreUnknownKeys = true }
         .parseToJsonElement(File(root, "build.json").readText()).jsonObject["auth"]!!.jsonObject["applies"].toString()
     private val applies = Declarations.parseAuthApplies(appliesText)
+    /** #629 the declared credential id the VAULT-delivered token is held under, off the same block. */
+    private val credentials = Declarations.parseAuthCredentialIds(appliesText)
 
     private fun repo(name: String, auth: String) = ManagedRepo(id = "id-$name", name = name, path = "/store/$name", authKind = auth)
 
@@ -40,7 +42,7 @@ class DriveAuthApplyTest {
 
     @Test fun `a token reaches every managed https repository and no other`() {
         val artifact = JSONObject("""{"_meta":{"user":"u"},"git":{"github_token":" ghp_x "}}""")
-        val r = DriveAuthApply.plan(artifact, applies, listOf(repo("a", "https"), repo("b", "ssh"), repo("c", "https")))
+        val r = DriveAuthApply.plan(artifact, applies, listOf(repo("a", "https"), repo("b", "ssh"), repo("c", "https")), credentials)
         val git = r.steps.single { it.section == "git" }
         assertTrue(git.line, git.ok)
         assertTrue(git.line, git.line.contains("2 repositories") && git.line.contains("a") && git.line.contains("c") && !git.line.contains(", b"))
@@ -48,9 +50,25 @@ class DriveAuthApplyTest {
         assertTrue(r.ok)
     }
 
-    @Test fun `a token with no https repository yet says clone first, and nothing is ok`() {
+    /**
+     * #629 THE FRESH-PHONE CASE, which used to be reported not-ok so the vault token was thrown
+     * away and the page then demanded a browser login for a credential we already had. With a
+     * declared credential_id the token always lands, and that is the whole vault path.
+     */
+    @Test fun `a token with no https repository yet still lands under the declared credential id`() {
         val artifact = JSONObject("""{"git":{"github_token":"ghp_x"}}""")
-        val r = DriveAuthApply.plan(artifact, applies, listOf(repo("a", "ssh")))
+        assertTrue("build.json must declare the credential id", credentials["git"].orEmpty().isNotBlank())
+        val r = DriveAuthApply.plan(artifact, applies, listOf(repo("a", "ssh")), credentials)
+        val git = r.steps.single { it.section == "git" }
+        assertTrue(git.line, git.ok)
+        assertTrue(git.line, git.line.contains(credentials.getValue("git")))
+        assertTrue(r.ok)
+    }
+
+    /** And with NO credential id declared it is honest about having nowhere to put the token. */
+    @Test fun `a token with no https repository and no declared credential id says clone first`() {
+        val artifact = JSONObject("""{"git":{"github_token":"ghp_x"}}""")
+        val r = DriveAuthApply.plan(artifact, applies, listOf(repo("a", "ssh")), emptyMap())
         assertFalse(r.ok)
         assertTrue(r.text(), r.text().contains("clone into the store first"))
     }
