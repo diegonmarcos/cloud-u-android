@@ -129,17 +129,6 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     var login by remember { mutableStateOf(GitLogin()) }
     var listing by remember { mutableStateOf(GitListing()) }
     LaunchedEffect(Unit) { coordinator.refresh() }
-    // #629 THE VAULT IS THE MAIN ROAD. The credential the #566 config import delivers already has
-    // `repo` scope — it is the token that pushes all day — so the personal section authenticates
-    // from it and the account's own repositories list themselves with no tap and no browser. The
-    // device grant below is only offered when this is blank.
-    LaunchedEffect(Unit) {
-        val vault = withContext(Dispatchers.IO) { DriveAuthApply.vaultGitToken(ctx.applicationContext) }
-        if (vault.isNotBlank() && login.token.isBlank()) {
-            login = login.copy(identity = page.owner, token = vault, fromVault = true)
-            fetchListing(vault)
-        }
-    }
 
     // #606 the store's git folder — the ONE place a clone lands, resolved from the declaration.
     val root = remember { SharedStore.gitRoot().absolutePath }
@@ -173,6 +162,18 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                 onSuccess = { GitListing(loaded = true, repos = it.repos, complete = it.complete) },
                 onFailure = { GitListing(loaded = true, error = it.message ?: it.javaClass.simpleName) },
             )
+        }
+    }
+
+    // #629 THE VAULT IS THE MAIN ROAD. The credential the #566 config import delivers already has
+    // `repo` scope — it is the token that pushes all day — so the personal section authenticates
+    // from it and the account's own repositories list themselves with no tap and no browser. The
+    // device grant below is only offered when this is blank.
+    LaunchedEffect(Unit) {
+        val vault = withContext(Dispatchers.IO) { DriveAuthApply.vaultGitToken(ctx.applicationContext) }
+        if (vault.isNotBlank() && login.token.isBlank()) {
+            login = login.copy(identity = page.owner, token = vault, fromVault = true)
+            fetchListing(vault)
         }
     }
 
