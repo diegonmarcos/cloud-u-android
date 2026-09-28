@@ -4,7 +4,7 @@
   "_doc_why": "24 of the 28 ship workflows executed no test of any kind, so for 24 applications the pipeline's only question was 'did Gradle exit 0'. An application with zero testers and one with fifty passing testers produced indistinguishable green ticks, and that indistinguishability is the lie — it is why a feature can be marked done, shipped, and be absent from the phone. Writing 24 test suites is a quarter's work, not a task; naming the gap per application, in data, is what makes the debt legible and orderable.",
   "apps": {
     "a_solutions/ae-tool_termux-boot": "Assert the BOOT_COMPLETED receiver is exported and the host package name it reaches matches ac_cloud-nix-on-droid's applicationId; a mismatch is a boot script that silently never runs.",
-    "aa_cloud-superapp": "Has 89 shell testers. tests.unit.enabled=false, so its step named 'JVM unit tests (fatal on failure)' executes nothing and goes green — its own task, not this one.",
+    "aa_cloud-superapp": "Has 90 shell testers. tests.unit.enabled=false, so its step named 'JVM unit tests (fatal on failure)' executes nothing and goes green — its own task, not this one.",
     "ab_cloud-libs-shared/keyboard-engines": "Assert the five bundled modules named in build.json all exist under libs/ — a renamed module currently ships a feature pack missing a feature.",
     "ab_cloud-libs-shared/lib-apks": "Assert the per-asset path sets it derives UNION to the workflow's whole trigger list — publish-gate-blast-radius.test.sh already asserts this; give it a tests block so it runs in the ship job too.",
     "ac_c3-morpheus": "WebView panel app: assert every panel endpoint in build.json is a mesh 10.0.0.x address — a public hostname is Authelia-gated and renders a login page on the phone.",

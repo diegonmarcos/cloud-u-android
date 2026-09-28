@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.profile
 
 import android.content.Context
+import com.diegonmarcos.superapp.adbdebug.PackageVerifier
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
@@ -68,8 +69,12 @@ object Wizard {
         "identity" -> SignIn.Current.session != null || ConfigsPrefs(ctx).autheliaEmail.isNotBlank()
         // Vault: durably applied at least once, or fetched this session.
         "vault" -> UserRegistry.appliedAt(ctx).isNotBlank() || VaultConnect.Imported.bundle != null
-        // Permissions: the same three system reads Configs ▸ Permissions makes.
-        "permissions" -> filesAccessGranted() && notificationAccessGranted(ctx) && dumpGranted(ctx)
+        // Permissions: the same system reads Configs ▸ Permissions makes — now
+        // four, because #632 added Play Protect to that page's DECLARED rows and
+        // a step that measures three of four would report done on a phone the
+        // page is still showing a red row for.
+        "permissions" -> filesAccessGranted() && notificationAccessGranted(ctx) &&
+            dumpGranted(ctx) && playProtectScanOff(ctx)
         // Apps: every DECLARED phone app (kind=app) is present on the device.
         "apps" -> declaredApps().let { it.isNotEmpty() && it.all { app -> installed(ctx, app) } }
         // Repos/Drive: the GitHub token the private-repo clone needs is configured
@@ -101,6 +106,17 @@ object Wizard {
     private fun notificationAccessGranted(ctx: Context): Boolean =
         runCatching { NotificationManagerCompat.getEnabledListenerPackages(ctx).contains(ctx.packageName) }
             .getOrDefault(false)
+
+    /**
+     * Play Protect's install-time scan is off (#632) — READ, not remembered.
+     *
+     * Unverifiable counts as NOT done: the keys are absent exactly where nothing
+     * has turned scanning off, so the stock answer and the unreadable answer
+     * point the same way, and a step that guessed the other way would tick
+     * itself on every device that cannot prove anything.
+     */
+    private fun playProtectScanOff(ctx: Context): Boolean =
+        PackageVerifier.readable(ctx) && !PackageVerifier.state(ctx).on
 
     private fun dumpGranted(ctx: Context): Boolean =
         ContextCompat.checkSelfPermission(ctx, "android.permission.DUMP") == PackageManager.PERMISSION_GRANTED

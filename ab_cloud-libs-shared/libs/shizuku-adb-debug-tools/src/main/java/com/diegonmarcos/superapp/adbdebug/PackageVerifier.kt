@@ -51,6 +51,27 @@ object PackageVerifier {
             else "Play Protect install scan: ON (consent=$consent enable=$enable adb=$adb)"
     }
 
+    /** The three keys, in one place — [readable] and [values] both need them. */
+    private val KEYS = listOf(CONSENT, ENABLE, ADB)
+
+    /**
+     * Whether this device actually STORES any of the three values, so a reader
+     * can tell "verified ON" from "nothing to read" (#632).
+     *
+     * [state] has to pass a default to Settings.Global.getInt, and the default
+     * it passes is the stock-GMS one — so an absent key and a consented device
+     * come back identically. Every caller that renders a tick needs to know
+     * which of the two it is looking at: a row that cannot verify must say so,
+     * not show the default dressed up as a measurement.
+     *
+     * getString rather than getInt because null is the only answer that means
+     * "not present"; an unreadable provider also lands here, which is the same
+     * verdict for the caller either way.
+     */
+    fun readable(ctx: Context): Boolean = KEYS.any { key ->
+        runCatching { Settings.Global.getString(ctx.contentResolver, key) }.getOrNull() != null
+    }
+
     fun state(ctx: Context): State {
         fun g(key: String, def: Int) =
             runCatching { Settings.Global.getInt(ctx.contentResolver, key, def) }.getOrDefault(def)

@@ -28,6 +28,7 @@ import com.diegonmarcos.superapp.adbdebug.EmbeddedAdbChannel
 import com.diegonmarcos.superapp.adbdebug.ShizukuShellChannel
 import com.diegonmarcos.superapp.adbdebug.ShellChannel
 import com.diegonmarcos.superapp.adbdebug.LocalHotspot
+import com.diegonmarcos.superapp.adbdebug.PackageVerifier
 import com.diegonmarcos.superapp.adbdebug.WifiDirect
 import com.diegonmarcos.superapp.adbdebug.WirelessDebugging
 import android.content.pm.PackageManager
@@ -586,6 +587,15 @@ class PermissionsFragment : Fragment() {
     private fun buildPageItems(ctx: Context): List<PageItem> {
         fun ok(s: String) = s.trimStart().startsWith("✓")
         val roles = parsePermissionRoles().map { r -> specialAccessRole(ctx, r.role, r.expectedHolders).let { st -> PageItem(r.label, ok(st), st) { openDefaultAppsSettings() } } }
+        // #632 DECLARED device-state rows (build.json::ui.permissions.device[]),
+        // measured live. Nothing about them is written here: the label and the
+        // remedy come from the declaration and the state comes from a system
+        // read, so the row renders like every other one and the #622 wizard
+        // measures the same thing this page shows.
+        val device = parseDeviceItems().map { d ->
+            val measured = deviceState(ctx, d)
+            PageItem(d.label, measured.first, measured.second) { openDeviceRemedy(ctx, d) }
+        }
         return listOf(
             PageItem("Battery optimization (no-optim)", grantedBatteryOptim(ctx), specialAccessBattery(ctx)) { openBatteryOptimizationSettings() },
             PageItem("Default launcher", specialAccessLauncher(ctx).let(::ok), specialAccessLauncher(ctx)) { openDefaultAppsSettings() },
@@ -600,7 +610,7 @@ class PermissionsFragment : Fragment() {
             PageItem("Samsung never-sleeping", null, "unknown until opened") { openSamsungNeverSleepingSettings() },
             PageItem("Dumpsys (DUMP, adb only)", specialAccessDumpGranted(ctx), specialAccessDump(ctx)) { openAppSettings() },
             PageItem("App info / settings", null, "") { openAppSettings() },
-        ) + roles
+        ) + roles + device
     }
 
     // NO onResume->rebuildFragment: rebuildFragment() detaches+attaches this
@@ -972,6 +982,88 @@ class PermissionsFragment : Fragment() {
             out.add(label to perm)
         }
         return out
+    }
+
+    /** One DECLARED device-state row (#632): build.json::ui.permissions.device[]. */
+    private class DeviceSpec(val key: String, val label: String, val want: String, val remedy: String)
+
+    private fun parseDeviceItems(): List<DeviceSpec> {
+        val raw = runCatching {
+            String(android.util.Base64.decode(BuildConfig.UI_PERMISSIONS_DEVICE_B64, android.util.Base64.DEFAULT))
+        }.getOrDefault("[]")
+        val arr = runCatching { org.json.JSONArray(raw) }.getOrDefault(org.json.JSONArray())
+        val out = mutableListOf<DeviceSpec>()
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val key = o.optString("key"); val label = o.optString("label")
+            if (key.isBlank() || label.isBlank()) continue
+            out.add(DeviceSpec(key, label, o.optString("want"), o.optString("remedy")))
+        }
+        return out
+    }
+
+    /**
+     * A declared device row's state, MEASURED. Nothing here reads a preference
+     * or a remembered flag — that is the whole point of the row (#622/#452):
+     * Play Protect is device state that GMS can re-arm behind us, so a stored
+     * "done" would be green on a phone that is scanning again.
+     *
+     * Three outcomes, not two. `null` granted means CANNOT VERIFY, which is a
+     * real answer here: Settings.Global.getInt needs a default and the default
+     * is the stock-GMS value, so an absent key reads exactly like a consented
+     * device. [PackageVerifier.readable] separates them, and an unverifiable row
+     * says so and sends the user to look rather than showing a tick.
+     */
+    private fun deviceState(ctx: Context, spec: DeviceSpec): Pair<Boolean?, String> = when (spec.key) {
+        "play_protect_off" -> {
+            if (!PackageVerifier.readable(ctx))
+                null to "— cannot verify on this device — check " + spec.remedy
+            else PackageVerifier.state(ctx).let { st ->
+                if (!st.on) true to "✓ OFF — sideloaded installs are not scanned or delayed"
+                else false to "◯ ON — " + st.describe() + " — " + spec.remedy
+            }
+        }
+        // A key nobody measures is not a row: saying so beats drawing it grey
+        // forever, which is how an unimplemented declaration hides.
+        else -> null to "— no measurement declared for \"${spec.key}\""
+    }
+
+    /**
+     * Take the user to where the declared row can actually be changed.
+     *
+     * This app CANNOT flip Play Protect: the three Settings.Global values behind
+     * it need WRITE_SECURE_SETTINGS, which no sideloaded APK holds — so this is
+     * the #616 All-Files-Access shape, not a pretend toggle. (With the embedded
+     * adb channel paired, the Play Protect button in the Installs block above
+     * does write them, through PackageVerifier.setScanning. That is the
+     * privileged path and this row does not depend on it.)
+     *
+     * Every rung says where it landed or why it could not, because an action
+     * that opens nothing and reports nothing is indistinguishable from a dead
+     * button.
+     */
+    private fun openDeviceRemedy(ctx: Context, spec: DeviceSpec) {
+        if (spec.key != "play_protect_off") {
+            Toast.makeText(ctx, "No remedy page declared for ${spec.key}", Toast.LENGTH_LONG).show()
+            return
+        }
+        val gms = android.content.Intent().setClassName(
+            "com.google.android.gms", "com.google.android.gms.security.settings.VerifyAppsSettingsActivity")
+        val ladder = listOf(
+            gms to "Play Protect settings",
+            android.content.Intent("com.android.settings.action.SECURITY_SETTINGS") to "Security settings",
+            android.content.Intent(android.provider.Settings.ACTION_SECURITY_SETTINGS) to "Security settings",
+            android.content.Intent(android.provider.Settings.ACTION_SETTINGS) to "System settings",
+        )
+        for ((intent, where) in ladder) {
+            if (intent.resolveActivity(ctx.packageManager) == null) continue
+            if (runCatching { startActivity(intent) }.isSuccess) {
+                Toast.makeText(ctx, "$where — " + spec.remedy, Toast.LENGTH_LONG).show()
+                return
+            }
+        }
+        Toast.makeText(ctx, "Nothing on this device answers for Play Protect settings. " + spec.remedy,
+            Toast.LENGTH_LONG).show()
     }
 
     private fun parsePermissionRoles(): List<RoleSpec> {

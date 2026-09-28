@@ -133,6 +133,12 @@ def uiPermissionsRolesJson = groovy.json.JsonOutput.toJson(buildJson.ui.permissi
 def uiPermissionsPrivilegedJson = groovy.json.JsonOutput.toJson(buildJson.ui.permissions?.privileged ?: [])
 def uiPermissionsPrivilegedB64  = uiPermissionsPrivilegedJson.bytes.encodeBase64().toString()
 def uiPermissionsRolesB64  = uiPermissionsRolesJson.bytes.encodeBase64().toString()
+// #632 build.json::ui.permissions.device[] — setup items that are DEVICE state
+// rather than an Android permission (Play Protect being the first). Baked the
+// same way as the three lists above so the Perms page renders them from the one
+// declaration and nothing is appended in Kotlin.
+def uiPermissionsDeviceJson = groovy.json.JsonOutput.toJson(buildJson.ui.permissions?.device ?: [])
+def uiPermissionsDeviceB64  = uiPermissionsDeviceJson.bytes.encodeBase64().toString()
 def defaultSection  = buildJson.ui.default_section ?: 'home'
 def defaultMode     = buildJson.ui.default_mode    ?: 'apps'
 def tileColumns     = (buildJson.ui.tile_columns as Number)?.intValue() ?: 3
@@ -767,6 +773,7 @@ android {
         buildConfigField "String", "UI_PERMISSIONS_RUNTIME_B64", "\"${uiPermissionsRuntimeB64}\""
         buildConfigField "String", "UI_PERMISSIONS_ROLES_B64", "\"${uiPermissionsRolesB64}\""
         buildConfigField "String", "UI_PERMISSIONS_PRIVILEGED_B64", "\"${uiPermissionsPrivilegedB64}\""
+        buildConfigField "String", "UI_PERMISSIONS_DEVICE_B64", "\"${uiPermissionsDeviceB64}\""
         buildConfigField "String", "UI_DEFAULT_SECTION",    "\"${defaultSection}\""
         // #531 the bottom-nav island's sections, in bar order (build.json::ui.bottom_nav).
         buildConfigField "String", "UI_BOTTOM_NAV",         "\"${(buildJson.ui.bottom_nav ?: []).join(',')}\""
