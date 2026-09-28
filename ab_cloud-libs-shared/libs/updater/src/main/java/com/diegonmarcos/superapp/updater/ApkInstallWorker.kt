@@ -1,6 +1,7 @@
 package com.diegonmarcos.superapp.updater
 
 import com.diegonmarcos.superapp.updater.apk.VerifiedApk
+import com.diegonmarcos.superapp.updater.cache.ApkCache
 import com.diegonmarcos.superapp.updater.install.UpdateInstaller
 import com.diegonmarcos.superapp.updater.source.Download
 import android.content.Context
@@ -38,7 +39,7 @@ class ApkInstallWorker(
             return@withContext Result.failure()
         }
         try {
-            val apk = File(applicationContext.cacheDir, "companion-$pkg.apk")
+            val apk = ApkCache.file(applicationContext, "companion-$pkg.apk")
             UpdateProgress.update(UpdateProgress.State.Downloading(0, 0, -1))
             var declared = 0L
             // The private copy of this loop is gone. It was the only one of the

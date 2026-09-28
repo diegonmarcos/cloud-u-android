@@ -129,9 +129,15 @@ print("== T6: Phone Apps buttons come from ONE capability derivation and ONE ins
 if re.search(r'btn\(ctx, "', phone): bad("Phone Apps hardcodes a button label - its buttons must come from PhoneAppActions.of")
 elif "PhoneAppActions.of(" in phone: ok("Phone Apps draws each row from PhoneAppActions.of")
 else: bad("Phone Apps does not draw its buttons from PhoneAppActions.of")
-installers = [f for f, t in store_files.items() if re.search(r"\bFleet\.install\(", t)]
-if installers == ["FleetInstall.kt"]: ok("Fleet.install is called from FleetInstall.kt alone - no second updater")
-else: bad("Fleet.install is called from %s - the store has more than one update path" % installers)
+# #625 split Fleet.install into Fleet.download + Fleet.commit so a batch can
+# fetch everything before installing anything. The one-path rule did not change,
+# only the two calls it is made of: FleetInstall.kt is still the only file in the
+# store that reaches the fleet ENGINE, and BatchInstall composes FleetInstall's
+# two halves rather than calling Fleet itself.
+installers = sorted(f for f, t in store_files.items() if re.search(r"\bFleet\.commit\(", t))
+if installers == ["ExternalInstall.kt", "FleetInstall.kt"]:
+    ok("the installer is entered from FleetInstall.kt (fleet) and ExternalInstall.kt (#571 ladder) alone")
+else: bad("Fleet.commit is called from %s - the store has more than one install path" % installers)
 for name, text in (("StoreCloudFragment", cloud), ("StorePhoneFragment", phone)):
     # #571 moved Phone Apps' call into installOne(app, r) -> FleetInstall.run(app, fleetApp):
     # the argument names changed, the one path did not. Match the call, not its locals.

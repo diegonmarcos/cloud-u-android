@@ -147,10 +147,12 @@ object BootstrapInstall {
      * A `content://` URI for [file], copying it into our cache first if it is
      * somewhere the provider does not cover.
      *
-     * Both sources currently write straight into `cacheDir`, which the
-     * provider's paths already export — so the copy is dead weight today and
+     * Every source writes into [com.diegonmarcos.superapp.updater.cache.ApkCache],
+     * which updater_apk_paths.xml exports — so the copy is dead weight today and
      * exists only so that a future source writing elsewhere degrades to a slow
      * install rather than to an `IllegalArgumentException` at the last step.
+     * The copy target stays in `cacheDir` on purpose: it IS disposable, unlike
+     * the download it was made from (#625).
      */
     private fun uriFor(ctx: Context, file: File): Uri {
         runCatching { return FileProvider.getUriForFile(ctx, authority(ctx), file) }

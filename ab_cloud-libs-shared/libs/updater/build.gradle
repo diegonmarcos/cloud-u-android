@@ -44,6 +44,26 @@ if (!fleetFile.exists()) {
 def fleetB64 = fleetFile.text.bytes.encodeBase64().toString()
 def ghcr = buildJson.release.ghcr
 def au   = buildJson.release.auto_update
+// #625 THE APK CACHE POLICY, DECLARED ONCE.
+//
+// Resolved exactly like constellation-fleet.json above and for the same reason:
+// where a download lives and when it may be deleted is a FLEET-WIDE rule, not a
+// per-app one, so an app that says nothing inherits the canonical block instead
+// of baking a different retention policy per consumer. An app MAY narrow it by
+// declaring release.apk_cache of its own.
+//
+// Unresolvable is a hard build failure, never a default. A defaulted cache
+// directory is how the cache silently went back to cacheDir — which Android
+// reclaims without asking, and which is the whole bug (#625).
+def apkCacheDecl = buildJson.release.apk_cache ?: new groovy.json.JsonSlurper()
+    .parse(new File(projectDir, '../../../aa_cloud-superapp/build.json').canonicalFile).release.apk_cache
+if (!apkCacheDecl?.dir || !apkCacheDecl?.max_bytes || !apkCacheDecl?.evict) {
+    throw new GradleException("release.apk_cache{dir,max_bytes,evict} is missing from " +
+        "${rootDir}/build.json and from the canonical aa_cloud-superapp/build.json. " +
+        ":libs:updater bakes it into APK_CACHE_DIR/APK_CACHE_MAX_BYTES/APK_CACHE_EVICT; " +
+        "ApkCache has no fallback on purpose, because the fallback WAS cacheDir and " +
+        "cacheDir is what the OS deletes under the user's downloads.")
+}
 // WHICH GHCR IMAGE THIS APP UPDATES ITSELF FROM, named exactly once.
 //
 // Most apps publish a single artefact and say so in release.ghcr.image. A FORK
@@ -133,6 +153,10 @@ android {
         buildConfigField "boolean", "AU_REQUIRE_CHARGING",         "${au.require_charging}"
         buildConfigField "String",  "AU_INSTALL_MODE",             "\"${au.install_mode}\""
         buildConfigField "String",  "GIT_SHORT_SHA",               "\"${shortSha}\""
+        // #625 the apk cache: directory name, size bound, eviction policy.
+        buildConfigField "String",  "APK_CACHE_DIR",               "\"${apkCacheDecl.dir}\""
+        buildConfigField "long",    "APK_CACHE_MAX_BYTES",         "${apkCacheDecl.max_bytes}L"
+        buildConfigField "String",  "APK_CACHE_EVICT",             "\"${apkCacheDecl.evict}\""
         // javac caps ONE string constant at 65,535 UTF-8 bytes (JVMS 4.4.7, CONSTANT_Utf8).
         // The fleet manifest's base64 crossed that on 2026-09-24 — 68,072 bytes at 72
         // entries, once the four #567 engine libraries registered — and every consumer's

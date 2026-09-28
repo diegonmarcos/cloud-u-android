@@ -184,8 +184,8 @@ object Download {
     }
 
     /** Move the completed part into place. Rename can only fail across
-     *  filesystems — both live in cacheDir — but copy rather than lose the
-     *  download if it ever does. */
+     *  filesystems — both live in the one apk cache dir — but copy rather than
+     *  lose the download if it ever does. */
     private fun finish(part: File, target: File): Long {
         if (!part.renameTo(target)) {
             part.copyTo(target, overwrite = true)

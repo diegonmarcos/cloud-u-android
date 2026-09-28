@@ -20,6 +20,7 @@ import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.adbdebug.ShellChannels
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.UpdateProgress
+import com.diegonmarcos.superapp.updater.cache.ApkCache
 import kotlin.concurrent.thread
 
 /**
@@ -74,6 +75,11 @@ class StorePhoneFragment : Fragment() {
     private var cfg: SourceResolver.Config? = null
     private val states = HashMap<String, SourceResolver.Check>()
     private val stateViews = HashMap<String, TextView>()
+    // #625 what the APK cache holds, per package, as of the last reload: the
+    // row's own answer to "is the download still here, and is it the thing I
+    // have installed?". Read from ApkCache's download records — no second
+    // bookkeeping, and no hashing on the UI thread.
+    private val cached = HashMap<String, ApkCache.Entry>()
 
     // #565 export / import. Registered at construction, as the Activity Result
     // API requires; the system picker owns where the file lives.
@@ -102,6 +108,11 @@ class StorePhoneFragment : Fragment() {
             orientation = LinearLayout.HORIZONTAL
             addView(fileBtn(ctx, ctx.getString(R.string.store_export)) { exportDoc.launch(EXPORT_NAME) })
             addView(fileBtn(ctx, ctx.getString(R.string.store_import)) { importDoc.launch(IMPORT_TYPES) })
+            // #625 the manual door onto the cache. The app owns eviction now, so
+            // the user needs a way to say "drop it all" that does not mean
+            // Settings ▸ Clear cache — which no longer reaches these bytes, on
+            // purpose, because the OS doing that silently WAS the bug.
+            addView(fileBtn(ctx, ctx.getString(R.string.store_cache_clear)) { clearCache() })
         })
         col.addView(caption(ctx, ctx.getString(R.string.store_phone_caption)))
         col.addView(filterToggle(ctx))
@@ -190,6 +201,14 @@ class StorePhoneFragment : Fragment() {
         resolver.apps.values.forEach { declared.putIfAbsent(it.pkg, it.label) }
         val shelves = AppStoreHost.classify(ctx, declared)
         states.clear()
+        cached.clear()
+        ApkCache.entries(ctx).forEach { e ->
+            val r = e.record ?: return@forEach
+            // Newest cached build per package wins the row's line; the older one
+            // is what eviction takes first.
+            val had = cached[r.pkg]?.record
+            if (had == null || r.versionCode > had.versionCode) cached[r.pkg] = e
+        }
         return declared.map { (pkg, label) ->
             val installed = runCatching { pm.getPackageInfo(pkg, 0) }.isSuccess
             val fa = fleet[pkg]
@@ -281,6 +300,22 @@ class StorePhoneFragment : Fragment() {
             stateViews[r.pkg] = this
             paint(ctx, this, states[r.pkg] ?: SourceResolver.Check.Unknown(null, ""), r)
         })
+        // #625 cached-vs-installed, per row. "cached, matches what is
+        // installed" is the state in which the bytes are about to be reaped;
+        // "cached, NOT installed" is a download waiting for its install — the
+        // thing that used to disappear.
+        cached[r.pkg]?.let { e ->
+            val rec = e.record ?: return@let
+            val here = SourceResolver.installed(ctx, r.pkg)?.second
+            addView(TextView(ctx).apply {
+                tag = CACHE_TAG_PREFIX + r.pkg; textSize = 11f
+                val mb = (e.bytes / 1_000_000).coerceAtLeast(1L)
+                text = if (here == rec.versionCode)
+                    ctx.getString(R.string.store_cache_matches, rec.versionCode, mb)
+                else ctx.getString(R.string.store_cache_waiting, rec.versionCode, mb, here?.toString() ?: "—")
+                setTextColor(if (here == rec.versionCode) cUp else cUpd)
+            })
+        }
         val buttons = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
             setPadding(0, dp(ctx, 4), 0, 0)
@@ -356,17 +391,54 @@ class StorePhoneFragment : Fragment() {
         batch(ctx, targets)
     }
 
-    /** Sequential — each install may raise the system confirm sheet. */
+    /**
+     * #625 DOWNLOAD THEM ALL, THEN INSTALL THEM ONE BY ONE.
+     *
+     * This used to be one loop calling [installOne] per row — resolve,
+     * download, install, next — so every confirmation dialog was followed by a
+     * wait on the next app's network fetch, and a batch interrupted half way
+     * had installed some apps and not even downloaded the rest. [BatchInstall]
+     * is the ONE engine that owns the ordering (the same two-phase shape
+     * [Fleet.installAllLocked] already used for the constellation pass), so
+     * this fragment cannot hold a different opinion about it.
+     *
+     * Installs stay strictly sequential inside phase 2 — each one may raise the
+     * system confirm sheet — and a download failure costs only its own app.
+     */
     private fun batch(ctx: Context, targets: List<Row>) {
         val app = ctx.applicationContext
+        val resolver = cfg ?: PhoneAppActions.resolver(PhoneAppActions.sources(app))
         thread(name = "store-phone-batch") {
-            var failed = 0
-            targets.forEachIndexed { i, r ->
-                UpdateProgress.beginBatch(r.label, i + 1, targets.size)
-                installOne(app, r)?.let { failed++; toastLater(app, app.getString(R.string.store_phone_failed, r.label, it)) }
+            val outcomes = BatchInstall.run(
+                app,
+                targets.map { BatchInstall.Target(it.pkg, it.label, it.fleetApp, it.external) },
+                BatchInstall.engine(resolver)
+            ) { phase, t, i, n ->
+                UpdateProgress.beginBatch(
+                    (if (phase == BatchInstall.Phase.DOWNLOAD) "\u2193 " else "") + t.label, i, n)
             }
             UpdateProgress.endBatch()
-            toastLater(app, app.getString(R.string.store_phone_batch_done, targets.size - failed, failed))
+            // Per-app, never a bare count: a failure you cannot name is a
+            // failure nobody can act on. The cached bytes of a failed install
+            // are still on disk, and the row's cache line now says so.
+            val failed = outcomes.filter { !it.installed }
+            failed.forEach { o ->
+                toastLater(app, app.getString(R.string.store_phone_failed, o.target.label,
+                    o.message ?: app.getString(R.string.store_cache_kept)))
+            }
+            toastLater(app, app.getString(R.string.store_phone_batch_done,
+                outcomes.size - failed.size, failed.size))
+            view?.post { if (isAdded) reload() }
+        }
+    }
+
+    /** #625 the user's own "clear cache": every cached APK, gone, counted. */
+    private fun clearCache() {
+        val app = requireContext().applicationContext
+        thread(name = "store-cache-clear") {
+            val e = ApkCache.clear(app)
+            toastLater(app, app.getString(R.string.store_cache_cleared,
+                e.deleted.size, e.freedBytes / 1_000_000))
             view?.post { if (isAdded) reload() }
         }
     }
@@ -439,6 +511,10 @@ class StorePhoneFragment : Fragment() {
     companion object {
         /** The state line of a row is tagged [STATE_TAG_PREFIX] + package. */
         const val STATE_TAG_PREFIX = "store-phone-state:"
+        /** #625 the cached-vs-installed line, tagged [CACHE_TAG_PREFIX] + package.
+         *  Absent when nothing for that package is in the cache — a test reads
+         *  the rendered answer rather than this source. */
+        const val CACHE_TAG_PREFIX = "store-phone-cache:"
         private const val UNSHELVED = "￿"
         private const val EXPORT_NAME = "cloud-sa-apps.json"
         // A .json picked from Downloads is as often octet-stream as json.

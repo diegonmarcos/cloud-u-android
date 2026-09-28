@@ -1,5 +1,6 @@
 package com.diegonmarcos.superapp.updater
 
+import com.diegonmarcos.superapp.updater.cache.ApkCache
 import com.diegonmarcos.superapp.updater.install.InstallGate
 import android.app.ActivityManager
 import android.app.Notification
@@ -37,24 +38,35 @@ class PackageInstallerReceiver : BroadcastReceiver() {
     private val NOTIF_ID = 0xC10D
 
     /**
-     * Delete the cached APK once the install is CONFIRMED successful.
+     * Delete the cached APK once the install is CONFIRMED successful — and
+     * #625: only once the CACHED ARTIFACT is confirmed to be what is now
+     * INSTALLED.
      *
-     * This is the only point where success is actually known: committing a
-     * session only means the bytes were handed over, and a user who declines
-     * the system prompt still needs them to retry - deleting any earlier turns
-     * every declined dialog into a fresh 10-80MB download.
+     * A success status was never quite the right gate. It says the installer
+     * finished without complaining; it does not say the bytes we are about to
+     * throw away are the bytes that landed. [ApkCache.reapIfInstalled] asks the
+     * device instead: the file must still hash to what was downloaded, and the
+     * installed package must match that artifact's own package name,
+     * versionCode and signing certificate. Anything less keeps the file, with
+     * the reason. What cannot be proven without root — that the installed
+     * base.apk is byte-identical — is not claimed; see [ApkCache]'s header.
      *
-     * Best-effort: a failed delete costs disk, never correctness.
+     * The "only our own cache" check moved into [ApkCache.isOurs] so it follows
+     * the directory. It used to compare against `context.cacheDir`, and left
+     * there it would have matched nothing after the move — a reap that silently
+     * stops happening, which has no symptom except a cache that never shrinks.
+     *
+     * Best-effort about deleting, strict about deciding: a failed delete costs
+     * disk, a wrong decision costs the user the whole download.
      */
     private fun reapCachedApk(context: Context, path: String?) {
         if (path.isNullOrEmpty()) return
-        val f = java.io.File(path)
-        // Only ever touch our own cache - never a file some other caller
-        // pointed the installer at.
-        if (!f.isFile || f.parentFile != context.cacheDir) return
-        val size = f.length()
-        if (runCatching { f.delete() }.getOrDefault(false))
-            Log.i(TAG, "reaped cached ${f.name}, freed ${size / 1_000_000}MB")
+        when (val r = ApkCache.reapIfInstalled(context, java.io.File(path))) {
+            is ApkCache.Retention.Reaped ->
+                Log.i(TAG, "reaped cached ${r.name}, freed ${r.freedBytes / 1_000_000}MB: ${r.reason}")
+            is ApkCache.Retention.Kept ->
+                Log.i(TAG, "cache KEPT after a success status: ${r.reason}")
+        }
     }
 
     override fun onReceive(context: Context, intent: Intent) {

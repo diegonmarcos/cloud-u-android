@@ -3,6 +3,7 @@ package com.diegonmarcos.superapp.updater.source
 import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.apk.VerifiedApk
+import com.diegonmarcos.superapp.updater.cache.ApkCache
 import android.content.Context
 import java.io.File
 
@@ -65,7 +66,7 @@ internal object ReleaseSource : ApkSource {
         // (see Fleet.App.assets), and this source is tried FIRST, so a flat
         // arm64 name here is what put an arm64 APK on an x86_64 device.
         val url = app.abiReleaseUrl
-        val target = File(ctx.cacheDir, "fleet-${app.id}-release.apk")
+        val target = ApkCache.file(ctx, "fleet-${app.id}-release.apk")
         // The declared size, so Download can tell a resumable prefix of THIS
         // artifact from a leftover part of a previous release under the same
         // per-app filename, and so progress has a denominator from the first
@@ -121,7 +122,7 @@ internal object ReleaseSource : ApkSource {
             verified ?: run {
                 // Known-bad bytes: drop the partial too, or every later attempt
                 // resumes on top of them forever.
-                Download.discard(target)
+                ApkCache.drop(target)
                 error("release asset failed verification (${target.length()} B against a " +
                       "declared $declared" +
                       (if (sha != null) ", sha256 $sha" else ", no sha256 sidecar published") +
@@ -172,7 +173,7 @@ internal object GhcrSource : ApkSource {
         val client = GhcrClient(app.registry, app.namespace, app.image)
         val token = client.token()
         val layer = Fleet.remoteLayerFor(app, client, token)
-        val target = File(ctx.cacheDir, "fleet-${app.id}-${layer.digest.substringAfter(':').take(12)}.apk")
+        val target = ApkCache.file(ctx, "fleet-${app.id}-${layer.digest.substringAfter(':').take(12)}.apk")
         UpdateProgress.update(UpdateProgress.State.Downloading(0, 0L, layer.size))
         // Raw fleet threads aren't WorkManager — the Cancel button reaches them
         // only through UpdateProgress.cancelRequested.
@@ -185,7 +186,7 @@ internal object GhcrSource : ApkSource {
         if (verified == null) {
             // Both the file AND the partial: bytes that failed a digest are
             // known-bad, and a resume on top of them can only ever fail again.
-            Download.discard(target)
+            ApkCache.drop(target)
             // Throw rather than publish Failed and return null. Fleet.download
             // owns the terminal state now, and it needs this reason to put in
             // it; publishing here as well raced its own caller and reported a

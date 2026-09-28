@@ -147,7 +147,7 @@ echo "== T6: the client verifies the BYTES before spending an install attempt ==
 has_code "$SRC" 'Fleet.releaseSha256(app)'          "the release path reads the published digest"
 has_code "$SRC" 'VerifiedApk.byDigest(target, sha)' "and verifies the download against it"
 has_code "$SRC" 'VerifiedApk.bySize(target, declared)' "size remains the fallback for assets with no sidecar"
-has_code "$SRC" 'Download.discard(target)'          "bytes that fail verification are dropped, not resumed onto"
+has_code "$SRC" 'ApkCache.drop(target)'             "bytes that fail verification are dropped, not resumed onto"
 
 echo "== T7: no success is reported without observing success =="
 # Fleet.install returns as soon as a channel ACCEPTED the APK. For the
@@ -156,7 +156,40 @@ echo "== T7: no success is reported without observing success =="
 # record a later failure was supposed to leave.
 has_code "$FLEET" 'fun observesOutcome(channelName: String)' "the two meanings of 'the channel returned' are distinguished"
 has_code "$FLEET" 'channelName == ShellInstall.name'         "only the channel that reads pm's answer counts as observed"
-has_code "$PAGE"  'if (Fleet.install(ctx, app)) Advisory.recordSuccess' "the store clears the advisory only on an observed install"
+has_code "$PAGE"  'if (Fleet.observesOutcome(Fleet.commit(ctx, app, apk))) Advisory.recordSuccess' "the store clears the advisory only on an observed install"
+
+echo "== T8 (#625): the APK cache is PERSISTENT, and retention is proven, not assumed =="
+# The cache used to be context.cacheDir. Android reclaims cacheDir under storage
+# pressure without asking and Settings > Clear cache wipes it, so a 267 MB
+# download really did vanish between fetch and install — which is exactly the
+# "the store deletes my download" that was reported. There was no
+# delete-on-failure bug: the deleting process was the OS.
+CACHE="$UPD/cache/ApkCache.kt"
+has_code "$CACHE" 'ctx.noBackupFilesDir' "the cache lives in a dir the OS does not reclaim"
+hasnt_code "$CACHE" 'ctx.cacheDir' "and never in cacheDir"
+has_code "$CACHE" 'BuildConfig.APK_CACHE_DIR' "its name is declared in build.json, not written here"
+has_code "$CACHE" 'BuildConfig.APK_CACHE_MAX_BYTES' "so is its size bound"
+has_code "$CACHE" 'BuildConfig.APK_CACHE_EVICT' "so is its eviction policy"
+# Retention is gated on the DEVICE agreeing, not on a broadcast saying so.
+has_code "$CACHE" 'if (onDisk != rec.sha256)' "a file that is not the artifact downloaded is never read as installed"
+has_code "$CACHE" 'if (code != rec.versionCode)' "nor is a package installed at another versionCode"
+has_code "$RCV" 'ApkCache.reapIfInstalled' "the success branch asks the cache, it does not delete by itself"
+hasnt_code "$RCV" 'context.cacheDir' "the 'only our own cache' check followed the move"
+# ONE engine owns download-all-then-install; see ApkCacheRetentionTest for the
+# ordering assertion itself.
+BATCH="$LIB/appstore/src/main/java/com/diegonmarcos/superapp/appstore/BatchInstall.kt"
+# ORDERING, not merely presence: the LAST stage call must come before the FIRST
+# install call in the engine's own body — the textual form of the guarantee
+# app/src/test/.../apps/ApkCacheRetentionTest.kt asserts by execution.
+stage_last=$(code "$BATCH" | grep -n 'engine.stage(' | tail -1 | cut -d: -f1)
+inst_first=$(code "$BATCH" | grep -n 'engine.install(' | head -1 | cut -d: -f1)
+if [ -n "$stage_last" ] && [ -n "$inst_first" ] && [ "$stage_last" -lt "$inst_first" ]; then
+    ok "the batch downloads every app before it installs any"
+else
+    bad "BatchInstall interleaves download and install (stage@${stage_last:-none} install@${inst_first:-none})"
+fi
+has_code "$LIB/appstore/src/main/java/com/diegonmarcos/superapp/appstore/StorePhoneFragment.kt" \
+    'BatchInstall.run(' "Store > Phone install-all/update-all runs through that one engine"
 
 echo
 echo "== RESULT: $PASS passed, $FAIL failed =="

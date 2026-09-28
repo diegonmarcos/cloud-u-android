@@ -2,6 +2,7 @@ package com.diegonmarcos.superapp.updater
 
 import com.diegonmarcos.superapp.updater.apk.ApkIntegrity
 import com.diegonmarcos.superapp.updater.apk.VerifiedApk
+import com.diegonmarcos.superapp.updater.cache.ApkCache
 import com.diegonmarcos.superapp.updater.install.InstallChannel
 import com.diegonmarcos.superapp.updater.install.InstallGate
 import com.diegonmarcos.superapp.updater.install.SessionInstall
@@ -505,6 +506,13 @@ object Fleet {
             // artifact, and it used to be unanswerable from the logs.
             Log.i(TAG, "download ${app.kind} ${app.id}: source=${source.name} " +
                        "→ ${apk.evidence}, ${apk.length} bytes")
+            // #625 RECORD WHAT WAS DOWNLOADED, HERE, ONCE. Every fleet source
+            // funnels through this return, so the sha256 + identity that
+            // retention is later gated on cannot be missing for some sources and
+            // present for others — and the cache is brought back under its
+            // declared bound at the same moment, before the next app's download
+            // pushes it further over.
+            ApkCache.keep(ctx, apk.file)
             return apk
         }
         val why = "could not download ${app.id}: " + declined.joinToString(" | ")
@@ -596,7 +604,7 @@ object Fleet {
                 // OLDER when both codes are non-null — see its own contract.
                 val allowed = downgradePolicy.allowDowngrade(app, identity.versionCode, installedCode!!)
                 if (!allowed) {
-                    apk.file.delete()   // stale: never re-offer these exact bytes
+                    ApkCache.drop(apk.file)   // stale: never re-offer these exact bytes
                     error("stale candidate for ${app.id}: versionCode ${identity.versionCode} is " +
                           "OLDER than the installed $installedCode — this is a downgrade, not an " +
                           "update. Discarded the cached artifact; the source served a build older " +

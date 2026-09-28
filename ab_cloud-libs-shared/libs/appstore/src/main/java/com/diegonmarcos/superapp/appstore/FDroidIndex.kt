@@ -5,6 +5,7 @@ import android.os.Build
 import android.util.JsonReader
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.apk.VerifiedApk
+import com.diegonmarcos.superapp.updater.cache.ApkCache
 import com.diegonmarcos.superapp.updater.source.Download
 import org.json.JSONObject
 import java.io.File
@@ -56,14 +57,14 @@ object FDroidIndex {
         val v = entry.versions.filter { it.versionCode == entry.suggestedVersionCode }
             .firstOrNull { it.nativecode.isEmpty() || it.nativecode.any { a -> a in abis } }
             ?: error("$pkg: suggested versionCode ${entry.suggestedVersionCode} has no APK for ${abis.joinToString()}")
-        val target = File(ctx.cacheDir, "external-$pkg.apk")
+        val target = ApkCache.file(ctx, "external-$pkg.apk")
         UpdateProgress.update(UpdateProgress.State.Downloading(0, 0L, -1L))
         Download.toFile(url = repo + v.apkName, target = target, shouldCancel = { UpdateProgress.cancelRequested }) { written, total ->
             val pct = if (total > 0) ((written * 100) / total).toInt().coerceIn(0, 100) else 0
             UpdateProgress.update(UpdateProgress.State.Downloading(pct, written, total))
         }
         return VerifiedApk.byDigest(target, v.sha256) ?: run {
-            Download.discard(target)
+            ApkCache.drop(target)
             error("F-Droid ${v.apkName}: digest mismatch against the signed index")
         }
     }

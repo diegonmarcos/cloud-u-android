@@ -7,9 +7,9 @@ import com.diegonmarcos.superapp.updater.Fleet
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.VersionOrder
 import com.diegonmarcos.superapp.updater.apk.VerifiedApk
+import com.diegonmarcos.superapp.updater.cache.ApkCache
 import com.diegonmarcos.superapp.updater.source.Download
 import org.json.JSONObject
-import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -250,7 +250,12 @@ object SourceResolver {
         is Source.Vendor -> fetchVendor(ctx, app, src)
         is Source.FDroid -> identity(ctx, app.pkg, FDroidIndex.fetch(ctx, cfg.fdroid, app.pkg))
         is Source.Play -> error("${app.label} publishes no APK outside Google Play")
-    }
+    // #625 the external half of the ONE record point ([Fleet.download] is the
+    // fleet half): the sha256 + identity that retention is gated on, written the
+    // moment the bytes verified, plus the bounded cache's eviction pass. An
+    // external APK with no record would simply never be reaped, which is the
+    // safe direction but is not the declared policy.
+    }.also { ApkCache.keep(ctx, it.file) }
 
     private fun fetchVendor(ctx: Context, app: External, src: Source.Vendor): VerifiedApk {
         UpdateProgress.update(UpdateProgress.State.CheckingManifest)
@@ -264,7 +269,7 @@ object SourceResolver {
         require(url.startsWith("https://")) { "refusing a non-https APK: $url" }
         val digest = src.sha256Key?.let { k -> feed?.let { path(it, k) as? String } }
             ?: src.sha256?.let { sidecar(fill(it)) }
-        val target = File(ctx.cacheDir, "external-${app.pkg}.apk")
+        val target = ApkCache.file(ctx, "external-${app.pkg}.apk")
         UpdateProgress.update(UpdateProgress.State.Downloading(0, 0L, -1L))
         Download.toFile(url = url, target = target, shouldCancel = { UpdateProgress.cancelRequested }) { written, total ->
             val pct = if (total > 0) ((written * 100) / total).toInt().coerceIn(0, 100) else 0
@@ -274,7 +279,7 @@ object SourceResolver {
         // that does not gets the structural floor and an honest evidence line.
         val verified = (if (digest != null) VerifiedApk.byDigest(target, digest) else VerifiedApk.structural(target))
             ?: run {
-                Download.discard(target)
+                ApkCache.drop(target)
                 error("${app.label}: the vendor APK failed verification" + (digest?.let { " against $it" } ?: ""))
             }
         return identity(ctx, app.pkg, verified)
@@ -285,7 +290,7 @@ object SourceResolver {
     private fun identity(ctx: Context, pkg: String, apk: VerifiedApk): VerifiedApk {
         val id = Fleet.candidateIdentity(ctx, apk.file) ?: return apk
         if (id.pkg != pkg) {
-            apk.file.delete()
+            ApkCache.drop(apk.file)
             error("downloaded ${id.pkg}, wanted $pkg — discarded")
         }
         return apk

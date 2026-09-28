@@ -7,6 +7,7 @@ import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
 import com.diegonmarcos.superapp.updater.apk.ApkIntegrity
 import com.diegonmarcos.superapp.updater.apk.VerifiedApk
+import com.diegonmarcos.superapp.updater.cache.ApkCache
 import android.content.Context
 import android.content.pm.PackageManager
 import android.util.Log
@@ -89,7 +90,7 @@ internal class UpdateChecker(private val context: Context) {
      *  or error flips to Failed and throws. */
     fun download(a: Available, shouldCancel: () -> Boolean = { false }): VerifiedApk {
         try {
-            val target = File(context.cacheDir, "update-${a.remoteDigest.substringAfter(':').take(12)}.apk")
+            val target = ApkCache.file(context, "update-${a.remoteDigest.substringAfter(':').take(12)}.apk")
             UpdateProgress.update(UpdateProgress.State.Downloading(0, 0, a.remoteSize))
             client.blob(a.remoteDigest, a.token, target, a.remoteSize, shouldCancel) { bytes, total ->
                 val totalKnown = if (total > 0) total else a.remoteSize
@@ -101,7 +102,7 @@ internal class UpdateChecker(private val context: Context) {
                 // The partial goes too. Bytes that failed a digest are
                 // known-bad, and leaving the .part would have every later
                 // attempt resume on top of them and fail the same way forever.
-                Download.discard(target)
+                ApkCache.drop(target)
                 UpdateProgress.update(UpdateProgress.State.Failed(
                     "digest mismatch against ${a.remoteDigest}"))
                 error("downloaded digest != manifest ${a.remoteDigest}")
