@@ -118,7 +118,25 @@
     "artifact": {
       "release": "cloud-terminal.apk",
       "debug": "cloud-terminal.apk"
-    }
+    },
+    "companions": [
+      {
+        "_doc": "#628 Slice 2 — the rootfs is an INSTALLABLE fleet library APK, not a bare release asset (#618). Gated on its own paths_from so an app-code change never republishes the ~400 MB payload — the #618 regression this design exists to avoid. Built by the same job, toolchain and keystore as this app's own APK (_build_companions, called from build-fork) and uploaded to the SAME rolling release (_publish_companions), so no second signing path and no second channel are introduced.",
+        "id": "rootfs-termux",
+        "gradle_task": ":rootfs-lib:assembleRelease",
+        "apk_glob": "rootfs-lib/build/outputs/apk/release/*.apk",
+        "asset": "Cloud-Lib-Rootfs-Termux.apk",
+        "assets": {
+          "arm64": "Cloud-Lib-Rootfs-Termux.apk",
+          "x86_64": "Cloud-Lib-Rootfs-Termux-x86_64.apk"
+        },
+        "paths_from": [
+          "ac_cloud-termux/rootfs",
+          "ac_cloud-termux/rootfs-lib"
+        ],
+        "package": "com.diegonmarcos.cloudlib.rootfstermux"
+      }
+    ]
   },
   "tests": {
     "_doc": "What CI runs to prove this app works. Read by 1_cicd/src/scripts/cloud-android-test-engine.sh. The shell phase runs test/test-rootfs-declared.sh (the rootfs declaration holds together, consumes the fleet tool belt, and is wired into build, gradle and Java). Its runtime half, rootfs/verify-rootfs.sh, needs the built tree, so the ship workflow's rootfs job runs it per ABI on a native runner; test-rootfs-declared.sh fails if that step is ever removed.",

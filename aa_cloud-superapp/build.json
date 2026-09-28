@@ -84,13 +84,7 @@
         "id": "libs",
         "label": "Libs",
         "default_for_kind": "lib",
-        "blurb": "One APK per library module, installable and inspectable on its own. Most are also compiled into the apps that use them; the exception is net-wg (WireGuard), an out-of-process engine its app needs installed."
-      },
-      {
-        "id": "runtimes",
-        "label": "Runtimes",
-        "default_for_kind": "artifact",
-        "blurb": "Runtime libs that are NOT an APK: the ~400 MB root filesystems the two terminals enter, published beside their APK and addressed by content (#618/#624). Each row names the lib, the content-address version and the release asset the app fetches once, verifies against the sha256 baked into it, and never fetches again while that digest holds. Nothing here installs — these rows are in the catalogue, not the app list, so no updater or batch can ever be handed one; whether a given phone has already fetched and extracted its tree is the terminal's own state and is not read from here."
+        "blurb": "One APK per library module, installable and inspectable on its own. Most are also compiled into the apps that use them. Two are not: net-wg (WireGuard), an out-of-process engine its app needs installed, and the two rootfs libraries — the ~400 MB root filesystems the terminals enter (#628). Those two are large, and they are ordinary: the store installs and updates them exactly like every other row here, and the terminal that needs one reads it out of the installed APK instead of downloading a runtime of its own."
       },
       {
         "id": "libs-l-ml",

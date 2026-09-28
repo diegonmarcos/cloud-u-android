@@ -3,7 +3,9 @@ package com.termux.app;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
 import android.os.Environment;
 import android.system.Os;
 import android.util.Pair;
@@ -261,11 +263,15 @@ final class TermuxInstaller {
     }
 
     /**
-     * #470: copy the glibc rootfs baked into this APK next to the prefix when its
-     * digest moved, on EVERY start and not only on first bootstrap, so an update
-     * reaches phones that installed this app before the rootfs existed. A failure
-     * is logged and the terminal still opens: enter.sh falls back to bash when
-     * its files are missing, and the failsafe session never touches them.
+     * #470: extract the glibc rootfs out of the cloud-lib-rootfs-termux companion
+     * APK (#628) next to the prefix when its digest moved, on EVERY start and not
+     * only on first bootstrap, so an update reaches phones that installed this app
+     * before the rootfs existed. A failure is never swallowed silently: the lib
+     * being absent shows a dialog with a deep link to the Store's Cloud tab
+     * (CloudRootfs.LibMissing), and any other failure is logged AND shown, so
+     * there is no case where the shell silently never got its agent-coding root.
+     * Either way the terminal still opens: enter.sh falls back to bash when its
+     * files are missing, and the failsafe session never touches them.
      */
     private static void stageCloudRootfs(final Activity activity, final Runnable whenDone) {
         if (CloudRootfs.isStaged(activity)) {
@@ -276,22 +282,95 @@ final class TermuxInstaller {
         new Thread() {
             @Override
             public void run() {
+                Exception failure = null;
                 try {
                     CloudRootfs.stage(activity);
                 } catch (Exception e) {
-                    Logger.logStackTraceWithMessage(LOG_TAG, "Staging the baked rootfs failed", e);
+                    failure = e;
+                    Logger.logStackTraceWithMessage(LOG_TAG, "Staging the cloud-lib-rootfs-termux payload failed", e);
                 } finally {
+                    final Exception f = failure;
                     activity.runOnUiThread(() -> {
                         try {
                             progress.dismiss();
                         } catch (RuntimeException e) {
                             // Activity already dismissed - ignore.
                         }
-                        whenDone.run();
+                        if (f instanceof CloudRootfs.LibMissing) {
+                            showCloudRootfsLibMissingDialog(activity, f.getMessage(), whenDone);
+                        } else if (f != null) {
+                            showCloudRootfsStageErrorDialog(activity, f.getMessage(), whenDone);
+                        } else {
+                            whenDone.run();
+                        }
                     });
                 }
             }
         }.start();
+    }
+
+    /**
+     * #628: cloud-lib-rootfs-termux is not installed. Offers the Store's Cloud
+     * tab via the superapp's launcher deep link (the same "shortcut_action"
+     * vocabulary every constellation deep link uses) and, either way, a
+     * "Continue" that opens the terminal into plain bash — the shell must never
+     * be trapped behind this dialog.
+     */
+    private static void showCloudRootfsLibMissingDialog(Activity activity, String message, Runnable whenDone) {
+        try {
+            new AlertDialog.Builder(activity)
+                .setTitle(R.string.cloud_rootfs_lib_missing_title)
+                .setMessage(activity.getString(R.string.cloud_rootfs_lib_missing_body) +
+                    (message != null ? "\n\n" + message : ""))
+                .setPositiveButton(R.string.cloud_rootfs_lib_missing_install, (dialog, which) -> {
+                    dialog.dismiss();
+                    openCloudStore(activity);
+                    whenDone.run();
+                })
+                .setNegativeButton(R.string.cloud_rootfs_lib_missing_continue, (dialog, which) -> {
+                    dialog.dismiss();
+                    whenDone.run();
+                })
+                .setOnCancelListener(dialog -> whenDone.run())
+                .show();
+        } catch (WindowManager.BadTokenException e) {
+            // Activity already dismissed - ignore, but never leave the terminal unopened.
+            whenDone.run();
+        }
+    }
+
+    /** #628: any OTHER staging failure — logged above already, and shown here so nothing fails silently. */
+    private static void showCloudRootfsStageErrorDialog(Activity activity, String message, Runnable whenDone) {
+        try {
+            new AlertDialog.Builder(activity)
+                .setTitle(R.string.cloud_rootfs_stage_error_title)
+                .setMessage(activity.getString(R.string.cloud_rootfs_stage_error_body, message))
+                .setPositiveButton(R.string.cloud_rootfs_stage_error_continue, (dialog, which) -> {
+                    dialog.dismiss();
+                    whenDone.run();
+                })
+                .setOnCancelListener(dialog -> whenDone.run())
+                .show();
+        } catch (WindowManager.BadTokenException e) {
+            whenDone.run();
+        }
+    }
+
+    /**
+     * The superapp's own deep-link vocabulary: an explicit Intent naming its
+     * launcher activity and a "shortcut_action" extra, the same mechanism every
+     * other constellation deep link into the Store uses.
+     */
+    private static void openCloudStore(Activity activity) {
+        try {
+            Intent i = new Intent(Intent.ACTION_MAIN)
+                .setClassName("com.diegonmarcos.superapp", "com.diegonmarcos.superapp.HomeActivity")
+                .putExtra("shortcut_action", "page:config/store-cloud")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            activity.startActivity(i);
+        } catch (ActivityNotFoundException e) {
+            Logger.logStackTraceWithMessage(LOG_TAG, "Could not open the SuperApp's Cloud store", e);
+        }
     }
 
     public static void showBootstrapErrorDialog(Activity activity, Runnable whenDone, String message) {

@@ -137,44 +137,55 @@ grep -q 'All-Files-Access' "$R/enter.sh" \
     && ok "enter.sh prints a legible notice when the shared store is not readable" \
     || bad "enter.sh binds an unreadable shared store silently — no All-Files-Access notice (#612)"
 
-echo "── 6: #618 the tree is FETCHED, not bundled, and the fetch is sha256-gated ──"
+echo "── 6: #628 the tree ships as the cloud-lib-rootfs-termux companion APK, and extraction is sha256-gated ──"
 G="$APP/app/build.gradle"
 CR="$J/cloud/CloudRootfs.java"
+LG="$APP/rootfs-lib/build.gradle"
+LM="$APP/rootfs-lib/src/main/AndroidManifest.xml"
 P="$R/publish-artifact.sh"
 digest_asset="$(json "$R/rootfs.json" 'd["artifact"]["digest_asset"]')"
 url_asset="$(json "$R/rootfs.json" 'd["artifact"]["url_asset"]')"
 
-[ -f "$P" ] && ok "the publish step exists: rootfs/publish-artifact.sh" \
-            || bad "nothing publishes the rootfs tarball — it could only ship inside the APK"
-grep -q 'already published' "$P" \
-    && ok "an already-published asset keeps its hosted bytes (a rebuild cannot move them under a shipped APK)" \
-    || bad "publish-artifact.sh re-uploads the same asset name — phones would be told a digest the host no longer serves"
-grep -q "tasks.register('publishCloudRootfs')" "$G" \
-    && ok "gradle publishes the tarball before packaging" || bad "gradle has no publishCloudRootfs task"
-grep -q "dependsOn 'publishCloudRootfs'" "$G" \
-    && ok "verifyCloudRootfs runs after the publish" || bad "verifyCloudRootfs does not depend on publishCloudRootfs"
-# THE point of #618: no rootfs bytes in the APK. The gradle gate must refuse a
-# tarball left in assets/, and the Java must not list it among the assets it
-# copies out (it cannot, it is not there).
-grep -q "would bundle the rootfs it is supposed to fetch" "$G" \
-    && ok "gradle refuses to build an APK with the tarball still in assets/" \
-    || bad "nothing stops the tarball being packaged again — the APK would be 400 MB (#618)"
-if grep -q "FILES = {\"proot\", \"enter.sh\", URL_ASSET}" "$CR"; then
-    ok "the app copies only the small files out of assets/"
+[ -f "$P" ] && bad "rootfs/publish-artifact.sh is still here — #628 leaves exactly ONE way the rootfs arrives, and this was the #618 network path" \
+            || ok "publish-artifact.sh is gone — no publish-then-fetch path is left to drift out of sync"
+[ -f "$LG" ] && ok "the companion lib module exists: rootfs-lib/build.gradle" \
+             || bad "rootfs-lib/build.gradle is missing — nothing builds the cloud-lib-rootfs-termux APK"
+[ -f "$LM" ] && ok "the companion lib manifest exists: rootfs-lib/src/main/AndroidManifest.xml" \
+             || bad "rootfs-lib/src/main/AndroidManifest.xml is missing"
+grep -q "':rootfs-lib'" "$APP/settings.gradle" \
+    && ok "settings.gradle includes :rootfs-lib" || bad "settings.gradle does not include :rootfs-lib"
+grep -q "tasks.register('stageRootfsPayload')" "$G" \
+    && ok "gradle stages the tarball into the companion lib before packaging" || bad "gradle has no stageRootfsPayload task"
+grep -q "dependsOn 'stageRootfsPayload'" "$G" \
+    && ok "verifyCloudRootfs runs after the stage" || bad "verifyCloudRootfs does not depend on stageRootfsPayload"
+# THE point of #628: no rootfs bytes, no digest sidecar and no url sidecar left
+# in the APP's own APK — all three moved into the companion lib.
+grep -q "must carry none of it" "$G" \
+    && ok "gradle refuses to build an APK with the #618 sidecars or the tarball still in assets/" \
+    || bad "nothing stops the old scheme's leftovers being packaged again"
+if grep -q 'FILES = {"proot", "enter.sh"}' "$CR"; then
+    ok "the app copies only the small files out of its OWN assets/ — the tarball is not among them"
 else
-    bad "CloudRootfs still lists the tarball among its assets — it is not in the APK any more"
+    bad "CloudRootfs still lists something beyond proot/enter.sh among its own assets"
 fi
-# MUTATION PROOF. This is the assertion #618 rests on, so it is run twice: once
-# against the real file and once against a copy with the digest comparison
-# deleted. A copy that still passes means the assertion checks nothing, and an
-# unverified 400 MB download could land without this tester noticing.
+grep -q 'checkSignatures' "$CR" && grep -q 'SIGNATURE_MATCH' "$CR" \
+    && ok "CloudRootfs refuses to unpack a companion signed with a different key" \
+    || bad "CloudRootfs does not check the companion's signature — untrusted bytes could be unpacked and executed"
+grep -q 'class LibMissing' "$CR" \
+    && ok "a missing companion is a distinguishable LibMissing, not a generic IOException" \
+    || bad "CloudRootfs has no LibMissing — the caller cannot offer the Store deep link"
+# MUTATION PROOF. This is the assertion #618 and #628 both rest on, so it is
+# run twice: once against the real file and once against a copy with the
+# digest comparison deleted. A copy that still passes means the assertion
+# checks nothing, and an unverified 400 MB payload could be unpacked without
+# this tester noticing.
 sha_gated() {
     grep -q 'DigestInputStream' "$1" && grep -q 'want.equals(got)' "$1" \
         && grep -q 'not the " + want' "$1"
 }
 sha_gated "$CR" \
-    && ok "the fetch is gated on the baked sha256" \
-    || bad "the fetched rootfs is not compared to the baked digest — unread bytes would be unpacked and executed (#618)"
+    && ok "the extraction is gated on the companion's own declared sha256" \
+    || bad "the extracted rootfs is not compared to the declared digest — unread bytes would be unpacked and executed"
 MUT="$T/CloudRootfs-no-gate.java"
 grep -v 'want.equals(got)' "$CR" > "$MUT"
 if sha_gated "$MUT"; then
@@ -183,23 +194,16 @@ else
     ok "mutation proved: deleting the digest comparison makes the assertion above go red"
 fi
 grep -q 'part.delete()' "$CR" \
-    && ok "a digest mismatch leaves nothing behind" || bad "a rejected download is kept on disk"
-# The url and the digest reach the phone as ASSETS written by the publish step,
-# so neither this APK's Java nor its gradle names a host.
-# grep -n prefixes every line with "<n>:", so a comment filter anchored at ^ must
-# allow for it — anchoring at '^\s*\*' matches nothing and passes whatever the
-# file says, the same hollow-green shape the sibling tester documents.
-if grep -n 'https\?://' "$CR" | grep -vE '^[0-9]+:[[:space:]]*(\*|//|/\*)' | grep -q .; then
-    bad "CloudRootfs.java hardcodes a url — it must read $url_asset, written from the declaration"
+    && ok "a digest mismatch leaves nothing behind" || bad "a rejected extraction is kept on disk"
+# #628's whole point: nothing here ever opens a socket.
+if grep -qE 'HttpURLConnection|java\.net\.URL' "$CR"; then
+    bad "CloudRootfs.java still touches the network — #628 removes the #618 runtime fetch entirely"
 else
-    ok "CloudRootfs.java hardcodes no url (it reads $url_asset)"
+    ok "CloudRootfs.java has no HTTP left in it — the rootfs is read out of the sibling APK, never fetched"
 fi
-grep -q 'cloudRootfsArtifact.repo' "$G" && grep -q 'cloudRootfsArtifact.tag' "$G" \
-    && ok "gradle reads the repo and tag from rootfs.json::artifact" \
-    || bad "app/build.gradle does not read artifact.repo/tag from the declaration"
 grep -q 'cloudRootfsArtifact.digest_asset' "$G" && grep -q 'cloudRootfsArtifact.url_asset' "$G" \
-    && ok "gradle names the two baked files ($digest_asset, $url_asset) from the declaration" \
-    || bad "the digest/url asset names are not read from rootfs.json::artifact"
+    && ok "gradle still names the two #618 sidecars ($digest_asset, $url_asset) — only to assert their ABSENCE now" \
+    || bad "the #618 sidecar names are not read from rootfs.json::artifact any more"
 
 echo
 [ "$fail" -eq 0 ] && echo "PASS test-rootfs-declared" || echo "FAIL test-rootfs-declared"

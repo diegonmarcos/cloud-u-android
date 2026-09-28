@@ -41,7 +41,11 @@ android {
     defaultConfig {
         applicationId "cld.termux"
         applicationIdSuffix ".nix"
-        versionCode 188043
+        // #628 Slice 2 -- bumped for the switch from a runtime-downloaded
+        // bootstrap to one read out of the installed rootfs-nixdroid companion
+        // lib (TermuxInstaller.openBootstrapFromLib), so the Store treats this
+        // as an update rather than a no-op reinstall.
+        versionCode 188044
         versionName "0.118.0_v0.3.8_nix"
         // fdroid checkupdates looks for literal versionCode/versionName,
         // can't get fancy with these and use string interpolation and similar
@@ -56,6 +60,12 @@ android {
         //validateVersionName(versionName)
 
         buildConfigField "String", "TERMUX_PACKAGE_VARIANT", "\"" + project.ext.packageVariant + "\"" // Used by TermuxApplication class
+
+        // #628 Slice 2 -- the applicationId of the companion lib TermuxInstaller
+        // resolves at runtime (PackageManager.getApplicationInfo) to read the
+        // rootfs out of. Read from build.json::release.companions, never a
+        // literal, so the two agree by construction.
+        buildConfigField "String", "CLOUD_ROOTFS_LIB_PACKAGE", "\"" + rootfsLibPackage() + "\""
 
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "cld.termux.nix"
         manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal (Nix)"
@@ -309,6 +319,22 @@ def bootstrapSpec() {
     return spec
 }
 
+// #628 Slice 2 -- the ONE declaration of the rootfs companion lib's
+// applicationId, read from build.json::release.companions so BuildConfig's
+// CLOUD_ROOTFS_LIB_PACKAGE and rootfs-lib/build.gradle's own applicationId
+// can never drift apart from each other.
+def rootfsLibPackage() {
+    def declaration = new File(projectDir.parentFile, "build.json")
+    if (!declaration.exists())
+        throw new GradleException("missing " + declaration)
+    def declared = new groovy.json.JsonSlurper().parseText(declaration.getText("UTF-8"))
+    def companion = (declared.release?.companions ?: []).find { it.id == "rootfs-nixdroid" }
+    if (companion == null || !companion.package)
+        throw new GradleException(declaration.toString() + " has no release.companions[] entry with id "
+                + "'rootfs-nixdroid' declaring .package")
+    return companion.package
+}
+
 // The ABI this APK is for, from the release.variants[] entry the engine
 // selected. Same CLOUDNAV_ABIS hook every other per-ABI app here uses. One
 // rootfs per APK: baking all of them would multiply ~38MB by four for three
@@ -376,6 +402,22 @@ task bakeBootstrap() {
         def spec = bootstrapSpec()
         def abi = bootstrapAbi()
         def pin = spec.archs[abi]
+        def art = spec.artifact
+        if (art == null)
+            throw new GradleException("build.json::forks.nixdroid.bootstrap has no artifact block -- refusing to "
+                    + "bake the payload with nothing to version it by (#618/#628)")
+
+        // #628 Slice 2 -- the payload's final home is rootfs-lib's staging
+        // area, not a GH release. If a previous run already staged both files
+        // there, this run is free: no re-download, no re-patch, no re-bake of
+        // ~400 MB for a rerun that changed nothing.
+        def payloadDir = new File(rootProject.buildDir, "rootfs-payload")
+        def stagedPayload = new File(payloadDir, "bootstrap.zip")
+        def stagedManifest = new File(payloadDir, "rootfs-lib.json")
+        if (stagedPayload.isFile() && stagedManifest.isFile()) {
+            logger.quiet("bakeBootstrap: " + abi + " -> already staged at " + payloadDir)
+            return
+        }
 
         def staging = new File(buildDir, "generated/bootstrap/download")
         staging.mkdirs()
@@ -456,47 +498,29 @@ task bakeBootstrap() {
                         + "); see log above")
         }
 
-        // #605 -- stamp the sha256 of the FINAL (id-patched, tooling-baked) zip
-        // as its own asset, so TermuxInstaller can tell "already installed"
-        // apart from "already installed an OLDER bootstrap" and re-extract a
-        // fix instead of leaving a stale, already-extracted rootfs in place.
-        //
-        // #618 -- and that stamp is now the ONLY thing about the zip that the
-        // APK carries, together with the url it is fetched from. Publishing the
-        // ~400 MB beside the APK rather than inside it is what stops a one-line
-        // app fix from being a 400 MB update on every phone. Every value comes
-        // from the artifact declaration; nothing here is a url or a name.
-        //
-        // The digest is the published bytes' digest, not necessarily this
-        // build's: publish-artifact.sh keeps an asset that already exists and
-        // reads its digest back, because neither this bake nor a re-deflate is
-        // byte-reproducible and a rebuild must not move bytes under an APK that
-        // was already shipped a digest.
-        def art = spec.artifact
-        if (art == null)
-            throw new GradleException("build.json::forks.nixdroid.bootstrap has no artifact block -- refusing to "
-                    + "bake 400 MB into the APK (#618)")
-        def digestFile = new File(bootstrapAssetsDir, art.digest_asset)
-        def urlFile = new File(bootstrapAssetsDir, art.url_asset)
-        def publisher = new File(projectDir.parentFile, art.publisher)
-        if (!publisher.exists())
-            throw new GradleException("missing " + publisher + " (the artifact publish step, build.json::...artifact.publisher)")
-        def publishResult = exec {
-            commandLine "sh", publisher.absolutePath, baked.absolutePath,
-                    art.repo, art.tag, bootstrapArtifactAsset(art, abi),
-                    digestFile.absolutePath, urlFile.absolutePath
-            ignoreExitValue = true
-        }
-        if (publishResult.exitValue != 0)
-            throw new GradleException("publish-artifact.sh failed for " + bootstrapArtifactAsset(art, abi)
-                    + " (exit " + publishResult.exitValue + "); see log above")
+        // #628 Slice 2 -- stage the FINAL (id-patched, tooling-baked) zip for
+        // rootfs-lib instead of publishing it to a GH release. NO network in
+        // this step: art.repo/.tag/.url describe the transport #628 removes,
+        // and nothing here reads them. The sha256 gates TermuxInstaller's
+        // extraction (openBootstrapFromLib) exactly as it gated fetchBootstrap
+        // before it -- it is computed from the bytes that actually go into
+        // the lib APK, so it cannot describe anything else. version is the
+        // same 12-hex content address the app's own BOOTSTRAP_VERSION
+        // comparison already keyed on, unchanged by this move.
         def bakedLength = baked.length()
-        // THE line that shrinks the APK: the zip never reaches assets/.
-        if (!baked.delete())
-            throw new GradleException("could not remove " + baked + " -- the APK would carry the bootstrap it fetches (#618)")
+        def digest = sha256Of(baked)
+        def version = bootstrapArtifactId(art)
+        payloadDir.mkdirs()
+        // THE line that shrinks the app APK: the zip goes to rootfs-lib's
+        // staging area, never into this module's own assets/.
+        if (!baked.renameTo(stagedPayload))
+            throw new GradleException("could not move " + baked + " to " + stagedPayload
+                    + " -- the app APK would carry the bootstrap it should not (#618/#628)")
+        stagedManifest.text = groovy.json.JsonOutput.toJson(
+                [version: version, payload: stagedPayload.name, sha256: digest])
 
-        logger.quiet("bakeBootstrap: " + abi + " -> " + urlFile.text.trim()
-                + " (" + bakedLength + " B, from " + downloaded.length() + " B), sha256 " + digestFile.text.trim())
+        logger.quiet("bakeBootstrap: " + abi + " -> " + stagedPayload
+                + " (" + bakedLength + " B, from " + downloaded.length() + " B), sha256 " + digest)
     }
 }
 
@@ -518,7 +542,11 @@ def sha256Of(File file) {
     return checksum
 }
 
-android.sourceSets.main.assets.srcDir bootstrapAssetsDir
+// #628 Slice 2 -- bootstrapAssetsDir carries only INTERMEDIATE files now
+// (the id-patched, tooling-baked zip on its way to rootfs-lib's staging
+// area). Nothing that ends up there is meant for this APK's own assets/ any
+// more -- the whole point of the companion lib is that this app carries no
+// part of the ~400 MB payload -- so it is no longer wired as a sourceSet.
 
 // Assets are merged long before javaCompile, so depending on javaCompile (the
 // hook the sibling termux bootstrap uses for its cpp inputs) would bake

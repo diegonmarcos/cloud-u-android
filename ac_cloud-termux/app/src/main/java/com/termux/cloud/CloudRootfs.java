@@ -1,6 +1,8 @@
 package com.termux.cloud;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.system.ErrnoException;
 import android.system.Os;
@@ -9,6 +11,9 @@ import com.termux.BuildConfig;
 import com.termux.shared.logger.Logger;
 import com.termux.shared.termux.TermuxConstants;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -16,66 +21,83 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * Stages the glibc root filesystem this terminal runs (#470) and makes it the
  * terminal's login shell.
  *
- * The APK carries assets/&lt;asset_dir&gt;/ (asset_dir from rootfs/rootfs.json):
- * proot, enter.sh, rootfs.sha256 and rootfs.url — four small files. #618: the
- * ~400 MB tarball is NOT among them. It used to be, and that made every
- * one-line app fix a 400 MB update that every phone re-downloaded in full.
- * It is now a separately-addressed asset on this app's own rolling release,
- * fetched once here, gated on the baked rootfs.sha256, and cached: when the
- * staged digest already equals the baked one nothing is fetched at all, so an
- * app update that does not move the rootfs costs no bytes and works offline.
+ * #628: the ~400 MB tree is no longer fetched over the network (#618's
+ * runtime download is gone). It now ships inside a SIBLING APK — the fleet
+ * library com.diegonmarcos.cloudlib.rootfstermux (cloud-lib-rootfs-termux),
+ * installed and updated by the Store exactly like any other library. This app
+ * carries only proot and enter.sh in its own assets/&lt;asset_dir&gt;/; the
+ * tarball is read straight out of the lib APK — assets/rootfs-lib.json for its
+ * manifest, assets/rootfs.tar.zst for the payload — via {@link ZipFile}, and
+ * streamed into $PREFIX/var/lib/&lt;asset_dir&gt;/. Nothing here opens a socket.
  *
- * Everything is copied/fetched to $PREFIX/var/lib/&lt;asset_dir&gt;/ whenever the
- * baked digest differs from the staged one, so a fresh install AND an update of
- * an existing install both get the new tree. Existing installs matter: the
- * Termux bootstrap only ever runs once, so anything hung off it would never
- * reach a phone that already had this app — built, shipped, and never switched
- * on (#436).
+ * Trust chain: the lib must be signed with the SAME key as this app
+ * ({@code checkSignatures == SIGNATURE_MATCH}) before a single byte is read
+ * out of it — unpacking ~400 MB of executables out of an APK signed by
+ * somebody else is exactly the "marking unread bytes executable" hazard #348
+ * fought elsewhere in this app. The lib's own manifest sha256 is then the
+ * digest the extracted tarball is gated on, exactly as #618's fetch used to be
+ * gated on a baked digest — only the transport changed.
+ *
+ * Everything is extracted to $PREFIX/var/lib/&lt;asset_dir&gt;/ whenever the lib's
+ * declared digest differs from the staged one, so a fresh install AND an
+ * update of an existing install both get the new tree; existing installs
+ * matter because the Termux bootstrap only ever runs once (#436).
  *
  * The first time anything is staged on a device, ~/.termux/shell is pointed at
- * enter.sh, which is Termux's own mechanism for choosing the login shell (it is
- * what `chsh` writes and what $PREFIX/bin/login reads). Later updates leave it
- * alone, so a user who switched back to bash keeps bash. enter.sh does the
- * unpacking itself on the next login; the failsafe session skips it.
+ * enter.sh — that mechanism is unchanged by #628.
  */
 public final class CloudRootfs {
 
     private static final String LOG_TAG = "CloudRootfs";
     private static final String DIGEST = "rootfs.sha256";
-    /** #618 — where the tarball is fetched from, written by CI from rootfs.json::artifact. Never a literal here. */
-    private static final String URL_ASSET = "rootfs.url";
     private static final String TARBALL = "rootfs.tar.zst";
-    /** The small files, from assets. The digest is written LAST and only after a verified fetch, so an interrupted update restages. */
-    private static final String[] FILES = {"proot", "enter.sh", URL_ASSET};
+    /** The manifest {@link #stageRootfsPayload} (app/build.gradle) writes beside the payload inside :rootfs-lib. */
+    private static final String MANIFEST_ENTRY = "assets/rootfs-lib.json";
+    /** The small files this app still carries in its own assets/ — the tarball does not, any more. */
+    private static final String[] FILES = {"proot", "enter.sh"};
 
     private CloudRootfs() {}
+
+    /**
+     * Thrown when com.diegonmarcos.cloudlib.rootfstermux is not installed, so the
+     * caller can tell this apart from every other failure and offer the Store
+     * deep link instead of a generic error (see TermuxInstaller#stageCloudRootfs).
+     */
+    public static final class LibMissing extends IOException {
+        public LibMissing(String message) { super(message); }
+    }
 
     private static File stageDir() {
         return new File(TermuxConstants.TERMUX_PREFIX_DIR_PATH, "var/lib/" + BuildConfig.CLOUD_ROOTFS_ASSET_DIR);
     }
 
-    /** Cheap enough for the UI thread: two 65-byte reads. */
+    /**
+     * Cheap enough for the UI thread: opens the lib's ZipFile only to read its
+     * small manifest entry (a few dozen bytes) — never the ~400 MB payload entry.
+     */
     public static boolean isStaged(Context context) {
         try {
             File staged = new File(stageDir(), DIGEST);
-            return staged.isFile() && baked(context.getAssets()).equals(read(new FileInputStream(staged)));
-        } catch (IOException e) {
+            if (!staged.isFile()) return false;
+            String want = field(libManifest(context), "sha256");
+            return want.equals(read(new FileInputStream(staged)));
+        } catch (Exception e) {
             return false;
         }
     }
 
-    /** Fetches ~400 MB the first time and after a rootfs change; call off the UI thread. */
+    /** Extracts ~400 MB out of the sibling lib APK the first time and after a rootfs change; call off the UI thread. */
     public static void stage(Context context) throws IOException, ErrnoException {
         AssetManager assets = context.getAssets();
         File dir = stageDir();
@@ -95,15 +117,20 @@ public final class CloudRootfs {
         //noinspection OctalInteger
         Os.chmod(new File(dir, "enter.sh").getAbsolutePath(), 0700);
 
-        fetchTarball(dir, read(assets.open(BuildConfig.CLOUD_ROOTFS_ASSET_DIR + "/" + URL_ASSET)), baked(assets));
+        String libSourceDir = trustedLibSourceDir(context);
+        JSONObject manifest = readManifest(libSourceDir);
+        String want = field(manifest, "sha256");
+        String payload = field(manifest, "payload");
+
+        extractPayload(libSourceDir, payload, want, dir);
 
         // LAST, and only now: enter.sh unpacks exactly when this file disagrees
         // with what it already unpacked, so writing it before a verified tarball
         // is in place would tell it to unpack bytes that are not there.
         try (OutputStream out = new FileOutputStream(new File(dir, DIGEST))) {
-            out.write((baked(assets) + "\n").getBytes(StandardCharsets.UTF_8));
+            out.write((want + "\n").getBytes(StandardCharsets.UTF_8));
         }
-        Logger.logInfo(LOG_TAG, "Staged the rootfs " + baked(assets) + " into " + dir);
+        Logger.logInfo(LOG_TAG, "Staged the rootfs " + want + " into " + dir);
 
         if (firstEver) {
             File termuxDir = new File(TermuxConstants.TERMUX_HOME_DIR_PATH, ".termux");
@@ -117,40 +144,96 @@ public final class CloudRootfs {
     }
 
     /**
-     * #618 — fetch the tarball and REFUSE it unless it hashes to {@code want}.
-     *
-     * The digest comes from the APK, the bytes come from the network, and the
-     * comparison is the only thing that makes the second trustworthy: without it
-     * this would be the first-run download that #348 removed from the other
-     * terminal, marking unread bytes executable. A mismatch throws, so the old
-     * digest stays on disk, enter.sh keeps using the tree it already unpacked,
-     * and the next start tries again.
+     * Resolves com.diegonmarcos.cloudlib.rootfstermux and refuses it unless it is
+     * signed with this app's own key. #628's trust boundary: this app is about
+     * to unpack and exec ~400 MB out of another APK's assets, and only a
+     * matching signature makes that APK part of the same constellation build
+     * rather than an unrelated package somebody else installed under the id
+     * this app expects to trust.
+     */
+    private static String trustedLibSourceDir(Context context) throws IOException {
+        PackageManager pm = context.getPackageManager();
+        String libPackage = BuildConfig.CLOUD_ROOTFS_LIB_PACKAGE;
+        ApplicationInfo info;
+        try {
+            info = pm.getApplicationInfo(libPackage, 0);
+        } catch (PackageManager.NameNotFoundException e) {
+            throw new LibMissing("cloud-lib-rootfs-termux (" + libPackage + ") is not installed — " +
+                "install it from the Store's Cloud tab to enable the agent-coding shell");
+        }
+        //noinspection deprecation
+        if (pm.checkSignatures(context.getPackageName(), libPackage) != PackageManager.SIGNATURE_MATCH) {
+            throw new IOException("cloud-lib-rootfs-termux (" + libPackage + ") is signed with a different key " +
+                "than this app — refusing to unpack it");
+        }
+        return info.sourceDir;
+    }
+
+    /** Reads and validates {@link #MANIFEST_ENTRY} out of the lib APK at {@code libSourceDir}. */
+    private static JSONObject readManifest(String libSourceDir) throws IOException {
+        try (ZipFile zip = new ZipFile(libSourceDir)) {
+            ZipEntry entry = zip.getEntry(MANIFEST_ENTRY);
+            if (entry == null)
+                throw new IOException("cloud-lib-rootfs-termux carries no " + MANIFEST_ENTRY + " — reinstall it from the Store");
+            String text;
+            try (InputStream in = zip.getInputStream(entry)) {
+                text = read(in);
+            }
+            JSONObject json = new JSONObject(text);
+            if (!json.has("version") || !json.has("payload") || !json.has("sha256"))
+                throw new IOException("cloud-lib-rootfs-termux's " + MANIFEST_ENTRY + " is missing version/payload/sha256 — reinstall it from the Store");
+            return json;
+        } catch (JSONException e) {
+            throw new IOException("cloud-lib-rootfs-termux's " + MANIFEST_ENTRY + " is not valid JSON", e);
+        }
+    }
+
+    /**
+     * One manifest field, with org.json's CHECKED JSONException translated at the
+     * boundary. Not a convenience: every caller here declares IOException, and a
+     * bare getString would not compile.
+     */
+    private static String field(JSONObject manifest, String name) throws IOException {
+        try {
+            return manifest.getString(name);
+        } catch (JSONException e) {
+            throw new IOException("cloud-lib-rootfs-termux's " + MANIFEST_ENTRY
+                + " has no usable " + name + " — reinstall it from the Store", e);
+        }
+    }
+
+    /** {@link #isStaged} only ever reads this — never {@link #extractPayload}'s ~400 MB entry. */
+    private static JSONObject libManifest(Context context) throws IOException {
+        return readManifest(trustedLibSourceDir(context));
+    }
+
+    /**
+     * #618's guard, moved: fetch became extract, but the property is the same —
+     * REFUSE the payload unless it hashes to {@code want}. A mismatch throws, so
+     * the old digest stays on disk, enter.sh keeps using the tree it already
+     * unpacked, and the next start tries again.
      *
      * A tarball already on disk that hashes correctly is kept: an interrupted
-     * update resumes without another 400 MB.
+     * update resumes without extracting another 400 MB.
      */
-    private static void fetchTarball(File dir, String url, String want) throws IOException {
+    private static void extractPayload(String libSourceDir, String payload, String want, File dir) throws IOException {
         File tarball = new File(dir, TARBALL);
         if (tarball.isFile() && want.equals(sha256(tarball))) {
-            Logger.logInfo(LOG_TAG, "The fetched rootfs " + want + " is already here");
+            Logger.logInfo(LOG_TAG, "The extracted rootfs " + want + " is already here");
             return;
         }
 
         File part = new File(dir, TARBALL + ".part");
         //noinspection ResultOfMethodCallIgnored
         part.delete();
-        Logger.logInfo(LOG_TAG, "Fetching the rootfs " + want + " from " + url);
+        Logger.logInfo(LOG_TAG, "Extracting the rootfs " + want + " from cloud-lib-rootfs-termux");
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.setInstanceFollowRedirects(true);
-        connection.setConnectTimeout(30_000);
-        connection.setReadTimeout(60_000);
-        try {
-            int status = connection.getResponseCode();
-            if (status != HttpURLConnection.HTTP_OK)
-                throw new IOException("fetching " + url + " answered HTTP " + status);
+        try (ZipFile zip = new ZipFile(libSourceDir)) {
+            ZipEntry entry = zip.getEntry("assets/" + payload);
+            if (entry == null)
+                throw new IOException("cloud-lib-rootfs-termux carries no assets/" + payload + " — reinstall it from the Store");
             MessageDigest digest = sha256();
-            try (InputStream in = new DigestInputStream(connection.getInputStream(), digest);
+            try (InputStream in = new DigestInputStream(zip.getInputStream(entry), digest);
                  OutputStream out = new FileOutputStream(part)) {
                 byte[] buffer = new byte[1 << 16];
                 int n;
@@ -160,11 +243,9 @@ public final class CloudRootfs {
             if (!want.equals(got)) {
                 //noinspection ResultOfMethodCallIgnored
                 part.delete();
-                throw new IOException("the rootfs fetched from " + url + " is sha256 " + got
+                throw new IOException("the rootfs extracted from cloud-lib-rootfs-termux is sha256 " + got
                     + ", not the " + want + " this build was signed off against");
             }
-        } finally {
-            connection.disconnect();
         }
         //noinspection ResultOfMethodCallIgnored
         tarball.delete();
@@ -193,10 +274,6 @@ public final class CloudRootfs {
         StringBuilder out = new StringBuilder(bytes.length * 2);
         for (byte b : bytes) out.append(Character.forDigit((b >> 4) & 0xf, 16)).append(Character.forDigit(b & 0xf, 16));
         return out.toString();
-    }
-
-    private static String baked(AssetManager assets) throws IOException {
-        return read(assets.open(BuildConfig.CLOUD_ROOTFS_ASSET_DIR + "/" + DIGEST));
     }
 
     private static boolean isSymlink(File file) {

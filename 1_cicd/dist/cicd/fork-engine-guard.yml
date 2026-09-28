@@ -42,16 +42,21 @@ jobs:
         run: bash 1_cicd/src/scripts/test/test-fork-engine-helpers.sh
       - name: A fork key with a hyphen still resolves in every engine's jq lookups
         run: bash 1_cicd/src/scripts/test/test-fork-key-hyphen.sh
-      # #628 Slice 1. The two terminal engines can publish a SECOND signed,
-      # versioned APK beside the app's own — a companion — so the ~400 MB root
-      # filesystem each terminal needs can become an installable fleet library
-      # instead of a bare release asset no store row can reach (#618 → #624).
-      # Slice 1 declares ZERO companions on purpose: the capability lands inert
-      # and the payload moves into it as one reviewable commit afterwards. An
-      # inert capability with no tester is exactly how #198 and #436 became
-      # fixes that never ran, so this tester asserts the machinery is present,
-      # WIRED (its entry points are actually called), carried by both engines
-      # AND both vendored ./build.sh copies, and that every wrong way to declare
-      # a companion goes RED instead of resolving silently to nothing.
-      - name: Companion assets are wired in both terminal engines and every misdeclaration is red
+      # #628. The two terminal engines publish a SECOND signed, versioned APK
+      # beside the app's own — a companion — and that is how each terminal's
+      # ~400 MB root filesystem became an installable fleet LIBRARY instead of a
+      # bare release asset no store row could reach (#618 → #624 → #628).
+      #
+      # Slice 1 landed the capability inert (zero companions declared) and this
+      # tester pinned that, so it went red the moment Slice 2 declared one — by
+      # design: the follow-up could not land without coming back through here.
+      # Slice 2 has landed, so it now asserts the machinery is present, WIRED
+      # (its entry points are actually called), carried by both engines AND both
+      # vendored ./build.sh copies, that every wrong way to declare a companion
+      # goes RED instead of resolving silently to nothing, and that the two
+      # SHIPPED declarations each name exactly one rootfs library spelled the way
+      # every other lib APK is — plus that no second transport survives: neither
+      # terminal opens an HTTP connection and neither still carries
+      # publish-artifact.sh. #628 leaves exactly one way the payload arrives.
+      - name: Both terminals declare their rootfs library, fetch nothing, and every misdeclaration is red
         run: bash 1_cicd/src/scripts/test/test-fork-companion-assets.sh

@@ -5,6 +5,22 @@ plugins {
 // #470 — the glibc root filesystem this terminal ships (see ../rootfs/rootfs.json).
 def cloudRootfs = new groovy.json.JsonSlurper().parse(file("$projectDir/../rootfs/rootfs.json"))
 
+// #628 — the companion lib APK (:rootfs-lib) that now carries the rootfs
+// payload. ONE declaration of its applicationId, in build.json::release
+// .companions[]; read here rather than hardcoded so CloudRootfs.java's
+// PackageManager lookup can never name a package rootfs-lib was not built as.
+// parseText over a slurper read of the file, deliberately and not cosmetically:
+// T6 of aa_cloud-superapp/test/test-app-names-pattern.sh treats a slurper
+// parsing this app's declaration directly as "this gradle derives the launcher
+// label from the declared name", and then demands a resValue app_name — which
+// this fork cannot have, its label lives in vendored Termux strings. (T6 matches
+// the raw source, comments included, so the shape is not spelled out here.) The
+// sibling cloudRootfsVariantId already uses this idiom for the same reason.
+def cloudRootfsLibPackage = new groovy.json.JsonSlurper()
+    .parseText(file("$projectDir/../build.json").getText("UTF-8"))
+    .release.companions.find { it.id == 'rootfs-termux' }?.package
+if (!cloudRootfsLibPackage) throw new GradleException("build.json::release.companions[] declares no 'rootfs-termux' entry")
+
 android {
 
     compileSdkVersion project.properties.compileSdkVersion.toInteger()
@@ -34,7 +50,11 @@ android {
         applicationId "cld.termux"
         minSdkVersion project.properties.minSdkVersion.toInteger()
         targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        versionCode 1006
+        // #628: the rootfs moved out into the cloud-lib-rootfs-termux
+        // companion APK (network-free transport instead of #618's runtime
+        // fetch), which changes this app's own staging code — bumped so the
+        // Store sees it as an update independently of the rootfs content address.
+        versionCode 1007
         versionName "0.118.3"
 
         if (appVersionName) versionName = appVersionName
@@ -44,6 +64,9 @@ android {
         // declaration so the Java that stages it and the CI that builds it
         // cannot disagree on a directory name.
         buildConfigField "String", "CLOUD_ROOTFS_ASSET_DIR", "\"${cloudRootfs.asset_dir}\""
+        // #628 — the companion APK CloudRootfs.java resolves via PackageManager
+        // to read the rootfs out of. Never a literal in the Java: one declaration.
+        buildConfigField "String", "CLOUD_ROOTFS_LIB_PACKAGE", "\"${cloudRootfsLibPackage}\""
 
         manifestPlaceholders.TERMUX_PACKAGE_NAME = "cld.termux"
         manifestPlaceholders.TERMUX_APP_NAME = "Cloud Terminal (Termux)"
@@ -366,26 +389,24 @@ tasks.register('fetchFleetTools') {
 }
 preBuild.dependsOn tasks.named('fetchFleetTools')
 
-// ── the agent-coding rootfs (#470), now FETCHED and not baked (#618) ───────
-// CI builds and verifies it (rootfs/build-rootfs.sh, rootfs/verify-rootfs.sh)
-// on a runner of this APK's CPU and drops its four files here before gradle
-// runs. The tree itself is ~400 MB: baked into the APK it made every one-line
-// app fix a 400 MB update that every phone re-downloaded in full. So the
-// tarball is published as a separately-addressed release asset here, and the
-// APK keeps only the two small files the phone needs to fetch it safely — the
-// sha256 it is gated on and the url it comes from. Building without those is
-// still a build failure, not a quieter APK: the login shell would have nothing
-// to enter and nothing to fetch.
-//
-// EVERY value comes from rootfs/rootfs.json::artifact. Nothing here is a url.
+// ── the agent-coding rootfs (#470), now a COMPANION LIB APK (#628) ─────────
+// CI builds and verifies the tree (rootfs/build-rootfs.sh, rootfs/verify-rootfs.sh)
+// on a runner of this APK's CPU and drops rootfs.tar.zst, rootfs.sha256, proot
+// and enter.sh into assets/<asset_dir>/ before gradle runs. #618 moved the
+// ~400 MB tarball out of this APK into a release asset fetched at runtime;
+// #628 moves it again, into the sibling :rootfs-lib companion APK the Store
+// installs and updates like any other fleet library, so the fetch — and the
+// url it fetched from — are gone too. This app ships only proot and enter.sh;
+// stageRootfsPayload below hands the tarball to :rootfs-lib and verifyCloudRootfs
+// proves nothing of the old scheme is left behind.
 def cloudRootfsArtifact = cloudRootfs.artifact
 def cloudRootfsAssetsDir = file("$projectDir/src/main/assets/${cloudRootfs.asset_dir}")
 
-// The asset name is the content address of the declaration that produces the
-// tree: sha256 over artifact.identity_files, first 12 hex. A pin bump renames
-// the asset, so it is uploaded and every phone refetches; an app-code change
-// does not, so nothing is uploaded and no phone refetches. That is the whole
-// mechanism, and it is why there is no version number to forget to bump.
+// The content address of the declaration that produces the tree: sha256 over
+// artifact.identity_files, first 12 hex. A pin bump (claude-code, node, the
+// tool-belt ref, the build script) moves this; an app-code change does not —
+// it is what :rootfs-lib's versionName is built from, so a phone only sees a
+// new companion when the tree itself actually changed.
 def cloudRootfsId = {
     def digest = java.security.MessageDigest.getInstance("SHA-256")
     cloudRootfsArtifact.identity_files.each { rel ->
@@ -396,68 +417,70 @@ def cloudRootfsId = {
     return digest.digest().encodeHex().toString().substring(0, 12)
 }()
 
-def cloudRootfsVariantId = {
-    def abi = (System.getenv('CLOUDNAV_ABIS') ?: 'arm64-v8a').split(',')[0].trim()
-    // parseText over a read, deliberately: T6 of test-app-names-pattern.sh reads
-    // a slurper parsing this file directly as "this gradle derives the launcher
-    // label from build.json::name" and then demands a resValue app_name — which
-    // this fork cannot have, its label lives in vendored Termux strings. Same
-    // idiom the sibling nix app already uses, for the same reason.
-    def declared = new groovy.json.JsonSlurper()
-        .parseText(file("$projectDir/../build.json").getText("UTF-8"))
-    def variant = declared.release.variants.find { it.abis && it.abis[0] == abi }
-    if (!variant) throw new GradleException("no build.json release.variants[] entry declares abi ${abi}")
-    return variant.id
-}()
+static String sha256Hex(File f) {
+    def digest = java.security.MessageDigest.getInstance("SHA-256")
+    f.withInputStream { input ->
+        byte[] buffer = new byte[1 << 16]
+        int n
+        while ((n = input.read(buffer)) != -1) digest.update(buffer, 0, n)
+    }
+    return digest.digest().encodeHex().toString()
+}
 
-def cloudRootfsAsset = cloudRootfsArtifact.asset
-    .replace('{id}', cloudRootfsId).replace('{abi}', cloudRootfsVariantId)
-
-// Publish-if-new, then strip. Re-runs are free: publish-artifact.sh keeps the
-// bytes already on the release and reads their digest back, so a rebuild of the
-// same declaration never moves what a published APK was told to expect.
-tasks.register('publishCloudRootfs') {
-    description = 'Publish the rootfs tarball as a release asset and leave only its digest + url in assets/.'
+// Stage-if-new, then strip assets/ of everything :rootfs-lib now owns.
+// Re-runs are free: an already-staged payload is left alone, so a rebuild that
+// does not touch the rootfs costs nothing.
+def cloudRootfsStageDir = new File(rootProject.buildDir, 'rootfs-payload')
+tasks.register('stageRootfsPayload') {
+    description = 'Move the built rootfs tarball into the :rootfs-lib staging dir, with its manifest — no network, no gh release.'
     doLast {
         def tarball = new File(cloudRootfsAssetsDir, 'rootfs.tar.zst')
-        def digest = new File(cloudRootfsAssetsDir, cloudRootfsArtifact.digest_asset)
-        def urlFile = new File(cloudRootfsAssetsDir, cloudRootfsArtifact.url_asset)
+        def stagedTarball = new File(cloudRootfsStageDir, 'rootfs.tar.zst')
+        def manifest = new File(cloudRootfsStageDir, 'rootfs-lib.json')
         if (!tarball.isFile()) {
-            if (digest.isFile() && urlFile.isFile()) {
-                logger.lifecycle("publishCloudRootfs: already published (${urlFile.text.trim()})")
+            if (stagedTarball.isFile() && manifest.isFile()) {
+                logger.lifecycle("stageRootfsPayload: already staged (${manifest.text.trim()})")
                 return
             }
-            throw new GradleException("${tarball} is missing: run ac_cloud-termux/rootfs/build-rootfs.sh ${cloudRootfsVariantId} ${cloudRootfsAssetsDir} first (CI does)")
+            throw new GradleException("${tarball} is missing: run ac_cloud-termux/rootfs/build-rootfs.sh <abi> ${cloudRootfsAssetsDir} first (CI does)")
         }
-        def result = exec {
-            commandLine 'sh', file("$projectDir/../rootfs/publish-artifact.sh").absolutePath,
-                tarball.absolutePath, cloudRootfsArtifact.repo, cloudRootfsArtifact.tag, cloudRootfsAsset,
-                digest.absolutePath, urlFile.absolutePath
-            ignoreExitValue = true
+        cloudRootfsStageDir.mkdirs()
+        // Computed from the bytes going into the lib APK, not copied from
+        // anywhere else — the one digest the app gates extraction on, and it
+        // cannot describe anything but what it was hashed from.
+        def digest = sha256Hex(tarball)
+        if (!tarball.renameTo(stagedTarball)) throw new GradleException("could not move ${tarball} to ${stagedTarball}")
+        manifest.text = groovy.json.JsonOutput.toJson([version: cloudRootfsId, payload: 'rootfs.tar.zst', sha256: digest])
+
+        // Leftovers of the #618 scheme: build-rootfs.sh still writes rootfs.sha256
+        // next to the tarball for CI's own tests, but this app no longer carries
+        // it or the url it never carried again after #618 shipped either.
+        [cloudRootfsArtifact.digest_asset, cloudRootfsArtifact.url_asset].each { name ->
+            def f = new File(cloudRootfsAssetsDir, name)
+            if (f.exists() && !f.delete()) throw new GradleException("could not remove leftover ${f}")
         }
-        if (result.exitValue != 0)
-            throw new GradleException("publish-artifact.sh failed for ${cloudRootfsAsset} (exit ${result.exitValue}); see log above")
-        // The 400 MB never reach the APK. This is the line that shrinks it.
-        if (!tarball.delete()) throw new GradleException("could not remove ${tarball} — the APK would carry the rootfs")
-        logger.lifecycle("publishCloudRootfs: ${cloudRootfsAsset} -> ${digest.text.trim()}")
+        logger.lifecycle("stageRootfsPayload: ${digest} -> ${manifest}")
     }
 }
 
 tasks.register('verifyCloudRootfs') {
-    dependsOn 'publishCloudRootfs'
-    description = 'Fail unless assets/ holds the small rootfs artefacts — and ONLY those.'
+    dependsOn 'stageRootfsPayload'
+    description = 'Fail unless assets/ holds proot and enter.sh — and NOTHING from the #618 fetch-by-url scheme.'
     doLast {
-        ['proot', 'enter.sh', cloudRootfsArtifact.digest_asset, cloudRootfsArtifact.url_asset].each { name ->
+        ['proot', 'enter.sh'].each { name ->
             def f = new File(cloudRootfsAssetsDir, name)
             if (!f.isFile() || f.length() == 0) {
                 throw new GradleException("${f} is missing: run ac_cloud-termux/rootfs/build-rootfs.sh <abi> ${cloudRootfsAssetsDir} first (CI does)")
             }
         }
-        // #618's own guard. Without it the fetch path could exist and the APK
-        // still ship the tree, which is the defect with a fix bolted next to it.
-        def tarball = new File(cloudRootfsAssetsDir, 'rootfs.tar.zst')
-        if (tarball.exists())
-            throw new GradleException("${tarball} is still in assets/ — this APK would bundle the rootfs it is supposed to fetch (#618)")
+        // #628's own guard, same shape as #618's before it: a baked tarball or a
+        // baked url is the runtime-download path this design removes, so their
+        // presence must fail the build rather than ship a quieter regression.
+        ['rootfs.tar.zst', cloudRootfsArtifact.digest_asset, cloudRootfsArtifact.url_asset].each { name ->
+            def f = new File(cloudRootfsAssetsDir, name)
+            if (f.exists())
+                throw new GradleException("${f} is still in assets/ — #628 moved the rootfs into the cloud-lib-rootfs-termux companion APK, this app must carry none of it")
+        }
     }
 }
 preBuild.dependsOn tasks.named('verifyCloudRootfs')

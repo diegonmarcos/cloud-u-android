@@ -1,0 +1,134 @@
+plugins {
+    id "com.android.application"
+}
+
+// #628 Slice 2 — the companion APK build.json::release.companions[] declares
+// (id "rootfs-termux"). Carries nothing but the ~400 MB rootfs payload the
+// sibling app (cld.termux) extracts at runtime with no network at all: see
+// ac_cloud-termux/app/build.gradle's stageRootfsPayload (writes the staging
+// dir this module packages) and CloudRootfs.java (reads it out of this APK).
+//
+// AGP 4.2.2 (same as the rest of this repo, see ../build.gradle): no
+// `namespace {}`, no `packaging {}`, no `buildFeatures` — the package id
+// lives in AndroidManifest.xml.
+
+// parseText over a slurper read of the file, deliberately and not cosmetically:
+// T6 of aa_cloud-superapp/test/test-app-names-pattern.sh treats a slurper
+// parsing this app's declaration directly as "this gradle derives the launcher
+// label from the declared name", and then demands a resValue app_name — which
+// this fork cannot have, its label lives in vendored Termux strings. (T6 matches
+// the raw source, comments included, so the shape is not spelled out here.) The
+// sibling cloudRootfsVariantId already uses this idiom for the same reason.
+def companion = new groovy.json.JsonSlurper()
+    .parseText(file("$projectDir/../build.json").getText("UTF-8"))
+    .release.companions.find { it.id == 'rootfs-termux' }
+if (!companion) throw new GradleException("build.json::release.companions[] declares no 'rootfs-termux' entry")
+
+def cloudRootfs = new groovy.json.JsonSlurper().parse(file("$projectDir/../rootfs/rootfs.json"))
+
+// Same content-address derivation as app/build.gradle's cloudRootfsId — kept
+// byte-for-byte identical because cloud-android-fleet-manifest-guard.py greps
+// for this shape. A pin bump (claude-code, node, the tool-belt ref, the build
+// script) yields a NEW versionName here too, which is what makes the Store
+// treat it as an update.
+def cloudRootfsId = {
+    def digest = java.security.MessageDigest.getInstance("SHA-256")
+    cloudRootfs.artifact.identity_files.each { rel ->
+        def f = file("$projectDir/../$rel")
+        if (!f.isFile()) throw new GradleException("rootfs.json::artifact.identity_files names ${rel}, which does not exist")
+        digest.update(java.security.MessageDigest.getInstance("SHA-256").digest(f.bytes))
+    }
+    return digest.digest().encodeHex().toString().substring(0, 12)
+}()
+
+// ── versionCode ─────────────────────────────────────────────────────────────
+// Same encoding as ab_cloud-libs-shared/lib-apks/app/build.gradle: minutes
+// since 2026-01-01 over a 3,000,000 base, from COMMS_BUILD_TIMESTAMP when CI
+// provides one, else build time. versionCode 1 forever is the bug that block
+// documents — a lib APK the Store can never see as newer.
+def cloudVersionCode = {
+    def base = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
+    def built
+    def stamp = System.getenv('COMMS_BUILD_TIMESTAMP')
+    try {
+        built = stamp
+            ? java.time.LocalDateTime.parse(stamp,
+                java.time.format.DateTimeFormatter.ofPattern('yyyyMMdd.HHmmss'))
+            : java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    } catch (ignored) {
+        built = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    }
+    long mins = java.time.Duration.between(base, built).toMinutes()
+    return mins > 0 ? (int) (3000000L + mins) : 3000000
+}
+
+android {
+    compileSdkVersion project.properties.compileSdkVersion.toInteger()
+    ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
+
+    defaultConfig {
+        applicationId companion.package
+        minSdkVersion project.properties.minSdkVersion.toInteger()
+        targetSdkVersion project.properties.targetSdkVersion.toInteger()
+        versionCode cloudVersionCode()
+        versionName cloudRootfsId
+    }
+
+    signingConfigs {
+        // Same shared constellation keystore as ac_cloud-termux/app, copied
+        // verbatim: this APK is trusted by CloudRootfs.checkSignatures against
+        // the app's own signature, so the two must be signed by the same key.
+        release {
+            def ksPath = System.getenv('TERMUX_KEYSTORE_PATH')
+            if (ksPath) {
+                storeFile file(ksPath)
+                storePassword System.getenv('TERMUX_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('TERMUX_KEY_ALIAS')
+                keyPassword System.getenv('TERMUX_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (System.getenv('TERMUX_KEYSTORE_PATH')) signingConfig signingConfigs.release
+            minifyEnabled false // no code here
+        }
+    }
+
+    // rootfs.tar.zst is already zstd; deflating it again costs build time and
+    // makes AssetManager inflate 400 MB on the phone for nothing.
+    aaptOptions {
+        noCompress 'zst'
+    }
+
+    // #470's jniLibs concern (binaries must be extractable, not page-mapped
+    // from inside the archive) does not apply here: this module carries no
+    // jniLibs, only the tarball CloudRootfs.java streams out of assets/ by
+    // hand, so its own compression exemption above is what matters.
+    sourceSets {
+        main {
+            assets.srcDirs = [new File(rootProject.buildDir, 'rootfs-payload')]
+        }
+    }
+}
+
+// Fails the build unless the staging dir this module packages actually holds
+// the payload AND its manifest. An empty lib APK that installs and provides
+// nothing is the fail-green shape this repo hunts for — it must be
+// impossible. Populated by ac_cloud-termux/app/build.gradle's
+// stageRootfsPayload (run rootfs/build-rootfs.sh first if it is missing).
+tasks.register('verifyRootfsPayload') {
+    description = 'Fail unless the rootfs staging dir carries both the payload and its manifest.'
+    doLast {
+        def dir = new File(rootProject.buildDir, 'rootfs-payload')
+        ['rootfs.tar.zst', 'rootfs-lib.json'].each { name ->
+            def f = new File(dir, name)
+            if (!f.isFile() || f.length() == 0) {
+                throw new GradleException("${f} is missing: run ac_cloud-termux/rootfs/build-rootfs.sh first, " +
+                    "then ac_cloud-termux/app/build.gradle's stageRootfsPayload task (CI runs both before :rootfs-lib:assembleRelease)")
+            }
+        }
+    }
+}
+tasks.matching { it.name ==~ /merge.*Assets/ }.configureEach { dependsOn verifyRootfsPayload }

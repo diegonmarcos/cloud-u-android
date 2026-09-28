@@ -39,6 +39,14 @@
         \nBootstrap binaries compiled for &TERMUX_APP_NAME; have hardcoded $PREFIX path and cannot be installed
         under any path other than:\n%1$s.</string>
 
+    <!-- #628: the bootstrap now lives in the rootfs-nixdroid companion lib, installed and
+         updated through the Store like any other fleet library. -->
+    <string name="rootfs_lib_missing_title">Terminal environment not installed</string>
+    <string name="rootfs_lib_missing_body">&TERMUX_APP_NAME; reads its terminal environment (proot + Nix) from the
+        cloud-lib-rootfs-nixdroid package, which is not installed. Install it from the Store\'s Cloud tab to get a
+        terminal here.</string>
+    <string name="rootfs_lib_missing_install">Install</string>
+
 
 
     <!-- Terminal Sidebar and Shortcuts -->

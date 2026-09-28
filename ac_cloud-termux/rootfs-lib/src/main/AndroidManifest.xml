@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #628 Slice 2 — carries nothing but the rootfs payload in assets/. A
+     payload library like the rest of ab_cloud-libs-shared/lib-apks: no
+     activity, no permission, no launcher icon, bound by the sibling app
+     (cld.termux) rather than opened by the user. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.diegonmarcos.cloudlib.rootfstermux">
+
+    <application
+        android:label="Cloud Lib Rootfs Termux"
+        android:allowBackup="false"
+        android:hasCode="false" />
+
+</manifest>

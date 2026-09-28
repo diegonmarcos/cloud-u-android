@@ -4,12 +4,16 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Environment;
 import android.system.Os;
 import android.util.Pair;
 import android.view.WindowManager;
 
+import com.termux.BuildConfig;
 import com.termux.R;
 import com.termux.shared.file.FileUtils;
 import com.termux.shared.termux.crash.TermuxCrashUtils;
@@ -31,8 +35,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
@@ -40,7 +42,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
+
+import org.json.JSONObject;
 
 import static com.termux.shared.termux.TermuxConstants.TERMUX_FILES_DIR_PATH;
 import static com.termux.shared.termux.TermuxConstants.TERMUX_PREFIX_DIR;
@@ -70,140 +75,155 @@ import static com.termux.shared.termux.TermuxConstants.TERMUX_STAGING_PREFIX_DIR
 final class TermuxInstaller {
 
     private static final String LOG_TAG = "TermuxInstaller";
-    /**
-     * The proot + glibc root filesystem, BAKED INTO THIS APK at build time by
-     * app/build.gradle::bakeBootstrap from the pin in
-     * build.json::forks.nixdroid.bootstrap. #348.
-     * <p/>
-     * This used to be a url -- "https://nix-on-droid.unboiled.info/bootstrap-release-24.05" --
-     * pre-filled into an editable dialog box on first launch and streamed
-     * straight into the ZipInputStream below. Three things were wrong with
-     * that, and all three are why the bootstrap is now an asset:
-     * <p/>
-     * (a) No network, no terminal. Ever. There was no cached copy to fall
-     *     back to, so a phone that is offline at first launch has no shell.
-     * (b) A host nobody here controls sat in the boot path of the runtime.
-     * (c) NOTHING verified the bytes. Unlike the gradle-side download, which
-     *     checks sha256 and fails the build on mismatch, whatever came back
-     *     from that url was extracted and marked executable unread.
-     * <p/>
-     * The bytes are now fixed at build time, verified against the pinned
-     * sha256, and patched for this fork's package id before they are baked.
-     */
-    static final String BOOTSTRAP_ASSET_NAME = "bootstrap.zip";
 
     /**
-     * #618 -- and it is no longer INSIDE the APK. The baked zip is ~400 MB, so
-     * every one-line app fix shipped a 400 MB update that every phone
-     * re-downloaded in full just to get the code. app/build.gradle::bakeBootstrap
-     * now publishes it as a separately-addressed asset on this app's own rolling
-     * GitHub release and bakes only two small files in its place: the url below
-     * and the sha256 above it.
-     * <p/>
-     * None of (a), (b) or (c) comes back. (a): the fetch happens once, the
-     * extracted $PREFIX is what the terminal runs, and nothing is fetched again
-     * while the installed version matches the baked one -- so after first run the
-     * app is offline-clean, and an app update that does not move the bootstrap
-     * costs no bytes at all. (b): the host is GitHub Releases, the same channel
-     * this APK itself is installed from, and the url is DERIVED from
-     * build.json::forks.nixdroid.bootstrap.artifact, never typed here. (c): the
-     * bytes are refused unless they hash to {@link #BOOTSTRAP_VERSION_ASSET_NAME},
-     * which travels inside the signed APK -- so what is extracted and marked
-     * executable is exactly what CI verified and published.
+     * #628 -- the proot + Nix rootfs no longer travels with this APK at all,
+     * baked in or fetched over HTTP. It is a real, installed, signed sibling
+     * package (rootfs-lib/, applicationId {@link BuildConfig#CLOUD_ROOTFS_LIB_PACKAGE},
+     * asset cloud-lib-rootfs-nixdroid) the Store's Cloud tab installs and
+     * updates like any other fleet library. This class only READS it: resolves
+     * the package, checks it is signed with THIS app's key, reads its
+     * {@link #LIB_MANIFEST_ENTRY} manifest, and extracts {@link #LIB_PAYLOAD_ENTRY_PREFIX}
+     * lazily, verified against the manifest's sha256 before anything is marked
+     * executable -- the same #348 guarantee {@code fetchBootstrap} gave a
+     * downloaded zip, now given to bytes read out of another app's APK.
      */
-    static final String BOOTSTRAP_URL_ASSET_NAME = "bootstrap.zip.url";
+    static final String LIB_MANIFEST_ENTRY = "assets/rootfs-lib.json";
 
-    /** Where the fetched zip is cached while it is extracted. Deleted afterwards: it is 400 MB. */
-    static final File CACHED_BOOTSTRAP_FILE = new File(TERMUX_FILES_DIR_PATH, ".bootstrap.zip");
+    /** Prefix of the payload entry inside the lib APK; the exact name is {@code manifest.payload}. */
+    static final String LIB_PAYLOAD_ENTRY_PREFIX = "assets/";
+
+    /** Where the payload, once verified, is extracted to be read as a plain {@link File}. */
+    static final File EXTRACTED_BOOTSTRAP_FILE = new File(TERMUX_FILES_DIR_PATH, ".bootstrap.zip");
 
     /**
-     * #605 -- the sha256 of {@link #BOOTSTRAP_ASSET_NAME}, baked alongside it by
-     * app/build.gradle::bakeBootstrap so this app can tell "already installed"
-     * apart from "already installed an OLDER, possibly broken, bootstrap".
-     * <p/>
-     * Below, {@link #setupBootstrapIfNeeded} used to treat any non-empty
-     * {@code $PREFIX} as done, forever -- an APK update that fixes the baked
-     * bootstrap (e.g. the id-rewrite that keeps bin/login's proot-static exec
-     * pointed at THIS app's own /data/data/<id>/files, not a different app's)
-     * never reached a phone that had already extracted the broken one: nothing
-     * ever re-extracted it. Comparing this file against a marker written next
-     * to $PREFIX after each successful extraction (outside it, so deleting/
-     * recreating $PREFIX doesn't erase the record) is what lets a fixed
-     * bootstrap.zip actually replace a stale, already-installed rootfs.
+     * #605 -- the version this class last successfully extracted FROM the lib,
+     * recorded outside $PREFIX (which the next update may wipe and re-extract)
+     * so a future launch can tell a stale, already-extracted rootfs apart from
+     * a newer one the lib was updated to carry. {@link #setupBootstrapIfNeeded}
+     * compares this against {@code rootfs-lib.json}'s {@code version} field.
      */
-    static final String BOOTSTRAP_VERSION_ASSET_NAME = "bootstrap.zip.sha256";
-
-    /** Where the version of the currently-extracted $PREFIX is recorded. See {@link #BOOTSTRAP_VERSION_ASSET_NAME}. */
     static final File INSTALLED_BOOTSTRAP_VERSION_FILE = new File(TERMUX_FILES_DIR_PATH, ".bootstrap_version");
 
-    /** Reads {@link #BOOTSTRAP_VERSION_ASSET_NAME} from assets, or null if it is missing. */
-    private static String readBakedBootstrapVersion(Activity activity) {
-        try (InputStream in = activity.getAssets().open(BOOTSTRAP_VERSION_ASSET_NAME)) {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buffer = new byte[256];
-            int read;
-            while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
-            return new String(out.toByteArray(), StandardCharsets.UTF_8).trim();
-        } catch (Exception e) {
-            Logger.logWarn(LOG_TAG, "Could not read " + BOOTSTRAP_VERSION_ASSET_NAME + " from assets: " + e);
-            return null;
-        }
+    /** Thrown when {@link BuildConfig#CLOUD_ROOTFS_LIB_PACKAGE} is not installed. A distinct type
+     *  so callers can offer the Store deep link instead of just failing. */
+    static final class LibMissing extends Exception {
+        LibMissing(String message) { super(message); }
     }
 
-    /** Reads {@link #BOOTSTRAP_URL_ASSET_NAME} from assets, or null if it is missing. */
-    private static String readBootstrapUrl(Activity activity) {
-        try (InputStream in = activity.getAssets().open(BOOTSTRAP_URL_ASSET_NAME)) {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buffer = new byte[256];
-            int read;
-            while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
-            return new String(out.toByteArray(), StandardCharsets.UTF_8).trim();
-        } catch (Exception e) {
-            Logger.logWarn(LOG_TAG, "Could not read " + BOOTSTRAP_URL_ASSET_NAME + " from assets: " + e);
-            return null;
+    /** The small pointer the lib APK carries: its content-address version, the payload entry's
+     *  name and the sha256 that gates extracting it. */
+    private static final class LibBootstrapManifest {
+        final String version;
+        final String payload;
+        final String sha256;
+        LibBootstrapManifest(String version, String payload, String sha256) {
+            this.version = version; this.payload = payload; this.sha256 = sha256;
         }
     }
 
     /**
-     * #618 -- fetch the published bootstrap and REFUSE it unless it hashes to
-     * {@code want}, the digest baked into this signed APK.
-     * <p/>
-     * That comparison is the entire difference between this and the first-run
-     * download #348 deleted: there, whatever the host served was extracted and
-     * marked executable unread. Here the bytes are compared to a digest the
-     * network cannot influence, and a mismatch throws before anything is
-     * extracted. A cached copy that already hashes correctly is reused, so an
-     * interrupted extraction does not cost another 400 MB.
+     * THE trust boundary, and the only place this app learns where the rootfs
+     * library's APK is. Resolves cloud-lib-rootfs-nixdroid and refuses it unless
+     * it carries this app's own signature.
+     *
+     * #348's guarantee, given to another app's APK: extracting ~400 MB of
+     * executables out of a package we did not verify is exactly the "marking
+     * unread bytes executable" hazard this whole file exists to avoid. A
+     * signature match is what makes the sibling trustworthy — so every read of
+     * that APK goes through here, and there is no path that reaches its bytes
+     * without having passed this check.
      */
-    private static File fetchBootstrap(Activity activity, String want) throws Exception {
-        if (want == null)
-            throw new IOException("this APK carries no " + BOOTSTRAP_VERSION_ASSET_NAME
-                + ", so the fetched bootstrap could not be verified — refusing to extract unchecked bytes");
-        String url = readBootstrapUrl(activity);
-        if (url == null || url.isEmpty())
-            throw new IOException("this APK carries no " + BOOTSTRAP_URL_ASSET_NAME
-                + " — build.json::forks.nixdroid.bootstrap.artifact is where it comes from");
+    private static String trustedLibSourceDir(Activity activity) throws LibMissing, IOException {
+        String libPackage = BuildConfig.CLOUD_ROOTFS_LIB_PACKAGE;
+        String sourceDir;
+        try {
+            sourceDir = activity.getPackageManager().getApplicationInfo(libPackage, 0).sourceDir;
+        } catch (PackageManager.NameNotFoundException e) {
+            throw new LibMissing("cloud-lib-rootfs-nixdroid (" + libPackage + ") is not installed. "
+                + "Install it from the Store's Cloud tab to get a terminal here.");
+        }
+        @SuppressWarnings("deprecation")
+        boolean sameSignature = activity.getPackageManager()
+            .checkSignatures(activity.getPackageName(), libPackage) == PackageManager.SIGNATURE_MATCH;
+        if (!sameSignature)
+            throw new IOException(libPackage + " is installed but signed with a different key than "
+                + activity.getPackageName() + " -- refusing to extract executables from an untrusted APK");
+        return sourceDir;
+    }
 
-        if (CACHED_BOOTSTRAP_FILE.isFile() && want.equals(sha256Of(CACHED_BOOTSTRAP_FILE))) {
-            Logger.logInfo(LOG_TAG, "The fetched bootstrap " + want + " is already cached");
-            return CACHED_BOOTSTRAP_FILE;
+    /**
+     * Resolves the installed rootfs-nixdroid lib, checks it is signed with the
+     * SAME key as this app, and reads its manifest. Cheap: a {@link ZipFile}
+     * central-directory read plus one small JSON entry, never the ~400 MB
+     * payload -- safe to call from the UI thread to decide whether a
+     * re-extraction is needed before showing any progress dialog.
+     */
+    private static LibBootstrapManifest readLibManifest(Activity activity) throws LibMissing, IOException {
+        String libPackage = BuildConfig.CLOUD_ROOTFS_LIB_PACKAGE;
+        String sourceDir = trustedLibSourceDir(activity);
+
+        try (ZipFile lib = new ZipFile(sourceDir)) {
+            ZipEntry entry = lib.getEntry(LIB_MANIFEST_ENTRY);
+            if (entry == null)
+                throw new IOException(libPackage + " carries no " + LIB_MANIFEST_ENTRY + " -- not a valid rootfs-nixdroid lib");
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try (InputStream in = lib.getInputStream(entry)) {
+                byte[] buffer = new byte[1 << 12];
+                int read;
+                while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+            }
+            JSONObject json = new JSONObject(out.toString(StandardCharsets.UTF_8.name()));
+            String version = json.optString("version", null);
+            String payload = json.optString("payload", null);
+            String sha256 = json.optString("sha256", null);
+            if (version == null || payload == null || sha256 == null)
+                throw new IOException(libPackage + "'s " + LIB_MANIFEST_ENTRY
+                    + " is missing version/payload/sha256 -- refusing to extract an unverifiable bootstrap");
+            return new LibBootstrapManifest(version, payload, sha256);
+        } catch (org.json.JSONException e) {
+            throw new IOException(libPackage + "'s " + LIB_MANIFEST_ENTRY + " does not parse: " + e);
+        }
+    }
+
+    /**
+     * Lazily extracts the manifest's payload entry out of the lib APK, verified
+     * against its sha256 before it is trusted. A previously-extracted copy that
+     * already hashes correctly is reused rather than re-extracted, exactly as
+     * {@code fetchBootstrap} used to reuse a cached download.
+     */
+    private static File openBootstrapFromLib(Activity activity, LibBootstrapManifest manifest) throws LibMissing, IOException {
+        // want -- the digest the lib's OWN manifest declares. Named the same as
+        // #618's fetchBootstrap named its baked digest, so the comparison below
+        // reads as the same guarantee moved to a different source: the bytes
+        // are refused unless they hash to a value the network (here: the other
+        // app's APK) cannot influence.
+        final String want = manifest.sha256;
+        if (EXTRACTED_BOOTSTRAP_FILE.isFile() && want.equals(sha256OfQuiet(EXTRACTED_BOOTSTRAP_FILE))) {
+            Logger.logInfo(LOG_TAG, "The bootstrap " + manifest.version + " is already extracted");
+            return EXTRACTED_BOOTSTRAP_FILE;
         }
 
-        File part = new File(CACHED_BOOTSTRAP_FILE.getAbsolutePath() + ".part");
+        String libPackage = BuildConfig.CLOUD_ROOTFS_LIB_PACKAGE;
+        // Through the SAME trust boundary, not a second resolution of its own.
+        // This used to re-read getApplicationInfo() here with no signature check,
+        // relying on readLibManifest having run first — a door that is closed
+        // only by call order, which is the kind of guarantee that survives
+        // exactly until somebody adds a caller.
+        String sourceDir = trustedLibSourceDir(activity);
+
+        File part = new File(EXTRACTED_BOOTSTRAP_FILE.getAbsolutePath() + ".part");
         //noinspection ResultOfMethodCallIgnored
         part.delete();
-        Logger.logInfo(LOG_TAG, "Fetching the bootstrap " + want + " from " + url);
+        Logger.logInfo(LOG_TAG, "Extracting the bootstrap " + manifest.version + " from " + libPackage);
 
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.setInstanceFollowRedirects(true);
-        connection.setConnectTimeout(30_000);
-        connection.setReadTimeout(60_000);
-        try {
-            int status = connection.getResponseCode();
-            if (status != HttpURLConnection.HTTP_OK)
-                throw new IOException("fetching " + url + " answered HTTP " + status);
+        try (ZipFile lib = new ZipFile(sourceDir)) {
+            String entryName = LIB_PAYLOAD_ENTRY_PREFIX + manifest.payload;
+            ZipEntry entry = lib.getEntry(entryName);
+            if (entry == null)
+                throw new IOException(libPackage + " carries no " + entryName + " -- the lib's manifest names a payload it does not have");
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            try (InputStream in = new DigestInputStream(connection.getInputStream(), digest);
+            try (InputStream in = new DigestInputStream(lib.getInputStream(entry), digest);
                  FileOutputStream out = new FileOutputStream(part)) {
                 byte[] buffer = new byte[1 << 16];
                 int read;
@@ -213,17 +233,27 @@ final class TermuxInstaller {
             if (!want.equals(got)) {
                 //noinspection ResultOfMethodCallIgnored
                 part.delete();
-                throw new IOException("the bootstrap fetched from " + url + " is sha256 " + got
-                    + ", not the " + want + " this APK was built against");
+                throw new IOException(libPackage + "'s " + entryName + " is sha256 " + got
+                    + ", not the " + want + " its own manifest declares");
             }
-        } finally {
-            connection.disconnect();
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IOException(e);
         }
         //noinspection ResultOfMethodCallIgnored
-        CACHED_BOOTSTRAP_FILE.delete();
-        if (!part.renameTo(CACHED_BOOTSTRAP_FILE))
-            throw new IOException("cannot move " + part + " to " + CACHED_BOOTSTRAP_FILE);
-        return CACHED_BOOTSTRAP_FILE;
+        EXTRACTED_BOOTSTRAP_FILE.delete();
+        if (!part.renameTo(EXTRACTED_BOOTSTRAP_FILE))
+            throw new IOException("cannot move " + part + " to " + EXTRACTED_BOOTSTRAP_FILE);
+        return EXTRACTED_BOOTSTRAP_FILE;
+    }
+
+    /** Same digest as {@link #sha256Of(File)} but never throws -- a reuse check must not fail
+     *  the whole install just because the previously-extracted copy is unreadable. */
+    private static String sha256OfQuiet(File file) {
+        try {
+            return sha256Of(file);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private static String sha256Of(File file) throws Exception {
@@ -297,13 +327,27 @@ final class TermuxInstaller {
             return;
         }
 
-        // #605 -- an APK update can ship a FIXED bootstrap.zip, but that fix
-        // never reaches a phone whose $PREFIX was already extracted from an
-        // older, possibly-broken one, unless the version actually installed
-        // is compared against the version this build carries.
-        String bakedBootstrapVersion = readBakedBootstrapVersion(activity);
-        boolean bootstrapUpToDate = bakedBootstrapVersion == null
-            || bakedBootstrapVersion.equals(readInstalledBootstrapVersion());
+        // #628 -- the bootstrap lives in the rootfs-nixdroid companion lib now,
+        // not this APK's own assets/. A missing lib or a signature mismatch is
+        // surfaced here, before any progress dialog, as a dialog naming the lib
+        // and offering the Store's Cloud tab -- not a failure buried deeper in
+        // the install with no way for the user to act on it.
+        LibBootstrapManifest libManifest;
+        try {
+            libManifest = readLibManifest(activity);
+        } catch (LibMissing e) {
+            showLibMissingDialog(activity, whenDone, e.getMessage());
+            return;
+        } catch (IOException e) {
+            showBootstrapErrorDialog(activity, whenDone, e.getMessage());
+            return;
+        }
+
+        // #605 -- the lib can be updated to carry a FIXED bootstrap, but that
+        // fix never reaches a phone whose $PREFIX was already extracted from an
+        // older, possibly-broken one, unless the version actually installed is
+        // compared against the version the lib currently carries.
+        boolean bootstrapUpToDate = libManifest.version.equals(readInstalledBootstrapVersion());
 
         // If prefix directory exists, even if its a symlink to a valid directory and symlink is not broken/dangling
         if (FileUtils.directoryFileExists(TERMUX_PREFIX_DIR_PATH, true)) {
@@ -313,18 +357,18 @@ final class TermuxInstaller {
                 whenDone.run();
                 return;
             } else {
-                Logger.logInfo(LOG_TAG, "The termux prefix directory \"" + TERMUX_PREFIX_DIR_PATH + "\" was extracted from an older bootstrap (installed=" + readInstalledBootstrapVersion() + ", baked=" + bakedBootstrapVersion + "); re-extracting.");
+                Logger.logInfo(LOG_TAG, "The termux prefix directory \"" + TERMUX_PREFIX_DIR_PATH + "\" was extracted from an older bootstrap (installed=" + readInstalledBootstrapVersion() + ", lib=" + libManifest.version + "); re-extracting.");
             }
         } else if (FileUtils.fileExists(TERMUX_PREFIX_DIR_PATH, false)) {
             Logger.logInfo(LOG_TAG, "The termux prefix directory \"" + TERMUX_PREFIX_DIR_PATH + "\" does not exist but another file exists at its destination.");
         }
 
-        // The bootstrap ships inside the APK, so there is nothing to ask the
-        // user and nothing to fetch: install it.
-        restOfSetupIfNeeded(activity, whenDone, bakedBootstrapVersion);
+        // The bootstrap is read out of the installed lib, so there is nothing
+        // to ask the user and no network involved: install it.
+        restOfSetupIfNeeded(activity, whenDone, libManifest);
     }
 
-    static void restOfSetupIfNeeded(final Activity activity, final Runnable whenDone, final String bakedBootstrapVersion) {
+    static void restOfSetupIfNeeded(final Activity activity, final Runnable whenDone, final LibBootstrapManifest libManifest) {
 
         final ProgressDialog progress = ProgressDialog.show(activity, null, activity.getString(R.string.bootstrap_installer_body), true, false);
         new Thread() {
@@ -363,11 +407,13 @@ final class TermuxInstaller {
                         return;
                     }
 
-                    // #618 -- the zip is fetched (once) instead of unpacked from
-                    // assets/, and refused unless it hashes to the digest this
-                    // APK carries. Everything after this line is unchanged: what
-                    // is extracted is the same verified archive as before.
-                    final File bootstrapZip = fetchBootstrap(activity, bakedBootstrapVersion);
+                    // #628 -- the zip is extracted (once) out of the installed
+                    // rootfs-nixdroid lib instead of fetched over HTTP, and
+                    // refused unless it hashes to the sha256 the lib's own
+                    // manifest declares. Everything after this line is
+                    // unchanged: what is extracted is the same verified
+                    // archive as before, just read from a different place.
+                    final File bootstrapZip = openBootstrapFromLib(activity, libManifest);
 
                     Logger.logInfo(LOG_TAG, "Extracting bootstrap zip to prefix staging directory \"" + TERMUX_STAGING_PREFIX_DIR_PATH + "\".");
 
@@ -458,24 +504,26 @@ final class TermuxInstaller {
                     // #605 -- record what was actually extracted, outside $PREFIX
                     // (which the next update may wipe and re-extract), so a future
                     // launch can tell this bootstrap apart from a newer, fixed one.
-                    if (bakedBootstrapVersion != null) {
-                        try (FileOutputStream versionOut = new FileOutputStream(INSTALLED_BOOTSTRAP_VERSION_FILE)) {
-                            versionOut.write(bakedBootstrapVersion.getBytes(StandardCharsets.UTF_8));
-                        } catch (Exception e) {
-                            Logger.logWarn(LOG_TAG, "Could not record installed bootstrap version: " + e);
-                        }
+                    try (FileOutputStream versionOut = new FileOutputStream(INSTALLED_BOOTSTRAP_VERSION_FILE)) {
+                        versionOut.write(libManifest.version.getBytes(StandardCharsets.UTF_8));
+                    } catch (Exception e) {
+                        Logger.logWarn(LOG_TAG, "Could not record installed bootstrap version: " + e);
                     }
 
-                    // #618 -- the 400 MB cache has done its job. Keeping it would
-                    // double this app's footprint for bytes only a rootfs change
-                    // needs again, and a change refetches by its new digest.
+                    // #628 -- the extracted-once cache has done its job. Keeping it
+                    // would double this app's footprint for bytes only a rootfs
+                    // change needs again, and a change re-extracts by its new
+                    // digest the next time the lib is opened.
                     //noinspection ResultOfMethodCallIgnored
-                    CACHED_BOOTSTRAP_FILE.delete();
+                    EXTRACTED_BOOTSTRAP_FILE.delete();
 
                     // Recreate env file since termux prefix was wiped earlier
                     TermuxShellEnvironment.writeEnvironmentToFile(activity);
 
                     activity.runOnUiThread(whenDone);
+
+                } catch (final LibMissing e) {
+                    showLibMissingDialog(activity, whenDone, e.getMessage());
 
                 } catch (final Exception e) {
                     showBootstrapErrorDialog(activity, whenDone, Logger.getStackTracesMarkdownString(null, Logger.getStackTracesStringArray(e)));
@@ -510,6 +558,44 @@ final class TermuxInstaller {
                         dialog.dismiss();
                         FileUtils.deleteFile("termux prefix directory", TERMUX_PREFIX_DIR_PATH, true);
                         TermuxInstaller.setupBootstrapIfNeeded(activity, whenDone);
+                    }).show();
+            } catch (WindowManager.BadTokenException e1) {
+                // Activity already dismissed - ignore.
+            }
+        });
+    }
+
+    /**
+     * #628 -- {@link LibMissing} is a DIFFERENT failure than a broken
+     * extraction: nothing here is corrupt, the rootfs-nixdroid companion lib
+     * this app reads its terminal environment out of is simply not installed
+     * (or not yet, or was uninstalled). "Try again" would just fail the same
+     * way again, so this dialog offers the one thing that actually helps:
+     * a deep link into the SuperApp's Store, Cloud tab, where that lib lives.
+     */
+    public static void showLibMissingDialog(Activity activity, Runnable whenDone, String message) {
+        Logger.logErrorExtended(LOG_TAG, "Rootfs lib missing:\n" + message);
+        sendBootstrapCrashReportNotification(activity, message);
+
+        activity.runOnUiThread(() -> {
+            try {
+                new AlertDialog.Builder(activity).setTitle(R.string.rootfs_lib_missing_title).setMessage(R.string.rootfs_lib_missing_body)
+                    .setNegativeButton(R.string.bootstrap_error_abort, (dialog, which) -> {
+                        dialog.dismiss();
+                        activity.finish();
+                    })
+                    .setPositiveButton(R.string.rootfs_lib_missing_install, (dialog, which) -> {
+                        dialog.dismiss();
+                        try {
+                            Intent i = new Intent(Intent.ACTION_MAIN)
+                                .setClassName("com.diegonmarcos.superapp", "com.diegonmarcos.superapp.HomeActivity")
+                                .putExtra("shortcut_action", "page:config/store-cloud")
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                            activity.startActivity(i);
+                        } catch (ActivityNotFoundException e) {
+                            Logger.logWarn(LOG_TAG, "SuperApp Store is not installed, cannot deep link to it: " + e);
+                        }
+                        activity.finish();
                     }).show();
             } catch (WindowManager.BadTokenException e1) {
                 // Activity already dismissed - ignore.

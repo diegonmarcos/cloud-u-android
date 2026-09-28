@@ -94,11 +94,12 @@ else
     bad "rewrite target $TO does not match applicationId+suffix (${GRADLE_ID}${GRADLE_SUFFIX}) and/or TermuxConstants ($CONST_ID) — the rootfs would point at a package that is not installed"
 fi
 
-# A5 — the UNVERIFIED first-run download is GONE, not merely unused. #618 gives
-#      the installer a fetch back, and the difference from defect (1) is the
-#      whole point: no editable dialog, no third-party host, and the bytes are
-#      refused unless they hash to the digest inside this signed APK. That gate
-#      is asserted (and mutation-proved) in the #618 section below.
+# A5 — the UNVERIFIED first-run download is GONE, not merely unused. #628's
+#      companion lib is what replaces it, and the difference from defect (1)
+#      is the whole point: no editable dialog, no third-party host at runtime,
+#      and the bytes are refused unless they hash to the digest the companion's
+#      own manifest declares. That gate is asserted (and mutation-proved) in
+#      the #628 section below.
 if grep -q 'openStream()' "$INSTALLER" || grep -q 'setEditable\|EditText' "$INSTALLER"; then
     bad "TermuxInstaller still streams the bootstrap from a user-editable url — defect (1) is back"
 else
@@ -112,29 +113,25 @@ else
     ok "no live bootstrap url left in TermuxInstaller"
 fi
 
-# A6 — it names the runtime under exactly the declared name, and #618: it
-#      EXTRACTS from the fetched file rather than from assets/, because the
-#      zip is not in the APK any more.
-JAVA_ASSET="$(sed -n 's/.*BOOTSTRAP_ASSET_NAME = "\([^"]*\)".*/\1/p' "$INSTALLER" | head -1)"
-if [ "$JAVA_ASSET" = "$ASSET" ]; then
-    ok "installer names the runtime $ASSET, the name build.json declares"
+# A6 — #628: the runtime is not named or read out of THIS app's own assets/
+#      at all any more (it never was fetched into them either, under #618).
+#      It is read out of the companion lib's assets/, under a name that lib's
+#      own manifest declares — asserted in full in the #628 section below.
+if grep -q 'BOOTSTRAP_ASSET_NAME' "$INSTALLER" || grep -q 'getAssets().open(BOOTSTRAP_ASSET_NAME)' "$INSTALLER"; then
+    bad "TermuxInstaller still names a BOOTSTRAP_ASSET_NAME baked into ITS OWN APK — #628 moved the payload out of this app entirely"
 else
-    bad "installer asset '$JAVA_ASSET' does not match build.json asset_name '$ASSET'"
-fi
-if grep -q 'getAssets().open(BOOTSTRAP_ASSET_NAME)' "$INSTALLER"; then
-    bad "installer still unpacks the zip out of assets/ — the APK would have to carry 400 MB (#618)"
-else
-    ok "installer does not read the zip from assets/ (#618: it is fetched)"
+    ok "installer does not read the runtime out of its own assets/ (#628: it lives in the companion lib)"
 fi
 
-# A7 — something actually PUTS it there. An asset nobody bakes is an APK that
-#      installs, launches and then cannot find its own runtime.
+# A7 — something actually PUTS the payload somewhere the companion lib can
+#      package it. bakeBootstrap must exist and run before asset merging, same
+#      as it always has; what it stages into has moved (asserted in the #628
+#      section below), not whether it runs at all.
 if grep -q 'task bakeBootstrap' "$GRADLE" \
-   && grep -q 'assets.srcDir bootstrapAssetsDir' "$GRADLE" \
    && grep -q 'merge.*Assets/.*dependsOn bakeBootstrap' "$GRADLE"; then
     ok "app/build.gradle bakes the rootfs and wires it ahead of asset merging"
 else
-    bad "app/build.gradle does not define bakeBootstrap, register its assets dir, and run it before merge*Assets"
+    bad "app/build.gradle does not define bakeBootstrap and run it before merge*Assets"
 fi
 
 # A8 — the rewrite gate the bake step shells out to is reachable.
@@ -294,123 +291,139 @@ case "$C1_RESULT" in
     *)  bad "patch_bootstrap_ids.py did not produce a clean $TO proot-static exec: $C1_RESULT" ;;
 esac
 
-# ── #605 — an APK update alone does not fix an already-extracted rootfs
+# ── #605/#628 — an updated lib does not fix an already-extracted rootfs
 #           unless something re-extracts it: TermuxInstaller must gate its
 #           "prefix already exists, do nothing" shortcut on comparing the
-#           baked bootstrap's version against what was actually installed.
-BOOTSTRAP_VERSION_ASSET="$(sed -n 's/.*BOOTSTRAP_VERSION_ASSET_NAME = "\([^"]*\)".*/\1/p' "$INSTALLER" | head -1)"
-if [ "$BOOTSTRAP_VERSION_ASSET" = "${ASSET}.sha256" ] \
-   && grep -q 'readBakedBootstrapVersion' "$INSTALLER" \
+#           declared version against what was actually installed, not just
+#           non-emptiness. #628 moved the version's SOURCE from a baked APK
+#           asset to the companion lib's own manifest; the gate itself (#605)
+#           is unchanged and still has to exist.
+if grep -q 'readLibManifest' "$INSTALLER" \
+   && grep -q 'INSTALLED_BOOTSTRAP_VERSION_FILE' "$INSTALLER" \
    && grep -q 'readInstalledBootstrapVersion' "$INSTALLER" \
-   && grep -q 'bootstrapUpToDate' "$INSTALLER"; then
-    ok "TermuxInstaller gates its 'prefix already exists' shortcut on the baked bootstrap version, not just non-emptiness"
+   && grep -q 'bootstrapUpToDate' "$INSTALLER" \
+   && grep -q 'libManifest.version.equals(readInstalledBootstrapVersion())' "$INSTALLER"; then
+    ok "TermuxInstaller gates its 'prefix already exists' shortcut on the lib's declared version, not just non-emptiness"
 else
-    bad "TermuxInstaller has no bootstrap-version gate — an APK update that fixes bootstrap.zip would never reach a phone with an already-extracted, stale \$PREFIX"
+    bad "TermuxInstaller has no bootstrap-version gate — a lib update that fixes the rootfs would never reach a phone with an already-extracted, stale \$PREFIX"
 fi
 
-DIGEST_ASSET="$(q forks.nixdroid.bootstrap.artifact.digest_asset)"
-URL_ASSET="$(q forks.nixdroid.bootstrap.artifact.url_asset)"
-if [ "$DIGEST_ASSET" = "${ASSET}.sha256" ] && grep -q 'art.digest_asset' "$GRADLE"; then
-    ok "app/build.gradle bakes ${ASSET}.sha256 for the installer to compare against"
+if grep -q 'class LibBootstrapManifest' "$INSTALLER" && grep -q 'LIB_MANIFEST_ENTRY = "assets/rootfs-lib.json"' "$INSTALLER"; then
+    ok "TermuxInstaller reads its version/payload/sha256 from the companion's own assets/rootfs-lib.json manifest"
 else
-    bad "app/build.gradle does not write ${ASSET}.sha256 — the installer's version gate has nothing to read"
+    bad "TermuxInstaller does not read a rootfs-lib.json manifest — the installer's version gate has nothing to read (#628)"
 fi
 
 
-# ── #618 — the 400 MB runtime is PUBLISHED beside the APK, not inside it ───
-# Both terminals baked their root filesystem into the APK, so every one-line app
-# fix was a 400 MB update that every phone re-downloaded in full. The zip now
-# goes to this app's own rolling release and the APK keeps two small files: the
-# digest the fetch is gated on and the url it comes from. Two things have to be
-# true together, and half of either is worse than neither: the bytes must be OUT
-# of the APK, and the fetch that replaces them must be REFUSED unless it hashes
-# to the digest travelling inside the signed APK.
-echo "── #618 the runtime is fetched, not bundled, and the fetch is sha256-gated ──"
+# ── #628 — the 400 MB runtime ships as the cloud-lib-rootfs-nixdroid
+#           companion APK, and extraction out of it is sha256-gated ────────
+# #618 got the bytes OUT of the app's own APK by publishing them to a rolling
+# GH release and fetching them at runtime over HTTP. That fixed the "every
+# one-line fix is a 400 MB update" defect and reintroduced a network dependency
+# in the boot path — exactly what #348 had removed. #628 removes the network
+# too: the bytes now ship as a second, signed, INSTALLED sibling APK
+# (release.companions[], rootfs-lib/) that the Store installs/updates like any
+# other fleet library, and TermuxInstaller only ever reads it locally. Two
+# things have to be true together, same as #618: the bytes must be OUT of the
+# app's own APK, and reading them out of the companion must be REFUSED unless
+# they hash to the digest the companion's own manifest declares.
+echo "── #628 the runtime ships as the cloud-lib-rootfs-nixdroid companion APK, and extraction is sha256-gated ──"
 
-ART_REPO="$(q forks.nixdroid.bootstrap.artifact.repo)"
-ART_TAG="$(q forks.nixdroid.bootstrap.artifact.tag)"
-ART_ASSET="$(q forks.nixdroid.bootstrap.artifact.asset)"
-ART_URL="$(q forks.nixdroid.bootstrap.artifact.url)"
-PUBLISHER_REL="$(q forks.nixdroid.bootstrap.artifact.publisher)"
-if [ -n "$ART_REPO" ] && [ -n "$ART_TAG" ] && [ -n "$ART_ASSET" ] && [ -n "$ART_URL" ] \
-   && [ -n "$DIGEST_ASSET" ] && [ -n "$URL_ASSET" ] && [ -n "$PUBLISHER_REL" ]; then
-    ok "build.json declares the ONE artifact block (release $ART_TAG on $ART_REPO, asset $ART_ASSET)"
-else
-    bad "forks.nixdroid.bootstrap.artifact is incomplete — the zip could only ship inside the APK (#618)"
-fi
-
-# The asset name must address its content AND its ABI, or a pin bump would keep
-# the old name and every phone would stay on the old runtime forever while CI
-# reported a new build.
-for token in '{id}' '{abi}'; do
-    case "$ART_ASSET" in
-        *"$token"*) ok "artifact.asset carries $token" ;;
-        *) bad "artifact.asset '$ART_ASSET' has no $token — the name would not address its content (#618)" ;;
-    esac
-done
-for token in '{repo}' '{tag}' '{asset}'; do
-    case "$ART_URL" in
-        *"$token"*) ok "artifact.url derives $token" ;;
-        *) bad "artifact.url '$ART_URL' has no $token — the url must be derived, never written out (#618)" ;;
-    esac
-done
-MISSING_IDENTITY="$(python3 -c "
-import json, os
-art = json.load(open('$BUILD_JSON'))['forks']['nixdroid']['bootstrap']['artifact']
-print(','.join(p for p in art['identity_files'] if not os.path.isfile(os.path.join('$DIR', p))))
+COMPANION_CHECK="$(python3 -c "
+import json
+d = json.load(open('$BUILD_JSON'))
+companions = d.get('release', {}).get('companions', [])
+c = next((x for x in companions if x.get('id') == 'rootfs-nixdroid'), None)
+if c is None:
+    print('MISSING')
+else:
+    need = ['gradle_task', 'apk_glob', 'asset', 'assets', 'paths_from', 'package']
+    missing = [k for k in need if not c.get(k)]
+    print('OK' if not missing else 'INCOMPLETE:' + ','.join(missing))
 " 2>/dev/null)"
-[ -z "$MISSING_IDENTITY" ] \
-    && ok "every artifact.identity_files entry exists" \
-    || bad "artifact.identity_files names files that do not exist: $MISSING_IDENTITY"
-python3 -c "
-import json, sys
-art = json.load(open('$BUILD_JSON'))['forks']['nixdroid']['bootstrap']['artifact']
-sys.exit(0 if any(p.endswith('build.json') for p in art['identity_files']) else 1)
-" 2>/dev/null \
-    && ok "build.json is part of the artifact identity — every pin in it moves the runtime" \
-    || bad "artifact.identity_files does not include build.json: a pin bump would not rename the asset (#618)"
+case "$COMPANION_CHECK" in
+    OK)      ok "release.companions[] declares rootfs-nixdroid with gradle_task/apk_glob/asset/assets/paths_from/package" ;;
+    MISSING) bad "build.json has no release.companions[] entry with id rootfs-nixdroid — #628's whole vehicle is missing" ;;
+    *)       bad "release.companions[id=rootfs-nixdroid] is incomplete: ${COMPANION_CHECK#INCOMPLETE:}" ;;
+esac
 
-PUBLISHER="$DIR/$PUBLISHER_REL"
-[ -f "$PUBLISHER" ] && ok "the publish step exists: $PUBLISHER_REL" \
-                    || bad "$PUBLISHER_REL is missing — nothing publishes the zip, so it could only ship in the APK"
-grep -q 'already published' "$PUBLISHER" 2>/dev/null \
-    && ok "an already-published asset keeps its hosted bytes (a rebuild cannot move them under a shipped APK)" \
-    || bad "$PUBLISHER_REL re-uploads the same asset name — phones would be told a digest the host no longer serves"
-
-# THE line that shrinks the APK. Without it the fetch path could exist and the
-# APK still carry the zip: the defect with a fix bolted next to it.
-if grep -q 'the APK would carry the bootstrap it fetches' "$GRADLE"; then
-    ok "bakeBootstrap removes the zip from assets/ and fails loudly if it cannot"
+PUBLISHER_REL="bootstrap/publish-artifact.sh"
+if [ -f "$DIR/$PUBLISHER_REL" ]; then
+    bad "$PUBLISHER_REL is still here — #628 leaves exactly ONE way the rootfs arrives, and this was the #618 network path"
 else
-    bad "nothing removes the baked zip from assets/ — the APK would still be 400 MB (#618)"
+    ok "publish-artifact.sh is gone — no publish-then-fetch path is left to drift out of sync"
 fi
-grep -q 'bootstrapArtifactAsset' "$GRADLE" \
-    && ok "gradle names the published asset from the declaration" \
-    || bad "app/build.gradle does not derive the asset name from artifact.asset"
-
-# The installer side: url from an asset (never a literal), digest compared, and
-# the cache reused so an interrupted extraction does not cost another 400 MB.
-if grep -n 'https\?://' "$INSTALLER" | grep -vE '^[0-9]+:[[:space:]]*(\*|//|/\*)' | grep -q .; then
-    bad "TermuxInstaller hardcodes a url — it must read $URL_ASSET, written from the declaration (#618)"
+if grep -q "\"publisher\"" "$BUILD_JSON"; then
+    bad "build.json still declares artifact.publisher — #628 leaves nothing to publish"
 else
-    ok "TermuxInstaller hardcodes no url (it reads $URL_ASSET)"
+    ok "build.json no longer declares artifact.publisher"
 fi
-grep -q 'CACHED_BOOTSTRAP_FILE' "$INSTALLER" \
-    && ok "the fetched zip is cached, so a retry does not refetch 400 MB" \
-    || bad "there is no fetch cache — an interrupted extraction would refetch the whole runtime"
+
+LIBGRADLE="$DIR/rootfs-lib/build.gradle"
+LIBMANIFEST="$DIR/rootfs-lib/src/main/AndroidManifest.xml"
+[ -f "$LIBGRADLE" ] && ok "the companion lib module exists: rootfs-lib/build.gradle" \
+                     || bad "rootfs-lib/build.gradle is missing — nothing builds the cloud-lib-rootfs-nixdroid APK"
+[ -f "$LIBMANIFEST" ] && ok "the companion lib manifest exists: rootfs-lib/src/main/AndroidManifest.xml" \
+                       || bad "rootfs-lib/src/main/AndroidManifest.xml is missing"
+grep -q "':rootfs-lib'" "$DIR/settings.gradle" \
+    && ok "settings.gradle includes :rootfs-lib" \
+    || bad "settings.gradle does not include :rootfs-lib"
+if [ -f "$LIBGRADLE" ] && grep -q 'task verifyRootfsPayload' "$LIBGRADLE" \
+   && grep -q 'dependsOn verifyRootfsPayload' "$LIBGRADLE"; then
+    ok "rootfs-lib's verifyRootfsPayload is wired ahead of asset merging"
+else
+    bad "rootfs-lib/build.gradle does not define verifyRootfsPayload and wire it before merge*Assets — an empty companion APK could install and provide nothing"
+fi
+
+# The staging step: bakeBootstrap must write BOTH the payload and its sha256
+# manifest into rootfs-payload/, or the companion lib has nothing to package.
+if grep -q 'rootfs-payload' "$GRADLE" && grep -q 'stagedPayload' "$GRADLE" \
+   && grep -q 'stagedManifest' "$GRADLE" && grep -q 'sha256Of(baked)' "$GRADLE"; then
+    ok "bakeBootstrap stages bootstrap.zip + rootfs-lib.json into rootfs-payload/ and writes the sha256 there"
+else
+    bad "app/build.gradle does not stage both the payload and its sha256 manifest into rootfs-payload/ (#628)"
+fi
+
+# THE point of #628: no bootstrap bytes, no digest sidecar and no url sidecar
+# left in the app's OWN APK any more — all three moved into the companion.
+if grep -q 'android.sourceSets.main.assets.srcDir bootstrapAssetsDir' "$GRADLE"; then
+    bad "app/build.gradle still wires bootstrapAssetsDir as an assets sourceSet — the app APK would carry the bootstrap again (#628)"
+else
+    ok "app/build.gradle no longer wires bootstrapAssetsDir into the app APK's own assets/ (no bootstrap.zip, no .url, no .sha256 in the app APK)"
+fi
+if grep -q 'art\.digest_asset\|art\.url_asset' "$GRADLE"; then
+    bad "app/build.gradle still bakes art.digest_asset/art.url_asset into the app APK — that is the #618 sidecar path #628 removes"
+else
+    ok "app/build.gradle no longer bakes the #618 digest/url sidecars into the app APK"
+fi
+
+# The installer side: resolves the companion package, trusts only a
+# same-signature APK, reads its manifest, and gates extraction on the sha256
+# that manifest declares — never a network fetch.
+if grep -q 'getApplicationInfo' "$INSTALLER" && grep -q 'BuildConfig.CLOUD_ROOTFS_LIB_PACKAGE' "$INSTALLER"; then
+    ok "TermuxInstaller resolves the companion lib via PackageManager/getApplicationInfo(...).sourceDir"
+else
+    bad "TermuxInstaller does not resolve BuildConfig.CLOUD_ROOTFS_LIB_PACKAGE via PackageManager (#628)"
+fi
+grep -q 'checkSignatures' "$INSTALLER" && grep -q 'SIGNATURE_MATCH' "$INSTALLER" \
+    && ok "TermuxInstaller refuses a companion signed with a different key" \
+    || bad "TermuxInstaller does not check the companion's signature — untrusted bytes could be extracted and executed (#628)"
+grep -q 'class LibMissing' "$INSTALLER" \
+    && ok "a missing companion is a distinguishable LibMissing, not a generic IOException" \
+    || bad "TermuxInstaller has no LibMissing — the caller cannot offer the Store deep link"
 
 # MUTATION PROOF. The assertion below is the one that matters, so it is run
 # twice: once against the real file, and once against a copy with the digest
-# comparison deleted. If the copy still passes, the assertion checks nothing and
-# an unverified download could land without this tester noticing.
+# comparison deleted. If the copy still passes, the assertion checks nothing
+# and an unverified payload could be extracted without this tester noticing.
 sha_gated() {
     grep -q 'DigestInputStream' "$1" && grep -q 'want.equals(got)' "$1" \
         && grep -q 'not the " + want' "$1"
 }
 if sha_gated "$INSTALLER"; then
-    ok "the fetch is gated on the sha256 baked into this signed APK"
+    ok "the extraction is gated on the sha256 the companion's own manifest declares"
 else
-    bad "the fetched bootstrap is not compared to the baked digest — unread bytes would be extracted and marked executable (#618)"
+    bad "the extracted bootstrap is not compared to the declared digest — unread bytes would be extracted and marked executable (#628)"
 fi
 MUT="$(mktemp)"
 grep -v 'want.equals(got)' "$INSTALLER" > "$MUT"
@@ -420,6 +433,28 @@ else
     ok "mutation proved: deleting the digest comparison makes the assertion above go red"
 fi
 rm -f "$MUT"
+
+grep -q 'part.delete()' "$INSTALLER" \
+    && ok "a digest mismatch leaves nothing behind" \
+    || bad "a rejected extraction is kept on disk"
+
+# #628's whole point: nothing here ever opens a socket any more.
+if grep -qE 'HttpURLConnection|java\.net\.URL' "$INSTALLER"; then
+    bad "TermuxInstaller still touches the network — #628 removes the #618 runtime fetch entirely"
+else
+    ok "TermuxInstaller has no HTTP left in it — the rootfs is read out of the sibling APK, never fetched"
+fi
+
+# A missing companion must be legible, not a silent crash: a dialog naming the
+# lib and offering the Store's Cloud tab deep link.
+if grep -q 'showLibMissingDialog' "$INSTALLER" \
+   && grep -q 'com.diegonmarcos.superapp' "$INSTALLER" \
+   && grep -q 'page:config/store-cloud' "$INSTALLER" \
+   && grep -q 'ActivityNotFoundException' "$INSTALLER"; then
+    ok "a missing companion surfaces a dialog with the Store's Cloud tab deep link"
+else
+    bad "LibMissing does not surface a dialog with the Store deep link — a missing companion would fail silently or crash (#628)"
+fi
 
 echo "── $fails failed ──"
 [ "$fails" -eq 0 ]

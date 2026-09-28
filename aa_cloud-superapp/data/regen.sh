@@ -340,6 +340,54 @@ regen_constellation() {
         apps="$(jq --argjson acc "$apps" '$acc + (.constellation.external // [])' "$selfbj")"
     fi
 
+    # ── Runtime payloads are LIBRARIES (#618 -> #624 -> #628) ────────────────
+    # #618 moved the two terminals' ~400 MB runtime trees out of their APKs and
+    # onto the release beside them, addressed by content. #624 gave each one a
+    # fleet row — but a CATALOGUE row, which carries no package and no
+    # versionCode, so the store could draw it and nothing else, and each terminal
+    # went on downloading its own runtime at first launch from a url baked into
+    # the APK.
+    #
+    # #628 finished it: each payload is a REAL LIBRARY. Its own signed, versioned
+    # APK, built and published as a companion beside the app's own
+    # (build.json::release.companions[]), and listed HERE, in `apps`, under the
+    # same Libs group as cloud-lib-cal — because `apps` is what Fleet.parse
+    # reads, and therefore the only place the store's install and update paths
+    # can be handed it at all. The terminal downloads nothing; the store does.
+    #
+    # Resolved by the fleet-manifest guard's own --emit-rootfs-libs, not by jq
+    # here: the version is a sha256-over-sha256s content address the guard must
+    # recompute anyway to prove the manifest current, and two implementations of
+    # an address would be two versions of one library. The guard emits every
+    # field EXCEPT the three urls, whose constants live once at the top of this
+    # function — so a rootfs lib row and any other lib APK row are assembled
+    # from the same two halves, and the group stamp below treats them alike.
+    local rootfs_libs
+    rootfs_libs="$(python3 "$UNIX/1_cicd/src/scripts/cloud-android-fleet-manifest-guard.py" \
+                        --root "$UNIX" --emit-rootfs-libs)" \
+        || { echo "ERROR: runtime payload libraries do not resolve (#628)" >&2; return 1; }
+    apps="$(jq -n --argjson apps "$apps" --argjson libs "$rootfs_libs" \
+               --arg rel "$rel" --arg tree "$tree" --arg pkg "$pkg" '
+        $apps + [ $libs[]
+          | . as $l
+          # module / app_dir / what are the guard'"'"'s resolution inputs, not fleet
+          # fields: dropped so a rootfs lib row is key-for-key the same shape as
+          # every other lib row and nothing downstream needs a case for it.
+          | del(.module, .app_dir, .what)
+          + { release_url: ($rel + "/download/latest/" + $l.asset),
+              repo_url: ($tree + "/" + $l.app_dir),
+              ghcr_page: ($pkg + "/" + $l.image) } ]')"
+
+    # Reference rows are resolved here too, by the SAME ml_group, so the
+    # catalogue's tab and the catalogue's name are one fact as well. installable
+    # is stamped rather than trusted from the data, so no catalogue row can ever
+    # claim to be installable.
+    #
+    # `kind` extends the ONE group rule to the catalogue instead of adding a
+    # second one: an ML reference names its own tab, anything else takes the tab
+    # whose default_for_kind is its kind — exactly what the apps line above does.
+    # A row with no kind keeps landing in no group and keeps failing below, so
+    # the existing ML naming requirement is untouched.
     # One asset is one installable APK is one fleet entry. Duplicates reach
     # here two ways: two build.json describing the same APK
     # (ab_cloud-keyboard-libs and ab_cloud-libs-shared/keyboard-engines both
@@ -382,43 +430,11 @@ regen_constellation() {
         ((.constellation.groups // []) | map(select(.default_for_kind != null)
               | { key: .default_for_kind, value: .id }) | from_entries) as $defaults
         | $apps | map(. + { group: (ml_group(.id) // $defaults[.kind]) })' "$selfbj")"
-    # ── Runtime artifacts (#624) ─────────────────────────────────────────────
-    # #618 moved the two terminals' ~400 MB runtime trees out of their APKs and
-    # onto the release beside them, addressed by content. That left them with no
-    # fleet identity at all: no name, no version, no row — the store could not
-    # say what the phone was about to fetch. Each one is now a declared lib, from
-    # ONE declaration per app (<app>/fleet-lib.json, which POINTS at #618's
-    # artifact block rather than restating it).
-    #
-    # Resolved by the fleet-manifest guard's own --emit-artifact-libs, not by jq
-    # here: the id is a sha256-over-sha256s content address that the guard must
-    # recompute anyway to prove the manifest current, and two implementations of
-    # an address would be two versions of one artifact.
-    #
-    # They land in `catalogue`, NOT in `apps`, and that placement is the whole
-    # safety property: Fleet.parse reads only `apps`, so no updater, worker,
-    # install path or batch can be handed 437 MB as though it were an APK. #618
-    # removed an install-size wall; a lib row must not walk it back.
-    local artifact_libs
-    artifact_libs="$(python3 "$UNIX/1_cicd/src/scripts/cloud-android-fleet-manifest-guard.py" \
-                        --root "$UNIX" --emit-artifact-libs)" \
-        || { echo "ERROR: runtime artifact libs do not resolve (#624)" >&2; return 1; }
-
-    # Reference rows are resolved here too, by the SAME ml_group, so the
-    # catalogue's tab and the catalogue's name are one fact as well. installable
-    # is stamped rather than trusted from the data, so no catalogue row can ever
-    # claim to be installable.
-    #
-    # `kind` extends the ONE group rule to the catalogue instead of adding a
-    # second one: an ML reference names its own tab, anything else takes the tab
-    # whose default_for_kind is its kind — exactly what the apps line above does.
-    # A row with no kind keeps landing in no group and keeps failing below, so
-    # the existing ML naming requirement is untouched.
     local catalogue
-    catalogue="$(jq --argjson artifacts "$artifact_libs" "$ml_group"'
+    catalogue="$(jq "$ml_group"'
         ((.constellation.groups // []) | map(select(.default_for_kind != null)
               | { key: .default_for_kind, value: .id }) | from_entries) as $defaults
-        | [ ((.constellation.catalogue // [])[] | . + { kind: null }), $artifacts[] ]
+        | [ ((.constellation.catalogue // [])[] | . + { kind: null }) ]
         | map({ id, label: (.label // .id),
                 group: (ml_group(.id) // (if .kind then $defaults[.kind] else null end)),
                 description: (.description // ""), installable: false }

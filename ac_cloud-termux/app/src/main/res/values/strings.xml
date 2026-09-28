@@ -37,6 +37,15 @@
         \nBootstrap binaries compiled for &TERMUX_APP_NAME; have hardcoded $PREFIX path and cannot be installed
         under any path other than %1$s.</string>
 
+    <!-- #628: the agent-coding rootfs ships as the cloud-lib-rootfs-termux companion APK -->
+    <string name="cloud_rootfs_lib_missing_title">Agent-coding shell unavailable</string>
+    <string name="cloud_rootfs_lib_missing_body">The agent-coding root filesystem (claude, goose, hermes, agy) ships as its own fleet library, Cloud Lib Rootfs Termux, and it is not installed. Install it from the Store\'s Cloud tab, then reopen &TERMUX_APP_NAME;.\n\nYou can still continue with the plain &TERMUX_APP_NAME; shell.</string>
+    <string name="cloud_rootfs_lib_missing_install">Open Store</string>
+    <string name="cloud_rootfs_lib_missing_continue">Continue</string>
+    <string name="cloud_rootfs_stage_error_title">Agent-coding shell not staged</string>
+    <string name="cloud_rootfs_stage_error_body">&TERMUX_APP_NAME; could not stage the agent-coding root filesystem: %1$s\n\nYou can still continue with the plain &TERMUX_APP_NAME; shell.</string>
+    <string name="cloud_rootfs_stage_error_continue">Continue</string>
+
 
 
     <!-- Terminal Sidebar and Shortcuts -->

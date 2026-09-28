@@ -1,0 +1,142 @@
+// ---------------------------------------------------------------------------
+// #628 Slice 2 — the proot + Nix rootfs as its own installable fleet library
+// APK (cloud-lib-rootfs-nixdroid), instead of a bare release asset the app
+// fetched over HTTP at runtime.
+//
+// This module carries NO CODE (hasCode="false", see AndroidManifest.xml) and
+// NO DEPENDENCIES: it exists purely to give ../app/build.gradle's
+// bakeBootstrap output (staged at $rootProject.buildDir/rootfs-payload/) a
+// signed, versioned, installable package to live inside. Every identity value
+// below — applicationId, versionName — is read from build.json, never a
+// literal, so there is exactly one place that names this lib.
+// ---------------------------------------------------------------------------
+
+plugins {
+    id "com.android.application"
+}
+
+def declaration = new File(rootProject.projectDir, "build.json")
+def declared = new groovy.json.JsonSlurper().parseText(declaration.getText("UTF-8"))
+def companion = (declared.release?.companions ?: []).find { it.id == "rootfs-nixdroid" }
+if (companion == null)
+    throw new GradleException(declaration.toString() + " has no release.companions[] entry with id "
+            + "'rootfs-nixdroid' — this module has nothing to be published as")
+if (!companion.package)
+    throw new GradleException(declaration.toString() + "::release.companions[id=rootfs-nixdroid] "
+            + "declares no .package — refusing to guess an applicationId")
+
+// #618 -- the published asset's identity: sha256-of-sha256s over
+// forks.nixdroid.bootstrap.artifact.identity_files, first 12 hex. Copied
+// byte-for-byte from ../app/build.gradle's bootstrapArtifactId so
+// 1_cicd/src/scripts/cloud-android-fleet-manifest-guard.py's grep for this
+// shape (getInstance("SHA-256").digest(f.bytes) / substring(0, 12)) keeps
+// matching both gradle files, not just one of them.
+def bootstrapArtifactId(art) {
+    def digest = java.security.MessageDigest.getInstance("SHA-256")
+    art.identity_files.each { rel ->
+        def f = new File(rootProject.projectDir, rel)
+        if (!f.isFile())
+            throw new GradleException("build.json::...artifact.identity_files names " + rel + ", which does not exist")
+        digest.update(java.security.MessageDigest.getInstance("SHA-256").digest(f.bytes))
+    }
+    return digest.digest().encodeHex().toString().substring(0, 12)
+}
+
+def bootstrapArt = declared.forks?.nixdroid?.bootstrap?.artifact
+if (bootstrapArt == null)
+    throw new GradleException(declaration.toString() + " has no forks.nixdroid.bootstrap.artifact block "
+            + "-- this lib's version has nothing to be derived from")
+
+// ── versionCode ─────────────────────────────────────────────────────────────
+// Same encoding ab_cloud-libs-shared/lib-apks/app/build.gradle uses so the
+// whole fleet is comparable: minutes since 2026-01-01 over a 3,000,000 base,
+// from COMMS_BUILD_TIMESTAMP when CI provides one, else build time. A
+// versionCode pinned at 1 forever is the documented bug that file fixed --
+// without a moving versionCode the Store can never see this lib as updatable.
+def rootfsVersionCode = { ->
+    def base = java.time.LocalDateTime.of(2026, 1, 1, 0, 0)
+    def built
+    def stamp = System.getenv('COMMS_BUILD_TIMESTAMP')
+    try {
+        built = stamp
+            ? java.time.LocalDateTime.parse(stamp,
+                java.time.format.DateTimeFormatter.ofPattern('yyyyMMdd.HHmmss'))
+            : java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    } catch (ignored) {
+        built = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC)
+    }
+    long mins = java.time.Duration.between(base, built).toMinutes()
+    return mins > 0 ? (int) (3000000L + mins) : 3000000
+}
+
+android {
+    namespace 'com.diegonmarcos.cloudlib.rootfsnixdroid'
+    compileSdkVersion project.properties.compileSdkVersion.toInteger()
+
+    defaultConfig {
+        applicationId companion.package
+        minSdkVersion project.properties.minSdkVersion.toInteger()
+        targetSdkVersion project.properties.targetSdkVersion.toInteger()
+        versionCode rootfsVersionCode()
+        versionName bootstrapArtifactId(bootstrapArt)
+        ndk {
+            abiFilters 'arm64-v8a', 'x86_64'
+        }
+    }
+
+    // Same shared constellation keystore as ../app/build.gradle, copied
+    // verbatim: signing=vault_jks_env (build.json::forks.nixdroid.build) is
+    // what the fork engine writes into this environment, and it must sign
+    // this companion with the SAME key it signs the app with, or the app's
+    // own signature check on this lib (TermuxInstaller.openBootstrapFromLib)
+    // would refuse a build the engine itself just produced.
+    signingConfigs {
+        release {
+            def ksPath = System.getenv('TERMUX_KEYSTORE_PATH')
+            if (ksPath) {
+                storeFile file(ksPath)
+                storePassword System.getenv('TERMUX_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('TERMUX_KEY_ALIAS')
+                keyPassword System.getenv('TERMUX_KEY_PASSWORD')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (System.getenv('TERMUX_KEYSTORE_PATH')) signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+
+    // The payload is already a deflated zip; re-compressing it into the APK's
+    // own zip container buys nothing and costs CPU/time on every build.
+    androidResources {
+        noCompress += 'zip'
+    }
+}
+
+// ../app/build.gradle::bakeBootstrap stages the payload here:
+//   $rootProject.buildDir/rootfs-payload/bootstrap.zip
+//   $rootProject.buildDir/rootfs-payload/rootfs-lib.json
+def rootfsPayloadDir = new File(rootProject.buildDir, 'rootfs-payload')
+android.sourceSets.main.assets.srcDir rootfsPayloadDir
+
+// An empty lib APK that installs and provides nothing is the fail-green shape
+// this repo hunts for everywhere else (#348's "unread bytes marked
+// executable" sibling: here it would be "nothing marked executable at all,
+// silently"). Fail the build rather than ship a companion with no rootfs in
+// it.
+task verifyRootfsPayload {
+    doLast {
+        def payload = new File(rootfsPayloadDir, 'bootstrap.zip')
+        def manifest = new File(rootfsPayloadDir, 'rootfs-lib.json')
+        if (!payload.isFile() || !manifest.isFile())
+            throw new GradleException("rootfs-lib: " + rootfsPayloadDir + " is missing "
+                    + (!payload.isFile() ? "bootstrap.zip " : "")
+                    + (!manifest.isFile() ? "rootfs-lib.json " : "")
+                    + "-- run ../app/build.gradle's bakeBootstrap task first (this module carries "
+                    + "no code of its own and stages nothing itself)")
+    }
+}
+tasks.matching { it.name ==~ /merge.*Assets/ }.configureEach { dependsOn verifyRootfsPayload }

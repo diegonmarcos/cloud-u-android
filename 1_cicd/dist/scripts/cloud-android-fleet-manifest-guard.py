@@ -29,16 +29,33 @@ would pass the moment somebody re-added a fallback under a different name.
 Exit status 0 = every consumer resolves a populated manifest.
 Exit status 1 = at least one consumer would bake an empty or missing fleet.
 
-ALSO HELD HERE (task #624).  #618 moved the two terminals' ~400 MB runtime
-trees out of their APKs and onto the release beside them, addressed by content.
-Mechanically right, and INVISIBLE: the fleet had no row, no name and no version
-for either of them, so the constellation's own store could not say what the
-phone was about to fetch.  A rootfs artifact is now a declared fleet lib like
-everything else, and this guard holds the declaration closed at both ends —
-an artifact with no `fleet-lib.json`, a `fleet-lib.json` pointing at nothing,
-and a manifest whose row disagrees with the content address recomputed from the
-tree all fail here.  `--emit-artifact-libs` is the SAME resolution, printed for
-data/regen.sh, so the generator and the guard cannot hold different opinions.
+ALSO HELD HERE (tasks #624 -> #628).  #618 moved the two terminals' ~400 MB
+runtime trees out of their APKs and onto the release beside them, addressed by
+content.  #624 gave each one a fleet row, but only a CATALOGUE row: no package,
+no versionCode, no signature, nothing the store could install — so the terminal
+still downloaded its own runtime at first launch, from a url baked into the APK.
+
+#628 finished it.  A rootfs is now a REAL LIBRARY, indistinguishable from
+cloud-lib-cal: its own signed, versioned APK, published as a companion beside
+the app's own (`build.json::release.companions[]`), listed in `apps` under Libs,
+installed and updated by the Store, and read by the terminal out of the sibling
+APK it finds through PackageManager.  THE STORE DOWNLOADS IT; THE TERMINAL NEVER
+DOES.  This guard therefore now asserts the OPPOSITE of what it asserted for
+#624, and that inversion is the point:
+
+  * a rootfs lib must be in `apps`, NOT in `catalogue` — `apps` is what
+    Fleet.parse reads, so `apps` is the only place the Store's install and
+    update paths can be handed it at all;
+  * it must be `kind: "lib"` and carry a real `package`, declared exactly once,
+    by the companion entry that builds the APK;
+  * it must be drawn in the group whose `default_for_kind` is "lib";
+  * and NO run-time download path may survive in either terminal — an
+    HttpURLConnection, a `java.net.URL` or a baked url asset anywhere in the
+    app's sources is a second way for the payload to arrive, and #628 says
+    there is exactly one.
+
+`--emit-rootfs-libs` is the SAME resolution, printed for data/regen.sh, so the
+generator and the guard cannot hold different opinions about a lib's identity.
 """
 
 import argparse
@@ -156,28 +173,52 @@ def application_count(path):
     return len([k for k in data if not k.startswith("_")])
 
 
-# ── #624: runtime artifacts are fleet libs ──────────────────────────────────
+# ── #628: a rootfs is a REAL LIBRARY the Store installs ──────────────────────
 #
-# An app declares a content-addressed runtime artifact by carrying an `artifact`
+# An app declares a content-addressed runtime payload by carrying an `artifact`
 # object with #618's shape. That SHAPE is the discovery rule, not a list of
 # directories: a third terminal that publishes its tree the same way is found
-# without editing this file, and — the point of the guard — cannot be published
-# without a fleet identity.
+# without editing this file, and — the point of the guard — cannot ship without
+# being a declared, installable fleet library.
 ARTIFACT_SHAPE = ("identity_files", "digest_asset", "url_asset")
-# The one file that says who an artifact is to the fleet. Its own file rather
-# than a build.json key because ac_cloud-nix-on-droid/build.json is itself an
-# identity_file: a fleet key there would re-address 370 MB of unchanged bytes.
+# The one file that says who a payload is to the fleet. Its own file rather than
+# a build.json key so the sibling terminals are read by one scan.
 FLEET_LIB = "fleet-lib.json"
 # The content address, byte for byte as both app/build.gradle derive it: sha256
 # over the per-file sha256 digests of identity_files, first 12 hex. Stated in
 # three places now, so ARTIFACT_ID_GRADLE below fails loudly if either gradle
-# stops agreeing with this one — a silent divergence would name the fleet row
-# after an asset that does not exist.
+# stops agreeing with this one — a silent divergence would version the fleet row
+# after bytes nobody built.
 ARTIFACT_ID_GRADLE = (
     re.compile(r"""getInstance\("SHA-256"\)\.digest\(f\.bytes\)"""),
     re.compile(r"""substring\(0,\s*12\)"""),
 )
 SKIP_DIRS = ("z_archive", ".git", ".github")
+
+# THE #628 INVERSION, as a rule rather than a promise.  Before #628 each
+# terminal fetched its own ~400 MB tree at first launch from a url baked into
+# the APK. The Store installs it now, so every one of these in an app's sources
+# is a SECOND way for the payload to arrive — and two transports means the one
+# nobody audits is the one that runs. Matched per app, on the app's own sources.
+RUNTIME_FETCH = (
+    (re.compile(r"\bHttpURLConnection\b"),
+     "opens an HTTP connection. The Store downloads the rootfs library; the "
+     "terminal reads it out of the installed sibling APK and fetches nothing."),
+    (re.compile(r"\bjava\.net\.URL\b|\bnew URL\("),
+     "builds a URL. #628 leaves exactly one way the payload arrives, and it is "
+     "not the network."),
+)
+RUNTIME_FETCH_SCAN = ("app/src/main/java", "app/src/main/kotlin")
+
+# The other half of the same rule. Removing the network is only half of #628's
+# safety: the app now unpacks ~400 MB of executables out of ANOTHER package's
+# APK, and the only thing that makes those bytes as trustworthy as its own is
+# that the sibling carries the same signing key. Without this check the id is all
+# that is checked, and an id is not a credential — any package installed under it
+# would be unpacked and exec'd. So the check is REQUIRED, not merely encouraged:
+# a terminal that consumes a rootfs library and never compares signatures fails
+# here the same way a leftover download path does.
+TRUST_CHECK = re.compile(r"\bSIGNATURE_MATCH\b")
 
 
 def _artifacts_in(blob, path=""):
@@ -214,15 +255,54 @@ def _content_address(app_dir, artifact):
     return outer.hexdigest()[:12]
 
 
-def _variant_ids(app_dir):
-    """release.variants[].id — what {abi} in an asset name is filled with."""
+def _build_json(app_dir):
     try:
         with open(os.path.join(app_dir, "build.json"), encoding="utf-8") as handle:
-            declared = json.load(handle)
+            return json.load(handle)
     except (OSError, ValueError):
-        return []
-    return [v["id"] for v in (declared.get("release", {}).get("variants") or [])
-            if isinstance(v, dict) and v.get("id")]
+        return {}
+
+
+def _variants(app_dir):
+    """release.variants[] — one published APK per entry, per ABI."""
+    declared = _build_json(app_dir).get("release", {}).get("variants") or []
+    return [v for v in declared if isinstance(v, dict) and v.get("id")]
+
+
+def _companion(app_dir, companion_id):
+    """The release.companions[] entry that BUILDS this lib's APK, or None.
+
+    Matched on == against the id as DATA. Never interpolated into a lookup: the
+    ids are hyphenated and `.companions.rootfs-termux` is arithmetic on two
+    undefined names, which resolves to nothing and reports success (#368)."""
+    declared = _build_json(app_dir).get("release", {}).get("companions") or []
+    for entry in declared:
+        if isinstance(entry, dict) and entry.get("id") == companion_id:
+            return entry
+    return None
+
+
+# The ONE naming rule every lib APK in the constellation already obeys, read
+# from the declaration that owns it (ab_cloud-libs-shared/lib-apks/build.json::
+# lib_apks) rather than restated here — a rootfs lib is spelled like cloud-lib-cal
+# because it IS one, and a prefix change has to move both or neither.
+LIB_APKS_DECL = "ab_cloud-libs-shared/lib-apks/build.json"
+
+
+def _lib_naming(root):
+    """(application_id_prefix, asset_prefix, image_prefix) for every lib APK."""
+    declared = _build_json(os.path.join(root, "ab_cloud-libs-shared", "lib-apks"))
+    libs = declared.get("lib_apks") or {}
+    ghcr = (declared.get("release") or {}).get("ghcr") or {}
+    return (libs.get("application_id_prefix"), libs.get("asset_prefix"),
+            ghcr.get("image_prefix"))
+
+
+def _asset_name(asset_prefix, module):
+    """Cloud-Lib-Rootfs-Termux.apk — each '-' segment capitalised, exactly as
+    ab_cloud-libs-shared/lib-apks/build.sh and data/regen.sh both name it."""
+    return "%s%s.apk" % (asset_prefix,
+                         "-".join(part[:1].upper() + part[1:] for part in module.split("-")))
 
 
 def discover_artifacts(root):
@@ -250,23 +330,37 @@ def discover_artifacts(root):
     return found
 
 
-def artifact_libs(root):
-    """(rows, failures): the fleet catalogue rows every declared runtime artifact
-    is, and everything the declaration got wrong. ONE resolution, read by
-    data/regen.sh (--emit-artifact-libs) and by the guard below."""
+def rootfs_libs(root):
+    """(rows, failures): the fleet `apps` rows every declared runtime payload is,
+    and everything the declaration got wrong. ONE resolution, read by
+    aa_cloud-superapp/data/regen.sh (--emit-rootfs-libs) and by the guard below.
+
+    The rows are shaped exactly like the Cloud-Lib-*.apk rows regen.sh emits for
+    ab_cloud-libs-shared, minus the three url fields regen.sh owns the constants
+    for. That sameness is the deliverable: the Store has no rootfs case."""
     rows, failures = [], []
     artifacts = discover_artifacts(root)
     claimed = set()
+    id_prefix, asset_prefix, image_prefix = _lib_naming(root)
+    if not (id_prefix and asset_prefix and image_prefix):
+        failures.append(
+            "%s no longer declares lib_apks.application_id_prefix / asset_prefix / "
+            "release.ghcr.image_prefix.\n"
+            "      Those three name EVERY lib APK in the fleet, rootfs libs included, so "
+            "without them\n      a rootfs lib cannot be spelled the way every other library "
+            "is (#474/#628)." % LIB_APKS_DECL)
+        return [], failures
 
     for app, source, dotted, artifact in artifacts:
-        decl_path = os.path.join(root, app, FLEET_LIB)
+        app_dir = os.path.join(root, app)
+        decl_path = os.path.join(app_dir, FLEET_LIB)
         shown = "%s::%s" % (os.path.relpath(source, root), dotted)
         if not os.path.isfile(decl_path):
             failures.append(
-                "%s is a content-addressed runtime artifact with NO fleet identity.\n"
-                "      #618 publishes it beside the APK; #624 says every shared thing here is a\n"
-                "      declared lib. Add %s/%s (module, kind, declared_in, at, what) so it gets a\n"
-                "      cloud-lib-{module} name, a version and a Constellation row." % (shown, app, FLEET_LIB))
+                "%s is a content-addressed runtime payload with NO fleet identity.\n"
+                "      #628 says a payload a sibling app consumes is a LIBRARY: it gets its own\n"
+                "      signed APK, a versionCode and a Store row like cloud-lib-cal. Add %s/%s\n"
+                "      (module, kind:\"lib\", companion, declared_in, at, what)." % (shown, app, FLEET_LIB))
             continue
         try:
             with open(decl_path, encoding="utf-8") as handle:
@@ -277,7 +371,7 @@ def artifact_libs(root):
         # The declaration POINTS at #618's artifact rather than restating it, so
         # the pointer has to land on this very object. A fleet-lib.json aiming
         # somewhere else is reported by the pass below, not silently accepted.
-        pointed = os.path.join(root, app, decl.get("declared_in") or "build.json")
+        pointed = os.path.join(app_dir, decl.get("declared_in") or "build.json")
         if not os.path.isfile(pointed):
             continue
         with open(pointed, encoding="utf-8") as handle:
@@ -287,39 +381,125 @@ def artifact_libs(root):
 
         module = decl.get("module")
         if not module:
-            failures.append("%s/%s declares no `module` — there is no name to derive an id or a "
-                            "label from (#474)." % (app, FLEET_LIB))
+            failures.append("%s/%s declares no `module` — there is no name to derive an id, a "
+                            "label, a package or an asset from (#474)." % (app, FLEET_LIB))
             continue
-        address = _content_address(os.path.join(root, app), artifact)
+
+        # THE INVERSION. `kind: "artifact"` was #624's shape and it put the row
+        # in `catalogue`, where Fleet.parse cannot see it — which is exactly why
+        # the terminal had to fetch its own runtime. A rootfs is a lib now.
+        kind = decl.get("kind")
+        if kind != "lib":
+            failures.append(
+                "%s/%s declares kind %r, not \"lib\".\n"
+                "      #624 emitted these as catalogue-only `artifact` rows: no package, no\n"
+                "      versionCode, nothing the Store could install, so each terminal downloaded\n"
+                "      its own ~400 MB runtime at first launch. #628 makes it a real library —\n"
+                "      kind \"lib\" is what lands the row in `apps`, and `apps` is the only thing\n"
+                "      Fleet.parse reads, so it is the only place an install path can reach it."
+                % (app, FLEET_LIB, kind))
+            continue
+
+        # ONE declaration of the APK's identity: the companion entry that builds
+        # it. A `package` in fleet-lib.json as well would be a second statement
+        # of the one fact the built APK actually carries.
+        companion_id = decl.get("companion")
+        if not companion_id:
+            failures.append(
+                "%s/%s names no `companion`.\n"
+                "      A library is an APK, and the APK is built and published by\n"
+                "      build.json::release.companions[] — that entry owns the applicationId and\n"
+                "      the per-ABI asset names, and this pointer is how the fleet row reaches\n"
+                "      them without restating either." % (app, FLEET_LIB))
+            continue
+        companion = _companion(app_dir, companion_id)
+        if companion is None:
+            failures.append(
+                "%s/%s points at companion %r, which %s/build.json::release.companions[] does\n"
+                "      not declare. The fleet would offer a library nothing builds." % (
+                    app, FLEET_LIB, companion_id, app))
+            continue
+        missing = [field for field in ("gradle_task", "apk_glob", "paths_from", "package")
+                   if not companion.get(field)]
+        if missing:
+            failures.append(
+                "%s/build.json::release.companions[%r] declares no %s.\n"
+                "      Without gradle_task/apk_glob nothing builds or finds the APK; without\n"
+                "      paths_from the 400 MB is gated on the whole app's identity and gets\n"
+                "      republished by every unrelated code change, which is the #618 regression\n"
+                "      this whole design exists to avoid; without package the row names no\n"
+                "      installable thing." % (app, companion_id, ", ".join(missing)))
+            continue
+
+        package = companion["package"]
+        canonical_package = "%s.%s" % (id_prefix, module.replace("-", ""))
+        if package != canonical_package:
+            failures.append(
+                "%s/build.json::release.companions[%r].package is %r, not the canonical %r.\n"
+                "      Every lib APK's applicationId is %s + the module name with dashes\n"
+                "      stripped (%s). A rootfs lib spelled differently is a library that only\n"
+                "      looks like one." % (app, companion_id, package, canonical_package,
+                                           id_prefix, LIB_APKS_DECL))
+            continue
+
+        canonical_asset = _asset_name(asset_prefix, module)
+        if companion.get("asset") != canonical_asset:
+            failures.append(
+                "%s/build.json::release.companions[%r].asset is %r, not the canonical %r\n"
+                "      (%s::lib_apks.asset_prefix + the Title-Cased dashed module)." % (
+                    app, companion_id, companion.get("asset"), canonical_asset, LIB_APKS_DECL))
+            continue
+
+        address = _content_address(app_dir, artifact)
         if address is None:
             failures.append("%s names identity_files that do not exist — %s/%s would be versioned "
                             "by nothing." % (shown, app, FLEET_LIB))
             continue
-        assets = [artifact["asset"].replace("{id}", address).replace("{abi}", abi)
-                  for abi in _variant_ids(os.path.join(root, app))] \
-                 or [artifact["asset"].replace("{id}", address)]
+
+        # Per-ABI assets, keyed the way the updater matches Build.SUPPORTED_ABIS:
+        # the companion names its APK per VARIANT (the engine reads
+        # .assets[$CLOUDNAV_VARIANT]), and a variant covers several ABIs. Two
+        # ABI jobs must not overwrite each other's library on the release.
+        per_abi = {}
+        for variant in _variants(app_dir):
+            named = (companion.get("assets") or {}).get(variant["id"]) or companion["asset"]
+            for abi in variant.get("supported_abis") or variant.get("abis") or [variant["id"]]:
+                if isinstance(abi, str) and abi:
+                    per_abi[abi] = named
+
+        ghcr = (_build_json(app_dir).get("release") or {}).get("ghcr") or {}
         rows.append({
             "id": "lib-%s" % module,
             "label": "cloud-lib-%s" % module,
-            "kind": decl.get("kind", "artifact"),
-            "version": address,
-            "description": "%s  ·  version %s — the content address of %s, so the version moves "
-                           "when the declaration that builds the tree moves and never otherwise.  "
-                           "·  %s on %s@%s  ·  fetched and extracted state on THIS device is not "
-                           "known to this page: the terminal app owns it." % (
-                               decl.get("what", "A runtime artifact fetched beside the APK."),
-                               address, shown, ", ".join(assets),
-                               artifact.get("repo", "?"), artifact.get("tag", "?")),
+            "module": module,
+            "app_dir": app,
+            "package": package,
+            "alt_id": None,
+            "registry": ghcr.get("registry"),
+            "namespace": ghcr.get("namespace"),
+            "image": "%s%s" % (image_prefix, module),
+            "tag": "latest",
+            "asset": companion["asset"],
+            "assets": per_abi,
+            "blocked": False,
+            "kind": "lib",
+            # OUR version (#631), and for a payload addressed by content there is
+            # no other honest one: it moves when the declaration that builds the
+            # tree moves and never otherwise. No hand-maintained number to forget.
+            "version_name": address,
+            "what": decl.get("what", ""),
         })
 
         # The python above and the two gradle derivations must stay one rule.
-        gradles = glob.glob(os.path.join(root, app, "**", "build.gradle"), recursive=True)
+        gradles = glob.glob(os.path.join(app_dir, "**", "build.gradle"), recursive=True)
         if not any(all(pattern.search(open(g, encoding="utf-8", errors="replace").read())
                        for pattern in ARTIFACT_ID_GRADLE) for g in gradles):
             failures.append(
-                "%s no longer derives its asset id as sha256-of-sha256s truncated to 12 hex.\n"
-                "      This guard and data/regen.sh recompute that address to name the fleet row;\n"
-                "      if the gradle rule changed, the row now points at an asset nobody uploads." % app)
+                "%s no longer derives its version as sha256-of-sha256s truncated to 12 hex.\n"
+                "      This guard and data/regen.sh recompute that address to version the fleet\n"
+                "      row; if the gradle rule changed, the row versions bytes nobody built." % app)
+
+        failures.extend(_one_transport(root, app, module))
 
     for app in sorted({a for a, _, _, _ in artifacts}):
         decl_path = os.path.join(root, app, FLEET_LIB)
@@ -329,20 +509,70 @@ def artifact_libs(root):
 
     duplicates = sorted({r["id"] for r in rows if [x["id"] for x in rows].count(r["id"]) > 1})
     if duplicates:
-        failures.append("runtime artifact ids %s are declared more than once — one artifact is one "
-                        "fleet lib." % duplicates)
+        failures.append("rootfs lib ids %s are declared more than once — one payload is one "
+                        "library." % duplicates)
     return sorted(rows, key=lambda r: r["id"]), failures
 
 
-def check_artifact_libs(root):
-    """Every declared runtime artifact is IN the committed manifest, current, and
-    drawn in a declared group. A row that regen.sh never wrote is a lib the
-    phone cannot see, which is the whole #624 complaint."""
-    rows, failures = artifact_libs(root)
+def _one_transport(root, app, module):
+    """Exactly ONE way the payload arrives, and it is verified on the way in.
+
+    #628's whole claim is that the Store downloads the rootfs library and the app
+    reads it out of the installed sibling APK. Two properties, both checked here
+    because they are the same property from either side:
+
+      * no SECOND transport survives — a leftover HttpURLConnection or URL is a
+        path that still works, is no longer exercised by anyone, and is therefore
+        the one that will rot unnoticed, so it is refused rather than deprecated;
+      * the one transport that remains is TRUSTED — the sibling APK is only as
+        good as its signature, and an applicationId is not a credential."""
+    failures = []
+    trusted = False
+    for relative in RUNTIME_FETCH_SCAN:
+        base = os.path.join(root, app, relative)
+        if not os.path.isdir(base):
+            continue
+        for current, _dirs, files in os.walk(base):
+            for name in sorted(files):
+                if not name.endswith((".java", ".kt")):
+                    continue
+                path = os.path.join(current, name)
+                with open(path, encoding="utf-8", errors="replace") as handle:
+                    body = handle.read()
+                if TRUST_CHECK.search(body):
+                    trusted = True
+                for pattern, why in RUNTIME_FETCH:
+                    if pattern.search(body):
+                        failures.append(
+                            "%s still %s\n"
+                            "      cloud-lib-%s is installed and updated by the Store like every\n"
+                            "      other library; #628 leaves exactly ONE way the payload arrives."
+                            % (os.path.relpath(path, root), why, module))
+    if not trusted:
+        failures.append(
+            "%s consumes cloud-lib-%s but compares no signatures.\n"
+            "      It is about to unpack and exec ~400 MB out of another package's APK, and the\n"
+            "      applicationId alone does not say who built it — any package installed under\n"
+            "      that id would be unpacked. PackageManager.checkSignatures(...) ==\n"
+            "      SIGNATURE_MATCH is what makes the sibling part of this build (#348)."
+            % (app, module))
+    return failures
+
+
+def check_rootfs_libs(root):
+    """Every declared rootfs library is IN the manifest's `apps`, current, out of
+    `catalogue`, and drawn in the Libs tab.
+
+    Every assertion here is the INVERSE of the one #624 made, because #624's
+    placement is the defect #628 fixes: a catalogue row has no package and no
+    versionCode, so no install and no update path can be handed it, and the
+    terminal was left downloading its own runtime."""
+    rows, failures = rootfs_libs(root)
     manifest = os.path.join(root, CANONICAL)
     if not rows:
-        failures.append("no runtime artifact resolves to a fleet lib — either #618's artifacts are "
-                        "gone or this guard stopped finding them, and it would now prove nothing.")
+        failures.append("no runtime payload resolves to a fleet library — either #618's artifacts "
+                        "are gone or this guard stopped finding them, and it would now prove "
+                        "nothing.")
         return failures
     try:
         with open(manifest, encoding="utf-8") as handle:
@@ -350,33 +580,54 @@ def check_artifact_libs(root):
     except (OSError, ValueError) as error:
         failures.append("%s does not parse: %s" % (CANONICAL, error))
         return failures
-    catalogue = {row["id"]: row for row in fleet.get("catalogue", [])}
-    members = {member for group in fleet.get("groups", []) for member in group.get("members", [])}
+    apps = {row["id"]: row for row in fleet.get("apps", [])}
+    catalogue = {row["id"] for row in fleet.get("catalogue", [])}
+    groups = fleet.get("groups", [])
+    members = {member: group.get("id") for group in groups for member in group.get("members", [])}
     for row in rows:
-        present = catalogue.get(row["id"])
+        # The catalogue check comes FIRST and does not depend on the `apps` row,
+        # because demoting a library back to #624's placement removes it from
+        # `apps` and adds it to `catalogue` in one move. Checked the other way
+        # round the guard reports only the vaguer "missing from apps" and the
+        # specific regression — catalogue-only, therefore uninstallable — is
+        # never named, which is a guard that is right for the wrong reason.
+        if row["id"] in catalogue:
+            failures.append(
+                "%s is in %s's `catalogue`.\n"
+                "      That is #624's placement and it is the defect: a catalogue row carries no\n"
+                "      package and no versionCode, so the Store can draw it and nothing more —\n"
+                "      which is why the terminal downloaded its own runtime. It belongs in\n"
+                "      `apps`, and in exactly one of the two." % (row["id"], CANONICAL))
+        present = apps.get(row["id"])
         if present is None:
             failures.append(
-                "%s is declared as a fleet lib but %s has no catalogue row for it.\n"
+                "%s is a declared fleet library but %s lists it in no `apps` row.\n"
                 "      Run aa_cloud-superapp/data/regen.sh --constellation-only and commit the\n"
-                "      result: an undeclared artifact is invisible in Constellation (#624)." % (row["id"], CANONICAL))
+                "      result. `apps` is what Fleet.parse reads, so a library missing from it\n"
+                "      cannot be installed or updated by anything (#628)." % (row["id"], CANONICAL))
             continue
-        if present.get("version") != row["version"]:
-            failures.append("%s in %s is versioned %r but the tree's content address is %r — the "
-                            "manifest is stale; regenerate it." % (
-                                row["id"], CANONICAL, present.get("version"), row["version"]))
-        if present.get("label") != row["label"]:
-            failures.append("%s in %s is labelled %r, not the canonical cloud-lib-{module} %r (#474)."
-                            % (row["id"], CANONICAL, present.get("label"), row["label"]))
-        if present.get("installable") is not False:
-            failures.append("%s in %s does not say installable:false. A 400 MB runtime tree must "
-                            "never be offered as an APK install (#618)." % (row["id"], CANONICAL))
-        if row["id"] in {app["id"] for app in fleet.get("apps", [])}:
-            failures.append("%s is in %s's `apps`. Fleet.parse reads `apps`, so the updater would be "
-                            "handed a 400 MB artifact as an installable package (#618/#624). It "
-                            "belongs in `catalogue`." % (row["id"], CANONICAL))
-        if row["id"] not in members:
-            failures.append("%s is in no declared Constellation group, so it is drawn in no tab at "
-                            "all." % row["id"])
+        for field in ("label", "package", "asset", "image", "kind"):
+            if present.get(field) != row[field]:
+                failures.append("%s in %s has %s %r; the declaration resolves %r." % (
+                    row["id"], CANONICAL, field, present.get(field), row[field]))
+        if present.get("version_name") != row["version_name"]:
+            failures.append(
+                "%s in %s is versioned %r but the tree's content address is %r — the manifest "
+                "is stale; regenerate it." % (
+                    row["id"], CANONICAL, present.get("version_name"), row["version_name"]))
+        if present.get("assets") != row["assets"]:
+            failures.append(
+                "%s in %s carries per-ABI assets %r, not the %r its companion declares.\n"
+                "      An x86_64 phone handed the arm64 library fails INSTALL_FAILED_NO_MATCHING_ABIS."
+                % (row["id"], CANONICAL, present.get("assets"), row["assets"]))
+        libs_group = next((g.get("id") for g in groups if g.get("default_for_kind") == "lib"), None)
+        if libs_group is None:
+            libs_group = "libs"
+        if members.get(row["id"]) != libs_group:
+            failures.append(
+                "%s is drawn in group %r, not %r — a library belongs in the Libs tab beside every "
+                "other lib APK, which is the whole of #628's 'follow the same pattern'." % (
+                    row["id"], members.get(row["id"]), libs_group))
     return failures
 
 
@@ -384,9 +635,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", default=None,
                         help="repository root (default: two levels above this script's directory)")
-    parser.add_argument("--emit-artifact-libs", action="store_true",
-                        help="print the fleet catalogue rows for every declared runtime artifact "
-                             "(#624) as JSON, for aa_cloud-superapp/data/regen.sh")
+    parser.add_argument("--emit-rootfs-libs", action="store_true",
+                        help="print the fleet `apps` row for every declared runtime payload "
+                             "(#628) as JSON, for aa_cloud-superapp/data/regen.sh")
     args = parser.parse_args()
 
     root = args.root or os.path.abspath(
@@ -394,8 +645,8 @@ def main():
 
     # The generator's view of the same resolution. Emitted, never re-derived in
     # jq, so regen.sh and this guard cannot disagree about a lib's id or version.
-    if args.emit_artifact_libs:
-        rows, problems = artifact_libs(root)
+    if args.emit_rootfs_libs:
+        rows, problems = rootfs_libs(root)
         if problems:
             for line in problems:
                 print(line, file=sys.stderr)
@@ -458,9 +709,10 @@ def main():
             failures.append("%s resolves %s but it lists NO applications."
                             % (shown, os.path.relpath(path, root)))
 
-    # 3. #624 — every content-addressed runtime artifact is a declared fleet lib,
-    #    present in the manifest, current, not installable and drawn in a tab.
-    failures.extend(check_artifact_libs(root))
+    # 3. #628 — every content-addressed runtime payload is a declared fleet
+    #    LIBRARY: in `apps`, out of `catalogue`, current, drawn in the Libs tab,
+    #    and with no run-time download path left in the app that consumes it.
+    failures.extend(check_rootfs_libs(root))
 
     if failures:
         print("Fleet manifest guard — %d problem(s):\n" % len(failures))

@@ -175,10 +175,13 @@ for pair in "${ENGINES[@]}"; do
   assert_eq "$name: companion asset falls back to the variant-neutral name" \
     "cloud-lib-rootfs-termux.apk" "$a"
 
-  # ── TODAY'S STATE: inert ──────────────────────────────────────────────
-  # Slice 1 declares no companions, so every loop must iterate nothing. This is
-  # the assertion that turns RED the moment Slice 2 lands, which is the point:
-  # the follow-up cannot land without coming back through this file.
+  # ── an app that declares nothing resolves nothing ─────────────────────
+  # Slice 1 shipped with ZERO companions declared and this assertion was
+  # written against the real build.json, so it turned red the moment Slice 2
+  # declared one — which was its purpose: the follow-up could not land without
+  # coming back through this file. Slice 2 landed, so the property moves to a
+  # FIXTURE (where it is still worth holding: a companion-less app must not
+  # inherit a sibling's) and the real declarations are asserted at the bottom.
   out="$(run_in_fixture "$engine" '{"release":{}}' 'echo "ids=$(_companion_ids | tr "\n" ",")"')"
   eval "$out"
   assert_eq "$name: an app declaring no companions resolves NONE" "" "$ids"
@@ -226,12 +229,112 @@ for pair in "${ENGINES[@]}"; do
 done
 
 # ── the REAL build.json files, not a fixture ────────────────────────────
-# Slice 1's contract in one line: the capability is in the engines and nothing
-# declares it yet, so no pipeline changes behaviour on this commit.
+# Slice 2's contract: each terminal declares EXACTLY ONE companion, and that
+# companion is the rootfs library the store installs. Asserted against the
+# shipped declarations rather than a fixture, because an engine capability that
+# nothing declares changes no pipeline — which was Slice 1's state, and is the
+# state this block used to pin.
+#
+# The identity assertions are deliberately NOT a second copy of the naming rule:
+# they read what the ONE naming declaration (ab_cloud-libs-shared/lib-apks/
+# build.json::lib_apks) produces for this module, so a prefix change moves both
+# or fails here. cloud-android-fleet-manifest-guard.py holds the same rule from
+# the fleet side; this holds it from the engine side, where the APK is built.
 echo "== the shipped declarations =="
+LIB_DECL="$REPO/ab_cloud-libs-shared/lib-apks/build.json"
+id_prefix="$(jq -r '.lib_apks.application_id_prefix' "$LIB_DECL")"
+asset_prefix="$(jq -r '.lib_apks.asset_prefix' "$LIB_DECL")"
+assert_eq "the one lib naming declaration still names an applicationId prefix" \
+  "com.diegonmarcos.cloudlib" "$id_prefix"
+
 for app in ac_cloud-termux ac_cloud-nix-on-droid; do
-  n="$(jq -r '(.release.companions // []) | length' "$REPO/$app/build.json")"
-  assert_eq "$app declares 0 companions (Slice 1 is inert)" "0" "$n"
+  bj="$REPO/$app/build.json"
+  n="$(jq -r '(.release.companions // []) | length' "$bj")"
+  assert_eq "$app declares exactly 1 companion (#628 Slice 2)" "1" "$n"
+
+  # The fleet identity and the build identity are ONE fact, stated by the
+  # companion and POINTED AT by fleet-lib.json. A fleet-lib.json naming a
+  # companion nobody declares is a store row for an APK no job produces.
+  module="$(jq -r '.module' "$REPO/$app/fleet-lib.json")"
+  companion="$(jq -r '.companion' "$REPO/$app/fleet-lib.json")"
+  assert_eq "$app/fleet-lib.json is kind \"lib\", not #624's \"artifact\"" \
+    "lib" "$(jq -r '.kind' "$REPO/$app/fleet-lib.json")"
+  assert_eq "$app's declared companion is the one release.companions[] declares" \
+    "$companion" "$(jq -r --arg c "$companion" '(.release.companions // [])[] | select(.id==$c) | .id' "$bj")"
+
+  # Spelled like every other lib APK: prefix + module sans dashes, and
+  # Cloud-Lib-<Title-Cased-Module>.apk. "Consistency means follow same pattern".
+  want_pkg="$id_prefix.$(printf '%s' "$module" | tr -d '-')"
+  want_asset="$asset_prefix$(printf '%s' "$module" | awk -F- '{for(i=1;i<=NF;i++){$i=toupper(substr($i,1,1)) substr($i,2)}}1' OFS=-).apk"
+  assert_eq "$app's companion applicationId is the canonical lib spelling" \
+    "$want_pkg" "$(jq -r --arg c "$companion" '(.release.companions // [])[] | select(.id==$c) | .package' "$bj")"
+  assert_eq "$app's companion asset is the canonical lib asset name" \
+    "$want_asset" "$(jq -r --arg c "$companion" '(.release.companions // [])[] | select(.id==$c) | .asset' "$bj")"
+
+  # One published name per ABI job, or the two matrix jobs overwrite each
+  # other's library on the release and one ABI ships the other's rootfs.
+  variants="$(jq -r '[(.release.variants // [])[].id] | sort | join(",")' "$bj")"
+  named="$(jq -r --arg c "$companion" '[(.release.companions // [])[] | select(.id==$c) | .assets | keys[]] | sort | join(",")' "$bj")"
+  assert_eq "$app's companion names an asset for every release variant" "$variants" "$named"
+
+  # THE INDEPENDENT GATE is the whole reason this mechanism exists. Without
+  # paths_from the 400 MB library is gated on the app's identity and every
+  # one-line code fix republishes it — the #618 regression, reintroduced.
+  gated="$(jq -r --arg c "$companion" '[(.release.companions // [])[] | select(.id==$c) | .paths_from[]?] | length' "$bj")"
+  case "$gated" in
+    0) printf '  [FAIL] %s\n' "$app's companion declares no paths_from"; fail=$((fail+1)) ;;
+    *) printf '  [PASS] %s\n' "$app's companion is gated on its own declared inputs ($gated path(s))"; pass=$((pass+1)) ;;
+  esac
+
+  # AND every one of them EXISTS. Found while writing this file:
+  # cloud-android-source-identity.sh hashes a paths_from entry that names nothing
+  # as nothing and still prints a confident 64-hex identity with status 0 — so a
+  # typo does not fail, it silently NARROWS the gate's input set, and the gate
+  # then skips a republish that was genuinely needed. That is strictly worse than
+  # the phantom republish the gate exists to prevent, and it is invisible: the
+  # identity looks exactly as real as a correct one. Asserted here, where the
+  # declaration lives, because it is the declarations this ticket adds.
+  while IFS= read -r decl_path; do
+    [ -n "$decl_path" ] || continue
+    if [ -e "$REPO/$decl_path" ]; then
+      printf '  [PASS] %s\n' "$app's companion gates on $decl_path, which exists"; pass=$((pass+1))
+    else
+      printf '  [FAIL] %s\n' "$app's companion gates on $decl_path, which does not exist — the gate would hash it as nothing and narrow its own scope silently"; fail=$((fail+1))
+    fi
+  done < <(jq -r --arg c "$companion" '(.release.companions // [])[] | select(.id==$c) | .paths_from[]?' "$bj")
+
+  # The gradle module the companion names must actually exist, and be included
+  # in the gradle build — a gradle_task pointing at no project is a build that
+  # fails only in CI, on a native runner, forty minutes in.
+  gmod="$(jq -r --arg c "$companion" '(.release.companions // [])[] | select(.id==$c) | .gradle_task' "$bj" | sed 's/^://; s/:.*$//')"
+  if [ -f "$REPO/$app/$gmod/build.gradle" ]; then
+    printf '  [PASS] %s\n' "$app's companion gradle module $gmod exists"; pass=$((pass+1))
+  else
+    printf '  [FAIL] %s\n' "$app declares gradle_task in :$gmod but $app/$gmod/build.gradle does not exist"; fail=$((fail+1))
+  fi
+  assert_contains "$app/settings.gradle includes :$gmod" "':$gmod'" "$(cat "$REPO/$app/settings.gradle")"
+done
+
+# ── NO SECOND TRANSPORT ─────────────────────────────────────────────────
+# #628's claim in one line: the STORE downloads the rootfs and the terminal
+# reads it out of the installed sibling APK. A surviving HttpURLConnection is a
+# path that still works, is no longer exercised by anyone, and is therefore the
+# one that rots unnoticed — so it is asserted absent here as well as in the
+# fleet guard, because this is the file a change to a terminal's build comes
+# through.
+echo
+echo "== exactly one way the payload arrives =="
+for app in ac_cloud-termux ac_cloud-nix-on-droid; do
+  # `|| true` on the grep, not on the pipeline: no match is exit 1 and
+  # `set -o pipefail` would kill the tester at exactly the point it is proving
+  # the healthy case — a tester that dies while passing reports nothing at all.
+  hits="$( { grep -rlE 'HttpURLConnection|java\.net\.URL' "$REPO/$app/app/src/main/java" 2>/dev/null || true; } | wc -l | tr -d ' ')"
+  assert_eq "$app's sources open no HTTP connection (the store downloads the lib)" "0" "$hits"
+  if [ -e "$REPO/$app/rootfs/publish-artifact.sh" ] || [ -e "$REPO/$app/bootstrap/publish-artifact.sh" ]; then
+    printf '  [FAIL] %s\n' "$app still carries publish-artifact.sh — the payload has two transports again"; fail=$((fail+1))
+  else
+    printf '  [PASS] %s\n' "$app no longer carries publish-artifact.sh"; pass=$((pass+1))
+  fi
 done
 
 echo

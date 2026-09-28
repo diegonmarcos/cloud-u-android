@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #628 Slice 2 — carries the baked proot + Nix rootfs as an asset and
+     nothing else: no activity, no permission, no launcher icon. It is bound
+     by ../app (TermuxInstaller.openBootstrapFromLib), never opened by the
+     user, exactly like ab_cloud-libs-shared/lib-apks' wrapper manifest. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:label="Cloud Lib Rootfs Nixdroid"
+        android:allowBackup="false"
+        android:hasCode="false" />
+
+</manifest>
