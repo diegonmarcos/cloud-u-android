@@ -9,6 +9,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.FragmentActivity
 import com.diegonmarcos.superapp.updater.Fleet
+import com.diegonmarcos.superapp.updater.FleetIdentity
 import com.diegonmarcos.superapp.updater.VersionOrder
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlin.concurrent.thread
@@ -98,10 +99,13 @@ object ApkDetailSheet {
             return
         }
         into.addView(kv(ctx, "Package", d.pkg))
-        into.addView(kv(ctx, "Version", "${d.versionName}  (code ${d.versionCode})"))
+        // #631: the ONE identity pattern's version part, so this sheet cannot
+        // spell a version differently from the row that opened it — and so the
+        // wall-clock versionCode is labelled `apk build` here too.
+        into.addView(kv(ctx, "Version", FleetIdentity.version(d.versionName, 0L, d.versionCode)))
         into.addView(kv(ctx, "First installed", ts(d.firstInstallAtMs)))
         into.addView(kv(ctx, "Last updated", ts(d.lastUpdateAtMs)))
-        into.addView(kv(ctx, "APK size", human(d.bytes)))
+        into.addView(kv(ctx, "APK size", FleetIdentity.size(d.bytes)))
         into.addView(kv(ctx, "sha256", d.sha256.ifBlank { "—" }))
         into.addView(kv(ctx, "Signing cert", d.signingCertSha256?.take(16)?.plus("…") ?: "—"))
         into.addView(kv(ctx, "Installer", d.installerPackage ?: "—"))
@@ -140,7 +144,7 @@ object ApkDetailSheet {
                 into.addView(kv(ctx, "Status", "not installed — available to install"))
             else -> {}
         }
-        into.addView(kv(ctx, "Size", human(state.bytes)))
+        into.addView(kv(ctx, "Size", FleetIdentity.size(state.bytes)))
         if (asset != null) {
             into.addView(kv(ctx, "Published", if (asset.publishedAtMillis > 0) ts(asset.publishedAtMillis) else "—"))
             into.addView(kv(ctx, "Release URL", app.abiReleaseUrl))
@@ -270,11 +274,9 @@ object ApkDetailSheet {
         setPadding(dp(ctx, 18), dp(ctx, 12), dp(ctx, 18), dp(ctx, 16))
     }
 
-    private fun human(b: Long): String = when {
-        b <= 0L -> "—"
-        b >= 1_000_000 -> String.format(java.util.Locale.US, "%.1f MB", b / 1_000_000.0)
-        else -> String.format(java.util.Locale.US, "%.0f KB", b / 1000.0)
-    }
+    // The size format used to live here too, a second copy of the row's own
+    // (#631). Both size rows above now ask FleetIdentity, which is also the one
+    // place that decides what 0 bytes means — not a size, so it says so.
 
     private fun ts(ms: Long): String =
         if (ms <= 0L) "—"

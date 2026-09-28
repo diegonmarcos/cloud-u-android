@@ -22,6 +22,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.diegonmarcos.superapp.updater.BootstrapInstall
 import com.diegonmarcos.superapp.updater.Fleet
+import com.diegonmarcos.superapp.updater.FleetIdentity
 import com.diegonmarcos.superapp.updater.UpdateProgress
 import com.diegonmarcos.superapp.updater.Updater
 import kotlin.concurrent.thread
@@ -79,7 +80,12 @@ class StoreCloudFragment : Fragment() {
             Fleet.App(id = entry.getString("id"), label = entry.optString("label", entry.getString("id")),
                 pkg = "", altId = null, registry = "", namespace = "", image = "", tag = "",
                 asset = "", assets = emptyMap(), releaseUrl = "", repoUrl = "", ghcrPage = "",
-                blocked = !entry.optBoolean("installable", false), kind = "")
+                blocked = !entry.optBoolean("installable", false), kind = "",
+                // A catalogue row's `version` IS our version of it: the content
+                // address regen.sh computed from the tree (#618/#624). Carried
+                // so the one identity pattern has a real version to print here
+                // too, instead of the marker for a row that does declare one.
+                declaredVersionName = entry.optString("version").takeIf { it.isNotEmpty() })
         }
     }
     // #405: an ML lib states its application in its own id -
@@ -698,32 +704,41 @@ class StoreCloudFragment : Fragment() {
             is Fleet.State.Blocked         -> "⛔" to cBlk
             is Fleet.State.Error           -> "⚠" to cErr
         }
-        val size = if (s.bytes > 0) human(s.bytes) else ""
         dots[appId]?.let { it.text = glyph; it.setTextColor(color) }
 
-        // Collapsed line: only what you scan by. Version and size stay; the sha
-        // and the remote digest are inspection, so they live in the detail.
+        // #631: ONE identity pattern, and neither line here composes it. Both
+        // ask [FleetIdentity] — the collapsed row for the fields you scan by,
+        // the expanded row for all three — so the version, the sha and the size
+        // cannot come out in two shapes, and neither line can invent a field
+        // this device could not source.
+        val app = (fleet + references).firstOrNull { it.id == appId }
+        fun identity(fields: Set<FleetIdentity.Field>) =
+            app?.let { FleetIdentity.of(it, s, fields) } ?: ""
+
         statusViews[appId]?.let { tv ->
             tv.setTextColor(color)
             tv.text = listOf(when (s) {
-                is Fleet.State.Installed       -> "v${s.versionName}"
-                is Fleet.State.UpdateAvailable -> "v${s.versionName ?: "—"} → new"
+                is Fleet.State.Installed       -> "installed"
+                is Fleet.State.UpdateAvailable -> "update"
                 is Fleet.State.Missing         -> "not installed"
                 is Fleet.State.Blocked         -> if (appId in catalogue) "reference · not installable" else "not published"
                 is Fleet.State.Error           -> s.message
-            }, size).filter { it.isNotEmpty() }.joinToString("  ·  ")
+            }, if (s is Fleet.State.Blocked || s is Fleet.State.Error) "" else identity(FleetIdentity.SCAN))
+                .filter { it.isNotEmpty() }.joinToString(FleetIdentity.SEP)
         }
 
         fullStatusViews[appId]?.let { tv ->
             tv.setTextColor(color)
-            val sz = if (size.isEmpty()) "" else "  ·  $size"
-            tv.text = when (s) {
-                is Fleet.State.Installed       -> "✓ up to date  ·  v${s.versionName} (${s.versionCode})  ·  sha ${s.sha12}$sz"
-                is Fleet.State.UpdateAvailable -> "⬆ update available  ·  installed v${s.versionName ?: "—"} → ${s.remoteDigest12}$sz"
-                is Fleet.State.Missing         -> "◯ not installed  ·  tap Install$sz"
+            val id = identity(FleetIdentity.FULL)
+            val head = when (s) {
+                is Fleet.State.Installed       -> "✓ up to date"
+                is Fleet.State.UpdateAvailable -> "⬆ update available"
+                is Fleet.State.Missing         -> "◯ not installed  ·  tap Install"
                 is Fleet.State.Blocked         -> if (appId in catalogue) "⛔ reference row — a third-party library with nothing to install" else "⛔ not published yet"
                 is Fleet.State.Error           -> "⚠ ${s.message}"
             }
+            tv.text = if (s is Fleet.State.Blocked || s is Fleet.State.Error || id.isEmpty()) head
+                      else head + FleetIdentity.SEP + id
         }
 
         quickBtns[appId]?.let { b ->
@@ -741,11 +756,9 @@ class StoreCloudFragment : Fragment() {
         }
     }
 
-    /** Bytes as MB/KB. Decimal MB, matching what GitHub and the Play Store show
-     *  for the same APK - a binary-MiB figure here would read as a mismatch. */
-    private fun human(b: Long): String =
-        if (b >= 1_000_000) String.format(java.util.Locale.US, "%.1f MB", b / 1_000_000.0)
-        else String.format(java.util.Locale.US, "%.0f KB", b / 1000.0)
+    /** The one size format, owned by [FleetIdentity] (#631) so the summary
+     *  line and the progress line cannot drift from the row's own size. */
+    private fun human(b: Long): String = FleetIdentity.human(b)
 
     private fun install(ctx: Context, app: Fleet.App) {
         Toast.makeText(ctx, "Installing ${app.label}…", Toast.LENGTH_SHORT).show()

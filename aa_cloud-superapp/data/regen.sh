@@ -97,6 +97,25 @@ regen_constellation() {
           | { key: ., value: ($v.gh_asset // "") } ]
         | map(select(.value != "")) | from_entries'
 
+    # ── OUR declared version, one jq expression for all three emitters (#631) ──
+    # The store's identity line must show the FLEET's version, and the only
+    # other version a phone can see is the installed APK's — which for a comms
+    # fork is upstream's string and for our own apps already has `(sha-…)`
+    # folded in by app/build.gradle. The declared pair is build.json::android
+    # .version_name / .version_code, so it is emitted from the same declaration
+    # gradle reads, and NOT emitted at all where nothing declares it: an absent
+    # key is the honest answer and FleetIdentity prints a marker for it, which
+    # is the whole point — a fork must not borrow upstream's number.
+    #
+    # NOT the APK's effective versionCode. That is codeFinal, minutes since
+    # 2026, computed at build time and unknowable here; the row labels it
+    # `apk build` and reads it off the installed package.
+    local vers='
+        ( if ((.android.version_name // "") != "")
+          then { version_name: .android.version_name } else {} end )
+        + ( if ((.android.version_code // 0) > 0)
+            then { version_code: .android.version_code } else {} end )'
+
     # Scan EVERY sibling repo's build.json, not just ac_cloud-*/. Membership is a
     # property of the DATA, not of the directory name: a dir self-registers as a
     # top-level app (.android.application_id + .release.ghcr), a multi-lib repo
@@ -199,7 +218,13 @@ regen_constellation() {
                                  repo_url: ($tree + "/" + $libdir + "/" + $mod),
                                  ghcr_page: ($pkg + "/" + $img),
                                  blocked: false,
-                                 kind: "lib" } ] end' "$bj")"
+                                 kind: "lib" }
+                                # #631 OUR version, so the one identity pattern
+                                # has a declared version to print rather than
+                                # the installed APK version string. Adds nothing
+                                # where nothing declares one: absent is the
+                                # honest answer and the UI says so.
+                                + ('"$vers"') ] end' "$bj")"
             done
         elif jq -e '.release.ghcr.image and .android.application_id' "$bj" >/dev/null 2>&1; then
             # ── Top-level app (browser/vault/wallet/superapp/nav/ide) ─────────
@@ -243,6 +268,7 @@ regen_constellation() {
                              # promising an install that cannot happen.
                              blocked: (((.build // {}) | has("host")) and (.build.host == null)),
                              kind: (.release.kind // "app") }
+                             + ('"$vers"')
                              + (if ($assets | length) > 0 then { assets: $assets } else {} end) ) ]' "$bj")"
         elif jq -e '(.forks // {}) | to_entries
                     | map(select(.key != "_doc" and (.value|type=="object")))
@@ -299,6 +325,7 @@ regen_constellation() {
                              ghcr_page: ($pkg + "/" + $f.image),
                              blocked: ($f.blocked_on != null),
                              kind: (.release.kind // "app") }
+                             + ('"$vers"')
                              + (if ($assets | length) > 0 then { assets: $assets } else {} end) ) ]' "$bj")"
         fi
     done
