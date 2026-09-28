@@ -48,6 +48,8 @@ BUILD_JSON="$APP/build.json"
 GRADLE="$APP/app/build.gradle"
 SRC="$APP/app/src/main/java/com/diegonmarcos/clouddrive"
 STORE="$SRC/SharedStore.kt"
+MIGRATION="$SRC/StoreMigration.kt"
+SEED="$SRC/StoreSeed.kt"
 CARDS="$SRC/sync/GitReposScreen.kt"
 DECL="$SRC/Declarations.kt"
 PLACES="$SRC/files/Places.kt"
@@ -66,7 +68,7 @@ FAILURES=0
 pass() { echo "  PASS  $*"; }
 fail() { echo "  FAIL  $*"; FAILURES=$((FAILURES + 1)); }
 
-for required in "$BUILD_JSON" "$GRADLE" "$STORE" "$CARDS" "$DECL" "$PLACES" "$MAIN" "$HOST" "$WORKER" "$COORD_KT" "$GIT_SCREEN" "$GIT_MODELS" "$RCLONE_CONFIG" "$RCLONE_TEST"; do
+for required in "$BUILD_JSON" "$GRADLE" "$STORE" "$MIGRATION" "$SEED" "$CARDS" "$DECL" "$PLACES" "$MAIN" "$HOST" "$WORKER" "$COORD_KT" "$GIT_SCREEN" "$GIT_MODELS" "$RCLONE_CONFIG" "$RCLONE_TEST"; do
     [ -f "$required" ] || { echo "ERROR missing source: $required"; exit 1; }
 done
 
@@ -121,6 +123,21 @@ else
 fi
 if grep -qE 'url = page\.cloneUrl\(name, mode\)' "$CARDS" && grep -qE 'coordinator\.cloneInto\(' "$CARDS"; then pass "every row's Clone hands the declared URL to the one clone path"; else fail "the Git page does not clone through the declared URL / the coordinator"; fi
 if grep -qE 'val dir = SharedStore\.repoDir\(name\)' "$COORD_KT" && grep -qE 'GitEngine\.clone\(url, dir, auth = credentials\.authFor\(managed\)\)' "$COORD_KT" && grep -qE 'registry\.upsert\(managed\)' "$COORD_KT"; then pass "the page's clone lands in the store's git folder, through the engine, into the ONE registry"; else fail "the page's clone does not go through SharedStore.repoDir + GitEngine.clone + the registry"; fi
+
+echo "── S3b one-time migration of stray root clones into the git folder ──"
+# #606 a phone updated across the git_subdir change keeps its clones at the store ROOT; the
+# first-run seed would re-clone them into the new git folder as a second copy. StoreMigration
+# moves them, manifest-driven (no hardcoded repository name) and idempotent (a taken destination
+# is left alone), BEFORE the seed loop runs.
+if grep -qE 'fun migrate\(root: File, gitSubdir: String, repoNames: Set<String>\): List<Move>' "$MIGRATION" \
+   && grep -qE 'File\(root, gitSubdir\)' "$MIGRATION" \
+   && grep -qE 'if \(dest\.exists\(\)\)' "$MIGRATION"; then
+    pass "StoreMigration.migrate relocates root strays into root/gitSubdir and never clobbers a taken destination"
+else
+    fail "StoreMigration.migrate is missing, does not resolve the git folder, or would overwrite an existing clone"
+fi
+if grep -qE 'it\.name != gitSubdir' "$MIGRATION" && grep -qE 'it\.name in repoNames' "$MIGRATION"; then pass "the migration skips the git folder itself and acts only on declared repository names"; else fail "the migration is not manifest-driven / does not skip the git_subdir folder"; fi
+if grep -qE 'StoreMigration\.migrate\(SharedStore\.root\(\), BuildConfig\.GIT_SUBDIR, family\.repos\.map \{ it\.name \}\.toSet\(\)\)' "$SEED" && awk '/StoreMigration\.migrate/{m=NR} /Declarations\.seedRepos\.forEach/{s=NR} END{exit !(m && s && m < s)}' "$SEED"; then pass "StoreSeedWorker runs the migration (all declared names) BEFORE the seed loop"; else fail "StoreSeedWorker does not run StoreMigration before the seed loop"; fi
 
 echo "── S4 scheduled sync ──"
 if grep -qE "class GitSyncWorker\(context: Context, params: WorkerParameters\) : Worker\(" "$WORKER"; then pass "GitSyncWorker is a WorkManager Worker"; else fail "GitSyncWorker is not a Worker"; fi

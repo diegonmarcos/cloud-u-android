@@ -36,6 +36,27 @@ class StoreSeedWorker(context: Context, params: WorkerParameters) : Worker(conte
         if (!BuildConfig.SEED_ENABLED) return Result.success()
         val family = Declarations.gitFamily
         val registry = RepoRegistry(File(applicationContext.filesDir, GitSyncWorker.REGISTRY_FILE))
+        // #606 one-time migration: clones a pre-git_subdir build left at the store's ROOT are
+        // moved into the git folder BEFORE the seed loop, so the seed then finds them present and
+        // does not re-clone them into a second copy. Manifest-driven (every declared name), never
+        // a hardcoded repository, and idempotent — a stray whose destination is taken is left alone.
+        StoreMigration.migrate(SharedStore.root(), BuildConfig.GIT_SUBDIR, family.repos.map { it.name }.toSet()).forEach { move ->
+            if (!move.moved) {
+                Log.i(TAG, "stray ${move.name} left in place: ${move.to.absolutePath} already exists")
+                return@forEach
+            }
+            Log.i(TAG, "migrated stray ${move.name} → ${move.to.absolutePath}")
+            val decl = family.repos.firstOrNull { it.name == move.name }
+            val url = decl?.let { family.cloneUrl(it) } ?: ""
+            registry.upsert(
+                ManagedRepo(
+                    id = RepoRegistry.idFor(move.to.absolutePath),
+                    name = move.name,
+                    path = move.to.absolutePath,
+                    remoteUrl = url,
+                ),
+            )
+        }
         Declarations.seedRepos.forEach { decl ->
             if (isStopped) return Result.retry()
             val dir = SharedStore.repoDir(decl.name)
