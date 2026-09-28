@@ -87,7 +87,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.R
@@ -210,7 +209,7 @@ fun FilesScreen(controller: FilesController, actions: DriveActions, hasAccess: B
                 })
             } else {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
-                    val wide = maxWidth >= 600.dp
+                    val wide = maxWidth >= DriveMetrics.wide
                     val paneContent: @Composable (PaneId, Modifier) -> Unit = { id, m ->
                         Pane(id, ui, controller, listings, prefs, isActive = ui.active == id, modifier = m,
                             onOpenPlaces = { dialog = FilesDialog.Places(id, pickDestination = false, move = false) },
@@ -304,10 +303,10 @@ private fun Pane(
     val borderColour = if (isActive && ui.dualPane) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
     Column(
         modifier
-            .padding(horizontal = 6.dp, vertical = 4.dp)
+            .padding(horizontal = DriveMetrics.gapWide, vertical = DriveMetrics.gap)
             .testTag(if (id == PaneId.A) DriveTags.FILES_PANE_A else DriveTags.FILES_PANE_B)
             .clip(RoundedCornerShape(DriveMetrics.cardRadius))
-            .border(1.dp, borderColour, RoundedCornerShape(DriveMetrics.cardRadius))
+            .border(DriveMetrics.hairline, borderColour, RoundedCornerShape(DriveMetrics.cardRadius))
             .background(MaterialTheme.colorScheme.surface)
             // Any touch on the inactive pane activates it. Not clickable{}: that merges the whole pane
             // into one semantics node, hiding the strip, crumbs, toolbar and rows from TalkBack.
@@ -357,13 +356,13 @@ private fun PaneHeader(id: PaneId, ui: FilesUiState, listings: Map<String, Files
     val listing = listings[pane.location.key]
     val count = listing?.let { controller.visible(pane, it).size }
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp).testTag(DriveTags.FILES_PANE_HEADER)
-            .clip(RoundedCornerShape(DriveMetrics.cardRadius)).border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(DriveMetrics.cardRadius))
-            .background(MaterialTheme.colorScheme.surface).clickable { controller.activate(id) }.padding(horizontal = 12.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gapWide, vertical = DriveMetrics.gap).testTag(DriveTags.FILES_PANE_HEADER)
+            .clip(RoundedCornerShape(DriveMetrics.cardRadius)).border(DriveMetrics.hairline, MaterialTheme.colorScheme.outline, RoundedCornerShape(DriveMetrics.cardRadius))
+            .background(MaterialTheme.colorScheme.surface).clickable { controller.activate(id) }.padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.pad),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(if (pane.location.isArchive) Icons.Filled.Archive else Icons.Filled.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(DriveMetrics.pad))
         Text(pane.location.crumbs().takeLast(2).joinToString(" › ") { it.name }, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (count != null) Text(if (count == 1) stringResource(R.string.files_item_one) else stringResource(R.string.files_items, count), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Icon(Icons.Filled.ExpandMore, contentDescription = stringResource(R.string.files_pane_activate), tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -372,8 +371,8 @@ private fun PaneHeader(id: PaneId, ui: FilesUiState, listings: Map<String, Files
 
 @Composable
 private fun TabStrip(id: PaneId, pane: PaneState, controller: FilesController, onOpenPlaces: () -> Unit) {
-    Row(Modifier.fillMaxWidth().testTag(DriveTags.FILES_TAB_STRIP).padding(start = 6.dp, end = 2.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fillMaxWidth().testTag(DriveTags.FILES_TAB_STRIP).padding(start = DriveMetrics.gapWide, end = DriveMetrics.tight, top = DriveMetrics.gapWide), verticalAlignment = Alignment.CenterVertically) {
+        LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
             itemsIndexed(pane.tabs) { i, tab ->
                 val selected = i == pane.activeTab
                 Row(
@@ -381,18 +380,18 @@ private fun TabStrip(id: PaneId, pane: PaneState, controller: FilesController, o
                         .background(if (selected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
                         .combinedClickable(onClick = { controller.update { FilesReducer.selectTab(it, id, i) } },
                             onLongClick = { (tab.location as? Location.Local)?.let { controller.prefs.toggleBookmark(it.path) } })
-                        .padding(start = 10.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+                        .padding(start = DriveMetrics.pad, end = DriveMetrics.gap, top = DriveMetrics.tight, bottom = DriveMetrics.tight),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(if (tab.location.isArchive) Icons.Filled.Archive else Icons.Filled.Folder, contentDescription = null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.width(6.dp))
-                    Text(tab.location.name, style = MaterialTheme.typography.labelMedium, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(96.dp))
-                    if (pane.tabs.size > 1) IconButton(onClick = { controller.update { FilesReducer.closeTab(it, id, i) } }, Modifier.size(24.dp)) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.files_close_tab), Modifier.size(14.dp)) }
-                    else Spacer(Modifier.width(6.dp))
+                    Icon(if (tab.location.isArchive) Icons.Filled.Archive else Icons.Filled.Folder, contentDescription = null, Modifier.size(DriveMetrics.iconSmall), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(DriveMetrics.gapWide))
+                    Text(tab.location.name, style = MaterialTheme.typography.labelMedium, fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.width(DriveMetrics.tabLabel))
+                    if (pane.tabs.size > 1) IconButton(onClick = { controller.update { FilesReducer.closeTab(it, id, i) } }, Modifier.size(DriveMetrics.tapSmall)) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.files_close_tab), Modifier.size(DriveMetrics.iconSmall)) }
+                    else Spacer(Modifier.width(DriveMetrics.gapWide))
                 }
             }
         }
-        IconButton(onClick = onOpenPlaces, Modifier.size(32.dp)) { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.files_new_tab)) }
+        IconButton(onClick = onOpenPlaces, Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.files_new_tab)) }
     }
 }
 
@@ -402,19 +401,19 @@ private fun Breadcrumbs(id: PaneId, loc: Location, controller: FilesController) 
     val crumbs = remember(loc) { loc.crumbs() }
     val listState = rememberLazyListState()
     LaunchedEffect(crumbs.size) { if (crumbs.isNotEmpty()) listState.animateScrollToItem(crumbs.lastIndex) }
-    LazyRow(Modifier.fillMaxWidth().testTag(DriveTags.FILES_BREADCRUMBS).padding(horizontal = 10.dp, vertical = 4.dp), state = listState, verticalAlignment = Alignment.CenterVertically) {
+    LazyRow(Modifier.fillMaxWidth().testTag(DriveTags.FILES_BREADCRUMBS).padding(horizontal = DriveMetrics.pad, vertical = DriveMetrics.gap), state = listState, verticalAlignment = Alignment.CenterVertically) {
         itemsIndexed(crumbs) { i, crumb ->
             val last = i == crumbs.lastIndex
             val label = (crumb as? Location.Local)?.let { Places.rootLabel(ctx, it.path) } ?: crumb.name
             Text(
                 label,
-                Modifier.clip(bottomNavPillShape).clickable(enabled = !last) { controller.open(id, crumb) }.padding(horizontal = 6.dp, vertical = 2.dp),
+                Modifier.clip(bottomNavPillShape).clickable(enabled = !last) { controller.open(id, crumb) }.padding(horizontal = DriveMetrics.gapWide, vertical = DriveMetrics.tight),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = if (last) FontWeight.Bold else FontWeight.Normal,
                 color = if (last) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
             )
-            if (!last) Icon(Icons.Filled.ChevronRight, contentDescription = null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (!last) Icon(Icons.Filled.ChevronRight, contentDescription = null, Modifier.size(DriveMetrics.iconSmall), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -426,7 +425,7 @@ private fun PaneToolbar(id: PaneId, pane: PaneState, controller: FilesController
     val filter = Declarations.files.filters.firstOrNull { it.id == pane.filterId }
     val localPath = (pane.location as? Location.Local)?.path
     val bookmarked = localPath != null && localPath in prefs.bookmarks
-    Row(Modifier.fillMaxWidth().testTag(DriveTags.FILES_TOOLBAR).padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(Modifier.fillMaxWidth().testTag(DriveTags.FILES_TOOLBAR).padding(horizontal = DriveMetrics.pad, vertical = DriveMetrics.tight), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
         Box {
             Pill(sortLabel(pane.sort) + if (pane.descending) " ↓" else " ↑", { sortMenu = true }, icon = Icons.Filled.Sort)
             DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
@@ -445,10 +444,10 @@ private fun PaneToolbar(id: PaneId, pane: PaneState, controller: FilesController
             }
         }
         Spacer(Modifier.weight(1f))
-        IconButton(onClick = { controller.update { FilesReducer.toggleHidden(it, id) } }, Modifier.size(32.dp)) { Icon(if (pane.showHidden) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, contentDescription = stringResource(if (pane.showHidden) R.string.files_hidden_hide else R.string.files_hidden_show), Modifier.size(18.dp)) }
-        IconButton(enabled = localPath != null, onClick = { localPath?.let { controller.prefs.toggleBookmark(it) } }, modifier = Modifier.size(32.dp)) { Icon(if (bookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, contentDescription = stringResource(if (bookmarked) R.string.files_bookmark_remove else R.string.files_bookmark_add), Modifier.size(18.dp)) }
-        IconButton(onClick = { controller.update { FilesReducer.setViewMode(it, id, if (pane.viewMode == ViewMode.LIST) ViewMode.TREE else ViewMode.LIST) } }, Modifier.size(32.dp)) { Icon(if (pane.viewMode == ViewMode.LIST) Icons.Filled.AccountTree else Icons.Filled.ViewList, contentDescription = stringResource(if (pane.viewMode == ViewMode.LIST) R.string.files_view_tree else R.string.files_view_list), Modifier.size(18.dp)) }
-        IconButton(enabled = pane.location.parentOrNull() != null, onClick = { controller.up(id) }, modifier = Modifier.size(32.dp)) { Icon(Icons.Filled.ArrowUpward, contentDescription = stringResource(R.string.files_up), Modifier.size(18.dp)) }
+        IconButton(onClick = { controller.update { FilesReducer.toggleHidden(it, id) } }, Modifier.size(DriveMetrics.tap)) { Icon(if (pane.showHidden) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, contentDescription = stringResource(if (pane.showHidden) R.string.files_hidden_hide else R.string.files_hidden_show), Modifier.size(DriveMetrics.icon)) }
+        IconButton(enabled = localPath != null, onClick = { localPath?.let { controller.prefs.toggleBookmark(it) } }, modifier = Modifier.size(DriveMetrics.tap)) { Icon(if (bookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, contentDescription = stringResource(if (bookmarked) R.string.files_bookmark_remove else R.string.files_bookmark_add), Modifier.size(DriveMetrics.icon)) }
+        IconButton(onClick = { controller.update { FilesReducer.setViewMode(it, id, if (pane.viewMode == ViewMode.LIST) ViewMode.TREE else ViewMode.LIST) } }, Modifier.size(DriveMetrics.tap)) { Icon(if (pane.viewMode == ViewMode.LIST) Icons.Filled.AccountTree else Icons.Filled.ViewList, contentDescription = stringResource(if (pane.viewMode == ViewMode.LIST) R.string.files_view_tree else R.string.files_view_list), Modifier.size(DriveMetrics.icon)) }
+        IconButton(enabled = pane.location.parentOrNull() != null, onClick = { controller.up(id) }, modifier = Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.ArrowUpward, contentDescription = stringResource(R.string.files_up), Modifier.size(DriveMetrics.icon)) }
     }
 }
 
@@ -499,7 +498,7 @@ private fun EntryList(
                 onToggleExpand = { controller.update { FilesReducer.toggleExpanded(it, id, e.key) }; controller.ensureLoaded(e.location) },
                 onMenu = { a -> onMenu(e, a) },
             )
-            Hairline(Modifier.padding(start = 64.dp))
+            Hairline(Modifier.padding(start = DriveMetrics.glyph + DriveMetrics.padWide))
         }
     }
 }
@@ -518,24 +517,24 @@ private fun EntryRow(
         Modifier.fillMaxWidth().height(DriveMetrics.rowHeight).testTag(DriveTags.FILES_ROW)
             .background(if (selected) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface)
             .then(if (selecting) Modifier.clickable(onClick = onTap) else Modifier.combinedClickable(onClick = onTap, onLongClick = onLongPress))
-            .padding(start = 8.dp + DriveMetrics.treeIndent * depth, end = 4.dp),
+            .padding(start = DriveMetrics.pad + DriveMetrics.treeIndent * depth, end = DriveMetrics.gap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (tree) {
-            if (entry.isDirectory) IconButton(onClick = onToggleExpand, Modifier.size(28.dp)) { Icon(if (expanded) Icons.Filled.ExpandMore else Icons.Filled.ChevronRight, contentDescription = null, Modifier.size(18.dp)) }
-            else Spacer(Modifier.width(28.dp))
+            if (entry.isDirectory) IconButton(onClick = onToggleExpand, Modifier.size(DriveMetrics.tapSmall)) { Icon(if (expanded) Icons.Filled.ExpandMore else Icons.Filled.ChevronRight, contentDescription = null, Modifier.size(DriveMetrics.icon)) }
+            else Spacer(Modifier.width(DriveMetrics.tapSmall))
         }
         Box(Modifier.size(DriveMetrics.glyph), contentAlignment = Alignment.Center) {
             val bitmap: ImageBitmap? = if (isImage && thumbnails) produceState<ImageBitmap?>(null, entry.key) {
                 value = withContext(Dispatchers.IO) { runCatching { controller.thumbnail(local!!.path)?.asImageBitmap() }.getOrNull() }
             }.value else null
-            if (bitmap != null) androidx.compose.foundation.Image(bitmap, contentDescription = null, Modifier.size(DriveMetrics.glyph).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
-            else Icon(IconCatalog.forEntry(entry.isDirectory, entry.mime, entry.extension, isArchive), contentDescription = null, tint = if (entry.isDirectory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp))
-            if (selected) Box(Modifier.size(18.dp).align(Alignment.BottomEnd).clip(bottomNavPillShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Check, contentDescription = null, Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onPrimary)
+            if (bitmap != null) androidx.compose.foundation.Image(bitmap, contentDescription = null, Modifier.size(DriveMetrics.glyph).clip(RoundedCornerShape(DriveMetrics.pad)), contentScale = ContentScale.Crop)
+            else Icon(IconCatalog.forEntry(entry.isDirectory, entry.mime, entry.extension, isArchive), contentDescription = null, tint = if (entry.isDirectory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(DriveMetrics.glyphIcon))
+            if (selected) Box(Modifier.size(DriveMetrics.icon).align(Alignment.BottomEnd).clip(bottomNavPillShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.Check, contentDescription = null, Modifier.size(DriveMetrics.iconSmall), tint = MaterialTheme.colorScheme.onPrimary)
             }
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(DriveMetrics.padWide))
         Column(Modifier.weight(1f)) {
             Text(entry.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val meta = when {
@@ -546,7 +545,7 @@ private fun EntryRow(
             Text(meta, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box {
-            IconButton(onClick = { menu = true }, Modifier.size(36.dp)) { Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.chrome_more), Modifier.size(18.dp)) }
+            IconButton(onClick = { menu = true }, Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.chrome_more), Modifier.size(DriveMetrics.icon)) }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 @Composable fun item(label: Int, action: EntryAction) = DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = { menu = false; onMenu(action) })
                 if (local != null && !entry.isDirectory) item(R.string.files_open_with, EntryAction.OPEN_WITH)
@@ -577,10 +576,10 @@ private fun SelectionBar(
     val otherLocal = ui.otherPane.location as? Location.Local
     var more by remember { mutableStateOf(false) }
     Row(
-        Modifier.fillMaxWidth().testTag(DriveTags.FILES_SELECTION_BAR).background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxWidth().testTag(DriveTags.FILES_SELECTION_BAR).background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = DriveMetrics.pad, vertical = DriveMetrics.pad),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad),
     ) {
-        IconButton(onClick = { controller.update { FilesReducer.clearSelection(it, it.active) } }, Modifier.size(32.dp)) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.files_clear_selection)) }
+        IconButton(onClick = { controller.update { FilesReducer.clearSelection(it, it.active) } }, Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.files_clear_selection)) }
         Text(stringResource(if (inArchive) R.string.files_selected_readonly else R.string.files_selected, pane.selection.size), Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, maxLines = 2)
         when {
             inArchive && ui.dualPane && otherLocal != null -> Pill(stringResource(R.string.files_extract_to_other), { controller.transferSelection(ui.active, otherLocal, move = false) }, filled = true)
@@ -595,7 +594,7 @@ private fun SelectionBar(
             }
         }
         Box {
-            IconButton(onClick = { more = true }, Modifier.size(32.dp)) { Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.chrome_more)) }
+            IconButton(onClick = { more = true }, Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.chrome_more)) }
             DropdownMenu(expanded = more, onDismissRequest = { more = false }) {
                 val selected = controller.selectedEntries(ui.active)
                 if (!inArchive) {
@@ -637,7 +636,7 @@ private fun PlacesSheet(d: FilesDialog.Places, ui: FilesUiState, controller: Fil
         onDismiss()
     }
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = Modifier.testTag(DriveTags.FILES_PLACES_SHEET)) {
-        LazyColumn(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+        LazyColumn(Modifier.fillMaxWidth().padding(bottom = DriveMetrics.padWide)) {
             item { SectionHeader(stringResource(if (d.pickDestination) (if (d.move) R.string.files_move_to else R.string.files_copy_to) else R.string.files_places)) }
             // #603 ONE HEADER PER DECLARED SECTION (ui.files.sections), in declared order, each
             // holding the places that name it: Emulated (shared storage) and Cloud-Drive-Storage
@@ -646,14 +645,14 @@ private fun PlacesSheet(d: FilesDialog.Places, ui: FilesUiState, controller: Fil
             Declarations.files.sections.forEach { section ->
                 item { SectionHeader(section.label) }
                 declared.filter { it.section == section.id }.forEach { p ->
-                    if (p.hero) item { DriveCard(p.label, summary = p.location?.path, summaryMonospace = true, hero = true, onClick = { go(p) }) { Text(p.hint, Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer) } }
+                    if (p.hero) item { DriveCard(p.label, summary = p.location?.path, summaryMonospace = true, hero = true, onClick = { go(p) }) { Text(p.hint, Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer) } }
                     else item(key = p.id) { PlaceRow(p) { go(p) } }
                 }
             }
             item { SectionHeader(stringResource(R.string.files_places_section)) }
             items(discovered, key = { it.id }) { p -> PlaceRow(p) { go(p) } }
             item { SectionHeader(stringResource(R.string.files_bookmarks_section), count = bookmarks.size) }
-            if (bookmarks.isEmpty()) item { Text(stringResource(R.string.files_bookmarks_none), Modifier.padding(horizontal = 16.dp, vertical = 6.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (bookmarks.isEmpty()) item { Text(stringResource(R.string.files_bookmarks_none), Modifier.padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             items(bookmarks, key = { it.id }) { b -> PlaceRow(b, onRemove = { controller.prefs.removeBookmark(b.location!!.path) }) { go(b) } }
         }
     }
@@ -661,15 +660,15 @@ private fun PlacesSheet(d: FilesDialog.Places, ui: FilesUiState, controller: Fil
 
 @Composable
 private fun PlaceRow(p: Places.Place, onRemove: (() -> Unit)? = null, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
         Icon(IconCatalog.vectorOrDefault(p.icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(14.dp))
+        Spacer(Modifier.width(DriveMetrics.padWide))
         Column(Modifier.weight(1f)) {
             Text(p.label, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val hint = p.hint.ifBlank { p.location?.path ?: "" }
             if (hint.isNotBlank()) Text(hint, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        if (onRemove != null) IconButton(onClick = onRemove, Modifier.size(32.dp)) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.files_bookmark_remove), Modifier.size(16.dp)) }
+        if (onRemove != null) IconButton(onClick = onRemove, Modifier.size(DriveMetrics.tap)) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.files_bookmark_remove), Modifier.size(DriveMetrics.icon)) }
     }
 }
 
@@ -681,13 +680,13 @@ private fun SearchPanel(controller: FilesController, search: FilesController.Sea
     var contentToo by remember { mutableStateOf(false) }
     val root = ui.activePane.location as? Location.Local
     Column(Modifier.fillMaxSize().testTag(DriveTags.FILES_SEARCH_BAR)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter, vertical = DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(query, { query = it }, Modifier.weight(1f), label = { Text(stringResource(R.string.files_search_hint)) }, singleLine = true,
                 trailingIcon = { IconButton(onClick = { if (root != null && query.isNotBlank()) controller.startSearch(root, query, contentToo) }) { Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.files_search)) } })
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter), verticalAlignment = Alignment.CenterVertically) {
             Switch(checked = contentToo, onCheckedChange = { contentToo = it })
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DriveMetrics.pad))
             Text(stringResource(R.string.files_search_text_too), style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.weight(1f))
             if (search.running) Pill(stringResource(R.string.chrome_cancel), { controller.cancelSearch() })
@@ -699,16 +698,16 @@ private fun SearchPanel(controller: FilesController, search: FilesController.Sea
             else -> LazyColumn(Modifier.fillMaxSize()) {
                 items(search.hits, key = { it.entry.key }) { hit ->
                     val e = hit.entry
-                    Row(Modifier.fillMaxWidth().clickable { onOpen(hit) }.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().clickable { onOpen(hit) }.padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
                         Icon(IconCatalog.forEntry(e.isDirectory, e.mime, e.extension, false), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(Modifier.width(12.dp))
+                        Spacer(Modifier.width(DriveMetrics.padWide))
                         Column(Modifier.weight(1f)) {
                             Text(e.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text((e.location as Location.Local).parent()?.path ?: "", style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                         if (hit.matchedByContent) CapsuleBadge(stringResource(R.string.files_search_match_text))
                     }
-                    Hairline(Modifier.padding(start = 52.dp))
+                    Hairline(Modifier.padding(start = DriveMetrics.glyph + DriveMetrics.padWide))
                 }
             }
         }

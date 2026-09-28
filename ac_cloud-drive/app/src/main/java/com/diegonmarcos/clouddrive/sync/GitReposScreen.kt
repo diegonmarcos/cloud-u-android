@@ -52,7 +52,6 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.BuildConfig
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveActions
@@ -174,9 +173,9 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
 
     LazyColumn(modifier.fillMaxSize()) {
         item {
-            Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HERO).padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HERO).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Filled.Commit, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(DriveMetrics.pad))
                 Column(Modifier.weight(1f)) {
                     Text(stringResource(R.string.sync_store) + " · " + root, style = MaterialTheme.typography.labelMedium, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
@@ -292,7 +291,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
             SectionHeader(stringResource(R.string.sync_history_section), count = events.size, action = if (showHistory) stringResource(R.string.chrome_close) else stringResource(R.string.sync_history)) { showHistory = !showHistory }
         }
         if (showHistory) {
-            if (events.isEmpty()) item { Text(stringResource(R.string.sync_history_empty), Modifier.padding(horizontal = DriveMetrics.gutter + 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (events.isEmpty()) item { Text(stringResource(R.string.sync_history_empty), Modifier.padding(horizontal = DriveMetrics.sectionInset), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             items(events.take(50), key = { "${it.epochSeconds}-${it.repoId}" }) { e -> HistoryRow(e, fmt) }
         }
     }
@@ -347,8 +346,8 @@ private fun GitLoginBox(
         tag = DriveTags.SYNC_GIT_LOGIN,
     ) {
         if (webauth != null) {
-            SignInWays(host = host, policy = listOf(webauth.provider), modifier = Modifier.padding(top = 6.dp), pill = { label, tag, onClick ->
-                Pill(label, onClick, modifier = Modifier.padding(top = 6.dp).testTag(tag), icon = IconCatalog.vectorOrDefault(webauth.icon))
+            SignInWays(host = host, policy = listOf(webauth.provider), modifier = Modifier.padding(top = DriveMetrics.gapWide), pill = { label, tag, onClick ->
+                Pill(label, onClick, modifier = Modifier.padding(top = DriveMetrics.gapWide).testTag(tag), icon = IconCatalog.vectorOrDefault(webauth.icon))
             })
         }
         if (ssh != null) {
@@ -357,19 +356,19 @@ private fun GitLoginBox(
                 OutlinedTextField(
                     login.sshKeyPath, onSshKeyPath,
                     label = { Text(stringResource(R.string.sync_auth_key_path)) },
-                    singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = DriveMetrics.gapWide),
                 )
-                Text(stringResource(R.string.git_login_ssh_cannot_list), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.git_login_ssh_cannot_list), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         when {
-            listing.loading -> Text(stringResource(R.string.git_listing_loading), Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall)
+            listing.loading -> Text(stringResource(R.string.git_listing_loading), Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall)
             listing.error.isNotBlank() -> {
-                Text(stringResource(R.string.git_listing_failed, listing.error), Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall, color = colorResource(R.color.status_light_off))
+                Text(stringResource(R.string.git_listing_failed, listing.error), Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall, color = colorResource(R.color.status_light_off))
                 PillRow { Pill(stringResource(R.string.chrome_retry), onRetry) }
             }
-            listing.loaded && !listing.complete -> Text(stringResource(R.string.git_listing_truncated, page.api.maxPages), Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            listing.loaded && listing.repos.isEmpty() -> Text(stringResource(R.string.git_listing_empty), Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall)
+            listing.loaded && !listing.complete -> Text(stringResource(R.string.git_listing_truncated, page.api.maxPages), Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            listing.loaded && listing.repos.isEmpty() -> Text(stringResource(R.string.git_listing_empty), Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -397,17 +396,17 @@ private fun GitRepoRow(
     val light = lightOf(repo, glance)
     Row(
         Modifier.fillMaxWidth().testTag(DriveTags.SYNC_GIT_ROW)
-            .heightIn(min = 40.dp)
+            .heightIn(min = DriveMetrics.rowHeight)
             .clickable(enabled = repo != null, onClick = onToggle)
-            .padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 4.dp),
+            .padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         StatusDot(light, name)
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(DriveMetrics.pad))
         Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         if (isPrivate) CapsuleBadge(stringResource(R.string.chrome_private))
         if (fork) CapsuleBadge(stringResource(R.string.git_fork))
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(DriveMetrics.pad))
         Text(
             rowStats(repo, glance),
             Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace,
@@ -424,7 +423,7 @@ private fun GitRepoRow(
             )
         }
     }
-    if (running != null) LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter + 4.dp))
+    if (running != null) LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset))
 }
 
 /** The row's inline stats: what fits on one line and nothing more. */
@@ -487,18 +486,18 @@ private fun GitRepoOpsBox(
     DriveCard(repo.name, light = lightOf(repo, glance), tag = DriveTags.SYNC_REPO_CARD) {
         Text(
             if (repo.lastSyncEpochSeconds > 0) stringResource(R.string.sync_last, fmt.format(Date(repo.lastSyncEpochSeconds * 1000)), repo.lastSyncSummary) else stringResource(R.string.sync_never),
-            Modifier.padding(top = 2.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            Modifier.padding(top = DriveMetrics.tight), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis,
         )
         if (glance != null && glance.conflicts > 0) {
-            Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.Warning, contentDescription = null, tint = off, modifier = Modifier.padding(horizontal = 4.dp))
+            Row(Modifier.padding(top = DriveMetrics.gap), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Warning, contentDescription = null, tint = off, modifier = Modifier.padding(horizontal = DriveMetrics.gap))
                 Text(stringResource(R.string.sync_conflicts, glance.conflicts), color = off, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
             }
             PillRow { Pill(stringResource(R.string.sync_resolve_conflicts, glance.conflicts), { actions.openEngine(EngineActivity.ENGINE_GIT, repo.path) }, filled = true) }
         }
         if (running != null) {
-            LinearProgressIndicator(Modifier.fillMaxWidth().padding(vertical = 6.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            LinearProgressIndicator(Modifier.fillMaxWidth().padding(vertical = DriveMetrics.gapWide))
+            Row(horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad)) {
                 GitSyncCoordinator.Step.values().forEach { step ->
                     val active = step == running.step
                     Text(stepLabel(step), style = MaterialTheme.typography.labelSmall, fontWeight = if (active) FontWeight.Bold else FontWeight.Normal, color = if (active) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
@@ -510,8 +509,8 @@ private fun GitRepoOpsBox(
         // THE OPERATIONS RAIL — declared order, horizontally scrollable so a dense row's
         // disclosure never becomes a wall of buttons.
         Row(
-            Modifier.fillMaxWidth().testTag(DriveTags.SYNC_GIT_OPS).padding(top = 8.dp).horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            Modifier.fillMaxWidth().testTag(DriveTags.SYNC_GIT_OPS).padding(top = DriveMetrics.pad).horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             page.ops.forEach { op ->
@@ -547,10 +546,10 @@ private fun GitRepoOpsBox(
             Pill(stringResource(R.string.sync_history), { panel = if (panel == "history") "" else "history" }, icon = Icons.Filled.History)
             Pill(stringResource(R.string.sync_settings), onSettings, icon = Icons.Filled.Settings)
         }
-        if (readOnly) Text(stringResource(R.string.git_readonly_blocked), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (readOnly) Text(stringResource(R.string.git_readonly_blocked), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         result?.let { r ->
             Text(
-                r.summary, Modifier.padding(top = 6.dp), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace,
+                r.summary, Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace,
                 color = if (r.ok) MaterialTheme.colorScheme.onSurfaceVariant else off, maxLines = 4, overflow = TextOverflow.Ellipsis,
             )
         }
@@ -559,10 +558,10 @@ private fun GitRepoOpsBox(
         val d = details
         when (panel) {
             "commit" -> {
-                OutlinedTextField(message, { message = it }, label = { Text(stringResource(R.string.git_commit_message)) }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+                OutlinedTextField(message, { message = it }, label = { Text(stringResource(R.string.git_commit_message)) }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = DriveMetrics.gapWide))
                 PillRow { Pill(page.op("commit")?.label.orEmpty(), { coordinator.runOp(repo, "commit", message); panel = "" }, filled = true, enabled = running == null) }
             }
-            "metadata" -> Column(Modifier.padding(top = 6.dp)) {
+            "metadata" -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
                 MetaLine(stringResource(R.string.git_meta_path, repo.path))
                 MetaLine(stringResource(R.string.git_meta_branch, glance?.branch ?: stringResource(R.string.sync_no_branch), glance?.upstream ?: stringResource(R.string.git_meta_no_upstream)))
                 MetaLine(stringResource(R.string.git_meta_auth, repo.authKind, repo.remoteUrl.ifBlank { stringResource(R.string.git_meta_no_remote) }))
@@ -573,20 +572,20 @@ private fun GitRepoOpsBox(
                 }
                 d?.error?.let { why -> MetaLine(stringResource(R.string.sync_glance_unreadable, why)) }
             }
-            "stats" -> Column(Modifier.padding(top = 6.dp)) {
+            "stats" -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
                 MetaLine(stringResource(R.string.git_stats_state, if (glance?.changed == 0) stringResource(R.string.sync_clean) else stringResource(R.string.sync_changed, glance?.changed ?: 0), glance?.ahead ?: 0, glance?.behind ?: 0, glance?.conflicts ?: 0))
                 if (d != null && !d.loading) MetaLine(stringResource(R.string.git_stats_commits, d.commits.size, d.hooks.size, d.workflows.size))
             }
-            "history" -> Column(Modifier.padding(top = 6.dp)) {
+            "history" -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
                 if (d == null || d.loading) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
                 else if (d.commits.isEmpty()) Text(stringResource(R.string.git_history_empty), style = MaterialTheme.typography.bodySmall)
                 else d.commits.forEach { c ->
                     MetaLine(stringResource(R.string.git_commit_line, c.shortSha, fmt.format(Date(c.time * 1000)), c.author, c.summary))
                 }
             }
-            "remote" -> Column(Modifier.padding(top = 6.dp)) {
+            "remote" -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
                 Text(stringResource(R.string.git_remote_switch), style = MaterialTheme.typography.labelLarge)
-                Row(Modifier.padding(top = 6.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.padding(top = DriveMetrics.gapWide).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
                     page.remoteModes.forEach { mode ->
                         val url = mode.urlFor(page.owner, repoName)
                         Pill(mode.label, { coordinator.setRemote(repo, mode, page.owner, repoName) }, icon = IconCatalog.vectorOrDefault(mode.icon), filled = repo.remoteUrl == url)
@@ -594,24 +593,24 @@ private fun GitRepoOpsBox(
                 }
                 page.remoteModes.forEach { mode -> MetaLine(stringResource(R.string.git_remote_mode_line, mode.label, mode.urlFor(page.owner, repoName))) }
             }
-            "hooks" -> Column(Modifier.padding(top = 6.dp)) {
+            "hooks" -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
                 if (d == null || d.loading) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
                 else if (d.hooks.isEmpty()) Text(stringResource(R.string.git_hooks_none), style = MaterialTheme.typography.bodySmall)
                 else d.hooks.forEach { h -> MetaLine(h) }
             }
-            "actions" -> Column(Modifier.padding(top = 6.dp)) {
+            "actions" -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
                 if (d == null || d.loading) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
                 else if (d.workflows.isEmpty()) Text(stringResource(R.string.git_actions_none), style = MaterialTheme.typography.bodySmall)
                 else d.workflows.forEach { w -> MetaLine(w) }
             }
-            "size" -> Column(Modifier.padding(top = 6.dp)) {
+            "size" -> Column(Modifier.padding(top = DriveMetrics.gapWide)) {
                 if (d == null || d.loading) Text(stringResource(R.string.sync_glance_reading), style = MaterialTheme.typography.bodySmall)
                 else MetaLine(stringResource(R.string.git_size_line, GitRepoScan.humanBytes(d.size.bytes), d.size.files, d.size.folders, GitRepoScan.humanBytes(d.size.gitBytes)))
             }
         }
         Text(
             if (repo.autoSync) stringResource(R.string.sync_auto, if (repo.syncIntervalMinutes > 0) repo.syncIntervalMinutes else BuildConfig.GIT_SYNC_INTERVAL_MINUTES, stringResource(if (repo.syncRequireUnmetered) R.string.sync_network_unmetered else R.string.sync_network_any)) else stringResource(R.string.sync_manual),
-            Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            Modifier.padding(top = DriveMetrics.pad), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 
@@ -644,12 +643,12 @@ private fun stepLabel(step: GitSyncCoordinator.Step): String = when (step) {
 private fun HistoryRow(e: SyncEvent, fmt: DateFormat, compact: Boolean = false) {
     var open by remember { mutableStateOf(false) }
     val state = if (e.ok) StatusLight.State.ON else StatusLight.State.OFF
-    Column(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HISTORY).clickable { open = !open }.padding(horizontal = if (compact) 0.dp else DriveMetrics.gutter + 4.dp, vertical = 4.dp)) {
+    Column(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HISTORY).clickable { open = !open }.padding(horizontal = if (compact) DriveMetrics.none else DriveMetrics.sectionInset, vertical = DriveMetrics.gap)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             StatusLightRow(state, e.repoName)
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DriveMetrics.pad))
             Text(fmt.format(Date(e.epochSeconds * 1000)), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(DriveMetrics.pad))
             if (!compact) Text(e.repoName, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.weight(1f))
             CapsuleBadge(stringResource(if (e.trigger == SyncHistory.TRIGGER_SCHEDULED) R.string.sync_trigger_scheduled else R.string.sync_trigger_manual))
@@ -679,23 +678,23 @@ private fun RepoSettingsSheet(repo: ManagedRepo, coordinator: GitSyncCoordinator
     val periods = Declarations.sync.gitPeriodsMinutes
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 32.dp)) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = DriveMetrics.padWide).padding(bottom = DriveMetrics.padWide)) {
             Text(repo.name, style = MaterialTheme.typography.titleLarge)
             Text(repo.path, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.padding(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = autoSync, onCheckedChange = { autoSync = it }); Spacer(Modifier.width(10.dp)); Text(stringResource(R.string.sync_settings_auto)) }
-            Text(stringResource(R.string.sync_settings_period), Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
-            Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Spacer(Modifier.padding(DriveMetrics.gapWide))
+            Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = autoSync, onCheckedChange = { autoSync = it }); Spacer(Modifier.width(DriveMetrics.pad)); Text(stringResource(R.string.sync_settings_auto)) }
+            Text(stringResource(R.string.sync_settings_period), Modifier.padding(top = DriveMetrics.pad), style = MaterialTheme.typography.labelLarge)
+            Row(Modifier.padding(top = DriveMetrics.gapWide), horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
                 (listOf(0L) + periods.map { it.toLong() }).forEach { p ->
                     Pill(if (p == 0L) stringResource(R.string.sync_settings_minutes, BuildConfig.GIT_SYNC_INTERVAL_MINUTES) else stringResource(R.string.sync_settings_minutes, p), { interval = p }, filled = interval == p)
                 }
             }
-            Text(stringResource(R.string.sync_settings_network), Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
-            Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(stringResource(R.string.sync_settings_network), Modifier.padding(top = DriveMetrics.pad), style = MaterialTheme.typography.labelLarge)
+            Row(Modifier.padding(top = DriveMetrics.gapWide), horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
                 Pill(stringResource(R.string.sync_network_unmetered), { unmetered = true }, filled = unmetered)
                 Pill(stringResource(R.string.sync_network_any), { unmetered = false }, filled = !unmetered)
             }
-            Text(stringResource(R.string.sync_settings_auth), Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.sync_settings_auth), Modifier.padding(top = DriveMetrics.padWide), style = MaterialTheme.typography.labelLarge)
             Row {
                 listOf("none" to R.string.sync_auth_none, "https" to R.string.sync_auth_https, "ssh" to R.string.sync_auth_ssh).forEach { (k, label) ->
                     Row(Modifier.clickable { authKind = k }, verticalAlignment = Alignment.CenterVertically) { RadioButton(selected = authKind == k, onClick = { authKind = k }); Text(stringResource(label), style = MaterialTheme.typography.bodySmall) }
@@ -709,12 +708,12 @@ private fun RepoSettingsSheet(repo: ManagedRepo, coordinator: GitSyncCoordinator
                 OutlinedTextField(keyPath, { keyPath = it }, label = { Text(stringResource(R.string.sync_auth_key_path)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(secret, { secret = it }, label = { Text(stringResource(R.string.sync_auth_passphrase)) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
             }
-            Text(stringResource(R.string.sync_settings_author), Modifier.padding(top = 12.dp), style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(R.string.sync_settings_author), Modifier.padding(top = DriveMetrics.padWide), style = MaterialTheme.typography.labelLarge)
             OutlinedTextField(authorName, { authorName = it }, label = { Text(stringResource(R.string.sync_settings_author_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(authorEmail, { authorEmail = it }, label = { Text(stringResource(R.string.sync_settings_author_email)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) { Switch(checked = rebase, onCheckedChange = { rebase = it }); Spacer(Modifier.width(10.dp)); Text(stringResource(R.string.sync_settings_rebase)) }
+            Row(Modifier.padding(top = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) { Switch(checked = rebase, onCheckedChange = { rebase = it }); Spacer(Modifier.width(DriveMetrics.pad)); Text(stringResource(R.string.sync_settings_rebase)) }
             OutlinedTextField(message, { message = it }, label = { Text(stringResource(R.string.sync_settings_message)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth().padding(top = DriveMetrics.padWide), horizontalArrangement = Arrangement.SpaceBetween) {
                 Pill(stringResource(R.string.sync_settings_remove), { confirmRemove = true })
                 Pill(stringResource(R.string.chrome_save), {
                     if (secret.isNotBlank()) coordinator.setSecret(repo, secret)

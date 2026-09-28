@@ -18,7 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.R
@@ -86,7 +85,7 @@ fun HomeScreen(
             item { SectionHeader(stringResource(R.string.home_apps_section), count = Declarations.apps.size) }
             item {
                 Text(
-                    stringResource(R.string.home_apps_hint), Modifier.padding(horizontal = DriveMetrics.gutter + 4.dp),
+                    stringResource(R.string.home_apps_hint), Modifier.padding(horizontal = DriveMetrics.sectionInset),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

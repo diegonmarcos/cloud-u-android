@@ -10,7 +10,7 @@
 #       Breadcrumbs → PaneToolbar → StorageBar → (Loading|Error|Empty|EntryList);
 #       every element carries its DriveTags tag.
 #   F2  dual pane: PaneId.A and PaneId.B are both composed; the inactive pane
-#       collapses to PaneHeader in portrait; side by side at ≥ 600.dp; the toggle
+#       collapses to PaneHeader in portrait; side by side at ≥ DriveMetrics.wide; the toggle
 #       persists (DrivePrefs.setDualPane).
 #   F3  tree view: ViewMode.TREE, treeRows over the pane's expanded set, a chevron
 #       toggling FilesReducer.toggleExpanded, indent per depth.
@@ -90,7 +90,7 @@ done
 
 echo "── F2 two real panes ──"
 if grep -qE 'paneContent\(PaneId\.A, Modifier\.weight\(1f\)\.fillMaxHeight\(\)\)' "$SCREEN" && grep -qE 'paneContent\(PaneId\.B, Modifier\.weight\(1f\)\.fillMaxHeight\(\)\)' "$SCREEN"; then pass "both panes composed side by side"; else fail "no side-by-side composition of pane A and B"; fi
-if grep -qE 'val wide = maxWidth >= 600\.dp' "$SCREEN" && grep -qE 'PaneHeader\(ui\.otherId, ui, listings, controller\)' "$SCREEN"; then pass "portrait collapses the inactive pane to a header; ≥600dp goes side by side"; else fail "the portrait / wide layouts are not both there"; fi
+if grep -qE 'val wide = maxWidth >= DriveMetrics\.wide' "$SCREEN" && grep -qE 'PaneHeader\(ui\.otherId, ui, listings, controller\)' "$SCREEN"; then pass "portrait collapses the inactive pane to a header; ≥600dp goes side by side"; else fail "the portrait / wide layouts are not both there"; fi
 if grep -qE 'fun setDual\(dual: Boolean\)' "$CTRL" && grep -qE 'prefs\.setDualPane\(dual\)' "$CTRL" && grep -qE 'fun toggleDual\(s: FilesUiState\)' "$STATE"; then pass "the dual toggle is a reducer and persists"; else fail "dual pane toggle not persisted"; fi
 if grep -qE 'val otherId: PaneId' "$STATE" && grep -qE 'transferSelection\(ui\.active, otherLocal, move = false\)' "$SCREEN" && grep -qE 'transferSelection\(ui\.active, otherLocal, move = true\)' "$SCREEN"; then pass "copy → other pane and move → other pane target the OTHER pane's folder"; else fail "cross-pane copy/move missing"; fi
 

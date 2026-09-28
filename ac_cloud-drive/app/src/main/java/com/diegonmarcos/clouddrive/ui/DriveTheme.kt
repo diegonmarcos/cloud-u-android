@@ -2,10 +2,13 @@ package com.diegonmarcos.clouddrive.ui
 
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.isSpecified
 import com.diegonmarcos.clouddrive.R
 
 /**
@@ -28,7 +31,30 @@ import com.diegonmarcos.clouddrive.R
  * fixes all of them and every future one, which is why the fix is not per widget: a
  * widget-by-widget `color =` would have to be remembered on every new Text ever added.
  * The View half of the same promise is Theme.CloudDrive's android:textColorPrimary.
+ *
+ * #621 THE TEXT half of the density declaration. The Material type scale is sized for
+ * launcher-class chrome; this app is rows of facts. Rather than a `fontSize =` on every
+ * Text — the per-widget fix that has to be remembered forever — the WHOLE scale is
+ * multiplied ONCE by DriveMetrics.textScale, so `MaterialTheme.typography.*` is already
+ * dense everywhere and re-tuning the app's type is one number in DriveMetrics.
  */
+/** One style, scaled: the size and its line height together, so leading never outgrows the glyph. */
+private fun TextStyle.dense(scale: Float = DriveMetrics.textScale) = copy(
+    fontSize = if (fontSize.isSpecified) fontSize * scale else fontSize,
+    lineHeight = if (lineHeight.isSpecified) lineHeight * scale else lineHeight,
+)
+
+/** The whole Material scale at DriveMetrics.textScale — the app's ONE type declaration. */
+private fun denseTypography(): Typography = Typography().let { t ->
+    Typography(
+        displayLarge = t.displayLarge.dense(), displayMedium = t.displayMedium.dense(), displaySmall = t.displaySmall.dense(),
+        headlineLarge = t.headlineLarge.dense(), headlineMedium = t.headlineMedium.dense(), headlineSmall = t.headlineSmall.dense(),
+        titleLarge = t.titleLarge.dense(), titleMedium = t.titleMedium.dense(), titleSmall = t.titleSmall.dense(),
+        bodyLarge = t.bodyLarge.dense(), bodyMedium = t.bodyMedium.dense(), bodySmall = t.bodySmall.dense(),
+        labelLarge = t.labelLarge.dense(), labelMedium = t.labelMedium.dense(), labelSmall = t.labelSmall.dense(),
+    )
+}
+
 @Composable
 fun DriveTheme(content: @Composable () -> Unit) {
     val background = colorResource(R.color.drive_background)
@@ -71,7 +97,7 @@ fun DriveTheme(content: @Composable () -> Unit) {
         errorContainer = raised,
         onErrorContainer = off,
     )
-    MaterialTheme(colorScheme = scheme) {
+    MaterialTheme(colorScheme = scheme, typography = denseTypography()) {
         CompositionLocalProvider(LocalContentColor provides text, content = content)
     }
 }

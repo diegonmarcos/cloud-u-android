@@ -60,11 +60,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.files.ConfirmDialog
 import com.diegonmarcos.clouddrive.files.FileOps
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTheme
 import com.diegonmarcos.clouddrive.ui.IslandAction
 import com.diegonmarcos.clouddrive.ui.Pill
@@ -124,7 +124,7 @@ class ImageViewerActivity : ComponentActivity() {
             HorizontalPager(state = pager, modifier = Modifier.weight(1f).fillMaxWidth(), key = { paths[it] }) { page ->
                 ZoomableImage(paths[page], version)
             }
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.pad, vertical = DriveMetrics.pad), horizontalArrangement = Arrangement.SpaceEvenly) {
                 IslandAction(Icons.Filled.Rotate90DegreesCw, stringResource(R.string.viewer_rotate), tint = Color.White) { current?.let { rotate(File(it)); version++ } }
                 IslandAction(Icons.Filled.QrCodeScanner, stringResource(R.string.viewer_scan), tint = Color.White) { sheet = Sheet.SCAN }
                 IslandAction(Icons.Filled.DocumentScanner, stringResource(R.string.viewer_ocr), tint = Color.White) { sheet = Sheet.OCR }
@@ -229,8 +229,8 @@ class ImageViewerActivity : ComponentActivity() {
                 if (lat != null && lon != null) getString(R.string.viewer_info_location, lat, lon) else null,
             )
         }
-        Column(Modifier.padding(20.dp).padding(bottom = 24.dp)) {
-            info.forEach { Text(it, Modifier.padding(vertical = 3.dp), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
+        Column(Modifier.padding(DriveMetrics.padWide).padding(bottom = DriveMetrics.padWide)) {
+            info.forEach { Text(it, Modifier.padding(vertical = DriveMetrics.tight), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
         }
     }
 
@@ -242,7 +242,7 @@ class ImageViewerActivity : ComponentActivity() {
     @Composable
     private fun ScanSheet(engine: ImageScanEngine, file: File, say: (String) -> Unit, close: () -> Unit) {
         val result by produceState<Result<BarcodePayload?>?>(null, file) { value = withContext(Dispatchers.IO) { runCatching { engine.decodeBarcode(file)?.payload } } }
-        Column(Modifier.padding(20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(DriveMetrics.padWide).padding(bottom = DriveMetrics.padWide), verticalArrangement = Arrangement.spacedBy(DriveMetrics.pad)) {
             val r = result
             when {
                 r == null -> CircularProgressIndicator()
@@ -251,7 +251,7 @@ class ImageViewerActivity : ComponentActivity() {
                 else -> {
                     val p = r.getOrNull()!!
                     Text(payloadText(p), style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad)) {
                         when (p) {
                             is BarcodePayload.Url -> Pill(stringResource(R.string.viewer_open_url), { openUrl(p.url); close() }, filled = true)
                             is BarcodePayload.Wifi -> Pill(stringResource(R.string.viewer_join_wifi), { say(joinWifi(p.ssid, p.password)); close() }, filled = true)
@@ -283,7 +283,7 @@ class ImageViewerActivity : ComponentActivity() {
     @Composable
     private fun OcrSheet(engine: ImageScanEngine, file: File, say: (String) -> Unit, close: () -> Unit) {
         val result by produceState<Pair<String?, String?>?>(null, file) { value = withContext(Dispatchers.IO) { runCatching { val r = engine.recognizeText(file); r.text to r.error }.getOrElse { null to (it.message ?: it.toString()) } } }
-        Column(Modifier.padding(20.dp).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(DriveMetrics.padWide).padding(bottom = DriveMetrics.padWide), verticalArrangement = Arrangement.spacedBy(DriveMetrics.pad)) {
             val r = result
             when {
                 r == null -> CircularProgressIndicator()
@@ -291,8 +291,8 @@ class ImageViewerActivity : ComponentActivity() {
                 r.first.isNullOrBlank() -> Text(stringResource(R.string.viewer_no_text))
                 else -> {
                     val text = r.first!!
-                    Text(text, Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 8.dp), style = MaterialTheme.typography.bodySmall, maxLines = 18)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text, Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = DriveMetrics.pad), style = MaterialTheme.typography.bodySmall, maxLines = 18)
+                    Row(horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad)) {
                         Pill(stringResource(R.string.viewer_copy), { copyText(text); close() }, filled = true)
                         Pill(stringResource(R.string.viewer_share), { startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), null)); close() })
                         Pill(stringResource(R.string.viewer_save_txt), { say(saveBeside(file, text, "txt")); close() })

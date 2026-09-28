@@ -18,13 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.BuildConfig
 import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.files.Places
 import com.diegonmarcos.clouddrive.ui.DriveCard
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.PillRow
@@ -51,7 +51,7 @@ fun OthersPage(prefs: DrivePrefs, actions: DriveActions, rcloneVersion: String?,
             ) {
                 Text(
                     stringResource(R.string.configs_removable_volumes, volumes.size),
-                    Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 PillRow {
                     Pill(stringResource(R.string.configs_grant_tree), { actions.requestTreeGrant() }, filled = !granted)
@@ -72,9 +72,9 @@ fun OthersPage(prefs: DrivePrefs, actions: DriveActions, rcloneVersion: String?,
 
 @Composable
 private fun AboutRow(label: String, value: String) {
-    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(top = DriveMetrics.gapWide), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(DriveMetrics.padWide))
         Text(value, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
     }
 }

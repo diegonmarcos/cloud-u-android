@@ -13,7 +13,7 @@
     "compile_sdk": 36,
     "min_sdk": 26,
     "target_sdk": 35,
-    "version_code": 10,
+    "version_code": 11,
     "version_name": "0.5.0-dev",
     "abi_filters": [
       "arm64-v8a"
@@ -511,11 +511,12 @@
           }
         ],
         "history_max": 30,
-        "_doc_public_repos": "#608 THE DECLARED PUBLIC SET of the `public` section, alphabetical by name. DERIVED, not hand-picked: every repository of `owner` whose name begins with one of `name_families` AND whose GitHub `private` flag is false, enumerated once over the REST list route and verified one by one (an unauthenticated GET of /repos/<owner>/<name> answering 200 IS the proof of public). cloud-u-android — this repository — is in the set; it was missing from data/drive-git-repos.json's curated family's intent and is named here explicitly for that reason. front-data is HERE and PUBLIC: drive-git-repos.json marked it private, which the live API contradicts, and that file is corrected in the same change. There is no repository called `front`: the front-end tree of this fleet is `ffront`, carried as its OWN name family (the `front` family does not match it) and seeded like the cloud set, so it is present here explicitly rather than silently renamed. NOT in the set, on purpose: diegonmarcos.github.io and git-repos-master (public, but outside both name families) and every cloud*/front* repository whose flag is private (cloud-data, cloud-data-lfs, cloud-data-my-ai-memory, cloud-me, cloud-me_configs, cloud-me_data-private, cloud-me_vault, cloud-notes, front-galaxy-gaia, front-unity) — those reach the page through the personal section's authenticated listing, which is where a private repository belongs. THE FIELDS ARE `repo` AND `caption`, NOT `name`/`label`, and that is not cosmetic: the fleet's app-names guard (aa_cloud-superapp/test/test-app-names-pattern.sh T5) sweeps every `name`, `label` and `title` in every build.json and refuses a value that normalises onto an application's name — `cloud-me_data-pub` normalises onto the cloud-me application — and it is RIGHT to refuse an application name written that way. A git repository name is a different kind of fact from an application name, so it is carried under a key that says which one it is, instead of dropping a repository out of a set whose whole point is to be complete.",
+        "_doc_public_repos": "#608 THE DECLARED PUBLIC SET of the `public` section, alphabetical by name. DERIVED, not hand-picked: every repository of `owner` whose name begins with one of `name_families` AND whose GitHub `private` flag is false, enumerated once over the REST list route and verified one by one (an unauthenticated GET of /repos/<owner>/<name> answering 200 IS the proof of public). cloud-u-android — this repository — is in the set; it was missing from data/drive-git-repos.json's curated family's intent and is named here explicitly for that reason. front-data is HERE and PUBLIC: drive-git-repos.json marked it private, which the live API contradicts, and that file is corrected in the same change. There is no repository called `front`: the front-end tree of this fleet is `ffront`, carried as its OWN name family (the `front` family does not match it) and seeded like the cloud set, so it is present here explicitly rather than silently renamed. #616 CORRECTED THE SET: the seed set is what cloud/repos.json and ffront/repos.json DECLARE public, not a name prefix, so it grew diegonmarcos.github.io and front-diegonmarcos \u2014 both are HERE now, `diegonmarcos` joining the name families for the first of them, because a repository that seeds into the store and is missing from the page is a store the page cannot show (P2 refuses that disagreement). NOT in the set, on purpose: git-repos-master (public, but outside the name families) and every cloud*/front* repository whose flag is private (cloud-data, cloud-data-lfs, cloud-data-my-ai-memory, cloud-me, cloud-me_configs, cloud-me_data-private, cloud-me_vault, cloud-notes, front-galaxy-gaia, front-unity) — those reach the page through the personal section's authenticated listing, which is where a private repository belongs. THE FIELDS ARE `repo` AND `caption`, NOT `name`/`label`, and that is not cosmetic: the fleet's app-names guard (aa_cloud-superapp/test/test-app-names-pattern.sh T5) sweeps every `name`, `label` and `title` in every build.json and refuses a value that normalises onto an application's name — `cloud-me_data-pub` normalises onto the cloud-me application — and it is RIGHT to refuse an application name written that way. A git repository name is a different kind of fact from an application name, so it is carried under a key that says which one it is, instead of dropping a repository out of a set whose whole point is to be complete.",
         "name_families": [
           "cloud",
-          "front",
-          "ffront"
+          "diegonmarcos",
+          "ffront",
+          "front"
         ],
         "public_repos": [
           {
@@ -547,6 +548,10 @@
             "caption": "cloud-u-linux"
           },
           {
+            "repo": "diegonmarcos.github.io",
+            "caption": "diegonmarcos.github.io"
+          },
+          {
             "repo": "ffront",
             "caption": "ffront"
           },
@@ -557,6 +562,10 @@
           {
             "repo": "front-data",
             "caption": "front-data"
+          },
+          {
+            "repo": "front-diegonmarcos",
+            "caption": "front-diegonmarcos"
           }
         ]
       }

@@ -273,7 +273,7 @@ for t in hooksSkipTheSamples workflowsAreTheYamlOnes sizeCountsTheTreeAndTheGitD
 done
 
 echo "── P8 dense, not a card per repository ──"
-if grep -qE 'private fun GitRepoRow\(' "$PAGE" && grep -qE 'testTag\(DriveTags\.SYNC_GIT_ROW\)' "$PAGE" && grep -qE '\.heightIn\(min = 40\.dp\)' "$PAGE" && grep -qE 'StatusDot\(light, name\)' "$PAGE"; then pass "one compact Row per repository, with a height floor and the one-character light"; else fail "the repository row is not the dense row #608 asked for"; fi
+if grep -qE 'private fun GitRepoRow\(' "$PAGE" && grep -qE 'testTag\(DriveTags\.SYNC_GIT_ROW\)' "$PAGE" && grep -qE '\.heightIn\(min = DriveMetrics\.rowHeight\)' "$PAGE" && grep -qE 'StatusDot\(light, name\)' "$PAGE"; then pass "one compact Row per repository, with a height floor and the one-character light"; else fail "the repository row is not the dense row #608 asked for"; fi
 if python3 - "$PAGE" <<'PYTHON'
 import re, sys
 src = open(sys.argv[1], encoding="utf-8").read()

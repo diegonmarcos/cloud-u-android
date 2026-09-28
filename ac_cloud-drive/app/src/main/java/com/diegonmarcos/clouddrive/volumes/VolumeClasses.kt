@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.sync.ConnectionRow
@@ -128,7 +127,7 @@ fun S3Volumes(coordinator: RcloneCoordinator, modifier: Modifier = Modifier) {
         if (remotes.isEmpty()) item { EmptyState(Icons.Filled.Cloud, stringResource(R.string.volumes_class_empty), stringResource(R.string.volumes_s3_hint)) }
         items(remotes, key = { "s3-" + it.name }) { r ->
             val opened = open == r.name
-            val note = Modifier.padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 6.dp)
+            val note = Modifier.padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.gapWide)
             Column(Modifier.fillMaxWidth()) {
                 DriveCard(
                     r.name,
@@ -138,7 +137,7 @@ fun S3Volumes(coordinator: RcloneCoordinator, modifier: Modifier = Modifier) {
                     summaryMonospace = true,
                     tag = DriveTags.VOLUMES_CARD,
                 ) {
-                    if (r.status == "unreachable" && r.reason.isNotBlank()) Text(r.reason, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    if (r.status == "unreachable" && r.reason.isNotBlank()) Text(r.reason, Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     PillRow {
                         Pill(stringResource(if (opened) R.string.volumes_close else R.string.rclone_browse), {
                             if (opened) { open = null; entries = emptyList() } else { open = r.name; path = "" }
@@ -154,11 +153,11 @@ fun S3Volumes(coordinator: RcloneCoordinator, modifier: Modifier = Modifier) {
                         Row(
                             Modifier.fillMaxWidth().testTag(DriveTags.VOLUMES_ENTRY_ROW)
                                 .clickable(enabled = e.isDir) { path = if (path.isBlank()) e.path else path + "/" + e.name }
-                                .padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 8.dp),
+                                .padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(IconCatalog.forEntry(e.isDir, e.mimeType, e.name.substringAfterLast('.', ""), false), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                            Column(Modifier.weight(1f).padding(start = DriveMetrics.padWide)) {
                                 Text(e.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 if (!e.isDir) Text(RcloneOutput.humanBytes(e.size), style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }

@@ -14,9 +14,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.ui.DriveCard
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.StatusLight
@@ -55,11 +55,11 @@ fun SignInCard(modifier: Modifier = Modifier) {
         },
         tag = DriveTags.CONFIGS_CARD,
     ) {
-        SignInWays(host = host, modifier = Modifier.padding(top = 8.dp), pill = { label, tag, onClick ->
-            Pill(label, onClick, modifier = Modifier.padding(top = 6.dp).testTag(tag))
+        SignInWays(host = host, modifier = Modifier.padding(top = DriveMetrics.pad), pill = { label, tag, onClick ->
+            Pill(label, onClick, modifier = Modifier.padding(top = DriveMetrics.gapWide).testTag(tag))
         })
-        Text(stringResource(R.string.configs_sign_in_applies, DriveAuthApply.applies.keys.joinToString(" · ")), Modifier.padding(top = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        report?.let { Text(it.text(), Modifier.padding(top = 6.dp).testTag(DriveTags.CONFIGS_SIGN_IN_REPORT), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
+        Text(stringResource(R.string.configs_sign_in_applies, DriveAuthApply.applies.keys.joinToString(" · ")), Modifier.padding(top = DriveMetrics.pad), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        report?.let { Text(it.text(), Modifier.padding(top = DriveMetrics.gapWide).testTag(DriveTags.CONFIGS_SIGN_IN_REPORT), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace) }
     }
 }
 

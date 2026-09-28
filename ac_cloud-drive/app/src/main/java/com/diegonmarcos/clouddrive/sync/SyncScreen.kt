@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.diegonmarcos.clouddrive.Declarations
@@ -34,6 +33,7 @@ import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.GitSyncWorker
 import com.diegonmarcos.clouddrive.R
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.EmptyState
 import com.diegonmarcos.clouddrive.ui.IconCatalog
@@ -91,8 +91,8 @@ fun SyncScreen(
     Column(modifier.fillMaxSize()) {
         ToolbarIsland(title = stringResource(R.string.sync_tab_title), subtitle = pages.firstOrNull { it.id == current }?.label)
         Row(
-            Modifier.fillMaxWidth().testTag(DriveTags.SYNC_STRIP).horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Modifier.fillMaxWidth().testTag(DriveTags.SYNC_STRIP).horizontalScroll(rememberScrollState()).padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.gap),
+            horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad),
         ) {
             pages.forEach { p -> Pill(p.label, { current = p.id }, icon = IconCatalog.vectorOrDefault(p.icon), filled = current == p.id) }
         }

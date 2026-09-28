@@ -27,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
@@ -36,6 +35,7 @@ import com.diegonmarcos.clouddrive.files.Places
 import com.diegonmarcos.clouddrive.sync.MountsSyncScreen
 import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
 import com.diegonmarcos.clouddrive.ui.DriveCard
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.EmptyState
 import com.diegonmarcos.clouddrive.ui.IconCatalog
@@ -136,8 +136,8 @@ private fun ClassStrip(
 ) {
     SectionHeader(label, count = classes.size)
     Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = DriveMetrics.padWide, vertical = DriveMetrics.gap),
+        horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad),
     ) {
         classes.forEach { c -> Pill(c.label, { onPick(c.id) }, icon = IconCatalog.vectorOrDefault(c.icon), filled = current == c.id) }
         trailing()

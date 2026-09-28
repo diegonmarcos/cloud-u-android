@@ -30,8 +30,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.R
@@ -69,10 +67,10 @@ fun AppsGrid(actions: DriveActions, onRoute: (tab: String, page: String) -> Unit
     Column(modifier.fillMaxWidth()) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
-            modifier = Modifier.fillMaxWidth().height(96.dp * rows).testTag(DriveTags.APPS_GRID),
+            modifier = Modifier.fillMaxWidth().height(DriveMetrics.appTile * rows).testTag(DriveTags.APPS_GRID),
             contentPadding = PaddingValues(DriveMetrics.gutter),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(DriveMetrics.pad),
+            verticalArrangement = Arrangement.spacedBy(DriveMetrics.pad),
             userScrollEnabled = false,
         ) {
             items(apps, key = { it.label }) { app ->
@@ -87,15 +85,15 @@ fun AppsGrid(actions: DriveActions, onRoute: (tab: String, page: String) -> Unit
                                 if (!ok) scope.launch { snackbar.showSnackbar(ctx.getString(R.string.chrome_not_installed, app.label)) }
                             }
                         }
-                        .padding(vertical = 14.dp),
+                        .padding(vertical = DriveMetrics.padWide),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Box(Modifier.size(56.dp).clip(bottomNavPillShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-                        Text(app.icon, fontSize = 26.sp)
-                        if (!present) Text(StatusLight.glyph(StatusLight.State.OFF), Modifier.align(Alignment.BottomEnd).padding(4.dp), color = colorResource(StatusLight.colourRes(StatusLight.State.OFF)), fontSize = 12.sp)
+                    Box(Modifier.size(DriveMetrics.appGlyph).clip(bottomNavPillShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+                        Text(app.icon, fontSize = DriveMetrics.tileGlyphText)
+                        if (!present) Text(StatusLight.glyph(StatusLight.State.OFF), Modifier.align(Alignment.BottomEnd).padding(DriveMetrics.gap), color = colorResource(StatusLight.colourRes(StatusLight.State.OFF)), fontSize = DriveMetrics.statusGlyphText)
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Text(app.label, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 6.dp))
+                    Spacer(Modifier.height(DriveMetrics.pad))
+                    Text(app.label, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = DriveMetrics.gapWide))
                 }
             }
         }

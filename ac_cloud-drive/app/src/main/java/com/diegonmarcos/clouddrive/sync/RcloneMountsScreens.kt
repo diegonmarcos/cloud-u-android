@@ -30,7 +30,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
@@ -75,13 +74,13 @@ fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions:
 
     LazyColumn(modifier.fillMaxSize()) {
         item {
-            Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HERO).padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_HERO).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(if (available) stringResource(R.string.rclone_binary_present, version ?: "") else stringResource(R.string.rclone_binary_missing), style = MaterialTheme.typography.labelMedium)
                     Text(stringResource(R.string.rclone_remotes_count, remotes.size), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 StatusLightRow(StatusLight.of(available), stringResource(R.string.rclone_remotes_section))
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(DriveMetrics.pad))
                 Pill(stringResource(R.string.rclone_open), { actions.openEngine(EngineActivity.ENGINE_RCLONE, "remotes") })
             }
         }
@@ -104,14 +103,14 @@ fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions:
             ) {
                 Text(
                     stringResource(R.string.rsync_rule_meta, job.op, rule.scheduleMinutes?.let { stringResource(R.string.rsync_rule_every, it) } ?: stringResource(R.string.rsync_rule_manual)),
-                    Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (declaredRemote?.status == "unreachable" && declaredRemote.reason.isNotBlank()) {
-                    Text(declaredRemote.reason, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Text(declaredRemote.reason, Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 }
                 val s = run?.stats
                 if (run != null && s != null) {
-                    if (run.exit == null) LinearProgressIndicator(progress = { s.fraction }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    if (run.exit == null) LinearProgressIndicator(progress = { s.fraction }, modifier = Modifier.fillMaxWidth().padding(vertical = DriveMetrics.gap))
                     Text(stringResource(R.string.rclone_progress, RcloneOutput.humanBytes(s.bytes), RcloneOutput.humanBytes(s.totalBytes), RcloneOutput.humanBytes(s.speedBytesPerSecond.toLong()), RcloneOutput.humanEta(s.etaSeconds), s.transfers, s.totalTransfers, s.errors), style = MaterialTheme.typography.labelSmall)
                 }
                 PillRow {
@@ -140,7 +139,7 @@ fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions:
                     last == null -> stringResource(R.string.rclone_untested)
                     else -> null
                 }
-                if (!note.isNullOrBlank()) Text(note, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                if (!note.isNullOrBlank()) Text(note, Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 PillRow {
                     Pill(stringResource(R.string.rclone_test), { coordinator.testRemote(r) { _, text -> onMessage("${r.name}: $text") } }, filled = true, enabled = available && r.name !in testing)
                     Pill(stringResource(R.string.rclone_browse), { actions.openEngine(EngineActivity.ENGINE_RCLONE, "browse") }, enabled = available)
@@ -153,7 +152,7 @@ fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions:
         items(jobs, key = { "job-" + it.id }) { job ->
             val run = runs[job.id]
             val runningNow = run != null && run.exit == null
-            Column(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_JOB_ROW).padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 8.dp)) {
+            Column(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_JOB_ROW).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -168,10 +167,10 @@ fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions:
                 }
                 if (run != null) {
                     val s = run.stats
-                    if (run.exit == null) LinearProgressIndicator(progress = { s?.fraction ?: 0f }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp))
+                    if (run.exit == null) LinearProgressIndicator(progress = { s?.fraction ?: 0f }, modifier = Modifier.fillMaxWidth().padding(vertical = DriveMetrics.gap))
                     if (s != null) Text(stringResource(R.string.rclone_progress, RcloneOutput.humanBytes(s.bytes), RcloneOutput.humanBytes(s.totalBytes), RcloneOutput.humanBytes(s.speedBytesPerSecond.toLong()), RcloneOutput.humanEta(s.etaSeconds), s.transfers, s.totalTransfers, s.errors), style = MaterialTheme.typography.labelSmall)
                     if (run.exit != null) Text(when (run.exit) { 0 -> stringResource(R.string.rclone_exit_ok); -2 -> stringResource(R.string.rclone_exit_cancelled); else -> stringResource(R.string.rclone_exit_code, run.exit) }, style = MaterialTheme.typography.labelSmall)
-                    Column(Modifier.fillMaxWidth().padding(top = 4.dp).background(MaterialTheme.colorScheme.surfaceVariant).padding(6.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(top = DriveMetrics.gap).background(MaterialTheme.colorScheme.surfaceVariant).padding(DriveMetrics.gapWide)) {
                         run.lines.takeLast(6).forEach { Text(it, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     }
                 }
@@ -181,7 +180,7 @@ fun RcloneSyncScreen(coordinator: RcloneCoordinator, prefs: DrivePrefs, actions:
         // Fleet-side rclone operations the phone cannot run (kind not an rclone verb, e.g. mount).
         val fleetOnly = Declarations.rcloneJobs.filter { it.kind !in com.diegonmarcos.cloudlib.rclone.RcloneJob.OPS }
         items(fleetOnly, key = { "fleet-" + it.name }) { j ->
-            Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_JOB_ROW).padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_JOB_ROW).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) { Text(j.name, style = MaterialTheme.typography.titleSmall); CapsuleBadge(stringResource(R.string.rclone_fleet_side)) }
                     Text("${j.kind}  ${j.source}  →  ${j.destination}", style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -221,7 +220,7 @@ fun MountsSyncScreen(
             val last = prefs.lastTest("mount:" + m.id)
             val credential = when (coordinator.mountCredentialState(m)) { 2 -> stringResource(R.string.mounts_key_auth); 1 -> stringResource(R.string.mounts_password_stored); else -> stringResource(R.string.mounts_no_credential) }
             DriveCard(m.name, badge = if (m.declared) stringResource(R.string.chrome_declared) else null, light = StatusLight.of(last), summary = m.uri, summaryMonospace = true, tag = DriveTags.SYNC_MOUNT_CARD) {
-                Text(m.type.label + " · " + credential + (results[m.id]?.let { r -> " · " + (if (last == true) stringResource(R.string.mounts_reachable, r.toIntOrNull() ?: 0) else r) } ?: ""), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(m.type.label + " · " + credential + (results[m.id]?.let { r -> " · " + (if (last == true) stringResource(R.string.mounts_reachable, r.toIntOrNull() ?: 0) else r) } ?: ""), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 PillRow {
                     Pill(stringResource(R.string.rclone_test), { coordinator.testMount(m) { _, text -> onMessage("${m.name}: $text") } }, filled = true, enabled = m.id !in testing)
                     Pill(stringResource(R.string.rclone_browse), { actions.openEngine(EngineActivity.ENGINE_MOUNTS, m.id) })
@@ -240,7 +239,7 @@ fun MountsSyncScreen(
  */
 @Composable
 fun ConnectionRow(c: Declarations.ConnectionDecl) {
-    Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_CONNECTION_ROW).padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().testTag(DriveTags.SYNC_CONNECTION_ROW).padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(c.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text("${c.kind} · ${c.endpoint}", style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)

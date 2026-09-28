@@ -16,13 +16,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.BuildConfig
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DriveActions
 import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.ui.DriveCard
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import com.diegonmarcos.clouddrive.ui.DriveTags
 import com.diegonmarcos.clouddrive.ui.Pill
 import com.diegonmarcos.clouddrive.ui.PillRow
@@ -48,8 +48,8 @@ fun GeneralPage(prefs: DrivePrefs, actions: DriveActions, hasAccess: Boolean, mo
         item { SignInCard() }
         item {
             DriveCard(stringResource(R.string.configs_files), tag = DriveTags.CONFIGS_CARD) {
-                Text(stringResource(R.string.configs_default_sort), Modifier.padding(top = 8.dp), style = MaterialTheme.typography.labelLarge)
-                Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(stringResource(R.string.configs_default_sort), Modifier.padding(top = DriveMetrics.pad), style = MaterialTheme.typography.labelLarge)
+                Row(Modifier.padding(top = DriveMetrics.gapWide), horizontalArrangement = Arrangement.spacedBy(DriveMetrics.gapWide)) {
                     Declarations.files.sortKeys.forEach { key -> Pill(sortLabel(key), { prefs.setDefaultSort(key) }, filled = snap.defaultSort == key) }
                 }
                 ToggleRow(stringResource(R.string.configs_show_hidden), snap.showHidden) { prefs.setShowHidden(it) }
@@ -62,14 +62,14 @@ fun GeneralPage(prefs: DrivePrefs, actions: DriveActions, hasAccess: Boolean, mo
                 stringResource(R.string.configs_sync_schedule), light = StatusLight.State.UNVERIFIABLE,
                 summary = stringResource(R.string.sync_schedule, BuildConfig.GIT_SYNC_INTERVAL_MINUTES, stringResource(if (BuildConfig.GIT_SYNC_REQUIRE_UNMETERED) R.string.sync_network_unmetered else R.string.sync_network_any)),
                 tag = DriveTags.CONFIGS_CARD,
-            ) { Text(stringResource(R.string.configs_sync_schedule_body), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            ) { Text(stringResource(R.string.configs_sync_schedule_body), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }
 
 @Composable
 internal fun ToggleRow(label: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(top = DriveMetrics.gapWide), verticalAlignment = Alignment.CenterVertically) {
         Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
         Switch(checked = checked, onCheckedChange = onChange)
     }

@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.DrivePrefs
 import com.diegonmarcos.clouddrive.R
@@ -111,10 +110,10 @@ fun BackupsScreen(runner: MirrorRunner, prefs: DrivePrefs, modifier: Modifier = 
                 else -> StatusLight.State.OFF
             }
             DriveCard(job.name, badge = if (job.delete) stringResource(R.string.backups_delete_badge) else null, light = light, summary = "${job.source}  →  ${job.destination}", summaryMonospace = true, tag = DriveTags.BACKUPS_MIRROR_CARD) {
-                if (job.notes.isNotBlank()) Text(job.notes, Modifier.padding(top = 4.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (job.notes.isNotBlank()) Text(job.notes, Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(
                     if (last != null) stringResource(R.string.backups_last_run, fmt.format(Date(last.first * 1000)), last.second) else stringResource(R.string.backups_never_run),
-                    Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                    Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
                 if (running && run != null) {
                     ProgressCard(
@@ -128,7 +127,7 @@ fun BackupsScreen(runner: MirrorRunner, prefs: DrivePrefs, modifier: Modifier = 
         }
         item { SectionHeader(stringResource(R.string.backups_fleet_section), count = fleet.size) }
         items(fleet, key = { "fleet-" + it.name }) { c ->
-            Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.gutter + 4.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = DriveMetrics.sectionInset, vertical = DriveMetrics.pad), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(c.name, style = MaterialTheme.typography.titleSmall)
                     Text("${c.kind} · ${c.endpoint} · ${c.auth}", style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)

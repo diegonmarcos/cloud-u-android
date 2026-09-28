@@ -23,8 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.dp
 import com.diegonmarcos.clouddrive.R
+import com.diegonmarcos.clouddrive.ui.DriveMetrics
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
@@ -73,7 +73,7 @@ fun PropertiesDialog(state: FilesController.PropertiesState, onDismiss: () -> Un
                     PropRow(stringResource(R.string.files_props_md5), r?.md5 ?: stringResource(R.string.files_props_hashing), mono = true)
                     PropRow(stringResource(R.string.files_props_sha256), r?.sha256 ?: state.progress, mono = true)
                 }
-                if (state.running) CircularProgressIndicator(Modifier.padding(top = 8.dp))
+                if (state.running) CircularProgressIndicator(Modifier.padding(top = DriveMetrics.pad))
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.chrome_ok)) } },
@@ -82,7 +82,7 @@ fun PropertiesDialog(state: FilesController.PropertiesState, onDismiss: () -> Un
 
 @Composable
 private fun PropRow(label: String, value: String, mono: Boolean = false) {
-    Column(Modifier.padding(vertical = 3.dp)) {
+    Column(Modifier.padding(vertical = DriveMetrics.tight)) {
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, style = MaterialTheme.typography.bodySmall, fontFamily = if (mono) FontFamily.Monospace else FontFamily.Default)
     }
@@ -101,8 +101,8 @@ fun BulkRenameDialog(files: List<File>, onDismiss: () -> Unit, onApply: (List<Fi
         text = {
             Column {
                 OutlinedTextField(pattern, { pattern = it }, label = { Text(stringResource(R.string.files_rename_pattern_hint)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                if (blocked) Text(stringResource(R.string.files_rename_blocked), color = colorResource(R.color.status_light_off), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
-                LazyColumn(Modifier.heightIn(max = 260.dp).padding(top = 8.dp)) {
+                if (blocked) Text(stringResource(R.string.files_rename_blocked), color = colorResource(R.color.status_light_off), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = DriveMetrics.gap))
+                LazyColumn(Modifier.heightIn(max = DriveMetrics.dialogList).padding(top = DriveMetrics.pad)) {
                     items(plan, key = { it.path }) { step ->
                         Text(
                             stringResource(R.string.files_rename_preview, step.oldName, step.newName) + (step.reason?.let { "  · $it" } ?: ""),
@@ -128,12 +128,12 @@ fun DuplicatesDialog(groups: List<FileOps.DuplicateGroup>?, onReveal: (String) -
             when {
                 groups == null -> CircularProgressIndicator()
                 groups.isEmpty() -> Text(stringResource(R.string.files_duplicates_none))
-                else -> LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                else -> LazyColumn(Modifier.heightIn(max = DriveMetrics.dialogList)) {
                     items(groups, key = { it.paths.first() }) { g ->
-                        Column(Modifier.padding(vertical = 6.dp)) {
+                        Column(Modifier.padding(vertical = DriveMetrics.gapWide)) {
                             Text(stringResource(R.string.files_duplicates_group, g.paths.size, FileOps.humanBytes(g.size)), style = MaterialTheme.typography.labelLarge)
                             g.paths.forEach { p ->
-                                Row(Modifier.fillMaxWidth().clickable { onReveal(p) }.padding(vertical = 2.dp)) {
+                                Row(Modifier.fillMaxWidth().clickable { onReveal(p) }.padding(vertical = DriveMetrics.tight)) {
                                     Text(p, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
                                 }
                             }
@@ -155,7 +155,7 @@ fun ConvertPdfDialog(entry: FileOps.Entry, onDismiss: () -> Unit, onConvert: (St
         text = {
             Column {
                 Text(entry.name, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(Modifier.padding(top = 10.dp)) {
+                Row(Modifier.padding(top = DriveMetrics.pad)) {
                     com.diegonmarcos.clouddrive.PdfConvert.TARGETS.forEach { t ->
                         TextButton(onClick = { onConvert(t) }) { Text(t) }
                     }
