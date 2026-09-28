@@ -211,6 +211,28 @@ else
     bad "bake_default_packages.py is missing the #612 bin/login mount patch (\$HOME/emulated, \$HOME/cloud-drive-shared-store)"
 fi
 
+# ── #612 — All-Files-Access is asked for, and its absence is legible ──────
+# MANAGE_EXTERNAL_STORAGE is declared in the manifest but is a special access that
+# is NOT granted at install and cannot be self-granted, so TermuxActivity must send
+# the user to the toggle on launch and the baked bin/login must not mount an empty
+# tree in silence. Both are greps over source: delete either and this goes red.
+ACTIVITY="$DIR/app/src/main/java/com/termux/app/TermuxActivity.java"
+if grep -q 'Environment.isExternalStorageManager()' "$ACTIVITY"; then
+    ok "TermuxActivity checks isExternalStorageManager() on launch"
+else
+    bad "TermuxActivity has no isExternalStorageManager() first-run check — the terminal never asks for All-Files-Access (#612)"
+fi
+if grep -q 'requestManageStorageExternalPermission' "$ACTIVITY"; then
+    ok "TermuxActivity opens this app's All-Files-Access settings screen"
+else
+    bad "TermuxActivity never requests MANAGE_EXTERNAL_STORAGE — the check leads nowhere (#612)"
+fi
+if grep -q 'All-Files-Access' "$BAKE_PY"; then
+    ok "bin/login prints a legible notice when the shared store is not readable"
+else
+    bad "bin/login binds an unreadable shared store silently — no All-Files-Access notice (#612)"
+fi
+
 # ── #605 — bin/login's proot-static exec must resolve to THIS app's own
 #           prefix, never the different (and not-installed) com.termux.nix
 #           app whose path was baked into the upstream bootstrap zip. Runs the

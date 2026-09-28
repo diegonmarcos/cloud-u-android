@@ -134,18 +134,24 @@ def main() -> int:
                 print(f"FAIL: expected exactly one proot-static exec line in bin/login:\n  {exec_line}",
                       file=sys.stderr)
                 return 1
+            # /storage/emulated/0 exists as a directory even without All-Files-Access, but is
+            # then not traversable, so binding it would mount an empty tree silently. Probe
+            # readability (ls) rather than existence (-d); when it fails, print one clear line
+            # naming the toggle to flip instead of a dark mount, and skip both binds.
             mount_setup = (
                 'mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store" 2>/dev/null || true\n'
-                'if [ -d /storage/emulated/0 ]; then\n'
+                'if ls /storage/emulated/0 >/dev/null 2>&1; then\n'
                 '  BIND_HOME_EMULATED="-b /storage/emulated/0:$HOME/emulated"\n'
+                f'  mkdir -p "/storage/emulated/0/{shared_root_name}" 2>/dev/null || true\n'
+                f'  if [ -d "/storage/emulated/0/{shared_root_name}" ]; then\n'
+                f'    BIND_HOME_SHARED_STORE="-b /storage/emulated/0/{shared_root_name}:$HOME/cloud-drive-shared-store"\n'
+                '  else\n'
+                '    BIND_HOME_SHARED_STORE=""\n'
+                '  fi\n'
                 'else\n'
                 '  BIND_HOME_EMULATED=""\n'
-                'fi\n\n'
-                f'mkdir -p "/storage/emulated/0/{shared_root_name}" 2>/dev/null || true\n'
-                f'if [ -d "/storage/emulated/0/{shared_root_name}" ]; then\n'
-                f'  BIND_HOME_SHARED_STORE="-b /storage/emulated/0/{shared_root_name}:$HOME/cloud-drive-shared-store"\n'
-                'else\n'
                 '  BIND_HOME_SHARED_STORE=""\n'
+                '  echo "⚠ cloud-drive shared store needs All-Files-Access — enable it in Settings ▸ Apps ▸ Cloud Terminal (Nix) ▸ All files access" >&2\n'
                 'fi\n\n'
             )
             bin_login = bin_login.replace(

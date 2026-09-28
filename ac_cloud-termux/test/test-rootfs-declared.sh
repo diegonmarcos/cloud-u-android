@@ -113,6 +113,22 @@ grep -q 'Os.symlink(new File(dir, "enter.sh")' "$J/cloud/CloudRootfs.java" \
 ids="$(grep -v '^[[:space:]]*#' "$R/enter.sh" | grep -n '/data/data\|com\.termux\|cld\.termux' || true)"
 [ -z "$ids" ] && ok "enter.sh hardcodes no app id or /data/data path" || bad "enter.sh hardcodes an app path: $ids"
 
+echo "── 5: #612 All-Files-Access is asked for, and its absence is legible ──"
+# All-Files-Access (MANAGE_EXTERNAL_STORAGE) is declared in the manifest but is a
+# special access that is NOT granted at install and cannot be self-granted, so the
+# app must send the user to the toggle and enter.sh must not mount an empty tree in
+# silence. Both are greps over source: delete either and this section goes red.
+ACT="$J/app/TermuxActivity.java"
+grep -q 'Environment.isExternalStorageManager()' "$ACT" \
+    && ok "TermuxActivity checks isExternalStorageManager() on launch" \
+    || bad "TermuxActivity has no isExternalStorageManager() first-run check — the terminal never asks for All-Files-Access (#612)"
+grep -q 'ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION' "$ACT" \
+    && ok "TermuxActivity opens this app's All-Files-Access settings screen" \
+    || bad "TermuxActivity never fires ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION — the check leads nowhere"
+grep -q 'All-Files-Access' "$R/enter.sh" \
+    && ok "enter.sh prints a legible notice when the shared store is not readable" \
+    || bad "enter.sh binds an unreadable shared store silently — no All-Files-Access notice (#612)"
+
 echo
 [ "$fail" -eq 0 ] && echo "PASS test-rootfs-declared" || echo "FAIL test-rootfs-declared"
 exit "$fail"

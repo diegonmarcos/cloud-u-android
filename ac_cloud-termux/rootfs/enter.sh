@@ -82,9 +82,16 @@ fi
 # Environment.getExternalStorageDirectory()) -- keep this literal in sync with
 # that value, not a copy of it.
 mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store"
-[ ! -d /storage/emulated/0 ] || binds="$binds -b /storage/emulated/0:$HOME/emulated"
-mkdir -p /storage/emulated/0/CloudDrive 2>/dev/null || true
-[ ! -d /storage/emulated/0/CloudDrive ] || binds="$binds -b /storage/emulated/0/CloudDrive:$HOME/cloud-drive-shared-store"
+# /storage/emulated/0 exists as a directory even without All-Files-Access, but is
+# then not traversable, so binding it would mount an empty tree silently. Probe
+# readability and, when it fails, say why in one line instead of a dark mount.
+if ls /storage/emulated/0 >/dev/null 2>&1; then
+    binds="$binds -b /storage/emulated/0:$HOME/emulated"
+    mkdir -p /storage/emulated/0/CloudDrive 2>/dev/null || true
+    [ ! -d /storage/emulated/0/CloudDrive ] || binds="$binds -b /storage/emulated/0/CloudDrive:$HOME/cloud-drive-shared-store"
+else
+    echo "⚠ cloud-drive shared store needs All-Files-Access — enable it in Settings ▸ Apps ▸ Cloud Terminal (Termux) ▸ All files access" >&2
+fi
 
 # $HOME is bound as /root, so credentials, git config and work survive a
 # rootfs update (which replaces the tree above) and stay visible to Termux.

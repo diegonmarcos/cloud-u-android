@@ -10,7 +10,9 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
@@ -274,9 +276,26 @@ public final class TermuxActivity extends AppCompatActivity implements ServiceCo
             return;
         }
 
+        // #612: the cloud-drive shared store and /storage/emulated/0 are bound into the proot
+        // root by bin/login, but All-Files-Access (MANAGE_EXTERNAL_STORAGE) is a special access
+        // that is NOT granted at install and cannot be self-granted. Without it the shared-store
+        // bind is silently empty. If it is missing, send the user straight to this app's
+        // All-Files-Access toggle so they can grant it. Once per launch (onCreate), never a loop.
+        requestManageStorageIfNeeded();
+
         // Send the {@link TermuxConstants#BROADCAST_TERMUX_OPENED} broadcast to notify apps that Termux
         // app has been opened.
         TermuxUtils.sendTermuxOpenedBroadcast(this);
+    }
+
+    /** #612: on Android 11+, if this app is not yet an external-storage manager, open the
+     * per-app All-Files-Access settings screen (PermissionUtils falls back to the fleet-wide
+     * screen) so the cloud-drive shared store bind is not empty. */
+    private void requestManageStorageIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager())
+            return;
+        PermissionUtils.requestManageStorageExternalPermission(this,
+            PermissionUtils.REQUEST_GRANT_STORAGE_PERMISSION);
     }
 
     @Override

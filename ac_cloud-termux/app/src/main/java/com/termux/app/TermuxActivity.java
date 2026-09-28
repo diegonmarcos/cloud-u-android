@@ -14,8 +14,11 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Gravity;
@@ -247,9 +250,34 @@ public final class TermuxActivity extends Activity implements ServiceConnection 
         if (!bindService(serviceIntent, this, 0))
             throw new RuntimeException("bindService() failed");
 
+        // #612: the cloud-drive shared store and /storage/emulated/0 are bound into the proot
+        // root by enter.sh, but All-Files-Access (MANAGE_EXTERNAL_STORAGE) is a special access
+        // that is NOT granted at install and cannot be self-granted. Without it the shared-store
+        // bind is silently empty. If it is missing, send the user straight to this app's
+        // All-Files-Access toggle so they can grant it. Once per launch (onCreate), never a loop.
+        requestManageStorageIfNeeded();
+
         // Send the {@link TermuxConstants#BROADCAST_TERMUX_OPENED} broadcast to notify apps that Termux
         // app has been opened.
         TermuxUtils.sendTermuxOpenedBroadcast(this);
+    }
+
+    /** #612: on Android 11+, if this app is not yet an external-storage manager, open the
+     * per-app All-Files-Access settings screen so the cloud-drive shared store bind is not empty. */
+    private void requestManageStorageIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager())
+            return;
+        Uri pkg = Uri.parse("package:" + getPackageName());
+        try {
+            startActivity(new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, pkg));
+        } catch (Exception e) {
+            // Fall back to the fleet-wide All-Files-Access list if the per-package screen is absent.
+            try {
+                startActivity(new Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION));
+            } catch (Exception e2) {
+                Logger.logStackTraceWithMessage(LOG_TAG, "Cannot open All-Files-Access settings", e2);
+            }
+        }
     }
 
     @Override
