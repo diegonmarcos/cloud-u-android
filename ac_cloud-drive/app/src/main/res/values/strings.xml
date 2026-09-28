@@ -239,6 +239,10 @@
          lives here is only the wording the page itself owns. -->
     <string name="git_section_other">Other clones in the store</string>
     <string name="git_login_title">Personal repositories</string>
+    <!-- #629 the vault-delivered git credential: the supported path, not a browser login -->
+    <string name="git_login_from_vault">Credential: from vault (%1$s)</string>
+    <string name="git_login_vault_note">The config import delivered this credential, so the private listing and every clone work without a browser login.</string>
+    <string name="git_login_vault_absent">No vault config has been imported on this phone yet. Importing one in Configs \u25b8 Sign in is the supported path; the browser code below is the fallback.</string>
     <string name="git_login_hint">Sign in to list this account\'s repositories, private ones included</string>
     <string name="git_login_as">signed in as %1$s · scope %2$s</string>
     <string name="git_login_ssh_active">cloning with your SSH key</string>

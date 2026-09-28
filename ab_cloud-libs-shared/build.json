@@ -3562,6 +3562,24 @@
         "ref": "main"
       }
     },
+    "_doc_grant_remedies": "#629 A DEVICE-GRANT ERROR WHOSE FIX IS NOT IN THE CODE, mapped to its REMEDY \u2014 declared here, once, so no Fragment carries the sentence. The owner hit `device_flow_disabled - Device Flow must be explicitly enabled for this App` on the Sync \u25b8 Git sign-in: the declared client_id has the `Ov23li` prefix, which is a GITHUB APP, and GitHub Apps ship with Device Flow OFF. No amount of code can work around a provider-side switch, so the only useful thing the UI can do is name the switch and where it lives \u2014 and say that on this fleet the browser grant is the FALLBACK, because the git credential is already delivered by the vault import (ac_cloud-drive/build.json::auth.applies). `match` is a substring of the provider's own error text; the first match wins; a message that matches nothing is shown unchanged. SignInUi.word() is the single consumer.",
+    "grant_remedies": [
+      {
+        "match": "device_flow_disabled",
+        "remedy": "The declared client is a GitHub App, and GitHub Apps ship with Device Flow OFF. Enable it at github.com/settings/apps \u2192 the app \u2192 General \u2192 Device flow. On this fleet you do not need it: the git credential arrives with the vault config import, and Sync \u25b8 Git uses that first.",
+        "url": "https://github.com/settings/apps"
+      },
+      {
+        "match": "Device Flow must be explicitly enabled",
+        "remedy": "Same switch, worded by GitHub: github.com/settings/apps \u2192 the app \u2192 General \u2192 Device flow. The vault-delivered credential is the supported path and needs no browser.",
+        "url": "https://github.com/settings/apps"
+      },
+      {
+        "match": "unauthorized_client",
+        "remedy": "The provider does not accept this client for the device grant. Check the declared client_id, or use the vault config import, which carries the credential already.",
+        "url": ""
+      }
+    ],
     "vault_connect": {
       "_doc": "The #566/#569 consolidated vault export route: start mails a one-time code to the bearer's address, fetch returns the decrypted bundle. known_schema_versions is what this build accepts (configs/schema.json refuses an unknown one).",
       "base_url": "https://api.diegonmarcos.com/pub",

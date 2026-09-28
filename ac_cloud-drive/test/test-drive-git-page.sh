@@ -249,7 +249,9 @@ if grep -qE 'setForce\(true\)' "$ENGINE" && grep -qE 'ResetCommand\.ResetType\.H
 
 echo "── P5 the login is the fleet's ONE sign-in, narrowed ──"
 if grep -qE 'SignInWays\(host = host, policy = listOf\(webauth\.provider\)' "$PAGE"; then pass "the page hosts libs:auth's own surface, narrowed to the DECLARED provider"; else fail "the page does not host SignInWays with the declared provider as the policy"; fi
-if grep -qE 'login = login\.copy\(identity = result\.identity, token = result\.accessToken\)' "$PAGE" && grep -qE 'fetchListing\(result\.accessToken\)' "$PAGE"; then pass "the listing and the private clone use the approval's own access token"; else fail "the page does not take the token off the sign-in result"; fi
+# #629 the browser grant is now the FALLBACK and marks its token as not-from-the-vault; the
+# vault-first path itself is pinned by test-drive-git-vault-credential.sh.
+if grep -qE 'login = login\.copy\(identity = result\.identity, token = result\.accessToken, fromVault = false\)' "$PAGE" && grep -qE 'fetchListing\(result\.accessToken\)' "$PAGE"; then pass "the listing and the private clone use the approval's own access token"; else fail "the page does not take the token off the sign-in result"; fi
 if grep -qE 'val accessToken: String = ""' "$AUTH_UI"; then pass "libs:auth carries the token as a DEFAULTED field — the superapp's existing call sites are untouched"; else fail "SignInResult.accessToken is missing or not defaulted (a required field would break the other consumer)"; fi
 if grep -qE 'accessToken = approval\.accessToken' "$AUTH_UI"; then pass "the device-grant dialog fills it in"; else fail "the device grant does not pass its token through"; fi
 if grep -qE 'R\.string\.sync_auth_key_path' "$PAGE" && grep -qE 'sshKeyPath = if \(ssh\) login\.sshKeyPath else ""' "$PAGE" && grep -qE 'GitSyncCoordinator\.AUTH_SSH' "$PAGE"; then pass "the SSH way reuses the key path libs:git-sync already holds — no second key mechanism"; else fail "the SSH login does not reuse the existing key mechanism"; fi

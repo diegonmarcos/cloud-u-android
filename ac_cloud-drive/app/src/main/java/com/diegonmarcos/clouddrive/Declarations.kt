@@ -233,6 +233,8 @@ object Declarations {
     val rcloneJobs: List<RcloneJobDecl> by lazy { parseRcloneJobs(decode(BuildConfig.RCLONE_JOBS_B64)) }
     /** #587 build.json::auth.applies → artifact section id → the key inside it that a drive sign-in applies. */
     val authApplies: Map<String, String> by lazy { parseAuthApplies(decode(BuildConfig.AUTH_APPLIES_B64)) }
+    /** #629 the same block's `credential_id`: the id the VAULT-delivered credential is held under. */
+    val authCredentialIds: Map<String, String> by lazy { parseAuthCredentialIds(decode(BuildConfig.AUTH_APPLIES_B64)) }
 
     fun decode(b64: String): String = if (b64.isBlank()) "" else runCatching { String(Base64.getDecoder().decode(b64), Charsets.UTF_8) }.getOrDefault("")
 
@@ -393,6 +395,18 @@ object Declarations {
     fun parseRcloneJobs(text: String): List<RcloneJobDecl> = objects(element(text)).mapNotNull { j ->
         val name = j.str("name"); if (name.isBlank()) return@mapNotNull null
         RcloneJobDecl(name, j.str("kind"), j.str("source"), j.str("destination"), j.str("schedule"), j.str("notes"))
+    }
+
+    /**
+     * #629 section id -> `credential_id`, declared beside `key` in the SAME block so the id the
+     * vault-delivered credential lives under is never typed into Kotlin. A section with no
+     * credential_id simply has none, and the caller then writes only the per-repository secrets.
+     */
+    fun parseAuthCredentialIds(text: String): Map<String, String> {
+        val o = element(text) as? JsonObject ?: return emptyMap()
+        return o.entries.asSequence().filterNot { it.key.startsWith("_") }
+            .mapNotNull { (id, v) -> (v as? JsonObject)?.str("credential_id")?.takeIf { it.isNotBlank() }?.let { id to it } }
+            .toMap()
     }
 
     fun parseAuthApplies(text: String): Map<String, String> {

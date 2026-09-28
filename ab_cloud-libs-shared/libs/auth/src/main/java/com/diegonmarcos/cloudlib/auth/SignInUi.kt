@@ -309,7 +309,10 @@ private fun DeviceFlowDialog(p: SignIn.Provider, onDismiss: () -> Unit, onLanded
             phase.pending.ifBlank { ctx.getString(R.string.auth_code_expiry, phase.code.expiresInSeconds / 60) },
         )
         is DeviceGrant.Phase.Approved -> ctx.getString(R.string.auth_approved, phase.identity.ifBlank { p.label })
-        is DeviceGrant.Phase.Failed -> "✗ ${phase.message}"
+        // #629 THE REMEDY, not just the error. `device_flow_disabled` is a switch in the provider's
+        // own settings and no code can reach it, so the words must name the switch; the mapping is
+        // DECLARED in ab_cloud-libs-shared/build.json::auth.grant_remedies and read once here.
+        is DeviceGrant.Phase.Failed -> "✗ " + AuthDeclaration.explain(phase.message)
         DeviceGrant.Phase.Expired -> ctx.getString(R.string.auth_code_expired)
     }
     AlertDialog(

@@ -3,6 +3,7 @@ package com.diegonmarcos.clouddrive.configs
 import android.content.Context
 import com.diegonmarcos.clouddrive.Declarations
 import com.diegonmarcos.clouddrive.GitSyncWorker
+import com.diegonmarcos.cloudlib.gitsync.GitAuth
 import com.diegonmarcos.cloudlib.gitsync.GitCredentialStore
 import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
 import com.diegonmarcos.cloudlib.gitsync.RepoRegistry
@@ -38,6 +39,12 @@ object DriveAuthApply {
 
     /** build.json::auth.applies → section id → the key inside it, off the ONE reader. */
     val applies: Map<String, String> get() = Declarations.authApplies
+
+    /**
+     * #629 build.json::auth.applies.<section>.credential_id — the id the VAULT-delivered secret is
+     * held under in the engines' own store. Declared, never typed here.
+     */
+    val credentialIds: Map<String, String> get() = Declarations.authCredentialIds
 
     /** The artifact's [section] — bare artifact or `{schema, bundle}` envelope alike. */
     private fun section(artifact: JSONObject, id: String): JSONObject? =
@@ -80,10 +87,20 @@ object DriveAuthApply {
                 "git" -> {
                     val (token, why) = gitToken(artifact, key)
                     val targets = repos.filter { it.authKind == "https" }
+                    val credential = credentialIds[id].orEmpty()
                     when {
                         token == null -> Step(id, false, "git: $why")
-                        targets.isEmpty() -> Step(id, false, "git: $why found, but no managed repository uses https auth yet — clone into the store first, then sign in again")
-                        else -> Step(id, true, "git: $why → ${targets.size} repositor${if (targets.size == 1) "y" else "ies"} (${targets.joinToString { it.name }})")
+                        // #629 A TOKEN WITH NO CLONE IS STILL A WIN. This used to report NOT-ok and
+                        // write nothing when no repository had been cloned yet, which is exactly the
+                        // state of a fresh phone — so the vault import delivered the credential and
+                        // the app threw it away, then asked for a browser login instead. The token
+                        // now always lands under the declared credential_id, which is what the Git
+                        // page's listing and its first clone read.
+                        targets.isEmpty() && credential.isNotBlank() ->
+                            Step(id, true, "git: $why → the vault credential ($credential); no repository is cloned yet, so nothing else needs it")
+                        targets.isEmpty() ->
+                            Step(id, false, "git: $why found, but auth.applies.git declares no credential_id and no managed repository uses https auth yet")
+                        else -> Step(id, true, "git: $why → ${targets.size} repositor${if (targets.size == 1) "y" else "ies"} (${targets.joinToString { it.name }})" + (if (credential.isBlank()) "" else " + the vault credential ($credential)"))
                     }
                 }
                 "rclone" -> {
@@ -94,6 +111,21 @@ object DriveAuthApply {
             }
         }
         return Report(steps)
+    }
+
+    /**
+     * #629 THE VAULT-DELIVERED GIT CREDENTIAL, read back out of the engines' own store under the
+     * declared id. Blank when no vault import has landed — which is the ONLY case in which the Git
+     * page offers the browser device grant at all. Nothing else holds this secret and nothing
+     * returns it anywhere but to libs:git-sync's own auth.
+     */
+    fun vaultGitToken(ctx: Context): String {
+        val id = credentialIds["git"].orEmpty()
+        if (id.isBlank()) return ""
+        val store = GitCredentialStore(ctx)
+        if (!store.hasSecret(id)) return ""
+        val auth = store.authFor(ManagedRepo(id = id, name = id, path = "", authKind = "https"))
+        return (auth as? GitAuth.Https)?.secret.orEmpty()
     }
 
     /** THE writer. Plans against the live registry, then writes every ok step. */
@@ -107,6 +139,10 @@ object DriveAuthApply {
                     val (token, _) = gitToken(artifact, applies.getValue("git"))
                     val store = GitCredentialStore(ctx)
                     repos.filter { it.authKind == "https" }.forEach { store.setSecret(it.id, token!!) }
+                    // #629 and the ONE vault-delivered credential, under its declared id, in the
+                    // SAME store — so a repository that is not on the phone yet, and the account
+                    // listing, both have it. No second credential store exists.
+                    credentialIds[step.section]?.takeIf { it.isNotBlank() }?.let { store.setSecret(it, token!!) }
                 }
                 "rclone" -> {
                     val (remotes, _) = rcloneRemotes(artifact, applies.getValue("rclone"))

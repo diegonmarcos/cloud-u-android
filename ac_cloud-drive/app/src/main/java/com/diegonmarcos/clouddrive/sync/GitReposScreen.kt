@@ -45,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
@@ -79,6 +80,8 @@ import com.diegonmarcos.cloudlib.gitsync.ManagedRepo
 import java.io.File
 import java.text.DateFormat
 import java.util.Date
+import com.diegonmarcos.clouddrive.configs.DriveAuthApply
+import com.diegonmarcos.cloudlib.auth.AuthDeclaration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -110,6 +113,7 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextRunMinutes: Long?, modifier: Modifier = Modifier) {
+    val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val page = Declarations.sync.git
     val repos by coordinator.repos.collectAsState()
@@ -125,6 +129,17 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     var login by remember { mutableStateOf(GitLogin()) }
     var listing by remember { mutableStateOf(GitListing()) }
     LaunchedEffect(Unit) { coordinator.refresh() }
+    // #629 THE VAULT IS THE MAIN ROAD. The credential the #566 config import delivers already has
+    // `repo` scope — it is the token that pushes all day — so the personal section authenticates
+    // from it and the account's own repositories list themselves with no tap and no browser. The
+    // device grant below is only offered when this is blank.
+    LaunchedEffect(Unit) {
+        val vault = withContext(Dispatchers.IO) { DriveAuthApply.vaultGitToken(ctx.applicationContext) }
+        if (vault.isNotBlank() && login.token.isBlank()) {
+            login = login.copy(identity = page.owner, token = vault, fromVault = true)
+            fetchListing(vault)
+        }
+    }
 
     // #606 the store's git folder — the ONE place a clone lands, resolved from the declaration.
     val root = remember { SharedStore.gitRoot().absolutePath }
@@ -165,7 +180,7 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         object : SignInHost {
             override fun onSignedIn(result: SignInResult) {
                 SignIn.Current.session = SignIn.Session(result.provider.id, result.identity)
-                login = login.copy(identity = result.identity, token = result.accessToken)
+                login = login.copy(identity = result.identity, token = result.accessToken, fromVault = false)
                 if (result.accessToken.isNotBlank()) fetchListing(result.accessToken)
             }
         }
@@ -299,12 +314,18 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     settingsFor?.let { repo -> RepoSettingsSheet(repo, coordinator, onDismiss = { settingsFor = null }) }
 }
 
-/** What the personal section signed in as, for the process only: never stored, never logged. */
+/**
+ * What the personal section is authenticated as, for the process only: never stored here, never
+ * logged. #629 [fromVault] says the token came from the VAULT-DELIVERED config import (through
+ * [DriveAuthApply.vaultGitToken], out of libs:git-sync's own keystore store) rather than from a
+ * browser device grant — which is the difference between the supported path and the fallback.
+ */
 private data class GitLogin(
     val identity: String = "",
     val token: String = "",
     val ssh: Boolean = false,
     val sshKeyPath: String = "",
+    val fromVault: Boolean = false,
 ) {
     val signedIn: Boolean get() = token.isNotBlank() || (ssh && sshKeyPath.isNotBlank())
 }
@@ -339,13 +360,23 @@ private fun GitLoginBox(
         stringResource(R.string.git_login_title),
         light = if (login.signedIn) StatusLight.State.ON else StatusLight.State.UNKNOWN,
         summary = when {
+            // #629 the state the owner must be able to read at a glance: the credential is the
+            // vault's, so the private listing and every clone just work.
+            login.fromVault -> stringResource(R.string.git_login_from_vault, login.identity)
             login.token.isNotBlank() -> stringResource(R.string.git_login_as, login.identity.ifBlank { webauth?.label ?: "" }, webauth?.scope ?: "")
             login.ssh && login.sshKeyPath.isNotBlank() -> stringResource(R.string.git_login_ssh_active)
             else -> stringResource(R.string.git_login_hint)
         },
         tag = DriveTags.SYNC_GIT_LOGIN,
     ) {
-        if (webauth != null) {
+        // #629 THE FALLBACK, and only that. With a vault-delivered credential in hand there is
+        // nothing for a browser grant to add, so no Start button is drawn at all; without one, it
+        // is offered under a line that names the supported path. A provider-side refusal
+        // (device_flow_disabled) is worded by libs:auth from the DECLARED remedy table.
+        if (login.fromVault) {
+            Text(stringResource(R.string.git_login_vault_note), Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_VAULT_NOTE), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else if (webauth != null) {
+            Text(stringResource(R.string.git_login_vault_absent), Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_VAULT_NOTE), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             SignInWays(host = host, policy = listOf(webauth.provider), modifier = Modifier.padding(top = DriveMetrics.gapWide), pill = { label, tag, onClick ->
                 Pill(label, onClick, modifier = Modifier.padding(top = DriveMetrics.gapWide).testTag(tag), icon = IconCatalog.vectorOrDefault(webauth.icon))
             })
@@ -364,7 +395,7 @@ private fun GitLoginBox(
         when {
             listing.loading -> Text(stringResource(R.string.git_listing_loading), Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall)
             listing.error.isNotBlank() -> {
-                Text(stringResource(R.string.git_listing_failed, listing.error), Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall, color = colorResource(R.color.status_light_off))
+                Text(stringResource(R.string.git_listing_failed, AuthDeclaration.explain(listing.error)), Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall, color = colorResource(R.color.status_light_off))
                 PillRow { Pill(stringResource(R.string.chrome_retry), onRetry) }
             }
             listing.loaded && !listing.complete -> Text(stringResource(R.string.git_listing_truncated, page.api.maxPages), Modifier.padding(top = DriveMetrics.gapWide), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
