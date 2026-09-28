@@ -284,7 +284,7 @@ hasnt_code "$SYNC" "mailCode"     "ProfileSync never reads the mailed code"
 hasnt_code "$SYNC" "confirmation" "ProfileSync carries no confirmation field"
 hasnt_code "$IMPORT" "mail_code"  "the auto-import writes no 2FA code"
 
-echo "== T11: SIX tabs, declarative order in build.json; AI is not a tab; the export carries no private key (#614) =="
+echo "== T11: SEVEN tabs, declarative order in build.json; AI is not a tab; the export carries no private key (#614) =="
 WG_PROFILES="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardProfiles.kt"
 # The six tab literals live in the id→Tab map; the STRIP's order + membership
 # come from build.json::ui.profile.tabs (data), not this map's declaration order.
@@ -307,15 +307,15 @@ hasnt_code "$FRAGMENT" "AiFragment"             "the AI page is not re-hosted he
 has "$FRAGMENT" 'WG_ROUTE = "section:wg"'          "WireGuard tab uses the declared section target"
 hasnt_code "$FRAGMENT" "page:config/wg"            "not the page target, which only rewrites to section:wg"
 hasnt_code "$FRAGMENT" "page:wg/config"            "not the double-push target"
-# Still no child fragments and no borrowed launcher machinery, at six tabs.
-hasnt_code "$FRAGMENT" "childFragmentManager"   "six tabs still use no child fragments"
-hasnt_code "$FRAGMENT" "SectionTabsFragment"    "six tabs still avoid the section mechanism"
+# Still no child fragments and no borrowed launcher machinery, at seven tabs.
+hasnt_code "$FRAGMENT" "childFragmentManager"   "seven tabs still use no child fragments"
+hasnt_code "$FRAGMENT" "SectionTabsFragment"    "seven tabs still avoid the section mechanism"
 
-echo "-- T11-order: the strip is EXACTLY [connect, vault, fleet, repos, infos, wireguard], in order --"
+echo "-- T11-order: the strip is EXACTLY [connect, vault, fleet, store, repos, infos, wireguard], in order (#617 inserts store after fleet) --"
 tab_order_ok() {   # $1 = build.json path; returns 0 iff the declared order matches
     python3 - "$1" <<'PY'
 import json, sys
-want = ["connect", "vault", "fleet", "repos", "infos", "wireguard"]
+want = ["connect", "vault", "fleet", "store", "repos", "infos", "wireguard"]
 got = (json.load(open(sys.argv[1]))["ui"].get("profile") or {}).get("tabs")
 sys.exit(0 if got == want else 1)
 PY
@@ -328,7 +328,7 @@ ids = {p["id"] for p in ext}
 sys.exit(0 if {"cloudflare-warp", "proton-vpn"} <= ids else 1)
 PY
 }
-if tab_order_ok "$ROOT/build.json"; then ok "T11-order: build.json declares the six tabs in the required order"
+if tab_order_ok "$ROOT/build.json"; then ok "T11-order: build.json declares the seven tabs in the required order"
 else bad "T11-order: build.json tab order is wrong"; fi
 
 echo "-- T11-mutation: a dropped tab, a reordered tab, and a missing WG profile each go red --"
@@ -358,6 +358,29 @@ p=sys.argv[1]; d=json.load(open(p)); w=d["ui"]["wireguard_external_profiles"]; w
 PY
 wg_has_externals "$SCRATCH/build.json" && bad "T11-mutation: a missing WG profile was NOT caught" || ok "T11-mutation: a missing WG profile is caught"
 rm -rf "$SCRATCH"; trap - EXIT
+
+echo "-- T11-store: the Store tab (#617) is a LAUNCH tab that deep-links to Store ▸ Phone, NOT a re-listed column --"
+# The Store tab has a NULL column and a route (the wireguard idiom), so it is a
+# launcher into the page that ALREADY lists the declared apps — never a second
+# copy of that list rendered inside Profile.
+has "$FRAGMENT" 'Tab("Store", null, STORE_ROUTE)'          "T11-store: the Store tab is a null-column launch tab"
+has "$FRAGMENT" 'STORE_ROUTE = "page:config/store-phone"'  "T11-store: it deep-links to Store ▸ Phone (page:config/store-phone)"
+hasnt_code "$FRAGMENT" "renderStore"                       "T11-store: Profile does NOT re-render a Store list"
+hasnt_code "$FRAGMENT" "CONSTELLATION_FLEET_B64"           "T11-store: Profile holds no copy of the declared fleet list — the page owns it"
+
+echo "-- T11-store-mutation: a wrong Store route, or a re-listed column, goes red --"
+route_to_store_phone() {   # $1 = ProfileFragment.kt; 0 iff the Store tab routes to store-phone
+    grep -qF 'STORE_ROUTE = "page:config/store-phone"' "$1" && grep -qF 'Tab("Store", null, STORE_ROUTE)' "$1"
+}
+SCRATCH2="$(mktemp -d)"; trap 'rm -rf "$SCRATCH2"' EXIT
+route_to_store_phone "$ROOT/$FRAGMENT" || bad "T11-store-mutation: the unmutated tree should pass"
+# (1) the route aimed at the wrong page
+sed 's#page:config/store-phone#page:config/store-cloud#' "$ROOT/$FRAGMENT" > "$SCRATCH2/mut.kt"
+route_to_store_phone "$SCRATCH2/mut.kt" && bad "T11-store-mutation: a wrong Store route was NOT caught" || ok "T11-store-mutation: a wrong Store route is caught"
+# (2) the launch tab turned back into a rendered column
+sed 's/Tab("Store", null, STORE_ROUTE)/Tab("Store", store)/' "$ROOT/$FRAGMENT" > "$SCRATCH2/mut.kt"
+route_to_store_phone "$SCRATCH2/mut.kt" && bad "T11-store-mutation: a re-listed Store column was NOT caught" || ok "T11-store-mutation: a re-listed Store column is caught"
+rm -rf "$SCRATCH2"; trap - EXIT
 
 echo "-- T11a: the profile matrix is DATA in build.json, not literals in Kotlin --"
 has "$WG_PROFILES" "BuildConfig.UI_WG_PROFILES_JSON_B64" "profiles come from baked build.json data"

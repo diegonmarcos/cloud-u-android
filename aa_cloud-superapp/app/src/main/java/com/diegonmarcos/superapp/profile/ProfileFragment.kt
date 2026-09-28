@@ -179,6 +179,7 @@ class ProfileFragment : Fragment() {
             "connect" to Tab("Connect", connect),
             "vault" to Tab("Vault", vault),
             "fleet" to Tab(getString(R.string.vault_tab_imported), imported),
+            "store" to Tab("Store", null, STORE_ROUTE),
             "repos" to Tab("Repos", repos),
             "infos" to Tab("Infos", col),
             "wireguard" to Tab("WireGuard", null, WG_ROUTE),
@@ -1857,6 +1858,18 @@ class ProfileFragment : Fragment() {
          * directly, and its `parent: config` makes Back return to Configs.
          */
         private const val WG_ROUTE = "section:wg"
+
+        /**
+         * The Store tab (#617) is a LAUNCH tab, not a re-listed column: it
+         * deep-links to Store ▸ Phone Apps — the page that ALREADY lists every
+         * declared phone app (installed ∪ fleet ∪ external) and, since #619,
+         * carries the Declared / Installed filter. Store ▸ Phone opens in
+         * Declared mode by default, so this link lands the user on the full
+         * declared set with no argument to pass. `page:config/store-phone` is
+         * the same page: target the Store strip and the update notification
+         * use; naming the page and not a class keeps ONE source of the list.
+         */
+        private const val STORE_ROUTE = "page:config/store-phone"
 
         /** Imported values longer than this are shortened until tapped. */
         private const val IMPORTED_PREVIEW_CHARS = 400

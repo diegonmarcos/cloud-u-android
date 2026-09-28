@@ -104,6 +104,40 @@ if sorted(installs) == ["ExternalInstall.run(", "Fleet.installAll("] and "plan.o
     ok("the import installs only through Fleet.installAll (plan.ours) and ExternalInstall (plan.direct)")
 else: bad("the import reaches install paths %s" % installs)
 
+print("== T5: the Declared / Installed filter (#619) ==")
+# The toggle exists as two pills, wired to the two i18n'd labels.
+if 'R.string.store_phone_filter_declared' in phone and 'R.string.store_phone_filter_installed' in phone \
+        and re.search(r"private fun filterToggle\(", phone):
+    ok("Phone Apps draws a Declared / Installed toggle from two string resources")
+else: bad("Phone Apps has no Declared / Installed toggle")
+# DECLARED is the default — this is the mode Profile ▸ Store deep-links into,
+# and the full set on a fresh phone.
+if re.search(r"private var installedOnly\s*=\s*false", phone):
+    ok("T5-default: the default filter is Declared (installedOnly = false)")
+else: bad("T5-default: the default filter is not Declared")
+
+# THE SUBSET CONTRACT, by construction: Declared renders the whole set rows()
+# built; Installed renders rows.filter { it.installed } — a subset of it. The
+# two branches must be exactly this, so Installed can never be a re-enumeration
+# that could add a row Declared does not have.
+def filter_ok(text):
+    m = re.search(r"if\s*\(installedOnly\)\s*(.+?)\s*else\s*rows\b", text)
+    return bool(m) and m.group(1).strip() == "rows.filter { it.installed }"
+if filter_ok(phone): ok("T5-subset: Installed = rows.filter { it.installed }, Declared = the full rows — a subset by construction")
+else: bad("T5-subset: the filter is not the by-construction subset of the declared rows")
+
+print("== T5-mutation: an unfiltered Installed, or an Installed default, goes red ==")
+if not filter_ok(phone): bad("T5-mutation: the unmutated tree should pass the subset gate")
+# (1) Installed no longer filters — it would show the FULL set, not a subset.
+mut1 = phone.replace("if (installedOnly) rows.filter { it.installed } else rows",
+                     "if (installedOnly) rows else rows")
+if filter_ok(mut1): bad("T5-mutation: an unfiltered Installed view was NOT caught")
+else: ok("T5-mutation: an unfiltered Installed view is caught")
+# (2) the default flips to Installed — Profile ▸ Store would no longer land on Declared.
+mut2 = re.sub(r"private var installedOnly\s*=\s*false", "private var installedOnly = true", phone)
+if re.search(r"private var installedOnly\s*=\s*false", mut2): bad("T5-mutation: an Installed default was NOT caught")
+else: ok("T5-mutation: an Installed default is caught")
+
 print("RESULT: %d passed, %d failed" % (PASS, FAIL))
 sys.exit(1 if FAIL else 0)
 PY

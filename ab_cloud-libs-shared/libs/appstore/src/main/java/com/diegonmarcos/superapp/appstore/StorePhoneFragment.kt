@@ -62,6 +62,15 @@ class StorePhoneFragment : Fragment() {
     private val cBadge = 0xFFE53E3E.toInt()
     private var list: LinearLayout? = null
     private var rows: List<Row> = emptyList()
+    // #619 the row filter. false = Declared (the full set rows() builds:
+    // installed ∪ fleet ∪ external) — the default, and the mode Profile ▸ Store
+    // deep-links into; true = Installed (only rows already on the device). No
+    // second list: it filters Row.installed, the state rows() already resolved
+    // through PackageManager. redraw() re-renders the SAME rows, so flipping the
+    // toggle never re-probes or re-enumerates.
+    private var installedOnly = false
+    private var declaredPill: TextView? = null
+    private var installedPill: TextView? = null
     private var cfg: SourceResolver.Config? = null
     private val states = HashMap<String, SourceResolver.Check>()
     private val stateViews = HashMap<String, TextView>()
@@ -95,6 +104,7 @@ class StorePhoneFragment : Fragment() {
             addView(fileBtn(ctx, ctx.getString(R.string.store_import)) { importDoc.launch(IMPORT_TYPES) })
         })
         col.addView(caption(ctx, ctx.getString(R.string.store_phone_caption)))
+        col.addView(filterToggle(ctx))
         val rowsView = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         list = rowsView
         col.addView(rowsView)
@@ -198,12 +208,16 @@ class StorePhoneFragment : Fragment() {
 
     private fun render(ctx: Context, into: LinearLayout, rows: List<Row>) {
         stateViews.clear()
-        val missing = rows.count { !it.installed }
-        val play = rows.count { !it.installed && !it.direct }
-        into.addView(caption(ctx, ctx.getString(R.string.store_phone_count, rows.size) + "  ·  " +
+        // #619 Declared shows every row rows() built; Installed keeps only the
+        // ones on the device. The declared set is never rebuilt here — it is
+        // filtered, so Installed is by construction a subset of Declared.
+        val shown = if (installedOnly) rows.filter { it.installed } else rows
+        val missing = shown.count { !it.installed }
+        val play = shown.count { !it.installed && !it.direct }
+        into.addView(caption(ctx, ctx.getString(R.string.store_phone_count, shown.size) + "  ·  " +
             ctx.getString(R.string.store_phone_count_missing, missing, play)))
         var heading: String? = null
-        for (r in rows) {
+        for (r in shown) {
             val here = r.shelf?.heading ?: if (heading != null) ctx.getString(R.string.store_phone_other) else null
             if (here != null && here != heading) into.addView(TextView(ctx).apply {
                 text = here; textSize = 12f; setTextColor(cHead)
@@ -212,6 +226,38 @@ class StorePhoneFragment : Fragment() {
             heading = here
             into.addView(row(ctx, r))
         }
+    }
+
+    /** #619 the Declared / Installed segmented toggle. Two pills; tapping one
+     *  sets [installedOnly] and re-renders the SAME rows (no re-probe). */
+    private fun filterToggle(ctx: Context): View {
+        fun pill(label: String, onlyInstalled: Boolean) = TextView(ctx).apply {
+            text = label; textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
+            setTextColor(0xFFFFFFFF.toInt())
+            setPadding(dp(ctx, 10), dp(ctx, 7), dp(ctx, 10), dp(ctx, 7))
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                .apply { setMargins(dp(ctx, 3), dp(ctx, 2), dp(ctx, 3), dp(ctx, 8)) }
+            isClickable = true
+            setOnClickListener { if (installedOnly != onlyInstalled) { installedOnly = onlyInstalled; styleFilter(); redraw() } }
+        }
+        val d = pill(ctx.getString(R.string.store_phone_filter_declared), false).also { declaredPill = it }
+        val i = pill(ctx.getString(R.string.store_phone_filter_installed), true).also { installedPill = it }
+        styleFilter()
+        return LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; addView(d); addView(i) }
+    }
+
+    /** The selected pill wears the installed-green; the other is dimmed. */
+    private fun styleFilter() {
+        declaredPill?.setBackgroundColor(if (!installedOnly) cUp else 0xFF2A2A33.toInt())
+        installedPill?.setBackgroundColor(if (installedOnly) cUp else 0xFF2A2A33.toInt())
+    }
+
+    /** Re-render the current rows under the current filter — no enumerate, no probe. */
+    private fun redraw() {
+        val ctx = context ?: return
+        val into = list ?: return
+        into.removeAllViews()
+        render(ctx, into, rows)
     }
 
     private fun row(ctx: Context, r: Row) = LinearLayout(ctx).apply {
