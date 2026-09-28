@@ -79,9 +79,22 @@ android {
         targetSdkVersion project.properties.targetSdkVersion.toInteger()
         versionCode rootfsVersionCode()
         versionName bootstrapArtifactId(bootstrapArt)
-        ndk {
-            abiFilters 'arm64-v8a', 'x86_64'
-        }
+        // NO ndk.abiFilters. This module compiles nothing native — it carries one
+        // zip — so an abiFilters list would be dead config, and a HARDCODED one at
+        // that: every other module in the fleet takes its ABIs from
+        // CLOUDNAV_ABIS, which the engine exports from release.variants[]. What
+        // makes this companion per-ABI is the PAYLOAD and the per-variant asset
+        // name the store selects on, not a native-library split the APK does not
+        // have.
+        //
+        // One consequence, stated rather than glossed: the ship workflow computes
+        // COMMS_BUILD_TIMESTAMP inside each matrix job, so the arm64 and x86_64
+        // companions carry versionCodes a minute or two apart under ONE
+        // applicationId. Harmless as it stands — the store picks the asset by ABI
+        // from the fleet row's assets{} map, and both codes are far above anything
+        // a phone has installed — but it is not by design. Making the stamp a
+        // workflow-level output shared by the matrix is the real fix and belongs
+        // with the workflow, not here.
     }
 
     // Same shared constellation keystore as ../app/build.gradle, copied
@@ -139,4 +152,11 @@ task verifyRootfsPayload {
                     + "no code of its own and stages nothing itself)")
     }
 }
+// ORDER, STATED. The fork engine's build.json declares the app's gradle task as
+// a bare `assembleRelease`, which Gradle runs in EVERY project — so :app's tasks
+// and this module's interleave in one invocation, and the staging dir happened to
+// be written first only because ":app" sorts before ":rootfs-lib". That is luck,
+// not a dependency, and the failure it hides is this module packaging an APK with
+// no payload in it. Named here so Gradle enforces it.
+verifyRootfsPayload.dependsOn ':app:bakeBootstrap'
 tasks.matching { it.name ==~ /merge.*Assets/ }.configureEach { dependsOn verifyRootfsPayload }

@@ -103,6 +103,16 @@ for dirpath, dirnames, filenames in os.walk(root):
             else:
                 # A thin-hub repo whose only identity IS the fork's.
                 claim(v['app_id'], rel + '::forks.' + k)
+    # A COMPANION mints one applicationId too (#628). An app may publish a
+    # second signed APK beside its own — the two terminals each ship their
+    # ~400 MB root filesystem as the fleet library cloud-lib-rootfs-* that way —
+    # and release.companions[].package is where that identity is declared, once,
+    # by the entry that builds the APK. Without this the generated fleet names a
+    # package T2 cannot find, which reads as "the generator invented an identity"
+    # when the truth is that this collector did not know the declaration site.
+    for c in ((b.get('release') or {}).get('companions') or []):
+        if isinstance(c, dict) and c.get('package'):
+            claim(c['package'], rel + '::release.companions[' + str(c.get('id')) + ']')
     # lib-apks mints one applicationId per shipped library module, by the rule
     # in its app/build.gradle: prefix + module name with '-' stripped.
     lib = b.get('lib_apks')

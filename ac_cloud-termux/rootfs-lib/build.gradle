@@ -64,7 +64,10 @@ def cloudVersionCode = {
 
 android {
     compileSdkVersion project.properties.compileSdkVersion.toInteger()
-    ndkVersion = System.getenv("JITPACK_NDK_VERSION") ?: project.properties.ndkVersion
+    // NO ndkVersion, deliberately. There is no native code in this module — it
+    // carries one tarball — and declaring an NDK version makes the build depend
+    // on that exact NDK being installed for no benefit. The sibling app module
+    // declares it because it has an externalNativeBuild; this one does not.
 
     defaultConfig {
         applicationId companion.package
@@ -131,4 +134,11 @@ tasks.register('verifyRootfsPayload') {
         }
     }
 }
+// ORDER, STATED. The fork engine's build.json declares the app's gradle task as
+// a bare `assembleRelease`, which Gradle runs in EVERY project — so :app's tasks
+// and this module's interleave in one invocation, and the staging dir happened to
+// be written first only because ":app" sorts before ":rootfs-lib". That is luck,
+// not a dependency, and the failure it hides is this module packaging an APK with
+// no payload in it. Named here so Gradle enforces it.
+verifyRootfsPayload.dependsOn ':app:stageRootfsPayload'
 tasks.matching { it.name ==~ /merge.*Assets/ }.configureEach { dependsOn verifyRootfsPayload }

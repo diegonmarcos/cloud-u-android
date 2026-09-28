@@ -60,3 +60,24 @@ jobs:
       # publish-artifact.sh. #628 leaves exactly one way the payload arrives.
       - name: Both terminals declare their rootfs library, fetch nothing, and every misdeclaration is red
         run: bash 1_cicd/src/scripts/test/test-fork-companion-assets.sh
+
+      # #628 again, and the more expensive half of it. Every fork engine asserts
+      # the built APK's package id before publishing, and it read that id with
+      # `strings -e l` — 16-bit little-endian only. That worked for every
+      # application APK (their manifests carry a UTF-16 string pool) and read
+      # NOTHING out of the first payload-only LIBRARY APK it was pointed at, so a
+      # correct applicationId was refused as a mismatch with an EMPTY evidence
+      # list under it, across two applications and four jobs. The guard was
+      # fail-closed; its verdict was wrong, which is worse, because it named a
+      # defect that did not exist and hid the one that did.
+      #
+      # The fix widens what the reader accepts, and widening a fail-closed guard
+      # is how a fail-closed guard becomes fail-OPEN (#452). So this tester holds
+      # both ends: every encoding a real manifest uses must be READ, and a
+      # genuinely wrong id and an unreadable manifest must both still be REFUSED
+      # — with DIFFERENT messages, because conflating those two is what cost the
+      # afternoon. Run here rather than in the ship workflows: those carry
+      # `!ac_*/test/**` path filters, so a guard living there goes unrun exactly
+      # when a tester changes.
+      - name: Every fork engine reads an APK's real package id, and still refuses a wrong or unreadable one
+        run: bash 1_cicd/src/scripts/test/test-apk-identity-reader.sh

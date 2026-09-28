@@ -52,7 +52,15 @@ DIST_DIR="$SCRIPT_DIR/dist"
 CMD="${1:-help}"
 
 log()    { printf "[%s] %s\n" "$(date '+%H:%M:%S')" "$1"; }
-errlog() { printf "\033[0;31m[%s] ERROR: %s\033[0m\n" "$(date '+%H:%M:%S')" "$1" >&2; }
+errlog() {
+  printf "\033[0;31m[%s] ERROR: %s\033[0m\n" "$(date '+%H:%M:%S')" "$1" >&2
+  # ALSO a GitHub annotation. Reading a job's log needs admin rights on this
+  # repository, so an agent without one sees only "Process completed with exit
+  # code 1" and has to guess (#628 burned a CI cycle on exactly that). An
+  # annotation reaches the run summary and the public check-run API.
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then printf '::error::%s\n' "$1" >&2; fi
+  return 0
+}
 
 # Every gradle call goes through `nix develop` for a reproducible toolchain.
 # BYPASS_NIX=1 uses host tools (IDE / dev only — never CI).
@@ -473,6 +481,53 @@ _enforce_signature() {
 # Guard against shipping an APK with the wrong package identity.
 # $1=key, $2=apk path, $3=expected package id (defaults to .forks.<key>.app_id).
 # Source-built forks pass app_id; upstream-APK forks pass upstream_apk.package when set.
+# The package ids an APK actually declares.
+#
+# EXACT READER FIRST, `strings` only as a fallback (#628). This used to be one
+# line inside _assert_apk_identity:
+#
+#   unzip -p "$apk" AndroidManifest.xml | LC_ALL=C strings -e l
+#
+# and `-e l` reads ONLY 16-bit little-endian. Every APK it had ever been pointed
+# at was an application, whose binary manifest carries a UTF-16 string pool, so
+# it always worked. The first payload-only library APK it was pointed at
+# (#628's cloud-lib-rootfs-*) yielded NOTHING — and in a `grep -Fqx`, nothing is
+# indistinguishable from the WRONG package. So a library whose package id was
+# exactly right was refused as an identity mismatch, with an empty list of
+# "package-shaped strings found" printed underneath as the evidence. The guard
+# was fail-closed, which was right; its VERDICT was wrong, which is worse than
+# either, because it named a defect that did not exist and hid the one that did.
+#
+# aapt/aapt2 parse the manifest chunk properly and do not care how its string
+# pool is encoded. cloud-code-engine.sh has read the package that way all along;
+# this brings the fork engines to the same reader.
+#
+# The `||` on the old line was also on the PIPELINE, so its status was
+# `strings`', never `unzip`'s: a failed extraction could not reach its own error
+# message. Extraction is checked on its own here.
+_apk_declared_packages() {
+  local apk="$1" out="" bt tool manifest
+  bt="$(ls -d "${ANDROID_HOME:-/nonexistent}"/build-tools/* 2>/dev/null | sort -V | tail -1)"
+  for tool in "$bt/aapt2" "$bt/aapt" aapt2 aapt; do
+    command -v "$tool" >/dev/null 2>&1 || [ -x "$tool" ] || continue
+    case "$tool" in
+      *aapt2) out="$("$tool" dump packagename "$apk" 2>/dev/null || true)" ;;
+      *)      out="$("$tool" dump badging "$apk" 2>/dev/null \
+                     | sed -n "s/^package: name='\([^']*\)'.*/\1/p" || true)" ;;
+    esac
+    if [ -n "$out" ]; then printf '%s\n' "$out"; return 0; fi
+  done
+  # No SDK on this machine (a local checkout). Read the pool BOTH ways rather
+  # than betting on one encoding: -e l is UTF-16LE, -e S is single-byte/UTF-8,
+  # and which of the two a manifest uses is aapt2's choice, not ours.
+  manifest="$(mktemp)"
+  if unzip -p "$apk" AndroidManifest.xml > "$manifest" 2>/dev/null && [ -s "$manifest" ]; then
+    { LC_ALL=C strings -e l "$manifest"; LC_ALL=C strings -e S "$manifest"; } 2>/dev/null
+  fi
+  rm -f "$manifest"
+  return 0
+}
+
 _assert_apk_identity() {
   local key="$1" apk="$2" expected_id="${3:-}"
   if [ -z "$expected_id" ]; then
@@ -480,18 +535,27 @@ _assert_apk_identity() {
   fi
   [ -n "$expected_id" ] && [ "$expected_id" != "null" ] \
     || { errlog "identity-assert[$key]: expected package id not provided and .forks.${key}.app_id missing"; exit 1; }
-  local pkgs; pkgs="$(unzip -p "$apk" AndroidManifest.xml | LC_ALL=C strings -e l)" \
-    || { errlog "identity-assert[$key]: failed to extract AndroidManifest.xml from $apk"; exit 1; }
+  local pkgs; pkgs="$(_apk_declared_packages "$apk")"
+  # `|| true` on the whole pipeline, and it is load-bearing: these engines run
+  # under `set -euo pipefail`, so a grep that matches NOTHING exits 1 and takes
+  # the shell down right here — before the error message below can be printed.
+  # The result is an exit status with no explanation, which is the exact
+  # blindness #628 was written to remove, reintroduced by its own fix.
+  local shaped; shaped="$(printf '%s\n' "$pkgs" \
+    | grep -E '^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$' | sort -u || true)"
+  # UNREADABLE IS ITS OWN FAILURE, and saying so is the whole #628 fix. Still
+  # fail-closed — nothing is published — but it must never again be reported as
+  # "the package is wrong", because that verdict sent a whole afternoon after a
+  # correct applicationId while the real defect was the reader.
+  if [ -z "$shaped" ]; then
+    errlog "identity-assert[$key]: could not read ANY package id out of $apk — refusing to publish"
+    errlog "  This is NOT 'the package is wrong', it is 'the manifest could not be read'."
+    errlog "  Install the Android SDK build-tools (aapt2) on this runner, or check the APK is intact."
+    exit 1
+  fi
   if ! printf '%s\n' "$pkgs" | grep -Fqx "$expected_id"; then
     errlog "identity-assert[$key]: APK package != $expected_id — refusing to publish"
-    # Only report PACKAGE-SHAPED strings. Grepping for any dotted string picks
-    # up intent-filter pathPatterns (ReFra registers e.g. '.*\..*\..*\.apng'
-    # for file associations), which made GHA 30540989541 report
-    # "Found packages: .*\..*\..*\.apng .*\..*\..*\.jxl" — useless for
-    # diagnosing an identity mismatch. Application ids are lowercase dotted
-    # segments with no regex metacharacters.
-    errlog "  Package-shaped strings found: $(printf '%s\n' "$pkgs" \
-      | grep -E '^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$' | sort -u | head -5 | tr '\n' ' ')"
+    errlog "  Package ids read from the APK: $(printf '%s\n' "$shaped" | head -5 | tr '\n' ' ')"
     exit 1
   fi
   log "identity-assert[$key]: OK — package $expected_id confirmed in manifest"
