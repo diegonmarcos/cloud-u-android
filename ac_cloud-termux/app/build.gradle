@@ -34,7 +34,7 @@ android {
         applicationId "cld.termux"
         minSdkVersion project.properties.minSdkVersion.toInteger()
         targetSdkVersion project.properties.targetSdkVersion.toInteger()
-        versionCode 1005
+        versionCode 1006
         versionName "0.118.3"
 
         if (appVersionName) versionName = appVersionName
@@ -366,21 +366,92 @@ tasks.register('fetchFleetTools') {
 }
 preBuild.dependsOn tasks.named('fetchFleetTools')
 
-// ── the baked agent-coding rootfs (#470) ───────────────────────────────────
+// ── the agent-coding rootfs (#470), now FETCHED and not baked (#618) ───────
 // CI builds and verifies it (rootfs/build-rootfs.sh, rootfs/verify-rootfs.sh)
-// on a runner of this APK's CPU and drops the four files here before gradle
-// runs. Building without them would ship a terminal whose login shell has
-// nothing to enter, so that is a build failure, not a quieter APK.
-tasks.register('verifyCloudRootfs') {
-    description = 'Fail unless the baked rootfs artefacts are in assets/.'
+// on a runner of this APK's CPU and drops its four files here before gradle
+// runs. The tree itself is ~400 MB: baked into the APK it made every one-line
+// app fix a 400 MB update that every phone re-downloaded in full. So the
+// tarball is published as a separately-addressed release asset here, and the
+// APK keeps only the two small files the phone needs to fetch it safely — the
+// sha256 it is gated on and the url it comes from. Building without those is
+// still a build failure, not a quieter APK: the login shell would have nothing
+// to enter and nothing to fetch.
+//
+// EVERY value comes from rootfs/rootfs.json::artifact. Nothing here is a url.
+def cloudRootfsArtifact = cloudRootfs.artifact
+def cloudRootfsAssetsDir = file("$projectDir/src/main/assets/${cloudRootfs.asset_dir}")
+
+// The asset name is the content address of the declaration that produces the
+// tree: sha256 over artifact.identity_files, first 12 hex. A pin bump renames
+// the asset, so it is uploaded and every phone refetches; an app-code change
+// does not, so nothing is uploaded and no phone refetches. That is the whole
+// mechanism, and it is why there is no version number to forget to bump.
+def cloudRootfsId = {
+    def digest = java.security.MessageDigest.getInstance("SHA-256")
+    cloudRootfsArtifact.identity_files.each { rel ->
+        def f = file("$projectDir/../$rel")
+        if (!f.isFile()) throw new GradleException("rootfs.json::artifact.identity_files names ${rel}, which does not exist")
+        digest.update(java.security.MessageDigest.getInstance("SHA-256").digest(f.bytes))
+    }
+    return digest.digest().encodeHex().toString().substring(0, 12)
+}()
+
+def cloudRootfsVariantId = {
+    def abi = (System.getenv('CLOUDNAV_ABIS') ?: 'arm64-v8a').split(',')[0].trim()
+    def declared = new groovy.json.JsonSlurper().parse(file("$projectDir/../build.json"))
+    def variant = declared.release.variants.find { it.abis && it.abis[0] == abi }
+    if (!variant) throw new GradleException("no build.json release.variants[] entry declares abi ${abi}")
+    return variant.id
+}()
+
+def cloudRootfsAsset = cloudRootfsArtifact.asset
+    .replace('{id}', cloudRootfsId).replace('{abi}', cloudRootfsVariantId)
+
+// Publish-if-new, then strip. Re-runs are free: publish-artifact.sh keeps the
+// bytes already on the release and reads their digest back, so a rebuild of the
+// same declaration never moves what a published APK was told to expect.
+tasks.register('publishCloudRootfs') {
+    description = 'Publish the rootfs tarball as a release asset and leave only its digest + url in assets/.'
     doLast {
-        def dir = file("$projectDir/src/main/assets/${cloudRootfs.asset_dir}")
-        ['rootfs.tar.zst', 'rootfs.sha256', 'proot', 'enter.sh'].each { name ->
-            def f = new File(dir, name)
+        def tarball = new File(cloudRootfsAssetsDir, 'rootfs.tar.zst')
+        def digest = new File(cloudRootfsAssetsDir, cloudRootfsArtifact.digest_asset)
+        def urlFile = new File(cloudRootfsAssetsDir, cloudRootfsArtifact.url_asset)
+        if (!tarball.isFile()) {
+            if (digest.isFile() && urlFile.isFile()) {
+                logger.lifecycle("publishCloudRootfs: already published (${urlFile.text.trim()})")
+                return
+            }
+            throw new GradleException("${tarball} is missing: run ac_cloud-termux/rootfs/build-rootfs.sh ${cloudRootfsVariantId} ${cloudRootfsAssetsDir} first (CI does)")
+        }
+        def result = exec {
+            commandLine 'sh', file("$projectDir/../rootfs/publish-artifact.sh").absolutePath,
+                tarball.absolutePath, cloudRootfsArtifact.repo, cloudRootfsArtifact.tag, cloudRootfsAsset,
+                digest.absolutePath, urlFile.absolutePath
+            ignoreExitValue = true
+        }
+        if (result.exitValue != 0)
+            throw new GradleException("publish-artifact.sh failed for ${cloudRootfsAsset} (exit ${result.exitValue}); see log above")
+        // The 400 MB never reach the APK. This is the line that shrinks it.
+        if (!tarball.delete()) throw new GradleException("could not remove ${tarball} — the APK would carry the rootfs")
+        logger.lifecycle("publishCloudRootfs: ${cloudRootfsAsset} -> ${digest.text.trim()}")
+    }
+}
+
+tasks.register('verifyCloudRootfs') {
+    dependsOn 'publishCloudRootfs'
+    description = 'Fail unless assets/ holds the small rootfs artefacts — and ONLY those.'
+    doLast {
+        ['proot', 'enter.sh', cloudRootfsArtifact.digest_asset, cloudRootfsArtifact.url_asset].each { name ->
+            def f = new File(cloudRootfsAssetsDir, name)
             if (!f.isFile() || f.length() == 0) {
-                throw new GradleException("${f} is missing: run ac_cloud-termux/rootfs/build-rootfs.sh <abi> ${dir} first (CI does)")
+                throw new GradleException("${f} is missing: run ac_cloud-termux/rootfs/build-rootfs.sh <abi> ${cloudRootfsAssetsDir} first (CI does)")
             }
         }
+        // #618's own guard. Without it the fetch path could exist and the APK
+        // still ship the tree, which is the defect with a fix bolted next to it.
+        def tarball = new File(cloudRootfsAssetsDir, 'rootfs.tar.zst')
+        if (tarball.exists())
+            throw new GradleException("${tarball} is still in assets/ — this APK would bundle the rootfs it is supposed to fetch (#618)")
     }
 }
 preBuild.dependsOn tasks.named('verifyCloudRootfs')

@@ -92,6 +92,24 @@ def resolve(decl, shared):
     if not smoke:
         die("smoke is empty — nothing would prove the rootfs runs")
 
+    # #618 — the tarball is a release asset, not APK bytes. The asset name is the
+    # content address of this declaration, so the pieces that produce the tree
+    # must all be inside identity_files: one that is missing would let a pin bump
+    # keep the old asset name, and every phone would stay on the old rootfs
+    # forever while CI reported a new build.
+    art = decl["artifact"]
+    for token in ("{id}", "{abi}"):
+        if token not in art["asset"]:
+            die(f"artifact.asset {art['asset']!r} has no {token} — the asset name must address its content and its ABI")
+    for token in ("{repo}", "{tag}", "{asset}"):
+        if token not in art["url"]:
+            die(f"artifact.url {art['url']!r} has no {token} — the url must be derived, never written out")
+    missing = [p for p in art["identity_files"] if not os.path.isfile(os.path.join(APP_DIR, p))]
+    if missing:
+        die(f"artifact.identity_files {missing} do not exist — the asset name would not address what builds the tree")
+    if not any(p.endswith("rootfs.json") for p in art["identity_files"]):
+        die("artifact.identity_files must include rootfs.json itself — every pin in it moves the tree")
+
     src = decl["proot"]
     boot = json.load(open(os.path.join(REPO_ROOT, src["source_build_json"])))
     boot = next(iter(boot["forks"].values()))["bootstrap"]
@@ -107,6 +125,7 @@ def resolve(decl, shared):
         "nameservers": decl["nameservers"],
         "base_image": decl["base_image"]["ref"],
         "asset_dir": decl["asset_dir"],
+        "artifact": art,
         "abis": decl["abis"],
         "proot_entry": src["entry"],
         "proot_bootstrap": {abi: {"url": f"{boot['url_base']}/{boot['release']}/bootstrap-{a['arch']}.zip",

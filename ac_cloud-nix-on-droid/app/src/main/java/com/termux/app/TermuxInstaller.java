@@ -28,9 +28,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -88,6 +93,30 @@ final class TermuxInstaller {
     static final String BOOTSTRAP_ASSET_NAME = "bootstrap.zip";
 
     /**
+     * #618 -- and it is no longer INSIDE the APK. The baked zip is ~400 MB, so
+     * every one-line app fix shipped a 400 MB update that every phone
+     * re-downloaded in full just to get the code. app/build.gradle::bakeBootstrap
+     * now publishes it as a separately-addressed asset on this app's own rolling
+     * GitHub release and bakes only two small files in its place: the url below
+     * and the sha256 above it.
+     * <p/>
+     * None of (a), (b) or (c) comes back. (a): the fetch happens once, the
+     * extracted $PREFIX is what the terminal runs, and nothing is fetched again
+     * while the installed version matches the baked one -- so after first run the
+     * app is offline-clean, and an app update that does not move the bootstrap
+     * costs no bytes at all. (b): the host is GitHub Releases, the same channel
+     * this APK itself is installed from, and the url is DERIVED from
+     * build.json::forks.nixdroid.bootstrap.artifact, never typed here. (c): the
+     * bytes are refused unless they hash to {@link #BOOTSTRAP_VERSION_ASSET_NAME},
+     * which travels inside the signed APK -- so what is extracted and marked
+     * executable is exactly what CI verified and published.
+     */
+    static final String BOOTSTRAP_URL_ASSET_NAME = "bootstrap.zip.url";
+
+    /** Where the fetched zip is cached while it is extracted. Deleted afterwards: it is 400 MB. */
+    static final File CACHED_BOOTSTRAP_FILE = new File(TERMUX_FILES_DIR_PATH, ".bootstrap.zip");
+
+    /**
      * #605 -- the sha256 of {@link #BOOTSTRAP_ASSET_NAME}, baked alongside it by
      * app/build.gradle::bakeBootstrap so this app can tell "already installed"
      * apart from "already installed an OLDER, possibly broken, bootstrap".
@@ -119,6 +148,98 @@ final class TermuxInstaller {
             Logger.logWarn(LOG_TAG, "Could not read " + BOOTSTRAP_VERSION_ASSET_NAME + " from assets: " + e);
             return null;
         }
+    }
+
+    /** Reads {@link #BOOTSTRAP_URL_ASSET_NAME} from assets, or null if it is missing. */
+    private static String readBootstrapUrl(Activity activity) {
+        try (InputStream in = activity.getAssets().open(BOOTSTRAP_URL_ASSET_NAME)) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            byte[] buffer = new byte[256];
+            int read;
+            while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+            return new String(out.toByteArray(), StandardCharsets.UTF_8).trim();
+        } catch (Exception e) {
+            Logger.logWarn(LOG_TAG, "Could not read " + BOOTSTRAP_URL_ASSET_NAME + " from assets: " + e);
+            return null;
+        }
+    }
+
+    /**
+     * #618 -- fetch the published bootstrap and REFUSE it unless it hashes to
+     * {@code want}, the digest baked into this signed APK.
+     * <p/>
+     * That comparison is the entire difference between this and the first-run
+     * download #348 deleted: there, whatever the host served was extracted and
+     * marked executable unread. Here the bytes are compared to a digest the
+     * network cannot influence, and a mismatch throws before anything is
+     * extracted. A cached copy that already hashes correctly is reused, so an
+     * interrupted extraction does not cost another 400 MB.
+     */
+    private static File fetchBootstrap(Activity activity, String want) throws Exception {
+        if (want == null)
+            throw new IOException("this APK carries no " + BOOTSTRAP_VERSION_ASSET_NAME
+                + ", so the fetched bootstrap could not be verified — refusing to extract unchecked bytes");
+        String url = readBootstrapUrl(activity);
+        if (url == null || url.isEmpty())
+            throw new IOException("this APK carries no " + BOOTSTRAP_URL_ASSET_NAME
+                + " — build.json::forks.nixdroid.bootstrap.artifact is where it comes from");
+
+        if (CACHED_BOOTSTRAP_FILE.isFile() && want.equals(sha256Of(CACHED_BOOTSTRAP_FILE))) {
+            Logger.logInfo(LOG_TAG, "The fetched bootstrap " + want + " is already cached");
+            return CACHED_BOOTSTRAP_FILE;
+        }
+
+        File part = new File(CACHED_BOOTSTRAP_FILE.getAbsolutePath() + ".part");
+        //noinspection ResultOfMethodCallIgnored
+        part.delete();
+        Logger.logInfo(LOG_TAG, "Fetching the bootstrap " + want + " from " + url);
+
+        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+        connection.setInstanceFollowRedirects(true);
+        connection.setConnectTimeout(30_000);
+        connection.setReadTimeout(60_000);
+        try {
+            int status = connection.getResponseCode();
+            if (status != HttpURLConnection.HTTP_OK)
+                throw new IOException("fetching " + url + " answered HTTP " + status);
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            try (InputStream in = new DigestInputStream(connection.getInputStream(), digest);
+                 FileOutputStream out = new FileOutputStream(part)) {
+                byte[] buffer = new byte[1 << 16];
+                int read;
+                while ((read = in.read(buffer)) != -1) out.write(buffer, 0, read);
+            }
+            String got = hex(digest.digest());
+            if (!want.equals(got)) {
+                //noinspection ResultOfMethodCallIgnored
+                part.delete();
+                throw new IOException("the bootstrap fetched from " + url + " is sha256 " + got
+                    + ", not the " + want + " this APK was built against");
+            }
+        } finally {
+            connection.disconnect();
+        }
+        //noinspection ResultOfMethodCallIgnored
+        CACHED_BOOTSTRAP_FILE.delete();
+        if (!part.renameTo(CACHED_BOOTSTRAP_FILE))
+            throw new IOException("cannot move " + part + " to " + CACHED_BOOTSTRAP_FILE);
+        return CACHED_BOOTSTRAP_FILE;
+    }
+
+    private static String sha256Of(File file) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (InputStream in = new DigestInputStream(new FileInputStream(file), digest)) {
+            byte[] buffer = new byte[1 << 16];
+            //noinspection StatementWithEmptyBody
+            while (in.read(buffer) != -1) { }
+        }
+        return hex(digest.digest());
+    }
+
+    private static String hex(byte[] bytes) {
+        StringBuilder out = new StringBuilder(bytes.length * 2);
+        for (byte b : bytes) out.append(Character.forDigit((b >> 4) & 0xf, 16)).append(Character.forDigit(b & 0xf, 16));
+        return out.toString();
     }
 
     /** Reads the marker left by the last successful extraction, or null if there was none. */
@@ -242,14 +363,19 @@ final class TermuxInstaller {
                         return;
                     }
 
+                    // #618 -- the zip is fetched (once) instead of unpacked from
+                    // assets/, and refused unless it hashes to the digest this
+                    // APK carries. Everything after this line is unchanged: what
+                    // is extracted is the same verified archive as before.
+                    final File bootstrapZip = fetchBootstrap(activity, bakedBootstrapVersion);
+
                     Logger.logInfo(LOG_TAG, "Extracting bootstrap zip to prefix staging directory \"" + TERMUX_STAGING_PREFIX_DIR_PATH + "\".");
 
                     final byte[] buffer = new byte[8096];
                     final List<Pair<String, String>> symlinks = new ArrayList<>(50);
                     final List<String> executables = new ArrayList<>(128);
 
-                    try (ZipInputStream zipInput = new ZipInputStream(
-                             activity.getAssets().open(BOOTSTRAP_ASSET_NAME))) {
+                    try (ZipInputStream zipInput = new ZipInputStream(new FileInputStream(bootstrapZip))) {
                         ZipEntry zipEntry;
                         while ((zipEntry = zipInput.getNextEntry()) != null) {
                             if (zipEntry.getName().equals("SYMLINKS.txt")) {
@@ -339,6 +465,12 @@ final class TermuxInstaller {
                             Logger.logWarn(LOG_TAG, "Could not record installed bootstrap version: " + e);
                         }
                     }
+
+                    // #618 -- the 400 MB cache has done its job. Keeping it would
+                    // double this app's footprint for bytes only a rootfs change
+                    // needs again, and a change refetches by its new digest.
+                    //noinspection ResultOfMethodCallIgnored
+                    CACHED_BOOTSTRAP_FILE.delete();
 
                     // Recreate env file since termux prefix was wiped earlier
                     TermuxShellEnvironment.writeEnvironmentToFile(activity);

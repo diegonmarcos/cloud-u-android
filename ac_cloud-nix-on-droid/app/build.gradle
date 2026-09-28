@@ -41,7 +41,7 @@ android {
     defaultConfig {
         applicationId "cld.termux"
         applicationIdSuffix ".nix"
-        versionCode 188042
+        versionCode 188043
         versionName "0.118.0_v0.3.8_nix"
         // fdroid checkupdates looks for literal versionCode/versionName,
         // can't get fancy with these and use string interpolation and similar
@@ -336,6 +336,38 @@ def sharedRootName() {
     return sharedRoot
 }
 
+// #618 -- the published asset's name IS the content address of everything that
+// determines the baked zip: sha256 over artifact.identity_files, first 12 hex,
+// plus the release.variants[] id. A pin or script change renames the asset, so
+// it is uploaded and every phone refetches by its new digest; an app-code
+// change leaves the name alone, so nothing is uploaded and no phone refetches.
+// That is the whole reason there is no hand-maintained version to forget.
+def bootstrapArtifactId(art) {
+    def digest = java.security.MessageDigest.getInstance("SHA-256")
+    art.identity_files.each { rel ->
+        def f = new File(projectDir.parentFile, rel)
+        if (!f.isFile())
+            throw new GradleException("build.json::...artifact.identity_files names " + rel + ", which does not exist")
+        digest.update(java.security.MessageDigest.getInstance("SHA-256").digest(f.bytes))
+    }
+    return digest.digest().encodeHex().toString().substring(0, 12)
+}
+
+// The release.variants[] id for an Android ABI, so the asset is named the way
+// the APK beside it is: the variant id, never the raw ABI.
+def bootstrapVariantId(abi) {
+    def declared = new groovy.json.JsonSlurper()
+            .parseText(new File(projectDir.parentFile, "build.json").getText("UTF-8"))
+    def variant = declared.release.variants.find { it.abis && it.abis[0] == abi }
+    if (variant == null)
+        throw new GradleException("no build.json release.variants[] entry declares abi " + abi)
+    return variant.id
+}
+
+def bootstrapArtifactAsset(art, abi) {
+    return art.asset.replace("{id}", bootstrapArtifactId(art)).replace("{abi}", bootstrapVariantId(abi))
+}
+
 def bootstrapAssetsDir = new File(buildDir, "generated/bootstrap/assets")
 
 task bakeBootstrap() {
@@ -428,10 +460,43 @@ task bakeBootstrap() {
         // as its own asset, so TermuxInstaller can tell "already installed"
         // apart from "already installed an OLDER bootstrap" and re-extract a
         // fix instead of leaving a stale, already-extracted rootfs in place.
-        new File(bootstrapAssetsDir, spec.asset_name + ".sha256").text = sha256Of(baked)
+        //
+        // #618 -- and that stamp is now the ONLY thing about the zip that the
+        // APK carries, together with the url it is fetched from. Publishing the
+        // ~400 MB beside the APK rather than inside it is what stops a one-line
+        // app fix from being a 400 MB update on every phone. Every value comes
+        // from the artifact declaration; nothing here is a url or a name.
+        //
+        // The digest is the published bytes' digest, not necessarily this
+        // build's: publish-artifact.sh keeps an asset that already exists and
+        // reads its digest back, because neither this bake nor a re-deflate is
+        // byte-reproducible and a rebuild must not move bytes under an APK that
+        // was already shipped a digest.
+        def art = spec.artifact
+        if (art == null)
+            throw new GradleException("build.json::forks.nixdroid.bootstrap has no artifact block -- refusing to "
+                    + "bake 400 MB into the APK (#618)")
+        def digestFile = new File(bootstrapAssetsDir, art.digest_asset)
+        def urlFile = new File(bootstrapAssetsDir, art.url_asset)
+        def publisher = new File(projectDir.parentFile, art.publisher)
+        if (!publisher.exists())
+            throw new GradleException("missing " + publisher + " (the artifact publish step, build.json::...artifact.publisher)")
+        def publishResult = exec {
+            commandLine "sh", publisher.absolutePath, baked.absolutePath,
+                    art.repo, art.tag, bootstrapArtifactAsset(art, abi),
+                    digestFile.absolutePath, urlFile.absolutePath
+            ignoreExitValue = true
+        }
+        if (publishResult.exitValue != 0)
+            throw new GradleException("publish-artifact.sh failed for " + bootstrapArtifactAsset(art, abi)
+                    + " (exit " + publishResult.exitValue + "); see log above")
+        def bakedLength = baked.length()
+        // THE line that shrinks the APK: the zip never reaches assets/.
+        if (!baked.delete())
+            throw new GradleException("could not remove " + baked + " -- the APK would carry the bootstrap it fetches (#618)")
 
-        logger.quiet("bakeBootstrap: " + abi + " -> assets/" + spec.asset_name
-                + " (" + baked.length() + " B, from " + downloaded.length() + " B)")
+        logger.quiet("bakeBootstrap: " + abi + " -> " + urlFile.text.trim()
+                + " (" + bakedLength + " B, from " + downloaded.length() + " B), sha256 " + digestFile.text.trim())
     }
 }
 

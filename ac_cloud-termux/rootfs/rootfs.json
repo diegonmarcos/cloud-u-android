@@ -134,7 +134,24 @@
     "entry": "bin/proot-static"
   },
   "asset_dir": "cloud-rootfs",
-  "_doc_asset_dir": "APK assets/<asset_dir>/ holds rootfs.tar.xz, rootfs.sha256, proot and enter.sh. The app stages them under $PREFIX/var/lib/<asset_dir>/ and enter.sh extracts the tree there on first shell.",
+  "_doc_asset_dir": "APK assets/<asset_dir>/ holds rootfs.sha256, rootfs.url, proot and enter.sh — four small files, NOT the tree. #618: the tree is fetched once from the artifact declared below, verified against rootfs.sha256 and cached. The app stages the small files under $PREFIX/var/lib/<asset_dir>/, fetches the tarball next to them, and enter.sh extracts it there on first shell.",
+  "artifact": {
+    "_doc": "#618 — the rootfs tarball is a SEPARATELY VERSIONED release asset, not APK bytes. It is ~400 MB and it changes only when the declaration below changes, while the APK's code changes constantly; baked in, every one-line app fix made every phone re-download 400 MB. Published to the app's own rolling GH release (the same channel and the same repo as the APK, so no new infrastructure and no new host), fetched on first run and whenever the declared digest moves, and never again.",
+    "repo": "diegonmarcos/cloud-u-android",
+    "tag": "latest",
+    "asset": "cloud-rootfs-{id}-{abi}.tar.zst",
+    "url": "https://github.com/{repo}/releases/download/{tag}/{asset}",
+    "_doc_id": "{id} is the first 12 hex of sha256 over identity_files, so the asset name IS the content address of the declaration that produces the tree. A pin bump (claude-code, node, the tool-belt ref, the build script) yields a NEW name: it is uploaded, its digest is baked into the next APK, and every phone refetches. An app-code change yields the SAME name: nothing is uploaded and no phone refetches. That is why there is no hand-maintained version number to forget to bump. {abi} is the release.variants[] id.",
+    "identity_files": [
+      "rootfs/rootfs.json",
+      "rootfs/build-rootfs.sh",
+      "rootfs/install-in-rootfs.sh",
+      "rootfs/resolve.py"
+    ],
+    "digest_asset": "rootfs.sha256",
+    "url_asset": "rootfs.url",
+    "_doc_assets": "The two small files baked into the APK in the tarball's place: the sha256 the fetch is gated on, and the resolved url it is fetched from. Both are written by the publish step from THIS declaration, so the phone never carries a hardcoded url."
+  },
   "abis": {
     "arm64-v8a": {
       "docker_arch": "arm64",

@@ -94,11 +94,15 @@ else
     bad "rewrite target $TO does not match applicationId+suffix (${GRADLE_ID}${GRADLE_SUFFIX}) and/or TermuxConstants ($CONST_ID) — the rootfs would point at a package that is not installed"
 fi
 
-# A5 — the first-run download is GONE from the installer, not merely unused.
-if grep -q 'openStream()' "$INSTALLER"; then
-    bad "TermuxInstaller still calls openStream() — the bootstrap is still fetched at runtime"
+# A5 — the UNVERIFIED first-run download is GONE, not merely unused. #618 gives
+#      the installer a fetch back, and the difference from defect (1) is the
+#      whole point: no editable dialog, no third-party host, and the bytes are
+#      refused unless they hash to the digest inside this signed APK. That gate
+#      is asserted (and mutation-proved) in the #618 section below.
+if grep -q 'openStream()' "$INSTALLER" || grep -q 'setEditable\|EditText' "$INSTALLER"; then
+    bad "TermuxInstaller still streams the bootstrap from a user-editable url — defect (1) is back"
 else
-    ok "TermuxInstaller makes no runtime network call for the bootstrap"
+    ok "TermuxInstaller has no user-editable, unverified bootstrap download"
 fi
 # grep -q writes nothing, so piping it into a filter tests the filter's view of
 # an empty stream and is green whatever the file says. Filter FIRST, then match.
@@ -108,12 +112,19 @@ else
     ok "no live bootstrap url left in TermuxInstaller"
 fi
 
-# A6 — it reads the baked asset, under exactly the declared name.
+# A6 — it names the runtime under exactly the declared name, and #618: it
+#      EXTRACTS from the fetched file rather than from assets/, because the
+#      zip is not in the APK any more.
 JAVA_ASSET="$(sed -n 's/.*BOOTSTRAP_ASSET_NAME = "\([^"]*\)".*/\1/p' "$INSTALLER" | head -1)"
-if grep -q 'getAssets().open(BOOTSTRAP_ASSET_NAME)' "$INSTALLER" && [ "$JAVA_ASSET" = "$ASSET" ]; then
-    ok "installer reads assets/$ASSET, the name build.json declares"
+if [ "$JAVA_ASSET" = "$ASSET" ]; then
+    ok "installer names the runtime $ASSET, the name build.json declares"
 else
-    bad "installer asset '$JAVA_ASSET' does not match build.json asset_name '$ASSET', or it does not read from assets at all"
+    bad "installer asset '$JAVA_ASSET' does not match build.json asset_name '$ASSET'"
+fi
+if grep -q 'getAssets().open(BOOTSTRAP_ASSET_NAME)' "$INSTALLER"; then
+    bad "installer still unpacks the zip out of assets/ — the APK would have to carry 400 MB (#618)"
+else
+    ok "installer does not read the zip from assets/ (#618: it is fetched)"
 fi
 
 # A7 — something actually PUTS it there. An asset nobody bakes is an APK that
@@ -297,11 +308,118 @@ else
     bad "TermuxInstaller has no bootstrap-version gate — an APK update that fixes bootstrap.zip would never reach a phone with an already-extracted, stale \$PREFIX"
 fi
 
-if grep -q "spec.asset_name + \".sha256\"" "$GRADLE" && grep -q 'sha256Of(baked)' "$GRADLE"; then
-    ok "app/build.gradle bakes ${ASSET}.sha256 alongside $ASSET for the installer to compare against"
+DIGEST_ASSET="$(q forks.nixdroid.bootstrap.artifact.digest_asset)"
+URL_ASSET="$(q forks.nixdroid.bootstrap.artifact.url_asset)"
+if [ "$DIGEST_ASSET" = "${ASSET}.sha256" ] && grep -q 'art.digest_asset' "$GRADLE"; then
+    ok "app/build.gradle bakes ${ASSET}.sha256 for the installer to compare against"
 else
     bad "app/build.gradle does not write ${ASSET}.sha256 — the installer's version gate has nothing to read"
 fi
+
+
+# ── #618 — the 400 MB runtime is PUBLISHED beside the APK, not inside it ───
+# Both terminals baked their root filesystem into the APK, so every one-line app
+# fix was a 400 MB update that every phone re-downloaded in full. The zip now
+# goes to this app's own rolling release and the APK keeps two small files: the
+# digest the fetch is gated on and the url it comes from. Two things have to be
+# true together, and half of either is worse than neither: the bytes must be OUT
+# of the APK, and the fetch that replaces them must be REFUSED unless it hashes
+# to the digest travelling inside the signed APK.
+echo "── #618 the runtime is fetched, not bundled, and the fetch is sha256-gated ──"
+
+ART_REPO="$(q forks.nixdroid.bootstrap.artifact.repo)"
+ART_TAG="$(q forks.nixdroid.bootstrap.artifact.tag)"
+ART_ASSET="$(q forks.nixdroid.bootstrap.artifact.asset)"
+ART_URL="$(q forks.nixdroid.bootstrap.artifact.url)"
+PUBLISHER_REL="$(q forks.nixdroid.bootstrap.artifact.publisher)"
+if [ -n "$ART_REPO" ] && [ -n "$ART_TAG" ] && [ -n "$ART_ASSET" ] && [ -n "$ART_URL" ] \
+   && [ -n "$DIGEST_ASSET" ] && [ -n "$URL_ASSET" ] && [ -n "$PUBLISHER_REL" ]; then
+    ok "build.json declares the ONE artifact block (release $ART_TAG on $ART_REPO, asset $ART_ASSET)"
+else
+    bad "forks.nixdroid.bootstrap.artifact is incomplete — the zip could only ship inside the APK (#618)"
+fi
+
+# The asset name must address its content AND its ABI, or a pin bump would keep
+# the old name and every phone would stay on the old runtime forever while CI
+# reported a new build.
+for token in '{id}' '{abi}'; do
+    case "$ART_ASSET" in
+        *"$token"*) ok "artifact.asset carries $token" ;;
+        *) bad "artifact.asset '$ART_ASSET' has no $token — the name would not address its content (#618)" ;;
+    esac
+done
+for token in '{repo}' '{tag}' '{asset}'; do
+    case "$ART_URL" in
+        *"$token"*) ok "artifact.url derives $token" ;;
+        *) bad "artifact.url '$ART_URL' has no $token — the url must be derived, never written out (#618)" ;;
+    esac
+done
+MISSING_IDENTITY="$(python3 -c "
+import json, os
+art = json.load(open('$BUILD_JSON'))['forks']['nixdroid']['bootstrap']['artifact']
+print(','.join(p for p in art['identity_files'] if not os.path.isfile(os.path.join('$DIR', p))))
+" 2>/dev/null)"
+[ -z "$MISSING_IDENTITY" ] \
+    && ok "every artifact.identity_files entry exists" \
+    || bad "artifact.identity_files names files that do not exist: $MISSING_IDENTITY"
+python3 -c "
+import json, sys
+art = json.load(open('$BUILD_JSON'))['forks']['nixdroid']['bootstrap']['artifact']
+sys.exit(0 if any(p.endswith('build.json') for p in art['identity_files']) else 1)
+" 2>/dev/null \
+    && ok "build.json is part of the artifact identity — every pin in it moves the runtime" \
+    || bad "artifact.identity_files does not include build.json: a pin bump would not rename the asset (#618)"
+
+PUBLISHER="$DIR/$PUBLISHER_REL"
+[ -f "$PUBLISHER" ] && ok "the publish step exists: $PUBLISHER_REL" \
+                    || bad "$PUBLISHER_REL is missing — nothing publishes the zip, so it could only ship in the APK"
+grep -q 'already published' "$PUBLISHER" 2>/dev/null \
+    && ok "an already-published asset keeps its hosted bytes (a rebuild cannot move them under a shipped APK)" \
+    || bad "$PUBLISHER_REL re-uploads the same asset name — phones would be told a digest the host no longer serves"
+
+# THE line that shrinks the APK. Without it the fetch path could exist and the
+# APK still carry the zip: the defect with a fix bolted next to it.
+if grep -q 'the APK would carry the bootstrap it fetches' "$GRADLE"; then
+    ok "bakeBootstrap removes the zip from assets/ and fails loudly if it cannot"
+else
+    bad "nothing removes the baked zip from assets/ — the APK would still be 400 MB (#618)"
+fi
+grep -q 'bootstrapArtifactAsset' "$GRADLE" \
+    && ok "gradle names the published asset from the declaration" \
+    || bad "app/build.gradle does not derive the asset name from artifact.asset"
+
+# The installer side: url from an asset (never a literal), digest compared, and
+# the cache reused so an interrupted extraction does not cost another 400 MB.
+if grep -n 'https\?://' "$INSTALLER" | grep -vE '^[0-9]+:[[:space:]]*(\*|//|/\*)' | grep -q .; then
+    bad "TermuxInstaller hardcodes a url — it must read $URL_ASSET, written from the declaration (#618)"
+else
+    ok "TermuxInstaller hardcodes no url (it reads $URL_ASSET)"
+fi
+grep -q 'CACHED_BOOTSTRAP_FILE' "$INSTALLER" \
+    && ok "the fetched zip is cached, so a retry does not refetch 400 MB" \
+    || bad "there is no fetch cache — an interrupted extraction would refetch the whole runtime"
+
+# MUTATION PROOF. The assertion below is the one that matters, so it is run
+# twice: once against the real file, and once against a copy with the digest
+# comparison deleted. If the copy still passes, the assertion checks nothing and
+# an unverified download could land without this tester noticing.
+sha_gated() {
+    grep -q 'DigestInputStream' "$1" && grep -q 'want.equals(got)' "$1" \
+        && grep -q 'not the " + want' "$1"
+}
+if sha_gated "$INSTALLER"; then
+    ok "the fetch is gated on the sha256 baked into this signed APK"
+else
+    bad "the fetched bootstrap is not compared to the baked digest — unread bytes would be extracted and marked executable (#618)"
+fi
+MUT="$(mktemp)"
+grep -v 'want.equals(got)' "$INSTALLER" > "$MUT"
+if sha_gated "$MUT"; then
+    bad "MUTATION SURVIVED: deleting the digest comparison left the sha256 assertion green — it proves nothing"
+else
+    ok "mutation proved: deleting the digest comparison makes the assertion above go red"
+fi
+rm -f "$MUT"
 
 echo "── $fails failed ──"
 [ "$fails" -eq 0 ]

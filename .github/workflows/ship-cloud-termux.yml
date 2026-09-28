@@ -214,6 +214,11 @@ jobs:
           VAULT_DIR: ${{ github.workspace }}/.vault
           SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
           COMMS_BUILD_TIMESTAMP: ${{ env.COMMS_BUILD_TIMESTAMP }}
+          # #618 — the build PUBLISHES the big runtime artefact (the rootfs
+          # tarball / the baked bootstrap zip) to this app's own rolling release
+          # and keeps only its digest + url in the APK, so `gh release upload`
+          # runs here. GITHUB_TOKEN, never a PAT: the asset belongs to this repo.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./build.sh build-fork "$FORK"
           ls -la dist/

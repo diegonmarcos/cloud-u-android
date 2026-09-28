@@ -38,6 +38,22 @@
         "release": "bootstrap-release-24.05",
         "_doc_url_residual": "url_base is a THIRD-PARTY host and it is still in the BUILD path, though no longer in the boot path. The sha256 pins below mean a compromised or vanished host fails the build loudly rather than shipping different bytes. Mirroring these two zips to our own GH release and repointing url_base is the follow-up; it changes this value and nothing else.",
         "asset_name": "bootstrap.zip",
+        "artifact": {
+          "_doc": "#618 — the baked zip is ~400 MB, so it is PUBLISHED beside the APK instead of inside it. It used to be an APK asset, which made every one-line app fix a 400 MB update that every phone re-downloaded in full just to get the code. It now goes to this app's own rolling GH release (same repo, same channel, same GITHUB_TOKEN the APK is published with — no new host, which is the point #348 fought for), and the APK carries only digest_asset + url_asset in its place. TermuxInstaller fetches it once, refuses it unless it hashes to digest_asset, extracts it and deletes the cache; while the installed version matches the baked digest nothing is fetched at all, so an app update that does not move the bootstrap costs no bytes and the app is offline-clean after first run.",
+          "repo": "diegonmarcos/cloud-u-android",
+          "tag": "latest",
+          "asset": "cloud-nixdroid-bootstrap-{id}-{abi}.zip",
+          "url": "https://github.com/{repo}/releases/download/{tag}/{asset}",
+          "_doc_id": "{id} is the first 12 hex of sha256 over identity_files — the content address of everything that DETERMINES the baked zip: this declaration (url_base, release, the per-arch sha256 pins, the nixpkgs pin and attrs) and the two scripts that transform it. A pin or script change yields a NEW asset name, so it is uploaded and every phone refetches; an app-code change yields the same name, so nothing is uploaded and no phone refetches. That is why there is no hand-maintained version to forget to bump. {abi} is the release.variants[] id.",
+          "identity_files": [
+            "build.json",
+            "app/src/main/cpp/patch_bootstrap_ids.py",
+            "app/src/main/cpp/bake_default_packages.py"
+          ],
+          "digest_asset": "bootstrap.zip.sha256",
+          "url_asset": "bootstrap.zip.url",
+          "publisher": "bootstrap/publish-artifact.sh"
+        },
         "_doc_asset_name": "Name inside the APK's assets/. One per APK, not one per architecture: each release.variants[] entry builds its own APK, so baking all four would multiply the size for three rootfses that APK can never run.",
         "package_name_rewrite": {
           "from": "com.termux.nix",
