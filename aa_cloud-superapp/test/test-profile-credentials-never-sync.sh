@@ -284,7 +284,7 @@ hasnt_code "$SYNC" "mailCode"     "ProfileSync never reads the mailed code"
 hasnt_code "$SYNC" "confirmation" "ProfileSync carries no confirmation field"
 hasnt_code "$IMPORT" "mail_code"  "the auto-import writes no 2FA code"
 
-echo "== T11: SEVEN tabs, declarative order in build.json; AI is not a tab; the export carries no private key (#614) =="
+echo "== T11: EIGHT tabs, declarative order in build.json; AI is not a tab; the export carries no private key (#614) =="
 WG_PROFILES="app/src/main/java/com/diegonmarcos/superapp/network/WireGuardProfiles.kt"
 # The six tab literals live in the id→Tab map; the STRIP's order + membership
 # come from build.json::ui.profile.tabs (data), not this map's declaration order.
@@ -308,14 +308,14 @@ has "$FRAGMENT" 'WG_ROUTE = "section:wg"'          "WireGuard tab uses the decla
 hasnt_code "$FRAGMENT" "page:config/wg"            "not the page target, which only rewrites to section:wg"
 hasnt_code "$FRAGMENT" "page:wg/config"            "not the double-push target"
 # Still no child fragments and no borrowed launcher machinery, at seven tabs.
-hasnt_code "$FRAGMENT" "childFragmentManager"   "seven tabs still use no child fragments"
-hasnt_code "$FRAGMENT" "SectionTabsFragment"    "seven tabs still avoid the section mechanism"
+hasnt_code "$FRAGMENT" "childFragmentManager"   "eight tabs still use no child fragments"
+hasnt_code "$FRAGMENT" "SectionTabsFragment"    "eight tabs still avoid the section mechanism"
 
-echo "-- T11-order: the strip is EXACTLY [connect, vault, fleet, store, repos, infos, wireguard], in order (#617 inserts store after fleet) --"
+echo "-- T11-order: the strip is EXACTLY [setup, connect, vault, fleet, store, repos, infos, wireguard], in order (#617 store after fleet; #622 setup first) --"
 tab_order_ok() {   # $1 = build.json path; returns 0 iff the declared order matches
     python3 - "$1" <<'PY'
 import json, sys
-want = ["connect", "vault", "fleet", "store", "repos", "infos", "wireguard"]
+want = ["setup", "connect", "vault", "fleet", "store", "repos", "infos", "wireguard"]
 got = (json.load(open(sys.argv[1]))["ui"].get("profile") or {}).get("tabs")
 sys.exit(0 if got == want else 1)
 PY
@@ -328,7 +328,7 @@ ids = {p["id"] for p in ext}
 sys.exit(0 if {"cloudflare-warp", "proton-vpn"} <= ids else 1)
 PY
 }
-if tab_order_ok "$ROOT/build.json"; then ok "T11-order: build.json declares the seven tabs in the required order"
+if tab_order_ok "$ROOT/build.json"; then ok "T11-order: build.json declares the eight tabs in the required order"
 else bad "T11-order: build.json tab order is wrong"; fi
 
 echo "-- T11-mutation: a dropped tab, a reordered tab, and a missing WG profile each go red --"

@@ -150,11 +150,13 @@ class ProfileFragment : Fragment() {
         // MOVING between tabs keeps its existing call site. WireGuard has no
         // column at all — it is a LINK to the screen that already exists (see
         // [tabStrip]).
+        val setup = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val connect = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val vault = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val imported = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val repos = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        page.addView(setup)
         page.addView(connect)
         page.addView(vault)
         page.addView(imported)
@@ -176,6 +178,7 @@ class ProfileFragment : Fragment() {
         // drop an id in build.json and the strip follows; nothing about the
         // strip's membership or order is spelled out here. Connect is first.
         val byId = mapOf(
+            "setup" to Tab("Setup", setup),
             "connect" to Tab("Connect", connect),
             "vault" to Tab("Vault", vault),
             "fleet" to Tab(getString(R.string.vault_tab_imported), imported),
@@ -314,6 +317,8 @@ class ProfileFragment : Fragment() {
         renderVault(ctx, vault)
 
         renderRepos(ctx, repos)
+
+        renderWizard(ctx, setup)
 
         // ── Privacy ──────────────────────────────────────────────────────
         // Disclosure lives on the collecting screen on purpose: "what is held
@@ -645,6 +650,57 @@ class ProfileFragment : Fragment() {
                 }.onFailure { view?.snack("Could not open $url") }
             })
         }
+    }
+
+    // ── Setup (tab) · THE FLEET WIZARD (#622) ─────────────────────────────
+
+    /**
+     * The SETUP tab: the ordered, resumable fleet-configuration wizard AND the
+     * account center. The steps, their order and each step's done-check + route
+     * are DATA ([Wizard.steps], from build.json::ui.profile.wizard). Each row
+     * shows a REAL, live-measured done light ([Wizard.done] — never a stored
+     * flag, #452) and, tapped, DELEGATES to the surface that step configures
+     * (another tab of this strip, or a launcher route). Re-entering never breaks
+     * a completed step; a step undone elsewhere is pending again on reopen.
+     */
+    private fun renderWizard(ctx: android.content.Context, into: LinearLayout) {
+        val steps = Wizard.steps()
+        if (steps.isEmpty()) return
+        into.addView(sectionHeader(ctx, "Fleet setup"))
+        into.addView(caption(ctx, "Take this phone to fully configured. Each step shows its live state and opens the screen that configures it — re-run any step any time."))
+        for (step in steps) {
+            val done = Wizard.done(ctx, step.check)
+            into.addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+                setPadding(0, dp(ctx, 8), 0, dp(ctx, 8))
+                tag = "wizard:${step.id}"
+                isClickable = step.route.isNotBlank()
+                if (step.route.isNotBlank()) setOnClickListener { openWizardRoute(step.route) }
+                addView(TextView(ctx).apply {
+                    text = if (done) "✓" else "○"
+                    setTextColor(if (done) 0xFF48BB78.toInt() else 0x99FFFFFF.toInt())
+                    textSize = 16f; setPadding(0, 0, dp(ctx, 12), 0)
+                })
+                addView(TextView(ctx).apply {
+                    text = step.label
+                    setTextAppearance(android.R.style.TextAppearance_Material_Body1)
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                })
+            })
+        }
+    }
+
+    /** Delegate a wizard step to its declared surface: a `tab:<id>` selects that
+     *  tab of this strip; anything else is a launcher route handed to the host. */
+    private fun openWizardRoute(route: String) {
+        if (route.startsWith("tab:")) {
+            val idx = profileTabOrder().indexOf(route.removePrefix("tab:"))
+            if (idx >= 0) strip?.getTabAt(idx)?.select()
+            return
+        }
+        (activity as? com.diegonmarcos.superapp.launcher.TileGridFragment.TileClickListener)
+            ?.onTileClicked(route)
     }
 
     /** Repo {label,url} list — data-driven from build.json::ui.profile_default.repos. */

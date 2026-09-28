@@ -288,6 +288,50 @@ cmp -s "$UI" "$TMP/web-to-bearer.kt" && bad "T9: the mutation did not change the
     || { fourways "$SHARED" "$TMP/web-to-bearer.kt" >/dev/null && bad "T9: passed a web pill that opens the bearer dialog" || ok "T9: web pill → bearer dialog → RED"; }
 fourways "$SHARED" "$UI" >/dev/null && ok "T9: the unmutated tree is still green" || bad "T9: the unmutated tree is red"
 
+echo "== T10: the fleet wizard (#622) is declarative, and its done-checks are real measurements =="
+WIZ="$PKG/Wizard.kt"
+wizard_order() { jq -r '(.ui.profile.wizard.steps // [])[].id' "$1" | tr '\n' ' ' | sed 's/ $//'; }
+WANT_STEPS="identity vault permissions apps repos wireguard fleet finish"
+[ "$(wizard_order "$BJ")" = "$WANT_STEPS" ] \
+    && ok "T10: build.json declares the 8 wizard steps in order" \
+    || bad "T10: wizard step order is '$(wizard_order "$BJ")'"
+# The wizard is DATA: the engine reads the baked blob, the fragment iterates it,
+# the blob is baked from build.json — no step id or order is spelled out in Kotlin.
+grep -q 'BuildConfig.UI_PROFILE_WIZARD_B64' "$WIZ" && ok "T10: Wizard reads the baked declaration" || bad "T10: Wizard does not read UI_PROFILE_WIZARD_B64"
+grep -q 'Wizard.steps()' "$PF" && grep -q 'for (step in steps)' "$PF" && ok "T10: renderWizard iterates the declared steps" || bad "T10: renderWizard does not iterate Wizard.steps()"
+grep -qF 'UI_PROFILE_WIZARD_B64' "$APP/app/build.gradle" && ok "T10: the wizard blob is baked" || bad "T10: UI_PROFILE_WIZARD_B64 is not baked"
+# Every done-check is a LIVE measurement of actual device state (#452: a wizard
+# that remembers success is worse than one that re-checks). Each real probe must
+# be present, and no stored 'step done' flag may exist.
+real_checks() {   # $1 = Wizard.kt; 0 iff every step's real probe is present
+    for probe in 'SignIn.Current.session' 'autheliaEmail' 'appliedAt' \
+                 'Environment.isExternalStorageManager' 'getEnabledListenerPackages' \
+                 'android.permission.DUMP' 'getPackageInfo' 'interfacePrivateKey' 'K_GITHUB_TOKEN'; do
+        grep -qF "$probe" "$1" || return 1
+    done
+    return 0
+}
+apps_measured() { grep -qE '"apps" -> .*declaredApps\(\)' "$1"; }
+real_checks "$WIZ" && ok "T10-real: every done-check carries its real system/state probe" || bad "T10-real: a done-check is missing its real probe"
+apps_measured "$WIZ" && ok "T10-real: the apps step measures installed packages, not a flag" || bad "T10-real: the apps step is not a real measurement"
+grep -qE 'getBoolean\("?wizard|putBoolean\("?wizard|wizard_done|stepDone' "$WIZ" \
+    && bad "T10-real: the wizard remembers a done flag (#452)" || ok "T10-real: no stored done flag — every check re-measures"
+
+echo "== T10-mutation: a reordered step, or a faked (remembered) done-check, turns red =="
+SC="$(mktemp -d)"; trap 'rm -rf "$SC"' EXIT
+cp "$BJ" "$SC/build.json"
+python3 - "$SC/build.json" <<'PY'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p)); s=d["ui"]["profile"]["wizard"]["steps"]; s[2],s[3]=s[3],s[2]; json.dump(d,open(p,"w"))
+PY
+[ "$(wizard_order "$SC/build.json")" = "$WANT_STEPS" ] && bad "T10-mutation: a reordered step was NOT caught" || ok "T10-mutation: a reordered step is caught"
+# Fake the apps done-check as a bare `true` (a remembered/hardcoded success)
+# while its real measurement is removed — the #452 trap made concrete.
+sed 's/"apps" -> declaredApps().*/"apps" -> true/' "$WIZ" > "$SC/Wizard.kt"
+if grep -q '"apps" -> declaredApps' "$SC/Wizard.kt"; then bad "T10-mutation: the apps mutation did not apply (tester stale)"
+else apps_measured "$SC/Wizard.kt" && bad "T10-mutation: a faked apps done-check (true) was NOT caught" || ok "T10-mutation: a faked apps done-check is caught"; fi
+rm -rf "$SC"; trap - EXIT
+
 echo
 echo "passed=$PASS failed=$FAIL"
 [ "$FAIL" = 0 ]
