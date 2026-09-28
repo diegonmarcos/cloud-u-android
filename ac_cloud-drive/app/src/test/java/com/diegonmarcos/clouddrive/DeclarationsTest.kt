@@ -91,6 +91,17 @@ class DeclarationsTest {
         assertFalse("Cloud Constellation carries no auth affordance", volumes.sections.first { it.id == "constellation" }.auth)
         assertEquals(volumes.classes.map { it.id }.toSet(), volumes.sections.flatMap { it.classIds }.toSet())
         assertTrue("every declared class is claimed by a section", volumes.unsectioned().isEmpty())
+        // #630 the fleet-app leg is RELATIVE to the store, never the owner-only Android/data tree,
+        // and the wall itself is declared so a row can state it instead of offering a dead Open.
+        assertFalse("the openable leg must not be an Android/data path", volumes.constellationPath.contains("Android/data"))
+        assertFalse("the openable leg is relative to the store", volumes.constellationPath.startsWith("/"))
+        val wall = requireNotNull(volumes.ownerOnly) { "ui.volumes.constellation_owner_only is not declared" }
+        assertFalse("the owner-only tree must never be declared openable", wall.openable)
+        assertTrue("the wall names the tree it is about", wall.path.contains("Android/data"))
+        assertTrue("the carve-out landed in API 30", wall.blockedSinceSdk >= 30)
+        assertTrue("a stated wall must offer the handoff that works", wall.handoff)
+        assertTrue("the wall's path names the app", volumes.ownerOnlyPathOf("com.x").contains("com.x"))
+        assertEquals("", volumes.ownerOnlyPathOf(""))
     }
 
     @Test fun syncRulesMapOntoOneRcloneJob() {

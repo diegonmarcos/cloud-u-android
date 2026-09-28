@@ -139,7 +139,12 @@
     <string name="volumes_open">Open in Files</string>
     <!-- Volumes, the four declared classes (#604) -->
     <string name="volumes_constellation_section">Fleet apps</string>
-    <string name="volumes_constellation_hint">Declared in data/drive-constellation.json; a row opens that app\'s shared files folder</string>
+    <string name="volumes_constellation_hint">Derived from the constellation fleet manifest; a row opens that app\'s folder in the shared store</string>
+    <!-- #630 the platform wall: /Android/data/&lt;pkg&gt; is owner-only since API 30 and no permission grants it -->
+    <string name="volumes_owner_only">Owner-only: Android %1$d+ lets only %2$s read its own %3$s. Nothing here can open it.</string>
+    <string name="volumes_open_in_app">Open in %1$s</string>
+    <string name="volumes_open_in_app_missing">%1$s is not installed, so nothing can open its owner-only folder</string>
+    <string name="volumes_store_folder">In the shared store — every fleet app with all-files access reads this</string>
     <string name="volumes_machines_hint">No host of this kind is declared yet</string>
     <string name="volumes_machines_other">Other hosts</string>
     <string name="volumes_personal_auth">Sign in</string>

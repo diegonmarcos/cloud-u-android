@@ -146,7 +146,11 @@ object DriveTags {
     const val CONFIGS_STRIP = "configs_strip"
     const val VOLUMES_CARD = "volumes_card"
     const val VOLUMES_STRIP = "volumes_strip"
+    /** #630 one declared section of the Volumes tab: its own header, its own strip, its own rows. */
+    const val VOLUMES_SECTION = "volumes_section"
     const val VOLUMES_ENTRY_ROW = "volumes_entry_row"
+    /** #630 the line a Fleet-Volumes row prints instead of offering an Open that cannot work. */
+    const val VOLUMES_OWNER_ONLY = "volumes_owner_only"
     const val RSYNC_RULE_CARD = "rsync_rule_card"
     const val HOME_CARD = "home_card"
     const val HOME_STORAGE_BAR = "home_storage_bar"

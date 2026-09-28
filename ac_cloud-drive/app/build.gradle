@@ -166,12 +166,16 @@ if (driveAppsFile.exists()) {
     }
 }
 def driveAppsB64  = b64(resolvedDriveApps)
-// #604 Volumes ▸ Cloud-Constellation: the fleet apps whose shared external folder the
-// class lists. Resolved against the SAME fleet manifest as the Apps grid above — one
-// list of packages for the whole app, and a fleet id the manifest does not carry is a
-// hard error here rather than a row that can never open anything.
+// #604/#630 Volumes ▸ Fleet Volumes: the fleet apps whose folder the class lists.
+// #630 DERIVED, NEVER HAND-PICKED. data/drive-constellation.json used to BE the list and
+// carried four entries, so the section showed four of the fleet's apps and looked like the
+// whole fleet. The list is now every `kind: app` entry of the constellation fleet manifest
+// — the SAME canonical file :libs:updater and the Store's Phone tab read — and
+// drive-constellation.json is reduced to LABEL/ICON OVERRIDES for the few whose manifest
+// label reads as a slug. An override naming a fleet id the manifest does not carry is still
+// a hard error; a manifest app with no override simply takes its manifest label.
 def constellationFile = file('../data/drive-constellation.json')
-def resolvedConstellation = []
+def constellationOverrides = [:]
 if (constellationFile.exists()) {
     new groovy.json.JsonSlurper().parse(constellationFile).apps.each { entry ->
         def fleetEntry = fleetById[entry.fleet]
@@ -181,8 +185,25 @@ if (constellationFile.exists()) {
                 "constellation fleet manifest does not contain ($fleetAppsFile). " +
                 "Rename or remove the entry.")
         }
-        resolvedConstellation << [label: entry.label, icon: entry.icon, package: fleetEntry.package]
+        constellationOverrides[entry.fleet] = entry
     }
+}
+def resolvedConstellation = []
+fleetById.each { fleetId, fleetEntry ->
+    if (fleetEntry.kind != 'app') return
+    if (!fleetEntry.package) return
+    def over = constellationOverrides[fleetId]
+    resolvedConstellation << [
+        label  : (over?.label ?: fleetEntry.label ?: fleetId),
+        icon   : (over?.icon ?: 'apps'),
+        package: fleetEntry.package,
+    ]
+}
+resolvedConstellation.sort { it.label.toLowerCase() }
+if (resolvedConstellation.isEmpty()) {
+    throw new GradleException(
+        "the constellation fleet manifest ($fleetAppsFile) yielded no `kind: app` entry: " +
+        "Volumes ▸ Fleet Volumes would render an empty section.")
 }
 def constellationB64 = b64(resolvedConstellation)
 // #604 the folder↔folder sync rules the Rsync sub-page renders, on the same carrier.

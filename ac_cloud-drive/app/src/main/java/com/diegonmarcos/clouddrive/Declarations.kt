@@ -111,10 +111,20 @@ object Declarations {
     data class PersonalAuthDecl(val pkg: String, val target: String, val extra: String, val icon: String)
 
     /**
-     * #604/#613 the Volumes tab: the four classes, the two sections that regroup them
+     * #630 THE PLATFORM WALL, declared (build.json::ui.volumes.constellation_owner_only). A fleet
+     * app's `/Android/data/<pkg>/` tree is readable ONLY by that app since API [blockedSinceSdk]:
+     * MANAGE_EXTERNAL_STORAGE carves it out and Android 13+ closes the SAF route too. [openable]
+     * is therefore false and the row must render NO Open affordance onto [path]; [handoff] says it
+     * offers a launch of the owning app instead, which is the one process that can read it.
+     */
+    data class OwnerOnlyDecl(val path: String, val openable: Boolean, val blockedSinceSdk: Int, val handoff: Boolean)
+
+    /**
+     * #604/#613/#630 the Volumes tab: the four classes, the two sections that regroup them
      * (#613), the host kinds Cloud-Machines groups by, the data/drive-remotes.json types
-     * the S3 class owns, where one fleet app's shared folder lives ([constellationPath]
-     * carries a `<package>` placeholder), and Personal Mounts' auth deep-link.
+     * the S3 class owns, where one fleet app's folder lives inside the shared store
+     * ([constellationPath], a RELATIVE leg carrying a `<package>` placeholder — #630), the
+     * owner-only tree that can never be opened, and Personal Volumes' auth deep-link.
      */
     data class VolumesDecl(
         val classes: List<VolumeClassDecl>,
@@ -123,10 +133,15 @@ object Declarations {
         val s3RemoteTypes: Set<String>,
         val constellationPath: String,
         val personalAuth: PersonalAuthDecl?,
+        val ownerOnly: OwnerOnlyDecl? = null,
     ) {
-        /** The shared external files folder of [packageName], or blank when nothing is declared. */
+        /** [packageName]'s folder inside the shared store — a relative leg SharedStore resolves. */
         fun constellationPathOf(packageName: String): String =
             if (constellationPath.isBlank() || packageName.isBlank()) "" else constellationPath.replace("<package>", packageName)
+
+        /** The declared owner-only tree of [packageName] — stated, never offered as openable. */
+        fun ownerOnlyPathOf(packageName: String): String =
+            ownerOnly?.path?.takeIf { it.isNotBlank() && packageName.isNotBlank() }?.replace("<package>", packageName).orEmpty()
         /** The class ids no section claims — VolumesScreen renders them under 'Others' (#292: never lose a row). */
         fun unsectioned(): List<VolumeClassDecl> {
             val claimed = sections.flatMap { it.classIds }.toSet()
@@ -315,7 +330,7 @@ object Declarations {
     }
 
     fun parseVolumes(text: String): VolumesDecl {
-        val o = element(text) as? JsonObject ?: return VolumesDecl(emptyList(), emptyList(), emptyList(), emptySet(), "", null)
+        val o = element(text) as? JsonObject ?: return VolumesDecl(emptyList(), emptyList(), emptyList(), emptySet(), "", null, null)
         val classes = objects(o["classes"]).mapNotNull { c ->
             val id = c.str("id"); if (id.isBlank()) null else VolumeClassDecl(id, c.str("label", id), c.str("icon"))
         }
@@ -325,7 +340,10 @@ object Declarations {
         val personalAuth = (o["personal_auth"] as? JsonObject)?.let {
             val pkg = it.str("package"); if (pkg.isBlank()) null else PersonalAuthDecl(pkg, it.str("target"), it.str("extra"), it.str("icon"))
         }
-        return VolumesDecl(classes, sections, o.strings("machine_kinds"), o.strings("s3_remote_types").toSet(), o.str("constellation_path"), personalAuth)
+        val ownerOnly = (o["constellation_owner_only"] as? JsonObject)?.let {
+            val path = it.str("path"); if (path.isBlank()) null else OwnerOnlyDecl(path, it.bool("openable"), it.int("blocked_since_sdk") ?: 30, it.bool("handoff", true))
+        }
+        return VolumesDecl(classes, sections, o.strings("machine_kinds"), o.strings("s3_remote_types").toSet(), o.str("constellation_path"), personalAuth, ownerOnly)
     }
 
     fun parseConstellation(text: String): List<ConstellationAppDecl> = objects(element(text)).mapNotNull { a ->

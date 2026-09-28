@@ -1,27 +1,27 @@
 {
-  "_doc": "#604 CLOUD-CONSTELLATION — the on-device mesh between OUR same-signature fleet apps, as the Volumes tab's first class. One row per app, and the row opens that app's SHARED external-storage files folder (build.json::ui.volumes.constellation_path) through the navigator the device volumes already use. Only the `apps` array crosses into the APK: the _doc_* keys are for whoever edits this file.",
-  "_doc_identity": "Same contract as data/drive-apps.json: this file declares the SELECTION and the presentation, and every entry resolves its package from data/constellation-fleet.json at build time (ac_cloud-drive/app/build.gradle). There is no second list of packages here — that is the #170/#380/#381 defect shape — and a fleet id the manifest does not carry is a hard build error.",
-  "_doc_private_storage": "A fleet app's PRIVATE data dir (/data/data/<package>) is NOT addressed and cannot be: sharedUserId may not be declared fresh past API 32, and no other route exists between two installed apps' sandboxes. What IS readable with all-files access is the shared external folder above, so that is the only thing a row promises.",
-  "apps": [
-    {
-      "fleet": "drive",
-      "label": "Cloud Drive",
-      "icon": "folder"
-    },
-    {
-      "fleet": "aa_cloud-superapp",
-      "label": "Cloud SuperApp",
-      "icon": "apps"
-    },
-    {
-      "fleet": "code",
-      "label": "Cloud Code",
-      "icon": "code"
-    },
-    {
-      "fleet": "notes",
-      "label": "Cloud Notes",
-      "icon": "description"
-    }
-  ]
+ "_doc": "#604/#630 FLEET VOLUMES — the on-device volumes of OUR same-signature fleet apps, the Volumes tab's first class. #630 THIS FILE IS NO LONGER THE LIST. It used to declare which apps appeared, carried four entries, and so the section showed four apps and read as the whole fleet; ac_cloud-drive/app/build.gradle now derives one row per `kind: app` entry of aa_cloud-superapp/data/constellation-fleet.json — the SAME canonical manifest :libs:updater and the Store's Phone tab read — and what remains here is LABEL and ICON overrides for the apps whose manifest label reads as a slug. An override naming a fleet id the manifest does not carry is still a hard build error; an app with no override takes its manifest label and the default icon.",
+ "_doc_identity": "Same contract as data/drive-apps.json: a package is NEVER written here, it is resolved from data/constellation-fleet.json at build time. #630 goes further and resolves the SELECTION from there too, so this file cannot be the reason a fleet app is missing from the section — that is the #170/#380/#381 defect shape, and it had reappeared as a four-entry list.",
+ "_doc_private_storage": "#630 A fleet app's PRIVATE data dir (/data/data/<package>) is not addressed and cannot be. Neither is /storage/emulated/0/Android/data/<package>/: since API 30 that tree is readable only by its owning app, MANAGE_EXTERNAL_STORAGE is explicitly carved out of it, and Android 13+ blocks SAF there as well — the device is API 35. build.json::ui.volumes.constellation_owner_only declares that wall and the row states it; what a row OPENS is the app's folder inside the ONE shared store (ui.volumes.constellation_path), a location the fleet controls and every app with all-files access can reach.",
+ "apps": [
+  {
+   "fleet": "drive",
+   "label": "Cloud Drive",
+   "icon": "folder"
+  },
+  {
+   "fleet": "aa_cloud-superapp",
+   "label": "Cloud SuperApp",
+   "icon": "apps"
+  },
+  {
+   "fleet": "code",
+   "label": "Cloud Code",
+   "icon": "code"
+  },
+  {
+   "fleet": "notes",
+   "label": "Cloud Notes",
+   "icon": "description"
+  }
+ ]
 }

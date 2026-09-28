@@ -13,7 +13,7 @@
     "compile_sdk": 36,
     "min_sdk": 26,
     "target_sdk": 35,
-    "version_code": 12,
+    "version_code": 13,
     "version_name": "0.5.0-dev",
     "abi_filters": [
       "arm64-v8a"
@@ -294,16 +294,16 @@
           "icon": "cloud"
         }
       ],
-      "_doc_sections": "#613 THE TWO SECTIONS the four classes regroup into, in render order. `classes` names the ui.volumes.classes ids each section owns; the class rendering is UNCHANGED (VolumesScreen still dispatches its body on the class id) — a section only reparents which class pills sit under which header. `auth: true` gives the section the Personal-Mounts sign-in affordance below (personal_auth), a deep-link to the fleet's auth Profile; Cloud Constellation is the mesh/cloud side and carries none. A class no section names is NOT lost: VolumesScreen renders it under an 'Others' header (the #292 rule — never lose a row). The union of every section's `classes` must cover ui.volumes.classes; test/test-drive-shell.sh D13 holds it so.",
+      "_doc_sections": "#613/#630 THE TWO SECTIONS the four classes regroup into, in render order. `classes` names the ui.volumes.classes ids each section owns. #630 RENAMED them to the owner's own words — Fleet Volumes and Personal Volumes — and, more importantly, fixed what they LOOKED like: #613 stacked both pill strips at the top of ONE shared body, so two declared sections rendered as one list and the owner reported 'SEPARATE TWO SECTIONS!! IS TWO SECTIONS!!'. Each section now owns its OWN header, its OWN pill strip, its OWN selected class and its OWN rows underneath, and the bodies split the screen; test/test-drive-volumes-sections.sh fails the build on a single shared body. `auth: true` gives the section the Personal-Volumes sign-in affordance below (personal_auth), a deep-link to the fleet's auth Profile; Fleet Volumes is the mesh/cloud side and carries none. A class no section names is NOT lost: it gets an 'Others' section of its own (the #292 rule — never lose a row). The union of every section's `classes` must cover ui.volumes.classes; test/test-drive-shell.sh D13 holds it so.",
       "sections": [
         {
           "id": "constellation",
-          "label": "Cloud Constellation",
+          "label": "Fleet Volumes",
           "classes": [ "constellation" ]
         },
         {
           "id": "personal",
-          "label": "Personal Mounts",
+          "label": "Personal Volumes",
           "auth": true,
           "classes": [ "machines", "containers", "s3" ]
         }
@@ -326,8 +326,15 @@
         "s3",
         "google-drive"
       ],
-      "_doc_constellation_path": "Where one fleet app's files are readable from another. `<package>` is substituted with the resolved package id; the result is SHARED external storage, the same access model the Files tab's device browsing already uses, so a fleet app's folder opens through the existing onOpenPath navigator and no new storage-access code exists. A fleet app's PRIVATE data dir is deliberately NOT addressed: sharedUserId cannot be declared fresh past API 32 and there is no other route, so promising it would be a row that never opens.",
-      "constellation_path": "/storage/emulated/0/Android/data/<package>/files"
+      "_doc_constellation_path": "#604/#630 WHERE ONE FLEET APP'S FOLDER IS ACTUALLY READABLE FROM ANOTHER. This used to be /storage/emulated/0/Android/data/<package>/files, and that path CAN NEVER BE OPENED by cloud-drive: since Android 11 (API 30) /Android/data/<pkg>/ is readable only by its owning app, MANAGE_EXTERNAL_STORAGE does NOT grant it (Android/data and Android/obb are explicitly carved out of that permission), and Android 13+ blocks the SAF/DocumentsProvider route into those trees as well. The device is API 35, so every row read 'Not verifiable: cannot read <package>' and its Open did nothing — the OS refusing correctly. It is now a leg of the ONE SHARED STORE (storage.shared_root, resolved through SharedStore.resolve so the absolute path is still written down nowhere): a location the FLEET controls and that every app holding all-files access can genuinely reach. The <package> placeholder is substituted with the resolved package id, once.",
+      "constellation_path": "apps/<package>",
+      "_doc_constellation_owner_only": "#630 THE PLATFORM WALL, DECLARED, so no row can offer a path that is guaranteed to fail. `path` is the app's own Android/data folder; `openable: false` says cloud-drive must never render an Open affordance onto it; `blocked_since_sdk` is the API level that carved it out of every other app's reach; `handoff: true` says the row offers 'Open in <app>' instead — a launch of the OWNING app, which is the one process that can read that directory. The row states the reason in plain words rather than rendering 'Not verifiable' as a mystery, which is the #292 rule applied to a platform refusal: never an empty box, and never a button that cannot work.",
+      "constellation_owner_only": {
+        "path": "/storage/emulated/0/Android/data/<package>/files",
+        "openable": false,
+        "blocked_since_sdk": 30,
+        "handoff": true
+      }
     },
     "sync": {
       "_doc": "#609 the strip inside the NEW Sync island — ONE declaration, three sub-pages, in this order. Git, Rclone (LABELLED Rsync — #604's rename stands) and Mounts moved back OUT of ui.configs.pages into their own tab, the mirror of #603's move the other way: all three are an ENGINE'S OWN surface (libs:git-sync, libs:rclone, libs:mounts) and belong beside each other, not folded into general settings. SyncScreen dispatches on the id, the ONE place Kotlin names them; test/test-drive-shell.sh diffs it against this declaration in both directions.",

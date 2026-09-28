@@ -23,11 +23,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import com.diegonmarcos.clouddrive.Declarations
+import com.diegonmarcos.clouddrive.DriveActions
+import com.diegonmarcos.clouddrive.SharedStore
 import com.diegonmarcos.clouddrive.R
 import com.diegonmarcos.clouddrive.sync.ConnectionRow
 import com.diegonmarcos.clouddrive.sync.RcloneCoordinator
@@ -54,20 +57,58 @@ import kotlinx.coroutines.withContext
  */
 
 /**
- * CLASS A — the on-device mesh between our same-signature fleet apps. A row opens that app's
- * SHARED external files folder through the navigator the device volumes already use. A fleet
- * app's private sandbox is NOT addressed: build.json::ui.volumes._doc_constellation_path says why.
+ * CLASS A — FLEET VOLUMES: the on-device volumes of our same-signature fleet apps. Every
+ * `kind: app` entry of the constellation fleet manifest gets a row (#630 — the list is DERIVED
+ * at build time, not hand-picked, which is why four apps used to be the whole section).
+ *
+ * #630 WHAT A ROW OPENS, AND WHAT IT CANNOT. A row used to address
+ * `/storage/emulated/0/Android/data/<package>/files` and its Open did nothing, because that tree
+ * is readable ONLY by its owning app since API 30: MANAGE_EXTERNAL_STORAGE is explicitly carved
+ * out of Android/data and Android/obb, and Android 13+ closes the SAF/DocumentsProvider route as
+ * well. The device is API 35. That is the OS refusing correctly and no code can get past it, so
+ * the row STATES it — in plain words, naming the app and the API level from
+ * ui.volumes.constellation_owner_only — and offers the two things that DO work: the app's folder
+ * inside the ONE shared store (a location the fleet controls and any app with all-files access
+ * can read), and a handoff, "Open in <app>", which launches the owner to read its own directory.
+ * No Open affordance is ever rendered onto the owner-only path.
  */
 @Composable
-fun ConstellationVolumes(onOpenPath: (String) -> Unit, modifier: Modifier = Modifier) {
+fun ConstellationVolumes(actions: DriveActions, onOpenPath: (String) -> Unit, say: (String) -> Unit, modifier: Modifier = Modifier) {
     val apps = Declarations.constellation
+    val ownerOnly = Declarations.volumes.ownerOnly
     LazyColumn(modifier.fillMaxSize()) {
         item { SectionHeader(stringResource(R.string.volumes_constellation_section), count = apps.size) }
         if (apps.isEmpty()) item { EmptyState(Icons.Filled.Folder, stringResource(R.string.volumes_class_empty), stringResource(R.string.volumes_constellation_hint)) }
         items(apps, key = { "fleet-" + it.packageName }) { app ->
-            val path = Declarations.volumes.constellationPathOf(app.packageName)
-            DriveCard(app.label, light = StatusLight.State.UNVERIFIABLE, summary = path, summaryMonospace = true, tag = DriveTags.VOLUMES_CARD) {
-                PillRow { Pill(stringResource(R.string.volumes_open), { if (path.isNotBlank()) onOpenPath(path) }, filled = true, enabled = path.isNotBlank()) }
+            val ctx = LocalContext.current
+            // The declared leg is RELATIVE to the store; SharedStore resolves it, so the absolute
+            // path is still written down in exactly one place (#575).
+            val path = SharedStore.resolve(Declarations.volumes.constellationPathOf(app.packageName))
+            val reachable = path.isNotBlank() && !path.startsWith("<")
+            DriveCard(
+                app.label,
+                light = StatusLight.of(reachable),
+                summary = path,
+                summaryMonospace = true,
+                tag = DriveTags.VOLUMES_CARD,
+            ) {
+                Text(stringResource(R.string.volumes_store_folder), Modifier.padding(top = DriveMetrics.gap), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // The platform wall, said out loud. A row never renders "Not verifiable" as a
+                // mystery and never offers an Open onto a path the OS guarantees will fail.
+                if (ownerOnly != null && !ownerOnly.openable) {
+                    Text(
+                        stringResource(R.string.volumes_owner_only, ownerOnly.blockedSinceSdk, app.label, Declarations.volumes.ownerOnlyPathOf(app.packageName)),
+                        Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.VOLUMES_OWNER_ONLY),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                PillRow {
+                    Pill(stringResource(R.string.volumes_open), { if (reachable) onOpenPath(path) }, filled = true, enabled = reachable)
+                    if (ownerOnly?.handoff == true) Pill(stringResource(R.string.volumes_open_in_app, app.label), {
+                        if (!actions.launchApp(app.packageName, "")) say(ctx.getString(R.string.volumes_open_in_app_missing, app.label))
+                    })
+                }
             }
         }
     }
