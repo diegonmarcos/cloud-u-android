@@ -33,6 +33,14 @@
    "notes": "The fleet hub repository (repos.json, clone.sh)"
   },
   {
+   "name": "cloud-data-my-ai-memory",
+   "label": "cloud-data-my-ai-memory",
+   "github_owner": "diegonmarcos",
+   "gitea_owner": "diego",
+   "private": true,
+   "notes": "The owner's memory + product backlog. cloud-code's Backlog tab reads and writes it HERE, through the shared store (#575 proof case) — no second clone."
+  },
+  {
    "name": "cloud-infra",
    "label": "cloud-infra",
    "github_owner": "diegonmarcos",
@@ -87,6 +95,15 @@
    "notes": "Linux fleet configs"
   },
   {
+   "name": "diegonmarcos.github.io",
+   "label": "front · site",
+   "github_owner": "diegonmarcos",
+   "gitea_owner": "diego",
+   "public": true,
+   "notes": "The public site — public but carries no seed flag, stays declared-not-cloned",
+   "seed": true
+  },
+  {
    "name": "ffront",
    "label": "ffront",
    "github_owner": "diegonmarcos",
@@ -101,7 +118,8 @@
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
-   "notes": "Static assets — public but carries no seed flag, stays declared-not-cloned"
+   "notes": "Static assets — public but carries no seed flag, stays declared-not-cloned",
+   "seed": true
   },
   {
    "name": "front-data",
@@ -109,23 +127,17 @@
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
-   "notes": "Front-end data feeds. #608 CORRECTED: this file said private: true and the live API says private=false (an unauthenticated GET of the repository answers 200), so it is public and belongs to the Git page's declared public set. Still not seeded: it carries no seed flag."
+   "notes": "Front-end data feeds. #608 CORRECTED: this file said private: true and the live API says private=false (an unauthenticated GET of the repository answers 200), so it is public and belongs to the Git page's declared public set. Still not seeded: it carries no seed flag.",
+   "seed": true
   },
   {
-   "name": "diegonmarcos.github.io",
-   "label": "front · site",
+   "name": "front-diegonmarcos",
+   "label": "front-diegonmarcos",
    "github_owner": "diegonmarcos",
    "gitea_owner": "diego",
    "public": true,
-   "notes": "The public site — public but carries no seed flag, stays declared-not-cloned"
-  },
-  {
-   "name": "cloud-data-my-ai-memory",
-   "label": "cloud-data-my-ai-memory",
-   "github_owner": "diegonmarcos",
-   "gitea_owner": "diego",
-   "private": true,
-   "notes": "The owner's memory + product backlog. cloud-code's Backlog tab reads and writes it HERE, through the shared store (#575 proof case) — no second clone."
+   "seed": true,
+   "notes": "Front web projects (personal site + the traditional budgets project)"
   }
  ],
  "_doc_clone": "#575/#606 Every repository here is cloned INTO THE ONE SHARED STORE (ac_cloud-drive/build.json::storage.shared_root) as <root>/<git_subdir>/<name>, by the page's Clone/Open button: the target folder and the upstream URL (https://<github host>/<github_owner>/<name>.git, composed from the github instance above) are handed to the native git manager (libs:git-sync), which asks only for a token when the repository is private. A folder that already holds the clone opens instead of cloning. Nothing here is a path: the root lives in build.json and the page reads it through FilesBridge.sharedRoot().",
