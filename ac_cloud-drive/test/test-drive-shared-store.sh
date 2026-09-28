@@ -131,13 +131,16 @@ echo "── S3b one-time migration of stray root clones into the git folder ─
 # is left alone), BEFORE the seed loop runs.
 if grep -qE 'fun migrate\(root: File, gitSubdir: String, repoNames: Set<String>\): List<Move>' "$MIGRATION" \
    && grep -qE 'File\(root, gitSubdir\)' "$MIGRATION" \
-   && grep -qE 'if \(dest\.exists\(\)\)' "$MIGRATION"; then
-    pass "StoreMigration.migrate relocates root strays into root/gitSubdir and never clobbers a taken destination"
+   && grep -qE 'fun isComplete\(dir: File\)' "$MIGRATION" \
+   && grep -qE 'if \(destScore == COMPLETE\)' "$MIGRATION"; then
+    # #629 the rule changed from POSITION to COMPLETENESS: the device carried both copies of a
+    # repository, each partly complete, in either direction. See test-drive-seed-and-migration.sh.
+    pass "StoreMigration.migrate relocates root strays into root/gitSubdir and deletes a copy only when the survivor is COMPLETE"
 else
-    fail "StoreMigration.migrate is missing, does not resolve the git folder, or would overwrite an existing clone"
+    fail "StoreMigration.migrate is missing, does not resolve the git folder, or can delete a copy that is not redundant"
 fi
 if grep -qE 'it\.name != gitSubdir' "$MIGRATION" && grep -qE 'it\.name in repoNames' "$MIGRATION"; then pass "the migration skips the git folder itself and acts only on declared repository names"; else fail "the migration is not manifest-driven / does not skip the git_subdir folder"; fi
-if grep -qE 'StoreMigration\.migrate\(SharedStore\.root\(\), BuildConfig\.GIT_SUBDIR, family\.repos\.map \{ it\.name \}\.toSet\(\)\)' "$SEED" && awk '/StoreMigration\.migrate/{m=NR} /Declarations\.seedRepos\.forEach/{s=NR} END{exit !(m && s && m < s)}' "$SEED"; then pass "StoreSeedWorker runs the migration (all declared names) BEFORE the seed loop"; else fail "StoreSeedWorker does not run StoreMigration before the seed loop"; fi
+if grep -qE 'StoreMigration\.migrate\(SharedStore\.root\(\), BuildConfig\.GIT_SUBDIR, family\.repos\.map \{ it\.name \}\.toSet\(\)\)' "$SEED" && awk '/StoreMigration\.migrate/{m=NR} /val declared = Declarations\.seedRepos/{s=NR} END{exit !(m && s && m < s)}' "$SEED"; then pass "StoreSeedWorker runs the migration (all declared names) BEFORE the seed loop"; else fail "StoreSeedWorker does not run StoreMigration before the seed loop"; fi
 
 echo "── S4 scheduled sync ──"
 if grep -qE "class GitSyncWorker\(context: Context, params: WorkerParameters\) : Worker\(" "$WORKER"; then pass "GitSyncWorker is a WorkManager Worker"; else fail "GitSyncWorker is not a Worker"; fi
