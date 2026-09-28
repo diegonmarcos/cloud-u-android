@@ -4,6 +4,7 @@ import android.app.Application;
 import android.content.Context;
 
 import com.termux.BuildConfig;
+import com.termux.cloud.CloudTermuxProperties;
 import com.termux.shared.errors.Error;
 import com.termux.shared.logger.Logger;
 import com.termux.shared.termux.TermuxBootstrap;
@@ -36,6 +37,12 @@ public class TermuxApplication extends Application {
 
         // Set TermuxBootstrap.TERMUX_APP_PACKAGE_MANAGER and TermuxBootstrap.TERMUX_APP_PACKAGE_VARIANT
         TermuxBootstrap.setTermuxPackageManagerAndVariant(BuildConfig.TERMUX_PACKAGE_VARIANT);
+
+        // #620 — write allow-external-apps=true into ~/.termux/termux.properties
+        // BEFORE the line below caches that file. Without it RunCommandService
+        // refuses the boot runner's intent on every single reboot, and nothing
+        // in this app ever wrote the property (it only read it).
+        CloudTermuxProperties.ensureAllowExternalApps();
 
         // Init app wide SharedProperties loaded from termux.properties
         TermuxAppSharedProperties properties = TermuxAppSharedProperties.init(context);
