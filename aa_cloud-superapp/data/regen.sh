@@ -355,15 +355,49 @@ regen_constellation() {
         ((.constellation.groups // []) | map(select(.default_for_kind != null)
               | { key: .default_for_kind, value: .id }) | from_entries) as $defaults
         | $apps | map(. + { group: (ml_group(.id) // $defaults[.kind]) })' "$selfbj")"
+    # ── Runtime artifacts (#624) ─────────────────────────────────────────────
+    # #618 moved the two terminals' ~400 MB runtime trees out of their APKs and
+    # onto the release beside them, addressed by content. That left them with no
+    # fleet identity at all: no name, no version, no row — the store could not
+    # say what the phone was about to fetch. Each one is now a declared lib, from
+    # ONE declaration per app (<app>/fleet-lib.json, which POINTS at #618's
+    # artifact block rather than restating it).
+    #
+    # Resolved by the fleet-manifest guard's own --emit-artifact-libs, not by jq
+    # here: the id is a sha256-over-sha256s content address that the guard must
+    # recompute anyway to prove the manifest current, and two implementations of
+    # an address would be two versions of one artifact.
+    #
+    # They land in `catalogue`, NOT in `apps`, and that placement is the whole
+    # safety property: Fleet.parse reads only `apps`, so no updater, worker,
+    # install path or batch can be handed 437 MB as though it were an APK. #618
+    # removed an install-size wall; a lib row must not walk it back.
+    local artifact_libs
+    artifact_libs="$(python3 "$UNIX/1_cicd/src/scripts/cloud-android-fleet-manifest-guard.py" \
+                        --root "$UNIX" --emit-artifact-libs)" \
+        || { echo "ERROR: runtime artifact libs do not resolve (#624)" >&2; return 1; }
+
     # Reference rows are resolved here too, by the SAME ml_group, so the
     # catalogue's tab and the catalogue's name are one fact as well. installable
     # is stamped rather than trusted from the data, so no catalogue row can ever
     # claim to be installable.
+    #
+    # `kind` extends the ONE group rule to the catalogue instead of adding a
+    # second one: an ML reference names its own tab, anything else takes the tab
+    # whose default_for_kind is its kind — exactly what the apps line above does.
+    # A row with no kind keeps landing in no group and keeps failing below, so
+    # the existing ML naming requirement is untouched.
     local catalogue
-    catalogue="$(jq "$ml_group"'
-        [ (.constellation.catalogue // [])[]
-          | { id, label: (.label // .id), group: (ml_group(.id) // null),
-              description: (.description // ""), installable: false } ]' "$selfbj")"
+    catalogue="$(jq --argjson artifacts "$artifact_libs" "$ml_group"'
+        ((.constellation.groups // []) | map(select(.default_for_kind != null)
+              | { key: .default_for_kind, value: .id }) | from_entries) as $defaults
+        | [ ((.constellation.catalogue // [])[] | . + { kind: null }), $artifacts[] ]
+        | map({ id, label: (.label // .id),
+                group: (ml_group(.id) // (if .kind then $defaults[.kind] else null end)),
+                description: (.description // ""), installable: false }
+              # `version` only where there IS one, so the 40-odd ML reference rows
+              # stay byte-identical and the baked base64 does not grow for them.
+              + (if .version then { version: .version } else {} end))' "$selfbj")"
     local group_problems
     group_problems="$(jq -r --argjson apps "$apps" --argjson catalogue "$catalogue" '
         ((.constellation.groups // []) | map(.id)) as $declared
