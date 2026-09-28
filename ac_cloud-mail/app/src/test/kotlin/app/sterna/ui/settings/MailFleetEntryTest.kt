@@ -94,15 +94,87 @@ class MailFleetEntryTest {
         )
     }
 
-    // -- 3. completeness against a neighbour --------------------------------------------------
+    // -- 3. completeness, against the SCHEMA and not against a neighbour ----------------------
 
-    @Test fun `mail's entry carries every field the keyboard's does`() {
-        val missing = keys(keyboardBlock) - keys(mailBlock)
+    /**
+     * This used to read `keys(keyboardEntry) - keys(mailEntry)`, calling the keyboard
+     * "the reference shape". That encoded ONE app's field set as the fleet's schema,
+     * and #631 made the field set deliberately per-app: `version_name`/`version_code`
+     * are emitted only where `build.json::android` declares them, because "an absent
+     * key is the honest answer" and a fork must not borrow upstream's number. The
+     * keyboard declares them and mail does not, so from #631 onward this test failed
+     * on an honest difference — a false red, and a landmine for every future app that
+     * legitimately declares a different set.
+     *
+     * The floor that actually means something is the INTERSECTION: a key carried by
+     * EVERY app entry is structural, and mail missing one of those is a real defect.
+     * A key carried by only some entries is optional by construction and cannot be
+     * asserted from a neighbour.
+     */
+    @Test fun `mail's entry carries every field that EVERY app entry carries`() {
+        val missing = universalAppKeys() - keys(mailBlock)
         assertEquals(
-            "the keyboard entry is the reference shape. A field present there and absent here " +
-                "is a fact Configs ▸ Update cannot show about mail but could about the keyboard",
+            "these keys are present on every entry in the fleet, so they are the schema " +
+                "rather than one app's shape. One of them missing here is a fact Configs ▸ " +
+                "Update cannot show about mail that it can show about every other app",
             emptySet<String>(),
             missing,
+        )
+    }
+
+    @Test fun `the intersection floor is not vacuous`() {
+        // A floor computed from every entry would be EMPTY if the entry splitter ever
+        // stopped finding entries, and an empty floor subtracts to nothing and passes
+        // forever. Proving the floor is real is what keeps the test above from becoming
+        // decoration the day the manifest's layout changes.
+        val universal = universalAppKeys()
+        assertTrue(
+            "the fleet must yield a non-trivial common key set; got $universal",
+            universal.containsAll(setOf("id", "package", "asset", "release_url", "kind")),
+        )
+        assertEquals(
+            "a synthetic entry missing a structural key must be REPORTED by the same " +
+                "subtraction the test above performs — otherwise that test cannot fail",
+            setOf("release_url"),
+            universal - (keys(mailBlock) - setOf("release_url")),
+        )
+    }
+
+    /**
+     * The other half, and the one that makes a DECLARED field non-optional: whatever
+     * this app's own build.json declares must reach its entry. #631's rule is
+     * "emitted from the same declaration gradle reads, and not emitted at all where
+     * nothing declares it" — so the honest assertion is conditional on the
+     * declaration, not on a neighbour. Today mail declares no `android` block at all
+     * and this holds trivially; the moment it declares one, a regen that drops it
+     * goes red here.
+     */
+    @Test fun `no field mail's own build_json declares is missing from its entry`() {
+        val missing = declaredOptionalFields(MAIL_BUILD_JSON.readText()) - keys(mailBlock)
+        assertEquals(
+            "build.json declares it and the manifest dropped it: Configs ▸ Update would " +
+                "show 'not declared' for a version this app does declare",
+            emptySet<String>(),
+            missing,
+        )
+    }
+
+    @Test fun `the declared-field check goes RED when a declared field is dropped`() {
+        // THE MUTATION. Without it the test above is indistinguishable from one that
+        // asserts nothing, because mail currently declares nothing for it to find —
+        // exactly how a conditional assertion becomes a blind one.
+        val declaresBoth = """{"android":{"version_name":"9.9.9","version_code":424242}}"""
+        assertEquals(
+            "a build.json declaring both version fields, against an entry carrying " +
+                "neither, must report both as missing",
+            setOf("version_name", "version_code"),
+            declaredOptionalFields(declaresBoth) - keys(mailBlock),
+        )
+        assertEquals(
+            "…and a build.json declaring nothing must report nothing, so the check is " +
+                "conditional on the declaration and not simply always-empty",
+            emptySet<String>(),
+            declaredOptionalFields("""{"upstream":{"version":"1.5.4"}}""") - keys(mailBlock),
         )
     }
 
@@ -225,8 +297,96 @@ class MailFleetEntryTest {
         /** The `mail` entry's own JSON object, as text. */
         val mailBlock: String by lazy { objectContaining("package", "com.diegonmarcos.comms.mail") }
 
-        /** The `keyboard` entry, the reference shape for completeness. */
-        val keyboardBlock: String by lazy { objectContaining("package", "com.diegonmarcos.cloudkeyboard") }
+        /**
+         * Every entry in `apps`, as text. Brace-matched from the `"apps":[` array so
+         * the splitter does not depend on the one-entry-per-line layout regen.sh
+         * happens to write today.
+         */
+        fun appBlocks(): List<String> {
+            // `"apps"` FOLLOWED BY A COLON, not the bare token: the groups array
+            // contains {"id":"apps","label":"Apps",…}, so a plain indexOf("\"apps\"")
+            // finds that VALUE first and then brace-matches the wrong array entirely —
+            // yielding zero entries, an empty intersection floor, and a completeness
+            // check that passes vacuously. Found by porting this to python and
+            // counting entries against jq.
+            val at = Regex("\"apps\"\\s*:\\s*\\[").find(fleetText)
+                ?: error("$FLEET_PATH has no `apps` array")
+            val open = fleetText.indexOf('[', at.range.first)
+            val blocks = mutableListOf<String>()
+            var i = open + 1
+            var depth = 0
+            var start = -1
+            var inString = false
+            var escaped = false
+            while (i < fleetText.length) {
+                val c = fleetText[i]
+                when {
+                    escaped -> escaped = false
+                    c == '\\' && inString -> escaped = true
+                    c == '"' -> inString = !inString
+                    inString -> Unit
+                    c == '{' -> { if (depth == 0) start = i; depth++ }
+                    c == '}' -> { depth--; if (depth == 0 && start >= 0) { blocks += fleetText.substring(start, i + 1); start = -1 } }
+                    c == ']' && depth == 0 -> return blocks
+                }
+                i++
+            }
+            error("$FLEET_PATH's `apps` array is unterminated")
+        }
+
+        /** Keys carried by EVERY app entry — the fleet's structural floor, derived from
+         *  the data rather than from one app that happens to sit next to this one. */
+        fun universalAppKeys(): Set<String> =
+            appBlocks().map { keys(it) }.reduceOrNull { a, b -> a intersect b }
+                ?: error("$FLEET_PATH yielded no app entries — the splitter is broken, and an " +
+                    "empty floor would make every completeness check pass vacuously")
+
+        /**
+         * The text of the `{ … }` that starts at [open], brace-matched and skipping
+         * string literals. Shared by [objectContaining] and [declaredOptionalFields]
+         * so there is one brace matcher rather than two that can disagree.
+         */
+        fun braceMatched(text: String, open: Int): String {
+            var depth = 0
+            var i = open
+            var inString = false
+            var escaped = false
+            while (i < text.length) {
+                val c = text[i]
+                if (escaped) {
+                    escaped = false
+                } else if (c == '\\' && inString) {
+                    escaped = true
+                } else if (c == '"') {
+                    inString = !inString
+                } else if (!inString) {
+                    if (c == '{') depth++
+                    if (c == '}') {
+                        depth--
+                        if (depth == 0) return text.substring(open, i + 1)
+                    }
+                }
+                i++
+            }
+            error("unbalanced braces from offset $open")
+        }
+
+        /** The fields regen.sh emits ONLY where build.json declares them (#631):
+         *  `android.version_name` / `android.version_code`. Empty when there is no
+         *  `android` block at all, which is mail's state today. */
+        fun declaredOptionalFields(buildJsonText: String): Set<String> {
+            val at = Regex("\"android\"\\s*:\\s*\\{").find(buildJsonText) ?: return emptySet()
+            val android = braceMatched(buildJsonText, buildJsonText.indexOf('{', at.range.first))
+            val found = mutableSetOf<String>()
+            if (Regex("\"version_name\"\\s*:\\s*\"[^\"]+\"").containsMatchIn(android)) {
+                found += "version_name"
+            }
+            // > 0, the same threshold regen.sh applies: a declared 0 is not a version.
+            val code = Regex("\"version_code\"\\s*:\\s*(\\d+)").find(android)
+                ?.groupValues?.get(1)?.toIntOrNull()
+            if (code != null && code > 0) found += "version_code"
+            return found
+        }
 
         val mail: Map<String, String> by lazy {
             keys(mailBlock).associateWith { k -> stringValue(mailBlock, k) ?: "" }

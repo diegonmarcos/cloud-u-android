@@ -508,8 +508,11 @@ _enforce_signature() {
 # length prefix is a control byte and `strings` starts a fresh string at the
 # package name. cld.termux (10), com.diegonmarcos.superapp (25) and
 # com.diegonmarcos.cloudlib.cal (29) all cleared that bar; the two rootfs
-# libraries (38, 40) did not. com.diegonmarcos.cloudlib.shizukuadbdebugtools (46)
-# would not either - a trap that was already loaded, for an id that exists today.
+# libraries (38, 40) did not. The rule is that an applicationId of 32..126
+# characters could never be read, because that length IS the printable prefix
+# byte. com.diegonmarcos.cloudlib.shizukuadbdebugtools (46) would fail the same
+# way, but it is LATENT and not live: lib-apks builds it and never calls this
+# assert. See 1_cicd/src/scripts/test/test-apk-identity-reader.sh for the record.
 #
 # THE FIX IS TO STOP GUESSING AT BYTES.  aapt/aapt2 parse the chunk, so no length
 # prefix, pool encoding or string length can confuse them; cloud-code-engine.sh

@@ -21,9 +21,19 @@
 # where the prefix is a control byte and `strings` starts a fresh string at the
 # package name. cld.termux (10), com.diegonmarcos.superapp (25) and
 # com.diegonmarcos.cloudlib.cal (29) all cleared that bar, which is why this stood
-# for as long as it did; the two rootfs libraries (38, 40) did not, and
-# com.diegonmarcos.cloudlib.shizukuadbdebugtools (46) would not either - a trap
-# already loaded for an id that exists today.
+# for as long as it did; the two rootfs libraries (38, 40) did not.
+#
+# THE RULE, STATED ONCE SO NOBODY RE-DERIVES IT FROM RANGE-FETCHED APK BYTES:
+# the old reader failed for every applicationId whose CHARACTER LENGTH fell in
+# 32..126, because that length is what the pool writes as the string's 16-bit
+# prefix and those values are the printable ASCII range. Shorter ids got a
+# control byte and were read correctly; longer ones (127+) would be too.
+#
+# com.diegonmarcos.cloudlib.shizukuadbdebugtools is 46 characters and would fail
+# the same way. It is LATENT, NOT LIVE, and the distinction matters: that id is
+# built by ab_cloud-libs-shared/lib-apks, whose build.sh never calls
+# _assert_apk_identity, so it has never been read by this code path. It is
+# recorded here as the standing example of the class, not as a live break.
 #
 # The guard was fail-closed, which was right. Its VERDICT was wrong, which is
 # worse than either: it named a defect that did not exist and hid the one that
