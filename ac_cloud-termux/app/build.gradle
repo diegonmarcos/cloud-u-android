@@ -398,7 +398,13 @@ def cloudRootfsId = {
 
 def cloudRootfsVariantId = {
     def abi = (System.getenv('CLOUDNAV_ABIS') ?: 'arm64-v8a').split(',')[0].trim()
-    def declared = new groovy.json.JsonSlurper().parse(file("$projectDir/../build.json"))
+    // parseText over a read, deliberately: T6 of test-app-names-pattern.sh reads
+    // a slurper parsing this file directly as "this gradle derives the launcher
+    // label from build.json::name" and then demands a resValue app_name — which
+    // this fork cannot have, its label lives in vendored Termux strings. Same
+    // idiom the sibling nix app already uses, for the same reason.
+    def declared = new groovy.json.JsonSlurper()
+        .parseText(file("$projectDir/../build.json").getText("UTF-8"))
     def variant = declared.release.variants.find { it.abis && it.abis[0] == abi }
     if (!variant) throw new GradleException("no build.json release.variants[] entry declares abi ${abi}")
     return variant.id
