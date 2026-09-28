@@ -117,6 +117,182 @@ _export_variant_abis() {
   return 0
 }
 
+# ── Companion assets (#628) ─────────────────────────────────────────────
+# A companion is a SECOND APK this app publishes BESIDE its own, declared in
+# build.json::release.companions[].
+#
+# WHY.  A payload a SIBLING app consumes at runtime — the two terminals' ~400 MB
+# root filesystems — was published by #618 as a bare release asset. That fixed
+# the real problem (a one-line app fix no longer shipped 400 MB) and created a
+# new one: a bare asset has no package, no versionCode and no signature, so the
+# constellation store could show a row for it and nothing more. #624 made the
+# row; #628 makes it INSTALLABLE, by giving the payload its own signed,
+# versioned APK that installs and updates through exactly the path every other
+# fleet library uses. This is the engine half: one app, two published APKs.
+#
+# THE WHOLE POINT IS THE INDEPENDENT GATE.  A companion carrying 437 MB must NOT
+# be rebuilt and re-uploaded because somebody fixed a line of app code — that
+# regression is precisely what #618 removed, and reintroducing it here would
+# undo the ticket that made this design necessary. So each companion is gated on
+# ITS OWN declared inputs through cloud-android-publish-gate.sh's
+# --asset/--paths-from mode: the same per-asset gating ab_cloud-libs-shared/
+# lib-apks already uses for its 24 APKs, and the reason that mode exists. A
+# companion whose declared inputs did not move is neither built nor published,
+# while the app's own APK ships as usual.
+#
+# Declared shape — every field is data; this engine names none of it:
+#   id          the companion's key (logs, and the gate's sidecar identity)
+#   gradle_task the task that builds it, run in the fork's OWN tracker
+#   apk_glob    where its APK lands inside that tracker
+#   asset       published asset name; assets{<variant-id>} overrides per ABI
+#   paths_from  the ONLY inputs it is gated on, relative to the repo root
+#   package     applicationId to assert on the built APK, when declared
+#
+# ZERO companions are declared today, so every loop below iterates nothing and
+# both engines behave byte-for-byte as they did. That is deliberate (#628 Slice
+# 1): the capability lands and is PROVEN first, and the payload moves into it
+# in one reviewable commit afterwards. The proof is
+# 1_cicd/src/scripts/test/test-fork-companion-assets.sh, registered by
+# fork-engine-guard.yml — an inert capability with no tester is how #198 and
+# #436 became fixes that never ran.
+_companion_ids() {
+  prefer_host jq -r '(.release.companions // [])[] | .id // empty' "$SCRIPT_DIR/build.json"
+}
+
+# Companion-scoped read. Same discipline as _fork_json and for the same reason
+# (#368): the id travels as DATA (--arg) and is matched with ==, never
+# interpolated into a jq path — `.companions.rootfs-termux` is arithmetic on two
+# undefined functions, not a lookup, and jq exits 0 having resolved nothing.
+_companion_json() {
+  local id="$1" sub="${2:-}"
+  prefer_host jq -r --arg i "$id" \
+    "((.release.companions // [])[] | select(.id==\$i))${sub} // empty" "$SCRIPT_DIR/build.json"
+}
+
+# The published name for the ACTIVE variant: assets{<variant>} first, then the
+# variant-neutral .asset. Mirrors _variant_gh_asset exactly, so the two ABI jobs
+# of a per-ABI app cannot overwrite each other's companion on the release.
+_companion_asset() {
+  local id="$1" v="${CLOUDNAV_VARIANT:-}" n=""
+  [ -n "$v" ] && n="$(prefer_host jq -r --arg i "$id" --arg v "$v" \
+      '((.release.companions // [])[] | select(.id==$i) | .assets[$v]) // empty' \
+      "$SCRIPT_DIR/build.json")"
+  [ -n "$n" ] || n="$(_companion_json "$id" '.asset')"
+  printf '%s' "$n"
+}
+
+# The gate's declared inputs, written to $1. Validated HERE and not at the call
+# site: a companion with no paths_from would be gated against the whole app's
+# identity, which republishes it on every app-code change — the bug this
+# mechanism exists to prevent, so it is refused rather than defaulted. The
+# publish gate refuses the same combination for the same reason.
+_companion_paths_file() {
+  local id="$1" out="$2"
+  _companion_json "$id" '.paths_from[]?' > "$out"
+  if [ ! -s "$out" ]; then
+    errlog "companion[$id] declares no release.companions[].paths_from — gating one asset against the whole app's identity republishes it on every unrelated change (see cloud-android-publish-gate.sh, which refuses --asset without --paths-from)"
+    return 1
+  fi
+  return 0
+}
+
+# Did THIS companion's declared inputs move? 0 = build and publish it, 1 = skip.
+# Delegates to the ONE publish gate; its answer is a step output, so it is read
+# back from the file the gate writes. No gate on disk (a local checkout) means
+# there is nothing to compare against and the answer is "build it".
+_companion_should_publish() {
+  local id="$1" asset="$2"
+  local paths; paths="$(mktemp)"
+  _companion_paths_file "$id" "$paths" || { rm -f "$paths"; exit 1; }
+  local gate="$SCRIPT_DIR/../1_cicd/dist/scripts/cloud-android-publish-gate.sh"
+  if [ ! -f "$gate" ]; then
+    rm -f "$paths"
+    log "companion[$id]: no publish gate at $gate — building"
+    return 0
+  fi
+  local args=(check "$(basename "$SCRIPT_DIR")")
+  [ -n "${CLOUDNAV_VARIANT:-}" ] && args+=("$CLOUDNAV_VARIANT")
+  args+=(--asset "$asset" --paths-from "$paths")
+  local out; out="$(mktemp)"
+  ( cd "$SCRIPT_DIR/.." && GITHUB_OUTPUT="$out" sh "$gate" "${args[@]}" >&2 ) || true
+  local skip; skip="$(awk -F= '$1=="skip"{print $2}' "$out" | tail -1)"
+  rm -f "$paths" "$out"
+  [ "$skip" = "true" ] && return 1
+  return 0
+}
+
+# The identity sidecar that lets the NEXT run answer "unchanged". Without it the
+# gate can never say skip and every run republishes — which is the regression,
+# not a missing optimisation, so a failure to stamp is shouted about.
+_companion_stamp() {
+  local id="$1" asset="$2"
+  local gate="$SCRIPT_DIR/../1_cicd/dist/scripts/cloud-android-publish-gate.sh"
+  [ -f "$gate" ] || return 0
+  local paths; paths="$(mktemp)"
+  _companion_paths_file "$id" "$paths" || { rm -f "$paths"; exit 1; }
+  local args=(stamp "$(basename "$SCRIPT_DIR")")
+  [ -n "${CLOUDNAV_VARIANT:-}" ] && args+=("$CLOUDNAV_VARIANT")
+  args+=(--asset "$asset" --paths-from "$paths")
+  ( cd "$SCRIPT_DIR/.." && sh "$gate" "${args[@]}" ) \
+    || errlog "companion[$id]: could not stamp $asset.source — the next run will republish it"
+  rm -f "$paths"
+}
+
+# Build every declared companion whose inputs moved. Called from build-fork, so
+# a companion is built by the same job, toolchain and keystore as the app's own
+# APK and needs no second signing path.
+_build_companions() {
+  local key="$1" tracker dest id asset task glob pkg
+  tracker="$(_fork_json "$key" ".tracker_dir")"
+  dest="$SCRIPT_DIR/../$tracker"
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    asset="$(_companion_asset "$id")"
+    [ -n "$asset" ] || { errlog "companion[$id]: no asset name declared for variant ${CLOUDNAV_VARIANT:-<none>} (need .asset or .assets[\"${CLOUDNAV_VARIANT:-}\"])"; exit 1; }
+    if ! _companion_should_publish "$id" "$asset"; then
+      log "companion[$id]: $asset — declared inputs unchanged, NOT rebuilt (an app-code change must not republish it)"
+      continue
+    fi
+    task="$(_companion_json "$id" '.gradle_task')"
+    glob="$(_companion_json "$id" '.apk_glob')"
+    [ -n "$task" ] || { errlog "companion[$id]: declares no .gradle_task — nothing builds it"; exit 1; }
+    [ -n "$glob" ] || { errlog "companion[$id]: declares no .apk_glob — its APK could not be found"; exit 1; }
+    [ -d "$dest" ] || { errlog "companion[$id]: fork '$key' not materialized at $dest"; exit 1; }
+    _export_variant_abis
+    log "companion[$id]: $tracker ./gradlew $task → $asset"
+    ( cd "$dest" && chmod +x gradlew && in_nix ./gradlew --no-daemon "$task" )
+    shopt -s nullglob globstar
+    local apks=("$dest"/$glob)
+    shopt -u nullglob globstar
+    [ "${#apks[@]}" -ge 1 ] || { errlog "companion[$id]: no APK matched $glob"; exit 1; }
+    mkdir -p "$DIST_DIR"
+    cp "${apks[0]}" "$DIST_DIR/$asset"
+    _enforce_signature "$DIST_DIR/$asset"
+    pkg="$(_companion_json "$id" '.package')"
+    [ -z "$pkg" ] || _assert_apk_identity "$key" "$DIST_DIR/$asset" "$pkg"
+    log "companion[$id] → $DIST_DIR/$asset ($(wc -c <"$DIST_DIR/$asset") B)"
+  done < <(_companion_ids)
+}
+
+# Publish every companion this job actually built. A companion missing from
+# dist/ was skipped by its own gate, which is the mechanism working, so it is
+# reported and stepped over rather than treated as a failure.
+_publish_companions() {
+  local key="$1" tag="$2" id asset
+  while IFS= read -r id; do
+    [ -n "$id" ] || continue
+    asset="$(_companion_asset "$id")"
+    [ -n "$asset" ] || continue
+    if [ ! -f "$DIST_DIR/$asset" ]; then
+      log "companion[$id]: $asset not in $DIST_DIR — its declared inputs did not move, nothing to publish"
+      continue
+    fi
+    log "gh-release-fork[$key]: upload companion $asset → $tag"
+    _publish_release_asset "$tag" "$DIST_DIR/$asset"
+    _companion_stamp "$id" "$asset"
+  done < <(_companion_ids)
+}
+
 _fork_json() {
   local k="$1" sub="${2:-}"
   prefer_host jq -r --arg k "$k" ".forks[\$k]${sub} // empty" "$SCRIPT_DIR/build.json"
@@ -580,6 +756,7 @@ step_build_fork() {
     if [ -z "$up_pkg" ] || [ "$up_pkg" = "null" ]; then up_pkg=""; fi
     _assert_apk_identity "$key" "$DIST_DIR/$(_variant_gh_asset)" "$up_pkg"
     log "build-fork[$key]: upstream-APK fork ($bundle_abi) → $DIST_DIR/$(_variant_gh_asset) ($(wc -c <"$DIST_DIR/$(_variant_gh_asset)") B)"
+    _build_companions "$key"
     return 0
   fi
 
@@ -704,6 +881,7 @@ step_build_fork() {
   _enforce_signature "$DIST_DIR/$(_variant_gh_asset)"
   _assert_apk_identity "$key" "$DIST_DIR/$(_variant_gh_asset)"
   log "→ $DIST_DIR/$(_variant_gh_asset) ($(wc -c <"$DIST_DIR/$(_variant_gh_asset)") B)"
+  _build_companions "$key"
 }
 
 # ── publish-fork <key> ─────────────────────────────────────────────────
@@ -1089,6 +1267,7 @@ step_gh_release_fork() {
   fi
   log "gh-release-fork[$key]: upload $(_variant_gh_asset) → $rolling_tag"
   _publish_release_asset "$rolling_tag" "$src"
+  _publish_companions "$key" "$rolling_tag"
 }
 
 # Main-guard: allow this file to be `source`d (e.g. by tests) to exercise the

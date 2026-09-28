@@ -71,6 +71,16 @@ object Fleet {
         // AIDL bound services instead of UI. Data-driven from each app's
         // build.json::release.kind; splits the Constellation page's Apps/Libs tabs.
         val kind: String,
+        // OUR declared version, from this app's own
+        // build.json::android.version_name / version_code via data/regen.sh
+        // (#631). The version a row shows must be the fleet's own, and the only
+        // version the device can otherwise see is the INSTALLED APK's — which
+        // for a fork is upstream's string and for our apps already has the sha
+        // folded into it. Null/0 where nothing declares one (the comms forks
+        // keep upstream's versioning); [FleetIdentity] says so instead of
+        // substituting a number from somewhere else.
+        val declaredVersionName: String? = null,
+        val declaredVersionCode: Long = 0L,
     ) {
         /**
          * [releaseUrl] with its asset filename swapped for THIS device's ABI
@@ -141,6 +151,8 @@ object Fleet {
                     ghcrPage = o.optString("ghcr_page", ""),
                     blocked = o.optBoolean("blocked", false),
                     kind = o.optString("kind", "app").takeIf { it.isNotEmpty() } ?: "app",
+                    declaredVersionName = o.optString("version_name").takeIf { it.isNotEmpty() },
+                    declaredVersionCode = o.optLong("version_code", 0L),
                 )
             }
         } catch (t: Throwable) {
