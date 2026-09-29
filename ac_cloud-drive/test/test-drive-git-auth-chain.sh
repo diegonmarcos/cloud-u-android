@@ -451,7 +451,7 @@ c5b() {
     local bad=0 g name
     for g in "$@"; do
         name="$(basename "$g")"
-        grep -qE 'archiveOperations\.tarTree\(archiveOperations\.gzipCompression\(tarGz\)\)' "$g" \
+        grep -qE 'archiveOperations\.tarTree\(archiveOperations\.gzip\(tarGz\)\)' "$g" \
             || { echo "    $name: the entry is not read through Gradle's own tar reader with gzip STATED"; bad=1; }
         grep -qE '@javax\.inject\.Inject abstract ArchiveOperations getArchiveOperations\(\)' "$g" \
             || { echo "    $name: ArchiveOperations is not an injected service — the configuration cache would refuse it"; bad=1; }
@@ -672,7 +672,7 @@ _stage && _green "c5 gix" c5_one gix "$W/gix.json" "$W/gix.gradle" && {
     _json "$W/gix.json" 'd["binaries"]["arm64-v8a"]["binary_bytes"] = 0'
     _red "C5 gix: an unpinned byte count" c5_one gix "$W/gix.json" "$W/gix.gradle"; }
 _stage && _green "c5b" c5b "$W/gh.gradle" "$W/gix.gradle" && {
-    _sub "$W/gh.gradle" 'archiveOperations.tarTree(archiveOperations.gzipCompression(tarGz))' \
+    _sub "$W/gh.gradle" 'archiveOperations.tarTree(archiveOperations.gzip(tarGz))' \
                         'archiveOperations.tarTree(tarGz)'
     _red "C5 the gzip compression is guessed from the file name instead of stated" c5b "$W/gh.gradle" "$W/gix.gradle"; }
 _stage && _green "c5b" c5b "$W/gh.gradle" "$W/gix.gradle" && {

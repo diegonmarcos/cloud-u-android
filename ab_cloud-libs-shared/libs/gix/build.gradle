@@ -101,8 +101,8 @@ abstract class FetchGixBinaries extends DefaultTask {
 
     /**
      * Pull ONE entry out of a gzipped tar by exact path, using Gradle's own tar
-     * reader. Compression is stated (gzipCompression) rather than guessed from
-     * the file name, and NOTHING here computes a byte offset.
+     * reader, with the gzip layer STATED (archiveOperations.gzip) rather than
+     * guessed from the file name. NOTHING here computes a byte offset.
      *
      * #646 WAS RED BECAUSE THE PREVIOUS VERSION OF THIS METHOD COMPUTED THEM.
      * It walked 512-byte ustar headers and skipped each entry's data with
@@ -118,7 +118,7 @@ abstract class FetchGixBinaries extends DefaultTask {
      * jniLibs payload would install an app whose binary silently is not there.
      */
     protected void extract(File tarGz, String entry, File target) {
-        def matched = archiveOperations.tarTree(archiveOperations.gzipCompression(tarGz))
+        def matched = archiveOperations.tarTree(archiveOperations.gzip(tarGz))
                 .matching { it.include(entry) }.files
         if (matched.size() != 1)
             throw new GradleException("gix: " + tarGz + " does not hold exactly one entry " + entry + " (matched " + matched.size() + ")")
