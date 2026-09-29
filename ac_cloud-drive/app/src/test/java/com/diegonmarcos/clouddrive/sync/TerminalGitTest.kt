@@ -4,6 +4,7 @@ import com.diegonmarcos.clouddrive.Declarations
 import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -55,10 +56,22 @@ class TerminalGitTest {
         entry!!["package"]!!.jsonPrimitive.content
     }
 
-    /** The declaration as the PHONE sees it: every {package} substituted, the way gradle does. */
+    /**
+     * The declaration as the PHONE sees it. app/build.gradle does THREE things to the terminal
+     * block, not one, and this mirrors all three: substitute every {package}, SET `package` to
+     * the resolved id, and REMOVE `fleet`. Substituting alone leaves `package` absent, which is
+     * what [Declarations.GitTerminalDecl.declared] reads — so a test that only substituted
+     * would assert against a block the phone never sees.
+     */
     private val page: Declarations.GitPageDecl by lazy {
-        val baked = gitDecl.toString().replace("{package}", terminalPackage)
-        Declarations.parseGitPage(json.parseToJsonElement(baked))
+        val raw = json.parseToJsonElement(
+            gitDecl.toString().replace("{package}", terminalPackage)).jsonObject
+        val term = raw["terminal"]!!.jsonObject.toMutableMap().apply {
+            remove("fleet")
+            put("package", JsonPrimitive(terminalPackage))
+        }
+        val git = raw.toMutableMap().apply { put("terminal", JsonObject(term)) }
+        Declarations.parseGitPage(JsonObject(git))
     }
 
     // A temp path, NOT a device path: #603's rule is that the shared store's absolute location
