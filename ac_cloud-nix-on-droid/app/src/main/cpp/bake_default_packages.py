@@ -41,6 +41,48 @@ SESSION_INIT_TEMPLATE = (
 )
 DROPPED_ENTRY = "etc/static/UNINTIALISED"
 
+# #638 -- the two UNCONDITIONAL execs through /usr/bin/env that upstream's
+# generated login-inner carries, verbatim. /usr/bin/env is NOT in the bootstrap
+# zip: `usr/bin/` is an empty directory in it and SYMLINKS.txt has no line for
+# env. On a stock nix-on-droid install that path only appears once the
+# first-login wizard has run `nix-on-droid switch`, which symlinks it into
+# coreutils. Dropping DROPPED_ENTRY above is exactly what stops that wizard from
+# running, so on a fresh install of THIS app both lines below exec a file that
+# does not exist -- `/usr/bin/env: No such file or directory`, exit 127, no
+# shell, ever. Guarding the first one lets execution fall through to the
+# usershell block right below it, which execs an absolute /nix/store bash path
+# this zip really does ship (and really does chmod +x via EXECUTABLES.txt).
+ENV_EXEC = "exec /usr/bin/env bash  # otherwise it'll be a limited bash that came with Nix"
+ENV_EXEC_ARGV = 'exec /usr/bin/env "$@"'
+
+
+def patch_login_inner(login_inner: str, app_id: str, fallback_script: str) -> str:
+    """The text edits #595/#638 make to the generated usr/lib/login-inner.
+
+    Pure str -> str so test/test-bootstrap-baked.sh can run the REAL patch
+    offline, with no nix and no bootstrap zip, and then EXECUTE the result.
+    Raises ValueError on anything it does not recognise: a silently unpatched
+    login-inner is precisely how #638 shipped a boot crash behind a green CI.
+    """
+    want = SESSION_INIT_TEMPLATE.format(app_id=app_id)
+    if want not in login_inner:
+        raise ValueError(f"expected session-init line not found in usr/lib/login-inner:\n  {want}")
+    head, _, tail = login_inner.rpartition(want)
+    fallback_line = f'if [ -e "/data/data/{app_id}/files/home/.nix-profile/etc/profile.d/nix-on-droid-session-init.sh" ]; then\n  {want}\nelse\n  . /{fallback_script}\nfi'
+    login_inner = head + fallback_line + tail
+
+    if login_inner.count(ENV_EXEC) != 1:
+        raise ValueError(f"expected exactly one unconditional env exec in usr/lib/login-inner:\n  {ENV_EXEC}")
+    login_inner = login_inner.replace(ENV_EXEC, f"if [ -x /usr/bin/env ]; then\n  {ENV_EXEC}\nfi", 1)
+
+    # The "called with arguments" path (RunCommandService, `login <cmd>`) has the
+    # same dependency and no block below it to fall through to. bin/sh here IS
+    # bash, whose exec already resolves its argv against PATH, so env adds
+    # nothing but the missing file.
+    if login_inner.count(ENV_EXEC_ARGV) != 1:
+        raise ValueError(f"expected exactly one env exec of the caller's argv:\n  {ENV_EXEC_ARGV}")
+    return login_inner.replace(ENV_EXEC_ARGV, 'exec "$@"', 1)
+
 
 # claude-code carries an unfree license in nixpkgs (Anthropic's own terms,
 # not a nixpkgs restriction) -- nix's eval refuses it unless this is set, the
@@ -136,8 +178,11 @@ def main() -> int:
                 return 1
             # /storage/emulated/0 exists as a directory even without All-Files-Access, but is
             # then not traversable, so binding it would mount an empty tree silently. Probe
-            # readability (ls) rather than existence (-d); when it fails, print one clear line
-            # naming the toggle to flip instead of a dark mount, and skip both binds.
+            # readability (ls) rather than existence (-d); when it fails, state the fact in ONE
+            # line and skip both binds instead of mounting a dark tree. #639: the line does NOT
+            # describe a route through Settings -- TermuxActivity.requestManageStorageIfNeeded()
+            # deep-links straight to this package's All-Files-Access toggle on every launch that
+            # lacks the grant, so prose telling the user to go find it himself is redundant.
             mount_setup = (
                 'mkdir -p "$HOME/emulated" "$HOME/cloud-drive-shared-store" 2>/dev/null || true\n'
                 'if ls /storage/emulated/0 >/dev/null 2>&1; then\n'
@@ -151,7 +196,7 @@ def main() -> int:
                 'else\n'
                 '  BIND_HOME_EMULATED=""\n'
                 '  BIND_HOME_SHARED_STORE=""\n'
-                '  echo "⚠ cloud-drive shared store needs All-Files-Access — enable it in Settings ▸ Apps ▸ Cloud Terminal (Nix) ▸ All files access" >&2\n'
+                '  echo "⚠ cloud-drive shared store not mounted: All-Files-Access is not granted yet." >&2\n'
                 'fi\n\n'
             )
             bin_login = bin_login.replace(
@@ -160,15 +205,12 @@ def main() -> int:
                 1,
             )
 
-            # ── patch login-inner's one unconditional session-init line ───
-            want = SESSION_INIT_TEMPLATE.format(app_id=app_id)
-            if login_inner.count(want) < 1:
-                print(f"FAIL: expected session-init line not found in usr/lib/login-inner:\n  {want}",
-                      file=sys.stderr)
+            # ── patch login-inner's session-init line and its env execs ────
+            try:
+                login_inner = patch_login_inner(login_inner, app_id, fallback_script)
+            except ValueError as e:
+                print(f"FAIL: {e}", file=sys.stderr)
                 return 1
-            head, _, tail = login_inner.rpartition(want)
-            fallback_line = f'if [ -e "/data/data/{app_id}/files/home/.nix-profile/etc/profile.d/nix-on-droid-session-init.sh" ]; then\n  {want}\nelse\n  . /{fallback_script}\nfi'
-            login_inner = head + fallback_line + tail
 
             # ── new manifest lines ─────────────────────────────────────────
             new_symlinks = []

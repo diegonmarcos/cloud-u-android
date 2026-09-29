@@ -144,7 +144,10 @@ class MainActivity : ComponentActivity(), DriveActions {
 
     override fun requestStorageAccess() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        // #639 the per-package toggle first; the fleet-wide list only if no activity claims it,
+        // so a refused deep link still lands somewhere the grant can be given.
         runCatching { startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:$packageName"))) }
+            .onFailure { runCatching { startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) } }
     }
 
     override fun requestTreeGrant() { runCatching { openTreeLauncher.launch(null) } }
