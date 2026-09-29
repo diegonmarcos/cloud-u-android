@@ -79,7 +79,9 @@ import java.io.File
 import java.text.DateFormat
 import java.util.Date
 import com.diegonmarcos.clouddrive.configs.DriveAuthApply
+import com.diegonmarcos.clouddrive.configs.DriveGitChain
 import com.diegonmarcos.cloudlib.auth.AuthDeclaration
+import com.diegonmarcos.cloudlib.gh.GhDeviceLogin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -127,6 +129,10 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
     var expanded by remember { mutableStateOf("") }
     var login by remember { mutableStateOf(GitLogin()) }
     var listing by remember { mutableStateOf(GitListing()) }
+    // #646 what the DECLARED credential chain is about to do, and afterwards what it did.
+    // The declared order is read once, off the declaration, so this page describes the
+    // ranking it will actually follow rather than a ranking somebody typed here.
+    var chain by remember { mutableStateOf(GitChainState(order = DriveGitChain.declaredOrder())) }
     LaunchedEffect(Unit) { coordinator.refresh() }
 
     // #606 the store's git folder — the ONE place a clone lands, resolved from the declaration.
@@ -209,6 +215,52 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
         }
     }
 
+    /**
+     * #646 WALK THE DECLARED CHAIN — fleet first, GitHub second, both from ONE ordered
+     * declaration. Nothing about the ranking is decided here: [DriveGitChain] maps
+     * `AuthDeclaration.gitChain` straight through, so the order this follows is the order
+     * in the JSON.
+     *
+     * EVERY STEP IS RENDERED, including the ones that were skipped and why — "Cloud fleet
+     * unreachable → GitHub signed in" is a sentence the owner can read, not a state he has
+     * to infer from a credential appearing. That is the #639/#452 lesson: a chain that
+     * degrades silently looks exactly like a chain that works.
+     *
+     * The token is never put into [chain]: only the narrative, the answering provider's
+     * label and the short USER code go there. The credential itself goes straight from the
+     * outcome into the listing fetch, and [DriveGitChain] has already filed it in the one
+     * store under the one declared id.
+     */
+    fun startChain() {
+        chain = chain.copy(running = true, prompt = "", narrative = "", answeredBy = "")
+        scope.launch {
+            val outcome = withContext(Dispatchers.IO) {
+                DriveGitChain.resolve(
+                    ctx.applicationContext,
+                    onPhase = { phase ->
+                        // The short code the GitHub rung asks for — the whole UX tax, once
+                        // per device. A Granted phase carries the token, so it is NOT
+                        // surfaced here; only Prompt is.
+                        if (phase is GhDeviceLogin.Phase.Prompt) {
+                            chain = chain.copy(code = phase.userCode, prompt = phase.verificationUri)
+                        }
+                    },
+                )
+            }
+            chain = chain.copy(
+                running = false,
+                narrative = outcome.narrative(),
+                answeredBy = outcome.answeredByLabel.orEmpty(),
+                code = if (outcome.ok) "" else chain.code,
+                prompt = if (outcome.ok) "" else chain.prompt,
+            )
+            outcome.token?.takeIf { it.isNotBlank() }?.let { token ->
+                login = login.copy(identity = page.owner, token = token, fromVault = false)
+                fetchListing(token)
+            }
+        }
+    }
+
     // #629 THE VAULT IS THE ONLY ROAD (#641). The credential the #566 config import delivers already
     // has `repo` scope — it is the token that pushes all day — so the personal section authenticates
     // from it and the account's own repositories list themselves with no tap and no browser. There is
@@ -285,10 +337,11 @@ fun GitReposScreen(coordinator: GitSyncCoordinator, actions: DriveActions, nextR
                     item {
                         SectionHeader(section.label, count = if (listing.loaded) listing.repos.size else null)
                         GitLoginBox(
-                            page = page, login = login, listing = listing,
+                            page = page, login = login, listing = listing, chain = chain,
                             onSshKeyPath = { login = login.copy(sshKeyPath = it) },
                             onUseSsh = { login = login.copy(ssh = it) },
                             onRetry = { if (login.token.isNotBlank()) fetchListing(login.token) },
+                            onStartChain = { startChain() },
                         )
                     }
                     if (listing.loaded && listing.error.isBlank()) {
@@ -379,6 +432,24 @@ private data class GitLogin(
     val signedIn: Boolean get() = token.isNotBlank() || (ssh && sshKeyPath.isNotBlank())
 }
 
+/**
+ * #646 THE DECLARED CREDENTIAL CHAIN, as the page sees it. [order] is built from the
+ * declaration so the page states the ranking it will actually follow; [narrative] is the
+ * chain's account of what happened, every skipped rung included.
+ *
+ * NO TOKEN LIVES HERE. [code] is the short USER code GitHub asks the owner to type and
+ * [prompt] is the page he types it at — both public by design. The credential never enters
+ * this state, so nothing that renders or logs it can leak the secret.
+ */
+private data class GitChainState(
+    val running: Boolean = false,
+    val order: String = "",
+    val code: String = "",
+    val prompt: String = "",
+    val narrative: String = "",
+    val answeredBy: String = "",
+)
+
 /** The authenticated listing, or why there is none. */
 private data class GitListing(
     val loading: Boolean = false,
@@ -389,18 +460,30 @@ private data class GitListing(
 )
 
 /**
- * The personal section's control: what the vault-delivered credential yielded, and the user's
- * own SSH key beside it. #641 there is no browser login here at all — the device grant that
- * used to be offered ran against a GitHub App, whose Device Flow the provider ships OFF.
+ * The personal section's control: what the vault-delivered credential yielded, the DECLARED
+ * credential chain beside it, and the user's own SSH key.
+ *
+ * #646 THE CHAIN IS DRAWN ONLY WHEN THERE IS NOTHING ELSE. The vault credential remains the
+ * primary path and needs no negotiation, so the chain's affordance appears only when the
+ * vault has delivered nothing — and when it does appear it states the declared ORDER before
+ * anything runs, then every rung's outcome after.
+ *
+ * WHAT #641 FORBADE IS STILL FORBIDDEN, deliberately: this page hosts none of libs:auth's
+ * own sign-in composables and no portal-login flow, and it points at no provider setting.
+ * What #641 also said — that no browser login could exist — was true of the GitHub APP client
+ * it had deleted and is NOT true of GitHub's own app, which is what the chain's github rung
+ * uses. So the affordance is back and the sentence that claimed otherwise is gone.
  */
 @Composable
 private fun GitLoginBox(
     page: Declarations.GitPageDecl,
     login: GitLogin,
     listing: GitListing,
+    chain: GitChainState,
     onSshKeyPath: (String) -> Unit,
     onUseSsh: (Boolean) -> Unit,
     onRetry: () -> Unit,
+    onStartChain: () -> Unit,
 ) {
     val ssh = page.sshWay
     DriveCard(
@@ -415,14 +498,51 @@ private fun GitLoginBox(
         },
         tag = DriveTags.SYNC_GIT_LOGIN,
     ) {
-        // #629/#641 THE VAULT CREDENTIAL, and nothing beside it. There is no browser login and no
-        // Start button on this page: the only HTTPS credential is the one the config import
-        // delivers, so the card states which of the two states it is in and stops there.
+        // #629 THE VAULT CREDENTIAL FIRST. The card states which of the two states it is in.
         Text(
             stringResource(if (login.fromVault) R.string.git_login_vault_note else R.string.git_login_vault_absent),
             Modifier.padding(top = DriveMetrics.gap).testTag(DriveTags.SYNC_GIT_VAULT_NOTE),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        // #646 THE DECLARED CHAIN, only when the vault delivered nothing. Everything below is
+        // the chain describing ITSELF: the order it will try (off the declaration), the short
+        // code the GitHub rung asks for, and then which provider answered and why the ones
+        // before it were skipped. No branch here renders a token.
+        if (!login.fromVault) Column(Modifier.testTag(DriveTags.SYNC_GIT_CHAIN)) {
+            Text(
+                stringResource(R.string.git_chain_order, chain.order),
+                Modifier.padding(top = DriveMetrics.gap),
+                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            PillRow {
+                Pill(
+                    stringResource(if (chain.running) R.string.git_chain_running else R.string.git_chain_start),
+                    onStartChain, filled = !chain.running,
+                )
+            }
+            // The one short code, and where to type it. This is the whole UX tax of the
+            // GitHub rung and it is stated plainly rather than buried.
+            if (chain.code.isNotBlank()) Text(
+                stringResource(R.string.git_chain_prompt, chain.code, chain.prompt),
+                Modifier.padding(top = DriveMetrics.gap),
+                style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace,
+            )
+            // WHY THE PREVIOUS RUNG WAS SKIPPED, in words. Shown for success as well as
+            // failure: a fall-through that only surfaces when everything fails is a
+            // fall-through nobody can see working.
+            if (chain.narrative.isNotBlank()) Text(
+                chain.narrative,
+                Modifier.padding(top = DriveMetrics.gap),
+                style = MaterialTheme.typography.bodySmall,
+                color = if (chain.answeredBy.isNotBlank()) MaterialTheme.colorScheme.onSurfaceVariant
+                else colorResource(R.color.status_light_off),
+            )
+            if (chain.answeredBy.isNotBlank()) Text(
+                stringResource(R.string.git_chain_answered, chain.answeredBy),
+                Modifier.padding(top = DriveMetrics.gap),
+                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary,
+            )
+        }
         if (ssh != null) {
             PillRow { Pill(ssh.label, { onUseSsh(!login.ssh) }, icon = IconCatalog.vectorOrDefault(ssh.icon), filled = login.ssh) }
             if (login.ssh) {

@@ -1,0 +1,269 @@
+// libs:gh — the GitHub CLI as a fleet library: a sha256-pinned STATIC `gh`
+// binary plus the device-code login that turns it into a git credential
+// (data/gh-binary.json is the one pin; read its _doc first).
+//
+// #646 RUNG 2 OF THE DECLARED GIT AUTH CHAIN. The chain is one ordered
+// declaration (ab_cloud-libs-shared/build.json::auth.git_chain: fleet, then
+// github) and this module is only ever the SECOND rung: it is what answers when
+// our own Authelia-fronted proxy is unreachable. It authenticates against
+// GITHUB'S OWN registered app — the client ids are compiled into the pinned
+// binary and were exercised live — so there is nothing for the owner to register
+// and no provider setting to toggle. That is what makes this rung different from
+// the GitHub APP client #629/#641 deleted: see the pin's _doc_device_flow.
+//
+// This module holds NO chain logic and NO ordering. It exposes a provider that
+// the chain in libs:git-sync calls when the declaration reaches `github`;
+// reordering or removing that rung is an edit to the declaration, never here.
+//
+// Shared BY REFERENCE the way every module on this shelf is: lib-apks discovers
+// this directory and ships cloud-lib-gh as its own installable APK (#474 naming,
+// from the one declaration in aa_cloud-superapp/data/regen.sh), and an app that
+// wants the engine names it in its own build.json::modules.
+//
+// NO COMPOSE ON PURPOSE. This module renders nothing: the chain's visible state
+// belongs to the page that hosts it (cloud-drive's Sync ▸ Git), so that one
+// screen can say which rung answered and why the one before it was skipped. A
+// screen here would be a second place for the chain to describe itself.
+//
+// TESTED where it builds: src/test/ (JVM, no emulator) runs inside the consuming
+// app's own `gradle test`, and that app's ship workflow watches this directory.
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// ── the pinned binary ───────────────────────────────────────────────────────
+// Everything below is read from data/gh-binary.json. Nothing here names a
+// version, a URL or a hash.
+def ghPin = new groovy.json.JsonSlurper().parse(file('data/gh-binary.json'))
+def ghJniDir = new File(buildDir, 'generated/gh-jni')
+
+/**
+ * A REAL task class, not a doLast closure: the consuming apps build with
+ * Gradle's configuration cache, which refuses a task action that reaches for
+ * script objects. Managed @Input/@Output properties and self-contained helpers
+ * are what the cache supports. Downloads once, refuses on either hash mismatch,
+ * reads the ELF program headers for PT_INTERP, stages jniLibs.
+ *
+ * Differs from libs:rclone's otherwise identical task in ONE way: gh publishes
+ * .tar.gz, not .zip, and the JDK has no tar reader — so [extract] walks the
+ * POSIX/ustar headers itself instead of calling java.util.zip.ZipFile.
+ */
+abstract class FetchGhBinaries extends DefaultTask {
+    @InputFile abstract RegularFileProperty getPinFile()
+    @Internal abstract DirectoryProperty getCacheDir()
+    @OutputDirectory abstract DirectoryProperty getOutDir()
+
+    @TaskAction
+    void fetch() {
+        def pinJson = new groovy.json.JsonSlurper().parse(pinFile.get().asFile)
+        def cache = cacheDir.get().asFile
+        def out = outDir.get().asFile
+        // A plain loop, not .each { }: Gradle runs a DECORATED subclass of this
+        // task, and a closure inside it cannot see the class's own helpers.
+        for (entryAbi in pinJson.binaries.entrySet()) {
+            def abi = entryAbi.key; def pin = entryAbi.value
+            def url = pinJson.url_template.replace('{version}', pinJson.version).replace('{arch}', pin.arch)
+            def tar = new File(cache, "gh-${pinJson.version}-${pin.arch}.tar.gz")
+            fetchPinned(url, tar, pin.tar_sha256)
+            def entry = pinJson.entry_template.replace('{version}', pinJson.version).replace('{arch}', pin.arch)
+            def staged = new File(out, "${abi}/${pinJson.jni_name}")
+            staged.parentFile.mkdirs()
+            extract(tar, entry, staged)
+            def actual = sha256Of(staged)
+            if (actual != pin.binary_sha256) {
+                staged.delete()
+                throw new GradleException("gh: extracted binary sha256 mismatch for " + abi + "\n  expected " + pin.binary_sha256 + "\n  actual   " + actual)
+            }
+            if (staged.length() != (long) pin.binary_bytes) {
+                def had = staged.length(); staged.delete()
+                throw new GradleException("gh: extracted binary is " + had + " bytes for " + abi + "; the pin declares " + pin.binary_bytes)
+            }
+            if (pinJson.interp == 'none' && hasProgramInterpreter(staged)) {
+                staged.delete()
+                throw new GradleException("gh: " + abi + " binary carries a PT_INTERP — it is dynamically linked and will not run under bionic; the pin declares interp=none")
+            }
+            staged.setExecutable(true, false)
+            logger.quiet("gh: staged ${abi}/${pinJson.jni_name} (" + staged.length() + " bytes, static)")
+        }
+    }
+
+    /**
+     * Pull ONE entry out of a gzipped tar by exact path. Walks 512-byte
+     * POSIX/ustar headers: name at 0 (100), size as octal at 124 (12), typeflag
+     * at 156, ustar prefix at 345 (155); file data follows its header padded up
+     * to the next 512-byte boundary. Refuses rather than writing a short file if
+     * the entry is absent — an empty jniLibs payload would install an app whose
+     * binary silently is not there.
+     */
+    protected static void extract(File tarGz, String entry, File target) {
+        def input = new java.util.zip.GZIPInputStream(new BufferedInputStream(new FileInputStream(tarGz)))
+        try {
+            def header = new byte[512]
+            while (true) {
+                if (!readFully(input, header, 512)) break
+                if (header[0] == (byte) 0) break        // end-of-archive block
+                def name = cString(header, 0, 100)
+                def prefix = cString(header, 345, 155)
+                def full = prefix.isEmpty() ? name : prefix + '/' + name
+                def sizeField = cString(header, 124, 12).trim()
+                long size = sizeField.isEmpty() ? 0L : Long.parseLong(sizeField, 8)
+                char type = (char) header[156]
+                if (full == entry && (type == '0' || type == ((char) 0))) {
+                    target.withOutputStream { o ->
+                        long left = size
+                        def buf = new byte[1 << 16]
+                        while (left > 0) {
+                            int want = (int) Math.min((long) buf.length, left)
+                            if (!readFully(input, buf, want)) throw new GradleException("gh: " + tarGz + " truncated inside " + entry)
+                            o.write(buf, 0, want); left -= want
+                        }
+                    }
+                    return
+                }
+                long skip = ((size + 511L) / 512L) * 512L
+                while (skip > 0) { long n = input.skip(skip); if (n <= 0) break; skip -= n }
+            }
+        } finally { input.close() }
+        throw new GradleException("gh: " + tarGz + " has no entry " + entry)
+    }
+
+    /**
+     * Read exactly [n] bytes. False at a CLEAN end of stream (nothing read);
+     * a stream that ends mid-record is a truncated archive, not an end, and
+     * throws — silently accepting a short read is how a partial download
+     * becomes a staged binary that passes nothing and fails on a phone.
+     */
+    protected static boolean readFully(InputStream input, byte[] buf, int n) {
+        int off = 0
+        while (off < n) {
+            int r = input.read(buf, off, n - off)
+            if (r < 0) {
+                if (off == 0) return false
+                throw new GradleException("gh: unexpected end of archive after " + off + " of " + n + " bytes")
+            }
+            off += r
+        }
+        return true
+    }
+
+    /** A NUL-terminated field of a tar header as a String. */
+    protected static String cString(byte[] b, int off, int len) {
+        int end = off
+        while (end < off + len && b[end] != (byte) 0) end++
+        return new String(b, off, end - off, 'US-ASCII')
+    }
+
+    protected static String sha256Of(File f) {
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        f.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
+        return digest.digest().encodeHex().toString()
+    }
+
+    protected void fetchPinned(String url, File target, String sha256) {
+        if (target.exists() && sha256Of(target) == sha256) return
+        logger.quiet("gh: downloading " + url)
+        target.parentFile.mkdirs(); target.delete()
+        def connection = new URL(url).openConnection()
+        connection.setInstanceFollowRedirects(true)
+        target.withOutputStream { it << connection.inputStream }
+        def actual = sha256Of(target)
+        if (actual != sha256) {
+            target.delete()
+            throw new GradleException("gh: wrong sha256 for " + url + "\n  expected " + sha256 + "\n  actual   " + actual)
+        }
+    }
+
+    /** True when the ELF64 file has a PT_INTERP program header (i.e. requests a dynamic loader). */
+    protected static boolean hasProgramInterpreter(File elf) {
+        def raf = new RandomAccessFile(elf, 'r')
+        try {
+            def magic = new byte[4]; raf.readFully(magic)
+            if (magic[0] != (byte) 0x7f || magic[1] != (byte) 'E' || magic[2] != (byte) 'L' || magic[3] != (byte) 'F')
+                throw new GradleException("gh: " + elf + " is not an ELF file")
+            def order = java.nio.ByteOrder.LITTLE_ENDIAN
+            def header = new byte[64]; raf.seek(0); raf.readFully(header)
+            def bb = java.nio.ByteBuffer.wrap(header).order(order)
+            long phoff = bb.getLong(0x20); int phentsize = bb.getShort(0x36) & 0xffff; int phnum = bb.getShort(0x38) & 0xffff
+            for (int i = 0; i < phnum; i++) {
+                raf.seek(phoff + (long) i * phentsize)
+                def ph = new byte[4]; raf.readFully(ph)
+                int type = java.nio.ByteBuffer.wrap(ph).order(order).getInt(0)
+                if (type == 3) return true   // PT_INTERP
+            }
+            return false
+        } finally { raf.close() }
+    }
+}
+
+def fetchGhBinaries = tasks.register('fetchGhBinaries', FetchGhBinaries) {
+    description = "Download, verify (sha256 + byte count + no PT_INTERP) and stage the pinned gh binaries as jniLibs"
+    pinFile = file('data/gh-binary.json')
+    cacheDir = layout.buildDirectory.dir('gh-cache')
+    outDir = layout.buildDirectory.dir('generated/gh-jni')
+}
+preBuild.dependsOn fetchGhBinaries
+
+android {
+    namespace 'com.diegonmarcos.cloudlib.gh'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        // The pin, baked so the chain can state what it runs without shelling
+        // out first, and so GhRunner can name the .so it execs. The device-flow
+        // endpoints are baked for the same reason the rest of the fleet bakes
+        // its declarations: no URL is typed into Kotlin.
+        buildConfigField 'String', 'GH_VERSION', "\"${ghPin.version}\""
+        buildConfigField 'String', 'GH_JNI_NAME', "\"${ghPin.jni_name}\""
+        buildConfigField 'String', 'GH_DEVICE_CODE_URL', "\"${ghPin.device_code_url}\""
+        buildConfigField 'String', 'GH_TOKEN_URL', "\"${ghPin.token_url}\""
+        buildConfigField 'String', 'GH_VERIFICATION_URI', "\"${ghPin.verification_uri}\""
+        // The client ids MEASURED inside the pinned binary. Baked as a list so
+        // GhDeviceLogin can fall through to the second if GitHub retires the
+        // first, and so the tester can diff the bake against the pin.
+        buildConfigField 'String', 'GH_CLIENT_IDS', "\"${ghPin.client_ids.join(',')}\""
+        buildConfigField 'String', 'GH_ARM64_SHA256', "\"${ghPin.binaries['arm64-v8a'].binary_sha256}\""
+        buildConfigField 'String', 'GH_X86_64_SHA256', "\"${ghPin.binaries['x86_64'].binary_sha256}\""
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs += ghJniDir
+        }
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    testOptions {
+        unitTests {
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.15.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
+    testImplementation 'junit:junit:4.13.2'
+}

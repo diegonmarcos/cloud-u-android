@@ -275,7 +275,20 @@ sys.exit(1 if bad else 0)
 PYTHON
 if [ $? -eq 0 ]; then pass "the shared declaration keeps exactly ONE device grant (Google's) and no github provider"; else fail "the shared declaration does not carry exactly one device-flow provider with no github among them"; fi
 if grep -qE 'github\.com/settings/apps|Configs . Sign in' "$PAGE" "$STR"; then fail "the page still points at a provider setting or another page"; else pass "no breadcrumb prose: the page states its own state and stops"; fi
-if grep -qE 'R\.string\.git_login_vault_absent' "$PAGE" && grep -qE 'git_login_vault_absent">[^<]*no browser login' "$STR"; then pass "with no vault credential the page says so, and says there is no browser login"; else fail "the credential-absent line does not state plainly that there is no browser login"; fi
+# #646 THIS ASSERTION IS INVERTED, and the reason is a measurement, not a preference.
+# #641 required this line to end "there is no browser login", which was TRUE of the client it
+# had just deleted: ours was a GitHub APP and GitHub Apps ship Device Flow OFF. The official gh
+# binary turned out to carry GITHUB'S OWN app ids and both return live device codes, so the
+# sentence became false. What is pinned now is the opposite AND the absence of the old claim:
+# the page must still state the credential-absent case, must name the DECLARED CHAIN as the way
+# out of it, and must NOT still deny that a browser login exists.
+if grep -qE 'R\.string\.git_login_vault_absent' "$PAGE" \
+    && grep -qE 'git_login_vault_absent">[^<]*declared chain' "$STR" \
+    && ! grep -qE 'git_login_vault_absent">[^<]*no browser login' "$STR"; then
+    pass "#646 with no vault credential the page says so and names the declared chain, and no longer denies a browser login"
+else
+    fail "the credential-absent line does not name the declared chain (or still claims there is no browser login)"
+fi
 if grep -qE 'R\.string\.sync_auth_key_path' "$PAGE" && grep -qE 'sshKeyPath = if \(ssh\) login\.sshKeyPath else ""' "$PAGE" && grep -qE 'GitSyncCoordinator\.AUTH_SSH' "$PAGE"; then pass "the SSH way reuses the key path libs:git-sync already holds — no second key mechanism"; else fail "the SSH login does not reuse the existing key mechanism"; fi
 LEAK="$(grep -nE 'Log\.[a-z]+\(.*(token|accessToken)|putString\(.*token' "$PAGE" "$LIST" || true)"
 if [ -z "$LEAK" ]; then pass "no token is logged or written to preferences by the page"; else fail "a token leaves memory:"; printf '%s\n' "$LEAK" | sed 's/^/        /'; fi

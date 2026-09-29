@@ -1,0 +1,267 @@
+// libs:gix — gitoxide as a fleet library: a sha256-pinned STATIC `gix` binary
+// that clones and fetches over HTTPS in ONE file, with no helper process and no
+// rootfs (data/gix-binary.json is the one pin; read its _doc first).
+//
+// #646 THE IN-PROCESS GIT LEG. Clone and fetch run here. Canonical git cannot
+// ship this way — `git-remote-https` is a SEPARATE EXECUTABLE and Android
+// extracts only lib*.so, so HTTPS transport would need a second file under a
+// name the installer will not create (measured: eng-spec §1-§3). gitoxide has
+// rustls compiled in and needs nothing beside itself.
+//
+// IT CANNOT PUSH, and this module does not pretend it can: `gix push` answers
+// `error: unrecognized subcommand 'push'`. data/gix-binary.json::verbs declares
+// clone and fetch and NOTHING else, GixRunner refuses any verb outside that
+// declaration, and #646's tester fails the build if push is ever routed here.
+// Push is the terminal handoff (#642's RUN_COMMAND, shipped at 74225166b) or
+// JGit, which already does it inside libs:git-sync.
+//
+// Shared BY REFERENCE the way every module on this shelf is: lib-apks discovers
+// this directory and ships cloud-lib-gix as its own installable APK (#474
+// naming, from the one declaration in aa_cloud-superapp/data/regen.sh), and an
+// app that wants the engine names it in its own build.json::modules.
+//
+// NO COMPOSE ON PURPOSE: this module renders nothing. It is an engine, and the
+// screen that reports on it belongs to the app that hosts it.
+//
+// TESTED where it builds: src/test/ (JVM, no emulator) runs inside the consuming
+// app's own `gradle test`, and that app's ship workflow watches this directory.
+
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// ── the pinned binary ───────────────────────────────────────────────────────
+// Everything below is read from data/gix-binary.json. Nothing here names a
+// version, a URL or a hash.
+def gixPin = new groovy.json.JsonSlurper().parse(file('data/gix-binary.json'))
+def gixJniDir = new File(buildDir, 'generated/gix-jni')
+
+/**
+ * A REAL task class, not a doLast closure: the consuming apps build with
+ * Gradle's configuration cache, which refuses a task action that reaches for
+ * script objects. Managed @Input/@Output properties and self-contained helpers
+ * are what the cache supports. Downloads once, refuses on either hash mismatch,
+ * reads the ELF program headers for PT_INTERP, stages jniLibs.
+ *
+ * Differs from libs:rclone's otherwise identical task in ONE way: gitoxide
+ * publishes .tar.gz, not .zip, and the JDK has no tar reader — so [extract]
+ * walks the POSIX/ustar headers itself instead of calling java.util.zip.ZipFile.
+ */
+abstract class FetchGixBinaries extends DefaultTask {
+    @InputFile abstract RegularFileProperty getPinFile()
+    @Internal abstract DirectoryProperty getCacheDir()
+    @OutputDirectory abstract DirectoryProperty getOutDir()
+
+    @TaskAction
+    void fetch() {
+        def pinJson = new groovy.json.JsonSlurper().parse(pinFile.get().asFile)
+        def cache = cacheDir.get().asFile
+        def out = outDir.get().asFile
+        // A plain loop, not .each { }: Gradle runs a DECORATED subclass of this
+        // task, and a closure inside it cannot see the class's own helpers.
+        for (entryAbi in pinJson.binaries.entrySet()) {
+            def abi = entryAbi.key; def pin = entryAbi.value
+            def url = pinJson.url_template
+                .replace('{version}', pinJson.version)
+                .replace('{flavour}', pinJson.flavour)
+                .replace('{target}', pin.target)
+            def tar = new File(cache, "gix-${pinJson.version}-${pin.target}.tar.gz")
+            fetchPinned(url, tar, pin.tar_sha256)
+            def entry = pinJson.entry_template
+                .replace('{version}', pinJson.version)
+                .replace('{flavour}', pinJson.flavour)
+                .replace('{target}', pin.target)
+            def staged = new File(out, "${abi}/${pinJson.jni_name}")
+            staged.parentFile.mkdirs()
+            extract(tar, entry, staged)
+            def actual = sha256Of(staged)
+            if (actual != pin.binary_sha256) {
+                staged.delete()
+                throw new GradleException("gix: extracted binary sha256 mismatch for " + abi + "\n  expected " + pin.binary_sha256 + "\n  actual   " + actual)
+            }
+            if (staged.length() != (long) pin.binary_bytes) {
+                def had = staged.length(); staged.delete()
+                throw new GradleException("gix: extracted binary is " + had + " bytes for " + abi + "; the pin declares " + pin.binary_bytes)
+            }
+            if (pinJson.interp == 'none' && hasProgramInterpreter(staged)) {
+                staged.delete()
+                throw new GradleException("gix: " + abi + " binary carries a PT_INTERP — it is dynamically linked and will not run under bionic; the pin declares interp=none")
+            }
+            staged.setExecutable(true, false)
+            logger.quiet("gix: staged ${abi}/${pinJson.jni_name} (" + staged.length() + " bytes, static)")
+        }
+    }
+
+    /**
+     * Pull ONE entry out of a gzipped tar by exact path. Walks 512-byte
+     * POSIX/ustar headers: name at 0 (100), size as octal at 124 (12), typeflag
+     * at 156, ustar prefix at 345 (155); file data follows its header padded up
+     * to the next 512-byte boundary. Refuses rather than writing a short file if
+     * the entry is absent — an empty jniLibs payload would install an app whose
+     * binary silently is not there.
+     */
+    protected static void extract(File tarGz, String entry, File target) {
+        def input = new java.util.zip.GZIPInputStream(new BufferedInputStream(new FileInputStream(tarGz)))
+        try {
+            def header = new byte[512]
+            while (true) {
+                if (!readFully(input, header, 512)) break
+                if (header[0] == (byte) 0) break        // end-of-archive block
+                def name = cString(header, 0, 100)
+                def prefix = cString(header, 345, 155)
+                def full = prefix.isEmpty() ? name : prefix + '/' + name
+                def sizeField = cString(header, 124, 12).trim()
+                long size = sizeField.isEmpty() ? 0L : Long.parseLong(sizeField, 8)
+                char type = (char) header[156]
+                if (full == entry && (type == '0' || type == ((char) 0))) {
+                    target.withOutputStream { o ->
+                        long left = size
+                        def buf = new byte[1 << 16]
+                        while (left > 0) {
+                            int want = (int) Math.min((long) buf.length, left)
+                            if (!readFully(input, buf, want)) throw new GradleException("gix: " + tarGz + " truncated inside " + entry)
+                            o.write(buf, 0, want); left -= want
+                        }
+                    }
+                    return
+                }
+                long skip = ((size + 511L) / 512L) * 512L
+                while (skip > 0) { long n = input.skip(skip); if (n <= 0) break; skip -= n }
+            }
+        } finally { input.close() }
+        throw new GradleException("gix: " + tarGz + " has no entry " + entry)
+    }
+
+    /**
+     * Read exactly [n] bytes. False at a CLEAN end of stream (nothing read);
+     * a stream that ends mid-record is a truncated archive, not an end, and
+     * throws — silently accepting a short read is how a partial download
+     * becomes a staged binary that passes nothing and fails on a phone.
+     */
+    protected static boolean readFully(InputStream input, byte[] buf, int n) {
+        int off = 0
+        while (off < n) {
+            int r = input.read(buf, off, n - off)
+            if (r < 0) {
+                if (off == 0) return false
+                throw new GradleException("gix: unexpected end of archive after " + off + " of " + n + " bytes")
+            }
+            off += r
+        }
+        return true
+    }
+
+    /** A NUL-terminated field of a tar header as a String. */
+    protected static String cString(byte[] b, int off, int len) {
+        int end = off
+        while (end < off + len && b[end] != (byte) 0) end++
+        return new String(b, off, end - off, 'US-ASCII')
+    }
+
+    protected static String sha256Of(File f) {
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        f.eachByte(1 << 16) { buf, n -> digest.update(buf, 0, n) }
+        return digest.digest().encodeHex().toString()
+    }
+
+    protected void fetchPinned(String url, File target, String sha256) {
+        if (target.exists() && sha256Of(target) == sha256) return
+        logger.quiet("gix: downloading " + url)
+        target.parentFile.mkdirs(); target.delete()
+        def connection = new URL(url).openConnection()
+        connection.setInstanceFollowRedirects(true)
+        target.withOutputStream { it << connection.inputStream }
+        def actual = sha256Of(target)
+        if (actual != sha256) {
+            target.delete()
+            throw new GradleException("gix: wrong sha256 for " + url + "\n  expected " + sha256 + "\n  actual   " + actual)
+        }
+    }
+
+    /** True when the ELF64 file has a PT_INTERP program header (i.e. requests a dynamic loader). */
+    protected static boolean hasProgramInterpreter(File elf) {
+        def raf = new RandomAccessFile(elf, 'r')
+        try {
+            def magic = new byte[4]; raf.readFully(magic)
+            if (magic[0] != (byte) 0x7f || magic[1] != (byte) 'E' || magic[2] != (byte) 'L' || magic[3] != (byte) 'F')
+                throw new GradleException("gix: " + elf + " is not an ELF file")
+            def order = java.nio.ByteOrder.LITTLE_ENDIAN
+            def header = new byte[64]; raf.seek(0); raf.readFully(header)
+            def bb = java.nio.ByteBuffer.wrap(header).order(order)
+            long phoff = bb.getLong(0x20); int phentsize = bb.getShort(0x36) & 0xffff; int phnum = bb.getShort(0x38) & 0xffff
+            for (int i = 0; i < phnum; i++) {
+                raf.seek(phoff + (long) i * phentsize)
+                def ph = new byte[4]; raf.readFully(ph)
+                int type = java.nio.ByteBuffer.wrap(ph).order(order).getInt(0)
+                if (type == 3) return true   // PT_INTERP
+            }
+            return false
+        } finally { raf.close() }
+    }
+}
+
+def fetchGixBinaries = tasks.register('fetchGixBinaries', FetchGixBinaries) {
+    description = "Download, verify (sha256 + byte count + no PT_INTERP) and stage the pinned gix binaries as jniLibs"
+    pinFile = file('data/gix-binary.json')
+    cacheDir = layout.buildDirectory.dir('gix-cache')
+    outDir = layout.buildDirectory.dir('generated/gix-jni')
+}
+preBuild.dependsOn fetchGixBinaries
+
+android {
+    namespace 'com.diegonmarcos.cloudlib.gix'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        // The pin, baked so a caller can state what it runs without shelling out
+        // first, and so GixRunner can name the .so it execs. GIX_VERBS is the
+        // declaration that keeps push out: GixRunner refuses anything not in it,
+        // so the push-shaped hole is enforced by data, not by a comment.
+        buildConfigField 'String', 'GIX_VERSION', "\"${gixPin.version}\""
+        buildConfigField 'String', 'GIX_JNI_NAME', "\"${gixPin.jni_name}\""
+        buildConfigField 'String', 'GIX_VERBS', "\"${gixPin.verbs.join(',')}\""
+        buildConfigField 'String', 'GIX_ARM64_SHA256', "\"${gixPin.binaries['arm64-v8a'].binary_sha256}\""
+        buildConfigField 'String', 'GIX_X86_64_SHA256', "\"${gixPin.binaries['x86_64'].binary_sha256}\""
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs += gixJniDir
+        }
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    testOptions {
+        unitTests {
+            all {
+                testLogging {
+                    events 'failed'
+                    exceptionFormat 'full'
+                }
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.15.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
+    testImplementation 'junit:junit:4.13.2'
+}
