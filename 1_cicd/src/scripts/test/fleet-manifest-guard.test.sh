@@ -238,6 +238,46 @@ add_chunked_bake() {
         "'String.join(\"\", new String[]{' + (0..<fleetB64.length()).step(60000).collect { '\"' + fleetB64.substring(it, Math.min(it + 60000, fleetB64.length())) + '\"' }.join(', ') + '})'" \
         >> "$1/ab_cloud-libs-shared/libs/updater/build.gradle"
 }
+# ── #646 the SAME cap, on a DIFFERENT derived blob ────────────────────────────
+# The fleet manifest was not special. The L5 folder tree is derived the same way
+# and crossed the same cap five days later, with the build breaking because two
+# library DIRECTORIES were added. These three mutations pin the rule as a rule.
+reinstate_single_constant_tree_bake() {
+    printf 'android { defaultConfig {\n    buildConfigField "String", "UI_STACK_FOLDER_TREE_B64", "\\"${stackTreeB64}\\""\n} }\n' \
+        >> "$1/aa_cloud-superapp/app/build.gradle"
+}
+add_chunked_tree_bake() {
+    printf 'android { defaultConfig {\n    buildConfigField "String", "UI_STACK_FOLDER_TREE_B64", bakeB64(stackTreeB64)\n} }\n' \
+        >> "$1/aa_cloud-superapp/app/build.gradle"
+}
+# Chunking at a step that is itself over the cap is the defect wearing the fix's
+# clothes: every part is still one over-cap constant.
+widen_the_chunk_step() {
+    printf 'android { defaultConfig {\n    buildConfigField "String", "UI_AST_TREE_B64", %s\n} }\n' \
+        "'String.join(\"\", new String[]{' + (0..<astTreeB64.length()).step(70000).collect { '\"' + astTreeB64.substring(it) + '\"' }.join(', ') + '})'" \
+        >> "$1/aa_cloud-superapp/app/build.gradle"
+}
+# A PLACEHOLDER bake is EXEMPT, and the exemption is about DERIVATION rather than
+# about which application it is. Seven apps bake "—" for the folder tree — four
+# bytes, because only the superapp scans the repository — and requiring the
+# chunked form there would be churn in seven files that removes no risk. Written
+# into the fixture rather than sed'd into the real tree: the scaffold is synthetic,
+# so an edit aimed at a path it does not contain is a mutation that silently does
+# NOTHING and a case that passes for no reason.
+_write_agenda_tree_bake() {   # $1 root, $2 the right-hand side of the assignment
+    mkdir -p "$1/ac_cloud-agenda/app"
+    printf 'def stackTreeB64 = %s\nandroid { defaultConfig {\n    buildConfigField "String", "UI_STACK_FOLDER_TREE_B64", "\\"${stackTreeB64}\\""\n} }\n' \
+        "$2" > "$1/ac_cloud-agenda/app/build.gradle"
+    grep -q 'UI_STACK_FOLDER_TREE_B64' "$1/ac_cloud-agenda/app/build.gradle" \
+        || { echo "MUTATION DID NOT APPLY: no agenda bake written" >&2; exit 2; }
+}
+add_placeholder_tree_bake() {
+    _write_agenda_tree_bake "$1" '"—".bytes.encodeBase64().toString()'
+}
+# ...and the moment that application scans for real, the SAME bake must be caught.
+scan_for_real_in_a_placeholder_app() {
+    _write_agenda_tree_bake "$1" 'folderTree(5).bytes.encodeBase64().toString()'
+}
 delete_canonical()  { rm -f "$1/aa_cloud-superapp/data/constellation-fleet.json"; }
 empty_the_fleet()   { printf '{"apps":[]}\n' > "$1/aa_cloud-superapp/data/constellation-fleet.json"; }
 corrupt_the_fleet() { printf '{"apps":[\n' > "$1/aa_cloud-superapp/data/constellation-fleet.json"; }
@@ -379,6 +419,17 @@ case_is "manifest baked as ONE string constant is CAUGHT" 1 reinstate_single_con
 case_is "missing canonical manifest is CAUGHT"           1 delete_canonical
 case_is "manifest listing no applications is CAUGHT"     1 empty_the_fleet
 case_is "unparseable manifest is CAUGHT"                 1 corrupt_the_fleet
+
+echo
+echo "javac's 65,535-byte constant cap applies to EVERY derived blob (task #646)"
+case_is "the folder tree baked chunked is accepted"           0 add_chunked_tree_bake
+case_is "the folder tree baked as ONE constant is CAUGHT"     1 reinstate_single_constant_tree_bake \
+        "as ONE string constant"
+case_is "chunking at a step over the cap is CAUGHT"           1 widen_the_chunk_step \
+        "still over the cap"
+case_is "a four-byte placeholder bake is accepted"             0 add_placeholder_tree_bake
+case_is "a placeholder app that starts scanning for real is CAUGHT" 1 scan_for_real_in_a_placeholder_app \
+        "as ONE string constant"
 
 echo
 echo "A runtime payload is a real fleet LIBRARY the store installs (task #628)"

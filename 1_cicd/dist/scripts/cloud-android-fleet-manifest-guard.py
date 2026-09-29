@@ -80,18 +80,54 @@ DEPENDS = re.compile(r"""^[^/*]*project\(\s*['"]:libs:updater['"]\s*\)""")
 # The defect itself: a ternary or elvis that hands back an empty string when the
 # manifest is absent. This is what made the bug silent, so it is named directly.
 EMPTY_FALLBACK = re.compile(r"""fleet\w*\s*=.*(\?|\?:).*["']{2}""")
-# A bake of the manifest as ONE quoted literal: buildConfigField "String",
-# "CONSTELLATION_FLEET_B64", "\"${...}\"". javac caps a single string constant at
-# 65,535 UTF-8 bytes (JVMS 4.4.7); the manifest's base64 crossed that on
-# 2026-09-24 (68,072 bytes at 72 entries) and every consumer's BuildConfig
-# failed with "constant string too long". The bake has to be a NON-constant
-# expression (parts joined at class init), whatever the manifest's size today.
+# ── javac's 65,535-byte string-constant cap ──────────────────────────────────
+# A bake as ONE quoted literal — buildConfigField "String", "X_B64", "\"${...}\""
+# — is a CONSTANT_Utf8 entry, and JVMS 4.4.7 caps one at 65,535 bytes. Past that
+# every consumer's BuildConfig fails to COMPILE with "constant string too long",
+# which is javac talking about a generated file and naming nothing useful.
+#
+# THIS HAS NOW HAPPENED TWICE, on two different blobs, for the same reason:
+#   #567  the fleet manifest    68,072 bytes at 72 entries   2026-09-24 (c866529e8)
+#   #646  the L5 folder tree    65,624 bytes                 2026-09-29
+# The second is the tell. The tree had 147 bytes of headroom (65,388 at 10000dcb7,
+# green) and two new library directories added 236 (65,624 at a9e7383f4, red), so
+# the thing that broke the build was ADDING A DIRECTORY — measured from git at
+# both commits. Nothing asserted on the new directories; the blob simply grew.
+#
+# So the rule is not about any one constant: EVERY BLOB DERIVED FROM A SCAN OF THE
+# REPOSITORY must be baked as a non-constant expression (parts joined at class
+# init), whatever its size today, because its size is not something anyone edits
+# deliberately. Declarations baked from a JSON block are NOT on this list: those
+# only grow when someone edits the very file whose size they changed.
+GROWING_B64 = (
+    "CONSTELLATION_FLEET_B64",       # derived: every fleet member (#567)
+    "UI_STACK_FOLDER_TREE_B64",      # derived: the repo's directory tree, L5 (#646)
+    "UI_STACK_FOLDER_TREE_L4_B64",   # derived: the same tree, L4
+    "UI_STACK_FOLDER_TREE_L3_B64",   # derived: the same tree, L3
+    "UI_AST_TREE_B64",               # derived: a walk of files and their declarations
+    "UI_ASM_TREE_B64",               # derived: the page/section map
+)
 SINGLE_CONSTANT_BAKE = re.compile(
-    r"""buildConfigField\s*\(?\s*["']String["']\s*,\s*["']CONSTELLATION_FLEET_B64["']\s*,\s*["']\\?["']\$\{""")
+    r"""buildConfigField\s*\(?\s*["']String["']\s*,\s*["'](%s)["']\s*,\s*["']\\?["']\$\{(\w+)\}"""
+    % "|".join(GROWING_B64))
+# ONE EXEMPTION, and it is about DERIVATION rather than about which app it is.
+# Seven applications bake a PLACEHOLDER for the folder tree — `def stackTreeB64 =
+# "—".bytes.encodeBase64()...`, four bytes — because only the superapp actually
+# scans the repository. A placeholder is not derived data: it cannot grow, so
+# requiring the chunked form there would be churn in seven files that removes no
+# risk. The exemption is granted by the build file ASSIGNING THE VARIABLE A
+# LITERAL, so the day one of those apps starts scanning for real, the assignment
+# stops matching and the guard fires on it.
+PLACEHOLDER_ASSIGN = re.compile(
+    r"""^\s*def\s+%s\s*=\s*["'][^"']{0,8}["']\s*\.\s*bytes""")
+# A chunked bake that chunks too coarsely is the same defect wearing the fix's
+# clothes: String.join over 70,000-char parts still emits an over-cap constant.
+CHUNK_STEP = re.compile(r"""\.step\(\s*(\d+)\s*\)""")
+CONSTANT_UTF8_CAP = 65535
 
 
 def find_bakes(root):
-    """Every build file that bakes CONSTELLATION_FLEET_B64, with the lines that do."""
+    """Every build file that bakes a GROWING_B64 constant as one literal."""
     hits = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames
@@ -108,8 +144,20 @@ def find_bakes(root):
             for number, line in enumerate(lines, 1):
                 if line.lstrip().startswith("//"):
                     continue
-                if SINGLE_CONSTANT_BAKE.search(line):
-                    hits.append((path, number, line.strip()))
+                found = SINGLE_CONSTANT_BAKE.search(line)
+                if found:
+                    placeholder = re.compile(PLACEHOLDER_ASSIGN.pattern % re.escape(found.group(2)))
+                    if not any(placeholder.match(other) for other in lines):
+                        hits.append((path, number, found.group(1), line.strip()))
+                # A chunk step at or over the cap is the defect wearing the fix's
+                # clothes — String.join over 70,000-char parts is still one
+                # over-cap constant per part. `.step()` in these build files is
+                # only ever a blob being chunked.
+                for step in CHUNK_STEP.finditer(line):
+                    if int(step.group(1)) >= CONSTANT_UTF8_CAP:
+                        hits.append((path, number,
+                                     "a blob in %s-char parts, each one still over the cap"
+                                     % step.group(1), line.strip()))
     return hits
 
 
@@ -679,14 +727,19 @@ def main():
             "      fleet-blind application." % UPDATER_GRADLE)
 
     # 2. Every consumer must resolve a populated manifest.
-    for path, number, line in find_bakes(root):
+    for path, number, what, line in find_bakes(root):
         failures.append(
-            "%s:%d bakes the manifest as ONE string constant.\n"
-            "      javac refuses a constant over 65,535 bytes and the manifest's base64\n"
-            "      passed that on 2026-09-24 — every consumer's BuildConfig then fails with\n"
-            "      'constant string too long'. Bake it as String.join(\"\", new String[]{...})\n"
-            "      parts, as libs/updater/build.gradle does.\n"
-            "      %s" % (os.path.relpath(path, root), number, line))
+            "%s:%d bakes %s as ONE string constant.\n"
+            "      javac refuses a constant over %d bytes (JVMS 4.4.7, CONSTANT_Utf8), so\n"
+            "      every consumer's BuildConfig then fails to COMPILE with 'constant string\n"
+            "      too long' — in a step named for the tests, before a test runs.\n"
+            "      This blob is DERIVED, so it grows when nobody edits it: the fleet manifest\n"
+            "      crossed on 2026-09-24 at 68,072 bytes (#567), and the L5 folder tree crossed\n"
+            "      on 2026-09-29 at 65,624 because #646 added two library DIRECTORIES to a\n"
+            "      constant with 147 bytes left. Bake it as String.join(\"\", new String[]{...})\n"
+            "      parts — not a constant expression, so no cap — as libs/updater/build.gradle\n"
+            "      and aa_cloud-superapp/app/build.gradle's bakeB64 do.\n"
+            "      %s" % (os.path.relpath(path, root), number, what, CONSTANT_UTF8_CAP, line))
 
     consumers = find_consumers(root)
     if not consumers:
