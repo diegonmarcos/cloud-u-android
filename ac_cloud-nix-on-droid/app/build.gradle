@@ -489,7 +489,10 @@ task bakeBootstrap() {
             def toolingResult = exec {
                 commandLine "python3", toolingBaker.absolutePath, idPatched.absolutePath, baked.absolutePath,
                         tooling.nixpkgs_pin, tooling.attrs.join(","), tooling.profile_link,
-                        tooling.fallback_init_script, rewrite.to, nixSystem, sharedRootName()
+                        tooling.fallback_init_script, rewrite.to, nixSystem, sharedRootName(),
+                        // #641 -- which baked attr becomes the login shell. Declared, never
+                        // a literal here: the bake step resolves it under profile_link.
+                        tooling.login_shell_attr
                 ignoreExitValue = true
             }
             idPatched.delete()

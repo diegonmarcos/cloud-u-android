@@ -28,6 +28,7 @@ Usage:
 this function already has open.
 """
 import os
+import re
 import stat
 import subprocess
 import sys
@@ -40,6 +41,8 @@ SESSION_INIT_TEMPLATE = (
     'nix-on-droid-session-init.sh"'
 )
 DROPPED_ENTRY = "etc/static/UNINTIALISED"
+# The real file behind the etc/profile symlink (SYMLINKS.txt: /etc/static/profile←etc/profile).
+ETC_PROFILE_ENTRY = "etc/static/profile"
 
 # #638 -- the two UNCONDITIONAL execs through /usr/bin/env that upstream's
 # generated login-inner carries, verbatim. /usr/bin/env is NOT in the bootstrap
@@ -96,8 +99,9 @@ def env_target_unreachable(env_rel, existing, new_files, new_executables):
     return None
 
 
-def patch_login_inner(login_inner: str, app_id: str, fallback_script: str) -> str:
-    """The text edits #595/#638 make to the generated usr/lib/login-inner.
+def patch_login_inner(login_inner: str, app_id: str, fallback_script: str,
+                      profile_link: str, login_shell: str) -> str:
+    """The text edits #595/#638/#641 make to the generated usr/lib/login-inner.
 
     Pure str -> str so test/test-bootstrap-baked.sh can run the REAL patch
     offline, with no nix and no bootstrap zip, and then EXECUTE the result.
@@ -111,9 +115,21 @@ def patch_login_inner(login_inner: str, app_id: str, fallback_script: str) -> st
     fallback_line = f'if [ -e "/data/data/{app_id}/files/home/.nix-profile/etc/profile.d/nix-on-droid-session-init.sh" ]; then\n  {want}\nelse\n  . /{fallback_script}\nfi'
     login_inner = head + fallback_line + tail
 
+    # #641 -- this exec GOES, it is not merely guarded any more, and #640 is why:
+    # the moment /usr/bin/env exists the #638 guard becomes TRUE, this line fires,
+    # and login-inner execs bash and never reaches the usershell block below it.
+    # Guarding it kept the terminal alive when env was missing; keeping it now
+    # would make bash the permanent login shell and #641's fish unreachable. What
+    # replaces it is upstream's OWN shell selection right below -- which still
+    # tests -x and still falls back to bash -- so nothing is loosened: the fix is
+    # strictly upstream's mechanism instead of upstream's shortcut.
     if login_inner.count(ENV_EXEC) != 1:
         raise ValueError(f"expected exactly one unconditional env exec in usr/lib/login-inner:\n  {ENV_EXEC}")
-    login_inner = login_inner.replace(ENV_EXEC, f"if [ -x /usr/bin/env ]; then\n  {ENV_EXEC}\nfi", 1)
+    login_inner = login_inner.replace(
+        ENV_EXEC,
+        "# #641: the `exec /usr/bin/env bash` upstream puts here is dropped, so the\n"
+        "# usershell block below chooses the login shell (and still falls back to bash).",
+        1)
 
     # The "called with arguments" path (RunCommandService, `login <cmd>`) has the
     # same dependency and no block below it to fall through to. bin/sh here IS
@@ -121,7 +137,57 @@ def patch_login_inner(login_inner: str, app_id: str, fallback_script: str) -> st
     # nothing but the missing file.
     if login_inner.count(ENV_EXEC_ARGV) != 1:
         raise ValueError(f"expected exactly one env exec of the caller's argv:\n  {ENV_EXEC_ARGV}")
-    return login_inner.replace(ENV_EXEC_ARGV, 'exec "$@"', 1)
+    login_inner = login_inner.replace(ENV_EXEC_ARGV, 'exec "$@"', 1)
+
+    return retarget_usershell(login_inner, profile_link, login_shell)
+
+
+def retarget_usershell(login_inner: str, profile_link: str, login_shell: str) -> str:
+    """#641 -- upstream's generated `usershell=` points at the zip's own bash.
+
+    MEASURED in the pinned zip: usershell="/nix/store/<hash>-bash-5.2-p15/bin/bash",
+    and that literal appears again in the "Cannot execute shell ..." fallback
+    message, so BOTH move -- a retargeted assignment with a message still naming
+    bash is how a user is told the wrong thing about his own shell. The new value
+    is derived from profile_link, never a /nix/store literal, for the same reason
+    the env link is: every hash moves with the nixpkgs pin.
+    """
+    m = re.search(r'^usershell="([^"]+)"$', login_inner, re.M)
+    if not m:
+        raise ValueError('expected one `usershell="..."` assignment in usr/lib/login-inner')
+    old = m.group(1)
+    new = f"/{profile_link}/bin/{login_shell}"
+    if old == new:
+        raise ValueError(f"usershell is already {new}; the patch would be a silent no-op")
+    return login_inner.replace(old, new)
+
+
+def patch_etc_profile(etc_profile: str, fallback_script: str) -> str:
+    """#641 -- the noise on EVERY login, and it is upstream's file, not ours.
+
+    Diego's phone printed, verbatim:
+
+      -bash: /nix/store/5pmf0nlk34…-nix-on-droid-session-init.sh/etc/profile.d/nix-on-droid-session-init.sh: No such file or directory
+
+    (hash elided to a prefix on purpose -- the tester asserts no full store hash
+    survives anywhere in this file, and a quoted one would defeat that check. The
+    full line is in test-bootstrap-baked.sh's fixture, where it is the subject.)
+
+    That is the ENTIRE content of etc/static/profile in the pinned zip (symlinked
+    as etc/profile, read by the login bash), sourcing a store path that the zip
+    does not contain -- `nix-on-droid switch` is what would build it, and skipping
+    that wizard is this whole block's purpose. So the line can never succeed on a
+    fresh install of this app. It is guarded exactly like login-inner's own
+    session-init line, falling back to the baked PATH script, and NOT deleted: a
+    phone that later does run a real nix-on-droid generation gets it back.
+    """
+    body = [l for l in etc_profile.splitlines() if l.strip()]
+    if len(body) != 1 or not body[0].lstrip().startswith('. "') or '"' not in body[0][3:]:
+        raise ValueError("etc/static/profile is not the single `. \"<path>\"` line this patch "
+                         f"knows how to guard:\n  {etc_profile!r}")
+    src = body[0].strip()
+    path = src.split('"')[1]
+    return (f'if [ -e "{path}" ]; then\n  {src}\nelse\n  . /{fallback_script}\nfi\n')
 
 
 # claude-code carries an unfree license in nixpkgs (Anthropic's own terms,
@@ -140,20 +206,24 @@ def capture(cmd):
 
 
 def main() -> int:
-    if len(sys.argv) != 10:
+    if len(sys.argv) != 11:
         print(
             "usage: bake_default_packages.py <input.zip> <output.zip> "
             "<nixpkgs_pin> <attrs csv> <profile_link> <fallback_init_script> <app_id> <nix_system> "
-            "<shared_root_name>",
+            "<shared_root_name> <login_shell_attr>",
             file=sys.stderr,
         )
         return 2
 
     (input_zip, output_zip, pin, attrs_csv, profile_link, fallback_script, app_id, nix_system,
-     shared_root_name) = sys.argv[1:10]
+     shared_root_name, login_shell) = sys.argv[1:11]
     attrs = [a for a in attrs_csv.split(",") if a]
     if not attrs:
         print("no attrs given", file=sys.stderr)
+        return 2
+    if login_shell not in attrs:
+        print(f"FAIL: login_shell_attr {login_shell!r} is not in default_packages.attrs "
+              f"({attrs}) -- the login shell would be a path nothing bakes", file=sys.stderr)
         return 2
 
     with tempfile.TemporaryDirectory() as work:
@@ -201,6 +271,7 @@ def main() -> int:
             bin_login = zin.read("bin/login").decode()
             symlinks_txt = zin.read("SYMLINKS.txt").decode()
             executables_txt = zin.read("EXECUTABLES.txt").decode()
+            etc_profile = zin.read(ETC_PROFILE_ENTRY).decode()
 
             # ── #612: auto-mount shared storage + the cloud-drive shared
             # store into $HOME, the same generated-text-injection technique
@@ -247,7 +318,9 @@ def main() -> int:
 
             # ── patch login-inner's session-init line and its env execs ────
             try:
-                login_inner = patch_login_inner(login_inner, app_id, fallback_script)
+                login_inner = patch_login_inner(login_inner, app_id, fallback_script,
+                                                profile_link, login_shell)
+                etc_profile = patch_etc_profile(etc_profile, fallback_script)
             except ValueError as e:
                 print(f"FAIL: {e}", file=sys.stderr)
                 return 1
@@ -304,6 +377,18 @@ def main() -> int:
                 return 1
             new_symlinks.append(env_symlink_line(profile_link))
 
+            # ── #641: and the login shell login-inner now points at really ships
+            shell_in_profile = os.path.join(generation, "bin", login_shell)
+            if not os.path.islink(shell_in_profile) and not os.path.exists(shell_in_profile):
+                print(f"FAIL: the realized profile has no bin/{login_shell} ({shell_in_profile}) -- "
+                      f"login-inner would name a login shell that is not in the store", file=sys.stderr)
+                return 1
+            why = env_target_unreachable(
+                os.path.realpath(shell_in_profile).lstrip("/"), existing, new_files, new_executables)
+            if why:
+                print(f"FAIL: the {login_shell} login shell would not be runnable: {why}", file=sys.stderr)
+                return 1
+
             fallback_body = (
                 "# #595 -- baked default tooling, sourced by usr/lib/login-inner when\n"
                 "# $HOME/.nix-profile does not exist (the wizard that would normally\n"
@@ -335,6 +420,8 @@ def main() -> int:
                         zout.writestr(info, symlinks_txt)
                     elif name == "EXECUTABLES.txt":
                         zout.writestr(info, executables_txt)
+                    elif name == ETC_PROFILE_ENTRY:
+                        zout.writestr(info, etc_profile)
                     else:
                         zout.writestr(info, zin.read(name))
                 for rel, data in new_files.items():
