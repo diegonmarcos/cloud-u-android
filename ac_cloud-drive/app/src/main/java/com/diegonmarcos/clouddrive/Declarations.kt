@@ -475,7 +475,10 @@ object Declarations {
             ).filter { it.isNotBlank() }.toSet()
 
     /** #608 the page with nothing declared: every list empty, so the screen says so. */
-    val EMPTY_GIT_PAGE = GitPageDecl(true, "", emptyList(), emptyList(), emptyList(), GitApiDecl("", "", 1, ""), emptyList(), emptyList(), 30, emptyList(), emptyList())
+    // #642 the trailing null is `terminal`: the empty page hands nothing to cloud-terminal.
+    // Stated rather than defaulted — a default would let a real page lose its git handoff
+    // silently, and this is the one place where having none is the correct answer.
+    val EMPTY_GIT_PAGE = GitPageDecl(true, "", emptyList(), emptyList(), emptyList(), GitApiDecl("", "", 1, ""), emptyList(), emptyList(), 30, emptyList(), emptyList(), null)
 
     /** #608 the login kinds the Git page dispatches on — the ONLY provider vocabulary in Kotlin.
      *  #641 `webauth` is gone with the GitHub device grant it drove. */
