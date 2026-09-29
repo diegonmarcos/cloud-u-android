@@ -181,16 +181,29 @@ d=json.load(open('$BJ'))
 c=[s for s in d['ui']['sections'] if s['id']=='config'][0]
 print(' '.join(p['id'] for p in c['pages']))
 ")
+# TILED = the entries that actually draw a tile in the grid, in grid order: a
+# `hidden` page is a tab of another page and an `is_action` page is appended to
+# the Actions heading whatever its position, so neither can be the entry About
+# has to follow. #649 made that distinction load-bearing: the three action
+# entries now sit at the TAIL of the array, so testing the raw tail would read
+# `animations` and call a correct declaration wrong.
+TILED=$(python3 -c "
+import json
+d=json.load(open('$BJ'))
+c=[s for s in d['ui']['sections'] if s['id']=='config'][0]
+print(' '.join(p['id'] for p in c['pages']
+                if not p.get('hidden') and not p.get('is_action')))
+")
 # #580 deleted Configs ▸ Home (its two tabs merged into Launcher ▸ Notify), so
 # the page that used to sit immediately before About is gone. What is left to
 # pin is the other half of the old rule: About is opened once ever and stays the
-# LAST entry, and no `home` page creeps back into the list.
+# LAST tiled entry, and no `home` page creeps back into the list.
 if case " $ORDER " in *" home "*) true ;; *) false ;; esac; then
   bad "a Configs page named home is declared again — #580 deleted it; its tabs live in Launcher"
-elif [ "${ORDER##* }" = "about" ]; then
-  ok "no Home page in ui.sections[config].pages, and About is its last entry"
+elif [ "${TILED##* }" = "about" ]; then
+  ok "no Home page in ui.sections[config].pages, and About is its last tiled entry"
 else
-  bad "About is not the last Configs entry — order tail is: $(echo "$ORDER" | tr ' ' '\n' | tail -4 | tr '\n' ' ')"
+  bad "About is not the last tiled Configs entry — tiled tail is: $(echo "$TILED" | tr ' ' '\n' | tail -4 | tr '\n' ' ')"
 fi
 # Both surfaces read that one list. A Kotlin-side order would be a second truth.
 grep -qF 'SectionPages.pagesFor(section)' "$SHELL_KT" \

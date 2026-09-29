@@ -442,6 +442,21 @@ object Sections {
          *  count that changes the moment a page is added. */
         val rowBreak: Boolean = false,
 
+        /** Heading this page's tile sits under in its section's grid, and
+         *  [subgroup] the heading below that — the TWO declared levels of the
+         *  Configs grid (#649: Launcher; Watchdog ▸ Setup / Observability).
+         *
+         *  The WORDS live here, never in Kotlin, exactly as [label] does for a
+         *  page name — [LauncherNavController.sectionGrid] passes them through
+         *  and [TileGridFragment] prints them verbatim. A run of consecutive
+         *  pages carrying the same pair IS the group, so the order of
+         *  `pages` in build.json is the order of the headings and there is no
+         *  parallel group map to disagree with it.
+         *
+         *  Blank ⇒ the default Pages heading, which is every other section. */
+        val group: String = "",
+        val subgroup: String = "",
+
         /** `<sectionId>/<tile group title>` whose tiles this page opens with,
          *  as an app row. A REFERENCE to the canonical list, never a copy:
          *  Drive ▸ Connections names Cloud ▸ Apps ▸ Data Apps, so the row the
@@ -680,6 +695,8 @@ object Sections {
                         }.orEmpty(),
                         isAction = po.optBoolean("is_action", false),
                         rowBreak = po.optBoolean("row_break", false),
+                        group    = po.optString("group", ""),
+                        subgroup = po.optString("subgroup", ""),
                         appsFromTileGroup = po.optString("apps_from_tile_group", ""),
                         appsExtraTileIds = po.optJSONArray("apps_extra_tile_ids")?.let { ea ->
                             (0 until ea.length()).map { ea.getString(it) }

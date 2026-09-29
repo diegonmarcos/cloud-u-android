@@ -36,17 +36,23 @@ for f in "$BJ" "$KT/settings/LauncherPresetsFragment.kt" "$KT/settings/LauncherM
   [ -f "$f" ] || { echo "  ABORT: no such file: $f"; exit 2; }
 done
 
-echo "== T1: the Launcher strip is Presets | Controls | One-Hand | Notify (#580) =="
+echo "== T1: the Launcher group is Presets | Controls | One-Hand | Notify (#580, #649) =="
+# Asserted by LABEL, which is what the owner reads on the screen, and the four
+# labels are unchanged across #649 — it moved them from a tab strip to four
+# direct tiles under a `Launcher` heading, which is the same four words in the
+# same order in a different shape. The heading itself is asserted too: "Launcher"
+# is a declared string, so a Kotlin literal quietly supplying it would leave this
+# group unnamed in the file and still look right on the phone.
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
-pages = {p['id']: p for p in next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
-                                  if s['id'] == 'config')['pages']}
-tabs = pages['launcher'].get('tabs')
-labels = [pages.get(t, {}).get('label') for t in tabs or []]
+pages  = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
+              if s['id'] == 'config')['pages']
+group  = [p for p in pages if p.get('group') == 'Launcher']
+labels = [p['label'] for p in group]
 print('OK' if labels == ['Presets', 'Controls', 'One-Hand', 'Notify']
-      else 'tab labels = %r (tabs %r)' % (labels, tabs))
+      else 'Launcher group labels = %r' % (labels,))
 PY
-)" "launcher tabs, by label, are Presets · Controls · One-Hand · Notify"
+)" "the Launcher group, by label, is Presets · Controls · One-Hand · Notify"
 
 echo "== T2: Presets declares Sandboxes · Themes · Modes, in order =="
 check "$(python3 - "$BJ" <<'PY'

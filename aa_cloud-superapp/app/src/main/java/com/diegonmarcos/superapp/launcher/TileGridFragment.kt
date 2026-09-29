@@ -37,8 +37,14 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         fun onTileClicked(tileId: String)
     }
 
-    /** [group] = optional heading this tile sits under ("Pages", "Actions").
-     *  Blank means ungrouped, which is how every section but Configs builds.
+    /** [group] = optional heading this tile sits under, [subgroup] an optional
+     *  second heading below it — the two levels Configs declares (#649:
+     *  Launcher; Watchdog ▸ Setup / Observability). Blank means ungrouped,
+     *  which is how every section but Configs builds.
+     *
+     *  Both are the DECLARED words from build.json (`group` / `subgroup` on a
+     *  page, see [Sections.Page.group]) and are printed verbatim — a heading is
+     *  never a literal here, the same rule a tile [label] already keeps.
      *
      *  [rowBreak] = start a fresh row AT this tile. A group boundary already
      *  breaks a row, but it also prints a heading; this is the break without
@@ -50,6 +56,7 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         val label: String,
         @DrawableRes val iconRes: Int,
         val group: String = "",
+        val subgroup: String = "",
         val rowBreak: Boolean = false,
     )
 
@@ -61,6 +68,7 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         val labels = args.getStringArray(ARG_TILE_LABELS) ?: emptyArray()
         val icons  = args.getIntArray(ARG_TILE_ICONS)     ?: IntArray(0)
         val groups = args.getStringArray(ARG_TILE_GROUPS) ?: emptyArray()
+        val subs   = args.getStringArray(ARG_TILE_SUBS)   ?: emptyArray()
         val breaks = args.getBooleanArray(ARG_TILE_BREAKS) ?: BooleanArray(0)
 
         view.findViewById<TextView>(R.id.tile_grid_title).text = title
@@ -79,19 +87,30 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         val cols = COLS
         var i = 0
         var shownGroup: String? = null
+        var shownSub:   String? = null
         while (i < ids.size) {
-            // Group header ("Pages" / "Actions"). Blank group = ungrouped, which
-            // is every other section — they render exactly as before.
+            // Group header, then the subgroup header under it. Both are the
+            // words build.json declared. Blank = ungrouped, which is every
+            // other section — they render exactly as before.
+            //
+            // A new group RESETS shownSub: "Setup" under Watchdog and a "Setup"
+            // that arrived again under a later group are two headings, and
+            // remembering the old one would silently swallow the second.
             val g = groups.getOrNull(i).orEmpty()
-            if (g.isNotEmpty() && g != shownGroup) { grid.addView(groupHeader(g)); shownGroup = g }
-            // A row never straddles a group boundary: count how many of the next
-            // `cols` tiles still belong to this group, and start the next group
-            // on a fresh row.
+            val s = subs.getOrNull(i).orEmpty()
+            if (g.isNotEmpty() && g != shownGroup) {
+                grid.addView(groupHeader(g)); shownGroup = g; shownSub = null
+            }
+            if (s.isNotEmpty() && s != shownSub) { grid.addView(subgroupHeader(s)); shownSub = s }
+            // A row never straddles a group OR subgroup boundary: count how many
+            // of the next `cols` tiles still belong to this exact pair, and start
+            // the next one on a fresh row.
             // A declared row_break stops the run too — `span == 0 ||` so the
             // tile carrying the break still starts a row instead of a row of
             // zero tiles that would loop forever.
             var span = 0
             while (span < cols && i + span < ids.size && groups.getOrNull(i + span).orEmpty() == g &&
+                subs.getOrNull(i + span).orEmpty() == s &&
                 (span == 0 || !breaks.getOrElse(i + span) { false })) span++
             // wrap_content row → tile keeps its item_tile.xml fixed height,
             // ScrollView handles overflow. Auto-fit blew up single-row
@@ -180,6 +199,22 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         }
     }
 
+    /** The heading one level BELOW [groupHeader] — same TextView, indented and
+     *  a shade quieter so the two levels read as a hierarchy rather than as two
+     *  sections that happen to follow one another. Its text is declared
+     *  (`subgroup` in build.json), like every other word on this screen. */
+    private fun subgroupHeader(text: String): TextView {
+        val d = resources.displayMetrics.density
+        return TextView(requireContext()).apply {
+            this.text = text.uppercase()
+            setTextColor(0xFF7E71A0.toInt())
+            textSize = 10f
+            letterSpacing = 0.10f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setPadding((26 * d).toInt(), (6 * d).toInt(), (14 * d).toInt(), (4 * d).toInt())
+        }
+    }
+
     private fun tilePalette(ctx: android.content.Context): List<Pair<Int, Int>> = listOf(
         ctx.color(R.color.tile_blue_bg)   to ctx.color(R.color.tile_blue_fg),
         ctx.color(R.color.tile_green_bg)  to ctx.color(R.color.tile_green_fg),
@@ -203,6 +238,7 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
         private const val ARG_TILE_LABELS = "tile_labels"
         private const val ARG_TILE_ICONS  = "tile_icons"
         private const val ARG_TILE_GROUPS = "tile_groups"
+        private const val ARG_TILE_SUBS   = "tile_subgroups"
         private const val ARG_TILE_BREAKS = "tile_breaks"
 
         fun newInstance(title: String, tiles: List<Tile>) = TileGridFragment().apply {
@@ -212,6 +248,7 @@ class TileGridFragment : Fragment(R.layout.fragment_tile_grid) {
                 ARG_TILE_LABELS to tiles.map { it.label }.toTypedArray(),
                 ARG_TILE_ICONS  to tiles.map { it.iconRes }.toIntArray(),
                 ARG_TILE_GROUPS to tiles.map { it.group }.toTypedArray(),
+                ARG_TILE_SUBS   to tiles.map { it.subgroup }.toTypedArray(),
                 ARG_TILE_BREAKS to tiles.map { it.rowBreak }.toBooleanArray(),
             )
         }

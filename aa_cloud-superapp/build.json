@@ -11,7 +11,7 @@
     "compile_sdk": 35,
     "min_sdk": 26,
     "target_sdk": 34,
-    "version_code": 11,
+    "version_code": 12,
     "version_name": "0.1.1-dev",
     "_doc_abi_filters": "Native-library ABIs shipped in the APK. Defaults to arm64-v8a only because MapLibre Native (added in Push 2) ships ~15-18MB of .so per ABI; shipping all 4 default ABIs (arm64-v8a + armeabi-v7a + x86 + x86_64) inflates the APK from ~22MB to ~82MB. Every Samsung Galaxy from S8 (2017) onward + every modern Pixel is arm64, so this is safe for the user's device. To support 32-bit devices or x86 emulators, add 'armeabi-v7a' / 'x86_64' to this list and rebuild — no Kotlin / gradle edits needed.",
     "abi_filters": [
@@ -4580,26 +4580,62 @@
         "label": "Configs",
         "icon": "ic_settings",
         "module": null,
-        "_doc_pages_order": "Order here is the single source of truth — drives both the Configs section page-grid AND (via home_groups tiles_from_section: 'config') the Home Apps Configs row. WireGuard appears in the row via an explicit `tiles` entry on the home_groups row with insert_after_id, since WG lives in its own section. `row_break: true` on a page starts a fresh grid row at that tile, which is how the grid keeps the shape Profile/WireGuard/KDE/AI/Permissions — Launcher — Constellation/About instead of reflowing at ui.tile_columns.",
+        "_doc_pages_order": "Order here is the single source of truth \u2014 it drives the Configs page-grid, its SECTION and SUBSECTION headings, and (via home_groups tiles_from_section: 'config') the Home Apps Configs row. TWO LEVELS, DECLARED PER PAGE (#649): `group` is the section heading a tile sits under and `subgroup` is the heading below it, both rendered verbatim by TileGridFragment \u2014 the words \"Launcher\", \"Watchdog\", \"Setup\" and \"Observability\" appear in no Kotlin file, which is the same contract `label` already keeps for a page name. There is deliberately no parallel group map: a run of consecutive pages carrying the same group/subgroup IS the group, so moving an entry in this array moves it on the screen and a group with no pages left simply stops being drawn. A page that declares no group falls under the default Pages heading, which is every other section in this file. #649 replaced the old flat shape (Account/WireGuard/KDE/AI/Permissions \u2014 Launcher \u2014 Store/About, held together by `row_break`): Launcher stopped being a page wearing four tabs and became the TITLE over its four subpages as direct tiles, and the rest became Watchdog \u25b8 Setup + Watchdog \u25b8 Observability. `row_break: true` still starts a fresh grid row at a tile without printing a heading; no page in this section needs it any more, because every row break here is now a group boundary. ACTIONS ARE UNCHANGED: the trailing `is_action` entries are the same three, rendered under the same Actions heading from the same flag, and they carry no group \u2014 the grid appends them last whatever their position in this array.",
         "pages": [
+          {
+            "_doc": "Tab 1 of Launcher — the PRESETS: things you pick in one tap. Three groups, declared in ui.launcher_presets (order, names and which declaration feeds each group): Sandboxes (ui.launcher_profiles — Work · Personal · Guest), Themes (ui.launcher_themes — Cloud Purple · Cloud Minimalistic) and Modes (ui.launcher_modes — Power · Focus · Saving Energy). LauncherPresetsFragment draws them and owns no name of its own. Its id is `presets`, not `profile`, because `profile` is already this section's own top-level page (the owner's identity) and a section cannot hold two pages under one id. Nothing persisted moves with the rename: LauncherProfilePrefs/LauncherThemePrefs/LauncherModePrefs key off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
+            "id": "presets",
+            "label": "Presets",
+            "icon": "ic_p_sol_personal",
+            "group": "Launcher"
+          },
+          {
+            "_doc": "Tab 2 of Launcher — the CONTROLS (#574): ONE producer, LauncherConfigFragment, drawing the device/fleet switchboard (the Samsung-style icon grid declared in ui.control_panel and implemented in configs/DeviceControls.kt, formerly Configs ▸ Panel ▸ Control) followed by the launcher's own screensaver, switches, sliders and set-as-default-launcher. The theme picker that used to open this tab moved to Presets ▸ Themes — the SAME LauncherThemes.apply, not a copy. Nothing persisted moves with it: LauncherSettingsPrefs keys off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
+            "id": "controls",
+            "label": "Controls",
+            "icon": "ic_home",
+            "group": "Launcher"
+          },
+          {
+            "_doc": "Tab 2 of Launcher — One-Hand edge-gesture overlay (libs:launcher-onehand). OneHandFragment hosts the master toggle + the two special-permission deep-links (Draw over other apps, Accessibility). Data-driven engine config lives in build.json::onehand. KEPT ITS ID: `hidden` drops it from the Configs grid, the Home Apps Configs row, the Canopus arc and the Sirius tree (all of which list Section.pages), while Section.allPages keeps `page:config/onehand` resolvable — so every existing deep link, launcher shortcut, edge gesture and App-Tabs history entry still arrives, now on this tab. Its prefs (onehand_prefs, home_swipe_prefs, floatingnav) are untouched for the same reason the id is.",
+            "id": "onehand",
+            "label": "One-Hand",
+            "icon": "ic_onehand",
+            "group": "Launcher"
+          },
+          {
+            "_doc": "Tab 4 of Launcher — NOTIFY (#580), the notification centre in one place. It was Configs ▸ Home ▸ Notify, and Home's other tab, Push, was merged INTO it: the persistent-badge boxes now lead the page and Push's customization menus sit under the Filters as a collapsed Configs card. Then the page moved here and the emptied Home was deleted. `mirror_page` names sections[communication].pages[my-rss] and LauncherNavController.aggregatorPage renders that page's own fragment, so the cards, the filter row and the stack_my-rss declaration all stay owned by the Communication section — the two badge panes are stack_my-rss panels (kinds notification_badges / notification_badge_configs), not a copy declared here. mirror_page is the page-level twin of `mirror_section` (Cloud ▸ Configs / Cloud ▸ C3) and exists for the same reason those do: a tab that IS the other surface cannot drift from it, a second copy of it always does. Mirroring one PAGE rather than the section is what keeps this one tab instead of the Communication section's own six-tab strip nested inside ours. KEPT ITS ID: `hidden` keeps it out of the Configs grid while Section.allPages keeps `page:config/notify` resolvable, and the tab-owner lookup lands that target on this tab of Launcher.",
+            "id": "notify",
+            "label": "Notify",
+            "icon": "ic_rss",
+            "facet": true,
+            "mirror_page": "communication/my-rss",
+            "group": "Launcher"
+          },
           {
             "_doc": "Profile now owns config import. The old `import` page entry (action:import_configs) was REMOVED from this list and its two entries live inside ProfileFragment instead: 'Import · file · paste' (re-fires action:import_configs through MainActivity, so the launcher shortcut in res/xml/shortcuts.xml and the radial menu still reach ImportConfigsFragment unchanged) and 'OWebAuth Authelia · Auto Import Configs' (paste a bearer, fetch ui.config_source, apply via ConfigAutoImport).",
             "_doc_label": "#626 RENAMED Profile → Account. This is the ONE declaration of the words: the Configs tile, the Home-Apps Configs row entry and the page title all read `label`, so the rename is this string and nothing else. The `id` deliberately stays `profile` — it is the page's IDENTITY, not a user-visible label (#380/#381/#499 is the rule that an identity string must not sit in a label, not that the two must be spelled the same). Renaming it would break three things that name it and have no reason to change: SectionPages.kt's route, the launcher-shortcut deep link, and ac_cloud-drive/build.json::…personal_auth.target = `page:config/profile`, which is another SHIPPED app's cross-app contract.",
             "id": "profile",
             "label": "Account",
-            "icon": "ic_settings"
+            "icon": "ic_settings",
+            "group": "Watchdog",
+            "subgroup": "Setup"
           },
           {
             "_doc": "WireGuard is a CHILD of Configs. It lives in its own module-backed section (sections[wg], module libs:net) but is surfaced here as a real config page so it appears in the Configs grid + Home-Apps Configs row in order. action=section:wg opens that section; sections[wg].parent=config makes Back from it return to Configs (MainActivity.navigateUpToParent).",
             "id": "wg",
             "label": "WireGuard",
             "icon": "ic_wg",
-            "action": "section:wg"
+            "action": "section:wg",
+            "group": "Watchdog",
+            "subgroup": "Setup"
           },
           {
             "id": "kde",
             "label": "KDE",
-            "icon": "ic_kde"
+            "icon": "ic_kde",
+            "group": "Watchdog",
+            "subgroup": "Setup"
           },
           {
             "_doc": "AI is ONE page wearing FIVE tabs, declared the way Launcher and Home declare theirs — `tabs` naming page ids of this same section, so SectionPages hands it the SAME SectionTabsFragment and this app still has one tab mechanism rather than a second one to restyle and re-fix in parallel.",
@@ -4614,12 +4650,36 @@
               "textenhance",
               "library",
               "tokens"
-            ]
+            ],
+            "group": "Watchdog",
+            "subgroup": "Setup"
           },
           {
             "id": "perms",
             "label": "Permissions",
-            "icon": "ic_settings"
+            "icon": "ic_settings",
+            "group": "Watchdog",
+            "subgroup": "Setup"
+          },
+          {
+            "_doc": "#563 THE STORE — the one declaration of its identity (id `store`) and its display title (label). It was 'Constellation', an action page (action:constellation) with its own branch in ShellActivity; it is now an ordinary tabbed page, so every way in is a page: target resolved by the same strip Home/Launcher/AI use. Tab 1 is the fleet (every constellation APK: install/update/uninstall/open, per-app versions and digests); tab 2 is every launchable APK on the phone, each row with Update (fleet apps only, through the fleet's own install path) / Open / Stop / Remove / App info / its origin store read from the real installer (#564; map in libs/appstore assets/appstore-install-sources.json). Both tabs group by the central classification (ui.phone_folders + ui.phone_sections, through PhoneTaxonomy) — the store holds no taxonomy of its own. test-store-identity.sh guards that nothing routes here by the old name and that every tile pointing here carries this label.",
+            "_doc_tabs_order": "Cloud first: the fleet is what the store exists to manage, and it is the tab the Update-All action, the update notification and a lib tile all land on (page:config/store-cloud).",
+            "id": "store",
+            "label": "Store",
+            "icon": "ic_refresh",
+            "tabs": [
+              "store-cloud",
+              "store-phone"
+            ],
+            "group": "Watchdog",
+            "subgroup": "Setup"
+          },
+          {
+            "id": "about",
+            "label": "About",
+            "icon": "ic_settings",
+            "group": "Watchdog",
+            "subgroup": "Observability"
           },
           {
             "_doc": "Tab 1 of AI — the websearch agent's settings, once cloud-superapp has a websearch agent. It does not have one, so this renders AiNotBuiltFragment and says so. hidden = reached through the AI strip, not as its own Configs tile.",
@@ -4657,46 +4717,17 @@
             "hidden": true
           },
           {
-            "_doc": "Launcher is ONE page wearing FOUR tabs: Presets, Controls, One-Hand and Notify. Presets is what you PICK (a sandbox, a UI theme, a mode — three groups declared in ui.launcher_presets); Controls is what you FLIP (the device/fleet switchboard from the old Panel ▸ Control, then the launcher's own switches, sliders and screensaver); One-Hand is how you reach it; Notify (#580) is what the launcher tells you and how — the notification centre with its persistent badges, moved here from the Home page, which was deleted once it was empty. `tabs` lists PAGE IDS of this same section, in strip order: SectionPages hands a page that declares them to the SAME SectionTabsFragment a tabbed section wears, so there is one tab mechanism in this app, not two. All four tab ids stay real declared pages (hidden below), which is what keeps `page:config/onehand` alive as a target — see LauncherNavController.openSectionPage, which resolves a tab id to its owner page and lands on that tab. A stored destination naming a retired id (profiles, theme, control, panel) is judged dead by ShellActivity.recentTabStillExists rather than navigated into nothing.",
-            "id": "launcher",
-            "label": "Launcher",
-            "icon": "ic_home",
-            "tabs": [
-              "presets",
-              "controls",
-              "onehand",
-              "notify"
-            ],
-            "row_break": true
-          },
-          {
-            "_doc": "Tab 1 of Launcher — the PRESETS: things you pick in one tap. Three groups, declared in ui.launcher_presets (order, names and which declaration feeds each group): Sandboxes (ui.launcher_profiles — Work · Personal · Guest), Themes (ui.launcher_themes — Cloud Purple · Cloud Minimalistic) and Modes (ui.launcher_modes — Power · Focus · Saving Energy). LauncherPresetsFragment draws them and owns no name of its own. Its id is `presets`, not `profile`, because `profile` is already this section's own top-level page (the owner's identity) and a section cannot hold two pages under one id. Nothing persisted moves with the rename: LauncherProfilePrefs/LauncherThemePrefs/LauncherModePrefs key off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
-            "id": "presets",
-            "label": "Presets",
-            "icon": "ic_p_sol_personal",
+            "_doc": "Store tab 1 — the fleet store that used to be the whole page (libs:appstore StoreCloudFragment). The LABEL keeps the word Constellation deliberately; the id does not, because the id is identity and the label is only display. hidden = reached through the Store strip, not as its own Configs tile.",
+            "id": "store-cloud",
+            "label": "Cloud Constellation",
+            "icon": "ic_refresh",
             "hidden": true
           },
           {
-            "_doc": "Tab 2 of Launcher — the CONTROLS (#574): ONE producer, LauncherConfigFragment, drawing the device/fleet switchboard (the Samsung-style icon grid declared in ui.control_panel and implemented in configs/DeviceControls.kt, formerly Configs ▸ Panel ▸ Control) followed by the launcher's own screensaver, switches, sliders and set-as-default-launcher. The theme picker that used to open this tab moved to Presets ▸ Themes — the SAME LauncherThemes.apply, not a copy. Nothing persisted moves with it: LauncherSettingsPrefs keys off fixed store names, never off the page id. hidden = reached through the strip, not as its own Configs tile.",
-            "id": "controls",
-            "label": "Controls",
-            "icon": "ic_home",
-            "hidden": true
-          },
-          {
-            "_doc": "Tab 2 of Launcher — One-Hand edge-gesture overlay (libs:launcher-onehand). OneHandFragment hosts the master toggle + the two special-permission deep-links (Draw over other apps, Accessibility). Data-driven engine config lives in build.json::onehand. KEPT ITS ID: `hidden` drops it from the Configs grid, the Home Apps Configs row, the Canopus arc and the Sirius tree (all of which list Section.pages), while Section.allPages keeps `page:config/onehand` resolvable — so every existing deep link, launcher shortcut, edge gesture and App-Tabs history entry still arrives, now on this tab. Its prefs (onehand_prefs, home_swipe_prefs, floatingnav) are untouched for the same reason the id is.",
-            "id": "onehand",
-            "label": "One-Hand",
-            "icon": "ic_onehand",
-            "hidden": true
-          },
-          {
-            "_doc": "Tab 4 of Launcher — NOTIFY (#580), the notification centre in one place. It was Configs ▸ Home ▸ Notify, and Home's other tab, Push, was merged INTO it: the persistent-badge boxes now lead the page and Push's customization menus sit under the Filters as a collapsed Configs card. Then the page moved here and the emptied Home was deleted. `mirror_page` names sections[communication].pages[my-rss] and LauncherNavController.aggregatorPage renders that page's own fragment, so the cards, the filter row and the stack_my-rss declaration all stay owned by the Communication section — the two badge panes are stack_my-rss panels (kinds notification_badges / notification_badge_configs), not a copy declared here. mirror_page is the page-level twin of `mirror_section` (Cloud ▸ Configs / Cloud ▸ C3) and exists for the same reason those do: a tab that IS the other surface cannot drift from it, a second copy of it always does. Mirroring one PAGE rather than the section is what keeps this one tab instead of the Communication section's own six-tab strip nested inside ours. KEPT ITS ID: `hidden` keeps it out of the Configs grid while Section.allPages keeps `page:config/notify` resolvable, and the tab-owner lookup lands that target on this tab of Launcher.",
-            "id": "notify",
-            "label": "Notify",
-            "icon": "ic_rss",
-            "facet": true,
-            "mirror_page": "communication/my-rss",
+            "_doc": "Store tab 2 — every launchable APK on the phone (libs:appstore StorePhoneFragment). #564: each row draws Update | Open | Stop | Remove | App info | {origin store}, derived by PhoneAppActions from the device's own answers: Update only for Cloud fleet apps (FleetInstall, the Cloud tab's path); Stop only while the embedded adb channel is paired (#225/#280/#281), otherwise drawn disabled with the reason; Remove is ACTION_DELETE (Android confirms), disabled for system apps; the origin button reads getInstallSourceInfo through the one declared map (libs/appstore assets/appstore-install-sources.json): ours -> Store ▸ Cloud, a foreign store -> that store's page for the app, unknown -> App info.",
+            "id": "store-phone",
+            "label": "Phone Apps",
+            "icon": "ic_p_dialer",
             "hidden": true
           },
           {
@@ -4722,37 +4753,6 @@
             "icon": "ic_mode_apps",
             "action": "action:toggle_animations",
             "is_action": true
-          },
-          {
-            "_doc": "#563 THE STORE — the one declaration of its identity (id `store`) and its display title (label). It was 'Constellation', an action page (action:constellation) with its own branch in ShellActivity; it is now an ordinary tabbed page, so every way in is a page: target resolved by the same strip Home/Launcher/AI use. Tab 1 is the fleet (every constellation APK: install/update/uninstall/open, per-app versions and digests); tab 2 is every launchable APK on the phone, each row with Update (fleet apps only, through the fleet's own install path) / Open / Stop / Remove / App info / its origin store read from the real installer (#564; map in libs/appstore assets/appstore-install-sources.json). Both tabs group by the central classification (ui.phone_folders + ui.phone_sections, through PhoneTaxonomy) — the store holds no taxonomy of its own. test-store-identity.sh guards that nothing routes here by the old name and that every tile pointing here carries this label.",
-            "_doc_tabs_order": "Cloud first: the fleet is what the store exists to manage, and it is the tab the Update-All action, the update notification and a lib tile all land on (page:config/store-cloud).",
-            "id": "store",
-            "label": "Store",
-            "icon": "ic_refresh",
-            "tabs": [
-              "store-cloud",
-              "store-phone"
-            ],
-            "row_break": true
-          },
-          {
-            "_doc": "Store tab 1 — the fleet store that used to be the whole page (libs:appstore StoreCloudFragment). The LABEL keeps the word Constellation deliberately; the id does not, because the id is identity and the label is only display. hidden = reached through the Store strip, not as its own Configs tile.",
-            "id": "store-cloud",
-            "label": "Cloud Constellation",
-            "icon": "ic_refresh",
-            "hidden": true
-          },
-          {
-            "_doc": "Store tab 2 — every launchable APK on the phone (libs:appstore StorePhoneFragment). #564: each row draws Update | Open | Stop | Remove | App info | {origin store}, derived by PhoneAppActions from the device's own answers: Update only for Cloud fleet apps (FleetInstall, the Cloud tab's path); Stop only while the embedded adb channel is paired (#225/#280/#281), otherwise drawn disabled with the reason; Remove is ACTION_DELETE (Android confirms), disabled for system apps; the origin button reads getInstallSourceInfo through the one declared map (libs/appstore assets/appstore-install-sources.json): ours -> Store ▸ Cloud, a foreign store -> that store's page for the app, unknown -> App info.",
-            "id": "store-phone",
-            "label": "Phone Apps",
-            "icon": "ic_p_dialer",
-            "hidden": true
-          },
-          {
-            "id": "about",
-            "label": "About",
-            "icon": "ic_settings"
           }
         ]
       }

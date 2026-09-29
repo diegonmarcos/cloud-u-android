@@ -381,16 +381,30 @@ class LauncherNavController(private val host: NavHost) {
                 id = if (p.action.isNotBlank()) p.action else "page:${section.id}/${p.id}",
                 label = p.label,
                 iconRes = p.iconName?.let { Sections.iconResFor(ctx, it) } ?: 0,
-                group = if (p.isAction) GROUP_ACTIONS else GROUP_PAGES,
+                // The heading comes from the PAGE (#649) — `group`/`subgroup` in
+                // build.json — so a section can declare two levels (Configs:
+                // Launcher; Watchdog ▸ Setup / Observability) without a word of
+                // it living here. A page that declares none falls back to the
+                // one default heading, which is every other section.
+                group = if (p.isAction) GROUP_ACTIONS else p.group.ifBlank { GROUP_PAGES },
+                subgroup = if (p.isAction) "" else p.subgroup,
                 rowBreak = p.rowBreak)
         }
         val actions = own.filter { it.group == GROUP_ACTIONS } + starActionsOf(section)
+        // NOT `group == GROUP_PAGES`: a page under a DECLARED heading is still a
+        // page, and testing for the fallback name dropped every one of them off
+        // the grid the moment #649 gave Configs its own headings.
+        val pages = own.filterNot { it.group == GROUP_ACTIONS }
         return TileGridFragment.newInstance(
             title = title,
-            // No actions in this section? Drop the headings entirely — a lone
-            // "PAGES" banner over every other grid is noise.
-            tiles = if (actions.isEmpty()) own.map { it.copy(group = "") }
-                    else own.filter { it.group == GROUP_PAGES } + actions)
+            // No actions AND no declared headings? Drop the headings entirely —
+            // a lone "PAGES" banner over every other grid is noise. A section
+            // that DID declare its own headings keeps them either way: they are
+            // the structure the owner asked for, not a side effect of having
+            // actions to separate.
+            tiles = if (actions.isEmpty() && pages.all { it.group == GROUP_PAGES && it.subgroup.isEmpty() })
+                        pages.map { it.copy(group = "") }
+                    else pages + actions)
     }
 
     /** The extras declared on a section's radial node (KDE Connect,

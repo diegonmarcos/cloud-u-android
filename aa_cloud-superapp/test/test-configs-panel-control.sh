@@ -76,42 +76,52 @@ for f in "$BJ" "$GRADLE" "$SECTIONS" "$PAGES" "$NAV" "$TABS" "$CONTROLS" \
     echo "         is indistinguishable here from a contract being kept."; exit 2; }
 done
 
-echo "== T1: Configs ▸ Home is DELETED; Launcher carries Notify as its 4th tab, after One-Hand (#580) =="
+echo "== T1: Configs ▸ Home/Push/Panel/Control stay DELETED; Notify sits right after One-Hand (#580, #649) =="
+# #580 put Notify immediately after One-Hand in Launcher's tab strip. #649 turned
+# that strip into the `Launcher` group of four direct tiles — so the ORDER this
+# check owns survived verbatim and only its carrier changed, from
+# `pages[launcher].tabs` to the run of pages declaring `group: Launcher`. The
+# deleted ids are still deleted, which is the other half and the reason the four
+# retired names are listed rather than assumed.
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
-ids = [p['id'] for p in pages]
-launcher = next((p for p in pages if p['id'] == 'launcher'), None)
-gone = [i for i in ('home', 'push', 'panel', 'control') if i in ids]
-if gone:                             print('retired page(s) still declared: %r' % gone)
-elif launcher is None:               print('no `launcher` page in config')
-elif launcher.get('tabs', [])[-2:] != ['onehand', 'notify']:
-                                     print('Notify is not the tab right after One-Hand: %r' % (launcher.get('tabs'),))
-elif 'about' not in ids:             print('no `about` page')
-else:                                print('OK')
+ids  = [p['id'] for p in pages]
+gone = [i for i in ('home', 'push', 'panel', 'control', 'launcher') if i in ids]
+run  = [p['id'] for p in pages if p.get('group') == 'Launcher']
+if gone:                     print('retired page(s) still declared: %r' % gone)
+elif run[-2:] != ['onehand', 'notify']:
+                             print('Notify is not the page right after One-Hand: %r' % (run,))
+elif 'about' not in ids:     print('no `about` page')
+else:                        print('OK')
 PY
-)" "no home/push/panel/control page; launcher tabs end ..., onehand, notify"
+)" "no home/push/panel/control/launcher page; the Launcher group ends ..., onehand, notify"
 
-echo "== T2: the Notify tab is a REAL hidden page of the SAME section, never the owner =="
-# The strip contract established in 07964787e: a tab is a declared page, so
-# page:config/<tab> stays a live target. Notify must not be the tab that breaks
-# it by being declared inline.
+echo "== T2: Notify is a REAL, VISIBLE page of the config section, never declared inline =="
+# The contract established in 07964787e was: a tab is a declared page, so
+# page:config/<tab> stays a live target. #649 spent that contract — every one of
+# the four became its own tile, which is only possible because none of them was
+# ever an inline label. So the assertion inverts (`hidden` must now be ABSENT)
+# while what it protects does not: `page:config/notify` still resolves, and it
+# resolves to a page carrying the mirror rather than to a copy of it.
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
 by_id = {p['id']: p for p in pages}
-owner = by_id['launcher']
 problems = []
-for tab in owner.get('tabs', []):
-    if tab == 'launcher':         problems.append('launcher lists itself (infinite render)')
-    elif tab not in by_id:        problems.append('tab %r has no page behind it' % tab)
-    elif not by_id[tab].get('hidden'):
-                                  problems.append('tab %r must be hidden' % tab)
+for pid in ('presets', 'controls', 'onehand', 'notify'):
+    p = by_id.get(pid)
+    if p is None:                       problems.append('page %r is GONE — its target dead-ends' % pid)
+    elif p.get('hidden'):               problems.append('page %r is hidden — #649 gave it its own tile' % pid)
+    elif p.get('group') != 'Launcher':  problems.append('page %r left the Launcher group: %r' % (pid, p.get('group')))
+if by_id.get('notify', {}).get('mirror_page') != 'communication/my-rss':
+    problems.append('notify stopped mirroring communication/my-rss — a second '
+                    'notification centre is exactly what #497/#515 deleted')
 print('; '.join(problems) or 'OK')
 PY
-)" "every Launcher tab, Notify included, is a declared, hidden page of the config section"
+)" "presets/controls/onehand/notify are declared, VISIBLE Launcher pages; Notify still mirrors the one centre"
 
 echo "== T3: Notify MIRRORS the ntfy page — it does not carry a copy of it =="
 check "$(python3 - "$BJ" <<'PY'

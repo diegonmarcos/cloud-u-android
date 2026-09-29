@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
-# Tester: Configs ▸ Launcher is ONE page with four tabs (Presets | Controls |
-# One-Hand | Notify), and neither merging the old One-Hand page into it, the #574
-# renames (Profiles → Presets, Modes → Controls) nor #580 moving Notify in (and
-# deleting the emptied Configs ▸ Home) broke its stored settings or the targets
-# that still name it.
+# Tester: Configs ▸ LAUNCHER IS A HEADING over four DIRECT pages (Presets |
+# Controls | One-Hand | Notify), and neither the #154 merge that made it one
+# page with four tabs, the #574 renames (Profiles → Presets, Modes → Controls),
+# #580 moving Notify in, nor #649 promoting all four back out broke its stored
+# settings or the targets that still name it.
 #
-# WHY THIS EXISTS: the merge touches the two things a page move silently
-# destroys.
+# #649 INVERTED T1 AND T10 ON PURPOSE. There is no `launcher` page any more:
+# Launcher is the `group` those four pages declare, so each of them is its own
+# visible tile again and none of them is `hidden`. What this file is FOR did not
+# change, because the two things a page move silently destroys did not change.
 #   1. SETTINGS — a preference store keyed off a page id would have moved when
 #      the page did, wiping every toggle the user had set. This asserts the
 #      launcher/one-hand stores are named literally, so the id could change
-#      (`launcher` → `controls`) without taking the data with it.
+#      (`launcher` → `controls`) and the page could stop existing entirely
+#      without taking the data with it.
 #   2. TARGETS — `page:config/onehand` is spoken by launcher shortcuts, edge
 #      gestures, the radial menus and the App-Tabs history already on the
-#      device. The page stays DECLARED (hidden) and openSectionPage resolves it
-#      to its owner page + tab, so those keep landing. A tab declared inline
-#      instead of as a real page would have killed all of them at once.
+#      device. It resolved through the owner page + tab while One-Hand was a
+#      tab; it now resolves directly, because the page stayed DECLARED through
+#      both moves. A tab declared inline instead of as a real page would have
+#      killed all of them at once, twice.
 #
 # Static tester (no device, no build): build.json is read as data, the Kotlin
 # is checked for the routing contract that data relies on.
@@ -32,28 +36,49 @@ PAGES="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionPages.kt
 STRIP="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/SectionTabsFragment.kt"
 NAV="$APP/app/src/main/java/com/diegonmarcos/superapp/launcher/LauncherNavController.kt"
 
-echo "== T1: Configs ▸ Launcher declares its four tabs as page ids, in order (Notify AFTER One-Hand, #580) =="
+echo "== T1: Launcher is a declared GROUP over four DIRECT pages, in order (#649) =="
+# The four ids and their order are unchanged from the tab strip this replaced
+# (Notify AFTER One-Hand, #580) — only what carries them changed: a `group`
+# string on each page instead of a `tabs` array on a fifth page. Consecutive is
+# part of the assertion: the grid prints a heading when the group CHANGES, so a
+# member parked elsewhere in the array would print "LAUNCHER" a second time.
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
-launcher = next((p for p in pages if p['id'] == 'launcher'), None)
-if launcher is None:                       print('no `launcher` page in config')
-elif launcher.get('tabs') != ['presets', 'controls', 'onehand', 'notify']:
-                                           print('tabs = %r' % (launcher.get('tabs'),))
-elif launcher.get('hidden'):               print('the strip itself must stay listed')
-else:                                      print('OK')
+if any(p['id'] == 'launcher' for p in pages):
+    print('a `launcher` page is declared again — #649 made Launcher a heading, '
+          'and a page of that name would tile beside its own four members')
+    sys.exit()
+run = [p['id'] for p in pages if p.get('group') == 'Launcher']
+if run != ['presets', 'controls', 'onehand', 'notify']:
+    print('group Launcher = %r' % (run,)); sys.exit()
+ids   = [p['id'] for p in pages]
+first = ids.index('presets')
+if ids[first:first + 4] != run:
+    print('the four are not CONSECUTIVE: %r' % (ids[first:first + 6],)); sys.exit()
+hidden = [p['id'] for p in pages if p.get('group') == 'Launcher' and p.get('hidden')]
+if hidden:
+    print('still hidden, so it draws no tile of its own: %r' % (hidden,)); sys.exit()
+print('OK')
 PY
-)" "launcher: tabs = [presets, controls, onehand, notify], still a visible Configs entry"
+)" "Launcher groups presets, controls, onehand, notify as four consecutive visible pages"
 
-echo "== T2: every tab is a REAL declared page, hidden, and not the owner itself =="
+echo "== T2: every tab STILL declared in this section is a real hidden page, not its owner =="
+# The generic rule, which #649 left standing for the two pages that are still
+# strips (ai, store) after Launcher stopped being one. It is asserted over
+# whatever `tabs` the file declares rather than over a hand list, so it neither
+# went vacuous nor needed editing when four of its subjects became direct tiles —
+# and it reports WHICH owners it actually checked, because a rule that silently
+# has nothing left to check is a green that verified nothing.
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 pages = next(s for s in json.load(open(sys.argv[1]))['ui']['sections']
              if s['id'] == 'config')['pages']
 by_id = {p['id']: p for p in pages}
-problems = []
+owners, problems = [], []
 for owner in pages:
+    if owner.get('tabs'): owners.append(owner['id'])
     for tab in owner.get('tabs', []):
         if tab == owner['id']:
             problems.append('%s lists itself as a tab (infinite render)' % tab)
@@ -61,9 +86,23 @@ for owner in pages:
             problems.append('tab %r has no page behind it' % tab)
         elif not by_id[tab].get('hidden'):
             problems.append('tab %r is still a standalone Configs entry' % tab)
+if not owners:
+    problems.append('NO page in this section declares tabs any more — this check '
+                    'has no subject left and must be deleted, not left passing')
 print('; '.join(problems) or 'OK')
 PY
-)" "presets + controls + onehand + notify are declared, hidden pages of the same section"
+)" "the tab owners left in Configs (ai, store) name real hidden pages of the same section"
+# Assert the subject set separately and by name: a silent
+# change from {ai,store} to {ai} is this check losing half its coverage.
+OWNERS=$(python3 -c "
+import json
+pages = next(s for s in json.load(open('$BJ'))['ui']['sections']
+             if s['id'] == 'config')['pages']
+print(','.join(p['id'] for p in pages if p.get('tabs')))
+")
+[ "$OWNERS" = "ai,store" ] \
+  && ok "T2's subjects are exactly ai and store — Launcher is no longer among them (#649)" \
+  || bad "the Configs tab owners are now [$OWNERS], not [ai,store] — T2 checks a different set than it claims"
 
 echo "== T3: the One-Hand id SURVIVES (page:config/onehand must still resolve) =="
 check "$(python3 - "$BJ" <<'PY'
@@ -178,11 +217,14 @@ done
   && ok "launcher + one-hand stores are named literally, so no key moved with the page" \
   || bad "preference store name built from a variable:$sp_fail"
 
-echo "== T10: the Presets tab is 'presets', never 'profile' (#339, #574) =="
-# `profile` is the Configs section's OWN top-level page — the owner's identity:
-# name, email, WireGuard export. One section cannot hold two pages under one
-# id, so the Launcher tab had to take a second name. Naming them apart is the
-# whole reason the split works, which is why it is asserted rather than trusted.
+echo "== T10: the Presets page is 'presets', never 'profile' (#339, #574, #649) =="
+# `profile` is the owner's identity page (name, email, WireGuard export), which
+# #626 relabelled Account and #649 filed under Watchdog ▸ Setup. `presets` is
+# what you PICK on the launcher. One section cannot hold two pages under one id,
+# so the Launcher member had to take a second name. Naming them apart is the
+# whole reason the split works, which is why it is asserted rather than trusted —
+# and #649 made BOTH of them visible tiles, so the id is now the only thing
+# keeping them apart.
 check "$(python3 - "$BJ" <<'PY'
 import json, sys
 section = next(s for s in json.load(open(sys.argv[1]))['ui']['sections'] if s['id'] == 'config')
@@ -190,15 +232,19 @@ pages   = {p['id']: p for p in section['pages']}
 if 'profile' not in pages:
     print("the owner's identity page 'profile' is GONE — Configs lost its own tile")
 elif 'presets' not in pages:
-    print("no 'presets' page — the Launcher tab has nothing to render")
+    print("no 'presets' page — the Launcher group has nothing to render")
 elif pages['profile'].get('hidden'):
     print("'profile' went hidden — the owner's identity tile vanished from Configs")
-elif not pages['presets'].get('hidden'):
-    print("'presets' is visible — the tab would also stand as its own Configs tile")
+elif pages['presets'].get('hidden'):
+    print("'presets' went hidden — #649 promoted it to a direct Launcher tile")
+elif pages['profile'].get('group') == pages['presets'].get('group'):
+    print("'profile' and 'presets' landed under one heading (%r) — the owner's "
+          "identity is Watchdog setup, the launcher preset is not"
+          % (pages['profile'].get('group'),))
 else:
     print('OK')
 PY
-)" "profile (identity, visible) and presets (Launcher tab, hidden) are two pages"
+)" "profile (Watchdog ▸ Setup) and presets (Launcher) are two visible pages under two headings"
 
 grep -qF 'pageId == "presets" -> LauncherPresetsFragment.newInstance()' "$PAGES" \
   && ok "the presets tab routes to its own fragment" \
