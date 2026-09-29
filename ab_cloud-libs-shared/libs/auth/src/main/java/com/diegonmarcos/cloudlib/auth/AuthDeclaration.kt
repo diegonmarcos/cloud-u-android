@@ -36,12 +36,32 @@ object AuthDeclaration {
      */
     data class GrantRemedy(val match: String, val remedy: String, val url: String)
 
+    /**
+     * #646 ONE RUNG of the declared git-auth chain (`auth.git_chain.providers`),
+     * carrying its declared RANK in [position] — 0 is tried first.
+     *
+     * [kind] is the only thing a caller dispatches on, the same rule the sign-in
+     * providers follow. [config] is the rung's own declaration verbatim, so a
+     * rung gaining a field is an edit to the JSON and not to this class.
+     */
+    data class GitRung(
+        val id: String,
+        val label: String,
+        val kind: String,
+        val position: Int,
+        val config: JSONObject,
+    ) {
+        /** Does the phone hold a GitHub credential of its own on this leg? */
+        val holdsGithubCredential: Boolean get() = config.optBoolean("holds_github_credential", false)
+    }
+
     data class Declaration(
         val configSource: ConfigSource,
         val vault: VaultConnect.Endpoints,
         val knownSchemaVersions: Set<Int>,
         val signIn: JSONObject,
         val grantRemedies: List<GrantRemedy> = emptyList(),
+        val gitChain: List<GitRung> = emptyList(),
     )
 
     val current: Declaration by lazy { parse(decode(BuildConfig.AUTH_B64)) }
@@ -50,6 +70,14 @@ object AuthDeclaration {
     val vault: VaultConnect.Endpoints get() = current.vault
     val knownSchemaVersions: Set<Int> get() = current.knownSchemaVersions
     val grantRemedies: List<GrantRemedy> get() = current.grantRemedies
+
+    /**
+     * #646 The git-auth chain IN DECLARED ORDER — `auth.git_chain.order`, the one
+     * ranking. The walker (libs:git-sync's GitAuthChain) tries these front to
+     * back and nothing re-sorts them, so reordering the JSON reorders the real
+     * attempts and dropping a rung stops it being tried.
+     */
+    val gitChain: List<GitRung> get() = current.gitChain
 
     /**
      * #629 The declared remedy for [message], or null when nothing is declared for it. First match
@@ -106,6 +134,38 @@ object AuthDeclaration {
                     val match = o.optString("match"); if (match.isBlank()) null else GrantRemedy(match, o.optString("remedy"), o.optString("url"))
                 }
             },
+            gitChain = gitChain(root.optJSONObject("git_chain")),
         )
+    }
+
+    /**
+     * #646 The declared git-auth chain, in `order`, CLOSED AT BOTH ENDS: a rung
+     * ranked in `order` with no `providers` entry would be an attempt with no
+     * endpoint, and a `providers` entry missing from `order` would be a rung with
+     * no rank that therefore never runs. Either is a declaration that only half
+     * exists — the #627 rule libs:appstore's resolver already enforces — so both
+     * are dropped rather than guessed at, and the surviving chain is exactly the
+     * rungs that are completely declared.
+     *
+     * `order` alone decides the ranking. There is no sort here and no default
+     * ordering to fall back on: an empty or absent block yields an EMPTY chain,
+     * which reads as "no git auth is declared" rather than inventing a rung.
+     */
+    fun gitChain(block: JSONObject?): List<GitRung> {
+        val root = block ?: return emptyList()
+        val order = root.optJSONArray("order") ?: return emptyList()
+        val providers = root.optJSONObject("providers") ?: return emptyList()
+        return (0 until order.length()).mapNotNull { i ->
+            val id = order.optString(i).takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val declared = providers.optJSONObject(id) ?: return@mapNotNull null
+            val kind = declared.optString("kind").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            GitRung(
+                id = id,
+                label = declared.optString("label").ifBlank { id },
+                kind = kind,
+                position = i,
+                config = declared,
+            )
+        }
     }
 }
