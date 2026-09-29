@@ -329,6 +329,14 @@ rollback() {
     [ -n "$prev" ] || die "generation $cur is the oldest one kept; there is nothing to roll back to"
     switch_to "$GENS/$prev"
     echo "$ME: rolled back to generation $prev"
+    # MEASURED, and the reason this line exists: a generation directory is not
+    # write-protected (the store runs as the app's own uid, so any chmod it
+    # applied it could also undo — protection would be theatre). So an older
+    # generation CAN have been broken in place since it was built, and rolling
+    # back into it would otherwise look like a success and behave like a fault.
+    # Rollback is therefore not complete until the generation it landed on has
+    # been verified; a red here means `repair`, which builds a fresh one.
+    verify
 }
 
 # ── the package layer, which is NOT this engine's job where nix exists ─────
